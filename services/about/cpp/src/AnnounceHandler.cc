@@ -76,9 +76,9 @@ void AnnounceHandler::AnnounceSignalHandler(const ajn::InterfaceDescription::Mem
             objectDescriptions.insert(std::pair<qcc::String, std::vector<qcc::String> >(objectDescriptionPath, localVector));
         }
         MsgArg* tempControlArg2;
-        int languageTagNumElements;
+        size_t languageTagNumElements;
         CHECK_RETURN(args[3].Get("a{sv}", &languageTagNumElements, &tempControlArg2))
-        for (int i = 0; i < languageTagNumElements; i++) {
+        for (size_t i = 0; i < languageTagNumElements; i++) {
             char* tempKey;
             MsgArg* tempValue;
             CHECK_RETURN(tempControlArg2[i].Get("{sv}", &tempKey, &tempValue))
