@@ -267,6 +267,7 @@ TEST_F(ProxyBusObjectTest, SecureConnection) {
     InterfaceDescription* testIntf = NULL;
     status = servicebus.CreateInterface(INTERFACE_NAME, testIntf, false);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "chirp", "s", "", "chirp", 0);
@@ -308,6 +309,7 @@ TEST_F(ProxyBusObjectTest, SecureConnectionAsync) {
     InterfaceDescription* testIntf = NULL;
     status = servicebus.CreateInterface(INTERFACE_NAME, testIntf, false);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "chirp", "s", "", "chirp", 0);
@@ -354,6 +356,7 @@ TEST_F(ProxyBusObjectTest, GetChildren) {
 
     InterfaceDescription* testIntf = NULL;
     bus.CreateInterface("org.alljoyn.test.ProxyBusObjectTest", testIntf, false);
+    ASSERT_TRUE(testIntf != NULL);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
@@ -375,6 +378,7 @@ TEST_F(ProxyBusObjectTest, GetChildren) {
     EXPECT_TRUE(proxyObj.IsValid());
 
     ProxyBusObject* proxyObjSub = proxyObj.GetChild("/org/alljoyn/test/ProxyObjectTest");
+    ASSERT_TRUE(proxyObjSub != NULL);
 
     size_t numChildren = 0;
     ProxyBusObject** children = NULL;
@@ -417,6 +421,7 @@ TEST_F(ProxyBusObjectTest, AddChild_regressionTest) {
 
     InterfaceDescription* testIntf = NULL;
     bus.CreateInterface("org.alljoyn.test.ProxyBusObjectTest", testIntf, false);
+    ASSERT_TRUE(testIntf != NULL);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 

@@ -35,6 +35,7 @@ TEST(PerfTestRegression, Security_ALLJOYN_294_AddLogonEntry_Without_EnablePeerSe
 
     /* Create a Bus Attachment Object */
     BusAttachment*serviceBus = new BusAttachment("ALLJOYN-294", true);
+    ASSERT_TRUE(serviceBus != NULL);
     serviceBus->Start();
 
     QStatus status = serviceBus->Connect(clientArgs.c_str());

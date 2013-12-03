@@ -98,6 +98,7 @@ TEST_F(InterfaceTest, SUCCESS_AddInterfacestoBus_Activation) {
     /* Add org.alljoyn.alljoyn_test interface */
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName1(), testIntf);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName1(), testIntf);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -117,6 +118,7 @@ TEST_F(InterfaceTest, FAIL_AddInterfacestoBus_AfterActivation_NoActivate) {
     testIntf->Activate();
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName1(), testIntf);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
 
     /* Add org.alljoyn.alljoyn_test interface */
@@ -160,9 +162,11 @@ TEST_F(InterfaceTest, AddInterfacesToObject) {
     InterfaceDescription* testIntf = NULL;
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName1(), testIntf);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName1(), testIntf);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
 
     /* Use a different service object to GetInterface and AddInterfaceToObject */
@@ -189,9 +193,11 @@ TEST_F(InterfaceTest, AddInterfaceToObjectAgain) {
     InterfaceDescription* testIntf = NULL;
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName1(), testIntf);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName1(), testIntf);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
 
     const InterfaceDescription* regTestIntf = g_msgBus->GetInterface(myService.getAlljoynDummyInterfaceName1());
@@ -234,9 +240,11 @@ TEST_F(InterfaceTest, AddInterfaceAgainToRegisteredObject) {
     InterfaceDescription* testIntf = NULL;
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName1(), testIntf);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName1(), testIntf);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
 
     const InterfaceDescription* regTestIntf = g_msgBus->GetInterface(myService.getAlljoynDummyInterfaceName1());
@@ -439,6 +447,7 @@ TEST_F(InterfaceTest, FullAnnotationsXmlTest) {
     /* Add org.alljoyn.alljoyn_test interface */
     status = g_msgBus->CreateInterface("org.alljoyn.xmlTest", testIntf);
     EXPECT_EQ(status, ER_OK);
+    ASSERT_TRUE(testIntf != NULL);
 
     testIntf->AddAnnotation("org.freedesktop.DBus.Method.MyAnnotation", "someValue");
 
@@ -471,7 +480,7 @@ TEST_F(InterfaceTest, AnnotationXMLTest) {
     ASSERT_TRUE(iface != NULL);
 
     const InterfaceDescription::Member* deprecatedMem = iface->GetMember("Deprecated");
-    EXPECT_TRUE(deprecatedMem != NULL);
+    ASSERT_TRUE(deprecatedMem != NULL);
 
     //ASSERT_EQ(deprecatedMem->annotation, MEMBER_ANNOTATE_DEPRECATED);
     qcc::String val;
@@ -479,7 +488,7 @@ TEST_F(InterfaceTest, AnnotationXMLTest) {
     EXPECT_STREQ("true", val.c_str());
 
     const InterfaceDescription::Member* noreplyMem = iface->GetMember("NoReply");
-    EXPECT_TRUE(noreplyMem != NULL);
+    ASSERT_TRUE(noreplyMem != NULL);
 
     //ASSERT_EQ(noreplyMem->annotation, MEMBER_ANNOTATE_NO_REPLY);
     EXPECT_TRUE(noreplyMem->GetAnnotation(org::freedesktop::DBus::AnnotateNoReply, val));
@@ -514,14 +523,14 @@ TEST_F(InterfaceTest, ArgNamesTest) {
     ASSERT_TRUE(iface != NULL);
 
     const InterfaceDescription::Member* member = iface->GetMember("Method0");
-    EXPECT_TRUE(member != NULL);
+    ASSERT_TRUE(member != NULL);
     EXPECT_STREQ("", member->argNames.c_str());
 
     member = iface->GetMember("Method1");
-    EXPECT_TRUE(member != NULL);
+    ASSERT_TRUE(member != NULL);
     EXPECT_STREQ("arg0,", member->argNames.c_str());
 
     member = iface->GetMember("Method2");
-    EXPECT_TRUE(member != NULL);
+    ASSERT_TRUE(member != NULL);
     EXPECT_STREQ(",arg1", member->argNames.c_str());
 }

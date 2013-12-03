@@ -50,18 +50,20 @@ class SvcTestObject : public BusObject {
         /* Add interface1 to the BusObject. */
         const InterfaceDescription* Intf1 = mBus.GetInterface(interface1);
         EXPECT_TRUE(Intf1 != NULL);
-        AddInterface(*Intf1);
-        /* Add interface2 to the BusObject. */
-        const InterfaceDescription* Intf2 = mBus.GetInterface(interface2);
-        EXPECT_TRUE(Intf2 != NULL);
-        AddInterface(*Intf2);
+        if (Intf1 != NULL) {
+            AddInterface(*Intf1);
+            /* Add interface2 to the BusObject. */
+            const InterfaceDescription* Intf2 = mBus.GetInterface(interface2);
+            EXPECT_TRUE(Intf2 != NULL);
+            AddInterface(*Intf2);
 
-        /* Register the method handlers with the object */
-        const MethodEntry methodEntries[] = {
-            { Intf1->GetMember("my_ping"), static_cast<MessageReceiver::MethodHandler>(&SvcTestObject::Ping) },
-        };
-        status = AddMethodHandlers(methodEntries, ArraySize(methodEntries));
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            /* Register the method handlers with the object */
+            const MethodEntry methodEntries[] = {
+                { Intf1->GetMember("my_ping"), static_cast<MessageReceiver::MethodHandler>(&SvcTestObject::Ping) },
+            };
+            status = AddMethodHandlers(methodEntries, ArraySize(methodEntries));
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        }
     }
 
     void ObjectRegistered(void)
@@ -87,19 +89,20 @@ class SvcTestObject : public BusObject {
         QStatus status = ER_OK;
         const InterfaceDescription* Intf2 = bus.GetInterface(interface2);
         EXPECT_TRUE(Intf2 != NULL);
-
-        if (!msg->IsEncrypted() &&  (this->IsSecure() && Intf2->GetSecurityPolicy() != AJ_IFC_SECURITY_OFF)) {
-            status = ER_BUS_MESSAGE_NOT_ENCRYPTED;
-            status = MethodReply(msg, status);
-            EXPECT_EQ(ER_OK, status) << "Actual Status: " << QCC_StatusText(status);
-        } else {
-            get_property_called = true;
-            MsgArg prop("v", new MsgArg("i", prop_val));
-            if (msg->IsEncrypted()) {
-                msgEncrypted = true;
+        if (Intf2 != NULL) {
+            if (!msg->IsEncrypted() &&  (this->IsSecure() && Intf2->GetSecurityPolicy() != AJ_IFC_SECURITY_OFF)) {
+                status = ER_BUS_MESSAGE_NOT_ENCRYPTED;
+                status = MethodReply(msg, status);
+                EXPECT_EQ(ER_OK, status) << "Actual Status: " << QCC_StatusText(status);
+            } else {
+                get_property_called = true;
+                MsgArg prop("v", new MsgArg("i", prop_val));
+                if (msg->IsEncrypted()) {
+                    msgEncrypted = true;
+                }
+                status = MethodReply(msg, &prop, 1);
+                EXPECT_EQ(ER_OK, status) << "Error getting property, Actual Status: " << QCC_StatusText(status);
             }
-            status = MethodReply(msg, &prop, 1);
-            EXPECT_EQ(ER_OK, status) << "Error getting property, Actual Status: " << QCC_StatusText(status);
         }
     }
 
@@ -108,24 +111,25 @@ class SvcTestObject : public BusObject {
         QStatus status = ER_OK;
         const InterfaceDescription* Intf2 = bus.GetInterface(interface2);
         EXPECT_TRUE(Intf2 != NULL);
-
-        if (!msg->IsEncrypted() &&  (this->IsSecure() && Intf2->GetSecurityPolicy() != AJ_IFC_SECURITY_OFF)) {
-            status = ER_BUS_MESSAGE_NOT_ENCRYPTED;
-            status = MethodReply(msg, status);
-            EXPECT_EQ(ER_OK, status) << "Actual Status: " << QCC_StatusText(status);
-        } else {
-            set_property_called = true;
-            int32_t integer = 0;
-            if (msg->IsEncrypted()) {
-                msgEncrypted = true;
+        if (Intf2 != NULL) {
+            if (!msg->IsEncrypted() &&  (this->IsSecure() && Intf2->GetSecurityPolicy() != AJ_IFC_SECURITY_OFF)) {
+                status = ER_BUS_MESSAGE_NOT_ENCRYPTED;
+                status = MethodReply(msg, status);
+                EXPECT_EQ(ER_OK, status) << "Actual Status: " << QCC_StatusText(status);
+            } else {
+                set_property_called = true;
+                int32_t integer = 0;
+                if (msg->IsEncrypted()) {
+                    msgEncrypted = true;
+                }
+                const MsgArg* val = msg->GetArg(2);
+                MsgArg value = *(val->v_variant.val);
+                status = value.Get("i", &integer);
+                EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+                prop_val = integer;
+                status = MethodReply(msg, status);
+                EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
             }
-            const MsgArg* val = msg->GetArg(2);
-            MsgArg value = *(val->v_variant.val);
-            status = value.Get("i", &integer);
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-            prop_val = integer;
-            status = MethodReply(msg, status);
-            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         }
     }
 
@@ -221,12 +225,14 @@ TEST_F(ObjectSecurityTest, Test1) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -245,12 +251,14 @@ TEST_F(ObjectSecurityTest, Test1) {
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf->Activate();
     InterfaceDescription* clienttestIntf2 = NULL;
     status = clientbus.CreateInterface(interface2, clienttestIntf2, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf2 != NULL);
     status = clienttestIntf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf2->Activate();
@@ -312,12 +320,14 @@ TEST_F(ObjectSecurityTest, Test2) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -337,12 +347,14 @@ TEST_F(ObjectSecurityTest, Test2) {
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf->Activate();
     InterfaceDescription* clienttestIntf2 = NULL;
     status = clientbus.CreateInterface(interface2, clienttestIntf2, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf2 != NULL);
     status = clienttestIntf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf2->Activate();
@@ -401,12 +413,14 @@ TEST_F(ObjectSecurityTest, Test3) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -426,12 +440,14 @@ TEST_F(ObjectSecurityTest, Test3) {
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf->Activate();
     InterfaceDescription* clienttestIntf2 = NULL;
     status = clientbus.CreateInterface(interface2, clienttestIntf2, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf2 != NULL);
     status = clienttestIntf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf2->Activate();
@@ -491,12 +507,14 @@ TEST_F(ObjectSecurityTest, Test4) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -516,12 +534,14 @@ TEST_F(ObjectSecurityTest, Test4) {
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf->Activate();
     InterfaceDescription* clienttestIntf2 = NULL;
     status = clientbus.CreateInterface(interface2, clienttestIntf2, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf2 != NULL);
     status = clienttestIntf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf2->Activate();
@@ -581,12 +601,14 @@ TEST_F(ObjectSecurityTest, Test5) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -606,12 +628,14 @@ TEST_F(ObjectSecurityTest, Test5) {
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf->Activate();
     InterfaceDescription* clienttestIntf2 = NULL;
     status = clientbus.CreateInterface(interface2, clienttestIntf2, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf2 != NULL);
     status = clienttestIntf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf2->Activate();
@@ -672,12 +696,14 @@ TEST_F(ObjectSecurityTest, Test6) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -697,12 +723,14 @@ TEST_F(ObjectSecurityTest, Test6) {
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf->Activate();
     InterfaceDescription* clienttestIntf2 = NULL;
     status = clientbus.CreateInterface(interface2, clienttestIntf2, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf2 != NULL);
     status = clienttestIntf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf2->Activate();
@@ -762,12 +790,14 @@ TEST_F(ObjectSecurityTest, Test7) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -839,12 +869,14 @@ TEST_F(ObjectSecurityTest, Test8) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -913,12 +945,14 @@ TEST_F(ObjectSecurityTest, Test9) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -986,12 +1020,14 @@ TEST_F(ObjectSecurityTest, Test10) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* clienttestIntf2 = NULL;
     status = servicebus.CreateInterface(interface2, clienttestIntf2, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf2 != NULL);
     status = clienttestIntf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf2->Activate();
@@ -1060,12 +1096,14 @@ TEST_F(ObjectSecurityTest, Test11) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -1134,12 +1172,14 @@ TEST_F(ObjectSecurityTest, Test12) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -1208,12 +1248,14 @@ TEST_F(ObjectSecurityTest, Test13) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -1287,12 +1329,14 @@ TEST_F(ObjectSecurityTest, Test14) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -1365,12 +1409,14 @@ TEST_F(ObjectSecurityTest, Test15) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -1446,11 +1492,13 @@ TEST_F(ObjectSecurityTest, Test16) {
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
+    ASSERT_TRUE(Intf1 != NULL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -1520,12 +1568,14 @@ TEST_F(ObjectSecurityTest, Test17) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -1595,12 +1645,14 @@ TEST_F(ObjectSecurityTest, Test18) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -1666,12 +1718,14 @@ TEST_F(ObjectSecurityTest, Test19) {
     InterfaceDescription* servicetestIntf = NULL;
     status = servicebus.CreateInterface(interface1, servicetestIntf, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     servicetestIntf->Activate();
     InterfaceDescription* servicetestIntf2 = NULL;
     status = servicebus.CreateInterface(interface2, servicetestIntf2, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(servicetestIntf2 != NULL);
     status = servicetestIntf2->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     servicetestIntf2->Activate();
@@ -1755,6 +1809,7 @@ TEST_F(ObjectSecurityTest, Test20) {
     InterfaceDescription* servicetestIntf = NULL;
     status = servicebus.CreateInterface(interface1, servicetestIntf, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     servicetestIntf->Activate();
@@ -1773,6 +1828,7 @@ TEST_F(ObjectSecurityTest, Test20) {
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddSignal("my_signal", "s", NULL, 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf->Activate();
@@ -1824,6 +1880,7 @@ TEST_F(ObjectSecurityTest, Test21) {
     InterfaceDescription* servicetestIntf = NULL;
     status = servicebus.CreateInterface(interface1, servicetestIntf, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     servicetestIntf->Activate();
@@ -1842,6 +1899,7 @@ TEST_F(ObjectSecurityTest, Test21) {
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddSignal("my_signal", "s", NULL, 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf->Activate();
@@ -1894,6 +1952,7 @@ TEST_F(ObjectSecurityTest, Test22) {
     InterfaceDescription* servicetestIntf = NULL;
     status = servicebus.CreateInterface(interface1, servicetestIntf, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     servicetestIntf->Activate();
@@ -1912,6 +1971,7 @@ TEST_F(ObjectSecurityTest, Test22) {
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddSignal("my_signal", "s", NULL, 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf->Activate();
@@ -1963,6 +2023,7 @@ TEST_F(ObjectSecurityTest, Test23) {
     InterfaceDescription* servicetestIntf = NULL;
     status = servicebus.CreateInterface(interface1, servicetestIntf, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     servicetestIntf->Activate();
@@ -1981,6 +2042,7 @@ TEST_F(ObjectSecurityTest, Test23) {
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddSignal("my_signal", "s", NULL, 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf->Activate();
@@ -2032,6 +2094,7 @@ TEST_F(ObjectSecurityTest, Test24) {
     InterfaceDescription* servicetestIntf = NULL;
     status = servicebus.CreateInterface(interface1, servicetestIntf, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     servicetestIntf->Activate();
@@ -2050,6 +2113,7 @@ TEST_F(ObjectSecurityTest, Test24) {
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddSignal("my_signal", "s", NULL, 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf->Activate();
@@ -2102,6 +2166,7 @@ TEST_F(ObjectSecurityTest, Test25) {
     InterfaceDescription* servicetestIntf = NULL;
     status = servicebus.CreateInterface(interface1, servicetestIntf, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(servicetestIntf != NULL);
     status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     servicetestIntf->Activate();
@@ -2120,6 +2185,7 @@ TEST_F(ObjectSecurityTest, Test25) {
     InterfaceDescription* clienttestIntf = NULL;
     status = clientbus.CreateInterface(interface1, clienttestIntf, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(clienttestIntf != NULL);
     status = clienttestIntf->AddSignal("my_signal", "s", NULL, 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     clienttestIntf->Activate();
@@ -2179,14 +2245,16 @@ class GrandParentTestObject : public BusObject {
         /* Add interface1 to the BusObject. */
         const InterfaceDescription* Intf1 = mBus.GetInterface(grand_parent_interface1);
         EXPECT_TRUE(Intf1 != NULL);
-        AddInterface(*Intf1);
+        if (Intf1 != NULL) {
+            AddInterface(*Intf1);
 
-        /* Register the method handlers with the object */
-        const MethodEntry methodEntries[] = {
-            { Intf1->GetMember("grand_parent_ping"), static_cast<MessageReceiver::MethodHandler>(&GrandParentTestObject::GrandParentPing) },
-        };
-        status = AddMethodHandlers(methodEntries, ArraySize(methodEntries));
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            /* Register the method handlers with the object */
+            const MethodEntry methodEntries[] = {
+                { Intf1->GetMember("grand_parent_ping"), static_cast<MessageReceiver::MethodHandler>(&GrandParentTestObject::GrandParentPing) },
+            };
+            status = AddMethodHandlers(methodEntries, ArraySize(methodEntries));
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        }
     }
 
     void ObjectRegistered(void)
@@ -2229,14 +2297,16 @@ class ParentTestObject : public BusObject {
         /* Add interface1 to the BusObject. */
         const InterfaceDescription* Intf1 = mBus.GetInterface(parent_interface1);
         EXPECT_TRUE(Intf1 != NULL);
-        AddInterface(*Intf1);
+        if (Intf1 != NULL) {
+            AddInterface(*Intf1);
 
-        /* Register the method handlers with the object */
-        const MethodEntry methodEntries[] = {
-            { Intf1->GetMember("parent_ping"), static_cast<MessageReceiver::MethodHandler>(&ParentTestObject::ParentPing) },
-        };
-        status = AddMethodHandlers(methodEntries, ArraySize(methodEntries));
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            /* Register the method handlers with the object */
+            const MethodEntry methodEntries[] = {
+                { Intf1->GetMember("parent_ping"), static_cast<MessageReceiver::MethodHandler>(&ParentTestObject::ParentPing) },
+            };
+            status = AddMethodHandlers(methodEntries, ArraySize(methodEntries));
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        }
     }
 
     void ObjectRegistered(void)
@@ -2278,14 +2348,16 @@ class ChildTestObject : public BusObject {
         /* Add interface1 to the BusObject. */
         const InterfaceDescription* Intf1 = mBus.GetInterface(child_interface1);
         EXPECT_TRUE(Intf1 != NULL);
-        AddInterface(*Intf1);
+        if (Intf1 != NULL) {
+            AddInterface(*Intf1);
 
-        /* Register the method handlers with the object */
-        const MethodEntry methodEntries[] = {
-            { Intf1->GetMember("child_ping"), static_cast<MessageReceiver::MethodHandler>(&ChildTestObject::ChildPing) },
-        };
-        status = AddMethodHandlers(methodEntries, ArraySize(methodEntries));
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            /* Register the method handlers with the object */
+            const MethodEntry methodEntries[] = {
+                { Intf1->GetMember("child_ping"), static_cast<MessageReceiver::MethodHandler>(&ChildTestObject::ChildPing) },
+            };
+            status = AddMethodHandlers(methodEntries, ArraySize(methodEntries));
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        }
     }
 
     void ObjectRegistered(void)
@@ -2330,6 +2402,7 @@ TEST_F(ObjectSecurityTest, Test26) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(grand_parent_interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("grand_parent_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
@@ -2337,6 +2410,7 @@ TEST_F(ObjectSecurityTest, Test26) {
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(parent_interface1, Intf2, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddMethod("parent_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -2344,6 +2418,7 @@ TEST_F(ObjectSecurityTest, Test26) {
     InterfaceDescription* Intf3 = NULL;
     status = servicebus.CreateInterface(child_interface1, Intf3, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf3 != NULL);
     status = Intf3->AddMethod("child_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf3->Activate();
@@ -2456,11 +2531,13 @@ TEST_F(ObjectSecurityTest, Test27) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_OFF);
+    ASSERT_TRUE(Intf2 != NULL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -2546,12 +2623,14 @@ TEST_F(ObjectSecurityTest, Test28) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -2637,12 +2716,14 @@ TEST_F(ObjectSecurityTest, Test29) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -2728,12 +2809,14 @@ TEST_F(ObjectSecurityTest, Test30) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -2818,12 +2901,14 @@ TEST_F(ObjectSecurityTest, Test31) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();
@@ -2908,12 +2993,14 @@ TEST_F(ObjectSecurityTest, Test32) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf1 != NULL);
     status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;
     status = servicebus.CreateInterface(interface2, Intf2, AJ_IFC_SECURITY_INHERIT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(Intf2 != NULL);
     status = Intf2->AddProperty("integer_property", "i", PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf2->Activate();

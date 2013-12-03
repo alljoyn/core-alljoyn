@@ -350,6 +350,7 @@ TEST_F(PerfTest, Properties_SettingNoSuchProperty) {
     size_t numArgs = ArraySize(inArgs);
     MsgArg::Set(inArgs, numArgs, "ssv", testclient.getClientValuesInterfaceName(), "prop_signall", &newName);
     const InterfaceDescription* propIface = test_msgBus->GetInterface(ajn::org::freedesktop::DBus::Properties::InterfaceName);
+    ASSERT_TRUE(propIface != NULL);
 
     status = remoteObj.MethodCall(*(propIface->GetMember("Set")), inArgs, numArgs, reply, 5000, 0);
     EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -374,6 +375,7 @@ TEST_F(PerfTest, Properties_SettingReadOnlyProperty) {
     size_t numArgs = ArraySize(inArgs);
     MsgArg::Set(inArgs, numArgs, "ssv", testclient.getClientValuesInterfaceName(), "ro_str", &newName);
     const InterfaceDescription* propIface = test_msgBus->GetInterface(ajn::org::freedesktop::DBus::Properties::InterfaceName);
+    ASSERT_TRUE(propIface != NULL);
 
     status = remoteObj.MethodCall(*(propIface->GetMember("Set")), inArgs, numArgs, reply, 5000, 0);
     EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -445,7 +447,8 @@ TEST_F(PerfTest, BusObject_ALLJOYN_328_BusObject_destruction)
     qcc::String clientArgs = testclient.getClientArgs();
 
     /* Create a Bus Attachment Object */
-    BusAttachment*serviceBus = new BusAttachment("ALLJOYN-328", true);
+    BusAttachment* serviceBus = new BusAttachment("ALLJOYN-328", true);
+    ASSERT_TRUE(serviceBus != NULL);
     serviceBus->Start();
 
     /* Dynamically create a BusObject and register it with the Bus */
@@ -658,6 +661,7 @@ TEST_F(PerfTest, JoinSession_BusNotConnected_Fail)
 
 
     client_msgBus = new BusAttachment("clientSetup", true);
+    ASSERT_TRUE(client_msgBus != NULL);
     client_msgBus->Start();
 
     /* Join session failed because not connected yet*/
