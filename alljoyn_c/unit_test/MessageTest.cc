@@ -78,6 +78,7 @@ class MessageTest : public testing::Test {
         alljoyn_interfacedescription testIntf = NULL;
         status = alljoyn_busattachment_createinterface(servicebus, INTERFACE_NAME, &testIntf);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_TRUE(testIntf != NULL);
         status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         alljoyn_interfacedescription_activate(testIntf);

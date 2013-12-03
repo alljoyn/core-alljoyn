@@ -133,68 +133,71 @@ class SessionListenerTest : public testing::Test {
         alljoyn_interfacedescription testIntf = NULL;
         status = alljoyn_busattachment_createinterface(servicebus, INTERFACE_NAME, &testIntf);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = alljoyn_interfacedescription_addmethod(testIntf, "ping", "s", "s", "in,out", 0, 0);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        alljoyn_interfacedescription_activate(testIntf);
+        EXPECT_TRUE(testIntf != NULL);
+        if (testIntf != NULL) {
+            status = alljoyn_interfacedescription_addmethod(testIntf, "ping", "s", "s", "in,out", 0, 0);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            alljoyn_interfacedescription_activate(testIntf);
 
-        testObj = alljoyn_busobject_create(OBJECT_PATH, QCC_FALSE, NULL, NULL);
+            testObj = alljoyn_busobject_create(OBJECT_PATH, QCC_FALSE, NULL, NULL);
 
-        status = alljoyn_busobject_addinterface(testObj, testIntf);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            status = alljoyn_busobject_addinterface(testObj, testIntf);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-        /* register method handlers */
-        alljoyn_interfacedescription_member ping_member;
-        EXPECT_TRUE(alljoyn_interfacedescription_getmember(testIntf, "ping", &ping_member));
+            /* register method handlers */
+            alljoyn_interfacedescription_member ping_member;
+            EXPECT_TRUE(alljoyn_interfacedescription_getmember(testIntf, "ping", &ping_member));
 
-        status = alljoyn_busobject_addmethodhandler(testObj, ping_member, &ping_method, NULL);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            status = alljoyn_busobject_addmethodhandler(testObj, ping_member, &ping_method, NULL);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-        /* register the bus object */
-        status = alljoyn_busattachment_registerbusobject(servicebus, testObj);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            /* register the bus object */
+            status = alljoyn_busattachment_registerbusobject(servicebus, testObj);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-        /* Create session port listener */
-        alljoyn_sessionportlistener_callbacks spl_cbs = {
-            &accept_session_joiner, /* accept session joiner CB */
-            &session_joined        /* session joined CB */
-        };
-        sessionPortListener = alljoyn_sessionportlistener_create(&spl_cbs, NULL);
+            /* Create session port listener */
+            alljoyn_sessionportlistener_callbacks spl_cbs = {
+                &accept_session_joiner, /* accept session joiner CB */
+                &session_joined        /* session joined CB */
+            };
+            sessionPortListener = alljoyn_sessionportlistener_create(&spl_cbs, NULL);
 
-        /* Bind SessionPort session opts specify this is a multipoint session */
-        opts = alljoyn_sessionopts_create(ALLJOYN_TRAFFIC_TYPE_MESSAGES, QCC_TRUE, ALLJOYN_PROXIMITY_ANY, ALLJOYN_TRANSPORT_ANY);
-        alljoyn_sessionport sp = SESSION_PORT;
-        status = alljoyn_busattachment_bindsessionport(servicebus, &sp, opts, sessionPortListener);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            /* Bind SessionPort session opts specify this is a multipoint session */
+            opts = alljoyn_sessionopts_create(ALLJOYN_TRAFFIC_TYPE_MESSAGES, QCC_TRUE, ALLJOYN_PROXIMITY_ANY, ALLJOYN_TRANSPORT_ANY);
+            alljoyn_sessionport sp = SESSION_PORT;
+            status = alljoyn_busattachment_bindsessionport(servicebus, &sp, opts, sessionPortListener);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-        /* request name from the bus */
-        int flag = DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE;
-        EXPECT_EQ(ER_OK, alljoyn_busattachment_requestname(servicebus, OBJECT_NAME, flag));
-        EXPECT_EQ(ER_OK, alljoyn_busattachment_advertisename(servicebus, OBJECT_NAME, alljoyn_sessionopts_get_transports(opts)));
+            /* request name from the bus */
+            int flag = DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE;
+            EXPECT_EQ(ER_OK, alljoyn_busattachment_requestname(servicebus, OBJECT_NAME, flag));
+            EXPECT_EQ(ER_OK, alljoyn_busattachment_advertisename(servicebus, OBJECT_NAME, alljoyn_sessionopts_get_transports(opts)));
 
-        clientbus = alljoyn_busattachment_create("SessionListenerTestClient", QCC_FALSE);
-        EXPECT_EQ(ER_OK, alljoyn_busattachment_start(clientbus));
-        EXPECT_EQ(ER_OK, alljoyn_busattachment_connect(clientbus, ajn::getConnectArg().c_str()));
+            clientbus = alljoyn_busattachment_create("SessionListenerTestClient", QCC_FALSE);
+            EXPECT_EQ(ER_OK, alljoyn_busattachment_start(clientbus));
+            EXPECT_EQ(ER_OK, alljoyn_busattachment_connect(clientbus, ajn::getConnectArg().c_str()));
 
-        /* register bus listener */
-        alljoyn_buslistener_callbacks buslistenerCbs = {
-            NULL, //&listener_registered,
-            NULL, //&listener_unregistered,
-            &found_advertised_name,
-            &lost_advertised_name,
-            NULL, //&name_owner_changed,
-            NULL, //&bus_stopping,
-            NULL, //&bus_disconnected,
-            NULL, //&bus_prop_changed
-        };
-        buslistener = alljoyn_buslistener_create(&buslistenerCbs, NULL);
-        alljoyn_busattachment_registerbuslistener(clientbus, buslistener);
+            /* register bus listener */
+            alljoyn_buslistener_callbacks buslistenerCbs = {
+                NULL, //&listener_registered,
+                NULL, //&listener_unregistered,
+                &found_advertised_name,
+                &lost_advertised_name,
+                NULL, //&name_owner_changed,
+                NULL, //&bus_stopping,
+                NULL, //&bus_disconnected,
+                NULL, //&bus_prop_changed
+            };
+            buslistener = alljoyn_buslistener_create(&buslistenerCbs, NULL);
+            alljoyn_busattachment_registerbuslistener(clientbus, buslistener);
 
-        alljoyn_sessionlistener_callbacks sessionlisternerCbs = {
-            &session_lost,
-            &session_member_added,
-            &session_member_removed
-        };
-        sessionListener = alljoyn_sessionlistener_create(&sessionlisternerCbs, NULL);
+            alljoyn_sessionlistener_callbacks sessionlisternerCbs = {
+                &session_lost,
+                &session_member_added,
+                &session_member_removed
+            };
+            sessionListener = alljoyn_sessionlistener_create(&sessionlisternerCbs, NULL);
+        }
     }
 
     virtual void TearDown() {

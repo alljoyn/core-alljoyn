@@ -108,9 +108,10 @@ class KeyStoreListenerTest : public testing::Test {
         status = alljoyn_busattachment_connect(servicebus, ajn::getConnectArg().c_str());
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-        alljoyn_interfacedescription service_intf;
+        alljoyn_interfacedescription service_intf = NULL;
         status = alljoyn_busattachment_createinterface_secure(servicebus, INTERFACE_NAME, &service_intf, AJ_IFC_SECURITY_REQUIRED);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_TRUE(service_intf != NULL);
         status = alljoyn_interfacedescription_addmember(service_intf, ALLJOYN_MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         alljoyn_interfacedescription_activate(service_intf);

@@ -72,6 +72,7 @@ TEST(SignalsTest, registersignalhandler_basic) {
 
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.signalstest", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     if (status == ER_OK) {
         //alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "my_signal", "a{ys}", NULL, NULL, 0);
         status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "testSignal", "s", NULL, "newName", 0);
@@ -150,6 +151,7 @@ TEST(SignalsTest, registersignalhandler_multiple_signals) {
 
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.signalstest", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     if (status == ER_OK) {
         //alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "my_signal", "a{ys}", NULL, NULL, 0);
         status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "testSignal", "s", NULL, "newName", 0);
@@ -234,6 +236,7 @@ TEST(SignalsTest, unregistersignalhandler) {
 
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.signalstest", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     if (status == ER_OK) {
         //alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "my_signal", "a{ys}", NULL, NULL, 0);
         status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "testSignal", "s", NULL, "newName", 0);
@@ -338,6 +341,7 @@ TEST(SignalsTest, register_unregister_signalhandler_with_sourcePath) {
 
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.signalstest", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     if (status == ER_OK) {
         //alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "my_signal", "a{ys}", NULL, NULL, 0);
         status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "testSignal", "s", NULL, "newName", 0);
@@ -516,6 +520,7 @@ TEST(SignalsTest, unregisterallhandlers) {
 
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.signalstest", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     if (status == ER_OK) {
         //alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "my_signal", "a{ys}", NULL, NULL, 0);
         status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "testSignal", "s", NULL, "newName", 0);
@@ -613,6 +618,7 @@ TEST(SignalsTest, register_unregister_sessionlesssignals) {
 
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.signalstest", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     if (status == ER_OK) {
         status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "testSignal", "s", NULL, "newName", 0);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);

@@ -165,6 +165,7 @@ class BusObjectTest : public testing::Test {
         alljoyn_interfacedescription testIntf = NULL;
         status = alljoyn_busattachment_createinterface(servicebus, INTERFACE_NAME, &testIntf);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_TRUE(testIntf != NULL);
         status = alljoyn_interfacedescription_addproperty(testIntf, "prop1", "s", ALLJOYN_PROP_ACCESS_READ);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = alljoyn_interfacedescription_addproperty(testIntf, "prop2", "i", ALLJOYN_PROP_ACCESS_WRITE);
@@ -390,6 +391,7 @@ TEST_F(BusObjectTest, property_changed_signal)
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(servicebus, INTERFACE_NAME, &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     status = alljoyn_interfacedescription_addproperty(testIntf, "prop2", "i", ALLJOYN_PROP_ACCESS_RW);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = alljoyn_interfacedescription_addpropertyannotation(testIntf, "prop2", "org.freedesktop.DBus.Property.EmitsChangedSignal", "invalidates");
@@ -528,6 +530,7 @@ TEST_F(BusObjectTest, addmethodhandler)
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(servicebus, INTERFACE_NAME, &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     status = alljoyn_interfacedescription_addmethod(testIntf, "ping", "s", "s", "in,out", 0, 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = alljoyn_interfacedescription_addmethod(testIntf, "chirp", "s", "", "chirp", 0, 0);
@@ -644,6 +647,7 @@ TEST_F(BusObjectTest, addmethodhandlers)
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(servicebus, INTERFACE_NAME, &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     status = alljoyn_interfacedescription_addmethod(testIntf, "ping", "s", "s", "in,out", 0, 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = alljoyn_interfacedescription_addmethod(testIntf, "chirp", "s", "", "chirp", 0, 0);
@@ -762,6 +766,7 @@ TEST_F(BusObjectTest, addmethodhandler_addmethodhandlers_mix)
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(servicebus, INTERFACE_NAME, &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     status = alljoyn_interfacedescription_addmethod(testIntf, "ping", "s", "s", "in,out", 0, 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = alljoyn_interfacedescription_addmethod(testIntf, "chirp", "s", "", "chirp", 0, 0);

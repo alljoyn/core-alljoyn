@@ -239,6 +239,7 @@ TEST_F(ObjectSecurityTest, insecure_interface_sercure_object) {
     alljoyn_interfacedescription service_intf;
     status = alljoyn_busattachment_createinterface(servicebus, INTERFACE_NAME, &service_intf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(service_intf != NULL);
     status = alljoyn_interfacedescription_addmember(service_intf, ALLJOYN_MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     alljoyn_interfacedescription_activate(service_intf);
@@ -307,6 +308,7 @@ TEST_F(ObjectSecurityTest, interface_security_off_sercure_object) {
     alljoyn_interfacedescription service_intf;
     status = alljoyn_busattachment_createinterface_secure(servicebus, INTERFACE_NAME, &service_intf, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(service_intf != NULL);
     status = alljoyn_interfacedescription_addmember(service_intf, ALLJOYN_MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     alljoyn_interfacedescription_activate(service_intf);
