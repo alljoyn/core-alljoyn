@@ -82,7 +82,7 @@ class AuthListenerTest : public testing::Test {
         status = alljoyn_busattachment_connect(servicebus, ajn::getConnectArg().c_str());
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-        alljoyn_interfacedescription service_intf;
+        alljoyn_interfacedescription service_intf = NULL;
         status = alljoyn_busattachment_createinterface_secure(servicebus, INTERFACE_NAME, &service_intf, AJ_IFC_SECURITY_REQUIRED);
         ASSERT_TRUE(service_intf != NULL);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);

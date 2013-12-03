@@ -424,7 +424,9 @@ void signal_handler(const alljoyn_interfacedescription_member* member, const cha
         }
 
         intf = alljoyn_busattachment_getinterface(g_msgBus, alljoyn_message_getinterface(msg));
-        foundMember = alljoyn_interfacedescription_getmember(intf, "my_signal", &my_signal_member);
+        if (intf != NULL) {
+            foundMember = alljoyn_interfacedescription_getmember(intf, "my_signal", &my_signal_member);
+        }
 
         if (foundMember) {
             status = alljoyn_busobject_signal(g_testObj, alljoyn_message_getsender(msg), alljoyn_message_getsessionid(msg), my_signal_member, arg, 1, 0, 0, msg);
@@ -432,7 +434,7 @@ void signal_handler(const alljoyn_interfacedescription_member* member, const cha
                 printf("Failed to send Signal because of %s. \n", QCC_StatusText(status));
             }
         } else {
-            printf("Not able to send signal as could not find signal membr. \n");
+            printf("Not able to send signal as could not find signal member. \n");
         }
 
         /* Destroy the msgarg */

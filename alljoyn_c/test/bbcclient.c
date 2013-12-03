@@ -291,7 +291,7 @@ void ping_response_handler(alljoyn_message message, void* context)
         char errormessage[100];
         size_t size = 100;
         ret_string = alljoyn_message_geterrorname(message, errormessage, &size);
-        printf("%s.%s returned error %s: %s\n", g_wellKnownName, interface_name, ret_string, errormessage);
+        printf("%s.%s returned error %s: %s\n", g_wellKnownName, interface_name, (ret_string != NULL) ? ret_string : "NULL", errormessage);
     }
 }
 
@@ -728,7 +728,7 @@ int main(int argc, char** argv)
                         char errorMessage[100];
                         size_t size = 100;
                         const char* errName = alljoyn_message_geterrorname(reply, errorMessage, &size);
-                        printf("MethodCall on %s.%s reply was error %s %s\n", INTERFACE_NAME, ((pingDelay == 0) ? "my_ping" : "delayed_ping"), errName, errorMessage);
+                        printf("MethodCall on %s.%s reply was error %s %s\n", INTERFACE_NAME, ((pingDelay == 0) ? "my_ping" : "delayed_ping"), (errName != NULL) ? errName : "NULL", errorMessage);
                         status = ER_OK;
                     } else {
                         printf("MethodCall on %s.%s failed due to %s. \n", INTERFACE_NAME, ((pingDelay == 0) ? "my_ping" : "delayed_ping"), QCC_StatusText(status));
