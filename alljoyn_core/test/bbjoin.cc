@@ -297,66 +297,66 @@ int main(int argc, char** argv)
 
     /* Create message bus */
     g_msgBus = new BusAttachment("bbjoin", true, g_concurrent_threads);
-    status = g_msgBus->Start();
-    if (ER_OK != status) {
-        QCC_LogError(status, ("BusAttachment::Start failed"));
-        exit(-1);
-    }
-
-    /* Connect to the daemon */
-    if (clientArgs.empty()) {
-        status = g_msgBus->Connect();
-    } else {
-        status = g_msgBus->Connect(clientArgs.c_str());
-    }
-    if (ER_OK != status) {
-        QCC_LogError(status, ("BusAttachment::Connect failed"));
-        exit(-1);
-    }
-
-    MyBusListener myBusListener;
-    g_msgBus->RegisterBusListener(myBusListener);
-
-    /* Register local objects and connect to the daemon */
-    if (ER_OK == status) {
-
-        /* Create session opts */
-        SessionOpts optsmp(SessionOpts::TRAFFIC_MESSAGES, g_useMultipoint,  SessionOpts::PROXIMITY_ANY, transportOpts);
-
-        /* Create a session for incoming client connections */
-        status = g_msgBus->BindSessionPort(SESSION_PORT, optsmp, myBusListener);
-        if (status != ER_OK) {
-            QCC_LogError(status, ("BindSessionPort failed"));
-            exit(-1);
-        }
-
-        /* Request a well-known name */
-        QStatus status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
-        if (status != ER_OK) {
-            QCC_LogError(status, ("RequestName(%s) failed. ", g_wellKnownName.c_str()));
-            exit(-1);
-        }
-
-        /* Begin Advertising the well-known name */
-        status = g_msgBus->AdvertiseName(g_wellKnownName.c_str(), transportOpts);
+    if (g_msgBus != NULL) {
+        status = g_msgBus->Start();
         if (ER_OK != status) {
-            QCC_LogError(status, ("Advertise name(%s) failed ", g_wellKnownName.c_str()));
+            QCC_LogError(status, ("BusAttachment::Start failed"));
             exit(-1);
         }
 
-        status = g_msgBus->FindAdvertisedNameByTransport(g_findPrefix ? g_findPrefix : "com", transportOpts);
-        if (status != ER_OK) {
-            QCC_LogError(status, ("FindAdvertisedName failed "));
+        /* Connect to the daemon */
+        if (clientArgs.empty()) {
+            status = g_msgBus->Connect();
+        } else {
+            status = g_msgBus->Connect(clientArgs.c_str());
+        }
+        if (ER_OK != status) {
+            QCC_LogError(status, ("BusAttachment::Connect failed"));
             exit(-1);
         }
-    }
 
-    while ((g_interrupt == false) || (g_useCount > 0)) {
-        qcc::Sleep(100);
-    }
+        MyBusListener myBusListener;
+        g_msgBus->RegisterBusListener(myBusListener);
 
-    /* Clean up msg bus */
-    if (g_msgBus) {
+        /* Register local objects and connect to the daemon */
+        if (ER_OK == status) {
+
+            /* Create session opts */
+            SessionOpts optsmp(SessionOpts::TRAFFIC_MESSAGES, g_useMultipoint,  SessionOpts::PROXIMITY_ANY, transportOpts);
+
+            /* Create a session for incoming client connections */
+            status = g_msgBus->BindSessionPort(SESSION_PORT, optsmp, myBusListener);
+            if (status != ER_OK) {
+                QCC_LogError(status, ("BindSessionPort failed"));
+                exit(-1);
+            }
+
+            /* Request a well-known name */
+            QStatus status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
+            if (status != ER_OK) {
+                QCC_LogError(status, ("RequestName(%s) failed. ", g_wellKnownName.c_str()));
+                exit(-1);
+            }
+
+            /* Begin Advertising the well-known name */
+            status = g_msgBus->AdvertiseName(g_wellKnownName.c_str(), transportOpts);
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Advertise name(%s) failed ", g_wellKnownName.c_str()));
+                exit(-1);
+            }
+
+            status = g_msgBus->FindAdvertisedNameByTransport(g_findPrefix ? g_findPrefix : "com", transportOpts);
+            if (status != ER_OK) {
+                QCC_LogError(status, ("FindAdvertisedName failed "));
+                exit(-1);
+            }
+        }
+
+        while ((g_interrupt == false) || (g_useCount > 0)) {
+            qcc::Sleep(100);
+        }
+
+        /* Clean up msg bus */
         g_msgBus->Stop();
         g_msgBus->Join();
         delete g_msgBus;
