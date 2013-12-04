@@ -33,6 +33,7 @@
 #define FALLBEHIND_WARNING_MS   500
 
 #define TIMER_IS_DEAD_ALERTCODE  1
+#define FORCEREMOVEALARM_ALERTCODE  2
 
 using namespace std;
 using namespace qcc;
@@ -253,8 +254,7 @@ QStatus Timer::AddAlarm(const Alarm& alarm)
             /* Reset alert status */
             if (ER_ALERTED_THREAD == status1) {
                 thread->GetStopEvent().ResetEvent();
-                if (thread->GetAlertCode() == TIMER_IS_DEAD_ALERTCODE) {
-                    thread->ResetAlertCode();
+                if (thread->GetAlertCode() == FORCEREMOVEALARM_ALERTCODE) {
                     lock.Unlock(MUTEX_CONTEXT);
                     return ER_TIMER_EXITING;
                 }
@@ -392,7 +392,7 @@ bool Timer::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
                 while (isRunning && curAlarm && (*curAlarm == alarm)) {
-                    timerThreads[i]->Alert(TIMER_IS_DEAD_ALERTCODE);
+                    timerThreads[i]->Alert(FORCEREMOVEALARM_ALERTCODE);
                     lock.Unlock();
                     qcc::Sleep(2);
                     lock.Lock();
@@ -789,6 +789,14 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                         timer->reentrancyLock.Unlock();
                     }
                     timer->lock.Lock();
+                    /* If ForceRemoveAlarm has been called for this alarm, we need to reset the alert code.
+                     * Note that this must be atomic with setting the currentAlarm to NULL.
+                     */
+                    Thread* thread = Thread::GetThread();
+                    if (thread->GetAlertCode() == FORCEREMOVEALARM_ALERTCODE) {
+                        thread->ResetAlertCode();
+                    }
+
                     currentAlarm = NULL;
 
                     if (0 != top->periodMs) {
