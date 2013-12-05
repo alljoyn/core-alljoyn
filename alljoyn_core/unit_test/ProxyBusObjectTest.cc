@@ -77,20 +77,23 @@ class ProxyBusObjectTest : public testing::Test {
         InterfaceDescription* testIntf = NULL;
         status = servicebus.CreateInterface(INTERFACE_NAME, testIntf, false);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = testIntf->AddMember(MESSAGE_METHOD_CALL, "chirp", "s", "", "chirp", 0);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        testIntf->Activate();
-
+        EXPECT_TRUE(testIntf != NULL);
+        if (testIntf != NULL) {
+            status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            status = testIntf->AddMember(MESSAGE_METHOD_CALL, "chirp", "s", "", "chirp", 0);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            testIntf->Activate();
+        }
         servicebus.RegisterBusListener(buslistener);
 
         ProxyBusObjectTestBusObject testObj(OBJECT_PATH);
 
         const InterfaceDescription* exampleIntf = servicebus.GetInterface(INTERFACE_NAME);
-        ASSERT_TRUE(exampleIntf);
-
-        testObj.SetUp(*exampleIntf);
+        EXPECT_TRUE(exampleIntf);
+        if (exampleIntf != NULL) {
+            testObj.SetUp(*exampleIntf);
+        }
 
         status = servicebus.RegisterBusObject(testObj);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -454,6 +457,7 @@ TEST_F(ProxyBusObjectTest, AddPropertyInterfaceError) {
 
     InterfaceDescription* testIntf = NULL;
     bus.CreateInterface("org.alljoyn.test.ProxyBusObjectTest", testIntf, false);
+    ASSERT_TRUE(testIntf != NULL);
     status = testIntf->AddMember(MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = testIntf->AddProperty("stringProp", "s", PROP_ACCESS_RW);

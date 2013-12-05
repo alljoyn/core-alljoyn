@@ -659,21 +659,16 @@ TEST_F(PerfTest, JoinSession_BusNotConnected_Fail)
     QStatus status = ER_OK;
     BusAttachment* client_msgBus = NULL;
 
-
     client_msgBus = new BusAttachment("clientSetup", true);
     ASSERT_TRUE(client_msgBus != NULL);
     client_msgBus->Start();
-
     /* Join session failed because not connected yet*/
     SessionId sessionid;
     SessionOpts qos(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
     status = client_msgBus->JoinSession("org.alljoyn.invalid_services", 550, NULL, sessionid, qos);
     ASSERT_EQ(ER_BUS_NOT_CONNECTED, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    if (client_msgBus) {
-        delete client_msgBus;
-    }
-
+    delete client_msgBus;
 }
 TEST_F(PerfTest, JoinSession_InvalidPort_Fail)
 {

@@ -1491,8 +1491,8 @@ TEST_F(ObjectSecurityTest, Test16) {
     InterfaceDescription* Intf1 = NULL;
     status = servicebus.CreateInterface(interface1, Intf1, AJ_IFC_SECURITY_OFF);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     ASSERT_TRUE(Intf1 != NULL);
+    status = Intf1->AddMethod("my_ping", "s", "s", "inStr,outStr", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     Intf1->Activate();
     InterfaceDescription* Intf2 = NULL;

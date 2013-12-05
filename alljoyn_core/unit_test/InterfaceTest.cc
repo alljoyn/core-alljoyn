@@ -115,6 +115,7 @@ TEST_F(InterfaceTest, FAIL_AddInterfacestoBus_AfterActivation_NoActivate) {
     /* Add org.alljoyn.alljoyn_test interface */
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName1(), testIntf);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
     testIntf->Activate();
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName1(), testIntf);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
