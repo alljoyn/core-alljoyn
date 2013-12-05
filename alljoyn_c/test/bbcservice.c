@@ -452,28 +452,30 @@ void signal_handler(const alljoyn_interfacedescription_member* member, const cha
         arg = alljoyn_msgarg_create_and_set("s", "Ping back");
 
         intf = alljoyn_busattachment_getinterface(g_msgBus, alljoyn_message_getinterface(msg));
-        foundMember = alljoyn_interfacedescription_getmember(intf, "my_ping", &my_ping_member);
-        if (foundMember) {
+        if (intf != NULL) {
+            foundMember = alljoyn_interfacedescription_getmember(intf, "my_ping", &my_ping_member);
+            if (foundMember) {
 
-            alljoyn_message reply = NULL;
-            alljoyn_proxybusobject remoteObj = NULL;
+                alljoyn_message reply = NULL;
+                alljoyn_proxybusobject remoteObj = NULL;
 
-            reply = alljoyn_message_create(g_msgBus);
+                reply = alljoyn_message_create(g_msgBus);
 
-            remoteObj = alljoyn_proxybusobject_create(g_msgBus, alljoyn_message_getsender(msg), OBJECT_PATH, alljoyn_message_getsessionid(msg));
-            alljoyn_proxybusobject_addinterface(remoteObj, intf);
-            /*
-             * Make a fire-and-forget method call. If the signal was encrypted encrypt the ping
-             */
-            status = alljoyn_proxybusobject_methodcall(remoteObj, INTERFACE_NAME, "my_ping", arg, 1, reply, 5000, alljoyn_message_isencrypted(msg) ? ALLJOYN_MESSAGE_FLAG_ENCRYPTED : 0);
-            if (status != ER_OK) {
-                printf("MethodCall on %s.%s failed due to %s. \n", INTERFACE_NAME, "my_ping", QCC_StatusText(status));
+                remoteObj = alljoyn_proxybusobject_create(g_msgBus, alljoyn_message_getsender(msg), OBJECT_PATH, alljoyn_message_getsessionid(msg));
+                alljoyn_proxybusobject_addinterface(remoteObj, intf);
+                /*
+                 * Make a fire-and-forget method call. If the signal was encrypted encrypt the ping
+                 */
+                status = alljoyn_proxybusobject_methodcall(remoteObj, INTERFACE_NAME, "my_ping", arg, 1, reply, 5000, alljoyn_message_isencrypted(msg) ? ALLJOYN_MESSAGE_FLAG_ENCRYPTED : 0);
+                if (status != ER_OK) {
+                    printf("MethodCall on %s.%s failed due to %s. \n", INTERFACE_NAME, "my_ping", QCC_StatusText(status));
+                }
+
+                /* Destroy the message reply. */
+                alljoyn_message_destroy(reply);
+                /* Destroy the proxy bus object. */
+                alljoyn_proxybusobject_destroy(remoteObj);
             }
-
-            /* Destroy the message reply. */
-            alljoyn_message_destroy(reply);
-            /* Destroy the proxy bus object. */
-            alljoyn_proxybusobject_destroy(remoteObj);
         }
         /* Destroy the msgarg */
         alljoyn_msgarg_destroy(arg);
