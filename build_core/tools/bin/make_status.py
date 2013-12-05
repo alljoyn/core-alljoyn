@@ -175,13 +175,14 @@ def writeCPP0xHeaders():
     
     if None != CPP0xHeaderOut:
         CPP0xHeaderOut.write("""
-/******************************************************************************
+/**
  * @file
  * This file contains an enumerated list values that QStatus can return
  *
  * Note: This file is generated during the make process.
- *
- *
+ */
+
+/******************************************************************************
  * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
@@ -229,14 +230,16 @@ const char* QCC_%sStatusText(QStatus status)""" % prefix)
 """)
 
     if None != CommentCodeOut:
-	CommentCodeOut.write("""
-/******************************************************************************
+        CommentCodeOut.write("""
+/**
  * @file
- * This file maps a QStatus code to the detailed comment informaion
- * This file maps a QStatus code to the detailed comment informaion
+ * This file maps a QStatus code to the detailed comment information
+ *
  *
  * Note: This file is generated during the make process.
- *
+ */
+
+/******************************************************************************
  * Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
@@ -382,12 +385,13 @@ def writeHeaders():
             depOut.write(" \\\n %s" % arg)
     if None != headerOut:
         headerOut.write("""
-/******************************************************************************
+/**
  * @file
  * This file contains an enumerated list values that QStatus can return
  *
  * Note: This file is generated during the make process.
- *
+ */
+/******************************************************************************
  * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
