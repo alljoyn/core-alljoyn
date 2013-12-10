@@ -37,7 +37,7 @@ namespace AllJoynUnity
 		// On iOS plugins are statically linked so __Internal must be used as the library name
 		private const string DLL_IMPORT_TARGET = "__Internal";
 #else
-		private const string DLL_IMPORT_TARGET = "alljoyn_c";
+		private const string DLL_IMPORT_TARGET = "alljoyn_unity_native";
 #endif
 
 		private const string UNITY_VERSION = "0.0.3";

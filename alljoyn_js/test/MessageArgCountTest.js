@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -29,7 +29,7 @@ AsyncTestCase("MessageArgCountTest", {
             bus.connect(otherBusCreate);
         };
         var otherBusCreate = function(err) {
-            assertFalsy(err);            
+            assertFalsy(err);
             otherBus = new org.alljoyn.bus.BusAttachment();
             otherBus.create(false, otherBusConnect);
         };
@@ -54,14 +54,17 @@ AsyncTestCase("MessageArgCountTest", {
     testReplyError0: function(queue) {
         queue.call(function(callbacks) {
             var registerBusObject = function(err) {
-                bus.registerBusObject("/testobject", {
-                    "org.alljoyn.bus.samples.simple.SimpleInterface": {
-                        Ping: function(context, inStr) { 
-                            assertError(function() { context.replyError(); }, "TypeError");
-                            context.replyError(1);
-                        }
-                    }
-                }, callbacks.add(getProxyObj));
+                bus.registerBusObject("/testobject",
+                                      {
+                                          "org.alljoyn.bus.samples.simple.SimpleInterface": {
+                                              Ping: function(context, inStr) {
+                                                  assertError(function() { context.replyError(); }, "TypeError");
+                                                  context.replyError(1);
+                                              }
+                                          }
+                                      },
+                                      false,
+                                      callbacks.add(getProxyObj));
             };
             var getProxyObj = function(err) {
                 assertFalsy(err);
@@ -81,13 +84,16 @@ AsyncTestCase("MessageArgCountTest", {
     testReplyError1: function(queue) {
         queue.call(function(callbacks) {
             var registerBusObject = function(err) {
-                bus.registerBusObject("/testobject", {
-                    "org.alljoyn.bus.samples.simple.SimpleInterface": {
-                        Ping: function(context, inStr) { 
-                            assertNoError(function() { context.replyError(1); });
-                        }
-                    }
-                }, callbacks.add(getProxyObj));
+                bus.registerBusObject("/testobject",
+                                      {
+                                          "org.alljoyn.bus.samples.simple.SimpleInterface": {
+                                              Ping: function(context, inStr) {
+                                                  assertNoError(function() { context.replyError(1); });
+                                              }
+                                          }
+                                      },
+                                      false,
+                                      callbacks.add(getProxyObj));
             };
             var getProxyObj = function(err) {
                 assertFalsy(err);
@@ -107,13 +113,16 @@ AsyncTestCase("MessageArgCountTest", {
     testReplyError2: function(queue) {
         queue.call(function(callbacks) {
             var registerBusObject = function(err) {
-                bus.registerBusObject("/testobject", {
-                    "org.alljoyn.bus.samples.simple.SimpleInterface": {
-                        Ping: function(context, inStr) { 
-                            assertNoError(function() { context.replyError("name", "message"); });
-                        }
-                    }
-                }, callbacks.add(getProxyObj));
+                bus.registerBusObject("/testobject",
+                                      {
+                                          "org.alljoyn.bus.samples.simple.SimpleInterface": {
+                                              Ping: function(context, inStr) {
+                                                  assertNoError(function() { context.replyError("name", "message"); });
+                                              }
+                                          }
+                                      },
+                                      false,
+                                      callbacks.add(getProxyObj));
             };
             var getProxyObj = function(err) {
                 assertFalsy(err);
@@ -133,13 +142,16 @@ AsyncTestCase("MessageArgCountTest", {
     testReplyError3: function(queue) {
         queue.call(function(callbacks) {
             var registerBusObject = function(err) {
-                bus.registerBusObject("/testobject", {
-                    "org.alljoyn.bus.samples.simple.SimpleInterface": {
-                        Ping: function(context, inStr) { 
-                            assertNoError(function() { context.replyError("name"); });
-                        }
-                    }
-                }, callbacks.add(getProxyObj));
+                bus.registerBusObject("/testobject",
+                                      {
+                                          "org.alljoyn.bus.samples.simple.SimpleInterface": {
+                                              Ping: function(context, inStr) {
+                                                  assertNoError(function() { context.replyError("name"); });
+                                              }
+                                          }
+                                      },
+                                      false,
+                                      callbacks.add(getProxyObj));
             };
             var getProxyObj = function(err) {
                 assertFalsy(err);
@@ -159,13 +171,16 @@ AsyncTestCase("MessageArgCountTest", {
     testReplyError4: function(queue) {
         queue.call(function(callbacks) {
             var registerBusObject = function(err) {
-                bus.registerBusObject("/testobject", {
-                    "org.alljoyn.bus.samples.simple.SimpleInterface": {
-                        Ping: function(context, inStr) { 
-                            assertNoError(function() { context.replyError("name", callbacks.add(onReplyError)); });
-                        }
-                    }
-                }, callbacks.add(getProxyObj));
+                bus.registerBusObject("/testobject",
+                                      {
+                                          "org.alljoyn.bus.samples.simple.SimpleInterface": {
+                                              Ping: function(context, inStr) {
+                                                  assertNoError(function() { context.replyError("name", callbacks.add(onReplyError)); });
+                                              }
+                                          }
+                                      },
+                                      false,
+                                      callbacks.add(getProxyObj));
             };
             var onReplyError = function(err) {
                 assertFalsy(err);
@@ -188,13 +203,16 @@ AsyncTestCase("MessageArgCountTest", {
     testReplyError5: function(queue) {
         queue.call(function(callbacks) {
             var registerBusObject = function(err) {
-                bus.registerBusObject("/testobject", {
-                    "org.alljoyn.bus.samples.simple.SimpleInterface": {
-                        Ping: function(context, inStr) { 
-                            assertNoError(function() { context.replyError("name", "message", callbacks.add(onReplyError)); });
-                        }
-                    }
-                }, callbacks.add(getProxyObj));
+                bus.registerBusObject("/testobject",
+                                      {
+                                          "org.alljoyn.bus.samples.simple.SimpleInterface": {
+                                              Ping: function(context, inStr) {
+                                                  assertNoError(function() { context.replyError("name", "message", callbacks.add(onReplyError)); });
+                                              }
+                                          }
+                                      },
+                                      false,
+                                      callbacks.add(getProxyObj));
             };
             var onReplyError = function(err) {
                 assertFalsy(err);

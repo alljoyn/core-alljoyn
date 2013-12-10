@@ -1912,10 +1912,20 @@ bool _BusAttachmentHost::registerBusObject(const NPVariant* args, uint32_t argCo
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
+    /*
+     * This function actually works with 2 forms of the registerBusObject JS method:
+     *     registerBusObject(objPath, busObject, callback)
+     *     registerBusObject(objPath, busObject, secure, callback)
+     *
+     * Note that the 'secure' parameter is optional.  It defaults to false.
+     */
+
     qcc::String name;
     BusObjectNative* busObjectNative = NULL;
     CallbackNative* callbackNative = NULL;
     BusObjectListener* busObjectListener = NULL;
+    const NPVariant* arg = args;
+    bool secure = false;
     QStatus status = ER_OK;
 
     bool typeError = false;
@@ -1925,23 +1935,41 @@ bool _BusAttachmentHost::registerBusObject(const NPVariant* args, uint32_t argCo
         goto exit;
     }
 
-    name = ToDOMString(plugin, args[0], typeError);
+    name = ToDOMString(plugin, *arg, typeError);
     if (typeError) {
         plugin->RaiseTypeError("argument 0 is not a string");
         goto exit;
     }
+    ++arg;
 
-    busObjectNative = ToNativeObject<BusObjectNative>(plugin, args[1], typeError);
+    busObjectNative = ToNativeObject<BusObjectNative>(plugin, *arg, typeError);
     if (typeError || !busObjectNative) {
         typeError = true;
         plugin->RaiseTypeError("argument 1 is not an object");
         goto exit;
     }
+    ++arg;
 
-    callbackNative = ToNativeObject<CallbackNative>(plugin, args[2], typeError);
+    /*
+     * This method used to only take the object path, object reference, and
+     * callback as its only parameters.  It now takes a boolean to indicate if
+     * the object should be secure.  This new secure parameter should belong
+     * between the object reference and callback parameters.  We'll use the
+     * argCount to determine if the secure parameter is specified or not.
+     */
+    if (argCount > 3) {
+        secure = ToBoolean(plugin, *arg, typeError);
+        if (typeError) {
+            plugin->RaiseTypeError("argument 2 is not a boolean");
+            goto exit;
+        }
+        ++arg;
+    }
+
+    callbackNative = ToNativeObject<CallbackNative>(plugin, *arg, typeError);
     if (typeError || !callbackNative) {
         typeError = true;
-        plugin->RaiseTypeError("argument 2 is not an object");
+        plugin->RaiseTypeError((argCount > 3) ? "argument 3 is not an object" : "argument 2 is not an object");
         goto exit;
     }
 
@@ -1952,7 +1980,7 @@ bool _BusAttachmentHost::registerBusObject(const NPVariant* args, uint32_t argCo
         goto exit;
     }
 
-    status = (*busAttachment)->RegisterBusObject(*busObjectListener->env->busObject);
+    status = (*busAttachment)->RegisterBusObject(*busObjectListener->env->busObject, secure);
     if (ER_OK == status) {
         std::pair<qcc::String, BusObjectListener*> element(name, busObjectListener);
         busObjectListeners.insert(element);
@@ -3923,9 +3951,20 @@ bool _BusAttachmentHost::getProxyBusObject(const NPVariant* args, uint32_t argCo
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
+    /*
+     * This function actually works with 2 forms of the getProxyBusObject JS method:
+     *     getProxyBusObject(objPath, callback)
+     *     getProxyBusObject(objPath, secure, callback)
+     *
+     * Note that the 'secure' parameter is optional.  It defaults to false.
+     */
+
     qcc::String name;
+    qcc::String keyname;
     CallbackNative* callbackNative = NULL;
     std::map<qcc::String, ProxyBusObjectHost>::iterator it;
+    const NPVariant* arg = args;
+    bool secure = false;
     QStatus status = ER_OK;
     bool typeError = false;
 
@@ -3935,33 +3974,61 @@ bool _BusAttachmentHost::getProxyBusObject(const NPVariant* args, uint32_t argCo
         goto exit;
     }
 
-    name = ToDOMString(plugin, args[0], typeError);
+    name = ToDOMString(plugin, *arg, typeError);
     if (typeError) {
         plugin->RaiseTypeError("argument 0 is not a string");
         goto exit;
     }
+    ++arg;
 
-    callbackNative = ToNativeObject<CallbackNative>(plugin, args[1], typeError);
+    /*
+     * This method used to only take the object path, and callback as its only
+     * parameters.  It now takes a boolean to indicate if the proxy object
+     * should be secure.  This new secure parameter should belong between the
+     * object path and callback parameters.  We'll use the argCount to
+     * determine if the secure parameter is specified or not.
+     */
+    if (argCount > 2) {
+        secure = ToBoolean(plugin, *arg, typeError);
+        if (typeError) {
+            plugin->RaiseTypeError("argument 1 is not a boolean");
+            goto exit;
+        }
+        ++arg;
+    }
+
+    /*
+     * Tweak the object path to include a distinction between a secure object
+     * and an insecure object and save that as a key name used for looking up
+     * existing ProxyBusObjectHost instances.  This will handle the case of a
+     * poorly written JS app that calls getProxyBusObject with secure=false
+     * then later calls getProxyBusObject with secure=true.  The JS app will
+     * work the exact same way as a C++ app that instantiates ProxyBusObject
+     * in the same manner.
+     */
+    keyname = name + (secure ? "s" : "n");
+
+    callbackNative = ToNativeObject<CallbackNative>(plugin, *arg, typeError);
     if (typeError || !callbackNative) {
         typeError = true;
-        plugin->RaiseTypeError("argument 1 is not an object");
+        plugin->RaiseTypeError((argCount > 2) ? "argument 2 is not an object" : "argument 1 is not an object");
         goto exit;
     }
 
     QCC_DbgTrace(("name=%s", name.c_str()));
 
-    if (proxyBusObjects.find(name) == proxyBusObjects.end()) {
+    if (proxyBusObjects.find(keyname) == proxyBusObjects.end()) {
         qcc::String serviceName, path;
         std::map<qcc::String, qcc::String> argMap;
         ParseName(name, serviceName, path, argMap);
         const char* cserviceName = serviceName.c_str();
         const char* cpath = path.c_str();
         ajn::SessionId sessionId = strtoul(argMap["sessionId"].c_str(), 0, 0);
-        std::pair<qcc::String, ProxyBusObjectHost> element(name, ProxyBusObjectHost(plugin, *busAttachment, cserviceName, cpath, sessionId));
+        std::pair<qcc::String, ProxyBusObjectHost> element(keyname, ProxyBusObjectHost(plugin, *busAttachment, cserviceName, cpath, sessionId));
         proxyBusObjects.insert(element);
     }
 
-    it = proxyBusObjects.find(name);
+    it = proxyBusObjects.find(keyname);
     CallbackNative::DispatchCallback(plugin, callbackNative, status, it->second);
     callbackNative = NULL;
 

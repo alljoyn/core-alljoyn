@@ -27,7 +27,7 @@ using namespace std;
 
 
 IODispatch::IODispatch(const char* name, uint32_t concurrency) :
-    timer(name, true, concurrency, false, 50),
+    timer(name, true, concurrency, false, 96),
     reload(false),
     isRunning(false),
     numAlarmsInProgress(0),
@@ -311,8 +311,8 @@ void IODispatch::AlarmTriggered(const Alarm& alarm, QStatus reason)
 
         if (isRunning) {
             /* Timer is running. Remove any pending alarms */
-            timer.RemoveAlarm(dispatchEntry.readAlarm, true /* blocking */);
-            timer.RemoveAlarm(dispatchEntry.writeAlarm, true /* blocking */);
+            timer.ForceRemoveAlarm(dispatchEntry.readAlarm, true /* blocking */);
+            timer.ForceRemoveAlarm(dispatchEntry.writeAlarm, true /* blocking */);
         }
         /* If IODispatch has been stopped,
          * RemoveAlarms may not have successfully removed the alarm.

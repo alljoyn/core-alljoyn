@@ -57,7 +57,7 @@ AsyncTestCase("AddressBookTest", {
                             if (contact) {
                                 context.reply(contact);
                             } else {
-                                context.replyError("org.alljoyn.bus.samples.addressbook.Error", 
+                                context.replyError("org.alljoyn.bus.samples.addressbook.Error",
                                                    "No such contact");
                             }
                         },
@@ -122,7 +122,7 @@ AsyncTestCase("AddressBookTest", {
                 assertFalsy(err);
                 clientBus.connect(callbacks.add(getDbus));
             };
-            
+
             /*
              *  Now kick off the test.  This needs to be synchronized to wait until the
              *  service has acquired its name.

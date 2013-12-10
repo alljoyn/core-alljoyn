@@ -18,7 +18,8 @@
 #include <alljoyn/about/AnnouncementRegistrar.h>
 
 #include <signal.h>
-#include <stdio.h>
+#include <iostream>
+#include <iomanip>
 #include "AboutClientSessionListener.h"
 #include "AboutClientAnnounceHandler.h"
 #include "AboutClientSessionJoiner.h"
@@ -51,37 +52,39 @@ void sessionJoinedCallback(qcc::String const& busName, SessionId id)
     AboutClient* aboutClient = new AboutClient(*busAttachment);
     AboutIconClient* iconClient = NULL;
     bool hasIconInterface = false;
-    printf("\n%s AboutClient ObjectDescriptions\n-----------------------------------\n", busName.c_str());
+    std::cout << std::endl << busName.c_str() << " AboutClient ObjectDescriptions" << std::endl;
+    std::cout << "-----------------------------------" << std::endl;
     AboutClient::ObjectDescriptions objectDescriptions;
 
     if (aboutClient) {
         status = aboutClient->GetObjectDescriptions(busName.c_str(), objectDescriptions, id);
         if (status != ER_OK) {
-            printf("Unable get  ObjectDescriptions \n");
+            std::cout << "Call to getObjectDescriptions failed: " << QCC_StatusText(status) << std::endl;
         } else {
             for (AboutClient::ObjectDescriptions::const_iterator it = objectDescriptions.begin();
                  it != objectDescriptions.end(); ++it) {
                 qcc::String key = it->first;
                 std::vector<qcc::String> vector = it->second;
-                printf("key=%s", key.c_str());
+                std::cout << "key=" << key.c_str();
                 for (std::vector<qcc::String>::const_iterator itv = vector.begin(); itv != vector.end(); ++itv) {
                     if (key.compare("/About/DeviceIcon") == 0 && itv->compare("org.alljoyn.Icon") == 0) {
                         hasIconInterface = true;
                     }
-                    printf(" value=%s ", itv->c_str());
+                    std::cout << " value=" << itv->c_str() << " ";
                 }
-                printf("\n");
+                std::cout << std::endl;
             }
         }
 
-        printf("\n %s AboutClient AboutData Get Supported Languages\n-----------------------------------\n",
-               busName.c_str());
+        std::cout << std::endl << busName.c_str() << " AboutClient AboutData Get Supported Languages" << std::endl;
+        std::cout << "-----------------------------------" << std::endl;
+
         AboutClient::AboutData aboutData;
 
         std::vector<qcc::String> supportedLanguages;
         status = aboutClient->GetAboutData(busName.c_str(), NULL, aboutData);
         if (status != ER_OK) {
-            printf("Unable get  AboutData \n");
+            std::cout << "Call to getAboutData failed: "  << QCC_StatusText(status) << std::endl;
         } else {
             AboutClient::AboutData::iterator it = aboutData.find("SupportedLanguages");
             if (it != aboutData.end()) {
@@ -97,115 +100,124 @@ void sessionJoinedCallback(qcc::String const& busName, SessionId id)
         }
 
         for (std::vector<qcc::String>::iterator it = supportedLanguages.begin(); it != supportedLanguages.end(); ++it) {
-            printf("\n%s AboutClient AboutData using language=%s\n-----------------------------------\n",
-                   busName.c_str(), it->c_str());
+            std::cout << std::endl << busName.c_str() << " AboutClient AboutData using language=" << it->c_str() << std::endl;
+            std::cout << "-----------------------------------" << std::endl;
             status = aboutClient->GetAboutData(busName.c_str(), it->c_str(), aboutData);
             if (status != ER_OK) {
-                printf("Unable get  AboutData \n");
+                std::cout << "Call to getAboutData failed: " << QCC_StatusText(status) << std::endl;
             } else {
                 for (AboutClient::AboutData::iterator itx = aboutData.begin(); itx != aboutData.end(); ++itx) {
                     qcc::String key = itx->first;
                     ajn::MsgArg value = itx->second;
                     if (value.typeId == ALLJOYN_STRING) {
-                        printf("Key name=%s value=%s\n", key.c_str(), value.v_string.str);
+                        std::cout << "Key name=" << key.c_str() << " value=" << value.v_string.str << std::endl;
                     } else if (value.typeId == ALLJOYN_ARRAY && value.Signature().compare("as") == 0) {
-                        printf("Key name=%s values: ", key.c_str());
+                        std::cout << "Key name=" << key.c_str() << " values: ";
                         const MsgArg* stringArray;
                         size_t fieldListNumElements;
                         status = value.Get("as", &fieldListNumElements, &stringArray);
                         for (unsigned int i = 0; i < fieldListNumElements; i++) {
                             char* tempString;
                             stringArray[i].Get("s", &tempString);
-                            printf("%s ", tempString);
+                            std::cout << tempString << " ";
                         }
-                        printf("\n");
+                        std::cout << std::endl;
                     } else if (value.typeId == ALLJOYN_BYTE_ARRAY) {
-                        printf("Key name=%s value:", key.c_str());
+                        std::cout << "Key name=" << key.c_str() << " value:" << std::hex << std::uppercase << std::setfill('0');
                         uint8_t* AppIdBuffer;
                         size_t numElements;
                         value.Get("ay", &numElements, &AppIdBuffer);
                         for (size_t i = 0; i < numElements; i++) {
-                            printf("%02X", AppIdBuffer[i]);
+                            std::cout <<  std::setw(2) << (unsigned int)AppIdBuffer[i];
                         }
-                        printf("\n");
+                        std::cout << std::nouppercase << std::dec << std::endl;
                     }
                 }                                     // end of for
             }
         }
 
-        printf("\n%s AboutClient GetVersion\n-----------------------------------\n", busName.c_str());
+        std::cout << std::endl << busName.c_str() << " AboutClient GetVersion" << std::endl;
+        std::cout << "-----------------------------------" << std::endl;
+
         int ver;
         status = aboutClient->GetVersion(busName.c_str(), ver, id);
         if (status != ER_OK) {
-            printf("Unable get  Version \n");
+            std::cout << "Call to to getVersion failed " << QCC_StatusText(status) << std::endl;
         } else {
-            printf("Version=%d \n", ver);
+            std::cout << "Version=" << ver << std::endl;
         }
     } //if (aboutClient)
 
     if (hasIconInterface) {
         iconClient = new AboutIconClient(*busAttachment);
         if (iconClient) {
+            std::cout << std::endl << busName.c_str() << " AboutIcontClient GetUrl" << std::endl;
+            std::cout << "-----------------------------------" << std::endl;
+
             size_t contentSize;
-            printf("\n%s AboutIcontClient GetUrl \n-----------------------------------\n", busName.c_str());
             qcc::String url;
             status = iconClient->GetUrl(busName.c_str(), url, id);
             if (status != ER_OK) {
-                printf("Unable get  url \n");
+                std::cout << "Call to getUrl failed: " << QCC_StatusText(status) << std::endl;
             } else {
-                printf("url=%s\n", url.c_str());
+                std::cout << "url=" << url.c_str() << std::endl;
             }
 
-            printf("\n%s AboutIcontClient GetContent \n-----------------------------------\n",
-                   busName.c_str());
+            std::cout << std::endl << busName.c_str() << " AboutIcontClient GetContent" << std::endl;
+            std::cout << "-----------------------------------" << std::endl;
+
             uint8_t* content = NULL;
             status = iconClient->GetContent(busName.c_str(), &content, contentSize, id);
             if (status != ER_OK) {
-                printf("Unable get  GetContent \n");
+                std::cout << "Call to GetContent failed: " << QCC_StatusText(status) << std::endl;
             } else {
-                printf("Content size=%zu\n", contentSize);
-                printf("Content :\t");
+                std::cout << "Content size=" << contentSize << std::endl;
+                std::cout << "Content :\t";
                 for (size_t i = 0; i < contentSize; i++) {
                     if (i % 8 == 0 && i > 0)
-                        printf("\n\t\t");
-                    printf("%02X", content[i]);
+                        std::cout << "\n\t\t";
+                    std::cout << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << (unsigned int)content[i]
+                              << std::nouppercase << std::dec;
                 }
-                printf("\n");
+                std::cout << std::endl;
             }
 
-            printf("\n%s AboutIcontClient GetVersion \n-----------------------------------\n",
-                   busName.c_str());
+            std::cout << std::endl << busName.c_str() << " AboutIcontClient GetVersion" << std::endl;
+            std::cout << "-----------------------------------" << std::endl;
+
             int ver;
             status = iconClient->GetVersion(busName.c_str(), ver, id);
             if (status != ER_OK) {
-                printf("Unable get  Version \n");
+                std::cout << "Call to getVersion failed: " << QCC_StatusText(status) << std::endl;
             } else {
-                printf("Version=%d \n", ver);
+                std::cout << "Version=" << ver << std::endl;
             }
 
-            printf("\n%s AboutIcontClient GetMimeType \n-----------------------------------\n",
-                   busName.c_str());
+            std::cout << std::endl << busName.c_str() << " AboutIcontClient GetMimeType" << std::endl;
+            std::cout << "-----------------------------------" << std::endl;
+
             qcc::String mimetype;
 
             status = iconClient->GetMimeType(busName.c_str(), mimetype, id);
             if (status != ER_OK) {
-                printf("Unable get  Mimetype \n");
+                std::cout << "Call to getMimetype failed: " << QCC_StatusText(status) << std::endl;
             } else {
-                printf("Mimetype %s \n", mimetype.c_str());
+                std::cout << "Mimetype" << mimetype.c_str() << std::endl;
             }
 
-            printf("\n%s AboutIcontClient GetSize \n-----------------------------------\n", busName.c_str());
+            std::cout << std::endl << busName.c_str() << " AboutIcontClient GetSize" << std::endl;
+            std::cout << "-----------------------------------" << std::endl;
 
             status = iconClient->GetSize(busName.c_str(), contentSize, id);
             if (status != ER_OK) {
-                printf("Unable get  Size \n");
+                std::cout << "Call to getSize failed: " << QCC_StatusText(status) << std::endl;
             } else {
-                printf("Size=%zu\n", contentSize);
+                std::cout << "Size=" << contentSize << std::endl;
             }
         } //if (iconClient)
     } //if (isIconInterface)
     status = busAttachment->LeaveSession(id);
-    printf("Leaving (%s, ...) status=%s with id = %u\n", busName.c_str(), QCC_StatusText(status), id);
+    std::cout << "Leaving session id = " << id << " with " << busName.c_str() << " status: " << QCC_StatusText(status) << std::endl;
 
     if (aboutClient) {
         delete aboutClient;
@@ -228,7 +240,7 @@ void announceHandlerCallback(qcc::String const& busName, unsigned short port)
                                                      opts, joincb, aboutClientSessionListener);
 
     if (status != ER_OK) {
-        printf("Unable to JoinSession with %s  \n", busName.c_str());
+        std::cout << "Unable to JoinSession with " << busName.c_str() << std::endl;
         return;
     }
 }
@@ -243,8 +255,8 @@ void announceHandlerCallback(qcc::String const& busName, unsigned short port)
 int main(int argc, char**argv, char**envArg)
 {
     QStatus status = ER_OK;
-    printf("AllJoyn Library version: %s\n", ajn::GetVersion());
-    printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
+    std::cout << "AllJoyn Library version: " << ajn::GetVersion() << std::endl;
+    std::cout << "AllJoyn Library build info: " << ajn::GetBuildInfo() << std::endl;
 
     QCC_SetLogLevels("ALLJOYN_ABOUT_CLIENT=7");
     QCC_SetLogLevels("ALLJOYN_ABOUT_ICON_CLIENT=7");
@@ -276,18 +288,18 @@ int main(int argc, char**argv, char**envArg)
 
     status = busAttachment->Start();
     if (status == ER_OK) {
-        printf("BusAttachment started.\n");
+        std::cout << "BusAttachment started." << std::endl;
     } else {
-        printf("unable to connect to Start : %s\n", QCC_StatusText(status));
+        std::cout << "Unable to start BusAttachment. Status: " << QCC_StatusText(status) << std::endl;
         return 1;
     }
 
     status = busAttachment->Connect();
 
     if (ER_OK == status) {
-        printf("Daemon Connect succeeded.\n");
+        std::cout << "Daemon Connect succeeded." << std::endl;
     } else {
-        printf("Failed to connect daemon (%s).\n", QCC_StatusText(status));
+        std::cout << "Failed to connect daemon. Status: " << QCC_StatusText(status) << std::endl;
         return 1;
     }
 

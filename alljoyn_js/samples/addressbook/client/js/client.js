@@ -42,7 +42,7 @@ var onDeviceReady = function() {
             details,
             type,
             tel;
-        
+
         vcard = createElement('div', 'vcard');
 
         n = createElement('div', 'index n');
@@ -58,7 +58,7 @@ var onDeviceReady = function() {
             details.appendChild(tel);
         }
         vcard.appendChild(details);
-        
+
         return vcard;
     };
 
@@ -122,7 +122,7 @@ var onDeviceReady = function() {
             lastName: lastName,
             phoneNumbers: {}
         };
-        
+
         for (i = 0; i < tels.length; ++i) {
             type = tels[i].getElementsByClassName('type')[0].value;
             value = tels[i].getElementsByClassName('value')[0].value;

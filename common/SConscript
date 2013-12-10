@@ -29,7 +29,7 @@ if env['VARIANT'] == 'debug':
         if not os.environ.has_key('COVFILE'):
             print 'Error: COVFILE environment variable must be set'
             if not GetOption('help'):
-                Exit()
+                Exit(1)
         else:
             env.PrependENVPath('COVFILE', os.environ['COVFILE'])
 
@@ -50,7 +50,7 @@ if env['OS_GROUP'] == 'windows':
             # Must specify OPENSSL_BASE for winXP
             print 'Must specify OPENSSL_BASE when building for WindowsXP'
             if not GetOption('help'):
-                Exit()
+                Exit(1)
         else:
             env.AppendUnique(LIBS = ['bcrypt', 'ncrypt', 'crypt32'])
             env['CRYPTO'] = 'cng'
@@ -81,7 +81,7 @@ elif env['OS'] == 'darwin':
             # Must specify OPENSSL_ROOT for darwin, arm
             print 'Must specify OPENSSL_ROOT when building for OS=darwin, CPU=arm'
             if not GetOption('help'):
-                Exit()
+                Exit(1)
         env.Append(CPPPATH = ['$OPENSSL_ROOT/include'])
         env.Append(LIBPATH = ['$OPENSSL_ROOT/build/' + os.environ.get('CONFIGURATION') + '-' + os.environ.get('PLATFORM_NAME')])
 

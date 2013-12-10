@@ -50,9 +50,9 @@ QStatus RegisterBusObject(AboutService* obj) {
     QStatus status = s_msgBus->RegisterBusObject(*obj);
 
     if (ER_OK == status) {
-        printf("RegisterBusObject succeeded.\n");
+        std::cout << "RegisterBusObject succeeded." << std::endl;
     } else {
-        printf("RegisterBusObject failed (%s).\n", QCC_StatusText(status));
+        std::cout << "RegisterBusObject failed (" << QCC_StatusText(status) << ")." << std::endl;
     }
 
     return status;
@@ -64,9 +64,9 @@ QStatus ConnectToDaemon() {
     status = s_msgBus->Connect();
 
     if (ER_OK == status) {
-        printf("Daemon connect succeeded.\n");
+        std::cout << "Daemon connect succeeded." << std::endl;
     } else {
-        printf("Failed to connect daemon (%s).\n", QCC_StatusText(status));
+        std::cout << "Failed to connect daemon (" << QCC_StatusText(status) << ")." << std::endl;
     }
 
     return status;
@@ -77,9 +77,9 @@ QStatus StartMessageBus(void) {
     QStatus status = s_msgBus->Start();
 
     if (ER_OK == status) {
-        printf("BusAttachment started.\n");
+        std::cout << "BusAttachment started." << std::endl;
     } else {
-        printf("Start of BusAttachment failed (%s).\n", QCC_StatusText(status));
+        std::cout << "Start of BusAttachment failed (" << QCC_StatusText(status) << ")." << std::endl;
     }
 
     return status;
@@ -92,9 +92,9 @@ QStatus BindSession(TransportMask mask) {
     QStatus status = s_msgBus->BindSessionPort(sp, opts, s_busListener);
 
     if (ER_OK == status) {
-        printf("BindSessionPort succeeded.\n");
+        std::cout << "BindSessionPort succeeded." << std::endl;
     } else {
-        printf("BindSessionPort failed (%s).\n", QCC_StatusText(status));
+        std::cout << "BindSessionPort failed (" << QCC_StatusText(status) << ")." << std::endl;
     }
 
     return status;
@@ -105,7 +105,7 @@ QStatus AdvertiseName(TransportMask mask) {
     QStatus status = ER_BUS_ESTABLISH_FAILED;
     if (s_msgBus->IsConnected() && s_msgBus->GetUniqueName().size() > 0) {
         status = s_msgBus->AdvertiseName(s_msgBus->GetUniqueName().c_str(), mask);
-        printf("AdvertiseName %s =%d\n", s_msgBus->GetUniqueName().c_str(), status);
+        std::cout << "AdvertiseName " << s_msgBus->GetUniqueName().c_str() << " =" << status << std::endl;
     }
     return status;
 }
@@ -178,8 +178,8 @@ static void shutdown(AboutPropertyStoreImpl*& aboutPropertyStore, AboutIconServi
 
 int main(int argc, char**argv, char**envArg) {
     QStatus status = ER_OK;
-    printf("AllJoyn Library version: %s\n", ajn::GetVersion());
-    printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
+    std::cout << "AllJoyn Library version: " << ajn::GetVersion() << std::endl;
+    std::cout << "AllJoyn Library build info: " << ajn::GetBuildInfo() << std::endl;
     QCC_SetLogLevels("ALLJOYN_ABOUT_SERVICE=7;");
     QCC_SetLogLevels("ALLJOYN_ABOUT_ICON_SERVICE=7;");
 
@@ -198,10 +198,10 @@ int main(int argc, char**argv, char**envArg) {
 
     SERVICE_PORT = opts.GetPort();
     s_busListener.setSessionPort(SERVICE_PORT);
-    printf("using port %d\n", opts.GetPort());
+    std::cout << "using port " << opts.GetPort() << std::endl;
 
     if (!opts.GetAppId().empty()) {
-        printf("using appID %s\n", opts.GetAppId().c_str());
+        std::cout << "using appID " << opts.GetAppId().c_str() << std::endl;
     }
 
     /* Install SIGINT handler so Ctrl + C deallocates memory properly */

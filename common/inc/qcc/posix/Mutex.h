@@ -28,8 +28,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <qcc/StringUtil.h>
-
 #include <Status.h>
 
 namespace qcc {

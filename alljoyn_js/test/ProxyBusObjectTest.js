@@ -24,8 +24,8 @@ AsyncTestCase("ProxyBusObjectTest", {
         bus.destroy();
     },
 
-    /* 
-     * Test that bus.proxy["/foo"].children["bar"] is the same as bus.proxy["/foo/bar"]. 
+    /*
+     * Test that bus.proxy["/foo"].children["bar"] is the same as bus.proxy["/foo/bar"].
      */
     /*
      * NOTE: This test is disabled.  The underlying C++ code does not implement this
@@ -55,9 +55,9 @@ AsyncTestCase("ProxyBusObjectTest", {
             };
             var onIntrospect = function(err) {
                 assertFalsy(err);
-                /* 
+                /*
                  * Compare that the previously un-introspected object is the same as the
-                 * introspected one. 
+                 * introspected one.
                  */
                 a.getChildren("freedesktop", callbacks.add(verify0));
             };
@@ -97,7 +97,7 @@ AsyncTestCase("ProxyBusObjectTest", {
             var connect = function(err, proxyObj) {
                 assertFalsy(err);
                 proxy = proxyObj;
-                
+
                 var actual = {};
                 for (var n in proxy) {
                     actual[n] = true;
@@ -114,7 +114,7 @@ AsyncTestCase("ProxyBusObjectTest", {
                 assertTrue(actual["methodCall"]);
                 assertTrue(actual["parseXML"]);
                 assertTrue(actual["secureConnection"]);
-                
+
                 bus.connect(callbacks.add(getChildren));
             };
             var getChildren = function(err) {
@@ -132,24 +132,24 @@ AsyncTestCase("ProxyBusObjectTest", {
                 for (var i = 0; i < interfaces.length; ++i) {
                     actual[interfaces[i].name] = true;
                 }
-                
+
                 assertTrue(actual["org.freedesktop.DBus.Peer"]);
-                
+
                 proxy.getInterface('org.freedesktop.DBus.Peer', callbacks.add(introspect));
             };
             var introspect = function(err, intf) {
                 assertFalsy(err);
-                
+
                 actual = {};
                 for (var n in intf ) {
                     actual[n] = true;
                 }
-                
+
                 assertEquals("org.freedesktop.DBus.Peer", intf.name);
-                
+
                 var actual = {};
                 //for (var n in intf.method) {
-                for (var i = 0; i < intf.method.length; ++i) {    
+                for (var i = 0; i < intf.method.length; ++i) {
                     actual[intf.method[i].name] = true;
                 }
                 assertTrue(actual["GetMachineId"]);
@@ -157,12 +157,12 @@ AsyncTestCase("ProxyBusObjectTest", {
 
                 proxy.introspect(callbacks.add(onIntrospect));
             };
-            
+
             var onIntrospect = function(err) {
                 assertFalsy(err);
                 proxy.getInterfaces(callbacks.add(onGetInterfaces));
             };
-            
+
             var onGetInterfaces = function(err, interfaces) {
                 var actual = {};
                 for (var i = 0; i < interfaces.length; ++i) {
@@ -172,7 +172,7 @@ AsyncTestCase("ProxyBusObjectTest", {
                 assertTrue(actual["org.alljoyn.Daemon"]);
                 assertTrue(actual["org.freedesktop.DBus.Introspectable"]);
                 assertTrue(actual["org.freedesktop.DBus.Peer"]);
-                
+
                 proxy.getChildren(callbacks.add(getPeerInterface));
             };
             var getPeerInterface = function(err, children) {
@@ -192,7 +192,7 @@ AsyncTestCase("ProxyBusObjectTest", {
                 }
                 assertTrue(actual["GetMachineId"]);
                 assertTrue(actual["Ping"]);
-            };    
+            };
             this._setUp(callbacks.add(getProxyObj));
         });
     },
@@ -209,15 +209,18 @@ AsyncTestCase("ProxyBusObjectTest", {
                 otherBus.createInterface({
                     name: "org.alljoyn.bus.samples.simple.SimpleInterface",
                     method: [
-                        { name: 'Ping', signature: 's', returnSignature: 's', argNames: 'inStr,outStr', 
+                        { name: 'Ping', signature: 's', returnSignature: 's', argNames: 'inStr,outStr',
                           'org.freedesktop.DBus.Deprecated': true }
                     ]
                 }, callbacks.add(registerBusObject));
             };
             var registerBusObject = function(err) {
-                otherBus.registerBusObject("/testobject", {
-                    "org.alljoyn.bus.samples.simple.SimpleInterface": {}
-                }, callbacks.add(otherBusConnect));
+                otherBus.registerBusObject("/testobject",
+                                           {
+                                               "org.alljoyn.bus.samples.simple.SimpleInterface": {}
+                                           },
+                                           false,
+                                           callbacks.add(otherBusConnect));
             };
             var otherBusConnect = function(err) {
                 assertFalsy(err);
@@ -291,7 +294,7 @@ AsyncTestCase("ProxyBusObjectTest", {
     },
 
     testParseIntrospection: function(queue) {
-        var xml = 
+        var xml =
             '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"' +
             '"http://standards.freedesktop.org/dbus/introspect-1.0.dtd">' +
             '<node>' +
@@ -390,22 +393,25 @@ AsyncTestCase("ProxyBusObjectTest", {
                 assertFalsy(err);
                 bus.createInterface({
                     name: "test.SecureInterface",
-                    secure: true,
+                    secPolicy: org.alljoyn.bus.IfcSecurity.REQUIRED,
                     method: [ { name: 'Ping', signature: 's', returnSignature: 's' } ]
                 }, callbacks.add(registerBusObject));
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/test", {
-                    "test.SecureInterface": {
-                        Ping: function(context, inStr) { context.reply(inStr); }
-                    }
-                }, callbacks.add(enablePeerSecurity));
+                // Note: leaving secure parameter unset to exercise default code path in binding.
+                bus.registerBusObject("/test",
+                                      {
+                                          "test.SecureInterface": {
+                                              Ping: function(context, inStr) { context.reply(inStr); }
+                                          }
+                                      },
+                                      callbacks.add(enablePeerSecurity));
             };
             var enablePeerSecurity = function(err) {
                 assertFalsy(err);
                 bus.enablePeerSecurity("ALLJOYN_SRP_KEYX", {
-                    onRequest: callbacks.add(function(authMechanism, peerName, authCount, 
+                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
                                                       userName, credMask, credentials) {
                         credentials.password = "123456";
                         return true;
@@ -431,7 +437,7 @@ AsyncTestCase("ProxyBusObjectTest", {
             var otherBusEnablePeerSecurity = function(err) {
                 assertFalsy(err);
                 otherBus.enablePeerSecurity("ALLJOYN_SRP_KEYX", {
-                    onRequest: callbacks.add(function(authMechanism, peerName, authCount, 
+                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
                                                       userName, credMask, credentials) {
                         credentials.password = "123456";
                         return true;
@@ -462,6 +468,91 @@ AsyncTestCase("ProxyBusObjectTest", {
             };
             this._setUp(callbacks.add(createInterface));
         });
+    },
+
+    testSecureConnection2: function(queue) {
+        queue.call(function(callbacks) {
+            var createInterface = function(err) {
+                assertFalsy(err);
+                bus.createInterface({
+                    name: "test.SecureInterface",
+                    secPolicy: org.alljoyn.bus.IfcSecurity.INHERIT,
+                    method: [ { name: 'Ping', signature: 's', returnSignature: 's' } ]
+                }, callbacks.add(registerBusObject));
+            };
+            var registerBusObject = function(err) {
+                assertFalsy(err);
+                // Note: leaving secure parameter unset to exercise default code path in binding.
+                bus.registerBusObject("/test",
+                                      {
+                                          "test.SecureInterface": {
+                                              Ping: function(context, inStr) { context.reply(inStr); }
+                                          }
+                                      },
+                                      callbacks.add(enablePeerSecurity));
+            };
+            var enablePeerSecurity = function(err) {
+                assertFalsy(err);
+                bus.enablePeerSecurity("ALLJOYN_SRP_KEYX", {
+                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
+                                                      userName, credMask, credentials) {
+                        credentials.password = "123456";
+                        return true;
+                    }),
+                    onComplete: callbacks.add(function(authMechanism, peerName, success) {
+                        assertTrue(success);
+                    })
+                }, callbacks.add(clearKeyStore));
+            };
+            var clearKeyStore = function(err) {
+                assertFalsy(err);
+                bus.clearKeyStore(callbacks.add(connect));
+            };
+            var connect = function(err) {
+                assertFalsy(err);
+                bus.connect(callbacks.add(otherBusCreate));
+            };
+            var otherBusCreate = function(err) {
+                assertFalsy(err);
+                otherBus = new org.alljoyn.bus.BusAttachment();
+                otherBus.create(false, callbacks.add(otherBusEnablePeerSecurity));
+            };
+            var otherBusEnablePeerSecurity = function(err) {
+                assertFalsy(err);
+                otherBus.enablePeerSecurity("ALLJOYN_SRP_KEYX", {
+                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
+                                                      userName, credMask, credentials) {
+                        credentials.password = "123456";
+                        return true;
+                    }),
+                    onComplete: callbacks.add(function(authMechanism, peerName, success) {
+                        assertTrue(success);
+                    })
+                }, callbacks.add(otherBusClearKeyStore));
+            };
+            var otherBusClearKeyStore = function(err) {
+                assertFalsy(err);
+                otherBus.clearKeyStore(callbacks.add(otherBusConnect));
+            };
+            var otherBusConnect = function(err) {
+                assertFalsy(err);
+                otherBus.connect(callbacks.add(getProxyObj));
+            };
+            var getProxyObj = function(err) {
+                assertFalsy(err);
+                // Explicitly set secure parameter to true.
+                otherBus.getProxyBusObject(bus.uniqueName + "/test", true, callbacks.add(secureConnection));
+            };
+            var secureConnection = function(err, proxy) {
+                assertFalsy(err);
+                proxy.secureConnection(callbacks.add(done));
+            };
+            var done = function(err) {
+                assertFalsy(err);
+            };
+            this._setUp(callbacks.add(createInterface));
+        });
     }
+
 });
 

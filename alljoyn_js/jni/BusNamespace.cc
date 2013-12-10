@@ -41,6 +41,7 @@ _BusNamespace::_BusNamespace(Plugin& plugin) :
     busAttachmentInterface(plugin),
     busErrorInterface(plugin),
     credentialsInterface(plugin),
+    ifcSecurityInterface(plugin),
     messageInterface(plugin),
     sessionLostReasonInterface(plugin),
     sessionOptsInterface(plugin),
@@ -52,6 +53,7 @@ _BusNamespace::_BusNamespace(Plugin& plugin) :
     ATTRIBUTE("BusAttachment", &_BusNamespace::getBusAttachment, 0);
     ATTRIBUTE("BusError", &_BusNamespace::getBusError, 0);
     ATTRIBUTE("Credentials", &_BusNamespace::getCredentials, 0);
+    ATTRIBUTE("IfcSecurity", &_BusNamespace::getIfcSecurity, 0);
     ATTRIBUTE("Message", &_BusNamespace::getMessage, 0);
     ATTRIBUTE("SessionLostReason", &_BusNamespace::getSessionLostReason, 0);
     ATTRIBUTE("SessionOpts", &_BusNamespace::getSessionOpts, 0);
@@ -83,6 +85,12 @@ bool _BusNamespace::getBusError(NPVariant* result)
 bool _BusNamespace::getCredentials(NPVariant* result)
 {
     ToHostObject<CredentialsInterface>(plugin, credentialsInterface, *result);
+    return true;
+}
+
+bool _BusNamespace::getIfcSecurity(NPVariant* result)
+{
+    ToHostObject<IfcSecurityInterface>(plugin, ifcSecurityInterface, *result);
     return true;
 }
 

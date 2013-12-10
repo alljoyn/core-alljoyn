@@ -15,6 +15,7 @@
 import os
 
 Import('env')
+Import('clib')
 
 vars = Variables();
 
@@ -36,8 +37,6 @@ if envtest['OS_GROUP'] == 'windows':
 elif envtest['OS_GROUP'] == 'posix':
     envtest['CSC'] = 'gmcs'
 
-clib = '$DISTDIR/c/lib/${SHLIBPREFIX}alljoyn_c${SHLIBSUFFIX}'
-
 if envtest['VARIANT'] == 'debug':
     envtest['CSC_FLAGS']=['debug', 'define:DEBUG']
     envtest['CSC_LIB_FLAGS']=['debug', 'define:DEBUG']
@@ -49,12 +48,12 @@ if(env.has_key('XUNIT_DIR')):
     alljoyn_unity_test = envtest.CSharpLib(source = srcs , target='$UNITY_TESTDIR/AllJoynUnityTest.dll')
     
     # In addition to AllJoynUnitTest.dll the unit tests require xunit.dll, 
-    # alljoyn_unity.dll, and alljoyn_c.dll to run
+    # alljoyn_unity.dll, and alljoyn_unity_native.dll to run
     # place alljoyn_unity.dll into the test dir
     envtest.Install('$UNITY_TESTDIR', envtest['ALLJOYN_UNITY_LIB'])
-    #place alljoyn_c.dll into the test dir
+    #place alljoyn_unity_native.dll into the test dir
     envtest.Install('$UNITY_TESTDIR', clib)
-    #place alljoyn_c.dll into the unit_test/bin/$VARIANT directory to facilitate development
+    #place alljoyn_unity_native.dll into the unit_test/bin/$VARIANT directory to facilitate development
     if envtest['VARIANT'] == 'debug':
         envtest.Install('bin/Debug', clib)
     elif envtest['VARIANT'] == 'release':

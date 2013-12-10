@@ -171,7 +171,7 @@ var onDeviceReady = function() {
 var onKeyPress = function(event) {
     var c = event.which ? event.which : event.keyCode,
         message;
-    
+
     if (c === 13) {
         message = document.forms['message'];
         alljoyn.chat(message.text.value);

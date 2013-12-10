@@ -30,7 +30,7 @@ var alljoyn = (function() {
         var toObject = function(contact) {
             var obj,
                 i;
-            
+
             obj = {};
             for (i = 0; i < properties.length; ++i) {
                 obj[properties[i]] = contact[i];
@@ -40,7 +40,7 @@ var alljoyn = (function() {
         var toStruct = function(contact) {
             var struct,
                 i;
-            
+
             struct = [];
             for (i = 0; i < properties.length; ++i) {
                 struct[i] = contact[properties[i]];
@@ -118,7 +118,7 @@ var alljoyn = (function() {
                     secure: true,
                     /*
                      * The '(ssa{ss})' signature specifies the AllJoyn representation of a contact in
-                     * the address book.  
+                     * the address book.
                      *
                      * Let's decode this signature into its JavaScript representation:
                      * - First, the '(' tells us this is an AllJoyn STRUCT.  The binding documentation
@@ -177,7 +177,7 @@ var alljoyn = (function() {
                             var contact,
                                 result,
                                 i;
-                            
+
                             result = [];
                             for (i = 0; i < lastNames.length; ++i) {
                                 contact = contacts.get(lastNames[i]);
@@ -206,6 +206,6 @@ var alljoyn = (function() {
         that.start = function(contacts) {
             navigator.requestPermission("org.alljoyn.bus", function() { start(contacts); });
         }
-        
+
         return that;
     }());

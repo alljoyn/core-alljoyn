@@ -31,7 +31,7 @@ var alljoyn = (function() {
         var toObject = function(contact) {
             var obj,
                 i;
-            
+
             obj = {};
             for (i = 0; i < properties.length; ++i) {
                 obj[properties[i]] = contact[i];
@@ -41,7 +41,7 @@ var alljoyn = (function() {
         var toStruct = function(contact) {
             var struct,
                 i;
-            
+
             struct = [];
             for (i = 0; i < properties.length; ++i) {
                 struct[i] = contact[properties[i]];
@@ -128,7 +128,7 @@ var alljoyn = (function() {
         that.start = function() {
             navigator.requestPermission("org.alljoyn.bus", function() { start(); });
         }
-        
+
         that.get = function(onget, lastNames) {
             var onGet = function(err, context, contacts) {
                 var result,

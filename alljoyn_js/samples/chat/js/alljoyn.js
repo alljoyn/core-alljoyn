@@ -15,7 +15,7 @@
  */
 var alljoyn = (function() {
         /*
-         * The well-known name prefix which all bus attachments hosting a channel will use.  
+         * The well-known name prefix which all bus attachments hosting a channel will use.
          *
          * The NAME_PREFIX and the channel name are composed to give the well-known name that a
          * hosting bus attachment will request and advertise.
@@ -125,7 +125,7 @@ var alljoyn = (function() {
              */
             var createInterface = function(err) {
                 bus.createInterface({
-                    name: "org.alljoyn.bus.samples.chat", 
+                    name: "org.alljoyn.bus.samples.chat",
                     /*
                      * Specify a Chat signal of the interface.  The argument of the signal is a string.
                      */
@@ -134,7 +134,7 @@ var alljoyn = (function() {
                     ]
                 }, registerBusObject);
             };
-            /* 
+            /*
              * To make a service available to other AllJoyn peers, first register a BusObject with
              * the BusAttachment at a specific object path.  Our service is implemented by the
              * ChatService BusObject found at the "/chatService" object path.
@@ -157,7 +157,7 @@ var alljoyn = (function() {
             };
             /*
              * The signal handler for messages received from the AllJoyn bus.
-             * 
+             *
              * Since the messages sent on a chat channel will be sent using a bus signal, we need to
              * provide a signal handler to receive those signals.  This is it.
              */
@@ -169,7 +169,7 @@ var alljoyn = (function() {
                 onChat = function(context, str) {
                     /*
                      * See the long comment in joinChannel() for more explanation of why this is needed.
-                     * 
+                     *
                      * The only time we allow a signal from the hosted session ID to pass through is if
                      * we are in the joined to self state.  If the source of the signal is us, we also
                      * filter out the signal since we are going to locally echo the signal.
@@ -239,14 +239,14 @@ var alljoyn = (function() {
             };
             /* Create a new session listening on the contact port of the chat service. */
             bus.bindSessionPort({
-                port: CONTACT_PORT, 
+                port: CONTACT_PORT,
                 isMultipoint: true,
                 /*
                  * This method is called when a client tries to join the session we have bound.
                  * It asks us if we want to accept the client into our session.
                  */
-                onAccept: function(port, joiner, opts) { 
-                    return (port === CONTACT_PORT); 
+                onAccept: function(port, joiner, opts) {
+                    return (port === CONTACT_PORT);
                 },
                 /*
                  * If we return true in onAccept, we admit a new client into our session.  The
@@ -291,11 +291,11 @@ var alljoyn = (function() {
              * attachment.  This endpoint can be created explicitly by a call to joinSession() or
              * implicitly by a call to bindSessionPort().  An attempt to call joinSession() on a
              * session port we have created with bindSessionPort() will result in an error.
-             * 
+             *
              * When we call bindSessionPort(), we do an implicit joinSession() and thus signals
              * (which correspond to our chat messages) will begin to flow from the hosted chat
              * channel as soon as we begin to host a corresponding session.
-             * 
+             *
              * To achieve sane user interface behavior, we need to block those signals from the
              * implicit join done by the bind until our user joins the bound chat channel.  If we do
              * not do this, the chat messages from the chat channel hosted by the application will
@@ -304,7 +304,7 @@ var alljoyn = (function() {
              * Since the messages flow automatically, we can accomplish this by turning a filter on
              * and off in the chat signal handler.  So if we detect that we are hosting a channel,
              * and we find that we want to join the hosted channel we turn the filter off.
-             * 
+             *
              * We also need to be able to send chat messages to the hosted channel.  This means we
              * need to point the mChatInterface at the session ID of the hosted session.  There is
              * another complexity here since the hosted session doesn't exist until a remote session
@@ -312,7 +312,7 @@ var alljoyn = (function() {
              * remote device does a joinSession on our hosted session.  This, in turn, means that we
              * have to remember the session ID when we get an onJoined() callback in the
              * SessionPortListener passed into bindSessionPort().
-             * 
+             *
              * So, to summarize, these next few lines handle a relatively complex case.  When we
              * host a chat channel, we do a bindSessionPort which *enables* the creation of a
              * session.  As soon as a remote device joins the hosted chat channel, a session is
@@ -400,6 +400,6 @@ var alljoyn = (function() {
             id = joinedToSelf ? hostSessionId : sessionId;
             busObject.signal("org.alljoyn.bus.samples.chat", "Chat", str, { sessionId: id }, done);
         };
-        
+
         return that;
     }());

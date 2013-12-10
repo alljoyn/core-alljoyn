@@ -50,6 +50,13 @@ elif env['OS'] == 'winxp':
     env.Append(CPPDEFINES=[('NTDDI_VERSION', '0x05010300')])
                                
 #Suppress specific warnings
+# C4244 'conversion' conversion from one type to another type results in a possible
+#       loss of data.  In AllJoyn code this occures most often when we convert a
+#       socket file descriptor to an int.  It may be worth while to investigate
+#       warnings of this type but for now we are going to suppress them.
+# C4267 Conversion from size_t to another type.  We get this because we often change
+#       size_t to another value when we iterate though arrays.  Although its possible
+#       to cause issues we are going to suppress these warnings.
 # C4345 warning specifying that the later versions of MSVC initialize POD types
 #       (Plan Old Data) This warning is designed to inform users that the behavior
 #       changed from older compilers.  This warning is only encountered by 
@@ -58,7 +65,13 @@ elif env['OS'] == 'winxp':
 # C4355 "'this' used in base member initializer list"' Depending on the version of
 #       the MSVC compiler this warning may or may not be shut off by default.
 #       http://msdn.microsoft.com/en-us/library/3c594ae3.aspx
-env.Append(CXXFLAGS=['/wd4345', '/wd4355'])
+# C4800 warning forcing value to 'true' or 'false'.  This warning is produced when
+#       a value is changed from an int or a pointer to a bool. Usage of code that
+#       does it is common in AllJoyn. We often check to see if a pointer is NULL
+#       by checking if( ptr) This also is a common problem in the language bindings
+#       with things like QCC_BOOL and jboolean being defined as integers. For this
+#       reason we are choosing to suppress this particular warning.
+env.Append(CXXFLAGS=['/wd4244', '/wd4267','/wd4345', '/wd4355', '/wd4800'])
 
 env.Append(CFLAGS=['/nologo', '/vmm', '/vmg'])
 env.Append(CXXFLAGS=['/nologo', '/vmm', '/vmg'])
@@ -88,7 +101,7 @@ if env['VARIANT'] == 'debug':
    # (/MDd') to prevent build errors. 
    env.Append(CPPDEFINES=['_DEBUG', ('_ITERATOR_DEBUG_LEVEL', 2)])
    env.Append(CFLAGS=['/MDd', '/Od'])
-   env.Append(CXXFLAGS=['/MDd', '/Od', '/Gd', '/Ob1', '/W2'])
+   env.Append(CXXFLAGS=['/MDd', '/Od', '/Gd', '/Ob1', '/W3'])
    env.Append(LINKFLAGS=['/debug'])
    env.Append(JAVACFLAGS='-g -Xlint -Xlint:-serial')
 else:
@@ -96,7 +109,7 @@ else:
    if env['MSVC_VERSION'] >= '10.0':
        env.Append(CPPDEFINES=[('_ITERATOR_DEBUG_LEVEL', 0)])
    env.Append(CFLAGS=['/MD', '/Gy', '/O1', '/Ob2', '/Gd'])
-   env.Append(CXXFLAGS=['/MD', '/Gy', '/O1', '/Ob2', '/W2'])
+   env.Append(CXXFLAGS=['/MD', '/Gy', '/O1', '/Ob2', '/W3'])
    env.Append(LINKFLAGS=['/opt:ref'])
    env.Append(JAVACFLAGS='-Xlint -Xlint:-serial')
 

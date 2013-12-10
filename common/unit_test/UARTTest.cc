@@ -67,11 +67,11 @@ TEST(UARTTest, DISABLED_uart_large_buffer_test)
     size_t actual;
 
     h.PushBytes(txBuffer, 400, actual);
-    EXPECT_EQ(actual, 400);
+    EXPECT_EQ(actual, 400U);
 
 
     h1.PullBytes(rxBuffer, 400, actual);
-    EXPECT_EQ(actual, 400);
+    EXPECT_EQ(actual, 400U);
 
     for (int x = 0; x < 400; x++) {
         EXPECT_EQ(txBuffer[x], rxBuffer[x]);
@@ -134,46 +134,46 @@ TEST(UARTTest, DISABLED_uart_small_buffer_test)
 
     status = h.PushBytes(&buf, 5, x);
     EXPECT_EQ(status, ER_OK);
-    EXPECT_EQ(x, 5);
+    EXPECT_EQ(x, 5U);
     status = h.PushBytes(&buf1, 5, x);
     EXPECT_EQ(status, ER_OK);
-    EXPECT_EQ(x, 5);
+    EXPECT_EQ(x, 5U);
 
     status = h.PushBytes(&buf2, 5, x);
     EXPECT_EQ(status, ER_OK);
-    EXPECT_EQ(x, 5);
+    EXPECT_EQ(x, 5U);
 
     status = h.PushBytes(&buf3, 5, x);
     EXPECT_EQ(status, ER_OK);
-    EXPECT_EQ(x, 5);
+    EXPECT_EQ(x, 5U);
 
     size_t act;
 
     status = h1.PullBytes(&buf, 12, act);
     EXPECT_EQ(status, ER_OK);
-    EXPECT_EQ(act, 12);
+    EXPECT_EQ(act, 12U);
 
     status = h1.PullBytes(&buf, 8, act);
     EXPECT_EQ(status, ER_OK);
-    EXPECT_EQ(act, 8);
+    EXPECT_EQ(act, 8U);
 
 
     status = h.PushBytes(&buf4, 5, x);
     EXPECT_EQ(status, ER_OK);
-    EXPECT_EQ(x, 5);
+    EXPECT_EQ(x, 5U);
 
     status = h.PushBytes(&buf, 5, x);
     EXPECT_EQ(status, ER_OK);
-    EXPECT_EQ(x, 5);
+    EXPECT_EQ(x, 5U);
 
     status = h.PushBytes(&buf1, 5, x);
     EXPECT_EQ(status, ER_OK);
-    EXPECT_EQ(x, 5);
+    EXPECT_EQ(x, 5U);
 
 
     status = h1.PullBytes(&buf, 15, act);
     EXPECT_EQ(status, ER_OK);
-    EXPECT_EQ(act, 15);
+    EXPECT_EQ(act, 15U);
 
     timer0.Stop();
     timer1.Stop();
@@ -224,47 +224,47 @@ TEST(UARTTest, DISABLED_serial_testrecv) {
     for (int iter = 0; iter < 10; iter++) {
         printf("iteration %d", iter);
         h.PullBytes(rxBuffer, 200, act);
-        EXPECT_EQ(act, 200);
+        EXPECT_EQ(act, 200U);
         qcc::Sleep(500);
         printf(".");
 
         h.PullBytes(rxBuffer + 200, 200, act);
-        EXPECT_EQ(act, 200);
+        EXPECT_EQ(act, 200U);
         qcc::Sleep(500);
         printf(".");
 
         h.PullBytes(rxBuffer + 400, 200, act);
-        EXPECT_EQ(act, 200);
+        EXPECT_EQ(act, 200U);
         qcc::Sleep(500);
         printf(".");
 
         h.PullBytes(rxBuffer + 600, 200, act);
-        EXPECT_EQ(act, 200);
+        EXPECT_EQ(act, 200U);
         qcc::Sleep(500);
         printf(".");
 
         h.PullBytes(rxBuffer + 800, 200, act);
-        EXPECT_EQ(act, 200);
+        EXPECT_EQ(act, 200U);
         qcc::Sleep(500);
         printf(".");
 
         h.PullBytes(rxBuffer + 1000, 200, act);
-        EXPECT_EQ(act, 200);
+        EXPECT_EQ(act, 200U);
         qcc::Sleep(500);
         printf(".");
 
         h.PullBytes(rxBuffer + 1200, 200, act);
-        EXPECT_EQ(act, 200);
+        EXPECT_EQ(act, 200U);
         qcc::Sleep(500);
         printf(".");
 
         h.PullBytes(rxBuffer + 1400, 200, act);
-        EXPECT_EQ(act, 200);
+        EXPECT_EQ(act, 200U);
         for (int i = 0; i < 1600; i++) {
             EXPECT_EQ(txBuffer[i], rxBuffer[i]);
         }
         h.PushBytes(txBuffer, sizeof(txBuffer), act);
-        EXPECT_EQ(act, 1600);
+        EXPECT_EQ(act, 1600U);
         printf("\n");
 
     }
@@ -315,10 +315,10 @@ TEST(UARTTest, DISABLED_serial_testsend) {
     for (int iter = 0; iter < 10; iter++) {
         printf("iteration %d", iter);
         h1.PushBytes(txBuffer, sizeof(txBuffer), x);
-        EXPECT_EQ(x, 1600);
+        EXPECT_EQ(x, 1600U);
         printf(".");
         h1.PullBytes(rxBuffer, 1600, x);
-        EXPECT_EQ(x, 1600);
+        EXPECT_EQ(x, 1600U);
         printf(".");
         for (int i = 0; i < 1600; i++) {
             EXPECT_EQ(txBuffer[i], rxBuffer[i]);
@@ -376,7 +376,7 @@ TEST(UARTTest, DISABLED_serial_testrecv_ajtcl) {
     size_t act;
 
     h.PullBytes(rxBuffer, 1600, act);
-    EXPECT_EQ(act, 1600);
+    EXPECT_EQ(act, 1600U);
 
     for (int i = 0; i < 1600; i++) {
         EXPECT_EQ(txBuffer[i], rxBuffer[i]);
@@ -430,7 +430,7 @@ TEST(UARTTest, DISABLED_serial_testsend_ajtcl)
 
 
     h1.PushBytes(txBuffer, sizeof(txBuffer), x);
-    EXPECT_EQ(x, 1600);
+    EXPECT_EQ(x, 1600U);
 
     /* Wait for retransmission to finish */
     qcc::Sleep(4000);
@@ -450,8 +450,6 @@ TEST(UARTTest, DISABLED_serial_testrandomecho) {
     timer.Start();
     uint8_t rxBuffer[RANDOM_BYTES_MAX];
     memset(&rxBuffer, '\0', sizeof(rxBuffer));
-
-    int blocksize = 100;
 
     size_t x;
     UARTFd fd1;
@@ -534,7 +532,7 @@ TEST(UARTTest, DISABLED_serial_testsendrecv) {
         printf("iteration %d\n", iter);
         iter++;
         txlen = rand() % RANDOM_BYTES_MAX;
-        for (int i = 0; i < txlen; i++) {
+        for (size_t i = 0; i < txlen; i++) {
             txBuffer[i] = rand() % 256;
         }
         /* Send bytes */
@@ -569,9 +567,9 @@ TEST(UARTTest, DISABLED_valid_parameters)
     const uint8_t stopbits[] = { 1, 2 };
 
 #define SIZEOF(a) (sizeof(a) / sizeof(a[0]))
-    for (int d = 0; d < SIZEOF(databits); ++d) {
-        for (int p = 0; p < SIZEOF(parity); ++p) {
-            for (int s = 0; s < SIZEOF(stopbits); ++s) {
+    for (size_t d = 0; d < SIZEOF(databits); ++d) {
+        for (size_t p = 0; p < SIZEOF(parity); ++p) {
+            for (size_t s = 0; s < SIZEOF(stopbits); ++s) {
                 UARTFd fd;
                 QStatus status = UART("/tmp/COM0", BAUDRATE, databits[d], parity[p], stopbits[s], fd);
                 ASSERT_EQ(ER_OK, status);

@@ -57,6 +57,8 @@ if 'js' in bindings:
 
 
 if services.intersection(['about', 'config', 'controlpanel', 'notification', 'onboarding', 'audio']):
+    env['APP_COMMON_DIR'] = env.Dir('./applications/sample_apps')
+
     # config, controlpanel, notification, and onboarding all depend on about.
     env.SConscript(['services/about/SConscript'])
 
@@ -67,11 +69,12 @@ if services.intersection(['about', 'config', 'controlpanel', 'notification', 'on
         if 'onboarding' in services:
             env.SConscript(['services/onboarding/SConscript'])
 
-    if 'controlpanel' in services:
-        env.SConscript(['services/controlpanel/SConscript'])
-
-    if 'notification' in services:
+    if services.intersection(['controlpanel', 'notification']):
+        # controlpanel also depends on notification
         env.SConscript(['services/notification/SConscript'])
+
+        if 'controlpanel' in services:
+            env.SConscript(['services/controlpanel/SConscript'])
 
     if 'audio' in services:
         env.SConscript(['services/audio/SConscript'])
@@ -81,3 +84,8 @@ if services.intersection(['about', 'config', 'controlpanel', 'notification', 'on
 if env.has_key('WIN7_MSI') and env['WIN7_MSI'] == 'true':
     win7Sdk = env.SConscript(['alljoyn_core/install/Win7/SConscript'])
     env.Depends(win7Sdk, installedFiles)
+
+# Build Alias to make cleaning, building and rebuilding the documentation when
+# working only on the documentation simpler. This can be run by using
+# `scons all_docs`
+env.Alias('all_docs', ['core_docs', 'c_docs', 'unity_docs'])

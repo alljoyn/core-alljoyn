@@ -16,7 +16,7 @@
 
 #include "AboutClientSessionJoiner.h"
 #include "AboutClientSessionListener.h"
-#include <stdio.h>
+#include <iostream>
 
 using namespace ajn;
 
@@ -35,13 +35,13 @@ AboutClientSessionJoiner::~AboutClientSessionJoiner()
 void AboutClientSessionJoiner::JoinSessionCB(QStatus status, SessionId id, const SessionOpts& opts, void* context)
 {
     if (status == ER_OK) {
-        printf("JoinSessionCB(%s,...) succeeded with id = %u\n", m_Busname.c_str(), id);
+        std::cout << "JoinSessionCB(" << m_Busname.c_str() << ") succeeded with id" << id << std::endl;
         if (m_Callback) {
-            printf("Calling SessionJoiner Callback");
+            std::cout << "Calling SessionJoiner Callback" << std::endl;
             m_Callback(m_Busname, id);
         }
     } else {
-        printf("JoinSessionCB(%s, ...) failed with %s\n", m_Busname.c_str(), QCC_StatusText(status));
+        std::cout << "JoinSessionCB(" << m_Busname.c_str() << ") failed with status: " << QCC_StatusText(status) << std::endl;
     }
 
     AboutClientSessionListener* t = (AboutClientSessionListener*) context;

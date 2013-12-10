@@ -16,8 +16,8 @@
 /**
  * \file
  *
- * \name AllJoyn JavaScript API Reference Manual
- * \version 3.4.5
+ * \name AllJoyn&trade; JavaScript API Reference Manual
+ * \version 0.0.1
  *
  * Type coercion between DBus and JavaScript types is done according to the following table.
  * <table>

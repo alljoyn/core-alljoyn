@@ -22,11 +22,11 @@ docenv['ENV']['C_DISTDIR'] = str(env.Dir('$C_DISTDIR'))
 # Build docs
 installDocs = []
 if docenv['DOCS'] == 'html':
-    # the target directory 'docs/tmp' is never built this will cause doxygen 
-    # to run every time DOCS == 'html'
-    generateDocs = docenv.Doxygen(source='Doxygen_html', target=[Dir('tmp'),Dir('html')])
-    installDocs = docenv.Install('$C_DISTDIR/docs', Dir('html'))
-    docenv.Clean('Doxygen_html', Dir('html'))
-    docenv.Depends(installDocs, generateDocs)
+    installDocs = docenv.Doxygen(source='Doxygen_html')
+
+# Build Alias to make cleaning, building and rebuilding the documentation when
+# working only on the documentation simpler. This can be run by using
+# `scons c_docs`
+docenv.Alias('c_docs', installDocs)
 
 Return('installDocs')

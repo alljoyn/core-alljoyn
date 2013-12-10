@@ -39,7 +39,7 @@ var onDeviceReady = function() {
             details,
             type,
             tel;
-        
+
         vcard = createElement('div', 'vcard');
 
         n = createElement('div', 'index n');
@@ -55,7 +55,7 @@ var onDeviceReady = function() {
             details.appendChild(tel);
         }
         vcard.appendChild(details);
-        
+
         return vcard;
     };
 
@@ -65,7 +65,7 @@ var onDeviceReady = function() {
                 li;
 
             addressbook[contact.lastName] = contact;
-            
+
             vcard = toVCard(contact);
             li = $(contact.lastName);
             if (li) {

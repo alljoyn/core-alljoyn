@@ -219,7 +219,7 @@ class _Message {
      *
      * @return   Return true if this message was sent sessionless
      */
-    bool IsSessionless() const { return static_cast<bool>(msgHeader.flags & ALLJOYN_FLAG_SESSIONLESS); }
+    bool IsSessionless() const { return (msgHeader.flags & ALLJOYN_FLAG_SESSIONLESS) != 0; }
 
     /**
      * Returns the flags for the message.

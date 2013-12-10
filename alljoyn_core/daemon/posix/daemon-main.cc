@@ -62,10 +62,6 @@
 //#include "android/WFDTransport.h"
 #endif
 
-#if defined(AJ_ENABLE_BT)
-#include "BTTransport.h"
-#endif
-
 #include "Bus.h"
 #include "BusController.h"
 #include "DaemonConfig.h"
@@ -112,9 +108,6 @@ static const char
     "<busconfig>"
     "  <listen>unix:abstract=alljoyn</listen>"
     "  <listen>launchd:env=DBUS_LAUNCHD_SESSION_BUS_SOCKET</listen>"
-#if defined(AJ_ENABLE_BT)
-    "  <listen>bluetooth:</listen>"
-#endif
 #if defined(QCC_OS_LINUX)
 //    "  <listen>slap:type=uart,dev=/dev/ttyUSB0,baud=115200</listen>"
 #endif
@@ -124,7 +117,7 @@ static const char
 #endif
     "  <limit auth_timeout=\"5000\"/>"
     "  <limit max_incomplete_connections=\"16\"/>"
-    "  <limit max_completed_connections=\"64\"/>"
+    "  <limit max_completed_connections=\"32\"/>"
     "  <limit max_untrusted_clients=\"0\"/>"
     "  <property restrict_untrusted_clients=\"true\"/>"
     "  <ip_name_service>"
@@ -186,9 +179,6 @@ class OptParse {
     OptParse(int argc, char** argv) :
         argc(argc), argv(argv),
         fork(false), noFork(false),
-#if defined(AJ_ENABLE_BT)
-        noBT(false),
-#endif
 #if defined(AJ_ENABLE_ICE)
         noICE(false),
 #endif
@@ -214,11 +204,6 @@ class OptParse {
     bool GetNoFork() const {
         return noFork;
     }
-#if defined(AJ_ENABLE_BT)
-    bool GetNoBT() const {
-        return noBT;
-    }
-#endif
     bool GetNoSLAP() const {
         return noSLAP;
     }
@@ -262,9 +247,6 @@ class OptParse {
     qcc::String configFile;
     bool fork;
     bool noFork;
-#if defined(AJ_ENABLE_BT)
-    bool noBT;
-#endif
 #if defined(AJ_ENABLE_ICE)
     bool noICE;
 #endif
@@ -297,9 +279,6 @@ void OptParse::PrintUsage() {
         "]\n"
         "%*s [--print-address[=DESCRIPTOR]] [--print-pid[=DESCRIPTOR]]\n"
         "%*s [--fork | --nofork] "
-#if defined(AJ_ENABLE_BT)
-        "[--no-bt] "
-#endif
 #if defined(AJ_ENABLE_ICE)
         "[--no-ice] "
 #endif
@@ -326,10 +305,6 @@ void OptParse::PrintUsage() {
         "    --nofork\n"
         "        Force the daemon to only run in the foreground (override config file\n"
         "        setting).\n\n"
-#if defined(AJ_ENABLE_BT)
-        "    --no-bt\n"
-        "        Disable the Bluetooth transport (override config file setting).\n\n"
-#endif
 #if defined(AJ_ENABLE_ICE)
         "    --no-ice\n"
         "        Disable the ICE transport (override config file setting).\n\n"
@@ -468,9 +443,7 @@ OptParse::ParseResultCode OptParse::ParseResult()
             }
             noFork = true;
         } else if (arg.compare("--no-bt") == 0) {
-#if defined(AJ_ENABLE_BT)
-            noBT = true;
-#endif
+            // Obsolete - kept for backwards compatibility
         } else if (arg.compare("--no-slap") == 0) {
             noSLAP = true;
         } else if (arg.compare("--no-ice") == 0) {
@@ -582,11 +555,6 @@ int daemon(OptParse& opts) {
         } else if (addrStr.compare(0, sizeof("wfd:") - 1, "wfd:") == 0) {
             skip = opts.GetNoWFD();
 
-#if defined(AJ_ENABLE_BT)
-        } else if (addrStr.compare("bluetooth:") == 0) {
-            skip = opts.GetNoBT();
-#endif
-
         } else if (addrStr.compare(0, sizeof("slap:") - 1, "slap:") == 0) {
             skip = opts.GetNoSLAP();
 
@@ -622,9 +590,6 @@ int daemon(OptParse& opts) {
     cntr.Add(new TransportFactory<DaemonSLAPTransport>(DaemonSLAPTransport::TransportName, false));
 #endif
     cntr.Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
-#if defined(AJ_ENABLE_BT)
-    cntr.Add(new TransportFactory<BTTransport> ("bluetooth", false));
-#endif
 #if defined(AJ_ENABLE_ICE)
     cntr.Add(new TransportFactory<DaemonICETransport> ("ice", false));
 #endif

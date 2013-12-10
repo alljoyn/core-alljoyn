@@ -33,7 +33,6 @@ PROG_BINS =  \
         bbclient \
         bbjoin \
         bbjitter \
-        bttimingclient \
         marshal \
         names \
         compression \

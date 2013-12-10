@@ -26,6 +26,10 @@ if not env.has_key('_ALLJOYNCORE_'):
 
 jsenv = env.Clone()
 
+if jsenv['BD'] == 'on':
+    # Build JS with bundled daemon support
+    jsenv.Prepend(LIBS = [jsenv['bdobj'], jsenv['bdlib']])
+
 vars = Variables()
 vars.Add(PathVariable('CORDOVA_BASE', 'Base directory of Cordova (aka PhoneGap)', os.environ.get('CORDOVA_BASE')))
 vars.Add(PathVariable('GECKO_BASE', 'Base directory of Gecko SDK', os.environ.get('GECKO_BASE')))
@@ -40,7 +44,7 @@ jsenv.Append(CPPPATH = [jsenv.Dir('../alljoyn_core/src').srcnode()])
 if '' == jsenv.subst('$GECKO_BASE') and '' == jsenv.subst('$CORDOVA_BASE'):
     print 'Must specify either GECKO_BASE or CORDOVA_BASE build variable'
     if not GetOption('help'):
-        Exit()
+        Exit(1)
 
 sys.path.append(str(jsenv.Dir('../build_core/tools/scons').srcnode()))
 from jsstatus import JavaScriptStatus
@@ -107,20 +111,18 @@ if 'WIDLPROC' in jsenv:
     print("* using scons' -c option. The docs/html folder must manually be   *")
     print("* deleted to remove the documentation files created.              *")
     print("*******************************************************************")
-    footer = '"<hr/><p class=\\"copyright\\"></p><small>AllJoyn JavaScript API Reference Manual Version 3.4.5 ' + time.strftime('%a %B %d %H:%M:%S %Z %Y') + '<br/>Copyright &copy; 2011-2013 AllSeen Alliance.<br/><b>THIS DOCUMENT AND ALL INFORMATION CONTAIN HEREIN ARE PROVIDED ON AN \\"AS-IS\\" BASIS WITHOUT WARRANTY OF ANY KIND</b>.<br/><b>MAY CONTAIN U.S. AND INTERNATIONAL EXPORT CONTROLLED INFORMATION</b><br/></small>"'
+    footer = '"<hr/><p class=\\"copyright\\"></p><small>AllJoyn&trade; JavaScript API Reference Manual Version 0.0.1 ' + time.strftime('%a %B %d %H:%M:%S %Z %Y') + '<br/>Copyright &copy; 2011-2013 AllSeen Alliance.<br/><b>THIS DOCUMENT AND ALL INFORMATION CONTAIN HEREIN ARE PROVIDED ON AN \\"AS-IS\\" BASIS WITHOUT WARRANTY OF ANY KIND</b>.<br/><b>MAY CONTAIN U.S. AND INTERNATIONAL EXPORT CONTROLLED INFORMATION</b><br/></small>"'
     Widl('docs/alljoyn.widl.in', 'jni/Status.xml', 'docs/alljoyn.widl')
     # The target directory 'docs/tmp' is never built this will cause the command to run every time WIDLPROC=foo is set
     Command('docs/tmp', 'docs/alljoyn.widl', [
             widlproc_cmd('docs/alljoyn.widl', 'docs/alljoyn.wxml'),
             jsenv['XSLTPROC'] +
             ' --stringparam date "' + time.strftime('%d %B %Y') + '"' +
-            ' --stringparam logo "<img src=\\"icon.png\\" alt=\\"AllJoyn logo\\"/>"' +
             ' --stringparam footer ' + footer +
             ' --path ' + os.path.dirname(jsenv['WIDLPROC']) +
             ' -o ' + File('docs/html/index.html').path +
             ' ' + File(os.path.dirname(jsenv['WIDLPROC']) + '/../src/widlprocxmltohtml.xsl').path +
             ' ' + File('docs/alljoyn.wxml').path
             ])
-    jsenv.Install('docs/html', 'docs/icon.png')
     jsenv.Install('docs/html', 'docs/widlhtml.css')
 

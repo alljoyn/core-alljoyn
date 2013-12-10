@@ -40,7 +40,7 @@ var alljoyn = (function() {
                 that.getAll();
             };
             bus.create(true, connect);
-        };        
+        };
 
         that = {};
 
@@ -67,7 +67,7 @@ var alljoyn = (function() {
              */
             proxyObj.methodCall("org.freedesktop.DBus.Properties", "Get", "org.alljoyn.bus.samples.props.PropsInterface", "StringProp", onGet);
         };
-        
+
         that.setStringProp = function(value) {
             var onSet = function(err, context) {
                 if (err) {
@@ -94,7 +94,7 @@ var alljoyn = (function() {
             };
             proxyObj.methodCall("org.freedesktop.DBus.Properties", "Get", "org.alljoyn.bus.samples.props.PropsInterface", "IntProp", onGet);
         };
-        
+
         that.setIntProp = function(value) {
             var onSet = function(err, context) {
                 if (err) {
@@ -104,7 +104,7 @@ var alljoyn = (function() {
             };
             proxyObj.methodCall("org.freedesktop.DBus.Properties", "Set", "org.alljoyn.bus.samples.props.PropsInterface", "IntProp", { "i": value }, onSet);
         };
-        
+
         that.getAll = function() {
             var onGet = function(err, context, values) {
                 if (err) {

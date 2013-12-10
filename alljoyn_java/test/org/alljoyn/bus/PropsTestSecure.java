@@ -72,6 +72,10 @@ public class PropsTestSecure extends TestCase {
         public int getIntProp() { return intProperty; }
 
         public void setIntProp(int intProperty) { this.intProperty = intProperty; }
+
+        public String Ping(String str) throws BusException {
+            return str;
+        }
     }
 
     BusAttachment serviceBus;

@@ -1,10 +1,5 @@
-/**
- * @file
- * Utility functions for tweaking Bluetooth behavior via BlueZ.
- */
-
-/******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+/*
+ * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -17,31 +12,23 @@
  *    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- ******************************************************************************/
-
-#ifndef _ALLJOYN_BLUEZHCIUTILS_H
-#define _ALLJOYN_BLUEZHCIUTILS_H
-
-#include <qcc/platform.h>
-
-#include <qcc/Socket.h>
-
-#include "BDAddress.h"
-#include "BTTransportConsts.h"
-
-#include <alljoyn/Status.h>
-
-namespace ajn {
-namespace bluez {
-
-/**
- * Set the L2CAP mtu to something better than the BT 1.0 default value.
  */
-void ConfigL2capMTU(qcc::SocketFd sockFd);
+#ifndef _IFCSECURITYINTERFACE_H
+#define _IFCSECURITYINTERFACE_H
 
-void ConfigL2capMaster(qcc::SocketFd sockFd);
+#include "ScriptableObject.h"
+#include <qcc/ManagedObj.h>
 
-} // namespace bluez
-} // namespace ajn
+class _IfcSecurityInterface : public ScriptableObject {
+  public:
+    static std::map<qcc::String, int32_t>& Constants();
+    _IfcSecurityInterface(Plugin& plugin);
+    virtual ~_IfcSecurityInterface();
 
-#endif
+  private:
+    static std::map<qcc::String, int32_t> constants;
+};
+
+typedef qcc::ManagedObj<_IfcSecurityInterface> IfcSecurityInterface;
+
+#endif // _IFCSECURITYINTERFACE_H

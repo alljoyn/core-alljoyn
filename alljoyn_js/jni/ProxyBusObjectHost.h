@@ -38,6 +38,7 @@ class _ProxyBusObjectHost : public ScriptableObject {
     bool getPath(NPVariant* result);
     bool getServiceName(NPVariant* result);
     bool getSessionId(NPVariant* result);
+    bool getSecure(NPVariant* result);
 
     bool getChildren(const NPVariant* args, uint32_t argCount, NPVariant* result);
     bool getInterface(const NPVariant* args, uint32_t argCount, NPVariant* result);

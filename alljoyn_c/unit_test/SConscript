@@ -67,6 +67,10 @@ else:
     unittest_env = env.Clone()
     unittest_env.Prepend(LIBS = unittest_env['ALLJOYN_C_LIB_STATIC'])
 
+    if unittest_env['BD'] == 'on':
+        # Build apps with bundled daemon support
+        unittest_env.Prepend(LIBS = [unittest_env['bdobj'], unittest_env['bdlib']])
+
     gtest_dir = unittest_env['GTEST_DIR']
     if gtest_dir != '/usr':
         unittest_env.Append(CPPPATH = [gtest_dir + '/include'])

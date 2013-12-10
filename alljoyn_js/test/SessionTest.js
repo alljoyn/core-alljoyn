@@ -48,7 +48,7 @@ AsyncTestCase("SessionTest", {
                 assertFalsy(err);
                 /* Specify parameters */
                 var sessionOpts = { port: 0,
-                                    traffic: 1, 
+                                    traffic: 1,
                                     isMultipoint: false,
                                     proximity: 0xff,
                                     transports: 0xffff };
@@ -106,7 +106,7 @@ AsyncTestCase("SessionTest", {
             var joinSession = function(err) {
                 assertFalsy(err);
                 bus.joinSession({ host: otherBus.uniqueName,
-                                  port: port }, 
+                                  port: port },
                                 callbacks.add(onJoinSession));
             };
             var onJoinSession = function(err, id, opts) {
@@ -291,7 +291,7 @@ AsyncTestCase("SessionTest", {
             };
             var bindSessionPort = function(err) {
                 assertFalsy(err);
-                var sessionOpts = { isMultipoint: true, 
+                var sessionOpts = { isMultipoint: true,
                                     onAccept: callbacks.add(onAccept),
                                     onJoined: callbacks.add(onJoined) };
                 otherBus.bindSessionPort(sessionOpts, callbacks.add(connect));
@@ -343,7 +343,7 @@ AsyncTestCase("SessionTest", {
             };
             var bindSessionPort = function(err) {
                 assertFalsy(err);
-                var sessionOpts = { isMultipoint: true, 
+                var sessionOpts = { isMultipoint: true,
                                     onAccept: callbacks.add(onAccept),
                                     onJoined: callbacks.add(onJoined),
                                     onMemberAdded: callbacks.add(onMemberAdded),

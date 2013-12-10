@@ -49,16 +49,13 @@ using namespace ajn;
 namespace org {
 namespace alljoyn {
 namespace alljoyn_test {
-const char* InterfaceName1 = "org.alljoyn.signals.Interface";
 const char* DefaultWellKnownName = "org.alljoyn.signals";
-const char* ObjectPath = "/org/alljoyn/signals";
 }
 }
 }
 
 /** Static top level message bus object */
 static BusAttachment* g_msgBus = NULL;
-static Event g_discoverEvent;
 static String g_wellKnownName = ::org::alljoyn::alljoyn_test::DefaultWellKnownName;
 static bool g_acceptSession = true;
 static bool g_stressTest = false;
@@ -68,16 +65,15 @@ static int g_sleepBeforeLeave = 0;
 static int g_useCount = 0;
 static bool g_useMultipoint = true;
 static bool g_suppressNameOwnerChanged = false;
+static bool g_keep_retrying_in_failure = false;
+static uint32_t g_concurrent_threads = 4;
 
-SessionPort SESSION_PORT_MESSAGES_MP1 = 26;
+SessionPort SESSION_PORT = 26;
 
 static volatile sig_atomic_t g_interrupt = false;
 
 static void SigIntHandler(int sig)
 {
-    if (g_msgBus) {
-        g_msgBus->Stop();
-    }
     g_interrupt = true;
 }
 
@@ -92,7 +88,7 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
     void SessionJoined(SessionPort sessionPort, SessionId sessionId, const char* joiner)
     {
-        QCC_SyncPrintf("Session Established: joiner=%s, sessionId=%u\n", joiner, sessionId);
+        printf("=============> Session Established: joiner=%s, sessionId=%u\n", joiner, sessionId);
         QStatus status = g_msgBus->SetSessionListener(sessionId, this);
         if (ER_OK != status) {
             QCC_LogError(status, ("Failed to SetSessionListener(%u)", sessionId));
@@ -101,13 +97,12 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
-        QCC_SyncPrintf("FoundAdvertisedName(name=%s, transport=0x%x, prefix=%s)\n", name, transport, namePrefix);
+        printf("FoundAdvertisedName(name=%s, transport=0x%x, prefix=%s)\n", name, transport, namePrefix);
         if (strcmp(name, g_wellKnownName.c_str()) != 0) {
             SessionOpts::TrafficType traffic = SessionOpts::TRAFFIC_MESSAGES;
             SessionOpts opts(traffic, g_useMultipoint, SessionOpts::PROXIMITY_ANY, transport);
 
-            QCC_SyncPrintf("Calling JoinSessionAsync(%s)\n", name);
-            QStatus status = g_msgBus->JoinSessionAsync(name, 26, this, opts, this, ::strdup(name));
+            QStatus status = g_msgBus->JoinSessionAsync(name, SESSION_PORT, this, opts, this, ::strdup(name));
             if (ER_OK != status) {
                 QCC_LogError(status, ("JoinSessionAsync(%s) failed \n", name));
                 exit(1);
@@ -120,20 +115,22 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
         const char* name = reinterpret_cast<const char*>(context);
 
         if (status == ER_OK) {
-            QCC_SyncPrintf("JoinSessionAsync succeeded. SessionId=%u\n", sessionId);
-        } else if (status == ER_ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED) {
-            /* Retry join since we joined before leave was complete */
-            QCC_SyncPrintf("JoinSessionAsync was too early. Trying again.\n");
-            char* retryContext = ::strdup(name);
-            status = g_msgBus->JoinSessionAsync(name, 26, this, opts, this, retryContext);
-            if (status != ER_OK) {
-                QCC_SyncPrintf("JoinSessionAsync retry failed\n");
-                free(retryContext);
-            }
-            return;
+            printf("JoinSessionAsync succeeded. SessionId=%u ===========================>  %s\n", sessionId, name);
         } else {
-            QCC_LogError(status, ("JoinSessionAsych failed"));
-            QCC_SyncPrintf("JoinSession failed with %s\n", QCC_StatusText(status));
+            QCC_LogError(status, ("JoinSessionCB failure "));
+            if (g_keep_retrying_in_failure) {
+                /* Keep retrying inspite of failure. */
+                char* retryContext = ::strdup(name);
+                SessionOpts::TrafficType traffic = SessionOpts::TRAFFIC_MESSAGES;
+                SessionOpts opts1(traffic, g_useMultipoint, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+                QStatus status1 = g_msgBus->JoinSessionAsync(name, SESSION_PORT, this, opts1, this, retryContext);
+                if (status1 != ER_OK) {
+                    QCC_LogError(status1, ("JoinSession retry failure"));
+                    free(retryContext);
+                }
+            } else {
+                QCC_LogError(status, ("JoinSessionAsyncCB: JoinSession failure"));
+            }
         }
 
         /* Start over if we are in stress mode */
@@ -144,16 +141,14 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
             g_msgBus->EnableConcurrentCallbacks();
 
-            QCC_SyncPrintf("Calling LeaveSession(%u)\n", sessionId);
             QStatus status = g_msgBus->LeaveSession(sessionId);
-            QCC_SyncPrintf("LeaveSession(%u) returned %s\n", sessionId, QCC_StatusText(status));
 
             if (status == ER_OK) {
                 if (g_sleepBeforeRejoin) {
                     qcc::Sleep(g_sleepBeforeRejoin);
                 }
                 char* retryContext = ::strdup(name);
-                status = g_msgBus->JoinSessionAsync(name, 26, this, opts, this, retryContext);
+                status = g_msgBus->JoinSessionAsync(name, SESSION_PORT, this, opts, this, retryContext);
                 if (status != ER_OK) {
                     QCC_LogError(status, ("JoinSessionAsync failed"));
                     free(retryContext);
@@ -167,22 +162,22 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
 
     void LostAdvertisedName(const char* name, const TransportMask transport, const char* prefix)
     {
-        QCC_SyncPrintf("LostAdvertisedName(name=%s, transport=0x%x,  prefix=%s)\n", name, transport, prefix);
+        printf("LostAdvertisedName(name=%s, transport=0x%x,  prefix=%s)\n", name, transport, prefix);
     }
 
     void NameOwnerChanged(const char* name, const char* previousOwner, const char* newOwner)
     {
         if (!g_suppressNameOwnerChanged) {
-            QCC_SyncPrintf("NameOwnerChanged(%s, %s, %s)\n",
-                           name,
-                           previousOwner ? previousOwner : "null",
-                           newOwner ? newOwner : "null");
+            printf("NameOwnerChanged(%s, %s, %s)\n",
+                   name,
+                   previousOwner ? previousOwner : "null",
+                   newOwner ? newOwner : "null");
         }
     }
 
-    void SessionLost(SessionId sessid, SessionLostReason reason)
+    void SessionLost(SessionId sessid)
     {
-        QCC_SyncPrintf("Session Lost  %u. Reason = %u.\n", sessid, reason);
+        printf("Session Lost  %u\n", sessid);
     }
 };
 
@@ -196,21 +191,33 @@ static void usage(void)
     printf("   -r           = Reject incoming joinSession attempts\n");
     printf("   -s           = Stress test. Continous leave/join\n");
     printf("   -f <prefix>  = FindAdvertisedName prefix\n");
-    printf("   -b           = Advertise over Bluetooth (enables selective advertising)\n");
-    printf("   -t           = Advertise over TCP (enables selective advertising)\n");
-    printf("   -w           = Advertise over Wi-Fi Direct (enables selective advertising)\n");
+    printf("   -b           = Advertise/Discover over Bluetooth\n");
+    printf("   -t           = Advertise/Discover over TCP\n");
+    printf("   -w           = Advertise/Discover over Wi-Fi Direct\n");
+    printf("   -i           = Advertise/Discover over ICE \n");
+    printf("   -l           = Advertise/Discover over LOCAL\n");
     printf("   -dj <ms>     = Number of ms to delay between leaving and re-joining\n");
     printf("   -dl <ms>     = Number of ms to delay before leaving the session\n");
     printf("   -p           = Use point-to-point sessions rather than multi-point\n");
     printf("   -qnoc        = Suppress NameOwnerChanged printing\n");
+    printf("   -fa          = Retryjoin session even during failure\n");
+    printf("   -ct  #       = Set concurrency level\n");
+    printf("   -sp  #       = Session port\n");
     printf("\n");
 }
 
 /** Main entry point */
 int main(int argc, char** argv)
 {
+    const uint64_t startTime = GetTimestamp64(); // timestamp in milliseconds
     QStatus status = ER_OK;
-    uint32_t transportOpts = 0;
+    uint32_t transportOpts = TRANSPORT_TCP;
+
+    // echo command line to provide distinguishing information within multipoint session
+    for (int i = 0; i < argc; i++) {
+        printf("%s ", argv[i]);
+    }
+    printf("\n");
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
@@ -243,6 +250,10 @@ int main(int argc, char** argv)
             transportOpts |= TRANSPORT_WLAN;
         } else if (0 == strcmp("-w", argv[i])) {
             transportOpts |= TRANSPORT_WFD;
+        } else if (0 == strcmp("-i", argv[i])) {
+            transportOpts |= TRANSPORT_ICE;
+        } else if (0 == strcmp("-l", argv[i])) {
+            transportOpts |= TRANSPORT_LOCAL;
         } else if (0 == strcmp("-dj", argv[i])) {
             g_sleepBeforeRejoin = qcc::StringToU32(argv[++i], 0);
         } else if (0 == strcmp("-dl", argv[i])) {
@@ -251,7 +262,27 @@ int main(int argc, char** argv)
             g_useMultipoint = false;
         } else if (0 == strcmp("-qnoc", argv[i])) {
             g_suppressNameOwnerChanged = true;
-        } else {
+        } else if (0 == strcmp("-fa", argv[i])) {
+            g_keep_retrying_in_failure = true;
+        } else if (0 == strcmp("-ct", argv[i])) {
+            ++i;
+            if (i == argc) {
+                printf("option %s requires a parameter\n", argv[i - 1]);
+                usage();
+                exit(1);
+            } else {
+                g_concurrent_threads = qcc::StringToU32(argv[i], 0);;
+            }
+        } else if (0 == strcmp("-sp", argv[i])) {
+            ++i;
+            if (i == argc) {
+                printf("option %s requires a parameter\n", argv[i - 1]);
+                usage();
+                exit(1);
+            } else {
+                SESSION_PORT = (SessionPort) qcc::StringToU32(argv[i], 0);;
+            }
+        }  else {
             status = ER_FAIL;
             printf("Unknown option %s\n", argv[i]);
             usage();
@@ -259,27 +290,17 @@ int main(int argc, char** argv)
         }
     }
 
-    /* If no transport option was specifie, then make session options very open */
-    if (transportOpts == 0) {
-        transportOpts = TRANSPORT_ANY;
-    }
 
     /* Get env vars */
     Environ* env = Environ::GetAppEnviron();
-    qcc::String clientArgs = env->Find("DBUS_STARTER_ADDRESS");
-
-    if (clientArgs.empty()) {
-        clientArgs = env->Find("BUS_ADDRESS");
-    }
+    qcc::String clientArgs = env->Find("BUS_ADDRESS");
 
     /* Create message bus */
-    g_msgBus = new BusAttachment("bbjoin", true);
-
-    /* Start the msg bus */
-    if (ER_OK == status) {
-        status = g_msgBus->Start();
-    } else {
+    g_msgBus = new BusAttachment("bbjoin", true, g_concurrent_threads);
+    status = g_msgBus->Start();
+    if (ER_OK != status) {
         QCC_LogError(status, ("BusAttachment::Start failed"));
+        exit(-1);
     }
 
     /* Connect to the daemon */
@@ -287,6 +308,10 @@ int main(int argc, char** argv)
         status = g_msgBus->Connect();
     } else {
         status = g_msgBus->Connect(clientArgs.c_str());
+    }
+    if (ER_OK != status) {
+        QCC_LogError(status, ("BusAttachment::Connect failed"));
+        exit(-1);
     }
 
     MyBusListener myBusListener;
@@ -299,31 +324,30 @@ int main(int argc, char** argv)
         SessionOpts optsmp(SessionOpts::TRAFFIC_MESSAGES, g_useMultipoint,  SessionOpts::PROXIMITY_ANY, transportOpts);
 
         /* Create a session for incoming client connections */
-        status = g_msgBus->BindSessionPort(SESSION_PORT_MESSAGES_MP1, optsmp, myBusListener);
+        status = g_msgBus->BindSessionPort(SESSION_PORT, optsmp, myBusListener);
         if (status != ER_OK) {
             QCC_LogError(status, ("BindSessionPort failed"));
+            exit(-1);
         }
 
         /* Request a well-known name */
         QStatus status = g_msgBus->RequestName(g_wellKnownName.c_str(), DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
         if (status != ER_OK) {
-            status = (status == ER_OK) ? ER_FAIL : status;
             QCC_LogError(status, ("RequestName(%s) failed. ", g_wellKnownName.c_str()));
-            return status;
+            exit(-1);
         }
 
         /* Begin Advertising the well-known name */
         status = g_msgBus->AdvertiseName(g_wellKnownName.c_str(), transportOpts);
         if (ER_OK != status) {
-            status = (status == ER_OK) ? ER_FAIL : status;
-            QCC_LogError(status, ("Sending org.alljoyn.Bus.Advertise failed "));
-            return status;
+            QCC_LogError(status, ("Advertise name(%s) failed ", g_wellKnownName.c_str()));
+            exit(-1);
         }
 
-        status = g_msgBus->FindAdvertisedName(g_findPrefix ? g_findPrefix : "com");
+        status = g_msgBus->FindAdvertisedNameByTransport(g_findPrefix ? g_findPrefix : "com", transportOpts);
         if (status != ER_OK) {
-            status = (status == ER_OK) ? ER_FAIL : status;
             QCC_LogError(status, ("FindAdvertisedName failed "));
+            exit(-1);
         }
     }
 
@@ -338,7 +362,7 @@ int main(int argc, char** argv)
         delete g_msgBus;
     }
 
-    printf("\n %s exiting with status %d (%s)\n", argv[0], status, QCC_StatusText(status));
+    printf("Elapsed time is %ld seconds\n", (GetTimestamp64() - startTime) / 1000);
 
     return (int) status;
 }

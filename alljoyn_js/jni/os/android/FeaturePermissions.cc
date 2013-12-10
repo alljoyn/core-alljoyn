@@ -18,6 +18,7 @@
 #include "PluginData.h"
 #include <qcc/Debug.h>
 #include <qcc/FileStream.h>
+#include <qcc/StringUtil.h>
 #include <qcc/Util.h>
 
 #define QCC_MODULE "ALLJOYN_JS"

@@ -32,6 +32,12 @@ Help(vars.GenerateHelpText(unityenv))
 
 sys.path.append(str(unityenv.Dir('../build_core/tools/scons').srcnode()))
 
+# create the alljoyn_unity_native library this libary will link in the bundled daemon
+# similar to other language bindings.
+unityenv.Prepend(LIBS=[unityenv['bdobj'], unityenv['bdlib']])
+libaj_unity_native = unityenv.SharedLibrary('alljoyn_unity_native', [env['AJ_C_OBJS']])
+unityenv.Install('$UNITY_DISTDIR/lib', libaj_unity_native)
+
 # Make alljoyn_unity dist a sub-directory of the alljoyn dist.  This avoids any conflicts with alljoyn dist targets.
 unityenv['UNITY_DISTDIR'] = unityenv['DISTDIR'] + '/unity'
 unityenv['UNITY_TESTDIR'] = unityenv['TESTDIR'] + '/unity'
@@ -44,7 +50,7 @@ unityenv.VariantDir('$OBJDIR/samples', 'samples', duplicate = 0)
 unityenv['ALLJOYN_UNITY_LIB'] = unityenv.SConscript('src/SConscript', exports = {'env':unityenv})
 
 # Sample programs
-progs = unityenv.SConscript('samples/SConscript', exports = {'env':unityenv})
+progs = unityenv.SConscript('samples/SConscript', exports = {'env':unityenv, 'clib': libaj_unity_native})
 
 #install Package support files
 package_support_dir = unityenv.Dir('package_support/UnityPackage')
@@ -55,19 +61,17 @@ if unityenv['OS_GROUP'] == 'windows':
     #place alljoyn_unity.dll into the samples
     unityenv.Install('package_support/UnityPackage/Assets/Plugins', unityenv['ALLJOYN_UNITY_LIB'])
 
-    #place alljoyn_c.dll into the samples
-    liballjoyn_c = '$DISTDIR/c/lib/alljoyn_c.dll'
-    unityenv.Install('package_support/UnityPackage/Assets/Plugins', liballjoyn_c)
+    #place liballjoyn_unity_native.dll into the samples
+    unityenv.Install('package_support/UnityPackage/Assets/Plugins', libaj_unity_native)
 
 if unityenv['OS'] == 'android':
     #place alljoyn_unity.dll into the samples
     unityenv.Install('package_support/UnityPackage/Assets/Plugins', unityenv['ALLJOYN_UNITY_LIB'])
 
-    #place liballjoyn_c.so into the samples
-    liballjoyn_c = '$DISTDIR/c/lib/liballjoyn_c.so'
-    unityenv.Install('package_support/UnityPackage/Assets/Plugins/Android', liballjoyn_c)
+    #place liballjoyn_unity_native.so into the samples
+    unityenv.Install('package_support/UnityPackage/Assets/Plugins/Android', libaj_unity_native)
 
 #Build unit tests
-unityenv.SConscript('unit_test/SConscript', exports = {'env':unityenv})
+unityenv.SConscript('unit_test/SConscript', exports = {'env':unityenv, 'clib': libaj_unity_native})
 # Build docs
 unityenv.SConscript('docs/SConscript', exports = {'env':unityenv})

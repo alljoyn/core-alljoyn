@@ -16,7 +16,7 @@
 var service = (function() {
         var SERVICE_NAME = "org.alljoyn.bus.samples.simple",
             CONTACT_PORT = 42;
-  
+
         var that,
             aj,
             bus;
@@ -49,7 +49,7 @@ var service = (function() {
                     ]
                 }, registerBusObject);
             };
-            /* 
+            /*
              * To make a service available to other AllJoyn peers, register a BusObject with the
              * BusAttachment at a specific path.
              *
@@ -70,10 +70,10 @@ var service = (function() {
                          * Returning a value from the method is done by calling the reply method of the
                          * context.
                          */
-                        Ping: function(context, str) { 
+                        Ping: function(context, str) {
                             that.onping(context.sender, str);
                             /* Echo the input argument back as the method return value. */
-                            context.reply(str); 
+                            context.reply(str);
                             that.onping(bus.uniqueName, str);
                         }
                     }
@@ -94,12 +94,12 @@ var service = (function() {
                     return;
                 }
                 bus.bindSessionPort({
-                    port: CONTACT_PORT, 
-                    onAccept: function(port, joiner, opts) { 
-                        return (port === CONTACT_PORT); 
+                    port: CONTACT_PORT,
+                    onAccept: function(port, joiner, opts) {
+                        return (port === CONTACT_PORT);
                     },
-                    onJoined: function(port, id, joiner) { 
-                        that.onstatus("(" + joiner + ") joined session '" + id + "'"); 
+                    onJoined: function(port, id, joiner) {
+                        that.onstatus("(" + joiner + ") joined session '" + id + "'");
                     }
                 }, requestName);
             };
@@ -109,7 +109,7 @@ var service = (function() {
                     alert("Bind session port failed [(" + err + ")]");
                     return;
                 }
-                bus.requestName(SERVICE_NAME, aj.BusAttachment.DBUS_NAME_FLAG_REPLACE_EXISTING | 
+                bus.requestName(SERVICE_NAME, aj.BusAttachment.DBUS_NAME_FLAG_REPLACE_EXISTING |
                                               aj.BusAttachment.DBUS_NAME_FLAG_DO_NOT_QUEUE, advertiseName);
             };
             /* ...and advertise the same well-known name. */

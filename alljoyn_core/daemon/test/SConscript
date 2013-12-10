@@ -25,15 +25,6 @@ progs = [
 if daemon_env['OS'] in ['android', 'linux']:
    progs.append(daemon_env.Program('bbdaemon', ['bbdaemon.cc'] + daemon_objs))
    
-if daemon_env['BT'] == 'on':
-   testenv = daemon_env.Clone()
-   testenv.Append(LINKFLAGS=['-Wl,--allow-multiple-definition'])
-   progs.append(testenv.Program('BTAccessorTester',
-                                ['BTAccessorTester.cc'] +
-                                [ o for o in daemon_objs
-                                  if ((basename(str(o)) != 'BTTransport.o') and
-                                      (basename(str(o)) != 'BTController.o'))]))
-
 #if daemon_env['OS'] == 'win7':
 #   progs.append(daemon_env.Program('WinBtDiscovery.exe', ['WinBtDiscovery.cc']))
    

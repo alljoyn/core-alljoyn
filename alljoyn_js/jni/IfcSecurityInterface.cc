@@ -1,4 +1,4 @@
-/******************************************************************************
+/*
  * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
@@ -12,22 +12,33 @@
  *    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- ******************************************************************************/
+ */
+#include "IfcSecurityInterface.h"
 
-#include "AboutClientSessionListener.h"
-#include <stdio.h>
-#include <iostream>
+#include <qcc/Debug.h>
 
-AboutClientSessionListener::AboutClientSessionListener(qcc::String const& inServiceNAme) :
-    mySessionID(0), serviceName(inServiceNAme)
+#define QCC_MODULE "ALLJOYN_JS"
+
+std::map<qcc::String, int32_t> _IfcSecurityInterface::constants;
+
+std::map<qcc::String, int32_t>& _IfcSecurityInterface::Constants()
 {
+    if (constants.empty()) {
+        CONSTANT("INHERIT",  0x00);     /**< Inherit the security of the object that implements the interface */
+        CONSTANT("REQUIRED", 0x01);     /**< Security is required for an interface */
+        CONSTANT("OFF",      0x02);     /**< Security does not apply to this interface */
+    }
+    return constants;
 }
 
-AboutClientSessionListener::~AboutClientSessionListener()
+_IfcSecurityInterface::_IfcSecurityInterface(Plugin& plugin) :
+    ScriptableObject(plugin, Constants())
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
 }
 
-void AboutClientSessionListener::SessionLost(ajn::SessionId sessionId)
+_IfcSecurityInterface::~_IfcSecurityInterface()
 {
-    std::cout << "AboutClient session has been lost for " << serviceName.c_str() << std::endl;
+    QCC_DbgTrace(("%s", __FUNCTION__));
 }
+

@@ -24,9 +24,14 @@ installDocs = []
 
 # Build docs
 if env['DOCS'] == 'html':
-    generateDocs = docenv.Doxygen(source=['Doxygen_html', '../src/Status.cs'], target=[Dir('tmp'),Dir('html')])
+    generateDocs = docenv.Doxygen(source=['Doxygen_html'])
     installDocs = docenv.Install('$UNITY_DISTDIR/docs', Dir('html'))
-    docenv.Clean('Doxygen_html', Dir('html'))
+    docenv.Depends(generateDocs, '../src/Status.cs')
     docenv.Depends(installDocs, generateDocs)
+
+# Build Alias to make cleaning, building and rebuilding the documentation when
+# working only on the documentation simpler. This can be run by using
+# `scons unity_docs`
+docenv.Alias('unity_docs', installDocs)
 
 Return('installDocs')

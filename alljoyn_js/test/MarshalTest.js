@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -45,20 +45,23 @@ AsyncTestCase("MarshalTest", {
                 bus.createInterface({ name: 'interface.y', method: [ { name: 'Methody', signature: 'y', returnSignature: 'y' } ] }, callbacks.add(registerBusObject))
                 }))}))}))}))}))}))}))}))}))}))}))};
             var registerBusObject = function(err) {
-                bus.registerBusObject('/testObject', {
-                    'interface.b': { Methodb: function(context, arg) { context.reply(arg); } },
-                    'interface.d': { Methodd: function(context, arg) { context.reply(arg); } },
-                    'interface.g': { Methodg: function(context, arg) { context.reply(arg); } },
-                    'interface.i': { Methodi: function(context, arg) { context.reply(arg); } },
-                    'interface.n': { Methodn: function(context, arg) { context.reply(arg); } },
-                    'interface.o': { Methodo: function(context, arg) { context.reply(arg); } },
-                    'interface.q': { Methodq: function(context, arg) { context.reply(arg); } },
-                    'interface.s': { Methods: function(context, arg) { context.reply(arg); } },
-                    'interface.t': { Methodt: function(context, arg) { context.reply(arg); } },
-                    'interface.u': { Methodu: function(context, arg) { context.reply(arg); } },
-                    'interface.x': { Methodx: function(context, arg) { context.reply(arg); } },
-                    'interface.y': { Methody: function(context, arg) { context.reply(arg); } },
-                }, callbacks.add(getProxyObj));
+                bus.registerBusObject('/testObject',
+                                      {
+                                          'interface.b': { Methodb: function(context, arg) { context.reply(arg); } },
+                                          'interface.d': { Methodd: function(context, arg) { context.reply(arg); } },
+                                          'interface.g': { Methodg: function(context, arg) { context.reply(arg); } },
+                                          'interface.i': { Methodi: function(context, arg) { context.reply(arg); } },
+                                          'interface.n': { Methodn: function(context, arg) { context.reply(arg); } },
+                                          'interface.o': { Methodo: function(context, arg) { context.reply(arg); } },
+                                          'interface.q': { Methodq: function(context, arg) { context.reply(arg); } },
+                                          'interface.s': { Methods: function(context, arg) { context.reply(arg); } },
+                                          'interface.t': { Methodt: function(context, arg) { context.reply(arg); } },
+                                          'interface.u': { Methodu: function(context, arg) { context.reply(arg); } },
+                                          'interface.x': { Methodx: function(context, arg) { context.reply(arg); } },
+                                          'interface.y': { Methody: function(context, arg) { context.reply(arg); } }
+                                      },
+                                      false,
+                                      callbacks.add(getProxyObj));
             };
             var getProxyObj = function(err) {
                 assertFalsy(err);
@@ -158,32 +161,35 @@ AsyncTestCase("MarshalTest", {
                 bus.createInterface({ name: 'interface.av', method: [ { name: 'Methodav', signature: 'av', returnSignature: 'av' } ] }, callbacks.add(registerBusObject))
                 }))}))}))}))}))}))}))}))}))}))}))}))}))}))}))};
             var registerBusObject = function(err) {
-                bus.registerBusObject('/testObject', {
-                    'interface.ab': { Methodab: function(context, arg) { context.reply(arg); } },
-                    'interface.ad': { Methodad: function(context, arg) { context.reply(arg); } },
-                    'interface.ag': { Methodag: function(context, arg) { context.reply(arg); } },
-                    'interface.ai': { Methodai: function(context, arg) { context.reply(arg); } },
-                    'interface.an': { Methodan: function(context, arg) { context.reply(arg); } },
-                    'interface.ao': { Methodao: function(context, arg) { context.reply(arg); } },
-                    'interface.aq': { Methodaq: function(context, arg) { context.reply(arg); } },
-                    'interface.as': { Methodas: function(context, arg) { context.reply(arg); } },
-                    'interface.at': { Methodat: function(context, arg) { context.reply(arg); } },
-                    'interface.au': { Methodau: function(context, arg) { context.reply(arg); } },
-                    'interface.ax': { Methodax: function(context, arg) { context.reply(arg); } },
-                    'interface.ay': { Methoday: function(context, arg) { context.reply(arg); } },
-                    'interface.aas': { Methodaas: function(context, arg) { context.reply(arg); } },
-                    'interface.ae': { Methodae: function(context, arg) { context.reply(arg); } },
-                    'interface.ar': { Methodar: function(context, arg) { context.reply(arg); } },
-                    'interface.av': { 
-                        Methodav: function(err, context, arg) { 
-                            var args = [];
-                            for (var i = 0; i < arg.length; ++i) {
-                                args[i] = { 's': arg[i] };
-                            }
-                            context.reply(args); 
-                        }
-                    },
-                }, getProxyObj);
+                bus.registerBusObject('/testObject',
+                                      {
+                                          'interface.ab': { Methodab: function(context, arg) { context.reply(arg); } },
+                                          'interface.ad': { Methodad: function(context, arg) { context.reply(arg); } },
+                                          'interface.ag': { Methodag: function(context, arg) { context.reply(arg); } },
+                                          'interface.ai': { Methodai: function(context, arg) { context.reply(arg); } },
+                                          'interface.an': { Methodan: function(context, arg) { context.reply(arg); } },
+                                          'interface.ao': { Methodao: function(context, arg) { context.reply(arg); } },
+                                          'interface.aq': { Methodaq: function(context, arg) { context.reply(arg); } },
+                                          'interface.as': { Methodas: function(context, arg) { context.reply(arg); } },
+                                          'interface.at': { Methodat: function(context, arg) { context.reply(arg); } },
+                                          'interface.au': { Methodau: function(context, arg) { context.reply(arg); } },
+                                          'interface.ax': { Methodax: function(context, arg) { context.reply(arg); } },
+                                          'interface.ay': { Methoday: function(context, arg) { context.reply(arg); } },
+                                          'interface.aas': { Methodaas: function(context, arg) { context.reply(arg); } },
+                                          'interface.ae': { Methodae: function(context, arg) { context.reply(arg); } },
+                                          'interface.ar': { Methodar: function(context, arg) { context.reply(arg); } },
+                                          'interface.av': {
+                                              Methodav: function(context, arg) {
+                                                  var args = [];
+                                                  for (var i = 0; i < arg.length; ++i) {
+                                                      args[i] = { 's': arg[i] };
+                                                  }
+                                                  context.reply(args);
+                                              }
+                                          }
+                                      },
+                                      false,
+                                      callbacks.add(getProxyObj));
             };
             var getProxyObj = function(err) {
                 assertFalsy(err);
@@ -196,6 +202,7 @@ AsyncTestCase("MarshalTest", {
                 proxy.methodCall('interface.ab', 'Methodab', [ true, true ], callbacks.add(onReplyab));
             };
             var onReplyab = function(err, context, argab) {
+                err && console.log('err.name = ' + err.name + '   err.code = ' + err.code);
                 assertFalsy(err);
                 assertEquals([ true, true ], argab);
                 proxy.methodCall('interface.ad', 'Methodad', [ 1.234, 1.234 ], callbacks.add(onReplyad));
@@ -275,6 +282,7 @@ AsyncTestCase("MarshalTest", {
                 proxy.methodCall('interface.av', 'Methodav', [ { s: "string" }, { s: "string" } ], callbacks.add(onReplyav));
             };
             var onReplyav = function(err, context, argav) {
+                err && console.log('err.name = ' + err.name + '   err.code = ' + err.code);
                 assertFalsy(err);
                 assertEquals([ "string", "string" ], argav);
             };
@@ -483,300 +491,303 @@ AsyncTestCase("MarshalTest", {
                 bus.createInterface({ name: 'interface.eyv', method: [ { name: 'Methodeyv', signature: 'a{yv}', returnSignature: 'a{yv}' } ] }, callbacks.add(registerBusObject))
                 }))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))};
             var registerBusObject = function(err) {
-                bus.registerBusObject('/testObject', {
-                    'interface.ebb': { Methodebb: function(context, arg) { context.reply(arg); } },
-                    'interface.ebd': { Methodebd: function(context, arg) { context.reply(arg); } },
-                    'interface.ebg': { Methodebg: function(context, arg) { context.reply(arg); } },
-                    'interface.ebi': { Methodebi: function(context, arg) { context.reply(arg); } },
-                    'interface.ebn': { Methodebn: function(context, arg) { context.reply(arg); } },
-                    'interface.ebo': { Methodebo: function(context, arg) { context.reply(arg); } },
-                    'interface.ebq': { Methodebq: function(context, arg) { context.reply(arg); } },
-                    'interface.ebs': { Methodebs: function(context, arg) { context.reply(arg); } },
-                    'interface.ebt': { Methodebt: function(context, arg) { context.reply(arg); } },
-                    'interface.ebu': { Methodebu: function(context, arg) { context.reply(arg); } },
-                    'interface.ebx': { Methodebx: function(context, arg) { context.reply(arg); } },
-                    'interface.eby': { Methodeby: function(context, arg) { context.reply(arg); } },
-                    'interface.ebas': { Methodebas: function(context, arg) { context.reply(arg); } },
-                    'interface.ebe': { Methodebe: function(context, arg) { context.reply(arg); } },
-                    'interface.ebr': { Methodebr: function(context, arg) { context.reply(arg); } },
-                    'interface.ebv': {
-                        Methodebv: function(err, context, arg) {
-                            var args = {};
-                            for (var name in arg) {
-                                args[name] = { 's': arg[name] };
-                            }
-                            context.reply(args);
-                        }
-                    },
-                    'interface.edb': { Methodedb: function(context, arg) { context.reply(arg); } },
-                    'interface.edd': { Methodedd: function(context, arg) { context.reply(arg); } },
-                    'interface.edg': { Methodedg: function(context, arg) { context.reply(arg); } },
-                    'interface.edi': { Methodedi: function(context, arg) { context.reply(arg); } },
-                    'interface.edn': { Methodedn: function(context, arg) { context.reply(arg); } },
-                    'interface.edo': { Methodedo: function(context, arg) { context.reply(arg); } },
-                    'interface.edq': { Methodedq: function(context, arg) { context.reply(arg); } },
-                    'interface.eds': { Methodeds: function(context, arg) { context.reply(arg); } },
-                    'interface.edt': { Methodedt: function(context, arg) { context.reply(arg); } },
-                    'interface.edu': { Methodedu: function(context, arg) { context.reply(arg); } },
-                    'interface.edx': { Methodedx: function(context, arg) { context.reply(arg); } },
-                    'interface.edy': { Methodedy: function(context, arg) { context.reply(arg); } },
-                    'interface.edas': { Methodedas: function(context, arg) { context.reply(arg); } },
-                    'interface.ede': { Methodede: function(context, arg) { context.reply(arg); } },
-                    'interface.edr': { Methodedr: function(context, arg) { context.reply(arg); } },
-                    'interface.edv': {
-                        Methodedv: function(err, context, arg) {
-                            var args = {};
-                            for (var name in arg) {
-                                args[name] = { 's': arg[name] };
-                            }
-                            context.reply(args);
-                        }
-                    },
-                    'interface.egb': { Methodegb: function(context, arg) { context.reply(arg); } },
-                    'interface.egd': { Methodegd: function(context, arg) { context.reply(arg); } },
-                    'interface.egg': { Methodegg: function(context, arg) { context.reply(arg); } },
-                    'interface.egi': { Methodegi: function(context, arg) { context.reply(arg); } },
-                    'interface.egn': { Methodegn: function(context, arg) { context.reply(arg); } },
-                    'interface.ego': { Methodego: function(context, arg) { context.reply(arg); } },
-                    'interface.egq': { Methodegq: function(context, arg) { context.reply(arg); } },
-                    'interface.egs': { Methodegs: function(context, arg) { context.reply(arg); } },
-                    'interface.egt': { Methodegt: function(context, arg) { context.reply(arg); } },
-                    'interface.egu': { Methodegu: function(context, arg) { context.reply(arg); } },
-                    'interface.egx': { Methodegx: function(context, arg) { context.reply(arg); } },
-                    'interface.egy': { Methodegy: function(context, arg) { context.reply(arg); } },
-                    'interface.egas': { Methodegas: function(context, arg) { context.reply(arg); } },
-                    'interface.ege': { Methodege: function(context, arg) { context.reply(arg); } },
-                    'interface.egr': { Methodegr: function(context, arg) { context.reply(arg); } },
-                    'interface.egv': {
-                        Methodegv: function(err, context, arg) {
-                            var args = {};
-                            for (var name in arg) {
-                                args[name] = { 's': arg[name] };
-                            }
-                            context.reply(args);
-                        }
-                    },
-                    'interface.eib': { Methodeib: function(context, arg) { context.reply(arg); } },
-                    'interface.eid': { Methodeid: function(context, arg) { context.reply(arg); } },
-                    'interface.eig': { Methodeig: function(context, arg) { context.reply(arg); } },
-                    'interface.eii': { Methodeii: function(context, arg) { context.reply(arg); } },
-                    'interface.ein': { Methodein: function(context, arg) { context.reply(arg); } },
-                    'interface.eio': { Methodeio: function(context, arg) { context.reply(arg); } },
-                    'interface.eiq': { Methodeiq: function(context, arg) { context.reply(arg); } },
-                    'interface.eis': { Methodeis: function(context, arg) { context.reply(arg); } },
-                    'interface.eit': { Methodeit: function(context, arg) { context.reply(arg); } },
-                    'interface.eiu': { Methodeiu: function(context, arg) { context.reply(arg); } },
-                    'interface.eix': { Methodeix: function(context, arg) { context.reply(arg); } },
-                    'interface.eiy': { Methodeiy: function(context, arg) { context.reply(arg); } },
-                    'interface.eias': { Methodeias: function(context, arg) { context.reply(arg); } },
-                    'interface.eie': { Methodeie: function(context, arg) { context.reply(arg); } },
-                    'interface.eir': { Methodeir: function(context, arg) { context.reply(arg); } },
-                    'interface.eiv': {
-                        Methodeiv: function(context, arg) {
-                            var args = {};
-                            for (var name in arg) {
-                                args[name] = { 's': arg[name] };
-                            }
-                            context.reply(args);
-                        }
-                    },
-                    'interface.enb': { Methodenb: function(context, arg) { context.reply(arg); } },
-                    'interface.end': { Methodend: function(context, arg) { context.reply(arg); } },
-                    'interface.eng': { Methodeng: function(context, arg) { context.reply(arg); } },
-                    'interface.eni': { Methodeni: function(context, arg) { context.reply(arg); } },
-                    'interface.enn': { Methodenn: function(context, arg) { context.reply(arg); } },
-                    'interface.eno': { Methodeno: function(context, arg) { context.reply(arg); } },
-                    'interface.enq': { Methodenq: function(context, arg) { context.reply(arg); } },
-                    'interface.ens': { Methodens: function(context, arg) { context.reply(arg); } },
-                    'interface.ent': { Methodent: function(context, arg) { context.reply(arg); } },
-                    'interface.enu': { Methodenu: function(context, arg) { context.reply(arg); } },
-                    'interface.enx': { Methodenx: function(context, arg) { context.reply(arg); } },
-                    'interface.eny': { Methodeny: function(context, arg) { context.reply(arg); } },
-                    'interface.enas': { Methodenas: function(context, arg) { context.reply(arg); } },
-                    'interface.ene': { Methodene: function(context, arg) { context.reply(arg); } },
-                    'interface.enr': { Methodenr: function(context, arg) { context.reply(arg); } },
-                    'interface.env': {
-                        Methodenv: function(context, arg) {
-                            var args = {};
-                            for (var name in arg) {
-                                args[name] = { 's': arg[name] };
-                            }
-                            context.reply(args);
-                        }
-                    },
-                    'interface.eob': { Methodeob: function(context, arg) { context.reply(arg); } },
-                    'interface.eod': { Methodeod: function(context, arg) { context.reply(arg); } },
-                    'interface.eog': { Methodeog: function(context, arg) { context.reply(arg); } },
-                    'interface.eoi': { Methodeoi: function(context, arg) { context.reply(arg); } },
-                    'interface.eon': { Methodeon: function(context, arg) { context.reply(arg); } },
-                    'interface.eoo': { Methodeoo: function(context, arg) { context.reply(arg); } },
-                    'interface.eoq': { Methodeoq: function(context, arg) { context.reply(arg); } },
-                    'interface.eos': { Methodeos: function(context, arg) { context.reply(arg); } },
-                    'interface.eot': { Methodeot: function(context, arg) { context.reply(arg); } },
-                    'interface.eou': { Methodeou: function(context, arg) { context.reply(arg); } },
-                    'interface.eox': { Methodeox: function(context, arg) { context.reply(arg); } },
-                    'interface.eoy': { Methodeoy: function(context, arg) { context.reply(arg); } },
-                    'interface.eoas': { Methodeoas: function(context, arg) { context.reply(arg); } },
-                    'interface.eoe': { Methodeoe: function(context, arg) { context.reply(arg); } },
-                    'interface.eor': { Methodeor: function(context, arg) { context.reply(arg); } },
-                    'interface.eov': {
-                        Methodeov: function(context, arg) {
-                            var args = {};
-                            for (var name in arg) {
-                                args[name] = { 's': arg[name] };
-                            }
-                            context.reply(args);
-                        }
-                    },
-                    'interface.eqb': { Methodeqb: function(context, arg) { context.reply(arg); } },
-                    'interface.eqd': { Methodeqd: function(context, arg) { context.reply(arg); } },
-                    'interface.eqg': { Methodeqg: function(context, arg) { context.reply(arg); } },
-                    'interface.eqi': { Methodeqi: function(context, arg) { context.reply(arg); } },
-                    'interface.eqn': { Methodeqn: function(context, arg) { context.reply(arg); } },
-                    'interface.eqo': { Methodeqo: function(context, arg) { context.reply(arg); } },
-                    'interface.eqq': { Methodeqq: function(context, arg) { context.reply(arg); } },
-                    'interface.eqs': { Methodeqs: function(context, arg) { context.reply(arg); } },
-                    'interface.eqt': { Methodeqt: function(context, arg) { context.reply(arg); } },
-                    'interface.equ': { Methodequ: function(context, arg) { context.reply(arg); } },
-                    'interface.eqx': { Methodeqx: function(context, arg) { context.reply(arg); } },
-                    'interface.eqy': { Methodeqy: function(context, arg) { context.reply(arg); } },
-                    'interface.eqas': { Methodeqas: function(context, arg) { context.reply(arg); } },
-                    'interface.eqe': { Methodeqe: function(context, arg) { context.reply(arg); } },
-                    'interface.eqr': { Methodeqr: function(context, arg) { context.reply(arg); } },
-                    'interface.eqv': {
-                        Methodeqv: function(context, arg) {
-                            var args = {};
-                            for (var name in arg) {
-                                args[name] = { 's': arg[name] };
-                            }
-                            context.reply(args);
-                        }
-                    },
-                    'interface.esb': { Methodesb: function(context, arg) { context.reply(arg); } },
-                    'interface.esd': { Methodesd: function(context, arg) { context.reply(arg); } },
-                    'interface.esg': { Methodesg: function(context, arg) { context.reply(arg); } },
-                    'interface.esi': { Methodesi: function(context, arg) { context.reply(arg); } },
-                    'interface.esn': { Methodesn: function(context, arg) { context.reply(arg); } },
-                    'interface.eso': { Methodeso: function(context, arg) { context.reply(arg); } },
-                    'interface.esq': { Methodesq: function(context, arg) { context.reply(arg); } },
-                    'interface.ess': { Methodess: function(context, arg) { context.reply(arg); } },
-                    'interface.est': { Methodest: function(context, arg) { context.reply(arg); } },
-                    'interface.esu': { Methodesu: function(context, arg) { context.reply(arg); } },
-                    'interface.esx': { Methodesx: function(context, arg) { context.reply(arg); } },
-                    'interface.esy': { Methodesy: function(context, arg) { context.reply(arg); } },
-                    'interface.esas': { Methodesas: function(context, arg) { context.reply(arg); } },
-                    'interface.ese': { Methodese: function(context, arg) { context.reply(arg); } },
-                    'interface.esr': { Methodesr: function(context, arg) { context.reply(arg); } },
-                    'interface.esv': {
-                        Methodesv: function(context, arg) {
-                            var args = {};
-                            for (var name in arg) {
-                                args[name] = { 's': arg[name] };
-                            }
-                            context.reply(args);
-                        }
-                    },
-                    'interface.etb': { Methodetb: function(context, arg) { context.reply(arg); } },
-                    'interface.etd': { Methodetd: function(context, arg) { context.reply(arg); } },
-                    'interface.etg': { Methodetg: function(context, arg) { context.reply(arg); } },
-                    'interface.eti': { Methodeti: function(context, arg) { context.reply(arg); } },
-                    'interface.etn': { Methodetn: function(context, arg) { context.reply(arg); } },
-                    'interface.eto': { Methodeto: function(context, arg) { context.reply(arg); } },
-                    'interface.etq': { Methodetq: function(context, arg) { context.reply(arg); } },
-                    'interface.ets': { Methodets: function(context, arg) { context.reply(arg); } },
-                    'interface.ett': { Methodett: function(context, arg) { context.reply(arg); } },
-                    'interface.etu': { Methodetu: function(context, arg) { context.reply(arg); } },
-                    'interface.etx': { Methodetx: function(context, arg) { context.reply(arg); } },
-                    'interface.ety': { Methodety: function(context, arg) { context.reply(arg); } },
-                    'interface.etas': { Methodetas: function(context, arg) { context.reply(arg); } },
-                    'interface.ete': { Methodete: function(context, arg) { context.reply(arg); } },
-                    'interface.etr': { Methodetr: function(context, arg) { context.reply(arg); } },
-                    'interface.etv': {
-                        Methodetv: function(context, arg) {
-                            var args = {};
-                            for (var name in arg) {
-                                args[name] = { 's': arg[name] };
-                            }
-                            context.reply(args);
-                        }
-                    },
-                    'interface.eub': { Methodeub: function(context, arg) { context.reply(arg); } },
-                    'interface.eud': { Methodeud: function(context, arg) { context.reply(arg); } },
-                    'interface.eug': { Methodeug: function(context, arg) { context.reply(arg); } },
-                    'interface.eui': { Methodeui: function(context, arg) { context.reply(arg); } },
-                    'interface.eun': { Methodeun: function(context, arg) { context.reply(arg); } },
-                    'interface.euo': { Methodeuo: function(context, arg) { context.reply(arg); } },
-                    'interface.euq': { Methodeuq: function(context, arg) { context.reply(arg); } },
-                    'interface.eus': { Methodeus: function(context, arg) { context.reply(arg); } },
-                    'interface.eut': { Methodeut: function(context, arg) { context.reply(arg); } },
-                    'interface.euu': { Methodeuu: function(context, arg) { context.reply(arg); } },
-                    'interface.eux': { Methodeux: function(context, arg) { context.reply(arg); } },
-                    'interface.euy': { Methodeuy: function(context, arg) { context.reply(arg); } },
-                    'interface.euas': { Methodeuas: function(context, arg) { context.reply(arg); } },
-                    'interface.eue': { Methodeue: function(context, arg) { context.reply(arg); } },
-                    'interface.eur': { Methodeur: function(context, arg) { context.reply(arg); } },
-                    'interface.euv': {
-                        Methodeuv: function(context, arg) {
-                            var args = {};
-                            for (var name in arg) {
-                                args[name] = { 's': arg[name] };
-                            }
-                            context.reply(args);
-                        }
-                    },
-                    'interface.exb': { Methodexb: function(context, arg) { context.reply(arg); } },
-                    'interface.exd': { Methodexd: function(context, arg) { context.reply(arg); } },
-                    'interface.exg': { Methodexg: function(context, arg) { context.reply(arg); } },
-                    'interface.exi': { Methodexi: function(context, arg) { context.reply(arg); } },
-                    'interface.exn': { Methodexn: function(context, arg) { context.reply(arg); } },
-                    'interface.exo': { Methodexo: function(context, arg) { context.reply(arg); } },
-                    'interface.exq': { Methodexq: function(context, arg) { context.reply(arg); } },
-                    'interface.exs': { Methodexs: function(context, arg) { context.reply(arg); } },
-                    'interface.ext': { Methodext: function(context, arg) { context.reply(arg); } },
-                    'interface.exu': { Methodexu: function(context, arg) { context.reply(arg); } },
-                    'interface.exx': { Methodexx: function(context, arg) { context.reply(arg); } },
-                    'interface.exy': { Methodexy: function(context, arg) { context.reply(arg); } },
-                    'interface.exas': { Methodexas: function(context, arg) { context.reply(arg); } },
-                    'interface.exe': { Methodexe: function(context, arg) { context.reply(arg); } },
-                    'interface.exr': { Methodexr: function(context, arg) { context.reply(arg); } },
-                    'interface.exv': {
-                        Methodexv: function(context, arg) {
-                            var args = {};
-                            for (var name in arg) {
-                                args[name] = { 's': arg[name] };
-                            }
-                            context.reply(args);
-                        }
-                    },
-                    'interface.eyb': { Methodeyb: function(context, arg) { context.reply(arg); } },
-                    'interface.eyd': { Methodeyd: function(context, arg) { context.reply(arg); } },
-                    'interface.eyg': { Methodeyg: function(context, arg) { context.reply(arg); } },
-                    'interface.eyi': { Methodeyi: function(context, arg) { context.reply(arg); } },
-                    'interface.eyn': { Methodeyn: function(context, arg) { context.reply(arg); } },
-                    'interface.eyo': { Methodeyo: function(context, arg) { context.reply(arg); } },
-                    'interface.eyq': { Methodeyq: function(context, arg) { context.reply(arg); } },
-                    'interface.eys': { Methodeys: function(context, arg) { context.reply(arg); } },
-                    'interface.eyt': { Methodeyt: function(context, arg) { context.reply(arg); } },
-                    'interface.eyu': { Methodeyu: function(context, arg) { context.reply(arg); } },
-                    'interface.eyx': { Methodeyx: function(context, arg) { context.reply(arg); } },
-                    'interface.eyy': { Methodeyy: function(context, arg) { context.reply(arg); } },
-                    'interface.eyas': { Methodeyas: function(context, arg) { context.reply(arg); } },
-                    'interface.eye': { Methodeye: function(context, arg) { context.reply(arg); } },
-                    'interface.eyr': { Methodeyr: function(context, arg) { context.reply(arg); } },
-                    'interface.eyv': {
-                        Methodeyv: function(context, arg) {
-                            var args = {};
-                            for (var name in arg) {
-                                args[name] = { 's': arg[name] };
-                            }
-                            context.reply(args);
-                        }
-                    },
-                }, callbacks.add(getProxyObj));
+                bus.registerBusObject('/testObject',
+                                      {
+                                          'interface.ebb': { Methodebb: function(context, arg) { context.reply(arg); } },
+                                          'interface.ebd': { Methodebd: function(context, arg) { context.reply(arg); } },
+                                          'interface.ebg': { Methodebg: function(context, arg) { context.reply(arg); } },
+                                          'interface.ebi': { Methodebi: function(context, arg) { context.reply(arg); } },
+                                          'interface.ebn': { Methodebn: function(context, arg) { context.reply(arg); } },
+                                          'interface.ebo': { Methodebo: function(context, arg) { context.reply(arg); } },
+                                          'interface.ebq': { Methodebq: function(context, arg) { context.reply(arg); } },
+                                          'interface.ebs': { Methodebs: function(context, arg) { context.reply(arg); } },
+                                          'interface.ebt': { Methodebt: function(context, arg) { context.reply(arg); } },
+                                          'interface.ebu': { Methodebu: function(context, arg) { context.reply(arg); } },
+                                          'interface.ebx': { Methodebx: function(context, arg) { context.reply(arg); } },
+                                          'interface.eby': { Methodeby: function(context, arg) { context.reply(arg); } },
+                                          'interface.ebas': { Methodebas: function(context, arg) { context.reply(arg); } },
+                                          'interface.ebe': { Methodebe: function(context, arg) { context.reply(arg); } },
+                                          'interface.ebr': { Methodebr: function(context, arg) { context.reply(arg); } },
+                                          'interface.ebv': {
+                                              Methodebv: function(context, arg) {
+                                                  var args = {};
+                                                  for (var name in arg) {
+                                                      args[name] = { 's': arg[name] };
+                                                  }
+                                                  context.reply(args);
+                                              }
+                                          },
+                                          'interface.edb': { Methodedb: function(context, arg) { context.reply(arg); } },
+                                          'interface.edd': { Methodedd: function(context, arg) { context.reply(arg); } },
+                                          'interface.edg': { Methodedg: function(context, arg) { context.reply(arg); } },
+                                          'interface.edi': { Methodedi: function(context, arg) { context.reply(arg); } },
+                                          'interface.edn': { Methodedn: function(context, arg) { context.reply(arg); } },
+                                          'interface.edo': { Methodedo: function(context, arg) { context.reply(arg); } },
+                                          'interface.edq': { Methodedq: function(context, arg) { context.reply(arg); } },
+                                          'interface.eds': { Methodeds: function(context, arg) { context.reply(arg); } },
+                                          'interface.edt': { Methodedt: function(context, arg) { context.reply(arg); } },
+                                          'interface.edu': { Methodedu: function(context, arg) { context.reply(arg); } },
+                                          'interface.edx': { Methodedx: function(context, arg) { context.reply(arg); } },
+                                          'interface.edy': { Methodedy: function(context, arg) { context.reply(arg); } },
+                                          'interface.edas': { Methodedas: function(context, arg) { context.reply(arg); } },
+                                          'interface.ede': { Methodede: function(context, arg) { context.reply(arg); } },
+                                          'interface.edr': { Methodedr: function(context, arg) { context.reply(arg); } },
+                                          'interface.edv': {
+                                              Methodedv: function(context, arg) {
+                                                  var args = {};
+                                                  for (var name in arg) {
+                                                      args[name] = { 's': arg[name] };
+                                                  }
+                                                  context.reply(args);
+                                              }
+                                          },
+                                          'interface.egb': { Methodegb: function(context, arg) { context.reply(arg); } },
+                                          'interface.egd': { Methodegd: function(context, arg) { context.reply(arg); } },
+                                          'interface.egg': { Methodegg: function(context, arg) { context.reply(arg); } },
+                                          'interface.egi': { Methodegi: function(context, arg) { context.reply(arg); } },
+                                          'interface.egn': { Methodegn: function(context, arg) { context.reply(arg); } },
+                                          'interface.ego': { Methodego: function(context, arg) { context.reply(arg); } },
+                                          'interface.egq': { Methodegq: function(context, arg) { context.reply(arg); } },
+                                          'interface.egs': { Methodegs: function(context, arg) { context.reply(arg); } },
+                                          'interface.egt': { Methodegt: function(context, arg) { context.reply(arg); } },
+                                          'interface.egu': { Methodegu: function(context, arg) { context.reply(arg); } },
+                                          'interface.egx': { Methodegx: function(context, arg) { context.reply(arg); } },
+                                          'interface.egy': { Methodegy: function(context, arg) { context.reply(arg); } },
+                                          'interface.egas': { Methodegas: function(context, arg) { context.reply(arg); } },
+                                          'interface.ege': { Methodege: function(context, arg) { context.reply(arg); } },
+                                          'interface.egr': { Methodegr: function(context, arg) { context.reply(arg); } },
+                                          'interface.egv': {
+                                              Methodegv: function(context, arg) {
+                                                  var args = {};
+                                                  for (var name in arg) {
+                                                      args[name] = { 's': arg[name] };
+                                                  }
+                                                  context.reply(args);
+                                              }
+                                          },
+                                          'interface.eib': { Methodeib: function(context, arg) { context.reply(arg); } },
+                                          'interface.eid': { Methodeid: function(context, arg) { context.reply(arg); } },
+                                          'interface.eig': { Methodeig: function(context, arg) { context.reply(arg); } },
+                                          'interface.eii': { Methodeii: function(context, arg) { context.reply(arg); } },
+                                          'interface.ein': { Methodein: function(context, arg) { context.reply(arg); } },
+                                          'interface.eio': { Methodeio: function(context, arg) { context.reply(arg); } },
+                                          'interface.eiq': { Methodeiq: function(context, arg) { context.reply(arg); } },
+                                          'interface.eis': { Methodeis: function(context, arg) { context.reply(arg); } },
+                                          'interface.eit': { Methodeit: function(context, arg) { context.reply(arg); } },
+                                          'interface.eiu': { Methodeiu: function(context, arg) { context.reply(arg); } },
+                                          'interface.eix': { Methodeix: function(context, arg) { context.reply(arg); } },
+                                          'interface.eiy': { Methodeiy: function(context, arg) { context.reply(arg); } },
+                                          'interface.eias': { Methodeias: function(context, arg) { context.reply(arg); } },
+                                          'interface.eie': { Methodeie: function(context, arg) { context.reply(arg); } },
+                                          'interface.eir': { Methodeir: function(context, arg) { context.reply(arg); } },
+                                          'interface.eiv': {
+                                              Methodeiv: function(context, arg) {
+                                                  var args = {};
+                                                  for (var name in arg) {
+                                                      args[name] = { 's': arg[name] };
+                                                  }
+                                                  context.reply(args);
+                                              }
+                                          },
+                                          'interface.enb': { Methodenb: function(context, arg) { context.reply(arg); } },
+                                          'interface.end': { Methodend: function(context, arg) { context.reply(arg); } },
+                                          'interface.eng': { Methodeng: function(context, arg) { context.reply(arg); } },
+                                          'interface.eni': { Methodeni: function(context, arg) { context.reply(arg); } },
+                                          'interface.enn': { Methodenn: function(context, arg) { context.reply(arg); } },
+                                          'interface.eno': { Methodeno: function(context, arg) { context.reply(arg); } },
+                                          'interface.enq': { Methodenq: function(context, arg) { context.reply(arg); } },
+                                          'interface.ens': { Methodens: function(context, arg) { context.reply(arg); } },
+                                          'interface.ent': { Methodent: function(context, arg) { context.reply(arg); } },
+                                          'interface.enu': { Methodenu: function(context, arg) { context.reply(arg); } },
+                                          'interface.enx': { Methodenx: function(context, arg) { context.reply(arg); } },
+                                          'interface.eny': { Methodeny: function(context, arg) { context.reply(arg); } },
+                                          'interface.enas': { Methodenas: function(context, arg) { context.reply(arg); } },
+                                          'interface.ene': { Methodene: function(context, arg) { context.reply(arg); } },
+                                          'interface.enr': { Methodenr: function(context, arg) { context.reply(arg); } },
+                                          'interface.env': {
+                                              Methodenv: function(context, arg) {
+                                                  var args = {};
+                                                  for (var name in arg) {
+                                                      args[name] = { 's': arg[name] };
+                                                  }
+                                                  context.reply(args);
+                                              }
+                                          },
+                                          'interface.eob': { Methodeob: function(context, arg) { context.reply(arg); } },
+                                          'interface.eod': { Methodeod: function(context, arg) { context.reply(arg); } },
+                                          'interface.eog': { Methodeog: function(context, arg) { context.reply(arg); } },
+                                          'interface.eoi': { Methodeoi: function(context, arg) { context.reply(arg); } },
+                                          'interface.eon': { Methodeon: function(context, arg) { context.reply(arg); } },
+                                          'interface.eoo': { Methodeoo: function(context, arg) { context.reply(arg); } },
+                                          'interface.eoq': { Methodeoq: function(context, arg) { context.reply(arg); } },
+                                          'interface.eos': { Methodeos: function(context, arg) { context.reply(arg); } },
+                                          'interface.eot': { Methodeot: function(context, arg) { context.reply(arg); } },
+                                          'interface.eou': { Methodeou: function(context, arg) { context.reply(arg); } },
+                                          'interface.eox': { Methodeox: function(context, arg) { context.reply(arg); } },
+                                          'interface.eoy': { Methodeoy: function(context, arg) { context.reply(arg); } },
+                                          'interface.eoas': { Methodeoas: function(context, arg) { context.reply(arg); } },
+                                          'interface.eoe': { Methodeoe: function(context, arg) { context.reply(arg); } },
+                                          'interface.eor': { Methodeor: function(context, arg) { context.reply(arg); } },
+                                          'interface.eov': {
+                                              Methodeov: function(context, arg) {
+                                                  var args = {};
+                                                  for (var name in arg) {
+                                                      args[name] = { 's': arg[name] };
+                                                  }
+                                                  context.reply(args);
+                                              }
+                                          },
+                                          'interface.eqb': { Methodeqb: function(context, arg) { context.reply(arg); } },
+                                          'interface.eqd': { Methodeqd: function(context, arg) { context.reply(arg); } },
+                                          'interface.eqg': { Methodeqg: function(context, arg) { context.reply(arg); } },
+                                          'interface.eqi': { Methodeqi: function(context, arg) { context.reply(arg); } },
+                                          'interface.eqn': { Methodeqn: function(context, arg) { context.reply(arg); } },
+                                          'interface.eqo': { Methodeqo: function(context, arg) { context.reply(arg); } },
+                                          'interface.eqq': { Methodeqq: function(context, arg) { context.reply(arg); } },
+                                          'interface.eqs': { Methodeqs: function(context, arg) { context.reply(arg); } },
+                                          'interface.eqt': { Methodeqt: function(context, arg) { context.reply(arg); } },
+                                          'interface.equ': { Methodequ: function(context, arg) { context.reply(arg); } },
+                                          'interface.eqx': { Methodeqx: function(context, arg) { context.reply(arg); } },
+                                          'interface.eqy': { Methodeqy: function(context, arg) { context.reply(arg); } },
+                                          'interface.eqas': { Methodeqas: function(context, arg) { context.reply(arg); } },
+                                          'interface.eqe': { Methodeqe: function(context, arg) { context.reply(arg); } },
+                                          'interface.eqr': { Methodeqr: function(context, arg) { context.reply(arg); } },
+                                          'interface.eqv': {
+                                              Methodeqv: function(context, arg) {
+                                                  var args = {};
+                                                  for (var name in arg) {
+                                                      args[name] = { 's': arg[name] };
+                                                  }
+                                                  context.reply(args);
+                                              }
+                                          },
+                                          'interface.esb': { Methodesb: function(context, arg) { context.reply(arg); } },
+                                          'interface.esd': { Methodesd: function(context, arg) { context.reply(arg); } },
+                                          'interface.esg': { Methodesg: function(context, arg) { context.reply(arg); } },
+                                          'interface.esi': { Methodesi: function(context, arg) { context.reply(arg); } },
+                                          'interface.esn': { Methodesn: function(context, arg) { context.reply(arg); } },
+                                          'interface.eso': { Methodeso: function(context, arg) { context.reply(arg); } },
+                                          'interface.esq': { Methodesq: function(context, arg) { context.reply(arg); } },
+                                          'interface.ess': { Methodess: function(context, arg) { context.reply(arg); } },
+                                          'interface.est': { Methodest: function(context, arg) { context.reply(arg); } },
+                                          'interface.esu': { Methodesu: function(context, arg) { context.reply(arg); } },
+                                          'interface.esx': { Methodesx: function(context, arg) { context.reply(arg); } },
+                                          'interface.esy': { Methodesy: function(context, arg) { context.reply(arg); } },
+                                          'interface.esas': { Methodesas: function(context, arg) { context.reply(arg); } },
+                                          'interface.ese': { Methodese: function(context, arg) { context.reply(arg); } },
+                                          'interface.esr': { Methodesr: function(context, arg) { context.reply(arg); } },
+                                          'interface.esv': {
+                                              Methodesv: function(context, arg) {
+                                                  var args = {};
+                                                  for (var name in arg) {
+                                                      args[name] = { 's': arg[name] };
+                                                  }
+                                                  context.reply(args);
+                                              }
+                                          },
+                                          'interface.etb': { Methodetb: function(context, arg) { context.reply(arg); } },
+                                          'interface.etd': { Methodetd: function(context, arg) { context.reply(arg); } },
+                                          'interface.etg': { Methodetg: function(context, arg) { context.reply(arg); } },
+                                          'interface.eti': { Methodeti: function(context, arg) { context.reply(arg); } },
+                                          'interface.etn': { Methodetn: function(context, arg) { context.reply(arg); } },
+                                          'interface.eto': { Methodeto: function(context, arg) { context.reply(arg); } },
+                                          'interface.etq': { Methodetq: function(context, arg) { context.reply(arg); } },
+                                          'interface.ets': { Methodets: function(context, arg) { context.reply(arg); } },
+                                          'interface.ett': { Methodett: function(context, arg) { context.reply(arg); } },
+                                          'interface.etu': { Methodetu: function(context, arg) { context.reply(arg); } },
+                                          'interface.etx': { Methodetx: function(context, arg) { context.reply(arg); } },
+                                          'interface.ety': { Methodety: function(context, arg) { context.reply(arg); } },
+                                          'interface.etas': { Methodetas: function(context, arg) { context.reply(arg); } },
+                                          'interface.ete': { Methodete: function(context, arg) { context.reply(arg); } },
+                                          'interface.etr': { Methodetr: function(context, arg) { context.reply(arg); } },
+                                          'interface.etv': {
+                                              Methodetv: function(context, arg) {
+                                                  var args = {};
+                                                  for (var name in arg) {
+                                                      args[name] = { 's': arg[name] };
+                                                  }
+                                                  context.reply(args);
+                                              }
+                                          },
+                                          'interface.eub': { Methodeub: function(context, arg) { context.reply(arg); } },
+                                          'interface.eud': { Methodeud: function(context, arg) { context.reply(arg); } },
+                                          'interface.eug': { Methodeug: function(context, arg) { context.reply(arg); } },
+                                          'interface.eui': { Methodeui: function(context, arg) { context.reply(arg); } },
+                                          'interface.eun': { Methodeun: function(context, arg) { context.reply(arg); } },
+                                          'interface.euo': { Methodeuo: function(context, arg) { context.reply(arg); } },
+                                          'interface.euq': { Methodeuq: function(context, arg) { context.reply(arg); } },
+                                          'interface.eus': { Methodeus: function(context, arg) { context.reply(arg); } },
+                                          'interface.eut': { Methodeut: function(context, arg) { context.reply(arg); } },
+                                          'interface.euu': { Methodeuu: function(context, arg) { context.reply(arg); } },
+                                          'interface.eux': { Methodeux: function(context, arg) { context.reply(arg); } },
+                                          'interface.euy': { Methodeuy: function(context, arg) { context.reply(arg); } },
+                                          'interface.euas': { Methodeuas: function(context, arg) { context.reply(arg); } },
+                                          'interface.eue': { Methodeue: function(context, arg) { context.reply(arg); } },
+                                          'interface.eur': { Methodeur: function(context, arg) { context.reply(arg); } },
+                                          'interface.euv': {
+                                              Methodeuv: function(context, arg) {
+                                                  var args = {};
+                                                  for (var name in arg) {
+                                                      args[name] = { 's': arg[name] };
+                                                  }
+                                                  context.reply(args);
+                                              }
+                                          },
+                                          'interface.exb': { Methodexb: function(context, arg) { context.reply(arg); } },
+                                          'interface.exd': { Methodexd: function(context, arg) { context.reply(arg); } },
+                                          'interface.exg': { Methodexg: function(context, arg) { context.reply(arg); } },
+                                          'interface.exi': { Methodexi: function(context, arg) { context.reply(arg); } },
+                                          'interface.exn': { Methodexn: function(context, arg) { context.reply(arg); } },
+                                          'interface.exo': { Methodexo: function(context, arg) { context.reply(arg); } },
+                                          'interface.exq': { Methodexq: function(context, arg) { context.reply(arg); } },
+                                          'interface.exs': { Methodexs: function(context, arg) { context.reply(arg); } },
+                                          'interface.ext': { Methodext: function(context, arg) { context.reply(arg); } },
+                                          'interface.exu': { Methodexu: function(context, arg) { context.reply(arg); } },
+                                          'interface.exx': { Methodexx: function(context, arg) { context.reply(arg); } },
+                                          'interface.exy': { Methodexy: function(context, arg) { context.reply(arg); } },
+                                          'interface.exas': { Methodexas: function(context, arg) { context.reply(arg); } },
+                                          'interface.exe': { Methodexe: function(context, arg) { context.reply(arg); } },
+                                          'interface.exr': { Methodexr: function(context, arg) { context.reply(arg); } },
+                                          'interface.exv': {
+                                              Methodexv: function(context, arg) {
+                                                  var args = {};
+                                                  for (var name in arg) {
+                                                      args[name] = { 's': arg[name] };
+                                                  }
+                                                  context.reply(args);
+                                              }
+                                          },
+                                          'interface.eyb': { Methodeyb: function(context, arg) { context.reply(arg); } },
+                                          'interface.eyd': { Methodeyd: function(context, arg) { context.reply(arg); } },
+                                          'interface.eyg': { Methodeyg: function(context, arg) { context.reply(arg); } },
+                                          'interface.eyi': { Methodeyi: function(context, arg) { context.reply(arg); } },
+                                          'interface.eyn': { Methodeyn: function(context, arg) { context.reply(arg); } },
+                                          'interface.eyo': { Methodeyo: function(context, arg) { context.reply(arg); } },
+                                          'interface.eyq': { Methodeyq: function(context, arg) { context.reply(arg); } },
+                                          'interface.eys': { Methodeys: function(context, arg) { context.reply(arg); } },
+                                          'interface.eyt': { Methodeyt: function(context, arg) { context.reply(arg); } },
+                                          'interface.eyu': { Methodeyu: function(context, arg) { context.reply(arg); } },
+                                          'interface.eyx': { Methodeyx: function(context, arg) { context.reply(arg); } },
+                                          'interface.eyy': { Methodeyy: function(context, arg) { context.reply(arg); } },
+                                          'interface.eyas': { Methodeyas: function(context, arg) { context.reply(arg); } },
+                                          'interface.eye': { Methodeye: function(context, arg) { context.reply(arg); } },
+                                          'interface.eyr': { Methodeyr: function(context, arg) { context.reply(arg); } },
+                                          'interface.eyv': {
+                                              Methodeyv: function(context, arg) {
+                                                  var args = {};
+                                                  for (var name in arg) {
+                                                      args[name] = { 's': arg[name] };
+                                                  }
+                                                  context.reply(args);
+                                              }
+                                          }
+                                      },
+                                      false,
+                                      callbacks.add(getProxyObj));
             };
             var getProxyObj = function(err) {
                 assertFalsy(err);
-                bus.getProxyBusObject(bus.uniqueName + '/testObject', methodebb);
+                bus.getProxyBusObject(bus.uniqueName + '/testObject', callbacks.add(methodebb));
             };
             var proxy;
             var methodebb = function(err, proxyObj) {
@@ -785,6 +796,7 @@ AsyncTestCase("MarshalTest", {
                 proxy.methodCall('interface.ebb', 'Methodebb', { "true": true }, callbacks.add(onReplyebb));
             };
             var onReplyebb = function(err, context, argebb) {
+                err && console.log('err.name = ' + err.name + '   err.code = ' + err.code);
                 assertFalsy(err);
                 assertEquals({ "true": true }, argebb);
                 proxy.methodCall('interface.ebd', 'Methodebd', { "true": 1.234 }, callbacks.add(onReplyebd));
@@ -1797,32 +1809,35 @@ AsyncTestCase("MarshalTest", {
                 }))}))}))}))}))}))}))}))}))}))}))}))}))}))}))};
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject('/testObject', {
-                    'interface.rb': { Methodrb: function(context, arg) { context.reply(arg); } },
-                    'interface.rd': { Methodrd: function(context, arg) { context.reply(arg); } },
-                    'interface.rg': { Methodrg: function(context, arg) { context.reply(arg); } },
-                    'interface.ri': { Methodri: function(context, arg) { context.reply(arg); } },
-                    'interface.rn': { Methodrn: function(context, arg) { context.reply(arg); } },
-                    'interface.ro': { Methodro: function(context, arg) { context.reply(arg); } },
-                    'interface.rq': { Methodrq: function(context, arg) { context.reply(arg); } },
-                    'interface.rs': { Methodrs: function(context, arg) { context.reply(arg); } },
-                    'interface.rt': { Methodrt: function(context, arg) { context.reply(arg); } },
-                    'interface.ru': { Methodru: function(context, arg) { context.reply(arg); } },
-                    'interface.rx': { Methodrx: function(context, arg) { context.reply(arg); } },
-                    'interface.ry': { Methodry: function(context, arg) { context.reply(arg); } },
-                    'interface.ras': { Methodras: function(context, arg) { context.reply(arg); } },
-                    'interface.re': { Methodre: function(context, arg) { context.reply(arg); } },
-                    'interface.rr': { Methodrr: function(context, arg) { context.reply(arg); } },
-                    'interface.rv': { 
-                        Methodrv: function(context, arg) { 
-                            var args = [];
-                            for (var i = 0; i < arg.length; ++i) {
-                                args[i] = { 's': arg[i] };
-                            }
-                            context.reply(args); 
-                        } 
-                    },
-                }, callbacks.add(getProxyObj));
+                bus.registerBusObject('/testObject',
+                                      {
+                                          'interface.rb': { Methodrb: function(context, arg) { context.reply(arg); } },
+                                          'interface.rd': { Methodrd: function(context, arg) { context.reply(arg); } },
+                                          'interface.rg': { Methodrg: function(context, arg) { context.reply(arg); } },
+                                          'interface.ri': { Methodri: function(context, arg) { context.reply(arg); } },
+                                          'interface.rn': { Methodrn: function(context, arg) { context.reply(arg); } },
+                                          'interface.ro': { Methodro: function(context, arg) { context.reply(arg); } },
+                                          'interface.rq': { Methodrq: function(context, arg) { context.reply(arg); } },
+                                          'interface.rs': { Methodrs: function(context, arg) { context.reply(arg); } },
+                                          'interface.rt': { Methodrt: function(context, arg) { context.reply(arg); } },
+                                          'interface.ru': { Methodru: function(context, arg) { context.reply(arg); } },
+                                          'interface.rx': { Methodrx: function(context, arg) { context.reply(arg); } },
+                                          'interface.ry': { Methodry: function(context, arg) { context.reply(arg); } },
+                                          'interface.ras': { Methodras: function(context, arg) { context.reply(arg); } },
+                                          'interface.re': { Methodre: function(context, arg) { context.reply(arg); } },
+                                          'interface.rr': { Methodrr: function(context, arg) { context.reply(arg); } },
+                                          'interface.rv': {
+                                              Methodrv: function(context, arg) {
+                                                  var args = [];
+                                                  for (var i = 0; i < arg.length; ++i) {
+                                                      args[i] = { 's': arg[i] };
+                                                  }
+                                                  context.reply(args);
+                                              }
+                                          }
+                                      },
+                                      false,
+                                      callbacks.add(getProxyObj));
             };
             var getProxyObj = function(err) {
                 assertFalsy(err);
@@ -1945,24 +1960,27 @@ AsyncTestCase("MarshalTest", {
                 }))}))}))}))}))}))}))}))}))}))}))}))}))}))}))};
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject('/testObject', {
-                    'interface.vb': { Methodvb: function(context, arg) { context.reply({ 'b': arg }); } },
-                    'interface.vd': { Methodvd: function(context, arg) { context.reply({ 'd': arg }); } },
-                    'interface.vg': { Methodvg: function(context, arg) { context.reply({ 'g': arg }); } },
-                    'interface.vi': { Methodvi: function(context, arg) { context.reply({ 'i': arg }); } },
-                    'interface.vn': { Methodvn: function(context, arg) { context.reply({ 'n': arg }); } },
-                    'interface.vo': { Methodvo: function(context, arg) { context.reply({ 'o': arg }); } },
-                    'interface.vq': { Methodvq: function(context, arg) { context.reply({ 'q': arg }); } },
-                    'interface.vs': { Methodvs: function(context, arg) { context.reply({ 's': arg }); } },
-                    'interface.vt': { Methodvt: function(context, arg) { context.reply({ 't': arg }); } },
-                    'interface.vu': { Methodvu: function(context, arg) { context.reply({ 'u': arg }); } },
-                    'interface.vx': { Methodvx: function(context, arg) { context.reply({ 'x': arg }); } },
-                    'interface.vy': { Methodvy: function(context, arg) { context.reply({ 'y': arg }); } },
-                    'interface.vas': { Methodvas: function(context, arg) { context.reply({ 'as': arg }); } },
-                    'interface.ve': { Methodve: function(context, arg) { context.reply({ 'a{ss}': arg }); } },
-                    'interface.vr': { Methodvr: function(context, arg) { context.reply({ '(s)': arg }); } },
-                    'interface.vv': { Methodvv: function(context, arg) { context.reply({ 'v': arg }); } },
-                }, callbacks.add(getProxyObj));
+                bus.registerBusObject('/testObject',
+                                      {
+                                          'interface.vb': { Methodvb: function(context, arg) { context.reply({ 'b': arg }); } },
+                                          'interface.vd': { Methodvd: function(context, arg) { context.reply({ 'd': arg }); } },
+                                          'interface.vg': { Methodvg: function(context, arg) { context.reply({ 'g': arg }); } },
+                                          'interface.vi': { Methodvi: function(context, arg) { context.reply({ 'i': arg }); } },
+                                          'interface.vn': { Methodvn: function(context, arg) { context.reply({ 'n': arg }); } },
+                                          'interface.vo': { Methodvo: function(context, arg) { context.reply({ 'o': arg }); } },
+                                          'interface.vq': { Methodvq: function(context, arg) { context.reply({ 'q': arg }); } },
+                                          'interface.vs': { Methodvs: function(context, arg) { context.reply({ 's': arg }); } },
+                                          'interface.vt': { Methodvt: function(context, arg) { context.reply({ 't': arg }); } },
+                                          'interface.vu': { Methodvu: function(context, arg) { context.reply({ 'u': arg }); } },
+                                          'interface.vx': { Methodvx: function(context, arg) { context.reply({ 'x': arg }); } },
+                                          'interface.vy': { Methodvy: function(context, arg) { context.reply({ 'y': arg }); } },
+                                          'interface.vas': { Methodvas: function(context, arg) { context.reply({ 'as': arg }); } },
+                                          'interface.ve': { Methodve: function(context, arg) { context.reply({ 'a{ss}': arg }); } },
+                                          'interface.vr': { Methodvr: function(context, arg) { context.reply({ '(s)': arg }); } },
+                                          'interface.vv': { Methodvv: function(context, arg) { context.reply({ 'v': arg }); } }
+                                      },
+                                      false,
+                                      callbacks.add(getProxyObj));
             };
             var getProxyObj = function(err) {
                 assertFalsy(err);
@@ -2056,7 +2074,7 @@ AsyncTestCase("MarshalTest", {
             this._setUp(callbacks.add(connect));
         });
     },
-    
+
     testHandle: function(queue) {
         queue.call(function(callbacks) {
             var fds = {};
@@ -2069,11 +2087,10 @@ AsyncTestCase("MarshalTest", {
                         port: SESSION_PORT,
                         traffic: org.alljoyn.bus.SessionOpts.TRAFFIC_RAW_RELIABLE,
                         transport: org.alljoyn.bus.SessionOpts.TRANSPORT_LOCAL,
-                        onAccept: function(port, joiner, opts) { 
-                            return true; 
+                        onAccept: function(port, joiner, opts) {
+                            return true;
                         },
-                        onJoined: function(err, port, id, opts) {
-                            assertFalsy(err);
+                        onJoined: function(port, id, joiner) {
                             var onFd = function(err, fd) {
                                 assertFalsy(err);
                                 fds.server = fd;
@@ -2140,36 +2157,39 @@ AsyncTestCase("MarshalTest", {
                     bus.createInterface({ name: 'interface.vh', method: [ { name: 'Methodvh', signature: 'v', returnSignature: 'v' } ] }, callbacks.add(registerBusObject))
                     }))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))}))};
                 var registerBusObject = function(err) {
-                    bus.registerBusObject('/testObject', {
-                        'interface.h': { Methodh: function(context, arg) { context.reply(arg); } },
-                        'interface.ah': { Methodah: function(context, arg) { context.reply(arg); } },
-                        'interface.ehb': { Methodehb: function(context, arg) { context.reply(arg); } },
-                        'interface.ehd': { Methodehd: function(context, arg) { context.reply(arg); } },
-                        'interface.ehg': { Methodehg: function(context, arg) { context.reply(arg); } },
-                        'interface.ehi': { Methodehi: function(context, arg) { context.reply(arg); } },
-                        'interface.ehn': { Methodehn: function(context, arg) { context.reply(arg); } },
-                        'interface.eho': { Methodeho: function(context, arg) { context.reply(arg); } },
-                        'interface.ehq': { Methodehq: function(context, arg) { context.reply(arg); } },
-                        'interface.ehs': { Methodehs: function(context, arg) { context.reply(arg); } },
-                        'interface.eht': { Methodeht: function(context, arg) { context.reply(arg); } },
-                        'interface.ehu': { Methodehu: function(context, arg) { context.reply(arg); } },
-                        'interface.ehx': { Methodehx: function(context, arg) { context.reply(arg); } },
-                        'interface.ehy': { Methodehy: function(context, arg) { context.reply(arg); } },
-                        'interface.ehas': { Methodehas: function(context, arg) { context.reply(arg); } },
-                        'interface.ehe': { Methodehe: function(context, arg) { context.reply(arg); } },
-                        'interface.ehr': { Methodehr: function(context, arg) { context.reply(arg); } },
-                        'interface.ehv': {
-                            Methodehv: function(context, arg) {
-                                var args = {};
-                                for (var name in arg) {
-                                    args[name] = { 's': arg[name] };
-                                }
-                                context.reply(args);
-                            },
-                        },
-                        'interface.rh': { Methodrh: function(context, arg) { context.reply(arg); } },
-                        'interface.vh': { Methodvh: function(context, arg) { context.reply({ 'h': arg }); } }
-                    }, callbacks.add(getProxyObj));
+                    bus.registerBusObject('/testObject',
+                                          {
+                                              'interface.h': { Methodh: function(context, arg) { context.reply(arg); } },
+                                              'interface.ah': { Methodah: function(context, arg) { context.reply(arg); } },
+                                              'interface.ehb': { Methodehb: function(context, arg) { context.reply(arg); } },
+                                              'interface.ehd': { Methodehd: function(context, arg) { context.reply(arg); } },
+                                              'interface.ehg': { Methodehg: function(context, arg) { context.reply(arg); } },
+                                              'interface.ehi': { Methodehi: function(context, arg) { context.reply(arg); } },
+                                              'interface.ehn': { Methodehn: function(context, arg) { context.reply(arg); } },
+                                              'interface.eho': { Methodeho: function(context, arg) { context.reply(arg); } },
+                                              'interface.ehq': { Methodehq: function(context, arg) { context.reply(arg); } },
+                                              'interface.ehs': { Methodehs: function(context, arg) { context.reply(arg); } },
+                                              'interface.eht': { Methodeht: function(context, arg) { context.reply(arg); } },
+                                              'interface.ehu': { Methodehu: function(context, arg) { context.reply(arg); } },
+                                              'interface.ehx': { Methodehx: function(context, arg) { context.reply(arg); } },
+                                              'interface.ehy': { Methodehy: function(context, arg) { context.reply(arg); } },
+                                              'interface.ehas': { Methodehas: function(context, arg) { context.reply(arg); } },
+                                              'interface.ehe': { Methodehe: function(context, arg) { context.reply(arg); } },
+                                              'interface.ehr': { Methodehr: function(context, arg) { context.reply(arg); } },
+                                              'interface.ehv': {
+                                                  Methodehv: function(context, arg) {
+                                                      var args = {};
+                                                      for (var name in arg) {
+                                                          args[name] = { 's': arg[name] };
+                                                      }
+                                                      context.reply(args);
+                                                  }
+                                              },
+                                              'interface.rh': { Methodrh: function(context, arg) { context.reply(arg); } },
+                                              'interface.vh': { Methodvh: function(context, arg) { context.reply({ 'h': arg }); } }
+                                          },
+                                          false,
+                                          callbacks.add(getProxyObj));
                 };
                 var getProxyObj = function(err) {
                     assertFalsy(err);

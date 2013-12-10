@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,17 +18,20 @@ AsyncTestCase("AuthListenerTest", {
         bus = new org.alljoyn.bus.BusAttachment();
         var createInterface = function(err) {
             bus.createInterface({
-                name: "test.SecureInterface", 
+                name: "test.SecureInterface",
                 secure: true,
                 method: [ { name: 'Ping', signature: 's', returnSignature: 's' } ]
             }, registerBusObject);
         };
         var registerBusObject = function(err) {
-            bus.registerBusObject("/test", {
-                "test.SecureInterface": {
-                    Ping: function(context, inStr) { context.reply(inStr); }
-                }
-            }, createOtherBus);
+            bus.registerBusObject("/test",
+                                  {
+                                      "test.SecureInterface": {
+                                          Ping: function(context, inStr) { context.reply(inStr); }
+                                      }
+                                  },
+                                  false,
+                                  createOtherBus);
         };
         var createOtherBus = function(err) {
             otherBus = new org.alljoyn.bus.BusAttachment();
@@ -45,7 +48,7 @@ AsyncTestCase("AuthListenerTest", {
         queue.call(function(callbacks) {
             var enablePeerSecurity = function(err) {
                 bus.enablePeerSecurity("ALLJOYN_SRP_KEYX", {
-                    onRequest: callbacks.add(function(authMechanism, peerName, authCount, 
+                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
                                                       userName, credMask, credentials) {
                         assertEquals("ALLJOYN_SRP_KEYX", authMechanism);
                         assertEquals(otherBus.uniqueName, peerName);
@@ -72,7 +75,7 @@ AsyncTestCase("AuthListenerTest", {
             var otherBusEnablePeerSecurity = function(err) {
                 assertFalsy(err);
                 otherBus.enablePeerSecurity("ALLJOYN_SRP_KEYX", {
-                    onRequest: callbacks.add(function(authMechanism, peerName, authCount, 
+                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
                                                       userName, credMask, credentials) {
                         assertEquals("ALLJOYN_SRP_KEYX", authMechanism);
                         assertEquals(bus.uniqueName, peerName);
@@ -115,7 +118,7 @@ AsyncTestCase("AuthListenerTest", {
         queue.call(function(callbacks) {
             var enablePeerSecurity = function(err) {
                 bus.enablePeerSecurity("ALLJOYN_SRP_KEYX", {
-                    onRequest: callbacks.add(function(authMechanism, peerName, authCount, 
+                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
                                                       userName, credMask, credentials) {
                         assertEquals("ALLJOYN_SRP_KEYX", authMechanism);
                         assertEquals(otherBus.uniqueName, peerName);
@@ -141,7 +144,7 @@ AsyncTestCase("AuthListenerTest", {
             var otherBusEnablePeerSecurity = function(err) {
                 assertFalsy(err);
                 otherBus.enablePeerSecurity("ALLJOYN_SRP_KEYX", {
-                    onRequest: callbacks.add(function(authMechanism, peerName, authCount, 
+                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
                                                       userName, credMask, credentials) {
                         assertEquals("ALLJOYN_SRP_KEYX", authMechanism);
                         assertEquals(bus.uniqueName, peerName);
@@ -183,7 +186,7 @@ AsyncTestCase("AuthListenerTest", {
         queue.call(function(callbacks) {
             var enablePeerSecurity = function(err) {
                 bus.enablePeerSecurity("ALLJOYN_RSA_KEYX", {
-                    onRequest: callbacks.add(function(authMechanism, peerName, authCount, 
+                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
                                                       userName, credMask, credentials) {
                         assertEquals("ALLJOYN_RSA_KEYX", authMechanism);
                         assertEquals(otherBus.uniqueName, peerName);
@@ -213,7 +216,7 @@ AsyncTestCase("AuthListenerTest", {
             var otherBusEnablePeerSecurity = function(err) {
                 assertFalsy(err);
                 otherBus.enablePeerSecurity("ALLJOYN_RSA_KEYX", {
-                    onRequest: callbacks.add(function(authMechanism, peerName, authCount, 
+                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
                                                       userName, credMask, credentials) {
                         assertEquals("ALLJOYN_RSA_KEYX", authMechanism);
                         assertEquals(bus.uniqueName, peerName);
@@ -251,13 +254,13 @@ AsyncTestCase("AuthListenerTest", {
             this._setUp(callbacks.add(enablePeerSecurity));
         });
     },
-    
+
     testMultipleAuthMechanisms: function(queue) {
         queue.call(function(callbacks) {
-            var enablePeerSecurity = function(err) { 
+            var enablePeerSecurity = function(err) {
                 assertFalsy(err);
                 bus.enablePeerSecurity("ALLJOYN_RSA_KEYX ALLJOYN_SRP_KEYX", {
-                    onRequest: callbacks.add(function(authMechanism, peerName, authCount, 
+                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
                                                       userName, credMask, credentials) {
                         assertEquals("ALLJOYN_SRP_KEYX", authMechanism);
                         assertEquals(otherBus.uniqueName, peerName);
@@ -283,7 +286,7 @@ AsyncTestCase("AuthListenerTest", {
             var otherBusEnablePeerSecurity = function(err) {
                 assertFalsy(err);
                 otherBus.enablePeerSecurity("ALLJOYN_SRP_KEYX", {
-                    onRequest: callbacks.add(function(authMechanism, peerName, authCount, 
+                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
                                                       userName, credMask, credentials) {
                         assertEquals("ALLJOYN_SRP_KEYX", authMechanism);
                         assertEquals(bus.uniqueName, peerName);

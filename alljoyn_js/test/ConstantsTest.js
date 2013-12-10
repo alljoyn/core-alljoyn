@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -49,14 +49,17 @@ AsyncTestCase("ConstantsTest", {
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/testobject", {
-                    "org.alljoyn.bus.samples.simple.SimpleInterface": {
-                        Ping: function(context, inStr) { 
-                            assertEquals(1, context.ALLJOYN_FLAG_NO_REPLY_EXPECTED);
-                            context.reply(inStr);
-                        }
-                    }
-                }, callbacks.add(connect));
+                bus.registerBusObject("/testobject",
+                                      {
+                                          "org.alljoyn.bus.samples.simple.SimpleInterface": {
+                                              Ping: function(context, inStr) {
+                                                  assertEquals(1, context.ALLJOYN_FLAG_NO_REPLY_EXPECTED);
+                                                  context.reply(inStr);
+                                              }
+                                          }
+                                      },
+                                      false,
+                                      callbacks.add(connect));
             };
             var connect = function(err) {
                 assertFalsy(err);
@@ -91,7 +94,7 @@ AsyncTestCase("ConstantsTest", {
                 otherBus.connect(callbacks.add(otherBusBindSessionPort));
             };
             var onAccept = callbacks.add(function(port, joiner, opts) {
-                assertEquals(1, opts.TRAFFIC_MESSAGES);            
+                assertEquals(1, opts.TRAFFIC_MESSAGES);
                 return true;
             });
             var sessionOpts = { onAccept: onAccept };
@@ -111,7 +114,7 @@ AsyncTestCase("ConstantsTest", {
             };
             var onJoinSession = function(err, id, opts) {
                 assertFalsy(err);
-                assertEquals(1, opts.TRAFFIC_MESSAGES);            
+                assertEquals(1, opts.TRAFFIC_MESSAGES);
                 bus.leaveSession(id, callbacks.add(done));
             };
             var done = function(err) {
@@ -127,7 +130,7 @@ AsyncTestCase("ConstantsTest", {
             var createInterface = function(err) {
                 assertFalsy(err);
                 bus.createInterface({
-                    name: "org.alljoyn.bus.samples.simple.SimpleInterface", 
+                    name: "org.alljoyn.bus.samples.simple.SimpleInterface",
                     method: [
                         { name: 'Ping', signature: 's', returnSignature: 's', argNames: 'inStr,outStr' }
                     ]
@@ -135,13 +138,16 @@ AsyncTestCase("ConstantsTest", {
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/testobject", {
-                    "org.alljoyn.bus.samples.simple.SimpleInterface": {
-                        Ping: function(context, inStr) { 
-                            context.replyError("org.alljoyn.bus.samples.simple.Error");
-                        }
-                    }
-                }, callbacks.add(connect));
+                bus.registerBusObject("/testobject",
+                                      {
+                                          "org.alljoyn.bus.samples.simple.SimpleInterface": {
+                                              Ping: function(context, inStr) {
+                                                  context.replyError("org.alljoyn.bus.samples.simple.Error");
+                                              }
+                                          }
+                                      },
+                                      false,
+                                      callbacks.add(connect));
             };
             var connect = function(err) {
                 assertFalsy(err);
@@ -176,16 +182,19 @@ AsyncTestCase("ConstantsTest", {
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/test", {
-                    "test.SecureInterface": {
-                        Ping: function(context, inStr) { context.reply(inStr); }
-                    }
-                }, callbacks.add(enablePeerSecurity));
+                bus.registerBusObject("/test",
+                                      {
+                                          "test.SecureInterface": {
+                                              Ping: function(context, inStr) { context.reply(inStr); }
+                                          }
+                                      },
+                                      false,
+                                      callbacks.add(enablePeerSecurity));
             };
             var enablePeerSecurity = function(err) {
                 assertFalsy(err);
                 bus.enablePeerSecurity("ALLJOYN_SRP_LOGON", {
-                    onRequest: callbacks.add(function(authMechanism, peerName, authCount, 
+                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
                                                       userName, credMask, credentials) {
                         assertEquals("ALLJOYN_SRP_LOGON", authMechanism);
                         assertEquals(otherBus.uniqueName, peerName);
@@ -219,7 +228,7 @@ AsyncTestCase("ConstantsTest", {
             var otherBusEnablePeerSecurity = function(err) {
                 assertFalsy(err);
                 otherBus.enablePeerSecurity("ALLJOYN_SRP_LOGON", {
-                    onRequest: callbacks.add(function(authMechanism, peerName, authCount, 
+                    onRequest: callbacks.add(function(authMechanism, peerName, authCount,
                                                       userName, credMask, credentials) {
                         assertEquals("ALLJOYN_SRP_LOGON", authMechanism);
                         assertEquals(bus.uniqueName, peerName);

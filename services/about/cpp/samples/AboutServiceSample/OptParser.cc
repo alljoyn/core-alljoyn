@@ -17,6 +17,7 @@
 #include "OptParser.h"
 #include <stdio.h>
 #include <ctype.h>
+#include <iostream>
 
 static const char versionPreamble[] = "AboutService version: 1\n"
                                       "Copyright (c) 2009-2013 AllSeen Alliance.\n";
@@ -56,20 +57,20 @@ void OptParser::PrintUsage() {
     qcc::String cmd = argv[0];
     cmd = cmd.substr(cmd.find_last_of('/') + 1);
 
-    fprintf(stderr, "%s [--port=PORT  | --language=LANG |  --deviceId=DEVICEID | --appId=APPID | --deviceName=DEVICENAME"
-            "]\n"
-            "    --port=\n"
-            "        used to bind the service.\n\n"
-            "    --deviceId\n"
-            "        Use the specified DeviceID.\n\n"
-            "    --deviceName\n"
-            "        Use the specified DeviceName.\n\n"
-            "    --appId=\n"
-            "        Use the specified it is HexString of 16 bytes (32 chars) \n\n"
-            "    --language=\n"
-            "       default language for PropertyStore\n\n"
-            "    --version\n"
-            "        Print the version and copyright string, and exit.\n", cmd.c_str());
+    std::cerr << cmd.c_str() << " [--port=PORT  | --language=LANG |  --deviceId=DEVICEID | --appId=APPID | --deviceName=DEVICENAME"
+    "]\n"
+    "    --port=\n"
+    "        used to bind the service.\n\n"
+    "    --deviceId\n"
+    "        Use the specified DeviceID.\n\n"
+    "    --deviceName\n"
+    "        Use the specified DeviceName.\n\n"
+    "    --appId=\n"
+    "        Use the specified it is HexString of 16 bytes (32 chars) \n\n"
+    "    --language=\n"
+    "       default language for PropertyStore\n\n"
+    "    --version\n"
+    "        Print the version and copyright string, and exit." << std::endl;
 }
 
 bool OptParser::IsAllHex(const char* data) {
@@ -92,7 +93,7 @@ OptParser::ParseResultCode OptParser::ParseResult() {
     for (indx = 1; indx < argc; indx++) {
         qcc::String arg(argv[indx]);
         if (arg.compare("--version") == 0) {
-            printf(versionPreamble, "1");
+            std::cout << versionPreamble << std::endl;
             result = PR_EXIT_NO_ERROR;
             break;
         } else if (arg.compare(0, sizeof("--port") - 1, "--port") == 0) {
@@ -105,7 +106,7 @@ OptParser::ParseResultCode OptParser::ParseResult() {
             appGUID = arg.substr(sizeof("--appId"));
             if ((appGUID.length() != 32) || (!IsAllHex(appGUID.c_str()))) {
                 result = PR_INVALID_APPID;
-                fprintf(stderr, "Invalid appId: \"%s\"\n", argv[indx]);
+                std::cerr << "Invalid appId: \"" << argv[indx] << "\"" << std::endl;
                 break;
             }
         } else if (arg.compare(0, sizeof("--language") - 1, "--language") == 0) {
@@ -116,7 +117,7 @@ OptParser::ParseResultCode OptParser::ParseResult() {
             break;
         } else {
             result = PR_INVALID_OPTION;
-            fprintf(stderr, "Invalid option: \"%s\"\n", argv[indx]);
+            std::cerr << "Invalid option: \"" << argv[indx] << "\"" << std::endl;
             break;
         }
     }

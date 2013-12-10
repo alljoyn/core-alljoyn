@@ -417,6 +417,11 @@ QStatus Timer::AddAlarmNonBlocking(const Alarm& alarm)
     return status;
 }
 
+bool Timer::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
+{
+    //TODO: AJCORE332: Implement forceRemoveAlarm and addWaitQueue as implemented in windows/posix.
+    return false;
+}
 bool Timer::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
 {
     bool removed = false;

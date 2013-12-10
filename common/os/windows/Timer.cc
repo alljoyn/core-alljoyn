@@ -25,11 +25,14 @@
 #include <qcc/Debug.h>
 #include <qcc/Timer.h>
 #include <Status.h>
+#include <algorithm>
 
 #define QCC_MODULE  "TIMER"
 
 #define WORKER_IDLE_TIMEOUT_MS  20
 #define FALLBEHIND_WARNING_MS   500
+
+#define TIMER_IS_DEAD_ALERTCODE  1
 
 using namespace std;
 using namespace qcc;
@@ -201,6 +204,13 @@ QStatus Timer::Stop()
         }
         lock.Unlock();
     }
+
+    lock.Lock();
+    deque<Thread*>::iterator it = addWaitQueue.begin();
+    while (it != addWaitQueue.end()) {
+        (*it++)->Alert(TIMER_IS_DEAD_ALERTCODE);
+    }
+    lock.Unlock();
     return status;
 }
 
@@ -229,9 +239,27 @@ QStatus Timer::AddAlarm(const Alarm& alarm)
     if (isRunning) {
         /* Don't allow an infinite number of alarms to exist on this timer */
         while (maxAlarms && (alarms.size() >= maxAlarms) && isRunning) {
-            lock.Unlock();
-            qcc::Sleep(2);
-            lock.Lock();
+            Thread* thread = Thread::GetThread();
+            assert(thread);
+            addWaitQueue.push_front(thread);
+            lock.Unlock(MUTEX_CONTEXT);
+            QStatus status1 = Event::Wait(Event::neverSet, Event::WAIT_FOREVER);
+            lock.Lock(MUTEX_CONTEXT);
+            deque<Thread*>::iterator eit = find(addWaitQueue.begin(), addWaitQueue.end(), thread);
+            if (eit != addWaitQueue.end()) {
+                addWaitQueue.erase(eit);
+            }
+
+            /* Reset alert status */
+            if (ER_ALERTED_THREAD == status1) {
+                thread->GetStopEvent().ResetEvent();
+                if (thread->GetAlertCode() == TIMER_IS_DEAD_ALERTCODE) {
+
+
+                    lock.Unlock(MUTEX_CONTEXT);
+                    return ER_TIMER_EXITING;
+                }
+            }
         }
         /* Ensure timer is still running */
         if (isRunning) {
@@ -323,6 +351,55 @@ bool Timer::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
                         break;
                     }
 
+                    curAlarm = timerThreads[i]->GetCurrentAlarm();
+                }
+            }
+        }
+    }
+    lock.Unlock();
+    return foundAlarm;
+}
+
+bool Timer::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
+{
+    bool foundAlarm = false;
+    lock.Lock();
+    if (isRunning || expireOnExit) {
+        if (alarm->periodMs) {
+            set<Alarm>::iterator it = alarms.begin();
+            while (it != alarms.end()) {
+                if ((*it)->id == alarm->id) {
+                    foundAlarm = true;
+                    alarms.erase(it);
+                    break;
+                }
+                ++it;
+            }
+        } else {
+            set<Alarm>::iterator it = alarms.find(alarm);
+            if (it != alarms.end()) {
+                foundAlarm = true;
+                alarms.erase(it);
+            }
+        }
+        if (blockIfTriggered && !foundAlarm) {
+            /*
+             * There might be a call in progress to the alarm that is being removed.
+             * RemoveAlarm must not return until this alarm is finished.
+             */
+            for (size_t i = 0; i < timerThreads.size(); ++i) {
+                if ((timerThreads[i] == NULL) || (timerThreads[i] == Thread::GetThread())) {
+                    continue;
+                }
+                const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
+                while (isRunning && curAlarm && (*curAlarm == alarm)) {
+                    timerThreads[i]->Alert(TIMER_IS_DEAD_ALERTCODE);
+                    lock.Unlock();
+                    qcc::Sleep(2);
+                    lock.Lock();
+                    if (timerThreads[i] == NULL) {
+                        break;
+                    }
                     curAlarm = timerThreads[i]->GetCurrentAlarm();
                 }
             }
@@ -687,6 +764,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                  * the list.
                  */
                 timer->lock.Lock();
+
                 /* Make sure the alarm has not been serviced yet.
                  * If it has already been serviced by another thread, just ignore
                  * and go back to the top of the loop.
@@ -696,6 +774,14 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                     Alarm top = *it;
                     timer->alarms.erase(it);
                     currentAlarm = &top;
+                    if (0 < timer->addWaitQueue.size()) {
+                        Thread* wakeMe = timer->addWaitQueue.back();
+                        timer->addWaitQueue.pop_back();
+                        QStatus status = wakeMe->Alert();
+                        if (ER_OK != status) {
+                            QCC_LogError(status, ("Failed to alert thread blocked on full tx queue"));
+                        }
+                    }
                     timer->lock.Unlock();
 
                     QCC_DbgPrintf(("TimerThread::Run(): ******** AlarmTriggered()"));

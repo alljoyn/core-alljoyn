@@ -44,7 +44,7 @@ AsyncTestCase("MessageTest", {
                 assertFalsy(err);
                 otherBus.registerBusObject("/testobject", {
                     "org.alljoyn.bus.samples.simple.SimpleInterface": {
-                        Ping: function(context, inStr) { 
+                        Ping: function(context, inStr) {
                             assertFalse(context.isUnreliable);
                             assertUndefined(context.authMechanism);
                             assertEquals("s", context.signature);
@@ -115,7 +115,7 @@ AsyncTestCase("MessageTest", {
                 assertFalsy(err);
                 otherBus.registerBusObject("/testobject", {
                     "org.alljoyn.bus.samples.simple.SimpleInterface": {
-                        PingError: function(context, inStr) { 
+                        PingError: function(context, inStr) {
                             if (errorMessage) {
                                 context.replyError("org.alljoyn.bus.samples.simple.Error", errorMessage);
                             } else {
@@ -161,7 +161,7 @@ AsyncTestCase("MessageTest", {
                 assertEquals(1, err.code);
             };
             this._setUp(callbacks.add(otherBusCreate));
-        });            
+        });
     },
 });
 

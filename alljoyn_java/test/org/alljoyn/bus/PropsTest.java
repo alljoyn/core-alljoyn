@@ -46,6 +46,10 @@ public class PropsTest extends TestCase {
         public int getIntProp() { return intProperty; }
 
         public void setIntProp(int intProperty) { this.intProperty = intProperty; }
+
+        public String Ping(String str) throws BusException {
+            return str;
+        }
     }
 
     BusAttachment bus;
@@ -130,4 +134,23 @@ public class PropsTest extends TestCase {
         assertEquals("Hello", map.get("StringProp").getObject(String.class));
         assertEquals(6, (int)map.get("IntProp").getObject(Integer.class));
     }
+    
+    /* ALLJOYN-2043 */
+    public void testGetAllThenMethodCall() throws Exception {
+        /* Get a remote object */
+        ProxyBusObject remoteObj = bus.getProxyBusObject(bus.getUniqueName(),
+                                                         "/testProperties",
+                                                         BusAttachment.SESSION_ID_ANY,
+                                                         new Class<?>[] { PropsInterface.class,
+                                                                          Properties.class });
+
+        /* Use the org.freedesktop.DBus.Properties interface to get all the properties */
+        Properties properties = remoteObj.getInterface(Properties.class);
+        Map<String, Variant> map = properties.GetAll("org.alljoyn.bus.PropsInterface");
+        assertEquals("Hello", map.get("StringProp").getObject(String.class));
+        assertEquals(6, (int)map.get("IntProp").getObject(Integer.class));
+        
+        PropsInterface proxy = remoteObj.getInterface(PropsInterface.class);
+        assertEquals("World", proxy.Ping("World"));
+   }
 }

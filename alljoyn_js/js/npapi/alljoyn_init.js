@@ -65,7 +65,7 @@
     if (!window.org.alljoyn) {
         window.org.alljoyn = {bus: bus};
     }
-    
+
     /*
      * Until the feature permissions API is supported and available to the plugin, use the fallback
      * implementation in the plugin.
@@ -78,7 +78,7 @@
     }
 
     permissionLevel = window.navigator.permissionLevel;
-    window.navigator.permissionLevel = function(feature) { 
+    window.navigator.permissionLevel = function(feature) {
         if (feature === 'org.alljoyn.bus') {
             return bus.permissionLevel(feature);
         } else {
@@ -87,14 +87,14 @@
     }
 
     requestPermission = window.navigator.requestPermission;
-    window.navigator.requestPermission = function(feature, callback) { 
+    window.navigator.requestPermission = function(feature, callback) {
         if (feature === 'org.alljoyn.bus') {
-            return bus.requestPermission(feature, callback); 
+            return bus.requestPermission(feature, callback);
         } else {
             return requestPermission(feature, callback);
         }
     }
-    
+
     found = false;
     for (i = 0; window.navigator.privilegedFeatures && (i < window.navigator.privilegedFeatures.length); ++i) {
         if (window.navigator.privilegedFeatures[i] === 'org.alljoyn.bus') {

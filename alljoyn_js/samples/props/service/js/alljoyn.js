@@ -55,13 +55,13 @@ var alljoyn = (function() {
                     return {
                         "org.alljoyn.bus.samples.props.PropsInterface": {
                             get StringProp() { return stringProp; },
-                            set StringProp(value) { 
-                                stringProp = value; 
+                            set StringProp(value) {
+                                stringProp = value;
                                 that.onstringprop(stringProp);
                             },
                             get IntProp() { return intProp; },
-                            set IntProp(value) { 
-                                intProp = value; 
+                            set IntProp(value) {
+                                intProp = value;
                                 that.onintprop(intProp);
                             }
                         }
@@ -88,6 +88,6 @@ var alljoyn = (function() {
         that.start = function() {
             navigator.requestPermission("org.alljoyn.bus", function() { start(); });
         }
-        
+
         return that;
     }());

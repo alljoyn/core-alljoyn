@@ -26,10 +26,6 @@ else:
 
 vars = Variables()
 vars.Add(EnumVariable('ICE', 'Enable ICE Transport', default_ice, allowed_values=('on', 'off')))
-if daemon_env['OS'] in ['linux', 'openwrt', 'android']:
-    vars.Add(EnumVariable('BT', 'Enable Bluetooth Transport', 'on', allowed_values=('on', 'off')))
-else:
-    daemon_env['BT'] = 'off'
 vars.Update(daemon_env)
 Help(vars.GenerateHelpText(daemon_env))
 
@@ -62,12 +58,6 @@ daemon_objs.extend(daemon_env.SConscript('ns/SConscript', exports = ['daemon_env
 if daemon_env['OS'] == "android":
     daemon_objs.extend(daemon_env.SConscript('android/SConscript', exports = ['daemon_env']))
 
-
-if daemon_env['BT'] == 'on':
-    daemon_env.Append(CPPDEFINES = ['AJ_ENABLE_BT'])
-    daemon_env.Append(CPPPATH = [daemon_env.Dir('./bluetooth').srcnode()])
-    bt_objs = daemon_env.SConscript('bluetooth/SConscript', exports = ['daemon_env'])
-    daemon_objs.extend(bt_objs)
 
 if daemon_env['ICE'] == 'on':
     daemon_env.Append(CPPDEFINES=['AJ_ENABLE_ICE'])

@@ -54,12 +54,13 @@ class SessionListener {
 
     /**
      * Called by the bus when an existing session becomes disconnected. (Deprecated)
+     * @deprecated
      *
      * @see SessionLost(SessionId sessionId, SessionLostReason reason)
      *
      * @param sessionId     Id of session that was lost.
      */
-    QCC_DEPRECATED(virtual void SessionLost(SessionId sessionId)) { };
+    virtual void SessionLost(SessionId sessionId) { };
 
     /**
      * Called by the bus when an existing session becomes disconnected.

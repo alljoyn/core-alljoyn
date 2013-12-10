@@ -494,8 +494,13 @@ inline qcc::ThreadReturn STDCALL ThreadClass::Run(void* arg) {
         return this;
     }
 
-    /* Force bundled daemon */
-    status = bus->Connect("null:");
+    qcc::String* connectArgs = static_cast<qcc::String*>(arg);
+    // 'arg' is string value of env variable "BUS_ADDRESS"
+    if (connectArgs->empty()) {
+        status = bus->Connect();
+    } else {
+        status = bus->Connect(connectArgs->c_str());
+    }
 
     // determine which operation mode we are running in
     //
@@ -596,6 +601,10 @@ int main(int argc, char**argv)
     /* Install SIGINT handler */
     signal(SIGINT, SigIntHandler);
 
+    /* Get env vars */
+    Environ* env = Environ::GetAppEnviron();
+    qcc::String connectArgs = env->Find("BUS_ADDRESS");
+
     ThreadClass** threadList = new ThreadClass *[threads];
 
     while (!g_interrupt && iterations--) {
@@ -605,7 +614,7 @@ int main(int argc, char**argv)
             char buf[256];
             sprintf(buf, "Thread.n%d", i);
             threadList[i] = new ThreadClass((char*)buf, i);
-            threadList[i]->Start();
+            threadList[i]->Start(&connectArgs);
             QCC_SyncPrintf("started threadList[%d]... \n", i);
         }
 

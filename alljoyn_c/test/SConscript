@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2011, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2013, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -11,15 +11,22 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 Import('env')
 
-# Make private headers available
-env.Append(CPPPATH=[env.Dir('../../daemon').srcnode()])
+test_env = env.Clone()
 
-env.AppendUnique(LIBS=['Bthprops.lib'])
+test_env.Prepend(LIBS = [test_env['ALLJOYN_C_LIB_STATIC']])
 
-# Build using Windows
-srcs = env.Glob('*.cc')
-Return('srcs')
+if test_env['BD'] == 'on':
+    #Build apps with bundled daemon support
+    test_env.Prepend(LIBS = [test_env['bdobj'], test_env['bdlib']])
+
+test_programs = ['bbcclient', 'bbcservice']
+built_test_programs = []
+for test_p in test_programs:
+    test_obj = test_env.Object(test_p)
+    built_test_programs.append(test_env.Program(test_p,  [test_obj]))
+
+test_env.Install('$C_DISTDIR/bin', built_test_programs)

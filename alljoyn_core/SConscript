@@ -42,7 +42,7 @@ if ajenv['VARIANT'] == 'debug':
         if (not(os.environ.has_key('COVFILE'))):
             print('Error: COVFILE environment variable must be set')
             if not GetOption('help'):
-                Exit()
+                Exit(1)
         else:
             ajenv.PrependENVPath('COVFILE', os.environ['COVFILE'])
 
@@ -99,21 +99,21 @@ if ajenv['OS_GROUP'] == 'winrt':
     daemon_progs, bdlib, bdobj = ajenv.SConscript('$OBJDIR/daemon/SConscript', exports = ['winrt_objs'])
     ajenv.Install('$WINRT_DISTDIR/bin', daemon_progs)
     # WinRT needs the full path to the exact file.
-    env.Prepend(LIBS = [bdobj, bdlib])
-    daemon_obj = [bdobj]
+    daemon_obj = bdobj
+    daemon_lib = bdlib
 
 else:
     daemon_progs, bdlib, bdobj = ajenv.SConscript('$OBJDIR/daemon/SConscript')
     ajenv.Install('$CPP_DISTDIR/bin', daemon_progs)
     ajenv.Install('$CPP_DISTDIR/lib', bdlib)
     daemon_obj = ajenv.Install('$CPP_DISTDIR/lib', bdobj)
-    # Need to prepend rather than append to ensure proper static library ordering
-    if env['BD'] == 'on':
-        env.Prepend(LIBS = [bdobj, 'ajdaemon'])
+    daemon_lib = 'ajdaemon'
 
 
 # The global env needs the 'bdobj' for the Java binding
 env['bdobj'] = daemon_obj
+env['bdlib'] = daemon_lib
+
 
 # only include command line samples, unit test, test programs if we are not 
 # building for iOS. No support on iOS for command line applications.

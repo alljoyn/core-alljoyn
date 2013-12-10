@@ -17,10 +17,13 @@ Import('about_env')
 if about_env['OS_CONF'] in ['linux', 'openwrt']:
     local_env = about_env.Clone()
 
-    local_env.Prepend(LIBS = ['alljoyn_about', 'alljoyn'])
+    local_env.Prepend(LIBS = ['alljoyn_about'])
+
+    if local_env['BD'] == 'on' and local_env.has_key('bdobj') and local_env.has_key('bdlib'):
+        # Build apps with bundled daemon support
+        local_env.Prepend(LIBS = [local_env['bdobj'], local_env['bdlib']])
 
     # Sample programs
-
     sample_dirs = [
         'AboutClientSample',
         'AboutServiceSample'

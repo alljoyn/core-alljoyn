@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -40,18 +40,21 @@ AsyncTestCase("PropsTest", {
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/testProperties", function() {
-                    var stringProp = "Hello";
-                    var intProp = 6;
-                    return {
-                        "org.alljoyn.bus.PropsInterface": {
-                            get StringProp() { return stringProp; },
-                            set StringProp(value) { stringProp = value; },
-                            get IntProp() { return intProp; },
-                            set IntProp(value) { intProp = value; }
-                        }
-                    };
-                }(), callbacks.add(getDbus));
+                bus.registerBusObject("/testProperties",
+                                      function() {
+                                          var stringProp = "Hello";
+                                          var intProp = 6;
+                                          return {
+                                              "org.alljoyn.bus.PropsInterface": {
+                                                  get StringProp() { return stringProp; },
+                                                  set StringProp(value) { stringProp = value; },
+                                                  get IntProp() { return intProp; },
+                                                  set IntProp(value) { intProp = value; }
+                                              }
+                                          };
+                                      }(),
+                                      false,
+                                      callbacks.add(getDbus));
             };
             var getDbus = function(err) {
                 assertFalsy(err);

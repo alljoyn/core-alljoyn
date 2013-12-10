@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -25,7 +25,7 @@ AsyncTestCase("InterfaceDescriptionTest", {
     },
 
     testRegisterIntrospect: function(queue) {
-        var expectedXML = 
+        var expectedXML =
             '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"\n' +
             '"http://standards.freedesktop.org/dbus/introspect-1.0.dtd">\n' +
             '<node>\n' +
@@ -126,9 +126,10 @@ AsyncTestCase("InterfaceDescriptionTest", {
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/busObject", {
-                    "test.Interface": {}
-                }, callbacks.add(connect));
+                bus.registerBusObject("/busObject",
+                                      { "test.Interface": {} },
+                                      false,
+                                      callbacks.add(connect));
             };
             var connect = function(err) {
                 assertFalsy(err);
@@ -142,7 +143,7 @@ AsyncTestCase("InterfaceDescriptionTest", {
                 assertFalsy(err);
                 proxy.methodCall("org.freedesktop.DBus.Introspectable", "Introspect", callbacks.add(onIntrospect));
             };
-            var onIntrospect = function(err, context, xml) { 
+            var onIntrospect = function(err, context, xml) {
                 assertFalsy(err);
                 assertEquals(expectedXML, xml);
             };
@@ -152,7 +153,7 @@ AsyncTestCase("InterfaceDescriptionTest", {
 
     testParseXML: function(queue) {
         queue.call(function(callbacks) {
-            var xml = 
+            var xml =
                 '<node>\n' +
                 '  <interface name="test.Interface">\n' +
                 '    <method name="method1">\n' +

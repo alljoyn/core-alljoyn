@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -29,18 +29,21 @@ AsyncTestCase("ProxyMethodTest", {
                 bus.createInterface({
                     name: "org.alljoyn.bus.NoReply",
                     method: [
-                        { name: 'Ping', signature: 's', argNames: 'inStr', 
+                        { name: 'Ping', signature: 's', argNames: 'inStr',
                           'org.freedesktop.DBus.Method.NoReply': true }
                     ]
                 }, callbacks.add(registerBusObject));
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/testobject", {
-                    "org.alljoyn.bus.NoReply": {
-                        Ping: callbacks.add(function(context, inStr) {})
-                    }
-                }, callbacks.add(connect));
+                bus.registerBusObject("/testobject",
+                                      {
+                                          "org.alljoyn.bus.NoReply": {
+                                              Ping: callbacks.add(function(context, inStr) {})
+                                          }
+                                      },
+                                      false,
+                                      callbacks.add(connect));
             };
             var connect = function(err) {
                 assertFalsy(err);
@@ -75,14 +78,17 @@ AsyncTestCase("ProxyMethodTest", {
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/testobject", {
-                    "org.alljoyn.bus.Flags": {
-                        Ping: callbacks.add(function(context, inStr) { 
-                            assertEquals(0x02, context.flags & 0x02);
-                            context.reply(inStr);
-                        })
-                    }
-                }, callbacks.add(connect));
+                bus.registerBusObject("/testobject",
+                                      {
+                                          "org.alljoyn.bus.Flags": {
+                                              Ping: callbacks.add(function(context, inStr) {
+                                                                      assertEquals(0x02, context.flags & 0x02);
+                                                                      context.reply(inStr);
+                                                                  })
+                                           }
+                                      },
+                                      false,
+                                      callbacks.add(connect));
             };
             var connect = function(err) {
                 assertFalsy(err);
@@ -116,11 +122,14 @@ AsyncTestCase("ProxyMethodTest", {
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/testobject", {
-                    "org.alljoyn.bus.Timeout": {
-                        Ping: function(context, inStr) { /* no reply */ }
-                    }
-                }, callbacks.add(connect));
+                bus.registerBusObject("/testobject",
+                                      {
+                                          "org.alljoyn.bus.Timeout": {
+                                          Ping: function(context, inStr) { /* no reply */ }
+                                          }
+                                      },
+                                      false,
+                                      callbacks.add(connect));
             };
             var connect = function(err) {
                 assertFalsy(err);

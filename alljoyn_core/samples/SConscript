@@ -16,23 +16,29 @@
 Import('env')
 
 if env['OS'] != 'win8':
+    samples_env = env.Clone()
+
+    if samples_env['BD'] == 'on':
+        # Build apps with bundled daemon support
+        samples_env.Prepend(LIBS = [samples_env['bdobj'], samples_env['bdlib']])
+
     # Basic Sample programs
-    env.SConscript('basic/SConscript')
+    samples_env.SConscript('basic/SConscript', exports = {'env': samples_env})
 
     # Simple Sample programs
-    env.SConscript('simple/SConscript')
+    samples_env.SConscript('simple/SConscript', exports = {'env': samples_env})
 
     # Security Sample programs
-    env.SConscript('secure/SConscript')
+    samples_env.SConscript('secure/SConscript', exports = {'env': samples_env})
 
     # Chat Sample program
-    env.SConscript('chat/SConscript')
+    samples_env.SConscript('chat/SConscript', exports = {'env': samples_env})
 
     # File transfer Sample program
-    env.SConscript('FileTransfer/SConscript')
+    samples_env.SConscript('FileTransfer/SConscript', exports = {'env': samples_env})
 
     # Sample Daemon program
-    env.SConscript('SampleDaemon/SConscript')
+    samples_env.SConscript('SampleDaemon/SConscript', exports = {'env': samples_env})
 
 # Install readme
 if env['OS_CONF'] == 'windows':

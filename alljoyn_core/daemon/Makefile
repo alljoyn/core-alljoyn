@@ -41,13 +41,7 @@ else
     DAEMON_SRCS += $(OS_GROUP)/PermissionMgr.cc
 endif
 
-ifeq "$(BT)" "on"
-    # Use BlueZ
-    INCLUDE += -I$(PWD)/bluetooth -I$(PWD)/bluetooth/bt_bluez
-    DAEMON_SRCS += $(wildcard bluetooth/*.cc) $(wildcard bluetooth/bt_bluez/*.cc)
-endif
-
-ifeq "$(BT)" "on"
+ifeq "$(ICE)" "on"
     # Use ICE
     INCLUDE += -I$(PWD)/packetengine
     DAEMON_SRCS += $(wildcard ice/*.cc)

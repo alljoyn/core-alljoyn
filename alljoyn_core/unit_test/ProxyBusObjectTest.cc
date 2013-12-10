@@ -438,7 +438,6 @@ TEST_F(ProxyBusObjectTest, AddChild_regressionTest) {
     EXPECT_TRUE(proxyObj.IsValid());
 
     size_t numChildren = 0;
-    ProxyBusObject** children = NULL;
     numChildren = proxyObj.GetChildren();
     //if ALLJOYN-1908 were not fixed this would return 1
     EXPECT_EQ((size_t)2, numChildren);

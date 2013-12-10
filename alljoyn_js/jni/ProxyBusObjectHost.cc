@@ -342,6 +342,7 @@ void _ProxyBusObjectHost::Initialize()
     ATTRIBUTE("path", &_ProxyBusObjectHost::getPath, 0);
     ATTRIBUTE("serviceName", &_ProxyBusObjectHost::getServiceName, 0);
     ATTRIBUTE("sessionId", &_ProxyBusObjectHost::getSessionId, 0);
+    ATTRIBUTE("secure", &_ProxyBusObjectHost::getSecure, 0);
 
     OPERATION("getChildren", &_ProxyBusObjectHost::getChildren);
     OPERATION("getInterface", &_ProxyBusObjectHost::getInterface);
@@ -515,6 +516,12 @@ bool _ProxyBusObjectHost::getServiceName(NPVariant* result)
 bool _ProxyBusObjectHost::getSessionId(NPVariant* result)
 {
     ToUnsignedShort(plugin, proxyBusObject->GetSessionId(), *result);
+    return true;
+}
+
+bool _ProxyBusObjectHost::getSecure(NPVariant* result)
+{
+    ToUnsignedShort(plugin, proxyBusObject->IsSecure(), *result);
     return true;
 }
 

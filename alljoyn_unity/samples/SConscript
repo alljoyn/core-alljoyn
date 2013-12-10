@@ -14,6 +14,7 @@
 # 
 
 Import('env')
+Import('clib')
 
 # The return value is the collection of files installed in the build destination.
 returnValue = []
@@ -36,11 +37,10 @@ if env['OS_GROUP'] == 'windows':
     returnValue += env.Install('Unity/BasicServer/Assets/Plugins', env['ALLJOYN_UNITY_LIB'])
     returnValue += env.Install('Unity/Chat/Assets/Plugins', env['ALLJOYN_UNITY_LIB'])
 
-    #place alljoyn_c.dll into the samples
-    liballjoyn_c = '$DISTDIR/c/lib/alljoyn_c.dll'
-    returnValue += env.Install('Unity/BasicClient/Assets/Plugins', liballjoyn_c)
-    returnValue += env.Install('Unity/BasicServer/Assets/Plugins', liballjoyn_c)
-    returnValue += env.Install('Unity/Chat/Assets/Plugins', liballjoyn_c)
+    #place alljoyn_unity_native.dll into the samples
+    returnValue += env.Install('Unity/BasicClient/Assets/Plugins', clib)
+    returnValue += env.Install('Unity/BasicServer/Assets/Plugins', clib)
+    returnValue += env.Install('Unity/Chat/Assets/Plugins', clib)
 
 if env['OS'] == 'android':
     #place alljoyn_unity.dll into the samples
@@ -48,10 +48,9 @@ if env['OS'] == 'android':
     returnValue += env.Install('Unity/BasicServer/Assets/Plugins', env['ALLJOYN_UNITY_LIB'])
     returnValue += env.Install('Unity/Chat/Assets/Plugins', env['ALLJOYN_UNITY_LIB'])
 
-    #place liballjoyn_c.so into the samples
-    liballjoyn_c = '$DISTDIR/c/lib/liballjoyn_c.so'
-    returnValue += env.Install('Unity/BasicClient/Assets/Plugins/Android', liballjoyn_c)
-    returnValue += env.Install('Unity/BasicServer/Assets/Plugins/Android', liballjoyn_c)
-    returnValue += env.Install('Unity/Chat/Assets/Plugins/Android', liballjoyn_c)
+    #place liballjoyn_unity_native.so into the samples
+    returnValue += env.Install('Unity/BasicClient/Assets/Plugins/Android', clib)
+    returnValue += env.Install('Unity/BasicServer/Assets/Plugins/Android', clib)
+    returnValue += env.Install('Unity/Chat/Assets/Plugins/Android', clib)
 
 Return('returnValue')

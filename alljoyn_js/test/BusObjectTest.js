@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -39,11 +39,12 @@ AsyncTestCase("BusObjectTest", {
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/testobject", {
-                    "org.alljoyn.bus.samples.simple.SimpleInterface": {
-                        /* Doesn't implement Ping. */
-                    }
-                }, callbacks.add(getProxyObj));
+                bus.registerBusObject("/testobject",
+                                      {
+                                          "org.alljoyn.bus.samples.simple.SimpleInterface": { }
+                                      },
+                                      false,
+                                      callbacks.add(getProxyObj));
             };
             var getProxyObj = function(err) {
                 assertFalsy(err);
@@ -65,12 +66,17 @@ AsyncTestCase("BusObjectTest", {
         queue.call(function(callbacks) {
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/busObject", {
-                    onRegistered: callbacks.add(function() {
-                        bus.unregisterBusObject("/busObject", callbacks.add(function(err) { assertFalsy(err); }));
-                    }),
-                    onUnregistered: callbacks.add(function() {})
-                }, callbacks.add(connect));
+                bus.registerBusObject("/busObject",
+                                      {
+                                          onRegistered: callbacks.add(function() {
+                                              bus.unregisterBusObject("/busObject", callbacks.add(function(err) {
+                                                                                                      assertFalsy(err);
+                                                                                                  }));
+                                                                      }),
+                                          onUnregistered: callbacks.add(function() {})
+                                      },
+                                      false,
+                                      callbacks.add(connect));
             };
             var connect = function(err) {
                 assertFalsy(err);
@@ -85,7 +91,7 @@ AsyncTestCase("BusObjectTest", {
 
     testToXMLCallback: function(queue) {
         queue.call(function(callbacks) {
-            var expectedCustomXML = 
+            var expectedCustomXML =
                 '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"\n' +
                 '"http://standards.freedesktop.org/dbus/introspect-1.0.dtd">\n' +
                 '<node>\n' +
@@ -102,7 +108,7 @@ AsyncTestCase("BusObjectTest", {
                 '    </method>\n' +
                 '  </interface>\n' +
                 '</node>\n';
-            var expectedBuiltinXML = 
+            var expectedBuiltinXML =
                 '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"\n' +
                 '"http://standards.freedesktop.org/dbus/introspect-1.0.dtd">\n' +
                 '<node>\n' +
@@ -122,7 +128,7 @@ AsyncTestCase("BusObjectTest", {
             var createInterface = function(err) {
                 assertFalsy(err);
                 bus.createInterface({
-                    name: "org.alljoyn.bus.samples.simple.SimpleInterface", 
+                    name: "org.alljoyn.bus.samples.simple.SimpleInterface",
                     method: [
                         { name: 'Ping', signature: 's', returnSignature: 's', argNames: 'inStr,outStr' }
                     ]
@@ -150,7 +156,7 @@ AsyncTestCase("BusObjectTest", {
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/testobject", testobject, callbacks.add(connect));
+                bus.registerBusObject("/testobject", testobject, false, callbacks.add(connect));
             };
             var connect = function(err) {
                 assertFalsy(err);
@@ -166,13 +172,13 @@ AsyncTestCase("BusObjectTest", {
                 proxy = proxyObj;
                 proxy.methodCall("org.freedesktop.DBus.Introspectable", "Introspect", callbacks.add(onIntrospectCustom));
             };
-            var onIntrospectCustom = function(err, context, xml) { 
+            var onIntrospectCustom = function(err, context, xml) {
                 assertFalsy(err);
                 assertEquals(expectedCustomXML, xml);
                 delete testobject.toXML;
                 proxy.methodCall("org.freedesktop.DBus.Introspectable", "Introspect", callbacks.add(onIntrospectBuiltin));
             };
-            var onIntrospectBuiltin = function(err, context, xml) { 
+            var onIntrospectBuiltin = function(err, context, xml) {
                 assertFalsy(err);
                 assertEquals(expectedBuiltinXML, xml);
             };
@@ -197,13 +203,16 @@ AsyncTestCase("BusObjectTest", {
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/testobject", {
-                    "org.alljoyn.bus.samples.simple.SimpleInterface": {
-                        Ping: function(context, inStr) {
-                            window.setTimeout(callbacks.add(function() { context.reply(inStr); }), 250);
-                        }
-                    }
-                }, callbacks.add(getProxyObj));
+                bus.registerBusObject("/testobject",
+                                      {
+                                          "org.alljoyn.bus.samples.simple.SimpleInterface": {
+                                              Ping: function(context, inStr) {
+                                                  window.setTimeout(callbacks.add(function() { context.reply(inStr); }), 250);
+                                              }
+                                          }
+                                      },
+                                      false,
+                                      callbacks.add(getProxyObj));
             };
             var getProxyObj = function(err) {
                 assertFalsy(err);

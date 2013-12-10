@@ -49,7 +49,7 @@ AsyncTestCase("SocketFdTest", {
     testSendRecv: function(queue) {
         queue.call(function(callbacks) {
             var SESSION_PORT = 111;
-            
+
             var startSession = function() {
                 var connect = function(err) {
                     assertFalsy(err);
@@ -59,8 +59,8 @@ AsyncTestCase("SocketFdTest", {
                     port: SESSION_PORT,
                     traffic: org.alljoyn.bus.SessionOpts.TRAFFIC_RAW_RELIABLE,
                     transport: org.alljoyn.bus.SessionOpts.TRANSPORT_LOCAL,
-                    onAccept: function(port, joiner, opts) { 
-                        return true; 
+                    onAccept: function(port, joiner, opts) {
+                        return true;
                     },
                     onJoined: callbacks.add(function(port, id, opts) {
                         var fd = bus.getSessionFd(id);

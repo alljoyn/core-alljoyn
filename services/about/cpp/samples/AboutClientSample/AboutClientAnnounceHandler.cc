@@ -16,7 +16,7 @@
 
 #include "AboutClientAnnounceHandler.h"
 #include <alljoyn/about/AboutClient.h>
-#include <stdio.h>
+#include <iostream>
 
 using namespace ajn;
 using namespace services;
@@ -34,43 +34,43 @@ AboutClientAnnounceHandler::~AboutClientAnnounceHandler()
 void AboutClientAnnounceHandler::Announce(unsigned short version, unsigned short port, const char* busName, const ObjectDescriptions& objectDescs,
                                           const AboutData& aboutData)
 {
-    printf("\n\n*********************************************************************************\n");
-    printf("version  %hu\n", version);
-    printf("port  %hu\n", port);
-    printf("busName  %s\n", busName);
-    printf("ObjectDescriptions\n");
+    std::cout << std::endl << std::endl << "*********************************************************************************"
+              << std::endl;
+    std::cout << "version  " << version << std::endl;
+    std::cout << "port  " << port << std::endl;
+    std::cout << "busName  " << busName << std::endl;
+    std::cout << "ObjectDescriptions" << std::endl;
     for (AboutClient::ObjectDescriptions::const_iterator it = objectDescs.begin(); it != objectDescs.end(); ++it) {
         qcc::String key = it->first;
         std::vector<qcc::String> vector = it->second;
-        printf("key=%s", key.c_str());
+        std::cout << "key=" << key.c_str();
         for (std::vector<qcc::String>::const_iterator itv = vector.begin(); itv != vector.end(); ++itv) {
-            printf(" value=%s\n", itv->c_str());
+            std::cout << " value=" << itv->c_str() << std::endl;
         }
-        printf("\n");
     }
 
-    printf("Announcedata\n");
+    std::cout << "Announcedata" << std::endl;
     for (AboutClient::AboutData::const_iterator it = aboutData.begin(); it != aboutData.end(); ++it) {
         qcc::String key = it->first;
         ajn::MsgArg value = it->second;
         if (value.typeId == ALLJOYN_STRING) {
-            printf("Key name=%s value=%s\n", key.c_str(), value.v_string.str);
+            std::cout << "Key name=" << key.c_str() << " value=" << value.v_string.str << std::endl;
         } else if (value.typeId == ALLJOYN_BYTE_ARRAY) {
-            printf("Key name=%s value:", key.c_str());
+            std::cout << "Key name=" << key.c_str() << " value:" << std::hex << std::uppercase;
             uint8_t* AppIdBuffer;
             size_t numElements;
             value.Get("ay", &numElements, &AppIdBuffer);
             for (size_t i = 0; i < numElements; i++) {
-                printf("%X", AppIdBuffer[i]);
+                std::cout << (unsigned int)AppIdBuffer[i];
             }
-            printf("\n");
+            std::cout << std::nouppercase << std::dec << std::endl;
         }
     }
 
-    printf("*********************************************************************************\n\n");
+    std::cout << "*********************************************************************************" << std::endl << std::endl;
 
     if (m_Callback) {
-        printf("Calling AnnounceHandler Callback\n");
+        std::cout << "Calling AnnounceHandler Callback" << std::endl;
         m_Callback(busName, port);
     }
 }

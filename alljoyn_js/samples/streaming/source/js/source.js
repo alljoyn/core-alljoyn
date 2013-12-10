@@ -62,13 +62,13 @@ var onDeviceReady = function() {
             button = document.createElement('button');
             button.innerHTML = '>';
             li.appendChild(button);
-            
+
             span = document.createElement('span');
             span.innerHTML = props.Streams[i][0];
             li.appendChild(span);
-            
+
             button.onclick = onPush(props.Streams[i]);
-            
+
             $('useSources').appendChild(li);
         }
     };
@@ -148,14 +148,14 @@ var onDeviceReady = function() {
         for (i = 0; i < props.Playlist.length; ++i) {
             li = document.createElement('li');
             li.className = 'use';
-            
+
             span = document.createElement('span');
             if (i === props.NowPlaying) {
                 span.className = 'nowplaying';
             }
             span.innerHTML = props.Playlist[i];
             li.appendChild(span);
-            
+
             $('useSinks').appendChild(li);
         }
         if (props.Playlist.length > 0) {
@@ -267,7 +267,7 @@ var onDeviceReady = function() {
         li.appendChild(span);
 
         button.onclick = removeSource(li);
-        
+
         lis = $('hostSources').getElementsByTagName('li');
         $('hostSources').insertBefore(li, lis.item(lis.length - 1));
     };
@@ -294,7 +294,7 @@ var onDeviceReady = function() {
     /* The initial state of the page. */
     tabUseButton.onclick();
 
-    navigator.requestPermission('org.alljoyn.bus', function() { 
+    navigator.requestPermission('org.alljoyn.bus', function() {
         source.start(onStart);
         browser.start(onFoundSource, onLostSource, onFoundSink, onLostSink);
     });

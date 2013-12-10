@@ -20,7 +20,7 @@ var onError = function(err) {
 var addInterfaces = function(bus, callback) {
     var createInterface = function(err) {
         bus.createInterface({
-            name: 'trm.streaming.Sink', 
+            name: 'trm.streaming.Sink',
             property: [
                 { name: 'Playlist', signature: 'as', access: 'read' },
                 { name: 'NowPlaying', signature: 'i', access: 'read' }
@@ -38,7 +38,7 @@ var addInterfaces = function(bus, callback) {
         }, callback);
     };
     bus.createInterface({
-        name: 'trm.streaming.Source', 
+        name: 'trm.streaming.Source',
         property: [
             { name: 'Streams', signature: 'a(ssu)', access: 'read' }
         ],
@@ -77,7 +77,7 @@ var source = (function() {
                     get Streams() {
                         var srcs = [],
                             url;
-                        
+
                         for (port in sources) {
                             srcs.push([sources[port].file.name, sources[port].file.type, port]);
                         }
@@ -139,9 +139,9 @@ var source = (function() {
         opts = {
             traffic: org.alljoyn.bus.SessionOpts.TRAFFIC_RAW_RELIABLE,
             transport: org.alljoyn.bus.SessionOpts.TRANSPORT_WLAN,
-            onAccept: function(port, joiner, opts) { 
+            onAccept: function(port, joiner, opts) {
                 console.log('onAccept port:' + port);
-                return true; 
+                return true;
             },
             onJoined: function(port, id, opts) {
                 var send = function(err, fd) {
@@ -171,7 +171,7 @@ var source = (function() {
                 alert('Bind session failed [(' + err + ')]');
                 return;
             }
-            sources[port] = { 
+            sources[port] = {
                 url: null,
                 file: file,
                 id: 0
@@ -295,7 +295,7 @@ var sink = (function() {
                 onNameOwnerChanged: function(name, previousOwner, newOwner) {
                     var i,
                         n;
-                    
+
                     console.log('onNameOwnerChanged name:' + name + ' previousOwner:' + previousOwner + ' newOwner:' + newOwner);
                     n = playlist.length;
                     for (i = 0; i < playlist.length; ) {
@@ -578,7 +578,7 @@ var browser = (function() {
         };
         bus.getProxyBusObject(sink + '/trm/streaming/Sink:sessionId=' + sinkId, done);
     };
-    
+
     var play = function(sink) {
         var done = function(err, proxyObj) {
             proxyObj.methodCall('trm.streaming.Sink', 'Play', onError);
@@ -616,6 +616,6 @@ var browser = (function() {
         previous: previous,
         next: next
     };
-        
+
     return that;
 })();

@@ -27,11 +27,12 @@ QStatus InterfaceDescriptionNative::CreateInterface(Plugin& plugin, BusAttachmen
     qcc::String name;
     bool typeError = false;
     ajn::InterfaceDescription* interface;
+    ajn::InterfaceSecurityPolicy secPolicy;
     NPVariant length;
     NPVariant method;
     NPVariant signal;
     NPVariant property;
-    NPVariant secure;
+    NPVariant npSecPolicy;
     NPVariant npname;
     QStatus status = ER_OK;
 
@@ -46,18 +47,40 @@ QStatus InterfaceDescriptionNative::CreateInterface(Plugin& plugin, BusAttachmen
         goto exit;
     }
 
-    VOID_TO_NPVARIANT(secure);
-    if (!NPN_GetProperty(plugin->npp, interfaceDescriptionNative->objectValue, NPN_GetStringIdentifier("secure"), &secure)) {
-        QCC_LogError(ER_FAIL, ("Failed to get 'secure' property, defaulting to false"));
-        BOOLEAN_TO_NPVARIANT(false, secure);
+
+    VOID_TO_NPVARIANT(npSecPolicy);
+    if (!NPN_GetProperty(plugin->npp, interfaceDescriptionNative->objectValue, NPN_GetStringIdentifier("secPolicy"), &npSecPolicy)) {
+        QCC_LogError(ER_FAIL, ("Failed to get 'secPolicy' property, defaulting to INHERIT"));
+        INT32_TO_NPVARIANT(ajn::AJ_IFC_SECURITY_INHERIT, npSecPolicy);
     }
 
-    status = busAttachment->CreateInterface(name.c_str(), interface, ToBoolean(plugin, secure, typeError));
-    assert(!typeError); /* ToBoolean should never fail */
-    if (typeError) {
-        status = ER_FAIL;
-        QCC_LogError(status, ("ToBoolean failed"));
+    if (NPVARIANT_IS_VOID(npSecPolicy)) {
+        NPVariant secure;
+        bool sec = false;
+        QCC_DbgPrintf(("'secPolicy' property not specified, check for deprecated 'secure' property."));
+
+        VOID_TO_NPVARIANT(secure);
+        if (NPN_GetProperty(plugin->npp, interfaceDescriptionNative->objectValue, NPN_GetStringIdentifier("secure"), &secure)) {
+            sec = ToBoolean(plugin, secure, typeError);
+            assert(!typeError); /* ToBoolean should never fail */
+            if (typeError) {
+                QCC_LogError(ER_FAIL, ("ToBoolean failed"));
+                goto exit;
+            }
+        } else {
+            QCC_DbgPrintf(("Failed to get 'secure' property, defaulting secPolicy to INHERIT"));
+        }
+
+        INT32_TO_NPVARIANT(sec ? ajn::AJ_IFC_SECURITY_REQUIRED : ajn::AJ_IFC_SECURITY_INHERIT, npSecPolicy);
     }
+
+    secPolicy = static_cast<ajn::InterfaceSecurityPolicy>(ToLong(plugin, npSecPolicy, typeError));
+    if (typeError) {
+        QCC_LogError(ER_FAIL, ("ToLong failed"));
+        goto exit;
+    }
+
+    status = busAttachment->CreateInterface(name.c_str(), interface, secPolicy);
     if (ER_OK != status) {
         goto exit;
     }
@@ -313,6 +336,7 @@ InterfaceDescriptionNative* InterfaceDescriptionNative::GetInterface(Plugin& plu
     size_t numProps = 0;
     NPVariant methodArray = NPVARIANT_VOID;
     NPVariant method = NPVARIANT_VOID;
+    NPVariant secPolicy = NPVARIANT_VOID;
     NPVariant signalArray = NPVARIANT_VOID;
     NPVariant signal = NPVARIANT_VOID;
     const ajn::InterfaceDescription::Property** props = NULL;
@@ -339,10 +363,9 @@ InterfaceDescriptionNative* InterfaceDescriptionNative::GetInterface(Plugin& plu
         NPN_ReleaseVariantValue(&npname);
         VOID_TO_NPVARIANT(npname);
 
-        if (iface->IsSecure()) {
-            NPVariant secure;
-            BOOLEAN_TO_NPVARIANT(false, secure);
-            if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetStringIdentifier("secure"), &secure)) {
+        if (iface->GetSecurityPolicy() != ajn::AJ_IFC_SECURITY_INHERIT) {
+            INT32_TO_NPVARIANT(iface->GetSecurityPolicy(), secPolicy);
+            if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetStringIdentifier("secPolicy"), &secPolicy)) {
                 status = ER_FAIL;
                 QCC_LogError(status, ("NPN_SetProperty failed"));
                 goto exit;

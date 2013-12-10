@@ -36,4 +36,4 @@ else:
     liballjoyn_c_static = env.StaticLibrary('alljoyn_c', objs)
 liballjoyn_c_shared = env.SharedLibrary('alljoyn_c', objs_shared)
 
-Return('liballjoyn_c_static', 'liballjoyn_c_shared')
+Return('liballjoyn_c_static', 'liballjoyn_c_shared', 'objs_shared')

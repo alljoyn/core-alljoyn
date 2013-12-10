@@ -62,8 +62,10 @@ c_headers += clibenv.Install('$C_DISTDIR/inc/qcc/${OS_GROUP}', clibenv.Glob('inc
 # make sure the headers from alljoyn_core have been copied into the alljoyn_c headers 
 clibenv.Depends(c_headers, alljoyn_core_headers)
 
-# AllJoyn Libraries
-libs = clibenv.SConscript('$OBJDIR/SConscript', exports = {'env':clibenv})
+# AllJoyn Libraries, and shared object files.  The shared object files are exported into the environment
+# so that they can be used when building the alljoyn_unity_native library 
+static_lib, shared_lib, env['AJ_C_OBJS'] = clibenv.SConscript('$OBJDIR/SConscript', exports = {'env':clibenv})
+libs = [static_lib, shared_lib]
 dlibs = clibenv.Install('$C_DISTDIR/lib', libs)
 
 # the variable dlibs contains the file nodes for the  static library and the 
@@ -85,6 +87,9 @@ clibenv.SConscript('docs/SConscript', exports = {'env':clibenv})
 
 # Sample programs
 clibenv.SConscript('$OBJDIR/samples/SConscript', exports = {'env':clibenv})
+
+# Test programs
+clibenv.SConscript('test/SConscript', variant_dir='$OBJDIR/test', duplicate=0, exports = {'env':clibenv})
 
 # Build unit Tests
 clibenv.SConscript('unit_test/SConscript', variant_dir='$OBJDIR/unittest', duplicate=0, exports = {'env':clibenv})

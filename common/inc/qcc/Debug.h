@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2013 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -28,9 +28,10 @@
 
 #include <stdio.h>
 
-
+/** @cond ALLJOYN_DEV */
 /** @internal DEBUG */
 #define QCC_MODULE "DEBUG"
+/** @endcond */
 
 /**
  * Macro for printing out error messagages.
@@ -122,6 +123,7 @@
 
 
 /**
+ * @cond ALLJOYN_DEV
  * @internal
  * Generalized macro for printing debug messages for code built in debug mode.
  *
@@ -140,9 +142,11 @@
         }                                                               \
     } while (0)
 #endif
+/** @endcond */
 
 
 /**
+ * @cond ALLJOYN_DEV
  * @internal
  * Generalized macro for dumping arrays of data.
  *
@@ -156,7 +160,7 @@
 #define _QCC_DbgDumpData(_msgType, _data, _len)                         \
     _QCC_DbgDumpHex((_msgType), QCC_MODULE, __FILE__, __LINE__, # _data, (_data), (_len))
 #endif
-
+/** @endcond */
 
 
 #ifdef __cplusplus
@@ -236,6 +240,7 @@ void QCC_RegisterOutputCallback(QCC_DbgMsgCallback cb, void* context);
 void QCC_RegisterOutputFile(FILE* file);
 
 /**
+ * @cond ALLJOYN_DEV
  * @internal
  * Creates and prepares a debug context for printing debug output.
  *
@@ -296,6 +301,7 @@ static class DebugInitializer {
     ~DebugInitializer();
 } debugInitializer;
 
+/** @endcond */
 #ifdef __cplusplus
 }
 #endif

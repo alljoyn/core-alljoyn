@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -372,6 +372,13 @@ class MyAuthListener : public AuthListener {
             return false;
         }
 
+        if (strcmp(authMechanism, "ALLJOYN_PIN_KEYX") == 0) {
+            if (credMask & AuthListener::CRED_PASSWORD) {
+                creds.SetPassword("ABCDEFGH");
+            }
+            return true;
+        }
+
         if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
             if (credMask & AuthListener::CRED_PASSWORD) {
                 creds.SetPassword("123456");
@@ -432,22 +439,22 @@ static void usage(void)
 {
     printf("Usage: bbsig [-n <name> ] [-a <name> ] [-h] [-l] [-s] [-r #] [-i #] [-c #] [-t #] [-x] [-e[k] <mech>]\n\n");
     printf("Options:\n");
-    printf("   -h              = Print this help message\n");
-    printf("   -?              = Print this help message\n");
-    printf("   -a <name>       = Well-known name to advertise\n");
-    printf("   -n <name>       = Well-known name to find\n");
-    printf("   -s              = Enable stress mode (connect/disconnect w/ server between runs non-stop)\n");
-    printf("   -l              = Register signal handler for loopback\n");
-    printf("   -r #            = Signal rate (delay in ms between signals sent; default = 0)\n");
-    printf("   -y #            = Delay (in ms) between sending last signal and disconnecting (stress mode only)\n");
-    printf("   -i #            = Signal report interval (number of signals tx/rx per update; default = 1000)\n");
-    printf("   -c #            = Max number of signals to send, default = 1000000)\n");
-    printf("   -t #            = TTL for the signals\n");
-    printf("   -w              = Advertise over Wi-Fi Direct\n");
-    printf("   -x              = Compress headers\n");
-    printf("   -e[k] [RSA|SRP] = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
-    printf("   -d              = discover remote bus with test service\n");
-    printf("   -b              = Signal is broadcast rather than multicast\n");
+    printf("   -h                          = Print this help message\n");
+    printf("   -?                          = Print this help message\n");
+    printf("   -a <name>                   = Well-known name to advertise\n");
+    printf("   -n <name>                   = Well-known name to find\n");
+    printf("   -s                          = Enable stress mode (connect/disconnect w/ server between runs non-stop)\n");
+    printf("   -l                          = Register signal handler for loopback\n");
+    printf("   -r #                        = Signal rate (delay in ms between signals sent; default = 0)\n");
+    printf("   -y #                        = Delay (in ms) between sending last signal and disconnecting (stress mode only)\n");
+    printf("   -i #                        = Signal report interval (number of signals tx/rx per update; default = 1000)\n");
+    printf("   -c #                        = Max number of signals to send, default = 1000000)\n");
+    printf("   -t #                        = TTL for the signals\n");
+    printf("   -w                          = Advertise over Wi-Fi Direct\n");
+    printf("   -x                          = Compress headers\n");
+    printf("   -e[k] [RSA|SRP|LOGON|PINX]   = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
+    printf("   -d                          = discover remote bus with test service\n");
+    printf("   -b                          = Signal is broadcast rather than multicast\n");
 }
 
 
@@ -571,6 +578,9 @@ int main(int argc, char** argv)
                     ok = true;
                 } else if (strcmp(argv[i], "SRP") == 0) {
                     authMechs += "ALLJOYN_SRP_KEYX";
+                    ok = true;
+                } else if (strcmp(argv[i], "PINX") == 0) {
+                    authMechs += "ALLJOYN_PIN_KEYX";
                     ok = true;
                 } else if (strcmp(argv[i], "LOGON") == 0) {
                     if (++i == argc) {

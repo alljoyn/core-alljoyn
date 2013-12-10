@@ -133,6 +133,7 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
    env['CC'] = prefix + 'gcc'
    env['CXX'] = prefix + 'g++'
    env['LINK'] = prefix + 'gcc'
+   env['RANLIB'] = prefix + 'ranlib'
 
    env.PrependENVPath('PATH', path)
    env.Append(CPPPATH = inc_paths)

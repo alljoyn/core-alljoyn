@@ -22,6 +22,7 @@
 #include "MessageInterface.h"
 #include "Plugin.h"
 #include "ScriptableObject.h"
+#include "IfcSecurityInterface.h"
 #include "SessionLostReasonInterface.h"
 #include "SessionOptsInterface.h"
 #include "SocketFdInterface.h"
@@ -41,6 +42,7 @@ class _BusNamespace : public ScriptableObject {
     BusAttachmentInterface busAttachmentInterface;
     BusErrorInterface busErrorInterface;
     CredentialsInterface credentialsInterface;
+    IfcSecurityInterface ifcSecurityInterface;
     MessageInterface messageInterface;
     SessionLostReasonInterface sessionLostReasonInterface;
     SessionOptsInterface sessionOptsInterface;
@@ -49,6 +51,7 @@ class _BusNamespace : public ScriptableObject {
     bool getBusAttachment(NPVariant* result);
     bool getBusError(NPVariant* result);
     bool getCredentials(NPVariant* result);
+    bool getIfcSecurity(NPVariant* result);
     bool getMessage(NPVariant* result);
     bool getSessionOpts(NPVariant* result);
     bool getSessionLostReason(NPVariant* result);

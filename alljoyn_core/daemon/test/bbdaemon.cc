@@ -43,10 +43,6 @@
 #include "android/WFDTransport.h"
 #endif
 
-#if defined(AJ_ENABLE_BT)
-#include "BTTransport.h"
-#endif
-
 #include "Bus.h"
 #include "BusController.h"
 #include "DaemonConfig.h"
@@ -393,9 +389,6 @@ int main(int argc, char** argv)
     QStatus status = ER_OK;
     qcc::GUID128 guid;
     bool mimicBbservice = false;
-#if defined(AJ_ENABLE_BT)
-    bool noBT = false;
-#endif
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
@@ -413,10 +406,6 @@ int main(int argc, char** argv)
             exit(0);
         } else if (0 == strcmp("-m", argv[i])) {
             mimicBbservice = true;
-#if defined(AJ_ENABLE_BT)
-        } else if (0 == strcmp("-b", argv[i])) {
-            noBT = true;
-#endif
         } else if (0 == strcmp("-le", argv[i])) {
             _Message::SetEndianess(ALLJOYN_LITTLE_ENDIAN);
         } else if (0 == strcmp("-be", argv[i])) {
@@ -477,15 +466,7 @@ int main(int argc, char** argv)
      * defaults as the remote transport, and since it is on Android, supports
      * the WFD transport and may support the bluetooth transport if desired.
      */
-#if defined(AJ_ENABLE_BT)
-    if (noBT) {
-        serverArgs = env->Find("BUS_SERVER_ADDRESSES", "unix:abstract=alljoyn;tcp:;wfd:");
-    } else {
-        serverArgs = env->Find("BUS_SERVER_ADDRESSES", "unix:abstract=alljoyn;tcp:;wfd:;bluetooth:");
-    }
-#else
     serverArgs = env->Find("BUS_SERVER_ADDRESSES", "unix:abstract=alljoyn;tcp:;wfd:");
-#endif
 
 #endif /* !defined(DAEMON_LIB) */
 #endif /* defined(QCC_OS_ANDROID) */
@@ -508,15 +489,7 @@ int main(int argc, char** argv)
      * transport, uses the TCP transport for the remote transport and may or may
      * not support bluetooth if desired.
      */
-#if defined(AJ_ENABLE_BT)
-    if (noBT) {
-        serverArgs = env->Find("BUS_SERVER_ADDRESSES", "unix:abstract=alljoyn;tcp:");
-    } else {
-        serverArgs = env->Find("BUS_SERVER_ADDRESSES", "unix:abstract=alljoyn;tcp:;bluetooth:");
-    }
-#else
     serverArgs = env->Find("BUS_SERVER_ADDRESSES", "unix:abstract=alljoyn;tcp:");
-#endif
 
 #endif /* !defined(QCC_OS_GROUP_WINDOWS) && !defined(QCC_OS_ANDROID) && !defined(QCC_OS_DARWIN) */
 
@@ -535,12 +508,6 @@ int main(int argc, char** argv)
 
 #if defined(QCC_OS_ANDROID)
     cntr.Add(new TransportFactory<WFDTransport>(WFDTransport::TransportName, false));
-#endif
-
-#if defined(AJ_ENABLE_BT)
-    if (!noBT) {
-        cntr.Add(new TransportFactory<BTTransport>(BTTransport::TransportName, false));
-    }
 #endif
 
     /* Create message bus with support for alternate transports */

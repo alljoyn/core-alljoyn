@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2013 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,6 +18,7 @@ package org.alljoyn.bus;
 
 import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.annotation.BusInterface;
+import org.alljoyn.bus.annotation.BusMethod;
 import org.alljoyn.bus.annotation.BusProperty;
 
 /** 
@@ -28,7 +29,8 @@ import org.alljoyn.bus.annotation.BusProperty;
  */
 @BusInterface
 public interface PropsInterface {
-
+    @BusMethod
+    public String Ping(String str) throws BusException;
     /**
      * Get the property named 'StringProp'.
      *

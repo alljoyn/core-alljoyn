@@ -31,7 +31,7 @@ AsyncTestCase("BusAttachmentArgCountTest", {
 
     testConstructor0: function(queue) {
         this._wrap(queue, function(callback) {
-            assertNoError(function() { 
+            assertNoError(function() {
                 var testbus = new org.alljoyn.bus.BusAttachment();
                 testbus.destroy();
                 delete testbus;
@@ -40,7 +40,7 @@ AsyncTestCase("BusAttachmentArgCountTest", {
             callback();
         });
     },
-    
+
     testConnect0a: function(queue) {
         this._wrap(queue, function(callback) {
             assertError(function() { bus.connect(); });
@@ -480,11 +480,11 @@ AsyncTestCase("BusAttachmentArgCountTest", {
     testSetLinkTimeout3: function(queue) {
         this._wrap(queue, function(callback) {
             assertNoError(
-                function() { bus.setLinkTimeout(1, 1, 
+                function() { bus.setLinkTimeout(1, 1,
                     function(err, linktimeout) {
                         assertFalsy(err);
                         assertEquals(1, linktimeout);
-                    }); 
+                    });
             });
             callback();
         });

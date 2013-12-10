@@ -22,16 +22,22 @@ if env['OS'] == 'android' and env['ANDROID_PROXIMITY'] == 'on':
 srcs = ['alljoyn_java.cc']
 
 #if env['OS'] == 'android':
-#	srcs += ['P2pHelperService.cc']
+#    srcs += ['P2pHelperService.cc']
 
 objs = env.SharedObject(srcs)
 
 # JNI library
 bdenv = env.Clone()
-if bdenv['BD'] == 'off':
-    # The JNI code must link in the bundled daemon even if BD is set to 'off'
-    bdenv.Prepend(LIBS = ['ajdaemon'])
-    bdenv.Prepend(LIBS = env['bdobj'])
+
+if bdenv['LIBTYPE'] == 'both':
+    # Need to replace the shared alljoyn library with the static one for linking the plugin.
+    libs = bdenv['LIBS']
+    libs[libs.index('alljoyn')] = bdenv.File('$DISTDIR/cpp/lib/${LIBPREFIX}alljoyn${LIBSUFFIX}')
+    bdenv.Replace(LIBS = libs)
+
+
+# The JNI code must link in the bundled daemon even if BD is set to 'off'
+bdenv.Prepend(LIBS = [env['bdobj'], env['bdlib']])
 
 
 liballjoyn_java = bdenv.SharedLibrary('alljoyn_java', objs)

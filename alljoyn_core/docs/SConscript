@@ -26,20 +26,10 @@ installedDocs = None
 
 # Build docs
 if docenv['DOCS'] == 'html':
-    # the target directory 'docs/tmp' is never built this will cause doxygen 
-    # to run every time DOCS == 'html'
-    generateDocs = docenv.Doxygen(source='Doxygen_html', target=[Dir('tmp'), Dir('html')])
-    installedDocs = docenv.Install('$CPP_DISTDIR/docs', Dir('html'))
-    docenv.Clean('Doxygen_html', Dir('html'))
-    docenv.Depends(installedDocs, generateDocs)
+    installedDocs = docenv.Doxygen(source='Doxygen_html')
 
 elif docenv['DOCS'] == 'dev':
-    # the target directory 'docs/tmp' is never built this will cause doxygen 
-    # to run every time DOCS == 'html'
-    generateDocs = docenv.Doxygen(source='Doxygen_dev', target=[Dir('tmp'), Dir('html')])
-    installedDocs = docenv.Install('$CPP_DISTDIR/docs', Dir('html'))
-    docenv.Clean('Doxygen_html', Dir('html'))
-    docenv.Depends(installedDocs, generateDocs)
+    installedDocs = docenv.Doxygen(source='Doxygen_dev')
 
 elif docenv['DOCS'] == 'pdf':
     docenv.Doxygen(source='Doxygen_pdf', target=['./latex/refman.tex'])
@@ -71,7 +61,7 @@ elif docenv['DOCS'] == 'sandcastle':
     if not os.environ.has_key('SHFBROOT'):
         print 'Missing required environment build variable SHFBROOT'
         if not GetOption('help'):
-            Exit()
+            Exit(1)
 
     chm_env = docenv.Clone();
 
@@ -129,4 +119,7 @@ elif docenv['DOCS'] == 'chm':
 if installedDocs:
     docenv.Depends(installedDocs, core_headers);
 
-
+# Build Alias to make cleaning, building and rebuilding the documentation when
+# working only on the documentation simpler. This can be run by using
+# `scons core_docs`
+docenv.Alias('core_docs', installedDocs)

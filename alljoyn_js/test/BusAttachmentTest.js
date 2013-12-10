@@ -76,7 +76,7 @@ AsyncTestCase("BusAttachmentTest", {
     testRegisterUnregisterBusObject: function(queue) {
         queue.call(function(callbacks) {
             var register = function(err) {
-                bus.registerBusObject("/busObject", {}, callbacks.add(unregister));
+                bus.registerBusObject("/busObject", {}, false, callbacks.add(unregister));
             };
             var unregister = function(err) {
                 assertFalsy(err);
@@ -166,6 +166,43 @@ AsyncTestCase("BusAttachmentTest", {
         });
     },
 
+    testCreateGetInterfaceDescription2: function(queue) {
+        queue.call(function(callbacks) {
+            var interfaceDescription = { name: "test.interface", secPolicy: org.alljoyn.bus.IfcSecurity.REQUIRED };
+            var createInterface = function(err) {
+                bus.createInterface(interfaceDescription, callbacks.add(getInterface));
+            };
+            var getInterface = function(err) {
+                assertFalsy(err);
+                bus.getInterface(interfaceDescription.name, callbacks.add(equals));
+            };
+            var equals = function(err, intf) {
+                assertFalsy(err);
+                assertEquals(interfaceDescription, intf);
+            };
+            this._setUp(callbacks.add(createInterface));
+        });
+    },
+
+
+    testCreateGetInterfaceDescription3: function(queue) {
+        queue.call(function(callbacks) {
+            var interfaceDescription = { name: "test.interface", secPolicy: org.alljoyn.bus.IfcSecurity.OFF };
+            var createInterface = function(err) {
+                bus.createInterface(interfaceDescription, callbacks.add(getInterface));
+            };
+            var getInterface = function(err) {
+                assertFalsy(err);
+                bus.getInterface(interfaceDescription.name, callbacks.add(equals));
+            };
+            var equals = function(err, intf) {
+                assertFalsy(err);
+                assertEquals(interfaceDescription, intf);
+            };
+            this._setUp(callbacks.add(createInterface));
+        });
+    },
+
     testProxy: function(queue) {
         queue.call(function(callbacks) {
             var getProxyObj = function(err) {
@@ -212,7 +249,7 @@ AsyncTestCase("BusAttachmentTest", {
             };
             var done = function(err) {
                 assertFalsy(err);
-            };                
+            };
             this._setUp(callbacks.add(connect));
         });
     },
@@ -242,7 +279,7 @@ AsyncTestCase("BusAttachmentTest", {
             };
             var done = function(err) {
                 assertFalsy(err);
-            };                
+            };
             this._setUp(callbacks.add(connect));
         });
     },
@@ -267,7 +304,7 @@ AsyncTestCase("BusAttachmentTest", {
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/game/player", busObject, callbacks.add(registerSignalHandler));
+                bus.registerBusObject("/game/player", busObject, false, callbacks.add(registerSignalHandler));
             };
             var registerSignalHandler = function(err) {
                 assertFalsy(err);
@@ -315,7 +352,7 @@ AsyncTestCase("BusAttachmentTest", {
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/chatService", busObject, callbacks.add(registerSignalHandler));
+                bus.registerBusObject("/chatService", busObject, false, callbacks.add(registerSignalHandler));
             };
             var registerSignalHandler = function(err) {
                 assertFalsy(err);
@@ -354,7 +391,7 @@ AsyncTestCase("BusAttachmentTest", {
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/game/player", busObject, callbacks.add(registerSignalHandler));
+                bus.registerBusObject("/game/player", busObject, false, callbacks.add(registerSignalHandler));
             };
             var registerSignalHandler = function(err) {
                 assertFalsy(err);
@@ -383,7 +420,7 @@ AsyncTestCase("BusAttachmentTest", {
             this._setUp(callbacks.add(connect));
         });
     },
-    
+
     testSignalSourcepath: function(queue) {
         queue.call(function(callbacks) {
             var player0 = {
@@ -406,9 +443,9 @@ AsyncTestCase("BusAttachmentTest", {
             };
             var registerBusObject = function(err) {
                 assertFalsy(err);
-                bus.registerBusObject("/game/player0", player0, callbacks.add(function(err) {
+                bus.registerBusObject("/game/player0", player0, false, callbacks.add(function(err) {
                     assertFalsy(err);
-                    bus.registerBusObject("/game/player1", player1, callbacks.add(registerSignalHandler));
+                    bus.registerBusObject("/game/player1", player1, false, callbacks.add(registerSignalHandler));
                 }));
             };
             var onPlayerPosition = callbacks.add(function(context, x, y, rotation) {

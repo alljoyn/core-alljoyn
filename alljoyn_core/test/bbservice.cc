@@ -518,7 +518,7 @@ class LocalTestObject : public BusObject {
         /* Enable concurrent signal handling */
         g_msgBus->EnableConcurrentCallbacks();
 
-        if ((++rxCounts[sourcePath] % reportInterval) == 0) {
+        if ((IncrementAndFetch(&rxCounts[sourcePath]) % reportInterval) == 0) {
             QCC_SyncPrintf("RxSignal: %s - %u\n", sourcePath, rxCounts[sourcePath]);
             if (msg->IsEncrypted()) {
                 QCC_SyncPrintf("Authenticated using %s\n", msg->GetAuthMechanism().c_str());
@@ -645,7 +645,7 @@ class LocalTestObject : public BusObject {
 
   private:
 
-    map<qcc::String, size_t> rxCounts;
+    map<qcc::String, int32_t> rxCounts;
 
     unsigned long signalDelay;
     unsigned long reportInterval;
@@ -701,7 +701,6 @@ int main(int argc, char** argv)
     bool objSecure = false;
     unsigned long reportInterval = 1000;
     const char* keyStore = NULL;
-    bool secureIfce = false;
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_NONE);
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
@@ -730,7 +729,6 @@ int main(int argc, char** argv)
             }
             g_echo_signal = true;
         } else if (0 == strcmp("-s", argv[i])) {
-            secureIfce = true;
         } else if (0 == strcmp("-x", argv[i])) {
             g_compress = true;
         } else if (0 == strcmp("-i", argv[i])) {

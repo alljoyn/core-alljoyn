@@ -18,6 +18,10 @@ Import('env')
 test_env = env.Clone()
 test_env.Append(CPPPATH = test_env.Dir('..').srcnode())
 
+if test_env['BD'] == 'on':
+    # Build apps with bundled daemon support
+    test_env.Prepend(LIBS = [test_env['bdobj'], test_env['bdlib']])
+
 if test_env['OS'] != 'win8':
     # Test Programs
     progs = [
@@ -37,7 +41,6 @@ if test_env['OS'] != 'win8':
         test_env.Program('bbclient',      ['bbclient.cc']),
         test_env.Program('bbjoin',        ['bbjoin.cc']),
         test_env.Program('bbjitter',      ['bbjitter.cc']),
-        test_env.Program('bttimingclient', ['bttimingclient.cc']),
         test_env.Program('marshal',       ['marshal.cc']),
         test_env.Program('names',         ['names.cc']),
         test_env.Program('compression',   ['compression.cc']),
@@ -50,7 +53,6 @@ if test_env['OS'] != 'win8':
     if test_env['OS'] == 'linux' or test_env['OS'] == 'android':
         progs.extend(test_env.Program('mc-rcv',     ['mc-rcv.cc']))
         progs.extend(test_env.Program('mc-snd',     ['mc-snd.cc']))
-        progs.extend(test_env.Program('bluetoothd-crasher',     ['bluetoothd-crasher.cc']))
 
     if test_env['OS'] == 'win7':
         progs.extend(test_env.Program('mouseclient', ['mouseclient.cc']))

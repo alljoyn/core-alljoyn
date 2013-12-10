@@ -17,7 +17,11 @@ Import('env')
 
 sample_env = env.Clone()
 
-sample_env.Prepend(LIBS = [sample_env['ALLJOYN_C_LIB_STATIC'], 'alljoyn'])
+sample_env.Prepend(LIBS = sample_env['ALLJOYN_C_LIB_STATIC'])
+
+if sample_env['BD'] == 'on':
+    # Build apps with bundled daemon support
+    sample_env.Prepend(LIBS = [sample_env['bdobj'], sample_env['bdlib']])
 
 # Basic Sample programs
 sample_env.SConscript('basic/SConscript', exports = ['sample_env'])

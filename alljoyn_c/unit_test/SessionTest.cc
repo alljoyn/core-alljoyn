@@ -26,7 +26,6 @@ static const char* OBJECT_NAME = "org.alljoyn.test.SessionTest";
 static const char* OBJECT_PATH = "/org/alljoyn/test/SessionTest";
 static const alljoyn_sessionport SESSION_PORT = 42;
 
-static QCC_BOOL joincompleted_flag;
 static QCC_BOOL joinsessionhandler_flag;
 static QCC_BOOL foundadvertisedname_flag;
 static QCC_BOOL sessionjoined_flag;

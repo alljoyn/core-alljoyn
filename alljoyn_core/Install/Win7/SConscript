@@ -33,13 +33,13 @@ elif os.environ.has_key('ProgramFiles'):
     programFiles=os.environ['ProgramFiles']
 else:
     print 'Program files directory not found.'
-    Exit()
+    Exit(1)
 
 if env.has_key('MSVC_VERSION'):
     msvcVer = env['MSVC_VERSION']
 else:
     print 'Visual Studio version not found.'
-    Exit()
+    Exit(1)
 
 devEnv = '"' + programFiles + '\Microsoft Visual Studio ' + msvcVer + '\Common7\IDE\devenv.exe"' 
 cmd = cwd + '\MakeAjSdkMsi.cmd ' + cwd + ' ' + devEnv

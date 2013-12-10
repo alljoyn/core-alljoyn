@@ -85,11 +85,15 @@ if target_os in ['win8', 'win7', 'winxp']:
     if target_os == 'win8':
         vars.Add(EnumVariable('APPX_CXXFLAGS', 'Include appx dependencies', 'true', allowed_values=('false', 'true')))
 
+    path = []
+    if os.environ.has_key('MIKTEX_HOME'):
+        path = os.path.normpath(os.environ['MIKTEX_HOME'] + '/bin')
+
     msvc_version = ARGUMENTS.get('MSVC_VERSION')
-    env = Environment(variables = vars, TARGET_ARCH=target_cpu, MSVC_VERSION=msvc_version, tools = ['default', 'jar'])
+    env = Environment(variables = vars, TARGET_ARCH=target_cpu, MSVC_VERSION=msvc_version, tools = ['default', 'jar'], ENV = {'PATH' : path})
 
 else:
-    env = Environment(variables = vars, tools = ['gnulink', 'gcc', 'g++', 'ar', 'as', 'javac', 'javah', 'jar'])
+    env = Environment(variables = vars, tools = ['gnulink', 'gcc', 'g++', 'ar', 'as', 'javac', 'javah', 'jar', 'pdf', 'pdflatex'])
 
 if env['V'] == '0':
     env.Replace(CCCOMSTR =     '\t[CC]      $SOURCE',
@@ -112,12 +116,10 @@ if os.environ.has_key('DOXYGEN_HOME'):
 if os.environ.has_key('GRAPHVIZ_HOME'):
     env.PrependENVPath('PATH', os.path.normpath(os.environ['GRAPHVIZ_HOME'] + '/bin'))
 
-# Make it a build error to build stand alone daemon on unsupported platforms
-if env['OS'] not in ['android', 'linux', 'openwrt']:
-    if env['BD'] != "on":
-        print "Stand alone daemon is not supported on OS=%s" % (env['OS'])
-        if not GetOption('help'):
-            Exit(1)
+# Warn user about building stand alone daemon on unsupported platforms
+if env['OS'] not in ['android', 'linux', 'openwrt'] and env['BD'] != "on":
+    print "Stand alone daemon is not supported on OS=%s, building with BD=on anyway" % (env['OS'])
+    env['BD'] = "on"
 
 
 Help(vars.GenerateHelpText(env))
@@ -179,6 +181,7 @@ else:
 env.Tool('genversion', toolpath=['tools/scons'])
 env.Tool('javadoc', toolpath=['tools/scons'])
 env.Tool('Csharp', toolpath=['tools/scons'])
+env.Tool('jsdoc2', toolpath=['tools/scons'])
 
 # Create the builder that generates Status.h from Status.xml
 import sys

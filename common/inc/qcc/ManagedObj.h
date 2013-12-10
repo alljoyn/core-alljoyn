@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -39,8 +39,19 @@
 #include <qcc/atomic.h>
 
 namespace qcc {
-
-
+#if defined(QCC_OS_GROUP_WINDOWS)
+/*
+ * pragmas in the code should be avoided.  This pragma is only being used in
+ * this specific situation because. When compiling code on Visual Studio the
+ * fact that ManagedObj has two copy constructors will cause the compiler to
+ * generate two 4521 errors everytime a ManagedObj is used in the code.
+ * Resulting in hundreds of warnings. The extra copy constructor exists to avoid
+ * ambiguity with the ManagedObj<T>(A1& arg) constructor and can not be removed
+ * without breaking the code.
+ */
+#pragma warning(push)
+#pragma warning(disable: 4521)
+#endif
 /**
  * ManagedObj manages heap allocation and reference counting for a template parameter type T.
  * ManagedObj@<T@> allocates T and sets its reference count to 1 when it is created. Each time the
@@ -49,7 +60,7 @@ namespace qcc {
  * is destructed, the underlying T reference count is decremented. When the reference count reaches
  * zero, T itself is deallocated using delete.
  */
-template <class T>
+template <typename T>
 class ManagedObj {
   private:
 
@@ -441,7 +452,9 @@ class ManagedObj {
         IncRef();
     }
 };
-
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
 
 }
 

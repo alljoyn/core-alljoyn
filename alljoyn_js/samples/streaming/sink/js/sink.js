@@ -65,7 +65,7 @@ var onDeviceReady = function() {
         }
     };
 
-    navigator.requestPermission('org.alljoyn.bus', function() { 
+    navigator.requestPermission('org.alljoyn.bus', function() {
         sink.start(onStart, onLoad, onPlay, onPause, onPlaylistChanged);
     });
 };

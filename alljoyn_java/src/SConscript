@@ -32,7 +32,7 @@ if env['OS'] == 'android':
         if env.get('ANDROID_SDK', '') == '':
             print 'ANDROID_SDK must be set when building ICE=on.'
             if not GetOption('help'):
-                Exit()
+                Exit(1)
 
         env.Append(JAVACLASSPATH = os.pathsep + env.subst('$ANDROID_SDK/platforms/android-$ANDROID_API_LEVEL/android.jar'))
         main_classes += env.Java('$CLASSDIR', source = ['../helper'], JAVACLASSPATH = env.subst('$JAVACLASSPATH'))

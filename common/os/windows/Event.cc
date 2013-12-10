@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -361,27 +361,42 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
         QCC_LogError(ER_FAIL, ("Event::Wait: Maximum number of HANDLES reached"));
         return ER_FAIL;
     }
+    bool somethingSet = true;
+    DWORD ret = WAIT_FAILED;
+    while (signaledEvents.empty() && somethingSet) {
+        uint32_t orig = GetTimestamp();
+        ret = WaitForMultipleObjectsEx(numHandles, handles, FALSE, maxWaitMs, FALSE);
+        /* somethingSet will be true if the return value is between WAIT_OBJECT_0 and WAIT_OBJECT_0 + numHandles.
+           i.e. ret indicates that one of the handles passed in the array "handles" to WaitForMultipleObjectsEx
+           caused the function to return.
+         */
+        somethingSet = (ret >= WAIT_OBJECT_0) && (ret < (WAIT_OBJECT_0 + numHandles));
 
-    DWORD ret = WaitForMultipleObjectsEx(numHandles, handles, FALSE, maxWaitMs, FALSE);
-
-    bool somethingSet = (ret >= WAIT_OBJECT_0) && (ret < (WAIT_OBJECT_0 + numHandles));
-
-    for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
-        Event* evt = *it;
-        evt->DecrementNumThreads();
-        if (TIMED == evt->eventType) {
-            uint32_t now = GetTimestamp();
-            if (now >= evt->timestamp) {
-                if (0 < evt->period) {
-                    evt->timestamp += (((now - evt->timestamp) / evt->period) + 1) * evt->period;
+        for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
+            Event* evt = *it;
+            evt->DecrementNumThreads();
+            if (TIMED == evt->eventType) {
+                uint32_t now = GetTimestamp();
+                if (now >= evt->timestamp) {
+                    if (0 < evt->period) {
+                        evt->timestamp += (((now - evt->timestamp) / evt->period) + 1) * evt->period;
+                    }
+                    signaledEvents.push_back(evt);
                 }
-                signaledEvents.push_back(evt);
-            }
-        } else {
-            if (somethingSet && evt->IsSet()) {
-                signaledEvents.push_back(evt);
+            } else {
+                if (somethingSet && evt->IsSet()) {
+                    signaledEvents.push_back(evt);
+                }
             }
         }
+
+        uint32_t now = GetTimestamp();
+        /* Adjust the maxWaitMs by the time elapsed, in case we loop back up and call WaitForMultipleObjectsEx again. */
+        maxWaitMs -= now - orig;
+        /* If somethingSet is true, signaledEvents must not be empty here. But there are situations when WaitForMultipleObjectsEx
+           can return even though the event is not set. So, if somethingSet is true, but signaledEvents is empty,
+           we call WaitForMultipleObjectsEx again.
+         */
     }
 
     QStatus status = ER_OK;

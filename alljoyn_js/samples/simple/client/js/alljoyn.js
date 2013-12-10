@@ -16,13 +16,13 @@
 var client = (function() {
         var SERVICE_NAME = "org.alljoyn.bus.samples.simple",
             CONTACT_PORT = 42;
-  
+
         var that,
-            bus, 
+            bus,
             sessionId,
             isConnected = false,
             isStoppingDiscovery = false;
-        
+
         var start = function() {
             /*
              * All communication through AllJoyn begins with a BusAttachment.
@@ -43,7 +43,7 @@ var client = (function() {
                          * We found someone advertising the well-known SERVICE_NAME.  Now join a
                          * session of that someone.
                          */
-                        
+
                         /*
                          * If discovery is currently being stopped we won't join to any other
                          * sessions.
@@ -149,7 +149,7 @@ var client = (function() {
             /*
              * To communicate with an AllJoyn object, we create a ProxyBusObject.  A ProxyBusObject
              * is composed of a name, path, and sessionID.
-             * 
+             *
              * This ProxyBusObject is located at the well-known SERVICE_NAME, under path
              * "/SimpleService", and uses the sessionID we received earlier when we joined the
              * session.
