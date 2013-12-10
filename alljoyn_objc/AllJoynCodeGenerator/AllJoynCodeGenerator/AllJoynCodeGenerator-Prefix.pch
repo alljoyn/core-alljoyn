@@ -1,0 +1,7 @@
+//
+// Prefix header for all source files of the 'AllJoynCodeGenerator' target in the 'AllJoynCodeGenerator' project
+//
+
+#ifdef __OBJC__
+    #import <Foundation/Foundation.h>
+#endif

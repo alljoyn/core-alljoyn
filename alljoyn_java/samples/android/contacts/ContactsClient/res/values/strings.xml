@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Contacts Client</string>
+    <string name="get_contacts">Get Contacts List</string>
+    <string name="update_contacts">Update Contacts List</string>
+    <string name="label_name">Name</string>
+    <string name="label_phone_numbers">Phone Number(s)</string>
+    <string name="label_email_addresses">Email Address(es)</string>
+    <string name="contact_name">unknown</string>
+    <string name="contact_phone_number">unknown</string>
+    <string name="contact_email">unknow</string>
+    <string name="contact_dialog_title">Contact Details:</string>
+    <string-array name="phone_types">
+    	<item>Custom</item>
+    	<item>Home</item>
+    	<item>Mobile</item>
+    	<item>Work</item>
+    	<item>Fax Work</item>
+    	<item>Fax Home</item>
+    	<item>Pager</item>
+    	<item>Other</item>
+    	<item>CallBack</item>
+    	<item>Car</item>
+    	<item>Company Main</item>
+    	<item>ISDN</item>
+    	<item>Main</item>
+    	<item>Other Fax</item>
+    	<item>Radio</item>
+    	<item>Telex</item>
+    	<item>TTY/TTD</item>
+    	<item>Work Mobile</item>
+    	<item>Work Pager</item>
+    	<item>Assistant</item>
+    	<item>MMS</item>
+    </string-array>
+    <string-array name="email_types">
+    	<item>Custom</item>
+    	<item>Home</item>
+    	<item>Work</item>
+    	<item>Other</item>
+    	<item>Mobile</item>
+    </string-array>
+</resources>

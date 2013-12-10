@@ -1,0 +1,58 @@
+﻿<Page
+    x:Class="Secure.MainPage"
+    IsTabStop="false"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Secure"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Name="gridUserInterface" Background="{StaticResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.RowDefinitions>
+            <!--Page header in row 0-->
+            <RowDefinition Height="120"/>
+            <!--Title in row 1-->
+            <RowDefinition Height="30" />
+            <!--Buttons in row 2-->
+            <RowDefinition Height="50" />
+            <!--Password input in row 3-->
+            <RowDefinition Height="50" />
+            <!--Text output in row 4-->
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid Grid.Row="0" Margin="30,-10,0,10">
+            <TextBlock Text="Secure" Style="{StaticResource PageHeaderTextStyle}" Margin="5,0,0,0" />
+        </Grid>
+        <Grid Grid.Row="1" Margin="30,0,0,0">
+            <TextBlock Text="AllJoyn Sample of Encrypted Communication" Style="{StaticResource TitleTextStyle}" />
+        </Grid>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Button Name="buttonStartServer" Grid.Column="0" Content="Start Server" HorizontalAlignment="Center"
+                    Click="StartServerClick" />
+            <Button Name="buttonClient" Grid.Column="1" Content="Start Client" HorizontalAlignment="Center" 
+                    Click="StartClientClick" />
+        </Grid>
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBox Name="textBoxPinServer" Grid.Column="0" Width="145" Text="PIN to use."
+                     HorizontalAlignment="Center" IsReadOnly="True" VerticalAlignment="Center" />
+            <TextBox Name="textBoxPinClient" Grid.Column="1" Width="145" Text="Client PIN."
+                     HorizontalAlignment="Right" VerticalAlignment="Center" />
+            <Button Name="buttonSendPin" Grid.Column="2" Content="Send Pin" HorizontalAlignment="Left" 
+                    Click="SendPinClick" />
+        </Grid>
+        <Grid Name="gridOutput" Grid.Row="4">
+            <TextBox Name="textBoxOutput" TextWrapping="Wrap"  Width="Auto" Height="Auto"
+                     ScrollViewer.VerticalScrollBarVisibility="Visible"/>
+        </Grid>
+    </Grid>
+</Page>

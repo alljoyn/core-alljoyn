@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+  <org.alljoyn.bus.plugin.ClearPreference
+     android:key="PREF_CLEAR"
+     android:title="@string/clear_alljoyn"
+     android:summary="@string/clear_all_saved_authorizations_and_passwords"
+     android:dialogIcon="@android:drawable/ic_dialog_alert"
+     android:dialogTitle="@string/clear"
+     android:dialogMessage="@string/clear_all_saved_authorizations_and_passwords"/>
+</PreferenceScreen>

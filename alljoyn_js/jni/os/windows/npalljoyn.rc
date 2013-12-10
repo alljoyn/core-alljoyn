@@ -1,0 +1,78 @@
+/////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2011 - 2013, AllSeen Alliance. All rights reserved.
+//
+//    Permission to use, copy, modify, and/or distribute this software for any
+//    purpose with or without fee is hereby granted, provided that the above
+//    copyright notice and this permission notice appear in all copies.
+//
+//    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+//    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+//    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+//    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+//    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+//    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+//    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+#include <winresrc.h>
+#include "resource.h"
+#ifdef IDC_STATIC
+#undef IDC_STATIC
+#endif
+#define IDC_STATIC (-1)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION    3,4,5,0
+ PRODUCTVERSION 3,4,5,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS VOS__WINDOWS32
+ FILETYPE VFT_DLL
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904e4"
+        BEGIN
+            VALUE "CompanyName", "AllSeen Alliance."
+            VALUE "FileDescription", L"AllJoyn browser plugin"
+            VALUE "FileVersion", "3.4.5"
+            VALUE "InternalName", "npalljoyn"
+            VALUE "LegalCopyright", "Copyright (c) 2011-2013, AllSeen Alliance."
+            VALUE "MIMEType", "application/x-alljoyn"
+            VALUE "OriginalFilename", "npalljoyn.dll"
+            VALUE "ProductName", "AllJoyn"
+            VALUE "ProductVersion", "3.4.5"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_PERMISSIONREQ DIALOGEX 0, 0, 196, 105
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Security Warning"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    LTEXT           "The website below wants to use AllJoyn.",IDC_STATIC,12,12,131,8
+    CTEXT           "origin",IDC_ORIGIN,12,30,131,8
+    LTEXT           "Do you want to allow this?",IDC_STATIC,12,48,85,8
+    CONTROL         "Remember my decision for this site",IDC_REMEMBER,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,66,124,8
+    PUSHBUTTON      "Allow",IDYES,84,84,50,14
+    PUSHBUTTON      "Deny",IDNO,138,84,50,14
+END

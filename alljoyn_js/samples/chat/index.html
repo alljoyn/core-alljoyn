@@ -1,0 +1,59 @@
+<!--
+ Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+
+    Permission to use, copy, modify, and/or distribute this software for any
+    purpose with or without fee is hereby granted, provided that the above
+    copyright notice and this permission notice appear in all copies.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+-->
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+  <meta name="HandheldFriendly" content="True" />
+  <meta name='viewport' content='width=device-width; initial-scale=1.0; maximum-scale=1.0;' />
+  <head>
+    <title>Chat</title>
+    <link href="css/style.css" rel="stylesheet" type="text/css"></link>
+  </head>
+  <body>
+    <ul>
+      <a href="#use"><li id="tabUseButton">Join</li></a>
+      <a href="#host"><li id="tabHostButton">Start</li></a>
+    </ul>
+    
+    <div id="tabUse" class="tab">
+      <a name="use"></a>
+      <form name="joinChannel">
+        <label>Channel:</label>
+        <select name="channelNames" disabled="disabled">
+          <option>Searching...</option>
+        </select>
+        <button id="joinChannelButton" disabled="disabled">Join</button>
+      </form>
+      <form name="message">
+        <input name="text" placeholder="Enter message here" onkeypress="return onKeyPress(event);"></input>
+      </form>
+      <ol id="log">
+      </ol>
+    </div>
+    
+    <div id="tabHost" class="tab">
+      <a name="host"></a>
+      <form name="setChannel">
+        <label>Channel:</label>
+        <input name="channelName" placeholder="Enter name"></input>
+        <button id="startChannelButton">Start</button>
+      </form>
+    </div>
+
+    <script type="text/javascript" src="alljoyn_init.js"></script>
+    <script type="text/javascript" src="js/alljoyn.js"></script>
+    <script type="text/javascript" src="js/chat.js"></script>
+  </body>
+</html>

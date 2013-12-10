@@ -1,0 +1,13 @@
+build
+*~
+docs/html
+.sconsign.dblite
+jni/*.o
+jni/os/*/*.o
+jni/*.so
+*.o
+docs/alljoyn.wxml
+bin
+gen
+*.class
+whitespace.db

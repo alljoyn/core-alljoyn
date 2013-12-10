@@ -1,0 +1,47 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AllJoynUnity", "src\AllJoynUnity.csproj", "{17D5862E-E517-4677-9D55-6BE01FEC4D9D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "basic_client", "samples\csharp\basic_client\basic_client.csproj", "{EDBBFEC4-B5BC-49F2-A4D4-1E50941A351D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "basic_client-server", "samples\csharp\basic_client-server\basic_client-server.csproj", "{12F93F48-0E04-4BF9-95A7-2FD9E07231BB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "basic_server", "samples\csharp\basic_server\basic_server.csproj", "{253B2C11-05C3-4574-B302-7F8550E0524B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AllJoynUnityTest", "unit_test\AllJoynUnityTest.csproj", "{BD0E1D37-7B3D-4740-9DDD-C5015F2E277B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{17D5862E-E517-4677-9D55-6BE01FEC4D9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17D5862E-E517-4677-9D55-6BE01FEC4D9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17D5862E-E517-4677-9D55-6BE01FEC4D9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17D5862E-E517-4677-9D55-6BE01FEC4D9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EDBBFEC4-B5BC-49F2-A4D4-1E50941A351D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EDBBFEC4-B5BC-49F2-A4D4-1E50941A351D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EDBBFEC4-B5BC-49F2-A4D4-1E50941A351D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EDBBFEC4-B5BC-49F2-A4D4-1E50941A351D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{12F93F48-0E04-4BF9-95A7-2FD9E07231BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12F93F48-0E04-4BF9-95A7-2FD9E07231BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12F93F48-0E04-4BF9-95A7-2FD9E07231BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12F93F48-0E04-4BF9-95A7-2FD9E07231BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{253B2C11-05C3-4574-B302-7F8550E0524B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{253B2C11-05C3-4574-B302-7F8550E0524B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{253B2C11-05C3-4574-B302-7F8550E0524B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{253B2C11-05C3-4574-B302-7F8550E0524B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD0E1D37-7B3D-4740-9DDD-C5015F2E277B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD0E1D37-7B3D-4740-9DDD-C5015F2E277B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD0E1D37-7B3D-4740-9DDD-C5015F2E277B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD0E1D37-7B3D-4740-9DDD-C5015F2E277B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = basic_client\basic_client.csproj
+	EndGlobalSection
+EndGlobal

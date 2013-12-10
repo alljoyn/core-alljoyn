@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+   	android:layout_width="fill_parent"
+   	android:layout_height="fill_parent"
+   	android:stretchColumns="1" >
+   	<TableRow>
+   		<TextView
+   			android:text="@string/background_color"
+   			android:padding="3dip" />
+   		<TextView
+   			android:id="@+id/background_color_label"
+   			android:gravity="right"
+   			android:text="@string/color_unknown"
+   			android:padding="3dip" />
+   	</TableRow>
+   	<TableRow>
+   		<TextView
+   			android:text="@string/text_size"
+   			android:padding="3dip" />
+   		<TextView
+   			android:id="@+id/text_size_label"
+   			android:gravity="right"
+    		android:text="@string/size_unknown"
+   			android:padding="3dip" />
+   	</TableRow>
+   	<Button
+   		android:id="@+id/get_properties"
+   		android:text="@string/get_properties"
+   	/>
+   	<View
+   		android:layout_marginTop="10dip"
+   		android:layout_marginBottom="10dip"
+        android:layout_height="2dip"
+        android:background="#FF909090" />
+   	<Spinner
+		android:id="@+id/color_spinner"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:prompt="@string/color_prompt"
+	/>
+	<Spinner
+		android:id="@+id/text_size"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:prompt="@string/text_size_prompt"
+	/>
+	<Button
+		android:id="@+id/set_properties"
+		android:text="@string/set_properties"
+	/>
+</TableLayout>
+    

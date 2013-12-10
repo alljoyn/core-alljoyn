@@ -1,0 +1,56 @@
+/*
+ * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ *
+ *    Permission to use, copy, modify, and/or distribute this software for any
+ *    purpose with or without fee is hereby granted, provided that the above
+ *    copyright notice and this permission notice appear in all copies.
+ *
+ *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ *    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ *    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ *    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ *    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+package org.alljoyn.bus;
+
+import org.alljoyn.bus.BusException;
+import org.alljoyn.bus.annotation.BusInterface;
+import org.alljoyn.bus.annotation.BusMethod;
+import org.alljoyn.bus.annotation.Position;
+
+import java.util.Arrays;
+import java.util.Map;
+
+@BusInterface
+public interface MultipleReturnValuesInterface {
+
+    public class Values {
+        public static class Inner {
+            @Position(0) public int x;
+            public boolean equals(Object obj) {
+                return x == ((Inner)obj).x;
+            }
+        }
+        @Position(0) public int a;
+        @Position(1) public int b;
+        @Position(2) public Map<String, String> c;
+        @Position(3) public Map<String, String>[] d;
+        @Position(4) public long[] e;
+        @Position(5) public Inner f;
+        public boolean equals(Object obj) {
+            Values v = (Values)obj;
+            return a == v.a &&
+                b == v.b &&
+                c.equals(v.c) &&
+                Arrays.equals(d, v.d) &&
+                Arrays.equals(e, v.e) &&
+                f.equals(v.f);
+        }
+    }
+
+    @BusMethod(replySignature="iia{ss}aa{ss}ax(i)")
+    public Values Method() throws BusException;
+}

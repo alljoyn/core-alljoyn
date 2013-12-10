@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Properties Client</string>
+    <string name="text_size">Text Size</string>
+    <string name="size_unknown">unknown</string>
+    <string name="background_color">Background Color</string>
+    <string name="color_unknown">unknown</string>
+    <string name="get_properties">Get Properties</string>
+    <string name="set_properties">Set Properties</string>
+    <string name="get_properties_error">Unable to get properties.  Service most likely not started.</string>
+    <string name="set_properties_error">Unable to set properties.  Service most likely not started.</string>
+    <string name="color_prompt">Choose a color</string>
+    <string-array name="color_array">
+    	<item>Red</item>
+    	<item>Green</item>
+    	<item>Blue</item>
+    	<item>Yellow</item>
+    </string-array>
+    <string name="text_size_prompt">Choose a size</string>
+    <string-array name="text_size_array">
+    	<item>Tiny</item>
+    	<item>Small</item>
+    	<item>Medium</item>
+    	<item>Regular</item>
+    	<item>Large</item>
+    	<item>X-Large</item>
+    </string-array>
+</resources>

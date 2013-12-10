@@ -1,0 +1,54 @@
+/******************************************************************************
+ * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ *
+ *    Permission to use, copy, modify, and/or distribute this software for any
+ *    purpose with or without fee is hereby granted, provided that the above
+ *    copyright notice and this permission notice appear in all copies.
+ *
+ *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ *    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ *    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ *    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ *    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ ******************************************************************************/
+
+/*This file will contain documentation for AllJoyn that does not fit in the source code.  
+ * This is also a location to document things that don't have a clear place where they 
+ * should be documented in the code. (i.e. namespace ajn).
+ *
+ * This file will be parsed by doxygen.  Only text within the doxygen tags will show up in 
+ * the final documentation. 
+ */
+
+/*
+ * the namespace 'alljoyn' is used in so many locations that there is no single location that
+ * it makes since to document that namespace so it has been documented here.
+ */
+/**
+ * @namespace AllJoyn
+ * namespace used for the AllJoyn API
+ */
+
+/**
+ *
+ *@mainpage AllJoyn Documentation
+ *
+ AllJoyn for Windows Runtime API Reference Manual
+@section subsection1 Overview
+AllJoyn is a device-to-device communication protocol which enables mobile devices to support peer-to-peer applications such as multi-player gaming and social networking.
+
+AllJoyn is designed as a backwards-compatible extension of DBus, a standard protocol for inter-application communication in the Linux desktop environment. It offers the following features:
+
+- Cross platform/OS/device
+- Peer-to-peer communication
+- Simplified service discovery
+- Flexible security framework and trust models
+- Transport agnostic / multi-protocol support
+- Multi-language support for the AllJoyn API
+
+
+This document describes the Windows Runtime bindings for the AllJoyn API.
+
+ */

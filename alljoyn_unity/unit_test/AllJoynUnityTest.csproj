@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{BD0E1D37-7B3D-4740-9DDD-C5015F2E277B}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>AllJoynUnityTest</RootNamespace>
+    <AssemblyName>AllJoynUnityTest</AssemblyName>
+    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="xunit">
+      <HintPath>..\xunit.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AllJoynTestCommon.cs" />
+    <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="AuthListenerTest.cs" />
+    <Compile Include="BusAttachmentTest.cs" />
+    <Compile Include="BusListenerTest.cs" />
+    <Compile Include="BusObjectTest.cs" />
+    <Compile Include="ObjectSecurityTest.cs" />
+    <Compile Include="PasswordManagerTest.cs" />
+    <Compile Include="ConcurrentCallbackTest.cs" />
+    <Compile Include="MessageTest.cs" />
+    <Compile Include="MsgArgTest.cs" />
+    <Compile Include="InterfaceDescriptionTest.cs" />
+    <Compile Include="MsgArgsTest.cs" />
+    <Compile Include="ProxyBusObjectTest.cs" />
+    <Compile Include="SessionOptsTest.cs" />
+    <Compile Include="SessionTest.cs" />
+    <Compile Include="SignalsTest.cs" />
+    <Compile Include="VersionTest.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\src\AllJoynUnity.csproj">
+      <Project>{17D5862E-E517-4677-9D55-6BE01FEC4D9D}</Project>
+      <Name>AllJoynUnity</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

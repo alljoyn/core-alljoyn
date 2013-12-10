@@ -1,0 +1,57 @@
+# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+Import('daemon_env', 'daemon_objs')
+from os.path import basename
+
+# Test Programs
+progs = [
+    daemon_env.Program('advtunnel', ['advtunnel.cc'] + daemon_objs),
+    daemon_env.Program('ns', ['ns.cc'] + daemon_objs)
+   ]
+
+if daemon_env['OS'] in ['android', 'linux']:
+   progs.append(daemon_env.Program('bbdaemon', ['bbdaemon.cc'] + daemon_objs))
+   
+if daemon_env['BT'] == 'on':
+   testenv = daemon_env.Clone()
+   testenv.Append(LINKFLAGS=['-Wl,--allow-multiple-definition'])
+   progs.append(testenv.Program('BTAccessorTester',
+                                ['BTAccessorTester.cc'] +
+                                [ o for o in daemon_objs
+                                  if ((basename(str(o)) != 'BTTransport.o') and
+                                      (basename(str(o)) != 'BTController.o'))]))
+
+#if daemon_env['OS'] == 'win7':
+#   progs.append(daemon_env.Program('WinBtDiscovery.exe', ['WinBtDiscovery.cc']))
+   
+if daemon_env['ICE'] == 'on':
+   if daemon_env['OS_GROUP'] == 'posix':
+      progs.append(daemon_env.Program('packettest', ['PacketTest.cc'] + daemon_objs))
+
+#
+# On Android, build a static library that can be linked into a JNI dynamic 
+# library to implement the daemon as a Service
+#
+if daemon_env['OS'] == 'android':
+   libenv = daemon_env.Clone(CCFLAGS = '-DDAEMON_LIB')
+   libenv.Object(target = 'bbdaemon-lib', source = 'bbdaemon.cc')
+   libbbdaemon = libenv.StaticLibrary(['bbdaemon-lib'] + daemon_objs)
+   dlibs = libenv.Install('$CPP_DISTDIR/lib', libbbdaemon)
+
+if daemon_env['OS_GROUP'] == 'winrt':
+    progs = []
+	
+Return('progs')

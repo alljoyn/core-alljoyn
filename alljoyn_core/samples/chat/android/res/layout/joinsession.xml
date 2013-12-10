@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="wrap_content"
+  android:layout_height="wrap_content"
+  android:orientation="vertical">
+  
+	<EditText android:layout_height="wrap_content" 
+		android:id="@+id/JoinSessionText"
+		android:layout_width="125pt" 
+		android:text="">
+	</EditText>
+	
+	<LinearLayout android:id="@+id/LinearLayout04"
+		android:layout_width="wrap_content" 
+		android:layout_height="wrap_content">
+		<Button android:layout_width="wrap_content"
+			android:layout_height="wrap_content" 
+			android:id="@+id/JoinSessionCancel"
+			android:minWidth="65pt" 
+			android:text="Cancel"></Button>
+		<Button android:layout_width="wrap_content"
+			android:layout_height="wrap_content" 
+			android:id="@+id/JoinSessionOk"
+			android:text="OK" 
+			android:minWidth="65pt"></Button>
+	</LinearLayout>
+
+</LinearLayout>

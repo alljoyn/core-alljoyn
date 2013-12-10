@@ -1,0 +1,121 @@
+# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+import os
+Import('env')
+
+# Set up TMP 
+env['ENV']['TMP'] = os.environ['TMP']
+
+# MSVC version 8 and higher require a manifest
+if env['MSVC_VERSION'] >= '8.0':
+    # Add a post-build step to embed the manifest using mt.exe
+    # The number at the end of the line indicates the file type (1: EXE; 2:DLL).
+    env.Append(LINKCOM=[env['LINKCOM'], 'mt.exe -nologo -manifest ${TARGET}.manifest -outputresource:$TARGET;1'])
+    env.Append(SHLINKCOM=[env['SHLINKCOM'], 'mt.exe -nologo -manifest ${TARGET}.manifest -outputresource:$TARGET;2'])
+
+# Windows specific compiler flags
+env.Append(CPPDEFINES=['QCC_CPU_X86',
+                       'UNICODE',
+                       '_UNICODE',
+                       'WIN32_LEAN_AND_MEAN'])
+
+# Visual Studio compiler complains that functions like strncpy are unsafe. We
+# are aware that its possible to create a non-nul terminated string using the
+# strncpy function.  However, we cannot use the strncpy_s functions as VC++
+# suggests. Our code must work with a lot of different compilers so we cannot
+# use compiler specific code like strncpy_s. This will prevent visual studio
+# from giving errors we cannot do anything about.
+env.Append(CPPDEFINES=['_CRT_SECURE_NO_WARNINGS'])
+
+# Set MS OS version number
+if env['OS'] == 'win7':
+    # Windows 7
+    env.Append(CPPDEFINES=[('_WIN32_WINNT', '_WIN32_WINNT_WIN7')])
+elif env['OS'] == 'winxp':
+    # WinXP SP3
+    env.Append(CPPDEFINES=[('_WIN32_WINNT', '_WIN32_WINNT_WINXP')])
+    env.Append(CPPDEFINES=[('NTDDI_VERSION', '0x05010300')])
+                               
+#Suppress specific warnings
+# C4345 warning specifying that the later versions of MSVC initialize POD types
+#       (Plan Old Data) This warning is designed to inform users that the behavior
+#       changed from older compilers.  This warning is only encountered by 
+#       common/src/String.cc and does not effect AllJoyn.
+#       see http://msdn.microsoft.com/en-us/library/wewb47ee.aspx
+# C4355 "'this' used in base member initializer list"' Depending on the version of
+#       the MSVC compiler this warning may or may not be shut off by default.
+#       http://msdn.microsoft.com/en-us/library/3c594ae3.aspx
+env.Append(CXXFLAGS=['/wd4345', '/wd4355'])
+
+env.Append(CFLAGS=['/nologo', '/vmm', '/vmg'])
+env.Append(CXXFLAGS=['/nologo', '/vmm', '/vmg'])
+
+env.Append(CFLAGS=['/EHsc'])
+env.Append(CXXFLAGS=['/EHsc'])
+
+# Lib setup
+env.Append(LFLAGS=['/NODEFAULTLIB:libcmt.lib'])
+env.Append(LINKFLAGS=['/NODEFAULTLIB:libcmt.lib'])
+
+# With a modern Microsoft compiler it is typical to use a pdb file i.e. the /Zi
+# or/ZI CCPDBFLAGS.  However in SCons a pdb file is created for each .obj file.
+# To be able to use the debug information we would have to copy all of the
+# pdb files (one for each C++ file) into the dist. SCons documentation recommends
+# using the /Z7 option to solve this problem.  Since another more acceptable
+# solution has not yet been found we are going with the recommendation from the
+# SCons documentation. 
+if env['VARIANT'] == 'debug':
+    env['CCPDBFLAGS'] = '/Z7'
+
+# Debug/Release variants
+if env['VARIANT'] == 'debug':
+   # MSVC 2010 an newer require _ITERATOR_DEBUG_LEVEL specified to specify 
+   # _ITERATOR_DEBUG_LEVEL _DEBUG must also be specified.  If _DEBUG is also 
+   # specified then the debug version of the multithread and run-time routines
+   # (/MDd') to prevent build errors. 
+   env.Append(CPPDEFINES=['_DEBUG', ('_ITERATOR_DEBUG_LEVEL', 2)])
+   env.Append(CFLAGS=['/MDd', '/Od'])
+   env.Append(CXXFLAGS=['/MDd', '/Od', '/Gd', '/Ob1', '/W2'])
+   env.Append(LINKFLAGS=['/debug'])
+   env.Append(JAVACFLAGS='-g -Xlint -Xlint:-serial')
+else:
+   # MSVC 2010 an newer require _ITERATOR_DEBUG_LEVEL specified
+   if env['MSVC_VERSION'] >= '10.0':
+       env.Append(CPPDEFINES=[('_ITERATOR_DEBUG_LEVEL', 0)])
+   env.Append(CFLAGS=['/MD', '/Gy', '/O1', '/Ob2', '/Gd'])
+   env.Append(CXXFLAGS=['/MD', '/Gy', '/O1', '/Ob2', '/W2'])
+   env.Append(LINKFLAGS=['/opt:ref'])
+   env.Append(JAVACFLAGS='-Xlint -Xlint:-serial')
+
+# Archive expander
+def archive_expand(target, source, env):
+   # Copy sources to targets
+   outdir = env.subst(os.path.dirname(str(target[0])))
+   for archive in source:
+      Copy(outdir, str(archive))
+   return None
+      
+def archive_expand_emitter(target, source, env):
+   # target starts out as phony file in the desired output directory
+   # target ends up being the list of copied libraries
+   outdir = env.subst(os.path.dirname(str(target[0])))
+   modTargets = []
+   for archive in source:
+      modTargets.append(File(outdir+os.path.sep+os.path.basename(str(archive))))
+   return modTargets, source
+
+expand_bld = Builder(action=archive_expand, emitter=archive_expand_emitter)
+env.Append(BUILDERS={'ArchiveExpand' : expand_bld})

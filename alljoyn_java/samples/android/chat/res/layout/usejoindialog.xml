@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:layout_width="250dp"
+    android:layout_height="match_parent">
+    
+    <View
+        android:layout_width="match_parent"
+    	android:layout_height="5dip">
+    </View>
+    
+    <TextView 
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="Select a channel from the list below"
+    />
+    
+    <ListView 
+        android:id="@+id/useJoinChannelList"           
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
+        android:layout_marginLeft="5dp"
+        android:layout_marginRight="5dp"
+        android:divider="#ff505050"
+        android:background="#ff202020"
+        android:dividerHeight="1dp"
+        android:transcriptMode="alwaysScroll"
+    />
+    
+    <Button
+        android:id="@+id/useJoinCancel"
+        android:layout_width="120dp"
+        android:layout_height="wrap_content"
+        android:text="Cancel"
+    />
+        
+</LinearLayout>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="org.alljoyn.bus.plugin"
+          android:versionCode="345"
+          android:versionName="3.4.5">
+    
+    <uses-permission android:name="android.webkit.permission.PLUGIN" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    
+    <uses-sdk android:minSdkVersion="8" />
+    
+    <application android:icon="@drawable/icon" 
+                 android:label="@string/alljoyn_browser_plugin"
+                 android:manageSpaceActivity=".AllJoynPreferences">
+        <service android:name=".AllJoynPlugin">
+            <intent-filter>
+                <action android:name="android.webkit.PLUGIN" />
+            </intent-filter>
+            <meta-data android:name="type" android:value="native" />
+        </service>
+        
+        <service android:name=".SecurityService"
+                 android:exported="true" />
+        
+        <activity android:name=".AllJoynPreferences"
+                  android:label="@string/alljoyn_plugin_settings">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+    
+</manifest>

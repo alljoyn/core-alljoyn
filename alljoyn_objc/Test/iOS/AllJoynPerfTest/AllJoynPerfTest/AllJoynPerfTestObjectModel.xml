@@ -1,0 +1,45 @@
+<!--
+ ////////////////////////////////////////////////////////////////////////////////
+ // Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ //
+ //    Permission to use, copy, modify, and/or distribute this software for any
+ //    purpose with or without fee is hereby granted, provided that the above
+ //    copyright notice and this permission notice appear in all copies.
+ //
+ //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ //    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ //    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ //    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ //    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ //    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ ////////////////////////////////////////////////////////////////////////////////
+ -->
+<xml>
+    <node name="/PerfService">
+        <annotation name="org.alljoyn.lang.objc" value="PerformanceObject"/>
+        <interface name="org.alljoyn.bus.test.perf.both">
+            <annotation name="org.alljoyn.lang.objc" value="PerformanceObjectDelegate"/>
+            <method name="CheckPacket">
+                <arg name="packetIndex" type="i" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="checkPacketAtIndex:"/>
+                </arg>
+                <arg name="byteArray" type="ay" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="payLoad:"/>
+                </arg>
+                <arg name="packetSize" type="i" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="packetSize:"/>
+                </arg>
+                <arg name="result" type="b" direction="out"/>
+            </method>
+            <signal name="SendPacket">
+                <arg name="packetIndex" type="i">
+                    <annotation name="org.alljoyn.lang.objc" value="PacketAtIndex:"/>
+                </arg>
+                <arg name="byteArray" type="ay">
+                    <annotation name="org.alljoyn.lang.objc" value="payLoad:"/>
+                </arg>
+            </signal>
+        </interface>
+    </node>
+</xml>

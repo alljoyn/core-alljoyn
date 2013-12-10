@@ -1,0 +1,36 @@
+# Copyright (c) 2012, 2013 AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+Import('env')
+clientDistDir = '$DISTDIR/cpp/samples/FileTransfer'
+
+# Sample Programs
+progs = [
+    env.Program('FileTransferClient',  'FileTransferClient.cc'),
+    env.Program('FileTransferService', 'FileTransferService.cc')
+    ]
+
+if env['OS'] in ['linux', 'darwin']:
+    env.Install('$DISTDIR/cpp/bin/samples', progs )
+    env.Install(clientDistDir, env.Glob('*.cc'))
+
+elif env['OS_GROUP'] == 'windows':
+    env.Install('$DISTDIR/cpp/bin/samples', progs )
+    env.Install(clientDistDir, env.Glob('*.cc'))
+    env.InstallAs(clientDistDir + '/README.txt', 'README.windows.txt')
+    #install Visual Studio solution files
+    env.Install(clientDistDir+'/VC2008Win7', 'VC2008Win7/VC2008Win7.sln')
+    env.Install(clientDistDir+'/VC2008Win7/FileTransferClient', 'VC2008Win7/FileTransferClient/FileTransferClient.vcproj')
+    env.Install(clientDistDir+'/VC2008Win7/FileTransferService', 'VC2008Win7/FileTransferService/FileTransferService.vcproj')

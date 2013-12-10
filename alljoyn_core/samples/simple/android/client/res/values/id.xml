@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<item type="id" format="integer" name="client">1</item>
+<item type="id" format="integer" name="foundName">2</item>
+<item format="integer" type="id" name="parentView">3</item>
+</resources>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>org.alljoyn.bus</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <!-- This should be the absolute path to the installed alljoyn-daemon -->
+      <string>alljoyn-daemon</string>
+
+      <string>--nofork</string>
+      <string>--internal</string>
+    </array>
+
+    <key>Sockets</key>
+    <dict>
+      <key>unix_domain_listener</key>
+      <dict>
+	<key>SecureSocketWithKey</key>
+	<string>DBUS_LAUNCHD_SESSION_BUS_SOCKET</string>
+      </dict>
+    </dict>
+  </dict>
+</plist>

@@ -1,0 +1,119 @@
+# Copyright (c) 2010 - 2011, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+Import('env')
+import os
+
+vars = Variables()
+vars.Add(PathVariable('SDKROOT', ' Base directory of Mac/iOS SDK for target', os.environ.get('SDKROOT')))
+vars.Add(PathVariable('SYSTEM_DEVELOPER_DIR', ' Base directory for developer tools', os.environ.get('SYSTEM_DEVELOPER_DIR')))
+vars.Update(env)
+Help(vars.GenerateHelpText(env))
+
+# Verify dependencies
+if '' == env.subst('$SDKROOT'):
+   print 'SDKROOT variable is required'
+   if not GetOption('help'):
+      Exit(1)
+
+if '' == env.subst('$SYSTEM_DEVELOPER_DIR'):
+    env['SYSTEM_DEVELOPER_DIR'] = '/Developer'
+
+# Darwin on ARM (aka. iOS) specific defines
+env.Append(CPPDEFINES=['QCC_CPU_ARM'])
+env.Append(CPPDEFINES=['QCC_OS_IPHONE'])
+
+
+s = os.environ.get('CONFIGURATION')
+s = s.lower()
+env['OBJDIR'] = 'build/${OS}/${CPU}/' + os.environ.get('PLATFORM_NAME') + '/' + s + '/obj'
+env['DISTDIR'] = '#build/${OS}/${CPU}/' + os.environ.get('PLATFORM_NAME') + '/' + s + '/dist'
+env['TESTDIR'] = '#build/${OS}/${CPU}/' + os.environ.get('PLATFORM_NAME') + '/' + s + '/test'
+
+env['IPHONEOS_PLATFORM_DIR'] = '$SYSTEM_DEVELOPER_DIR/Platforms/iPhoneOS.platform'
+
+env['PATH'] = '$DT_TOOLCHAIN_DIR/usr/bin:$IPHONE_OS_PLATFORM_DIR/Developer/usr/bin:$SYSTEM_DEVELOPER_DIR/usr/bin:$PATH'
+
+env['CC'] = '$DT_TOOLCHAIN_DIR/usr/bin/clang'
+env['CXX'] = '$DT_TOOLCHAIN_DIR/usr/bin/clang++'
+
+env.Append(CFLAGS=[
+            '-fdiagnostics-show-category=id',
+            '-fdiagnostics-parseable-fixits',
+            '-fpascal-strings',
+            '-Wreturn-type',
+            '-Wparentheses',
+            '-Wswitch',
+            '-Wno-unused-parameter',
+            '-Wunused-variable', 
+            '-Wunused-value'])
+            
+env.Append(CXXFLAGS=[
+            '-fno-rtti',
+            '-fno-exceptions',
+            '-Wc++11-extensions'])
+            
+if os.environ.get('PLATFORM_NAME') == 'iphonesimulator':
+    print 'Using flags for iOS simulator...'
+    env.Append(CPPDEFINES=['QCC_OS_IPHONE_SIMULATOR'])
+    print env['VARIANT']
+    if env['VARIANT'] == 'Debug' or env['VARIANT'] == 'debug':
+        ccld = [
+                '-g',
+                '-arch', 'i686',
+                '-miphoneos-version-min=6.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=60000',
+                '-isysroot', '$SDKROOT'
+                ]
+        print 'Using iOS debug configuration'
+    else:
+        ccld = [
+                '-arch', 'i686', 
+                '-miphoneos-version-min=6.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=60000',
+                '-isysroot', '$SDKROOT'
+                ]        
+        print 'Using iOS release configuration'
+
+else:
+    print 'Using flags for iOS devices (arm - defaulting to armv7)...'
+    if env['VARIANT'] == 'Debug' or env['VARIANT'] == 'debug':
+        ccld = [
+                '-g',
+                '-arch', 'armv7',
+                '-miphoneos-version-min=6.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=60000',
+                '-isysroot', '$SDKROOT'
+                ]
+        print 'Using iOS debug configuration'
+    else:
+        ccld = [
+                '-arch', 'armv7',
+                '-miphoneos-version-min=6.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=60000',
+                '-isysroot', '$SDKROOT'
+                ]        
+        print 'Using iOS release configuration'
+
+    
+ld = [
+      '-framework', 'SystemConfiguration',
+      '-framework', 'Foundation'
+     ]
+    
+env.Append(CXXFLAGS=ccld)
+env.Append(CFLAGS=ccld)
+env.Append(LINKFLAGS=ccld)
+env.Append(LINKFLAGS=ld)

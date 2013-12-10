@@ -1,0 +1,39 @@
+# Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+Import('about_env')
+ 
+if not about_env.has_key('_ALLJOYNCORE_'):
+    about_env.Append(LIBS = ['alljoyn'])
+    if about_env['BD'] == 'on' :
+        bdFile = about_env.subst('$DISTDIR') + '/cpp/lib/BundledDaemon.o'
+        about_env.Prepend(LIBS = [File(bdFile), 'ajdaemon'])
+    if about_env['OS'] == 'openwrt':
+        about_env.AppendUnique(LIBS = [ 'stdc++', 'pthread' ])
+
+# Make about dist a sub-directory of the alljoyn dist.  This avoids any conflicts with alljoyn dist targets.
+about_env['ABOUT_DISTDIR'] = about_env['DISTDIR'] + '/about'
+
+about_env.Install('$ABOUT_DISTDIR/inc/alljoyn/about', about_env.Glob('inc/alljoyn/about/*.h'))
+
+# About libraries
+about_env.Install('$ABOUT_DISTDIR/lib', about_env.SConscript('src/SConscript', exports = ['about_env']))
+
+# Sample programs
+if about_env['BUILD_SERVICES_SAMPLES'] == 'on':
+    about_env.Install('$ABOUT_DISTDIR/bin', about_env.SConscript('samples/SConscript', exports = ['about_env']))
+
+# Build docs
+installDocs = about_env.SConscript('docs/SConscript', exports = ['about_env'])
+about_env.Depends(installDocs, about_env.Glob('$ABOUT_DISTDIR/inc/alljoyn/about/*.h'));

@@ -1,0 +1,962 @@
+-------------------------------------------------------------------------------
+This document contains a list of changes to the Java AllJoyn API.
+Each Status, Method, or class will be marked as follows:
+'NEW': API code that was added to the release.
+'CHANGED': API code that has been changed since the last release.
+'REMOVED': API code that has been deleted from the release and can no longer be 
+           used.
+'DEPRECATED': API code that has been marked as deprecated.
+
+Each addition should contain a short explanation of what added or changed.
+For more information please refer to the API documentation.
+-------------------------------------------------------------------------------
+AllJoyn API Changes between v3.3.2 and v3.4.0 (Java API)
+NEW STATUS
+ER_IODISPATCH_STOPPING value = 0x1023
+    Cannot execute a read or write command on an IODispatch thread because it is
+    stopping.
+
+NEW STATUS
+ER_SLAP_INVALID_PACKET_LEN value = 0x1024
+    Length of SLAP packet is invalid.
+
+NEW STATUS
+ER_SLAP_HDR_CHECKSUM_ERROR value = 0x1025
+    SLAP packet header checksum error.
+
+NEW STATUS
+ER_SLAP_INVALID_PACKET_TYPE value = 0x1026
+    Invalid SLAP packet type.
+
+NEW STATUS
+ER_SLAP_LEN_MISMATCH value = 0x1027
+    Calculated length does not match the received length.
+
+NEW STATUS
+ER_SLAP_PACKET_TYPE_MISMATCH value = 0x1028
+    Packet type does not match reliability bit.
+
+NEW STATUS
+ER_SLAP_CRC_ERROR value = 0x1029
+    SLAP packet CRC error.
+
+NEW STATUS
+ER_SLAP_ERROR value = 0x102A
+    Generic SLAP error.
+
+NEW STATUS
+ER_SLAP_OTHER_END_CLOSED value = 0x102B
+    Other end closed the SLAP connection
+
+NEW STATUS
+ER_ALLJOYN_REMOVESESSIONMEMBER_REPLY_NO_SESSION = 0x90ef
+    RemoveSessionMember reply: Specified session Id with this endpoint was not
+    found
+
+NEW STATUS
+ER_ALLJOYN_REMOVESESSIONMEMBER_NOT_BINDER = 0x90f0
+    RemoveSessionMember reply: Endpoint is not the binder of session
+
+NEW STATUS
+ER_ALLJOYN_REMOVESESSIONMEMBER_NOT_MULTIPOINT = 0x90f1
+    RemoveSessionMember reply: Session is not multipoint
+
+NEW STATUS
+ER_ALLJOYN_REMOVESESSIONMEMBER_NOT_FOUND = 0x90f2
+    RemoveSessionMember reply: Specified session member was not found
+
+NEW STATUS
+ER_ALLJOYN_REMOVESESSIONMEMBER_INCOMPATIBLE_REMOTE_DAEMON = 0x90f3
+    RemoveSessionMember reply: The remote daemon does not support this feature
+
+NEW STATUS
+ER_ALLJOYN_REMOVESESSIONMEMBER_REPLY_FAILED = 0x90f4
+    RemoveSessionMember reply: Failed for unspecified reason
+
+NEW STATUS
+ER_BUS_REMOVED_BY_BINDER = 0x90f5
+    The session member was removed by the binder
+
+NEW METHOD
+BusAttachment.removeSessionMember(int sessionId, String sessionMemberName)
+    Remove a session member from an existing multipoint session.
+
+    This method is a shortcut/helper that issues an
+    org.alljoyn.Bus.RemoveSessionMember method call to the local daemon
+    and interprets the response.
+
+    [param] sessionId - Session id.
+    [param] sessionMemberName - Name of member to remove from session.
+
+NEW METHOD
+BusAttachment.registerBusObject(BusObject busObj, String objPath, boolean secure)
+    Registers a bus object.
+
+    Once registered, the bus object may communicate to and from other
+    objects via its implemented bus interfaces.
+
+    The same object may not be registered on multiple bus connections.
+    [param] busObj - the BusObject to register
+    [param] objPath - the object path of the BusObject
+    [param] secure - true if authentication is required to access this object
+
+NEW METHOD
+BusAttachment.isBusObjectSecure(BusObject busObj)
+    Indicates if the BusObject is secure.
+
+NEW METHOD
+BusAttachment.getProxyBusObject(String busName,
+                                String objPath,
+                                int sessionId,
+                                Class[] busInterfaces,
+                                boolean secure)
+    Creates a proxy bus object for a remote bus object.
+    Methods on the remote object can be invoked through the proxy object.
+
+    There is no guarantee that the remote object referred to by the proxy
+    acutally exists.  If the remote object does not exist, proxy method calls
+    will fail.
+
+    Java proxy classes do not allow methods from two different interfaces to
+    have the same name and calling parameters. If two AllJoyn methods from two
+    different interfaces are implemented by the same remote object, one (or
+    both) of the method names must be modified. You may then use an annotation
+    for the renamed method to cause AllJoyn to use the originally expected
+    method name in any "wire" operations.
+
+    [param] busName - the remote endpoint name (well-known or unique)
+    [param] objPath - the absolute (non-relative) object path for the object
+    [param] sessionId - the session corresponding to the connection to the the
+                        object
+    [param] busInterfaces - an array of BusInterfaces that this proxy should
+                            respond to
+    [param] secure - the security mode for the remote object
+
+NEW CONSTRUCT
+ErrorReplyBusException(String name)
+    Constructs an ErrorReplyBusException with an error name and message from
+    a status code.
+
+    [param] status - the status code for the error
+
+NEW METHOD
+ErrorReplyBusException.getErrorStatus()
+   Gets the error status.
+
+NEW CONSTANT
+InterfaceDescription.AJ_IFC_SECURITY_INHERIT value = 0
+    Inherit the security of the object that implements the interface
+
+NEW CONSTANT
+InterfaceDescription.AJ_IFC_SECURITY_REQUIRED value = 1
+    Security is required for an interface
+
+NEW CONSTANT
+InterfaceDescription.AJ_IFC_SECURITY_OFF value = 2
+    Security does not apply to this interface
+
+NEW CONSTRUCTOR
+ProxyBusObject(BusAttachment busAttachment, String busName, String objPath,
+               int sessionId, Class[] busInterfaces, boolean secure)
+    Construct a ProxyBusObject.
+
+    [param] busAttachment - The connection the remote object is on.
+    [param] busName - Well-known or unique bus name of remote object.
+    [param] objPath - Object path of remote object.
+    [param] sessionId - The session ID corresponding to the connection to the object.
+    [param] busInterfaces - A list of BusInterfaces that this proxy should respond to.
+    [param] secure - the security mode for the remote object
+
+NEW METHOD
+ProxyBusObject.isSecure()
+    Indicates if the remote object for this proxy bus object is secure.
+
+NEW METHOD
+ProxyBusObject.getProperty(Class<T> iface, String propertyName)
+    Get a property from an interface on the remote object.
+
+    throws BusException if the named property doesn't exist
+
+    [param] iface the interface that the property exists on
+    [param] propertyName the name of the property
+
+NEW METHOD
+ProxyBusObject.setProperty(Class<T> iface, String propertyName, Variant value)
+    Set a property on an interface on the remote object.
+
+    throws BusException if the named property doesn't exist or cannot be set
+
+    [param] iface - the interface that the property exists on
+    [param] propertyName - the name of the property
+    [param] value - the value for the property
+
+NEW METHOD
+ProxyBusObject.getAllProperties(Class<T> iface) throws BusException
+    Get all properties from an interface on the remote object.
+
+    throws BusException if request cannot be honored
+
+    [param] iface - the interface
+
+NEW CONSTANT
+SessionListener.ALLJOYN_SESSIONLOST_INVALID value = 0x00
+    Invalid SessionLost code.
+
+NEW CONSTANT
+SessionListener.ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION value = 0x01
+    Remote end called LeaveSession.
+
+NEW CONSTANT
+SessionListener.ALLJOYN_SESSIONLOST_REMOTE_END_CLOSED_ABRUPTLY value = 0x02
+    Remote end closed abruptly.
+
+NEW CONSTANT
+SessionListener.ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER value = 0x03
+    Session binder removed this endpoint by calling RemoveSessionMember.
+
+NEW CONSTANT
+SessionListener.ALLJOYN_SESSIONLOST_LINK_TIMEOUT value = 0x04
+    Link was timed-out.
+
+NEW CONSTANT
+SessionListener.ALLJOYN_SESSIONLOST_REASON_OTHER value = 0x05
+    Unspecified reason for session loss.
+
+DEPRECATED METHOD
+SessionListener.sessionLost(int sessionId)
+    Called by the bus when a session becomes disconnected.
+
+    Any implementation of this function must be multithread safe.  See the
+    class documentation for details.
+
+    [param] sessionId - Id of session that was lost.
+
+NEW METHOD
+SessionListener.sessionLost(int sessionId, int reason)
+    Called by the bus when a session becomes disconnected.
+
+    Any implementation of this function must be multithread safe.  See the
+    class documentation for details.
+
+    [param] sessionId - Id of session that was lost.
+    [param] reason - Reason for the session being lost. One of:
+                     ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION
+                     ALLJOYN_SESSIONLOST_REMOTE_END_CLOSED_ABRUPTLY
+                     ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER
+                     ALLJOYN_SESSIONLOST_LINK_TIMEOUT
+                     ALLJOYN_SESSIONLOST_REASON_OTHER
+
+NEW SECURITY ANNOTATON
+@Secure(value="required")
+    Indicates that a given interface is secured by an authentication mechanism.
+
+    Valid value declarations are:
+      - required (default value) interface methods on the interface can only be
+                 called by an authenticated peer
+      - off if security is off interface authentication is never required
+            even when implemented by a secure object.
+      - inherit if the Secure annotation is omitted the interface will use a
+                security of inherit.  If security is inherit or security is not
+                specified for an interface the interface inherits the security
+                of the objects that implements the interface.
+    if an unknown value is given inherit will be used
+
+NEW SECURITY ANNOTATON
+@Secure(value="required")
+    Indicates that a given interface is secured by an authentication mechanism.
+
+    Valid value declarations are:
+      - required (default value) interface methods on the interface can only be
+                 called by an authenticated peer
+      - off if security is off interface authentication is never required
+            even when implemented by a secure object.
+      - inherit if the Secure annotation is omitted the interface will use a
+                security of inherit.  If security is inherit or security is not
+                specified for an interface the interface inherits the security
+                of the objects that implements the interface.
+    if an unknown value is given inherit will be used
+
+NEW SECURITY ANNOTATON
+@Secure(value="off")
+    Indicates that a given interface is secured by an authentication mechanism.
+
+    Valid value declarations are:
+      - required (default value) interface methods on the interface can only be
+                 called by an authenticated peer
+      - off if security is off interface authentication is never required
+            even when implemented by a secure object.
+      - inherit if the Secure annotation is omitted the interface will use a
+                security of inherit.  If security is inherit or security is not
+                specified for an interface the interface inherits the security
+                of the objects that implements the interface.
+    if an unknown value is given inherit will be used
+
+
+-------------------------------------------------------------------------------
+AllJoyn API Changes between v3.3.0 and v3.3.2 (Java API)
+NEW SESSIONOPP
+TRANSPORT_TCP      value=TRANSPORT_WLAN=0x0004
+    Transport using TCP (same as TRANSPORT_WLAN)
+
+NEW METHOD
+Variant.getSignature()
+    Gets the DBus type signature of the wrapped object.
+
+-------------------------------------------------------------------------------
+AllJoyn API Changes between v3.2.0 and v3.3.0 (Java API)
+NEW STATUS
+INVALID_STREAM value=0x1021
+    Attempt to reference non-existent stream entry
+
+NEW STATUS
+TIMER_FULL  value=0x1022 
+    Attempt to reference non-existent stream entry
+
+NEW STATUS
+ALLJOYN_ONAPPSUSPEND_REPLY_FAILED value=0x90ea 
+    OnAppSuspend reply: Failed
+
+NEW STATUS
+ALLJOYN_ONAPPSUSPEND_REPLY_UNSUPPORTED value=0x90eb 
+    OnAppSuspend reply: Unsupported operation
+
+NEW STATUS
+ALLJOYN_ONAPPRESUME_REPLY_FAILED value=0x90ec 
+    OnAppResume reply: Failed
+
+NEW STATUS
+ALLJOYN_ONAPPRESUME_REPLY_UNSUPPORTED value=0x90ed
+    OnAppResume reply: Unsupported operation
+
+NEW STATUS
+BUS_NO_SUCH_MESSAGE value=0x90ee
+    Message not found
+
+NEW METHOD
+BusAttachment.FindAdvertisedNameByTransport(String namePrefix, 
+                                            short transports)
+    Register interest in a well-known name prefix for the purpose of discovery 
+    over specified transports.
+    This method is a shortcut/helper that issues an org.alljoyn.Bus.FindAdvertisedName 
+    method call to the local daemon and interprets the response.
+    [param] namePrefix - Well-known name prefix that application is interested 
+                         in receiving BusListener::FoundAdvertisedName 
+                         notifications about.
+    [param] transports - Transports over which to do well-known name discovery
+
+NEW METHOD
+BusAttachment.CancelFindAdvertisedNameByTransport(String namePrefix, 
+                                                  short transports)
+    Cancel interest in a well-known name prefix that was previously
+    registered with FindAdvertisedName. This cancels well-known name discovery
+    over the specified transports.  This method is a shortcut/helper that 
+    issues an org.alljoyn.Bus.CancelFindAdvertisedName method call to the local
+    daemon and interprets the response.
+    [param] namePrefix - Well-known name prefix that application is no longer 
+                         interested in receiving BusListener::FoundAdvertisedName 
+                         notifications about.
+    [param] transports - Transports over which to cancel well-known name discovery
+
+NEW METHOD
+BusAttachment.isConnected()
+    Indicate whether bus is currently connected.
+
+NEW PROPERTY
+MessageContext.serial
+    The serial number of the message
+
+NEW METHOD
+SignalEmitter.getMessageContext()
+    Get the MessageContext of the last signal sent from this emitter.
+
+NEW METHOD
+SignalEmitter.cancelSessionlessSignal(int serialNum)
+    Cancel a sessionless signal sent from this SignalEmitter
+    [param] serialNum - Serial number of message to cancel
+
+NEW CLASS
+PasswordManager
+    Class to allow the user or application to set credentials used for the 
+    authentication of thin clients.
+    Before invoking Connect() to BusAttachment, the application should call 
+    SetCredentials if it expects to be able to communicate to/from thin clients.
+    The bundled daemon will start advertising the name as soon as it is started 
+    and MUST have the credentials set to be able to authenticate any thin 
+    clients that may try to use the bundled daemon to communicate with the app.
+
+NEW METHOD
+PasswordManager.SetCredentials(String authMechanism, String password)
+    Set credentials used for the authentication of thin clients.
+    [param] authMechanism - The name of the authentication mechanism issuing the 
+                            request.
+    [param] password - The password.
+
+-------------------------------------------------------------------------------
+AllJoyn API Changes between v3.0.0 and v3.2.0 (Java API)
+
+NEW STATUS
+NO_SUCH_DEVICE  value=0x90dc
+    A referenced device cannot be located.
+    
+NEW STATUS
+P2P value=0x90dd
+    An error occurred in a Wi-Fi Direct helper method call.
+
+NEW STATUS
+P2P_TIMEOUT  value=0x90de
+    A timeout occurred in a Wi-Fi Direct helper method call.
+
+NEW STATUS
+P2P_NOT_CONNECTED  value=0x90df
+    A required Wi-Fi Direct network connection does not exist.
+
+NEW STATUS
+BAD_TRANSPORT_MASK  value=0x90e0
+    Exactly one mask bit was not set in the provided TransportMask.
+
+NEW STATUS
+PROXIMITY_CONNECTION_ESTABLISH_FAIL  value=0x90e1
+    Fail to establish P2P proximity connection.
+
+NEW STATUS
+PROXIMITY_NO_PEERS_FOUND  value=0x90e2
+    Cannot find proximity P2P peers.
+
+NEW STATUS
+BUS_OBJECT_NOT_REGISTERED  value=0x90e3
+    Operation not permitted on unregistered bus object.
+
+NEW STATUS
+P2P_DISABLED  value=0x90e4
+    Wi-Fi Direct is disabled on the device.
+    
+NEW STATUS
+P2P_BUSY  value=0x90e5
+    Wi-Fi Direct resources are in busy state.
+
+NEW STATUS
+BUS_INCOMPATIBLE_DAEMON  value=0x90e6
+    The daemon version is too old to be used by this client.
+
+NEW STATUS
+P2P_NO_GO  value=0x90e7
+    Attempt to execute a Wi-Fi Direct GO-related operation while STA.
+
+NEW STATUS
+P2P_NO_STA  value=0x90e8
+    Attempt to execute a Wi-Fi Direct STA-related operation while GO.
+
+NEW STATUS
+P2P_FORBIDDEN  value=0x90e9
+    Attempt to execute a forbidden Wi-Fi Direct operation.
+
+NEW LISTENER
+BusListener.listenerRegistered(BusAttachment bus)
+     Called by the bus when the listener is registered. This gives the listener 
+     implementation the opportunity to save a reference to the bus.
+     [param] bus -  The bus the listener is registered with.
+
+NEW LISTENER
+BusListener.listenerUnregistered()
+    Called by the bus when the listener is unregistered.
+
+NEW SESSIONOPT MASK
+TRANSPORT_LAN  value = 0x0010
+    Use only a wired local area network to communicate with a given session.
+
+NEW SESSIONOPT MASK
+TRANSPORT_WFD  value=0x0080
+    Use only the Wi-Fi Direct transport to communicate with a given session.
+
+NEW METHOD
+SignalEmitter.setSessionlessFlag(boolean sessionless)
+    Sets the signal to be sent out as a sessionless signal
+    [param] sessionless - if true the signal is set to be sent out as a 
+                          sessionless signal
+
+
+
+
+-------------------------------------------------------------------------------
+AllJoyn API Changes between v2.6.0 and v3.0.0 (Java API)
+
+No known API changes.
+ 
+-------------------------------------------------------------------------------
+AllJoyn API Changes between v2.3.0 and v2.6.0 (Java API)
+
+NEW STATUS
+THREADPOOL_EXHAUSTED  value = 0x101f 
+    A thread pool has reached its specified concurrency
+
+NEW STATUS
+THREADPOOL_STOPPING  value = 0x1020 
+    Cannot execute a closure on a stopping thread pool
+
+NEW STATUS
+BUS_AUTHENTICATION_PENDING value = 0x90a7 
+    Authentication of remote peer is pending
+
+NEW STATUS
+BUS_NOT_AUTHORIZED value = 0x90a8 
+    Operation was not authorized
+
+NEW STATUS
+PACKET_BUS_NO_SUCH_CHANNEL value = 0x90a9 
+    Received packet for unknown channel
+
+NEW STATUS
+PACKET_BAD_FORMAT value = 0x90aa 
+    Received packet with incorrect header information
+
+NEW STATUS
+PACKET_CONNECT_TIMEOUT value = 0x90ab 
+    Timed out waiting for connect response
+
+NEW STATUS
+PACKET_CHANNEL_FAIL value = 0x90ac 
+    Failed to create new comm channel
+
+NEW STATUS
+PACKET_TOO_LARGE value = 0x90ad 
+    Message too large for use with packet based transport
+
+NEW STATUS
+PACKET_BAD_PARAMETER value = 0x90ae 
+    Invalid PacketEngine control packet received
+
+NEW STATUS
+PACKET_BAD_CRC value = 0x90af 
+    Packet has invalid CRC
+
+NEW STATUS
+STUN_ATTR_SIZE_MISMATCH value = 0x90b0 
+    STUN attribute size does not match size parsed
+
+NEW STATUS
+STUN_AUTH_CHALLENGE value = 0x90b1 
+    STUN server has denied request, issued Challenge
+
+NEW STATUS
+STUN_SOCKET_NOT_OPEN value = 0x90b2 
+    Underlying socket not open for operation
+
+NEW STATUS
+STUN_SOCKET_OPEN value = 0x90b3 
+    Underlying socket alread open
+
+NEW STATUS
+STUN_FAILED_TO_SEND_MSG value = 0x90b4 
+    Failed to send STUN message
+
+NEW STATUS
+STUN_FRAMING_ERROR value = 0x90b5 
+    Application specified invalid TCP framing
+
+NEW STATUS
+STUN_INVALID_ERROR_CODE value = 0x90b6 
+    Invalid STUN error code
+
+NEW STATUS
+STUN_INVALID_FINGERPRINT value = 0x90b7 
+    Fingerprint CRC does not match
+
+NEW STATUS
+STUN_INVALID_ADDR_FAMILY value = 0x90b8 
+    Invalid address family value in STUN 'address' attribute
+
+NEW STATUS
+STUN_INVALID_MESSAGE_INTEGRITY value = 0x90b9 
+    SHA1-HMAC message integrity value does not match. When passed to upper layer, 
+    indicates unauthorized response, message must be ignored
+
+NEW STATUS
+STUN_INVALID_MSG_TYPE value = 0x90ba 
+    Invalid STUN message type
+
+NEW STATUS
+STUN_INVALID_ATTR_TYPE value = 0x90bb 
+    Invalid STUN message attribute type
+
+NEW STATUS
+STUN_RESPONSE_WITH_USERNAME value = 0x90bc 
+    STUN response message included a USERNAME attribute
+
+NEW STATUS
+STUN_ERR400_BAD_REQUEST value = 0x90bd 
+    Received bad STUN request, upper layer must send error code 400
+
+NEW STATUS
+STUN_BAD_INDICATION value = 0x90be 
+    Received bad STUN indication, upper layer must ignore message
+
+NEW STATUS
+STUN_ERR401_UNAUTHORIZED_REQUEST value = 0x90bf 
+    Received STUN request with invalid USERNAME or invalid MESSAGE-INTEGRITY, 
+    upper layer must send error code 401
+
+NEW STATUS
+STUN_TOO_MANY_ATTRIBUTES value = 0x90c0 
+    Too many attributes in STUN message or unknown attributes list
+
+NEW STATUS
+STUN_DUPLICATE_ATTRIBUTE value = 0x90c1 
+    STUN message attribute must only be added once
+
+NEW STATUS
+STUN_UNAUTHORIZED_INDICATION value = 0x90c2 
+    Receive STUN indication with invalid USERNAME or invalid MESSAGE-INTEGRITY, 
+    upper layer must ignore message
+
+NEW STATUS
+ICE_ALLOCATING_MEMORY value = 0x90c3 
+    Unable to allocate heap from ICE
+
+NEW STATUS
+ICE_CHECKS_INCOMPLETE value = 0x90c4 
+    ICE Checks have not completed
+
+NEW STATUS
+ICE_ALLOCATE_REJECTED_NO_RESOURCES value = 0x90c5 
+    TURN server rejected ALLOCATE request
+
+NEW STATUS
+ICE_ALLOCATION_QUOTA_REACHED value = 0x90c6 
+    TURN server rejected with 486
+
+NEW STATUS
+ICE_ALLOCATION_MISMATCH value = 0x90c7 
+    TURN server has expired the allocation
+
+NEW STATUS
+ICE_STUN_ERROR value = 0x90c8 
+    Generic ICE error
+
+NEW STATUS
+ICE_INVALID_STATE value = 0x90c9 
+    ICE Agent is not in proper state to perform request
+
+NEW STATUS
+ICE_UNKNOWN_COMPONENT_ID value = 0x90ca 
+    ICE Component type is not recognized
+
+NEW STATUS
+RENDEZVOUS_SERVER_DEACTIVATED_USER value = 0x90cb 
+    Rendezvous Server has deactivated the current user. Register with the 
+    Rendezvous Server to continue.
+
+NEW STATUS
+RENDEZVOUS_SERVER_UNKNOWN_USER value = 0x90cc 
+    Rendezvous Server does not recognize the current user. Register with the 
+    Rendezvous Server to continue.
+
+NEW STATUS
+UNABLE_TO_CONNECT_TO_RENDEZVOUS_SERVER value = 0x90cd 
+    Unable to connect to the Rendezvous Server
+
+NEW STATUS
+NOT_CONNECTED_TO_RENDEZVOUS_SERVER value = 0x90ce 
+    Not connected to the Rendezvous Server
+
+NEW STATUS
+UNABLE_TO_SEND_MESSAGE_TO_RENDEZVOUS_SERVER value = 0x90cf 
+    Unable to send message to the Rendezvous Server
+
+NEW STATUS
+INVALID_RENDEZVOUS_SERVER_INTERFACE_MESSAGE value = 0x90d0 
+    Invalid Rendezvous Server interface message
+
+NEW STATUS
+INVALID_PERSISTENT_CONNECTION_MESSAGE_RESPONSE value = 0x90d1 
+    Invalid message response received over the Persistent connection with the 
+    Rendezvous Server
+
+NEW STATUS
+INVALID_ON_DEMAND_CONNECTION_MESSAGE_RESPONSE value = 0x90d2 
+    Invalid message response received over the On Demand connection with the 
+    Rendezvous Server
+
+NEW STATUS
+INVALID_HTTP_METHOD_USED_FOR_RENDEZVOUS_SERVER_INTERFACE_MESSAGE value = 0x90d3 
+    Invalid HTTP method type used for Rendezvous Server interface message
+
+NEW STATUS
+RENDEZVOUS_SERVER_ERR500_INTERNAL_ERROR value = 0x90d4 
+    Received a HTTP 500 status code from the Rendezvous Server. This indicates 
+    an internal error in the Server
+
+NEW STATUS
+RENDEZVOUS_SERVER_ERR503_STATUS_UNAVAILABLE value = 0x90d5 
+    Received a HTTP 503 status code from the Rendezvous Server. This indicates 
+    unavailability of the Server error state
+
+NEW STATUS
+RENDEZVOUS_SERVER_ERR401_UNAUTHORIZED_REQUEST value = 0x90d6 
+    Received a HTTP 401 status code from the Rendezvous Server. This indicates 
+    that the client is unauthorized to send a request to the Server. The Client 
+    login procedure must be initiated.
+
+NEW STATUS
+RENDEZVOUS_SERVER_UNRECOVERABLE_ERROR value = 0x90d7 
+    Received a HTTP status code indicating unrecoverable error from the 
+    Rendezvous Server. The connection with the Server should be re-established.
+
+NEW STATUS
+RENDEZVOUS_SERVER_ROOT_CERTIFICATE_UNINITIALIZED value = 0x90d8 
+    Rendezvous Server root ceritificate uninitialized.
+
+NEW STATUS
+BUS_NO_SUCH_ANNOTATION value = 0x90d9
+    Attempt to add an annotation to an interface or property that already exists.
+
+NEW STATUS
+BUS_ANNOTATION_ALREADY_EXISTS value = 0x90da
+    Attempt to add an annotation to an interface or property that already exists.
+
+NEW STATUS
+SOCK_CLOSING value = 0x90db
+    Socket close in progress
+
+NEW METHOD
+BusAttachment.emitChangedSignal(BusObject busObject, 
+                                String ifcName, 
+                                String propName, 
+                                Object val, 
+                                int sessionId)
+    Emit PropertiesChanged to signal the bus that this property has been updated
+    [param] busObject - The BusObject that is the source of this signal
+    [param] ifcName   - The name of the interface
+    [param] propName  - The name of the property being changed
+    [param] val       - The new value of the property
+    [param] sessionId - Id of the session we broadcast to (0 for all)
+
+    
+NEW METHOD
+BusAttachment.enableConcurrentCallbacks()
+    Enable callbacks within the context of the currently executing method
+    handler, signal handler or other AllJoyn callback.
+    
+    This method can ONLY be called from within the body of a signal handler,
+    method handler or other AllJoyn callback. It allows AllJoyn to dispatch 
+    a single (additional) callback while the current one is still executing.
+    This method is typically used when a method, signal handler or other
+    AllJoyn callback needs to execute for a long period of time or when the 
+    callback needs to make any kind of blocking call.
+    
+    This method MUST be called prior to making any non-asynchronous AllJoyn 
+    remote procedure calls from within an AllJoyn callback. This includes
+    calls such as joinSession(), advertiseName(), cancelAdvertisedName(),
+    findAdvertisedName(), cancelFindAdvertisedName(), setLinkTimeout(), etc.
+
+
+NEW METHOD
+BusListener.busDisconnected()
+    Called when a BusAttachment this listener is registered with is has become 
+    disconnected from the bus
+
+NEW LISTENER
+BusListener.propertyChanged(String propName, Variant propValue)
+    Called by the bus when the value of a property changes if that property has annotation
+    org.freedesktop.DBus.Properties.PropertiesChanged=true
+     
+    Any implementation of this function must be multithread safe.  See the
+    class documentation for details.
+    [param] propName  - The well-known name that has changed.
+    [param] propValue - The new value of the property; NULL if not present
+
+NEW LISTENER
+BusListener.busDisconnected()
+    Called when a BusAttachment this listener is registered with is has become disconnected from
+    the bus.
+    
+    Any implementation of this function must be multithread safe.  See the
+    class documentation for details.
+CHANGED METHOD
+InterfaceDescription.Property(String name, String signature, TreeMap<String, String> annotations)
+   Now able to specify generic Key/Value pair for property annotation.
+
+NEW METHOD
+InterfaceDescription.addMemberAnnotation(String member, String annotation, String value)
+    Add an annotation to the specified interface member
+
+NEW METHOD
+InterfaceDescription.addPropertyAnnotation(String property, String annotation, String value)
+    Add an annotation to the specified interface property
+
+NEW METHOD
+InterfaceDescription.addAnnotation(String annotation, String value)
+    Add an annotation to the interface
+
+NEW CONSTANT
+SessionOpts.TRANSPORT_ICE
+    Use only ICE transport to communicate with a given session
+
+NEW BUSSIGNAL
+PropertiesChanged(String name, Map<String, Variant> changed, String[] invalidated) throws BusException
+    Signal sent when one or more properties change on an object.
+    [param] name        - the interface name
+    [param] changed     - the changed properties with their new values
+    [param] invalidated - the changed properties without their new values
+
+
+
+
+-------------------------------------------------------------------------------
+AllJoyn API Changes between v2.2.0 and v2.3.0 (Java API)
+NEW STATUS
+WARNING value="0x1D"
+    Generic warning.
+
+NEW STATUS
+ALLJOYN_SETLINKTIMEOUT_REPLY_NOT_SUPPORTED value="0x90a0"
+    Local daemon does not support SetLinkTimeout.
+
+NEW STATUS    
+ALLJOYN_SETLINKTIMEOUT_REPLY_NO_DEST_SUPPORT value="0x90a1"
+    SetLinkTimeout not supported by destination.
+    
+NEW STATUS    
+ALLJOYN_SETLINKTIMEOUT_REPLY_FAILED value="0x90a2"
+    SetLinkTimeout failed.
+    
+NEW STATUS    
+ALLJOYN_ACCESS_PERMISSION_WARNING value="0x90a3"
+    No permission to use Wifi/Bluetooth.
+
+NEW STATUS
+ALLJOYN_ACCESS_PERMISSION_ERROR value="0x90a4"
+    No permission to access peer service.
+
+NEW STATUS
+BUS_DESTINATION_NOT_AUTHENTICATED value="0x90a5"
+    Cannot send a signal to a destination that is not authenticated.
+
+NEW STATUS
+BUS_ENDPOINT_REDIRECTED value="0x90a6"
+    Endpoint was redirected to another address.
+-------------------------------------------------------------------------------
+AllJoyn API Changes between v2.1.0 and v2.2.0 (Java API)
+NEW CLASS
+Class ExpirationRequest added to AuthListener
+    ExpirationRequest.setExpiration(int expiration)
+        Sets an expiration time in seconds relative to the current time for
+        the credentials. This value is optional and can be set on any
+        response to a credentials request. After the specified expiration
+        time has elapsed any secret keys based on the provided credentials
+        are invalidated and a new authentication exchange will be
+        required. If an expiration is not set the default expiration time for
+        the requested authentication mechanism is used.
+        [param] expiration - the expiration time in seconds
+
+CHANGED METHOD
+BusAttachment.joinSession(string, short, SessionOpts, SessionListener, OnJoinSessionListener, context)
+    Asynchronous version of joinSession(string, short, Mutable.IntegerValue, SessionOpts, SessionListener)}.
+    context param added in 2.2 release 
+    [param] context - User-defined context object.  Passed through to OnJoinSessionListener.onJoinSession(Status, int, SessionOpts, Object).
+    
+NEW METHOD
+BusAttachment.setLinkTimeout(int sessionId, Mutable.IntegerValue linkTimeout)
+    Set the link timeout for a session.
+    
+    Link timeout is the maximum number of seconds that an unresponsive
+    daemon-to-daemon connection will be monitored before declaring the
+    session lost (via SessionLost callback). Link timeout defaults to 0 which
+    indicates that AllJoyn link monitoring is disabled.
+    
+    Each transport type defines a lower bound on link timeout to avoid
+    defeating transport specific power management algorithms.
+    
+    [param] sessionId   - Id of session whose link timeout will be modified.
+    [param] linkTimeout - [IN/OUT] Max number of seconds that a link can be
+                          unresponsive before being declared lost. 0 indicates
+                          that AllJoyn link monitoring will be disabled. On
+                          return, this value will be the resulting (possibly
+                          upward) adjusted linkTimeout value that acceptable
+                          to the underlying transport.
+
+ NEW METHOD
+ BusAttachment.release()
+    Release resources immediately.
+    
+    Normally, when all references are removed to a given object, the Java
+    garbage collector notices the fact that the object is no longer required
+    and will destroy it.  This can happen at the garbage collector's leisure
+    an so any resources held by the object will not be released until "some
+    time later" after the object is no longer needed.
+    
+    Often, in test programs, we cycle through many BusAttachments in a very
+    short time, and if we rely on the garbage collector to clean up, we can
+    fairly quickly run out of scarce underlying resources -- especially file
+    descriptors.
+    
+    We provide an explicitly release() method to allow test programs to release
+    the underlying resources immediately.  The garbage collector will still
+    call finalize, but the resources held by the underlying C++ objects will
+    go away immediately.
+    
+    It is a programming error to call another method on the BusAttachment
+    after the release() method has been called.
+    
+NEW METHOD
+BusAttachment.setKeyExpiration(String guid, int timeout)
+    Sets the expiration time on keys associated with a specific remote peer as identified by its
+    peer GUID. The peer GUID associated with a bus name can be obtained by calling
+    getPeerGUID(String, Mutable.StringValue).  If the timeout is 0 this is equivalent to calling
+    clearKeys(String).
+    
+    [param] guid    - the GUID of a remote authenticated peer
+    [param] timeout - the time in seconds relative to the current time to expire the keys
+
+NEW METHOD
+BusAttachment.getKeyExpiration(String guid, Mutable.IntegerValue timeout)
+    Gets the expiration time on keys associated with a specific authenticated remote peer as
+    identified by its peer GUID. The peer GUID associated with a bus name can be obtained by
+    calling getPeerGUID(String, Mutable.StringValue).
+    
+    [param] guid    - the GUID of a remote authenticated peer
+    [param] timeout - the time in seconds relative to the current time when the keys will expire
+
+CHANGED METHOD
+InterfaceDescription.addMember(int type, String name, String inputSig, String outSig, int annotation, String accessPerm)
+    param accessPerm added for 2.2.0 release
+    
+NEW METHOD
+ProxyBusObject.release()
+    Release resources immediately.
+     
+    Normally, when all references are removed to a given object, the Java
+    garbage collector notices the fact that the object is no longer required
+    and will destory it.  This can happen at the garbage collector's leisure
+    an so any resources held by the object will not be released until "some
+    time later" after the object is no longer needed.
+    
+    Often, in test programs, we cycle through many BusAttachments in a very
+    short time, and if we rely on the garbage collector to clean up, we can
+    fairly quickly run out of scarce underlying resources -- especially file
+    descriptors.
+    
+    We provide an explicitly release() method to allow test programs to release
+    the underlying resources immediately.  The garbage collector will still
+    call finalize, but the resources held by the underlying C++ objects will
+    go away immediately.
+    
+    It is a programming error to call another method on the ProxyBusObject
+    after the release() method has been called.
+
+NEW METHOD
+SessionListener.sessionMemberAdded(int sessionId, String uniqueName)
+    Called by the bus for multipoint sessions when another node joins the session.
+    
+    [param] sessionId  - Id of multipoint session whose members have changed.
+    [param] uniqueName - Unique name of member who joined the session.
+
+NEW METHOD
+SessionListener.sessionMemberRemoved(int sessionId, String uniqueName)
+    Called by the bus for multipoint sessions when another node leaves the session.
+    
+    [param] sessionId  - Id of multipoint session whose members have changed.
+    [param] uniqueName - Unique name of member who left the session.
+    
+NEW STATUS 
+ALREADY_REGISTERED value="0xa004" 
+    An AuthListener is already set on this BusAttachment

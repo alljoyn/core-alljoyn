@@ -1,0 +1,93 @@
+# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+import os
+import sys
+
+Import('env')
+
+# Dependent Projects
+if not env.has_key('_ALLJOYNCORE_'):
+    env.SConscript('../alljoyn_core/SConscript')
+
+# Indicate that this SConscript file has been loaded already
+env['_ALLJOYNC_'] = True
+
+clibenv = env.Clone()
+
+vars = Variables();
+vars.Update(clibenv)
+Help(vars.GenerateHelpText(clibenv))
+
+
+# C binding requires a couple of header files in alljoyn_core/src
+clibenv.Append(CPPPATH = [clibenv.Dir('../alljoyn_core/src').srcnode()])
+
+sys.path.append(str(clibenv.Dir('../build_core/tools/scons').srcnode()))
+
+# Make alljoyn C dist a sub-directory of the alljoyn dist.
+clibenv['C_DISTDIR'] = clibenv['DISTDIR'] + '/c'
+clibenv['C_TESTDIR'] = clibenv['TESTDIR'] + '/c'
+
+# Add support for multiple build targets in the same workset
+clibenv.VariantDir('$OBJDIR', 'src', duplicate = 0)
+clibenv.VariantDir('$OBJDIR/samples', 'samples', duplicate = 0)
+
+# Install headers
+# C bindings use the following headers from alljoyn_core
+alljoyn_core_headers = clibenv.Install('inc/alljoyn_c', '$DISTDIR/cpp/inc/alljoyn/DBusStdDefines.h')
+alljoyn_core_headers += clibenv.Install('inc/alljoyn_c', '$DISTDIR/cpp/inc/alljoyn/Status.h')
+alljoyn_core_headers += clibenv.Install('inc/qcc', '$DISTDIR/cpp/inc/qcc/platform.h')
+alljoyn_core_headers += clibenv.Install('inc/qcc/${OS_GROUP}', '$DISTDIR/cpp/inc/qcc/${OS_GROUP}/platform_types.h')
+
+if clibenv['OS_GROUP'] == 'windows' or clibenv['OS_GROUP'] == 'win8':
+    alljoyn_core_headers += clibenv.Install('inc/qcc/${OS_GROUP}', '$DISTDIR/cpp/inc/qcc/${OS_GROUP}/mapping.h')
+
+c_headers = clibenv.Install('$C_DISTDIR/inc/alljoyn_c', clibenv.Glob('inc/alljoyn_c/*.h'))
+c_headers += clibenv.Install('$C_DISTDIR/inc/qcc', clibenv.Glob('inc/qcc/*.h'))
+c_headers += clibenv.Install('$C_DISTDIR/inc/qcc/${OS_GROUP}', clibenv.Glob('inc/qcc/${OS_GROUP}/*.h'))
+
+# make sure the headers from alljoyn_core have been copied into the alljoyn_c headers 
+clibenv.Depends(c_headers, alljoyn_core_headers)
+
+# AllJoyn Libraries
+libs = clibenv.SConscript('$OBJDIR/SConscript', exports = {'env':clibenv})
+dlibs = clibenv.Install('$C_DISTDIR/lib', libs)
+
+# the variable dlibs contains the file nodes for the  static library and the 
+# shared library however it may contain more files such as .pdb files on windows.  
+# Search through the list and assign the static library to the ALLJOYN_C_LIB_STATIC 
+# clibenv variable and the shared library to ALLJOYN_C_LIB_SHARED clibenv variable.
+for x in dlibs: 
+    if clibenv['OS_GROUP'] == 'windows' or clibenv['OS_GROUP'] == 'winrt':
+        if 'alljoyn_c_static' + clibenv['LIBSUFFIX'] in str(x):
+            clibenv['ALLJOYN_C_LIB_STATIC'] = x;
+    else:
+        if 'alljoyn_c' + clibenv['LIBSUFFIX'] in str(x):
+            clibenv['ALLJOYN_C_LIB_STATIC'] = x;
+    if 'alljoyn_c' + clibenv['SHLIBSUFFIX'] in str(x):
+        clibenv['ALLJOYN_C_LIB_SHARED'] = x;
+
+# Build docs
+clibenv.SConscript('docs/SConscript', exports = {'env':clibenv})
+
+# Sample programs
+clibenv.SConscript('$OBJDIR/samples/SConscript', exports = {'env':clibenv})
+
+# Build unit Tests
+clibenv.SConscript('unit_test/SConscript', variant_dir='$OBJDIR/unittest', duplicate=0, exports = {'env':clibenv})
+
+# don't try and build the samples till the header files are copied into place
+#clibenv.Depends(dlibs, c_headers)

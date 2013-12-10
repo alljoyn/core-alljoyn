@@ -1,0 +1,279 @@
+diff --recursive -u --exclude=*.pyc --exclude=*.pyo ../../scons-2.2.0/engine/scons/Tool/MSCommon/common.py ./Tool/MSCommon/common.py
+--- ../../scons-2.2.0/engine/scons/Tool/MSCommon/common.py	Fri Sep 14 10:15:31 2012
++++ ./Tool/MSCommon/common.py	Fri Sep 14 09:56:01 2012
+@@ -135,7 +135,11 @@
+     # controlled by vc.py, or else derived from the common_tools_var
+     # settings in vs.py.
+     vars = [
++        'ProgramFiles',
++        'ProgramFiles(x86)',
+         'COMSPEC',
++        'VS110COMNTOOLS',
++        'VS100COMNTOOLS',
+         'VS90COMNTOOLS',
+         'VS80COMNTOOLS',
+         'VS71COMNTOOLS',
+diff --recursive -u --exclude=*.pyc --exclude=*.pyo ../../scons-2.2.0/engine/scons/Tool/MSCommon/sdk.py ./Tool/MSCommon/sdk.py
+--- ../../scons-2.2.0/engine/scons/Tool/MSCommon/sdk.py	Fri Sep 14 10:15:31 2012
++++ ./Tool/MSCommon/sdk.py	Fri Sep 14 09:55:06 2012
+@@ -125,6 +125,30 @@
+         debug("sdk.py: get_sdk_vc_script():file:%s"%file)
+         return file
+ 
++    def get_sdk_appx_subdir(self):
++        """ Return the script to initialize the VC compiler installed by SDK
++        """
++        
++        if self.__dict__.has_key('vc_appx_subdir') == False:
++            return None
++            
++        appx_subdir = self.vc_appx_subdir;
++        if not appx_subdir:
++            debug("sdk.py: get_sdk_appx_subdir():sdk doesn't support appx");
++            return None
++            
++        file=os.path.join(self.find_sdk_dir(), appx_subdir)
++        if not file:
++            debug("sdk.py: get_sdk_appx_subdir():no file")
++        else:
++            debug("sdk.py: get_sdk_appx_subdir():file:%s"%file)
++            
++        if not os.path.exists(file):
++            debug("sdk.py: get_sdk_appx_subdir(): sanity check %s not found" % ftc)
++            return None
++            
++        return file
++
+ class WindowsSDK(SDKDefinition):
+     """
+     A subclass for trying to find installed Windows SDK directories.
+@@ -164,6 +188,21 @@
+                            'x86_ia64' : r'bin\vcvarsx86_ia64.bat',
+                            'ia64'     : r'bin\vcvarsia64.bat'}
+ 
++SDK71VCSetupScripts =    { 'x86'      : r'bin\vcvars32.bat',
++                           'amd64'    : r'bin\vcvars64.bat',
++                           'x86_amd64': r'bin\vcvarsx86_amd64.bat',
++                           'x86_ia64' : r'bin\vcvarsx86_ia64.bat',
++                           'ia64'     : r'bin\vcvarsia64.bat'}
++                           
++SDK80VCSetupScripts =    { 'x86'       : r'bin\vcvars32.bat',
++                           'amd64'     : r'bin\vcvars64.bat',
++                           'x86_amd64' : r'bin\vcvarsx86_amd64.bat',
++                           'x86_ia64'  : r'bin\vcvarsx86_ia64.bat',
++                           'ia64'      : r'bin\vcvarsia64.bat',
++                           'amd64_arm' : r'bin\vcvarsarm.bat',
++                           'x86_arm'   : r'bin\vcvarsarm.bat'}
++
++
+ # The list of support SDKs which we know how to detect.
+ #
+ # The first SDK found in the list is the one used by default if there
+@@ -172,6 +211,27 @@
+ #
+ # If you update this list, update the documentation in Tool/mssdk.xml.
+ SupportedSDKList = [
++    WindowsSDK('8.0',
++               sanity_check_file=r'bin\x86\makeappx.exe',
++               include_subdir='include',
++               lib_subdir={
++                   'x86'       : ['lib'],
++                   'x86_64'    : [r'lib\x64'],
++                   'ia64'      : [r'lib\ia64'],
++               },
++               vc_setup_scripts = SDK80VCSetupScripts,
++               vc_appx_subdir = 'References\\CommonConfiguration\\Neutral',
++              ),
++    WindowsSDK('7.1',
++               sanity_check_file=r'bin\SetEnv.Cmd',
++               include_subdir='include',
++               lib_subdir={
++                   'x86'       : ['lib'],
++                   'x86_64'    : [r'lib\x64'],
++                   'ia64'      : [r'lib\ia64'],
++               },
++               vc_setup_scripts = SDK71VCSetupScripts,
++              ),
+     WindowsSDK('7.0',
+                sanity_check_file=r'bin\SetEnv.Cmd',
+                include_subdir='include',
+diff --recursive -u --exclude=*.pyc --exclude=*.pyo ../../scons-2.2.0/engine/scons/Tool/MSCommon/vc.py ./Tool/MSCommon/vc.py
+--- ../../scons-2.2.0/engine/scons/Tool/MSCommon/vc.py	Fri Sep 14 10:15:31 2012
++++ ./Tool/MSCommon/vc.py	Fri Sep 14 10:06:05 2012
+@@ -81,6 +81,7 @@
+     "itanium"   : "ia64",
+     "x86"       : "x86",
+     "x86_64"    : "amd64",
++    "arm"       : "arm",
+ }
+ 
+ # Given a (host, target) tuple, return the argument for the bat file. Both host
+@@ -90,7 +91,9 @@
+     ("x86", "amd64"): "x86_amd64",
+     ("amd64", "amd64"): "amd64",
+     ("amd64", "x86"): "x86",
+-    ("x86", "ia64"): "x86_ia64"
++    ("x86", "ia64"): "x86_ia64",
++    ("amd64", "arm"): "x86_arm",
++    ("x86", "arm"): "x86_arm",
+ }
+ 
+ def get_host_target(env):
+@@ -155,6 +158,12 @@
+         '6.0': [
+             r'Microsoft\VisualStudio\6.0\Setup\Microsoft Visual C++\ProductDir']
+ }
++
++_VCVER_APPX_PLATFORM_DIR = {
++        '11.0Exp' : [r'vcpackages'],
++        '11.0' : [r'vcpackages'],
++}
++       
+         
+ def msvc_version_to_maj_min(msvc_version):
+    msvc_version_numeric = ''.join([x for  x in msvc_version if x in string_digits + '.'])
+@@ -227,6 +236,23 @@
+                 raise MissingConfiguration("registry dir %s not found on the filesystem" % comps)
+     return None
+ 
++def find_vc_appx_dir(env,msvc_version):
++    pdir = find_vc_pdir(msvc_version)
++    if pdir is None:
++        return None
++    
++    debug('vc.py: find_vc_appx_dir(): found directory for VC version %s' % repr(msvc_version))
++    
++    if _VCVER_APPX_PLATFORM_DIR.has_key(msvc_version) == False:
++        debug('vc.py: find_vc_appx_dir(): no appx directory specified for VC version %s' % repr(msvc_version))
++        return None
++        
++    subdir = _VCVER_APPX_PLATFORM_DIR[msvc_version][0]
++        
++    pdir = os.path.join(pdir, subdir)
++    debug('vc.py: find_vc_appx_dir(): found platform directory %s' % pdir)
++    return pdir
++
+ def find_batch_file(env,msvc_version,host_arch,target_arch):
+     """
+     Find the location of the batch script which should set up the compiler
+@@ -417,6 +443,48 @@
+     
+     return d
+     
++def msvc_appx_metadata_to_flags(env,appx_sdk_directory):
++    debug('msvc_appx_metadata_to_flags()')
++    
++    dirList = os.listdir(appx_sdk_directory)
++    for fname in dirList:
++        if fname.endswith(".winmd"):
++            env.Append(_APPX_CXXFLAGS=['/FU%s\\%s' % (appx_sdk_directory, fname)])
++    return
++
++def msvc_setup_appx_env(env, version):   
++    debug('msvc_setup_appx_env()')
++
++    # detect if appx sdk is installed
++    appx_sdk_version = os.environ.get('APPX_MSSDK_VERSION')
++    if appx_sdk_version:
++        debug('msvc_setup_appx_env: using specified APPX_MSSDK_VERSION version %s\n' % repr(appx_sdk_version))
++        appx_sdk = sdk.get_sdk_by_version(appx_sdk_version) 
++        if appx_sdk is None:
++            debug('msvc_setup_appx_env: APPX_MSSDK_VERSION %s was not found installed\n' % repr(appx_sdk_version))
++            return
++
++        appx_sdk_directory = appx_sdk.get_sdk_appx_subdir()
++        if appx_sdk_directory is None:
++            debug('msvc_setup_appx_env: APPX_MSSDK_VERSION %s is missing its metadata directory\n' % repr(appx_sdk_version))
++            return
++
++        env.Append(_APPX_CXXFLAGS=['/AI%s' % appx_sdk_directory])
++        cxxflags = env['_APPX_CXXFLAGS']
++
++        msvc_appx_metadata_to_flags(env,appx_sdk_directory)
++        
++        # now, add the platform specific metadata file on to the flags
++        vc_appx_directory = find_vc_appx_dir(env,version)
++        if vc_appx_directory is None:
++            debug('msvc_setup_appx_env: no platform appx directory for VC version: %s' % repr(version))
++            return 
++            
++        msvc_appx_metadata_to_flags(env,vc_appx_directory) 
++    else:
++        debug('msvc_setup_appx_env(): APPX_MSSDK_VERSION not found in env')
++
++    return
+ 
+ def msvc_setup_env(env):
+     debug('msvc_setup_env()')
+@@ -455,6 +523,10 @@
+     for k, v in d.items():
+         debug('vc.py:msvc_setup_env() env:%s -> %s'%(k,v))
+         env.PrependENVPath(k, v, delete_existing=True)
++
++    if env.has_key('APPX_CXXFLAGS') and env['APPX_CXXFLAGS'] == 'true':
++        msvc_setup_appx_env(env, version)
++
+ 
+ def msvc_exists(version=None):
+     vcs = cached_get_installed_vcs()
+diff --recursive -u --exclude=*.pyc --exclude=*.pyo ../../scons-2.2.0/engine/scons/Tool/MSCommon/vs.py ./Tool/MSCommon/vs.py
+--- ../../scons-2.2.0/engine/scons/Tool/MSCommon/vs.py	Fri Sep 14 10:15:31 2012
++++ ./Tool/MSCommon/vs.py	Fri Sep 14 10:02:34 2012
+@@ -211,28 +211,29 @@
+     #             default_dirname='TBD',
+     #),
+ 
+-    # Visual Studio 11
++    # Visual Studio 2012
+     # The batch file we look for is in the VC directory,
+     # so the devenv.com executable is up in ..\..\Common7\IDE.
+     VisualStudio('11.0',
+-                 sdk_version='6.1',
++                 vc_version='11.0',
++                 sdk_version='8.0',
+                  hkeys=[r'Microsoft\VisualStudio\11.0\Setup\VS\ProductDir'],
+                  common_tools_var='VS110COMNTOOLS',
+                  executable_path=r'Common7\IDE\devenv.com',
+                  batch_file_path=r'Common7\Tools\vsvars32.bat',
+                  default_dirname='Microsoft Visual Studio 11',
+-                 supported_arch=['x86', 'amd64'],
++                 supported_arch=['x86', 'amd64', "arm"],
+     ),
+ 
+     # Visual C++ 11 Express Edition
+     # The batch file we look for is in the VC directory,
+-    # so the VCExpress.exe executable is up in ..\..\Common7\IDE.
++    # so the VSWinExpress.exe executable is up in ..\..\Common7\IDE.
+     VisualStudio('11.0Exp',
+                  vc_version='11.0',
+-                 sdk_version='6.1',
+-                 hkeys=[r'Microsoft\VCExpress\11.0\Setup\VS\ProductDir'],
++                 sdk_version='8.0',
++                 hkeys=[r'Microsoft\VSWinExpress\11.0\Setup\VS\ProductDir'],
+                  common_tools_var='VS110COMNTOOLS',
+-                 executable_path=r'Common7\IDE\VCExpress.exe',
++                 executable_path=r'Common7\IDE\VSWinExpress.exe',
+                  batch_file_path=r'Common7\Tools\vsvars32.bat',
+                  default_dirname='Microsoft Visual Studio 11',
+                  supported_arch=['x86'],
+diff --recursive -u --exclude=*.pyc --exclude=*.pyo ../../scons-2.2.0/engine/scons/Tool/msvc.py ./Tool/msvc.py
+--- ../../scons-2.2.0/engine/scons/Tool/msvc.py	Fri Sep 14 10:15:30 2012
++++ ./Tool/msvc.py	Fri Sep 14 09:46:37 2012
+@@ -220,7 +220,7 @@
+     env['CCPDBFLAGS'] = SCons.Util.CLVar(['${(PDB and "/Z7") or ""}'])
+     env['CCPCHFLAGS'] = SCons.Util.CLVar(['${(PCH and "/Yu%s \\\"/Fp%s\\\""%(PCHSTOP or "",File(PCH))) or ""}'])
+     env['_MSVC_OUTPUT_FLAG'] = msvc_output_flag
+-    env['_CCCOMCOM']  = '$CPPFLAGS $_CPPDEFFLAGS $_CPPINCFLAGS $CCPCHFLAGS $CCPDBFLAGS'
++    env['_CCCOMCOM']  = '$CPPFLAGS $_APPX_CXXFLAGS $_CPPDEFFLAGS $_CPPINCFLAGS $CCPCHFLAGS $CCPDBFLAGS'
+     env['CC']         = 'cl'
+     env['CCFLAGS']    = SCons.Util.CLVar('/nologo')
+     env['CFLAGS']     = SCons.Util.CLVar('')
+@@ -260,7 +260,7 @@
+     env['CXXFILESUFFIX'] = '.cc'
+ 
+     env['PCHPDBFLAGS'] = SCons.Util.CLVar(['${(PDB and "/Yd") or ""}'])
+-    env['PCHCOM'] = '$CXX /Fo${TARGETS[1]} $CXXFLAGS $CCFLAGS $CPPFLAGS $_CPPDEFFLAGS $_CPPINCFLAGS /c $SOURCES /Yc$PCHSTOP /Fp${TARGETS[0]} $CCPDBFLAGS $PCHPDBFLAGS'
++    env['PCHCOM'] = '$CXX /Fo${TARGETS[1]} $CXXFLAGS $CCFLAGS $CPPFLAGS $_CPPDEFFLAGS $_CPPINCFLAGS $_APPX_CXXFLAGS /c $SOURCES /Yc$PCHSTOP /Fp${TARGETS[0]} $CCPDBFLAGS $PCHPDBFLAGS'
+     env['BUILDERS']['PCH'] = pch_builder
+ 
+     if 'ENV' not in env:

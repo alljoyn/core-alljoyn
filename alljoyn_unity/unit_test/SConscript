@@ -1,0 +1,68 @@
+# Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+import os
+
+Import('env')
+
+vars = Variables();
+
+vars.Add(PathVariable('XUNIT_DIR', 'The path to xUnit.net unit testing framework',  os.environ.get('XUNIT_DIR'), PathVariable.PathIsDir))
+
+vars.Update(env)
+
+Help(vars.GenerateHelpText(env))
+
+# AllJoyn Unity Unit Test Sources
+envtest = env.Clone()
+srcs = envtest.Glob('*.cs')
+
+envtest.Append(LIBPATH = ['$DISTDIR/c/lib'])
+envtest.Append(LIBS = ['alljoyn_c'])
+
+if envtest['OS_GROUP'] == 'windows':
+    envtest['CSC'] = 'csc.exe'
+elif envtest['OS_GROUP'] == 'posix':
+    envtest['CSC'] = 'gmcs'
+
+clib = '$DISTDIR/c/lib/${SHLIBPREFIX}alljoyn_c${SHLIBSUFFIX}'
+
+if envtest['VARIANT'] == 'debug':
+    envtest['CSC_FLAGS']=['debug', 'define:DEBUG']
+    envtest['CSC_LIB_FLAGS']=['debug', 'define:DEBUG']
+
+if(env.has_key('XUNIT_DIR')):
+    print("Building Unit Test for Unity Binding")
+    envtest['CSC_LIB_PATHS'] = [envtest['XUNIT_DIR'], Dir(env['UNITY_DISTDIR'] + os.sep + 'lib').abspath]
+    envtest['CSC_REFERENCES'] = ['xunit.dll', 'alljoyn_unity.dll']
+    alljoyn_unity_test = envtest.CSharpLib(source = srcs , target='$UNITY_TESTDIR/AllJoynUnityTest.dll')
+    
+    # In addition to AllJoynUnitTest.dll the unit tests require xunit.dll, 
+    # alljoyn_unity.dll, and alljoyn_c.dll to run
+    # place alljoyn_unity.dll into the test dir
+    envtest.Install('$UNITY_TESTDIR', envtest['ALLJOYN_UNITY_LIB'])
+    #place alljoyn_c.dll into the test dir
+    envtest.Install('$UNITY_TESTDIR', clib)
+    #place alljoyn_c.dll into the unit_test/bin/$VARIANT directory to facilitate development
+    if envtest['VARIANT'] == 'debug':
+        envtest.Install('bin/Debug', clib)
+    elif envtest['VARIANT'] == 'release':
+        envtest.Install('bin/Release', clib)
+    # place xunit.dll into the test dir
+    envtest.Install('$UNITY_TESTDIR', envtest['XUNIT_DIR'] + os.sep + 'xunit.dll')
+    # place xunit.dll into project folder so unit test can be built and run 
+    # from visual studio very useful for development and debugging.
+    envtest.Install('..' + os.sep, envtest['XUNIT_DIR'] + os.sep + 'xunit.dll')
+    
+    Return('alljoyn_unity_test')

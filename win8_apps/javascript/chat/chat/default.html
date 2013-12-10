@@ -1,0 +1,54 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>chat</title>
+
+    <!-- WinJS references -->
+    <link href="//Microsoft.WinJS.1.0/css/ui-light.css" rel="stylesheet" />
+    <link href="/css/default.css" rel="stylesheet" />
+    <script src="//Microsoft.WinJS.1.0/js/base.js"></script>
+    <script src="//Microsoft.WinJS.1.0/js/ui.js"></script>
+    <script src="/js/default.js"></script>
+</head>
+
+<body>
+    <div id="rootGrid">
+        <div id="header" role="contentinfo" data-win-control="WinJS.UI.HtmlControl" data-win-options="{uri: '/header.html'}"></div>
+        <div id="content">
+            <div id="use">
+                <form name="joinChannel">
+                    <img src="/images/tab_use.png" />
+                    <select name="channelNames" disabled="disabled" style="width: 248.53px; height: 49.41px;">
+                        <option>Searching...</option>
+                    </select>
+                    <button id="joinChannelButton" disabled="disabled" style="width: 144.78px; height: 48.42px;">Join Channel</button>
+                </form>
+            </div>
+
+            <div id="host">
+                <form name="setChannel">
+                    <img src="/images/tab_host.png" />
+                    <input name="channelName" placeholder="Enter name" style="width: 246.34px; height: 47px;" />
+                    <button id="startChannelButton" style="width: 140.3px; height: 48.42px;">Start Channel</button>
+                </form>
+            </div>
+
+            <div id="status">
+                <label id="outputLabel"></label>
+            </div>
+
+            <div id="msg">
+                <form name="message">
+                    <img src="images/chat-icon.png" />
+                    <input name="text" placeholder="Enter message here" onkeypress="return onKeyPress(event);" style="width: 374px; height: 45.64px;" />
+                </form>
+            </div>
+            <div id="log" />
+        </div>
+    </div>
+    <!-- Chat references -->
+    <script src="js/alljoyn.js"></script>
+    <script src="js/chat.js"></script>
+</body>
+</html>

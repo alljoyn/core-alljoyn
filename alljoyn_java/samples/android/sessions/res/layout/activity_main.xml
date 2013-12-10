@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="fill_parent"
+	android:layout_height="wrap_content">
+
+<LinearLayout
+	android:orientation="vertical"
+	android:layout_width="fill_parent"
+	android:layout_height="wrap_content"
+	android:background="@drawable/background">
+    
+        <TextView android:id="@+id/WiFiRadio"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:textSize="7pt"
+			android:text="WI-FI RADIO"
+			android:textColor="#FF0000"/>	
+        
+        <View
+		    android:layout_width="fill_parent"
+		    android:layout_height="1dp"
+		    android:layout_marginTop="5dp"
+		    android:layout_marginBottom="15dp"
+		    android:background="@android:color/white"/>
+			
+		<ToggleButton android:id="@+id/WiFi"
+			android:layout_marginTop="8dp"
+			android:layout_marginBottom="8dp"
+			android:layout_width="200dp"
+            android:layout_height="wrap_content"
+			android:layout_gravity="center"
+			android:textSize="7pt"
+			android:textOn="WiFi"
+			android:textOff="WiFi"
+			android:layout_weight="1"
+			android:textColor="#FFFFFF"
+			android:textStyle="italic"/>
+    
+		<TextView android:id="@+id/TCPIPActivity"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:textSize="7pt"
+			android:layout_marginTop="15dp"
+			android:text="TCP/IP ACTIVITY"
+			android:textColor="#FF0000"/>
+		
+		<View
+		    android:layout_width="fill_parent"
+		    android:layout_height="1dp"
+		    android:layout_marginTop="5dp"
+		    android:layout_marginBottom="10dp"
+		    android:background="@android:color/white"/>
+	
+		<LinearLayout
+			android:orientation="horizontal"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content">
+			
+			<ToggleButton android:id="@+id/ConnectToAP"
+				android:layout_marginTop="8dp"
+				android:layout_marginBottom="8dp"
+				android:layout_width="fill_parent"
+	            android:layout_height="wrap_content"
+				android:textSize="7pt"
+				android:textOn="Yay! Internet!"
+				android:textOff="Connect to AP"
+				android:layout_weight="1"
+				android:textColor="#FFFFFF"
+				android:textStyle="italic"/>
+	
+			<ToggleButton android:id="@+id/ICMPPing"
+				android:layout_marginTop="8dp"
+				android:layout_marginBottom="8dp"
+				android:layout_width="fill_parent"
+	            android:layout_height="wrap_content"
+				android:textSize="7pt"
+				android:textOn="Pinging..."
+				android:textOff="Ping 4.2.2.2\n(20 iterations)"
+				android:layout_weight="1"
+				android:textColor="#FFFFFF"
+				android:textStyle="italic"/>
+	
+		</LinearLayout>
+		
+		<TextView android:id="@+id/ServiceAdvertisements"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:textSize="7pt"
+			android:layout_marginTop="15dp"
+			android:text="SERVICE ADVERTISEMENTS"
+			android:textColor="#FF0000"/>
+	
+		<View
+		    android:layout_width="fill_parent"
+		    android:layout_height="1dp"
+		    android:layout_marginTop="5dp"
+		    android:layout_marginBottom="15dp"
+		    android:background="@android:color/white"/>
+		
+		<LinearLayout
+			android:orientation="horizontal"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content">
+			
+			<Button android:id="@+id/AdvertiseName"
+				android:layout_marginTop="8dp"
+				android:layout_marginBottom="8dp"
+				android:layout_width="fill_parent"
+	            android:layout_height="wrap_content"
+				android:textSize="7pt"
+				android:text="Advertise"
+				android:layout_weight="1"
+				android:textColor="#FFFFFF"
+				android:textStyle="italic"/>
+	
+			<Button android:id="@+id/CancelAdvertiseName"
+				android:layout_marginTop="8dp"
+				android:layout_marginBottom="8dp"
+				android:layout_width="fill_parent"
+	            android:layout_height="wrap_content"
+				android:textSize="7pt"
+				android:text="Cancel Advertise"
+				android:layout_weight="1"
+				android:textColor="#FFFFFF"
+				android:textStyle="italic"/>
+	
+		</LinearLayout>				
+	
+		<Button android:id="@+id/AdvertisedList"
+			android:layout_marginTop="8dp"
+			android:layout_marginBottom="8dp"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:layout_gravity="center"
+			android:textSize="7pt"
+			android:text="Services being advertised"
+			android:textColor="#FFFFFF"
+			android:textStyle="italic"/>
+		
+		<TextView android:id="@+id/ServiceDiscovery"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:textSize="7pt"
+			android:layout_marginTop="15dp"
+			android:text="SERVICE DISCOVERY"
+			android:textColor="#FF0000"/>
+		
+		<View
+		    android:layout_width="fill_parent"
+		    android:layout_height="1dp"
+		    android:layout_marginTop="5dp"
+		    android:layout_marginBottom="15dp"
+		    android:background="@android:color/white"/>
+	
+		<LinearLayout
+			android:orientation="horizontal"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content">
+			
+			<Button android:id="@+id/FindAdvertisedName"
+				android:layout_marginTop="8dp"
+				android:layout_marginBottom="8dp"
+				android:layout_width="fill_parent"
+				android:layout_height="wrap_content"
+				android:layout_gravity="center"
+				android:textSize="7pt"
+				android:text="Find"
+				android:layout_weight="1"
+				android:textColor="#FFFFFF"
+				android:textStyle="italic"/>
+	
+			<Button android:id="@+id/CancelFindAdvertisedName"
+				android:layout_marginTop="8dp"
+				android:layout_marginBottom="8dp"
+				android:layout_width="fill_parent"
+	            android:layout_height="wrap_content"
+				android:textSize="7pt"
+				android:text="Cancel Find"
+				android:layout_weight="1"
+				android:textColor="#FFFFFF"
+				android:textStyle="italic"/>
+	
+		</LinearLayout>				
+	
+		<LinearLayout
+		    android:orientation="horizontal"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content">
+
+		<Button android:id="@+id/DiscoveringList"
+			android:layout_marginTop="8dp"
+			android:layout_marginBottom="8dp"
+			android:layout_width="fill_parent"
+	        android:layout_height="wrap_content"
+			android:textSize="7pt"
+			android:text="Services being discovered for"
+			android:layout_weight="1"
+			android:textColor="#FFFFFF"
+			android:textStyle="italic"/>
+		
+		<Button android:id="@+id/DiscoveredList"
+			android:layout_marginTop="8dp"
+			android:layout_marginBottom="8dp"
+			android:layout_width="fill_parent"
+	        android:layout_height="wrap_content"
+			android:textSize="7pt"
+			android:text="Services Found"
+			android:layout_weight="1"
+			android:textColor="#FFFFFF"
+			android:textStyle="italic"/>
+		
+		</LinearLayout>
+		
+		<TextView android:id="@+id/ConnectionText"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:textSize="7pt"
+			android:layout_marginTop="15dp"
+			android:text="CONNECTIVITY AND DATA TRANSFER"
+			android:textColor="#FF0000"/>
+		
+		<View
+		    android:layout_width="fill_parent"
+		    android:layout_height="1dp"
+		    android:layout_marginTop="5dp"
+		    android:layout_marginBottom="15dp"
+		    android:background="@android:color/white"/>
+	
+		<ToggleButton android:id="@+id/RemoteConnect"
+			android:layout_marginTop="8dp"
+			android:layout_marginBottom="8dp"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:layout_gravity="center"
+			android:textSize="7pt"
+			android:textOn="Session Established!"
+			android:textOff="Joyn with Peer"
+			android:textColor="#FFFFFF"
+			android:textStyle="italic"/>
+		
+		<Button android:id="@+id/TransferData"
+			android:layout_marginTop="8dp"
+			android:layout_marginBottom="8dp"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:layout_gravity="center"
+			android:textSize="7pt"
+			android:text="Perform AJ Method Calls (100 iterations)"
+			android:textColor="#FFFFFF"
+			android:textStyle="italic"/>
+		
+</LinearLayout>
+
+</ScrollView>

@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/2010/manifest">
+  <Identity Name="a9486bc2-5b1b-4c01-ba95-c7bf7ac2739a" Version="1.0.0.0" Publisher="CN=User" />
+  <Properties>
+    <DisplayName>chat</DisplayName>
+    <Description>chat</Description>
+    <PublisherDisplayName>AllSeen Alliance.</PublisherDisplayName>
+    <Logo>images\storelogo.png</Logo>
+  </Properties>
+  <Prerequisites>
+    <OSMinVersion>6.2</OSMinVersion>
+    <OSMaxVersionTested>6.2</OSMaxVersionTested>
+  </Prerequisites>
+  <Resources>
+    <Resource Language="x-generate" />
+  </Resources>
+  <Applications>
+    <Application Id="App" StartPage="default.html">
+      <VisualElements DisplayName="chat" Logo="images\logo.png" SmallLogo="images\smalllogo.png" Description="chat" ForegroundText="dark" BackgroundColor="#FFFFFF">
+        <DefaultTile ShowName="allLogos" ShortName="Chat" />
+        <SplashScreen Image="images\splashscreen.png" BackgroundColor="white" />
+        <InitialRotationPreference>
+          <Rotation Preference="portrait" />
+        </InitialRotationPreference>
+      </VisualElements>
+      <Extensions>
+        <Extension Category="windows.fileTypeAssociation">
+          <FileTypeAssociation Name=".log">
+            <SupportedFileTypes>
+              <FileType ContentType="text/plain">.log</FileType>
+            </SupportedFileTypes>
+          </FileTypeAssociation>
+        </Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <Capability Name="documentsLibrary" />
+    <Capability Name="internetClientServer" />
+    <Capability Name="internetClient" />
+    <Capability Name="privateNetworkClientServer" />
+    <DeviceCapability Name="proximity" />
+    <DeviceCapability Name="location" />
+  </Capabilities>
+</Package>

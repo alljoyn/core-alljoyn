@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Connectionless Chat</string>
+
+    <string name="enterMessageHint">Enter message</string>
+
+    <string name="Name">Name</string>
+</resources>

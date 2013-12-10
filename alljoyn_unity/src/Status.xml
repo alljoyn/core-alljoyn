@@ -1,0 +1,23 @@
+<!--
+Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+
+   Permission to use, copy, modify, and/or distribute this software for any
+   purpose with or without fee is hereby granted, provided that the above
+   copyright notice and this permission notice appear in all copies.
+
+   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+   WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+   MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+   ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+   WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+   ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+   OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+-->
+<status_block xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="../common/src/Status.xml"/>
+  <xi:include href="../alljoyn_core/src/Status.xml"/>
+
+  <!-- Unity specific status messages can be added here using the follwing pattern-->
+  <!-- <status name="ER_{STATUS_NAME}" value="0x{STATUS_VALUE_IN_HEX}" comment="{short description of the meaning of the status}"/> -->
+</status_block>

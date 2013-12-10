@@ -1,0 +1,67 @@
+# Copyright (c) 2010 - 2011, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+Import('ajenv')
+Import('common_static_objs')
+Import('common_shared_objs')
+from os.path import basename
+
+# Need to clone the environment so that building a shared library does not
+# cause a circular dependency.
+libenv = ajenv.Clone()
+
+# AllJoyn Sources
+srcs = [ f for f in libenv.Glob('*.cc') + libenv.Glob('*.c')
+         if not (str(f).endswith('version.cc')) ]
+
+winrt_status_srcs = [ 'Status_CPP0x.cc', 'StatusComment.cc' ]
+if libenv['OS_GROUP'] != 'winrt':
+    srcs = [ f for f in srcs if basename(str(f)) not in winrt_status_srcs ]
+
+# Platform specific sources
+if libenv['OS'] == 'darwin':
+    os_srcs = [ f for f in libenv.Glob(libenv['OS'] + '/*.cc') ]
+else:
+    os_srcs = [ f for f in libenv.Glob(libenv['OS_GROUP'] + '/*.cc') ]
+
+    if libenv['OS'] == 'openwrt':
+        os_srcs += [ f for f in libenv.Glob('posix/linux/*.cc')]
+    else:
+        os_srcs += [ f for f in libenv.Glob(libenv['OS_GROUP'] + '/' + libenv['OS'] + '/*.cc')]
+
+version_cc = libenv.GenVersion('version')
+
+static_objs = common_static_objs + libenv.Object(srcs) + libenv.Object(os_srcs)
+libenv.Depends(version_cc, static_objs)
+static_objs.append(libenv.Object(version_cc))
+
+if libenv['LIBTYPE'] == 'static':
+    shared_objs = []
+else:
+    shared_objs = common_shared_objs + libenv.SharedObject(srcs) + libenv.SharedObject(os_srcs)
+    libenv.Depends(version_cc, shared_objs)
+    shared_objs.append(libenv.SharedObject(version_cc))
+
+if libenv['OS_GROUP'] == 'winrt':
+    libs = None
+    # winrt-specific build step
+    static_objs.append(libenv.SConscript(libenv['OS_GROUP'] + '/SConscript', exports = ['libenv']));
+else:
+    # AllJoyn Static Library
+    libs = libenv.StaticLibrary('alljoyn', static_objs)
+    if libenv['LIBTYPE'] != 'static':
+        libs.append(libenv.SharedLibrary('alljoyn', shared_objs))
+
+Return ('libs', 'static_objs', 'shared_objs')

@@ -1,0 +1,33 @@
+# Copyright (c) 2011, 2013, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+Import('env')
+
+# The return value is the collection of files installed in the build destination.
+returnValue = env.SConscript('JavaSDKDocMethodsClient/SConscript', exports = ['env'])
+returnValue += env.SConscript('JavaSDKDocMethodsService/SConscript', exports = ['env'])
+returnValue += env.SConscript('JavaSDKDocPropertiesClient/SConscript', exports = ['env'])
+returnValue += env.SConscript('JavaSDKDocPropertiesService/SConscript', exports = ['env'])
+returnValue += env.SConscript('JavaSDKDocSecurityLogonClient/SConscript', exports = ['env'])
+returnValue += env.SConscript('JavaSDKDocSecurityLogonService/SConscript', exports = ['env'])
+returnValue += env.SConscript('JavaSDKDocSecurityRsaClient/SConscript', exports = ['env'])
+returnValue += env.SConscript('JavaSDKDocSecurityRsaClient2/SConscript', exports = ['env'])
+returnValue += env.SConscript('JavaSDKDocSecurityRsaService/SConscript', exports = ['env'])
+returnValue += env.SConscript('JavaSDKDocSecuritySRPClient/SConscript', exports = ['env'])
+returnValue += env.SConscript('JavaSDKDocSecuritySRPService/SConscript', exports = ['env'])
+returnValue += env.SConscript('JavaSDKDocSignalClient/SConscript', exports = ['env'])
+returnValue += env.SConscript('JavaSDKDocSignalService/SConscript', exports = ['env'])
+
+Return('returnValue')

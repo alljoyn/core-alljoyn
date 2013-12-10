@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "AllJoynWinInstaller", "AllJoynWinInstaller.vdproj", "{980DB70B-D639-4517-8C90-5DA559F3F061}"
+	ProjectSection(ProjectDependencies) = postProject
+		{EF347273-73D0-49C5-AD46-BEFCE94056A9} = {EF347273-73D0-49C5-AD46-BEFCE94056A9}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ExpandCab", "ExpandCab\ExpandCab.vcxproj", "{EF347273-73D0-49C5-AD46-BEFCE94056A9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{980DB70B-D639-4517-8C90-5DA559F3F061}.Debug|Win32.ActiveCfg = Debug
+		{980DB70B-D639-4517-8C90-5DA559F3F061}.Debug|Win32.Build.0 = Debug
+		{980DB70B-D639-4517-8C90-5DA559F3F061}.Release|Win32.ActiveCfg = Release
+		{980DB70B-D639-4517-8C90-5DA559F3F061}.Release|Win32.Build.0 = Release
+		{EF347273-73D0-49C5-AD46-BEFCE94056A9}.Debug|Win32.ActiveCfg = Debug|Win32
+		{EF347273-73D0-49C5-AD46-BEFCE94056A9}.Debug|Win32.Build.0 = Debug|Win32
+		{EF347273-73D0-49C5-AD46-BEFCE94056A9}.Release|Win32.ActiveCfg = Release|Win32
+		{EF347273-73D0-49C5-AD46-BEFCE94056A9}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+   <!--
+
+        Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+
+           Permission to use, copy, modify, and/or distribute this software for any
+           purpose with or without fee is hereby granted, provided that the above
+           copyright notice and this permission notice appear in all copies.
+
+           THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+           WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+           MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+           ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+           WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+           ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+           OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+  -->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="match_parent"
+    >
+
+    <include
+        android:id="@+id/about_current_network"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        layout="@layout/current_network_layout"/>
+    
+    <!-- About version -->
+    <TextView
+        android:id="@+id/about_version_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/about_current_network"
+        android:text="@string/version"        
+        android:textSize="20sp"
+        android:padding="5dp" />
+    
+    <TextView
+        android:id="@+id/about_version_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" 
+        android:layout_toRightOf="@id/about_version_label"       
+        android:layout_alignBaseline="@id/about_version_label"
+        android:textSize="20sp"
+        android:padding="5dp" />
+
+    <!-- About language -->
+    <TextView
+        android:id="@+id/about_language_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/about_version_label"
+        android:text="@string/about_language"        
+        android:textSize="20sp"
+        android:padding="5dp" />
+    
+    <TextView
+        android:id="@+id/about_language_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" 
+        android:layout_toRightOf="@id/about_language_label"
+        android:layout_alignBaseline="@id/about_language_label"       
+        android:textSize="20sp"
+        android:padding="5dp" />
+    
+    <!-- Bus object description -->
+    <TextView
+        android:id="@+id/bus_description_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/about_language_label"
+        android:text="@string/bus_description_label"        
+        android:textSize="20sp"
+        android:padding="5dp" />
+    
+  	<ListView
+        android:id="@+id/bus_description_list"        
+        android:layout_width="fill_parent"
+        android:layout_height="150dp"
+        android:layout_below="@id/bus_description_label"
+        android:layout_marginTop="14dp"
+        android:background="@color/background_focused"
+        android:cacheColorHint="@color/background_focused"
+        >
+    </ListView>
+    
+    <!-- About data -->
+    <TextView
+        android:id="@+id/about_map_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/bus_description_list"
+        android:text="@string/about_data_label"        
+        android:textSize="20sp"
+        android:padding="5dp" />
+    
+  	<ListView
+        android:id="@+id/about_map_list"        
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_below="@id/about_map_label"
+        android:layout_marginTop="14dp"
+        android:background="@color/background_focused"
+        android:cacheColorHint="@color/background_focused"
+        >
+    </ListView>
+
+</RelativeLayout>
+
+
+

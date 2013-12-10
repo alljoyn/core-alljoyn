@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+   <!--
+
+        Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+
+           Permission to use, copy, modify, and/or distribute this software for any
+           purpose with or without fee is hereby granted, provided that the above
+           copyright notice and this permission notice appear in all copies.
+
+           THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+           WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+           MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+           ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+           WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+           ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+           OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+  -->
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/about_config_layout"
+    android:layout_width="wrap_content"
+    android:layout_height="fill_parent"
+    android:descendantFocusability="beforeDescendants"
+    android:focusableInTouchMode="true"
+    >
+    
+    <Button
+        android:id="@+id/AllJoynConnect"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:text="@string/AllJoynConnect" />
+    
+    <include
+        android:id="@+id/devices_current_network"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        layout="@layout/current_network_layout"
+        android:layout_below="@id/AllJoynConnect" />
+    
+    <ListView
+        android:id="@android:id/list"        
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_below="@id/devices_current_network"
+        android:layout_marginTop="14dp"
+        android:background="@color/background_focused"
+        android:cacheColorHint="@color/background_focused"
+        android:visibility="visible">
+    </ListView> 
+    
+</RelativeLayout>
+

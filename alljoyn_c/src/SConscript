@@ -1,0 +1,39 @@
+# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+Import('env')
+
+# AllJoyn Sources
+srcs = env.Glob('*.cc')
+
+objs = env.Object(srcs)
+objs_shared = env.SharedObject(srcs)
+
+# Windows produces two types of .lib files.  
+#    - static library used for statically linking 
+#    - import library used for linking with a shared library (i.e. a dll).
+# Depending on the build setup both file types may be needed.  To distinguish 
+# between the static library and the import library on windows the static 
+# library will be called alljoyn_c_static.lib and the import library will be 
+# called alljoyn_c.lib.
+# see http://msdn.microsoft.com/en-us/library/ba1z7822.aspx for more info.
+# For all other OSs there is no need to make this distinction.   
+if env['OS_GROUP'] == 'windows' or env['OS_GROUP'] == 'winrt':
+    liballjoyn_c_static = env.StaticLibrary('alljoyn_c_static', objs)
+else:
+    liballjoyn_c_static = env.StaticLibrary('alljoyn_c', objs)
+liballjoyn_c_shared = env.SharedLibrary('alljoyn_c', objs_shared)
+
+Return('liballjoyn_c_static', 'liballjoyn_c_shared')

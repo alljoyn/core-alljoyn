@@ -1,0 +1,73 @@
+# Copyright (c) 2010 - 2011, 2013, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+import os
+import sys
+
+Import('env')
+
+# Dependent Projects
+if not env.has_key('_ALLJOYNC_'):
+    # alljoyn_c is required for the unity_bindings
+    env.SConscript('../alljoyn_c/SConscript')
+
+unityenv = env.Clone()
+
+vars = Variables();
+#TODO place any environment vars here
+vars.Update(unityenv)
+Help(vars.GenerateHelpText(unityenv))
+
+sys.path.append(str(unityenv.Dir('../build_core/tools/scons').srcnode()))
+
+# Make alljoyn_unity dist a sub-directory of the alljoyn dist.  This avoids any conflicts with alljoyn dist targets.
+unityenv['UNITY_DISTDIR'] = unityenv['DISTDIR'] + '/unity'
+unityenv['UNITY_TESTDIR'] = unityenv['TESTDIR'] + '/unity'
+
+# Add support for multiple build targets in the same workset
+unityenv.VariantDir('$OBJDIR', 'src', duplicate = 0)
+unityenv.VariantDir('$OBJDIR/samples', 'samples', duplicate = 0)
+
+#alljoyn_unity.dll
+unityenv['ALLJOYN_UNITY_LIB'] = unityenv.SConscript('src/SConscript', exports = {'env':unityenv})
+
+# Sample programs
+progs = unityenv.SConscript('samples/SConscript', exports = {'env':unityenv})
+
+#install Package support files
+package_support_dir = unityenv.Dir('package_support/UnityPackage')
+unityenv.Install('$UNITY_DISTDIR/package_support', package_support_dir)
+
+#install libraries into the package support directory
+if unityenv['OS_GROUP'] == 'windows':
+    #place alljoyn_unity.dll into the samples
+    unityenv.Install('package_support/UnityPackage/Assets/Plugins', unityenv['ALLJOYN_UNITY_LIB'])
+
+    #place alljoyn_c.dll into the samples
+    liballjoyn_c = '$DISTDIR/c/lib/alljoyn_c.dll'
+    unityenv.Install('package_support/UnityPackage/Assets/Plugins', liballjoyn_c)
+
+if unityenv['OS'] == 'android':
+    #place alljoyn_unity.dll into the samples
+    unityenv.Install('package_support/UnityPackage/Assets/Plugins', unityenv['ALLJOYN_UNITY_LIB'])
+
+    #place liballjoyn_c.so into the samples
+    liballjoyn_c = '$DISTDIR/c/lib/liballjoyn_c.so'
+    unityenv.Install('package_support/UnityPackage/Assets/Plugins/Android', liballjoyn_c)
+
+#Build unit tests
+unityenv.SConscript('unit_test/SConscript', exports = {'env':unityenv})
+# Build docs
+unityenv.SConscript('docs/SConscript', exports = {'env':unityenv})

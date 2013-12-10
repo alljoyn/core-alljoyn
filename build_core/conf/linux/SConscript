@@ -1,0 +1,59 @@
+# Copyright (c) 2010 - 2011, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+Import('env')
+import os
+
+# Linux specific flags
+env.Append(CPPDEFINES = ['QCC_OS_LINUX'])
+env.Append(CPPDEFINES = ['_GLIBCXX_USE_C99_FP_MACROS_DYNAMIC'])
+
+env.Append(CFLAGS = ['-Wall',
+                     '-Werror=non-virtual-dtor',
+                     '-pipe',
+                     '-std=c99',
+                     '-fno-strict-aliasing',
+                     '-fno-asynchronous-unwind-tables',
+                     '-fno-unwind-tables',
+                     '-ffunction-sections',
+                     '-fdata-sections',
+                     '-Wno-long-long'])
+
+env.Append(CXXFLAGS = ['-Wall',
+                       '-Werror=non-virtual-dtor',
+                       '-pipe',
+                       '-std=gnu++0x',
+                       '-fno-exceptions',
+                       '-fno-strict-aliasing',
+                       '-fno-asynchronous-unwind-tables',
+                       '-fno-unwind-tables',
+                       '-ffunction-sections',
+                       '-fdata-sections',
+                       '-Wno-long-long',
+                       '-Wno-deprecated'])
+
+env.Append(JAVACFLAGS = ['-Xlint', '-Xlint:-serial'])
+
+# Debug/Release Variants
+if env['VARIANT'] == 'debug':
+   env.Append(CFLAGS = '-g')
+   env.Append(CXXFLAGS = '-g')
+   env.Append(JAVACFLAGS = '-g')
+else:
+   env.Append(CFLAGS = '-Os')
+   env.Append(CXXFLAGS = '-Os')
+   env.Append(LINKFLAGS = ['-s', '-Wl,--gc-sections'])
+
+env.SConscript('${CPU}/SConscript')

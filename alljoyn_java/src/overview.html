@@ -1,0 +1,61 @@
+<body>
+This document is the specification for the AllJoyn Java API.
+<h2><a id="subsection1">Overview</a></h2>
+AllJoyn is a device-to-device communication protocol which enables mobile devices to support peer-to-peer applications such as multi-player gaming and social networking.
+<p>
+AllJoyn is designed as a backwards-compatible extension of DBus, a standard protocol for inter-application communication in the Linux desktop environment. It offers the following features:
+<p>
+<ul>
+<li>Cross platform/OS/device</li>
+<li>Peer-to-peer communication</li>
+<li>Simplified service discovery</li>
+<li>Flexible security framework and trust models</li>
+<li>Transport agnostic / multi-protocol support</li>
+<li>Multi-language support for the AllJoyn API</li>
+</ul>
+<p>
+This document describes the Java language binding for the AllJoyn API. It covers the following topics:
+<p>
+<ul>
+<li><a href="#section2">Type Signatures</a></li>
+<li><a href="#section3">Messages</a></li>
+<li><a href="#section4">Signals</a></li>
+</ul>
+<h2><a id="section2">Type Signatures</a></h2>
+AllJoyn uses the same type signatures that are used by the DBus protocol.  The type signature is made up of <em>type codes</em>.  Type code is an ASCII character that represents a standard data type.
+<p>
+The following table summarizes the AllJoyn types.
+<table border="1" width="100%" cellpadding="3" cellspacing="0">
+<tr bgcolor="#ccccff" class="tableheadingcolor"><th><b>Conventional Name</b></th><th><b>Code</b></th><th><b>ASCII</b></th><th><b>Description</b></th></tr>
+<tr><td>INVALID</td><td>0</td><td>NUL</td><td>Not a valid type code, used to terminate signatures</td></tr>
+<tr><td>BYTE</td><td>121</td><td>'y'</td><td>8-bit unsigned integer</td></tr>
+<tr><td>BOOLEAN</td><td>98</td><td>'b'</td><td>Boolean value, 0 is <tt>FALSE</tt> and 1 is <tt>TRUE</tt>. Everything else is invalid.</td></tr>
+<tr><td>INT16</td><td>110</td><td>'n'</td><td>16-bit signed integer</td></tr>
+<tr><td>UINT16</td><td>113</td><td>'q'</td><td>16-bit unsigned integer</td></tr>
+<tr><td>INT32</td><td>105</td><td>'i'</td><td>32-bit signed integer</td></tr>
+<tr><td>UINT32</td><td>117</td><td>'u'</td><td>32-bit unsigned integer</td></tr>
+<tr><td>INT64</td><td>120</td><td>'x'</td><td>64-bit signed integer</td></tr>
+<tr><td>UINT64</td><td>116</td><td>'t'</td><td>64-bit unsigned integer</td></tr>
+<tr><td>DOUBLE</td><td>100</td><td>'d'</td><td>IEEE 754 double</td></tr>
+<tr><td>STRING</td><td>115</td><td>'s'</td><td>UTF-8 string (<em>must</em> be valid UTF-8). Must be nul terminated and contain no other nul bytes.</td></tr>
+<tr><td>OBJECT_PATH</td><td>111</td><td>'o'</td><td>Name of an object instance</td></tr>
+<tr><td>SIGNATURE</td><td>103</td><td>'g'</td><td>A type signature</td></tr>
+<tr><td>ARRAY</td><td>97</td><td>'a'</td><td>Array</td></tr>
+<tr><td>STRUCT</td><td>114, 40, 41</td><td>'r','(',')'</td><td>Struct</td></tr>
+<tr><td>VARIANT</td><td>118</td><td>'v'</td><td>Variant type (the type of the value is part of the value itself)</td></tr>
+<tr><td>DICT_ENTRY</td><td>101, 123, 125</td><td>'e','{','}'</td><td>Entry in a dict or map (array of key-value pairs)</td></tr>
+</table>
+<p>
+Four of the types are <em>container</em> types: <tt>STRUCT, ARRAY, VARIANT,</tt> and <tt>DICT_ENTRY</tt>.  All other types are a common basic data types. 
+<p>
+When specifying a <tt>STRUCT</tt> or <tt>DICT_ENTRY</tt>, 'r' and 'e' should not be used. Instead use ASCII characters '(', ')', '{', and '}' 
+to mark the beginning and ending of a container.  
+<dt><b>Note:</b><dd>Not all of the data types supported by AllJoyn are available in Java.</dd></dt>
+@see org.alljoyn.bus.annotation.Signature org.alljoyn.bus.annotation.Signature</code></a> for a list of which Java types are compatible with AllJoyn types.</dd>
+<p>
+<h2><a id="section3">Message</a></h2>
+A message is a unit of communication via the AllJoyn protocol.  A message can send an receive any number of values.
+<p>
+<h2><a id="section4">Signals</a></h2>
+A signal is an outbound value that is transmitted on the bus.
+</body>

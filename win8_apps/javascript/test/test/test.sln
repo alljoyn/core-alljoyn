@@ -1,0 +1,38 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 11
+Project("{262852C6-CD72-467D-83FE-5EEB1973A190}") = "test", "test.jsproj", "{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
+		Debug|x64 = Debug|x64
+		Debug|Win32 = Debug|Win32
+		Release|ARM = Release|ARM
+		Release|x64 = Release|x64
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Debug|ARM.ActiveCfg = Debug|ARM
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Debug|ARM.Build.0 = Debug|ARM
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Debug|ARM.Deploy.0 = Debug|ARM
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Debug|x64.ActiveCfg = Debug|x64
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Debug|x64.Build.0 = Debug|x64
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Debug|x64.Deploy.0 = Debug|x64
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Debug|Win32.ActiveCfg = Debug|x86
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Debug|Win32.Build.0 = Debug|x86
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Debug|Win32.Deploy.0 = Debug|x86
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Release|ARM.ActiveCfg = Release|ARM
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Release|ARM.Build.0 = Release|ARM
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Release|ARM.Deploy.0 = Release|ARM
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Release|x64.ActiveCfg = Release|x64
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Release|x64.Build.0 = Release|x64
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Release|x64.Deploy.0 = Release|x64
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Release|Win32.ActiveCfg = Release|x86
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Release|Win32.Build.0 = Release|x86
+		{C0FC4565-BA7A-4003-AEB5-D45B9260B1F8}.Release|Win32.Deploy.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

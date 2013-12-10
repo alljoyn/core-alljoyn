@@ -1,0 +1,196 @@
+AllSeen Alliance version number 3.4.5 is the same Release described in this file.
+
+-----------------------------------
+AllJoyn Version 3.4.3 Release Notes
+-----------------------------------
+
+Platform Support
+----------------
+ 1) Linux Ubuntu (32 and 64 bit x86)
+ 2) Android Gingerbread 2.3.4 (ARM7)
+ 3) Android Ice Cream Sandwich 4.0 (ARM7)
+ 4) Android JellyBean 4.1 (ARM7)
+ 5) Windows 7 (32 and 64 bit x86)
+ 6) Windows 8 (32 and 64 bit x86)
+ 7) Windows RT (ARM)
+ 8) iOS 7
+ 9) OSX 10.7 Lion
+10) OpenWRT (trunk)
+
+
+Features added in Version 3.4.3
+-------------------------------
+
+None
+
+
+Issues Addressed in Version 3.4.3
+---------------------------------
+
+ALLJOYN-2431: Support configuring databits, parity, and stopbits of SLAP
+transport.
+
+ALLJOYN-2483: Final cancel of advertisement is not sent if application
+terminates abruptly.
+
+ALLJOYN-2502: Increase timeout of session route setup to be more robust under
+stressful conditions.
+
+ALLJOYN-2507: LostAdvertisedName not always triggered for quiet advertisements.
+
+ALLJOYN-2514: Authentication error between little-endian and big-endian hosts.
+
+ALLJOYN-VARIOUS: Added support to JavaScript bindings for new API changes to
+report reason for lost session.
+
+ALLJOYN-VARIOUS: Added support to JavaScript bindings for new API changes to
+allow removal of member from multipoint session.
+
+
+Known Issues
+------------
+
+About feature not yet supported on platforms other than Linux and Android.
+
+ALLJOYN-1967: AllJoyn daemon cannot (quickly) detect disconnection of non-local
+client connection such as thin-client connection
+
+ALLJOYN-2192: AllJoyn thin client does not support header compression
+
+ALLJOYN-2374: AllJoyn thin client binding cannot send/receive messages larger
+than 55KB
+
+ALLJOYN-2504: Calling GetPeerGUID from RequestCredentialsAsync callback may
+cause deadlock when AllJoyn is built with OpenSSL without multi-thread support
+
+ALLJOYN-VARIOUS: JavaScript and Win8/RT language bindings do not currently
+support the new object based security APIs.
+
+ALLJOYN-VARIOUS: Win8/RT bindings do not currently support new API changes to
+report reason for lost session
+
+ALLJOYN-VARIOUS: Win8/RT bindings do not currently support new API changes to
+allow removal of member from multipoint session
+
+
+Compatibility
+-------------
+
+Applications written for AllJoyn 1.X will need to be modified and rebuilt for
+use with AllJoyn 2.0 and later.
+
+The AllJoyn wire protocol related to encryption and authentication has changed
+in the 2.1.0 release. AllJoyn interfaces that use security will not
+inter-operate with devices whose AllJoyn version is less than 2.1.0.
+
+The AllJoyn wire protocol was modified to have a 128kB maximum message size
+starting with version 2.1.0. Earlier versions of AllJoyn which attempt to send
+messages that are greater than 128kB will not inter-operate with versions
+greater than or equal to 2.1.0.
+
+Starting with version 2.2.0, AllJoyn clients on Android must obtain the manifest
+permissions needed to access wifi and Bluetooth in order to reach external
+AllJoyn nodes. These permissions are INTERNET, CHANGE_WIFI_MULTICAST_STATE,
+BLUETOOTH and BLUETOOTH_ADMIN.
+
+Starting with version 2.2.0 BusAttachment::Stop(bool) and
+BusAttachment::WaitStop() were changed to BusAttachment::Stop() and
+BusAttachment::Join() to be more consistent with the internal threading model of
+AllJoyn (ALLJOYN-803).
+
+Starting with version 2.5.0, AllJoyn control related callbacks such as
+BusListener::FoundAdvertisedName cannot make AllJoyn remote procedure calls or
+any type of blocking call without first enabling concurrent callbacks via the
+new BusAttachment.EnableConcurrentCallbacks() API.
+
+Version 3.0.0 shipped with an issue (ALLJOYN-1423) that prevented earlier versions
+of AllJoyn from seeing multicast advertisements produced by 3.0.0 based
+applications. This issue was addressed in version 3.0.1.
+
+Version 3.3.0 is the first version of the AllJoyn daemon that is compatible with
+AllJoyn thin client usage. Older daemons cannot be used with AllJoyn thin-clients.
+
+Starting with version 3.3.0, the AllJoyn Java binding call
+BusAttachement.registerSignalHandler() no longer implicitly adds a match rule
+that allows all globally broadcast signals of the given interface to be received.
+Beginning with version 3.3.0 of the Java binding, the application developer is
+responsible for explicitly calling BusAttachment.AddMatch with a rule that
+matches the globally broadcast signals that the app wishes to receive.
+
+Starting with version 3.4.0 the AllJoyn daemon and sample programs use a common
+shared library called liballjoyn.so on Linux and OpenWrt. In order to run these
+programs, you will need to set the LD_LIBRARY_PATH environment variable to
+include the directory where liballjoyn.so is located.
+
+Version 3.4 of the AllJoyn ICE transport changed the hostname for the Rendezvous
+server from rdvz.alljoyn.org to connect.alljoyn.org. As a result, pre-3.4 versions
+of AllJoyn cannot discover or connect using the ICE transport.
+
+
+Change history
+--------------
+
+3.4.3 - Bug fixes.
+
+3.4.2 - Bug fixes.
+    
+3.4.1 - Bug fixes.
+
+3.4.0 - Added support for Serial Line AllJoyn Protocol (SLAP) transport and
+        object level security.
+
+3.3.2 - Bug fixes.
+
+3.3.0 - Support for AllJoyn thin-clients. Enhanced sessionless signal support.
+
+3.2.0 - Support for OpenWRT, asynchronous callbacks in JavaScript binding, 
+        and sessionless signals.
+        
+3.0.2 - Bug fixes.
+
+3.0.1 - Bug fixes.
+
+3.0.0 - Added support for Win8 / WinRT and iOS / OSX
+
+2.6.0 - Support for "bundled daemon" wherein an application developer can
+        include all necessary AllJoyn components directly into their app.
+        Added AllJoyn Extension for Unity.
+
+2.5.1 - Bug fixes.
+
+2.5.0 - Support for ICE transport.  Support for Concurrent Methods/Signals.
+        Added new API BusAttachment.SetLinkTimeoutAsync. Added GoogleTest
+        Suite for AllJoyn core.
+
+2.3.6 - Added AllJoyn Extension for Unity (AllJoyn 2.3.6 only).
+        Note: AllJoyn Extension for Unity was NOT included in AllJoyn 2.5.x,
+        but was back again in AllJoyn 2.6.0 and later releases.
+
+2.3.5 - Bug fixes.
+
+2.3.3 - Bug fixes.
+
+2.3.2 - Bug fixes.
+
+2.3.1 - Bug fixes.
+
+2.3.0 - Added support for dynamic enable/disable of Bluetooth device on
+        Windows. Alpha support for Android ICS. BT and Windows stability.
+
+2.2.0 - Support for bundled daemon. BT fixes. Minor mods to security API.
+        Support for link timeout. Support for Android manifest enforced
+        security. Support for parallel authentication. Added
+        SessionMemberAdded/SessionMemberRemoved. Added BusAttachment::release()
+        to Java binding. Support for BusAttachment::Set/GetKeyExpiration().
+        Support for Windows CNG.
+
+2.1.0 - Added Java thread safety. Security fixes. Minor mods to security API.
+        Added AllJoyn.apk for non-rooted devices (wifi only).
+
+2.0.1 - Bug fixes.
+
+2.0.0 - Added sessions and topology management.
+        API's and daemon protocols changed.
+
+1.8.0 - Initial Open Source Release
+

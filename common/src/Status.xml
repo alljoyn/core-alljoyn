@@ -1,0 +1,95 @@
+<!--
+Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+
+   Permission to use, copy, modify, and/or distribute this software for any
+   purpose with or without fee is hereby granted, provided that the above
+   copyright notice and this permission notice appear in all copies.
+
+   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+   WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+   MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+   ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+   WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+   ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+   OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+-->
+<status_block xmlns:xi="http://www.w3.org/2001/XInclude">
+
+  <status name="ER_OK" value="0x0" comment="Success."/>
+  <status name="ER_FAIL" value="0x1" comment="Generic failure."/>
+  <status name="ER_UTF_CONVERSION_FAILED" value="0x2" comment="Conversion between UTF bases failed."/>
+  <status name="ER_BUFFER_TOO_SMALL" value="0x3" comment="Not enough space in buffer for operation."/>
+  <status name="ER_OS_ERROR" value="0x4" comment="Underlying OS has indicated an error."/>
+  <status name="ER_OUT_OF_MEMORY" value="0x5" comment="Failed to allocate memory."/>
+  <status name="ER_SOCKET_BIND_ERROR" value="0x6" comment="Bind to IP address failed."/>
+  <status name="ER_INIT_FAILED" value="0x7" comment="Initialization failed."/>
+  <status name="ER_WOULDBLOCK" value="0x8" comment="An I/O attempt on non-blocking resource would block"/>
+  <status name="ER_NOT_IMPLEMENTED" value="0x9" comment="Feature not implemented"/>
+  <status name="ER_TIMEOUT" value="0xa" comment="Operation timed out"/>
+  <status name="ER_SOCK_OTHER_END_CLOSED" value="0xb" comment="Other end closed the socket"/>
+  <status name="ER_BAD_ARG_1" value="0xc" comment="Function call argument 1 is invalid"/>
+  <status name="ER_BAD_ARG_2" value="0xd" comment="Function call argument 2 is invalid"/>
+  <status name="ER_BAD_ARG_3" value="0xe" comment="Function call argument 3 is invalid"/>
+  <status name="ER_BAD_ARG_4" value="0xf" comment="Function call argument 4 is invalid"/>
+  <status name="ER_BAD_ARG_5" value="0x10" comment="Function call argument 5 is invalid"/>
+  <status name="ER_BAD_ARG_6" value="0x11" comment="Function call argument 6 is invalid"/>
+  <status name="ER_BAD_ARG_7" value="0x12" comment="Function call argument 7 is invalid"/>
+  <status name="ER_BAD_ARG_8" value="0x13" comment="Function call argument 8 is invalid"/>
+  <status name="ER_INVALID_ADDRESS" value="0x14" comment="Address is NULL or invalid"/>
+  <status name="ER_INVALID_DATA" value="0x15" comment="Generic invalid data error"/>
+  <status name="ER_READ_ERROR" value="0x16" comment="Generic read error"/>
+  <status name="ER_WRITE_ERROR" value="0x17" comment="Generic write error"/>
+  <status name="ER_OPEN_FAILED" value="0x18" comment="Generic open failure"/>
+  <status name="ER_PARSE_ERROR" value="0x19" comment="Generic parse failure"/>
+  <status name="ER_END_OF_DATA" value="0x1A" comment="Generic EOD/EOF error"/>
+  <status name="ER_CONN_REFUSED" value="0x1B" comment="Connection was refused because no one is listening"/>
+  <status name="ER_BAD_ARG_COUNT" value="0x1C" comment="Incorrect number of arguments given to function call"/>
+  <status name="ER_WARNING" value="0x1D" comment="Generic warning"/>
+
+  <status name="ER_COMMON_ERRORS" value="0x1000" comment="Error code block for the Common subsystem."/>
+  <status name="ER_STOPPING_THREAD" value="0x1001" comment="Operation interrupted by ERThread stop signal."/>
+  <status name="ER_ALERTED_THREAD" value="0x1002" comment="Operation interrupted by ERThread alert signal."/>
+  <status name="ER_XML_MALFORMED" value="0x1003" comment="Cannot parse malformed XML"/>
+  <status name="ER_AUTH_FAIL" value="0x1004" comment="Authentication failed"/>
+  <status name="ER_AUTH_USER_REJECT" value="0x1005" comment="Authentication was rejected by user"/>
+  <status name="ER_NO_SUCH_ALARM" value="0x1006" comment="Attempt to reference non-existent timer alarm"/>
+  <status name="ER_TIMER_FALLBEHIND" value="0x1007" comment="A timer thread is missing scheduled alarm times"/>
+  <status name="ER_SSL_ERRORS" value="0x1008" comment="Error code block for SSL subsystem"/>
+  <status name="ER_SSL_INIT" value="0x1009" comment="SSL initialization failed."/>
+  <status name="ER_SSL_CONNECT" value="0x100a" comment="Failed to connect to remote host using SSL"/>
+  <status name="ER_SSL_VERIFY" value="0x100b" comment="Failed to verify identity of SSL destination"/>
+  <status name="ER_EXTERNAL_THREAD" value="0x100c" comment="Operation not supported on external thread wrapper"/>
+  <status name="ER_CRYPTO_ERROR" value="0x100d" comment="Non-specific error in the crypto subsystem"/>
+  <status name="ER_CRYPTO_TRUNCATED" value="0x100e" comment="Not enough room for key"/>
+  <status name="ER_CRYPTO_KEY_UNAVAILABLE" value="0x100f" comment="No key to return"/>
+  <status name="ER_BAD_HOSTNAME" value="0x1010" comment="Cannot lookup hostname"/>
+  <status name="ER_CRYPTO_KEY_UNUSABLE" value="0x1011" comment="Key cannot be used"/>
+  <status name="ER_EMPTY_KEY_BLOB" value="0x1012" comment="Key blob is empty"/>
+  <status name="ER_CORRUPT_KEYBLOB" value="0x1013" comment="Key blob is corrupted"/>
+  <status name="ER_INVALID_KEY_ENCODING" value="0x1014" comment="Encoded key is not valid"/>
+  <status name="ER_DEAD_THREAD" value="0x1015" comment="Operation not allowed thread is dead"/>
+  <status name="ER_THREAD_RUNNING" value="0x1016" comment="Cannot start a thread that is already running"/>
+  <status name="ER_THREAD_STOPPING" value="0x1017" comment="Cannot start a thread that is already stopping"/>
+  <status name="ER_BAD_STRING_ENCODING" value="0x1018" comment="Encoded string did not have the expected format or contents"/>
+  <status name="ER_CRYPTO_INSUFFICIENT_SECURITY" value="0x1019" comment="Crypto algorithm parameters do not provide sufficient security"/>
+  <status name="ER_CRYPTO_ILLEGAL_PARAMETERS" value="0x101a" comment="Crypto algorithm parameter value is illegal"/>
+  <status name="ER_CRYPTO_HASH_UNINITIALIZED" value="0x101b" comment="Cryptographic hash function must be initialized"/>
+  <status name="ER_THREAD_NO_WAIT" value="0x101c" comment="Thread cannot be blocked by a WAIT or SLEEP call"/>
+  <status name="ER_TIMER_EXITING" value="0x101d" comment="Cannot add an alarm to a timer that is exiting"/>
+  <status name="ER_INVALID_GUID" value="0x101e" comment="String is not a hex encoded GUID string"/>
+  <status name="ER_THREADPOOL_EXHAUSTED" value="0x101f" comment="A thread pool has reached its specified concurrency"/>
+  <status name="ER_THREADPOOL_STOPPING" value="0x1020" comment="Cannot execute a closure on a stopping thread pool"/>
+  <status name="ER_INVALID_STREAM" value="0x1021" comment="Attempt to reference non-existent stream entry"/>
+  <status name="ER_TIMER_FULL" value="0x1022" comment="Attempt to reference non-existent stream entry"/>
+  <status name="ER_IODISPATCH_STOPPING" value="0x1023" comment="Cannot execute a read or write command on an IODispatch thread because it is stopping."/>
+  <status name="ER_SLAP_INVALID_PACKET_LEN" value="0x1024" comment="Length of SLAP packet is invalid."/>
+  <status name="ER_SLAP_HDR_CHECKSUM_ERROR" value="0x1025" comment="SLAP packet header checksum error."/>
+  <status name="ER_SLAP_INVALID_PACKET_TYPE" value="0x1026" comment="Invalid SLAP packet type."/>
+  <status name="ER_SLAP_LEN_MISMATCH" value="0x1027" comment="Calculated length does not match the received length."/>
+  <status name="ER_SLAP_PACKET_TYPE_MISMATCH" value="0x1028" comment="Packet type does not match reliability bit."/>
+  <status name="ER_SLAP_CRC_ERROR" value="0x1029" comment="SLAP packet CRC error."/>
+  <status name="ER_SLAP_ERROR" value="0x102A" comment="Generic SLAP error."/>
+  <status name="ER_SLAP_OTHER_END_CLOSED" value="0x102B" comment="Other end closed the SLAP connection"/>
+  <status name="ER_NONE" value="0xffff" comment="No error code to report"/>
+</status_block>

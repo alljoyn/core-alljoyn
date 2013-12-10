@@ -1,0 +1,253 @@
+<!--
+Copyright (c) 2010 - 2012, AllSeen Alliance. All rights reserved.
+
+   Permission to use, copy, modify, and/or distribute this software for any
+   purpose with or without fee is hereby granted, provided that the above
+   copyright notice and this permission notice appear in all copies.
+
+   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+   WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+   MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+   ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+   WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+   ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+   OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+-->
+<status_block xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="../common/src/Status.xml"/>
+
+  <status name="ER_BUS_ERRORS" value="0x9000" comment="Error code block for ALLJOYN wire protocol"/>
+  <status name="ER_BUS_READ_ERROR" value="0x9001" comment="Error attempting to read"/>
+  <status name="ER_BUS_WRITE_ERROR" value="0x9002" comment="Error attempting to write"/>
+  <status name="ER_BUS_BAD_VALUE_TYPE" value="0x9003" comment="Read an invalid value type"/>
+  <status name="ER_BUS_BAD_HEADER_FIELD" value="0x9004" comment="Read an invalid header field"/>
+  <status name="ER_BUS_BAD_SIGNATURE" value="0x9005" comment="Signature was badly formed"/>
+  <status name="ER_BUS_BAD_OBJ_PATH" value="0x9006" comment="Object path contained an illegal character"/>
+  <status name="ER_BUS_BAD_MEMBER_NAME" value="0x9007" comment="A member name contained an illegal character"/>
+  <status name="ER_BUS_BAD_INTERFACE_NAME" value="0x9008" comment="An interface name contained an illegal character"/>
+  <status name="ER_BUS_BAD_ERROR_NAME" value="0x9009" comment="An error name contained an illegal character"/>
+  <status name="ER_BUS_BAD_BUS_NAME" value="0x900a" comment="A bus name contained an illegal character"/>
+  <status name="ER_BUS_NAME_TOO_LONG" value="0x900b" comment="A name exceeded the permitted length"/>
+  <status name="ER_BUS_BAD_LENGTH" value="0x900c" comment="Length of an array was not a multiple of the array element size"/>
+  <status name="ER_BUS_BAD_VALUE" value="0x900d" comment="Parsed value in a message was invalid (for example: boolean > 1) "/>
+  <status name="ER_BUS_BAD_HDR_FLAGS" value="0x900e" comment="Unknown header flags"/>
+  <status name="ER_BUS_BAD_BODY_LEN" value="0x900f" comment="Body length was to long or too short"/>
+  <status name="ER_BUS_BAD_HEADER_LEN" value="0x9010" comment="Header length was to long or too short"/>
+  <status name="ER_BUS_UNKNOWN_SERIAL" value="0x9011" comment="Serial number in a method response was unknown"/>
+  <status name="ER_BUS_UNKNOWN_PATH" value="0x9012" comment="Path in a method call or signal was unknown"/>
+  <status name="ER_BUS_UNKNOWN_INTERFACE" value="0x9013" comment="Interface in a method call or signal was unknown"/>
+  <status name="ER_BUS_ESTABLISH_FAILED" value="0x9014" comment="Failed to establish a connection"/>
+  <status name="ER_BUS_UNEXPECTED_SIGNATURE" value="0x9015" comment="Signature in message was not what was expected"/>
+  <status name="ER_BUS_INTERFACE_MISSING" value="0x9016" comment="Interface header field is missing"/>
+  <status name="ER_BUS_PATH_MISSING" value="0x9017" comment="Object path header field is missing"/>
+  <status name="ER_BUS_MEMBER_MISSING" value="0x9018" comment="Member header field is missing"/>
+  <status name="ER_BUS_REPLY_SERIAL_MISSING" value="0x9019" comment="Reply-Serial header field is missing"/>
+  <status name="ER_BUS_ERROR_NAME_MISSING" value="0x901a" comment="Error Name header field is missing"/>
+  <status name="ER_BUS_INTERFACE_NO_SUCH_MEMBER" value="0x901b" comment="Interface does not have the requested member"/>
+  <status name="ER_BUS_NO_SUCH_OBJECT" value="0x901c" comment="Object does not exist"/>
+  <status name="ER_BUS_OBJECT_NO_SUCH_MEMBER" value="0x901d" comment="Object does not have the requested member (on any interface)"/>
+  <status name="ER_BUS_OBJECT_NO_SUCH_INTERFACE" value="0x901e" comment="Object does not have the requested interface"/>
+  <status name="ER_BUS_NO_SUCH_INTERFACE" value="0x901f" comment="Requested interface does not exist"/>
+  <status name="ER_BUS_MEMBER_NO_SUCH_SIGNATURE" value="0x9020" comment="Member exists but does not have the requested signature"/>
+  <status name="ER_BUS_NOT_NUL_TERMINATED" value="0x9021" comment="A string or signature was not NUL terminated"/>
+  <status name="ER_BUS_NO_SUCH_PROPERTY" value="0x9022" comment="No such property for a GET or SET operation "/>
+  <status name="ER_BUS_SET_WRONG_SIGNATURE" value="0x9023" comment="Attempt to set a property value with the wrong signature"/>
+  <status name="ER_BUS_PROPERTY_VALUE_NOT_SET" value="0x9024" comment="Attempt to get a property whose value has not been set"/>
+  <status name="ER_BUS_PROPERTY_ACCESS_DENIED" value="0x9025" comment="Attempt to set or get a property failed due to access rights"/>
+  <status name="ER_BUS_NO_TRANSPORTS" value="0x9026" comment="No physical message transports were specified"/>
+  <status name="ER_BUS_BAD_TRANSPORT_ARGS" value="0x9027" comment="Missing or badly formatted transports args specified"/>
+  <status name="ER_BUS_NO_ROUTE" value="0x9028" comment="Message cannot be routed to destination"/>
+  <status name="ER_BUS_NO_ENDPOINT" value="0x9029" comment="An endpoint with given name cannot be found"/>
+  <status name="ER_BUS_BAD_SEND_PARAMETER" value="0x902a" comment="Bad parameter in send message call"/>
+  <status name="ER_BUS_UNMATCHED_REPLY_SERIAL" value="0x902b" comment="Serial number in method call reply message did not match any method calls"/>
+  <status name="ER_BUS_BAD_SENDER_ID" value="0x902c" comment="Sender identifier is invalid"/>
+  <status name="ER_BUS_TRANSPORT_NOT_STARTED" value="0x902d" comment="Attempt to send on a transport that has not been started"/>
+  <status name="ER_BUS_EMPTY_MESSAGE" value="0x902e" comment="Attempt to deliver an empty message"/>
+  <status name="ER_BUS_NOT_OWNER" value="0x902f" comment="A bus name operation was not permitted because sender does not own name"/>
+  <status name="ER_BUS_SET_PROPERTY_REJECTED" value="0x9030" comment="Application rejected a request to set a property"/>
+  <status name="ER_BUS_CONNECT_FAILED" value="0x9031" comment="Connection failed"/>
+  <status name="ER_BUS_REPLY_IS_ERROR_MESSAGE" value="0x9032" comment="Response from a method call was an ERROR message"/>
+  <status name="ER_BUS_NOT_AUTHENTICATING" value="0x9033" comment="Not in an authentication conversation"/>
+  <status name="ER_BUS_NO_LISTENER" value="0x9034" comment="A listener is required to implement the requested function"/>
+  <status name="ER_BUS_BT_TRANSPORT_ERROR" value="0x9035" comment="The Bluetooth transport reported an error"/>
+  <status name="ER_BUS_NOT_ALLOWED" value="0x9036" comment="The operation attempted is not allowed"/>
+  <status name="ER_BUS_WRITE_QUEUE_FULL" value="0x9037" comment="Write failed because write queue is full"/>
+  <status name="ER_BUS_ENDPOINT_CLOSING" value="0x9038" comment="Operation not permitted on endpoint in process of closing"/>
+  <status name="ER_BUS_INTERFACE_MISMATCH" value="0x9039" comment="Received two conflicting definitions for the same interface"/>
+  <status name="ER_BUS_MEMBER_ALREADY_EXISTS" value="0x903a" comment="Attempt to add a member to an interface that already exists"/>
+  <status name="ER_BUS_PROPERTY_ALREADY_EXISTS" value="0x903b" comment="Attempt to add a property to an interface that already exists"/>
+  <status name="ER_BUS_IFACE_ALREADY_EXISTS" value="0x903c" comment="Attempt to add an interface to an object that already exists"/>
+  <status name="ER_BUS_ERROR_RESPONSE" value="0x903d" comment="Received an error response to a method call"/>
+  <status name="ER_BUS_BAD_XML" value="0x903e" comment="XML data is improperly formatted"/>
+  <status name="ER_BUS_BAD_CHILD_PATH" value="0x903f" comment="The path of a child object is incorrect given it's parent's path"/>
+  <status name="ER_BUS_OBJ_ALREADY_EXISTS" value="0x9040" comment="Attempt to add a RemoteObject child that already exists"/>
+  <status name="ER_BUS_OBJ_NOT_FOUND" value="0x9041" comment="Object with given path does not exist"/>
+  <status name="ER_BUS_CANNOT_EXPAND_MESSAGE" value="0x9042" comment="Expansion information for a compressed message is not available"/>
+  <status name="ER_BUS_NOT_COMPRESSED" value="0x9043" comment="Attempt to expand a message that is not compressed"/>
+  <status name="ER_BUS_ALREADY_CONNECTED" value="0x9044" comment="Attempt to connect to a bus which is already connected"/>
+  <status name="ER_BUS_NOT_CONNECTED" value="0x9045" comment="Attempt to use a bus attachment that is not connected to a bus daemon"/>
+  <status name="ER_BUS_ALREADY_LISTENING" value="0x9046" comment="Attempt to listen on a bus address which is already being listened on"/>
+  <status name="ER_BUS_KEY_UNAVAILABLE" value="0x9047" comment="The request key is not available"/>
+  <status name="ER_BUS_TRUNCATED" value="0x9048" comment="Insufficient memory to copy data"/>
+  <status name="ER_BUS_KEY_STORE_NOT_LOADED" value="0x9049" comment="Accessing the key store before it is loaded"/>
+  <status name="ER_BUS_NO_AUTHENTICATION_MECHANISM" value="0x904a" comment="There is no authentication mechanism"/>
+  <status name="ER_BUS_BUS_ALREADY_STARTED" value="0x904b" comment="Bus has already been started"/>
+  <status name="ER_BUS_BUS_NOT_STARTED" value="0x904c" comment="Bus has not yet been started"/>
+  <status name="ER_BUS_KEYBLOB_OP_INVALID" value="0x904d" comment="The operation requested cannot be performed using this key blob"/>
+  <status name="ER_BUS_INVALID_HEADER_CHECKSUM" value="0x904e" comment="Invalid header checksum in an encrypted message"/>
+  <status name="ER_BUS_MESSAGE_NOT_ENCRYPTED" value="0x904f" comment="Security policy requires the message to be encrypted"/>
+  <status name="ER_BUS_INVALID_HEADER_SERIAL" value="0x9050" comment="Serial number in message header is invalid"/>
+  <status name="ER_BUS_TIME_TO_LIVE_EXPIRED" value="0x9051" comment="Message time-to-live has expired"/>
+  <status name="ER_BUS_HDR_EXPANSION_INVALID" value="0x9052" comment="Something is wrong with a header expansion"/>
+  <status name="ER_BUS_MISSING_COMPRESSION_TOKEN" value="0x9053" comment="Compressed headers require a compression token"/>
+  <status name="ER_BUS_NO_PEER_GUID" value="0x9054" comment="There is no GUID for this peer"/>
+  <status name="ER_BUS_MESSAGE_DECRYPTION_FAILED" value="0x9055" comment="Message decryption failed"/>
+  <status name="ER_BUS_SECURITY_FATAL" value="0x9056" comment="A fatal security failure"/>
+  <status name="ER_BUS_KEY_EXPIRED" value="0x9057" comment="An encryption key has expired"/>
+  <status name="ER_BUS_CORRUPT_KEYSTORE" value="0x9058" comment="Key store is corrupt"/>
+  <status name="ER_BUS_NO_CALL_FOR_REPLY" value="0x9059" comment="A reply only allowed in response to a method call"/>
+  <status name="ER_BUS_NOT_A_COMPLETE_TYPE" value="0x905a" comment="Signature must be a single complete type"/>
+  <status name="ER_BUS_POLICY_VIOLATION" value="0x905b" comment="Message does not meet policy restrictions"/>
+  <status name="ER_BUS_NO_SUCH_SERVICE" value="0x905c" comment="Service name is unknown"/>
+  <status name="ER_BUS_TRANSPORT_NOT_AVAILABLE" value="0x905d" comment="Transport cannot be used due to underlying mechanism disabled by OS"/>
+  <status name="ER_BUS_INVALID_AUTH_MECHANISM" value="0x905e" comment="Authentication mechanism is not valid"/>
+  <status name="ER_BUS_KEYSTORE_VERSION_MISMATCH" value="0x905f" comment="Key store has wrong version number"/>
+  <status name="ER_BUS_BLOCKING_CALL_NOT_ALLOWED" value="0x9060" comment="A synchronous method call from within handler is not permitted."/>
+  <status name="ER_BUS_SIGNATURE_MISMATCH" value="0x9061" comment="MsgArg(s) do not match signature."/>
+  <status name="ER_BUS_STOPPING" value="0x9062" comment="The bus is stopping."/>
+  <status name="ER_BUS_METHOD_CALL_ABORTED" value="0x9063" comment="The method call was aborted."/>
+  <status name="ER_BUS_CANNOT_ADD_INTERFACE" value="0x9064" comment="An interface cannot be added to an object that is already registered."/>
+  <status name="ER_BUS_CANNOT_ADD_HANDLER" value="0x9065" comment="A method handler cannot be added to an object that is already registered."/>
+  <status name="ER_BUS_KEYSTORE_NOT_LOADED" value="0x9066" comment="Key store has not been loaded"/>
+  <status name="ER_BUS_NO_SUCH_HANDLE" value="0x906b" comment="Handle is not in the handle table"/>
+  <status name="ER_BUS_HANDLES_NOT_ENABLED" value="0x906c" comment="Passing of handles is not enabled for this connection"/>
+  <status name="ER_BUS_HANDLES_MISMATCH" value="0x906d" comment="Message had more handles than expected"/>
+  <status name="ER_BT_MAX_CONNECTIONS_USED" value="0x906e" comment="Maximum Bluetooth connections already in use"/>
+  <status name="ER_BUS_NO_SESSION" value="0x906f" comment="Session id is not valid"/>
+  <status name="ER_BUS_ELEMENT_NOT_FOUND" value="0x9070" comment="Dictionary element was not found"/>
+  <status name="ER_BUS_NOT_A_DICTIONARY" value="0x9071" comment="MsgArg was not an array of dictionary elements"/>
+  <status name="ER_BUS_WAIT_FAILED" value="0x9072" comment="Wait failed"/>
+  <status name="ER_BUS_BAD_SESSION_OPTS" value="0x9074" comment="Session options are bad or incompatible"/>
+  <status name="ER_BUS_CONNECTION_REJECTED" value="0x9075" comment="Incoming connection rejected"/>
+  <status name="ER_DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER" value="0x9076" comment="RequestName reply: Name was successfully obtained"/>
+  <status name="ER_DBUS_REQUEST_NAME_REPLY_IN_QUEUE" value="0x9077" comment="RequestName reply: Name is already owned, request for name has been queued"/>
+  <status name="ER_DBUS_REQUEST_NAME_REPLY_EXISTS" value="0x9078" comment="RequestName reply: Name is already owned and DO_NOT_QUEUE was specified in request"/>
+  <status name="ER_DBUS_REQUEST_NAME_REPLY_ALREADY_OWNER" value="0x9079" comment="RequestName reply: Name is already owned by this endpoint"/>
+  <status name="ER_DBUS_RELEASE_NAME_REPLY_RELEASED" value="0x907a" comment="ReleaseName reply: Name was released"/>
+  <status name="ER_DBUS_RELEASE_NAME_REPLY_NON_EXISTENT" value="0x907b" comment=" ReleaseName reply: Name does not exist"/>
+  <status name="ER_DBUS_RELEASE_NAME_REPLY_NOT_OWNER" value="0x907c" comment="ReleaseName reply: Request to release name that is not owned by this endpoint"/>
+  <status name="ER_DBUS_START_REPLY_ALREADY_RUNNING" value="0x907e" comment="StartServiceByName reply: Service is already running"/>
+  <status name="ER_ALLJOYN_BINDSESSIONPORT_REPLY_ALREADY_EXISTS" value="0x9080" comment="BindSessionPort reply: SessionPort already exists"/>
+  <status name="ER_ALLJOYN_BINDSESSIONPORT_REPLY_FAILED" value="0x9081" comment="BindSessionPort reply: Failed"/>
+  <status name="ER_ALLJOYN_JOINSESSION_REPLY_NO_SESSION" value="0x9083" comment="JoinSession reply: Session with given name does not exist"/>
+  <status name="ER_ALLJOYN_JOINSESSION_REPLY_UNREACHABLE" value="0x9084" comment="JoinSession reply: Failed to find suitable transport"/>
+  <status name="ER_ALLJOYN_JOINSESSION_REPLY_CONNECT_FAILED" value="0x9085" comment="JoinSession reply: Connect to advertised address"/>
+  <status name="ER_ALLJOYN_JOINSESSION_REPLY_REJECTED" value="0x9086" comment="JoinSession reply: The session creator rejected the join req"/>
+  <status name="ER_ALLJOYN_JOINSESSION_REPLY_BAD_SESSION_OPTS" value="0x9087" comment="JoinSession reply: Failed due to session option incompatibilities"/>
+  <status name="ER_ALLJOYN_JOINSESSION_REPLY_FAILED" value="0x9088" comment="JoinSession reply: Failed for unknown reason"/>
+  <status name="ER_ALLJOYN_LEAVESESSION_REPLY_NO_SESSION" value="0x908a" comment="LeaveSession reply: Session with given name does not exist"/>
+  <status name="ER_ALLJOYN_LEAVESESSION_REPLY_FAILED" value="0x908b" comment="LeaveSession reply: Failed for unspecified reason"/>
+  <status name="ER_ALLJOYN_ADVERTISENAME_REPLY_ALREADY_ADVERTISING" value="0x908d" comment="AdvertiseName reply: This endpoint is already advertising this name"/>
+  <status name="ER_ALLJOYN_ADVERTISENAME_REPLY_FAILED" value="0x908e" comment="AdvertiseName reply: Advertise failed"/>
+  <status name="ER_ALLJOYN_CANCELADVERTISENAME_REPLY_FAILED" value="0x9090" comment="CancelAdvertiseName reply: Advertise failed"/>
+  <status name="ER_ALLJOYN_FINDADVERTISEDNAME_REPLY_ALREADY_DISCOVERING" value="0x9092" comment="FindAdvertisedName reply: This endpoint is already discovering this name"/>
+  <status name="ER_ALLJOYN_FINDADVERTISEDNAME_REPLY_FAILED" value="0x9093" comment="FindAdvertisedName reply: Failed"/>
+  <status name="ER_ALLJOYN_CANCELFINDADVERTISEDNAME_REPLY_FAILED" value="0x9095" comment="CancelFindAdvertisedName reply: Failed"/>
+  <status name="ER_BUS_UNEXPECTED_DISPOSITION" value="0x9096" comment="An unexpected disposition was returned and has been treated as an error"/>
+  <status name="ER_BUS_INTERFACE_ACTIVATED" value="0x9097" comment="An InterfaceDescription cannot be modified once activated"/>
+  <status name="ER_ALLJOYN_UNBINDSESSIONPORT_REPLY_BAD_PORT" value="0x9098" comment="UnbindSessionPort reply: SessionPort does not exist"/>
+  <status name="ER_ALLJOYN_UNBINDSESSIONPORT_REPLY_FAILED" value="0x9099" comment="UnbindSessionPort reply: Failed"/>
+  <status name="ER_ALLJOYN_BINDSESSIONPORT_REPLY_INVALID_OPTS" value="0x909a" comment="BindSessionPort reply: SessionOpts are invalid"/>
+  <status name="ER_ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED" value="0x909b" comment="JoinSession reply: Caller has already joined the session"/>
+  <status name="ER_BUS_SELF_CONNECT" value="0x909c" comment="Received BusHello from self"/>
+  <status name="ER_BUS_SECURITY_NOT_ENABLED" value="0x909d" comment="Security is not enabled for this bus attachment"/>
+  <status name="ER_BUS_LISTENER_ALREADY_SET" value="0x909e" comment="A listener has already been set"/>
+  <status name="ER_BUS_PEER_AUTH_VERSION_MISMATCH" value="0x909f" comment="Incompatible peer authentication version numbers"/>
+  <status name="ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NOT_SUPPORTED" value="0x90a0" comment="Local daemon does not support SetLinkTimeout"/>
+  <status name="ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NO_DEST_SUPPORT" value="0x90a1" comment="SetLinkTimeout not supported by destination"/>
+  <status name="ER_ALLJOYN_SETLINKTIMEOUT_REPLY_FAILED" value="0x90a2" comment="SetLinkTimeout failed"/>
+  <status name="ER_ALLJOYN_ACCESS_PERMISSION_WARNING" value="0x90a3" comment="No permission to use Wifi/Bluetooth"/>
+  <status name="ER_ALLJOYN_ACCESS_PERMISSION_ERROR" value="0x90a4" comment="No permission to access peer service"/>
+  <status name="ER_BUS_DESTINATION_NOT_AUTHENTICATED" value="0x90a5" comment="Cannot send a signal to a destination that is not authenticated"/>
+  <status name="ER_BUS_ENDPOINT_REDIRECTED" value="0x90a6" comment="Endpoint was redirected to another address"/>
+  <status name="ER_BUS_AUTHENTICATION_PENDING" value="0x90a7" comment="Authentication of remote peer is pending"/>
+  <status name="ER_BUS_NOT_AUTHORIZED" value="0x90a8" comment="Operation was not authorized"/>
+  <status name="ER_PACKET_BUS_NO_SUCH_CHANNEL" value="0x90a9" comment="Received packet for unknown channel"/>
+  <status name="ER_PACKET_BAD_FORMAT" value="0x90aa" comment="Received packet with incorrect header information"/>
+  <status name="ER_PACKET_CONNECT_TIMEOUT" value="0x90ab" comment="Timed out waiting for connect response"/>
+  <status name="ER_PACKET_CHANNEL_FAIL" value="0x90ac" comment="Failed to create new comm channel"/>
+  <status name="ER_PACKET_TOO_LARGE" value="0x90ad" comment="Message too large for use with packet based transport"/>
+  <status name="ER_PACKET_BAD_PARAMETER" value="0x90ae" comment="Invalid PacketEngine control packet received"/>
+  <status name="ER_PACKET_BAD_CRC" value="0x90af" comment="Packet has invalid CRC"/>
+  <status name="ER_STUN_ATTR_SIZE_MISMATCH" value="0x90b0" comment="STUN attribute size does not match size parsed" />
+  <status name="ER_STUN_AUTH_CHALLENGE" value="0x90b1" comment="STUN server has denied request, issued Challenge" />
+  <status name="ER_STUN_SOCKET_NOT_OPEN" value="0x90b2" comment="Underlying socket not open for operation" />
+  <status name="ER_STUN_SOCKET_OPEN" value="0x90b3" comment="Underlying socket alread open" />
+  <status name="ER_STUN_FAILED_TO_SEND_MSG" value="0x90b4" comment="Failed to send STUN message" />
+  <status name="ER_STUN_FRAMING_ERROR" value="0x90b5" comment="Application specified invalid TCP framing" />
+  <status name="ER_STUN_INVALID_ERROR_CODE" value="0x90b6" comment="Invalid STUN error code" />
+  <status name="ER_STUN_INVALID_FINGERPRINT" value="0x90b7" comment="Fingerprint CRC does not match" />
+  <status name="ER_STUN_INVALID_ADDR_FAMILY" value="0x90b8" comment="Invalid address family value in STUN 'address' attribute" />
+  <status name="ER_STUN_INVALID_MESSAGE_INTEGRITY" value="0x90b9" comment="SHA1-HMAC message integrity value does not match. When passed to upper layer, indicates unauthorized response, message must be ignored" />
+  <status name="ER_STUN_INVALID_MSG_TYPE" value="0x90ba" comment="Invalid STUN message type" />
+  <status name="ER_STUN_INVALID_ATTR_TYPE" value="0x90bb" comment="Invalid STUN message attribute type" />
+  <status name="ER_STUN_RESPONSE_WITH_USERNAME" value="0x90bc" comment="STUN response message included a USERNAME attribute" />
+  <status name="ER_STUN_ERR400_BAD_REQUEST" value="0x90bd" comment="Received bad STUN request, upper layer must send error code 400" />
+  <status name="ER_STUN_BAD_INDICATION" value="0x90be" comment="Received bad STUN indication, upper layer must ignore message" />
+  <status name="ER_STUN_ERR401_UNAUTHORIZED_REQUEST" value="0x90bf" comment="Received STUN request with invalid USERNAME or invalid MESSAGE-INTEGRITY, upper layer must send error code 401" />
+  <status name="ER_STUN_TOO_MANY_ATTRIBUTES" value="0x90c0" comment="Too many attributes in STUN message or unknown attributes list" />
+  <status name="ER_STUN_DUPLICATE_ATTRIBUTE" value="0x90c1" comment="STUN message attribute must only be added once" />
+  <status name="ER_STUN_UNAUTHORIZED_INDICATION" value="0x90c2" comment="Receive STUN indication with invalid USERNAME or invalid MESSAGE-INTEGRITY, upper layer must ignore message" />
+  <status name="ER_ICE_ALLOCATING_MEMORY" value="0x90c3" comment="Unable to allocate heap from ICE" />
+  <status name="ER_ICE_CHECKS_INCOMPLETE" value="0x90c4" comment="ICE Checks have not completed" />
+  <status name="ER_ICE_ALLOCATE_REJECTED_NO_RESOURCES" value="0x90c5" comment="TURN server rejected ALLOCATE request" />
+  <status name="ER_ICE_ALLOCATION_QUOTA_REACHED" value="0x90c6" comment="TURN server rejected with 486" />
+  <status name="ER_ICE_ALLOCATION_MISMATCH" value="0x90c7" comment="TURN server has expired the allocation" />
+  <status name="ER_ICE_STUN_ERROR" value="0x90c8" comment="Generic ICE error" />
+  <status name="ER_ICE_INVALID_STATE" value="0x90c9" comment="ICE Agent is not in proper state to perform request" />
+  <status name="ER_ICE_UNKNOWN_COMPONENT_ID" value="0x90ca" comment="ICE Component type is not recognized" />
+  <status name="ER_RENDEZVOUS_SERVER_DEACTIVATED_USER" value="0x90cb" comment="Rendezvous Server has deactivated the current user. Register with the Rendezvous Server to continue." />
+  <status name="ER_RENDEZVOUS_SERVER_UNKNOWN_USER" value="0x90cc" comment="Rendezvous Server does not recognize the current user. Register with the Rendezvous Server to continue." />
+  <status name="ER_UNABLE_TO_CONNECT_TO_RENDEZVOUS_SERVER" value="0x90cd" comment="Unable to connect to the Rendezvous Server" />
+  <status name="ER_NOT_CONNECTED_TO_RENDEZVOUS_SERVER" value="0x90ce" comment="Not connected to the Rendezvous Server" />
+  <status name="ER_UNABLE_TO_SEND_MESSAGE_TO_RENDEZVOUS_SERVER" value="0x90cf" comment="Unable to send message to the Rendezvous Server" />
+  <status name="ER_INVALID_RENDEZVOUS_SERVER_INTERFACE_MESSAGE" value="0x90d0" comment="Invalid Rendezvous Server interface message" />
+  <status name="ER_INVALID_PERSISTENT_CONNECTION_MESSAGE_RESPONSE" value="0x90d1" comment="Invalid message response received over the Persistent connection with the Rendezvous Server" />
+  <status name="ER_INVALID_ON_DEMAND_CONNECTION_MESSAGE_RESPONSE" value="0x90d2" comment="Invalid message response received over the On Demand connection with the Rendezvous Server" />
+  <status name="ER_INVALID_HTTP_METHOD_USED_FOR_RENDEZVOUS_SERVER_INTERFACE_MESSAGE" value="0x90d3" comment="Invalid HTTP method type used for Rendezvous Server interface message" />
+  <status name="ER_RENDEZVOUS_SERVER_ERR500_INTERNAL_ERROR" value="0x90d4" comment="Received a HTTP 500 status code from the Rendezvous Server. This indicates an internal error in the Server" />
+  <status name="ER_RENDEZVOUS_SERVER_ERR503_STATUS_UNAVAILABLE" value="0x90d5" comment="Received a HTTP 503 status code from the Rendezvous Server. This indicates unavailability of the Server error state" />
+  <status name="ER_RENDEZVOUS_SERVER_ERR401_UNAUTHORIZED_REQUEST" value="0x90d6" comment="Received a HTTP 401 status code from the Rendezvous Server. This indicates that the client is unauthorized to send a request to the Server. The Client login procedure must be initiated." />
+  <status name="ER_RENDEZVOUS_SERVER_UNRECOVERABLE_ERROR" value="0x90d7" comment="Received a HTTP status code indicating unrecoverable error from the Rendezvous Server. The connection with the Server should be re-established." />
+  <status name="ER_RENDEZVOUS_SERVER_ROOT_CERTIFICATE_UNINITIALIZED" value="0x90d8" comment="Rendezvous Server root ceritificate uninitialized." />
+  <status name="ER_BUS_NO_SUCH_ANNOTATION" value="0x90d9" comment="No such annotation for a GET or SET operation "/>
+  <status name="ER_BUS_ANNOTATION_ALREADY_EXISTS" value="0x90da" comment="Attempt to add an annotation to an interface or property that already exists"/>
+  <status name="ER_SOCK_CLOSING" value="0x90db" comment="Socket close in progress"/>
+  <status name="ER_NO_SUCH_DEVICE" value="0x90dc" comment="A referenced device cannot be located"/>
+  <status name="ER_P2P" value="0x90dd" comment="An error occurred in a Wi-Fi Direct helper method call"/>
+  <status name="ER_P2P_TIMEOUT" value="0x90de" comment="A timeout occurred in a Wi-Fi Direct helper method call"/>
+  <status name="ER_P2P_NOT_CONNECTED" value="0x90df" comment="A required Wi-Fi Direct network connection does not exist"/>
+  <status name="ER_BAD_TRANSPORT_MASK" value="0x90e0" comment="Exactly one mask bit was not set in the provided TransportMask"/>
+  <status name="ER_PROXIMITY_CONNECTION_ESTABLISH_FAIL" value="0x90e1" comment="Fail to establish P2P proximity connection"/>
+  <status name="ER_PROXIMITY_NO_PEERS_FOUND" value="0x90e2" comment="Cannot find proximity P2P peers"/>  
+  <status name="ER_BUS_OBJECT_NOT_REGISTERED" value="0x90e3" comment="Operation not permitted on unregistered bus object"/>  
+  <status name="ER_P2P_DISABLED" value="0x90e4" comment="Wi-Fi Direct is disabled on the device"/>
+  <status name="ER_P2P_BUSY" value="0x90e5" comment="Wi-Fi Direct resources are in busy state"/>
+  <status name="ER_BUS_INCOMPATIBLE_DAEMON" value="0x90e6" comment="The daemon version is too old to be used by this client"/>
+  <status name="ER_P2P_NO_GO" value="0x90e7" comment="Attempt to execute a Wi-Fi Direct GO-related operation while STA"/>
+  <status name="ER_P2P_NO_STA" value="0x90e8" comment="Attempt to execute a Wi-Fi Direct STA-related operation while GO"/>
+  <status name="ER_P2P_FORBIDDEN" value="0x90e9" comment="Attempt to execute a forbidden Wi-Fi Direct operation"/>
+  <status name="ER_ALLJOYN_ONAPPSUSPEND_REPLY_FAILED" value="0x90ea" comment="OnAppSuspend reply: Failed"/>
+  <status name="ER_ALLJOYN_ONAPPSUSPEND_REPLY_UNSUPPORTED" value="0x90eb" comment="OnAppSuspend reply: Unsupported operation"/>
+  <status name="ER_ALLJOYN_ONAPPRESUME_REPLY_FAILED" value="0x90ec" comment="OnAppResume reply: Failed"/>
+  <status name="ER_ALLJOYN_ONAPPRESUME_REPLY_UNSUPPORTED" value="0x90ed" comment="OnAppResume reply: Unsupported operation"/>
+  <status name="ER_BUS_NO_SUCH_MESSAGE" value="0x90ee" comment="Message not found"/>
+  <status name="ER_ALLJOYN_REMOVESESSIONMEMBER_REPLY_NO_SESSION" value="0x90ef" comment="RemoveSessionMember reply: Specified session Id with this endpoint was not found"/>
+  <status name="ER_ALLJOYN_REMOVESESSIONMEMBER_NOT_BINDER" value="0x90f0" comment="RemoveSessionMember reply: Endpoint is not the binder of session"/>
+  <status name="ER_ALLJOYN_REMOVESESSIONMEMBER_NOT_MULTIPOINT" value="0x90f1" comment="RemoveSessionMember reply: Session is not multipoint"/>
+  <status name="ER_ALLJOYN_REMOVESESSIONMEMBER_NOT_FOUND" value="0x90f2" comment="RemoveSessionMember reply: Specified session member was not found"/>
+  <status name="ER_ALLJOYN_REMOVESESSIONMEMBER_INCOMPATIBLE_REMOTE_DAEMON" value="0x90f3" comment="RemoveSessionMember reply: The remote daemon does not support this feature"/>
+  <status name="ER_ALLJOYN_REMOVESESSIONMEMBER_REPLY_FAILED" value="0x90f4" comment="RemoveSessionMember reply: Failed for unspecified reason"/>
+  <status name="ER_BUS_REMOVED_BY_BINDER" value="0x90f5" comment="The session member was removed by the binder"/>
+</status_block>

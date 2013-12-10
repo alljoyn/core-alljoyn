@@ -1,0 +1,192 @@
+# Copyright (c) 2011-2013, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+import os
+
+Import('env')
+
+# Call this function to verify there is a valid developer license to run the unit test.
+def have_developer_license():
+    from ctypes import windll, byref, create_string_buffer
+    have_valid_license = False
+    try:
+        filetime = create_string_buffer(8)    # buffer the size of a FILETIME structure
+        if windll.wsclient.CheckDeveloperLicense(byref(filetime)) == 0:
+            have_valid_license = True
+    except:
+        pass
+
+    if not have_valid_license:
+        print('Warning: No valid Windows Store developer license detected, unit tests will not be run.')
+    return have_valid_license
+
+
+if not env.has_key('GTEST_DIR'):
+    print('GTEST_DIR not specified skipping alljoyn_core unit test build')
+
+elif env['OS'] == 'darwin' and env['CPU'] in ['arm', 'armv7', 'armv7s']:
+    # do not even try Google test if darwin and arm
+    print 'GTEST_DIR ignored when building for OS=darwin CPU=arm, skipping alljoyn_core unit test build'
+
+else:
+    gtest_env = env.Clone();
+    gtest_dir = gtest_env['GTEST_DIR']
+    vars = Variables();
+    vars.AddVariables(('GTEST_HOME', '', gtest_dir))
+    vars.Update(gtest_env)
+
+    if gtest_dir == '/usr':
+        gtest_src_base = '%s/src/gtest' % gtest_dir
+    else:
+        gtest_src_base = gtest_dir
+
+    if gtest_env['OS_CONF'] == 'windows':
+        # gTest does not require the same CPPDEFINES as AllJoyn core.
+        gtest_env.Append(CPPDEFINES = ['WIN32', '_LIB'])
+        # don't use the _DEBUG define unless the /MDd compiler flag is specified
+        #gtest_env.Append(CPPDEFINES = ['WIN32', '_DEBUG', '_LIB'])
+        gtest_env.Append(CXXFLAGS = ['/EHsc'])
+
+    if gtest_env['OS_CONF'] == 'android':
+        # used by gtest to prevent use of wcscasecmp and set GTEST_HAS_STD_WSTRING=0
+        gtest_env.Append(CPPDEFINES = ['ANDROID'])
+
+    # tr1::tuple is not avalible for android or darwin
+    if gtest_env['OS_CONF'] == 'android' or gtest_env['OS_CONF'] == 'darwin':
+        gtest_env.Append(CPPDEFINES = ['GTEST_HAS_TR1_TUPLE=0'])
+
+    # clone() library function is NOT available on android-x86
+    if gtest_env['OS_CONF'] == 'android' and gtest_env['CPU'] == 'x86':
+        gtest_env.Append(CPPDEFINES = ['GTEST_HAS_CLONE=0'])
+
+    # Microsoft Visual Studio 2012 has a different _VARIADIC_MAX default value.
+    # See: http://blogs.msdn.com/b/vcblog/archive/2011/09/12/10209291.aspx
+    if gtest_env['OS_CONF'] == 'windows' and gtest_env['MSVC_VERSION'] == '11.0':
+        gtest_env.Append(CPPDEFINES = ['_VARIADIC_MAX=10'])
+
+    # we compile with no rtti and we are not using exceptions. 
+    gtest_env.Append(CPPDEFINES = ['GTEST_HAS_RTTI=0'])
+
+    # we replace AllJoyn's include CPPPATH options.  AllJoyn includes stlport that will cause the 
+    # gTest code to not compile as expected at this time
+    gtest_env.Append(CPPPATH = [ gtest_src_base ])
+    if gtest_dir != '/usr':
+        gtest_env.Append(CPPPATH = [ gtest_env.Dir('$GTEST_DIR/include') ])
+
+    gtest_obj = gtest_env.StaticObject(target = 'gtest-all', source = [ '%s/src/gtest-all.cc' % gtest_src_base ])
+    gtest_env.StaticLibrary(target = 'gtest', source = gtest_obj)
+    
+    test_src = gtest_env.Glob('*.cc')
+
+    unittest_env = env.Clone()
+
+    unittest_env.Append(CPPPATH = unittest_env.Dir('..').srcnode())
+
+    gtest_dir = unittest_env['GTEST_DIR']
+    if gtest_dir != '/usr':
+        unittest_env.Append(CPPPATH = [gtest_dir + '/include'])
+
+    if unittest_env['OS_GROUP'] == 'windows':
+        unittest_env.Append(CXXFLAGS = ['/EHsc'])
+
+
+    # we compile with no rtti and we are not using exceptions.
+    unittest_env.Append(CPPDEFINES = ['GTEST_HAS_RTTI=0'])
+
+    if unittest_env['OS_CONF'] == 'android':
+        # used by gtest to prevent use of wcscasecmp and set GTEST_HAS_STD_WSTRING=0
+        unittest_env.Append(CPPDEFINES = ['ANDROID'])
+
+    # tr1::tuple is not avalible for android or darwin
+    if unittest_env['OS_CONF'] == 'android' or unittest_env['OS_CONF'] == 'darwin':
+        unittest_env.Append(CPPDEFINES = ['GTEST_HAS_TR1_TUPLE=0'])
+    if unittest_env['OS_CONF'] == 'android' and unittest_env['CPU'] == 'x86':
+        unittest_env.Append(CPPDEFINES = ['GTEST_HAS_CLONE=0'])
+    if unittest_env['OS_CONF'] == 'windows' and unittest_env['MSVC_VERSION'] == '11.0':
+        unittest_env.Append(CPPDEFINES = ['_VARIADIC_MAX=10'])
+    # gtest library file is placed on folder above the the object files.
+    unittest_env.Append(LIBPATH = ['./'])
+    
+    unittest_env.Prepend(LIBS = ['gtest'])
+
+    obj = unittest_env.Object(test_src);
+        
+    unittest_prog = unittest_env.Program('ajtest', obj)
+    unittest_env.Install('$TESTDIR/cpp/bin', unittest_prog)
+
+    # install gtest utilities
+    unittest_env.Install('$TESTDIR/cpp/bin', Dir('test_report').srcnode())
+
+if (env['OS'] == 'win8' and
+    (env['WINRT_UNITTEST_RUN'] == 'on' or env['WINRT_UNITTEST_BUILD'] == 'on') and
+    have_developer_license() and
+    env['CPU'] in ['x86', 'x86_64']):
+
+    appx_env = env.Clone();
+
+    # choose the correct build flavor
+    if appx_env['CPU'] == 'x86':
+        platform = 'x86'
+    elif appx_env['CPU'] == 'x86_64':
+        platform = 'x64'
+
+    # Change the name slightly when building a debug version
+    if appx_env['VARIANT'].lower() == 'debug':
+        debug_name = '_Debug'
+    else:
+        debug_name = ''
+
+    # this magic setting is needed for vstest.console.exe to run for the right processor architecture
+    if appx_env['HOST_ARCH'] == 'x86_64':
+        appx_env['ENV']['PROCESSOR_ARCHITECTURE'] = 'AMD64'
+    elif appx_env['HOST_ARCH'] == 'x86':
+        appx_env['ENV']['PROCESSOR_ARCHITECTURE'] = 'X86'
+
+
+    unit_test_appx_name_stem = 'winrt/AllJoynUnitTests/AppPackages/AllJoynUnitTests_1.0.0.0_' + platform + debug_name + '_Test/AllJoynUnitTests_1.0.0.0_' + platform + debug_name + '.appx'
+    unit_test_appx_name = '../../../../alljoyn_core/unit_test/' + unit_test_appx_name_stem
+
+
+    # make_appx_cmd:
+    #    produces the appx files with the unit tests inside,
+    #    depends on AllJoyn.dll to exist
+    #    runs msbuild on the AllJoynUnitTests solution file.
+    make_appx_cmd = appx_env.Command(
+                          unit_test_appx_name,
+                        [   # source files to depend upon
+                            'winrt/AllJoynUnitTests.sln',
+                            '$WINRT_DISTDIR/bin/AllJoyn.dll',
+                            '$WINRT_DISTDIR/bin/AllJoyn.winmd'
+                        ],
+                        'msbuild.exe ${SOURCE.abspath} /t:Clean,Rebuild /p:Configuration=' + appx_env['VARIANT'] + ';Platform=' + platform,
+                        )
+
+    # the unit test:
+    #    produces no files,
+    #    depends on the .appx to exist
+    #    runs vstest.console.exe on the appx file.
+    if appx_env['WINRT_UNITTEST_RUN'] == 'on':
+        run_appx_unit_test = appx_env.Command( None,
+                             unit_test_appx_name_stem,
+                             'vstest.console.exe "${SOURCE.abspath} " /InIsolation /platform:' + platform
+                             )
+
+#    # Install vsix at the same level as the architecture directory
+#    makeappx_install = appx_env.Install('$CPP_DISTDIR/../test', source = unit_test_appx_name_stem )
+#    appx_env.Depends(makeappx_install, make_appx_cmd)
+
+
+    # make sure the appx file is built before trying to run the unit test.
+    if appx_env['WINRT_UNITTEST_RUN'] == 'on':
+        appx_env.Depends(run_appx_unit_test, make_appx_cmd)

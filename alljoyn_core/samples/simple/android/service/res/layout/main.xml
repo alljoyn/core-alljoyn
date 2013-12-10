@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_height="wrap_content" android:orientation="vertical"
+	android:layout_width="fill_parent">
+	<TextView android:id="@+id/TextView01" android:layout_width="wrap_content"
+		android:layout_height="wrap_content" android:text="Advertised Name"
+		android:textSize="8pt"></TextView>
+	<EditText android:layout_height="wrap_content"
+		android:layout_width="fill_parent" android:text="simple.service"
+		android:id="@+id/AdvertisedName"></EditText>
+	<LinearLayout android:id="@+id/LinearLayout01"
+		android:layout_height="wrap_content" android:layout_width="fill_parent"
+		android:orientation="horizontal">
+		<Button android:layout_height="wrap_content" android:text="Start"
+			android:layout_weight="1" android:layout_width="fill_parent"
+			android:id="@+id/StartButton"></Button>
+		<Button android:layout_height="wrap_content" android:text="Stop"
+			android:layout_width="fill_parent" android:layout_weight="1"
+			android:id="@+id/StopButton"></Button>
+	</LinearLayout>
+
+	<ListView android:layout_width="fill_parent"
+		android:layout_height="fill_parent" android:id="@+id/ListView"></ListView>
+</LinearLayout>

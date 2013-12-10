@@ -1,0 +1,10 @@
+﻿<FileList
+  Identity = "AllJoynSDK, Version=3.0"
+  DisplayName = "AllJoyn SDK for Windows Store apps"
+  MinVSVersion = "11.0"
+  AppliesTo = "WindowsAppContainer + (CSharp | VB | VisualC | JavaScript)"
+  SupportedArchitectures = "x86;x64;ARM"
+  DependsOn = "Microsoft.VCLibs, version=11.0">
+  <File Reference="AllJoyn.winmd" Implementation="AllJoyn.dll" />
+</FileList>
+

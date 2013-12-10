@@ -1,0 +1,49 @@
+# Copyright (c) 2010 - 2011, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+Import('env')
+import os
+
+# Darwin specific flags
+env.Append(CPPDEFINES=['QCC_OS_DARWIN'])
+
+env.Append(CPPLAGS=['-Wall',
+                   '-pipe',
+                   '-std=c99',
+                   '-fno-strict-aliasing',
+                   '-Wno-long-long'])
+
+env.Append(CXXFLAGS=['-Wall',
+                     '-Werror=non-virtual-dtor',
+                     '-pipe',
+                     '-std=gnu++11',
+                     '-fno-exceptions',
+                     '-fno-strict-aliasing',
+                     '-Wno-deprecated'])
+
+# Debug/Release Variants
+if env['VARIANT'] == 'debug' or env['VARIANT'] == 'Debug':
+   env.Append(CFLAGS='-g')
+   env.Append(CXXFLAGS='-g')
+   env.Append(JAVACFLAGS='-g -Xlint -Xlint:-serial')
+   print 'Using debug settings for darwin build...'
+else:
+   env.Append(CFLAGS='-O3')
+   env.Append(CXXFLAGS='-O3')
+   env.Append(LINKFLAGS='-s')
+   env.Append(JAVACFLAGS='-Xlint -Xlint:-serial')
+   print 'Using release settings for darwin build...'
+
+env.SConscript('${CPU}/SConscript')

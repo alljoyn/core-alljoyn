@@ -1,0 +1,48 @@
+# Copyright (c) 2012 - 2013, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+Import('env')
+
+if '' != env.subst('$GECKO_BASE'):
+    distdir = '$JS_DISTDIR/samples/%s'
+else:
+    distdir = '$JS_DISTDIR/samples/%s/assets/www'
+
+# The return value is the collection of files installed in the build destination.
+returnValue = []
+
+for sample in ['addressbook/client',
+               'addressbook/service',
+               'chat',
+               'props/client',
+               'props/service',
+               'simple/client',
+               'simple/service']:
+               #'streaming/sink',
+               #'streaming/source']:
+    env.Install(distdir % sample, env.Glob('%s/*' % sample))
+    if '' != env.subst('$GECKO_BASE'):
+        returnValue += env.Install(distdir % sample, '../js/npapi/alljoyn_init.js');
+    else:
+        returnValue += env.Install(distdir % sample, '../js/cordova/alljoyn_init.js');
+
+for sample in ['simple/client',
+               'simple/service']:
+    returnValue += env.Install((distdir + '/js') % sample, 'simple/simple.js')
+#for sample in ['streaming/sink',
+#               'streaming/source']:
+#    returnValue += env.Install((distdir + '/js') % sample, 'streaming/alljoyn.js')
+
+Return('returnValue')

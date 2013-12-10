@@ -1,0 +1,23 @@
+build
+*build
+.sconsign.dblite
+*.pdb
+.*.swp
+.cproject
+*.ncb
+*.log
+*.suo
+*.aps
+*.user
+*.xdc
+StyleCop.Cache
+*.bat
+bin
+obj
+gen
+libs
+bld
+Debug
+*.sdf
+ipch
+Generated Files

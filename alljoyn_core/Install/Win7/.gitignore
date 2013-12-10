@@ -1,0 +1,14 @@
+*.cab
+*.db
+*.ddf
+*.msi
+*.sdf
+*.opensdf
+ExpandCab.exe
+setup.inf
+setup.rpt
+Debug/*
+ExpandCab/Debug/*
+ExpandCab/Release/*
+ipch/*
+Release/*

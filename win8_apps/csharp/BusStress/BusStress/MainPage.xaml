@@ -1,0 +1,45 @@
+﻿<Page
+    x:Class="BusStress.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:BusStress"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="{StaticResource BackButtonDisabledForegroundThemeBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height=".08*"/>
+            <RowDefinition Height=".20*"/>
+            <RowDefinition Height=".65*"/>
+            <RowDefinition Height=".07*"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" TextWrapping="Wrap" Text="Bus Stress" Height="47" Foreground="Black" FontSize="40" FontWeight="Bold" Margin="20,0" VerticalAlignment="Bottom"/>
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width=".50*"/>
+                <ColumnDefinition Width=".50*"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Row="0" Grid.Column="0" Margin="20,20,20,0">
+                <TextBlock TextWrapping="Wrap" Text="Number of Iterations :" Height="Auto" FontSize="16" />
+                <Slider x:Name="IterationSlider" Foreground="Black" Minimum="1" Maximum="1000" Value="100" HorizontalAlignment="Left" Width="400" FontSize="20" Height="46" BorderBrush="#FF0D1D68" Background="#FF278E93" Margin="0,-5"/>
+                <ToggleSwitch Name="StopTreadsSwitch" FontSize="16" Header="Stop Threads before Join : " HorizontalAlignment="Stretch" VerticalAlignment="Stretch" OffContent="False" OnContent="True" Margin="0,-10,0,-3"/>
+                <TextBlock TextWrapping="Wrap" Text="Stress Type :" Height="Auto" FontSize="16"/>
+                <ComboBox Name="StressTypeComboBox" ItemsSource="{Binding}" MinWidth="300" HorizontalAlignment="Left" Margin="0,0,0,-5" />
+            </StackPanel>
+            <StackPanel Grid.Row="0" Grid.Column="1" Margin="20,20,20,0">
+                <TextBlock TextWrapping="Wrap" Text="Number of Threads :" Height="Auto" FontSize="16" />
+                <Slider x:Name="TreadSlider" BorderBrush="#FF0D1D68" Background="#FF278E93" Foreground="Black"  Minimum="1" Maximum="100" Value="5" HorizontalAlignment="Left" Width="400" TickPlacement="TopLeft" Height="47" Margin="0,-5"/>
+                <ToggleSwitch Name="DeleteBusSwitch" FontSize="16" Header="Delete Bus Attachments?" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" IsOn="True" OffContent="False" OnContent="True" Margin="0,-10,0,-3" />
+                <ToggleSwitch Name="MultipointSwitch" FontSize="16" Header="Multipoint?" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" IsOn="True" OffContent="False" OnContent="True" Margin="0,-10,0,-3" />
+            </StackPanel>
+        </Grid>
+        <ScrollViewer Name="scrollBar" Grid.Row="2">
+            <TextBox x:Name="output" TextWrapping="Wrap" Text="" Height="Auto" Foreground="Black" Margin="20,0"/>
+        </ScrollViewer>
+        <Button Grid.Row="3" Name="StartBtn" Content="Start" HorizontalAlignment="Left" VerticalAlignment="Stretch" Height="45" Width="217" Foreground="Black" Click="Start_Click" Margin="20,0,0,0"/>
+    </Grid>
+</Page>

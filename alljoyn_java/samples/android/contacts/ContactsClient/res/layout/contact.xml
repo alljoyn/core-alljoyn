@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- This is used to print a dialog that shows all of the information associated with a single contact.
+	Since a contact can have zero or more phone numbers or e-mails most of this information must be filled in 
+	dynamically by code -->
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="fill_parent" 
+	android:layout_height="fill_parent"
+	android:stretchColumns="1"
+	android:id="@+id/contact_table">
+	<TableRow>
+		<TextView
+			android:layout_column="1" 
+			android:text="@string/label_name"/>
+		<TextView
+			android:id="@+id/contact_name"
+			android:text="@string/contact_name" />			
+	</TableRow>
+	<TextView
+			android:layout_column="1" 
+			android:text="@string/label_phone_numbers"/>
+	<!-- phone number rows will be filled in by the program -->	
+	<TextView
+			android:layout_column="1" 
+			android:text="@string/label_email_addresses"/>
+	<TableRow>
+		<!-- email address rows will be filled in by the programm-->			
+	</TableRow>		
+</TableLayout>
+	

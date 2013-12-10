@@ -1,0 +1,38 @@
+# Copyright (c) 2010 - 2011, 2013, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+Import('env')
+
+# Install sample source
+if env['OS'] == 'android':
+    clientDistDir = '$CPP_DISTDIR/samples/simple/client'
+    env.Install(clientDistDir, 'android/client/AndroidManifest.xml')
+    env.Install(clientDistDir, 'android/client/.classpath')
+    env.Install(clientDistDir, 'android/client/.project')
+    env.Install(clientDistDir, 'android/client/default.properties')
+    env.Install(clientDistDir, Dir('android/client/.settings').srcnode())
+    env.Install(clientDistDir, Dir('android/client/jni').srcnode())
+    env.Install(clientDistDir, Dir('android/client/src').srcnode())
+    env.Install(clientDistDir, Dir('android/client/res').srcnode())
+
+    serviceDistDir = '$CPP_DISTDIR/samples/simple/service'
+    env.Install(serviceDistDir, 'android/service/AndroidManifest.xml')
+    env.Install(serviceDistDir, 'android/service/.classpath')
+    env.Install(serviceDistDir, 'android/service/.project')
+    env.Install(serviceDistDir, 'android/service/default.properties')
+    env.Install(serviceDistDir, Dir('android/service/.settings').srcnode())
+    env.Install(serviceDistDir, Dir('android/service/jni').srcnode())
+    env.Install(serviceDistDir, Dir('android/service/src').srcnode())
+    env.Install(serviceDistDir, Dir('android/service/res').srcnode())

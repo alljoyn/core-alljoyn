@@ -1,0 +1,64 @@
+<!--
+////////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+//
+//    Permission to use, copy, modify, and/or distribute this software for any
+//    purpose with or without fee is hereby granted, provided that the above
+//    copyright notice and this permission notice appear in all copies.
+//
+//    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+//    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+//    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+//    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+//    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+//    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+//    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+////////////////////////////////////////////////////////////////////////////////
+-->
+<xml>
+    <node name="/org/alljoyn/alljoyn_test">
+        <annotation name="org.alljoyn.lang.objc" value="PingObject"/>        
+        <interface name="org.alljoyn.alljoyn_test">
+            <annotation name="org.alljoyn.lang.objc" value="PingObjectDelegate"/>
+            <method name="delayed_ping">
+                <arg name="outStr" type="s" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="sendPingString:"/>
+                </arg>
+                <arg name="delay" type="u" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="withDelay:"/>
+                </arg>
+                <arg name="inStr" type="s" direction="out">
+                </arg>
+            </method>
+            <method name="my_ping">
+                <arg name="outStr" type="s" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="sendPingString:"/>
+                </arg>
+                <arg name="inStr" type="s" direction="out">
+                </arg>
+            </method>
+            <signal name="my_signal">
+            </signal>
+            <method name="time_ping">
+                <arg name="sendTimeSecs" type="u" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="sendPingAtTimeInSeconds:"/>
+                </arg>
+                <arg name="sendTimeMillisecs" type="q" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="timeInMilliseconds:"/>
+                </arg>
+                <arg name="receivedTimeSecs" type="u" direction="out">
+                    <annotation name="org.alljoyn.lang.objc" value="receivedTimeInSeconds:"/>
+                </arg>
+                <arg name="receivedTimeMillisecs" type="q" direction="out">
+                    <annotation name="org.alljoyn.lang.objc" value="receivedTimeInMilliseconds:"/>
+                </arg>
+            </method>
+        </interface>
+        <interface name="org.alljoyn.alljoyn_test.values">
+            <annotation name="org.alljoyn.lang.objc" value="PingObjectValuesDelegate"/>            
+            <property name="int_val" type="i" access="readwrite"/>
+            <property name="ro_str" type="s" access="read"/>
+            <property name="str_val" type="s" access="readwrite"/>
+        </interface>
+    </node>
+</xml>

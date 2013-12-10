@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 11
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CryptoWinRTUnitTest", "CryptoWinRTUnitTest\CryptoWinRTUnitTest.vcxproj", "{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8C753D20-B9D2-4032-BE3C-05248B40F444}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|ARM = Release|ARM
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Debug|ARM.ActiveCfg = Debug|Win32
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Debug|ARM.Build.0 = Debug|Win32
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Debug|ARM.Deploy.0 = Debug|Win32
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Debug|Win32.Build.0 = Debug|Win32
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Debug|Win32.Deploy.0 = Debug|Win32
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Debug|x64.ActiveCfg = Debug|Win32
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Debug|x64.Build.0 = Debug|Win32
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Debug|x64.Deploy.0 = Debug|Win32
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Release|ARM.ActiveCfg = Release|ARM
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Release|ARM.Build.0 = Release|ARM
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Release|ARM.Deploy.0 = Release|ARM
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Release|Win32.ActiveCfg = Release|Win32
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Release|Win32.Build.0 = Release|Win32
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Release|Win32.Deploy.0 = Release|Win32
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Release|x64.ActiveCfg = Release|x64
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Release|x64.Build.0 = Release|x64
+		{2842FF1C-B179-498E-9A58-C1EEFC0C9AFB}.Release|x64.Deploy.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

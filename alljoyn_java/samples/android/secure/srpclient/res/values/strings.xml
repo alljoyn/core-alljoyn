@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Secure SRP Client</string>
+	<string name="enter_message_hint">Enter message</string>
+	<string name="alert_dialog_password">Enter password</string>
+</resources>

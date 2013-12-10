@@ -1,0 +1,114 @@
+# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+from os.path import basename
+
+Import('env')
+
+daemon_env = env.Clone()
+
+if daemon_env['OS'] in [ 'linux', 'openwrt', 'winxp', 'win7' ] or (daemon_env['OS'] == 'darwin' and daemon_env['CPU'] == 'x86'):
+    default_ice = 'off'
+else:
+    default_ice = 'on'
+
+vars = Variables()
+vars.Add(EnumVariable('ICE', 'Enable ICE Transport', default_ice, allowed_values=('on', 'off')))
+if daemon_env['OS'] in ['linux', 'openwrt', 'android']:
+    vars.Add(EnumVariable('BT', 'Enable Bluetooth Transport', 'on', allowed_values=('on', 'off')))
+else:
+    daemon_env['BT'] = 'off'
+vars.Update(daemon_env)
+Help(vars.GenerateHelpText(daemon_env))
+
+
+if daemon_env['OS'] == 'android':
+    # Android Dalvik code is tied to the hip of daemon for proximity scanner
+    # functionality.  Let the build for Android know whether ICE support is
+    # available or not.
+    env['ANDROID_PROXIMITY'] = daemon_env['ICE']
+
+
+if daemon_env['OS'] == "darwin":
+    # Darwin has its own version of the daemon transport
+    srcs = [ f for f in daemon_env.Glob('*.cc') + daemon_env.Glob('*.c') + [daemon_env['OS'] + '/DaemonTransport.cc']]
+else:
+    srcs = [ f for f in daemon_env.Glob('*.cc') + daemon_env.Glob('*.c') + [daemon_env['OS_GROUP'] + '/DaemonTransport.cc']]
+
+if daemon_env['OS'] != "android":
+    srcs += [daemon_env['OS_GROUP'] + '/PermissionMgr.cc']
+
+daemon_env.Append(CPPPATH = [ daemon_env.Dir('..').srcnode(),
+                              daemon_env.Dir('.').srcnode(),
+                              daemon_env.Dir('$OS_GROUP').srcnode() ])
+
+daemon_objs = daemon_env.Object(srcs)
+
+daemon_objs.extend(daemon_env.SConscript('ns/SConscript', exports = ['daemon_env']))
+
+# Add in P2P Helper support for Android only
+if daemon_env['OS'] == "android":
+    daemon_objs.extend(daemon_env.SConscript('android/SConscript', exports = ['daemon_env']))
+
+
+if daemon_env['BT'] == 'on':
+    daemon_env.Append(CPPDEFINES = ['AJ_ENABLE_BT'])
+    daemon_env.Append(CPPPATH = [daemon_env.Dir('./bluetooth').srcnode()])
+    bt_objs = daemon_env.SConscript('bluetooth/SConscript', exports = ['daemon_env'])
+    daemon_objs.extend(bt_objs)
+
+if daemon_env['ICE'] == 'on':
+    daemon_env.Append(CPPDEFINES=['AJ_ENABLE_ICE'])
+    daemon_env.Append(CPPPATH = [ daemon_env.Dir('./packetengine').srcnode(),
+                                  daemon_env.Dir('./ice').srcnode() ])
+    pe_objs = daemon_env.SConscript('packetengine/SConscript', exports = ['daemon_env'])
+    ice_objs = daemon_env.SConscript('ice/SConscript', exports = ['daemon_env'])
+    json_objs = daemon_env.SConscript('JSON/SConscript', exports = ['daemon_env'])
+    daemon_objs.extend(pe_objs + ice_objs + json_objs)
+
+# Bundled daemon object file
+bdobj = daemon_env.SConscript('bundled/SConscript', exports = ['daemon_env'])
+
+# AllJoyn Daemon
+if daemon_env['OS_GROUP']=='winrt':
+    Import('winrt_objs')
+    daemon_objs.extend(winrt_objs + [bdobj])
+
+progs, os_objs = daemon_env.SConscript('${OS_GROUP}/SConscript', exports=['daemon_env', 'daemon_objs'])
+
+daemon_objs.extend(os_objs)
+
+# Daemon library
+if daemon_env['OS_GROUP'] != 'winrt':
+    lib = daemon_env.StaticLibrary('ajdaemon', daemon_objs);
+else:
+    lib = []
+
+# AllJoyn Daemon test programs
+if daemon_env['OS_GROUP'] == 'winrt':
+    tests = []
+elif daemon_env['OS'] == 'darwin':
+    if daemon_env['CPU'] in ['arm', 'armv7', 'armv7s']:
+        print 'Not building unit tests for iOS...'    
+        tests = []
+    else:
+        print 'Building unit tests for darwin...'
+        tests = daemon_env.SConscript('test/SConscript', exports = ['daemon_env', 'daemon_objs'])
+else:
+    tests = daemon_env.SConscript('test/SConscript', exports = ['daemon_env', 'daemon_objs'])
+    
+# Return daemon and related tests
+ret = progs + tests, lib, bdobj
+Return('ret')

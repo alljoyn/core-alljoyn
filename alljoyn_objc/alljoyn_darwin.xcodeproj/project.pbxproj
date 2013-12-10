@@ -1,0 +1,630 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXFileReference section */
+		AC135D25159A698500970833 /* alljoyn_core */ = {isa = PBXFileReference; lastKnownFileType = folder; name = alljoyn_core; path = ../alljoyn_core; sourceTree = "<group>"; };
+		AC135D27159A698500970833 /* alljoyn_streaming */ = {isa = PBXFileReference; lastKnownFileType = folder; name = alljoyn_streaming; path = ../alljoyn_streaming; sourceTree = "<group>"; };
+		AC135D28159A698500970833 /* build_core */ = {isa = PBXFileReference; lastKnownFileType = folder; name = build_core; path = ../build_core; sourceTree = "<group>"; };
+		AC135D29159A698500970833 /* common */ = {isa = PBXFileReference; lastKnownFileType = folder; name = common; path = ../common; sourceTree = "<group>"; };
+		AC8D8D03161377F900361742 /* alljoyn_c */ = {isa = PBXFileReference; lastKnownFileType = folder; name = alljoyn_c; path = ../alljoyn_c; sourceTree = "<group>"; };
+		ACECC2C716275D8100192EFF /* alljoyn_unity */ = {isa = PBXFileReference; lastKnownFileType = folder; name = alljoyn_unity; path = ../alljoyn_unity; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		ACB4AFAF150E631F0054D964 = {
+			isa = PBXGroup;
+			children = (
+				ACECC2C716275D8100192EFF /* alljoyn_unity */,
+				AC8D8D03161377F900361742 /* alljoyn_c */,
+				AC135D25159A698500970833 /* alljoyn_core */,
+				AC135D27159A698500970833 /* alljoyn_streaming */,
+				AC135D28159A698500970833 /* build_core */,
+				AC135D29159A698500970833 /* common */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXLegacyTarget section */
+		A441CDF7161F6479008A4779 /* alljoyn_unity_osx */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-u OS=darwin CPU=x86 DOCS=html BD=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildConfigurationList = A441CDFA161F6479008A4779 /* Build configuration list for PBXLegacyTarget "alljoyn_unity_osx" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/local/bin/scons;
+			buildWorkingDirectory = ../alljoyn_unity;
+			dependencies = (
+			);
+			name = alljoyn_unity_osx;
+			passBuildSettingsInEnvironment = 1;
+			productName = alljoyn_unity_osx;
+		};
+		AC0DC84C151A46F0000E302F /* alljoyn_core_ios */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-u OS=darwin CPU=arm BD=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildConfigurationList = AC0DC84D151A46F0000E302F /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/local/bin/scons;
+			buildWorkingDirectory = ../alljoyn_core;
+			dependencies = (
+			);
+			name = alljoyn_core_ios;
+			passBuildSettingsInEnvironment = 1;
+			productName = alljoyn_core_ios;
+		};
+		AC8D8CFE161376FE00361742 /* alljoyn_c_ios */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-u OS=darwin CPU=arm BD=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildConfigurationList = AC8D8CFF161376FE00361742 /* Build configuration list for PBXLegacyTarget "alljoyn_c_ios" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/local/bin/scons;
+			buildWorkingDirectory = ../alljoyn_c;
+			dependencies = (
+			);
+			name = alljoyn_c_ios;
+			passBuildSettingsInEnvironment = 1;
+			productName = alljoyn_c;
+		};
+		AC9C2C6E15FA9B4C00C60607 /* alljoyn_c_osx */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-u OS=darwin CPU=x86 DOCS=html BD=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildConfigurationList = AC9C2C7115FA9B4C00C60607 /* Build configuration list for PBXLegacyTarget "alljoyn_c_osx" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/local/bin/scons;
+			buildWorkingDirectory = ../alljoyn_c;
+			dependencies = (
+			);
+			name = alljoyn_c_osx;
+			passBuildSettingsInEnvironment = 1;
+			productName = alljoyn_c;
+		};
+		ACA3BC341587FC5E0010F1C5 /* alljoyn_streaming_osx */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-u OS=darwin CPU=x86 DOCS=html BD=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildConfigurationList = ACA3BC371587FC5E0010F1C5 /* Build configuration list for PBXLegacyTarget "alljoyn_streaming_osx" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/local/bin/scons;
+			buildWorkingDirectory = ../alljoyn_streaming;
+			dependencies = (
+			);
+			name = alljoyn_streaming_osx;
+			passBuildSettingsInEnvironment = 1;
+			productName = alljoyn_streaming_osx;
+		};
+		ACA3BC391587FDBC0010F1C5 /* alljoyn_streaming_ios */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-u OS=darwin CPU=arm BD=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildConfigurationList = ACA3BC3A1587FDBC0010F1C5 /* Build configuration list for PBXLegacyTarget "alljoyn_streaming_ios" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/local/bin/scons;
+			buildWorkingDirectory = ../alljoyn_streaming;
+			dependencies = (
+			);
+			name = alljoyn_streaming_ios;
+			passBuildSettingsInEnvironment = 1;
+			productName = alljoyn_streaming_ios;
+		};
+		ACB2C746160B8D9900D7E3A6 /* alljoyn_core_ios_armv7s */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-u OS=darwin CPU=armv7s BD=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildConfigurationList = ACB2C747160B8D9900D7E3A6 /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios_armv7s" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/local/bin/scons;
+			buildWorkingDirectory = ../alljoyn_core;
+			dependencies = (
+			);
+			name = alljoyn_core_ios_armv7s;
+			passBuildSettingsInEnvironment = 1;
+			productName = alljoyn_core_ios;
+		};
+		ACB2C74B160B8EFF00D7E3A6 /* alljoyn_core_ios_armv7 */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-u OS=darwin CPU=armv7 BD=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildConfigurationList = ACB2C74C160B8EFF00D7E3A6 /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios_armv7" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/local/bin/scons;
+			buildWorkingDirectory = ../alljoyn_core;
+			dependencies = (
+			);
+			name = alljoyn_core_ios_armv7;
+			passBuildSettingsInEnvironment = 1;
+			productName = alljoyn_core_ios;
+		};
+		ACB4AFB6150E631F0054D964 /* alljoyn_core_osx */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-u OS=darwin CPU=x86 DOCS=html BD=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildConfigurationList = ACB4AFB9150E631F0054D964 /* Build configuration list for PBXLegacyTarget "alljoyn_core_osx" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/local/bin/scons;
+			buildWorkingDirectory = ../alljoyn_core;
+			dependencies = (
+			);
+			name = alljoyn_core_osx;
+			passBuildSettingsInEnvironment = 1;
+			productName = alljoyn_darwin;
+		};
+		ACFED7B21624CE2900697423 /* alljoyn_unity_ios */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-u OS=darwin CPU=arm BD=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildConfigurationList = ACFED7B31624CE2900697423 /* Build configuration list for PBXLegacyTarget "alljoyn_unity_ios" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/local/bin/scons;
+			buildWorkingDirectory = ../alljoyn_unity;
+			dependencies = (
+			);
+			name = alljoyn_unity_ios;
+			passBuildSettingsInEnvironment = 1;
+			productName = alljoyn_unity_osx;
+		};
+/* End PBXLegacyTarget section */
+
+/* Begin PBXProject section */
+		ACB4AFB1150E631F0054D964 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0450;
+			};
+			buildConfigurationList = ACB4AFB4150E631F0054D964 /* Build configuration list for PBXProject "alljoyn_darwin" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = ACB4AFAF150E631F0054D964;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				ACB4AFB6150E631F0054D964 /* alljoyn_core_osx */,
+				AC0DC84C151A46F0000E302F /* alljoyn_core_ios */,
+				ACB2C74B160B8EFF00D7E3A6 /* alljoyn_core_ios_armv7 */,
+				ACB2C746160B8D9900D7E3A6 /* alljoyn_core_ios_armv7s */,
+				ACA3BC341587FC5E0010F1C5 /* alljoyn_streaming_osx */,
+				ACA3BC391587FDBC0010F1C5 /* alljoyn_streaming_ios */,
+				AC9C2C6E15FA9B4C00C60607 /* alljoyn_c_osx */,
+				AC8D8CFE161376FE00361742 /* alljoyn_c_ios */,
+				A441CDF7161F6479008A4779 /* alljoyn_unity_osx */,
+				ACFED7B21624CE2900697423 /* alljoyn_unity_ios */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin XCBuildConfiguration section */
+		A441CDF8161F6479008A4779 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				DEBUGGING_SYMBOLS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		A441CDF9161F6479008A4779 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		AC0DC84E151A46F0000E302F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				DEBUGGING_SYMBOLS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				VARIANT = "'debug'";
+			};
+			name = Debug;
+		};
+		AC0DC84F151A46F0000E302F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				VARIANT = "'release'";
+			};
+			name = Release;
+		};
+		AC8D8D00161376FE00361742 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++11";
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEBUGGING_SYMBOLS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = alljoyn_c_ios;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		AC8D8D01161376FE00361742 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++11";
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = alljoyn_c_ios;
+				SDKROOT = iphoneos;
+			};
+			name = Release;
+		};
+		AC9C2C6F15FA9B4C00C60607 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++11";
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEBUGGING_SYMBOLS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		AC9C2C7015FA9B4C00C60607 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++11";
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		ACA3BC351587FC5E0010F1C5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				DEBUGGING_SYMBOLS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		ACA3BC361587FC5E0010F1C5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		ACA3BC3B1587FDBC0010F1C5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "";
+				DEBUGGING_SYMBOLS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		ACA3BC3C1587FDBC0010F1C5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+			};
+			name = Release;
+		};
+		ACB2C748160B8D9900D7E3A6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				DEBUGGING_SYMBOLS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "alljoyn_core_ios copy";
+				SDKROOT = iphoneos;
+				VARIANT = "'debug'";
+			};
+			name = Debug;
+		};
+		ACB2C749160B8D9900D7E3A6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "alljoyn_core_ios copy";
+				SDKROOT = iphoneos;
+				VARIANT = "'release'";
+			};
+			name = Release;
+		};
+		ACB2C74D160B8EFF00D7E3A6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				DEBUGGING_SYMBOLS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "alljoyn_core_ios_armv7s copy";
+				SDKROOT = iphoneos;
+				VARIANT = "'debug'";
+			};
+			name = Debug;
+		};
+		ACB2C74E160B8EFF00D7E3A6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "alljoyn_core_ios_armv7s copy";
+				SDKROOT = iphoneos;
+				VARIANT = "'release'";
+			};
+			name = Release;
+		};
+		ACB4AFB7150E631F0054D964 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		ACB4AFB8150E631F0054D964 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		ACB4AFBA150E631F0054D964 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				DEBUGGING_SYMBOLS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VARIANT = debug;
+			};
+			name = Debug;
+		};
+		ACB4AFBB150E631F0054D964 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VARIANT = release;
+			};
+			name = Release;
+		};
+		ACFED7B41624CE2900697423 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				DEBUGGING_SYMBOLS = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = alljoyn_unity_ios;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		ACFED7B51624CE2900697423 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = alljoyn_unity_ios;
+				SDKROOT = iphoneos;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A441CDFA161F6479008A4779 /* Build configuration list for PBXLegacyTarget "alljoyn_unity_osx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A441CDF8161F6479008A4779 /* Debug */,
+				A441CDF9161F6479008A4779 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AC0DC84D151A46F0000E302F /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC0DC84E151A46F0000E302F /* Debug */,
+				AC0DC84F151A46F0000E302F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AC8D8CFF161376FE00361742 /* Build configuration list for PBXLegacyTarget "alljoyn_c_ios" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC8D8D00161376FE00361742 /* Debug */,
+				AC8D8D01161376FE00361742 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AC9C2C7115FA9B4C00C60607 /* Build configuration list for PBXLegacyTarget "alljoyn_c_osx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC9C2C6F15FA9B4C00C60607 /* Debug */,
+				AC9C2C7015FA9B4C00C60607 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		ACA3BC371587FC5E0010F1C5 /* Build configuration list for PBXLegacyTarget "alljoyn_streaming_osx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACA3BC351587FC5E0010F1C5 /* Debug */,
+				ACA3BC361587FC5E0010F1C5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		ACA3BC3A1587FDBC0010F1C5 /* Build configuration list for PBXLegacyTarget "alljoyn_streaming_ios" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACA3BC3B1587FDBC0010F1C5 /* Debug */,
+				ACA3BC3C1587FDBC0010F1C5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		ACB2C747160B8D9900D7E3A6 /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios_armv7s" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACB2C748160B8D9900D7E3A6 /* Debug */,
+				ACB2C749160B8D9900D7E3A6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		ACB2C74C160B8EFF00D7E3A6 /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios_armv7" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACB2C74D160B8EFF00D7E3A6 /* Debug */,
+				ACB2C74E160B8EFF00D7E3A6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		ACB4AFB4150E631F0054D964 /* Build configuration list for PBXProject "alljoyn_darwin" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACB4AFB7150E631F0054D964 /* Debug */,
+				ACB4AFB8150E631F0054D964 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		ACB4AFB9150E631F0054D964 /* Build configuration list for PBXLegacyTarget "alljoyn_core_osx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACB4AFBA150E631F0054D964 /* Debug */,
+				ACB4AFBB150E631F0054D964 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		ACFED7B31624CE2900697423 /* Build configuration list for PBXLegacyTarget "alljoyn_unity_ios" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACFED7B41624CE2900697423 /* Debug */,
+				ACFED7B51624CE2900697423 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = ACB4AFB1150E631F0054D964 /* Project object */;
+}

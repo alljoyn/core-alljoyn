@@ -1,0 +1,173 @@
+# Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+
+import os
+import string
+import subprocess
+
+
+# Froyo is API level 8
+min_api_level = 8
+
+Import('env')
+
+env['ANDROID_STL'] = 'gnustl_static'
+
+# android specific vars
+vars = Variables()
+vars.Add(PathVariable('ANDROID_SRC', 'Base directory of Android source tree', os.environ.get('ANDROID_SRC')))
+vars.Add(PathVariable('ANDROID_NDK', 'Base directory of Android NDK', os.environ.get('ANDROID_NDK')))
+vars.Add(PathVariable('ANDROID_SDK', 'Base directory of Android SDK', os.environ.get('ANDROID_SDK')))
+vars.Add('ANDROID_TARGET', 'Target to be used for the build', os.environ.get('ANDROID_TARGET'))
+vars.Update(env)
+Help(vars.GenerateHelpText(env))
+
+
+# Verify dependencies
+if env.get('ANDROID_NDK', '') == '':
+   print 'ANDROID_NDK variable is required'
+   if not GetOption('help'):
+      Exit(1)
+
+if env.get('ANDROID_SRC', '') == '':
+   print 'ANDROID_SRC variable is required'
+   if not GetOption('help'):
+      Exit(1)
+
+if env.get('ANDROID_TARGET', '') == '':
+   env['ANDROID_TARGET'] = 'generic'
+
+
+ndk_api_levels = set([ int(d.split('-')[-1]) for d in os.listdir(env['ANDROID_NDK'] + '/platforms') ])
+max_ndk_api_level = max(ndk_api_levels)
+if env.get('ANDROID_SDK', '') != '':
+   if max_ndk_api_level < min_api_level:
+      print 'Installed Android NDK does not support the minimum API level %d.' % min_api_level
+      if not GetOption('help'):
+         Exit(1)
+
+   min_ndk_api_level = min([ level for level in ndk_api_levels if level >= min_api_level ])
+   api_levels = [ level
+                  for level in set([ int(d.split('-')[-1]) for d in os.listdir(env['ANDROID_SDK'] + '/platforms') ])
+                  if level >= min_ndk_api_level ]
+
+   api_levels.sort()
+
+   vars2 = Variables()
+   vars2.Add('ANDROID_API_LEVEL', 'Android API level', os.environ.get('ANDROID_API_LEVEL', str(api_levels[-1])))
+   vars2.Update(env)
+   Help(vars2.GenerateHelpText(env))
+
+
+# Override MSVC build settings when building on windows.
+if 'win32' == env.subst('$HOST_OS'):
+   env['OBJPREFIX']      = ''
+   env['OBJSUFFIX']      = '.o'
+   env['SHOBJPREFIX']    = '$OBJPREFIX'
+   env['SHOBJSUFFIX']    = '.os'         # SCons uses ".os" for shared object files on Linux
+   env['PROGPREFIX']     = ''
+   env['PROGSUFFIX']     = ''
+   env['LIBPREFIX']      = 'lib'
+   env['LIBSUFFIX']      = '.a'
+   env['SHLIBPREFIX']    = '$LIBPREFIX'
+   env['SHLIBSUFFIX']    = '.so'
+   env['LIBPREFIXES']    = [ '$LIBPREFIX' ]
+   env['LIBSUFFIXES']    = [ '$LIBSUFFIX', '$SHLIBSUFFIX' ]
+
+if not GetOption('help') and env.has_key('ANDROID_NDK'):
+   abi_map = { 'arm': 'armeabi',
+               'mips': 'mips',
+               'x86': 'x86' }
+   curdir = env.Dir('.').srcnode()
+
+
+   # Do a "test build" using ndk-build on our special Android.mk file to get
+   # the command line options used by Android when building code.
+   tb = subprocess.Popen([ env.subst('$ANDROID_NDK/ndk-build'),
+                           'APP_BUILD_SCRIPT=%s/Android.mk' % curdir,
+                           'NDK_PROJECT_PATH=%s' % curdir,
+                           'APP_ABI=%s' % abi_map[env['CPU']],
+                           'APP_STL=%s' % env['ANDROID_STL'],
+                           'APP_PLATFORM=android-%s' % str(max_ndk_api_level),
+                           '-n' ],
+                         stdout = subprocess.PIPE)
+   stdoutdata, stderrdata = tb.communicate()
+
+   # Message the output from ndk-build into a dictionary.
+   settings = dict( [ map(string.strip, line[4:].split('=', 1))
+                      for line in stdoutdata.split('\n')
+                      if line.startswith('AJ> ') ] )
+
+   # Some versions of the Android NDK leave out
+   # .../gnu-libstdc++/<gcc-version>/include/backward include path so we need
+   # to add it if it is missing.  Also need to figure out where the STL
+   # library lives.
+   stl_lib_path = ''
+   inc_paths = map(string.strip, settings['INCLUDES'].split())
+   for ip in inc_paths:
+      bpath = ip + '/backward'
+      if bpath not in inc_paths and os.path.exists(bpath):
+         # Get the "backward" include path
+         inc_paths.append(bpath)
+
+      if '/libs/' in ip:
+         # Get the STL library path
+         stl_lib_path = os.path.split(ip)[0]
+
+   path = settings['TOOLCHAIN_PREBUILT_ROOT'] + '/bin'
+   prefix = settings['TOOLCHAIN_PREFIX'][len(path) + 1:]
+
+   env['AR'] = prefix + 'ar'
+   env['CC'] = prefix + 'gcc'
+   env['CXX'] = prefix + 'g++'
+   env['LINK'] = prefix + 'gcc'
+
+   env.PrependENVPath('PATH', path)
+   env.Append(CPPPATH = inc_paths)
+   env.AppendUnique(CFLAGS = settings['CFLAGS'].split())
+   env.AppendUnique(CXXFLAGS = settings['CXXFLAGS'].split())
+   env.AppendUnique(LINKFLAGS = settings['LDFLAGS'].split())
+   vflags = [f for f in settings[env['VARIANT'] + '_FLAGS'].split() if (f != '-g' and
+                                                                        f != '-DNDEBUG' and
+                                                                        f != '-UNDEBUG' and
+                                                                        not f.startswith('-O'))]
+   env.MergeFlags(vflags)
+   env.Append(LIBPATH = [ settings['SYSROOT'] + '/usr/lib',
+                          stl_lib_path ])
+   env.Append(LINKFLAGS = [ '--sysroot=' + settings['SYSROOT'],
+                            '-Wl,-rpath-link=' + settings['SYSROOT'] + '/usr/lib' ])
+
+   # Get OpenSSL from Android source.
+   env.Append(CPPPATH = '$ANDROID_SRC/external/openssl/include')
+   env.Append(LIBPATH = '$ANDROID_SRC/out/target/product/$ANDROID_TARGET/system/lib')
+
+   env.Append(CPPDEFINES = 'QCC_OS_ANDROID')
+   env.Append(CFLAGS = '-Wno-deprecated')
+   env.Append(CXXFLAGS = '-Wno-deprecated')
+
+   env.Append(LINKFLAGS = ['-Wl,--gc-sections', '-Wl,-z,nocopyreloc'])
+
+   # Debug/Release variants
+   if env['VARIANT'] == 'debug':
+      env.Append(CFLAGS = ['-O0', '-g'])
+      env.Append(CXXFLAGS = ['-O0', '-g'])
+      env.Append(JAVACFLAGS='-g -Xlint -Xlint:-serial')
+   else:
+      env.Append(CFLAGS = '-Os')
+      env.Append(CXXFLAGS = '-Os')
+      env.Append(LINKFLAGS='-s')
+      env.Append(JAVACFLAGS='-Xlint -Xlint:-serial')
+
+   env.SConscript('${CPU}/SConscript')

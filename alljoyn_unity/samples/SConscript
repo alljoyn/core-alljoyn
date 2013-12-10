@@ -1,0 +1,57 @@
+# Copyright (c) 2010 - 2011, 2013, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+Import('env')
+
+# The return value is the collection of files installed in the build destination.
+returnValue = []
+
+#Not currently installing the csharp samples into the distbin
+#returnValue += env.Install('$UNITY_DISTDIR/samples/csharp/basic_client', env.Dir('csharp/basic_client'))
+#returnValue += env.Install('$UNITY_DISTDIR/samples/csharp/basic_client-server', env.Dir('csharp/basic_client-server'))
+#returnValue += env.Install('$UNITY_DISTDIR/samples/csharp/basic_server', env.Dir('csharp/basic_server'))
+
+# only install the samples for an android build.
+if env['OS'] == 'android':
+    returnValue += env.Install('$UNITY_DISTDIR/samples', env.Dir('Unity/BasicClient'))
+    returnValue += env.Install('$UNITY_DISTDIR/samples', env.Dir('Unity/BasicServer'))
+    returnValue += env.Install('$UNITY_DISTDIR/samples', env.Dir('Unity/Chat'))
+
+#install libraries into samples in the source and the distdir
+if env['OS_GROUP'] == 'windows':
+    #place alljoyn_unity.dll into the samples
+    returnValue += env.Install('Unity/BasicClient/Assets/Plugins', env['ALLJOYN_UNITY_LIB'])
+    returnValue += env.Install('Unity/BasicServer/Assets/Plugins', env['ALLJOYN_UNITY_LIB'])
+    returnValue += env.Install('Unity/Chat/Assets/Plugins', env['ALLJOYN_UNITY_LIB'])
+
+    #place alljoyn_c.dll into the samples
+    liballjoyn_c = '$DISTDIR/c/lib/alljoyn_c.dll'
+    returnValue += env.Install('Unity/BasicClient/Assets/Plugins', liballjoyn_c)
+    returnValue += env.Install('Unity/BasicServer/Assets/Plugins', liballjoyn_c)
+    returnValue += env.Install('Unity/Chat/Assets/Plugins', liballjoyn_c)
+
+if env['OS'] == 'android':
+    #place alljoyn_unity.dll into the samples
+    returnValue += env.Install('Unity/BasicClient/Assets/Plugins', env['ALLJOYN_UNITY_LIB'])
+    returnValue += env.Install('Unity/BasicServer/Assets/Plugins', env['ALLJOYN_UNITY_LIB'])
+    returnValue += env.Install('Unity/Chat/Assets/Plugins', env['ALLJOYN_UNITY_LIB'])
+
+    #place liballjoyn_c.so into the samples
+    liballjoyn_c = '$DISTDIR/c/lib/liballjoyn_c.so'
+    returnValue += env.Install('Unity/BasicClient/Assets/Plugins/Android', liballjoyn_c)
+    returnValue += env.Install('Unity/BasicServer/Assets/Plugins/Android', liballjoyn_c)
+    returnValue += env.Install('Unity/Chat/Assets/Plugins/Android', liballjoyn_c)
+
+Return('returnValue')

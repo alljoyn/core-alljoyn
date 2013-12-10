@@ -1,0 +1,107 @@
+<project>
+  
+  <property name="src" value="./src" />
+  <!-- if switching the build value to build/linux/x86_64/debug then the StackShadowPages
+       jvm arg must be specified as 6 -->
+  <property name="build" value="build/linux/x86/debug" />
+  <property name="dist" value="./${build}/dist/java" />
+  <property name="classes" value="./test/${build}/obj/classes" />
+  <property name="test" value="./${build}/test" />
+  <property name="checkstyle" value="./${build}/checkstyle" />
+  <property name="org.alljoyn.bus.address" value="unix:abstract=alljoyn"/>
+  <property name="org.alljoyn.bus.daemonaddress" value="unix:abstract=AllJoynDaemonTest"/>
+  <property name="org.alljoyn.bus.daemonremoteaddress" value="tcp:addr=127.0.0.1,port=5343"/>
+  
+  <path id="test.classpath">
+    <pathelement location="${classes}" />
+    <fileset dir="${dist}">
+      <include name="**/*.jar" />
+    </fileset>
+  </path>
+
+  <target name="test-init">
+    <delete dir="${test}/data"/>
+    <delete dir="${test}/reports"/>
+    <mkdir dir="${test}/data"/>
+    <mkdir dir="${test}/reports"/>
+  </target>
+
+  <target name="test" depends="test-init">
+    <junit fork="yes" printsummary="false" errorProperty="test.failed" failureProperty="test.failed">
+      <jvmarg value="-Xcheck:jni" />
+      <jvmarg value="-Xmx512m" />
+      <!-- uncoment this jvmarg if you are doing a x86_64 build -->
+      <!-- <jvmarg value="-XX:StackShadowPages=6" /> -->
+      <jvmarg value="-Dorg.alljoyn.bus.address=${org.alljoyn.bus.address}" />
+      <jvmarg value="-Dorg.alljoyn.bus.daemonaddress=${org.alljoyn.bus.daemonaddress}" />
+      <jvmarg value="-Dorg.alljoyn.bus.daemonremoteaddress=${org.alljoyn.bus.daemonremoteaddress}" />
+      <sysproperty key="java.library.path" path="${dist}/lib"/>
+      <classpath refid="test.classpath" />
+      <formatter type="brief" usefile="false" />
+      <formatter type="xml" />
+      <batchtest todir="${test}/data" if="testcase">
+	<fileset dir="${classes}" includes="**/*${testcase}.class" />
+      </batchtest>
+      <batchtest todir="${test}/data" unless="testcase">
+	<fileset dir="${classes}" includes="**/*Test.class" />
+      </batchtest>
+    </junit>
+
+    <junitreport todir="${test}/data">
+      <fileset dir="${test}/data">
+	<include name="TEST-*.xml"/>
+      </fileset>
+      <report format="frames" todir="${test}/reports/junit"/>
+    </junitreport>
+
+    <fail message="Tests failed. Check log and/or reports." if="test.failed" />
+  </target>
+
+  <path id="checkstyle.classpath">
+    <fileset dir="${dist}">
+      <include name="**/alljoyn.jar" />
+    </fileset>
+  </path>
+
+  <target name="checkstyle-init">
+    <delete dir="${checkstyle}/data"/>
+    <delete dir="${checkstyle}/reports"/>
+    <mkdir dir="${checkstyle}/data"/>
+    <mkdir dir="${checkstyle}/reports"/>
+  </target>
+  
+  <target name="checkstyle" depends="checkstyle-init">
+    <taskdef resource="checkstyletask.properties"
+             classpath="/home/george/checkstyle-5.1/checkstyle-all-5.1.jar"/>
+    <checkstyle failonviolation="false" 
+                config="cs_checks.xml">
+      <fileset dir="${src}" includes="**/*.java"/>
+      <formatter type="xml" tofile="${checkstyle}/data/cs_errors.xml"/>
+      <classpath refid="checkstyle.classpath"/>
+    </checkstyle>  
+    <xslt basedir="${checkstyle}/data"
+          destdir="${checkstyle}/reports"
+          includes="cs_errors.xml"
+          style="/home/george/checkstyle-5.1/contrib/checkstyle-noframes.xsl">
+    </xslt>
+  </target>
+
+  <target name="checkstyle-android" depends="checkstyle-init">
+    <taskdef resource="checkstyletask.properties"
+             classpath="/home/george/checkstyle-5.1/checkstyle-all-5.1.jar"/>
+    <checkstyle failonviolation="false" 
+                config="android_checks.xml">
+      <fileset dir="./samples/android" 
+               includes="**/*.java"
+               excludes="**/test/* **/R.java"/>
+      <formatter type="xml" tofile="${checkstyle}/data/cs_errors.xml"/>
+      <classpath refid="checkstyle.classpath"/>
+    </checkstyle>  
+    <xslt basedir="${checkstyle}/data"
+          destdir="${checkstyle}/reports"
+          includes="cs_errors.xml"
+          style="/home/george/checkstyle-5.1/contrib/checkstyle-noframes.xsl">
+    </xslt>
+  </target>
+
+</project>

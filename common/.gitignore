@@ -1,0 +1,5 @@
+.sconsign.dblite
+build
+*~
+*.o
+whitespace.db

@@ -1,0 +1,77 @@
+# Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+
+import os
+import platform
+
+Import('env')
+
+if platform.system() == 'Darwin':
+    # De-Mac-ify a couple of the envrionment variables.
+    env.Replace(SHLIBSUFFIX='.so')
+    env.Replace(SHLINKFLAGS=['$LINKFLAGS', '-shared'])
+
+# OpenWRT specific vars
+vars = Variables()
+vars.Add('TARGET_PATH', 'Paths to toolchain for cross compiling AllJoyn for OpenWRT', os.environ.get('TARGET_PATH'))
+vars.Add('TARGET_CC', 'OpenWRT C compiler', os.environ.get('TARGET_CC'))
+vars.Add('TARGET_CFLAGS', 'OpenWRT C compiler flags', os.environ.get('TARGET_CFLAGS'))
+vars.Add('TARGET_CPPFLAGS', 'OpenWRT C pre-processor compiler flags', os.environ.get('TARGET_CPPFLAGS'))
+
+vars.Add('TARGET_CXX', 'OpenWRT C++ compiler', os.environ.get('TARGET_CXX'))
+
+vars.Add('TARGET_LINK', 'OpenWRT Linker', os.environ.get('TARGET_CC')) # Normally use the C compiler for linking.
+vars.Add('TARGET_LINKFLAGS', 'OpenWRT Linker flags', os.environ.get('TARGET_LDFLAGS'))
+
+vars.Add('TARGET_AR', 'OpenWRT Archiver', os.environ.get('TARGET_AR'))
+vars.Add('TARGET_RANLIB', 'OpenWRT Archive Indexer', os.environ.get('TARGET_RANLIB'))
+
+vars.Add('STAGING_DIR', 'OpenWRT staging dir', os.environ.get('STAGING_DIR'))
+
+vars.Update(env)
+Help(vars.GenerateHelpText(env))
+
+# Get the compiler flags OpenWrt requires.
+flags = env.ParseFlags(' '.join([env['TARGET_CFLAGS'], env['TARGET_CPPFLAGS'], env['TARGET_LINKFLAGS']]))
+
+# Put OpenWrt build paths in environment varaibles so GCC will search those
+# paths after paths specified with -I and -L.
+env['ENV']['CPATH']=':'.join(flags['CPPPATH'])
+env['ENV']['LIBRARY_PATH']=':'.join(flags['LIBPATH'])
+
+# Clear out the CPPPATH and LIBPATH values so that we can merge the rest of
+# the flags with the SCons build environment.
+flags['CPPPATH'] = []
+flags['LIBPATH'] = []
+
+# Merge the rest of the compiler flags
+env.MergeFlags(flags)
+
+# Set compiler and linker commands.
+env.Replace(CC = env['TARGET_CC'])
+env.Replace(CXX = env['TARGET_CXX'])
+env.Replace(LINK = env['TARGET_LINK'])
+env.Replace(AR = env['TARGET_AR'])
+env.Replace(RANLIB = env['TARGET_RANLIB'])
+
+env['ENV']['PATH'] = env['TARGET_PATH']
+env['ENV']['STAGING_DIR'] = env['STAGING_DIR']
+
+# Set Project and platform flags.
+env.Append(CPPFLAGS=['-Wno-deprecated'])  # AllJoyn uses various deprecated template classes (i.e., hash_map)
+env.Append(CXXFLAGS=['-std=c++0x',
+                     '-fno-exceptions'])
+env.Append(CPPDEFINES=['QCC_OS_LINUX'])
+env.Append(LIBS=['m'])  # STL needs libm on OpenWrt

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+   <!--
+
+        Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+
+           Permission to use, copy, modify, and/or distribute this software for any
+           purpose with or without fee is hereby granted, provided that the above
+           copyright notice and this permission notice appear in all copies.
+
+           THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+           WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+           MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+           ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+           WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+           ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+           OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+  -->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="match_parent"
+    >
+
+    <!-- Bus path -->
+    <TextView
+        android:id="@+id/bus_path_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"        
+        android:textColor="@color/android:black"
+        android:text="@string/bus_path_label"
+        android:padding="5dp" />
+    
+    <TextView
+        android:id="@+id/busPath"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/bus_path_label"
+        android:textColor="@color/android:black"
+        android:padding="5dp" />
+    
+    <!-- Interfaces label -->
+    <RelativeLayout        
+	    android:layout_width="fill_parent"
+	    android:layout_height="wrap_content"
+	    android:layout_below="@id/bus_path_label"
+        >
+	    <TextView
+	        android:id="@+id/bus_interfaces_label"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:textColor="@color/android:black"
+	        android:text="@string/bus_interfaces_label"
+	        android:padding="5dp" />
+	    <TextView
+	        android:id="@+id/busInterfaces"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+	        android:layout_toRightOf="@id/bus_interfaces_label"
+	        android:layout_alignBaseline="@id/bus_interfaces_label"        
+	        android:textColor="@color/android:black"
+	        android:padding="5dp" />
+	</RelativeLayout>
+
+</RelativeLayout>

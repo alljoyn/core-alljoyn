@@ -1,0 +1,23 @@
+﻿<Page
+    x:Class="SocketStress.MainPage"
+    IsTabStop="false"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SocketStress"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="White">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <StackPanel Orientation="Vertical">
+                <Button Foreground="Black" BorderBrush="Black" FontSize="20" Width="200" Click="Button_Click_1">Start Server</Button>
+                <Button Foreground="Black" BorderBrush="Black" FontSize="20" Width="200" Click="Button_Click_2">Start Test</Button>                       
+            </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Width="400" x:Name="successCount" Foreground="Black" FontSize="40" HorizontalAlignment="Right" Margin="50,0,0,0">0</TextBlock>
+                <TextBlock Width="400" x:Name="failCount" Foreground="Red" FontSize="40" HorizontalAlignment="Right" Margin="50,0,0,0">0</TextBlock>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Page>

@@ -1,0 +1,323 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AC18E1101628C46C00502763 /* libssl.0.9.8.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC18E10F1628C46C00502763 /* libssl.0.9.8.dylib */; };
+		AC18E1121628C47D00502763 /* libcrypto.0.9.8.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC18E1111628C47D00502763 /* libcrypto.0.9.8.dylib */; };
+		AC4711C216276AF700599E95 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC4711C116276AF700599E95 /* CoreFoundation.framework */; };
+		AC4711C816276AF700599E95 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AC4711C616276AF700599E95 /* InfoPlist.strings */; };
+		AC4711FA1627797E00599E95 /* libstdc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC4711F91627797E00599E95 /* libstdc++.dylib */; };
+		ACD90F331667ED4100AB8C99 /* BundledDaemon.o in Frameworks */ = {isa = PBXBuildFile; fileRef = ACD90F2F1667ED4100AB8C99 /* BundledDaemon.o */; };
+		ACD90F341667ED4100AB8C99 /* libajdaemon.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ACD90F301667ED4100AB8C99 /* libajdaemon.a */; };
+		ACD90F351667ED4100AB8C99 /* liballjoyn_c.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ACD90F311667ED4100AB8C99 /* liballjoyn_c.a */; };
+		ACD90F361667ED4100AB8C99 /* liballjoyn.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ACD90F321667ED4100AB8C99 /* liballjoyn.a */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		ACEF35F31666CC2400CCA8F8 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(SRCROOT)/AllJoynUnityBundle";
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		AC18E10F1628C46C00502763 /* libssl.0.9.8.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libssl.0.9.8.dylib; path = usr/lib/libssl.0.9.8.dylib; sourceTree = SDKROOT; };
+		AC18E1111628C47D00502763 /* libcrypto.0.9.8.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.0.9.8.dylib; path = usr/lib/libcrypto.0.9.8.dylib; sourceTree = SDKROOT; };
+		AC4711BE16276AF700599E95 /* alljoyn_c.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = alljoyn_c.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		AC4711C116276AF700599E95 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		AC4711C516276AF700599E95 /* AllJoynUnityBundle-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "AllJoynUnityBundle-Info.plist"; sourceTree = "<group>"; };
+		AC4711C716276AF700599E95 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		AC4711C916276AF700599E95 /* AllJoynUnityBundle-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "AllJoynUnityBundle-Prefix.pch"; sourceTree = "<group>"; };
+		AC4711F91627797E00599E95 /* libstdc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libstdc++.dylib"; path = "usr/lib/libstdc++.dylib"; sourceTree = SDKROOT; };
+		AC47120616277D8E00599E95 /* libmono.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmono.0.dylib; path = ../../../../Applications/Unity/Unity.app/Contents/Frameworks/MonoEmbedRuntime/osx/libmono.0.dylib; sourceTree = "<group>"; };
+		ACD90F2F1667ED4100AB8C99 /* BundledDaemon.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; name = BundledDaemon.o; path = ../../../alljoyn_unity/build/darwin/x86/debug/dist/cpp/lib/BundledDaemon.o; sourceTree = "<group>"; };
+		ACD90F301667ED4100AB8C99 /* libajdaemon.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libajdaemon.a; path = ../../../alljoyn_unity/build/darwin/x86/debug/dist/cpp/lib/libajdaemon.a; sourceTree = "<group>"; };
+		ACD90F311667ED4100AB8C99 /* liballjoyn_c.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liballjoyn_c.a; path = ../../../alljoyn_unity/build/darwin/x86/debug/dist/cpp/lib/liballjoyn_c.a; sourceTree = "<group>"; };
+		ACD90F321667ED4100AB8C99 /* liballjoyn.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liballjoyn.a; path = ../../../alljoyn_unity/build/darwin/x86/debug/dist/cpp/lib/liballjoyn.a; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AC4711BB16276AF700599E95 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ACD90F331667ED4100AB8C99 /* BundledDaemon.o in Frameworks */,
+				ACD90F341667ED4100AB8C99 /* libajdaemon.a in Frameworks */,
+				ACD90F351667ED4100AB8C99 /* liballjoyn_c.a in Frameworks */,
+				ACD90F361667ED4100AB8C99 /* liballjoyn.a in Frameworks */,
+				AC18E1121628C47D00502763 /* libcrypto.0.9.8.dylib in Frameworks */,
+				AC18E1101628C46C00502763 /* libssl.0.9.8.dylib in Frameworks */,
+				AC4711FA1627797E00599E95 /* libstdc++.dylib in Frameworks */,
+				AC4711C216276AF700599E95 /* CoreFoundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AC4711B316276AF700599E95 = {
+			isa = PBXGroup;
+			children = (
+				AC4711C316276AF700599E95 /* AllJoynUnityBundle */,
+				AC4711C016276AF700599E95 /* Frameworks */,
+				AC4711BF16276AF700599E95 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AC4711BF16276AF700599E95 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AC4711BE16276AF700599E95 /* alljoyn_c.bundle */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AC4711C016276AF700599E95 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				ACD90F2F1667ED4100AB8C99 /* BundledDaemon.o */,
+				ACD90F301667ED4100AB8C99 /* libajdaemon.a */,
+				ACD90F311667ED4100AB8C99 /* liballjoyn_c.a */,
+				ACD90F321667ED4100AB8C99 /* liballjoyn.a */,
+				AC18E1111628C47D00502763 /* libcrypto.0.9.8.dylib */,
+				AC18E10F1628C46C00502763 /* libssl.0.9.8.dylib */,
+				AC47120616277D8E00599E95 /* libmono.0.dylib */,
+				AC4711F91627797E00599E95 /* libstdc++.dylib */,
+				AC4711C116276AF700599E95 /* CoreFoundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		AC4711C316276AF700599E95 /* AllJoynUnityBundle */ = {
+			isa = PBXGroup;
+			children = (
+				AC4711C416276AF700599E95 /* Supporting Files */,
+			);
+			path = AllJoynUnityBundle;
+			sourceTree = "<group>";
+		};
+		AC4711C416276AF700599E95 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				AC4711C516276AF700599E95 /* AllJoynUnityBundle-Info.plist */,
+				AC4711C616276AF700599E95 /* InfoPlist.strings */,
+				AC4711C916276AF700599E95 /* AllJoynUnityBundle-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AC4711BD16276AF700599E95 /* AllJoynUnityBundle */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AC4711CC16276AF700599E95 /* Build configuration list for PBXNativeTarget "AllJoynUnityBundle" */;
+			buildPhases = (
+				ACEF35F31666CC2400CCA8F8 /* CopyFiles */,
+				AC4711BA16276AF700599E95 /* Sources */,
+				AC4711BB16276AF700599E95 /* Frameworks */,
+				AC4711BC16276AF700599E95 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AllJoynUnityBundle;
+			productName = AllJoynUnityBundle;
+			productReference = AC4711BE16276AF700599E95 /* alljoyn_c.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AC4711B516276AF700599E95 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0450;
+				ORGANIZATIONNAME = "AllSeen Alliance.";
+			};
+			buildConfigurationList = AC4711B816276AF700599E95 /* Build configuration list for PBXProject "AllJoynUnityBundle" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = AC4711B316276AF700599E95;
+			productRefGroup = AC4711BF16276AF700599E95 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AC4711BD16276AF700599E95 /* AllJoynUnityBundle */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AC4711BC16276AF700599E95 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AC4711C816276AF700599E95 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AC4711BA16276AF700599E95 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		AC4711C616276AF700599E95 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				AC4711C716276AF700599E95 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		AC4711CA16276AF700599E95 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		AC4711CB16276AF700599E95 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		AC4711CD16276AF700599E95 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "AllJoynUnityBundle/AllJoynUnityBundle-Prefix.pch";
+				INFOPLIST_FILE = "AllJoynUnityBundle/AllJoynUnityBundle-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SYSTEM_APPS_DIR)/Unity/Unity.app/Contents/Frameworks/MonoEmbedRuntime/osx\"",
+					"\"$(SRCROOT)/AllJoynUnityBundle\"",
+					"\"$(SRCROOT)/../../../alljoyn_unity/build/darwin/x86/debug/dist/cpp/lib\"",
+					"\"$(SRCROOT)\"",
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = alljoyn_c;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		AC4711CE16276AF700599E95 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "AllJoynUnityBundle/AllJoynUnityBundle-Prefix.pch";
+				INFOPLIST_FILE = "AllJoynUnityBundle/AllJoynUnityBundle-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SYSTEM_APPS_DIR)/Unity/Unity.app/Contents/Frameworks/MonoEmbedRuntime/osx\"",
+					"\"$(SRCROOT)/AllJoynUnityBundle\"",
+					"\"$(SRCROOT)/../../../alljoyn_unity/build/darwin/x86/debug/dist/cpp/lib\"",
+					"\"$(SRCROOT)\"",
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = alljoyn_c;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AC4711B816276AF700599E95 /* Build configuration list for PBXProject "AllJoynUnityBundle" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC4711CA16276AF700599E95 /* Debug */,
+				AC4711CB16276AF700599E95 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AC4711CC16276AF700599E95 /* Build configuration list for PBXNativeTarget "AllJoynUnityBundle" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC4711CD16276AF700599E95 /* Debug */,
+				AC4711CE16276AF700599E95 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AC4711B516276AF700599E95 /* Project object */;
+}

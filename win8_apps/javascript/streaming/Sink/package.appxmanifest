@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/2010/manifest">
+  <Identity Name="33e4208b-c638-4f6c-9a9a-e0ba56345b8c" Version="1.0.0.0" Publisher="CN=User" />
+  <Properties>
+    <DisplayName>Sink</DisplayName>
+    <PublisherDisplayName>User</PublisherDisplayName>
+    <Logo>images\storelogo.png</Logo>
+  </Properties>
+  <Prerequisites>
+    <OSMinVersion>6.2.1</OSMinVersion>
+    <OSMaxVersionTested>6.2.1</OSMaxVersionTested>
+  </Prerequisites>
+  <Resources>
+    <Resource Language="x-generate" />
+  </Resources>
+  <Applications>
+    <Application Id="App" StartPage="default.html">
+      <VisualElements DisplayName="Sink" Logo="images\logo.png" SmallLogo="images\smalllogo.png" Description="Sink" ForegroundText="light" BackgroundColor="white">
+        <DefaultTile ShowName="allLogos" />
+        <SplashScreen Image="images\splashscreen.png" />
+      </VisualElements>
+      <Extensions>
+        <Extension Category="windows.fileTypeAssociation">
+          <FileTypeAssociation Name=".log">
+            <SupportedFileTypes>
+              <FileType>.log</FileType>
+            </SupportedFileTypes>
+          </FileTypeAssociation>
+        </Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <Capability Name="musicLibrary" />
+    <Capability Name="videosLibrary" />
+    <Capability Name="privateNetworkClientServer" />
+    <Capability Name="internetClientServer" />
+    <Capability Name="documentsLibrary" />
+    <Capability Name="internetClient" />
+    <DeviceCapability Name="proximity" />
+    <DeviceCapability Name="location" />
+  </Capabilities>
+</Package>

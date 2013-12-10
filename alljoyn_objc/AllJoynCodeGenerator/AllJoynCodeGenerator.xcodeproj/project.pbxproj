@@ -1,0 +1,304 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AC1B069415262D2700C95551 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC1B069315262D2700C95551 /* Foundation.framework */; };
+		AC1B06A415262D4900C95551 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = AC1B06A115262D4900C95551 /* main.m */; };
+		AC8D8D341614B27D00361742 /* objcHeader.xsl in Copy AllJoyn Code Generator XSL Files To Build Directory */ = {isa = PBXBuildFile; fileRef = AC1B06A515262D5700C95551 /* objcHeader.xsl */; };
+		AC8D8D351614B27D00361742 /* objcSource.xsl in Copy AllJoyn Code Generator XSL Files To Build Directory */ = {isa = PBXBuildFile; fileRef = AC1B06A615262D5700C95551 /* objcSource.xsl */; };
+		AC8D8D361614B27D00361742 /* objcExtensionHeader.xsl in Copy AllJoyn Code Generator XSL Files To Build Directory */ = {isa = PBXBuildFile; fileRef = AC1B06A215262D4900C95551 /* objcExtensionHeader.xsl */; };
+		AC8D8D371614B27D00361742 /* objcExtensionSource.xsl in Copy AllJoyn Code Generator XSL Files To Build Directory */ = {isa = PBXBuildFile; fileRef = AC1B06A315262D4900C95551 /* objcExtensionSource.xsl */; };
+		AC8D8E501614D1B300361742 /* AllJoynCodeGenerator in Copy AllJoyn Code Generator Executable to bin folder */ = {isa = PBXBuildFile; fileRef = AC1B068F15262D2700C95551 /* AllJoynCodeGenerator */; };
+		AC8D8E521614D27100361742 /* objcHeader.xsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC1B06A515262D5700C95551 /* objcHeader.xsl */; };
+		AC8D8E531614D27100361742 /* objcSource.xsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC1B06A615262D5700C95551 /* objcSource.xsl */; };
+		AC8D8E541614D27100361742 /* objcExtensionHeader.xsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC1B06A215262D4900C95551 /* objcExtensionHeader.xsl */; };
+		AC8D8E551614D27100361742 /* objcExtensionSource.xsl in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC1B06A315262D4900C95551 /* objcExtensionSource.xsl */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		AC1B068D15262D2700C95551 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		AC8D8D331614B26000361742 /* Copy AllJoyn Code Generator XSL Files To Build Directory */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 6;
+			files = (
+				AC8D8D341614B27D00361742 /* objcHeader.xsl in Copy AllJoyn Code Generator XSL Files To Build Directory */,
+				AC8D8D351614B27D00361742 /* objcSource.xsl in Copy AllJoyn Code Generator XSL Files To Build Directory */,
+				AC8D8D361614B27D00361742 /* objcExtensionHeader.xsl in Copy AllJoyn Code Generator XSL Files To Build Directory */,
+				AC8D8D371614B27D00361742 /* objcExtensionSource.xsl in Copy AllJoyn Code Generator XSL Files To Build Directory */,
+			);
+			name = "Copy AllJoyn Code Generator XSL Files To Build Directory";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC8D8E4E1614D10400361742 /* Copy AllJoyn Code Generator Executable to bin folder */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(SRCROOT)/../bin";
+			dstSubfolderSpec = 0;
+			files = (
+				AC8D8E501614D1B300361742 /* AllJoynCodeGenerator in Copy AllJoyn Code Generator Executable to bin folder */,
+			);
+			name = "Copy AllJoyn Code Generator Executable to bin folder";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC8D8E511614D25F00361742 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(SRCROOT)/../bin";
+			dstSubfolderSpec = 0;
+			files = (
+				AC8D8E521614D27100361742 /* objcHeader.xsl in CopyFiles */,
+				AC8D8E531614D27100361742 /* objcSource.xsl in CopyFiles */,
+				AC8D8E541614D27100361742 /* objcExtensionHeader.xsl in CopyFiles */,
+				AC8D8E551614D27100361742 /* objcExtensionSource.xsl in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		AC0DE70F157D61580051E2CB /* AJNBasicObject.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AJNBasicObject.h; sourceTree = "<group>"; };
+		AC0DE710157D61580051E2CB /* AJNBasicObject.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNBasicObject.mm; sourceTree = "<group>"; };
+		AC0DE711157D61580051E2CB /* BasicObject.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BasicObject.h; sourceTree = "<group>"; };
+		AC0DE712157D61580051E2CB /* BasicObject.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BasicObject.m; sourceTree = "<group>"; };
+		AC1B068F15262D2700C95551 /* AllJoynCodeGenerator */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = AllJoynCodeGenerator; sourceTree = BUILT_PRODUCTS_DIR; };
+		AC1B069315262D2700C95551 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		AC1B069915262D2700C95551 /* AllJoynCodeGenerator-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "AllJoynCodeGenerator-Prefix.pch"; sourceTree = "<group>"; };
+		AC1B06A115262D4900C95551 /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		AC1B06A215262D4900C95551 /* objcExtensionHeader.xsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = objcExtensionHeader.xsl; sourceTree = "<group>"; };
+		AC1B06A315262D4900C95551 /* objcExtensionSource.xsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = objcExtensionSource.xsl; sourceTree = "<group>"; };
+		AC1B06A515262D5700C95551 /* objcHeader.xsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = objcHeader.xsl; sourceTree = "<group>"; };
+		AC1B06A615262D5700C95551 /* objcSource.xsl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = objcSource.xsl; sourceTree = "<group>"; };
+		AC1B06AB15262E9900C95551 /* BasicObjectModel.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = BasicObjectModel.xml; sourceTree = "<group>"; };
+		ACFCF7761566A3F000BC922D /* SConscript */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = SConscript; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AC1B068C15262D2700C95551 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AC1B069415262D2700C95551 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AC1B068415262D2700C95551 = {
+			isa = PBXGroup;
+			children = (
+				AC1B069515262D2700C95551 /* AllJoynCodeGenerator */,
+				AC1B069215262D2700C95551 /* Frameworks */,
+				AC1B069015262D2700C95551 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AC1B069015262D2700C95551 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AC1B068F15262D2700C95551 /* AllJoynCodeGenerator */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AC1B069215262D2700C95551 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				AC1B069315262D2700C95551 /* Foundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		AC1B069515262D2700C95551 /* AllJoynCodeGenerator */ = {
+			isa = PBXGroup;
+			children = (
+				AC0DE70F157D61580051E2CB /* AJNBasicObject.h */,
+				AC0DE710157D61580051E2CB /* AJNBasicObject.mm */,
+				AC0DE711157D61580051E2CB /* BasicObject.h */,
+				AC0DE712157D61580051E2CB /* BasicObject.m */,
+				ACFCF7761566A3F000BC922D /* SConscript */,
+				AC1B06AB15262E9900C95551 /* BasicObjectModel.xml */,
+				AC1B06A515262D5700C95551 /* objcHeader.xsl */,
+				AC1B06A615262D5700C95551 /* objcSource.xsl */,
+				AC1B06A215262D4900C95551 /* objcExtensionHeader.xsl */,
+				AC1B06A315262D4900C95551 /* objcExtensionSource.xsl */,
+				AC1B06A115262D4900C95551 /* main.m */,
+				AC1B069815262D2700C95551 /* Supporting Files */,
+			);
+			path = AllJoynCodeGenerator;
+			sourceTree = "<group>";
+		};
+		AC1B069815262D2700C95551 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				AC1B069915262D2700C95551 /* AllJoynCodeGenerator-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AC1B068E15262D2700C95551 /* AllJoynCodeGenerator */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AC1B069E15262D2700C95551 /* Build configuration list for PBXNativeTarget "AllJoynCodeGenerator" */;
+			buildPhases = (
+				AC1B068B15262D2700C95551 /* Sources */,
+				AC1B068C15262D2700C95551 /* Frameworks */,
+				AC1B068D15262D2700C95551 /* CopyFiles */,
+				AC8D8D331614B26000361742 /* Copy AllJoyn Code Generator XSL Files To Build Directory */,
+				AC8D8E4E1614D10400361742 /* Copy AllJoyn Code Generator Executable to bin folder */,
+				AC8D8E511614D25F00361742 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AllJoynCodeGenerator;
+			productName = AllJoynCodeGenerator;
+			productReference = AC1B068F15262D2700C95551 /* AllJoynCodeGenerator */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AC1B068615262D2700C95551 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0430;
+				ORGANIZATIONNAME = "2012-2013 AllSeen Alliance.";
+			};
+			buildConfigurationList = AC1B068915262D2700C95551 /* Build configuration list for PBXProject "AllJoynCodeGenerator" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = AC1B068415262D2700C95551;
+			productRefGroup = AC1B069015262D2700C95551 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AC1B068E15262D2700C95551 /* AllJoynCodeGenerator */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AC1B068B15262D2700C95551 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AC1B06A415262D4900C95551 /* main.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AC1B069C15262D2700C95551 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		AC1B069D15262D2700C95551 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		AC1B069F15262D2700C95551 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "AllJoynCodeGenerator/AllJoynCodeGenerator-Prefix.pch";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		AC1B06A015262D2700C95551 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "AllJoynCodeGenerator/AllJoynCodeGenerator-Prefix.pch";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AC1B068915262D2700C95551 /* Build configuration list for PBXProject "AllJoynCodeGenerator" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC1B069C15262D2700C95551 /* Debug */,
+				AC1B069D15262D2700C95551 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AC1B069E15262D2700C95551 /* Build configuration list for PBXNativeTarget "AllJoynCodeGenerator" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC1B069F15262D2700C95551 /* Debug */,
+				AC1B06A015262D2700C95551 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AC1B068615262D2700C95551 /* Project object */;
+}

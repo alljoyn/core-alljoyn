@@ -1,0 +1,75 @@
+////////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+//
+//    Permission to use, copy, modify, and/or distribute this software for any
+//    purpose with or without fee is hereby granted, provided that the above
+//    copyright notice and this permission notice appear in all copies.
+//
+//    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+//    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+//    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+//    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+//    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+//    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+//    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+////////////////////////////////////////////////////////////////////////////////
+
+#import "AJNCConversation.h"
+#import "AJNCConstants.h"
+#import "AJNCMessage.h"
+
+@interface AJNCConversation()
+
+
+@end
+
+@implementation AJNCConversation
+
+@synthesize name = _name;
+@synthesize identifier = _identifier;
+@synthesize chatObject = _chatObject;
+@synthesize messages = _messages;
+@synthesize type = _type;
+@synthesize totalParticipants = _totalParticipants;
+
+- (NSMutableArray*)messages
+{
+    if (_messages == nil) {
+        _messages = [[NSMutableArray alloc] init];
+    }
+    return _messages;
+}
+
+- (NSString*)displayName
+{
+    return [[self.name componentsSeparatedByString:@"."] lastObject];
+}
+
+- (id)initWithName:(NSString*)name identifier:(AJNSessionId)sessionId busObject:(AJNCBusObject *)chatObject
+{
+    self = [super init];
+    if (self) {
+        self.name = name;
+        self.identifier = sessionId;
+        self.chatObject = chatObject;
+        self.chatObject.session = self;
+        self.type = kAJNCConversationTypeRemoteHost;
+    }
+    return self;
+}
+
+- (void)chatMessageReceived:(NSString *)message from:(NSString *)sender onObjectPath:(NSString *)path forSession:(AJNSessionId)sessionId
+{
+    if (self.identifier != sessionId) {
+        return;
+    }
+    
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    [formatter setTimeStyle:NSDateFormatterMediumStyle];
+    [formatter setDateStyle:NSDateFormatterShortStyle];
+    
+    AJNCMessage *chatMessage = [[AJNCMessage alloc] initWithText:message fromSender:sender atDateTime:[formatter stringFromDate:[NSDate date]]];
+    [self.messages addObject:chatMessage];
+}
+
+@end

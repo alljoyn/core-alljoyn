@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Secure Logon Client</string>
+	<string name="enter_message_hint">Enter message</string>
+	<string name="logon_dialog">Enter logon</string>
+	<string name="dialog_ok">Logon</string>
+	<string name="enter_username_hint">Username</string>
+	<string name="enter_password_hint">Password</string>
+</resources>

@@ -1,0 +1,13 @@
+.sconsign.dblite
+build
+inc
+*~
+bin
+obj
+gen
+libs
+.settings
+.metadata
+test_report/reports
+MANIFEST.MF
+whitespace.db

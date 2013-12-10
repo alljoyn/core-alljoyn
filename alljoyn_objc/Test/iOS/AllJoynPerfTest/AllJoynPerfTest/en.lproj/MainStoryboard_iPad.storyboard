@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="2.0" toolsVersion="3084" systemVersion="11G63" targetRuntime="iOS.CocoaTouch.iPad" propertyAccessControl="none" useAutolayout="YES" initialViewController="cX1-S1-e9M">
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="2083"/>
+    </dependencies>
+    <scenes>
+        <!--View Controller-->
+        <scene sceneID="ZYs-bW-U8s">
+            <objects>
+                <tableViewController id="cX1-S1-e9M" customClass="ViewController" sceneMemberID="viewController">
+                    <tableView key="view" opaque="NO" clipsSubviews="YES" clearsContextBeforeDrawing="NO" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="static" style="grouped" separatorStyle="singleLineEtched" allowsSelection="NO" showsSelectionImmediatelyOnTouchBegin="NO" rowHeight="44" sectionHeaderHeight="10" sectionFooterHeight="10" id="Wab-CO-IZ6">
+                        <rect key="frame" x="0.0" y="20" width="768" height="1004"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <color key="backgroundColor" cocoaTouchSystemColor="groupTableViewBackgroundColor"/>
+                        <sections>
+                            <tableViewSection headerTitle="AllJoyn Performance Test" id="efb-SH-GHi">
+                                <cells>
+                                    <tableViewCell contentMode="scaleToFill" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" rowHeight="343" id="jIP-Qq-mVu">
+                                        <rect key="frame" x="0.0" y="54" width="768" height="345"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <view key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center">
+                                            <rect key="frame" x="45" y="1" width="678" height="342"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="E08-sS-eYA">
+                                                    <constraints>
+                                                        <constraint firstAttribute="width" constant="638" id="OxX-dc-tfR"/>
+                                                    </constraints>
+                                                    <segments>
+                                                        <segment title="Send"/>
+                                                        <segment title="Receive"/>
+                                                    </segments>
+                                                </segmentedControl>
+                                                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="mIP-Qb-HVq">
+                                                    <fontDescription key="fontDescription" type="boldSystem" pointSize="15"/>
+                                                    <state key="normal" title="Start">
+                                                        <color key="titleColor" red="0.19607843459999999" green="0.30980393290000002" blue="0.52156865600000002" alpha="1" colorSpace="calibratedRGB"/>
+                                                        <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                                    </state>
+                                                    <state key="highlighted">
+                                                        <color key="titleColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                                    </state>
+                                                    <connections>
+                                                        <action selector="didTouchStartButton:" destination="cX1-S1-e9M" eventType="touchUpInside" id="Ace-FI-Gq6"/>
+                                                    </connections>
+                                                </button>
+                                                <progressView opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="WFn-0F-Olw"/>
+                                                <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" editable="NO" translatesAutoresizingMaskIntoConstraints="NO" id="WtW-ef-Qxe">
+                                                    <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                                    <constraints>
+                                                        <constraint firstAttribute="height" constant="127" id="O5r-Ga-Al2"/>
+                                                    </constraints>
+                                                    <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                                    <textInputTraits key="textInputTraits" autocorrectionType="no"/>
+                                                </textView>
+                                                <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" text="" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="k3u-VT-XXn">
+                                                    <constraints>
+                                                        <constraint firstAttribute="height" constant="21" id="8Mw-kU-uff"/>
+                                                    </constraints>
+                                                    <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                                    <color key="textColor" white="0.33333333333333331" alpha="1" colorSpace="calibratedWhite"/>
+                                                    <color key="highlightedColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                                </label>
+                                                <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" text="" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="eSw-0D-o95">
+                                                    <constraints>
+                                                        <constraint firstAttribute="height" constant="21" id="3SI-aF-zLC"/>
+                                                    </constraints>
+                                                    <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                                    <color key="textColor" white="0.33333333333333331" alpha="1" colorSpace="calibratedWhite"/>
+                                                    <color key="highlightedColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                                </label>
+                                            </subviews>
+                                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        </view>
+                                        <constraints>
+                                            <constraint firstItem="WFn-0F-Olw" firstAttribute="top" secondItem="WtW-ef-Qxe" secondAttribute="bottom" constant="8" symbolic="YES" type="default" id="0iK-c2-XqR"/>
+                                            <constraint firstAttribute="bottom" secondItem="eSw-0D-o95" secondAttribute="bottom" constant="20" type="default" id="Bru-0q-eMi"/>
+                                            <constraint firstItem="k3u-VT-XXn" firstAttribute="leading" secondItem="WFn-0F-Olw" secondAttribute="leading" type="default" id="C8W-fm-iD7"/>
+                                            <constraint firstItem="WtW-ef-Qxe" firstAttribute="trailing" secondItem="mIP-Qb-HVq" secondAttribute="trailing" type="default" id="IPm-SN-S47"/>
+                                            <constraint firstItem="k3u-VT-XXn" firstAttribute="top" secondItem="WFn-0F-Olw" secondAttribute="bottom" constant="8" symbolic="YES" type="default" id="NSG-3k-ehW"/>
+                                            <constraint firstItem="E08-sS-eYA" firstAttribute="trailing" secondItem="mIP-Qb-HVq" secondAttribute="trailing" type="default" id="PEU-wW-qaP"/>
+                                            <constraint firstItem="eSw-0D-o95" firstAttribute="trailing" secondItem="k3u-VT-XXn" secondAttribute="trailing" type="default" id="UTd-Vv-VGJ"/>
+                                            <constraint firstItem="mIP-Qb-HVq" firstAttribute="leading" secondItem="E08-sS-eYA" secondAttribute="leading" type="default" id="XTg-Yv-uVl"/>
+                                            <constraint firstItem="WtW-ef-Qxe" firstAttribute="leading" secondItem="WFn-0F-Olw" secondAttribute="leading" type="default" id="aB1-my-ja9"/>
+                                            <constraint firstItem="eSw-0D-o95" firstAttribute="top" secondItem="k3u-VT-XXn" secondAttribute="bottom" constant="8" symbolic="YES" type="default" id="dPA-hv-p2d"/>
+                                            <constraint firstItem="WtW-ef-Qxe" firstAttribute="trailing" secondItem="WFn-0F-Olw" secondAttribute="trailing" type="default" id="jmw-DS-EKw"/>
+                                            <constraint firstItem="mIP-Qb-HVq" firstAttribute="leading" secondItem="WtW-ef-Qxe" secondAttribute="leading" type="default" id="kK4-x4-AfB"/>
+                                            <constraint firstItem="WtW-ef-Qxe" firstAttribute="top" secondItem="mIP-Qb-HVq" secondAttribute="bottom" constant="8" symbolic="YES" type="default" id="lNY-l0-glS"/>
+                                            <constraint firstItem="E08-sS-eYA" firstAttribute="centerX" secondItem="jIP-Qq-mVu" secondAttribute="centerX" type="default" id="m5m-IZ-UGS"/>
+                                            <constraint firstItem="k3u-VT-XXn" firstAttribute="trailing" secondItem="WFn-0F-Olw" secondAttribute="trailing" type="default" id="sHd-Hy-Owt"/>
+                                            <constraint firstItem="mIP-Qb-HVq" firstAttribute="top" secondItem="E08-sS-eYA" secondAttribute="bottom" constant="8" symbolic="YES" type="default" id="uP9-OP-RSr"/>
+                                            <constraint firstItem="k3u-VT-XXn" firstAttribute="leading" secondItem="eSw-0D-o95" secondAttribute="leading" type="default" id="wdf-nA-SMk"/>
+                                        </constraints>
+                                    </tableViewCell>
+                                </cells>
+                            </tableViewSection>
+                            <tableViewSection headerTitle="Transport" id="mCe-Wb-sa9">
+                                <cells>
+                                    <tableViewCell contentMode="scaleToFill" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" rowHeight="79" id="cOq-BL-RNK">
+                                        <rect key="frame" x="0.0" y="443" width="768" height="81"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <view key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center">
+                                            <rect key="frame" x="45" y="1" width="678" height="78"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="YWp-VW-9F6">
+                                                    <constraints>
+                                                        <constraint firstAttribute="width" constant="638" id="Fgp-ME-e9W"/>
+                                                    </constraints>
+                                                    <segments>
+                                                        <segment title="WiFi"/>
+                                                        <segment title="ICE"/>
+                                                    </segments>
+                                                </segmentedControl>
+                                            </subviews>
+                                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        </view>
+                                        <constraints>
+                                            <constraint firstItem="YWp-VW-9F6" firstAttribute="centerX" secondItem="cOq-BL-RNK" secondAttribute="centerX" type="default" id="YD2-af-waZ"/>
+                                            <constraint firstAttribute="bottom" secondItem="YWp-VW-9F6" secondAttribute="bottom" constant="20" type="default" id="bkD-CB-fjz"/>
+                                        </constraints>
+                                    </tableViewCell>
+                                </cells>
+                            </tableViewSection>
+                            <tableViewSection headerTitle="Message Type" id="jyD-Yg-l2Z">
+                                <cells>
+                                    <tableViewCell contentMode="scaleToFill" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" rowHeight="79" id="iZb-d4-U7s">
+                                        <rect key="frame" x="0.0" y="568" width="768" height="81"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <view key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center">
+                                            <rect key="frame" x="45" y="1" width="678" height="78"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="eVm-NY-2gK">
+                                                    <constraints>
+                                                        <constraint firstAttribute="width" constant="638" id="EwE-yh-naY"/>
+                                                    </constraints>
+                                                    <segments>
+                                                        <segment title="Signal"/>
+                                                        <segment title="Method"/>
+                                                    </segments>
+                                                </segmentedControl>
+                                            </subviews>
+                                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        </view>
+                                        <constraints>
+                                            <constraint firstItem="eVm-NY-2gK" firstAttribute="centerX" secondItem="iZb-d4-U7s" secondAttribute="centerX" type="default" id="4lp-rC-63U"/>
+                                            <constraint firstAttribute="bottom" secondItem="eVm-NY-2gK" secondAttribute="bottom" constant="20" type="default" id="koH-Tw-ejg"/>
+                                        </constraints>
+                                    </tableViewCell>
+                                </cells>
+                            </tableViewSection>
+                            <tableViewSection headerTitle="Message Size (kilobits)" id="ozg-hN-1Sf">
+                                <cells>
+                                    <tableViewCell contentMode="scaleToFill" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" rowHeight="79" id="jVm-Og-bB4">
+                                        <rect key="frame" x="0.0" y="693" width="768" height="81"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <view key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center">
+                                            <rect key="frame" x="45" y="1" width="678" height="78"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="3" translatesAutoresizingMaskIntoConstraints="NO" id="ER6-FW-4lf">
+                                                    <constraints>
+                                                        <constraint firstAttribute="width" constant="638" id="xjt-Zc-o9E"/>
+                                                    </constraints>
+                                                    <segments>
+                                                        <segment title="1"/>
+                                                        <segment title="10"/>
+                                                        <segment title="50"/>
+                                                        <segment title="100"/>
+                                                        <segment title="1000"/>
+                                                    </segments>
+                                                </segmentedControl>
+                                            </subviews>
+                                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        </view>
+                                        <constraints>
+                                            <constraint firstAttribute="bottom" secondItem="ER6-FW-4lf" secondAttribute="bottom" constant="20" type="default" id="aUU-65-Ln1"/>
+                                            <constraint firstItem="ER6-FW-4lf" firstAttribute="centerX" secondItem="jVm-Og-bB4" secondAttribute="centerX" type="default" id="cyp-Le-QPp"/>
+                                        </constraints>
+                                    </tableViewCell>
+                                </cells>
+                            </tableViewSection>
+                            <tableViewSection headerTitle="Compression" id="A6y-aq-8A6">
+                                <cells>
+                                    <tableViewCell contentMode="scaleToFill" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" rowHeight="79" id="C42-fY-Agj">
+                                        <rect key="frame" x="0.0" y="818" width="768" height="81"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <view key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center">
+                                            <rect key="frame" x="45" y="1" width="678" height="78"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <switch opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="NFd-mr-aKY"/>
+                                                <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" text="Header Compression" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="X0a-2X-nuj">
+                                                    <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                                    <color key="textColor" white="0.66666666666666663" alpha="1" colorSpace="calibratedWhite"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                            </subviews>
+                                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                                        </view>
+                                        <constraints>
+                                            <constraint firstItem="X0a-2X-nuj" firstAttribute="leading" secondItem="C42-fY-Agj" secondAttribute="leading" constant="65" id="72q-GS-cKY"/>
+                                            <constraint firstItem="NFd-mr-aKY" firstAttribute="top" secondItem="C42-fY-Agj" secondAttribute="top" constant="26" id="Hn8-rF-iPL"/>
+                                            <constraint firstAttribute="trailing" secondItem="NFd-mr-aKY" secondAttribute="trailing" constant="65" id="KpI-vf-LYM"/>
+                                            <constraint firstItem="NFd-mr-aKY" firstAttribute="centerY" secondItem="X0a-2X-nuj" secondAttribute="centerY" type="default" id="wNM-Ei-C5L"/>
+                                        </constraints>
+                                    </tableViewCell>
+                                </cells>
+                            </tableViewSection>
+                        </sections>
+                        <connections>
+                            <outlet property="dataSource" destination="cX1-S1-e9M" id="6zV-U8-6L4"/>
+                            <outlet property="delegate" destination="cX1-S1-e9M" id="Jud-eU-Osl"/>
+                        </connections>
+                    </tableView>
+                    <simulatedStatusBarMetrics key="simulatedStatusBarMetrics" statusBarStyle="blackTranslucent"/>
+                    <connections>
+                        <outlet property="eventsTextView" destination="WtW-ef-Qxe" id="gUT-Xk-Vuc"/>
+                        <outlet property="headerCompressionSwitch" destination="NFd-mr-aKY" id="odi-bD-Uag"/>
+                        <outlet property="messageSizeSegmentedControl" destination="ER6-FW-4lf" id="26y-Bg-qXE"/>
+                        <outlet property="messageTypeSegmentedControl" destination="eVm-NY-2gK" id="GmA-Nz-5Gi"/>
+                        <outlet property="operationTypeSegmentedControl" destination="E08-sS-eYA" id="fWR-xx-ayU"/>
+                        <outlet property="progressView" destination="WFn-0F-Olw" id="Ghd-VP-5PA"/>
+                        <outlet property="startButton" destination="mIP-Qb-HVq" id="c6P-vY-LdV"/>
+                        <outlet property="statusTextField1" destination="k3u-VT-XXn" id="7q1-p6-SAS"/>
+                        <outlet property="statusTextField2" destination="eSw-0D-o95" id="3Ic-DZ-PiV"/>
+                        <outlet property="transportTypeSegmentedControl" destination="YWp-VW-9F6" id="woJ-S0-SJ8"/>
+                    </connections>
+                </tableViewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="xgP-cz-UCR" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="320" y="-12"/>
+        </scene>
+    </scenes>
+    <classes>
+        <class className="NSLayoutConstraint" superclassName="NSObject">
+            <source key="sourceIdentifier" type="project" relativePath="./Classes/NSLayoutConstraint.h"/>
+        </class>
+        <class className="ViewController" superclassName="UITableViewController">
+            <source key="sourceIdentifier" type="project" relativePath="./Classes/ViewController.h"/>
+            <relationships>
+                <relationship kind="action" name="didTouchStartButton:"/>
+                <relationship kind="outlet" name="eventsTextView" candidateClass="UITextView"/>
+                <relationship kind="outlet" name="headerCompressionSwitch" candidateClass="UISwitch"/>
+                <relationship kind="outlet" name="messageSizeSegmentedControl" candidateClass="UISegmentedControl"/>
+                <relationship kind="outlet" name="messageTypeSegmentedControl" candidateClass="UISegmentedControl"/>
+                <relationship kind="outlet" name="operationTypeSegmentedControl" candidateClass="UISegmentedControl"/>
+                <relationship kind="outlet" name="progressView" candidateClass="UIProgressView"/>
+                <relationship kind="outlet" name="startButton" candidateClass="UIButton"/>
+                <relationship kind="outlet" name="statusTextField1" candidateClass="UILabel"/>
+                <relationship kind="outlet" name="statusTextField2" candidateClass="UILabel"/>
+                <relationship kind="outlet" name="transportTypeSegmentedControl" candidateClass="UISegmentedControl"/>
+            </relationships>
+        </class>
+    </classes>
+    <simulatedMetricsContainer key="defaultSimulatedMetrics">
+        <simulatedStatusBarMetrics key="statusBar" statusBarStyle="blackTranslucent"/>
+        <simulatedOrientationMetrics key="orientation"/>
+        <simulatedScreenMetrics key="destination"/>
+    </simulatedMetricsContainer>
+</document>

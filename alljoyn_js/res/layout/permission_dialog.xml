@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:layout_width="fill_parent" >
+    <TextView android:id="@+id/the_website_below_wants_to_use_alljoyn"
+	      android:layout_height="wrap_content" 
+              android:layout_width="fill_parent" />
+    <TextView android:id="@+id/origin"
+              android:gravity="center_horizontal"
+	      android:layout_height="wrap_content" 
+              android:layout_width="fill_parent" />
+    <TextView android:id="@+id/do_you_want_to_allow_this"
+	      android:layout_height="wrap_content" 
+              android:layout_width="fill_parent" />
+    <CheckBox android:id="@+id/remember_my_decision_for_this_site"
+	      android:layout_height="wrap_content" 
+              android:layout_width="fill_parent" />
+</LinearLayout>

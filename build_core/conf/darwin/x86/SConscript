@@ -1,0 +1,73 @@
+# Copyright (c) 2010 - 2011, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+Import('env')
+import os
+
+s = os.environ.get('CONFIGURATION')
+s = s.lower()
+env['OBJDIR'] = 'build/${OS}/${CPU}/' + s + '/obj'
+env['DISTDIR'] = '#build/${OS}/${CPU}/' + s + '/dist'
+env['TESTDIR'] = '#build/${OS}/${CPU}/' + s + '/test'
+
+vars = Variables()
+vars.Add(PathVariable('SDKROOT', ' Base directory of Mac/iOS SDK for target', os.environ.get('SDKROOT')))
+vars.Add(PathVariable('SYSTEM_DEVELOPER_DIR', ' Base directory for developer tools', os.environ.get('SYSTEM_DEVELOPER_DIR')))
+vars.Update(env)
+Help(vars.GenerateHelpText(env))
+
+# Verify dependencies
+if '' == env.subst('$SDKROOT'):
+   print 'SDKROOT variable is required'
+   if not GetOption('help'):
+      Exit(1)
+
+if '' == env.subst('$SYSTEM_DEVELOPER_DIR'):
+    env['SYSTEM_DEVELOPER_DIR'] = '/Developer'
+
+# Darwing specific flags
+env.Append(CPPDEFINES=['QCC_CPU_X86'])
+
+env['IPHONEOS_PLATFORM_DIR'] = '$SYSTEM_DEVELOPER_DIR/Platforms/iPhoneOS.platform'
+
+env['PATH'] = '$IPHONE_OS_PLATFORM_DIR/Developer/usr/bin:$SYSTEM_DEVELOPER_DIR/usr/bin:$PATH'
+
+env['CC'] = '$DT_TOOLCHAIN_DIR/usr/bin/clang'
+env['CXX'] = '$DT_TOOLCHAIN_DIR/usr/bin/clang++'
+
+env.Append(CFLAGS=[
+            '-fdiagnostics-show-category=id',
+            '-fdiagnostics-parseable-fixits',
+            '-fpascal-strings',
+            '-Wreturn-type',
+            '-Wparentheses',
+            '-Wswitch',
+            '-Wno-unused-parameter',
+            '-Wunused-variable', 
+            '-Wunused-value'])
+            
+env.Append(CXXFLAGS=[
+            '-fno-rtti',
+            '-fno-exceptions',
+            '-Wc++11-extensions'])
+
+ccld = ['-arch', 'i386', '-arch', 'x86_64', '-mmacosx-version-min=10.5.4']
+
+env.Append(CXXFLAGS=ccld)
+env.Append(CFLAGS=ccld)
+env.Append(LINKFLAGS=ccld)
+
+
+

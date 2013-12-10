@@ -1,0 +1,9 @@
+.sconsign.dblite
+build/
+# the following header files are copied into the alljoyn_c project via the SCons build 
+# system to aid with development they should not be checked into the repository.
+inc/alljoyn_c/DBusStdDefines.h
+inc/alljoyn_c/Status.h
+inc/qcc
+*.pdb
+whitespace.db

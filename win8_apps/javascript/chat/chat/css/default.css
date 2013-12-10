@@ -1,0 +1,122 @@
+﻿body {
+}
+
+#rootGrid
+{
+    width : 100%;
+    height : 100%;
+    display :-ms-grid;
+    -ms-grid-columns : 100px 1fr 100px;
+    -ms-grid-rows : 20px auto 1fr 20px;
+}
+
+#header
+{
+    -ms-grid-column: 2;
+    -ms-grid-row: 2;
+}
+
+#featureLabel
+{
+    font: 20pt/24pt "Segoe UI Semilight";
+    margin:0;
+    padding:5px 0 10px 0;
+    font-weight: normal;
+}
+
+#inputLabel, #outputLabel
+{
+    font: 11pt/15pt "Segoe UI";
+    margin:20px 0 20px 0;
+    padding:0;
+    font-weight: normal;
+}
+
+#listLabel, #descLabel
+{
+    font: 11pt/15pt "Segoe UI Semilight";
+    font-weight:normal;
+}
+
+#content
+{
+    padding-right:20px;
+    padding-bottom:20px;
+    overflow:auto;
+    display:-ms-grid;
+    -ms-grid-column: 2;
+    -ms-grid-row: 3;
+    -ms-grid-columns: 1fr;
+    -ms-grid-rows: auto auto auto auto 1fr;
+}
+
+#use {
+    -ms-grid-row: 1;
+    margin: 10px 10px 10px 10px;
+}
+
+#host {
+    -ms-grid-row: 2;
+    margin: 10px 10px 10px 10px;
+}
+
+#status {
+    -ms-grid-row: 3;
+    margin: 10px 10px 10px 10px;
+}
+
+#msg {
+    -ms-grid-row: 4;
+    margin: 10px 10px 10px 10px;
+}
+
+#log {
+    -ms-grid-row: 5;
+    margin: 10px 10px 10px 10px;
+}
+
+#inputLabel
+{
+    -ms-grid-row: 1;
+}
+
+#input
+{
+    -ms-grid-row: 2;
+    display: -ms-grid;
+    -ms-grid-columns: auto auto;
+    -ms-grid-rows: auto;
+    margin-top:10px;
+}
+
+#outputLabel
+{
+    -ms-grid-row: 3;
+    padding-top:10px;
+    padding-bottom:10px;
+    font-weight : bold;
+}
+
+#output
+{
+    height:100%;
+    -ms-grid-row: 4;
+    -ms-grid-row-align:stretch;
+}
+
+.clear
+{
+    clear:both;
+}
+
+@media screen and (-ms-view-state: fullscreen-landscape) {
+}
+
+@media screen and (-ms-view-state: filled) {
+}
+
+@media screen and (-ms-view-state: snapped) {
+}
+
+@media screen and (-ms-view-state: fullscreen-portrait) {
+}

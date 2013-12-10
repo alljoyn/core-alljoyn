@@ -1,0 +1,50 @@
+
+# Copyright (c) 2011-2013, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+import os
+import sys
+sys.path.append('../../build_core/tools/scons')
+from unitystatus import UnityStatus
+Import('env')
+
+if env['OS_GROUP'] == 'windows':
+    env['CSC'] = 'csc.exe'
+elif env['OS_GROUP'] == 'posix':
+    env['CSC'] = 'gmcs'
+
+if env['VARIANT'] == 'debug':
+    env['CSC_FLAGS']=['debug', 'define:DEBUG']
+    env['CSC_LIB_FLAGS']=['debug', 'define:DEBUG']
+
+# AllJoyn Unity status codes
+def unity_status_build_function(target, source, env):
+    basedir = os.path.normpath(os.path.dirname(source[0].get_abspath()) + '/..')
+    UnityStatus(source[0], target[0], basedir)
+
+unity_status_builder = Builder(action = unity_status_build_function, suffix = '.cs', src_suffix = '.xml')
+
+#Use the C# builder
+env.Append(BUILDERS = {'unity_status_bld': unity_status_builder})
+# The unity_status_builder does not know about the dependencies from includes inside
+# the Status.xml file.  If the Status.xml file found in common or alljoyn_core is 
+# changed Status.cs must manually be deleted to cause the Status to be rebuilt
+cs_status = env.unity_status_bld(source = 'Status', target = 'Status')
+
+# AllJoyn Sources
+srcs = env.Glob('*.cs')
+liballjoyn_unity = env.CSharpLib(source = srcs , target='$UNITY_DISTDIR/lib/alljoyn_unity.dll')
+env.Depends(liballjoyn_unity, cs_status);
+
+Return('liballjoyn_unity')

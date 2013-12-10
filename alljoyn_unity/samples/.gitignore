@@ -1,0 +1,9 @@
+*.pidb
+AllJoynUnity.userprefs
+csharp/AllJoynUnity/bin/
+csharp/basic_client/bin/
+csharp/basic_server/bin/
+csharp/basic_client-server/bin/
+csharp/basic_client/obj/
+csharp/basic_server/obj/
+csharp/basic_client-server/obj/

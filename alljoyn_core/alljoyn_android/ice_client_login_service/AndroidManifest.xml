@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+      package="org.alljoyn.ice"
+      android:versionCode="345"
+      android:versionName="3.4.5"
+      android:installLocation="internalOnly">
+    <uses-sdk android:minSdkVersion="8" />
+  	<uses-permission android:name="android.permission.ACCESS_WIFI_STATE"></uses-permission>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <application android:label="ClientLoginService">
+    <service android:name=".ClientLoginService" android:enabled="true">
+	</service>
+    </application>
+</manifest>

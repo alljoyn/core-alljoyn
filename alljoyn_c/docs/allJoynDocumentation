@@ -1,0 +1,80 @@
+/******************************************************************************
+ * Copyright (c) 2010-2013, AllSeen Alliance. All rights reserved.
+ *
+ *    Permission to use, copy, modify, and/or distribute this software for any
+ *    purpose with or without fee is hereby granted, provided that the above
+ *    copyright notice and this permission notice appear in all copies.
+ *
+ *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ *    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ *    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ *    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ *    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ ******************************************************************************/
+
+/*This file will contain documentation for AllJoyn that does not fit in the source code.  
+ * This is also a location to document things that don't have a clear place where they 
+ * should be documented in the code. (i.e. namespace ajn).
+ *
+ * This file will be parsed by doxygen.  Only text within the doxygen tags will show up in 
+ * the final documentation. 
+ */
+ 
+/**
+
+@mainpage AllJoyn Documentation
+
+AllJoyn C API Reference Manual
+@section subsection1 Overview
+AllJoyn is a device-to-device communication protocol which enables mobile devices to support peer-to-peer applications such as multi-player gaming and social networking.
+
+AllJoyn is designed as a backwards-compatible extension of DBus, a standard protocol for inter-application communication in the Linux desktop environment. It offers the following features:
+
+- Cross platform/OS/device
+- Peer-to-peer communication
+- Simplified service discovery
+- Flexible security framework and trust models
+- Transport agnostic / multi-protocol support
+- Multi-language support for the AllJoyn API
+
+
+This document describes the C language binding for the AllJoyn API. It covers the following topics:
+
+- @ref section2 "Type Signatures"
+- @ref section3 "Messages"
+- @ref section4 "Signals" 
+@section section2 Type Signatures
+AllJoyn uses the same type signatures that are used by the Dbus protocol.  The type signature is made up of <em> type codes </em> .  Type code is an ASCII character that represents a standard data type.
+
+The following table summarizes the AllJoyn types.
+<table >
+<tr><th><b>Conventional Name</b></th><th><b>Code</b></th><th><b>Description</b></th></tr>
+<tr><td>INVALID</td><td>0 (ASCII NUL)</td><td>Not a valid type code, used to terminate signatures</td></tr>
+<tr><td>BYTE</td><td>121 (ASCII 'y')</td><td>8-bit unsigned integer</td></tr>
+<tr><td>BOOLEAN</td><td>98 (ASCII 'b')</td><td>Boolean value, 0 is <tt>FALSE</tt> and 1 is <tt>TRUE</tt>. Everything else is invalid.</td></tr>
+<tr><td>INT16</td><td>110 (ASCII 'n')</td><td>16-bit signed integer</td></tr>
+<tr><td>UINT16</td><td>113 (ASCII 'q')</td><td>16-bit unsigned integer</td></tr>
+<tr><td>INT32</td><td>105 (ASCII 'i')</td><td>32-bit signed integer</td></tr>
+<tr><td>UINT32</td><td>117 (ASCII 'u')</td><td>32-bit unsigned integer</td></tr>
+<tr><td>INT64</td><td>120 (ASCII 'x')</td><td>64-bit signed integer</td></tr>
+<tr><td>UINT64</td><td>116 (ASCII 't')</td><td>64-bit unsigned integer</td></tr>
+<tr><td>DOUBLE</td><td>100 (ASCII 'd')</td><td>IEEE 754 double</td></tr>
+<tr><td>STRING</td><td>115 (ASCII 's')</td><td>UTF-8 string (<em>must</em> be valid UTF-8). Must be nul terminated and contain no other nul bytes.</td></tr>
+<tr><td>OBJECT_PATH</td><td>111 (ASCII 'o')</td><td>Name of an object instance</td></tr>
+<tr><td>SIGNATURE</td><td>103 (ASCII 'g')</td><td>A type signature</td></tr>
+<tr><td>ARRAY</td><td>97 (ASCII 'a')</td><td>Array</td></tr>
+<tr><td>STRUCT</td><td>114 (ASCII 'r'), 40 (ASCII '('), 41 (ASCII ')')</td><td>Struct</td></tr>
+<tr><td>VARIANT</td><td>118 (ASCII 'v') </td><td>Variant type (the type of the value is part of the value itself)</td></tr>
+<tr><td>DICT_ENTRY</td><td>101 (ASCII 'e'), 123 (ASCII '{'), 125 (ASCII '}') </td><td>Entry in a dict or map (array of key-value pairs)</td></tr>
+</table>
+
+For of the types are <em>container</em> types. <tt>STRUCT, ARRAY, VARIANT,</tt> and <tt> DICT_ENTRY </tt>.  All other types are a common basic data type.
+
+@section section3 Message
+A message is a unit of communication via the AllJoyn protocol.  A message can send an receive any number of values.
+
+@section section4 Signals
+A signal is an outbound value that is transmitted on the bus.
+ */

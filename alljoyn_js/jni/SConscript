@@ -1,0 +1,46 @@
+# Copyright (c) 2010 - 2011,2013 AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+Import('env')
+
+libenv = env.Clone()
+
+
+# Plugin library sources
+srcs = libenv.Glob('*.cc')
+if '' != libenv.subst('$GECKO_BASE'):
+    libenv.Append(CPPPATH = [libenv.Dir('.').srcnode(), libenv.Dir('npapi').srcnode(), libenv.subst('$GECKO_BASE/include')])
+    srcs.append(libenv.Glob('npapi/*.cc'))
+else:
+    libenv.Append(CPPPATH = [libenv.Dir('.').srcnode(), libenv.Dir('cordova').srcnode()])
+    srcs.append(libenv.Glob('cordova/*.cc'))
+    srcs.append(libenv.Glob('cordova/${OS_CONF}/*.cc'))
+srcs.append(libenv.Glob('os/${OS_CONF}/*.cc'))
+
+objs = libenv.SharedObject(srcs)
+if libenv['OS_CONF'] == 'windows':
+    objs.append(['os/${OS_CONF}/npalljoyn.def', libenv.RES('os/${OS_CONF}/npalljoyn.rc')])
+
+if libenv['LIBTYPE'] == 'both':
+    # Need to replace the shared alljoyn library with the static one for linking the plugin.
+    libs = libenv['LIBS']
+    libs[libs.index('alljoyn')] = libenv.File('$DISTDIR/cpp/lib/${LIBPREFIX}alljoyn${LIBSUFFIX}')
+    libenv.Replace(LIBS = libs)
+
+# Plugin library
+npalljoyn = libenv.SharedLibrary('npalljoyn', objs)
+shlibs = ['npalljoyn']
+
+Return(shlibs)

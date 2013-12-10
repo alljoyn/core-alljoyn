@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Shared KeyStore Client B</string>
+	<string name="enter_message_hint">Enter message</string>
+	<string name="alert_dialog_password">Enter password</string>
+</resources>

@@ -1,0 +1,42 @@
+# Copyright (c) 2010 - 2011, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+Import('daemon_env', 'daemon_objs')
+
+# Add OS specific daemon_objs
+if daemon_env['ICE'] == 'on':
+    os_objs = daemon_env.Object(['ProximityScanner.cc','Socket.cc'])
+else:
+    os_objs = []
+
+# Build the posix daemon and service launcher helper.
+if daemon_env['OS'] != 'darwin':
+    daemon = daemon_env.Program('alljoyn-daemon', ['daemon-main.cc'] + daemon_objs + os_objs)
+else:
+    daemon = []
+	
+#
+# On Android, build a static library that can be linked into a JNI dynamic 
+# library to implement the daemon as a Service
+#
+if daemon_env['OS'] == 'android':
+   libenv = daemon_env.Clone(CCFLAGS = '-DDAEMON_LIB')
+   libenv.Object(target = 'alljoyn-daemon', source = 'daemon-main.cc')
+   libdaemon = libenv.StaticLibrary(['alljoyn-daemon'] + daemon_objs + os_objs)
+   dlibs = libenv.Install('$CPP_DISTDIR/lib', libdaemon)
+
+#progs = daemon + servicehelper
+progs = daemon, os_objs
+Return('progs')

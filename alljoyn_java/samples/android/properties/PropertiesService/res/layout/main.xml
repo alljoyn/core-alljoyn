@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/main_layout"
+	android:background="#aa0000"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    >
+    <Spinner
+		android:id="@+id/color_spinner"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:prompt="@string/color_prompt"
+	/>
+	<Spinner
+		android:id="@+id/text_size"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:prompt="@string/text_size_prompt"
+	/>
+	<TextView  
+		android:id="@+id/lorem_ipsum"
+	    android:layout_width="fill_parent" 
+	    android:layout_height="wrap_content" 
+	    android:text="@string/lorem_ipsum"
+	    android:textColor="#000000"
+	    android:textSize="28sp"
+	/>	
+	
+</LinearLayout>

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="AboutFeature" basedir="." default="produce_about_sample">
+
+
+	<property name="src.dir"     value="src" />
+	<property name="libs.dir"    value="libs"/>
+	<property name="build.dir"   value="build"/>
+	<property name="classes.dir" value="${build.dir}/classes" />
+	<property name="deploy.dir"  value="${build.dir}/deploy" />
+	
+	<property name="about"       value="alljoyn_about" />
+	<property name="services"    value="alljoyn_services_common" />
+	
+    <property name="about_sample.dir" value="../../../applications/sample_apps/android/common_utils" />	
+    <property name="about_sample.dir.libs" value="${about_sample.dir}/libs" />
+
+     <property name="docs.lib" value="docs"/>
+    
+	<target name="clean">
+        <echo message="Cleaning ${ant.project.name} ${build.dir} directory..."/>
+        <delete dir="${build.dir}" includeemptydirs="true" quiet="true"/>       
+    </target>
+
+	<target name="init" depends="clean">
+          <echo message="${ant.project.name} Starting init..."/>
+          <echo message="${ant.project.name} Create build directory"/>
+          <mkdir dir="${build.dir}"/>
+          
+          <echo message="${ant.project.name} Create ${classes.dir} directory"/>
+          <mkdir dir="${classes.dir}"/>
+         
+          <echo message="${ant.project.name} Create ${deploy.dir} directory"/>
+          <mkdir dir="${deploy.dir}"/>
+    </target>
+	
+	<target name="compile" depends="init" description="Compiles the code">
+        <echo message="${ant.project.name} starting compilation..."/>
+        
+        <path id="classpath">
+            <fileset dir="${libs.dir}" includes="**/*.jar"/>
+        </path>
+
+        <javac source="1.6" target="1.6" srcdir="${src.dir}" destdir="${classes.dir}" classpathref="classpath" debug="true" includeantruntime="false"/>
+	</target>
+	
+	<target name="jar" depends="compile">
+	    <echo message="${ant.project.name} Creates ${about} JAR file"/>
+        <jar destfile="${deploy.dir}/${about}.jar" basedir="${classes.dir}" includes="org/alljoyn/about/**"/>
+        
+        <echo message="${ant.project.name} Creates ${services} JAR"/>
+        <jar destfile="${deploy.dir}/${services}.jar" basedir="${classes.dir}" includes="org/alljoyn/services/common/**"/>
+    </target>
+
+	<target name="produce_about_sample" depends="jar">
+	      <echo message="${ant.project.name} Create the AboutSample app"/>
+          <copy todir="${about_sample.dir.libs}" >
+              <fileset dir="${deploy.dir}" includes="**/*"/>
+              <fileset dir="${libs.dir}" includes="**/*.jar"/>
+          </copy>
+          
+          <ant antfile="${about_sample.dir}/build.xml" target="jar" inheritAll="false"/>
+    </target>
+	
+	<target name="jdoc" description="${ant.project.name} Creates JAVADOC">
+	     <delete dir="${docs.lib}" includeemptydirs="true" quiet="true"/>
+	      
+	    <javadoc
+                destdir="${docs.lib}"
+                author="false"
+                version="false"
+                use="true"
+                windowtitle="About Feature">
+	     
+		    <classpath id="classpath">    
+	            <fileset dir="${libs.dir}" >
+	               <include name="**/*.jar"/>
+	            </fileset>
+	        </classpath>
+		         
+		    <fileset dir="src" defaultexcludes="yes">
+	            <include name="*/**"/>
+	            <not>
+                    <filename name="SConscript"/>
+                </not>
+	        </fileset>
+		     
+		    <fileset dir="${about_sample.dir}/src" defaultexcludes="yes">
+	            <include name="*/**"/>
+	        </fileset>
+		     
+		    <doctitle><![CDATA[<h1> About Feature </h1>]]></doctitle>
+	   </javadoc>
+	</target>
+	
+</project>
+	
+	

@@ -1,0 +1,106 @@
+<!--
+ ////////////////////////////////////////////////////////////////////////////////
+ // Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ //
+ //    Permission to use, copy, modify, and/or distribute this software for any
+ //    purpose with or without fee is hereby granted, provided that the above
+ //    copyright notice and this permission notice appear in all copies.
+ //
+ //    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ //    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ //    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ //    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ //    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ //    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ //////////////////////////////////////////////////////////////////////////////// 
+ -->
+<xml>
+    <node name="org/alljoyn/Bus/basic_object">
+        <annotation name="org.alljoyn.lang.objc" value="BasicObject"/>
+        <interface name="org.alljoyn.bus.sample.strings">
+            <annotation name="org.alljoyn.lang.objc" value="BasicStringsDelegate"/>
+            <method name="Concatentate">
+                <arg name="str1" type="s" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="concatenateString:"/>
+                </arg>
+                <arg name="str2" type="s" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="withString:"/>
+                </arg>
+                <arg name="outStr" type="s" direction="out"/>
+            </method>
+            <method name="MethodWithMultipleOutArgs">
+                <arg name="str1" type="s" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="methodWithOutString:"/>
+                </arg>
+                <arg name="str2" type="s" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="inString2:"/>
+                </arg>
+                <arg name="outStr1" type="s" direction="out">
+                    <annotation name="org.alljoyn.lang.objc" value="outString1:"/>
+                </arg>
+                <arg name="outStr2" type="s" direction="out">
+                    <annotation name="org.alljoyn.lang.objc" value="outString2:"/>
+                </arg>                
+            </method>
+            <method name="MethodWithOnlyOutArgs">
+                <arg name="outStr1" type="s" direction="out">
+                    <annotation name="org.alljoyn.lang.objc" value="methodWithOnlyOutString:"/>
+                </arg>
+                <arg name="outStr2" type="s" direction="out">
+                    <annotation name="org.alljoyn.lang.objc" value="outString2:"/>
+                </arg>                
+            </method>
+            <method name="MethodWithNoReturnAndNoArgs"/>
+            <method name="MethodWithReturnAndNoInArgs">
+                <arg name="outStr" type="s" direction="out"/>
+            </method>
+            <method name="MethodWithComplexTypesForArgs">
+                <arg name="stringArray" type="as" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="methodWithStringArray:"/>
+                </arg>
+                <arg name="aStruct" type="(si)" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="structWithStringAndInt:"/>
+                </arg>
+                <arg name="outStr" type="s" direction="out"/>
+            </method>
+            <property name="testArrayProperty" type="a(ssssssis)" access="readwrite"/>
+            <property name="testStringProperty" type="s" access="readwrite"/>
+            <signal name="TestStringPropertyChanged">
+                <arg name="oldString" type="s">
+                    <annotation name="org.alljoyn.lang.objc" value="TestStringPropertyChangedFrom:"/>
+                </arg>
+                <arg name="newString" type="s">
+                    <annotation name="org.alljoyn.lang.objc" value="to:"/>
+                </arg>
+            </signal>
+            <signal name="TestSignalWithComplexArgs">
+                <arg name="oldString" type="as">
+                    <annotation name="org.alljoyn.lang.objc" value="TestSignalWithComplexArgs:"/>
+                </arg>
+            </signal>
+            <signal name="TestSignalWithNoArgs">
+            </signal>
+        </interface>
+        <interface name="org.alljoyn.bus.samples.chat">
+            <annotation name="org.alljoyn.lang.objc" value="BasicChatDelegate"/>
+            <signal name="Chat">
+                <arg name="message" type="s">
+                    <annotation name="org.alljoyn.lang.objc" value="Message:"/>                        
+                </arg>
+            </signal>
+            <property name="name" type="s" access="read"/>
+        </interface>
+    </node>
+    <node name="org/alljoyn/Bus/ping_object">
+        <annotation name="org.alljoyn.lang.objc" value="PingObject"/>        
+        <interface name="org.alljoyn.bus.samples.ping">
+            <annotation name="org.alljoyn.lang.objc" value="PingObjectDelegate"/>            
+            <method name="Ping">
+                <arg name="value" type="y" direction="in">
+                    <annotation name="org.alljoyn.lang.objc" value="pingWithValue:"/>
+                </arg>
+            </method>
+        </interface>
+    </node>
+</xml>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Very simple layout to get all the contacts and show a list of the contacts --> 
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    >
+    <ListView android:id="@+id/contact_list" 
+		android:layout_width="fill_parent" 
+		android:layout_height="fill_parent"
+		android:stackFromBottom="true"
+		android:transcriptMode="alwaysScroll"
+		android:layout_weight="1.0" 
+		/>
+    <Button
+    	android:id="@+id/get_contacts_btn"
+    	android:layout_width="fill_parent"
+    	android:layout_height="wrap_content"
+    	android:text="@string/get_contacts" />
+    	
+</LinearLayout>

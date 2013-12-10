@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- this layout has no user interactive interface the application only exists to 
+     provide the AllJoyn service. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    >
+<TextView  
+    android:layout_width="fill_parent" 
+    android:layout_height="wrap_content" 
+    android:text="@string/hello"
+    />
+    <ListView android:id="@+id/ListView" 
+		android:layout_width="fill_parent" 
+		android:layout_height="fill_parent"
+		android:stackFromBottom="false"
+		android:transcriptMode="alwaysScroll"
+		android:layout_weight="1.0" 
+		/>
+</LinearLayout>

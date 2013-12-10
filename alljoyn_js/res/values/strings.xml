@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+   <string name="alljoyn_browser_plugin">AllJoyn browser plugin</string>
+   <string name="alljoyn_plugin_settings">AllJoyn plugin settings</string>
+
+   <string name="security_warning">Security Warning</string>
+   <string name="the_website_below_wants_to_use_alljoyn">The website below wants to use AllJoyn.</string>
+   <string name="do_you_want_to_allow_this">Do you want to allow this?</string>
+   <string name="remember_my_decision_for_this_site">Remember my decision for this site</string>
+   <string name="allow">Allow</string>
+   <string name="deny">Deny</string>
+
+   <string name="clear_alljoyn">Clear AllJoyn</string>
+   <string name="clear_all_saved_authorizations_and_passwords">Clear all saved authorizations and passwords</string>
+   <string name="clear">Clear</string>
+</resources>

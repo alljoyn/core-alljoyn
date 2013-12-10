@@ -1,0 +1,57 @@
+# Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+
+Import('libenv')
+from os.path import basename
+
+# Clone env so we don't pollute the shared environment
+locenv = libenv.Clone()
+
+# We want to generate documentation for the winrt binding
+# ${TARGET} places the .xdc files next to the .obj files.
+locenv.Append(CXXFLAGS='/doc${TARGET}.xdc');
+
+# Platform specific sources
+srcs = [ f for f in locenv.Glob('binding/src/*.cc') ]
+
+objs = locenv.Object(srcs);
+
+# Header file includes
+locenv.Prepend(CPPPATH = 'binding/inc')
+
+## Add support for multiple build targets in the same workset
+#locenv.VariantDir('$OBJDIR', '.', duplicate = 0)
+
+
+# put the AllJoyn.xml file next to the AllJoyn.winmd file in the dist directory
+XDCSourceDir = Dir('.').abspath
+XMLFileRoot = locenv.Dir('$WINRT_DISTDIR\\bin\\AllJoyn').abspath
+XMLFile = locenv.File(XMLFileRoot+'.xml').abspath
+XDCTransformToolDir = locenv.Dir('binding').srcnode().abspath
+
+# run this after AllJoyn.dll has been built, and create AllJoyn.xml
+xml_file = locenv.Command(XMLFile,
+               '$WINRT_DISTDIR\\bin\\AllJoyn.dll',
+               [
+               ''.join(['xdcmake.exe /old ', XMLFileRoot, ' /nologo /Fr', XDCSourceDir,'\\*.xdc']),
+               ''.join([XDCTransformToolDir, '\\TransformXDCOutput.py ', XMLFile, ' ', XMLFile, '.tmp ']),
+                Delete(XMLFile),
+                Move(XMLFile, XMLFile+'.tmp')
+               ]
+               )
+
+locenv.Depends(xml_file, objs)
+
+Return('objs')

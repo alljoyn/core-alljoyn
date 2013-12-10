@@ -1,0 +1,305 @@
+/******************************************************************************
+ * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ *
+ *    Permission to use, copy, modify, and/or distribute this software for any
+ *    purpose with or without fee is hereby granted, provided that the above
+ *    copyright notice and this permission notice appear in all copies.
+ *
+ *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ *    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ *    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ *    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ *    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ ******************************************************************************/
+
+#include <alljoyn/BusAttachment.h>
+#include <alljoyn/about/AboutIconService.h>
+#include <alljoyn/about/AboutServiceApi.h>
+#include <alljoyn/about/AboutPropertyStoreImpl.h>
+
+#include <signal.h>
+#include "BusListenerImpl.h"
+#include "OptParser.h"
+
+using namespace ajn;
+using namespace services;
+
+#define CHECK_RETURN(x) if ((status = x) != ER_OK) return status;
+
+#define SERVICE_EXIT_OK       0
+#define SERVICE_OPTION_ERROR  1
+#define SERVICE_CONFIG_ERROR  2
+
+static SessionPort SERVICE_PORT;
+
+static volatile sig_atomic_t s_interrupt = false;
+
+static BusListenerImpl s_busListener(SERVICE_PORT);
+
+/** Top level message bus object. */
+static BusAttachment* s_msgBus = NULL;
+
+static void SigIntHandler(int sig) {
+    s_interrupt = true;
+}
+
+/** Register the bus object and connect, report the result to stdout, and return the status code. */
+QStatus RegisterBusObject(AboutService* obj) {
+    QStatus status = s_msgBus->RegisterBusObject(*obj);
+
+    if (ER_OK == status) {
+        printf("RegisterBusObject succeeded.\n");
+    } else {
+        printf("RegisterBusObject failed (%s).\n", QCC_StatusText(status));
+    }
+
+    return status;
+}
+
+/** Connect to the daemon, report the result to stdout, and return the status code. */
+QStatus ConnectToDaemon() {
+    QStatus status;
+    status = s_msgBus->Connect();
+
+    if (ER_OK == status) {
+        printf("Daemon connect succeeded.\n");
+    } else {
+        printf("Failed to connect daemon (%s).\n", QCC_StatusText(status));
+    }
+
+    return status;
+}
+
+/** Start the message bus, report the result to stdout, and return the status code. */
+QStatus StartMessageBus(void) {
+    QStatus status = s_msgBus->Start();
+
+    if (ER_OK == status) {
+        printf("BusAttachment started.\n");
+    } else {
+        printf("Start of BusAttachment failed (%s).\n", QCC_StatusText(status));
+    }
+
+    return status;
+}
+
+/** Create the session, report the result to stdout, and return the status code. */
+QStatus BindSession(TransportMask mask) {
+    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, mask);
+    SessionPort sp = SERVICE_PORT;
+    QStatus status = s_msgBus->BindSessionPort(sp, opts, s_busListener);
+
+    if (ER_OK == status) {
+        printf("BindSessionPort succeeded.\n");
+    } else {
+        printf("BindSessionPort failed (%s).\n", QCC_StatusText(status));
+    }
+
+    return status;
+}
+
+/** Advertise the service name, report the result to stdout, and return the status code. */
+QStatus AdvertiseName(TransportMask mask) {
+    QStatus status = ER_BUS_ESTABLISH_FAILED;
+    if (s_msgBus->IsConnected() && s_msgBus->GetUniqueName().size() > 0) {
+        status = s_msgBus->AdvertiseName(s_msgBus->GetUniqueName().c_str(), mask);
+        printf("AdvertiseName %s =%d\n", s_msgBus->GetUniqueName().c_str(), status);
+    }
+    return status;
+}
+
+static QStatus FillAboutPropertyStoreImplData(AboutPropertyStoreImpl* propStore, OptParser const& opts)
+{
+    QStatus status = ER_OK;
+
+    CHECK_RETURN(propStore->setDeviceId(opts.GetDeviceId()))
+    CHECK_RETURN(propStore->setDeviceName(opts.GetDeviceName()))
+    CHECK_RETURN(propStore->setAppId(opts.GetAppId()))
+
+    std::vector<qcc::String> languages(3);
+    languages[0] = "en";
+    languages[1] = "sp";
+    languages[2] = "fr";
+    CHECK_RETURN(propStore->setSupportedLangs(languages))
+    CHECK_RETURN(propStore->setDefaultLang(opts.GetDefaultLanguage()))
+
+    CHECK_RETURN(propStore->setAppName("AboutConfig"))
+    CHECK_RETURN(propStore->setModelNumber("Wxfy388i"))
+    CHECK_RETURN(propStore->setDateOfManufacture("10/1/2199"))
+    CHECK_RETURN(propStore->setSoftwareVersion("12.20.44 build 44454"))
+    CHECK_RETURN(propStore->setAjSoftwareVersion(ajn::GetVersion()))
+    CHECK_RETURN(propStore->setHardwareVersion("355.499. b"))
+
+    CHECK_RETURN(propStore->setDescription("This is an Alljoyn Application", "en"))
+    CHECK_RETURN(propStore->setDescription("Esta es una Alljoyn aplicacion", "sp"))
+    CHECK_RETURN(propStore->setDescription("C'est une Alljoyn application", "fr"))
+
+    CHECK_RETURN(propStore->setManufacturer("Company", "en"))
+    CHECK_RETURN(propStore->setManufacturer("Empresa", "sp"))
+    CHECK_RETURN(propStore->setManufacturer("Entreprise", "fr"))
+
+    CHECK_RETURN(propStore->setSupportUrl("http://www.alljoyn.org"))
+    return status;
+}
+
+void WaitForSigInt(void) {
+    while (s_interrupt == false) {
+#ifdef _WIN32
+        Sleep(100);
+#else
+        usleep(100 * 1000);
+#endif
+    }
+}
+
+static void shutdown(AboutPropertyStoreImpl*& aboutPropertyStore, AboutIconService*& aboutIconService)
+{
+    s_msgBus->CancelAdvertiseName(s_msgBus->GetUniqueName().c_str(), TRANSPORT_ANY);
+    s_msgBus->UnregisterBusListener(s_busListener);
+    s_msgBus->UnbindSessionPort(s_busListener.getSessionPort());
+
+    AboutServiceApi::DestroyInstance();
+
+    if (aboutPropertyStore) {
+        delete aboutPropertyStore;
+        aboutPropertyStore = NULL;
+    }
+
+    if (aboutIconService) {
+        delete aboutIconService;
+        aboutIconService = NULL;
+    }
+
+    delete s_msgBus;
+    s_msgBus = NULL;
+}
+
+int main(int argc, char**argv, char**envArg) {
+    QStatus status = ER_OK;
+    printf("AllJoyn Library version: %s\n", ajn::GetVersion());
+    printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
+    QCC_SetLogLevels("ALLJOYN_ABOUT_SERVICE=7;");
+    QCC_SetLogLevels("ALLJOYN_ABOUT_ICON_SERVICE=7;");
+
+    OptParser opts(argc, argv);
+    OptParser::ParseResultCode parseCode(opts.ParseResult());
+    switch (parseCode) {
+    case OptParser::PR_OK:
+        break;
+
+    case OptParser::PR_EXIT_NO_ERROR:
+        return SERVICE_EXIT_OK;
+
+    default:
+        return SERVICE_OPTION_ERROR;
+    }
+
+    SERVICE_PORT = opts.GetPort();
+    s_busListener.setSessionPort(SERVICE_PORT);
+    printf("using port %d\n", opts.GetPort());
+
+    if (!opts.GetAppId().empty()) {
+        printf("using appID %s\n", opts.GetAppId().c_str());
+    }
+
+    /* Install SIGINT handler so Ctrl + C deallocates memory properly */
+    signal(SIGINT, SigIntHandler);
+
+    //set Daemon password only for bundled app
+    #ifdef QCC_USING_BD
+    PasswordManager::SetCredentials("ALLJOYN_PIN_KEYX", "000000");
+    #endif
+
+    /* Create message bus */
+    s_msgBus = new BusAttachment("AboutServiceName", true);
+
+    if (!s_msgBus) {
+        status = ER_OUT_OF_MEMORY;
+        return status;
+    }
+
+    if (ER_OK == status) {
+        status = StartMessageBus();
+    }
+
+    if (ER_OK == status) {
+        status = ConnectToDaemon();
+    }
+
+    if (ER_OK == status) {
+        s_msgBus->RegisterBusListener(s_busListener);
+    }
+
+    AboutIconService* aboutIconService = NULL;
+    AboutPropertyStoreImpl* aboutPropertyStore = NULL;
+
+    if (ER_OK == status) {
+        aboutPropertyStore = new AboutPropertyStoreImpl();
+        status = FillAboutPropertyStoreImplData(aboutPropertyStore, opts);
+        if (status != ER_OK) {
+            shutdown(aboutPropertyStore, aboutIconService);
+            return EXIT_FAILURE;
+        }
+
+        AboutServiceApi::Init(*s_msgBus, *aboutPropertyStore);
+        if (!AboutServiceApi::getInstance()) {
+            shutdown(aboutPropertyStore, aboutIconService);
+            return EXIT_FAILURE;
+        }
+
+        AboutServiceApi::getInstance()->Register(SERVICE_PORT);
+        status = s_msgBus->RegisterBusObject(*AboutServiceApi::getInstance());
+
+        uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+                                       0x52, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x0A, 0x08, 0x02, 0x00, 0x00, 0x00, 0x02, 0x50, 0x58, 0xEA, 0x00,
+                                       0x00, 0x00, 0x04, 0x67, 0x41, 0x4D, 0x41, 0x00, 0x00, 0xAF, 0xC8, 0x37, 0x05, 0x8A, 0xE9, 0x00, 0x00, 0x00, 0x19,
+                                       0x74, 0x45, 0x58, 0x74, 0x53, 0x6F, 0x66, 0x74, 0x77, 0x61, 0x72, 0x65, 0x00, 0x41, 0x64, 0x6F, 0x62, 0x65, 0x20,
+                                       0x49, 0x6D, 0x61, 0x67, 0x65, 0x52, 0x65, 0x61, 0x64, 0x79, 0x71, 0xC9, 0x65, 0x3C, 0x00, 0x00, 0x00, 0x18, 0x49,
+                                       0x44, 0x41, 0x54, 0x78, 0xDA, 0x62, 0xFC, 0x3F, 0x95, 0x9F, 0x01, 0x37, 0x60, 0x62, 0xC0, 0x0B, 0x46, 0xAA, 0x34,
+                                       0x40, 0x80, 0x01, 0x00, 0x06, 0x7C, 0x01, 0xB7, 0xED, 0x4B, 0x53, 0x2C, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E,
+                                       0x44, 0xAE, 0x42, 0x60, 0x82 };
+
+        qcc::String mimeType("image/png");
+        qcc::String url(""); //put your url here
+
+        std::vector<qcc::String> interfaces;
+        interfaces.push_back("org.alljoyn.Icon");
+        status = AboutServiceApi::getInstance()->AddObjectDescription("/About/DeviceIcon", interfaces);
+
+        aboutIconService = new AboutIconService(*s_msgBus, mimeType, url, aboutIconContent,
+                                                sizeof(aboutIconContent) / sizeof(*aboutIconContent));
+        aboutIconService->Register();
+
+        status = s_msgBus->RegisterBusObject(*aboutIconService);
+    }
+
+    const TransportMask SERVICE_TRANSPORT_TYPE = TRANSPORT_ANY;
+
+    if (ER_OK == status) {
+        status = BindSession(SERVICE_TRANSPORT_TYPE);
+    }
+
+    if (ER_OK == status) {
+        status = AdvertiseName(SERVICE_TRANSPORT_TYPE);
+    }
+
+    if (ER_OK == status) {
+        status = AboutServiceApi::getInstance()->Announce();
+
+    }
+
+    /* Perform the service asynchronously until the user signals for an exit. */
+    if (ER_OK == status) {
+        WaitForSigInt();
+    }
+
+    shutdown(aboutPropertyStore, aboutIconService);
+
+    return 0;
+} /* main() */
+
+
+
+

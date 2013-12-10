@@ -1,0 +1,1591 @@
+-------------------------------------------------------------------------------
+This document contains a list of changes to the C++ AllJoyn API.
+Each Status, class, Method, Function, or MACRO will be marked as follows:
+'NEW': API code that was added to the release.
+'CHANGED': API code that has been changed since the last release.
+'REMOVED': API code that has been deleted from the release and can no longer be
+           used.
+'DEPRECATED': API code that has been marked as deprecated.
+
+Each addition should contain a short explanation of what added or changed.
+For more information please refer to the API documentation.
+-------------------------------------------------------------------------------
+AllJoyn API Changes between v3.3.2 and v3.4.0 (C++ API)
+NEW MACRO
+ALLJOYN_REMOVESESSIONMEMBER_REPLY_SUCCESS value = 1
+    RemoveSessionMember reply: Success
+
+NEW MACRO
+ALLJOYN_REMOVESESSIONMEMBER_REPLY_NO_SESSION value = 2
+    RemoveSessionMember reply: Session with sender and session ID does not exist.
+
+NEW MACRO
+ALLJOYN_REMOVESESSIONMEMBER_NOT_BINDER value = 3
+    RemoveSessionMember reply: Session was found, but sender is not the binder
+
+NEW MACRO
+ALLJOYN_REMOVESESSIONMEMBER_NOT_MULTIPOINT value = 4
+    RemoveSessionMember reply: Session was found, but is not multipoint
+
+NEW MACRO
+ALLJOYN_REMOVESESSIONMEMBER_NOT_FOUND value = 5
+    RemoveSessionMember reply: Session was found, but the specified session
+    member was not found
+
+NEW MACRO
+ALLJOYN_REMOVESESSIONMEMBER_INCOMPATIBLE_REMOTE_DAEMON value = 6
+    RemoveSessionMember reply: Session was found, but the remote daemon does not
+    support this feature
+
+NEW MACRO
+ALLJOYN_REMOVESESSIONMEMBER_REPLY_FAILED value = 7
+    RemoveSessionMember reply: Failed for unspecified reason
+
+NEW STATUS
+ER_IODISPATCH_STOPPING value = 0x1023
+    Cannot execute a read or write command on an IODispatch thread because it is
+    stopping.
+
+NEW STATUS
+ER_SLAP_INVALID_PACKET_LEN value = 0x1024
+    Length of SLAP packet is invalid.
+
+NEW STATUS
+ER_SLAP_HDR_CHECKSUM_ERROR value = 0x1025
+    SLAP packet header checksum error.
+
+NEW STATUS
+ER_SLAP_INVALID_PACKET_TYPE value = 0x1026
+    Invalid SLAP packet type.
+
+NEW STATUS
+ER_SLAP_LEN_MISMATCH value = 0x1027
+    Calculated length does not match the received length.
+
+NEW STATUS
+ER_SLAP_PACKET_TYPE_MISMATCH value = 0x1028
+    Packet type does not match reliability bit.
+
+NEW STATUS
+ER_SLAP_CRC_ERROR value = 0x1029
+    SLAP packet CRC error.
+
+NEW STATUS
+ER_SLAP_ERROR value = 0x102A
+    Generic SLAP error.
+
+NEW STATUS
+ER_SLAP_OTHER_END_CLOSED value = 0x102B
+    Other end closed the SLAP connection
+
+NEW STATUS
+ER_ALLJOYN_REMOVESESSIONMEMBER_REPLY_NO_SESSION = 0x90ef
+    RemoveSessionMember reply: Specified session Id with this endpoint was not
+    found
+
+NEW STATUS
+ER_ALLJOYN_REMOVESESSIONMEMBER_NOT_BINDER = 0x90f0
+    RemoveSessionMember reply: Endpoint is not the binder of session
+
+NEW STATUS
+ER_ALLJOYN_REMOVESESSIONMEMBER_NOT_MULTIPOINT = 0x90f1
+    RemoveSessionMember reply: Session is not multipoint
+
+NEW STATUS
+ER_ALLJOYN_REMOVESESSIONMEMBER_NOT_FOUND = 0x90f2
+    RemoveSessionMember reply: Specified session member was not found
+
+NEW STATUS
+ER_ALLJOYN_REMOVESESSIONMEMBER_INCOMPATIBLE_REMOTE_DAEMON = 0x90f3
+    RemoveSessionMember reply: The remote daemon does not support this feature
+
+NEW STATUS
+ER_ALLJOYN_REMOVESESSIONMEMBER_REPLY_FAILED = 0x90f4
+    RemoveSessionMember reply: Failed for unspecified reason
+
+NEW STATUS
+ER_BUS_REMOVED_BY_BINDER = 0x90f5
+    The session member was removed by the binder
+
+NEW METHOD
+ajn::BusAttachment.CreateInterface(const char* name,
+                                   InterfaceDescription*& iface,
+                                   InterfaceSecurityPolicy secPolicy);
+     Create an interface description with a given name.
+
+     Typically, interfaces that are implemented by BusObjects are created here.
+     Interfaces that are implemented by remote objects are added automatically by
+     the bus if they are not already present via
+     ajn::ProxyBusObject.IntrospectRemoteObject().
+
+     Because interfaces are added both explicitly (via this method) and
+     implicitly (via ajn::ProxyBusObject.IntrospectRemoteObject), there is the
+     possibility that creating an interface here will fail because the interface
+     already exists. If this happens, the ER_BUS_IFACE_ALREADY_EXISTS will be
+     returned and NULL will be returned in the iface [OUT] parameter.
+
+     Interfaces created with this method need to be activated using
+     ajn::InterfaceDescription.Activate() once all of the methods, signals,
+     etc have been added to the interface. The interface will be unaccessible
+     (via ajn::BusAttachment.GetInterfaces() or ajn::BusAttachment.GetInterface())
+     until it is activated.
+
+     [param] name - The requested interface name.
+     [param] iface [out]
+          - Interface description
+          - NULL if cannot be created.
+     [param] secPolicy - The security policy for this interface
+
+NEW METHOD
+ajn::BusAttachment.Disconnect()
+    Disconnect the BusAttachment from the remote bus.
+
+CHANGED METHOD
+ajn::BusAttachment.RegisterBusObject(BusObject& obj, bool secure = false)
+    Register a BusObject
+
+    [param] obj - BusObject to register.
+    [param] secure - true if authentication is required to access this object.
+
+NEW METHOD
+ajn::BusAttachment.RemoveSessionMember(SessionId sessionId,
+                                       qcc::String memberName)
+    Remove a member from an existing multipoint session.
+    This function may be called by the binder of the session to forcefully
+    remove a member from a session.
+
+    This method is a shortcut/helper that issues an
+    org.alljoyn.Bus.RemoveSessionMember method call to the local daemon and
+    interprets the response.
+
+    [param] sessionId - Session id.
+    [param] memberName - Member to remove.
+
+NEW METHOD
+ajn::BusObject.IsSecure()
+    Indicates if this object is secure.
+
+NEW ENUM
+InterfaceSecurityPolicy
+    The interface security policy can be inherit, required, or off. If security
+    is required on an interface, methods on that interface can only be called by
+    an authenticated peer and signals emitted from that interfaces can only be
+    received by an authenticated peer. If security is not specified for an
+    interface the interface inherits the security of the objects that implement
+    it.  If security is not applicable to an interface authentication is never
+    required even when the implemented by a secure object. For example, security
+    does not apply to the Introspection interface otherwise secure objects would
+    not be introspectable.
+
+NEW METHOD
+ajn::InterfaceDescription.GetSecurityPolicy()
+    Get the security policy that applies to this interface.
+
+NEW CONSTRUCTOR
+ajn::InterfaceDescription(const char* name, InterfaceSecurityPolicy secPolicy)
+    Construct an interface with no methods or properties
+    This constructor cannot be used by any class other than the factory class
+    (Bus).
+
+CHANGED CONSTRUCTOR
+ajn::ProxyBusObject(BusAttachment& bus, const char* service, const char* path,
+                    SessionId sessionId, bool secure = false)
+    Create an empty proxy object that refers to an object at given remote
+    service name. Note that the created proxy object does not contain
+    information about the interfaces that the actual remote object implements
+    with the exception that org.freedesktop.DBus.Peer interface is special-cased
+    (per the DBus spec) and can always be called on any object. Nor does it
+    contain information about the child objects that the actual remote object
+    might contain. The security mode can be specified if known or can be derived
+    from the XML description.
+
+    To fill in this object with the interfaces and child object names that the
+    actual remote object describes in its introspection data, call
+    ajn::ProxyBusObject.IntrospectRemoteObject() or
+    ajn::ProxyBusObject.IntrospectRemoteObjectAsync().
+
+    [param] bus - The bus.
+    [param] service - The remote service name (well-known or unique).
+    [param] path - The absolute (non-relative) object path for the remote object.
+    [param] sessionId - The session id the be used for communicating with remote
+                        object.
+    [param] secure - The security mode for the remote object.
+
+NEW METHOD
+ajn::ProxyBusObject.IsSecure()
+    Indicates if the remote object for this proxy bus object is secure.
+
+NEW ENUM
+ajn::SessionListener.SessionLostReason
+    Reason for the session being lost
+
+NEW LISTENER
+ajn::SessionListener.SessionLost(SessionId sessionId, SessionLostReason reason)
+    Called by the bus when an existing session becomes disconnected.
+    [param] sessionId - Id of session that was lost.
+    [param] reason - The reason for the session being lost
+
+DEPRECATED LISTENER
+ajn::SessionListener.SessionLost(SessionId sessionId)
+    Called by the bus when an existing session becomes disconnected.
+    [param] sessionId - Id of session that was lost.
+
+
+-------------------------------------------------------------------------------
+AllJoyn API Changes between v3.3.0 and v3.3.2 (C++ API)
+None.
+
+-------------------------------------------------------------------------------
+AllJoyn API Changes between v3.2.0 and v3.3.0 (C++ API)
+NEW MACRO
+ALLJOYN_ONAPPSUSPEND_REPLY_SUCCESS
+    OnAppSuspend reply: Success
+
+NEW MACRO
+ALLJOYN_ONAPPSUSPEND_REPLY_FAILED
+    OnAppSuspend reply: Failed
+
+NEW MACRO
+ALLJOYN_ONAPPSUSPEND_REPLY_NO_SUPPORT
+    OnAppSuspend reply: Not Supported
+
+NEW MACRO
+ALLJOYN_ONAPPRESUME_REPLY_SUCCESS
+    OnAppResume reply: Success
+
+NEW MACRO
+ALLJOYN_ONAPPRESUME_REPLY_FAILED
+    OnAppResume reply: Failed
+
+NEW MACRO
+ALLJOYN_ONAPPRESUME_REPLY_NO_SUPPORT
+    OnAppResume reply: Not Supported
+
+NEW MACRO
+ALLJOYN_CANCELSESSIONLESS_REPLY_SUCCESS
+    CancelSessionlessMessage reply: Success
+
+NEW MACRO
+ALLJOYN_CANCELSESSIONLESS_REPLY_NO_SUCH_MSG
+    CancelSessionlessMessage reply: Message with given serial num not found
+
+NEW MACRO
+ALLJOYN_CANCELSESSIONLESS_REPLY_NOT_ALLOWED
+    CancelSessionlessMessage reply: Caller is not allowed to cancel msg
+
+NEW MACRO
+ALLJOYN_CANCELSESSIONLESS_REPLY_FAILED
+    CancelSessionlessMessage reply: Failed for unspecified reason
+
+NEW STATUS
+ER_INVALID_STREAM value=0x1021
+    Attempt to reference non-existent stream entry
+
+NEW STATUS
+ER_TIMER_FULL  value=0x1022 
+    Attempt to reference non-existent stream entry
+
+NEW STATUS
+ER_ALLJOYN_ONAPPSUSPEND_REPLY_FAILED value=0x90ea 
+    OnAppSuspend reply: Failed
+
+NEW STATUS
+ER_ALLJOYN_ONAPPSUSPEND_REPLY_UNSUPPORTED value=0x90eb 
+    OnAppSuspend reply: Unsupported operation
+
+NEW STATUS
+ER_ALLJOYN_ONAPPRESUME_REPLY_FAILED value=0x90ec 
+    OnAppResume reply: Failed
+
+NEW STATUS
+ER_ALLJOYN_ONAPPRESUME_REPLY_UNSUPPORTED value=0x90ed
+    OnAppResume reply: Unsupported operation
+
+NEW STATUS
+ER_BUS_NO_SUCH_MESSAGE value=0x90ee
+    Message not found
+
+NEW METHOD
+ajn::BusAttachment.FindAdvertisedNameByTransport(const char* namePrefix, 
+                                                 TransportMask transports)
+    Register interest in a well-known name prefix for the purpose of discovery 
+    over specified transports.
+    This method is a shortcut/helper that issues an org.alljoyn.Bus.FindAdvertisedName 
+    method call to the local daemon and interprets the response.
+    [param] namePrefix - Well-known name prefix that application is interested 
+                         in receiving BusListener::FoundAdvertisedName 
+                         notifications about.
+    [param] transports - Transports over which to do well-known name discovery
+
+NEW METHOD
+ajn::BusAttachment.CancelFindAdvertisedNameByTransport(const char* namePrefix, 
+                                                       TransportMask transports)
+    Cancel interest in a well-known name prefix that was previously
+    registered with FindAdvertisedName. This cancels well-known name discovery
+    over the specified transports.  This method is a shortcut/helper that 
+    issues an org.alljoyn.Bus.CancelFindAdvertisedName method call to the local
+    daemon and interprets the response.
+    [param] namePrefix - Well-known name prefix that application is no longer 
+                         interested in receiving BusListener::FoundAdvertisedName 
+                         notifications about.
+    [param] transports - Transports over which to cancel well-known name discovery
+
+
+NEW METHOD
+ajn::BusObject.CancelSessionlessMessage(uint32_t serialNumber)
+    Remove sessionless message sent from this object from local daemon's
+    store/forward cache.
+    [param] serialNumber - Serial number of previously sent sessionless signal.
+
+NEW METHOD
+ajn::BusObject.CancelSessionlessMessage(const Message& msg)
+    Remove sessionless message sent from this object from local daemon's
+    store/forward cache.
+    [param] msg - Message to be removed.
+
+NEW ENUM
+ajn::AllJoynMessageState
+    Message states.
+
+NEW CLASS
+ajn::PasswordManager
+    Class to allow the user or application to set credentials used for the 
+    authentication of thin clients.
+    Before invoking Connect() to BusAttachment, the application should call 
+    SetCredentials if it expects to be able to communicate to/from thin clients.
+    The bundled daemon will start advertising the name as soon as it is started 
+    and MUST have the credentials set to be able to authenticate any thin 
+    clients that may try to use the bundled daemon to communicate with the app.
+
+NEW METHOD
+ajn::PasswordManager.SetCredentials(qcc::String authMechanism, 
+                                    qcc::String password)
+    Set credentials used for the authentication of thin clients.
+    [param] authMechanism - The name of the authentication mechanism issuing the 
+                            request.
+    [param] password - The password.
+
+-------------------------------------------------------------------------------
+AllJoyn API Changes between v3.0.0 and v3.2.0 (C++ API)
+NEW MACRO
+QCC_DLLEXPORT
+    if required call dllexport
+
+NEW MACRO
+strcasecmp
+    Map strcasecmp to _stricmp
+    strcasecmp does not properly map in windows this is needed to insure calls 
+    to strcasecmp(const char *s1, const char *s2) will compile in windows.
+
+NEW STATUS
+NO_SUCH_DEVICE  value=0x90dc
+    A referenced device cannot be located.
+    
+NEW STATUS
+P2P value=0x90dd
+    An error occurred in a Wi-Fi Direct helper method call.
+
+NEW STATUS
+P2P_TIMEOUT  value=0x90de
+    A timeout occurred in a Wi-Fi Direct helper method call.
+
+NEW STATUS
+P2P_NOT_CONNECTED  value=0x90df
+    A required Wi-Fi Direct network connection does not exist.
+
+NEW STATUS
+BAD_TRANSPORT_MASK  value=0x90e0
+    Exactly one mask bit was not set in the provided TransportMask.
+
+NEW STATUS
+PROXIMITY_CONNECTION_ESTABLISH_FAIL  value=0x90e1
+    Fail to establish P2P proximity connection.
+
+NEW STATUS
+PROXIMITY_NO_PEERS_FOUND  value=0x90e2
+    Cannot find proximity P2P peers.
+
+NEW STATUS
+BUS_OBJECT_NOT_REGISTERED  value=0x90e3
+    Operation not permitted on unregistered bus object.
+
+NEW STATUS
+P2P_DISABLED  value=0x90e4
+    Wi-Fi Direct is disabled on the device.
+    
+NEW STATUS
+P2P_BUSY  value=0x90e5
+    Wi-Fi Direct resources are in busy state.
+
+NEW STATUS
+BUS_INCOMPATIBLE_DAEMON  value=0x90e6
+    The daemon version is too old to be used by this client.
+
+NEW STATUS
+P2P_NO_GO  value=0x90e7
+    Attempt to execute a Wi-Fi Direct GO-related operation while STA.
+
+NEW STATUS
+P2P_NO_STA  value=0x90e8
+    Attempt to execute a Wi-Fi Direct STA-related operation while GO.
+
+NEW STATUS
+P2P_FORBIDDEN  value=0x90e9
+    Attempt to execute a forbidden Wi-Fi Direct operation.
+
+NEW METHOD
+ajn::BusAttachment.Connect()
+    Connect to local a AllJoyn daemon.
+    
+    Locate a local AllJoyn daemon that is compatible with this AllJoyn client's 
+    version and connect to the daemon.
+
+NEW METHOD
+ajn::BusAttachment.GetGlobalGUIDShortString()
+    Get the GUID of this BusAttachment as an 8 character string.
+    
+    The returned value may be appended to an advertised well-known name in order
+    to guarantee that the resulting name is globally unique.  Note: This version
+    of the string is not quite as unique as the version that returns 32 hex
+    characters, but it is sufficient since the returned string is identical to
+    the base portion of the unique name.  Also, the returned string may begin
+    with a digit and so the application would need to accomodate that if used
+    immediately after a "." in a d-bus compliant bus name.
+
+NEW METHOD
+ajn::BusObject.BusObject(const char* path, bool isPlaceholder = false)
+    BusObject constructor
+    [param] path - Object path for object.
+    [param] isPlaceholder - Place-holder objects are created by the bus itself 
+                            and serve only as parent objects (in the object path 
+                            sense) to other objects.
+    
+DEPRECATED METHOD
+ajn::BusObject.BusObject(BusAttachment& bus, const char* path, bool isPlaceholder = false)
+    BusOject constructor
+    [param] bus - Bus that this object exists on.
+    [param] path - Object path for object.
+    [param] isPlaceholder - Place-holder objects are created by the bus itself 
+                            and serve only as parent objects (in the object path 
+                            sense) to other objects.
+
+NEW METHOD
+ajn::InterfaceDescription.Property.operator=(const Property& other)
+    Property assignment operator
+    [param] other - The Property being copied to this one.
+
+NEW METHOD
+ajn::_Message.IsSessionless() const
+    Determin if message is sessionless.
+
+NEW METHOD
+qcc::ManagedObj<T> wrap(T* naked)
+    Static method to wrap an existing T that is already managed in its managed
+    object type.
+    This method is typically called from within a method of the inner T class to 
+    provide a managed object instance that can be passed to methods that 
+    required that type.
+    [param] naked - A unwrapped managed object instance.
+
+NEW METHOD
+qcc::ManagedObj<T>.cast(T2& other)
+    Static method to convert between managed objects of related types.
+    [param] other - A managed object instance of a related type.
+
+-------------------------------------------------------------------------------
+AllJoyn API Changes between v2.6.0 and v3.0.0 (C++ API)
+NEW MASK
+TransportMask TRANSPORT_TCP  value = 0x0004
+    Transport using TCP (same as TRANSPORT_WLAN)
+
+NEW MASK
+TransportMask TRANSPORT_WFD  value = 0x0080
+    Transport using Wi-Fi Direct transport
+    
+-------------------------------------------------------------------------------
+AllJoyn API Changes between v2.3.0 and v2.6.0 (C++ API)
+NEW MACRO
+ALLJOYN_DLLExport
+    Macro used for ectern C functions that will add __declspec(dllexport) when 
+    building on a windows OS
+
+NEW STATUS
+ER_THREADPOOL_EXHAUSTED  value = 0x101f 
+    A thread pool has reached its specified concurrency
+
+NEW STATUS
+ER_THREADPOOL_STOPPING  value = 0x1020 
+    Cannot execute a closure on a stopping thread pool
+
+NEW STATUS
+ER_BUS_AUTHENTICATION_PENDING value = 0x90a7 
+    Authentication of remote peer is pending
+
+NEW STATUS
+ER_BUS_NOT_AUTHORIZED value = 0x90a8 
+    Operation was not authorized
+
+NEW STATUS
+ER_PACKET_BUS_NO_SUCH_CHANNEL value = 0x90a9 
+    Received packet for unknown channel
+
+NEW STATUS
+ER_PACKET_BAD_FORMAT value = 0x90aa 
+    Received packet with incorrect header information
+
+NEW STATUS
+ER_PACKET_CONNECT_TIMEOUT value = 0x90ab 
+    Timed out waiting for connect response
+
+NEW STATUS
+ER_PACKET_CHANNEL_FAIL value = 0x90ac 
+    Failed to create new comm channel
+
+NEW STATUS
+ER_PACKET_TOO_LARGE value = 0x90ad 
+    Message too large for use with packet based transport
+
+NEW STATUS
+ER_PACKET_BAD_PARAMETER value = 0x90ae 
+    Invalid PacketEngine control packet received
+
+NEW STATUS
+ER_PACKET_BAD_CRC value = 0x90af 
+    Packet has invalid CRC
+
+NEW STATUS
+ER_STUN_ATTR_SIZE_MISMATCH value = 0x90b0 
+    STUN attribute size does not match size parsed
+
+NEW STATUS
+ER_STUN_AUTH_CHALLENGE value = 0x90b1 
+    STUN server has denied request, issued Challenge
+
+NEW STATUS
+ER_STUN_SOCKET_NOT_OPEN value = 0x90b2 
+    Underlying socket not open for operation
+
+NEW STATUS
+ER_STUN_SOCKET_OPEN value = 0x90b3 
+    Underlying socket alread open
+
+NEW STATUS
+ER_STUN_FAILED_TO_SEND_MSG value = 0x90b4 
+    Failed to send STUN message
+
+NEW STATUS
+ER_STUN_FRAMING_ERROR value = 0x90b5 
+    Application specified invalid TCP framing
+
+NEW STATUS
+ER_STUN_INVALID_ERROR_CODE value = 0x90b6 
+    Invalid STUN error code
+
+NEW STATUS
+ER_STUN_INVALID_FINGERPRINT value = 0x90b7 
+    Fingerprint CRC does not match
+
+NEW STATUS
+ER_STUN_INVALID_ADDR_FAMILY value = 0x90b8 
+    Invalid address family value in STUN 'address' attribute
+
+NEW STATUS
+ER_STUN_INVALID_MESSAGE_INTEGRITY value = 0x90b9 
+    SHA1-HMAC message integrity value does not match. When passed to upper layer, 
+    indicates unauthorized response, message must be ignored
+
+NEW STATUS
+ER_STUN_INVALID_MSG_TYPE value = 0x90ba 
+    Invalid STUN message type
+
+NEW STATUS
+ER_STUN_INVALID_ATTR_TYPE value = 0x90bb 
+    Invalid STUN message attribute type
+
+NEW STATUS
+ER_STUN_RESPONSE_WITH_USERNAME value = 0x90bc 
+    STUN response message included a USERNAME attribute
+
+NEW STATUS
+ER_STUN_ERR400_BAD_REQUEST value = 0x90bd 
+    Received bad STUN request, upper layer must send error code 400
+
+NEW STATUS
+ER_STUN_BAD_INDICATION value = 0x90be 
+    Received bad STUN indication, upper layer must ignore message
+
+NEW STATUS
+ER_STUN_ERR401_UNAUTHORIZED_REQUEST value = 0x90bf 
+    Received STUN request with invalid USERNAME or invalid MESSAGE-INTEGRITY, 
+    upper layer must send error code 401
+
+NEW STATUS
+ER_STUN_TOO_MANY_ATTRIBUTES value = 0x90c0 
+    Too many attributes in STUN message or unknown attributes list
+
+NEW STATUS
+ER_STUN_DUPLICATE_ATTRIBUTE value = 0x90c1 
+    STUN message attribute must only be added once
+
+NEW STATUS
+ER_STUN_UNAUTHORIZED_INDICATION value = 0x90c2 
+    Receive STUN indication with invalid USERNAME or invalid MESSAGE-INTEGRITY, 
+    upper layer must ignore message
+
+NEW STATUS
+ER_ICE_ALLOCATING_MEMORY value = 0x90c3 
+    Unable to allocate heap from ICE
+
+NEW STATUS
+ER_ICE_CHECKS_INCOMPLETE value = 0x90c4 
+    ICE Checks have not completed
+
+NEW STATUS
+ER_ICE_ALLOCATE_REJECTED_NO_RESOURCES value = 0x90c5 
+    TURN server rejected ALLOCATE request
+
+NEW STATUS
+ER_ICE_ALLOCATION_QUOTA_REACHED value = 0x90c6 
+    TURN server rejected with 486
+
+NEW STATUS
+ER_ICE_ALLOCATION_MISMATCH value = 0x90c7 
+    TURN server has expired the allocation
+
+NEW STATUS
+ER_ICE_STUN_ERROR value = 0x90c8 
+    Generic ICE error
+
+NEW STATUS
+ER_ICE_INVALID_STATE value = 0x90c9 
+    ICE Agent is not in proper state to perform request
+
+NEW STATUS
+ER_ICE_UNKNOWN_COMPONENT_ID value = 0x90ca 
+    ICE Component type is not recognized
+
+NEW STATUS
+ER_RENDEZVOUS_SERVER_DEACTIVATED_USER value = 0x90cb 
+    Rendezvous Server has deactivated the current user. Register with the 
+    Rendezvous Server to continue.
+
+NEW STATUS
+ER_RENDEZVOUS_SERVER_UNKNOWN_USER value = 0x90cc 
+    Rendezvous Server does not recognize the current user. Register with the 
+    Rendezvous Server to continue.
+
+NEW STATUS
+ER_UNABLE_TO_CONNECT_TO_RENDEZVOUS_SERVER value = 0x90cd 
+    Unable to connect to the Rendezvous Server
+
+NEW STATUS
+ER_NOT_CONNECTED_TO_RENDEZVOUS_SERVER value = 0x90ce 
+    Not connected to the Rendezvous Server
+
+NEW STATUS
+ER_UNABLE_TO_SEND_MESSAGE_TO_RENDEZVOUS_SERVER value = 0x90cf 
+    Unable to send message to the Rendezvous Server
+
+NEW STATUS
+ER_INVALID_RENDEZVOUS_SERVER_INTERFACE_MESSAGE value = 0x90d0 
+    Invalid Rendezvous Server interface message
+
+NEW STATUS
+ER_INVALID_PERSISTENT_CONNECTION_MESSAGE_RESPONSE value = 0x90d1 
+    Invalid message response received over the Persistent connection with the 
+    Rendezvous Server
+
+NEW STATUS
+ER_INVALID_ON_DEMAND_CONNECTION_MESSAGE_RESPONSE value = 0x90d2 
+    Invalid message response received over the On Demand connection with the 
+    Rendezvous Server
+
+NEW STATUS
+ER_INVALID_HTTP_METHOD_USED_FOR_RENDEZVOUS_SERVER_INTERFACE_MESSAGE value = 0x90d3 
+    Invalid HTTP method type used for Rendezvous Server interface message
+
+NEW STATUS
+ER_RENDEZVOUS_SERVER_ERR500_INTERNAL_ERROR value = 0x90d4 
+    Received a HTTP 500 status code from the Rendezvous Server. This indicates 
+    an internal error in the Server
+
+NEW STATUS
+ER_RENDEZVOUS_SERVER_ERR503_STATUS_UNAVAILABLE value = 0x90d5 
+    Received a HTTP 503 status code from the Rendezvous Server. This indicates 
+    unavailability of the Server error state
+
+NEW STATUS
+ER_RENDEZVOUS_SERVER_ERR401_UNAUTHORIZED_REQUEST value = 0x90d6 
+    Received a HTTP 401 status code from the Rendezvous Server. This indicates 
+    that the client is unauthorized to send a request to the Server. The Client 
+    login procedure must be initiated.
+
+NEW STATUS
+ER_RENDEZVOUS_SERVER_UNRECOVERABLE_ERROR value = 0x90d7 
+    Received a HTTP status code indicating unrecoverable error from the 
+    Rendezvous Server. The connection with the Server should be re-established.
+
+NEW STATUS
+ER_RENDEZVOUS_SERVER_ROOT_CERTIFICATE_UNINITIALIZED value = 0x90d8 
+    Rendezvous Server root ceritificate uninitialized.
+
+NEW STATUS
+ER_BUS_NO_SUCH_ANNOTATION  value = 0x90d9 
+    No such annotation for a GET or SET operation
+
+NEW STATUS
+ER_BUS_ANNOTATION_ALREADY_EXISTS  value = 0x90da 
+    Attempt to add an annotation to an interface or property that already exists
+
+NEW STATUS
+ER_SOCK_CLOSING value = 0x90db 
+    Socket close in progress
+
+NEW CLASS
+ajn::SetLinkTimeoutAsyncCB
+    Pure virtual base class implemented by classes that wish to call 
+    SetLinkTimeoutAsync().
+    
+CHANGED METHOD
+ajn::BusAttachment.BusAttachment(const char* applicationName, 
+                                 bool allowRemoteMessages = false, 
+                                 uint32_t concurrency = 4)
+    Construct a BusAttachment.
+    [param] applicationName     - Name of the application.
+    [param] allowRemoteMessages - True if this attachment is allowed to receive 
+                                  messages from remote devices.
+    [param] concurrency         - The maximum number of concurrent method and 
+                                  signal handlers locally executing.
+NEW COPY CONSTRUCTOR
+ajn::AuthListener::Credentials
+    [param] other - Credentials to copy
+
+CHANGED METHOD
+ajn::AuthListener::RequestCredentials(const char* authMechanism, 
+                                      const char* peerName, 
+                                      uint16_t authCount, 
+                                      const char* userName, 
+                                      uint16_t credMask, 
+                                      Credentials& credentials)
+    Changed from pure virtual function to virtual functions.  If 
+    ajn::AuthListener::RequestCredentialsAsync is used then there is no need to 
+    provide a RequestCredentials method.
+
+NEW METHOD
+ajn::AuthListener::RequestCredentialsAsync(const char* authMechanism, 
+                                           const char* peerName, 
+                                           uint16_t authCount, 
+                                           const char* userName, 
+                                           uint16_t credMask, 
+                                           void* authContext)
+    Authentication mechanism asynchronous request for credentials. If the user 
+    name is not an empty string the request is for credentials for that 
+    specific user. A count allows the listener to decide whether to allow or 
+    reject multiple authentication attempts to the same peer.
+    
+    An implementation must provide RequestCredentials or RequestCredentialsAsync 
+    but not both.
+    [param] authMechanism - The name of the authentication mechanism issuing 
+                            the request.
+    [param] peerName      - The name of the remote peer being authenticated.  
+                            On the initiating side this will be a 
+                            well-known-name for the remote peer. On the 
+                            accepting side this will be the unique bus name for 
+                            the remote peer.
+    [param] authCount     - Count (starting at 1) of the number of authentication 
+                            request attempts made.
+    [param] userName      - The user name for the credentials being requested.
+    [param] credMask      - A bit mask identifying the credentials being requested.
+    [param] authContext   - Callback context for associating the request with the 
+                            returned credentials.
+
+
+NEW VIRTUAL METHOD
+ajn::AuthListener::RequestCredentialsResponse(void* authContext, 
+                                              bool accept, 
+                                              Credentials& credentials)
+    Respond to a call to RequestCredentialsAsync.          
+    [param] authContext - Context that was passed in the call out to RequestCredentialsAsync.
+    [param] accept      - Returns true to accept the credentials request or false to reject it.
+    [param] credentials - The credentials being returned if accept is true.
+    
+NEW VIRTUAL METHOD
+ajn::AuthListener::VerifyCredentialsAsync(const char* authMechanism, 
+                                          const char* peerName, 
+                                          const Credentials& credentials, 
+                                          void* authContext)
+    Authentication mechanism asynchronous request for verification of 
+    credentials from a remote peer.
+    [param] authMechanism - The name of the authentication mechanism issuing the request.
+    [param] peerName      - The name of the remote peer being authenticated.  On the initiating
+                            side this will be a well-known-name for the remote peer. On the
+                            accepting side this will be the unique bus name for the remote peer.
+    [param] credentials   - The credentials to be verified.
+    [param] authContext   - Callback context for associating the request with the verification response.
+
+NEW VIRTUAL METHOD
+ajn::AuthListener::VerifyCredentialsResponse(void* authContext, bool accept)
+    Respond to a call to VerifyCredentialsAsync.
+    [param] authContext - Context that was passed in the call out to 
+                          RequestCredentialsAsync.
+    [param] accept      - Returns true to accept the credentials or false to 
+                          reject it.
+
+NEW CALLBACK CLASS
+ajn::BusAttachment.SetLinkTimeOutAsyncCB
+    Pure virtual base class implemented by classes that wish to call SetLinkTimeoutAsync()
+
+CHANGED CONSTRUCTOR
+ajn::BusAttachment(const char* applicationName, 
+                  bool allowRemoteMessages = false, 
+                  uint32_t concurrency = 4)
+    Added ability to specify concurrency when creating a new BusAttachment.
+
+NEW METHOD
+ajn::BusAttachment.GetConcurrency()
+    Get the concurrent method and signal handler limit.
+    
+NEW METHOD
+ajn::BusAttachment.GetConnectSpec()
+    Get the connect spec used by the BusAttachment
+
+NEW METHOD
+ajn::BusAttachment.EnableConcurrentCallbacks()
+    Allow the currently executing method/signal handler to enable concurrent 
+    callbacks during the scope of the handler's execution.
+
+NEW METHOD
+ajn::BusAttachment.UnregisterKeyStoreListener()
+    Set a key store listener to listen for key store load and store requests.
+    This overrides the internal key store listener.
+
+
+NEW METHOD
+ajn::BusAttachment.SetLinkTimeoutAsync(SessionId sessionid,
+                                       uint32_t linkTimeout,
+                                       BusAttachment::SetLinkTimeoutAsyncCB* callback,
+                                       void* context = NULL)
+    Set the link timeout for a session.
+
+    Link timeout is the maximum number of seconds that an unresponsive 
+    daemon-to-daemon connection will be monitored before declaring the session 
+    lost (via SessionLost callback). Link timeout defaults to 0 which indicates 
+    that AllJoyn link monitoring is disabled.
+
+    Each transport type defines a lower bound on link timeout to avoid defeating 
+    transport specific power management algorithms.
+
+    This call executes asynchronously. When the JoinSession response is received, 
+    the callback will be called.
+    [param] sessionid     Id of session whose link timeout will be modified.
+    [param] linkTimeout   Max number of seconds that a link can be unresponsive 
+                          before being declared lost. 0 indicates that AllJoyn 
+                          link monitoring will be disabled. On return, this value 
+                          will be the resulting (possibly upward) adjusted 
+                          linkTimeout value that acceptable to the underlying 
+                          transport.
+    [param]  callback     Called when SetLinkTimeout response is received.
+    [param]  context      User defined context which will be passed as-is to callback.
+
+NEW METHOD
+ajn::BusAttachment.GetLinkTimeoutResponse(Message& reply, uint32_t& timeout)
+    Validate the response to SetLinkTimeout
+    [param] propName    - The well-known name that has changed.
+    [param] propValue   - The new value of the property; NULL if not present
+
+
+NEW METHOD
+ajn::BusAttachment.GetJoinSessionResponse(Message& reply, SessionId& sessionId, SessionOpts& opts)
+    Validate the response to JoinSession
+
+NEW CLASS PROPERTY
+ajn::BusAttachment.concurrency
+    The maximum number of concurrent method and signal handlers locally executing
+
+NEW VIRTUAL METHOD
+ajn::BusListener.PropertyChanged(const char* propName, const MsgArg* propValue)
+    Called by the bus when the value of a property changes if that property has 
+    annotation
+
+
+NEW METHOD
+ajn::BusObject.EmitPropChanged(const char* ifcName, 
+                               const char* propName, 
+                               MsgArg& val, 
+                               SessionId id)
+    Emit PropertiesChanged to signal the bus that this property has been updated
+    
+    This is not protected because JNI needs to be able to call it
+    [param] ifcName  - The name of the interface
+    [param] propName - The name of the property being changed
+    [param] val      - The new value of the property
+    [param] id       - ID of the session we broadcast the signal to (0 for all)
+
+
+CHANGED METHOD
+ajn::BusObject.AddMethodHandler(const InterfaceDescription::Member* member, 
+                                MessageReceiver::MethodHandler handler, 
+                                void* context = NULL)
+    Add a method handler to this object. The interface for the method handler 
+    must have already been added by calling AddInterface().
+    [param] member  - Interface member implemented by handler.
+    [param] handler - Method handler.
+    [param] context - An optional context. This is mainly intended for 
+                      implementing language bindings and should normally be NULL.
+
+NEW VIRTUAL METHOD
+ajn::BusObject.CallMethodHandler(MessageReceiver::MethodHandler handler, 
+                                 const InterfaceDescription::Member* member, 
+                                 Message& message, void* context)
+    This method can be overridden to provide access to the context registered in 
+    the AddMethodHandler() call.
+    [param] member  - The method being called.
+    [param] handler - The handler to call.
+    [param] message - The message containing the method call arguments.
+    [param] context - NULL or a private context passed in when the method handler 
+                      was registered.
+
+NEW COPY CONSTRUCTOR
+ajn::InterfaceDescription::Member(const Member& other)
+    Member copy constructor
+
+NEW DESTRUCTOR
+ajn::InterfaceDescription::~Member()
+    Member destructor
+
+NEW METHOD
+ajn::InterfaceDescription::Member.GetAnnotations(qcc::String* names = NULL, 
+                                                 qcc::String* values = NULL,
+                                                 size_t size = 0) const
+    Get the names and values of all annotations
+    [param][out] names - Annotation names
+    [param][out] value - Annotation values
+    [param]    size  - Number of annotations to get
+
+NEW METHOD
+ajn::InterfaceDescription::Member.GetAnnotation(const qcc::String& name, 
+                                                qcc::String& value) const
+    Get this member's annotation value
+    [param]    name  - name of the annotation to look for
+    [param][out] value - The value of the annotation, if found
+
+NEW COPY CONSTRUCTOR
+ajn::InterfaceDescription::Property(const Property&other)
+    Property copy Constructor
+    
+NEW DESTRUCTOR
+ajn::InterfaceDescription::~Property()
+    Property destructor
+    
+NEW METHOD
+ajn::InterfaceDescription::Property.GetAnnotations(qcc::String* names = NULL, 
+                                                 qcc::String* values = NULL,
+                                                 size_t size = 0) const
+    Get the names and values of all annotations
+    [param][out] names - Annotation names
+    [param][out] value - Annotation values
+    [param]    size  - Number of annotations to get
+
+NEW METHOD
+ajn::InterfaceDescription::Property.GetAnnotation(const qcc::String& name, 
+                                                qcc::String& value) const
+    Get this property's annotation value
+    [param]    name  - name of the annotation to look for
+    [param][out] value - The value of the annotation, if found 
+
+NEW METHOD
+ajn::InterfaceDescription.AddMemberAnnotation(const char* member, 
+                                              const qcc::String& name, 
+                                              const qcc::String& value)
+    Add an annotation to an existing member (signal or method).
+    [param] member - Name of member
+    [param] name   - Name of annotation
+    [param] value  - Value for the annotation
+
+NEW METHOD
+ajn::InterfaceDescription.GetMemberAnnotation(const char* member, 
+                                              const qcc::String& name, 
+                                              qcc::String& value) const
+    Get annotation to an existing member (signal or method).
+    [param] member - Name of member
+    [param] name   - Name of annotation
+    [param] value  - Output value for the annotation
+
+NEW METHOD
+ajn::InterfaceDescription.AddPropertyAnnotation(const qcc::String& p_name, 
+                                                const qcc::String& name, 
+                                                const qcc::String& value)
+    Add an annotation to an existing property
+    [param] p_name - Name of the property
+    [param] name   - Name of annotation
+    [param] value  - Value for the annotation
+
+NEW METHOD
+ajn::InterfaceDescription.GetPropertyAnnotation(const qcc::String& p_name, 
+                                                const qcc::String& name, 
+                                                qcc::String& value) const
+    Get the annotation value for a property
+    [param] p_name - Name of the property
+    [param] name   - Name of annotation
+    [param] value  - Value for the annotation
+                                                
+NEW METHOD
+ajn::InterfaceDescription.AddAnnotation(const qcc::String& name, 
+                                        const qcc::String& value)
+    Add an annotation to the interface.
+    [param] name  - Name of annotation.
+    [param] value - Value of the annotation
+    
+NEW METHOD
+ajn::InterfaceDescription.GetAnnotation(const qcc::String& name, 
+                                        qcc::String& value) const
+    Get the value of an annotation
+    [param] name  - Name of annotation.
+    [param] value - Returned value of the annotation
+
+NEW METHOD
+ajn::InterfaceDescription.GetAnnotations(qcc::String* names = NULL, 
+                                         qcc::String* values = NULL, 
+                                         size_t size = 0) const;
+     Get the names and values of all annotations
+     [param][out] names - Annotation names
+     [param][out] value - Annotation values
+     [param][out] size  - Number of annotations
+                                         
+    
+NEW METHOD 
+ajn::_Message::GetErrorDescription() const
+    Returns a complete description of an error by concatenating the error name and the error
+    message together.
+    
+
+NEW METHOD
+ajn::_Message.SetEndianess(const char endian)
+    Set the endianess for outgoing messages. This is mainly for testing purposes.
+    [param] endian - Either ALLJOYN_LITTLE_ENDIAN or ALLJOYN_BIG_ENDIAN. Any 
+                     other value sets the endianess to the native endianess for 
+                     this platform.
+NEW COPY CONSTRUCTOR
+ajn::_Message._Message(const _Message& other)
+    Copy constructor.
+    [param] other - The other message to copy.
+
+NEW CALLBACK
+ajn::Listener.(ProxyBusObject::Listener::* GetPropertyCB)(QStatus status, ProxyBusObject* obj, const MsgArg& value, void* context)
+    Callback registered with GetPropertyAsync()
+    [param] status -  - ER_OK if the property get request was successfull or:
+                      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+                      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+                      - Other error status codes indicating the reason the get request failed.
+    [param] obj    -   Remote bus object that was introspected
+    [param] value  -   If status is ER_OK a MsgArg containing the returned property value
+    [param] context-   Caller provided context passed in to GetPropertyAsync()
+
+NEW CALLBACK
+ajn::Listener.(ProxyBusObject::Listener::* GetAllPropertiesCB)(QStatus status, ProxyBusObject* obj, const MsgArg& values, void* context)
+    Callback registered with GetAllPropertiesAsync()
+    [param] status      - - ER_OK if the get all properties request was successfull or:
+                          - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+                          - Other error status codes indicating the reason the get request failed.
+    [param] obj             Remote bus object that was introspected
+    [param][out] values - If status is ER_OK an array of dictionary entries, signature "a{sv}" listing the properties.
+    [param] context     - Caller provided context passed in to GetPropertyAsync()
+    
+NEW CALLBACK
+ajn::Listener.(ProxyBusObject::Listener::* SetPropertyCB)(QStatus status, ProxyBusObject* obj, void* context)
+    Callback registered with SetPropertyAsync()
+    [param] status   - - ER_OK if the property was successfully set or:
+                       - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+                       - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+                       - Other error status codes indicating the reason the set request failed.
+    [param] obj      - Remote bus object that was introspected
+    [param] context  - Caller provided context passed in to SetPropertyAsync()
+
+CHANGED METHOD
+ajn::ProxyBusObject.IntrospectRemoteObject(uint32_t timeout = DefaultCallTimeout)
+    Added abbility to set timeout when Introspecting a remote object
+
+CHANGED METHOD
+ajn::ProxyBusObject.IntrospectRemoteObjectAsync(ProxyBusObject::Listener* listener, 
+                                                ProxyBusObject::Listener::IntrospectCB callback, 
+                                                void* context, 
+                                                uint32_t timeout = DefaultCallTimeout)
+    Added abbility to set timeout when Introspecting a remote object
+
+CHANGED METHOD
+ajn::ProxyBusObject.GetProperty(const char* iface, 
+                                const char* property, 
+                                MsgArg& value, 
+                                uint32_t timeout = DefaultCallTimeout) const
+    Added abbility to set timeout when getting a property from a remote object
+
+NEW METHOD
+ajn::ProxyBusObject.GetPropertyAsync(const char* iface,
+                                     const char* property,
+                                     ProxyBusObject::Listener* listener,
+                                     ProxyBusObject::Listener::GetPropertyCB callback,
+                                     void* context,
+                                     uint32_t timeout = DefaultCallTimeout)
+    Make an asynchronous request to get a property from an interface on the 
+    remote object.
+    The property value is passed to the callback function.
+    [param] iface    - Name of interface to retrieve property from.
+    [param] property - The name of the property to get.
+    [param] listener - Pointer to the object that will receive the callback.
+    [param] callback - Method on listener that will be called.
+    [param] context  - User defined context which will be passed as-is to callback.
+    [param] timeout  - Timeout specified in milliseconds to wait for a reply
+
+CHANGE METHOD
+ajn::ProxyBusObject.GetAllProperties(const char* iface, 
+                                     MsgArg& values, 
+                                     uint32_t timeout = DefaultCallTimeout) const
+    Added abbility to set timeout when getting all properties from a remote object
+
+NEW METHOD
+ajn::ProxyBusObject.SetPropertyAsync(const char* iface,
+                                     const char* property,
+                                     MsgArg& value,
+                                     ProxyBusObject::Listener* listener,
+                                     ProxyBusObject::Listener::SetPropertyCB callback,
+                                     void* context,
+                                     uint32_t timeout = DefaultCallTimeout)
+    Make an asynchronous request to set a property on an interface on the remote object.
+    A callback function reports the success or failure of ther operation.
+    [param] iface    - Remote object's interface on which the property is defined.
+    [param] property - The name of the property to set.
+    [param] value    - The value to set
+    [param] listener - Pointer to the object that will receive the callback.
+    [param] callback - Method on listener that will be called.
+    [param] context  - User defined context which will be passed as-is to callback.
+    [param] timeout  - Timeout specified in milliseconds to wait for a reply
+
+CHANGED METHOD
+ajn::ProxyBusObject.SetProperty(const char* iface, 
+                                const char* property, 
+                                int32_t i, 
+                                uint32_t timeout = DefaultCallTimeout) const
+    Added abbility to specify timeout when Setting an int32 property from a remote object
+
+CHANGED METHOD
+ajn::ProxyBusObject.SetProperty(const char* iface, 
+                                const char* property, 
+                                const char* s, uint32_t timeout = DefaultCallTimeout) const
+    Added the abbility to specify a timeout when setting a string property  
+    from a remote object using a C string
+
+CHANGED METHOD
+ajn::ProxyBusObject.SetProperty(const char* iface, 
+                                const char* property, 
+                                const qcc::String& s, 
+                                uint32_t timeout = DefaultCallTimeout) const
+    Added the abbility to specify a timeout when setting a string property from 
+    a remote object using a qcc::String 
+
+NEW METHOD
+ajn::ProxyBusObject.GetManagedChildren(void* children = NULL, size_t numChildren = 0)
+    Returns an array of _ProxyBusObjects for the children of this ProxyBusObject.
+    Unlike the unmanaged version of GetChildren, it is expected the caller will call
+    delete on each _ProxyBusObject in the array returned.
+    [param] children    - A pointer to a _ProxyBusObject array to receive the children. Can be NULL in
+                          which case no children are returned and the return value gives the number
+                          of children available.
+    [param] numChildren - The size of the _ProxyBusObject array. If this value is smaller than the total
+                          number of children only numChildren will be returned.
+
+NEW METHOD
+ajn::ProxyBusObject.GetManagedChild(const char* inPath)
+    Get a path descendant _ProxyBusObject (child) by its relative path name.
+    
+    For example, if this _ProxyBusObject's path is "/foo/bar", then you can
+    retrieve the _ProxyBusObject for "/foo/bar/bat/baz" by calling
+    GetChild("bat/baz"). Unlike the unmanaged version of GetChild, it is
+    expected the caller will call delete on the _ProxyBusObject returned. 
+    [param] inPath - the relative path for the child.
+
+
+NEW BIT MASK
+TRANSPORT_ICE value = 0x0020
+    TrasportMask identifying transport ICE protocol
+
+NEW BIT MASK
+TRANSPORT_PROXIMITY value = 0x0040
+    Transport using WinRT proximity  framework 
+
+NEW METHOD
+qcc::ManagedObj.cast()
+    Templated Type conversion between managed objects of related types
+    
+NEW METHOD
+qcc::ManagedObj.GetRefCount()
+    Get the reference count
+
+NEW MACRO
+QCC_BOOL
+    Boolean type for C
+
+NEW MACRO
+QCC_TRUE
+    Boolean logic true for QCC_BOOL
+
+NEW MACRO
+QCC_FALSE
+    Boolean logic false for QCC_BOOL
+
+NEW CONSTANT
+qcc::MAX_LISTEN_CONNECTIONS
+    Platform dependent value for a max listen backlog
+    
+NEW METHOD
+qcc::String.append(const char c)
+    Append a single character to string.
+
+    [param] c - Character to append to string.
+
+NEW METHOD
+qcc::String.append(const char c)
+    Append a single character to string.
+    [param] c - Character to append to string.
+    
+NEW METHOD
+qcc::String.operator+=(const char c)
+    Append a character.
+
+    [param] c - Character to append to string.
+ 
+NEW CONSTANT
+qcc::String.Empty
+    Returns a reference to the empty string
+
+NEW TYPEDEF
+qcc_SocketFd
+    Socket file descriptor type to be used in C only code.
+
+-------------------------------------------------------------------------------
+AllJoyn API Changes between v2.2.0 and v2.3.0 (C++ API)
+NEW STATUS
+ER_WARNING  value = 0x1D 
+    Generic warning
+
+NEW STATUS
+ER_BUS_ENDPOINT_REDIRECTED  value = 0x90a6 
+    Endpoint was redirected to another address
+
+CHANGED FUNCTION
+qcc::Send(SocketFd sockfd, const void* buf, size_t len, size_t& sent)
+    Changed in 2.3 a 5th [param] timeout was removed - used to set Max ms to wait 
+        for send to complete or 0 for infinite.
+    Send a buffer of data over a socket.
+ 
+    [param] sockfd - Socket descriptor.
+    [param] buf    - Pointer to the buffer containing the data to send.
+    [param] len    - Number of octets in the buffer to be sent.
+    [param] sent   - [OUT] Number of octets sent.
+
+CHANGED FUNCTION
+qcc::IncrementAndFetch(volatile int32_t* mem)
+    Changed in 2.3 function input marked as volatile
+    Increment an int32_t and return it's new value atomically.
+ 
+    [param] mem - Pointer to int32_t to be incremented.
+
+CHANGED FUNCTION
+qcc::DecrementAndFetch(volatile int32_t* mem)
+    Changed in 2.3 function input marked as volatile
+    Decrement an int32_t and return it's new value atomically.
+ 
+    [param] mem - Pointer to int32_t to be decremented.
+
+-------------------------------------------------------------------------------    
+AllJoyn API Changes between v2.1.0 and v2.2.0 (C++ API)
+NEW STATUS
+ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NOT_SUPPORTED value = 0x90a0 
+    Local daemon does not support SetLinkTimeout
+
+NEW STATUS
+ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NO_DEST_SUPPORT value = 0x90a1 
+    SetLinkTimeout not supported by destination
+
+NEW STATUS
+ER_ALLJOYN_SETLINKTIMEOUT_REPLY_FAILED value = 0x90a2 
+    SetLinkTimeout failed
+
+NEW STATUS
+ER_ALLJOYN_ACCESS_PERMISSION_WARNING value = 0x90a3 
+    No permission to use Wifi/Bluetooth
+
+NEW STATUS
+ER_ALLJOYN_ACCESS_PERMISSION_ERROR value = 0x90a4 
+    No permission to access peer service
+
+NEW STATUS
+ER_BUS_DESTINATION_NOT_AUTHENTICATED value = 0x90a5 
+    Cannot send a signal to a destination that is not authenticated
+
+NEW ALLJOYN METHOOD
+Interface: org.alljoyn.Bus
+Method: SetLinkTimeout(uint32_t sessionId, uint32_t linkTimeout)
+    Input params:
+    sessionId   - Id of session whose link timeout will be modified.
+ 
+    linkTimeout - Max number of seconds that a link can be unresponsive before being
+                  declared lost. 0 indicates that AllJoyn link monitoring will be disabled.
+
+    Output params:              
+    disposition      - One of the ALLJOYN_SETLINKTMEOUT_* dispositions listed below
+    replyLinkTimeout - On successful disposition, this value will contain the resulting
+                                   (possibly upward) adjusted linkTimeout value that is acceptable
+                                   to the underlying transport.
+
+NEW ALLJOYN METHOD
+Interface: org.alljoyn.Bus
+Method: AliasUnixUser(uint32_t aliasUID)
+ Input params:
+     aliasUID - The alias user id.
+ 
+ Output params:
+    disposition - One of the ALLJOYN_ALIASUNIXUSER_* dispositions
+
+NEW METHOD
+ajn::AuthListener.SetExpiration(uint32_t expiration)
+    Sets an expiration time in seconds relative to the current time for the credentials. This value is optional and
+    can be set on any response to a credentials request. After the specified expiration time has elapsed any secret
+    keys based on the provided credentials are invalidated and a new authentication exchange will be required. If an
+    expiration is not set the default expiration time for the requested authentication mechanism is used.
+    
+    [param] expiration - The expiration time in seconds.
+
+NEW METHOD
+ajn::AuthListener.GetExpiration()
+    Get the expiration time in seconds if it is set.
+
+NEW METHOD
+ajn::BusAttachment.Stop()
+    Stop the message bus.
+    
+    Ask the threading subsystem in the bus attachment to begin the
+    process of ending the execution of its threads.
+    
+    The Stop() method call on a bus attachment should be thought of as
+    mapping to a threading package stop function.  It asks the BusAttachment
+    to begin shutting down its various threads of execution, but does not
+    wait for any threads to exit.
+    
+    A call to Stop() is implied as one of the first steps in the destruction
+    of a bus attachment.
+    
+    [warning] There is no guarantee that a listener callback may begin executing
+    after a call to Stop().  To achieve that effect, the Stop() must be followed
+    by a Join().
+    
+    [see] ajn::BusAttachment.Start()
+    [see] ajn::BusAttachment.Join()
+
+REMOVED METHOD
+ajn::BusAttachment.Stop(bool blockUntilStopped = true)
+    Stop the message bus.
+    
+    [param] blockUntilStopped - Block the caller until the bus is stopped
+
+NEW METHOD
+ajn::BusAttachment.Join()
+    Wait for all of the threads spawned by the bus attachment to be
+    completely exited.
+    
+    A call to the Join() method should be thought of as mapping to a
+    threading package join function call.  It blocks and waits until all of
+    the threads in the BusAttachment have, in fact, exited their Run functions,
+    gone through the stopping state and have returned their status.  When
+    the Join() method returns, one may be assured that no threads are running
+    in the bus attachment, and therefore there will be no callbacks in
+    progress and no further callbacks will ever come out of the instance of a
+    bus attachment on which Join() was called.
+    
+    A call to Join() is implied as one of the first steps in the destruction
+    of a bus attachment.  Thus, when a bus attachment is destroyed, it is
+    guaranteed that before it completes its destruction process, there will be
+    no callbacks in process.
+    
+    [warning] If Join() is called without a previous Stop() it will result in
+              blocking "forever."
+    
+    [see] Start()
+    [see] Stop()
+
+REMOVED METHOD 
+ajn::BusAttachment.WaitStop()
+    Wait for the message bus to be stopped. This method blocks the calling thread until another thread
+    calls the Stop() method. Return immediately if the message bus has not been started.
+    
+CHANGED METHOD
+ajn::BusAttachment.GetUniqueName() const;
+    Changed in 2.2 method now returns a qcc::String before it returned a qcc::String reference
+    Get the unique name of this BusAttachment.
+
+NEW METHOD
+ajn::BusAttachment.SetKeyExpiration(const qcc::String& guid, uint32_t timeout)
+    Set the expiration time on keys associated with a specific remote peer as identified by its
+    peer GUID. The peer GUID associated with a bus name can be obtained by calling GetPeerGUID().
+    If the timeout is 0 this is equivalent to calling ClearKeys().
+    
+    [param] guid    - The GUID of a remote authenticated peer.
+    [param] timeout - The time in seconds relative to the current time to expire the keys.
+
+NEW METHOD
+ajn::BusAttachment.GetKeyExpiration(const qcc::String& guid, uint32_t& timeout)
+    Get the expiration time on keys associated with a specific authenticated remote peer as
+    identified by its peer GUID. The peer GUID associated with a bus name can be obtained by
+    calling GetPeerGUID().
+    
+    [param] guid    - The GUID of a remote authenticated peer.
+    [param] timeout - The time in seconds relative to the current time when the keys will expire.
+
+NEW METHOD
+ajn::BusAttachment.SetLinkTimeout(SessionId sessionid, uint32_t& linkTimeout)
+    Set the link timeout for a session.
+    
+    Link timeout is the maximum number of seconds that an unresponsive daemon-to-daemon connection
+    will be monitored before declaring the session lost (via SessionLost callback). Link timeout
+    defaults to 0 which indicates that AllJoyn link monitoring is disabled.
+    
+    Each transport type defines a lower bound on link timeout to avoid defeating transport
+    specific power management algorithms.
+    
+    [param] sessionid    - Id of session whose link timeout will be modified.
+    [param] linkTimeout  - [IN/OUT] Max number of seconds that a link can be unresponsive before being
+                           declared lost. 0 indicates that AllJoyn link monitoring will be disabled. On
+                           return, this value will be the resulting (possibly upward) adjusted linkTimeout
+                           value that acceptable to the underlying transport.
+
+CHANGED METHOD
+ajn::InterfaceDescription.AddMember(AllJoynMessageType type, const char* name, const char* inputSig, const char* outSig, const char* argNames, uint8_t annotation = 0, const char* accessPerms = 0)
+    param accessPerms added for 2.2.0 release
+    
+    Add a member to the interface.
+    
+    [param] type        - Message type.
+    [param] name        - Name of member.
+    [param] inputSig    - Signature of input parameters or NULL for none.
+    [param] outSig      - Signature of output parameters or NULL for none.
+    [param] argNames    - Comma separated list of input and then output arg names used in annotation XML.
+    [param] annotation  - Annotation flags.
+    [param] accessPerms - Required permissions to invoke this call
+
+CHANGED METHOD
+ajn::InterfaceDescription.AddMethod(const char* name, const char* inputSig, const char* outSig, const char* argNames, uint8_t annotation = 0, const char* accessPerms = 0)
+    param accessPerms added for 2.2.0 release
+    
+    Add a method call member to the interface.
+    
+    [param] name        - Name of method call member.
+    [param] inputSig    - Signature of input parameters or NULL for none.
+    [param] outSig      - Signature of output parameters or NULL for none.
+    [param] argNames    - Comma separated list of input and then output arg names used in annotation XML.
+    [param] annotation  - Annotation flags.
+    [param] accessPerms - Access permission requirements on this call
+
+CHANGED METHOD
+ajn::InterfaceDescription.AddSignal(const char* name, const char* sig, const char* argNames, uint8_t annotation = 0, const char* accessPerms = 0)
+    param accessPerms added for 2.2.0 release
+    
+    Add a signal member to the interface.
+    
+    [param] name        - Name of method call member.
+    [param] sig         - Signature of parameters or NULL for none.
+    [param] argNames    - Comma separated list of arg names used in annotation XML.
+    [param] annotation  - Annotation flags.
+    [param] accessPerms - Access permission requirements on this call
+
+NEW METHOD
+ajn::ProxyBusObject.SecureConnectionAsync(bool forceAuth = false)
+    Asynchronously secure the connection to the remote peer for this proxy object. Peer-to-peer
+    connections can only be secured if EnablePeerSecurity() was previously called on the bus
+    attachment for this proxy object. If the peer-to-peer connection is already secure this
+    function does nothing. Note that peer-to-peer connections are automatically secured when a
+    method call or signal requiring encryption is sent or received.
+    
+    Notification of success or failure is via the AuthListener passed to EnablePeerSecurity().
+    
+    [param] forceAuth - If true, forces an re-authentication even if the peer connection is already
+                        authenticated.
+                        
+NEW METHOD
+ajn::SessionListener.SessionMemberAdded(SessionId sessionId, const char* uniqueName)
+    Called by the bus when a member of a multipoint session is added.
+    
+    [param] sessionId  - Id of session whose member(s) changed.
+    [param] uniqueName - Unique name of member who was added.
+
+NEW METHOD
+ajn::SessionListener.SessionMemberRemoved(SessionId sessionId, const char* uniqueName)
+    Called by the bus when a member of a multipoint session is removed.
+    
+    [param] sessionId  - Id of session whose member(s) changed.
+    [param] uniqueName - Unique name of member who was removed.
+
+NEW METHOD
+ajn::ManagedObj.ManagedObj<T>(const ManagedObj<T>&other, bool isDeep)
+    Create a copy of managed object T.
+    
+    If isDeep is true
+    Create a deep (clone) copy of a managed object.
+    A ManagedObject created using this constructor copies the underlying T
+    object and wraps it in a new ManagedObject with 1 reference.
+    
+    if isDeep is false
+    Do not make a deep copy of the managed object instead make a new reference
+    to the existing object and increment the reference counter by +1.
+    
+    [param] other  - ManagedObject to make a copy of.
+    [param] isDeep - Specify if this is a deep (clone) copy or a normal copy
+
+NEW METHOD
+ajn::ManagedObj.iden(const ManagedObj<T>& other) const
+    Returns true if the two managed objects managed the same object
+    [param] other - The other managed object to compare.
+
+NEW MACRO FUNCTION
+QCC_DEPRECATED(func)
+    mark a function as depricated
+
+CHANGED FUNCTION
+qcc::Send(SocketFd sockfd, const void* buf, size_t len, size_t& sent, uint32_t timeout = 0)
+    param timeout added in 2.2.0 release
+    
+    Send a buffer of data over a socket.
+    
+    [param] sockfd  - Socket descriptor.
+    [param] buf     - Pointer to the buffer containing the data to send.
+    [param] len     - Number of octets in the buffer to be sent.
+    [param] sent    - OUT: Number of octets sent.
+    [param] timeout - Max ms to wait for send to complete or 0 for infinite.
+
+NEW METHOD
+qcc::String.assign(const char* str, size_t len)
+    Assign a value to a string
+    
+    [param] str - Value to assign to string.
+    [param] len - Number of characters to assign or 0 to insert up to first nul byte in str.
+
+NEW METHOD
+qcc::String.assign(const char* str)
+    Assign a nul-terminated string value to a string
+    
+    [param] str - Value to assign to string.
+    
+NEW METHOD
+qcc::String.revsubstr(size_t pos = 0, size_t n = npos) const
+    Return a substring of this string with the order of the characters reversed.
+    
+    [param]  pos - Starting position of substring.
+    [param]  n   - Number of bytes in substring.
+
+NEW MACRO DEFINITION
+PRIi64 
+    value = "I64i"
+    64-bit signed integer from C9x inttypes.h
+
+NEW MACRO DEFINITION
+PRIu64 
+    value = "I64u"
+    64-bit unsigned integer from C9x inttypes.h
