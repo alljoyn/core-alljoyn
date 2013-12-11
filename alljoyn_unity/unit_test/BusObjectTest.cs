@@ -23,27 +23,34 @@ using Xunit;
 
 namespace AllJoynUnityTest
 {
-	public class BusObjectTest
+	public class BusObjectTest : IDisposable
 	{
 		const string INTERFACE_NAME = "org.alljoyn.test.BusObjectTest";
 		const string OBJECT_NAME = "org.alljoyn.test.BusObjectTest";
 		const string OBJECT_PATH = "/org/alljoyn/test/BusObjectTest";
 
-		public TimeSpan MaxWaitTime = TimeSpan.FromSeconds(5);
+		public TimeSpan MaxWaitTime = TimeSpan.FromSeconds(15);
 
-		AutoResetEvent notifyEvent = new AutoResetEvent(false);
+		private AutoResetEvent notifyEvent;
+
+		private AllJoyn.BusAttachment bus = null;
+		private AllJoyn.BusAttachment servicebus = null;
+
+		private AllJoyn.ProxyBusObject proxyBusObject = null;
 
 		bool objectRegistered;
 		bool objectUnregistered;
 		bool nameOwnerChangedFlag;
 
-		[Fact]
-		public void TestObjectRegisteredUnregistered()
+		private AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
+
+		private bool disposed = false;
+
+		public BusObjectTest()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
+			notifyEvent = new AutoResetEvent(false);
 
 			// create+start+connect bus attachment
-			AllJoyn.BusAttachment bus = null;
 			bus = new AllJoyn.BusAttachment("BusObjectTest", true);
 			Assert.NotNull(bus);
 
@@ -53,6 +60,57 @@ namespace AllJoynUnityTest
 			status = bus.Connect(AllJoynTestCommon.GetConnectSpec());
 			Assert.Equal(AllJoyn.QStatus.OK, status);
 
+			// create+start+connect bus attachment
+			servicebus = new AllJoyn.BusAttachment("BusObjectTestService", true);
+			Assert.NotNull(servicebus);
+
+			status = servicebus.Start();
+			Assert.Equal(AllJoyn.QStatus.OK, status);
+
+			status = servicebus.Connect(AllJoynTestCommon.GetConnectSpec());
+			Assert.Equal(AllJoyn.QStatus.OK, status);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!this.disposed)
+			{
+				// additional clean up before disposing
+				// make sure the ObjectName is not advertised or owned by the bus
+				// between runs these are run regardless we actually don't expect
+				// these names to be owned between runs this is here just in case
+				// a test fails we want to make sure the names are cleared from
+				// the daemon
+				bus.ReleaseName(OBJECT_NAME);
+				servicebus.ReleaseName(OBJECT_NAME);
+
+				if (disposing)
+				{
+					if (proxyBusObject != null)
+					{
+						proxyBusObject.Dispose();
+					}
+					bus.Dispose();
+					servicebus.Dispose();
+				}
+				disposed = true;
+			}
+		}
+
+		~BusObjectTest()
+		{
+			Dispose(false);
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		[Fact]
+		public void ObjectRegisteredUnregistered()
+		{
 			// create the bus object
 			TestBusObject testBusObject = new TestBusObject(bus, OBJECT_PATH, this);
 			objectRegistered = false;
@@ -68,26 +126,12 @@ namespace AllJoynUnityTest
 			bus.UnregisterBusObject(testBusObject);
 			Wait(MaxWaitTime);
 			Assert.Equal(true, objectUnregistered);
-
-			bus.Dispose();
-
 		}
 
 		[Fact]
-		public void TestAddMethodHandler()
+		public void AddMethodHandler()
 		{
 			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			// create+start+connect bus attachment
-			AllJoyn.BusAttachment servicebus = null;
-			servicebus = new AllJoyn.BusAttachment("BusObjectTestService", true);
-			Assert.NotNull(servicebus);
-
-			status = servicebus.Start();
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
-			status = servicebus.Connect(AllJoynTestCommon.GetConnectSpec());
-			Assert.Equal(AllJoyn.QStatus.OK, status);
 
 			// create+activate the interface
 			AllJoyn.InterfaceDescription testIntf = null;
@@ -119,19 +163,6 @@ namespace AllJoynUnityTest
 			Wait(MaxWaitTime);
 			Assert.Equal(true, nameOwnerChangedFlag);
 
-			///////////////////////////////////////////////////////////
-
-			// create the proxy bus object & call methods
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("BusObjectTest", true);
-			Assert.NotNull(bus);
-
-			status = bus.Start();
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
-			status = bus.Connect(AllJoynTestCommon.GetConnectSpec());
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
 			// create+activate the interface
 			AllJoyn.InterfaceDescription iFace = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out iFace);
@@ -143,7 +174,7 @@ namespace AllJoynUnityTest
 
 			iFace.Activate();
 
-			AllJoyn.ProxyBusObject proxyBusObject = new AllJoyn.ProxyBusObject(bus, OBJECT_NAME, OBJECT_PATH, 0);
+			proxyBusObject = new AllJoyn.ProxyBusObject(bus, OBJECT_NAME, OBJECT_PATH, 0);
 			status = proxyBusObject.AddInterface(iFace);
 			Assert.Equal(AllJoyn.QStatus.OK, status);
 
@@ -172,11 +203,6 @@ namespace AllJoynUnityTest
 #pragma warning restore 618
 
 			methodTestBusObject.Dispose();
-			servicebus.Dispose();
-
-			// TODO: need to call dispose on proxyBusObject first otherwise you get an AccessViolation???
-			proxyBusObject.Dispose();
-			bus.Dispose();
 		}
 
 		class DingBusObject : AllJoyn.BusObject
@@ -208,19 +234,6 @@ namespace AllJoynUnityTest
 		[Fact]
 		public void MethodNoInputParams()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			// create+start+connect bus attachment
-			AllJoyn.BusAttachment servicebus = null;
-			servicebus = new AllJoyn.BusAttachment("BusObjectTestService", true);
-			Assert.NotNull(servicebus);
-
-			status = servicebus.Start();
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
-			status = servicebus.Connect(AllJoynTestCommon.GetConnectSpec());
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
 			// create+activate the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = servicebus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -253,17 +266,6 @@ namespace AllJoynUnityTest
 
 			///////////////////////////////////////////////////////////
 
-			// create the proxy bus object & call methods
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("BusObjectTest", true);
-			Assert.NotNull(bus);
-
-			status = bus.Start();
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
-			status = bus.Connect(AllJoynTestCommon.GetConnectSpec());
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
 			// create+activate the interface
 			AllJoyn.InterfaceDescription iFace = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out iFace);
@@ -275,7 +277,7 @@ namespace AllJoynUnityTest
 
 			iFace.Activate();
 
-			AllJoyn.ProxyBusObject proxyBusObject = new AllJoyn.ProxyBusObject(bus, OBJECT_NAME, OBJECT_PATH, 0);
+			proxyBusObject = new AllJoyn.ProxyBusObject(bus, OBJECT_NAME, OBJECT_PATH, 0);
 			status = proxyBusObject.AddInterface(iFace);
 			Assert.Equal(AllJoyn.QStatus.OK, status);
 
@@ -298,11 +300,6 @@ namespace AllJoynUnityTest
 #pragma warning restore 618
 
 			dingBusObject.Dispose();
-			servicebus.Dispose();
-
-			// TODO: need to call dispose on proxyBusObject first otherwise you get an AccessViolation???
-			proxyBusObject.Dispose();
-			bus.Dispose();
 		}
 
 		private void Wait(TimeSpan timeout)

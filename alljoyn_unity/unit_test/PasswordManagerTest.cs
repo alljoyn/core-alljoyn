@@ -22,14 +22,43 @@ using Xunit;
 
 namespace AllJoynUnityTest
 {
-	public class PasswordManagerTest
+	public class PasswordManagerTest : IDisposable
 	{
+		AllJoyn.BusAttachment busAttachment = null;
+		private bool disposed = false;
+
+		public PasswordManagerTest()
+		{
+			busAttachment = new AllJoyn.BusAttachment("PasswordManagerTest", false);
+		}
+
+		~PasswordManagerTest()
+		{
+			Dispose(false);
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!this.disposed)
+			{
+				if (disposing)
+				{
+					busAttachment.Dispose();
+				}
+				disposed = true;
+			}
+		}
+
 		[Fact]
 		public void SetCredentials()
 		{
-			AllJoyn.BusAttachment busAttachment = new AllJoyn.BusAttachment("PasswordManagerTest", false);
 			Assert.Equal(AllJoyn.QStatus.OK, AllJoyn.PasswordManager.SetCredentials("ALLJOYN_PIN_KEYX", "1234"));
-			busAttachment.Dispose();
 		}
 	}
 }

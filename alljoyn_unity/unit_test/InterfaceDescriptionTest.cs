@@ -16,27 +16,57 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using AllJoynUnity;
 using Xunit;
 
 namespace AllJoynUnityTest
 {
-	public class InterfaceDescriptionTest
+	public class InterfaceDescriptionTest : IDisposable
 	{
 		const string INTERFACE_NAME = "org.alljoyn.test.InterfaceDescriptionTest";
 		const string OBJECT_PATH = "/org/alljoyn/test/InterfaceDescriptionTest";
 		const string WELLKNOWN_NAME = "org.alljoyn.test.InterfaceDescriptionTest";
 
+		AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
+
+		AllJoyn.BusAttachment bus = null;
+
+		private bool disposed = false;
+
+		public InterfaceDescriptionTest()
+		{
+			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
+			Assert.NotNull(bus);
+		}
+
+		~InterfaceDescriptionTest()
+		{
+			Dispose(false);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!this.disposed)
+			{
+				if (disposing)
+				{
+					bus.Dispose();
+				}
+				disposed = true;
+			}
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
 		[Fact]
 		public void AddMember()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -50,19 +80,11 @@ namespace AllJoynUnityTest
 			// Test adding a Signal
 			status = testIntf.AddMember(AllJoyn.Message.Type.Signal, "chirp", "", "s", "chirp", AllJoyn.InterfaceDescription.AnnotationFlags.Default);
 			Assert.Equal(AllJoyn.QStatus.OK, status);
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void GetMember()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -104,19 +126,11 @@ namespace AllJoynUnityTest
 			Assert.Equal("chirp", chirpMember.ArgNames);
 			//TODO add in code to use new annotation methods
 			//Assert.Equal(AllJoyn.InterfaceDescription.AnnotationFlags.Default, chirpMember.Annotation);
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void GetMembers()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -155,12 +169,6 @@ namespace AllJoynUnityTest
 		[Fact]
 		public void AddMethod()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			Assert.Equal(AllJoyn.QStatus.OK, bus.CreateInterface(INTERFACE_NAME, out testIntf));
@@ -185,19 +193,11 @@ namespace AllJoynUnityTest
 										"  </method>\n" +
 										"</interface>\n";
 			Assert.Equal(expectedIntrospect, testIntf.Introspect());
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void GetMethod()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -228,19 +228,11 @@ namespace AllJoynUnityTest
 			fooMember = testIntf.GetMethod("bar");
 			// since "bar" is not a member of the interface it should be null
 			Assert.Null(fooMember);
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void HasMember()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -265,19 +257,11 @@ namespace AllJoynUnityTest
 			Assert.Equal(false, testIntf.HasMember("ping", "i", "s"));
 			Assert.Equal(false, testIntf.HasMember("chirp", "b", null));
 			Assert.Equal(false, testIntf.HasMember("invalid", "s", null));
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void Activate()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -298,19 +282,11 @@ namespace AllJoynUnityTest
 			/* once the interface has been activated we should not be able to add new members */
 			status = testIntf.AddMember(AllJoyn.Message.Type.MethodCall, "pong", "s", "s", "in,out", AllJoyn.InterfaceDescription.AnnotationFlags.Default);
 			Assert.Equal(AllJoyn.QStatus.BUS_INTERFACE_ACTIVATED, status);
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void IsSecure()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create an insecure interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -347,8 +323,6 @@ namespace AllJoynUnityTest
 
 			Assert.Equal(true, testIntf.IsSecure);
 			Assert.Equal(AllJoyn.InterfaceDescription.SecurityPolicy.Required, testIntf.GetSecurityPolicy);
-
-			bus.Dispose();
 		}
 
 		//We are specifically testing an obsolete class
@@ -357,12 +331,6 @@ namespace AllJoynUnityTest
 		[Fact]
 		public void IsSecure_DepricatedCreateInterface()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create an insecure interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, false, out testIntf);
@@ -379,20 +347,12 @@ namespace AllJoynUnityTest
 			Assert.NotNull(testIntf);
 
 			Assert.Equal(true, testIntf.IsSecure);
-
-			bus.Dispose();
 		}
 #pragma warning restore 618
 
 		[Fact]
 		public void AddProperty()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -405,19 +365,11 @@ namespace AllJoynUnityTest
 			Assert.Equal(AllJoyn.QStatus.OK, status);
 			status = testIntf.AddProperty("prop3", "u", AllJoyn.InterfaceDescription.AccessFlags.ReadWrite);
 			Assert.Equal(AllJoyn.QStatus.OK, status);
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void HasProperty()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -436,19 +388,11 @@ namespace AllJoynUnityTest
 			Assert.Equal(true, testIntf.HasProperty("prop2"));
 			Assert.Equal(true, testIntf.HasProperty("prop3"));
 			Assert.Equal(false, testIntf.HasProperty("invalid_prop"));
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void HasProperties()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -486,19 +430,11 @@ namespace AllJoynUnityTest
 			 * hasproperties should return true.
 			 */
 			Assert.True(testIntf.HasProperties);
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void GetProperty()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -526,17 +462,11 @@ namespace AllJoynUnityTest
 			Assert.Equal("prop3", prop3.Name);
 			Assert.Equal("u", prop3.Signature);
 			Assert.Equal(AllJoyn.InterfaceDescription.AccessFlags.ReadWrite, prop3.Access);
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void GetProperties()
 		{
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			Assert.Equal(AllJoyn.QStatus.OK, bus.CreateInterface(INTERFACE_NAME, out testIntf));
@@ -559,12 +489,6 @@ namespace AllJoynUnityTest
 		[Fact]
 		public void GetName()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -572,19 +496,11 @@ namespace AllJoynUnityTest
 			Assert.NotNull(testIntf);
 
 			Assert.Equal(INTERFACE_NAME, testIntf.Name);
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void AddSignal()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -606,19 +522,11 @@ namespace AllJoynUnityTest
 			Assert.Equal("", signalMember.ReturnSignature);
 			Assert.Equal("data", signalMember.ArgNames);
 			//TODO add in code to use new annotation methods
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void GetSignal()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -648,19 +556,11 @@ namespace AllJoynUnityTest
 			methodMember = testIntf.GetSignal("bar");
 			// "bar" is not a member of the interface it should return null
 			Assert.Null(methodMember);
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void InterfaceAnnotations()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -700,19 +600,11 @@ namespace AllJoynUnityTest
 			Assert.Equal("amazing", value);
 			Assert.True(annotations.TryGetValue("org.alljoyn.test.annotation.five", out value));
 			Assert.Equal("treasure", value);
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void MethodAnnotations()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -767,19 +659,11 @@ namespace AllJoynUnityTest
 			Assert.Equal("treasure", value);
 			Assert.True(annotations.TryGetValue("one", out value));
 			Assert.Equal("black_cat", value);
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void SignalAnnotations()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -825,19 +709,11 @@ namespace AllJoynUnityTest
 			Assert.Equal("amazing", value);
 			Assert.True(annotations.TryGetValue("org.alljoyn.test.annotation.five", out value));
 			Assert.Equal("treasure", value);
-
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void PropertyAnnotations()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("InterfaceDescriptionTest", true);
-			Assert.NotNull(bus);
-
 			// create the interface
 			AllJoyn.InterfaceDescription testIntf = null;
 			status = bus.CreateInterface(INTERFACE_NAME, out testIntf);
@@ -886,7 +762,6 @@ namespace AllJoynUnityTest
 			Assert.Equal("amazing", value);
 			Assert.True(annotations.TryGetValue("org.alljoyn.test.annotation.five", out value));
 			Assert.Equal("treasure", value);
-			bus.Dispose();
 		}
 
 		[Fact]

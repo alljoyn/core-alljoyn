@@ -23,12 +23,12 @@ using Xunit;
 
 namespace AllJoynUnityTest
 {
-	public class BusListenerTest
+	public class BusListenerTest : IDisposable
 	{
-		public const string ObjectName = "org.alljoyn.test.BusListenerTest";
-		public TimeSpan MaxWaitTime = TimeSpan.FromSeconds(5);
+		const string ObjectName = "org.alljoyn.test.BusListenerTest";
+		TimeSpan MaxWaitTime = TimeSpan.FromSeconds(5);
 
-		AutoResetEvent notifyEvent = new AutoResetEvent(false);
+		AutoResetEvent notifyEvent;
 
 		bool listenerRegistered;
 		bool listenerUnregistered;
@@ -39,14 +39,17 @@ namespace AllJoynUnityTest
 		bool busStopping;
 		AllJoyn.TransportMask transportFound;
 
-		[Fact]
-		public void TestListenerRegisteredUnregistered()
+		private AllJoyn.BusAttachment bus;
+		AllJoyn.BusListener busListener;
+
+		private bool disposed = false;
+		private AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
+
+		public BusListenerTest()
 		{
-			AllJoyn.BusAttachment bus = new AllJoyn.BusAttachment("BusListenerTest", true);
-			AllJoyn.BusListener busListener = new TestBusListener(this);
-			listenerRegistered = false;
-			listenerUnregistered = false;
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
+			notifyEvent = new AutoResetEvent(false);
+
+			bus = new AllJoyn.BusAttachment("BusListenerTest", true);
 
 			// start the bus attachment
 			status = bus.Start();
@@ -55,6 +58,52 @@ namespace AllJoynUnityTest
 			// connect to the bus
 			status = bus.Connect(AllJoynTestCommon.GetConnectSpec());
 			Assert.Equal(AllJoyn.QStatus.OK, status);
+
+			busListener = new TestBusListener(this);
+		}
+
+		~BusListenerTest()
+		{
+			Dispose(false);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!this.disposed)
+			{
+				// additional clean up before disposing
+				// make sure the ObjectName is not advertised or owned by the bus
+				// between runs these are run regardless we actually don't expect
+				// these names to be owned between runs this is here just in case
+				// a test fails we want to make sure the names are cleared from
+				// the daemon
+				AllJoyn.SessionOpts sessionOpts = new AllJoyn.SessionOpts(
+					AllJoyn.SessionOpts.TrafficType.Messages, false,
+					AllJoyn.SessionOpts.ProximityType.Any, AllJoyn.TransportMask.Any);
+				bus.CancelAdvertisedName(ObjectName, sessionOpts.Transports);
+				bus.ReleaseName(ObjectName);
+
+				if (disposing)
+				{
+					busListener.Dispose();
+					bus.Dispose();
+				}
+
+				disposed = true;
+			}
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		[Fact]
+		public void TestListenerRegisteredUnregistered()
+		{
+			listenerRegistered = false;
+			listenerUnregistered = false;
 
 			bus.RegisterBusListener(busListener);
 			Wait(MaxWaitTime);
@@ -63,33 +112,16 @@ namespace AllJoynUnityTest
 			bus.UnregisterBusListener(busListener);
 			Wait(MaxWaitTime);
 			Assert.Equal(true, listenerUnregistered);
-
-			// TODO: move these into a teardown method?
-			busListener.Dispose();
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void TestFoundLostAdvertisedName()
 		{
-			// create bus attachment
-			AllJoyn.BusAttachment bus = new AllJoyn.BusAttachment("BusListenerTest", true);
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			// start the bus attachment
-			status = bus.Start();
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
-			// connect to the bus
-			status = bus.Connect(AllJoynTestCommon.GetConnectSpec());
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
 			listenerRegistered = false;
 			foundAdvertisedName = false;
 			lostAdvertisedName = false;
 
 			// register the bus listener
-			AllJoyn.BusListener busListener = new TestBusListener(this);
 			bus.RegisterBusListener(busListener);
 			Wait(MaxWaitTime);
 			Assert.Equal(true, listenerRegistered);
@@ -114,33 +146,16 @@ namespace AllJoynUnityTest
 
 			Wait(MaxWaitTime);
 			Assert.Equal(true, lostAdvertisedName);
-
-			// TODO: move these into a teardown method?
-			busListener.Dispose();
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void TestStopDisconnected()
 		{
-			// create bus attachment
-			AllJoyn.BusAttachment bus = new AllJoyn.BusAttachment("BusListenerTest", true);
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			// start the bus attachment
-			status = bus.Start();
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
-			// connect to the bus
-			status = bus.Connect(AllJoynTestCommon.GetConnectSpec());
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
 			listenerRegistered = false;
 			busDisconnected = false;
 			busStopping = false;
 
 			// register the bus listener
-			AllJoyn.BusListener busListener = new TestBusListener(this);
 			bus.RegisterBusListener(busListener);
 			Wait(MaxWaitTime);
 			Assert.Equal(true, listenerRegistered);
@@ -156,31 +171,16 @@ namespace AllJoynUnityTest
 			Assert.Equal(AllJoyn.QStatus.OK, status);
 			Wait(MaxWaitTime);
 			Assert.Equal(true, busStopping);
-
-			busListener.Dispose();
-			bus.Dispose();
+			status = bus.Join();
 		}
 
 		[Fact]
 		public void TestNameOwnerChanged()
 		{
-			// create bus attachment
-			AllJoyn.BusAttachment bus = new AllJoyn.BusAttachment("BusListenerTest", true);
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			// start the bus attachment
-			status = bus.Start();
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
-			// connect to the bus
-			status = bus.Connect(AllJoynTestCommon.GetConnectSpec());
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
 			listenerRegistered = false;
 			nameOwnerChanged = false;
 
 			// register the bus listener
-			AllJoyn.BusListener busListener = new TestBusListener(this);
 			bus.RegisterBusListener(busListener);
 			Wait(MaxWaitTime);
 			Assert.Equal(true, listenerRegistered);
@@ -190,33 +190,17 @@ namespace AllJoynUnityTest
 			Assert.Equal(AllJoyn.QStatus.OK, status);
 			Wait(MaxWaitTime);
 			Assert.Equal(true, nameOwnerChanged);
-
-			busListener.Dispose();
-			bus.Dispose();
 		}
 
 		[Fact]
 		public void TestFoundNameByTransport()
 		{
-			// create bus attachment
-			AllJoyn.BusAttachment bus = new AllJoyn.BusAttachment("BusListenerTest", true);
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			// start the bus attachment
-			status = bus.Start();
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
-			// connect to the bus
-			status = bus.Connect(AllJoynTestCommon.GetConnectSpec());
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
 			listenerRegistered = false;
 			foundAdvertisedName = false;
 			nameOwnerChanged = false;
 			transportFound = AllJoyn.TransportMask.None;
 
 			// register the bus listener
-			AllJoyn.BusListener busListener = new TestBusListener(this);
 			bus.RegisterBusListener(busListener);
 			Wait(MaxWaitTime);
 			Assert.Equal(true, listenerRegistered);
@@ -248,9 +232,6 @@ namespace AllJoynUnityTest
 
 			Wait(TimeSpan.FromSeconds(1));
 			Assert.Equal(false, foundAdvertisedName);
-
-			busListener.Dispose();
-			bus.Dispose();
 		}
 
 		private void Wait(TimeSpan timeout)

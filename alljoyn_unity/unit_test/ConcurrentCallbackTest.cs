@@ -23,9 +23,12 @@ using Xunit;
 
 namespace AllJoynUnityTest
 {
-	public class ConcurrentCallbackTest
+	public class ConcurrentCallbackTest : IDisposable
 	{
 		static AllJoyn.BusAttachment mbus;
+		AllJoyn.BusListener busListener = null;
+
+		AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
 
 		public const string ObjectName = "org.alljoyn.test.ConcurrentCallbackTest";
 		public TimeSpan MaxWaitTime = TimeSpan.FromSeconds(5);
@@ -76,16 +79,11 @@ namespace AllJoynUnityTest
 			}
 		}
 
-		[Fact]
-		public void EnableConcurrentCallbacks_Not_Used()
-		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-			callbackStatus = AllJoyn.QStatus.FAIL;
-			listenerRegisteredFlag = false;
-			nameOwnerChangedFlag = false;
+		private bool disposed = false;
 
+		public ConcurrentCallbackTest()
+		{
 			mbus = new AllJoyn.BusAttachment("BusListenerTest", true);
-			AllJoyn.BusListener busListener = new BusListenerWithBlockingCall(this);
 
 			// start the bus attachment
 			status = mbus.Start();
@@ -94,6 +92,46 @@ namespace AllJoynUnityTest
 			// connect to the bus
 			status = mbus.Connect(AllJoynTestCommon.GetConnectSpec());
 			Assert.Equal(AllJoyn.QStatus.OK, status);
+		}
+
+		~ConcurrentCallbackTest()
+		{
+			Dispose(false);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!this.disposed)
+			{
+				mbus.ReleaseName(ObjectName);
+
+				mbus.UnregisterBusListener(busListener);
+				mbus.Stop();
+				mbus.Join();
+
+				if (disposing)
+				{
+					mbus.Dispose();
+				}
+				disposed = true;
+
+			}
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		[Fact]
+		public void EnableConcurrentCallbacks_Not_Used()
+		{
+			callbackStatus = AllJoyn.QStatus.FAIL;
+			listenerRegisteredFlag = false;
+			nameOwnerChangedFlag = false;
+
+			busListener = new BusListenerWithBlockingCall(this);
 
 			mbus.RegisterBusListener(busListener);
 			Wait(MaxWaitTime);
@@ -112,10 +150,6 @@ namespace AllJoynUnityTest
 			 * Assert.Equal(AllJoyn.QStatus.BUS_BLOCKING_CALL_NOT_ALLOWED, callbackStatus);
 			 */
 			Assert.Equal(AllJoyn.QStatus.OK, callbackStatus);
-			mbus.UnregisterBusListener(busListener);
-			mbus.Stop();
-			mbus.Join();
-			mbus.Dispose();
 		}
 
 		// we need this so that we know when the advertised name has been found
@@ -157,21 +191,11 @@ namespace AllJoynUnityTest
 		[Fact]
 		public void EnableConcurrentCallbacks_Used()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
 			callbackStatus = AllJoyn.QStatus.FAIL;
 			listenerRegisteredFlag = false;
 			nameOwnerChangedFlag = false;
 
-			mbus = new AllJoyn.BusAttachment("BusListenerTest", true);
-			AllJoyn.BusListener busListener = new BusListenerEnableConcurrentCallbacks(this);
-
-			// start the bus attachment
-			status = mbus.Start();
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
-			// connect to the bus
-			status = mbus.Connect(AllJoynTestCommon.GetConnectSpec());
-			Assert.Equal(AllJoyn.QStatus.OK, status);
+			busListener = new BusListenerEnableConcurrentCallbacks(this);
 
 			mbus.RegisterBusListener(busListener);
 			Wait(MaxWaitTime);
@@ -181,11 +205,6 @@ namespace AllJoynUnityTest
 			Wait(MaxWaitTime);
 			Assert.True(nameOwnerChangedFlag);
 			Assert.Equal(AllJoyn.QStatus.OK, callbackStatus);
-
-			mbus.UnregisterBusListener(busListener);
-			mbus.Stop();
-			mbus.Join();
-			mbus.Dispose();
 		}
 	}
 }

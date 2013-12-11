@@ -25,7 +25,7 @@ using Xunit;
 
 namespace AllJoynUnityTest
 {
-	public class AuthListenerTest
+	public class AuthListenerTest : IDisposable
 	{
 		const string INTERFACE_NAME = "org.alljoyn.test.cs.authlistener";
 		const string OBJECT_PATH = "/org/alljoyn/test/authlistener";
@@ -35,6 +35,7 @@ namespace AllJoynUnityTest
 		private AllJoyn.BusAttachment clientBus;
 		private TestBusObject busObject;
 
+		private bool disposed = false;
 
 		public struct Authflags
 		{
@@ -86,6 +87,33 @@ namespace AllJoynUnityTest
 
 		~AuthListenerTest()
 		{
+			Dispose(false);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!this.disposed)
+			{
+				//additional clean up before disposing
+				Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Stop());
+				Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Join());
+
+				Assert.Equal(AllJoyn.QStatus.OK, clientBus.Stop());
+				Assert.Equal(AllJoyn.QStatus.OK, clientBus.Join());
+
+				if (disposing)
+				{
+					serviceBus.Dispose();
+					clientBus.Dispose();
+				}
+				disposed = true;
+			}
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
 		}
 
 		void ResetAuthFlags()
@@ -324,16 +352,6 @@ namespace AllJoynUnityTest
 			busObject.Dispose();
 
 			proxyBusObject.Dispose();
-
-
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Stop());
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Join());
-
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Stop());
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Join());
-
-			serviceBus.Dispose();
-			clientBus.Dispose();
 		}
 
 
@@ -473,16 +491,6 @@ namespace AllJoynUnityTest
 			busObject.Dispose();
 
 			proxyBusObject.Dispose();
-
-
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Stop());
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Join());
-
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Stop());
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Join());
-
-			serviceBus.Dispose();
-			clientBus.Dispose();
 		}
 
 
@@ -615,16 +623,6 @@ namespace AllJoynUnityTest
 			busObject.Dispose();
 
 			proxyBusObject.Dispose();
-
-
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Stop());
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Join());
-
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Stop());
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Join());
-
-			serviceBus.Dispose();
-			clientBus.Dispose();
 		}
 
 		const string service_x509certChain =
@@ -861,16 +859,6 @@ namespace AllJoynUnityTest
 			busObject.Dispose();
 
 			proxyBusObject.Dispose();
-
-
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Stop());
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Join());
-
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Stop());
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Join());
-
-			serviceBus.Dispose();
-			clientBus.Dispose();
 		}
 
 
@@ -991,16 +979,6 @@ namespace AllJoynUnityTest
 			busObject.Dispose();
 
 			proxyBusObject.Dispose();
-
-
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Stop());
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Join());
-
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Stop());
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Join());
-
-			serviceBus.Dispose();
-			clientBus.Dispose();
 		}
 
 		[Fact, Trait("authlistener", "secureconnection")]
@@ -1067,16 +1045,6 @@ namespace AllJoynUnityTest
 			busObject.Dispose();
 
 			proxyBusObject.Dispose();
-
-
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Stop());
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Join());
-
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Stop());
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Join());
-
-			serviceBus.Dispose();
-			clientBus.Dispose();
 		}
 	}
 }

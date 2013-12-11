@@ -22,8 +22,49 @@ using Xunit;
 
 namespace AllJoynUnityTest
 {
-	public class SignalsTest
+	public class SignalsTest : IDisposable
 	{
+		AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
+		AllJoyn.BusAttachment bus = null;
+
+		private bool disposed = false;
+
+		public SignalsTest()
+		{
+			// create+start+connect bus attachment
+			bus = new AllJoyn.BusAttachment("SignalsTest", true);
+			Assert.NotNull(bus);
+
+			status = bus.Start();
+			Assert.Equal(AllJoyn.QStatus.OK, status);
+
+			status = bus.Connect(AllJoynTestCommon.GetConnectSpec());
+			Assert.Equal(AllJoyn.QStatus.OK, status);
+		}
+
+		~SignalsTest()
+		{
+			Dispose(false);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!this.disposed)
+			{
+				if (disposing)
+				{
+					bus.Dispose();
+				}
+				disposed = true;
+			}
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
 		class TestBusObject : AllJoyn.BusObject
 		{
 			public TestBusObject(string path): base(path)
@@ -41,19 +82,6 @@ namespace AllJoynUnityTest
 		[Fact]
 		public void RegisterUnregisterSessionlessSignals()
 		{
-			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			// create+start+connect bus attachment
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("SignalsTest", true);
-			Assert.NotNull(bus);
-
-			status = bus.Start();
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
-			status = bus.Connect(AllJoynTestCommon.GetConnectSpec());
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
 			AllJoyn.InterfaceDescription testIntf;
 			Assert.Equal(AllJoyn.QStatus.OK, bus.CreateInterface("org.alljoyn.test.signalstest", out testIntf));
 			Assert.Equal(AllJoyn.QStatus.OK, testIntf.AddSignal("testSignal", "s", "newName"));

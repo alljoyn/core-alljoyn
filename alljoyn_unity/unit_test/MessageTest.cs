@@ -23,11 +23,14 @@ using Xunit;
 
 namespace AllJoynUnityTest
 {
-	public class MessageTest
+	public class MessageTest : IDisposable
 	{
 		private static string WELLKNOWN_NAME = "org.alljoyn.test.MessageTest";
 		private static string OBJECT_PATH = "/org/alljoyn/test/MessageTest";
 		private static string INTERFACE_NAME = "org.alljoyn.test.MessageTest";
+
+		private AllJoyn.BusAttachment serviceBus = null;
+		private AllJoyn.BusAttachment clientBus = null;
 
 		private AutoResetEvent notifyEvent = new AutoResetEvent(false);
 		private bool _nameOwnerChangedFlag;
@@ -43,14 +46,53 @@ namespace AllJoynUnityTest
 			notifyEvent.Set();
 		}
 
+		private bool disposed = false;
+
+		public MessageTest()
+		{
+			serviceBus = new AllJoyn.BusAttachment("MessageTest", false);
+			Assert.NotNull(serviceBus);
+
+			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Start());
+			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Connect(AllJoynTestCommon.GetConnectSpec()));
+
+			//SetUp Client
+			//start client BusAttachment
+			clientBus = new AllJoyn.BusAttachment("MessageTestClient", true);
+			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Start());
+			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Connect(AllJoynTestCommon.GetConnectSpec()));
+		}
+
+		~MessageTest()
+		{
+			Dispose(false);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!this.disposed)
+			{
+				if (disposing)
+				{
+					serviceBus.Dispose();
+					clientBus.Dispose();
+				}
+				disposed = true;
+			}
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
 		[Fact]
 		public void CreateDispose()
 		{
-			AllJoyn.BusAttachment busAttachment = new AllJoyn.BusAttachment("MessageTest", false);
-			AllJoyn.Message message = new AllJoyn.Message(busAttachment);
+			AllJoyn.Message message = new AllJoyn.Message(serviceBus);
 
 			message.Dispose();
-			busAttachment.Dispose();
 		}
 
 
@@ -107,12 +149,6 @@ namespace AllJoynUnityTest
 		[Fact]
 		public void GetArgs()
 		{
-			//SetUp Service
-			//start service BusAttachment
-			AllJoyn.BusAttachment serviceBus = new AllJoyn.BusAttachment("MessageTestService", true);
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Start());
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Connect(AllJoynTestCommon.GetConnectSpec()));
-
 			TestBusListener testBusListener = new TestBusListener(this);
 			serviceBus.RegisterBusListener(testBusListener);
 
@@ -140,13 +176,6 @@ namespace AllJoynUnityTest
 																					AllJoyn.DBus.NameFlags.AllowReplacement));
 			Wait(TimeSpan.FromSeconds(2));
 			Assert.True(_nameOwnerChangedFlag);
-
-
-			//SetUp Client
-			//start client BusAttachment
-			AllJoyn.BusAttachment clientBus = new AllJoyn.BusAttachment("MessageTestClient", true);
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Start());
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Connect(AllJoynTestCommon.GetConnectSpec()));
 
 			AllJoyn.ProxyBusObject proxyObj = new AllJoyn.ProxyBusObject(clientBus, WELLKNOWN_NAME, OBJECT_PATH, 0);
 
@@ -175,22 +204,14 @@ namespace AllJoynUnityTest
 			reply.Dispose();
 			input.Dispose();
 			proxyObj.Dispose();
-			clientBus.Dispose();
 
 			testBusListener.Dispose();
 			busObj.Dispose();
-			serviceBus.Dispose();
 		}
 
 		[Fact]
 		public void Properties()
 		{
-			//SetUp Service
-			//start service BusAttachment
-			AllJoyn.BusAttachment serviceBus = new AllJoyn.BusAttachment("MessageTestService", true);
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Start());
-			Assert.Equal(AllJoyn.QStatus.OK, serviceBus.Connect(AllJoynTestCommon.GetConnectSpec()));
-
 			TestBusListener testBusListener = new TestBusListener(this);
 			serviceBus.RegisterBusListener(testBusListener);
 
@@ -219,13 +240,6 @@ namespace AllJoynUnityTest
 			Wait(TimeSpan.FromSeconds(2));
 
 			Assert.True(_nameOwnerChangedFlag);
-
-
-			// SetUp Client
-			// start client BusAttachment
-			AllJoyn.BusAttachment clientBus = new AllJoyn.BusAttachment("MessageTestClient", true);
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Start());
-			Assert.Equal(AllJoyn.QStatus.OK, clientBus.Connect(AllJoynTestCommon.GetConnectSpec()));
 
 			AllJoyn.ProxyBusObject proxyObj = new AllJoyn.ProxyBusObject(clientBus, INTERFACE_NAME, OBJECT_PATH, 0);
 
@@ -299,11 +313,9 @@ namespace AllJoynUnityTest
 			reply.Dispose();
 			input.Dispose();
 			proxyObj.Dispose();
-			clientBus.Dispose();
 
 			testBusListener.Dispose();
 			busObj.Dispose();
-			serviceBus.Dispose();
 		}
 	}
 }

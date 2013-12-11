@@ -23,35 +23,65 @@ using Xunit;
 
 namespace AllJoynUnityTest
 {
-	public class ProxyBusObjectTest
+	public class ProxyBusObjectTest : IDisposable
 	{
 		//private static string WELLKNOWN_NAME = "org.alljoyn.test.ProxyBusObjectTest";
 		//private static string OBJECT_PATH = "/org/alljoyn/test/ProxyBusObjectTest";
 		private static string INTERFACE_NAME = "org.alljoyn.test.ProxyBusObjectTest";
 
+		private AllJoyn.BusAttachment busAttachment = null;
+		private AllJoyn.ProxyBusObject proxyBusObject = null;
+
+		private bool disposed = false;
+
+		public ProxyBusObjectTest()
+		{
+			busAttachment = new AllJoyn.BusAttachment("ProxyBusObjectTest", false);
+
+			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Start());
+			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Connect(AllJoynTestCommon.GetConnectSpec()));
+		}
+
+		~ProxyBusObjectTest()
+		{
+			Dispose(false);
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!this.disposed)
+			{
+				if (disposing)
+				{
+					if (proxyBusObject != null)
+					{
+						proxyBusObject.Dispose();
+					}
+					Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Stop());
+					Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Join());
+					busAttachment.Dispose();
+				}
+				disposed = true;
+			}
+		}
+
 		[Fact]
 		public void CreateDispose()
 		{
-			AllJoyn.BusAttachment busAttachment = new AllJoyn.BusAttachment("ProxyBusObjectTest", false);
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Start());
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Connect(AllJoynTestCommon.GetConnectSpec()));
-
-			AllJoyn.ProxyBusObject proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
+			proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
 			Assert.NotNull(proxyBusObject);
-			proxyBusObject.Dispose();
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Stop());
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Join());
-			busAttachment.Dispose();
 		}
 
 		[Fact]
 		public void IntrospectRemoteObject()
 		{
-			AllJoyn.BusAttachment busAttachment = new AllJoyn.BusAttachment("ProxyBusObjectTest", false);
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Start());
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Connect(AllJoynTestCommon.GetConnectSpec()));
-
-			AllJoyn.ProxyBusObject proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
+			proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
 			Assert.NotNull(proxyBusObject);
 
 			Assert.Equal(AllJoyn.QStatus.OK, proxyBusObject.IntrospectRemoteObject());
@@ -64,22 +94,12 @@ namespace AllJoynUnityTest
 										"  </method>\n" +
 										"</interface>\n";
 			Assert.Equal(expectedIntrospect, interfaceDescription.Introspect());
-
-
-			proxyBusObject.Dispose();
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Stop());
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Join());
-			busAttachment.Dispose();
 		}
 
 		[Fact]
 		public void Path()
 		{
-			AllJoyn.BusAttachment busAttachment = new AllJoyn.BusAttachment("ProxyBusObjectTest", false);
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Start());
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Connect(AllJoynTestCommon.GetConnectSpec()));
-
-			AllJoyn.ProxyBusObject proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
+			proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
 			Assert.NotNull(proxyBusObject);
 
 			Assert.Equal("/org/alljoyn/Bus", proxyBusObject.Path);
@@ -88,11 +108,7 @@ namespace AllJoynUnityTest
 		[Fact]
 		public void ServiceName()
 		{
-			AllJoyn.BusAttachment busAttachment = new AllJoyn.BusAttachment("ProxyBusObjectTest", false);
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Start());
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Connect(AllJoynTestCommon.GetConnectSpec()));
-
-			AllJoyn.ProxyBusObject proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
+			proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
 			Assert.NotNull(proxyBusObject);
 
 			Assert.Equal("org.alljoyn.Bus", proxyBusObject.ServiceName);
@@ -101,11 +117,7 @@ namespace AllJoynUnityTest
 		[Fact]
 		public void SessionId()
 		{
-			AllJoyn.BusAttachment busAttachment = new AllJoyn.BusAttachment("ProxyBusObjectTest", false);
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Start());
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Connect(AllJoynTestCommon.GetConnectSpec()));
-
-			AllJoyn.ProxyBusObject proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
+			proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
 			Assert.NotNull(proxyBusObject);
 
 			Assert.Equal(0u, proxyBusObject.SessionId);
@@ -118,11 +130,7 @@ namespace AllJoynUnityTest
 		[Fact]
 		public void ImplementsInterface()
 		{
-			AllJoyn.BusAttachment busAttachment = new AllJoyn.BusAttachment("ProxyBusObjectTest", false);
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Start());
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Connect(AllJoynTestCommon.GetConnectSpec()));
-
-			AllJoyn.ProxyBusObject proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
+			proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
 			Assert.NotNull(proxyBusObject);
 
 			Assert.Equal(AllJoyn.QStatus.OK, proxyBusObject.IntrospectRemoteObject());
@@ -135,11 +143,7 @@ namespace AllJoynUnityTest
 		[Fact]
 		public void GetInteface()
 		{
-			AllJoyn.BusAttachment busAttachment = new AllJoyn.BusAttachment("ProxyBusObjectTest", false);
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Start());
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Connect(AllJoynTestCommon.GetConnectSpec()));
-
-			AllJoyn.ProxyBusObject proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
+			proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
 			Assert.NotNull(proxyBusObject);
 
 			Assert.Equal(AllJoyn.QStatus.OK, proxyBusObject.IntrospectRemoteObject());
@@ -158,17 +162,13 @@ namespace AllJoynUnityTest
 		[Fact]
 		public void AddInterface()
 		{
-			AllJoyn.BusAttachment busAttachment = new AllJoyn.BusAttachment("ProxyBusObjectTest", false);
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Start());
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Connect(AllJoynTestCommon.GetConnectSpec()));
-
 			AllJoyn.InterfaceDescription testIntf = null;
 			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.CreateInterface(INTERFACE_NAME, out testIntf));
 			Assert.NotNull(testIntf);
 			Assert.Equal(AllJoyn.QStatus.OK, testIntf.AddMember(AllJoyn.Message.Type.MethodCall, "ping", "s", "s", "in,out"));
 			testIntf.Activate();
 
-			AllJoyn.ProxyBusObject proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
+			proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
 			Assert.NotNull(proxyBusObject);
 
 			Assert.Equal(AllJoyn.QStatus.OK, proxyBusObject.AddInterface(testIntf));
@@ -193,11 +193,8 @@ namespace AllJoynUnityTest
 									"    </method>\n" +
 									"  </interface>\n" +
 									"</node>\n";
-			AllJoyn.BusAttachment busAttachment = new AllJoyn.BusAttachment("ProxyBusObjectTest", false);
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Start());
-			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Connect(AllJoynTestCommon.GetConnectSpec()));
 
-			AllJoyn.ProxyBusObject proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, null, null, 0);
+			proxyBusObject = new AllJoyn.ProxyBusObject(busAttachment, null, null, 0);
 			Assert.NotNull(proxyBusObject);
 
 			Assert.Equal(AllJoyn.QStatus.OK, proxyBusObject.ParseXml(busObjectXML));

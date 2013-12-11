@@ -23,7 +23,7 @@ using Xunit;
 
 namespace AllJoynUnityTest
 {
-	public class SessionTest
+	public class SessionTest : IDisposable
 	{
 		const string INTERFACE_NAME = "org.alljoyn.test.SessionTest";
 		const string OBJECT_NAME = "org.alljoyn.test.SessionTest";
@@ -45,21 +45,56 @@ namespace AllJoynUnityTest
 		bool sessionLostReasonFlag;
 		AllJoyn.SessionListener.SessionLostReason reasonMarker;
 
+		private bool disposed = false;
+
+		public SessionTest()
+		{
+			SetupHost();
+			SetupMemberOne();
+			SetupMemberTwo();
+		}
+
+		~SessionTest()
+		{
+			Dispose(false);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!this.disposed)
+			{
+				hostBus.CancelAdvertisedName(OBJECT_NAME, AllJoyn.TransportMask.Any);
+				hostBus.ReleaseName(OBJECT_NAME);
+
+				memberOneBus.Stop();
+				memberOneBus.Join();
+
+				memberTwoBus.Stop();
+				memberTwoBus.Join();
+
+				hostBus.Stop();
+				hostBus.Join();
+
+				if (disposing)
+				{
+					memberOneBus.Dispose();
+					memberTwoBus.Dispose();
+					hostBus.Dispose();
+				}
+				disposed = true;
+			}
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
 		[Fact]
 		public void TestSessionJoined()
 		{
 			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
-
-			// create+start+connect bus attachment
-			AllJoyn.BusAttachment servicebus = null;
-			servicebus = new AllJoyn.BusAttachment("SessionTestService", true);
-			Assert.NotNull(servicebus);
-
-			status = servicebus.Start();
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
-			status = servicebus.Connect(AllJoynTestCommon.GetConnectSpec());
-			Assert.Equal(AllJoyn.QStatus.OK, status);
 
 			// Create session
 			AllJoyn.SessionOpts opts = new AllJoyn.SessionOpts(
@@ -71,15 +106,15 @@ namespace AllJoynUnityTest
 			AllJoyn.SessionPortListener sessionPortListener = new TestSessionPortListener(this);
 
 			// bind to the session port
-			status = servicebus.BindSessionPort(ref sessionPort, opts, sessionPortListener);
+			status = hostBus.BindSessionPort(ref sessionPort, opts, sessionPortListener);
 			Assert.Equal(AllJoyn.QStatus.OK, status);
 
 			// request name
-			status = servicebus.RequestName(OBJECT_NAME, AllJoyn.DBus.NameFlags.ReplaceExisting | AllJoyn.DBus.NameFlags.DoNotQueue);
+			status = hostBus.RequestName(OBJECT_NAME, AllJoyn.DBus.NameFlags.ReplaceExisting | AllJoyn.DBus.NameFlags.DoNotQueue);
 			Assert.Equal(AllJoyn.QStatus.OK, status);
 
 			// Advertise name
-			status = servicebus.AdvertiseName(OBJECT_NAME, opts.Transports);
+			status = hostBus.AdvertiseName(OBJECT_NAME, opts.Transports);
 			Assert.Equal(AllJoyn.QStatus.OK, status);
 
 			///////////////////////////////////////////////////////////
@@ -88,22 +123,13 @@ namespace AllJoynUnityTest
 			sessionJoinedFlag = false;
 
 			// try to join the session & verify callbacks are called
-			AllJoyn.BusAttachment bus = null;
-			bus = new AllJoyn.BusAttachment("SessionTest", true);
-			Assert.NotNull(bus);
-
-			status = bus.Start();
-			Assert.Equal(AllJoyn.QStatus.OK, status);
-
-			status = bus.Connect(AllJoynTestCommon.GetConnectSpec());
-			Assert.Equal(AllJoyn.QStatus.OK, status);
 
 			// register the bus listener
 			AllJoyn.BusListener busListener = new TestBusListener(this);
-			bus.RegisterBusListener(busListener);
+			memberOneBus.RegisterBusListener(busListener);
 
 			// find the advertised name from the "servicebus"
-			status = bus.FindAdvertisedName(OBJECT_NAME);
+			status = memberOneBus.FindAdvertisedName(OBJECT_NAME);
 			Assert.Equal(AllJoyn.QStatus.OK, status);
 			EventWaitHandle ewh = new EventWaitHandle(false, EventResetMode.AutoReset, "FoundAdvertisedName");
 			ewh.WaitOne(MaxWaitTime);
@@ -111,16 +137,13 @@ namespace AllJoynUnityTest
 
 			// try to join & verify that the sessionedJoined callback was called
 			uint sSessionId;
-			status = bus.JoinSession(OBJECT_NAME, SERVICE_PORT, null, out sSessionId, opts);
+			status = memberOneBus.JoinSession(OBJECT_NAME, SERVICE_PORT, null, out sSessionId, opts);
 			Assert.Equal(AllJoyn.QStatus.OK, status);
 			ewh = new EventWaitHandle(false, EventResetMode.AutoReset, "SessionJoined");
 			ewh.WaitOne(MaxWaitTime);
 			Assert.Equal(true, acceptSessionJoinerFlag);
 			Assert.Equal(true, sessionJoinedFlag);
-			servicebus.ReleaseName(OBJECT_NAME);
-			servicebus.Dispose();
-			bus.Dispose();
-
+			hostBus.ReleaseName(OBJECT_NAME);
 		}
 
 		[Fact]
@@ -129,10 +152,6 @@ namespace AllJoynUnityTest
 			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
 			sessionMemberAddedFlag = false;
 
-			///////////////////////////////////////////////////////////
-			// Setup the session host
-			///////////////////////////////////////////////////////////
-			SetupHost();
 			// Create session
 			AllJoyn.SessionOpts opts = new AllJoyn.SessionOpts(
 				AllJoyn.SessionOpts.TrafficType.Messages, true,
@@ -154,20 +173,12 @@ namespace AllJoynUnityTest
 			status = hostBus.AdvertiseName(OBJECT_NAME, opts.Transports);
 			Assert.Equal(AllJoyn.QStatus.OK, status);
 
-			///////////////////////////////////////////////////////////
-			// Setup session member one
-			///////////////////////////////////////////////////////////
-			SetupMemberOne();
 			// register sessionMemberOne's bus listener
 			AllJoyn.BusListener busListenerMemberOne = new TestBusListener(this);
 			memberOneBus.RegisterBusListener(busListenerMemberOne);
 			// create the session listener
 			AllJoyn.SessionListener sessionListener = new TestSessionListener2(this);
 
-			///////////////////////////////////////////////////////////
-			// Setup session member two
-			///////////////////////////////////////////////////////////
-			SetupMemberTwo();
 			AllJoyn.BusListener busListenerMemberTwo = new TestBusListener(this);
 			memberTwoBus.RegisterBusListener(busListenerMemberTwo);
 
@@ -228,20 +239,6 @@ namespace AllJoynUnityTest
 			Assert.Equal(true, sessionMemberRemovedFlag);
 
 			hostBus.ReleaseName(OBJECT_NAME);
-
-			memberOneBus.Stop();
-			memberOneBus.Join();
-
-			memberTwoBus.Stop();
-			memberTwoBus.Join();
-
-			hostBus.Stop();
-			hostBus.Join();
-
-			memberOneBus.Dispose();
-			memberTwoBus.Dispose();
-			hostBus.Dispose();
-
 		}
 
 		[Fact]
@@ -249,10 +246,6 @@ namespace AllJoynUnityTest
 		{
 			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
 
-			///////////////////////////////////////////////////////////
-			// Setup the session host
-			///////////////////////////////////////////////////////////
-			SetupHost();
 			// Create session
 			AllJoyn.SessionOpts opts = new AllJoyn.SessionOpts(
 				AllJoyn.SessionOpts.TrafficType.Messages, true,
@@ -274,10 +267,6 @@ namespace AllJoynUnityTest
 			status = hostBus.AdvertiseName(OBJECT_NAME, opts.Transports);
 			Assert.Equal(AllJoyn.QStatus.OK, status);
 
-			///////////////////////////////////////////////////////////
-			// Setup session member one
-			///////////////////////////////////////////////////////////
-			SetupMemberOne();
 			// register sessionMemberOne's bus listener
 			AllJoyn.BusListener busListenerMemberOne = new TestBusListener(this);
 			memberOneBus.RegisterBusListener(busListenerMemberOne);
@@ -321,12 +310,6 @@ namespace AllJoynUnityTest
 			Assert.Equal(true, sessionMemberRemovedFlag);
 
 			hostBus.ReleaseName(OBJECT_NAME);
-
-			memberOneBus.Stop();
-			memberOneBus.Join();
-
-			memberOneBus.Dispose();
-			hostBus.Dispose();
 		}
 
 		[Fact]
@@ -334,10 +317,6 @@ namespace AllJoynUnityTest
 		{
 			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
 
-			///////////////////////////////////////////////////////////
-			// Setup the session host
-			///////////////////////////////////////////////////////////
-			SetupHost();
 			// Create session
 			AllJoyn.SessionOpts opts = new AllJoyn.SessionOpts(
 				AllJoyn.SessionOpts.TrafficType.Messages, true,
@@ -359,10 +338,6 @@ namespace AllJoynUnityTest
 			status = hostBus.AdvertiseName(OBJECT_NAME, opts.Transports);
 			Assert.Equal(AllJoyn.QStatus.OK, status);
 
-			///////////////////////////////////////////////////////////
-			// Setup session member one
-			///////////////////////////////////////////////////////////
-			SetupMemberOne();
 			// register sessionMemberOne's bus listener
 			AllJoyn.BusListener busListenerMemberOne = new TestBusListener(this);
 			memberOneBus.RegisterBusListener(busListenerMemberOne);
@@ -408,12 +383,6 @@ namespace AllJoynUnityTest
 			Assert.Equal(true, sessionMemberRemovedFlag);
 
 			hostBus.ReleaseName(OBJECT_NAME);
-
-			memberOneBus.Stop();
-			memberOneBus.Join();
-
-			memberOneBus.Dispose();
-			hostBus.Dispose();
 		}
 
 		[Fact]
@@ -421,10 +390,6 @@ namespace AllJoynUnityTest
 		{
 			AllJoyn.QStatus status = AllJoyn.QStatus.FAIL;
 
-			///////////////////////////////////////////////////////////
-			// Setup the session host
-			///////////////////////////////////////////////////////////
-			SetupHost();
 			// Create session
 			AllJoyn.SessionOpts opts = new AllJoyn.SessionOpts(
 				AllJoyn.SessionOpts.TrafficType.Messages, true,
@@ -446,10 +411,6 @@ namespace AllJoynUnityTest
 			status = hostBus.AdvertiseName(OBJECT_NAME, opts.Transports);
 			Assert.Equal(AllJoyn.QStatus.OK, status);
 
-			///////////////////////////////////////////////////////////
-			// Setup session member one
-			///////////////////////////////////////////////////////////
-			SetupMemberOne();
 			// register sessionMemberOne's bus listener
 			AllJoyn.BusListener busListenerMemberOne = new TestBusListener(this);
 			memberOneBus.RegisterBusListener(busListenerMemberOne);
@@ -492,15 +453,8 @@ namespace AllJoynUnityTest
 			ewh = new EventWaitHandle(false, EventResetMode.AutoReset, "SessionMemberRemoved");
 			ewh.WaitOne(MaxWaitTime);
 			Assert.Equal(true, sessionMemberRemovedFlag);
-			hostBus.Stop();
-			hostBus.Join();
+
 			hostBus.ReleaseName(OBJECT_NAME);
-
-			memberOneBus.Stop();
-			memberOneBus.Join();
-
-			memberOneBus.Dispose();
-			hostBus.Dispose();
 		}
 
 		private void SetupHost()
