@@ -8,7 +8,10 @@ src/bin
 src/obj
 src/Status.cs
 alljoyn.jar
-alljoyn_c.dll
+alljoyn_unity_native.dll
+alljoyn_unity_native.exp
+alljoyn_unity_native.ilk
+alljoyn_unity_native.lib
 alljoyn_unity.dll
 xunit.dll
 liballjoyn_c.so
