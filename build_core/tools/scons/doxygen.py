@@ -492,6 +492,12 @@ def generate(env):
         DOXYGENFLAGS = '',
         DOXYGENCOM = 'cd ${SOURCE.dir} && ${DOXYGEN} ${DOXYGENFLAGS} ${SOURCE.file}'
     )
+    
+    # SystemDrive environment variable is used by doxygen on some systems to write
+    # cach files.  If the OS defines the enviroment variable 'SystemDrive' make
+    # sure it is imported into the scons environment.
+    if os.environ.has_key('SystemDrive'):
+        env.PrependENVPath('SystemDrive', os.path.normpath(os.environ['SystemDrive']))
 
 def exists(env):
     """
