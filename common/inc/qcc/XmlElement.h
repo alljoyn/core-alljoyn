@@ -41,7 +41,8 @@ struct XmlParseContext;
 
 /**
  * XMLElement is used to generate and parse simple XML fragments.
- * This is not a full-blown XML parser/generator and performs no DTD validation or other advanced features.
+ * This is not a full-blown XML parser/generator and performs no DTD validation
+ * or other advanced features.
  */
 class XmlElement {
   public:
@@ -62,8 +63,10 @@ class XmlElement {
      *
      * @param name     XML element name.
      * @param parent   Parent element or NULL if this element is the root.
+     * @param parentOwned  When the parent elements memory is freed it will free
+     *                     this this element
      */
-    XmlElement(const qcc::String& name = String::Empty, XmlElement* parent = NULL) : name(name), parent(parent) { }
+    XmlElement(const qcc::String& name = String::Empty, XmlElement* parent = NULL, bool parentOwned = false);
 
     /** Destructor */
     ~XmlElement();
@@ -131,7 +134,10 @@ class XmlElement {
     const std::vector<XmlElement*>& GetChildren() const { return children; }
 
     /**
-     * Get all children with a given name
+     * Get all children with a given name.
+     *
+     * Only return direct children. This method will not do a recursive search
+     * of the child nodes.
      *
      * @param name   XML child elements name to search for.
      * @return  A vector containing the matching elements.
@@ -202,6 +208,7 @@ class XmlElement {
     std::map<qcc::String, qcc::String> attributes;   /**< XML attributes */
     qcc::String content;                             /**< XML text content (unesacped) */
     XmlElement* parent;                              /**< XML parent element or NULL if root */
+    bool parentOwned;                                /**< XML parent responsible for freeing this xml element */
 
     /**
      * Helper used during parsing.
