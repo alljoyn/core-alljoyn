@@ -307,14 +307,80 @@ void IfConfigByFamily(uint32_t family, std::vector<IfConfigEntry>& entries)
                         QCC_LogError(status, ("IfConfigByFamily: Socket(QCC_AF_INET) failed: affects %s", entry.m_name.c_str()));
                         entry.m_prefixlen = static_cast<uint32_t>(-1);
                     }
+                } else if (family == AF_INET6) {
+                    //
+                    // Get a socket through qcc::Socket to keep its reference
+                    // counting squared away.
+                    //
+                    qcc::SocketFd socketFd;
+                    QStatus status = qcc::Socket(qcc::QCC_AF_INET6, qcc::QCC_SOCK_DGRAM, socketFd);
+
+                    if (status == ER_OK) {
+                        //
+                        // Like many interfaces that do similar things, there's no
+                        // clean way to figure out beforehand how big of a buffer we
+                        // are going to eventually need.  Typically user code just
+                        // picks buffers that are "big enough."  On the Linux side
+                        // of things, we run into a similar situation.  There we
+                        // chose a buffer that could handle about 150 interfaces, so
+                        // we just do the same thing here.  Hopefully 150 will be
+                        // "big enough" and an INTERFACE_INFO is not that big since
+                        // it holds a long flags and three sockaddr_gen structures
+                        // (two shorts, two longs and sixteen btyes).  We're then
+                        // looking at allocating 13,200 bytes
+                        //
+
+                        // initialize the prefix to an invalid value in case a matching address is not found
+                        entry.m_prefixlen = static_cast<uint32_t>(-1);
+
+                        DWORD nBytes;
+                        uint64_t bytes = sizeof(INT) + (sizeof(SOCKET_ADDRESS) * 150);
+                        char* addressBuffer = new char[bytes];
+                        //
+                        // Make the WinSock call to get the address information about
+                        // the various addresses that can be bound to this socket.
+                        // If the ioctl fails then we set the prefix length to some absurd value
+                        //
+
+                        if (WSAIoctl(socketFd, SIO_ADDRESS_LIST_QUERY, NULL, 0, addressBuffer,
+                                     bytes, &nBytes, 0, 0) == SOCKET_ERROR) {
+                            QCC_LogError(status, ("IfConfigByFamily: WSAIoctl(SIO_GET_INTERFACE_LIST) failed: affects %s; %d",
+                                                  entry.m_name.c_str(), WSAGetLastError()));
+                        } else {
+                            LPSOCKET_ADDRESS_LIST addresses = reinterpret_cast<LPSOCKET_ADDRESS_LIST>(addressBuffer);
+                            for (int32_t i = 0; i < addresses->iAddressCount; ++i) {
+                                const SOCKET_ADDRESS* address = &addresses->Address[i];
+
+                                if (address->lpSockaddr->sa_family == AF_INET6) {
+                                    char addr_str[INET6_ADDRSTRLEN];
+                                    DWORD size = sizeof(addr_str);
+                                    if (WSAAddressToStringA(address->lpSockaddr, address->iSockaddrLength, NULL, addr_str, &size) != 0) {
+                                        QCC_LogError(status, ("IfConfigByFamily: WSAAddressToStringA() failed: %d", WSAGetLastError()));
+                                    } else {
+                                        // split the string into the ip and prefix
+                                        char* percent = strchr(addr_str, '%');
+
+                                        if (percent != NULL) {
+                                            *percent = '\0';
+
+                                            if (entry.m_addr == addr_str) {
+                                                entry.m_prefixlen = strtoul(percent + 1, NULL, 10);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        delete [] addressBuffer;
+                        Close(socketFd);
+                    } else {
+                        QCC_LogError(status, ("IfConfigByFamily: Socket(QCC_AF_INET6) failed: affects %s", entry.m_name.c_str()));
+                        entry.m_prefixlen = static_cast<uint32_t>(-1);
+                    }
                 } else {
-                    //
-                    // Don't attempt to find the prefix length and broadcast
-                    // flag for AF_INET6 since it will never be used.  We have
-                    // to st it to something, so set it to an illegal value so
-                    // if someone does try to use it mistakenly, it will be
-                    // obviously bogus.
-                    //
+                    // this should never happen
                     entry.m_prefixlen = static_cast<uint32_t>(-1);
                 }
                 entries.push_back(entry);
