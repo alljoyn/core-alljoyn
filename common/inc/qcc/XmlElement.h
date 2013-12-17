@@ -303,6 +303,7 @@ struct XmlParseContext {
     qcc::String attrName;     /**< Name of attribute currently being parsed. */
     qcc::String attrValue;    /**< Value of attribute currently being parsed. */
     bool attrInQuote;         /**< true iff inside attribute value quotes */
+    char quoteChar;           /**< a " or ' character used for quote matching of an attribute */
     bool isEndTag;            /**< true iff currently parsed tag is an end tag */
     bool skip;                /**< true iff elements starts with "<!" */
 };
