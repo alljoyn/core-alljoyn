@@ -16,8 +16,8 @@ alljoyn-daemon
 bin
 build
 deploy
-docs/*.html
-docs/html/*.html
+cpp/docs/*.html
+cpp/docs/html
 gen
 lib
 local.properties
