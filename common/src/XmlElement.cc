@@ -336,11 +336,21 @@ QStatus XmlElement::Parse(XmlParseContext& ctx)
     return status;
 }
 
+XmlElement::XmlElement(const qcc::String& name, XmlElement* parent, bool parentOwned) : name(name), parent(parent), parentOwned(parentOwned)
+{
+    if (parent != NULL) {
+        parent->children.push_back(this);
+    }
+}
+
 XmlElement::~XmlElement()
 {
     vector<XmlElement*>::iterator it = children.begin();
     while (it != children.end()) {
-        delete *it++;
+        if ((*it)->parentOwned) {
+            delete *it;
+        }
+        it++;
     }
 }
 
@@ -396,7 +406,7 @@ qcc::String XmlElement::Generate(qcc::String* outStr) const
 XmlElement& XmlElement::CreateChild(const qcc::String& name)
 {
     QCC_DbgTrace(("XmlElement::CreateChild(\"%s\")", name.c_str()));
-    children.push_back(new XmlElement(name, this));
+    new XmlElement(name, this, true);
     return *children.back();
 }
 
