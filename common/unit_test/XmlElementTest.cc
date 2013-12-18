@@ -138,7 +138,7 @@ TEST(XmlElement, GetChildren_by_name)
 }
 
 
-TEST(XmlElement, Parse)
+TEST(XmlElement, Parse_double_quote)
 {
     String xml = "<config>\
                       <foo>\
@@ -153,4 +153,79 @@ TEST(XmlElement, Parse)
 
     ASSERT_TRUE(root != NULL);
     EXPECT_STREQ("config", root->GetName().c_str());
+    EXPECT_STREQ("foo", root->GetChild("foo")->GetName().c_str());
+    EXPECT_STREQ("value", root->GetChild("foo")->GetChildren()[0]->GetName().c_str());
+    EXPECT_STREQ("value", root->GetChild("foo")->GetChildren()[1]->GetName().c_str());
+
+    EXPECT_STREQ("hello", root->GetChild("foo")->GetChildren()[0]->GetAttribute("first").c_str());
+    EXPECT_STREQ("world", root->GetChild("foo")->GetChildren()[1]->GetAttribute("second").c_str());
+
+}
+
+TEST(XmlElement, Parse_single_quote)
+{
+    String xml = "<config>\
+                      <foo>\
+                          <value first='hello'/>\
+                          <value second='world'/>\
+                      </foo>\
+                  </config>";
+    StringSource source(xml);
+    XmlParseContext pc(source);
+    EXPECT_EQ(ER_OK, XmlElement::Parse(pc));
+    const XmlElement* root = pc.GetRoot();
+
+    ASSERT_TRUE(root != NULL);
+    EXPECT_STREQ("config", root->GetName().c_str());
+
+    EXPECT_STREQ("foo", root->GetChild("foo")->GetName().c_str());
+    EXPECT_STREQ("value", root->GetChild("foo")->GetChildren()[0]->GetName().c_str());
+    EXPECT_STREQ("value", root->GetChild("foo")->GetChildren()[1]->GetName().c_str());
+
+    EXPECT_STREQ("hello", root->GetChild("foo")->GetChildren()[0]->GetAttribute("first").c_str());
+    EXPECT_STREQ("world", root->GetChild("foo")->GetChildren()[1]->GetAttribute("second").c_str());
+}
+
+TEST(XmlElement, Parse_mixed_quote)
+{
+    String xml = "<config>\
+                      <foo>\
+                          <value first='<bar value=\"hello\"/>'/>\
+                          <value second=\"<bar value='world'/>\"/>\
+                      </foo>\
+                  </config>";
+    StringSource source(xml);
+    XmlParseContext pc(source);
+    EXPECT_EQ(ER_OK, XmlElement::Parse(pc));
+    const XmlElement* root = pc.GetRoot();
+
+    ASSERT_TRUE(root != NULL);
+    EXPECT_STREQ("config", root->GetName().c_str());
+
+    EXPECT_STREQ("foo", root->GetChild("foo")->GetName().c_str());
+    EXPECT_STREQ("value", root->GetChild("foo")->GetChildren()[0]->GetName().c_str());
+    EXPECT_STREQ("value", root->GetChild("foo")->GetChildren()[1]->GetName().c_str());
+
+    EXPECT_STREQ("<bar value=\"hello\"/>", root->GetChild("foo")->GetChildren()[0]->GetAttribute("first").c_str());
+    EXPECT_STREQ("<bar value='world'/>", root->GetChild("foo")->GetChildren()[1]->GetAttribute("second").c_str());
+}
+
+TEST(XmlElement, GetPath)
+{
+    String xml = "<config>\
+                      <foo>\
+                          <value first='hello'/>\
+                          <value second='world'/>\
+                      </foo>\
+                  </config>";
+    StringSource source(xml);
+    XmlParseContext pc(source);
+    EXPECT_EQ(ER_OK, XmlElement::Parse(pc));
+    const XmlElement* root = pc.GetRoot();
+
+    EXPECT_STREQ("hello", root->GetPath("foo/value")[0]->GetAttribute("first").c_str());
+    EXPECT_STREQ("world", root->GetPath("foo/value")[1]->GetAttribute("second").c_str());
+
+    EXPECT_STREQ("hello", root->GetPath("foo/value@first")[0]->GetAttribute("first").c_str());
+    EXPECT_STREQ("world", root->GetPath("foo/value@second")[0]->GetAttribute("second").c_str());
 }

@@ -291,7 +291,7 @@ QStatus XmlElement::Parse(XmlParseContext& ctx)
 
         case XmlParseContext::IN_ATTR_VALUE:
             if (ctx.attrInQuote) {
-                if ('"' == c) {
+                if (ctx.quoteChar == c) {
                     ctx.curElem->AddAttribute(ctx.attrName, unescapeXml(ctx.attrValue));
                     ctx.parseState = XmlParseContext::IN_ATTR_NAME;
                     ctx.attrName.clear();
@@ -304,6 +304,10 @@ QStatus XmlElement::Parse(XmlParseContext& ctx)
                     continue;
                 } else if ('"' == c) {
                     ctx.attrInQuote = true;
+                    ctx.quoteChar = '"';
+                } else if ('\'' == c) {
+                    ctx.attrInQuote = true;
+                    ctx.quoteChar = '\'';
                 } else if ('/' == c) {
                     ctx.isEndTag = true;
                 } else if ('>' == c) {
