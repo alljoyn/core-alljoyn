@@ -108,7 +108,7 @@ if env['V'] == '0':
                 RANLIBCOMSTR = '\t[RANLIB]  $TARGET'
                 )
 
-# Some tool aren't in default path
+# Some tools aren't in default path
 if os.environ.has_key('JAVA_HOME'):
     env.PrependENVPath('PATH', os.path.normpath(os.environ['JAVA_HOME'] + '/bin'))
 if os.environ.has_key('DOXYGEN_HOME'):
