@@ -2850,6 +2850,7 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         tcpEp->GetFeatures().isBusToBus = true;
         tcpEp->GetFeatures().allowRemote = m_bus.GetInternal().AllowRemoteMessages();
         tcpEp->GetFeatures().handlePassing = false;
+        tcpEp->GetFeatures().nameTransfer = opts.nameTransfer;
 
         qcc::String authName;
         qcc::String redirection;

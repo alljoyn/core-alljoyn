@@ -90,7 +90,7 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController) :
     curChangeId(0),
     lastAdvChangeId(-1),
     isDiscoveryStarted(false),
-    sessionOpts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY),
+    sessionOpts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY, SessionOpts::DAEMON_NAMES),
     sessionPort(SESSIONLESS_SESSION_PORT),
     advanceChangeId(false)
 {

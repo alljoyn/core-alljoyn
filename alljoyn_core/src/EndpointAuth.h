@@ -119,6 +119,7 @@ class EndpointAuth : public SASLEngine::ExtensionHandler {
      */
     uint32_t GetRemoteProtocolVersion() const { return remoteProtocolVersion; }
 
+    uint32_t GetNameTransfer() const { return nameTransfer; }
   private:
 
     /**
@@ -141,6 +142,7 @@ class EndpointAuth : public SASLEngine::ExtensionHandler {
     qcc::GUID128 remoteGUID;            ///< GUID of the remote side (when applicable)
     uint32_t remoteProtocolVersion;     ///< ALLJOYN protocol version of the remote side
 
+    uint32_t nameTransfer;
     ProtectedAuthListener authListener;  ///< Authentication listener
 
     /* Internal methods */

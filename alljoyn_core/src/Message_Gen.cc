@@ -1000,7 +1000,7 @@ ExitMarshalMessage:
 }
 
 
-QStatus _Message::HelloMessage(bool isBusToBus, bool allowRemote)
+QStatus _Message::HelloMessage(bool isBusToBus, bool allowRemote, SessionOpts::NameTransferType nameType)
 {
     QStatus status;
     /*
@@ -1016,7 +1016,7 @@ QStatus _Message::HelloMessage(bool isBusToBus, bool allowRemote)
         qcc::String guid = bus->GetInternal().GetGlobalGUID().ToString();
         MsgArg args[2];
         args[0].Set("s", guid.c_str());
-        args[1].Set("u", ALLJOYN_PROTOCOL_VERSION);
+        args[1].Set("u", nameType << 30 | ALLJOYN_PROTOCOL_VERSION);
         status = MarshalMessage("su",
                                 org::alljoyn::Bus::WellKnownName,
                                 MESSAGE_METHOD_CALL,

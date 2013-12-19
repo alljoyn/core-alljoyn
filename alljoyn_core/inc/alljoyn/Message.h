@@ -887,7 +887,7 @@ class _Message {
      *      - #ER_OK if hello method call was sent successfully.
      *      - An error status otherwise
      */
-    QStatus HelloMessage(bool isBusToBus, bool allowRemote);
+    QStatus HelloMessage(bool isBusToBus, bool allowRemote, SessionOpts::NameTransferType nametype);
 
     /**
      * Compose the reply to the hello method call
