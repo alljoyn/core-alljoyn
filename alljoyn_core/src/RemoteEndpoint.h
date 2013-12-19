@@ -82,6 +82,8 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
         uint32_t processId;        /**< Process id optionally obtained from the remote peer */
 
         bool trusted;              /**< Indicated if the remote client was trusted */
+        SessionOpts::NameTransferType nameTransfer;
+
     };
 
     /**

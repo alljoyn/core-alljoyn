@@ -45,6 +45,7 @@ typedef uint32_t SessionId;
  * SessionOpts contains a set of parameters that define a Session's characteristics.
  */
 class SessionOpts {
+    friend class SessionlessObj;
   public:
     /** Traffic type */
     typedef enum {
@@ -73,6 +74,16 @@ class SessionOpts {
 
     /** Allowed Transports  */
     TransportMask transports;
+
+    typedef enum {
+        ALL_NAMES = 0x00,       /** < ExchangeNames and NameChanged to be propogated to this session,
+                                      all NameChanged to be sent, all names to be sent as a part of
+                                      initial ExchangeNames */
+        DAEMON_NAMES = 0x01     /** < No ExchangeNames and NameChanged propogation,
+                                      no NameChanged to be sent, only Daemon names to be sent as a part of
+                                      initial ExchangeNames */
+    } NameTransferType;
+    NameTransferType nameTransfer;
 
     /**
      * Construct a SessionOpts with specific parameters.
@@ -122,7 +133,8 @@ class SessionOpts {
         traffic(traffic),
         isMultipoint(isMultipoint),
         proximity(proximity),
-        transports(transports)
+        transports(transports),
+        nameTransfer(ALL_NAMES)
     { }
 
     /**
@@ -132,7 +144,7 @@ class SessionOpts {
      * cpp/Chat/Chat/MainPage.xaml.cpp @n
      * csharp/chat/chat/MainPage.xaml.cs @n
      */
-    SessionOpts() : traffic(TRAFFIC_MESSAGES), isMultipoint(false), proximity(PROXIMITY_ANY), transports(TRANSPORT_ANY) { }
+    SessionOpts() : traffic(TRAFFIC_MESSAGES), isMultipoint(false), proximity(PROXIMITY_ANY), transports(TRANSPORT_ANY), nameTransfer(ALL_NAMES) { }
 
     /**
      * Determine whether this SessionOpts is compatible with the SessionOpts offered by other
@@ -191,6 +203,15 @@ class SessionOpts {
         }
         return false;
     }
+
+  private:
+    SessionOpts(SessionOpts::TrafficType traffic, bool isMultipoint, SessionOpts::Proximity proximity, TransportMask transports, NameTransferType nameType) :
+        traffic(traffic),
+        isMultipoint(isMultipoint),
+        proximity(proximity),
+        transports(transports),
+        nameTransfer(nameType)
+    { }
 };
 
 

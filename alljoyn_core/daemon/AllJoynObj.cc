@@ -1484,6 +1484,11 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                 tempEp = ajObj.router.FindEndpoint(srcB2BStr);
                 srcB2BEp = RemoteEndpoint::cast(tempEp);
                 if (srcB2BEp->IsValid() && srcEp->IsValid()) {
+                    uint32_t protoVer = srcB2BEp->GetFeatures().protocolVersion;
+                    if (protoVer < 9) {
+                        srcB2BEp->GetFeatures().nameTransfer = sme.opts.nameTransfer;
+                    }
+
                     /* Store ep for raw sessions (for future close and fd extract) */
                     if (optsOut.traffic != SessionOpts::TRAFFIC_MESSAGES) {
                         SessionMapEntry* smEntry = ajObj.SessionMapFind(sme.endpointName, sme.id);
@@ -3121,7 +3126,7 @@ void AllJoynObj::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
             map<qcc::StringMapKey, RemoteEndpoint>::iterator it2 = b2bEndpoints.begin();
             const qcc::GUID128& otherSideGuid = endpoint->GetRemoteGUID();
             while ((it2 != b2bEndpoints.end()) && (it != virtualEndpoints.end())) {
-                if ((it2->second != endpoint) && (it2->second->GetRemoteGUID() != otherSideGuid)) {
+                if ((it2->second != endpoint) && (it2->second->GetRemoteGUID() != otherSideGuid) && (it2->second->GetFeatures().nameTransfer == SessionOpts::ALL_NAMES)) {
                     Message sigMsg(bus);
                     MsgArg args[3];
                     args[0].Set("s", exitingEpName.c_str());
@@ -3193,11 +3198,14 @@ QStatus AllJoynObj::ExchangeNames(RemoteEndpoint& endpoint)
     MsgArg* entries = new MsgArg[names.size()];
     size_t numEntries = 0;
     vector<pair<qcc::String, vector<qcc::String> > >::const_iterator it = names.begin();
+    LocalEndpoint localEndpoint = bus.GetInternal().GetLocalEndpoint();
 
     /* Send all endpoint info except for endpoints related to destination */
     while (it != names.end()) {
         BusEndpoint ep = router.FindEndpoint(it->first);
-        if ((ep->IsValid() && ((ep->GetEndpointType() != ENDPOINT_TYPE_VIRTUAL) || VirtualEndpoint::cast(ep)->CanRouteWithout(endpoint->GetRemoteGUID())))) {
+        bool isLocalDaemonInfo = (it->first == localEndpoint->GetUniqueName());
+
+        if ((ep->IsValid() && ((endpoint->GetFeatures().nameTransfer == SessionOpts::ALL_NAMES) || isLocalDaemonInfo) && ((ep->GetEndpointType() != ENDPOINT_TYPE_VIRTUAL) || VirtualEndpoint::cast(ep)->CanRouteWithout(endpoint->GetRemoteGUID())))) {
             MsgArg* aliasNames = new MsgArg[it->second.size()];
             vector<qcc::String>::const_iterator ait = it->second.begin();
             size_t numAliases = 0;
@@ -3268,10 +3276,12 @@ void AllJoynObj::ExchangeNamesSignalHandler(const InterfaceDescription::Member* 
      * and doing it in the opposite order invites deadlock
      */
     AcquireLocks();
+
     map<qcc::StringMapKey, RemoteEndpoint>::iterator bit = b2bEndpoints.find(msg->GetRcvEndpointName());
     const size_t numItems = args[0].v_array.GetNumElements();
     if (bit != b2bEndpoints.end()) {
         qcc::GUID128 otherGuid = bit->second->GetRemoteGUID();
+
         bit = b2bEndpoints.begin();
         while (bit != b2bEndpoints.end()) {
             if (bit->second->GetRemoteGUID() == otherGuid) {
@@ -3279,6 +3289,10 @@ void AllJoynObj::ExchangeNamesSignalHandler(const InterfaceDescription::Member* 
                 for (size_t i = 0; i < numItems; ++i) {
                     assert(items[i].typeId == ALLJOYN_STRUCT);
                     qcc::String uniqueName = items[i].v_struct.members[0].v_string.str;
+                    if ((bit->second->GetFeatures().nameTransfer != SessionOpts::ALL_NAMES) && (uniqueName != msg->GetSender())) {
+                        continue;
+                    }
+
                     if (!IsLegalUniqueName(uniqueName.c_str())) {
                         QCC_LogError(ER_FAIL, ("Invalid unique name \"%s\" in ExchangeNames message", uniqueName.c_str()));
                         continue;
@@ -3350,7 +3364,7 @@ void AllJoynObj::ExchangeNamesSignalHandler(const InterfaceDescription::Member* 
         map<qcc::StringMapKey, RemoteEndpoint>::const_iterator bit = b2bEndpoints.find(msg->GetRcvEndpointName());
         map<qcc::StringMapKey, RemoteEndpoint>::iterator it = b2bEndpoints.begin();
         while (it != b2bEndpoints.end()) {
-            if ((bit == b2bEndpoints.end()) || (bit->second->GetRemoteGUID() != it->second->GetRemoteGUID())) {
+            if ((it->second->GetFeatures().nameTransfer == SessionOpts::ALL_NAMES) && ((bit == b2bEndpoints.end()) || (bit->second->GetRemoteGUID() != it->second->GetRemoteGUID()))) {
                 QCC_DbgPrintf(("Propagating ExchangeName signal to %s", it->second->GetUniqueName().c_str()));
                 StringMapKey key = it->first;
                 RemoteEndpoint ep = it->second;
@@ -3373,12 +3387,20 @@ void AllJoynObj::ExchangeNamesSignalHandler(const InterfaceDescription::Member* 
     }
 }
 
+
 void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg)
 {
     size_t numArgs;
     const MsgArg* args;
     msg->GetArgs(numArgs, args);
 
+    AcquireLocks();
+    map<qcc::StringMapKey, RemoteEndpoint>::iterator bit = b2bEndpoints.find(msg->GetRcvEndpointName());
+    if ((bit != b2bEndpoints.end()) && (bit->second->GetFeatures().nameTransfer != SessionOpts::ALL_NAMES)) {
+        ReleaseLocks();
+        return;
+    }
+    ReleaseLocks();
     assert(daemonIface);
 
     const qcc::String alias = args[0].v_string.str;
@@ -3456,8 +3478,7 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
         map<qcc::StringMapKey, RemoteEndpoint>::const_iterator bit = b2bEndpoints.find(msg->GetRcvEndpointName());
         map<qcc::StringMapKey, RemoteEndpoint>::iterator it = b2bEndpoints.begin();
         while (it != b2bEndpoints.end()) {
-            if ((bit == b2bEndpoints.end()) || (bit->second->GetRemoteGUID() != it->second->GetRemoteGUID())) {
-                QCC_DbgPrintf(("Propagating NameChanged signal to %s", it->second->GetUniqueName().c_str()));
+            if ((it->second->GetFeatures().nameTransfer == SessionOpts::ALL_NAMES) && ((bit == b2bEndpoints.end()) || (bit->second->GetRemoteGUID() != it->second->GetRemoteGUID()))) {
                 String key = it->first.c_str();
                 RemoteEndpoint ep = it->second;
                 ReleaseLocks();
@@ -3675,6 +3696,10 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias, const qcc::String* o
         AcquireLocks();
         map<qcc::StringMapKey, RemoteEndpoint>::iterator it = b2bEndpoints.begin();
         while (it != b2bEndpoints.end()) {
+            if (it->second->GetFeatures().nameTransfer != SessionOpts::ALL_NAMES) {
+                it++;
+                continue;
+            }
             Message sigMsg(bus);
             MsgArg args[3];
             args[0].Set("s", alias.c_str());
