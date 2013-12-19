@@ -233,6 +233,7 @@ QStatus _RemoteEndpoint::Establish(const qcc::String& authMechanisms, qcc::Strin
             internal->remoteGUID = auth.GetRemoteGUID();
             internal->features.protocolVersion = auth.GetRemoteProtocolVersion();
             internal->features.trusted = (authUsed != "ANONYMOUS");
+            internal->features.nameTransfer = (SessionOpts::NameTransferType)auth.GetNameTransfer();
 
         }
     }

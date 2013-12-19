@@ -60,8 +60,8 @@ QStatus EndpointAuth::Hello(qcc::String& redirection)
     QStatus status;
     Message hello(bus);
     Message response(bus);
-
-    status = hello->HelloMessage(endpoint->GetFeatures().isBusToBus, endpoint->GetFeatures().allowRemote);
+    nameTransfer = endpoint->GetFeatures().nameTransfer;
+    status = hello->HelloMessage(endpoint->GetFeatures().isBusToBus, endpoint->GetFeatures().allowRemote, endpoint->GetFeatures().nameTransfer);
     if (status != ER_OK) {
         return status;
     }
@@ -228,7 +228,9 @@ QStatus EndpointAuth::WaitHello(qcc::String& authUsed)
             hello->GetArgs(numArgs, args);
             if ((ER_OK == status) && (2 == numArgs) && (ALLJOYN_STRING == args[0].typeId) && (ALLJOYN_UINT32 == args[1].typeId)) {
                 remoteGUID = qcc::GUID128(args[0].v_string.str);
-                remoteProtocolVersion = args[1].v_uint32;
+                uint32_t temp = args[1].v_uint32;
+                remoteProtocolVersion = temp & 0x3FFFFFFF;
+                nameTransfer = temp >> 30;
                 if (remoteGUID == bus.GetInternal().GetGlobalGUID()) {
                     QCC_DbgPrintf(("BusHello was sent by self"));
                     return ER_BUS_SELF_CONNECT;

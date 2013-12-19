@@ -32,7 +32,7 @@
 #define QCC_MODULE  "ALLJOYN"
 
 /** Daemon-to-daemon protocol version number */
-#define ALLJOYN_PROTOCOL_VERSION  8
+#define ALLJOYN_PROTOCOL_VERSION  9
 
 namespace ajn {
 
