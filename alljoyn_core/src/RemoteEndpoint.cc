@@ -324,16 +324,14 @@ QStatus _RemoteEndpoint::Start()
 
     /* Register endpoint */
     BusEndpoint bep = BusEndpoint::cast(me);
-    status = router.RegisterEndpoint(bep);
+    status = iodispatch.StartStream(internal->stream, this, this, this);
     if (status == ER_OK) {
-        status = iodispatch.StartStream(internal->stream, this, this, this);
+        status = router.RegisterEndpoint(bep);
+
         if (status != ER_OK) {
             /* Failed to register with iodispatch */
             router.UnregisterEndpoint(this->GetUniqueName(), this->GetEndpointType());
         }
-    } else {
-        /* Failed to register with router */
-        router.UnregisterEndpoint(this->GetUniqueName(), this->GetEndpointType());
     }
     if (status != ER_OK) {
         Invalidate();
