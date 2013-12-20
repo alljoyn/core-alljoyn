@@ -322,18 +322,27 @@ QStatus _RemoteEndpoint::Start()
     /* Endpoint needs to be wrapped before we can use it */
     RemoteEndpoint me = RemoteEndpoint::wrap(this);
 
-    /* Register endpoint */
     BusEndpoint bep = BusEndpoint::cast(me);
-    status = router.RegisterEndpoint(bep);
+
+    /* Register endpoint with IODispatch - enable write, disable read */
+    status = iodispatch.StartStream(internal->stream, this, this, this, false, true);
     if (status == ER_OK) {
-        status = iodispatch.StartStream(internal->stream, this, this, this);
+        /* Register endpoint with router */
+        status = router.RegisterEndpoint(bep);
+
         if (status != ER_OK) {
             /* Failed to register with iodispatch */
             router.UnregisterEndpoint(this->GetUniqueName(), this->GetEndpointType());
         }
-    } else {
-        /* Failed to register with router */
-        router.UnregisterEndpoint(this->GetUniqueName(), this->GetEndpointType());
+    }
+
+    if (status == ER_OK) {
+        /* Enable read for this endpoint */
+        status = internal->bus.GetInternal().GetIODispatch().EnableReadCallback(internal->stream);
+        if (status != ER_OK) {
+            /* Failed to start read with iodispatch */
+            router.UnregisterEndpoint(this->GetUniqueName(), this->GetEndpointType());
+        }
     }
     if (status != ER_OK) {
         Invalidate();

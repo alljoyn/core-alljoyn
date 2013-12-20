@@ -551,7 +551,7 @@ class _TCPEndpoint : public _RemoteEndpoint {
 
     void SetEpStopping(void)
     {
-        assert(m_epState == EP_STARTING || m_epState == EP_STARTED || m_epState == EP_STOPPING);
+        assert(m_epState == EP_STARTING || m_epState == EP_STARTED || m_epState == EP_STOPPING || m_epState == EP_FAILED);
         m_epState = EP_STOPPING;
     }
 
