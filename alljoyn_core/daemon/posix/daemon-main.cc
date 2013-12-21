@@ -124,7 +124,7 @@ static const char
 #endif
     "  <limit auth_timeout=\"5000\"/>"
     "  <limit max_incomplete_connections=\"16\"/>"
-    "  <limit max_completed_connections=\"64\"/>"
+    "  <limit max_completed_connections=\"32\"/>"
     "  <limit max_untrusted_clients=\"0\"/>"
     "  <property restrict_untrusted_clients=\"true\"/>"
     "  <ip_name_service>"
