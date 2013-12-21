@@ -254,8 +254,7 @@ QStatus Timer::AddAlarm(const Alarm& alarm)
             if (ER_ALERTED_THREAD == status1) {
                 thread->GetStopEvent().ResetEvent();
                 if (thread->GetAlertCode() == TIMER_IS_DEAD_ALERTCODE) {
-
-
+                    thread->ResetAlertCode();
                     lock.Unlock(MUTEX_CONTEXT);
                     return ER_TIMER_EXITING;
                 }
