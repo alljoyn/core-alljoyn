@@ -1490,6 +1490,9 @@ void TCPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
          */
         if (endpointState == _TCPEndpoint::EP_FAILED) {
             m_endpointList.erase(i);
+            m_endpointListLock.Unlock(MUTEX_CONTEXT);
+            ep->AuthJoin();
+            m_endpointListLock.Lock(MUTEX_CONTEXT);
             i = m_endpointList.upper_bound(ep);
             continue;
         }
@@ -1509,6 +1512,7 @@ void TCPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
         if (endpointState == _TCPEndpoint::EP_STOPPING) {
             m_endpointList.erase(i);
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
+            ep->AuthJoin();
             ep->Join();
             m_endpointListLock.Lock(MUTEX_CONTEXT);
             i = m_endpointList.upper_bound(ep);
