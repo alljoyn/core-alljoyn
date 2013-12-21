@@ -260,6 +260,7 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
     QCC_DbgTrace(("SessionlessObj::AddRule(%s, ...)", epName.c_str()));
 
     if (rule.sessionless == Rule::SESSIONLESS_TRUE) {
+        router.LockNameTable();
         lock.Lock();
         map<String, uint32_t>::iterator it = ruleCountMap.find(epName);
         if (it == ruleCountMap.end()) {
@@ -272,7 +273,9 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
              */
             if (!changeIdMap.empty() || !messageMap.empty()) {
                 lock.Unlock();
+                router.UnlockNameTable();
                 RereceiveMessages(epName, "");
+                router.LockNameTable();
                 lock.Lock();
             }
         } else {
@@ -289,6 +292,7 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
             }
         }
         lock.Unlock();
+        router.UnlockNameTable();
     }
 }
 
@@ -297,6 +301,7 @@ void SessionlessObj::RemoveRule(const qcc::String& epName, Rule& rule)
     QCC_DbgTrace(("SessionlessObj::RemoveRule(%s, ...)", epName.c_str()));
 
     if (rule.sessionless == Rule::SESSIONLESS_TRUE) {
+        router.LockNameTable();
         lock.Lock();
         map<String, uint32_t>::iterator it = ruleCountMap.find(epName);
         if (it != ruleCountMap.end()) {
@@ -314,6 +319,7 @@ void SessionlessObj::RemoveRule(const qcc::String& epName, Rule& rule)
             isDiscoveryStarted = false;
         }
         lock.Unlock();
+        router.UnlockNameTable();
     }
 }
 
@@ -491,6 +497,7 @@ void SessionlessObj::NameOwnerChanged(const String& name,
 
     /* Remove entries from ruleCountMap for names exiting from the bus */
     if (oldOwner && !newOwner) {
+        router.LockNameTable();
         lock.Lock();
         map<String, uint32_t>::iterator it = ruleCountMap.find(name);
         if (it != ruleCountMap.end()) {
@@ -531,6 +538,7 @@ void SessionlessObj::NameOwnerChanged(const String& name,
             isDiscoveryStarted = false;
         }
         lock.Unlock();
+        router.UnlockNameTable();
     }
 }
 
@@ -823,6 +831,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         }
 
         /* Look for new/failed joinsessions to try/retry (after backoff) */
+        router.LockNameTable();
         lock.Lock();
         map<String, ChangeIdEntry>::iterator cit = changeIdMap.begin();
         while (cit != changeIdMap.end()) {
@@ -850,6 +859,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
             ++cit;
         }
         lock.Unlock();
+        router.UnlockNameTable();
 
         /* Rearm alarm */
         if (tilExpire != ::numeric_limits<uint32_t>::max()) {
@@ -880,6 +890,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId id, const SessionOp
     }
 
     /* Send out RequestSignals or RequestRange message if join was successful. Otherwise retry. */
+    router.LockNameTable();
     lock.Lock();
     map<String, ChangeIdEntry>::iterator cit = changeIdMap.find(guid);
     if (cit != changeIdMap.end()) {
@@ -900,14 +911,12 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId id, const SessionOp
                 /* Check to see if session host is capable of handling RequestSignalRange */
                 bool rangeCapable = false;
                 BusEndpoint ep = router.FindEndpoint(ctx1->name);
-                router.LockNameTable();
                 if (ep->IsValid() && (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL)) {
                     RemoteEndpoint rep = VirtualEndpoint::cast(ep)->GetBusToBusEndpoint(id);
                     if (rep->IsValid()) {
                         rangeCapable = (rep->GetRemoteProtocolVersion() >= 6);
                     }
                 }
-                router.UnlockNameTable();
                 if (rangeCapable) {
                     /* Handle head of catchup list */
                     isCatchup = true;
@@ -944,6 +953,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId id, const SessionOp
             }
         }
         lock.Unlock();
+        router.UnlockNameTable();
 
         if (status == ER_OK) {
             /* Add/replace sessionless adv name for remote daemon */
@@ -976,6 +986,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId id, const SessionOp
         }
     } else {
         lock.Unlock();
+        router.UnlockNameTable();
         QCC_LogError(ER_FAIL, ("Missing entry in changeIdMap for %s", guid.c_str()));
     }
 
