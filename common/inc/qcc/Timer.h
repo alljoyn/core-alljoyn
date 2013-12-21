@@ -26,6 +26,7 @@
 #include <qcc/Debug.h>
 #include <qcc/atomic.h>
 #include <set>
+#include <deque>
 
 #include <qcc/Mutex.h>
 #include <qcc/Thread.h>
@@ -241,6 +242,8 @@ class Timer : public OSTimer, public ThreadListener {
      */
     bool RemoveAlarm(const Alarm& alarm, bool blockIfTriggered = true);
 
+    bool ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered = true);
+
     /**
      * Remove any alarm for a specific listener returning the alarm. Returns a boolean if an alarm
      * was removed. This function is designed to be called in a loop to remove all alarms for a
@@ -339,6 +342,7 @@ class Timer : public OSTimer, public ThreadListener {
     Mutex reentrancyLock;
     qcc::String nameStr;
     const uint32_t maxAlarms;
+    std::deque<qcc::Thread*> addWaitQueue; /**< Threads waiting for alarms set to become not-full */
 };
 
 }
