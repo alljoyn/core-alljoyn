@@ -1,0 +1,86 @@
+
+Makefile-based build instructions for AllJoyn core and daemon
+-------------------------------------------------------------
+
+The makefile in this directory works only on Ubuntu x86, It builds 
+the AllJoyn daemon, client library and daemon support library.
+
+    Note:  The Makefiles found under "samples" are not part of this Make build.
+    Those Makefiles have always been part of the native-code sample programs for
+    Linux.
+
+These makefiles provide a starting point for users who are unfamilar
+with scons and want to build AllJoyn for custom embedded Linux
+targets. Such users will be expected to adapt these Makefiles to their
+particular platform.
+
+
+How to build AllJoyn from this source tree on Ubuntu x86, using Make.
+---------------------------------------------------------------------
+
+The makefiles described here only build the basic core alljoyn daemon
+and client library. No support for SCons-based builds or alternate
+language bindings is provided.
+
+
+1. Open a bash window and cd into the top folder (folder contains a Makefile and
+subfolders alljoyn_core and common).
+
+2. Run "make"
+
+If the CPU type of the host machine is x86, enter
+    make  OS=linux  CPU=x86  VARIANT=release
+or
+    make  OS=linux  CPU=x86  VARIANT=debug
+
+If the CPU type is amd64 or similar, enter
+    make  OS=linux  CPU=x86-64  VARIANT=release
+or
+    make  OS=linux  CPU=x86-64  VARIANT=debug
+
+where "VARIANT=release" results in stripped binaries optimized for production,
+and "VARIANT=debug" generates much larger binaries with debug support.
+
+Each successful "make" creates a new subtree ./build/linux/$(CPU)/$(VARIANT),
+corresponding to the CPU and VARIANT command line parameters.
+
+The build products installed in each subtree are a subset of the
+"AllJoyn SDK", and include finished executables (alljoyn-daemon, for
+example), header and library files, and sample client programs.
+
+Additional "make" targets:
+    clean       - remove intermediate build products from the source tree
+    distclean   - like clean, and also remove the
+                ./build/linux/$(CPU)/$(VARIANT) subtree
+    partial     - start the compile & link without removing anything first
+                  (not recommended)
+For example,
+    make  OS=linux  CPU=x86  VARIANT=release  distclean
+
+
+3. Run a simple test of these build products
+
+To build the chat sample program, cd to
+    ./build/linux/x86-64/release/dist/samples/chat
+and enter
+    make
+
+To run the alljoyn-daemon in the foreground,
+    cd ./build/linux/x86-64/release/dist/bin # for example
+and enter
+    ./alljoyn-daemon --internal
+
+To run chat, start a daemon as shown above.  Then, in a second command window,
+cd to
+    ./build/linux/x86-64/release/dist/samples/chat
+and enter
+    ./chat -s testing
+
+In a third command window, cd to
+    ./build/linux/x86-64/release/dist/samples/chat
+and enter
+    ./chat -j testing
+
+From then on, messages entered into either copy of chat should be echoed to the
+other copy through AllJoyn.
+
