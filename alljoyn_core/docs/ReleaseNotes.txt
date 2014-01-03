@@ -1,7 +1,5 @@
-AllSeen Alliance version number 3.4.5 is the same Release described in this file.
-
 -----------------------------------
-AllJoyn Version 3.4.3 Release Notes
+AllJoyn Version 3.4.6 Release Notes
 -----------------------------------
 
 Platform Support
@@ -18,34 +16,34 @@ Platform Support
 10) OpenWRT (trunk)
 
 
-Features added in Version 3.4.3
+Features added in Version 3.4.6
 -------------------------------
 
 None
 
 
-Issues Addressed in Version 3.4.3
+Issues Addressed in Version 3.4.6
 ---------------------------------
 
-ALLJOYN-2431: Support configuring databits, parity, and stopbits of SLAP
-transport.
+AJCORE-321: About client cpp sample release variant binary prints wrong port.
 
-ALLJOYN-2483: Final cancel of advertisement is not sent if application
-terminates abruptly.
+AJCORE-329: Fix deadlock situation that arises because of improper ordering when
+trying to acquire NameTable lock and SessionlessObject lock.
 
-ALLJOYN-2502: Increase timeout of session route setup to be more robust under
-stressful conditions.
+AJCORE-331: CPU usage on Linux goes very high while running stressful
+sessionless signal tests.  Change busy-waits to Event::Wait and force remove
+exit alarms.
 
-ALLJOYN-2507: LostAdvertisedName not always triggered for quiet advertisements.
+AJCORE-339: Fix crash that occurs if the endpoint exits before the auth thread
+has been joined.
 
-ALLJOYN-2514: Authentication error between little-endian and big-endian hosts.
+AJCORE-733: Avoid name propogation and send only local daemon names during
+initial ExchangeNames for sessionless sessions.  Also, reduce traffic between
+older and newer daemons to the extent possible and ignore unnecessary
+information sent out.
 
-ALLJOYN-VARIOUS: Added support to JavaScript bindings for new API changes to
-report reason for lost session.
-
-ALLJOYN-VARIOUS: Added support to JavaScript bindings for new API changes to
-allow removal of member from multipoint session.
-
+AJCORE-740: Change order of StartStream and RegisterEndpoint to fix deadlock if
+RemoteEndpoint is stopped before it can be completely started.
 
 Known Issues
 ------------
@@ -129,6 +127,8 @@ of AllJoyn cannot discover or connect using the ICE transport.
 
 Change history
 --------------
+
+3.4.6 - Bug fixes.  Improve CPU and memory usage when using sessionless signals.
 
 3.4.3 - Bug fixes.
 
