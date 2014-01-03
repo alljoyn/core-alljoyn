@@ -38,6 +38,7 @@ namespace ajn {
 #define SESSIONOPTS_ISMULTICAST "multi"
 #define SESSIONOPTS_PROXIMITY   "prox"
 #define SESSIONOPTS_TRANSPORTS  "trans"
+#define SESSIONOPTS_NAMETRANSFER  "names"
 
 bool SessionOpts::IsCompatible(const SessionOpts& other) const
 {
@@ -82,6 +83,8 @@ QStatus GetSessionOpts(const MsgArg& msgArg, SessionOpts& opts)
                 val->Get("y", &opts.proximity);
             } else if (::strcmp(SESSIONOPTS_TRANSPORTS, key) == 0) {
                 val->Get("q", &opts.transports);
+            } else if (::strcmp(SESSIONOPTS_NAMETRANSFER, key) == 0) {
+                val->Get("y", &opts.nameTransfer);
             }
         }
     }
@@ -94,12 +97,14 @@ void SetSessionOpts(const SessionOpts& opts, MsgArg& msgArg)
     MsgArg isMultiArg("b", opts.isMultipoint);
     MsgArg proximityArg("y", opts.proximity);
     MsgArg transportsArg("q", opts.transports);
+    MsgArg nameTransferArg("y", opts.nameTransfer);
 
-    MsgArg entries[4];
+    MsgArg entries[5];
     entries[0].Set("{sv}", SESSIONOPTS_TRAFFIC, &trafficArg);
     entries[1].Set("{sv}", SESSIONOPTS_ISMULTICAST, &isMultiArg);
     entries[2].Set("{sv}", SESSIONOPTS_PROXIMITY, &proximityArg);
     entries[3].Set("{sv}", SESSIONOPTS_TRANSPORTS, &transportsArg);
+    entries[4].Set("{sv}", SESSIONOPTS_NAMETRANSFER, &nameTransferArg);
     QStatus status = msgArg.Set("a{sv}", ArraySize(entries), entries);
     if (status == ER_OK) {
         msgArg.Stabilize();
