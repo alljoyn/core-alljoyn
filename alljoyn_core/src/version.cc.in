@@ -24,7 +24,7 @@
 static const char product[] = "AllJoyn Library";
 static const unsigned int architecture = 3;
 static const unsigned int apiLevel = 4;
-static const unsigned int release = 5;
+static const unsigned int release = 6;
 
 
 static const char version[] = "##VERSION_STRING##";
