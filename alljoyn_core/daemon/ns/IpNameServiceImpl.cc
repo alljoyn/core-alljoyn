@@ -904,7 +904,8 @@ void IpNameServiceImpl::ClearLiveInterfaces(void)
         // CONFIG_IP_MULTICAST was not set for the Android build -- i.e., we
         // have to do it anyway.
         //
-        if (m_liveInterfaces[i].m_flags & qcc::IfConfigEntry::MULTICAST) {
+        if (m_liveInterfaces[i].m_flags & qcc::IfConfigEntry::MULTICAST ||
+            m_liveInterfaces[i].m_flags & qcc::IfConfigEntry::LOOPBACK) {
             if (m_liveInterfaces[i].m_address.IsIPv4()) {
 #if 1
                 qcc::LeaveMulticastGroup(m_liveInterfaces[i].m_sockFd, qcc::QCC_AF_INET, IPV4_ALLJOYN_MULTICAST_GROUP, m_liveInterfaces[i].m_interfaceName);
@@ -1028,14 +1029,24 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
         QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Checking out interface %s", entries[i].m_name.c_str()));
 
         //
-        // We are never interested in interfaces that are not UP or are LOOPBACK
-        // interfaces.  We don't allow loopbacks since sending messages to the
-        // local host is handled by the MULTICAST_LOOP socket option which is
-        // enabled by default.
+        // We are never interested in interfaces that are not UP.
         //
-        if ((entries[i].m_flags & qcc::IfConfigEntry::UP) == 0 ||
-            (entries[i].m_flags & qcc::IfConfigEntry::LOOPBACK) != 0) {
-            QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): not UP or LOOPBACK"));
+        if ((entries[i].m_flags & qcc::IfConfigEntry::UP) == 0) {
+            QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): not UP"));
+            continue;
+        }
+        //
+        // LOOPBACK interfaces are a special case: sending messages to
+        // the local host is handled by the MULTICAST_LOOP socket
+        // option which is enabled by default.  However we must stil
+        // use the loopback interface in the case there are no other
+        // interfaces UP.  Furthermore, multicast LOOPBACK over IPv6
+        // doesn't appear to work consistently, so we are only
+        // interested in IPv4 multicast interfaces.
+        //
+        if ((entries[i].m_flags & qcc::IfConfigEntry::LOOPBACK) != 0 &&
+            (entries[i].m_family != qcc::QCC_AF_INET)) {
+            QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): ignoring non-IPv4 loopback"));
             continue;
         }
 
@@ -1150,26 +1161,28 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
         //
         // This next condition may be a bit confusing, so we break it out a bit
         // for clarity.  We can posibly use an interface if it supports either
-        // multicast or broadcast.  What we want to do is to detect the
-        // condition when we cannot use it, so we invert the logic.  That means
-        // !multicast && !broadcast.  Not being able to support broadcast is
-        // also true if we don't want to (i.e., m_broadcast is false).  This
-        // expression then looks like  !multicast && (!broadcast || !m_broadcast).
-        // broadcast really implies AF_INET since there is no broadcast in IPv6
-        // but we double-check this condition and come up with:
+        // loopback, multicast, or broadcast.  What we want to do is to detect
+        // the condition when we cannot use it, so we invert the logic.  That
+        // means !multicast && !broadcast && !loopback.  Not being able to
+        // support broadcast is also true if we don't want to (i.e., m_broadcast
+        // is false).  This expression then looks like !loopback && !multicast &&
+        // (!broadcast || !m_broadcast).  broadcast really implies AF_INET since
+        // there is no broadcast in IPv6 but we double-check this condition and
+        // come up with:
         //
-        //   !multicast && (!broadcast || !m_broadcast || !AF_INET).
+        //   !loopback && !multicast && (!broadcast || !m_broadcast || !AF_INET).
         //
         // To avoid a horribly complicated if statement, we make it look like
         // the above explanation.  The resulting debug print is intimidating,
         // but it says exactly the right thing for those in the know.
         //
+        bool loopback = (entries[i].m_flags & qcc::IfConfigEntry::LOOPBACK) != 0;
         bool multicast = (entries[i].m_flags & qcc::IfConfigEntry::MULTICAST) != 0;
         bool broadcast = (entries[i].m_flags & qcc::IfConfigEntry::BROADCAST) != 0;
         bool af_inet = entries[i].m_family == qcc::QCC_AF_INET;
 
-        if (!multicast && (!broadcast || !m_broadcast || !af_inet)) {
-            QCC_DbgPrintf(("LazyUpdateInterfaces: !multicast && (!broadcast || !m_broadcast || !af_inet).  Ignoring"));
+        if (!loopback && !multicast && (!broadcast || !m_broadcast || !af_inet)) {
+            QCC_DbgPrintf(("LazyUpdateInterfaces: !loopback && !multicast && (!broadcast || !m_broadcast || !af_inet).  Ignoring"));
             continue;
         }
 
@@ -1228,13 +1241,14 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
         }
 
         //
-        // If the MULTICAST flag is set, we are going to try and multicast out
-        // over the interface in question.  If the MULTICAST flag is not set,
-        // then we want to fall back to IPv4 subnet directed broadcast, so we
-        // optionally do all of the multicast games and take the interface live
-        // even if it doesn't support multicast.
+        // If the MULTICAST or LOOPBACK flag is set, we are going to try and
+        // multicast out over the interface in question.  If one of the flags is
+        // not set, then we want to fall back to IPv4 subnet directed broadcast,
+        // so we optionally do all of the multicast games and take the interface
+        // live even if it doesn't support multicast.
         //
-        if (entries[i].m_flags & qcc::IfConfigEntry::MULTICAST) {
+        if (entries[i].m_flags & qcc::IfConfigEntry::MULTICAST ||
+            entries[i].m_flags & qcc::IfConfigEntry::LOOPBACK) {
             //
             // Restrict the scope of the sent muticast packets to the local subnet.
             //
@@ -1292,7 +1306,8 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
         // The IGMP join must be done after the bind for Windows XP.  Other
         // OSes are fine with it, but XP balks.
         //
-        if (entries[i].m_flags & qcc::IfConfigEntry::MULTICAST) {
+        if (entries[i].m_flags & qcc::IfConfigEntry::MULTICAST ||
+            entries[i].m_flags & qcc::IfConfigEntry::LOOPBACK) {
             //
             // Arrange an IGMP join via the appropriate socket option (via the
             // qcc abstraction layer). Android doesn't bother to compile its
@@ -2577,7 +2592,8 @@ void IpNameServiceImpl::SendProtocolMessage(
         // legacy).
         //
 #if 1
-        if (flags & qcc::IfConfigEntry::MULTICAST) {
+        if (flags & qcc::IfConfigEntry::MULTICAST ||
+            flags & qcc::IfConfigEntry::LOOPBACK) {
 
 #if WORKAROUND_2_3_BUG
 
@@ -2654,7 +2670,8 @@ void IpNameServiceImpl::SendProtocolMessage(
             QCC_DbgPrintf(("IpNameServiceImpl::SendProtocolMessage():  Interface does not support broadcast"));
         }
     } else {
-        if (flags & qcc::IfConfigEntry::MULTICAST) {
+        if (flags & qcc::IfConfigEntry::MULTICAST ||
+            flags & qcc::IfConfigEntry::LOOPBACK) {
 
 #if WORKAROUND_2_3_BUG
 
