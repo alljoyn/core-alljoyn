@@ -67,7 +67,7 @@ class RendezvousServerConnection {
      * @internal
      * @brief Constructor.
      */
-    RendezvousServerConnection(String rdvzServer, bool enableIPv6, bool useHttp);
+    RendezvousServerConnection(String rdvzServer, bool enableIPv6, bool useHttp, String rootCert, String caCert);
 
     /**
      * @internal
@@ -344,6 +344,19 @@ class RendezvousServerConnection {
      * @brief Boolean indicating if HTTP protocol needs to be used for connection.
      */
     bool UseHTTP;
+
+    /**
+     * @internal
+     * @brief Server root certificate if HTTPS protocol is used.
+     */
+    String RendezvousServerRootCertificate;
+
+    /**
+     * @internal
+     * @brief Server CA certificate if HTTPS protocol is used.
+     */
+    String RendezvousServerCACertificate;
+
 };
 
 } //namespace ajn

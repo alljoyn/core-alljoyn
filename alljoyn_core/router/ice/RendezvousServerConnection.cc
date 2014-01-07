@@ -48,7 +48,7 @@ using namespace qcc;
 
 namespace ajn {
 
-RendezvousServerConnection::RendezvousServerConnection(String rdvzServer, bool enableIPv6, bool useHttp) :
+RendezvousServerConnection::RendezvousServerConnection(String rdvzServer, bool enableIPv6, bool useHttp, String rootCert, String caCert) :
     onDemandIsConnected(false),
     onDemandConn(NULL),
     persistentIsConnected(false),
@@ -59,7 +59,9 @@ RendezvousServerConnection::RendezvousServerConnection(String rdvzServer, bool e
     RendezvousServer(rdvzServer),
     RendezvousServerIPAddress(),
     EnableIPv6(enableIPv6),
-    UseHTTP(useHttp)
+    UseHTTP(useHttp),
+    RendezvousServerRootCertificate(rootCert),
+    RendezvousServerCACertificate(caCert)
 {
     QCC_DbgPrintf(("RendezvousServerConnection::RendezvousServerConnection()\n"));
 
@@ -363,6 +365,7 @@ QStatus RendezvousServerConnection::SetupHTTPConn(SocketFd sockFd, HttpConnectio
     if (status == ER_OK) {
         if (!UseHTTP) {
             (*httpConn)->SetProtocol(HttpConnection::PROTO_HTTPS);
+            (*httpConn)->SetServerCertificates(RendezvousServerRootCertificate, RendezvousServerCACertificate);
         }
 
         status = (*httpConn)->Connect(sockFd);

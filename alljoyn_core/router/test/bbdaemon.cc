@@ -76,18 +76,6 @@ static const char daemonConfig[] =
     "  <tcp>"
 //    "    <property router_advertisement_prefix=\"org.alljoyn.BusNode.\"/>"
     "  </tcp>"
-#if defined(AJ_ENABLE_ICE)
-    "  <ice>"
-    "    <limit max_incomplete_connections=\"16\"/>"
-    "    <limit max_completed_connections=\"64\"/>"
-    "  </ice>"
-    "  <ice_discovery_manager>"
-    "    <property interfaces=\"*\"/>"
-    "    <property server=\"rdvs.alljoyn.org\"/>"
-    "    <property protocol=\"HTTPS\"/>"
-    "    <property enable_ipv6=\"false\"/>"
-    "  </ice_discovery_manager>"
-#endif
     "</busconfig>";
 
 /** Static top level message bus object */

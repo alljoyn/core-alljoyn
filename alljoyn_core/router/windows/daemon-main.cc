@@ -77,7 +77,6 @@ static const char defaultConfig[] =
     "  <listen>localhost:port=9955</listen>"
     "  <listen>localhost:port=9956</listen>"
     "  <listen>bluetooth:</listen>"
-    "  <listen>ice:</listen>"
     "  <limit auth_timeout=\"32768\"/>"
     "  <limit max_incomplete_connections=\"16\"/>"
     "  <limit max_completed_connections=\"64\"/>"
@@ -92,16 +91,6 @@ static const char defaultConfig[] =
     "  <tcp>"
 //    "    <property router_advertisement_prefix=\"org.alljoyn.BusNode.\"/>"
     "  </tcp>"
-    "  <ice>"
-    "    <limit max_incomplete_connections=\"16\"/>"
-    "    <limit max_completed_connections=\"64\"/>"
-    "  </ice>"
-    "  <ice_discovery_manager>"
-    "    <property interfaces=\"*\"/>"
-    "    <property server=\"rdvs.alljoyn.org\"/>"
-    "    <property protocol=\"HTTPS\"/>"
-    "    <property enable_ipv6=\"false\"/>"
-    "  </ice_discovery_manager>"
     "</busconfig>";
 
 static volatile sig_atomic_t g_interrupt = false;

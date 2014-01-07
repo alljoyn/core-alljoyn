@@ -129,19 +129,6 @@ static const char
     "  <tcp>"
 //    "    <property router_advertisement_prefix=\"org.alljoyn.BusNode.\"/>"
     "  </tcp>"
-#if defined(AJ_ENABLE_ICE)
-    "  <listen>ice:</listen>"
-    "  <ice>"
-    "    <limit max_incomplete_connections=\"16\"/>"
-    "    <limit max_completed_connections=\"64\"/>"
-    "  </ice>"
-    "  <ice_discovery_manager>"
-    "    <property interfaces=\"*\"/>"
-    "    <property server=\"connect.alljoyn.org\"/>"
-    "    <property protocol=\"HTTPS\"/>"
-    "    <property enable_ipv6=\"false\"/>"
-    "  </ice_discovery_manager>"
-#endif
     "</busconfig>";
 
 

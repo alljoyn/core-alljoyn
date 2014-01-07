@@ -19,13 +19,8 @@ Import('env')
 
 daemon_env = env.Clone()
 
-if daemon_env['OS'] in [ 'linux', 'openwrt', 'winxp', 'win7' ] or (daemon_env['OS'] == 'darwin' and daemon_env['CPU'] == 'x86'):
-    default_ice = 'off'
-else:
-    default_ice = 'on'
-
 vars = Variables()
-vars.Add(EnumVariable('ICE', 'Enable ICE Transport', default_ice, allowed_values=('on', 'off')))
+vars.Add(EnumVariable('ICE', 'Enable ICE Transport', 'off', allowed_values=('on', 'off')))
 vars.Update(daemon_env)
 Help(vars.GenerateHelpText(daemon_env))
 

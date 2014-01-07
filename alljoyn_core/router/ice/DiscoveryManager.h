@@ -1161,6 +1161,12 @@ class DiscoveryManager : public Thread, public AlarmListener {
 
     /* Proxy Bus object used to get user login credentials from the client login service */
     ProxyBusObject* clientLoginRemoteObj;
+
+    /* Server CA certificate if HTTPS protocol is used. */
+    String RendezvousServerCACertificate;
+
+    /* Server root certificate if HTTPS protocol is used */
+    String RendezvousServerRootCertificate;
 };
 
 } // namespace ajn

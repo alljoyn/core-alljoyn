@@ -254,6 +254,14 @@ class HttpConnection {
     void SetProtocol(Protocol protocol) { this->protocol = protocol; }
 
     /**
+     * Set the server certificates used for PROTO_HTTPS connections.
+     *
+     * @param rootCert Server root certificate.
+     * @param caCert   Server CA certificate.
+     */
+    void SetServerCertificates(String rootCert, String caCert) { this->rootCert = rootCert; this->caCert = caCert; }
+
+    /**
      * Set the URL path.
      *
      * @param urlPath     Path portion of URL.
@@ -398,7 +406,9 @@ class HttpConnection {
         protocol(other.protocol),
         httpStatus(other.httpStatus),
         isMultipartForm(other.isMultipartForm),
-        isApplicationJson(other.isApplicationJson)
+        isApplicationJson(other.isApplicationJson),
+        rootCert(other.rootCert),
+        caCert(other.caCert)
     {
         /* This constructor should never be invoked */
         assert(false);
@@ -417,6 +427,8 @@ class HttpConnection {
             httpStatus = other.httpStatus;
             isMultipartForm = other.isMultipartForm;
             isApplicationJson = other.isApplicationJson;
+            rootCert = other.rootCert;
+            caCert = other.caCert;
         }
 
         return *this;
@@ -446,6 +458,8 @@ class HttpConnection {
     std::map<String, String> requestHeaders;  /**< HTTP headers sent in request */
     std::map<String, String> responseHeaders; /**< HTTP headers sent in response */
     IPAddress localIPAddress;                 /**< IP address of the local interface to be used for connection*/
+    String rootCert;                          /**< Server root certificate */
+    String caCert;                            /**< Server CA certificate */
 };
 
 #endif

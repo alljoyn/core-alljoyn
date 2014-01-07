@@ -30,6 +30,7 @@
 #include <qcc/platform.h>
 #include <qcc/Debug.h>
 #include <qcc/Event.h>
+#include <qcc/FileStream.h>
 #include <qcc/Stream.h>
 #include <qcc/Socket.h>
 #include <qcc/StringSource.h>
@@ -61,7 +62,7 @@ namespace ajn {
 //   <busconfig>
 //     <ice_discovery_manager>
 //       <property interfaces="*"/>
-//       <property server="rdvs.alljoyn.org"/>
+//       <property server="rdvs.example.org"/>
 //       <property protocol="HTTPS"/>
 //       <property enable_ipv6=\"false\"/>"
 //     </ice_discovery_manager>
@@ -122,25 +123,7 @@ DiscoveryManager::DiscoveryManager(BusAttachment& bus) :
 {
     QCC_DbgPrintf(("DiscoveryManager::DiscoveryManager()\n"));
 
-    //
-    // There are configurable attributes of the Discovery Manager which are determined
-    // by the configuration database.  A module name is required and is defined
-    // here.  An example of how to use this is in setting the interfaces the discovery
-    // manager will use for discovery.
-    //
-    //   <busconfig>
-    //     <ice_discovery_manager>
-    //       <property interfaces="*"/>
-    //       <property server="rdvs.alljoyn.org"/>
-    //       <property protocol="HTTPS"/>
-    //       <property enable_ipv6=\"false\"/>"
-    //     </ice_discovery_manager>
-    //   </busconfig>
-    //
     DaemonConfig* config = DaemonConfig::Access();
-
-    /* Retrieve the Rendezvous Server address from the config file */
-    RendezvousServer = config->Get("ice_discovery_manager/property@server", "connect.alljoyn.org");
 
     /* Retrieve the connection protocol to be used */
     if (config->Get("ice_discovery_manager/property@protocol") == "HTTP") {
@@ -153,8 +136,6 @@ DiscoveryManager::DiscoveryManager(BusAttachment& bus) :
         QCC_DbgPrintf(("DiscoveryManager::DiscoveryManager(): Enabling use of IPv6 interfaces"));
         EnableIPv6 = true;
     }
-
-    QCC_DbgPrintf(("DiscoveryManager::DiscoveryManager(): RendezvousServer = %s\n", RendezvousServer.c_str()));
 
     /* Initialize the keep alive timer value to the default value */
     SetTKeepAlive(T_KEEP_ALIVE_MIN_IN_SECS);
@@ -419,6 +400,54 @@ QStatus DiscoveryManager::Init(const String& guid)
     //
     if (DiscoveryManagerState != IMPL_SHUTDOWN) {
         return ER_FAIL;
+    }
+    //
+    // Retrieve the Rendezvous Server address from the config file
+    //
+    DaemonConfig* config = DaemonConfig::Access();
+    RendezvousServer = config->Get("ice_discovery_manager/property@server");
+    if (RendezvousServer.empty()) {
+        QCC_LogError(ER_FAIL, ("Server address not specified in config"));
+        return ER_FAIL;
+    }
+    QCC_DbgPrintf(("DiscoveryManager::Init(): RendezvousServer = %s\n", RendezvousServer.c_str()));
+    if (!UseHTTP) {
+        //
+        // Retrieve the Rendezvous Server certificate
+        //
+        FileSource pemFile(config->Get("ice_discovery_manager/property@server_certificate"));
+        if (!pemFile.IsValid()) {
+            status = ER_FAIL;
+            QCC_LogError(status, ("Path of server_certificate invalid"));
+            return status;
+        }
+        String pem;
+        char buf[4096];
+        size_t bytesPulled = 0;
+        while ((status = pemFile.PullBytes(buf, 4096, bytesPulled)) == ER_OK) {
+            pem.append(buf, bytesPulled);
+        }
+        if (ER_NONE != status) {
+            QCC_LogError(status, ("Read server_certificate failed"));
+            return status;
+        }
+        // Certificate file should have two certifices: CA certificate followed by root certificate
+        size_t pos = 0;
+        for (int i = 0; i < 2; ++i) {
+            size_t beginCert = pem.find("-----BEGIN CERTIFICATE-----", pos);
+            size_t endCert = pem.find("-----END CERTIFICATE-----", pos);
+            if ((beginCert >= endCert) || (endCert == String::npos)) {
+                status = ER_FAIL;
+                QCC_LogError(status, ("server_certificate invalid format"));
+                return status;
+            }
+            pos = endCert + sizeof("-----END CERTIFICATE-----");
+            if (i == 0) {
+                RendezvousServerCACertificate = pem.substr(beginCert, pos);
+            } else {
+                RendezvousServerRootCertificate = pem.substr(beginCert, pos);
+            }
+        }
     }
 
     DiscoveryManagerState = IMPL_INITIALIZING;
@@ -1025,8 +1054,8 @@ QStatus DiscoveryManager::Connect(void)
         QCC_LogError(status, ("DiscoveryManager::Connect(): InterfaceFlags = NONE"));
     } else {
         if (!(Connection)) {
-            Connection = new RendezvousServerConnection(RendezvousServer, EnableIPv6, UseHTTP);
-
+            Connection = new RendezvousServerConnection(RendezvousServer, EnableIPv6, UseHTTP,
+                                                        RendezvousServerRootCertificate, RendezvousServerCACertificate);
             if (!Connection) {
                 status = ER_FAIL;
                 QCC_LogError(status, ("DiscoveryManager::Connect(): Unable to initialize Connection"));

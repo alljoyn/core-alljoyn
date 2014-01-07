@@ -83,19 +83,6 @@ static const char bundledConfig[] =
     "  <tcp>"
 //    "    <property router_advertisement_prefix=\"org.alljoyn.BusNode.\"/>"
     "  </tcp>"
-#if defined(QCC_OS_ANDROID) || defined(QCC_OS_LINUX) || defined(QCC_OS_DARWIN) || defined(QCC_OS_WINRT)
-    "  <listen>ice:</listen>"
-    "  <ice>"
-    "    <limit max_incomplete_connections=\"16\"/>"
-    "    <limit max_completed_connections=\"64\"/>"
-    "  </ice>"
-    "  <ice_discovery_manager>"
-    "    <property interfaces=\"*\"/>"
-    "    <property server=\"connect.alljoyn.org\"/>"
-    "    <property protocol=\"HTTPS\"/>"
-    "    <property enable_ipv6=\"false\"/>"
-    "  </ice_discovery_manager>"
-#endif
 #if defined(QCC_OS_WINRT)
 //    "  <listen>proximity:addr=0::0,port=0,family=ipv6</listen>"
 #endif
