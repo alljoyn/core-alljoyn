@@ -1,5 +1,5 @@
 Welcome to AllJoyn
-==========================================
+===========================================
 
 The documentation for the project as a whole can be found in the
 `alljoyn_core/docs` directory.  Most notably:
