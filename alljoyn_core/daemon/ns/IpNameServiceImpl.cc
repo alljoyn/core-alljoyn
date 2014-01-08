@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1220,9 +1220,9 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
         // This will set the SO_REUSEPORT socket option if available or fall
         // back onto SO_REUSEADDR if not.
         //
-        status = qcc::SetReusePort(sockFd, true);
+        status = qcc::SetReuseAddrPort(sockFd, true);
         if (status != ER_OK && status != ER_NOT_IMPLEMENTED) {
-            QCC_LogError(status, ("IpNameServiceImpl::LazyUpdateInterfaces(): SetReusePort() failed"));
+            QCC_LogError(status, ("IpNameServiceImpl::LazyUpdateInterfaces(): SetReuseAddrPort() failed"));
             qcc::Close(sockFd);
             continue;
         }

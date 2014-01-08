@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -290,21 +290,6 @@ QStatus SetBlocking(SocketFd sockfd, bool blocking);
 QStatus SetNagle(SocketFd sockfd, bool useNagle);
 
 /**
- * @brief Allow a service to bind to a TCP endpoint which is in the TIME_WAIT
- * state.
- *
- * Setting this option allows a service to be restarted after a crash (or
- * contrl-C) and then be restarted without having to wait for some possibly
- * significant (on the order of minutes) time.
- *
- * @see SetReusePort()
- *
- * @param sockfd The socket descriptor identifying the resource.
- * @param reuse  Set to true to allow address and/or port reuse.
- */
-QStatus SetReuseAddress(SocketFd sockfd, bool reuse);
-
-/**
  * @brief Allow multiple services to bind to the same address and port.
  *
  * Setting this option allows a multiple services to bind to the same address
@@ -313,21 +298,14 @@ QStatus SetReuseAddress(SocketFd sockfd, bool reuse);
  * order to use this function successfully, ALL processes that want to listen on
  * a common port must set this option.
  *
- * @warning This function sets the socket option SO_REUSEPORT when it is
- * available but falls back to SO_REUSEADDR if it is not.  The original socket
- * option was a BSD-ism that was introduced when multicast was added there.  Not
- * all stacks support SO_REUSEPORT, but to accomplish the same thing they will
- * special-case SO_REUSEADDR in the presence of multicast to accomplish the same
- * functionality.  In this case, there is no functional difference between
- * SetReusePort() and SetReuseAddress(), but the two functions remain for
- * clarity of purpose.
- *
- * @see SetReuseAddress()
+ * @warning Implementation detail: The Darwin platform uses SO_REUSEPORT while
+ * Windows uses SO_EXCLUSIVEADDRUSE.  SO_REUSEADDR is used for all Linux based
+ * platforms (including Android).
  *
  * @param sockfd The socket descriptor identifying the resource.
  * @param reuse  Set to true to allow address and/or port reuse.
  */
-QStatus SetReusePort(SocketFd sockfd, bool reuse);
+QStatus SetReuseAddrPort(SocketFd sockfd, bool reuse);
 
 /**
  * Ask a UDP-based socket to join the specified multicast group.

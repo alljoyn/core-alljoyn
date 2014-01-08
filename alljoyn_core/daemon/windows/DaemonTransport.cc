@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -188,9 +188,9 @@ static QStatus ListenFd(map<qcc::String, qcc::String>& argMap, SocketFd& listenF
      * Set the SO_REUSEADDR socket option so we don't have to wait for four
      * minutes while the endponit is in TIME_WAIT if we crash (or control-C).
      */
-    status = qcc::SetReuseAddress(listenFd, true);
+    status = qcc::SetReuseAddrPort(listenFd, true);
     if (status != ER_OK) {
-        QCC_LogError(status, ("DaemonTransport::ListenFd(): SetReuseAddress() failed"));
+        QCC_LogError(status, ("DaemonTransport::ListenFd(): SetReuseAddrPort() failed"));
         return status;
     }
     /*
