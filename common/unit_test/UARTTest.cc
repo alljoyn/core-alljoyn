@@ -94,7 +94,68 @@ TEST(UARTTest, DISABLED_uart_large_buffer_test)
     delete s;
     delete s1;
 }
+TEST(UARTTest, DISABLED_uart_codisco_test)
+{
+    Timer timer0("SLAPtimer0", true, 1, false, 10);
+    timer0.Start();
+    Timer timer1("SLAPtimer1", true, 1, false, 10);
+    timer1.Start();
+    UARTFd fd0;
+    UARTFd fd1;
+    QStatus status = UART("/tmp/COM0", BAUDRATE, fd0);
+    ASSERT_EQ(status, ER_OK);
 
+    status = UART("/tmp/COM1", BAUDRATE, fd1);
+    ASSERT_EQ(status, ER_OK);
+
+    UARTStream* s = new UARTStream(fd0);
+    UARTStream* s1 = new UARTStream(fd1);
+    SLAPStream h(s, timer0, PACKET_SIZE, WINDOW_SIZE, BAUDRATE);
+    SLAPStream h1(s1, timer1, PACKET_SIZE, WINDOW_SIZE, BAUDRATE);
+    h.ScheduleLinkControlPacket();
+    h1.ScheduleLinkControlPacket();
+    IODispatch iodisp("iodisp", 4);
+    iodisp.Start();
+
+    UARTController uc(s, iodisp, &h);
+    UARTController uc1(s1, iodisp, &h1);
+    uc.Start();
+    uc1.Start();
+    uint8_t rxBuffer[400];
+    memset(&rxBuffer, 'R', sizeof(rxBuffer));
+
+    uint8_t txBuffer[400];
+    memset(&txBuffer, 'T', sizeof(txBuffer));
+
+    int blocksize = 20;
+    for (int blocks = 0; blocks < 20; blocks++) {
+        memset(txBuffer + (blocks * blocksize), 'A' + (uint8_t)blocks, blocksize);
+    }
+
+    size_t actual;
+    /* Wait for link to become Active */
+    qcc::Sleep(1000);
+    h.Close();
+
+    status = h1.PullBytes(rxBuffer, 400, actual);
+    EXPECT_EQ(status, ER_SLAP_OTHER_END_CLOSED);
+
+    timer0.Stop();
+    timer1.Stop();
+    uc.Stop();
+    uc1.Stop();
+    iodisp.Stop();
+
+    timer0.Join();
+    timer1.Join();
+    uc.Join();
+    uc1.Join();
+    iodisp.Join();
+
+    h1.Close();
+    delete s;
+    delete s1;
+}
 TEST(UARTTest, DISABLED_uart_small_buffer_test)
 {
     Timer timer0("SLAPtimer0", true, 1, false, 10);

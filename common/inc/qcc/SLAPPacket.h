@@ -59,6 +59,8 @@ enum ControlPacketType {
     ACCEPT_PKT = 2,
     NEGO_PKT = 3,
     NEGO_RESP_PKT = 4,
+    DISCONN_PKT = 5,
+    DISCONN_RESP_PKT = 6
 };
 
 class SLAPReadPacket {

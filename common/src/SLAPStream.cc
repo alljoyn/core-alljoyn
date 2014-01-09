@@ -29,7 +29,10 @@
 #define QCC_MODULE "SLAP"
 using namespace qcc;
 
-#define SLAP_PROTOCOL_VERSION_NUMBER 0
+/* The SLAP version that adds the disconnect feature */
+#define SLAP_VERSION_DISCONNECT_FEATURE 1
+
+#define SLAP_PROTOCOL_VERSION_NUMBER 1
 #define SLAP_DEFAULT_WINDOW_SIZE 4
 #define SLAP_MAX_WINDOW_SIZE 4
 #define SLAP_MAX_PACKET_SIZE 0xFFFF
@@ -47,12 +50,17 @@ using namespace qcc;
 /**
  * controls rate at which we send CONN packets when the link is down in milliseconds
  */
-#define CONN_TIMEOUT   200
+const uint32_t CONN_TIMEOUT = 200;
 
 /**
  * controls rate at which we send NEGO packets when the link is being established in milliseconds
  */
-#define NEGO_TIMEOUT   200
+const uint32_t NEGO_TIMEOUT = 200;
+
+/**
+ * controls rate at which we send DISCONN packets when the link is down in milliseconds
+ */
+const uint32_t DISCONN_TIMEOUT = 200;
 
 SLAPStream::SLAPStream(Stream* rawStream, Timer& timer, uint16_t maxPacketSize, uint16_t maxWindowSize, uint32_t baudrate) :
     m_rawStream(rawStream),
@@ -445,6 +453,7 @@ void SLAPStream::ProcessControlPacket()
             m_linkParams.packetSize = (m_rxCurrent->GetConfigField(0) << 8) | m_rxCurrent->GetConfigField(1);
 
             m_linkParams.windowSize = 1 << encodedWindowSize;
+            m_linkParams.protocolVersion = m_rxCurrent->GetConfigField(2) >> 2;
 
             /*
              * Check that the configuration response is valid.
@@ -492,17 +501,23 @@ void SLAPStream::ProcessControlPacket()
         if (pktType == NEGO_PKT) {
             uint8_t requestedEncWindowSize = m_rxCurrent->GetConfigField(2) & 0x03;
             uint8_t requestedWindowSize = 1 << requestedEncWindowSize;
+            uint8_t requestedProtocolVersion = m_rxCurrent->GetConfigField(2) >> 2;
             uint16_t requestedPacketSize = (m_rxCurrent->GetConfigField(0) << 8) | m_rxCurrent->GetConfigField(1);
+
             uint16_t agreedPacketSize = (requestedPacketSize < m_linkParams.maxPacketSize) ? requestedPacketSize : m_linkParams.packetSize;
             uint16_t agreedWindowSize = (requestedWindowSize < m_linkParams.maxWindowSize) ? requestedWindowSize : m_linkParams.maxWindowSize;
-            QCC_DbgPrintf(("Got NEGO req:win %d pkt %d, agr:win %d pkt %d", requestedWindowSize, requestedPacketSize, agreedWindowSize, agreedPacketSize));
-            m_linkParams.packetSize = agreedPacketSize;
+            uint8_t agreedProtocolVersion = (requestedProtocolVersion < SLAP_PROTOCOL_VERSION_NUMBER) ? requestedProtocolVersion : SLAP_PROTOCOL_VERSION_NUMBER;
+            QCC_DbgPrintf(("Got NEGO req:win %d pkt %d, pv %d agr:win %d pkt %d pv %d", requestedWindowSize, requestedPacketSize, requestedProtocolVersion,
+                           agreedWindowSize, agreedPacketSize, agreedProtocolVersion));
 
+            m_linkParams.packetSize = agreedPacketSize;
             m_linkParams.windowSize = agreedWindowSize;
+            m_linkParams.protocolVersion = agreedProtocolVersion;
+
             m_configField[0] = agreedPacketSize >> 8;
             m_configField[1] = agreedPacketSize & 0xFF;
             uint8_t agreedEncWindowSize = ((agreedWindowSize == 1) ? 0 : ((agreedWindowSize == 2) ? 1 : ((agreedWindowSize == 4) ? 2 : 3)));
-            m_configField[2] = (SLAP_PROTOCOL_VERSION_NUMBER << 2) | agreedEncWindowSize;
+            m_configField[2] = (agreedProtocolVersion << 2) | agreedEncWindowSize;
 
             QCC_DbgPrintf(("PCP sending NEGORESP pkt %d win %d conf %X %X %X", agreedPacketSize, agreedWindowSize, m_configField[0], m_configField[1], m_configField[2]));
 
@@ -520,7 +535,7 @@ void SLAPStream::ProcessControlPacket()
             m_configField[0] = m_linkParams.packetSize >> 8;
             m_configField[1] = m_linkParams.packetSize & 0xFF;
             uint8_t agreedEncWindowSize = ((m_linkParams.windowSize == 1) ? 0 : ((m_linkParams.windowSize == 2) ? 1 : ((m_linkParams.windowSize == 4) ? 2 : 3)));
-            m_configField[2] = (SLAP_PROTOCOL_VERSION_NUMBER << 2) | agreedEncWindowSize;
+            m_configField[2] = (m_linkParams.protocolVersion << 2) | agreedEncWindowSize;
 
             QCC_DbgPrintf(("PCP sending NEGORESP conf %X %X %X", m_configField[0], m_configField[1], m_configField[2]));
 
@@ -538,6 +553,31 @@ void SLAPStream::ProcessControlPacket()
             m_linkState = LINK_DEAD;
             m_sourceEvent.SetEvent();
             m_sinkEvent.SetEvent();
+            return;
+        }
+        if (pktType == DISCONN_PKT) {
+            QCC_DbgPrintf(("Got disconn, setting link to dead"));
+            EnqueueCtrl(DISCONN_RESP_PKT);
+            m_linkState = LINK_DEAD;
+            m_sourceEvent.SetEvent();
+            m_sinkEvent.SetEvent();
+            return;
+        }
+        break;
+
+    case LINK_DYING:
+        if (pktType == DISCONN_RESP_PKT) {
+            QCC_DbgPrintf(("Got disconn resp, setting link to dead"));
+            m_linkState = LINK_DEAD;
+            m_sourceEvent.SetEvent();
+            m_sinkEvent.SetEvent();
+            m_deadEvent.SetEvent();
+            return;
+        }
+
+        if (pktType == DISCONN_PKT) {
+            QCC_DbgPrintf(("Got disconn, queuing DRSP"));
+            EnqueueCtrl(DISCONN_RESP_PKT);
             return;
         }
         break;
@@ -631,7 +671,6 @@ QStatus SLAPStream::ScheduleLinkControlPacket() {
         /*
          * Send a sync packet.
          */
-        //assert(!m_timer.HasAlarm(m_ctrlAlarm));
         EnqueueCtrl(CONN_PKT);
         when = CONN_TIMEOUT;
 
@@ -640,13 +679,22 @@ QStatus SLAPStream::ScheduleLinkControlPacket() {
         break;
 
     case LINK_INITIALIZED:
-        //assert(!m_timer.HasAlarm(m_ctrlAlarm));
-
         /*
          * Send a conf packet.
          */
         EnqueueCtrl(NEGO_PKT, m_configField);
         when = NEGO_TIMEOUT;
+        m_ctrlAlarm = Alarm(when, listener, m_resendControlCtxt);
+
+        addCtrlAlarm = true;
+        break;
+
+    case LINK_DYING:
+        /*
+         * Send a conf packet.
+         */
+        EnqueueCtrl(DISCONN_PKT, m_configField);
+        when = DISCONN_TIMEOUT;
         m_ctrlAlarm = Alarm(when, listener, m_resendControlCtxt);
 
         addCtrlAlarm = true;
@@ -907,6 +955,29 @@ void SLAPStream::AlarmTriggered(const Alarm& alarm, QStatus reason)
     m_streamLock.Unlock(MUTEX_CONTEXT);
 }
 void SLAPStream::Close() {
-    m_linkState = LINK_UNINITIALIZED;
+    m_streamLock.Lock(MUTEX_CONTEXT);
+    if (m_linkParams.protocolVersion >= SLAP_VERSION_DISCONNECT_FEATURE) {
+        if (m_linkState != LINK_DEAD) {
+            m_linkState = LINK_DYING;
+            ScheduleLinkControlPacket();
+            m_streamLock.Unlock(MUTEX_CONTEXT);
+            /* Wait until DRSP is received from the other end upto a
+             * max timeout of 4*resendTimeout.
+             */
+            Event::Wait(m_deadEvent, DISCONN_TIMEOUT * 4);
+            m_streamLock.Lock(MUTEX_CONTEXT);
+            if (m_linkState != LINK_DEAD) {
+                QCC_DbgPrintf(("Couldnt kill link gracefully"));
+                m_linkState = LINK_DEAD;
+                m_sourceEvent.SetEvent();
+                m_sinkEvent.SetEvent();
+            } else {
+                QCC_DbgPrintf(("Killed link gracefully."));
+            }
+        }
+    } else {
+        m_linkState = LINK_DEAD;
+    }
+    m_streamLock.Unlock(MUTEX_CONTEXT);
 }
 

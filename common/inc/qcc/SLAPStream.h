@@ -137,6 +137,7 @@ class SLAPStream : public Stream, public UARTReadListener, public AlarmListener 
         uint32_t baudrate;
         uint32_t resendTimeout;
         uint32_t ackTimeout;
+        uint32_t protocolVersion;
     };
     LinkParams m_linkParams;      /**< Parameters associated with the SLAP stream */
 
@@ -144,6 +145,7 @@ class SLAPStream : public Stream, public UARTReadListener, public AlarmListener 
         LINK_UNINITIALIZED,     /**< Link is uninitialized */
         LINK_INITIALIZED,       /**< Link is in the process of configuration */
         LINK_ACTIVE,            /**< the link is active - can send/receive data */
+        LINK_DYING,             /**< the link is in the process of being shutdown by this end */
         LINK_DEAD               /**< Link is dead */
     };
     LinkState m_linkState;        /**< Current state of the SLAP Stream link */
@@ -151,7 +153,8 @@ class SLAPStream : public Stream, public UARTReadListener, public AlarmListener 
 
     Event m_sourceEvent;          /**< Source event for this stream */
     Event m_sinkEvent;            /**< Sink event for this stream */
-
+    Event m_deadEvent;            /**< Event used to indicate that the other end has
+                                       successfully processed the DISC packet and is shutting down. */
     uint32_t m_sendTimeout;       /**< Send timeout for the stream */
 
     enum CallbackType {
