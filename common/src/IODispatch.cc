@@ -307,24 +307,25 @@ void IODispatch::AlarmTriggered(const Alarm& alarm, QStatus reason)
 
     case IO_EXIT:
 
-        lock.Unlock();
-
         if (isRunning) {
+            lock.Unlock();
             /* Timer is running. Remove any pending alarms */
             timer.ForceRemoveAlarm(dispatchEntry.readAlarm, true /* blocking */);
             timer.ForceRemoveAlarm(dispatchEntry.writeAlarm, true /* blocking */);
+            lock.Lock();
         }
         /* If IODispatch has been stopped,
          * RemoveAlarms may not have successfully removed the alarm.
          * In that case, wait for any alarms that are in progress to finish.
          */
         while (!isRunning && numAlarmsInProgress) {
+            lock.Unlock();
             Sleep(2);
+            lock.Lock();
         }
         /* Make the exit callback */
         dispatchEntry.exitListener->ExitCallback();
         /* Find and erase the stream entry */
-        lock.Lock();
         it = dispatchEntries.find(stream);
         if (it == dispatchEntries.end()) {
             /* This should never happen - it means that the entry was deleted
