@@ -31,7 +31,7 @@ bindings = set([ b.strip()
                  if b.strip() == 'cpp' or os.path.exists('alljoyn_%s/SConscript' % b.strip()) ])
 services = set([ s.strip()
                  for s in env['SERVICES'].split(',')
-                 if s == 'about' or os.path.exists('../../services/%s/SConscript' % s.strip())])
+                 if s.strip() == 'about' or os.path.exists('../../services/%s/SConscript' % s.strip())])
 
 print 'Building bindings: %s' % ', '.join(bindings)
 print 'Building services: %s' % ', '.join(services)
