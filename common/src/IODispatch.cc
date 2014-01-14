@@ -323,8 +323,11 @@ void IODispatch::AlarmTriggered(const Alarm& alarm, QStatus reason)
             Sleep(2);
             lock.Lock();
         }
+
         /* Make the exit callback */
+        lock.Unlock();
         dispatchEntry.exitListener->ExitCallback();
+        lock.Lock();
         /* Find and erase the stream entry */
         it = dispatchEntries.find(stream);
         if (it == dispatchEntries.end()) {
