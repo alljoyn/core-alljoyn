@@ -17,13 +17,13 @@
 
 all:
 	cd src; make;
-	cd daemon; make;
+	cd router; make;
 	cd test; make;
 	cd samples; make;
 	cp inc/alljoyn $(INSTALLDIR)/dist/inc -rf
 
 clean:
 	cd src; make clean;
-	cd daemon; make clean;
+	cd router; make clean;
 	cd test; make clean;
 	cd samples; make clean;

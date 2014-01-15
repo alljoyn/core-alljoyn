@@ -62,7 +62,7 @@ if ajenv['OS_GROUP'] == 'winrt':
 # Add support for multiple build targets in the same workset
 ajenv.VariantDir('$OBJDIR', 'src', duplicate = 0)
 ajenv.VariantDir('$OBJDIR/test', 'test', duplicate = 0)
-ajenv.VariantDir('$OBJDIR/daemon', 'daemon', duplicate = 0)
+ajenv.VariantDir('$OBJDIR/router', 'router', duplicate = 0)
 ajenv.VariantDir('$OBJDIR/samples', 'samples', duplicate = 0)
 ajenv.VariantDir('$OBJDIR/alljoyn_android', 'alljoyn_android', duplicate = 0)
 
@@ -96,14 +96,14 @@ if ajenv['OS_GROUP'] != 'winrt':
 # AllJoyn Daemon, daemon library, and bundled daemon object file
 if ajenv['OS_GROUP'] == 'winrt':
     winrt_objs = static_objs
-    daemon_progs, bdlib, bdobj = ajenv.SConscript('$OBJDIR/daemon/SConscript', exports = ['winrt_objs'])
+    daemon_progs, bdlib, bdobj = ajenv.SConscript('$OBJDIR/router/SConscript', exports = ['winrt_objs'])
     ajenv.Install('$WINRT_DISTDIR/bin', daemon_progs)
     # WinRT needs the full path to the exact file.
     daemon_obj = bdobj
     daemon_lib = bdlib
 
 else:
-    daemon_progs, bdlib, bdobj = ajenv.SConscript('$OBJDIR/daemon/SConscript')
+    daemon_progs, bdlib, bdobj = ajenv.SConscript('$OBJDIR/router/SConscript')
     ajenv.Install('$CPP_DISTDIR/bin', daemon_progs)
     ajenv.Install('$CPP_DISTDIR/lib', bdlib)
     daemon_obj = ajenv.Install('$CPP_DISTDIR/lib', bdobj)
