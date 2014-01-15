@@ -106,7 +106,7 @@ else
 endif
 
 # Header/lib path include
-INCLUDE = -I$(PWD)/common/inc -I$(PWD)/alljoyn_core/inc -I$(PWD)/alljoyn_core/src -I$(PWD)/alljoyn_core/daemon -I$(PWD)/alljoyn_core/inc/alljoyn
+INCLUDE = -I$(PWD)/common/inc -I$(PWD)/alljoyn_core/inc -I$(PWD)/alljoyn_core/src -I$(PWD)/alljoyn_core/router -I$(PWD)/alljoyn_core/inc/alljoyn
 
 # Platform specifics system libs
 ifeq "$(OS)" "linux"
