@@ -167,7 +167,7 @@ QStatus Socket(AddressFamily addrFamily, SocketType type, SocketFd& sockfd)
         return ER_NOT_IMPLEMENTED;
     }
     ret = socket(static_cast<int>(addrFamily), static_cast<int>(type), 0);
-    if (ret == SOCKET_ERROR) {
+    if (ret == INVALID_SOCKET) {
         status = ER_OS_ERROR;
         QCC_LogError(status, ("Opening socket: %s", StrError().c_str()));
     } else {
@@ -281,7 +281,7 @@ QStatus Accept(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort, Soc
 
 
     ret = accept(static_cast<SOCKET>(sockfd), reinterpret_cast<struct sockaddr*>(&addr), &addrLen);
-    if (ret == SOCKET_ERROR) {
+    if (ret == INVALID_SOCKET) {
         if (WSAGetLastError() == WSAEWOULDBLOCK) {
             status = ER_WOULDBLOCK;
         } else {
