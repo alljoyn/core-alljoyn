@@ -1212,6 +1212,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
                 status = qcc::SetBroadcast(sockFd, true);
                 if (status != ER_OK && status != ER_NOT_IMPLEMENTED) {
                     QCC_LogError(status, ("LazyUpdateInterfaces: enable broadcast failed"));
+                    qcc::Close(sockFd);
                     continue;
                 }
             }
