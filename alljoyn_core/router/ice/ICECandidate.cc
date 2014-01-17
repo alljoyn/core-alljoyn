@@ -345,216 +345,216 @@ QStatus _ICECandidate::ReadReceivedMessage(uint32_t timeoutMsec)
     for (stunAttrIt = msg.Begin(); stunAttrIt != msg.End(); ++stunAttrIt) {
         switch ((*stunAttrIt)->GetType()) {
         case STUN_ATTR_XOR_MAPPED_ADDRESS: {
-            const StunAttributeXorMappedAddress& sa = *reinterpret_cast<StunAttributeXorMappedAddress*>(*stunAttrIt);
+                const StunAttributeXorMappedAddress& sa = *reinterpret_cast<StunAttributeXorMappedAddress*>(*stunAttrIt);
 
-            IPEndpoint base;
-            stunActivity->stun->GetLocalAddress(base.addr, base.port);
+                IPEndpoint base;
+                stunActivity->stun->GetLocalAddress(base.addr, base.port);
 
-            // Should only appear in a response to our earlier (outbound) check.
-            // To later determine peer-reflexive candidate...
-            sa.GetAddress(mappedAddress.addr, mappedAddress.port);
+                // Should only appear in a response to our earlier (outbound) check.
+                // To later determine peer-reflexive candidate...
+                sa.GetAddress(mappedAddress.addr, mappedAddress.port);
 
-            sa.GetAddress(reflexive.addr, reflexive.port);
+                sa.GetAddress(reflexive.addr, reflexive.port);
 
-            // Set the local Server reflexive candidate in the associated STUN object. We don't
-            // care if the returned Server reflexive candidate is same as the local host
-            // candidate for this setting
-            stunActivity->stun->SetLocalSrflxCandidate(reflexive);
+                // Set the local Server reflexive candidate in the associated STUN object. We don't
+                // care if the returned Server reflexive candidate is same as the local host
+                // candidate for this setting
+                stunActivity->stun->SetLocalSrflxCandidate(reflexive);
 
-            if (ICESession::ICEGatheringCandidates ==
-                component->GetICEStream()->GetSession()->GetState()) {
-                if (relayedCandidate->GetType() == _ICECandidate::Relayed_Candidate) {
-                    relayedCandidate->SetMappedAddress(reflexive);
-                }
-
-                // Discard if reflexive is identical to host
-                if (base.addr != reflexive.addr) {
-                    StunActivity* reflexiveCandidateStunActivity =
-                        new StunActivity(stunActivity->stun);
-
-                    stunActivity->stun->GetComponent()->AddToStunActivityList(
-                        reflexiveCandidateStunActivity);
-
-                    _ICECandidate::ICECandidateType type = _ICECandidate::ServerReflexive_Candidate;
-                    SocketType sockType = stunActivity->stun->GetSocketType();
-                    Component* component = stunActivity->stun->GetComponent();
-                    ICECandidate reflexiveCandidate = ICECandidate(type,
-                                                                   reflexive,
-                                                                   base,
-                                                                   component,
-                                                                   sockType,
-                                                                   reflexiveCandidateStunActivity);
-
-                    // store server_reflexive candidate (reuse host candidate's stun object)
-                    stunActivity->stun->GetComponent()->AddCandidate(reflexiveCandidate);
-                    if (sharedStunServerReflexiveCandidate) {
-                        delete sharedStunServerReflexiveCandidate;
+                if (ICESession::ICEGatheringCandidates ==
+                    component->GetICEStream()->GetSession()->GetState()) {
+                    if (relayedCandidate->GetType() == _ICECandidate::Relayed_Candidate) {
+                        relayedCandidate->SetMappedAddress(reflexive);
                     }
-                    sharedStunServerReflexiveCandidate = new ICECandidate(reflexiveCandidate);
+
+                    // Discard if reflexive is identical to host
+                    if (base.addr != reflexive.addr) {
+                        StunActivity* reflexiveCandidateStunActivity =
+                            new StunActivity(stunActivity->stun);
+
+                        stunActivity->stun->GetComponent()->AddToStunActivityList(
+                            reflexiveCandidateStunActivity);
+
+                        _ICECandidate::ICECandidateType type = _ICECandidate::ServerReflexive_Candidate;
+                        SocketType sockType = stunActivity->stun->GetSocketType();
+                        Component* component = stunActivity->stun->GetComponent();
+                        ICECandidate reflexiveCandidate = ICECandidate(type,
+                                                                       reflexive,
+                                                                       base,
+                                                                       component,
+                                                                       sockType,
+                                                                       reflexiveCandidateStunActivity);
+
+                        // store server_reflexive candidate (reuse host candidate's stun object)
+                        stunActivity->stun->GetComponent()->AddCandidate(reflexiveCandidate);
+                        if (sharedStunServerReflexiveCandidate) {
+                            delete sharedStunServerReflexiveCandidate;
+                        }
+                        sharedStunServerReflexiveCandidate = new ICECandidate(reflexiveCandidate);
+                    }
                 }
+                // cease retries
+                if (NULL != retransmit) {
+                    retransmit->SetState(Retransmit::ReceivedSuccessResponse);
+                }
+                break;
             }
-            // cease retries
-            if (NULL != retransmit) {
-                retransmit->SetState(Retransmit::ReceivedSuccessResponse);
-            }
-            break;
-        }
 
         case STUN_ATTR_XOR_PEER_ADDRESS:
-        {
-            break;
-        }
+            {
+                break;
+            }
 
         case STUN_ATTR_ALLOCATED_XOR_SERVER_REFLEXIVE_ADDRESS:
-        {
-            break;
-        }
+            {
+                break;
+            }
 
         case STUN_ATTR_XOR_RELAYED_ADDRESS: {
-            const StunAttributeXorRelayedAddress& sa = *reinterpret_cast<StunAttributeXorRelayedAddress*>(*stunAttrIt);
+                const StunAttributeXorRelayedAddress& sa = *reinterpret_cast<StunAttributeXorRelayedAddress*>(*stunAttrIt);
 
-            IPEndpoint host;
-            stunActivity->stun->GetLocalAddress(host.addr, host.port);
-            sa.GetAddress(relayed.addr, relayed.port);
+                IPEndpoint host;
+                stunActivity->stun->GetLocalAddress(host.addr, host.port);
+                sa.GetAddress(relayed.addr, relayed.port);
 
-            if (ICESession::ICEGatheringCandidates ==
-                component->GetICEStream()->GetSession()->GetState()) {
-                // Discard if relayed is identical to host
-                if (relayed.addr != host.addr) {
-                    // (Reuse host candidate's stun object.)
+                if (ICESession::ICEGatheringCandidates ==
+                    component->GetICEStream()->GetSession()->GetState()) {
+                    // Discard if relayed is identical to host
+                    if (relayed.addr != host.addr) {
+                        // (Reuse host candidate's stun object.)
 
-                    //  Maintain count of retries and timeouts as we perform Allocate
-                    // _refresh_ requests to the TURN server for this relayed candidate.
-                    StunActivity* relayedCandidateStunActivity = new StunActivity(stunActivity->stun);
+                        //  Maintain count of retries and timeouts as we perform Allocate
+                        // _refresh_ requests to the TURN server for this relayed candidate.
+                        StunActivity* relayedCandidateStunActivity = new StunActivity(stunActivity->stun);
 
-                    stunActivity->stun->GetComponent()->AddToStunActivityList(
-                        relayedCandidateStunActivity);
+                        stunActivity->stun->GetComponent()->AddToStunActivityList(
+                            relayedCandidateStunActivity);
 
-                    //  Maintain count of retries and timeouts as we perform Permission
-                    // _refresh_ requests to the TURN server for this relayed candidate.
-                    StunActivity* permissionStunActivity = new StunActivity(stunActivity->stun);
+                        //  Maintain count of retries and timeouts as we perform Permission
+                        // _refresh_ requests to the TURN server for this relayed candidate.
+                        StunActivity* permissionStunActivity = new StunActivity(stunActivity->stun);
 
-                    stunActivity->stun->GetComponent()->AddToStunActivityList(
-                        permissionStunActivity);
+                        stunActivity->stun->GetComponent()->AddToStunActivityList(
+                            permissionStunActivity);
 
-                    SocketType sockType = stunActivity->stun->GetSocketType();
-                    Component* component = stunActivity->stun->GetComponent();
-                    relayedCandidate = ICECandidate(relayed,
-                                                    relayed,
-                                                    reflexive,
-                                                    grantedAllocationLifetimeSecs,
-                                                    component,
-                                                    sockType,
-                                                    relayedCandidateStunActivity,
-                                                    permissionStunActivity);
+                        SocketType sockType = stunActivity->stun->GetSocketType();
+                        Component* component = stunActivity->stun->GetComponent();
+                        relayedCandidate = ICECandidate(relayed,
+                                                        relayed,
+                                                        reflexive,
+                                                        grantedAllocationLifetimeSecs,
+                                                        component,
+                                                        sockType,
+                                                        relayedCandidateStunActivity,
+                                                        permissionStunActivity);
 
-                    // store relayed candidate
-                    stunActivity->stun->GetComponent()->AddCandidate(relayedCandidate);
+                        // store relayed candidate
+                        stunActivity->stun->GetComponent()->AddCandidate(relayedCandidate);
 
-                    // Set the relay IP and port in the STUN object
-                    stunActivity->stun->SetTurnAddr(relayed.addr);
-                    stunActivity->stun->SetTurnPort(relayed.port);
-                    QCC_DbgPrintf(("Setting Relay address %s and port %d in STUN object", relayed.addr.ToString().c_str(), relayed.port));
+                        // Set the relay IP and port in the STUN object
+                        stunActivity->stun->SetTurnAddr(relayed.addr);
+                        stunActivity->stun->SetTurnPort(relayed.port);
+                        QCC_DbgPrintf(("Setting Relay address %s and port %d in STUN object", relayed.addr.ToString().c_str(), relayed.port));
 
-                    if (sharedStunRelayedCandidate) {
-                        delete sharedStunRelayedCandidate;
+                        if (sharedStunRelayedCandidate) {
+                            delete sharedStunRelayedCandidate;
+                        }
+
+                        sharedStunRelayedCandidate = new ICECandidate(relayedCandidate); // to demux received check messages later
                     }
-
-                    sharedStunRelayedCandidate = new ICECandidate(relayedCandidate); // to demux received check messages later
                 }
+                // cease retries
+                if (NULL != retransmit) {
+                    retransmit->SetState(Retransmit::ReceivedSuccessResponse);
+                }
+                break;
             }
-            // cease retries
-            if (NULL != retransmit) {
-                retransmit->SetState(Retransmit::ReceivedSuccessResponse);
-            }
-            break;
-        }
 
         case STUN_ATTR_LIFETIME: {
-            const StunAttributeLifetime& sa = *reinterpret_cast<StunAttributeLifetime*>(*stunAttrIt);
-            grantedAllocationLifetimeSecs = sa.GetLifetime();
-            if (relayedCandidate->GetType() == _ICECandidate::Relayed_Candidate) {
-                relayedCandidate->SetAllocationLifetimeSeconds(grantedAllocationLifetimeSecs);
+                const StunAttributeLifetime& sa = *reinterpret_cast<StunAttributeLifetime*>(*stunAttrIt);
+                grantedAllocationLifetimeSecs = sa.GetLifetime();
+                if (relayedCandidate->GetType() == _ICECandidate::Relayed_Candidate) {
+                    relayedCandidate->SetAllocationLifetimeSeconds(grantedAllocationLifetimeSecs);
+                }
+
+                break;
             }
 
-            break;
-        }
-
         case STUN_ATTR_PRIORITY: {
-            //const StunAttributePriority& sa = *reinterpret_cast<StunAttributePriority*>(*stunAttrIt);
-            //requestPriority = sa.GetPriority();
-            break;
-        }
+                //const StunAttributePriority& sa = *reinterpret_cast<StunAttributePriority*>(*stunAttrIt);
+                //requestPriority = sa.GetPriority();
+                break;
+            }
 
         case STUN_ATTR_USE_CANDIDATE:
             useCandidateRequest = true;
             break;
 
         case STUN_ATTR_ICE_CONTROLLING: {
-            //const StunAttributeIceControlling& sa = *reinterpret_cast<StunAttributeIceControlling*>(*stunAttrIt);
-            ICEcontrollingRequest = true;
-            //controlTieBreaker = sa.GetValue();
-            break;
-        }
+                //const StunAttributeIceControlling& sa = *reinterpret_cast<StunAttributeIceControlling*>(*stunAttrIt);
+                ICEcontrollingRequest = true;
+                //controlTieBreaker = sa.GetValue();
+                break;
+            }
 
         case STUN_ATTR_ICE_CONTROLLED: {
-            //const StunAttributeIceControlled& sa = *reinterpret_cast<StunAttributeIceControlled*>(*stunAttrIt);
-            ICEcontrollingRequest = false;
-            //controlTieBreaker = sa.GetValue();
-            break;
-        }
+                //const StunAttributeIceControlled& sa = *reinterpret_cast<StunAttributeIceControlled*>(*stunAttrIt);
+                ICEcontrollingRequest = false;
+                //controlTieBreaker = sa.GetValue();
+                break;
+            }
 
 
         case STUN_ATTR_ERROR_CODE: {
-            const StunAttributeErrorCode& sa = *reinterpret_cast<StunAttributeErrorCode*>(*stunAttrIt);
-            StunErrorCodes error;
-            String reason;
-            sa.GetError(error, reason);
+                const StunAttributeErrorCode& sa = *reinterpret_cast<StunAttributeErrorCode*>(*stunAttrIt);
+                StunErrorCodes error;
+                String reason;
+                sa.GetError(error, reason);
 
-            if (NULL != retransmit) {
-                retransmit->SetState(Retransmit::ReceivedErrorResponse);
+                if (NULL != retransmit) {
+                    retransmit->SetState(Retransmit::ReceivedErrorResponse);
 
-                switch (error) {
-                case STUN_ERR_CODE_UNAUTHORIZED:
-                    // Handle this special case of STUN 'error' by retrying with credentials
-                    retransmit->SetState(Retransmit::ReceivedAuthenticateResponse);
-                    retransmit->SetErrorCode(ER_STUN_AUTH_CHALLENGE);
-                    break;
+                    switch (error) {
+                    case STUN_ERR_CODE_UNAUTHORIZED:
+                        // Handle this special case of STUN 'error' by retrying with credentials
+                        retransmit->SetState(Retransmit::ReceivedAuthenticateResponse);
+                        retransmit->SetErrorCode(ER_STUN_AUTH_CHALLENGE);
+                        break;
 
-                case STUN_ERR_CODE_INSUFFICIENT_CAPACITY:
-                    retransmit->SetErrorCode(ER_ICE_ALLOCATE_REJECTED_NO_RESOURCES);
-                    //todo notify app
-                    break;
+                    case STUN_ERR_CODE_INSUFFICIENT_CAPACITY:
+                        retransmit->SetErrorCode(ER_ICE_ALLOCATE_REJECTED_NO_RESOURCES);
+                        //todo notify app
+                        break;
 
-                case STUN_ERR_CODE_ALLOCATION_QUOTA_REACHED:
-                    retransmit->SetErrorCode(ER_ICE_ALLOCATION_QUOTA_REACHED);
-                    break;
+                    case STUN_ERR_CODE_ALLOCATION_QUOTA_REACHED:
+                        retransmit->SetErrorCode(ER_ICE_ALLOCATION_QUOTA_REACHED);
+                        break;
 
-                case STUN_ERR_CODE_ALLOCATION_MISMATCH:
-                    retransmit->SetErrorCode(ER_ICE_ALLOCATION_MISMATCH);
-                    break;
+                    case STUN_ERR_CODE_ALLOCATION_MISMATCH:
+                        retransmit->SetErrorCode(ER_ICE_ALLOCATION_MISMATCH);
+                        break;
 
-                case STUN_ERR_CODE_ROLE_CONFLICT:
-                    // Handle this special case of STUN 'error' by retrying with reversed role
-                    checkStatus = ICECandidatePair::CheckRoleConflict;
-                    break;
+                    case STUN_ERR_CODE_ROLE_CONFLICT:
+                        // Handle this special case of STUN 'error' by retrying with reversed role
+                        checkStatus = ICECandidatePair::CheckRoleConflict;
+                        break;
 
-                default:
-                    status = ER_ICE_STUN_ERROR;
-                    checkStatus = ICECandidatePair::CheckGenericFailed;
-                    retransmit->SetErrorCode(status); //ToDo make these unique!!!
-                    break;
+                    default:
+                        status = ER_ICE_STUN_ERROR;
+                        checkStatus = ICECandidatePair::CheckGenericFailed;
+                        retransmit->SetErrorCode(status); //ToDo make these unique!!!
+                        break;
+                    }
                 }
+
+                break;
             }
 
-            break;
-        }
-
         case STUN_ATTR_USERNAME: {
-            const StunAttributeUsername& sa = *reinterpret_cast<StunAttributeUsername*>(*stunAttrIt);
-            sa.GetUsername(username);
-            break;
-        }
+                const StunAttributeUsername& sa = *reinterpret_cast<StunAttributeUsername*>(*stunAttrIt);
+                sa.GetUsername(username);
+                break;
+            }
 
         default:
             break;
@@ -573,32 +573,32 @@ QStatus _ICECandidate::ReadReceivedMessage(uint32_t timeoutMsec)
         break;
 
     case STUN_MSG_REQUEST_CLASS:
-    {
-        if (msg.GetTypeMethod() != STUN_MSG_BINDING_METHOD) {
-            goto exit;
-        }
+        {
+            if (msg.GetTypeMethod() != STUN_MSG_BINDING_METHOD) {
+                goto exit;
+            }
 
-        if (!component->GetICEStream()->GetSession()->ChecksStarted()) {
-            // We haven't received peer's candidates yet via offer/answer.
-            // Simply respond with no further state change.
-            SendResponse(checkStatus, remote, receivedMsgWasRelayed, tid);
-            goto exit;
-        }
+            if (!component->GetICEStream()->GetSession()->ChecksStarted()) {
+                // We haven't received peer's candidates yet via offer/answer.
+                // Simply respond with no further state change.
+                SendResponse(checkStatus, remote, receivedMsgWasRelayed, tid);
+                goto exit;
+            }
 
-        if (component->GetICEStream()->GetSession()->GetRemoteInitiatedCheckUsername() != username) {
-            // Username fragment does not match.
+            if (component->GetICEStream()->GetSession()->GetRemoteInitiatedCheckUsername() != username) {
+                // Username fragment does not match.
 
-            // ToDo: the server MUST reject the request
-            // with an error response.  This response MUST use an error code
-            // of 401 (Unauthorized).
-            goto exit;
-        }
+                // ToDo: the server MUST reject the request
+                // with an error response.  This response MUST use an error code
+                // of 401 (Unauthorized).
+                goto exit;
+            }
 
-        // Section 7.2.1.1 draft-ietf-mmusic-ice-19
-        checkStatus = ICECandidatePair::CheckResponseSent;  // assume everything is ok
+            // Section 7.2.1.1 draft-ietf-mmusic-ice-19
+            checkStatus = ICECandidatePair::CheckResponseSent; // assume everything is ok
 
-        if (component->GetICEStream()->GetSession()->IsControllingAgent()) {
-            if (ICEcontrollingRequest) {
+            if (component->GetICEStream()->GetSession()->IsControllingAgent()) {
+                if (ICEcontrollingRequest) {
 /* ToDo: determine tieBreaker by matching intended pair (Need to know if this is a Relayed request.)
                 if (constructedPair->GetControlTieBreaker() < controlTieBreaker) {
                     // switch to controlled role
@@ -608,9 +608,9 @@ QStatus _ICECandidate::ReadReceivedMessage(uint32_t timeoutMsec)
                     checkStatus = ICECandidatePair::CheckRoleConflict;
                 }
  */
-            }
-        } else {   // agent is in controlled role
-            if (!ICEcontrollingRequest) { //ICE-CONTROLLED present in request
+                }
+            } else { // agent is in controlled role
+                if (!ICEcontrollingRequest) { //ICE-CONTROLLED present in request
 /* ToDo: determine tieBreaker by matching intended pair (Need to know if this is a Relayed request.)
                 if ( constructedPair->GetControlTieBreaker() < controlTieBreaker) {
                     checkStatus = ICECandidatePair::CheckRoleConflict;
@@ -620,119 +620,119 @@ QStatus _ICECandidate::ReadReceivedMessage(uint32_t timeoutMsec)
                     component->GetICEStream()->GetSession()->SwapControllingAgent();
                 }
  */
-            }
-        }
-
-        status = SendResponse(checkStatus, remote, receivedMsgWasRelayed, tid);
-
-        if (ER_OK == status &&
-            checkStatus == ICECandidatePair::CheckResponseSent) {
-
-            // Section 7.2.1.4 draft-ietf-mmusic-ice-19
-            // 'Construct' a pair, meaning find a pair whose local candidate is equal to
-            // the transport address on which the STUN request was received, and a
-            // remote candidate equal to the source transport address where the
-            // request came from (which may be peer-reflexive remote candidate that was just learned).
-            // Recall that this Stun object may be shared by multiple local
-            // candidates (host, server-reflexive, relayed,) each belonging to perhaps multiple candidate pairs.
-            ICECandidatePair* constructedPair = NULL;
-            if (receivedMsgWasRelayed && sharedStunRelayedCandidate) {
-                QCC_DbgPrintf(("%s: receivedMsgWasRelayed && sharedStunRelayedCandidate", __FUNCTION__));
-                constructedPair = component->GetICEStream()->MatchCheckListEndpoint((*sharedStunRelayedCandidate)->endPoint, remote);
-            } else {
-                QCC_DbgPrintf(("%s: !(receivedMsgWasRelayed && sharedStunRelayedCandidate)", __FUNCTION__));
-                constructedPair = component->GetICEStream()->MatchCheckListEndpoint(endPoint, remote);
-                if ((NULL == constructedPair) && sharedStunServerReflexiveCandidate) {
-                    QCC_DbgPrintf(("%s: ((NULL == constructedPair) && sharedStunServerReflexiveCandidate)", __FUNCTION__));
-                    constructedPair = component->GetICEStream()->MatchCheckListEndpoint((*sharedStunServerReflexiveCandidate)->endPoint, remote);
-                }
-            }
-            if (!constructedPair) {
-                break;
-            } else {
-                // Pair is on check list
-                switch (constructedPair->state) {
-                case ICECandidatePair::Waiting:
-                    constructedPair->AddTriggered();
-                    break;
-
-                case ICECandidatePair::Frozen:
-                    constructedPair->AddTriggered();   // ToDo: spec doesn't explicitly say to, but
-                    // we change to Waiting here. Correct?
-                    break;
-
-                case ICECandidatePair::InProgress:
-                    // Cancel the in-progress transaction and any remaining retransmits,
-                    // and trigger a new check.
-                    constructedPair->SetCanceled();
-                    constructedPair->AddTriggered();
-                    break;
-
-                case ICECandidatePair::Failed:
-                    constructedPair->AddTriggered();
-                    break;
-
-                case ICECandidatePair::Succeeded:
-                    // do nothing
-                    break;
                 }
             }
 
-            // Section 7.2.1.5 draft-ietf-mmusic-ice-19
-            if (useCandidateRequest && !component->GetICEStream()->GetSession()->IsControllingAgent()) {
-                if (constructedPair->state == ICECandidatePair::Succeeded) {
-                    constructedPair->SetNominated();
-                    QCC_DbgPrintf(("SetNominated (CONTROLLED) local %s:%d remote %s:%d",
-                                   constructedPair->local->endPoint.addr.ToString().c_str(),
-                                   constructedPair->local->endPoint.port,
-                                   constructedPair->remote->endPoint.addr.ToString().c_str(),
-                                   constructedPair->remote->endPoint.port));
+            status = SendResponse(checkStatus, remote, receivedMsgWasRelayed, tid);
 
-                } else if (constructedPair->state == ICECandidatePair::InProgress ||
-                           constructedPair->state == ICECandidatePair::Waiting) { //EqualsCanceledTransactionID??
-                    constructedPair->SetNominatedContingent();
-                    QCC_DbgPrintf(("SetNominatedContingent (CONTROLLED) local %s:%d remote %s:%d",
-                                   constructedPair->local->endPoint.addr.ToString().c_str(),
-                                   constructedPair->local->endPoint.port,
-                                   constructedPair->remote->endPoint.addr.ToString().c_str(),
-                                   constructedPair->remote->endPoint.port));
+            if (ER_OK == status &&
+                checkStatus == ICECandidatePair::CheckResponseSent) {
+
+                // Section 7.2.1.4 draft-ietf-mmusic-ice-19
+                // 'Construct' a pair, meaning find a pair whose local candidate is equal to
+                // the transport address on which the STUN request was received, and a
+                // remote candidate equal to the source transport address where the
+                // request came from (which may be peer-reflexive remote candidate that was just learned).
+                // Recall that this Stun object may be shared by multiple local
+                // candidates (host, server-reflexive, relayed,) each belonging to perhaps multiple candidate pairs.
+                ICECandidatePair* constructedPair = NULL;
+                if (receivedMsgWasRelayed && sharedStunRelayedCandidate) {
+                    QCC_DbgPrintf(("%s: receivedMsgWasRelayed && sharedStunRelayedCandidate", __FUNCTION__));
+                    constructedPair = component->GetICEStream()->MatchCheckListEndpoint((*sharedStunRelayedCandidate)->endPoint, remote);
+                } else {
+                    QCC_DbgPrintf(("%s: !(receivedMsgWasRelayed && sharedStunRelayedCandidate)", __FUNCTION__));
+                    constructedPair = component->GetICEStream()->MatchCheckListEndpoint(endPoint, remote);
+                    if ((NULL == constructedPair) && sharedStunServerReflexiveCandidate) {
+                        QCC_DbgPrintf(("%s: ((NULL == constructedPair) && sharedStunServerReflexiveCandidate)", __FUNCTION__));
+                        constructedPair = component->GetICEStream()->MatchCheckListEndpoint((*sharedStunServerReflexiveCandidate)->endPoint, remote);
+                    }
                 }
-            }
+                if (!constructedPair) {
+                    break;
+                } else {
+                    // Pair is on check list
+                    switch (constructedPair->state) {
+                    case ICECandidatePair::Waiting:
+                        constructedPair->AddTriggered();
+                        break;
 
-            component->GetICEStream()->GetSession()->UpdateICEStreamStates();
-        }
+                    case ICECandidatePair::Frozen:
+                        constructedPair->AddTriggered(); // ToDo: spec doesn't explicitly say to, but
+                        // we change to Waiting here. Correct?
+                        break;
 
-        break;
-    }
+                    case ICECandidatePair::InProgress:
+                        // Cancel the in-progress transaction and any remaining retransmits,
+                        // and trigger a new check.
+                        constructedPair->SetCanceled();
+                        constructedPair->AddTriggered();
+                        break;
 
-    case STUN_MSG_RESPONSE_CLASS:
-    {
-        // Is this an Allocate/CreatePermission/refresh response?
-        if (NULL != retransmit) {
-            if (retransmit->GetState() == Retransmit::AwaitingResponse) {
-                retransmit->SetState(Retransmit::ReceivedSuccessResponse);
-                QCC_DbgPrintf(("ReceivedSuccessResponse"));
-            }
-        } else {
-            // Check if this is a response to our request.
-            ICECandidatePair* intendedPair = component->GetICEStream()->MatchCheckList(remote, tid);
-            if (intendedPair) {
-                if ((ICECandidatePair::InProgress == intendedPair->state) ||
-                    ((ICECandidatePair::Waiting == intendedPair->state) &&     // canceled?
-                     intendedPair->EqualsCanceledTransactionID(tid))) {
+                    case ICECandidatePair::Failed:
+                        constructedPair->AddTriggered();
+                        break;
 
-                    QCC_DbgPrintf(("CheckSucceeded"));
+                    case ICECandidatePair::Succeeded:
+                        // do nothing
+                        break;
+                    }
+                }
 
-                    // Notify the stream object
-                    component->GetICEStream()->ProcessCheckEvent(*intendedPair,
-                                                                 ICECandidatePair::CheckSucceeded, mappedAddress);
+                // Section 7.2.1.5 draft-ietf-mmusic-ice-19
+                if (useCandidateRequest && !component->GetICEStream()->GetSession()->IsControllingAgent()) {
+                    if (constructedPair->state == ICECandidatePair::Succeeded) {
+                        constructedPair->SetNominated();
+                        QCC_DbgPrintf(("SetNominated (CONTROLLED) local %s:%d remote %s:%d",
+                                       constructedPair->local->endPoint.addr.ToString().c_str(),
+                                       constructedPair->local->endPoint.port,
+                                       constructedPair->remote->endPoint.addr.ToString().c_str(),
+                                       constructedPair->remote->endPoint.port));
+
+                    } else if (constructedPair->state == ICECandidatePair::InProgress ||
+                               constructedPair->state == ICECandidatePair::Waiting) { //EqualsCanceledTransactionID??
+                        constructedPair->SetNominatedContingent();
+                        QCC_DbgPrintf(("SetNominatedContingent (CONTROLLED) local %s:%d remote %s:%d",
+                                       constructedPair->local->endPoint.addr.ToString().c_str(),
+                                       constructedPair->local->endPoint.port,
+                                       constructedPair->remote->endPoint.addr.ToString().c_str(),
+                                       constructedPair->remote->endPoint.port));
+                    }
                 }
 
                 component->GetICEStream()->GetSession()->UpdateICEStreamStates();
             }
+
+            break;
         }
-        break;
-    }
+
+    case STUN_MSG_RESPONSE_CLASS:
+        {
+            // Is this an Allocate/CreatePermission/refresh response?
+            if (NULL != retransmit) {
+                if (retransmit->GetState() == Retransmit::AwaitingResponse) {
+                    retransmit->SetState(Retransmit::ReceivedSuccessResponse);
+                    QCC_DbgPrintf(("ReceivedSuccessResponse"));
+                }
+            } else {
+                // Check if this is a response to our request.
+                ICECandidatePair* intendedPair = component->GetICEStream()->MatchCheckList(remote, tid);
+                if (intendedPair) {
+                    if ((ICECandidatePair::InProgress == intendedPair->state) ||
+                        ((ICECandidatePair::Waiting == intendedPair->state) && // canceled?
+                         intendedPair->EqualsCanceledTransactionID(tid))) {
+
+                        QCC_DbgPrintf(("CheckSucceeded"));
+
+                        // Notify the stream object
+                        component->GetICEStream()->ProcessCheckEvent(*intendedPair,
+                                                                     ICECandidatePair::CheckSucceeded, mappedAddress);
+                    }
+
+                    component->GetICEStream()->GetSession()->UpdateICEStreamStates();
+                }
+            }
+            break;
+        }
 
     default:
         break;

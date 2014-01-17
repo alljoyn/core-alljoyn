@@ -201,7 +201,9 @@ static void PrintFlags(uint32_t flags)
     if (flags & qcc::IfConfigEntry::DYNAMIC) {
         printf("DYNAMIC ");
     }
-    if (flags) printf("\b");
+    if (flags) {
+        printf("\b");
+    }
     printf(")");
 }
 

@@ -288,20 +288,20 @@ bool _PolicyDB::AddRule(policydb::PolicyCategory cat,
         break;
 
     case policydb::POLICY_USER: {
-        uint32_t uid = GetUsersUid(catValue.c_str());
-        success = AddRule(ownRS.userRules[uid], sendRS.userRules[uid],
-                          receiveRS.userRules[uid], connectRS.userRules[uid],
-                          permission, ruleAttrs);
-        break;
-    }
+            uint32_t uid = GetUsersUid(catValue.c_str());
+            success = AddRule(ownRS.userRules[uid], sendRS.userRules[uid],
+                              receiveRS.userRules[uid], connectRS.userRules[uid],
+                              permission, ruleAttrs);
+            break;
+        }
 
     case policydb::POLICY_GROUP: {
-        uint32_t gid = GetUsersGid(catValue.c_str());
-        success = AddRule(ownRS.groupRules[gid], sendRS.groupRules[gid],
-                          receiveRS.groupRules[gid], connectRS.groupRules[gid],
-                          permission, ruleAttrs);
-        break;
-    }
+            uint32_t gid = GetUsersGid(catValue.c_str());
+            success = AddRule(ownRS.groupRules[gid], sendRS.groupRules[gid],
+                              receiveRS.groupRules[gid], connectRS.groupRules[gid],
+                              permission, ruleAttrs);
+            break;
+        }
 
     case policydb::POLICY_AT_CONSOLE:
         if (catValue.compare("true") == 0) {

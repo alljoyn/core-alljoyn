@@ -297,18 +297,18 @@ NPError NPP_GetValue(NPP npp, NPPVariable var, void* value)
 #endif
 
     case NPPVpluginScriptableNPObject: {
-        if (!npp) {
-            ret = NPERR_INVALID_INSTANCE_ERROR;
+            if (!npp) {
+                ret = NPERR_INVALID_INSTANCE_ERROR;
+                break;
+            }
+            PluginData* pluginData = reinterpret_cast<PluginData*>(npp->pdata);
+            if (!pluginData) {
+                ret = NPERR_GENERIC_ERROR;
+                break;
+            }
+            *(NPObject** )value = pluginData->GetScriptableObject();
             break;
         }
-        PluginData* pluginData = reinterpret_cast<PluginData*>(npp->pdata);
-        if (!pluginData) {
-            ret = NPERR_GENERIC_ERROR;
-            break;
-        }
-        *(NPObject** )value = pluginData->GetScriptableObject();
-        break;
-    }
 
     default:
         ret = NPERR_GENERIC_ERROR;

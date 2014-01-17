@@ -25,7 +25,7 @@ using namespace services;
 static const char* ABOUT_ICON_OBJECT_PATH = "/About/DeviceIcon";
 static const char* ABOUT_ICON_INTERFACE_NAME = "org.alljoyn.Icon";
 
-#define CHECK_BREAK(x) if ((status = x) != ER_OK) break;
+#define CHECK_BREAK(x) if ((status = x) != ER_OK) { break; }
 
 AboutIconClient::AboutIconClient(ajn::BusAttachment& bus)
     : m_BusAttachment(&bus)

@@ -417,11 +417,11 @@ static void Fuzz(TestPipe& stream)
         /*
          * Toggle flag bits
          */
-    {
-        uint8_t bit = (1 << qcc::Rand8() % 8);
-        hdr->flags ^= bit;
-    }
-    break;
+        {
+            uint8_t bit = (1 << qcc::Rand8() % 8);
+            hdr->flags ^= bit;
+        }
+        break;
 
     case 4:
         /*
@@ -518,21 +518,27 @@ static QStatus TestMarshal(const MsgArg* argList, size_t numArgs, const char* ex
     ep->GetFeatures().handlePassing = true;
 
     if (numArgs == 0) {
-        if (!quiet) printf("Empty arg.v_struct.Elements, arg.v_struct.numElements\n");
-        else errString += "Empty arg.v_struct.Elements, arg.v_struct.numElements\n";
+        if (!quiet) {
+            printf("Empty arg.v_struct.Elements, arg.v_struct.numElements\n");
+        } else {      errString += "Empty arg.v_struct.Elements, arg.v_struct.numElements\n"; }
         return ER_FAIL;
     }
 
-    if (!quiet) printf("++++++++++++++++++++++++++++++++++++++++++++\n");
-    else errString += "\n++++++++++++++++++++++++++++++++++++++++++++\n";
+    if (!quiet) {
+        printf("++++++++++++++++++++++++++++++++++++++++++++\n");
+    } else {  errString += "\n++++++++++++++++++++++++++++++++++++++++++++\n"; }
     qcc::String inargList = MsgArg::ToString(argList, numArgs);
     qcc::String inSig = MsgArg::Signature(argList, numArgs);
-    if (!quiet) printf("ArgList:\n%s", inargList.c_str());
-    else if (!bigArray) errString += "ArgList:\n" + static_cast<qcc::String>(inargList.c_str());
+    if (!quiet) {
+        printf("ArgList:\n%s", inargList.c_str());
+    } else if (!bigArray) {
+        errString += "ArgList:\n" + static_cast<qcc::String>(inargList.c_str());
+    }
 
     status = msg.MethodCall("desti.nation", "/foo/bar", "foo.bar", "test", argList, numArgs);
-    if (!quiet) printf("MethodCall status:%s\n", QCC_StatusText(status));
-    else errString += "MethodCall status: " + static_cast<qcc::String>(QCC_StatusText(status)) + "\n";
+    if (!quiet) {
+        printf("MethodCall status:%s\n", QCC_StatusText(status));
+    } else {  errString += "MethodCall status: " + static_cast<qcc::String>(QCC_StatusText(status)) + "\n"; }
     if (status != ER_OK) {
         return status;
     }
@@ -547,43 +553,52 @@ static QStatus TestMarshal(const MsgArg* argList, size_t numArgs, const char* ex
 
     status = msg.Read(ep, ":88.88");
     if (status != ER_OK) {
-        if (!quiet) printf("Message::Read status:%s\n", QCC_StatusText(status));
-        else errString += "Message::Read status : " + static_cast<qcc::String>(QCC_StatusText(status)) + "\n";
+        if (!quiet) {
+            printf("Message::Read status:%s\n", QCC_StatusText(status));
+        } else {      errString += "Message::Read status : " + static_cast<qcc::String>(QCC_StatusText(status)) + "\n"; }
         return status;
     }
 
     status = msg.Unmarshal(ep, ":88.88");
     if (status != ER_OK) {
-        if (!quiet) printf("Message::Unmarshal status:%s\n", QCC_StatusText(status));
-        else errString += "Message::Unmarshal status : " + static_cast<qcc::String>(QCC_StatusText(status)) + "\n";
+        if (!quiet) {
+            printf("Message::Unmarshal status:%s\n", QCC_StatusText(status));
+        } else {      errString += "Message::Unmarshal status : " + static_cast<qcc::String>(QCC_StatusText(status)) + "\n"; }
         return status;
     }
     status = msg.UnmarshalBody();
     if (status != ER_OK) {
-        if (!quiet) printf("Message::UnmarshalArgs status:%s\n", QCC_StatusText(status));
-        else errString += "Message::UnmarshalArgs status : " + static_cast<qcc::String>(QCC_StatusText(status)) + "\n";
+        if (!quiet) {
+            printf("Message::UnmarshalArgs status:%s\n", QCC_StatusText(status));
+        } else {      errString += "Message::UnmarshalArgs status : " + static_cast<qcc::String>(QCC_StatusText(status)) + "\n"; }
         return status;
     }
     msg.GetArgs(numArgs, argList);
     qcc::String outargList = MsgArg::ToString(argList, numArgs);
     qcc::String outSig = MsgArg::Signature(argList, numArgs);
-    if (!quiet) printf("--------------------------------------------\n");
-    else errString += "--------------------------------------------\n";
+    if (!quiet) {
+        printf("--------------------------------------------\n");
+    } else {  errString += "--------------------------------------------\n"; }
     if (inargList == outargList) {
-        if (!quiet) printf("outargList == inargList\n");
-        else errString += "outargList == inargList\n";
+        if (!quiet) {
+            printf("outargList == inargList\n");
+        } else {      errString += "outargList == inargList\n"; }
     } else if (exception && (StripWS(outargList) == StripWS(exception))) {
-        if (!quiet) printf("outargList == exception\n%s\n", exception);
-        else errString += "outargList == exception\n" + static_cast<qcc::String>(exception) + "\n";
+        if (!quiet) {
+            printf("outargList == exception\n%s\n", exception);
+        } else {      errString += "outargList == exception\n" + static_cast<qcc::String>(exception) + "\n"; }
     } else if (exception && (strcmp(exception, "*") == 0) && (inSig == outSig)) {
-        if (!quiet) printf("Unmarshal: hand compare:\n%s\n%s\n", inargList.c_str(), outargList.c_str());
-        else errString += "Unmarshal: hand compare:\n" + static_cast<qcc::String>(inargList.c_str()) +
-                          "\n" + static_cast<qcc::String>(outargList.c_str()) + "\n";
+        if (!quiet) {
+            printf("Unmarshal: hand compare:\n%s\n%s\n", inargList.c_str(), outargList.c_str());
+        } else {      errString += "Unmarshal: hand compare:\n" + static_cast<qcc::String>(inargList.c_str()) +
+                                   "\n" + static_cast<qcc::String>(outargList.c_str()) + "\n"; }
     } else {
-        if (!quiet) printf("FAILED\n");
-        else errString += "FAILED\n";
-        if (!quiet) printf("Unmarshal: %u argList\n%s\n", static_cast<uint32_t>(numArgs), outargList.c_str());
-        else errString += "Unmarshal: argList\n" + static_cast<qcc::String>(outargList.c_str()) + "\n";
+        if (!quiet) {
+            printf("FAILED\n");
+        } else {      errString += "FAILED\n"; }
+        if (!quiet) {
+            printf("Unmarshal: %u argList\n%s\n", static_cast<uint32_t>(numArgs), outargList.c_str());
+        } else {      errString += "Unmarshal: argList\n" + static_cast<qcc::String>(outargList.c_str()) + "\n"; }
         status = ER_FAIL;
     }
     return status;

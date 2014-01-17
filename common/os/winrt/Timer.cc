@@ -654,8 +654,12 @@ OSAlarm::OSAlarm() : _timer(nullptr)
 
 /// compare Alarm objects for storage in a priority queue.
 bool CompareAlarm::operator()(const Alarm& a1, const Alarm& a2) {
-    if (a2->alarmTime < a1->alarmTime) return true;
-    if (a1->alarmTime == a2->alarmTime && a1->id > a2->id) return true;
+    if (a2->alarmTime < a1->alarmTime) {
+        return true;
+    }
+    if (a1->alarmTime == a2->alarmTime && a1->id > a2->id) {
+        return true;
+    }
     return false;
 };
 

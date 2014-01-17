@@ -18,8 +18,8 @@
 #include <qcc/Debug.h>
 #include <algorithm>
 
-#define CHECK(x) if ((status = x) != ER_OK) break;
-#define CHECK_RETURN(x) if ((status = x) != ER_OK) return status;
+#define CHECK(x) if ((status = x) != ER_OK) { break; }
+#define CHECK_RETURN(x) if ((status = x) != ER_OK) { return status; }
 #define QCC_MODULE "ALLJOYN_ABOUT_PROPERTYSTORE"
 
 namespace ajn {
@@ -63,15 +63,18 @@ static void HexStringToBytes(const qcc::String& hex, uint8_t* outBytes, size_t l
 
 QStatus AboutPropertyStoreImpl::isLanguageSupported(const char* language)
 {
-    if (!language)
+    if (!language) {
         return ER_LANGUAGE_NOT_SUPPORTED;
+    }
 
     PropertyMap::iterator it = m_Properties.find(SUPPORTED_LANGS);
-    if (it == m_Properties.end())
+    if (it == m_Properties.end()) {
         return ER_LANGUAGE_NOT_SUPPORTED;
+    }
 
-    if (std::find(m_SupportedLangs.begin(), m_SupportedLangs.end(), qcc::String(language)) == m_SupportedLangs.end())
+    if (std::find(m_SupportedLangs.begin(), m_SupportedLangs.end(), qcc::String(language)) == m_SupportedLangs.end()) {
         return ER_LANGUAGE_NOT_SUPPORTED;
+    }
 
     return ER_OK;
 }
@@ -97,12 +100,14 @@ QStatus AboutPropertyStoreImpl::ReadAll(const char* languageTag, Filter filter, 
             for (PropertyMap::const_iterator it = m_Properties.begin(); it != m_Properties.end(); ++it) {
                 const PropertyStoreProperty& property = it->second;
 
-                if (!property.getIsAnnouncable())
+                if (!property.getIsAnnouncable()) {
                     continue;
+                }
 
                 // check that it is from the defaultLanguage or empty.
-                if (!(property.getLanguage().empty() || property.getLanguage().compare(defaultLanguage) == 0))
+                if (!(property.getLanguage().empty() || property.getLanguage().compare(defaultLanguage) == 0)) {
                     continue;
+                }
 
                 CHECK(argsAnnounceData[announceArgCount].Set("{sv}", property.getPropertyName().c_str(),
                                                              new MsgArg(property.getPropertyValue())))
@@ -123,8 +128,9 @@ QStatus AboutPropertyStoreImpl::ReadAll(const char* languageTag, Filter filter, 
             CHECK_RETURN(isLanguageSupported(languageTag))
         } else {
             PropertyMap::iterator it = m_Properties.find(DEFAULT_LANG);
-            if (it == m_Properties.end())
+            if (it == m_Properties.end()) {
                 return ER_LANGUAGE_NOT_SUPPORTED;
+            }
             CHECK_RETURN(it->second.getPropertyValue().Get("s", &languageTag))
         }
 
@@ -134,12 +140,14 @@ QStatus AboutPropertyStoreImpl::ReadAll(const char* languageTag, Filter filter, 
             for (PropertyMap::const_iterator it = m_Properties.begin(); it != m_Properties.end(); ++it) {
                 const PropertyStoreProperty& property = it->second;
 
-                if (!property.getIsPublic())
+                if (!property.getIsPublic()) {
                     continue;
+                }
 
                 // check that it is from the defaultLanguage or empty.
-                if (!(property.getLanguage().empty() || property.getLanguage().compare(languageTag) == 0))
+                if (!(property.getLanguage().empty() || property.getLanguage().compare(languageTag) == 0)) {
                     continue;
+                }
 
                 CHECK(argsReadData[readArgCount].Set("{sv}", property.getPropertyName().c_str(),
                                                      new MsgArg(property.getPropertyValue())))
@@ -183,8 +191,9 @@ PropertyStoreProperty* AboutPropertyStoreImpl::getProperty(PropertyStoreKey prop
 {
     std::pair<PropertyMap::iterator, PropertyMap::iterator> iter = m_Properties.equal_range(propertyKey);
     for (PropertyMap::iterator it = iter.first; it != iter.second; it++) {
-        if (it->second.getLanguage().compare(language) == 0)
+        if (it->second.getLanguage().compare(language) == 0) {
             return &it->second;
+        }
     }
 
     return 0;
@@ -220,8 +229,9 @@ QStatus AboutPropertyStoreImpl::setProperty(PropertyStoreKey propertyKey, const 
 
 qcc::String const& AboutPropertyStoreImpl::getPropertyStoreName(PropertyStoreKey propertyStoreKey)
 {
-    if (propertyStoreKey < 0 || propertyStoreKey >= NUMBER_OF_KEYS)
+    if (propertyStoreKey < 0 || propertyStoreKey >= NUMBER_OF_KEYS) {
         return PropertyStoreName[NUMBER_OF_KEYS];
+    }
 
     return PropertyStoreName[propertyStoreKey];
 }
@@ -421,8 +431,9 @@ QStatus AboutPropertyStoreImpl::validateValue(PropertyStoreKey propertyKey, ajn:
         break;
     }
 
-    if (status != ER_OK)
+    if (status != ER_OK) {
         QCC_LogError(status, ("Validation of PropertyStore value failed"));
+    }
     return status;
 }
 

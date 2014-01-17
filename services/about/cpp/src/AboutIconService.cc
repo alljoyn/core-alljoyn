@@ -19,7 +19,7 @@
 #include <alljoyn/BusAttachment.h>
 
 #define QCC_MODULE "ALLJOYN_ABOUT_ICON_SERVICE"
-#define CHECK_RETURN(x) if ((status = x) != ER_OK) return status;
+#define CHECK_RETURN(x) if ((status = x) != ER_OK) { return status; }
 
 using namespace ajn;
 using namespace services;
@@ -40,8 +40,9 @@ QStatus AboutIconService::Register() {
     InterfaceDescription* intf = const_cast<InterfaceDescription*>(m_BusAttachment->GetInterface(ABOUT_ICON_INTERFACE_NAME));
     if (!intf) {
         CHECK_RETURN(m_BusAttachment->CreateInterface(ABOUT_ICON_INTERFACE_NAME, intf, false))
-        if (!intf)
+        if (!intf) {
             return ER_BUS_CANNOT_ADD_INTERFACE;
+        }
 
         CHECK_RETURN(intf->AddMethod("GetUrl", NULL, "s", "url"))
         CHECK_RETURN(intf->AddMethod("GetContent", NULL, "ay", "content"))
@@ -66,10 +67,11 @@ void AboutIconService::GetUrl(const ajn::InterfaceDescription::Member* member, a
     if (numArgs == 0) {
         ajn::MsgArg retargs[1];
         QStatus status = retargs[0].Set("s", m_Url.c_str());
-        if (status != ER_OK)
+        if (status != ER_OK) {
             MethodReply(msg, status);
-        else
+        } else {
             MethodReply(msg, retargs, 1);
+        }
     } else {
         MethodReply(msg, ER_INVALID_DATA);
     }
@@ -83,10 +85,11 @@ void AboutIconService::GetContent(const ajn::InterfaceDescription::Member* membe
     if (numArgs == 0) {
         ajn::MsgArg retargs[1];
         QStatus status = retargs[0].Set("ay", m_ContentSize, m_Content);
-        if (status != ER_OK)
+        if (status != ER_OK) {
             MethodReply(msg, status);
-        else
+        } else {
             MethodReply(msg, retargs, 1);
+        }
     } else {
         MethodReply(msg, ER_INVALID_DATA);
     }

@@ -348,7 +348,9 @@ int main(int argc, char** argv)
         testIntf->AddSignal("Button_Down", "i", "dummy");
         testIntf->Activate();
     } else {
-        if (ER_OK == status) status = ER_FAIL;
+        if (ER_OK == status) {
+            status = ER_FAIL;
+        }
         QCC_LogError(status, ("Failed to create interface \"%s\"", ::org::alljoyn::alljoyn_test::InterfaceName));
     }
 

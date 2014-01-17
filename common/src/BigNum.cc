@@ -1017,13 +1017,15 @@ BigNum BigNum::mod_inv(const BigNum& mod) const
         iter = -iter;
     }
 
-    if (u3 != 1)
+    if (u3 != 1) {
         return 0;  // error, there is no inverse
 
-    if (iter < 0)
+    }
+    if (iter < 0) {
         inv = mod - u1;
-    else
+    } else {
         inv = u1;
+    }
 
     return inv;
 }

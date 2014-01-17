@@ -989,7 +989,7 @@ class JLocalRef {
   public:
     JLocalRef() : jobj(NULL) { }
     JLocalRef(const T& obj) : jobj(obj) { }
-    ~JLocalRef() { if (jobj) GetEnv()->DeleteLocalRef(jobj); }
+    ~JLocalRef() { if (jobj) { GetEnv()->DeleteLocalRef(jobj); } }
     JLocalRef& operator=(T obj)
     {
         if (jobj) {
@@ -1083,7 +1083,9 @@ JString::JString(jstring s)
  */
 JString::~JString()
 {
-    if (str) GetEnv()->ReleaseStringUTFChars(jstr, str);
+    if (str) {
+        GetEnv()->ReleaseStringUTFChars(jstr, str);
+    }
 }
 
 /**

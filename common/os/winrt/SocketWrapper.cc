@@ -453,178 +453,178 @@ uint32_t SocketWrapper::Bind(Platform::String ^ bindName, int localPort)
         }
         switch (_socketType) {
         case SocketType::QCC_SOCK_STREAM:
-        {
-            // Check if bind operation is necessary to re-do
-            if (nullptr == _tcpSocketListener ||
-                _lastBindHostname != bindName ||
-                _lastBindPort != localPort) {
-                // Validate bind address
-                result = (::QStatus)IsValidAddress(bindName);
-                if (ER_OK != result) {
-                    break;
-                }
-                // Store bind information
-                _lastBindHostname = bindName;
-                _lastBindPort = localPort;
-                try {
-                    // Sanitize the bind address
-                    Platform::String ^ name = SanitizeAddress(bindName);
-                    if (nullptr == _tcpSocketListener) {
-                        // Create StreamSocketListener
-                        _tcpSocketListener = ref new StreamSocketListener();
-                        // Check for allocation error
+            {
+                // Check if bind operation is necessary to re-do
+                if (nullptr == _tcpSocketListener ||
+                    _lastBindHostname != bindName ||
+                    _lastBindPort != localPort) {
+                    // Validate bind address
+                    result = (::QStatus)IsValidAddress(bindName);
+                    if (ER_OK != result) {
+                        break;
+                    }
+                    // Store bind information
+                    _lastBindHostname = bindName;
+                    _lastBindPort = localPort;
+                    try {
+                        // Sanitize the bind address
+                        Platform::String ^ name = SanitizeAddress(bindName);
                         if (nullptr == _tcpSocketListener) {
-                            result = ER_OUT_OF_MEMORY;
-                            break;
+                            // Create StreamSocketListener
+                            _tcpSocketListener = ref new StreamSocketListener();
+                            // Check for allocation error
+                            if (nullptr == _tcpSocketListener) {
+                                result = ER_OUT_OF_MEMORY;
+                                break;
+                            }
+                            // Create event handler for receiving connections
+                            TypedEventHandler<StreamSocketListener ^, StreamSocketListenerConnectionReceivedEventArgs ^> ^ handler = ref new TypedEventHandler<StreamSocketListener ^, StreamSocketListenerConnectionReceivedEventArgs ^>(
+                                [ = ] (StreamSocketListener ^ sender, StreamSocketListenerConnectionReceivedEventArgs ^ args) {
+                                    TCPSocketConnectionReceived(sender, args);
+                                });
+                            // Check for allocation error
+                            if (nullptr == handler) {
+                                result = ER_OUT_OF_MEMORY;
+                                break;
+                            }
+                            // Add event handler for ConnectionReceived
+                            _tcpSocketListener->ConnectionReceived::add(handler);
                         }
-                        // Create event handler for receiving connections
-                        TypedEventHandler<StreamSocketListener ^, StreamSocketListenerConnectionReceivedEventArgs ^> ^ handler = ref new TypedEventHandler<StreamSocketListener ^, StreamSocketListenerConnectionReceivedEventArgs ^>(
-                            [ = ] (StreamSocketListener ^ sender, StreamSocketListenerConnectionReceivedEventArgs ^ args) {
-                                TCPSocketConnectionReceived(sender, args);
-                            });
-                        // Check for allocation error
-                        if (nullptr == handler) {
-                            result = ER_OUT_OF_MEMORY;
-                            break;
+                        // Check if bound name is ANY
+                        if (nullptr != name) {
+                            // Create HostName from string
+                            Windows::Networking::HostName ^ hostname = ref new Windows::Networking::HostName(name);
+                            // Check for allocation error
+                            if (nullptr == hostname) {
+                                result = ER_OUT_OF_MEMORY;
+                                break;
+                            }
+                            // Bind socket with address
+                            IAsyncAction ^ op = _tcpSocketListener->BindEndpointAsync(hostname, localPort != 0 ? localPort.ToString() : "");
+                            // Check for allocation error
+                            if (nullptr == op) {
+                                result = ER_OUT_OF_MEMORY;
+                                break;
+                            }
+                            concurrency::task<void> bindTask(op);
+                            // Wait for bind to complete
+                            bindTask.wait();
+                        } else {
+                            // Bind socket with port
+                            IAsyncAction ^ op = _tcpSocketListener->BindServiceNameAsync(localPort != 0 ? localPort.ToString() : "");
+                            // Check for allocation error
+                            if (nullptr == op) {
+                                result = ER_OUT_OF_MEMORY;
+                                break;
+                            }
+                            concurrency::task<void> bindTask(op);
+                            // Wait for bind to complete
+                            bindTask.wait();
                         }
-                        // Add event handler for ConnectionReceived
-                        _tcpSocketListener->ConnectionReceived::add(handler);
+                        // Store the bind port
+                        _lastBindPort = _wtoi(_tcpSocketListener->Information->LocalPort->Data());
+                        // Set the bind state
+                        SetBindingState(BindingState::Bind);
+                        result = ER_OK;
+                        break;
+                    } catch (Platform::COMException ^ ex) {
+                        result = ER_OS_ERROR;
+                        SetLastError(COMExceptionToQStatus(ex->HResult));
+                        break;
+                    } catch (...) {
+                        result = ER_OS_ERROR;
+                        SetLastError(ER_OS_ERROR);
+                        break;
                     }
-                    // Check if bound name is ANY
-                    if (nullptr != name) {
-                        // Create HostName from string
-                        Windows::Networking::HostName ^ hostname = ref new Windows::Networking::HostName(name);
-                        // Check for allocation error
-                        if (nullptr == hostname) {
-                            result = ER_OUT_OF_MEMORY;
-                            break;
-                        }
-                        // Bind socket with address
-                        IAsyncAction ^ op = _tcpSocketListener->BindEndpointAsync(hostname, localPort != 0 ? localPort.ToString() : "");
-                        // Check for allocation error
-                        if (nullptr == op) {
-                            result = ER_OUT_OF_MEMORY;
-                            break;
-                        }
-                        concurrency::task<void> bindTask(op);
-                        // Wait for bind to complete
-                        bindTask.wait();
-                    } else {
-                        // Bind socket with port
-                        IAsyncAction ^ op = _tcpSocketListener->BindServiceNameAsync(localPort != 0 ? localPort.ToString() : "");
-                        // Check for allocation error
-                        if (nullptr == op) {
-                            result = ER_OUT_OF_MEMORY;
-                            break;
-                        }
-                        concurrency::task<void> bindTask(op);
-                        // Wait for bind to complete
-                        bindTask.wait();
-                    }
-                    // Store the bind port
-                    _lastBindPort = _wtoi(_tcpSocketListener->Information->LocalPort->Data());
-                    // Set the bind state
-                    SetBindingState(BindingState::Bind);
-                    result = ER_OK;
-                    break;
-                } catch (Platform::COMException ^ ex) {
-                    result = ER_OS_ERROR;
-                    SetLastError(COMExceptionToQStatus(ex->HResult));
-                    break;
-                } catch (...) {
-                    result = ER_OS_ERROR;
-                    SetLastError(ER_OS_ERROR);
-                    break;
                 }
             }
-        }
-        break;
+            break;
 
         case SocketType::QCC_SOCK_DGRAM:
-        {
-            // Check if bind operation is necessary to re-do
-            if (nullptr == _udpSocket ||
-                _lastBindHostname != bindName ||
-                _lastBindPort != localPort) {
-                // Validate bind address
-                result = (::QStatus)IsValidAddress(bindName);
-                if (ER_OK != result) {
-                    break;
-                }
-                // Store bind information
-                _lastBindHostname = bindName;
-                _lastBindPort = localPort;
-                try{
-                    // Sanitize the bind address
-                    Platform::String ^ name = SanitizeAddress(bindName);
-                    if (nullptr == _udpSocket) {
-                        // Create DatagramSocket
-                        _udpSocket = ref new DatagramSocket();
-                        // Check for allocation error
+            {
+                // Check if bind operation is necessary to re-do
+                if (nullptr == _udpSocket ||
+                    _lastBindHostname != bindName ||
+                    _lastBindPort != localPort) {
+                    // Validate bind address
+                    result = (::QStatus)IsValidAddress(bindName);
+                    if (ER_OK != result) {
+                        break;
+                    }
+                    // Store bind information
+                    _lastBindHostname = bindName;
+                    _lastBindPort = localPort;
+                    try{
+                        // Sanitize the bind address
+                        Platform::String ^ name = SanitizeAddress(bindName);
                         if (nullptr == _udpSocket) {
-                            result = ER_OUT_OF_MEMORY;
-                            break;
+                            // Create DatagramSocket
+                            _udpSocket = ref new DatagramSocket();
+                            // Check for allocation error
+                            if (nullptr == _udpSocket) {
+                                result = ER_OUT_OF_MEMORY;
+                                break;
+                            }
+                            // Create event handler for receiving messages
+                            TypedEventHandler<DatagramSocket ^, DatagramSocketMessageReceivedEventArgs ^> ^ handler = ref new TypedEventHandler<DatagramSocket ^, DatagramSocketMessageReceivedEventArgs ^>(
+                                [ = ] (DatagramSocket ^ sender, DatagramSocketMessageReceivedEventArgs ^ args) {
+                                    UDPSocketMessageReceived(sender, args);
+                                });
+                            // Check for allocation error
+                            if (nullptr == handler) {
+                                result = ER_OUT_OF_MEMORY;
+                                break;
+                            }
+                            // Add handler for MessageReceived
+                            _udpSocket->MessageReceived::add(handler);
                         }
-                        // Create event handler for receiving messages
-                        TypedEventHandler<DatagramSocket ^, DatagramSocketMessageReceivedEventArgs ^> ^ handler = ref new TypedEventHandler<DatagramSocket ^, DatagramSocketMessageReceivedEventArgs ^>(
-                            [ = ] (DatagramSocket ^ sender, DatagramSocketMessageReceivedEventArgs ^ args) {
-                                UDPSocketMessageReceived(sender, args);
-                            });
-                        // Check for allocation error
-                        if (nullptr == handler) {
-                            result = ER_OUT_OF_MEMORY;
-                            break;
+                        // Check if bound name is ANY
+                        if (nullptr != name) {
+                            // Create HostName from string
+                            Windows::Networking::HostName ^ hostname = ref new Windows::Networking::HostName(name);
+                            // Check for allocation error
+                            if (nullptr == hostname) {
+                                result = ER_OUT_OF_MEMORY;
+                                break;
+                            }
+                            // Bind socket with address
+                            IAsyncAction ^ op = _udpSocket->BindEndpointAsync(hostname, localPort != 0 ? localPort.ToString() : "");
+                            // Check for allocation error
+                            if (nullptr == op) {
+                                result = ER_OUT_OF_MEMORY;
+                                break;
+                            }
+                            concurrency::task<void> bindTask(op);
+                            // Wait for bind to complete
+                            bindTask.wait();
+                        } else {
+                            // Bind socket with port
+                            IAsyncAction ^ op = _udpSocket->BindServiceNameAsync(localPort != 0 ? localPort.ToString() : "");
+                            // Check for allocation error
+                            if (nullptr == op) {
+                                result = ER_OUT_OF_MEMORY;
+                                break;
+                            }
+                            concurrency::task<void> bindTask(op);
+                            // Wait for bind to complete
+                            bindTask.wait();
                         }
-                        // Add handler for MessageReceived
-                        _udpSocket->MessageReceived::add(handler);
+                        // Store the bind port
+                        _lastBindPort = _wtoi(_udpSocket->Information->LocalPort->Data());
+                        // Set binding state
+                        SetBindingState(BindingState::Bind);
+                        result = ER_OK;
+                        break;
+                    } catch (Platform::COMException ^ ex) {
+                        SetLastError(COMExceptionToQStatus(ex->HResult));
+                        break;
+                    } catch (...) {
+                        SetLastError(ER_OS_ERROR);
+                        break;
                     }
-                    // Check if bound name is ANY
-                    if (nullptr != name) {
-                        // Create HostName from string
-                        Windows::Networking::HostName ^ hostname = ref new Windows::Networking::HostName(name);
-                        // Check for allocation error
-                        if (nullptr == hostname) {
-                            result = ER_OUT_OF_MEMORY;
-                            break;
-                        }
-                        // Bind socket with address
-                        IAsyncAction ^ op = _udpSocket->BindEndpointAsync(hostname, localPort != 0 ? localPort.ToString() : "");
-                        // Check for allocation error
-                        if (nullptr == op) {
-                            result = ER_OUT_OF_MEMORY;
-                            break;
-                        }
-                        concurrency::task<void> bindTask(op);
-                        // Wait for bind to complete
-                        bindTask.wait();
-                    } else {
-                        // Bind socket with port
-                        IAsyncAction ^ op = _udpSocket->BindServiceNameAsync(localPort != 0 ? localPort.ToString() : "");
-                        // Check for allocation error
-                        if (nullptr == op) {
-                            result = ER_OUT_OF_MEMORY;
-                            break;
-                        }
-                        concurrency::task<void> bindTask(op);
-                        // Wait for bind to complete
-                        bindTask.wait();
-                    }
-                    // Store the bind port
-                    _lastBindPort = _wtoi(_udpSocket->Information->LocalPort->Data());
-                    // Set binding state
-                    SetBindingState(BindingState::Bind);
-                    result = ER_OK;
-                    break;
-                } catch (Platform::COMException ^ ex) {
-                    SetLastError(COMExceptionToQStatus(ex->HResult));
-                    break;
-                } catch (...) {
-                    SetLastError(ER_OS_ERROR);
-                    break;
                 }
             }
-        }
-        break;
+            break;
 
         default:
             break;
@@ -1388,117 +1388,67 @@ uint32_t SocketWrapper::SendTo(Platform::String ^ remoteAddr, int remotePort,
             break;
 
         case SocketType::QCC_SOCK_DGRAM:
-        {
-            // Create DataWriter
-            DataWriter ^ dw = ref new DataWriter();
-            // Check for allocation error
-            if (nullptr == dw) {
-                result = ER_OUT_OF_MEMORY;
-                break;
-            }
-            // Store bytes in buf array
-            dw->WriteBytes(buf);
-            // Take ownership of the IBuffer
-            IBuffer ^ buffer = dw->DetachBuffer();
-            // Check for allocation error
-            if (nullptr == buffer) {
-                result = ER_FAIL;
-                break;
-            }
-            // Don't create DatagramSocket if already bound
-            if (_udpSocket != nullptr) {
-                sender = _udpSocket;
-            } else {
-                // Create DatagramSocket
-                sender = ref new DatagramSocket();
-                if (nullptr == sender) {
+            {
+                // Create DataWriter
+                DataWriter ^ dw = ref new DataWriter();
+                // Check for allocation error
+                if (nullptr == dw) {
                     result = ER_OUT_OF_MEMORY;
                     break;
                 }
-            }
-            IOutputStream ^ writeStream = nullptr;
-            try {
-                // Create HostName from string
-                Windows::Networking::HostName ^ hostname = ref new Windows::Networking::HostName(remoteAddr);
+                // Store bytes in buf array
+                dw->WriteBytes(buf);
+                // Take ownership of the IBuffer
+                IBuffer ^ buffer = dw->DetachBuffer();
                 // Check for allocation error
-                if (nullptr == hostname) {
-                    result = ER_OUT_OF_MEMORY;
+                if (nullptr == buffer) {
+                    result = ER_FAIL;
                     break;
                 }
-                // Convert port to string
-                Platform::String ^ strRemotePort = remotePort.ToString();
-                // Check for allocation error
-                if (nullptr == strRemotePort) {
-                    result = ER_OUT_OF_MEMORY;
-                    break;
-                }
-                // Get stream associated with the udp socket
-                IAsyncOperation<IOutputStream ^> ^ getStreamOp = sender->GetOutputStreamAsync(hostname, strRemotePort);
-                // Check for allocation error
-                if (nullptr == getStreamOp) {
-                    result = ER_OUT_OF_MEMORY;
-                    break;
-                }
-                concurrency::task<IOutputStream ^> getStreamTask(getStreamOp);
-                // Wait for task to complete
-                getStreamTask.wait();
-                // Get the output stream
-                writeStream = getStreamTask.get();
-                // Check for allocation error
-                if (nullptr == writeStream) {
-                    result = ER_OS_ERROR;
-                    break;
-                }
-            } catch (Platform::COMException ^ ex) {
-                SetLastError(COMExceptionToQStatus(ex->HResult), true);
-                SetEvent(Events::Exception);
-                break;
-            } catch (...) {
-                SetLastError(ER_OS_ERROR, true);
-                SetEvent(Events::Exception);
-                break;
-            }
-            // Check if socket is blocking
-            if (_blocking) {
-                try {
-                    // Write the bytes
-                    IAsyncOperationWithProgress<uint32, uint32>  ^ op = writeStream->WriteAsync(buffer);
-                    // Check for allocation error
-                    if (nullptr == op) {
+                // Don't create DatagramSocket if already bound
+                if (_udpSocket != nullptr) {
+                    sender = _udpSocket;
+                } else {
+                    // Create DatagramSocket
+                    sender = ref new DatagramSocket();
+                    if (nullptr == sender) {
                         result = ER_OUT_OF_MEMORY;
                         break;
                     }
-                    // Store the task and operation associated with task
-                    concurrency::task<uint32> sendTask(op);
-                    _sendOperationsMap[op->Id] = op;
-                    ClearEvent(Events::Write);
-                    _sendTasksMap[op->Id] = sendTask.then([ = ] (uint32 progress) {
-                                                              UDPSocketSendComplete(op, op->Status);
-                                                          });
-                    concurrency::task<void> sendTask2 = _sendTasksMap[op->Id];
-                    // Release the API lock
-                    _mutex.Unlock();
-                    try {
-                        // Wait for send task to complete
-                        sendTask2.wait();
-                        // Get the result of the send
-                        sent[0] = sendTask.get();
-                        // Re-acquire the API lock
-                        _mutex.Lock();
-                        result = ER_OK;
-                        break;
-                    } catch (Platform::COMException ^ ex) {
-                        _mutex.Lock();
-                        SetLastError(COMExceptionToQStatus(ex->HResult), true);
-                        SetEvent(Events::Exception);
-                        break;
-                    } catch (...) {
-                        _mutex.Lock();
-                        SetLastError(ER_OS_ERROR, true);
-                        SetEvent(Events::Exception);
+                }
+                IOutputStream ^ writeStream = nullptr;
+                try {
+                    // Create HostName from string
+                    Windows::Networking::HostName ^ hostname = ref new Windows::Networking::HostName(remoteAddr);
+                    // Check for allocation error
+                    if (nullptr == hostname) {
+                        result = ER_OUT_OF_MEMORY;
                         break;
                     }
-                    break;
+                    // Convert port to string
+                    Platform::String ^ strRemotePort = remotePort.ToString();
+                    // Check for allocation error
+                    if (nullptr == strRemotePort) {
+                        result = ER_OUT_OF_MEMORY;
+                        break;
+                    }
+                    // Get stream associated with the udp socket
+                    IAsyncOperation<IOutputStream ^> ^ getStreamOp = sender->GetOutputStreamAsync(hostname, strRemotePort);
+                    // Check for allocation error
+                    if (nullptr == getStreamOp) {
+                        result = ER_OUT_OF_MEMORY;
+                        break;
+                    }
+                    concurrency::task<IOutputStream ^> getStreamTask(getStreamOp);
+                    // Wait for task to complete
+                    getStreamTask.wait();
+                    // Get the output stream
+                    writeStream = getStreamTask.get();
+                    // Check for allocation error
+                    if (nullptr == writeStream) {
+                        result = ER_OS_ERROR;
+                        break;
+                    }
                 } catch (Platform::COMException ^ ex) {
                     SetLastError(COMExceptionToQStatus(ex->HResult), true);
                     SetEvent(Events::Exception);
@@ -1508,13 +1458,11 @@ uint32_t SocketWrapper::SendTo(Platform::String ^ remoteAddr, int remotePort,
                     SetEvent(Events::Exception);
                     break;
                 }
-                break;
-            } else {
-                try{
-                    // Only one send operation is allow at any time
-                    if (_sendOperationsMap.size() == 0) {
+                // Check if socket is blocking
+                if (_blocking) {
+                    try {
                         // Write the bytes
-                        IAsyncOperationWithProgress<uint32, uint32> ^ op = writeStream->WriteAsync(buffer);
+                        IAsyncOperationWithProgress<uint32, uint32>  ^ op = writeStream->WriteAsync(buffer);
                         // Check for allocation error
                         if (nullptr == op) {
                             result = ER_OUT_OF_MEMORY;
@@ -1527,27 +1475,79 @@ uint32_t SocketWrapper::SendTo(Platform::String ^ remoteAddr, int remotePort,
                         _sendTasksMap[op->Id] = sendTask.then([ = ] (uint32 progress) {
                                                                   UDPSocketSendComplete(op, op->Status);
                                                               });
-                        sent[0] = len;
-                        result = ER_OK;
+                        concurrency::task<void> sendTask2 = _sendTasksMap[op->Id];
+                        // Release the API lock
+                        _mutex.Unlock();
+                        try {
+                            // Wait for send task to complete
+                            sendTask2.wait();
+                            // Get the result of the send
+                            sent[0] = sendTask.get();
+                            // Re-acquire the API lock
+                            _mutex.Lock();
+                            result = ER_OK;
+                            break;
+                        } catch (Platform::COMException ^ ex) {
+                            _mutex.Lock();
+                            SetLastError(COMExceptionToQStatus(ex->HResult), true);
+                            SetEvent(Events::Exception);
+                            break;
+                        } catch (...) {
+                            _mutex.Lock();
+                            SetLastError(ER_OS_ERROR, true);
+                            SetEvent(Events::Exception);
+                            break;
+                        }
                         break;
-                    } else {
-                        // Operation already in progress
-                        sent[0] = 0;
-                        result = ER_WOULDBLOCK;
+                    } catch (Platform::COMException ^ ex) {
+                        SetLastError(COMExceptionToQStatus(ex->HResult), true);
+                        SetEvent(Events::Exception);
+                        break;
+                    } catch (...) {
+                        SetLastError(ER_OS_ERROR, true);
+                        SetEvent(Events::Exception);
                         break;
                     }
                     break;
-                } catch (Platform::COMException ^ ex) {
-                    SetLastError(COMExceptionToQStatus(ex->HResult), true);
-                    SetEvent(Events::Exception);
-                    break;
-                } catch (...) {
-                    SetLastError(ER_OS_ERROR, true);
-                    SetEvent(Events::Exception);
-                    break;
+                } else {
+                    try{
+                        // Only one send operation is allow at any time
+                        if (_sendOperationsMap.size() == 0) {
+                            // Write the bytes
+                            IAsyncOperationWithProgress<uint32, uint32> ^ op = writeStream->WriteAsync(buffer);
+                            // Check for allocation error
+                            if (nullptr == op) {
+                                result = ER_OUT_OF_MEMORY;
+                                break;
+                            }
+                            // Store the task and operation associated with task
+                            concurrency::task<uint32> sendTask(op);
+                            _sendOperationsMap[op->Id] = op;
+                            ClearEvent(Events::Write);
+                            _sendTasksMap[op->Id] = sendTask.then([ = ] (uint32 progress) {
+                                                                      UDPSocketSendComplete(op, op->Status);
+                                                                  });
+                            sent[0] = len;
+                            result = ER_OK;
+                            break;
+                        } else {
+                            // Operation already in progress
+                            sent[0] = 0;
+                            result = ER_WOULDBLOCK;
+                            break;
+                        }
+                        break;
+                    } catch (Platform::COMException ^ ex) {
+                        SetLastError(COMExceptionToQStatus(ex->HResult), true);
+                        SetEvent(Events::Exception);
+                        break;
+                    } catch (...) {
+                        SetLastError(ER_OS_ERROR, true);
+                        SetEvent(Events::Exception);
+                        break;
+                    }
                 }
             }
-        }
 
         default:
             break;
@@ -1649,89 +1649,89 @@ uint32_t SocketWrapper::RecvFrom(Platform::WriteOnlyArray<Platform::String ^> ^ 
             break;
 
         case SocketType::QCC_SOCK_DGRAM:
-        {
-            // Check udp socket for bind
-            if ((GetBindingState() & (int)BindingState::Bind) == 0) {
-                result = ER_FAIL;
-                break;
-            }
-            // Check if data is available for read
-            if (nullptr != _dataReader && _dataReader->UnconsumedBufferLength > 0) {
-                // Pull bytes
-                ConsumeReaderBytes(buf, len, received);
-                result = ER_OK;
-                break;
-            } else if (nullptr == _dataReader || _dataReader->UnconsumedBufferLength == 0) {
-                // Check if socket is blocking
-                if (_blocking) {
-                    bool haveData = false;
-                    UDPMessage ^ m = nullptr;
-                    while (!haveData) {
-                        // Release the API lock
-                        _mutex.Unlock();
-                        // Wait for data to arrive
-                        result = (::QStatus)((int)_semReceiveDataQueue.Wait());
-                        // Re-acquire the API lock
-                        _mutex.Lock();
-                        if (ER_OK != result) {
-                            break;
-                        }
-                        // Grab a message from the backlog
-                        m = _udpBacklog.front();
-                        _udpBacklog.pop_front();
-                        if (nullptr != m) {
-                            haveData = true;
-                        }
-                        // Fail operations on sockets in an exception state
-                        if ((GetBindingState() & (int)BindingState::Exception) != 0) {
-                            result = ER_FAIL;
-                            break;
-                        }
-                    }
-                    if (ER_OK != result) {
-                        break;
-                    }
-                    // Update the current reader
-                    _dataReader = m->Reader;
-                    // Pull bytes
-                    ConsumeReaderBytes(buf, len, received);
-                    // Set output parameters
-                    remoteAddr[0] = m->RemoteHostname;
-                    remotePort[0] = m->RemotePort;
-                    result = ER_OK;
-                    break;
-                } else {
-                    // See if there's a message and buffer immediately available to consume
-                    if (_udpBacklog.size() > 0) {
-                        // update the resource count
-                        result = (::QStatus)((int)_semReceiveDataQueue.Wait());
-                        if (ER_OK != result) {
-                            break;
-                        }
-                        UDPMessage ^ m;
-                        // Grab a message from the backlog
-                        m = _udpBacklog.front();
-                        _udpBacklog.pop_front();
-                        if (nullptr != m) {
-                            // Update the current reader
-                            _dataReader = m->Reader;
-                            // Pull bytes
-                            ConsumeReaderBytes(buf, len, received);
-                            // Set output parameters
-                            remoteAddr[0] = m->RemoteHostname;
-                            remotePort[0] = m->RemotePort;
-                            result = ER_OK;
-                            break;
-                        }
-                    }
-                    // not blocking, no data
-                    received[0] = 0;
-                    result = ER_WOULDBLOCK;
+            {
+                // Check udp socket for bind
+                if ((GetBindingState() & (int)BindingState::Bind) == 0) {
+                    result = ER_FAIL;
                     break;
                 }
+                // Check if data is available for read
+                if (nullptr != _dataReader && _dataReader->UnconsumedBufferLength > 0) {
+                    // Pull bytes
+                    ConsumeReaderBytes(buf, len, received);
+                    result = ER_OK;
+                    break;
+                } else if (nullptr == _dataReader || _dataReader->UnconsumedBufferLength == 0) {
+                    // Check if socket is blocking
+                    if (_blocking) {
+                        bool haveData = false;
+                        UDPMessage ^ m = nullptr;
+                        while (!haveData) {
+                            // Release the API lock
+                            _mutex.Unlock();
+                            // Wait for data to arrive
+                            result = (::QStatus)((int)_semReceiveDataQueue.Wait());
+                            // Re-acquire the API lock
+                            _mutex.Lock();
+                            if (ER_OK != result) {
+                                break;
+                            }
+                            // Grab a message from the backlog
+                            m = _udpBacklog.front();
+                            _udpBacklog.pop_front();
+                            if (nullptr != m) {
+                                haveData = true;
+                            }
+                            // Fail operations on sockets in an exception state
+                            if ((GetBindingState() & (int)BindingState::Exception) != 0) {
+                                result = ER_FAIL;
+                                break;
+                            }
+                        }
+                        if (ER_OK != result) {
+                            break;
+                        }
+                        // Update the current reader
+                        _dataReader = m->Reader;
+                        // Pull bytes
+                        ConsumeReaderBytes(buf, len, received);
+                        // Set output parameters
+                        remoteAddr[0] = m->RemoteHostname;
+                        remotePort[0] = m->RemotePort;
+                        result = ER_OK;
+                        break;
+                    } else {
+                        // See if there's a message and buffer immediately available to consume
+                        if (_udpBacklog.size() > 0) {
+                            // update the resource count
+                            result = (::QStatus)((int)_semReceiveDataQueue.Wait());
+                            if (ER_OK != result) {
+                                break;
+                            }
+                            UDPMessage ^ m;
+                            // Grab a message from the backlog
+                            m = _udpBacklog.front();
+                            _udpBacklog.pop_front();
+                            if (nullptr != m) {
+                                // Update the current reader
+                                _dataReader = m->Reader;
+                                // Pull bytes
+                                ConsumeReaderBytes(buf, len, received);
+                                // Set output parameters
+                                remoteAddr[0] = m->RemoteHostname;
+                                remotePort[0] = m->RemotePort;
+                                result = ER_OK;
+                                break;
+                            }
+                        }
+                        // not blocking, no data
+                        received[0] = 0;
+                        result = ER_WOULDBLOCK;
+                        break;
+                    }
+                }
             }
-        }
-        break;
+            break;
 
         default:
             break;
@@ -1774,135 +1774,135 @@ uint32_t SocketWrapper::Send(const Platform::Array<uint8> ^ buf, int len, Platfo
         }
         switch (_socketType) {
         case SocketType::QCC_SOCK_STREAM:
-        {
-            // Check for connected state
-            if ((GetBindingState() & BindingState::Connect) != 0) {
-                // Create DataWriter
-                DataWriter ^ dw = ref new DataWriter();
-                // Check for allocation error
-                if (nullptr == dw) {
-                    result = ER_OUT_OF_MEMORY;
-                    break;
-                }
-                // Write the bytes
-                dw->WriteBytes(buf);
-                // Take ownership of the buffer
-                IBuffer ^ buffer = dw->DetachBuffer();
-                // Check for allocation error
-                if (nullptr == buffer) {
-                    result = ER_FAIL;
-                    break;
-                }
-                // Check if socket is blocking
-                if (_blocking) {
-                    try {
-                        // Write the bytes
-                        IAsyncOperationWithProgress<uint32, uint32>  ^ op = _tcpSocket->OutputStream->WriteAsync(buffer);
-                        // Check for allocation error
-                        if (nullptr == op) {
-                            result = ER_OUT_OF_MEMORY;
-                            break;
-                        }
-                        // Store the operation and task associated with the operation
-                        concurrency::task<uint32> sendTask(op);
-                        _sendOperationsMap[op->Id] = op;
-                        ClearEvent(Events::Write);
-                        _sendTasksMap[op->Id] = sendTask.then([ = ] (uint32 progress) {
-                                                                  TCPSocketSendComplete(op, op->Status);
-                                                              });
-                        concurrency::task<void> sendTask2 = _sendTasksMap[op->Id];
-                        // Release the API lock
-                        _mutex.Unlock();
-                        try {
-                            // Wait for send task to complete
-                            sendTask2.wait();
-                            // Get the send result
-                            sent[0] = sendTask.get();
-                            // Re-acquire the API lock
-                            _mutex.Lock();
-                            result = ER_OK;
-                            break;
-                        } catch (Platform::COMException ^ ex) {
-                            // Re-acquire the API lock
-                            _mutex.Lock();
-                            SetLastError(COMExceptionToQStatus(ex->HResult), true);
-                            SetEvent(Events::Exception);
-                            break;
-                        } catch (...) {
-                            // Re-acquire the API lock
-                            _mutex.Lock();
-                            SetLastError(ER_OS_ERROR, true);
-                            SetEvent(Events::Exception);
-                            break;
-                        }
-                        break;
-                    } catch (Platform::COMException ^ ex) {
-                        SetLastError(COMExceptionToQStatus(ex->HResult), true);
-                        SetEvent(Events::Exception);
-                        break;
-                    } catch (...) {
-                        SetLastError(ER_OS_ERROR, true);
-                        SetEvent(Events::Exception);
+            {
+                // Check for connected state
+                if ((GetBindingState() & BindingState::Connect) != 0) {
+                    // Create DataWriter
+                    DataWriter ^ dw = ref new DataWriter();
+                    // Check for allocation error
+                    if (nullptr == dw) {
+                        result = ER_OUT_OF_MEMORY;
                         break;
                     }
-                } else {
-                    try{
-                        // Only one send operation is allowed at once
-                        if (_sendOperationsMap.size() == 0) {
-                            // Send the bytes
-                            IAsyncOperationWithProgress<uint32, uint32> ^ op = _tcpSocket->OutputStream->WriteAsync(buffer);
+                    // Write the bytes
+                    dw->WriteBytes(buf);
+                    // Take ownership of the buffer
+                    IBuffer ^ buffer = dw->DetachBuffer();
+                    // Check for allocation error
+                    if (nullptr == buffer) {
+                        result = ER_FAIL;
+                        break;
+                    }
+                    // Check if socket is blocking
+                    if (_blocking) {
+                        try {
+                            // Write the bytes
+                            IAsyncOperationWithProgress<uint32, uint32>  ^ op = _tcpSocket->OutputStream->WriteAsync(buffer);
                             // Check for allocation error
                             if (nullptr == op) {
                                 result = ER_OUT_OF_MEMORY;
                                 break;
                             }
-                            // Store the operation and the task associated with the operation
+                            // Store the operation and task associated with the operation
                             concurrency::task<uint32> sendTask(op);
                             _sendOperationsMap[op->Id] = op;
                             ClearEvent(Events::Write);
                             _sendTasksMap[op->Id] = sendTask.then([ = ] (uint32 progress) {
                                                                       TCPSocketSendComplete(op, op->Status);
                                                                   });
-                            // not blocking, wait for data to say it completed
-                            sent[0] = len;
-                            result = ER_OK;
+                            concurrency::task<void> sendTask2 = _sendTasksMap[op->Id];
+                            // Release the API lock
+                            _mutex.Unlock();
+                            try {
+                                // Wait for send task to complete
+                                sendTask2.wait();
+                                // Get the send result
+                                sent[0] = sendTask.get();
+                                // Re-acquire the API lock
+                                _mutex.Lock();
+                                result = ER_OK;
+                                break;
+                            } catch (Platform::COMException ^ ex) {
+                                // Re-acquire the API lock
+                                _mutex.Lock();
+                                SetLastError(COMExceptionToQStatus(ex->HResult), true);
+                                SetEvent(Events::Exception);
+                                break;
+                            } catch (...) {
+                                // Re-acquire the API lock
+                                _mutex.Lock();
+                                SetLastError(ER_OS_ERROR, true);
+                                SetEvent(Events::Exception);
+                                break;
+                            }
                             break;
-                        } else {
-                            sent[0] = 0;
-                            result = ER_WOULDBLOCK;
+                        } catch (Platform::COMException ^ ex) {
+                            SetLastError(COMExceptionToQStatus(ex->HResult), true);
+                            SetEvent(Events::Exception);
+                            break;
+                        } catch (...) {
+                            SetLastError(ER_OS_ERROR, true);
+                            SetEvent(Events::Exception);
                             break;
                         }
-                        break;
-                    } catch (Platform::COMException ^ ex) {
-                        SetLastError(COMExceptionToQStatus(ex->HResult), true);
-                        SetEvent(Events::Exception);
-                        break;
-                    } catch (...) {
-                        SetLastError(ER_OS_ERROR, true);
-                        SetEvent(Events::Exception);
-                        break;
+                    } else {
+                        try{
+                            // Only one send operation is allowed at once
+                            if (_sendOperationsMap.size() == 0) {
+                                // Send the bytes
+                                IAsyncOperationWithProgress<uint32, uint32> ^ op = _tcpSocket->OutputStream->WriteAsync(buffer);
+                                // Check for allocation error
+                                if (nullptr == op) {
+                                    result = ER_OUT_OF_MEMORY;
+                                    break;
+                                }
+                                // Store the operation and the task associated with the operation
+                                concurrency::task<uint32> sendTask(op);
+                                _sendOperationsMap[op->Id] = op;
+                                ClearEvent(Events::Write);
+                                _sendTasksMap[op->Id] = sendTask.then([ = ] (uint32 progress) {
+                                                                          TCPSocketSendComplete(op, op->Status);
+                                                                      });
+                                // not blocking, wait for data to say it completed
+                                sent[0] = len;
+                                result = ER_OK;
+                                break;
+                            } else {
+                                sent[0] = 0;
+                                result = ER_WOULDBLOCK;
+                                break;
+                            }
+                            break;
+                        } catch (Platform::COMException ^ ex) {
+                            SetLastError(COMExceptionToQStatus(ex->HResult), true);
+                            SetEvent(Events::Exception);
+                            break;
+                        } catch (...) {
+                            SetLastError(ER_OS_ERROR, true);
+                            SetEvent(Events::Exception);
+                            break;
+                        }
                     }
+                } else {
+                    // Not connected
+                    result = ER_FAIL;
+                    break;
                 }
-            } else {
-                // Not connected
+                break;
+            }
+
+        case SocketType::QCC_SOCK_DGRAM:
+            {
+                // Check for bind
+                if ((GetBindingState() & BindingState::Bind) != 0) {
+                    // Send the data
+                    result = (::QStatus)SendTo(_lastBindHostname, _lastBindPort, buf, len, sent);
+                    break;
+                }
+                // Must have bind
                 result = ER_FAIL;
                 break;
             }
-            break;
-        }
-
-        case SocketType::QCC_SOCK_DGRAM:
-        {
-            // Check for bind
-            if ((GetBindingState() & BindingState::Bind) != 0) {
-                // Send the data
-                result = (::QStatus)SendTo(_lastBindHostname, _lastBindPort, buf, len, sent);
-                break;
-            }
-            // Must have bind
-            result = ER_FAIL;
-            break;
-        }
 
         default:
             break;
@@ -2041,57 +2041,79 @@ uint32_t SocketWrapper::Recv(Platform::WriteOnlyArray<uint8> ^ buf, int len, Pla
         }
         switch (_socketType) {
         case SocketType::QCC_SOCK_STREAM:
-        {
-            // Check socket for connected state
-            if ((GetBindingState() & BindingState::Connect) != 0) {
-                // Check if data is ready to read
-                if (_dataReader->UnconsumedBufferLength == 0) {
-                    // Check for blocking
-                    if (_blocking) {
-                        bool haveData = false;
-                        while (!haveData) {
+            {
+                // Check socket for connected state
+                if ((GetBindingState() & BindingState::Connect) != 0) {
+                    // Check if data is ready to read
+                    if (_dataReader->UnconsumedBufferLength == 0) {
+                        // Check for blocking
+                        if (_blocking) {
+                            bool haveData = false;
+                            while (!haveData) {
+                                // Queue up the traffic
+                                result = (::QStatus)QueueTraffic();
+                                if (ER_OK != result) {
+                                    break;
+                                }
+                                // Store operation and task associated with operation
+                                concurrency::task<void> rTask = _receiveTasksMap.begin()->second;
+                                uint32 id = _receiveOperationsMap.begin()->first;
+                                // Release the API lock
+                                _mutex.Unlock();
+                                result = ER_FAIL;
+                                try {
+                                    // Wait for recv task to complete
+                                    rTask.wait();
+                                    // Re-acquire the API lock
+                                    _mutex.Lock();
+                                    if (_dataReader->UnconsumedBufferLength != 0) {
+                                        haveData = true;
+                                        result = ER_OK;
+                                    }
+                                    // Fail operations on sockets in an exception state
+                                    if ((GetBindingState() & (int)BindingState::Exception) != 0) {
+                                        result = ER_FAIL;
+                                        break;
+                                    }
+                                } catch (Platform::COMException ^ ex) {
+                                    // Re-acquire the API lock
+                                    _mutex.Lock();
+                                    SetLastError(COMExceptionToQStatus(ex->HResult), true);
+                                    SetEvent(Events::Exception);
+                                    break;
+                                } catch (...) {
+                                    // Re-acquire the API lock
+                                    _mutex.Lock();
+                                    SetLastError(ER_OS_ERROR, true);
+                                    SetEvent(Events::Exception);
+                                    break;
+                                }
+                            }
+                            if (ER_OK != result) {
+                                break;
+                            }
+                            // Pull bytes
+                            ConsumeReaderBytes(buf, len, received);
+                            // If we just flushed the reader, try and queue
+                            if (_dataReader->UnconsumedBufferLength == 0) {
+                                // Queue up the traffic
+                                result = (::QStatus)QueueTraffic();
+                            } else {
+                                result = ER_OK;
+                            }
+                            break;
+                        } else {
                             // Queue up the traffic
                             result = (::QStatus)QueueTraffic();
                             if (ER_OK != result) {
                                 break;
                             }
-                            // Store operation and task associated with operation
-                            concurrency::task<void> rTask = _receiveTasksMap.begin()->second;
-                            uint32 id = _receiveOperationsMap.begin()->first;
-                            // Release the API lock
-                            _mutex.Unlock();
-                            result = ER_FAIL;
-                            try {
-                                // Wait for recv task to complete
-                                rTask.wait();
-                                // Re-acquire the API lock
-                                _mutex.Lock();
-                                if (_dataReader->UnconsumedBufferLength != 0) {
-                                    haveData = true;
-                                    result = ER_OK;
-                                }
-                                // Fail operations on sockets in an exception state
-                                if ((GetBindingState() & (int)BindingState::Exception) != 0) {
-                                    result = ER_FAIL;
-                                    break;
-                                }
-                            } catch (Platform::COMException ^ ex) {
-                                // Re-acquire the API lock
-                                _mutex.Lock();
-                                SetLastError(COMExceptionToQStatus(ex->HResult), true);
-                                SetEvent(Events::Exception);
-                                break;
-                            } catch (...) {
-                                // Re-acquire the API lock
-                                _mutex.Lock();
-                                SetLastError(ER_OS_ERROR, true);
-                                SetEvent(Events::Exception);
-                                break;
-                            }
-                        }
-                        if (ER_OK != result) {
+                            // Set the output parameters
+                            received[0] = 0;
+                            result = ER_WOULDBLOCK;
                             break;
                         }
+                    } else {
                         // Pull bytes
                         ConsumeReaderBytes(buf, len, received);
                         // If we just flushed the reader, try and queue
@@ -2102,55 +2124,33 @@ uint32_t SocketWrapper::Recv(Platform::WriteOnlyArray<uint8> ^ buf, int len, Pla
                             result = ER_OK;
                         }
                         break;
-                    } else {
-                        // Queue up the traffic
-                        result = (::QStatus)QueueTraffic();
-                        if (ER_OK != result) {
-                            break;
-                        }
-                        // Set the output parameters
-                        received[0] = 0;
-                        result = ER_WOULDBLOCK;
-                        break;
                     }
-                } else {
-                    // Pull bytes
-                    ConsumeReaderBytes(buf, len, received);
-                    // If we just flushed the reader, try and queue
-                    if (_dataReader->UnconsumedBufferLength == 0) {
-                        // Queue up the traffic
-                        result = (::QStatus)QueueTraffic();
-                    } else {
-                        result = ER_OK;
-                    }
-                    break;
                 }
+                // Not connected
+                result = ER_FAIL;
+                break;
             }
-            // Not connected
-            result = ER_FAIL;
-            break;
-        }
 
         case SocketType::QCC_SOCK_DGRAM:
-        {
-            // Create string array to store the remote address
-            Platform::Array<Platform::String ^> ^ remoteAddr = ref new Platform::Array<Platform::String ^>(1);
-            // Check for allocation error
-            if (nullptr == remoteAddr) {
-                result = ER_OUT_OF_MEMORY;
+            {
+                // Create string array to store the remote address
+                Platform::Array<Platform::String ^> ^ remoteAddr = ref new Platform::Array<Platform::String ^>(1);
+                // Check for allocation error
+                if (nullptr == remoteAddr) {
+                    result = ER_OUT_OF_MEMORY;
+                    break;
+                }
+                // Create int array to store the remote port
+                Platform::Array<int> ^ remotePort = ref new Platform::Array<int>(1);
+                // Check for allocation error
+                if (nullptr == remotePort) {
+                    result = ER_OUT_OF_MEMORY;
+                    break;
+                }
+                // Receive data
+                result = (::QStatus)RecvFrom(remoteAddr, remotePort, buf, len, received);
                 break;
             }
-            // Create int array to store the remote port
-            Platform::Array<int> ^ remotePort = ref new Platform::Array<int>(1);
-            // Check for allocation error
-            if (nullptr == remotePort) {
-                result = ER_OUT_OF_MEMORY;
-                break;
-            }
-            // Receive data
-            result = (::QStatus)RecvFrom(remoteAddr, remotePort, buf, len, received);
-            break;
-        }
 
         default:
             break;

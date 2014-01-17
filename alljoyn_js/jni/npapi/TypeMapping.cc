@@ -58,28 +58,28 @@ static NPVariant DefaultValue(Plugin& plugin, NPObject* object, Hint hint, bool&
     while (0 < step && step < 3) {
         switch (step) {
         case 1: {
-            NPVariant val;
-            if (NPN_Invoke(plugin->npp, object, NPN_GetStringIdentifier("valueOf"), 0, 0, &val)) {
-                if (IsPrimitive(val)) {
-                    return val;
-                } else {
-                    NPN_ReleaseVariantValue(&val);
+                NPVariant val;
+                if (NPN_Invoke(plugin->npp, object, NPN_GetStringIdentifier("valueOf"), 0, 0, &val)) {
+                    if (IsPrimitive(val)) {
+                        return val;
+                    } else {
+                        NPN_ReleaseVariantValue(&val);
+                    }
                 }
+                break;
             }
-            break;
-        }
 
         case 2: {
-            NPVariant str;
-            if (NPN_Invoke(plugin->npp, object, NPN_GetStringIdentifier("toString"), 0, 0, &str)) {
-                if (IsPrimitive(str)) {
-                    return str;
-                } else {
-                    NPN_ReleaseVariantValue(&str);
+                NPVariant str;
+                if (NPN_Invoke(plugin->npp, object, NPN_GetStringIdentifier("toString"), 0, 0, &str)) {
+                    if (IsPrimitive(str)) {
+                        return str;
+                    } else {
+                        NPN_ReleaseVariantValue(&str);
+                    }
                 }
+                break;
             }
-            break;
-        }
         }
         step += (hint == HINT_NUMBER) ? 1 : -1;
     }
@@ -149,31 +149,31 @@ static double ToNumber(Plugin& plugin, const NPVariant& value, bool& typeError)
         return NPVARIANT_TO_DOUBLE(value);
 
     case NPVariantType_String: {
-        double n = NAN;
-        NPObject* window = NULL;
-        if (NPERR_NO_ERROR == NPN_GetValue(plugin->npp, NPNVWindowNPObject, &window)) {
-            NPVariant result;
-            if (NPN_Invoke(plugin->npp, window, NPN_GetStringIdentifier("parseFloat"), &value, 1, &result)) {
-                if (NPVARIANT_IS_INT32(result)) {
-                    n = NPVARIANT_TO_INT32(result);
-                } else if (NPVARIANT_IS_DOUBLE(result)) {
-                    n = NPVARIANT_TO_DOUBLE(result);
+            double n = NAN;
+            NPObject* window = NULL;
+            if (NPERR_NO_ERROR == NPN_GetValue(plugin->npp, NPNVWindowNPObject, &window)) {
+                NPVariant result;
+                if (NPN_Invoke(plugin->npp, window, NPN_GetStringIdentifier("parseFloat"), &value, 1, &result)) {
+                    if (NPVARIANT_IS_INT32(result)) {
+                        n = NPVARIANT_TO_INT32(result);
+                    } else if (NPVARIANT_IS_DOUBLE(result)) {
+                        n = NPVARIANT_TO_DOUBLE(result);
+                    }
+                    NPN_ReleaseVariantValue(&result);
                 }
-                NPN_ReleaseVariantValue(&result);
+                NPN_ReleaseObject(window);
             }
-            NPN_ReleaseObject(window);
+            return n;
         }
-        return n;
-    }
 
     case NPVariantType_Object: {
-        NPVariant primitive = ToPrimitive(plugin, value, HINT_NUMBER, typeError);
-        if (!typeError) {
-            return ToNumber(plugin, primitive, typeError);
+            NPVariant primitive = ToPrimitive(plugin, value, HINT_NUMBER, typeError);
+            if (!typeError) {
+                return ToNumber(plugin, primitive, typeError);
+            }
+            NPN_ReleaseVariantValue(&primitive);
+            return NAN;
         }
-        NPN_ReleaseVariantValue(&primitive);
-        return NAN;
-    }
 
     default:
         assert(0); /* Will not reach here. */
@@ -245,13 +245,13 @@ static qcc::String ToString(Plugin& plugin, const NPVariant& value, bool& typeEr
         return NPVARIANT_TO_STRING(value).UTF8Length ? qcc::String(NPVARIANT_TO_STRING(value).UTF8Characters, NPVARIANT_TO_STRING(value).UTF8Length) : qcc::String();
 
     case NPVariantType_Object: {
-        NPVariant primitive = ToPrimitive(plugin, value, HINT_STRING, typeError);
-        if (!typeError) {
-            return ToString(plugin, primitive, typeError);
+            NPVariant primitive = ToPrimitive(plugin, value, HINT_STRING, typeError);
+            if (!typeError) {
+                return ToString(plugin, primitive, typeError);
+            }
+            NPN_ReleaseVariantValue(&primitive);
+            return "undefined";
         }
-        NPN_ReleaseVariantValue(&primitive);
-        return "undefined";
-    }
 
     default:
         assert(0); /* Will not reach here. */
@@ -303,10 +303,10 @@ static void ToDictionaryKey(Plugin& plugin, const ajn::MsgArg& value, NPIdentifi
         break;
 
     case ajn::ALLJOYN_DOUBLE: {
-        qcc::String str = NumberToString(plugin, value.v_double);
-        identifier = NPN_GetStringIdentifier(str.c_str());
-        break;
-    }
+            qcc::String str = NumberToString(plugin, value.v_double);
+            identifier = NPN_GetStringIdentifier(str.c_str());
+            break;
+        }
 
     case ajn::ALLJOYN_STRING:
         identifier = NPN_GetStringIdentifier(value.v_string.str);
@@ -409,163 +409,49 @@ void ToAny(Plugin& plugin, const NPVariant& value, const qcc::String signature, 
         break;
 
     case ajn::ALLJOYN_INT64: {
-        int64_t x = ToLongLong(plugin, value, typeError);
-        status = arg.Set("x", x);
-        break;
-    }
+            int64_t x = ToLongLong(plugin, value, typeError);
+            status = arg.Set("x", x);
+            break;
+        }
 
     case ajn::ALLJOYN_UINT64: {
-        uint64_t t = ToUnsignedLongLong(plugin, value, typeError);
-        status = arg.Set("t", t);
-        break;
-    }
+            uint64_t t = ToUnsignedLongLong(plugin, value, typeError);
+            status = arg.Set("t", t);
+            break;
+        }
 
     case ajn::ALLJOYN_DOUBLE: {
-        double d = ToDouble(plugin, value, typeError);
-        status = arg.Set("d", d);
-        break;
-    }
+            double d = ToDouble(plugin, value, typeError);
+            status = arg.Set("d", d);
+            break;
+        }
 
     case ajn::ALLJOYN_STRING: {
-        qcc::String s = ToDOMString(plugin, value, typeError);
-        status = arg.Set("s", s.c_str());
-        arg.Stabilize();
-        break;
-    }
+            qcc::String s = ToDOMString(plugin, value, typeError);
+            status = arg.Set("s", s.c_str());
+            arg.Stabilize();
+            break;
+        }
 
     case ajn::ALLJOYN_OBJECT_PATH: {
-        qcc::String o = ToDOMString(plugin, value, typeError);
-        status = arg.Set("o", o.c_str());
-        arg.Stabilize();
-        break;
-    }
+            qcc::String o = ToDOMString(plugin, value, typeError);
+            status = arg.Set("o", o.c_str());
+            arg.Stabilize();
+            break;
+        }
 
     case ajn::ALLJOYN_SIGNATURE: {
-        qcc::String g = ToDOMString(plugin, value, typeError);
-        status = arg.Set("g", g.c_str());
-        arg.Stabilize();
-        break;
-    }
+            qcc::String g = ToDOMString(plugin, value, typeError);
+            status = arg.Set("g", g.c_str());
+            arg.Stabilize();
+            break;
+        }
 
     case ajn::ALLJOYN_STRUCT_OPEN: {
-        if (!NPVARIANT_IS_OBJECT(value)) {
-            typeError = true;
-            break;
-        }
-        NPVariant length = NPVARIANT_VOID;
-        if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetStringIdentifier("length"), &length) ||
-            !(NPVARIANT_IS_INT32(length) || NPVARIANT_IS_DOUBLE(length))) {
-            NPN_ReleaseVariantValue(&length);
-            typeError = true;
-            break;
-        }
-        bool ignored;
-        size_t numMembers = ToLong(plugin, length, ignored);
-        NPN_ReleaseVariantValue(&length);
-        qcc::String substr = signature.substr(1, signature.size() - 1);
-        if (numMembers != ajn::SignatureUtils::CountCompleteTypes(substr.c_str())) {
-            typeError = true;
-            break;
-        }
-
-        arg.typeId = ajn::ALLJOYN_STRUCT;
-        arg.v_struct.numMembers = numMembers;
-        arg.v_struct.members = new ajn::MsgArg[arg.v_struct.numMembers];
-        arg.SetOwnershipFlags(ajn::MsgArg::OwnsArgs);
-
-        const char* begin = signature.c_str() + 1;
-        for (size_t i = 0; i < arg.v_struct.numMembers; ++i) {
-            const char* end = begin;
-            status = ajn::SignatureUtils::ParseCompleteType(end);
-            if (ER_OK != status) {
-                break;
-            }
-            qcc::String typeSignature(begin, end - begin);
-            NPVariant element = NPVARIANT_VOID;
-            if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
+            if (!NPVARIANT_IS_OBJECT(value)) {
                 typeError = true;
                 break;
             }
-            ToAny(plugin, element, typeSignature, arg.v_struct.members[i], typeError);
-            NPN_ReleaseVariantValue(&element);
-            if (typeError) {
-                break;
-            }
-            begin = end;
-        }
-        break;
-    }
-
-    case ajn::ALLJOYN_ARRAY: {
-        if (!NPVARIANT_IS_OBJECT(value)) {
-            typeError = true;
-            break;
-        }
-        qcc::String elemSignature = signature.substr(1);
-
-        if (elemSignature[0] == ajn::ALLJOYN_DICT_ENTRY_OPEN) {
-            const char* begin = elemSignature.c_str() + 1;
-            const char* end = begin;
-            status = ajn::SignatureUtils::ParseCompleteType(end);
-            if (ER_OK != status) {
-                break;
-            }
-            qcc::String keySignature(begin, end - begin);
-            begin = end;
-            status = ajn::SignatureUtils::ParseCompleteType(end);
-            if (ER_OK != status) {
-                break;
-            }
-            qcc::String valueSignature(begin, end - begin);
-
-            NPIdentifier* properties = NULL;
-            uint32_t propertiesCount = 0;
-            if (!NPN_Enumerate(plugin->npp, NPVARIANT_TO_OBJECT(value), &properties, &propertiesCount)) {
-                typeError = true;
-                break;
-            }
-            size_t numElements = propertiesCount;
-            ajn::MsgArg* elements = new ajn::MsgArg[numElements];
-
-            arg.v_array.SetElements(elemSignature.c_str(), numElements, elements);
-            if (ER_OK != status) {
-                NPN_MemFree(properties);
-                delete[] elements;
-                break;
-            }
-            arg.typeId = ajn::ALLJOYN_ARRAY;
-            arg.SetOwnershipFlags(ajn::MsgArg::OwnsArgs);
-
-            for (size_t i = 0; i < numElements; ++i) {
-                NPVariant key;
-                if (NPN_IdentifierIsString(properties[i])) {
-                    NPUTF8* utf8 = NPN_UTF8FromIdentifier(properties[i]);
-                    ToDOMString(plugin, utf8, strlen(utf8), key);
-                    NPN_MemFree(utf8);
-                } else {
-                    int32_t n = NPN_IntFromIdentifier(properties[i]);
-                    INT32_TO_NPVARIANT(n, key);
-                }
-                NPVariant val;
-                if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), properties[i], &val)) {
-                    typeError = true;
-                    break;
-                }
-
-                elements[i].typeId = ajn::ALLJOYN_DICT_ENTRY;
-                elements[i].v_dictEntry.key = new ajn::MsgArg();
-                elements[i].v_dictEntry.val = new ajn::MsgArg();
-                elements[i].SetOwnershipFlags(ajn::MsgArg::OwnsArgs);
-                ToAny(plugin, key, keySignature, *elements[i].v_dictEntry.key, typeError);
-                if (!typeError) {
-                    ToAny(plugin, val, valueSignature, *elements[i].v_dictEntry.val, typeError);
-                }
-                NPN_ReleaseVariantValue(&val);
-                NPN_ReleaseVariantValue(&key);
-            }
-
-            NPN_MemFree(properties);
-        } else {
             NPVariant length = NPVARIANT_VOID;
             if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetStringIdentifier("length"), &length) ||
                 !(NPVARIANT_IS_INT32(length) || NPVARIANT_IS_DOUBLE(length))) {
@@ -574,203 +460,76 @@ void ToAny(Plugin& plugin, const NPVariant& value, const qcc::String signature, 
                 break;
             }
             bool ignored;
-            size_t numElements = ToLong(plugin, length, ignored);
+            size_t numMembers = ToLong(plugin, length, ignored);
             NPN_ReleaseVariantValue(&length);
-
-            switch (elemSignature[0]) {
-            case ajn::ALLJOYN_BOOLEAN: {
-                arg.typeId = ajn::ALLJOYN_BOOLEAN_ARRAY;
-                arg.v_scalarArray.numElements = numElements;
-                arg.v_scalarArray.v_bool = new bool[numElements];
-                arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
-
-                for (size_t i = 0; i < numElements; ++i) {
-                    NPVariant element = NPVARIANT_VOID;
-                    if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
-                        typeError = true;
-                        break;
-                    }
-                    const_cast<bool*>(arg.v_scalarArray.v_bool)[i] = ToBoolean(plugin, element, typeError);
-                    NPN_ReleaseVariantValue(&element);
-                    if (typeError) {
-                        break;
-                    }
-                }
+            qcc::String substr = signature.substr(1, signature.size() - 1);
+            if (numMembers != ajn::SignatureUtils::CountCompleteTypes(substr.c_str())) {
+                typeError = true;
                 break;
             }
 
-            case ajn::ALLJOYN_BYTE: {
-                arg.typeId = ajn::ALLJOYN_BYTE_ARRAY;
-                arg.v_scalarArray.numElements = numElements;
-                arg.v_scalarArray.v_byte = new uint8_t[numElements];
-                arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
+            arg.typeId = ajn::ALLJOYN_STRUCT;
+            arg.v_struct.numMembers = numMembers;
+            arg.v_struct.members = new ajn::MsgArg[arg.v_struct.numMembers];
+            arg.SetOwnershipFlags(ajn::MsgArg::OwnsArgs);
 
-                for (size_t i = 0; i < numElements; ++i) {
-                    NPVariant element = NPVARIANT_VOID;
-                    if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
-                        typeError = true;
-                        break;
-                    }
-                    const_cast<uint8_t*>(arg.v_scalarArray.v_byte)[i] = ToOctet(plugin, element, typeError);
-                    NPN_ReleaseVariantValue(&element);
-                    if (typeError) {
-                        break;
-                    }
-                }
-                break;
-            }
-
-            case ajn::ALLJOYN_INT32: {
-                arg.typeId = ajn::ALLJOYN_INT32_ARRAY;
-                arg.v_scalarArray.numElements = numElements;
-                arg.v_scalarArray.v_int32 = new int32_t[numElements];
-                arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
-
-                for (size_t i = 0; i < numElements; ++i) {
-                    NPVariant element = NPVARIANT_VOID;
-                    if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
-                        typeError = true;
-                        break;
-                    }
-                    const_cast<int32_t*>(arg.v_scalarArray.v_int32)[i] = ToLong(plugin, element, typeError);
-                    NPN_ReleaseVariantValue(&element);
-                    if (typeError) {
-                        break;
-                    }
-                }
-                break;
-            }
-
-            case ajn::ALLJOYN_INT16: {
-                arg.typeId = ajn::ALLJOYN_INT16_ARRAY;
-                arg.v_scalarArray.numElements = numElements;
-                arg.v_scalarArray.v_int16 = new int16_t[numElements];
-                arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
-
-                for (size_t i = 0; i < numElements; ++i) {
-                    NPVariant element = NPVARIANT_VOID;
-                    if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
-                        typeError = true;
-                        break;
-                    }
-                    const_cast<int16_t*>(arg.v_scalarArray.v_int16)[i] = ToShort(plugin, element, typeError);
-                    NPN_ReleaseVariantValue(&element);
-                    if (typeError) {
-                        break;
-                    }
-                }
-                break;
-            }
-
-            case ajn::ALLJOYN_UINT16: {
-                arg.typeId = ajn::ALLJOYN_UINT16_ARRAY;
-                arg.v_scalarArray.numElements = numElements;
-                arg.v_scalarArray.v_uint16 = new uint16_t[numElements];
-                arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
-
-                for (size_t i = 0; i < numElements; ++i) {
-                    NPVariant element = NPVARIANT_VOID;
-                    if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
-                        typeError = true;
-                        break;
-                    }
-                    const_cast<uint16_t*>(arg.v_scalarArray.v_uint16)[i] = ToUnsignedShort(plugin, element, typeError);
-                    NPN_ReleaseVariantValue(&element);
-                    if (typeError) {
-                        break;
-                    }
-                }
-                break;
-            }
-
-            case ajn::ALLJOYN_UINT64: {
-                arg.typeId = ajn::ALLJOYN_UINT64_ARRAY;
-                arg.v_scalarArray.numElements = numElements;
-                arg.v_scalarArray.v_uint64 = new uint64_t[numElements];
-                arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
-
-                for (size_t i = 0; i < numElements; ++i) {
-                    NPVariant element = NPVARIANT_VOID;
-                    if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
-                        typeError = true;
-                        break;
-                    }
-                    const_cast<uint64_t*>(arg.v_scalarArray.v_uint64)[i] = ToUnsignedLongLong(plugin, element, typeError);
-                    NPN_ReleaseVariantValue(&element);
-                    if (typeError) {
-                        break;
-                    }
-                }
-                break;
-            }
-
-            case ajn::ALLJOYN_UINT32: {
-                arg.typeId = ajn::ALLJOYN_UINT32_ARRAY;
-                arg.v_scalarArray.numElements = numElements;
-                arg.v_scalarArray.v_uint32 = new uint32_t[numElements];
-                arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
-
-                for (size_t i = 0; i < numElements; ++i) {
-                    NPVariant element = NPVARIANT_VOID;
-                    if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
-                        typeError = true;
-                        break;
-                    }
-                    const_cast<uint32_t*>(arg.v_scalarArray.v_uint32)[i] = ToUnsignedLong(plugin, element, typeError);
-                    NPN_ReleaseVariantValue(&element);
-                    if (typeError) {
-                        break;
-                    }
-                }
-                break;
-            }
-
-            case ajn::ALLJOYN_INT64: {
-                arg.typeId = ajn::ALLJOYN_INT64_ARRAY;
-                arg.v_scalarArray.numElements = numElements;
-                arg.v_scalarArray.v_int64 = new int64_t[numElements];
-                arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
-
-                for (size_t i = 0; i < numElements; ++i) {
-                    NPVariant element = NPVARIANT_VOID;
-                    if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
-                        typeError = true;
-                        break;
-                    }
-                    const_cast<int64_t*>(arg.v_scalarArray.v_int64)[i] = ToLongLong(plugin, element, typeError);
-                    NPN_ReleaseVariantValue(&element);
-                    if (typeError) {
-                        break;
-                    }
-                }
-                break;
-            }
-
-            case ajn::ALLJOYN_DOUBLE: {
-                arg.typeId = ajn::ALLJOYN_DOUBLE_ARRAY;
-                arg.v_scalarArray.numElements = numElements;
-                arg.v_scalarArray.v_double = new double[numElements];
-                arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
-
-                for (size_t i = 0; i < numElements; ++i) {
-                    NPVariant element = NPVARIANT_VOID;
-                    if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
-                        typeError = true;
-                        break;
-                    }
-                    const_cast<double*>(arg.v_scalarArray.v_double)[i] = ToDouble(plugin, element, typeError);
-                    NPN_ReleaseVariantValue(&element);
-                    if (typeError) {
-                        break;
-                    }
-                }
-                break;
-            }
-
-            default: {
-                ajn::MsgArg* elements = new ajn::MsgArg[numElements];
-                status = arg.v_array.SetElements(elemSignature.c_str(), numElements, elements);
+            const char* begin = signature.c_str() + 1;
+            for (size_t i = 0; i < arg.v_struct.numMembers; ++i) {
+                const char* end = begin;
+                status = ajn::SignatureUtils::ParseCompleteType(end);
                 if (ER_OK != status) {
+                    break;
+                }
+                qcc::String typeSignature(begin, end - begin);
+                NPVariant element = NPVARIANT_VOID;
+                if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
+                    typeError = true;
+                    break;
+                }
+                ToAny(plugin, element, typeSignature, arg.v_struct.members[i], typeError);
+                NPN_ReleaseVariantValue(&element);
+                if (typeError) {
+                    break;
+                }
+                begin = end;
+            }
+            break;
+        }
+
+    case ajn::ALLJOYN_ARRAY: {
+            if (!NPVARIANT_IS_OBJECT(value)) {
+                typeError = true;
+                break;
+            }
+            qcc::String elemSignature = signature.substr(1);
+
+            if (elemSignature[0] == ajn::ALLJOYN_DICT_ENTRY_OPEN) {
+                const char* begin = elemSignature.c_str() + 1;
+                const char* end = begin;
+                status = ajn::SignatureUtils::ParseCompleteType(end);
+                if (ER_OK != status) {
+                    break;
+                }
+                qcc::String keySignature(begin, end - begin);
+                begin = end;
+                status = ajn::SignatureUtils::ParseCompleteType(end);
+                if (ER_OK != status) {
+                    break;
+                }
+                qcc::String valueSignature(begin, end - begin);
+
+                NPIdentifier* properties = NULL;
+                uint32_t propertiesCount = 0;
+                if (!NPN_Enumerate(plugin->npp, NPVARIANT_TO_OBJECT(value), &properties, &propertiesCount)) {
+                    typeError = true;
+                    break;
+                }
+                size_t numElements = propertiesCount;
+                ajn::MsgArg* elements = new ajn::MsgArg[numElements];
+
+                arg.v_array.SetElements(elemSignature.c_str(), numElements, elements);
+                if (ER_OK != status) {
+                    NPN_MemFree(properties);
                     delete[] elements;
                     break;
                 }
@@ -778,119 +537,360 @@ void ToAny(Plugin& plugin, const NPVariant& value, const qcc::String signature, 
                 arg.SetOwnershipFlags(ajn::MsgArg::OwnsArgs);
 
                 for (size_t i = 0; i < numElements; ++i) {
-                    NPVariant element = NPVARIANT_VOID;
-                    if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
+                    NPVariant key;
+                    if (NPN_IdentifierIsString(properties[i])) {
+                        NPUTF8* utf8 = NPN_UTF8FromIdentifier(properties[i]);
+                        ToDOMString(plugin, utf8, strlen(utf8), key);
+                        NPN_MemFree(utf8);
+                    } else {
+                        int32_t n = NPN_IntFromIdentifier(properties[i]);
+                        INT32_TO_NPVARIANT(n, key);
+                    }
+                    NPVariant val;
+                    if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), properties[i], &val)) {
                         typeError = true;
                         break;
                     }
-                    ToAny(plugin, element, elemSignature, elements[i], typeError);
-                    NPN_ReleaseVariantValue(&element);
-                    if (typeError) {
+
+                    elements[i].typeId = ajn::ALLJOYN_DICT_ENTRY;
+                    elements[i].v_dictEntry.key = new ajn::MsgArg();
+                    elements[i].v_dictEntry.val = new ajn::MsgArg();
+                    elements[i].SetOwnershipFlags(ajn::MsgArg::OwnsArgs);
+                    ToAny(plugin, key, keySignature, *elements[i].v_dictEntry.key, typeError);
+                    if (!typeError) {
+                        ToAny(plugin, val, valueSignature, *elements[i].v_dictEntry.val, typeError);
+                    }
+                    NPN_ReleaseVariantValue(&val);
+                    NPN_ReleaseVariantValue(&key);
+                }
+
+                NPN_MemFree(properties);
+            } else {
+                NPVariant length = NPVARIANT_VOID;
+                if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetStringIdentifier("length"), &length) ||
+                    !(NPVARIANT_IS_INT32(length) || NPVARIANT_IS_DOUBLE(length))) {
+                    NPN_ReleaseVariantValue(&length);
+                    typeError = true;
+                    break;
+                }
+                bool ignored;
+                size_t numElements = ToLong(plugin, length, ignored);
+                NPN_ReleaseVariantValue(&length);
+
+                switch (elemSignature[0]) {
+                case ajn::ALLJOYN_BOOLEAN: {
+                        arg.typeId = ajn::ALLJOYN_BOOLEAN_ARRAY;
+                        arg.v_scalarArray.numElements = numElements;
+                        arg.v_scalarArray.v_bool = new bool[numElements];
+                        arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
+
+                        for (size_t i = 0; i < numElements; ++i) {
+                            NPVariant element = NPVARIANT_VOID;
+                            if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
+                                typeError = true;
+                                break;
+                            }
+                            const_cast<bool*>(arg.v_scalarArray.v_bool)[i] = ToBoolean(plugin, element, typeError);
+                            NPN_ReleaseVariantValue(&element);
+                            if (typeError) {
+                                break;
+                            }
+                        }
+                        break;
+                    }
+
+                case ajn::ALLJOYN_BYTE: {
+                        arg.typeId = ajn::ALLJOYN_BYTE_ARRAY;
+                        arg.v_scalarArray.numElements = numElements;
+                        arg.v_scalarArray.v_byte = new uint8_t[numElements];
+                        arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
+
+                        for (size_t i = 0; i < numElements; ++i) {
+                            NPVariant element = NPVARIANT_VOID;
+                            if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
+                                typeError = true;
+                                break;
+                            }
+                            const_cast<uint8_t*>(arg.v_scalarArray.v_byte)[i] = ToOctet(plugin, element, typeError);
+                            NPN_ReleaseVariantValue(&element);
+                            if (typeError) {
+                                break;
+                            }
+                        }
+                        break;
+                    }
+
+                case ajn::ALLJOYN_INT32: {
+                        arg.typeId = ajn::ALLJOYN_INT32_ARRAY;
+                        arg.v_scalarArray.numElements = numElements;
+                        arg.v_scalarArray.v_int32 = new int32_t[numElements];
+                        arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
+
+                        for (size_t i = 0; i < numElements; ++i) {
+                            NPVariant element = NPVARIANT_VOID;
+                            if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
+                                typeError = true;
+                                break;
+                            }
+                            const_cast<int32_t*>(arg.v_scalarArray.v_int32)[i] = ToLong(plugin, element, typeError);
+                            NPN_ReleaseVariantValue(&element);
+                            if (typeError) {
+                                break;
+                            }
+                        }
+                        break;
+                    }
+
+                case ajn::ALLJOYN_INT16: {
+                        arg.typeId = ajn::ALLJOYN_INT16_ARRAY;
+                        arg.v_scalarArray.numElements = numElements;
+                        arg.v_scalarArray.v_int16 = new int16_t[numElements];
+                        arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
+
+                        for (size_t i = 0; i < numElements; ++i) {
+                            NPVariant element = NPVARIANT_VOID;
+                            if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
+                                typeError = true;
+                                break;
+                            }
+                            const_cast<int16_t*>(arg.v_scalarArray.v_int16)[i] = ToShort(plugin, element, typeError);
+                            NPN_ReleaseVariantValue(&element);
+                            if (typeError) {
+                                break;
+                            }
+                        }
+                        break;
+                    }
+
+                case ajn::ALLJOYN_UINT16: {
+                        arg.typeId = ajn::ALLJOYN_UINT16_ARRAY;
+                        arg.v_scalarArray.numElements = numElements;
+                        arg.v_scalarArray.v_uint16 = new uint16_t[numElements];
+                        arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
+
+                        for (size_t i = 0; i < numElements; ++i) {
+                            NPVariant element = NPVARIANT_VOID;
+                            if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
+                                typeError = true;
+                                break;
+                            }
+                            const_cast<uint16_t*>(arg.v_scalarArray.v_uint16)[i] = ToUnsignedShort(plugin, element, typeError);
+                            NPN_ReleaseVariantValue(&element);
+                            if (typeError) {
+                                break;
+                            }
+                        }
+                        break;
+                    }
+
+                case ajn::ALLJOYN_UINT64: {
+                        arg.typeId = ajn::ALLJOYN_UINT64_ARRAY;
+                        arg.v_scalarArray.numElements = numElements;
+                        arg.v_scalarArray.v_uint64 = new uint64_t[numElements];
+                        arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
+
+                        for (size_t i = 0; i < numElements; ++i) {
+                            NPVariant element = NPVARIANT_VOID;
+                            if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
+                                typeError = true;
+                                break;
+                            }
+                            const_cast<uint64_t*>(arg.v_scalarArray.v_uint64)[i] = ToUnsignedLongLong(plugin, element, typeError);
+                            NPN_ReleaseVariantValue(&element);
+                            if (typeError) {
+                                break;
+                            }
+                        }
+                        break;
+                    }
+
+                case ajn::ALLJOYN_UINT32: {
+                        arg.typeId = ajn::ALLJOYN_UINT32_ARRAY;
+                        arg.v_scalarArray.numElements = numElements;
+                        arg.v_scalarArray.v_uint32 = new uint32_t[numElements];
+                        arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
+
+                        for (size_t i = 0; i < numElements; ++i) {
+                            NPVariant element = NPVARIANT_VOID;
+                            if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
+                                typeError = true;
+                                break;
+                            }
+                            const_cast<uint32_t*>(arg.v_scalarArray.v_uint32)[i] = ToUnsignedLong(plugin, element, typeError);
+                            NPN_ReleaseVariantValue(&element);
+                            if (typeError) {
+                                break;
+                            }
+                        }
+                        break;
+                    }
+
+                case ajn::ALLJOYN_INT64: {
+                        arg.typeId = ajn::ALLJOYN_INT64_ARRAY;
+                        arg.v_scalarArray.numElements = numElements;
+                        arg.v_scalarArray.v_int64 = new int64_t[numElements];
+                        arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
+
+                        for (size_t i = 0; i < numElements; ++i) {
+                            NPVariant element = NPVARIANT_VOID;
+                            if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
+                                typeError = true;
+                                break;
+                            }
+                            const_cast<int64_t*>(arg.v_scalarArray.v_int64)[i] = ToLongLong(plugin, element, typeError);
+                            NPN_ReleaseVariantValue(&element);
+                            if (typeError) {
+                                break;
+                            }
+                        }
+                        break;
+                    }
+
+                case ajn::ALLJOYN_DOUBLE: {
+                        arg.typeId = ajn::ALLJOYN_DOUBLE_ARRAY;
+                        arg.v_scalarArray.numElements = numElements;
+                        arg.v_scalarArray.v_double = new double[numElements];
+                        arg.SetOwnershipFlags(ajn::MsgArg::OwnsData);
+
+                        for (size_t i = 0; i < numElements; ++i) {
+                            NPVariant element = NPVARIANT_VOID;
+                            if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
+                                typeError = true;
+                                break;
+                            }
+                            const_cast<double*>(arg.v_scalarArray.v_double)[i] = ToDouble(plugin, element, typeError);
+                            NPN_ReleaseVariantValue(&element);
+                            if (typeError) {
+                                break;
+                            }
+                        }
+                        break;
+                    }
+
+                default: {
+                        ajn::MsgArg* elements = new ajn::MsgArg[numElements];
+                        status = arg.v_array.SetElements(elemSignature.c_str(), numElements, elements);
+                        if (ER_OK != status) {
+                            delete[] elements;
+                            break;
+                        }
+                        arg.typeId = ajn::ALLJOYN_ARRAY;
+                        arg.SetOwnershipFlags(ajn::MsgArg::OwnsArgs);
+
+                        for (size_t i = 0; i < numElements; ++i) {
+                            NPVariant element = NPVARIANT_VOID;
+                            if (!NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), NPN_GetIntIdentifier(i), &element)) {
+                                typeError = true;
+                                break;
+                            }
+                            ToAny(plugin, element, elemSignature, elements[i], typeError);
+                            NPN_ReleaseVariantValue(&element);
+                            if (typeError) {
+                                break;
+                            }
+                        }
                         break;
                     }
                 }
-                break;
             }
-            }
+            break;
         }
-        break;
-    }
 
     case ajn::ALLJOYN_VARIANT: {
-        if (!NPVARIANT_IS_OBJECT(value)) {
-            typeError = true;
-            break;
-        }
-
-        NPIdentifier* properties = NULL;
-        uint32_t propertiesCount = 0;
-        if (!NPN_Enumerate(plugin->npp, NPVARIANT_TO_OBJECT(value), &properties, &propertiesCount)) {
-            typeError = true;
-            break;
-        }
-        if (1 != propertiesCount) {
-            NPN_MemFree(properties);
-            typeError = true;
-            break;
-        }
-
-        arg.typeId = ajn::ALLJOYN_VARIANT;
-        arg.v_variant.val = new ajn::MsgArg;
-        arg.SetOwnershipFlags(ajn::MsgArg::OwnsArgs);
-
-        NPUTF8* utf8 = NPN_UTF8FromIdentifier(properties[0]);
-        qcc::String signature(utf8);
-        NPVariant val;
-        if (NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), properties[0], &val)) {
-            ToAny(plugin, val, signature, *arg.v_variant.val, typeError);
-            NPN_ReleaseVariantValue(&val);
-        } else {
-            typeError = true;
-        }
-
-        NPN_MemFree(utf8);
-        NPN_MemFree(properties);
-        break;
-    }
-
-    case ajn::ALLJOYN_HANDLE: {
-        qcc::SocketFd fd = qcc::INVALID_SOCKET_FD;
-
-        switch (value.type) {
-        case NPVariantType_Void:
-        case NPVariantType_Null:
-            break;
-
-        case NPVariantType_Bool:
-            typeError = true;
-            break;
-
-        case NPVariantType_Int32:
-            fd = NPVARIANT_TO_INT32(value);
-            break;
-
-        case NPVariantType_Double:
-            fd = static_cast<qcc::SocketFd>(NPVARIANT_TO_DOUBLE(value));
-            break;
-
-        case NPVariantType_String: {
-            NPObject* window = NULL;
-            if (NPERR_NO_ERROR == NPN_GetValue(plugin->npp, NPNVWindowNPObject, &window)) {
-                NPVariant result;
-                if (NPN_Invoke(plugin->npp, window, NPN_GetStringIdentifier("parseFloat"), &value, 1, &result)) {
-                    if (NPVARIANT_IS_INT32(result)) {
-                        fd = NPVARIANT_TO_INT32(result);
-                    } else if (NPVARIANT_IS_DOUBLE(result)) {
-                        fd = static_cast<qcc::SocketFd>(NPVARIANT_TO_DOUBLE(result));
-                    }
-                    NPN_ReleaseVariantValue(&result);
-                }
-                NPN_ReleaseObject(window);
-            }
-            break;
-        }
-
-        case NPVariantType_Object: {
-            SocketFdHost* socketFd = ToHostObject<SocketFdHost>(plugin, value, typeError);
-            if (typeError || !socketFd) {
+            if (!NPVARIANT_IS_OBJECT(value)) {
                 typeError = true;
                 break;
             }
-            fd = (*socketFd)->GetFd();
+
+            NPIdentifier* properties = NULL;
+            uint32_t propertiesCount = 0;
+            if (!NPN_Enumerate(plugin->npp, NPVARIANT_TO_OBJECT(value), &properties, &propertiesCount)) {
+                typeError = true;
+                break;
+            }
+            if (1 != propertiesCount) {
+                NPN_MemFree(properties);
+                typeError = true;
+                break;
+            }
+
+            arg.typeId = ajn::ALLJOYN_VARIANT;
+            arg.v_variant.val = new ajn::MsgArg;
+            arg.SetOwnershipFlags(ajn::MsgArg::OwnsArgs);
+
+            NPUTF8* utf8 = NPN_UTF8FromIdentifier(properties[0]);
+            qcc::String signature(utf8);
+            NPVariant val;
+            if (NPN_GetProperty(plugin->npp, NPVARIANT_TO_OBJECT(value), properties[0], &val)) {
+                ToAny(plugin, val, signature, *arg.v_variant.val, typeError);
+                NPN_ReleaseVariantValue(&val);
+            } else {
+                typeError = true;
+            }
+
+            NPN_MemFree(utf8);
+            NPN_MemFree(properties);
             break;
         }
 
-        default:
-            assert(0); /* Will not reach here. */
-            typeError = true;
+    case ajn::ALLJOYN_HANDLE: {
+            qcc::SocketFd fd = qcc::INVALID_SOCKET_FD;
+
+            switch (value.type) {
+            case NPVariantType_Void:
+            case NPVariantType_Null:
+                break;
+
+            case NPVariantType_Bool:
+                typeError = true;
+                break;
+
+            case NPVariantType_Int32:
+                fd = NPVARIANT_TO_INT32(value);
+                break;
+
+            case NPVariantType_Double:
+                fd = static_cast<qcc::SocketFd>(NPVARIANT_TO_DOUBLE(value));
+                break;
+
+            case NPVariantType_String: {
+                    NPObject* window = NULL;
+                    if (NPERR_NO_ERROR == NPN_GetValue(plugin->npp, NPNVWindowNPObject, &window)) {
+                        NPVariant result;
+                        if (NPN_Invoke(plugin->npp, window, NPN_GetStringIdentifier("parseFloat"), &value, 1, &result)) {
+                            if (NPVARIANT_IS_INT32(result)) {
+                                fd = NPVARIANT_TO_INT32(result);
+                            } else if (NPVARIANT_IS_DOUBLE(result)) {
+                                fd = static_cast<qcc::SocketFd>(NPVARIANT_TO_DOUBLE(result));
+                            }
+                            NPN_ReleaseVariantValue(&result);
+                        }
+                        NPN_ReleaseObject(window);
+                    }
+                    break;
+                }
+
+            case NPVariantType_Object: {
+                    SocketFdHost* socketFd = ToHostObject<SocketFdHost>(plugin, value, typeError);
+                    if (typeError || !socketFd) {
+                        typeError = true;
+                        break;
+                    }
+                    fd = (*socketFd)->GetFd();
+                    break;
+                }
+
+            default:
+                assert(0); /* Will not reach here. */
+                typeError = true;
+                break;
+            }
+
+            if (!typeError) {
+                arg.Set("h", fd);
+            }
             break;
         }
-
-        if (!typeError) {
-            arg.Set("h", fd);
-        }
-        break;
-    }
 
     default:
         status = ER_BUS_BAD_SIGNATURE;
@@ -956,71 +956,10 @@ void ToAny(Plugin& plugin, const ajn::MsgArg& value, NPVariant& variant, QStatus
         break;
 
     case ajn::ALLJOYN_STRUCT: {
-        if (NewArray(plugin, variant)) {
-            for (size_t i = 0; (ER_OK == status) && (i < value.v_struct.numMembers); ++i) {
-                NPVariant element = NPVARIANT_VOID;
-                ToAny(plugin, value.v_struct.members[i], element, status);
-                if ((ER_OK == status) &&
-                    !NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
-                    status = ER_FAIL;
-                    QCC_LogError(status, ("NPN_SetProperty failed"));
-                }
-                NPN_ReleaseVariantValue(&element);
-            }
-        } else {
-            status = ER_FAIL;
-            QCC_LogError(status, ("NewArray failed"));
-            VOID_TO_NPVARIANT(variant);
-        }
-        break;
-    }
-
-    case ajn::ALLJOYN_VARIANT: {
-        if (ajn::ALLJOYN_VARIANT != value.v_variant.val->typeId) {
-            ToAny(plugin, *value.v_variant.val, variant, status);
-        } else if (NewObject(plugin, variant)) {
-            qcc::String nestedSignature = value.v_variant.val->v_variant.val->Signature();
-            NPVariant nestedValue = NPVARIANT_VOID;
-            ToAny(plugin, *value.v_variant.val->v_variant.val, nestedValue, status);
-            if ((ER_OK == status) &&
-                !NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetStringIdentifier(nestedSignature.c_str()), &nestedValue)) {
-                status = ER_FAIL;
-                QCC_LogError(status, ("NPN_SetProperty failed"));
-            }
-            NPN_ReleaseVariantValue(&nestedValue);
-        } else {
-            status = ER_FAIL;
-            QCC_LogError(status, ("NewObject failed"));
-            VOID_TO_NPVARIANT(variant);
-        }
-        break;
-    }
-
-    case ajn::ALLJOYN_ARRAY: {
-        if (value.v_array.GetElemSig()[0] == ajn::ALLJOYN_DICT_ENTRY_OPEN) {
-            if (NewObject(plugin, variant)) {
-                for (size_t i = 0; (ER_OK == status) && (i < value.v_array.GetNumElements()); ++i) {
-                    NPIdentifier key = 0;
-                    NPVariant val = NPVARIANT_VOID;
-                    ToDictionaryKey(plugin, *value.v_array.GetElements()[i].v_dictEntry.key, key);
-                    ToAny(plugin, *value.v_array.GetElements()[i].v_dictEntry.val, val, status);
-                    if ((ER_OK == status) &&
-                        !NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), key, &val)) {
-                        status = ER_FAIL;
-                        QCC_LogError(status, ("NPN_SetProperty failed"));
-                    }
-                    NPN_ReleaseVariantValue(&val);
-                }
-            } else {
-                status = ER_FAIL;
-                QCC_LogError(status, ("NewObject failed"));
-                VOID_TO_NPVARIANT(variant);
-            }
-        } else {
             if (NewArray(plugin, variant)) {
-                for (size_t i = 0; (ER_OK == status) && (i < value.v_array.GetNumElements()); ++i) {
+                for (size_t i = 0; (ER_OK == status) && (i < value.v_struct.numMembers); ++i) {
                     NPVariant element = NPVARIANT_VOID;
-                    ToAny(plugin, value.v_array.GetElements()[i], element, status);
+                    ToAny(plugin, value.v_struct.members[i], element, status);
                     if ((ER_OK == status) &&
                         !NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
                         status = ER_FAIL;
@@ -1033,191 +972,252 @@ void ToAny(Plugin& plugin, const ajn::MsgArg& value, NPVariant& variant, QStatus
                 QCC_LogError(status, ("NewArray failed"));
                 VOID_TO_NPVARIANT(variant);
             }
+            break;
         }
-        break;
-    }
+
+    case ajn::ALLJOYN_VARIANT: {
+            if (ajn::ALLJOYN_VARIANT != value.v_variant.val->typeId) {
+                ToAny(plugin, *value.v_variant.val, variant, status);
+            } else if (NewObject(plugin, variant)) {
+                qcc::String nestedSignature = value.v_variant.val->v_variant.val->Signature();
+                NPVariant nestedValue = NPVARIANT_VOID;
+                ToAny(plugin, *value.v_variant.val->v_variant.val, nestedValue, status);
+                if ((ER_OK == status) &&
+                    !NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetStringIdentifier(nestedSignature.c_str()), &nestedValue)) {
+                    status = ER_FAIL;
+                    QCC_LogError(status, ("NPN_SetProperty failed"));
+                }
+                NPN_ReleaseVariantValue(&nestedValue);
+            } else {
+                status = ER_FAIL;
+                QCC_LogError(status, ("NewObject failed"));
+                VOID_TO_NPVARIANT(variant);
+            }
+            break;
+        }
+
+    case ajn::ALLJOYN_ARRAY: {
+            if (value.v_array.GetElemSig()[0] == ajn::ALLJOYN_DICT_ENTRY_OPEN) {
+                if (NewObject(plugin, variant)) {
+                    for (size_t i = 0; (ER_OK == status) && (i < value.v_array.GetNumElements()); ++i) {
+                        NPIdentifier key = 0;
+                        NPVariant val = NPVARIANT_VOID;
+                        ToDictionaryKey(plugin, *value.v_array.GetElements()[i].v_dictEntry.key, key);
+                        ToAny(plugin, *value.v_array.GetElements()[i].v_dictEntry.val, val, status);
+                        if ((ER_OK == status) &&
+                            !NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), key, &val)) {
+                            status = ER_FAIL;
+                            QCC_LogError(status, ("NPN_SetProperty failed"));
+                        }
+                        NPN_ReleaseVariantValue(&val);
+                    }
+                } else {
+                    status = ER_FAIL;
+                    QCC_LogError(status, ("NewObject failed"));
+                    VOID_TO_NPVARIANT(variant);
+                }
+            } else {
+                if (NewArray(plugin, variant)) {
+                    for (size_t i = 0; (ER_OK == status) && (i < value.v_array.GetNumElements()); ++i) {
+                        NPVariant element = NPVARIANT_VOID;
+                        ToAny(plugin, value.v_array.GetElements()[i], element, status);
+                        if ((ER_OK == status) &&
+                            !NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
+                            status = ER_FAIL;
+                            QCC_LogError(status, ("NPN_SetProperty failed"));
+                        }
+                        NPN_ReleaseVariantValue(&element);
+                    }
+                } else {
+                    status = ER_FAIL;
+                    QCC_LogError(status, ("NewArray failed"));
+                    VOID_TO_NPVARIANT(variant);
+                }
+            }
+            break;
+        }
 
 
     case ajn::ALLJOYN_BOOLEAN_ARRAY: {
-        if (NewArray(plugin, variant)) {
-            for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
-                NPVariant element = NPVARIANT_VOID;
-                ToBoolean(plugin, value.v_scalarArray.v_bool[i], element);
-                if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
-                    status = ER_FAIL;
-                    QCC_LogError(status, ("NPN_SetProperty failed"));
+            if (NewArray(plugin, variant)) {
+                for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
+                    NPVariant element = NPVARIANT_VOID;
+                    ToBoolean(plugin, value.v_scalarArray.v_bool[i], element);
+                    if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
+                        status = ER_FAIL;
+                        QCC_LogError(status, ("NPN_SetProperty failed"));
+                    }
+                    NPN_ReleaseVariantValue(&element);
                 }
-                NPN_ReleaseVariantValue(&element);
+            } else {
+                status = ER_FAIL;
+                QCC_LogError(status, ("NewArray failed"));
+                VOID_TO_NPVARIANT(variant);
             }
-        } else {
-            status = ER_FAIL;
-            QCC_LogError(status, ("NewArray failed"));
-            VOID_TO_NPVARIANT(variant);
+            break;
         }
-        break;
-    }
 
     case ajn::ALLJOYN_DOUBLE_ARRAY: {
-        if (NewArray(plugin, variant)) {
-            for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
-                NPVariant element = NPVARIANT_VOID;
-                ToDouble(plugin, value.v_scalarArray.v_double[i], element);
-                if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
-                    status = ER_FAIL;
-                    QCC_LogError(status, ("NPN_SetProperty failed"));
+            if (NewArray(plugin, variant)) {
+                for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
+                    NPVariant element = NPVARIANT_VOID;
+                    ToDouble(plugin, value.v_scalarArray.v_double[i], element);
+                    if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
+                        status = ER_FAIL;
+                        QCC_LogError(status, ("NPN_SetProperty failed"));
+                    }
+                    NPN_ReleaseVariantValue(&element);
                 }
-                NPN_ReleaseVariantValue(&element);
+            } else {
+                status = ER_FAIL;
+                QCC_LogError(status, ("NewArray failed"));
+                VOID_TO_NPVARIANT(variant);
             }
-        } else {
-            status = ER_FAIL;
-            QCC_LogError(status, ("NewArray failed"));
-            VOID_TO_NPVARIANT(variant);
+            break;
         }
-        break;
-    }
 
     case ajn::ALLJOYN_INT32_ARRAY: {
-        if (NewArray(plugin, variant)) {
-            for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
-                NPVariant element = NPVARIANT_VOID;
-                ToLong(plugin, value.v_scalarArray.v_int32[i], element);
-                if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
-                    status = ER_FAIL;
-                    QCC_LogError(status, ("NPN_SetProperty failed"));
+            if (NewArray(plugin, variant)) {
+                for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
+                    NPVariant element = NPVARIANT_VOID;
+                    ToLong(plugin, value.v_scalarArray.v_int32[i], element);
+                    if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
+                        status = ER_FAIL;
+                        QCC_LogError(status, ("NPN_SetProperty failed"));
+                    }
+                    NPN_ReleaseVariantValue(&element);
                 }
-                NPN_ReleaseVariantValue(&element);
+            } else {
+                status = ER_FAIL;
+                QCC_LogError(status, ("NewArray failed"));
+                VOID_TO_NPVARIANT(variant);
             }
-        } else {
-            status = ER_FAIL;
-            QCC_LogError(status, ("NewArray failed"));
-            VOID_TO_NPVARIANT(variant);
+            break;
         }
-        break;
-    }
 
     case ajn::ALLJOYN_INT16_ARRAY: {
-        if (NewArray(plugin, variant)) {
-            for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
-                NPVariant element = NPVARIANT_VOID;
-                ToShort(plugin, value.v_scalarArray.v_int16[i], element);
-                if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
-                    status = ER_FAIL;
-                    QCC_LogError(status, ("NPN_SetProperty failed"));
+            if (NewArray(plugin, variant)) {
+                for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
+                    NPVariant element = NPVARIANT_VOID;
+                    ToShort(plugin, value.v_scalarArray.v_int16[i], element);
+                    if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
+                        status = ER_FAIL;
+                        QCC_LogError(status, ("NPN_SetProperty failed"));
+                    }
+                    NPN_ReleaseVariantValue(&element);
                 }
-                NPN_ReleaseVariantValue(&element);
+            } else {
+                status = ER_FAIL;
+                QCC_LogError(status, ("NewArray failed"));
+                VOID_TO_NPVARIANT(variant);
             }
-        } else {
-            status = ER_FAIL;
-            QCC_LogError(status, ("NewArray failed"));
-            VOID_TO_NPVARIANT(variant);
+            break;
         }
-        break;
-    }
 
     case ajn::ALLJOYN_UINT16_ARRAY: {
-        if (NewArray(plugin, variant)) {
-            for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
-                NPVariant element = NPVARIANT_VOID;
-                ToUnsignedShort(plugin, value.v_scalarArray.v_uint16[i], element);
-                if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
-                    status = ER_FAIL;
-                    QCC_LogError(status, ("NPN_SetProperty failed"));
+            if (NewArray(plugin, variant)) {
+                for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
+                    NPVariant element = NPVARIANT_VOID;
+                    ToUnsignedShort(plugin, value.v_scalarArray.v_uint16[i], element);
+                    if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
+                        status = ER_FAIL;
+                        QCC_LogError(status, ("NPN_SetProperty failed"));
+                    }
+                    NPN_ReleaseVariantValue(&element);
                 }
-                NPN_ReleaseVariantValue(&element);
+            } else {
+                status = ER_FAIL;
+                QCC_LogError(status, ("NewArray failed"));
+                VOID_TO_NPVARIANT(variant);
             }
-        } else {
-            status = ER_FAIL;
-            QCC_LogError(status, ("NewArray failed"));
-            VOID_TO_NPVARIANT(variant);
+            break;
         }
-        break;
-    }
 
     case ajn::ALLJOYN_UINT64_ARRAY: {
-        if (NewArray(plugin, variant)) {
-            for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
-                NPVariant element = NPVARIANT_VOID;
-                ToUnsignedLongLong(plugin, value.v_scalarArray.v_uint64[i], element);
-                if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
-                    status = ER_FAIL;
-                    QCC_LogError(status, ("NPN_SetProperty failed"));
+            if (NewArray(plugin, variant)) {
+                for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
+                    NPVariant element = NPVARIANT_VOID;
+                    ToUnsignedLongLong(plugin, value.v_scalarArray.v_uint64[i], element);
+                    if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
+                        status = ER_FAIL;
+                        QCC_LogError(status, ("NPN_SetProperty failed"));
+                    }
+                    NPN_ReleaseVariantValue(&element);
                 }
-                NPN_ReleaseVariantValue(&element);
+            } else {
+                status = ER_FAIL;
+                QCC_LogError(status, ("NewArray failed"));
+                VOID_TO_NPVARIANT(variant);
             }
-        } else {
-            status = ER_FAIL;
-            QCC_LogError(status, ("NewArray failed"));
-            VOID_TO_NPVARIANT(variant);
+            break;
         }
-        break;
-    }
 
     case ajn::ALLJOYN_UINT32_ARRAY: {
-        if (NewArray(plugin, variant)) {
-            for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
-                NPVariant element = NPVARIANT_VOID;
-                ToUnsignedLong(plugin, value.v_scalarArray.v_uint32[i], element);
-                if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
-                    status = ER_FAIL;
-                    QCC_LogError(status, ("NPN_SetProperty failed"));
+            if (NewArray(plugin, variant)) {
+                for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
+                    NPVariant element = NPVARIANT_VOID;
+                    ToUnsignedLong(plugin, value.v_scalarArray.v_uint32[i], element);
+                    if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
+                        status = ER_FAIL;
+                        QCC_LogError(status, ("NPN_SetProperty failed"));
+                    }
+                    NPN_ReleaseVariantValue(&element);
                 }
-                NPN_ReleaseVariantValue(&element);
+            } else {
+                status = ER_FAIL;
+                QCC_LogError(status, ("NewArray failed"));
+                VOID_TO_NPVARIANT(variant);
             }
-        } else {
-            status = ER_FAIL;
-            QCC_LogError(status, ("NewArray failed"));
-            VOID_TO_NPVARIANT(variant);
+            break;
         }
-        break;
-    }
 
     case ajn::ALLJOYN_INT64_ARRAY: {
-        if (NewArray(plugin, variant)) {
-            for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
-                NPVariant element = NPVARIANT_VOID;
-                ToLongLong(plugin, value.v_scalarArray.v_int64[i], element);
-                if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
-                    status = ER_FAIL;
-                    QCC_LogError(status, ("NPN_SetProperty failed"));
+            if (NewArray(plugin, variant)) {
+                for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
+                    NPVariant element = NPVARIANT_VOID;
+                    ToLongLong(plugin, value.v_scalarArray.v_int64[i], element);
+                    if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
+                        status = ER_FAIL;
+                        QCC_LogError(status, ("NPN_SetProperty failed"));
+                    }
+                    NPN_ReleaseVariantValue(&element);
                 }
-                NPN_ReleaseVariantValue(&element);
+            } else {
+                status = ER_FAIL;
+                QCC_LogError(status, ("NewArray failed"));
+                VOID_TO_NPVARIANT(variant);
             }
-        } else {
-            status = ER_FAIL;
-            QCC_LogError(status, ("NewArray failed"));
-            VOID_TO_NPVARIANT(variant);
+            break;
         }
-        break;
-    }
 
     case ajn::ALLJOYN_BYTE_ARRAY: {
-        if (NewArray(plugin, variant)) {
-            for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
-                NPVariant element = NPVARIANT_VOID;
-                ToOctet(plugin, value.v_scalarArray.v_byte[i], element);
-                if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
-                    status = ER_FAIL;
-                    QCC_LogError(status, ("NPN_SetProperty failed"));
+            if (NewArray(plugin, variant)) {
+                for (size_t i = 0; (ER_OK == status) && (i < value.v_scalarArray.numElements); ++i) {
+                    NPVariant element = NPVARIANT_VOID;
+                    ToOctet(plugin, value.v_scalarArray.v_byte[i], element);
+                    if (!NPN_SetProperty(plugin->npp, NPVARIANT_TO_OBJECT(variant), NPN_GetIntIdentifier(i), &element)) {
+                        status = ER_FAIL;
+                        QCC_LogError(status, ("NPN_SetProperty failed"));
+                    }
+                    NPN_ReleaseVariantValue(&element);
                 }
-                NPN_ReleaseVariantValue(&element);
+            } else {
+                status = ER_FAIL;
+                QCC_LogError(status, ("NewArray failed"));
+                VOID_TO_NPVARIANT(variant);
             }
-        } else {
-            status = ER_FAIL;
-            QCC_LogError(status, ("NewArray failed"));
-            VOID_TO_NPVARIANT(variant);
+            break;
         }
-        break;
-    }
 
     case ajn::ALLJOYN_HANDLE: {
-        qcc::SocketFd fd;
-        status = qcc::SocketDup(value.v_handle.fd, fd);
-        if (ER_OK == status) {
-            SocketFdHost socketFdHost(plugin, fd);
-            ToHostObject<SocketFdHost>(plugin, socketFdHost, variant);
+            qcc::SocketFd fd;
+            status = qcc::SocketDup(value.v_handle.fd, fd);
+            if (ER_OK == status) {
+                SocketFdHost socketFdHost(plugin, fd);
+                ToHostObject<SocketFdHost>(plugin, socketFdHost, variant);
+            }
+            break;
         }
-        break;
-    }
 
     default:
         /* Should never reach this case. */

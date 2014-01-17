@@ -52,8 +52,9 @@ ALLJOYN_API void __stdcall MessageOut(char*arg, int& maxchars)
 
 ALLJOYN_API void __stdcall SetupChat(char* chatName, bool asAdvertiser, int& maxchars)
 {
-    if (NULL == s_connection)
+    if (NULL == s_connection) {
         s_connection = new ChatConnection(*ManagedOutput, *JoinNotifier);
+    }
     if (asAdvertiser) {
         s_connection->advertisedName = NAME_PREFIX;
         s_connection->advertisedName += chatName;

@@ -48,8 +48,9 @@ bool g_isManaged = false;
 
 bool IsWhiteSpace(char c)
 {
-    if ((c == ' ') || (c == '\t') || (c == '\n') || (c == '\r'))
+    if ((c == ' ') || (c == '\t') || (c == '\n') || (c == '\r')) {
         return true;
+    }
     return false;
 }
 

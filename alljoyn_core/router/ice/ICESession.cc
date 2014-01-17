@@ -741,22 +741,22 @@ bool ICESession::RelayedCandidateActivityIsStale(StunActivity* stunActivity)
     case Retransmit::ReceivedSuccessResponse:   // previous attempt refreshed successfully
     case Retransmit::AwaitingTransmitSlot:      // very first refresh attempt
     case Retransmit::NoResponseToAllRetries:    // optimistic, huh.
-    {
-        // Time for next keepalive?
+        {
+            // Time for next keepalive?
 
-        // How long ago did we refresh?
-        uint32_t ageMsecs = stunActivity->retransmit.GetAwaitingTransmitTimeMsecs();
-        // How long were we given to live?
-        uint32_t refreshAgeSecs =
-            (stunActivity == stunActivity->candidate->GetPermissionStunActivity()) ?
-            TURN_PERMISSION_REFRESH_PERIOD_SECS :
-            stunActivity->candidate->GetAllocationLifetimeSeconds();
+            // How long ago did we refresh?
+            uint32_t ageMsecs = stunActivity->retransmit.GetAwaitingTransmitTimeMsecs();
+            // How long were we given to live?
+            uint32_t refreshAgeSecs =
+                (stunActivity == stunActivity->candidate->GetPermissionStunActivity()) ?
+                TURN_PERMISSION_REFRESH_PERIOD_SECS :
+                stunActivity->candidate->GetAllocationLifetimeSeconds();
 
-        if (ageMsecs + (TURN_REFRESH_WARNING_PERIOD_SECS * 1000) > refreshAgeSecs * 1000) {
-            isStale = true;
+            if (ageMsecs + (TURN_REFRESH_WARNING_PERIOD_SECS * 1000) > refreshAgeSecs * 1000) {
+                isStale = true;
+            }
+            break;
         }
-        break;
-    }
 
     default:
         break;
@@ -796,88 +796,88 @@ void ICESession::GetAllReadyStunActivities(list<StunActivity*>& foundList)
             for (stunActivityIt = stunActivityList->begin(); stunActivityIt != stunActivityList->end(); ++stunActivityIt) {
                 switch ((*stunActivityIt)->candidate->GetType()) {
                 case _ICECandidate::Relayed_Candidate:
-                {
-                    // Once gathered, any relayed candidate must be periodically refreshed.
-                    if (RelayedCandidateActivityIsStale(*stunActivityIt)) {
-                        foundList.push_back(*stunActivityIt);
+                    {
+                        // Once gathered, any relayed candidate must be periodically refreshed.
+                        if (RelayedCandidateActivityIsStale(*stunActivityIt)) {
+                            foundList.push_back(*stunActivityIt);
+                        }
+                        break;
                     }
-                    break;
-                }
 
                 case _ICECandidate::ServerReflexive_Candidate:
                 case _ICECandidate::PeerReflexive_Candidate:
-                {
-                    // During and after gathering phase, the NAT bindings for each reflexive
-                    // candidate are 'kept-alive' by sending a periodic Binding Indication.
+                    {
+                        // During and after gathering phase, the NAT bindings for each reflexive
+                        // candidate are 'kept-alive' by sending a periodic Binding Indication.
 
-                    // See if it's time to send another indication (just to keep NAT bindings alive.)
-                    // We do not timeout on a response.
-                    // ToDo: the retransmit timestamp should be updated each time the application sends
-                    // via the Stun object, probably in ice_SpliceSend (or the equivalent...)
-                    if ((*stunActivityIt)->retransmit.GetAwaitingTransmitTimeMsecs() >
-                        STUN_KEEP_ALIVE_INTERVAL_IN_MILLISECS) {
-                        foundList.push_back(*stunActivityIt);
-                    }
-                    break;
-                }
-
-                case _ICECandidate::Host_Candidate:
-                {
-                    Retransmit& retransmit = (*stunActivityIt)->retransmit;
-
-                    switch (retransmit.GetState()) {
-                    case Retransmit::AwaitingTransmitSlot:
-                    case Retransmit::ReceivedAuthenticateResponse:
-                        foundList.push_back(*stunActivityIt);
-                        allCandidatesGathered = false;
-                        break;
-
-                    case Retransmit::AwaitingResponse:
-                        // see if we have timed out
-                        if (retransmit.RetryTimedOut()) {
-                            //verify that we have not exceeded retries
-                            if (retransmit.AnyRetriesNotSent()) {
-                                retransmit.SetState(Retransmit::AwaitingTransmitSlot);
-                                foundList.push_back(*stunActivityIt);
-                                allCandidatesGathered = false;
-                            } else {
-                                // We are done with attempting to reach the server on this candidate.
-                                retransmit.SetState(Retransmit::NoResponseToAllRetries);
-#ifdef AGGRESSIVE_FAIL_GATHERING
-                                anyCandidatesFailedRetries = true;
-                                SetErrorCode(ER_ICE_SERVER_NO_RESPONSE);
-#endif
-                            }
-                        } else {
-                            // We haven't timed out yet. Give this guy a chance.
-                            allCandidatesGathered = false;
+                        // See if it's time to send another indication (just to keep NAT bindings alive.)
+                        // We do not timeout on a response.
+                        // ToDo: the retransmit timestamp should be updated each time the application sends
+                        // via the Stun object, probably in ice_SpliceSend (or the equivalent...)
+                        if ((*stunActivityIt)->retransmit.GetAwaitingTransmitTimeMsecs() >
+                            STUN_KEEP_ALIVE_INTERVAL_IN_MILLISECS) {
+                            foundList.push_back(*stunActivityIt);
                         }
                         break;
+                    }
 
-                    case Retransmit::ReceivedErrorResponse:
-                        errorFound = true;
-                        SetErrorCode(retransmit.GetErrorCode());
-                        break;
+                case _ICECandidate::Host_Candidate:
+                    {
+                        Retransmit& retransmit = (*stunActivityIt)->retransmit;
 
-                    case Retransmit::NoResponseToAllRetries:
+                        switch (retransmit.GetState()) {
+                        case Retransmit::AwaitingTransmitSlot:
+                        case Retransmit::ReceivedAuthenticateResponse:
+                            foundList.push_back(*stunActivityIt);
+                            allCandidatesGathered = false;
+                            break;
+
+                        case Retransmit::AwaitingResponse:
+                            // see if we have timed out
+                            if (retransmit.RetryTimedOut()) {
+                                //verify that we have not exceeded retries
+                                if (retransmit.AnyRetriesNotSent()) {
+                                    retransmit.SetState(Retransmit::AwaitingTransmitSlot);
+                                    foundList.push_back(*stunActivityIt);
+                                    allCandidatesGathered = false;
+                                } else {
+                                    // We are done with attempting to reach the server on this candidate.
+                                    retransmit.SetState(Retransmit::NoResponseToAllRetries);
 #ifdef AGGRESSIVE_FAIL_GATHERING
-                        anyCandidatesFailedRetries = true;
-                        SetErrorCode(ER_ICE_SERVER_NO_RESPONSE);
+                                    anyCandidatesFailedRetries = true;
+                                    SetErrorCode(ER_ICE_SERVER_NO_RESPONSE);
 #endif
-                        break;
+                                }
+                            } else {
+                                // We haven't timed out yet. Give this guy a chance.
+                                allCandidatesGathered = false;
+                            }
+                            break;
 
-                    case Retransmit::ReceivedSuccessResponse:
-                        // All done gathering for this local interface.
-                        break;
+                        case Retransmit::ReceivedErrorResponse:
+                            errorFound = true;
+                            SetErrorCode(retransmit.GetErrorCode());
+                            break;
 
-                    case Retransmit::Error:
-                    default:
-                        errorFound = true;
-                        SetErrorCode(ER_ICE_STUN_ERROR);
+                        case Retransmit::NoResponseToAllRetries:
+#ifdef AGGRESSIVE_FAIL_GATHERING
+                            anyCandidatesFailedRetries = true;
+                            SetErrorCode(ER_ICE_SERVER_NO_RESPONSE);
+#endif
+                            break;
+
+                        case Retransmit::ReceivedSuccessResponse:
+                            // All done gathering for this local interface.
+                            break;
+
+                        case Retransmit::Error:
+                        default:
+                            errorFound = true;
+                            SetErrorCode(ER_ICE_STUN_ERROR);
+                            break;
+                        }
                         break;
                     }
-                    break;
-                }
 
                 case _ICECandidate::Invalid_Candidate:
                 default:
@@ -950,34 +950,34 @@ void ICESession::FindPendingWork(void)
 
         case _ICECandidate::ServerReflexive_Candidate:
         case _ICECandidate::PeerReflexive_Candidate:
-        {
-            // Queue it for transmit only. Because this is an
-            // Indication there is no retransmit on timeout.
-            IPEndpoint destination = nextStunActivity->candidate->GetType() == _ICECandidate::ServerReflexive_Candidate ?
-                                     StunServer :
-                                     StunServer;                                         //ToDo use peer-reflexive address
-            ComposeAndEnqueueNATKeepalive(nextStunActivity->stun, destination);
+            {
+                // Queue it for transmit only. Because this is an
+                // Indication there is no retransmit on timeout.
+                IPEndpoint destination = nextStunActivity->candidate->GetType() == _ICECandidate::ServerReflexive_Candidate ?
+                                         StunServer :
+                                         StunServer;                                     //ToDo use peer-reflexive address
+                ComposeAndEnqueueNATKeepalive(nextStunActivity->stun, destination);
 
-            // Update its time stamp.
-            nextStunActivity->retransmit.IncrementAttempts();
-            break;
-        }
-
-        case _ICECandidate::Relayed_Candidate:
-        {
-            // Queue it for transmit/retransmit.
-            // (We have already verified that we will not exceed retries.)
-            if (nextStunActivity->candidate->GetPermissionStunActivity() ==
-                nextStunActivity) {
-                EnqueueTurnCreatePermissions(nextStunActivity->candidate);
-            } else {
-                EnqueueTurnRefresh(nextStunActivity);
+                // Update its time stamp.
+                nextStunActivity->retransmit.IncrementAttempts();
+                break;
             }
 
-            // Update its time stamp and set state to awaiting response
-            nextStunActivity->retransmit.IncrementAttempts();
-            break;
-        }
+        case _ICECandidate::Relayed_Candidate:
+            {
+                // Queue it for transmit/retransmit.
+                // (We have already verified that we will not exceed retries.)
+                if (nextStunActivity->candidate->GetPermissionStunActivity() ==
+                    nextStunActivity) {
+                    EnqueueTurnCreatePermissions(nextStunActivity->candidate);
+                } else {
+                    EnqueueTurnRefresh(nextStunActivity);
+                }
+
+                // Update its time stamp and set state to awaiting response
+                nextStunActivity->retransmit.IncrementAttempts();
+                break;
+            }
 
         case _ICECandidate::Invalid_Candidate:
         default:

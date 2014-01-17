@@ -18,7 +18,7 @@
 #include <qcc/Debug.h>
 
 #define QCC_MODULE "ALLJOYN_ABOUT_ANNOUNCEMENT_REGISTRAR"
-#define CHECK_RETURN(x) if ((status = x) != ER_OK) return status;
+#define CHECK_RETURN(x) if ((status = x) != ER_OK) { return status; }
 
 using namespace ajn;
 using namespace services;

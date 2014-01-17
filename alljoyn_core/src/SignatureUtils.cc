@@ -286,13 +286,13 @@ size_t SignatureUtils::GetSize(const MsgArg* values, size_t numValues, size_t of
             break;
 
         case ALLJOYN_VARIANT:
-        {
-            char sig[256];
-            size_t len = 0;
-            MakeSignature(values->v_variant.val, 1, sig, len);
-            sz = GetSize(values->v_variant.val, 1, sz + 1 + len + 1);
-        }
-        break;
+            {
+                char sig[256];
+                size_t len = 0;
+                MakeSignature(values->v_variant.val, 1, sig, len);
+                sz = GetSize(values->v_variant.val, 1, sz + 1 + len + 1);
+            }
+            break;
 
         case ALLJOYN_BYTE:
             sz += 1;

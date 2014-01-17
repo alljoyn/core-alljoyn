@@ -89,9 +89,10 @@ void found_advertised_name(const void* context, const char* name, alljoyn_transp
         status = alljoyn_busattachment_joinsession(g_msgBus, name, SESSION_PORT, g_sessionListener, &sessionid, session_opts);
         if (ER_OK != status) {
             printf("JoinSession(%s) failed because of %s", name, QCC_StatusText(status));
-        } else
+        } else {
             /* set the session id in context. */
             *((alljoyn_sessionid*)context) = sessionid;
+        }
 
         //destroy session opts
         alljoyn_sessionopts_destroy(session_opts);
@@ -187,7 +188,9 @@ QCC_BOOL request_credentials(const void* context, const char* authMechanism, con
         return QCC_FALSE;
     }
     /* fetch the user id from the context. */
-    if (context) userId =  (char*)context;
+    if (context) {
+        userId =  (char*)context;
+    }
 
     printf("RequestCredentials for authenticating %s using mechanism %s\n", authPeer, authMechanism);
 
@@ -719,10 +722,11 @@ int main(int argc, char** argv)
                         } else {
                             char*value = NULL;
                             status = alljoyn_msgarg_get(alljoyn_message_getarg(reply, 0), "s", &value);
-                            if (pingDelay == 0)
+                            if (pingDelay == 0) {
                                 printf("%s.%s ( path=%s ) returned \"%s\"\n", g_wellKnownName, ((pingDelay == 0) ? "my_ping" : "delayed_ping"), OBJECT_PATH, value);
-                            else
+                            } else {
                                 printf("%s.%s ( path=%s ) returned \"%s\"\n", g_wellKnownName, "delayed_ping", OBJECT_PATH, value);
+                            }
                         }
                     } else if (status == ER_BUS_REPLY_IS_ERROR_MESSAGE) {
                         char errorMessage[100];
@@ -788,12 +792,22 @@ int main(int argc, char** argv)
         alljoyn_busattachment_unregisterbuslistener(g_msgBus, busListener);
 
         /* Delete all the creations. Destroy busattachment at last.*/
-        if (remoteObj) alljoyn_proxybusobject_destroy(remoteObj);
-        if (g_msgBus) alljoyn_busattachment_destroy(g_msgBus);
+        if (remoteObj) {
+            alljoyn_proxybusobject_destroy(remoteObj);
+        }
+        if (g_msgBus) {
+            alljoyn_busattachment_destroy(g_msgBus);
+        }
 
-        if (busListener) alljoyn_buslistener_destroy(busListener);
-        if (authListener) alljoyn_authlistener_destroy(authListener);
-        if (g_sessionListener) alljoyn_sessionlistener_destroy(g_sessionListener);
+        if (busListener) {
+            alljoyn_buslistener_destroy(busListener);
+        }
+        if (authListener) {
+            alljoyn_authlistener_destroy(authListener);
+        }
+        if (g_sessionListener) {
+            alljoyn_sessionlistener_destroy(g_sessionListener);
+        }
 
         /* Break out of the inner for loop. */
         if (status != ER_OK) {

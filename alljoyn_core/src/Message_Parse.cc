@@ -226,52 +226,52 @@ QStatus _Message::ParseArray(MsgArg* arg,
 
     /* Falling through */
     default:
-    {
-        qcc::String elemSig(sigStart, sigPtr - sigStart);
-        size_t numElements = 0;
-        MsgArg* elements = NULL;
-        if (len > 0) {
-            /*
-             * We know how many bytes there are in the array but not how many elements until we
-             * unmarshal them.
-             */
-            uint8_t* endOfArray = bufPos + len;
-            size_t capacity = 8;
-            numElements = 0;
-            elements = new MsgArg[capacity];
-            /*
-             * Loop until we have consumed all of the data bytes
-             */
-            while (bufPos < endOfArray) {
-                if (numElements == capacity) {
-                    capacity *= 2;
-                    MsgArg* bigger = new MsgArg[capacity];
-                    memcpy(bigger, elements, numElements * sizeof(MsgArg));
-                    /*
-                     * Clear the flags to prevent the destructor from freeing anything other
-                     * than the MsgArgs.
-                     */
-                    for (size_t i = 0; i < numElements; i++) {
-                        elements[i].flags = 0;
+        {
+            qcc::String elemSig(sigStart, sigPtr - sigStart);
+            size_t numElements = 0;
+            MsgArg* elements = NULL;
+            if (len > 0) {
+                /*
+                 * We know how many bytes there are in the array but not how many elements until we
+                 * unmarshal them.
+                 */
+                uint8_t* endOfArray = bufPos + len;
+                size_t capacity = 8;
+                numElements = 0;
+                elements = new MsgArg[capacity];
+                /*
+                 * Loop until we have consumed all of the data bytes
+                 */
+                while (bufPos < endOfArray) {
+                    if (numElements == capacity) {
+                        capacity *= 2;
+                        MsgArg* bigger = new MsgArg[capacity];
+                        memcpy(bigger, elements, numElements * sizeof(MsgArg));
+                        /*
+                         * Clear the flags to prevent the destructor from freeing anything other
+                         * than the MsgArgs.
+                         */
+                        for (size_t i = 0; i < numElements; i++) {
+                            elements[i].flags = 0;
+                        }
+                        delete [] elements;
+                        elements = bigger;
                     }
-                    delete [] elements;
-                    elements = bigger;
-                }
-                const char* esig = elemSig.c_str();
-                status = ParseValue(&elements[numElements++], esig, true);
-                if (status != ER_OK) {
-                    break;
+                    const char* esig = elemSig.c_str();
+                    status = ParseValue(&elements[numElements++], esig, true);
+                    if (status != ER_OK) {
+                        break;
+                    }
                 }
             }
+            if (status == ER_OK) {
+                arg->v_array.SetElements(elemSig.c_str(), numElements, elements);
+                arg->flags |= MsgArg::OwnsArgs;
+            } else {
+                delete [] elements;
+            }
         }
-        if (status == ER_OK) {
-            arg->v_array.SetElements(elemSig.c_str(), numElements, elements);
-            arg->flags |= MsgArg::OwnsArgs;
-        } else {
-            delete [] elements;
-        }
-    }
-    break;
+        break;
     }
     if (status != ER_OK) {
         arg->typeId = ALLJOYN_INVALID;
@@ -422,21 +422,21 @@ QStatus _Message::ParseValue(MsgArg* arg, const char*& sigPtr, bool arrayElem)
         break;
 
     case ALLJOYN_BOOLEAN:
-    {
-        bufPos = AlignPtr(bufPos, 4);
-        uint32_t v = *((uint32_t*)bufPos);
-        if (endianSwap) {
-            v = EndianSwap32(v);
+        {
+            bufPos = AlignPtr(bufPos, 4);
+            uint32_t v = *((uint32_t*)bufPos);
+            if (endianSwap) {
+                v = EndianSwap32(v);
+            }
+            if (v > 1) {
+                status = ER_BUS_BAD_VALUE;
+            } else {
+                arg->v_bool = (v == 1);
+                bufPos += 4;
+                arg->typeId = typeId;
+            }
         }
-        if (v > 1) {
-            status = ER_BUS_BAD_VALUE;
-        } else {
-            arg->v_bool = (v == 1);
-            bufPos += 4;
-            arg->typeId = typeId;
-        }
-    }
-    break;
+        break;
 
     case ALLJOYN_INT32:
     case ALLJOYN_UINT32:
@@ -514,22 +514,22 @@ QStatus _Message::ParseValue(MsgArg* arg, const char*& sigPtr, bool arrayElem)
         break;
 
     case ALLJOYN_HANDLE:
-    {
-        bufPos = AlignPtr(bufPos, 4);
-        uint32_t index = *((uint32_t*)bufPos);
-        if (endianSwap) {
-            index = EndianSwap32(index);
+        {
+            bufPos = AlignPtr(bufPos, 4);
+            uint32_t index = *((uint32_t*)bufPos);
+            if (endianSwap) {
+                index = EndianSwap32(index);
+            }
+            uint32_t numHandles = (hdrFields.field[ALLJOYN_HDR_FIELD_HANDLES].typeId == ALLJOYN_INVALID) ? 0 : hdrFields.field[ALLJOYN_HDR_FIELD_HANDLES].v_uint32;
+            if (index >=  numHandles) {
+                status = ER_BUS_NO_SUCH_HANDLE;
+            } else {
+                arg->typeId = typeId;
+                arg->v_handle.fd = handles[index];
+                bufPos += 4;
+            }
         }
-        uint32_t numHandles = (hdrFields.field[ALLJOYN_HDR_FIELD_HANDLES].typeId == ALLJOYN_INVALID) ? 0 : hdrFields.field[ALLJOYN_HDR_FIELD_HANDLES].v_uint32;
-        if (index >=  numHandles) {
-            status = ER_BUS_NO_SUCH_HANDLE;
-        } else {
-            arg->typeId = typeId;
-            arg->v_handle.fd = handles[index];
-            bufPos += 4;
-        }
-    }
-    break;
+        break;
 
     default:
         status = ER_BUS_BAD_VALUE_TYPE;
@@ -972,7 +972,9 @@ QStatus _Message::PullBytes(RemoteEndpoint& endpoint, bool checkSender, bool ped
         if (status == ER_ALERTED_THREAD) {
             QCC_LogError(status, ("PullBytes ALERTED continuing"));
             status = ER_OK;
-        } else if (status != ER_OK) break;
+        } else if (status != ER_OK) {
+            break;
+        }
         countRead -= read;
         bufPos += read;
         if (countRead == 0) {

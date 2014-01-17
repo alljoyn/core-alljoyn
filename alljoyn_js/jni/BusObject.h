@@ -79,15 +79,14 @@ class _BusObject : public ajn::BusObject {
     }
     virtual void ObjectRegistered() {
         ajn::BusObject::ObjectRegistered();
-        if (busObjectListener) busObjectListener->ObjectRegistered();
+        if (busObjectListener) { busObjectListener->ObjectRegistered(); }
     }
     virtual void ObjectUnregistered() {
         ajn::BusObject::ObjectUnregistered();
-        if (busObjectListener) busObjectListener->ObjectUnregistered();
+        if (busObjectListener) { busObjectListener->ObjectUnregistered(); }
     }
     void MethodHandler(const ajn::InterfaceDescription::Member* member, ajn::Message& message) {
-        if (busObjectListener) busObjectListener->MethodHandler(member, message);
-        else MethodReply(message, ER_FAIL);
+        if (busObjectListener) { busObjectListener->MethodHandler(member, message); } else { MethodReply(message, ER_FAIL); }
     }
 };
 

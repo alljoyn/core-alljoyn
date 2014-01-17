@@ -575,28 +575,28 @@ static MsgArg* ParseCallArgToken(deque<AllJoynTypeId>& sigTokens, deque<const To
         break;
 
     case ALLJOYN_VARIANT: {
-        qcc::String vsig(token.GetArg());
-        if (vsig[vsig.size() - 1] == ':') {
-            vsig.resize(vsig.size() - 1);
-            vsig.resize(1);
+            qcc::String vsig(token.GetArg());
+            if (vsig[vsig.size() - 1] == ':') {
+                vsig.resize(vsig.size() - 1);
+                vsig.resize(1);
+            }
+            if (SignatureUtils::CountCompleteTypes(vsig.c_str()) != 1) {
+                printf("Variant parameters must resolve to a single complete type.\n");
+                exit(1);
+            }
+            deque<const Token*> vargTokens(argTokens.begin(), argTokens.end());
+            deque<AllJoynTypeId> vsigTokens;
+            for (qcc::String::const_iterator vs = vsig.begin(); vs != vsig.end(); ++vs) {
+                vsigTokens.push_back(static_cast<AllJoynTypeId>(*vs));
+            }
+            arg = new MsgArg(sig);
+            arg->v_variant.val = ParseCallArgToken(vsigTokens, vargTokens);
+            assert(vsigTokens.empty());
+            while (argTokens.size() > vargTokens.size()) {
+                argTokens.pop_front();
+            }
+            break;
         }
-        if (SignatureUtils::CountCompleteTypes(vsig.c_str()) != 1) {
-            printf("Variant parameters must resolve to a single complete type.\n");
-            exit(1);
-        }
-        deque<const Token*> vargTokens(argTokens.begin(), argTokens.end());
-        deque<AllJoynTypeId> vsigTokens;
-        for (qcc::String::const_iterator vs = vsig.begin(); vs != vsig.end(); ++vs) {
-            vsigTokens.push_back(static_cast<AllJoynTypeId>(*vs));
-        }
-        arg = new MsgArg(sig);
-        arg->v_variant.val = ParseCallArgToken(vsigTokens, vargTokens);
-        assert(vsigTokens.empty());
-        while (argTokens.size() > vargTokens.size()) {
-            argTokens.pop_front();
-        }
-        break;
-    }
 
     default:
         break;

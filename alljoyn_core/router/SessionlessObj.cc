@@ -522,10 +522,11 @@ void SessionlessObj::NameOwnerChanged(const String& name,
                  * not a log error since this is expected behaver and should not
                  * be presented to the user if they don't want to see it.
                  */
-                if (ER_TIMER_EXITING == status)
+                if (ER_TIMER_EXITING == status) {
                     QCC_DbgHLPrintf(("Timer::AddAlarm failed : %s", QCC_StatusText(status)));
-                else
+                } else {
                     QCC_LogError(status, ("Timer::AddAlarm failed"));
+                }
             }
         }
 

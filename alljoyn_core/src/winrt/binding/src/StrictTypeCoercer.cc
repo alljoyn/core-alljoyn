@@ -48,234 +48,234 @@ Platform::Object ^ StrictTypeCoercer::Coerce(Platform::Object ^ obj, ajn::AllJoy
 
     switch (typeId) {
     case ALLJOYN_BOOLEAN:
-    {
-        // Property type must be boolean
-        if (type == Windows::Foundation::PropertyType::Boolean) {
-            retObj = obj;
+        {
+            // Property type must be boolean
+            if (type == Windows::Foundation::PropertyType::Boolean) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_DOUBLE:
-    {
-        // Property type must be double
-        if (type == Windows::Foundation::PropertyType::Double) {
-            retObj = obj;
+        {
+            // Property type must be double
+            if (type == Windows::Foundation::PropertyType::Double) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_VARIANT:
     case ALLJOYN_STRUCT:
     case ALLJOYN_DICT_ENTRY:
-    {
-        // Property type must be MsgArg
-        MsgArg ^ msgArg = dynamic_cast<MsgArg ^>(obj);
-        if (msgArg != nullptr) {
-            retObj = obj;
+        {
+            // Property type must be MsgArg
+            MsgArg ^ msgArg = dynamic_cast<MsgArg ^>(obj);
+            if (msgArg != nullptr) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_INT32:
-    {
-        // Property type must be int32
-        if (type == Windows::Foundation::PropertyType::Int32) {
-            retObj = obj;
+        {
+            // Property type must be int32
+            if (type == Windows::Foundation::PropertyType::Int32) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_STRING:
-    {
-        // Property type must be string
-        if (type == Windows::Foundation::PropertyType::String) {
-            retObj = obj;
+        {
+            // Property type must be string
+            if (type == Windows::Foundation::PropertyType::String) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_INT64:
-    {
-        // Property type must be int64
-        if (type == Windows::Foundation::PropertyType::Int64) {
-            retObj = obj;
+        {
+            // Property type must be int64
+            if (type == Windows::Foundation::PropertyType::Int64) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_BYTE:
-    {
-        // Property type must be uint8
-        if (type == Windows::Foundation::PropertyType::UInt8) {
-            retObj = obj;
+        {
+            // Property type must be uint8
+            if (type == Windows::Foundation::PropertyType::UInt8) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_UINT32:
-    {
-        // Property type must be uint32
-        if (type == Windows::Foundation::PropertyType::UInt32) {
-            retObj = obj;
+        {
+            // Property type must be uint32
+            if (type == Windows::Foundation::PropertyType::UInt32) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_UINT64:
-    {
-        // Property type must be uint64
-        if (type == Windows::Foundation::PropertyType::UInt64) {
-            retObj = obj;
+        {
+            // Property type must be uint64
+            if (type == Windows::Foundation::PropertyType::UInt64) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_OBJECT_PATH:
-    {
-        // Property type must be string
-        if (type == Windows::Foundation::PropertyType::String) {
-            retObj = obj;
+        {
+            // Property type must be string
+            if (type == Windows::Foundation::PropertyType::String) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_SIGNATURE:
-    {
-        // Property type must be string
-        if (type == Windows::Foundation::PropertyType::String) {
-            retObj = obj;
+        {
+            // Property type must be string
+            if (type == Windows::Foundation::PropertyType::String) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_HANDLE:
-    {
-        // Property type must be uint64
-        if (type == Windows::Foundation::PropertyType::UInt64) {
-            retObj = obj;
+        {
+            // Property type must be uint64
+            if (type == Windows::Foundation::PropertyType::UInt64) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_UINT16:
-    {
-        // Property type must be uint16
-        if (type == Windows::Foundation::PropertyType::UInt16) {
-            retObj = obj;
+        {
+            // Property type must be uint16
+            if (type == Windows::Foundation::PropertyType::UInt16) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_INT16:
-    {
-        // Property type must be int16
-        if (type == Windows::Foundation::PropertyType::Int16) {
-            retObj = obj;
+        {
+            // Property type must be int16
+            if (type == Windows::Foundation::PropertyType::Int16) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_ARRAY:
-    {
-        // Property type must be array
-        if (type == Windows::Foundation::PropertyType::InspectableArray) {
-            retObj = obj;
+        {
+            // Property type must be array
+            if (type == Windows::Foundation::PropertyType::InspectableArray) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_BOOLEAN_ARRAY:
-    {
-        // Property type must be boolean array
-        if (type == Windows::Foundation::PropertyType::BooleanArray) {
-            retObj = obj;
+        {
+            // Property type must be boolean array
+            if (type == Windows::Foundation::PropertyType::BooleanArray) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_DOUBLE_ARRAY:
-    {
-        // Property type must be double array
-        if (type == Windows::Foundation::PropertyType::DoubleArray) {
-            retObj = obj;
+        {
+            // Property type must be double array
+            if (type == Windows::Foundation::PropertyType::DoubleArray) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_INT32_ARRAY:
-    {
-        // Property type must be int32 array
-        if (type == Windows::Foundation::PropertyType::Int32Array) {
-            retObj = obj;
+        {
+            // Property type must be int32 array
+            if (type == Windows::Foundation::PropertyType::Int32Array) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_INT16_ARRAY:
-    {
-        // Property type must be int16 array
-        if (type == Windows::Foundation::PropertyType::Int16Array) {
-            retObj = obj;
+        {
+            // Property type must be int16 array
+            if (type == Windows::Foundation::PropertyType::Int16Array) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_UINT16_ARRAY:
-    {
-        // Property type must be uint16 array
-        if (type == Windows::Foundation::PropertyType::UInt16Array) {
-            retObj = obj;
+        {
+            // Property type must be uint16 array
+            if (type == Windows::Foundation::PropertyType::UInt16Array) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_UINT64_ARRAY:
-    {
-        // Property type must be uint64 array
-        if (type == Windows::Foundation::PropertyType::UInt64Array) {
-            retObj = obj;
+        {
+            // Property type must be uint64 array
+            if (type == Windows::Foundation::PropertyType::UInt64Array) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_UINT32_ARRAY:
-    {
-        // Property type must be uint32 array
-        if (type == Windows::Foundation::PropertyType::UInt32Array) {
-            retObj = obj;
+        {
+            // Property type must be uint32 array
+            if (type == Windows::Foundation::PropertyType::UInt32Array) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_INT64_ARRAY:
-    {
-        // Property type must be int64 array
-        if (type == Windows::Foundation::PropertyType::Int64Array) {
-            retObj = obj;
+        {
+            // Property type must be int64 array
+            if (type == Windows::Foundation::PropertyType::Int64Array) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_BYTE_ARRAY:
-    {
-        // Property type must be byte array
-        if (type == Windows::Foundation::PropertyType::UInt8Array) {
-            retObj = obj;
+        {
+            // Property type must be byte array
+            if (type == Windows::Foundation::PropertyType::UInt8Array) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case 'sa':
     case 'oa':
     case 'ga':
-    {
-        // Property type must be string array
-        if (type == Windows::Foundation::PropertyType::StringArray) {
-            retObj = obj;
+        {
+            // Property type must be string array
+            if (type == Windows::Foundation::PropertyType::StringArray) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     default:
         break;

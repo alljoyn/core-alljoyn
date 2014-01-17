@@ -328,8 +328,9 @@ void ping(alljoyn_busobject busobject, const alljoyn_interfacedescription_member
     status = alljoyn_msgarg_get(alljoyn_message_getarg(msg, 0), "s", &value);
     if (ER_OK != status) {
         printf("Ping: Error reading alljoyn_message %s\n", QCC_StatusText(status));
-    } else
+    } else {
         printf("Pinged with: %s\n", value);
+    }
 
     if (alljoyn_message_isencrypted(msg) == QCC_TRUE) {
         printf("Authenticated using %s\n", alljoyn_message_getauthmechanism(msg));

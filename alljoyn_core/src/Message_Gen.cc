@@ -391,50 +391,50 @@ QStatus _Message::MarshalArgs(const MsgArg* arg, size_t numArgs)
             break;
 
         case ALLJOYN_VARIANT:
-        {
-            /* First byte is reserved for the length */
-            char sig[257];
-            size_t len = 0;
-            status = SignatureUtils::MakeSignature(arg->v_variant.val, 1, sig + 1, len);
-            if (status == ER_OK) {
-                sig[0] = (char)len;
-                MarshalBytes(sig, len + 2);
-                status = MarshalArgs(arg->v_variant.val, 1);
+            {
+                /* First byte is reserved for the length */
+                char sig[257];
+                size_t len = 0;
+                status = SignatureUtils::MakeSignature(arg->v_variant.val, 1, sig + 1, len);
+                if (status == ER_OK) {
+                    sig[0] = (char)len;
+                    MarshalBytes(sig, len + 2);
+                    status = MarshalArgs(arg->v_variant.val, 1);
+                }
             }
-        }
-        break;
+            break;
 
         case ALLJOYN_BYTE:
             Marshal1(arg->v_byte);
             break;
 
         case ALLJOYN_HANDLE:
-        {
-            uint32_t index = 0;
-            /* Check if handle is already listed */
-            while ((index < numHandles) && (handles[index] != arg->v_handle.fd)) {
-                ++index;
-            }
-            /* If handle was not found expand handle array */
-            if (index == numHandles) {
-                qcc::SocketFd* h = new qcc::SocketFd[numHandles + 1];
-                memcpy(h, handles, numHandles * sizeof(qcc::SocketFd));
-                delete [] handles;
-                handles = h;
-                status = qcc::SocketDup(arg->v_handle.fd, handles[numHandles++]);
-                if (status != ER_OK) {
-                    --numHandles;
-                    break;
+            {
+                uint32_t index = 0;
+                /* Check if handle is already listed */
+                while ((index < numHandles) && (handles[index] != arg->v_handle.fd)) {
+                    ++index;
+                }
+                /* If handle was not found expand handle array */
+                if (index == numHandles) {
+                    qcc::SocketFd* h = new qcc::SocketFd[numHandles + 1];
+                    memcpy(h, handles, numHandles * sizeof(qcc::SocketFd));
+                    delete [] handles;
+                    handles = h;
+                    status = qcc::SocketDup(arg->v_handle.fd, handles[numHandles++]);
+                    if (status != ER_OK) {
+                        --numHandles;
+                        break;
+                    }
+                }
+                /* Marshal the index of the handle */
+                if (endianSwap) {
+                    MarshalReversed(&index, 4);
+                } else {
+                    Marshal4(index);
                 }
             }
-            /* Marshal the index of the handle */
-            if (endianSwap) {
-                MarshalReversed(&index, 4);
-            } else {
-                Marshal4(index);
-            }
-        }
-        break;
+            break;
 
         default:
             status = ER_BUS_BAD_VALUE_TYPE;
@@ -574,7 +574,7 @@ QStatus _Message::DeliverNonBlocking(RemoteEndpoint& endpoint)
             countWrite -= pushed;
             writePtr += pushed;
             writeState = MESSAGE_HEADER_BODY;
-        } else break;
+        } else { break; }
 
     case MESSAGE_HEADER_BODY:
         status = ER_OK;
@@ -696,13 +696,13 @@ void _Message::MarshalHeaderFields()
                 /*
                  * Use standard variant marshaling for the other cases.
                  */
-            {
-                MsgArg variant(ALLJOYN_VARIANT);
-                variant.v_variant.val = field;
-                MarshalArgs(&variant, 1);
-                variant.v_variant.val = NULL;
-            }
-            break;
+                {
+                    MsgArg variant(ALLJOYN_VARIANT);
+                    variant.v_variant.val = field;
+                    MarshalArgs(&variant, 1);
+                    variant.v_variant.val = NULL;
+                }
+                break;
             }
         }
     }

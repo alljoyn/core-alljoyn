@@ -63,8 +63,12 @@ namespace qcc {
 
 static AddressFamily TranslateFamily(uint32_t family)
 {
-    if (family == AF_INET) return QCC_AF_INET;
-    if (family == AF_INET6) return QCC_AF_INET6;
+    if (family == AF_INET) {
+        return QCC_AF_INET;
+    }
+    if (family == AF_INET6) {
+        return QCC_AF_INET6;
+    }
     return QCC_AF_UNSPEC;
 }
 

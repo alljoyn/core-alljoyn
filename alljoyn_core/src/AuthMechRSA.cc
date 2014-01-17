@@ -469,32 +469,32 @@ qcc::String AuthMechRSA::Challenge(const qcc::String& response,
          * Client has sent a certificate verification string. Server sends a
          * finish message.
          */
-    {
-        size_t inLen = response.size() / 2;
-        uint8_t* inBytes = new uint8_t[inLen];
-        /*
-         * Decrypt client's certificate verification string.
-         */
-        if (HexStringToBytes(response, inBytes, inLen) != inLen) {
-            status = ER_BAD_STRING_ENCODING;
-        } else {
-            uint8_t digest[Crypto_SHA1::DIGEST_SIZE];
+        {
+            size_t inLen = response.size() / 2;
+            uint8_t* inBytes = new uint8_t[inLen];
             /*
-             * Snapshot msg hash and compute the verifier string.
+             * Decrypt client's certificate verification string.
              */
-            msgHash.GetDigest(digest, true);
-            status = remote.rsa.VerifyDigest(digest, sizeof(digest), inBytes, inLen);
+            if (HexStringToBytes(response, inBytes, inLen) != inLen) {
+                status = ER_BAD_STRING_ENCODING;
+            } else {
+                uint8_t digest[Crypto_SHA1::DIGEST_SIZE];
+                /*
+                 * Snapshot msg hash and compute the verifier string.
+                 */
+                msgHash.GetDigest(digest, true);
+                status = remote.rsa.VerifyDigest(digest, sizeof(digest), inBytes, inLen);
+            }
+            if (status == ER_OK) {
+                msgHash.Update((const uint8_t*)response.data(), response.size());
+                challenge = ComputeVerifier("server finished");
+                result = ALLJOYN_AUTH_CONTINUE;
+            } else {
+                result = ALLJOYN_AUTH_FAIL;
+            }
+            delete [] inBytes;
         }
-        if (status == ER_OK) {
-            msgHash.Update((const uint8_t*)response.data(), response.size());
-            challenge = ComputeVerifier("server finished");
-            result = ALLJOYN_AUTH_CONTINUE;
-        } else {
-            result = ALLJOYN_AUTH_FAIL;
-        }
-        delete [] inBytes;
-    }
-    break;
+        break;
 
     case 5:
         /*

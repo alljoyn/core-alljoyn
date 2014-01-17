@@ -951,43 +951,43 @@ QStatus MsgArg::VBuildArgs(const char*& signature, size_t sigLen, MsgArg* arg, s
     while (sigLen--) {
         switch (*signature++) {
         case '*':
-        {
-            MsgArg* inArg =  va_arg(argp, MsgArg*);
-            if (!inArg) {
-                return ER_INVALID_ADDRESS;
+            {
+                MsgArg* inArg =  va_arg(argp, MsgArg*);
+                if (!inArg) {
+                    return ER_INVALID_ADDRESS;
+                }
+                if (inArg->typeId == ALLJOYN_ARRAY) {
+                    status = arg->v_array.SetElements(inArg->v_array.elemSig, inArg->v_array.numElements, inArg->v_array.elements);
+                } else {
+                    memcpy(arg, inArg, sizeof(MsgArg));
+                }
+                arg->flags = 0;
             }
-            if (inArg->typeId == ALLJOYN_ARRAY) {
-                status = arg->v_array.SetElements(inArg->v_array.elemSig, inArg->v_array.numElements, inArg->v_array.elements);
-            } else {
-                memcpy(arg, inArg, sizeof(MsgArg));
-            }
-            arg->flags = 0;
-        }
-        break;
+            break;
 
         case 'a':
-        {
-            const char* elemSig = signature;
-            if (!elemSig) {
-                return ER_INVALID_ADDRESS;
+            {
+                const char* elemSig = signature;
+                if (!elemSig) {
+                    return ER_INVALID_ADDRESS;
+                }
+                arg->typeId = ALLJOYN_ARRAY;
+                if (*elemSig == '*' || *elemSig == '$') {
+                    ++signature;
+                } else {
+                    status = SignatureUtils::ParseContainerSignature(*arg, signature);
+                }
+                if (status == ER_OK) {
+                    size_t elemSigLen = signature - elemSig;
+                    status = BuildArray(arg, qcc::String(elemSig, elemSigLen), &argp);
+                    sigLen -= elemSigLen;
+                } else {
+                    status = ER_BUS_NOT_A_COMPLETE_TYPE;
+                    QCC_LogError(status, ("Signature for array was not a complete type"));
+                    arg->typeId = ALLJOYN_INVALID;
+                }
             }
-            arg->typeId = ALLJOYN_ARRAY;
-            if (*elemSig == '*' || *elemSig == '$') {
-                ++signature;
-            } else {
-                status = SignatureUtils::ParseContainerSignature(*arg, signature);
-            }
-            if (status == ER_OK) {
-                size_t elemSigLen = signature - elemSig;
-                status = BuildArray(arg, qcc::String(elemSig, elemSigLen), &argp);
-                sigLen -= elemSigLen;
-            } else {
-                status = ER_BUS_NOT_A_COMPLETE_TYPE;
-                QCC_LogError(status, ("Signature for array was not a complete type"));
-                arg->typeId = ALLJOYN_INVALID;
-            }
-        }
-        break;
+            break;
 
         case 'b':
             arg->typeId = ALLJOYN_BOOLEAN;
@@ -1006,22 +1006,22 @@ QStatus MsgArg::VBuildArgs(const char*& signature, size_t sigLen, MsgArg* arg, s
             break;
 
         case 'g':
-        {
-            char* sig = va_arg(argp, char*);
-            if (!sig) {
-                arg->v_signature.sig = "";
-                arg->v_signature.len = 0;
-                arg->typeId = ALLJOYN_SIGNATURE;
-            } else if (SignatureUtils::IsValidSignature(sig)) {
-                arg->v_signature.sig = sig;
-                arg->v_signature.len = (uint8_t)strlen(sig);
-                arg->typeId = ALLJOYN_SIGNATURE;
-            } else {
-                status = ER_BUS_BAD_SIGNATURE;
-                QCC_LogError(status, ("String \"%s\" is not a legal signature", sig));
+            {
+                char* sig = va_arg(argp, char*);
+                if (!sig) {
+                    arg->v_signature.sig = "";
+                    arg->v_signature.len = 0;
+                    arg->typeId = ALLJOYN_SIGNATURE;
+                } else if (SignatureUtils::IsValidSignature(sig)) {
+                    arg->v_signature.sig = sig;
+                    arg->v_signature.len = (uint8_t)strlen(sig);
+                    arg->typeId = ALLJOYN_SIGNATURE;
+                } else {
+                    status = ER_BUS_BAD_SIGNATURE;
+                    QCC_LogError(status, ("String \"%s\" is not a legal signature", sig));
+                }
             }
-        }
-        break;
+            break;
 
         case 'h':
             arg->typeId = ALLJOYN_HANDLE;
@@ -1039,18 +1039,18 @@ QStatus MsgArg::VBuildArgs(const char*& signature, size_t sigLen, MsgArg* arg, s
             break;
 
         case 'o':
-        {
-            char* object_path = va_arg(argp, char*);
-            if (IsLegalObjectPath(object_path)) {
-                arg->typeId = ALLJOYN_OBJECT_PATH;
-                arg->v_string.str = object_path;
-                arg->v_string.len = arg->v_string.str ? strlen(arg->v_string.str) : 0;
-            } else {
-                status = ER_BUS_BAD_SIGNATURE;
-                QCC_LogError(status, ("String \"%s\" is not a legal object path", object_path));
+            {
+                char* object_path = va_arg(argp, char*);
+                if (IsLegalObjectPath(object_path)) {
+                    arg->typeId = ALLJOYN_OBJECT_PATH;
+                    arg->v_string.str = object_path;
+                    arg->v_string.len = arg->v_string.str ? strlen(arg->v_string.str) : 0;
+                } else {
+                    status = ER_BUS_BAD_SIGNATURE;
+                    QCC_LogError(status, ("String \"%s\" is not a legal object path", object_path));
+                }
             }
-        }
-        break;
+            break;
 
         case 'q':
             arg->typeId = ALLJOYN_UINT16;
@@ -1095,53 +1095,53 @@ QStatus MsgArg::VBuildArgs(const char*& signature, size_t sigLen, MsgArg* arg, s
             break;
 
         case '(':
-        {
-            const char* memberSig = signature;
-            arg->typeId = ALLJOYN_STRUCT;
-            status = SignatureUtils::ParseContainerSignature(*arg, signature);
-            if (status == ER_OK) {
-                size_t memSigLen = signature - memberSig - 1;                 // -1 to exclude the closing ')'
-                arg->v_struct.members = new MsgArg[arg->v_struct.numMembers];
-                arg->flags |= OwnsArgs;
-                status = VBuildArgs(memberSig, memSigLen, arg->v_struct.members, arg->v_struct.numMembers, &argp);
-                sigLen -= (memSigLen + 1);
-            } else {
-                QCC_LogError(status, ("Signature for STRUCT was not a complete type"));
-                arg->typeId = ALLJOYN_INVALID;
+            {
+                const char* memberSig = signature;
+                arg->typeId = ALLJOYN_STRUCT;
+                status = SignatureUtils::ParseContainerSignature(*arg, signature);
+                if (status == ER_OK) {
+                    size_t memSigLen = signature - memberSig - 1;             // -1 to exclude the closing ')'
+                    arg->v_struct.members = new MsgArg[arg->v_struct.numMembers];
+                    arg->flags |= OwnsArgs;
+                    status = VBuildArgs(memberSig, memSigLen, arg->v_struct.members, arg->v_struct.numMembers, &argp);
+                    sigLen -= (memSigLen + 1);
+                } else {
+                    QCC_LogError(status, ("Signature for STRUCT was not a complete type"));
+                    arg->typeId = ALLJOYN_INVALID;
+                }
             }
-        }
-        break;
+            break;
 
         case '{':
-        {
-            const char* memberSig = signature;
-            arg->typeId = ALLJOYN_DICT_ENTRY;
-            status = SignatureUtils::ParseContainerSignature(*arg, signature);
-            if (status == ER_OK) {
-                size_t memSigLen = signature - memberSig - 1;                 // -1 to exclude the closing '}'
-                arg->v_dictEntry.key = new MsgArg;
-                arg->v_dictEntry.val = new MsgArg;
-                arg->flags |= OwnsArgs;
-                status = VBuildArgs(memberSig, memSigLen, arg->v_dictEntry.key, 1, &argp);
-                if (status != ER_OK) {
-                    break;
-                }
-                if (SignatureUtils::IsBasicType(arg->v_dictEntry.key->typeId)) {
-                    status = VBuildArgs(memberSig, memSigLen, arg->v_dictEntry.val, 1, &argp);
+            {
+                const char* memberSig = signature;
+                arg->typeId = ALLJOYN_DICT_ENTRY;
+                status = SignatureUtils::ParseContainerSignature(*arg, signature);
+                if (status == ER_OK) {
+                    size_t memSigLen = signature - memberSig - 1;             // -1 to exclude the closing '}'
+                    arg->v_dictEntry.key = new MsgArg;
+                    arg->v_dictEntry.val = new MsgArg;
+                    arg->flags |= OwnsArgs;
+                    status = VBuildArgs(memberSig, memSigLen, arg->v_dictEntry.key, 1, &argp);
+                    if (status != ER_OK) {
+                        break;
+                    }
+                    if (SignatureUtils::IsBasicType(arg->v_dictEntry.key->typeId)) {
+                        status = VBuildArgs(memberSig, memSigLen, arg->v_dictEntry.val, 1, &argp);
+                    } else {
+                        status = ER_BUS_BAD_SIGNATURE;
+                        QCC_LogError(status, ("Key type for DICTIONARY ENTRY was not a basic type"));
+                    }
+                    if (status != ER_OK) {
+                        break;
+                    }
+                    sigLen -= (memSigLen + 1);
                 } else {
-                    status = ER_BUS_BAD_SIGNATURE;
-                    QCC_LogError(status, ("Key type for DICTIONARY ENTRY was not a basic type"));
+                    QCC_LogError(status, ("Signature for DICT_ENTRY was not a complete type"));
+                    arg->typeId = ALLJOYN_INVALID;
                 }
-                if (status != ER_OK) {
-                    break;
-                }
-                sigLen -= (memSigLen + 1);
-            } else {
-                QCC_LogError(status, ("Signature for DICT_ENTRY was not a complete type"));
-                arg->typeId = ALLJOYN_INVALID;
             }
-        }
-        break;
+            break;
 
         default:
             QCC_LogError(ER_BUS_BAD_SIGNATURE, ("Invalid char '\\%d' in signature", *(signature - 1)));
@@ -1464,15 +1464,15 @@ QStatus MsgArg::VParseArgs(const char*& signature, size_t sigLen, const MsgArg* 
         /* Falling through */
         case ALLJOYN_WILDCARD:
             /* argp is a pointer to a MsgArg */
-        {
-            const MsgArg** p = va_arg(argp, const MsgArg * *);
-            if (!p) {
-                status = ER_INVALID_ADDRESS;
-                break;
+            {
+                const MsgArg** p = va_arg(argp, const MsgArg * *);
+                if (!p) {
+                    status = ER_INVALID_ADDRESS;
+                    break;
+                }
+                *p = arg;
             }
-            *p = arg;
-        }
-        break;
+            break;
 
         case ALLJOYN_ARRAY:
             if ((arg->typeId & 0xFF) != ALLJOYN_ARRAY) {

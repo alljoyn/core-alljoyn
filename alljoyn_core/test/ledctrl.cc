@@ -245,7 +245,9 @@ int main(int argc, char** argv)
         ledIntf->AddMethod("Off", NULL, NULL, NULL, 0);
         ledIntf->Activate();
     } else {
-        if (ER_OK == status) status = ER_FAIL;
+        if (ER_OK == status) {
+            status = ER_FAIL;
+        }
         QCC_LogError(status, ("Failed to create interface \"%s\"", ::org::alljoyn::alljoyn_test::InterfaceName));
     }
 

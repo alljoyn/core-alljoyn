@@ -112,8 +112,12 @@ namespace qcc {
 
 static AddressFamily TranslateFamily(uint32_t family)
 {
-    if (family == AF_INET) return QCC_AF_INET;
-    if (family == AF_INET6) return QCC_AF_INET6;
+    if (family == AF_INET) {
+        return QCC_AF_INET;
+    }
+    if (family == AF_INET6) {
+        return QCC_AF_INET6;
+    }
     return QCC_AF_UNSPEC;
 }
 
@@ -129,36 +133,68 @@ static AddressFamily TranslateFamily(uint32_t family)
 static uint32_t TranslateFlags(uint32_t flags)
 {
     uint32_t ourFlags = 0;
-    if (flags & IFF_UP) ourFlags |= IfConfigEntry::UP;
-    if (flags & IFF_BROADCAST) ourFlags |= IfConfigEntry::BROADCAST;
-    if (flags & IFF_DEBUG) ourFlags |= IfConfigEntry::DEBUG;
-    if (flags & IFF_LOOPBACK) ourFlags |= IfConfigEntry::LOOPBACK;
-    if (flags & IFF_POINTOPOINT) ourFlags |= IfConfigEntry::POINTOPOINT;
-    if (flags & IFF_RUNNING) ourFlags |= IfConfigEntry::RUNNING;
-    if (flags & IFF_NOARP) ourFlags |= IfConfigEntry::NOARP;
-    if (flags & IFF_PROMISC) ourFlags |= IfConfigEntry::PROMISC;
-    if (flags & IFF_NOTRAILERS) ourFlags |= IfConfigEntry::NOTRAILERS;
-    if (flags & IFF_ALLMULTI) ourFlags |= IfConfigEntry::ALLMULTI;
-    if (flags & IFF_MULTICAST) ourFlags |= IfConfigEntry::MULTICAST;
+    if (flags & IFF_UP) {
+        ourFlags |= IfConfigEntry::UP;
+    }
+    if (flags & IFF_BROADCAST) {
+        ourFlags |= IfConfigEntry::BROADCAST;
+    }
+    if (flags & IFF_DEBUG) {
+        ourFlags |= IfConfigEntry::DEBUG;
+    }
+    if (flags & IFF_LOOPBACK) {
+        ourFlags |= IfConfigEntry::LOOPBACK;
+    }
+    if (flags & IFF_POINTOPOINT) {
+        ourFlags |= IfConfigEntry::POINTOPOINT;
+    }
+    if (flags & IFF_RUNNING) {
+        ourFlags |= IfConfigEntry::RUNNING;
+    }
+    if (flags & IFF_NOARP) {
+        ourFlags |= IfConfigEntry::NOARP;
+    }
+    if (flags & IFF_PROMISC) {
+        ourFlags |= IfConfigEntry::PROMISC;
+    }
+    if (flags & IFF_NOTRAILERS) {
+        ourFlags |= IfConfigEntry::NOTRAILERS;
+    }
+    if (flags & IFF_ALLMULTI) {
+        ourFlags |= IfConfigEntry::ALLMULTI;
+    }
+    if (flags & IFF_MULTICAST) {
+        ourFlags |= IfConfigEntry::MULTICAST;
+    }
 
 #if defined(IFF_MASTER)
-    if (flags & IFF_MASTER) ourFlags |= IfConfigEntry::MASTER;
+    if (flags & IFF_MASTER) {
+        ourFlags |= IfConfigEntry::MASTER;
+    }
 #endif
 
 #if defined(IFF_SLAVE)
-    if (flags & IFF_SLAVE) ourFlags |= IfConfigEntry::SLAVE;
+    if (flags & IFF_SLAVE) {
+        ourFlags |= IfConfigEntry::SLAVE;
+    }
 #endif
 
 #if defined(IFF_PORTSEL)
-    if (flags & IFF_PORTSEL) ourFlags |= IfConfigEntry::PORTSEL;
+    if (flags & IFF_PORTSEL) {
+        ourFlags |= IfConfigEntry::PORTSEL;
+    }
 #endif
 
 #if defined(IFF_AUTOMEDIA)
-    if (flags & IFF_AUTOMEDIA) ourFlags |= IfConfigEntry::AUTOMEDIA;
+    if (flags & IFF_AUTOMEDIA) {
+        ourFlags |= IfConfigEntry::AUTOMEDIA;
+    }
 #endif
 
 #if defined(IFF_DYNAMIC)
-    if (flags & IFF_DYNAMIC) ourFlags |= IfConfigEntry::DYNAMIC;
+    if (flags & IFF_DYNAMIC) {
+        ourFlags |= IfConfigEntry::DYNAMIC;
+    }
 #endif
 
     return ourFlags;

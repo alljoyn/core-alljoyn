@@ -23,8 +23,9 @@ using namespace ajn;
 AboutClientSessionJoiner::AboutClientSessionJoiner(const char* name, SessionJoinedCallback callback) :
     m_Busname(""), m_Callback(callback)
 {
-    if (name)
+    if (name) {
         m_Busname.assign(name);
+    }
 }
 
 AboutClientSessionJoiner::~AboutClientSessionJoiner()

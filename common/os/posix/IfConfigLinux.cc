@@ -113,8 +113,12 @@ namespace qcc {
 
 static AddressFamily TranslateFamily(uint32_t family)
 {
-    if (family == AF_INET) return QCC_AF_INET;
-    if (family == AF_INET6) return QCC_AF_INET6;
+    if (family == AF_INET) {
+        return QCC_AF_INET;
+    }
+    if (family == AF_INET6) {
+        return QCC_AF_INET6;
+    }
     return QCC_AF_UNSPEC;
 }
 
@@ -128,22 +132,54 @@ static AddressFamily TranslateFamily(uint32_t family)
 static uint32_t TranslateFlags(uint32_t flags)
 {
     uint32_t ourFlags = 0;
-    if (flags & IFF_UP) ourFlags |= IfConfigEntry::UP;
-    if (flags & IFF_BROADCAST) ourFlags |= IfConfigEntry::BROADCAST;
-    if (flags & IFF_DEBUG) ourFlags |= IfConfigEntry::DEBUG;
-    if (flags & IFF_LOOPBACK) ourFlags |= IfConfigEntry::LOOPBACK;
-    if (flags & IFF_POINTOPOINT) ourFlags |= IfConfigEntry::POINTOPOINT;
-    if (flags & IFF_RUNNING) ourFlags |= IfConfigEntry::RUNNING;
-    if (flags & IFF_NOARP) ourFlags |= IfConfigEntry::NOARP;
-    if (flags & IFF_PROMISC) ourFlags |= IfConfigEntry::PROMISC;
-    if (flags & IFF_NOTRAILERS) ourFlags |= IfConfigEntry::NOTRAILERS;
-    if (flags & IFF_ALLMULTI) ourFlags |= IfConfigEntry::ALLMULTI;
-    if (flags & IFF_MASTER) ourFlags |= IfConfigEntry::MASTER;
-    if (flags & IFF_SLAVE) ourFlags |= IfConfigEntry::SLAVE;
-    if (flags & IFF_MULTICAST) ourFlags |= IfConfigEntry::MULTICAST;
-    if (flags & IFF_PORTSEL) ourFlags |= IfConfigEntry::PORTSEL;
-    if (flags & IFF_AUTOMEDIA) ourFlags |= IfConfigEntry::AUTOMEDIA;
-    if (flags & IFF_DYNAMIC) ourFlags |= IfConfigEntry::DYNAMIC;
+    if (flags & IFF_UP) {
+        ourFlags |= IfConfigEntry::UP;
+    }
+    if (flags & IFF_BROADCAST) {
+        ourFlags |= IfConfigEntry::BROADCAST;
+    }
+    if (flags & IFF_DEBUG) {
+        ourFlags |= IfConfigEntry::DEBUG;
+    }
+    if (flags & IFF_LOOPBACK) {
+        ourFlags |= IfConfigEntry::LOOPBACK;
+    }
+    if (flags & IFF_POINTOPOINT) {
+        ourFlags |= IfConfigEntry::POINTOPOINT;
+    }
+    if (flags & IFF_RUNNING) {
+        ourFlags |= IfConfigEntry::RUNNING;
+    }
+    if (flags & IFF_NOARP) {
+        ourFlags |= IfConfigEntry::NOARP;
+    }
+    if (flags & IFF_PROMISC) {
+        ourFlags |= IfConfigEntry::PROMISC;
+    }
+    if (flags & IFF_NOTRAILERS) {
+        ourFlags |= IfConfigEntry::NOTRAILERS;
+    }
+    if (flags & IFF_ALLMULTI) {
+        ourFlags |= IfConfigEntry::ALLMULTI;
+    }
+    if (flags & IFF_MASTER) {
+        ourFlags |= IfConfigEntry::MASTER;
+    }
+    if (flags & IFF_SLAVE) {
+        ourFlags |= IfConfigEntry::SLAVE;
+    }
+    if (flags & IFF_MULTICAST) {
+        ourFlags |= IfConfigEntry::MULTICAST;
+    }
+    if (flags & IFF_PORTSEL) {
+        ourFlags |= IfConfigEntry::PORTSEL;
+    }
+    if (flags & IFF_AUTOMEDIA) {
+        ourFlags |= IfConfigEntry::AUTOMEDIA;
+    }
+    if (flags & IFF_DYNAMIC) {
+        ourFlags |= IfConfigEntry::DYNAMIC;
+    }
     return ourFlags;
 }
 
@@ -370,30 +406,30 @@ static std::list<IfEntry> NetlinkGetInterfaces(void)
             break;
 
         case RTM_NEWLINK:
-        {
-            IfEntry entry;
+            {
+                IfEntry entry;
 
-            struct ifinfomsg* ifi = (struct ifinfomsg*)NLMSG_DATA(nh);
-            entry.m_index = ifi->ifi_index;
-            entry.m_flags = ifi->ifi_flags;
+                struct ifinfomsg* ifi = (struct ifinfomsg*)NLMSG_DATA(nh);
+                entry.m_index = ifi->ifi_index;
+                entry.m_flags = ifi->ifi_flags;
 
-            struct rtattr* rta = IFLA_RTA(ifi);
-            uint32_t rtalen = IFLA_PAYLOAD(nh);
+                struct rtattr* rta = IFLA_RTA(ifi);
+                uint32_t rtalen = IFLA_PAYLOAD(nh);
 
-            for (; RTA_OK(rta, rtalen); rta = RTA_NEXT(rta, rtalen)) {
-                switch (rta->rta_type) {
-                case IFLA_IFNAME:
-                    entry.m_name = qcc::String((char*)RTA_DATA(rta));
-                    break;
+                for (; RTA_OK(rta, rtalen); rta = RTA_NEXT(rta, rtalen)) {
+                    switch (rta->rta_type) {
+                    case IFLA_IFNAME:
+                        entry.m_name = qcc::String((char*)RTA_DATA(rta));
+                        break;
 
-                case IFLA_MTU:
-                    entry.m_mtu = *(int*)RTA_DATA(rta);
-                    break;
+                    case IFLA_MTU:
+                        entry.m_mtu = *(int*)RTA_DATA(rta);
+                        break;
+                    }
                 }
+                entries.push_back(entry);
+                break;
             }
-            entries.push_back(entry);
-            break;
-        }
         }
     }
 
@@ -485,51 +521,51 @@ static std::list<AddrEntry> NetlinkGetAddresses(uint32_t family)
             break;
 
         case RTM_NEWADDR:
-        {
-            AddrEntry entry;
+            {
+                AddrEntry entry;
 
-            struct ifaddrmsg* ifa = (struct ifaddrmsg*)NLMSG_DATA(nh);
+                struct ifaddrmsg* ifa = (struct ifaddrmsg*)NLMSG_DATA(nh);
 
-            entry.m_family = ifa->ifa_family;
-            entry.m_prefixlen = ifa->ifa_prefixlen;
-            entry.m_flags = ifa->ifa_flags;
-            entry.m_scope = ifa->ifa_scope;
-            entry.m_index = ifa->ifa_index;
+                entry.m_family = ifa->ifa_family;
+                entry.m_prefixlen = ifa->ifa_prefixlen;
+                entry.m_flags = ifa->ifa_flags;
+                entry.m_scope = ifa->ifa_scope;
+                entry.m_index = ifa->ifa_index;
 
-            struct rtattr* rta = IFA_RTA(ifa);
-            uint32_t rtalen = IFA_PAYLOAD(nh);
+                struct rtattr* rta = IFA_RTA(ifa);
+                uint32_t rtalen = IFA_PAYLOAD(nh);
 
-            for (; RTA_OK(rta, rtalen); rta = RTA_NEXT(rta, rtalen)) {
-                switch (rta->rta_type) {
-                case IFA_ADDRESS:
-                    if (ifa->ifa_family == AF_INET) {
-                        struct in_addr* p = (struct in_addr*)RTA_DATA(rta);
-                        //
-                        // Android seems to stash INADDR_ANY in as an
-                        // IFA_ADDRESS in the case of an AF_INET address
-                        // for some reason, so we ignore those.
-                        //
-                        if (p->s_addr != 0) {
-                            char buffer[17];
-                            inet_ntop(AF_INET, p, buffer, sizeof(buffer));
+                for (; RTA_OK(rta, rtalen); rta = RTA_NEXT(rta, rtalen)) {
+                    switch (rta->rta_type) {
+                    case IFA_ADDRESS:
+                        if (ifa->ifa_family == AF_INET) {
+                            struct in_addr* p = (struct in_addr*)RTA_DATA(rta);
+                            //
+                            // Android seems to stash INADDR_ANY in as an
+                            // IFA_ADDRESS in the case of an AF_INET address
+                            // for some reason, so we ignore those.
+                            //
+                            if (p->s_addr != 0) {
+                                char buffer[17];
+                                inet_ntop(AF_INET, p, buffer, sizeof(buffer));
+                                entry.m_addr = qcc::String(buffer);
+                            }
+                        }
+                        if (ifa->ifa_family == AF_INET6) {
+                            struct in6_addr* p = (struct in6_addr*)RTA_DATA(rta);
+                            char buffer[41];
+                            inet_ntop(AF_INET6, p, buffer, sizeof(buffer));
                             entry.m_addr = qcc::String(buffer);
                         }
-                    }
-                    if (ifa->ifa_family == AF_INET6) {
-                        struct in6_addr* p = (struct in6_addr*)RTA_DATA(rta);
-                        char buffer[41];
-                        inet_ntop(AF_INET6, p, buffer, sizeof(buffer));
-                        entry.m_addr = qcc::String(buffer);
-                    }
-                    break;
+                        break;
 
-                default:
-                    break;
+                    default:
+                        break;
+                    }
                 }
+                entries.push_back(entry);
             }
-            entries.push_back(entry);
-        }
-        break;
+            break;
         }
     }
 

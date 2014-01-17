@@ -174,8 +174,9 @@ void sessionJoinedCallback(qcc::String const& busName, SessionId id)
                 std::cout << "Content size=" << contentSize << std::endl;
                 std::cout << "Content :\t";
                 for (size_t i = 0; i < contentSize; i++) {
-                    if (i % 8 == 0 && i > 0)
+                    if (i % 8 == 0 && i > 0) {
                         std::cout << "\n\t\t";
+                    }
                     std::cout << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << (unsigned int)content[i]
                               << std::nouppercase << std::dec;
                 }

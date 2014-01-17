@@ -707,25 +707,25 @@ void ICEStream::ProcessCheckEvent(ICECandidatePair& requestPair,
         break;
 
     case ICECandidatePair::CheckSucceeded:
-    {
-        ICECandidatePair* validPair = &requestPair;
+        {
+            ICECandidatePair* validPair = &requestPair;
 
-        validPair->local->GetComponent()->AddToValidList(validPair);
+            validPair->local->GetComponent()->AddToValidList(validPair);
 
-        // Section 7.1.2.2.3 draft-ietf-mmusic-ice-19
-        // This is ambiguous. Spec says 'pair that generated the check', which implies
-        // the original request, not any peer-reflexive that may have just been added.
-        requestPair.state = ICECandidatePair::Succeeded;
+            // Section 7.1.2.2.3 draft-ietf-mmusic-ice-19
+            // This is ambiguous. Spec says 'pair that generated the check', which implies
+            // the original request, not any peer-reflexive that may have just been added.
+            requestPair.state = ICECandidatePair::Succeeded;
 
-        UnfreezeMatchingPairs(requestPair.GetFoundation());
-        UpdatePairStates(&requestPair);
+            UnfreezeMatchingPairs(requestPair.GetFoundation());
+            UpdatePairStates(&requestPair);
 
-        // Section 7.1.2.2.4 draft-ietf-mmusic-ice-19
-        // This is less ambiguous, as it says "valid pair generated from that check..."
-        validPair->UpdateNominatedFlag();
+            // Section 7.1.2.2.4 draft-ietf-mmusic-ice-19
+            // This is less ambiguous, as it says "valid pair generated from that check..."
+            validPair->UpdateNominatedFlag();
 
-        break;
-    }
+            break;
+        }
 
     case ICECandidatePair::CheckTimeout:
         requestPair.state = ICECandidatePair::Failed;

@@ -64,13 +64,13 @@ qcc::String _Plugin::ToFilename(const qcc::String& in)
         case '@':
         case '=':
         case '&': {
-            char encoded[3];
-            snprintf(encoded, 3, "%02X", url[i]);
-            url[i] = '%';
-            url.insert(i + 1, encoded, 2);
-            i += 2;
-            break;
-        }
+                char encoded[3];
+                snprintf(encoded, 3, "%02X", url[i]);
+                url[i] = '%';
+                url.insert(i + 1, encoded, 2);
+                i += 2;
+                break;
+            }
 
         default:
             /* Do nothing */

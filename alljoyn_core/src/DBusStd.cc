@@ -61,7 +61,9 @@ QStatus org::freedesktop::DBus::CreateInterfaces(BusAttachment& bus) {
     InterfaceDescription* intf = NULL;
     QStatus status = bus.CreateInterface(org::freedesktop::DBus::InterfaceName, intf);
     if ((ER_OK != status) || !intf) {
-        if (ER_OK == status) status = ER_FAIL;
+        if (ER_OK == status) {
+            status = ER_FAIL;
+        }
         QCC_LogError(status, ("Failed to create interface \"%s\"", org::freedesktop::DBus::InterfaceName));
         return status;
     }
@@ -97,7 +99,9 @@ QStatus org::freedesktop::DBus::CreateInterfaces(BusAttachment& bus) {
     InterfaceDescription* introspectIntf = NULL;
     status = bus.CreateInterface(org::freedesktop::DBus::Introspectable::InterfaceName, introspectIntf, AJ_IFC_SECURITY_OFF);
     if ((ER_OK != status) || !introspectIntf) {
-        if (ER_OK == status) status = ER_FAIL;
+        if (ER_OK == status) {
+            status = ER_FAIL;
+        }
         QCC_LogError(status, ("Failed to create interface \"%s\"", org::freedesktop::DBus::Introspectable::InterfaceName));
         return status;
     }
@@ -109,7 +113,9 @@ QStatus org::freedesktop::DBus::CreateInterfaces(BusAttachment& bus) {
     InterfaceDescription* peerIntf = NULL;
     status = bus.CreateInterface(org::freedesktop::DBus::Peer::InterfaceName, peerIntf, AJ_IFC_SECURITY_OFF);
     if ((ER_OK != status) || !peerIntf) {
-        if (ER_OK == status) status = ER_FAIL;
+        if (ER_OK == status) {
+            status = ER_FAIL;
+        }
         QCC_LogError(status, ("Failed to create interface \"%s\"", org::freedesktop::DBus::Peer::InterfaceName));
         return status;
     }
@@ -121,7 +127,9 @@ QStatus org::freedesktop::DBus::CreateInterfaces(BusAttachment& bus) {
     InterfaceDescription* propsIntf = NULL;
     status = bus.CreateInterface(org::freedesktop::DBus::Properties::InterfaceName, propsIntf, AJ_IFC_SECURITY_OFF);
     if ((ER_OK != status) || !propsIntf) {
-        if (ER_OK == status) status = ER_FAIL;
+        if (ER_OK == status) {
+            status = ER_FAIL;
+        }
         QCC_LogError(status, ("Failed to create interface \"%s\"", org::freedesktop::DBus::Peer::InterfaceName));
         return status;
     }

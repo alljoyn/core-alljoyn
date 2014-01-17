@@ -561,7 +561,9 @@ int main(int argc, char** argv)
                 testIntf->AddMethod("time_ping", "uq", "uq", NULL, 0);
                 testIntf->Activate();
             } else {
-                if (ER_OK == status) status = ER_FAIL;
+                if (ER_OK == status) {
+                    status = ER_FAIL;
+                }
                 QCC_LogError(status, ("Failed to create interface \"%s\"", ::org::alljoyn::alljoyn_test::InterfaceName));
             }
 
@@ -575,7 +577,9 @@ int main(int argc, char** argv)
                     valuesIntf->AddProperty("ro_str", "s", PROP_ACCESS_READ);
                     valuesIntf->Activate();
                 } else {
-                    if (ER_OK == status) status = ER_FAIL;
+                    if (ER_OK == status) {
+                        status = ER_FAIL;
+                    }
                     QCC_LogError(status, ("Failed to create interface \"%s\"", ::org::alljoyn::alljoyn_test::values::InterfaceName));
                 }
             }

@@ -239,9 +239,15 @@ String& String::append(const char c)
 
 String& String::append(const char* str, size_t strLen)
 {
-    if (NULL == str) return *this;
-    if (0 == strLen) strLen = ::strlen(str);
-    if (0 == strLen) return *this;
+    if (NULL == str) {
+        return *this;
+    }
+    if (0 == strLen) {
+        strLen = ::strlen(str);
+    }
+    if (0 == strLen) {
+        return *this;
+    }
 
     size_t totalLen = strLen + context->offset;
     if ((1 != context->refCount) || (totalLen > context->capacity)) {
@@ -259,8 +265,9 @@ String& String::append(const char* str, size_t strLen)
 String& String::erase(size_t pos, size_t n)
 {
     /* Trying to erase past the end of the string, do nothing. */
-    if (pos >= size())
+    if (pos >= size()) {
         return *this;
+    }
 
     if (context != &nullContext) {
         if (context->refCount != 1) {
@@ -321,8 +328,12 @@ void String::reserve(size_t newCapacity)
 
 String& String::insert(size_t pos, const char* str, size_t strLen)
 {
-    if (NULL == str) return *this;
-    if (0 == strLen) strLen = ::strlen(str);
+    if (NULL == str) {
+        return *this;
+    }
+    if (0 == strLen) {
+        strLen = ::strlen(str);
+    }
 
     if (context == &nullContext) {
         NewContext(NULL, 0, strLen);
@@ -345,7 +356,9 @@ String& String::insert(size_t pos, const char* str, size_t strLen)
 
 size_t String::find(const char* str, size_t pos) const
 {
-    if (context == &nullContext) return npos;
+    if (context == &nullContext) {
+        return npos;
+    }
 
     const char* base = context->c_str;
     const char* p = static_cast<const char*>(::memmem(base + pos, context->offset - pos, str, ::strlen(str)));
@@ -354,8 +367,12 @@ size_t String::find(const char* str, size_t pos) const
 
 size_t String::find(const String& str, size_t pos) const
 {
-    if (context == &nullContext) return npos;
-    if (0 == str.size()) return 0;
+    if (context == &nullContext) {
+        return npos;
+    }
+    if (0 == str.size()) {
+        return 0;
+    }
 
     const char* base = context->c_str;
     const char* p = static_cast<const char*>(::memmem(base + pos,
@@ -367,7 +384,9 @@ size_t String::find(const String& str, size_t pos) const
 
 size_t String::find_first_of(const char c, size_t pos) const
 {
-    if (context == &nullContext) return npos;
+    if (context == &nullContext) {
+        return npos;
+    }
 
     const char* ret = ::strchr(context->c_str + pos, (int) c);
     return ret ? (ret - context->c_str) : npos;
@@ -375,7 +394,9 @@ size_t String::find_first_of(const char c, size_t pos) const
 
 size_t String::find_last_of(const char c, size_t pos) const
 {
-    if (context == &nullContext) return npos;
+    if (context == &nullContext) {
+        return npos;
+    }
 
     size_t i = MIN(pos, size());
     while (i-- > 0) {
@@ -388,7 +409,9 @@ size_t String::find_last_of(const char c, size_t pos) const
 
 size_t String::find_first_of(const char* set, size_t pos) const
 {
-    if (context == &nullContext) return npos;
+    if (context == &nullContext) {
+        return npos;
+    }
 
     size_t i = pos;
     size_t endIdx = size();
@@ -405,7 +428,9 @@ size_t String::find_first_of(const char* set, size_t pos) const
 
 size_t String::find_first_not_of(const char* set, size_t pos) const
 {
-    if (context == &nullContext) return npos;
+    if (context == &nullContext) {
+        return npos;
+    }
 
     size_t i = pos;
     size_t endIdx = size();
@@ -427,7 +452,9 @@ size_t String::find_first_not_of(const char* set, size_t pos) const
 
 size_t String::find_last_not_of(const char* set, size_t pos) const
 {
-    if (context == &nullContext) return npos;
+    if (context == &nullContext) {
+        return npos;
+    }
 
     size_t i = MIN(pos, size());
     while (i-- > 0) {

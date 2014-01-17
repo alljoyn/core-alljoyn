@@ -108,7 +108,9 @@ bool IsValidDecimalNumber(const qcc::String& str)
         }
     }
 
-    if (curPos == len) return true;
+    if (curPos == len) {
+        return true;
+    }
 
     if (data[curPos] == '.') {
         curPos++;
@@ -121,13 +123,19 @@ bool IsValidDecimalNumber(const qcc::String& str)
                 return false;
             }
         }
-        if (curPos == len) return true;
+        if (curPos == len) {
+            return true;
+        }
     }
 
     if (tolower(data[curPos]) == 'e') {
-        if (++curPos == len) return false;
+        if (++curPos == len) {
+            return false;
+        }
         if (data[curPos] == '+' || data[curPos] == '-') {
-            if (++curPos == len) return false;
+            if (++curPos == len) {
+                return false;
+            }
         }
         while (curPos < len) {
             if (data[curPos] >= '0' && data[curPos] <= '9') {
@@ -436,333 +444,333 @@ Platform::Object ^ WeakTypeCoercer::Coerce(Platform::Object ^ obj, ajn::AllJoynT
 
     switch (typeId) {
     case ALLJOYN_BOOLEAN:
-    {
-        bool success = false;
-        bool val = ToBoolean(prop, success);
-        if (success) {
-            Platform::Object ^ o = val;
-            retObj = o;
+        {
+            bool success = false;
+            bool val = ToBoolean(prop, success);
+            if (success) {
+                Platform::Object ^ o = val;
+                retObj = o;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_DOUBLE:
-    {
-        bool success = false;
-        float64 val = ToNumber<float64>(prop, success, CONVERT_TO_DOUBLE);
-        if (success) {
-            Platform::Object ^ o = val;
-            retObj = o;
+        {
+            bool success = false;
+            float64 val = ToNumber<float64>(prop, success, CONVERT_TO_DOUBLE);
+            if (success) {
+                Platform::Object ^ o = val;
+                retObj = o;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_VARIANT:
     case ALLJOYN_STRUCT:
     case ALLJOYN_DICT_ENTRY:
-    {
-        MsgArg ^ msgArg = dynamic_cast<MsgArg ^>(obj);
-        if (msgArg != nullptr) {
-            retObj = obj;
+        {
+            MsgArg ^ msgArg = dynamic_cast<MsgArg ^>(obj);
+            if (msgArg != nullptr) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_INT32:
-    {
-        if (type == Windows::Foundation::PropertyType::Int32) {
-            retObj = obj;
-        } else {
-            bool success = false;
-            int32 val = ToNumber<int32>(prop, success, CONVERT_TO_INTEGER, INT32_MIN, INT32_MAX);
-            if (success) {
-                Platform::Object ^ o = val;
-                retObj = o;
+        {
+            if (type == Windows::Foundation::PropertyType::Int32) {
+                retObj = obj;
+            } else {
+                bool success = false;
+                int32 val = ToNumber<int32>(prop, success, CONVERT_TO_INTEGER, INT32_MIN, INT32_MAX);
+                if (success) {
+                    Platform::Object ^ o = val;
+                    retObj = o;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_STRING:
-    {
-        bool success = false;
-        Platform::String ^ o = ToWideCharString(prop, success);
-        if (success) {
-            retObj = o;
+        {
+            bool success = false;
+            Platform::String ^ o = ToWideCharString(prop, success);
+            if (success) {
+                retObj = o;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_INT64:
-    {
-        if (type == Windows::Foundation::PropertyType::Int64) {
-            retObj = obj;
-        } else {
-            bool success = false;
-            int64 val = ToNumber<int64>(prop, success, CONVERT_TO_INTEGER, INT64_MIN, INT64_MAX);
-            if (success) {
-                Platform::Object ^ o = val;
-                retObj = o;
+        {
+            if (type == Windows::Foundation::PropertyType::Int64) {
+                retObj = obj;
+            } else {
+                bool success = false;
+                int64 val = ToNumber<int64>(prop, success, CONVERT_TO_INTEGER, INT64_MIN, INT64_MAX);
+                if (success) {
+                    Platform::Object ^ o = val;
+                    retObj = o;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_BYTE:
-    {
-        if (type == Windows::Foundation::PropertyType::UInt8) {
-            retObj = obj;
-        } else {
-            bool success = false;
-            uint8 val = ToNumber<uint8>(prop, success, CONVERT_TO_INTEGER, 0, UINT8_MAX);
-            if (success) {
-                Platform::Object ^ o = val;
-                retObj = o;
+        {
+            if (type == Windows::Foundation::PropertyType::UInt8) {
+                retObj = obj;
+            } else {
+                bool success = false;
+                uint8 val = ToNumber<uint8>(prop, success, CONVERT_TO_INTEGER, 0, UINT8_MAX);
+                if (success) {
+                    Platform::Object ^ o = val;
+                    retObj = o;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_UINT32:
-    {
-        if (type == Windows::Foundation::PropertyType::UInt32) {
-            retObj = obj;
-        } else {
-            bool success = false;
-            uint32 val = ToNumber<uint32>(prop, success, CONVERT_TO_INTEGER, 0, UINT32_MAX);
-            if (success) {
-                Platform::Object ^ o = val;
-                retObj = o;
+        {
+            if (type == Windows::Foundation::PropertyType::UInt32) {
+                retObj = obj;
+            } else {
+                bool success = false;
+                uint32 val = ToNumber<uint32>(prop, success, CONVERT_TO_INTEGER, 0, UINT32_MAX);
+                if (success) {
+                    Platform::Object ^ o = val;
+                    retObj = o;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_UINT64:
-    {
-        if (type == Windows::Foundation::PropertyType::UInt64) {
-            retObj = obj;
-        } else {
-            bool success = false;
-            uint64 val = ToNumber<uint64>(prop, success, CONVERT_TO_UINT64);
-            if (success) {
-                Platform::Object ^ o = val;
-                retObj = o;
+        {
+            if (type == Windows::Foundation::PropertyType::UInt64) {
+                retObj = obj;
+            } else {
+                bool success = false;
+                uint64 val = ToNumber<uint64>(prop, success, CONVERT_TO_UINT64);
+                if (success) {
+                    Platform::Object ^ o = val;
+                    retObj = o;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_OBJECT_PATH:
-    {
-        if (type == Windows::Foundation::PropertyType::String) {
-            retObj = obj;
+        {
+            if (type == Windows::Foundation::PropertyType::String) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_SIGNATURE:
-    {
-        if (type == Windows::Foundation::PropertyType::String) {
-            retObj = obj;
+        {
+            if (type == Windows::Foundation::PropertyType::String) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_HANDLE:
-    {
-        if (type == Windows::Foundation::PropertyType::UInt64) {
-            retObj = obj;
-        } else {
-            bool success = false;
-            uint64 val = ToNumber<uint64>(prop, success, CONVERT_TO_UINT64, 0, UINT64_MAX);
-            if (success) {
-                Platform::Object ^ o = val;
-                retObj = o;
+        {
+            if (type == Windows::Foundation::PropertyType::UInt64) {
+                retObj = obj;
+            } else {
+                bool success = false;
+                uint64 val = ToNumber<uint64>(prop, success, CONVERT_TO_UINT64, 0, UINT64_MAX);
+                if (success) {
+                    Platform::Object ^ o = val;
+                    retObj = o;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_UINT16:
-    {
-        if (type == Windows::Foundation::PropertyType::UInt16) {
-            retObj = obj;
-        } else {
-            bool success = false;
-            uint16 val = ToNumber<uint16>(prop, success, CONVERT_TO_INTEGER, 0, UINT16_MAX);
-            if (success) {
-                Platform::Object ^ o = val;
-                retObj = o;
+        {
+            if (type == Windows::Foundation::PropertyType::UInt16) {
+                retObj = obj;
+            } else {
+                bool success = false;
+                uint16 val = ToNumber<uint16>(prop, success, CONVERT_TO_INTEGER, 0, UINT16_MAX);
+                if (success) {
+                    Platform::Object ^ o = val;
+                    retObj = o;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_INT16:
-    {
-        if (type == Windows::Foundation::PropertyType::Int16) {
-            retObj = obj;
-        } else {
-            bool success = false;
-            int16 val = ToNumber<int16>(prop, success, CONVERT_TO_INTEGER, INT16_MIN, INT16_MAX);
-            if (success) {
-                Platform::Object ^ o = val;
-                retObj = o;
+        {
+            if (type == Windows::Foundation::PropertyType::Int16) {
+                retObj = obj;
+            } else {
+                bool success = false;
+                int16 val = ToNumber<int16>(prop, success, CONVERT_TO_INTEGER, INT16_MIN, INT16_MAX);
+                if (success) {
+                    Platform::Object ^ o = val;
+                    retObj = o;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_ARRAY:
-    {
-        if (type == Windows::Foundation::PropertyType::InspectableArray) {
-            retObj = obj;
+        {
+            if (type == Windows::Foundation::PropertyType::InspectableArray) {
+                retObj = obj;
+            }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_BOOLEAN_ARRAY:
-    {
-        if (type == Windows::Foundation::PropertyType::BooleanArray) {
-            retObj = obj;
-        } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
-            bool success = false;
-            Platform::Array<Platform::Boolean> ^ boolArr = ToBooleanArray(prop, success);
-            if (success) {
-                retObj = boolArr;
+        {
+            if (type == Windows::Foundation::PropertyType::BooleanArray) {
+                retObj = obj;
+            } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
+                bool success = false;
+                Platform::Array<Platform::Boolean> ^ boolArr = ToBooleanArray(prop, success);
+                if (success) {
+                    retObj = boolArr;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_DOUBLE_ARRAY:
-    {
-        if (type == Windows::Foundation::PropertyType::DoubleArray) {
-            retObj = obj;
-        } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
-            bool success = false;
-            Platform::Array<float64> ^ doubleArr = ToArray<float64>(prop, success, CONVERT_TO_DOUBLE);
-            if (success) {
-                retObj = doubleArr;
+        {
+            if (type == Windows::Foundation::PropertyType::DoubleArray) {
+                retObj = obj;
+            } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
+                bool success = false;
+                Platform::Array<float64> ^ doubleArr = ToArray<float64>(prop, success, CONVERT_TO_DOUBLE);
+                if (success) {
+                    retObj = doubleArr;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_INT32_ARRAY:
-    {
-        if (type == Windows::Foundation::PropertyType::Int32Array) {
-            retObj = obj;
-        } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
-            bool success = false;
-            Platform::Array<int32> ^ int32Arr = ToArray<int32>(prop, success, CONVERT_TO_INTEGER, INT32_MIN, INT32_MAX);
-            if (success) {
-                retObj = int32Arr;
+        {
+            if (type == Windows::Foundation::PropertyType::Int32Array) {
+                retObj = obj;
+            } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
+                bool success = false;
+                Platform::Array<int32> ^ int32Arr = ToArray<int32>(prop, success, CONVERT_TO_INTEGER, INT32_MIN, INT32_MAX);
+                if (success) {
+                    retObj = int32Arr;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_INT16_ARRAY:
-    {
-        if (type == Windows::Foundation::PropertyType::Int16Array) {
-            retObj = obj;
-        } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
-            bool success = false;
-            Platform::Array<int16> ^ int16Arr = ToArray<int16>(prop, success, CONVERT_TO_INTEGER, INT16_MIN, INT16_MAX);
-            if (success) {
-                retObj = int16Arr;
+        {
+            if (type == Windows::Foundation::PropertyType::Int16Array) {
+                retObj = obj;
+            } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
+                bool success = false;
+                Platform::Array<int16> ^ int16Arr = ToArray<int16>(prop, success, CONVERT_TO_INTEGER, INT16_MIN, INT16_MAX);
+                if (success) {
+                    retObj = int16Arr;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_UINT16_ARRAY:
-    {
-        if (type == Windows::Foundation::PropertyType::UInt16Array) {
-            retObj = obj;
-        } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
-            bool success = false;
-            Platform::Array<uint16> ^ uint16Arr = ToArray<uint16>(prop, success, CONVERT_TO_INTEGER, 0, UINT16_MAX);
-            if (success) {
-                retObj = uint16Arr;
+        {
+            if (type == Windows::Foundation::PropertyType::UInt16Array) {
+                retObj = obj;
+            } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
+                bool success = false;
+                Platform::Array<uint16> ^ uint16Arr = ToArray<uint16>(prop, success, CONVERT_TO_INTEGER, 0, UINT16_MAX);
+                if (success) {
+                    retObj = uint16Arr;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_UINT64_ARRAY:
-    {
-        if (type == Windows::Foundation::PropertyType::UInt64Array) {
-            retObj = obj;
-        } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
-            bool success = false;
-            Platform::Array<uint64> ^ uint64Arr = ToArray<uint64>(prop, success, CONVERT_TO_UINT64);
-            if (success) {
-                retObj = uint64Arr;
+        {
+            if (type == Windows::Foundation::PropertyType::UInt64Array) {
+                retObj = obj;
+            } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
+                bool success = false;
+                Platform::Array<uint64> ^ uint64Arr = ToArray<uint64>(prop, success, CONVERT_TO_UINT64);
+                if (success) {
+                    retObj = uint64Arr;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_UINT32_ARRAY:
-    {
-        if (type == Windows::Foundation::PropertyType::UInt32Array) {
-            retObj = obj;
-        } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
-            bool success = false;
-            Platform::Array<uint32> ^ uint32Arr = ToArray<uint32>(prop, success, CONVERT_TO_INTEGER, 0, UINT32_MAX);
-            if (success) {
-                retObj = uint32Arr;
+        {
+            if (type == Windows::Foundation::PropertyType::UInt32Array) {
+                retObj = obj;
+            } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
+                bool success = false;
+                Platform::Array<uint32> ^ uint32Arr = ToArray<uint32>(prop, success, CONVERT_TO_INTEGER, 0, UINT32_MAX);
+                if (success) {
+                    retObj = uint32Arr;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_INT64_ARRAY:
-    {
-        if (type == Windows::Foundation::PropertyType::Int64Array) {
-            retObj = obj;
-        } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
-            bool success = false;
-            Platform::Array<int64> ^ int64Arr = ToArray<int64>(prop, success, CONVERT_TO_INTEGER, INT64_MIN, INT64_MAX);
-            if (success) {
-                retObj = int64Arr;
+        {
+            if (type == Windows::Foundation::PropertyType::Int64Array) {
+                retObj = obj;
+            } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
+                bool success = false;
+                Platform::Array<int64> ^ int64Arr = ToArray<int64>(prop, success, CONVERT_TO_INTEGER, INT64_MIN, INT64_MAX);
+                if (success) {
+                    retObj = int64Arr;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case ALLJOYN_BYTE_ARRAY:
-    {
-        if (type == Windows::Foundation::PropertyType::UInt8Array) {
-            retObj = obj;
-        } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
-            bool success = false;
-            Platform::Array<uint8> ^ uint8Arr = ToArray<uint8>(prop, success, CONVERT_TO_INTEGER, 0, UINT8_MAX);
-            if (success) {
-                retObj = uint8Arr;
+        {
+            if (type == Windows::Foundation::PropertyType::UInt8Array) {
+                retObj = obj;
+            } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
+                bool success = false;
+                Platform::Array<uint8> ^ uint8Arr = ToArray<uint8>(prop, success, CONVERT_TO_INTEGER, 0, UINT8_MAX);
+                if (success) {
+                    retObj = uint8Arr;
+                }
             }
         }
-    }
-    break;
+        break;
 
     case 'sa':
     case 'oa':
     case 'ga':
-    {
-        if (type == Windows::Foundation::PropertyType::StringArray) {
-            retObj = obj;
-        } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
-            bool success = false;
-            Platform::Array<Platform::String ^> ^ strArr = ToWideCharStringArray(prop, success);
-            if (success) {
-                retObj = strArr;
+        {
+            if (type == Windows::Foundation::PropertyType::StringArray) {
+                retObj = obj;
+            } else if (type == Windows::Foundation::PropertyType::InspectableArray) {
+                bool success = false;
+                Platform::Array<Platform::String ^> ^ strArr = ToWideCharStringArray(prop, success);
+                if (success) {
+                    retObj = strArr;
+                }
             }
         }
-    }
-    break;
+        break;
 
     default:
         break;

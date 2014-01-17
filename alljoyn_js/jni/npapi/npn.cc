@@ -32,20 +32,20 @@ void NPN_RetainVariantValue(const NPVariant*variant, NPVariant* retained)
 {
     switch (variant->type) {
     case NPVariantType_String: {
-        uint32_t UTF8Length = NPVARIANT_TO_STRING(*variant).UTF8Length;
-        const NPUTF8* UTF8Characters = NPVARIANT_TO_STRING(*variant).UTF8Characters;
-        char* chars = reinterpret_cast<char*>(NPN_MemAlloc(UTF8Length + 1));
-        strncpy(chars, UTF8Characters, UTF8Length);
-        chars[UTF8Length] = 0;
-        STRINGN_TO_NPVARIANT(chars, UTF8Length, *retained);
-        break;
-    }
+            uint32_t UTF8Length = NPVARIANT_TO_STRING(*variant).UTF8Length;
+            const NPUTF8* UTF8Characters = NPVARIANT_TO_STRING(*variant).UTF8Characters;
+            char* chars = reinterpret_cast<char*>(NPN_MemAlloc(UTF8Length + 1));
+            strncpy(chars, UTF8Characters, UTF8Length);
+            chars[UTF8Length] = 0;
+            STRINGN_TO_NPVARIANT(chars, UTF8Length, *retained);
+            break;
+        }
 
     case NPVariantType_Object: {
-        *retained = *variant;
-        NPN_RetainObject(NPVARIANT_TO_OBJECT(*retained));
-        break;
-    }
+            *retained = *variant;
+            NPN_RetainObject(NPVARIANT_TO_OBJECT(*retained));
+            break;
+        }
 
     default:
         *retained = *variant;

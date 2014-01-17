@@ -160,33 +160,33 @@ QStatus Crypto_ASN1::EncodeV(const char*& syntax, qcc::String& asn, va_list* arg
     while ((status == ER_OK) && (*syntax != 0) && (*syntax != ')') && (*syntax != '}')) {
         switch (*syntax++) {
         case 'i':
-        {
-            asn.push_back((char)ASN_INTEGER);
-            uint32_t v = va_arg(argp, uint32_t);
-            if (v) {
-                uint8_t n[5];
-                //c++0x does not allow implicit typecast from uint32_t to uint8_t
-                n[0] = 0;
-                n[1] = ((uint8_t)(v >> 24));
-                n[2] = ((uint8_t)(v >> 16));
-                n[3] = ((uint8_t)(v >> 8));
-                n[4] = ((uint8_t)(v & 0xFF));
-                size_t i = 0;
-                while (!n[i]) {
-                    ++i;
+            {
+                asn.push_back((char)ASN_INTEGER);
+                uint32_t v = va_arg(argp, uint32_t);
+                if (v) {
+                    uint8_t n[5];
+                    //c++0x does not allow implicit typecast from uint32_t to uint8_t
+                    n[0] = 0;
+                    n[1] = ((uint8_t)(v >> 24));
+                    n[2] = ((uint8_t)(v >> 16));
+                    n[3] = ((uint8_t)(v >> 8));
+                    n[4] = ((uint8_t)(v & 0xFF));
+                    size_t i = 0;
+                    while (!n[i]) {
+                        ++i;
+                    }
+                    if (n[i] & 0x80) {
+                        --i;
+                    }
+                    len = 5 - i;
+                    EncodeLen(asn, len);
+                    asn.append((char*)(n + i), len);
+                } else {
+                    asn.push_back((char)1);
+                    asn.push_back((char)0);
                 }
-                if (n[i] & 0x80) {
-                    --i;
-                }
-                len = 5 - i;
-                EncodeLen(asn, len);
-                asn.append((char*)(n + i), len);
-            } else {
-                asn.push_back((char)1);
-                asn.push_back((char)0);
             }
-        }
-        break;
+            break;
 
         case 'l':
             val = va_arg(argp, qcc::String*);
@@ -212,17 +212,17 @@ QStatus Crypto_ASN1::EncodeV(const char*& syntax, qcc::String& asn, va_list* arg
             break;
 
         case 'o':
-        {
-            val = va_arg(argp, qcc::String*);
-            asn.push_back((char)ASN_OID);
-            qcc::String oid;
-            status = EncodeOID(oid, *val);
-            if (status == ER_OK) {
-                EncodeLen(asn, oid.size());
-                asn += oid;
+            {
+                val = va_arg(argp, qcc::String*);
+                asn.push_back((char)ASN_OID);
+                qcc::String oid;
+                status = EncodeOID(oid, *val);
+                if (status == ER_OK) {
+                    EncodeLen(asn, oid.size());
+                    asn += oid;
+                }
             }
-        }
-        break;
+            break;
 
         case 'x':
             val = va_arg(argp, qcc::String*);
@@ -232,23 +232,23 @@ QStatus Crypto_ASN1::EncodeV(const char*& syntax, qcc::String& asn, va_list* arg
             break;
 
         case 'b':
-        {
-            val = va_arg(argp, qcc::String*);
-            size_t bitLen = va_arg(argp, size_t);
-            if (bitLen <= (val->size() * 8)) {
-                size_t unusedBits = (8 - bitLen) & 7;
-                size_t len = (bitLen + 7) / 8;
-                asn.push_back((char)ASN_BITS);
-                EncodeLen(asn, len + 1);
-                asn.push_back((char)unusedBits);
-                asn.append((char*)val->data(), len - 1);
-                // In DER encoding unused bits must be zero
-                asn.push_back((char)(*val)[len - 1] & (0xFF >> unusedBits));
-            } else {
-                status = ER_FAIL;
+            {
+                val = va_arg(argp, qcc::String*);
+                size_t bitLen = va_arg(argp, size_t);
+                if (bitLen <= (val->size() * 8)) {
+                    size_t unusedBits = (8 - bitLen) & 7;
+                    size_t len = (bitLen + 7) / 8;
+                    asn.push_back((char)ASN_BITS);
+                    EncodeLen(asn, len + 1);
+                    asn.push_back((char)unusedBits);
+                    asn.append((char*)val->data(), len - 1);
+                    // In DER encoding unused bits must be zero
+                    asn.push_back((char)(*val)[len - 1] & (0xFF >> unusedBits));
+                } else {
+                    status = ER_FAIL;
+                }
             }
-        }
-        break;
+            break;
 
         case 'n':
             asn.push_back((char)ASN_NULL);
@@ -256,32 +256,32 @@ QStatus Crypto_ASN1::EncodeV(const char*& syntax, qcc::String& asn, va_list* arg
             break;
 
         case '(':
-        {
-            qcc::String seq;
-            status = EncodeV(syntax, seq, argpIn);
-            if (*syntax++ != ')') {
-                status = ER_FAIL;
-            } else if (status == ER_OK) {
-                asn.push_back((char)ASN_SEQ | 0x20);
-                EncodeLen(asn, seq.size());
-                asn += seq;
+            {
+                qcc::String seq;
+                status = EncodeV(syntax, seq, argpIn);
+                if (*syntax++ != ')') {
+                    status = ER_FAIL;
+                } else if (status == ER_OK) {
+                    asn.push_back((char)ASN_SEQ | 0x20);
+                    EncodeLen(asn, seq.size());
+                    asn += seq;
+                }
             }
-        }
-        break;
+            break;
 
         case '{':
-        {
-            qcc::String set;
-            status = EncodeV(syntax, set, argpIn);
-            if (*syntax++ != '}') {
-                status = ER_FAIL;
-            } else if (status == ER_OK) {
-                asn.push_back((char)ASN_SET_OF | 0x20);
-                EncodeLen(asn, set.size());
-                asn += set;
+            {
+                qcc::String set;
+                status = EncodeV(syntax, set, argpIn);
+                if (*syntax++ != '}') {
+                    status = ER_FAIL;
+                } else if (status == ER_OK) {
+                    asn.push_back((char)ASN_SET_OF | 0x20);
+                    EncodeLen(asn, set.size());
+                    asn += set;
+                }
             }
-        }
-        break;
+            break;
 
         case 'a':
             val = va_arg(argp, qcc::String*);
@@ -476,18 +476,18 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
             break;
 
         case '?':
-        {
-            const uint8_t* start = asn - 1;
-            if (!DecodeLen(asn, eod, len)) {
-                status = ER_FAIL;
-            } else {
-                asn += len;
-                val = va_arg(argp, qcc::String*);
-                if (val) {
-                    val->assign((char*)start, asn - start);
+            {
+                const uint8_t* start = asn - 1;
+                if (!DecodeLen(asn, eod, len)) {
+                    status = ER_FAIL;
+                } else {
+                    asn += len;
+                    val = va_arg(argp, qcc::String*);
+                    if (val) {
+                        val->assign((char*)start, asn - start);
+                    }
                 }
             }
-        }
             continue;
 
         case '*':
@@ -501,17 +501,17 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
             continue;
 
         case '.':
-        {
-            // consume the rest of the items
-            const uint8_t* start = asn - 1;
-            len = eod - start;
-            val = va_arg(argp, qcc::String*);
-            if (val) {
-                val->assign((char*)start, len);
+            {
+                // consume the rest of the items
+                const uint8_t* start = asn - 1;
+                len = eod - start;
+                val = va_arg(argp, qcc::String*);
+                if (val) {
+                    val->assign((char*)start, len);
+                }
+                asn += len; // move asn forward
+                continue;
             }
-            asn += len; // move asn forward
-            continue;
-        }
 
         default:
             status = ER_BAD_ARG_1;
@@ -664,11 +664,11 @@ qcc::String Crypto_ASN1::ToString(const uint8_t* asn, size_t len, size_t indent)
         switch (tag & 0x1F) {
 
         case ASN_BOOLEAN:
-        {
-            dump += "BOOLEAN ";
-            dump += *p++ ? "true\n" : "false\n";
-        }
-        break;
+            {
+                dump += "BOOLEAN ";
+                dump += *p++ ? "true\n" : "false\n";
+            }
+            break;
 
         case ASN_INTEGER:
             if (!DecodeLen(p, eod, l)) {

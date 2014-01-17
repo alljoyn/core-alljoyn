@@ -21,7 +21,7 @@
 
 #define QCC_MODULE "ALLJOYN_ABOUT_SERVICE"
 #define ABOUT_SERVICE_VERSION 1
-#define CHECK_RETURN(x) if ((status = x) != ER_OK) return status;
+#define CHECK_RETURN(x) if ((status = x) != ER_OK) { return status; }
 
 using namespace ajn;
 using namespace services;
@@ -47,8 +47,9 @@ QStatus AboutService::Register(int port) {
     if (!p_InterfaceDescription) {
         CHECK_RETURN(m_BusAttachment->CreateInterface(ABOUT_INTERFACE_NAME, p_InterfaceDescription, false))
 
-        if (!p_InterfaceDescription)
+        if (!p_InterfaceDescription) {
             return ER_BUS_CANNOT_ADD_INTERFACE;
+        }
 
         CHECK_RETURN(p_InterfaceDescription->AddMethod("GetAboutData", "s", "a{sv}", "languageTag,aboutData"))
         CHECK_RETURN(p_InterfaceDescription->AddMethod("GetObjectDescription", NULL, "a(oas)", "Control"))

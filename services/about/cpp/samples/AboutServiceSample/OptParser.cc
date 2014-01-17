@@ -76,8 +76,9 @@ void OptParser::PrintUsage() {
 bool OptParser::IsAllHex(const char* data) {
 
     for (size_t index = 0; index < strlen(data); ++index) {
-        if (!isxdigit(data[index]))
+        if (!isxdigit(data[index])) {
             return false;
+        }
     }
     return true;
 }

@@ -63,11 +63,13 @@ ALLJOYN_API void __stdcall SetJoinListener(FPJoinedCallback callback)
 // the bus initialization and configuration function
 ALLJOYN_API void __stdcall ConnectToAllJoyn(char* identity, bool& asAdvertiser)
 {
-    if ((NULL == ManagedOutput) || (NULL == JoinNotifier))
+    if ((NULL == ManagedOutput) || (NULL == JoinNotifier)) {
         MessageBox(NULL, L"Callbacks not set", L"Alljoyn", MB_OK);
-    if (NULL == s_connection)      // create on demand
+    }
+    if (NULL == s_connection) {    // create on demand
         s_connection = new AllJoynConnection(*ManagedOutput, *JoinNotifier);  // , *QueryCallback);
 
+    }
     s_connection->Connect(identity, asAdvertiser);
 //	if( s_connection->IsConnected() )
 //	{
@@ -79,8 +81,9 @@ ALLJOYN_API void __stdcall ConnectToAllJoyn(char* identity, bool& asAdvertiser)
 
 ALLJOYN_API void __stdcall DisconnectFromAllJoyn(void)
 {
-    if (NULL != s_connection)
+    if (NULL != s_connection) {
         delete s_connection;
+    }
     s_connection = NULL;
 }
 
@@ -130,8 +133,9 @@ ALLJOYN_API void __stdcall QueryRemoteXfer(int index, char* filename, int& files
             // TODO: if negotiated segment size returned
             // NotifyUser(MSG_STATUS, "Accepted %d %d", filesize, accept);
             NotifyUser(MSG_STATUS, "Accepted");
-        } else
+        } else {
             NotifyUser(MSG_STATUS, "Rejected");
+        }
     } else {
         NotifyUser(MSG_ERROR, "%s", QCC_StatusText(status));
 //	    if( status == ER_BUS_REPLY_IS_ERROR_MESSAGE)
@@ -152,8 +156,9 @@ ALLJOYN_API void __stdcall InitiateXfer(int proxyIndex, int segmentSize, int nSe
     NotifyUser(MSG_SYSTEM, "Initiated transfer");
     if (status == ER_OK) {
         success = true;
-    } else
+    } else {
         success = false;
+    }
 }
 
 //("receive", "ayii",  "i", "segment, serialNum. segSize , success ", 0);
@@ -178,8 +183,9 @@ ALLJOYN_API void __stdcall TransferSegment(int proxyIndex, void* pv, int serialN
     NotifyUser(MSG_SYSTEM, "Initiated transfer");
     if (status == ER_OK) {
         success = reply->GetArg(0)->v_int32;
-    } else
+    } else {
         success = false;
+    }
 
 }
 
@@ -204,8 +210,9 @@ ALLJOYN_API void __stdcall GetRemoteTransferStatus(int proxyIndex, int& state, i
         state = reply->GetArg(0)->v_int32;
         if (state == -1) {
             status = pbo->MethodCall(XFER_SERVICE_INTERFACE_NAME, "error", inputs, 1, reply, 5000);
-            if (status == ER_OK)
+            if (status == ER_OK) {
                 errorCode = reply->GetArg(0)->v_int32;
+            }
         }
     }
 }
@@ -222,7 +229,8 @@ ALLJOYN_API void __stdcall EndRemoteTransfer(int proxyIndex, bool& success)
     QStatus status = pbo->MethodCall(XFER_SERVICE_INTERFACE_NAME, "close", inputs, 1, reply, 5000);
     if (status == ER_OK) {
         success = true;
-    } else
+    } else {
         success = false;
+    }
 }
 

@@ -26,7 +26,7 @@
 using namespace ajn;
 using namespace services;
 
-#define CHECK_RETURN(x) if ((status = x) != ER_OK) return status;
+#define CHECK_RETURN(x) if ((status = x) != ER_OK) { return status; }
 
 #define SERVICE_EXIT_OK       0
 #define SERVICE_OPTION_ERROR  1

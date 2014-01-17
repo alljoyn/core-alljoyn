@@ -215,52 +215,52 @@ QStatus HttpConnection::Connect(SocketFd sock)
         switch (protocol) {
         default:
         case PROTO_HTTP:
-        {
-            if (0 == port) {
-                port = 80;
-            }
-            SocketStream* sockStream = new SocketStream(sock);
-            stream = sockStream;
-            status = sockStream->Connect(hostIPAddress, port);
+            {
+                if (0 == port) {
+                    port = 80;
+                }
+                SocketStream* sockStream = new SocketStream(sock);
+                stream = sockStream;
+                status = sockStream->Connect(hostIPAddress, port);
 
-            /* Retrieve the interface details over which the OS has
-             * set up the socket to talk to the Server */
-            uint16_t localPort;
-            qcc::GetLocalAddress(sockStream->GetSocketFd(), localIPAddress, localPort);
+                /* Retrieve the interface details over which the OS has
+                 * set up the socket to talk to the Server */
+                uint16_t localPort;
+                qcc::GetLocalAddress(sockStream->GetSocketFd(), localIPAddress, localPort);
 
-            httpSource.Reset(*stream);
-            break;
-        }
-
-        case PROTO_HTTPS:
-        {
-            if (rootCert.empty() || caCert.empty()) {
-                status = ER_RENDEZVOUS_SERVER_ROOT_CERTIFICATE_UNINITIALIZED;
+                httpSource.Reset(*stream);
                 break;
             }
 
-            if (0 == port) {
-                port = 443;
-            }
+        case PROTO_HTTPS:
+            {
+                if (rootCert.empty() || caCert.empty()) {
+                    status = ER_RENDEZVOUS_SERVER_ROOT_CERTIFICATE_UNINITIALIZED;
+                    break;
+                }
 
-            SslSocket* sslSocket = new SslSocket(host, rootCert.c_str(), caCert.c_str());
-            stream = sslSocket;
+                if (0 == port) {
+                    port = 443;
+                }
+
+                SslSocket* sslSocket = new SslSocket(host, rootCert.c_str(), caCert.c_str());
+                stream = sslSocket;
 #if defined(QCC_OS_WINRT)
-            // On WinRT, when using SslSocket, Connect() should use the host name instead of its IP address, otherwise it will fail with error "CertCN_NO_MATCH"
-            status = sslSocket->Connect(host, port);
+                // On WinRT, when using SslSocket, Connect() should use the host name instead of its IP address, otherwise it will fail with error "CertCN_NO_MATCH"
+                status = sslSocket->Connect(host, port);
 #else
-            status = sslSocket->Connect(hostIPAddress, port);
+                status = sslSocket->Connect(hostIPAddress, port);
 #endif
 
-            /* Retrieve the interface details over which the OS has
-             * set up the socket to talk to the Server */
-            uint16_t localPort;
-            qcc::GetLocalAddress(sslSocket->GetSocketFd(), localIPAddress, localPort);
+                /* Retrieve the interface details over which the OS has
+                 * set up the socket to talk to the Server */
+                uint16_t localPort;
+                qcc::GetLocalAddress(sslSocket->GetSocketFd(), localIPAddress, localPort);
 
-            httpSource.Reset(*stream);
+                httpSource.Reset(*stream);
 
-            break;
-        }
+                break;
+            }
         }
 
     } else {

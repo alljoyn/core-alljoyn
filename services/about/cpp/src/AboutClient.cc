@@ -26,7 +26,7 @@ using namespace services;
 static const char* ABOUT_OBJECT_PATH = "/About";
 static const char* ABOUT_INTERFACE_NAME = "org.alljoyn.About";
 
-#define CHECK_BREAK(x) if ((status = x) != ER_OK) break;
+#define CHECK_BREAK(x) if ((status = x) != ER_OK) { break; }
 
 AboutClient::AboutClient(ajn::BusAttachment& bus) :
     m_BusAttachment(&bus)
@@ -99,8 +99,9 @@ QStatus AboutClient::GetObjectDescriptions(const char* busName, AboutClient::Obj
                     CHECK_BREAK(interfaceEntries[i].Get("s", &interfaceName))
                     localVector.push_back(interfaceName);
                 }
-                if (status != ER_OK)
+                if (status != ER_OK) {
                     break;
+                }
                 objectDescs.insert(std::pair<qcc::String, std::vector<qcc::String> >(objectDescriptionPath, localVector));
             }
         }
@@ -136,8 +137,9 @@ QStatus AboutClient::GetAboutData(const char* busName, const char* languageTag, 
             QCC_LogError(status, ("GetAboutData ::Error name=%s ErorrMessage=%s", replyMsg->GetErrorName(&errorMessage),
                                   errorMessage.c_str()));
         }
-        if (status != ER_OK)
+        if (status != ER_OK) {
             break;
+        }
 
         const ajn::MsgArg* returnArgs = 0;
         size_t numArgs = 0;

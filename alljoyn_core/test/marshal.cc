@@ -131,7 +131,7 @@ class _MyMessage : public _Message {
                        uint8_t flags = 0)
     {
         qcc::String sig = MsgArg::Signature(argList, numArgs);
-        if (!quiet) printf("Signature = \"%s\"\n", sig.c_str());
+        if (!quiet) { printf("Signature = \"%s\"\n", sig.c_str()); }
         return CallMsg(sig, destination, 0, objPath, interface, methodName, argList, numArgs, flags);
     }
 
@@ -143,7 +143,7 @@ class _MyMessage : public _Message {
                    size_t numArgs)
     {
         qcc::String sig = MsgArg::Signature(argList, numArgs);
-        if (!quiet) printf("Signature = \"%s\"\n", sig.c_str());
+        if (!quiet) { printf("Signature = \"%s\"\n", sig.c_str()); }
         return SignalMsg(sig, destination, 0, objPath, interface, signalName, argList, numArgs, 0, 0);
     }
 
@@ -228,11 +228,11 @@ static void Fuzz(TestPipe& stream)
         /*
          * Toggle flag bits
          */
-    {
-        uint8_t bit = (1 << qcc::Rand8() % 8);
-        hdr->flags ^= bit;
-    }
-    break;
+        {
+            uint8_t bit = (1 << qcc::Rand8() % 8);
+            hdr->flags ^= bit;
+        }
+        break;
 
     case 4:
         /*
@@ -303,17 +303,25 @@ static QStatus TestMarshal(const MsgArg* argList, size_t numArgs, const char* ex
     ep->GetFeatures().handlePassing = true;
 
     if (numArgs == 0) {
-        if (!quiet) printf("Empty arg.v_struct.Elements, arg.v_struct.numElements\n");
+        if (!quiet) {
+            printf("Empty arg.v_struct.Elements, arg.v_struct.numElements\n");
+        }
         return ER_FAIL;
     }
 
-    if (!quiet) printf("++++++++++++++++++++++++++++++++++++++++++++\n");
+    if (!quiet) {
+        printf("++++++++++++++++++++++++++++++++++++++++++++\n");
+    }
     qcc::String inargList = MsgArg::ToString(argList, numArgs);
     qcc::String inSig = MsgArg::Signature(argList, numArgs);
-    if (!quiet) printf("ArgList:\n%s", inargList.c_str());
+    if (!quiet) {
+        printf("ArgList:\n%s", inargList.c_str());
+    }
 
     status = msg->MethodCall("desti.nation", "/foo/bar", "foo.bar", "test", argList, numArgs);
-    if (!quiet) printf("MethodCall status:%s\n", QCC_StatusText(status));
+    if (!quiet) {
+        printf("MethodCall status:%s\n", QCC_StatusText(status));
+    }
     if (status != ER_OK) {
         return status;
     }
@@ -328,33 +336,51 @@ static QStatus TestMarshal(const MsgArg* argList, size_t numArgs, const char* ex
 
     status = msg->Read(ep, ":88.88");
     if (status != ER_OK) {
-        if (!quiet) printf("Message::Read status:%s\n", QCC_StatusText(status));
+        if (!quiet) {
+            printf("Message::Read status:%s\n", QCC_StatusText(status));
+        }
         return status;
     }
 
     status = msg->Unmarshal(ep, ":88.88");
     if (status != ER_OK) {
-        if (!quiet) printf("Message::Unmarshal status:%s\n", QCC_StatusText(status));
+        if (!quiet) {
+            printf("Message::Unmarshal status:%s\n", QCC_StatusText(status));
+        }
         return status;
     }
     status = msg->UnmarshalBody();
     if (status != ER_OK) {
-        if (!quiet) printf("Message::UnmarshalArgs status:%s\n", QCC_StatusText(status));
+        if (!quiet) {
+            printf("Message::UnmarshalArgs status:%s\n", QCC_StatusText(status));
+        }
         return status;
     }
     msg->GetArgs(numArgs, argList);
     qcc::String outargList = MsgArg::ToString(argList, numArgs);
     qcc::String outSig = MsgArg::Signature(argList, numArgs);
-    if (!quiet) printf("--------------------------------------------\n");
+    if (!quiet) {
+        printf("--------------------------------------------\n");
+    }
     if (inargList == outargList) {
-        if (!quiet) printf("outargList == inargList\n");
+        if (!quiet) {
+            printf("outargList == inargList\n");
+        }
     } else if (exception && (StripWS(outargList) == StripWS(exception))) {
-        if (!quiet) printf("outargList == exception\n%s\n", exception);
+        if (!quiet) {
+            printf("outargList == exception\n%s\n", exception);
+        }
     } else if (exception && (strcmp(exception, "*") == 0) && (inSig == outSig)) {
-        if (!quiet) printf("Unmarshal: hand compare:\n%s\n%s\n", inargList.c_str(), outargList.c_str());
+        if (!quiet) {
+            printf("Unmarshal: hand compare:\n%s\n%s\n", inargList.c_str(), outargList.c_str());
+        }
     } else {
-        if (!quiet) printf("FAILED\n");
-        if (!quiet) printf("Unmarshal: %u argList\n%s\n", static_cast<uint32_t>(numArgs), outargList.c_str());
+        if (!quiet) {
+            printf("FAILED\n");
+        }
+        if (!quiet) {
+            printf("Unmarshal: %u argList\n%s\n", static_cast<uint32_t>(numArgs), outargList.c_str());
+        }
         status = ER_FAIL;
     }
     return status;
@@ -1083,10 +1109,14 @@ int main(int argc, char** argv)
                 const char* start = sig;
                 status = SignatureUtils::ParseCompleteType(sig);
                 if (status != ER_OK) {
-                    if (!quiet) printf("Incomplete type \"%s\"\n", qcc::String(start, sig - start).c_str());
+                    if (!quiet) {
+                        printf("Incomplete type \"%s\"\n", qcc::String(start, sig - start).c_str());
+                    }
                     break;
                 }
-                if (!quiet) printf("Complete type \"%s\"\n", qcc::String(start, sig - start).c_str());
+                if (!quiet) {
+                    printf("Complete type \"%s\"\n", qcc::String(start, sig - start).c_str());
+                }
             }
             if (status == ER_OK) {
                 if (*sig != 0) {
@@ -1118,11 +1148,15 @@ int main(int argc, char** argv)
         for (size_t i = 0; i < ArraySize(bad); i++) {
             const char* sig = bad[i];
             if (SignatureUtils::ParseCompleteType(sig) == ER_OK) {
-                if (!quiet) printf("Invalid complete type \"%s\"", bad[i]);
+                if (!quiet) {
+                    printf("Invalid complete type \"%s\"", bad[i]);
+                }
                 status = ER_FAIL;
                 break;
             } else {
-                if (!quiet) printf("Not a complete type \"%s\"\n", *sig ? sig : bad[i]);
+                if (!quiet) {
+                    printf("Not a complete type \"%s\"\n", *sig ? sig : bad[i]);
+                }
             }
         }
     }
@@ -1160,13 +1194,17 @@ int main(int argc, char** argv)
         if (!SignatureUtils::IsValidSignature(aaaGood)) {
             status = ER_FAIL;
         } else {
-            if (!quiet) printf("good %s\n", aaaGood);
+            if (!quiet) {
+                printf("good %s\n", aaaGood);
+            }
         }
         if (status == ER_OK) {
             if (SignatureUtils::IsValidSignature(aaaaBad)) {
                 status = ER_FAIL;
             } else {
-                if (!quiet) printf("bad %s\n", aaaaBad);
+                if (!quiet) {
+                    printf("bad %s\n", aaaaBad);
+                }
             }
         }
         const char sssGood[] = "((((((((((((((((((((((((((((((((ii))))))))))))))))))))))))))))))))";
@@ -1175,14 +1213,18 @@ int main(int argc, char** argv)
             if (!SignatureUtils::IsValidSignature(sssGood)) {
                 status = ER_FAIL;
             } else {
-                if (!quiet) printf("good %s\n", sssGood);
+                if (!quiet) {
+                    printf("good %s\n", sssGood);
+                }
             }
         }
         if (status == ER_OK) {
             if (SignatureUtils::IsValidSignature(ssssBad)) {
                 status = ER_FAIL;
             } else {
-                if (!quiet) printf("bad %s\n", ssssBad);
+                if (!quiet) {
+                    printf("bad %s\n", ssssBad);
+                }
             }
         }
         const char soGood[] = "((((((((((((((((((((((((((((((((iaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaai))))))))))))))))))))))))))))))))";
@@ -1190,7 +1232,9 @@ int main(int argc, char** argv)
             if (!SignatureUtils::IsValidSignature(soGood)) {
                 status = ER_FAIL;
             } else {
-                if (!quiet) printf("good %s\n", soGood);
+                if (!quiet) {
+                    printf("good %s\n", soGood);
+                }
             }
         }
         const char notSoGood[] = "a((((((((((((((((((((((((((((((((iaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaai))))))))))))))))))))))))))))))))";
@@ -1198,7 +1242,9 @@ int main(int argc, char** argv)
             if (SignatureUtils::IsValidSignature(notSoGood)) {
                 status = ER_FAIL;
             } else {
-                if (!quiet) printf("bad %s\n", notSoGood);
+                if (!quiet) {
+                    printf("bad %s\n", notSoGood);
+                }
             }
         }
     }

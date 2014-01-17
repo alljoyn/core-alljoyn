@@ -366,188 +366,188 @@ void PacketEngine::AlarmTriggered(const Alarm& alarm, QStatus reason)
 
     switch (ctx->contextType) {
     case AlarmContext::CONTEXT_DISCONNECT_REQ:
-    {
-        /* Retry the DISCONNECT_REQ if retries still remain */
-        DisconnectReqAlarmContext* cctx = static_cast<DisconnectReqAlarmContext*>(ctx);
-        ChannelInfo* ci = AcquireChannelInfo(cctx->chanId);
-        QStatus status = ER_FAIL;
-        if (ci) {
-            if ((++cctx->retries < DISCONNECT_RETRIES) && (ci->state == ChannelInfo::CLOSING)) {
-                QCC_DbgPrintf(("PacketEngine: cid=0x%x disconnect timeout. Retrying...", ci->id));
-                /* Rearm the timer and resend the disconnect request */
-                status = DeliverControlMsg(*ci, cctx->disconnReq, sizeof(cctx->disconnReq));
-                if (status == ER_OK) {
-                    uint32_t timeout = DISCONNECT_RETRY_TIMEOUT * cctx->retries;
-                    uint32_t zero = 0;
-                    qcc::AlarmListener* packetEngineListener = this;
-                    ci->disconnectReqAlarm = Alarm(timeout, packetEngineListener, ctx, zero);
-                    status = timer.AddAlarm(ci->disconnectReqAlarm);
+        {
+            /* Retry the DISCONNECT_REQ if retries still remain */
+            DisconnectReqAlarmContext* cctx = static_cast<DisconnectReqAlarmContext*>(ctx);
+            ChannelInfo* ci = AcquireChannelInfo(cctx->chanId);
+            QStatus status = ER_FAIL;
+            if (ci) {
+                if ((++cctx->retries < DISCONNECT_RETRIES) && (ci->state == ChannelInfo::CLOSING)) {
+                    QCC_DbgPrintf(("PacketEngine: cid=0x%x disconnect timeout. Retrying...", ci->id));
+                    /* Rearm the timer and resend the disconnect request */
+                    status = DeliverControlMsg(*ci, cctx->disconnReq, sizeof(cctx->disconnReq));
+                    if (status == ER_OK) {
+                        uint32_t timeout = DISCONNECT_RETRY_TIMEOUT * cctx->retries;
+                        uint32_t zero = 0;
+                        qcc::AlarmListener* packetEngineListener = this;
+                        ci->disconnectReqAlarm = Alarm(timeout, packetEngineListener, ctx, zero);
+                        status = timer.AddAlarm(ci->disconnectReqAlarm);
+                    }
                 }
-            }
-            if (status != ER_OK) {
-                QCC_LogError(status, ("PacketEngine: cid=0x%x disconnect failed. Closing channel.", ci->id));
-                ci->state = ChannelInfo::CLOSED;
-            }
-            ReleaseChannelInfo(*ci);
-        }
-        break;
-    }
-
-    case AlarmContext::CONTEXT_DISCONNECT_RSP:
-    {
-        /* Done waiting for DISCONNECT_REQ retries from remote. Close channel */
-        DisconnectRspAlarmContext* cctx = static_cast<DisconnectRspAlarmContext*>(ctx);
-        ChannelInfo* ci = AcquireChannelInfo(cctx->chanId);
-        if (ci) {
-            QCC_DbgPrintf(("Received DisconnectRsp for id=0x%x", ci->id));
-            ci->state = ChannelInfo::CLOSED;
-            ReleaseChannelInfo(*ci);
-        }
-        break;
-    }
-
-    case AlarmContext::CONTEXT_CONNECT_REQ:
-    {
-        ConnectReqAlarmContext* cctx = static_cast<ConnectReqAlarmContext*>(ctx);
-        ChannelInfo* ci = AcquireChannelInfo(cctx->chanId);
-        QStatus status = ER_FAIL;
-        if (ci) {
-            if (++cctx->retries < CONNECT_RETRIES) {
-                /* Rearm the timer and resend the connect request */
-                status = DeliverControlMsg(*ci, cctx->connReq, sizeof(cctx->connReq));
-                if (status == ER_OK) {
-                    uint32_t timeout = CONNECT_RETRY_TIMEOUT * cctx->retries;
-                    uint32_t zero = 0;
-                    qcc::AlarmListener* packetEngineListener = this;
-                    ci->connectReqAlarm = Alarm(timeout, packetEngineListener, ctx, zero);
-                    status = timer.AddAlarm(ci->connectReqAlarm);
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("PacketEngine: cid=0x%x disconnect failed. Closing channel.", ci->id));
+                    ci->state = ChannelInfo::CLOSED;
                 }
+                ReleaseChannelInfo(*ci);
             }
-            if (status != ER_OK) {
-                /* Retries exhauseted. Notify the connect cb and remove the context and channel */
-                QCC_DbgPrintf(("PacketEngine: cid=0x%x connnect response timeout", ci->id));
-                ci->listener.PacketEngineConnectCB(*this, ER_PACKET_CONNECT_TIMEOUT, NULL, cctx->dest, cctx->context);
-                ci->state = ChannelInfo::CLOSED;
-            }
-            ReleaseChannelInfo(*ci);
-        }
-        break;
-    }
-
-    case AlarmContext::CONTEXT_CONNECT_RSP:
-    {
-        ConnectRspAlarmContext* cctx = static_cast<ConnectRspAlarmContext*>(ctx);
-        ChannelInfo* ci = AcquireChannelInfo(cctx->chanId);
-        QStatus status = ER_FAIL;
-        if (ci) {
-            if (++cctx->retries < CONNECT_RETRIES) {
-                /* Rearm the timer and resend the connect response */
-                status = DeliverControlMsg(*ci, cctx->connRsp, sizeof(cctx->connRsp));
-                if (status == ER_OK) {
-                    uint32_t zero = 0;
-                    uint32_t timeout = CONNECT_RETRY_TIMEOUT * cctx->retries;
-                    qcc::AlarmListener* packetEngineListener = this;
-                    ci->connectRspAlarm = Alarm(timeout, packetEngineListener, ctx, zero);
-                    status = timer.AddAlarm(ci->connectRspAlarm);
-                }
-            }
-            if (status != ER_OK) {
-                /* Retries exhauseted. */
-                QCC_DbgPrintf(("PacketEngine: cid=0x%x connect response ack timeout", ci->id));
-                ci->state = ChannelInfo::CLOSED;
-            }
-            ReleaseChannelInfo(*ci);
-        }
-        break;
-    }
-
-    case AlarmContext::CONTEXT_XON:
-    {
-        XOnAlarmContext* cctx = static_cast<XOnAlarmContext*>(ctx);
-
-        // To make klocwork happy
-        if (!cctx) {
             break;
         }
 
-        ChannelInfo* ci = AcquireChannelInfo(cctx->chanId);
-        QStatus status = ER_FAIL;
-        if (ci) {
-            ci->rxLock.Lock();
-            /* Retry the Xon and reload the alarm only if this alarm is the
-             * latest Xon alarm that has been setup. */
-            if (cctx->xoffSeqNum == ci->rxFlowSeqNum) {
-                if (++cctx->retries < XON_RETRIES) {
-                    /* Rearm the timer and resend the XON */
-                    cctx->xon[1] = htole32(ci->rxAck);
-                    cctx->xon[2] = htole32(ci->rxDrain);
-                    status = DeliverControlMsg(*ci, cctx->xon, sizeof(cctx->xon), ci->rxFlowSeqNum);
-                    if (status != ER_OK) {
-                        QCC_LogError(status, ("Failed to send XON"));
+    case AlarmContext::CONTEXT_DISCONNECT_RSP:
+        {
+            /* Done waiting for DISCONNECT_REQ retries from remote. Close channel */
+            DisconnectRspAlarmContext* cctx = static_cast<DisconnectRspAlarmContext*>(ctx);
+            ChannelInfo* ci = AcquireChannelInfo(cctx->chanId);
+            if (ci) {
+                QCC_DbgPrintf(("Received DisconnectRsp for id=0x%x", ci->id));
+                ci->state = ChannelInfo::CLOSED;
+                ReleaseChannelInfo(*ci);
+            }
+            break;
+        }
+
+    case AlarmContext::CONTEXT_CONNECT_REQ:
+        {
+            ConnectReqAlarmContext* cctx = static_cast<ConnectReqAlarmContext*>(ctx);
+            ChannelInfo* ci = AcquireChannelInfo(cctx->chanId);
+            QStatus status = ER_FAIL;
+            if (ci) {
+                if (++cctx->retries < CONNECT_RETRIES) {
+                    /* Rearm the timer and resend the connect request */
+                    status = DeliverControlMsg(*ci, cctx->connReq, sizeof(cctx->connReq));
+                    if (status == ER_OK) {
+                        uint32_t timeout = CONNECT_RETRY_TIMEOUT * cctx->retries;
+                        uint32_t zero = 0;
+                        qcc::AlarmListener* packetEngineListener = this;
+                        ci->connectReqAlarm = Alarm(timeout, packetEngineListener, ctx, zero);
+                        status = timer.AddAlarm(ci->connectReqAlarm);
+                    }
+                }
+                if (status != ER_OK) {
+                    /* Retries exhauseted. Notify the connect cb and remove the context and channel */
+                    QCC_DbgPrintf(("PacketEngine: cid=0x%x connnect response timeout", ci->id));
+                    ci->listener.PacketEngineConnectCB(*this, ER_PACKET_CONNECT_TIMEOUT, NULL, cctx->dest, cctx->context);
+                    ci->state = ChannelInfo::CLOSED;
+                }
+                ReleaseChannelInfo(*ci);
+            }
+            break;
+        }
+
+    case AlarmContext::CONTEXT_CONNECT_RSP:
+        {
+            ConnectRspAlarmContext* cctx = static_cast<ConnectRspAlarmContext*>(ctx);
+            ChannelInfo* ci = AcquireChannelInfo(cctx->chanId);
+            QStatus status = ER_FAIL;
+            if (ci) {
+                if (++cctx->retries < CONNECT_RETRIES) {
+                    /* Rearm the timer and resend the connect response */
+                    status = DeliverControlMsg(*ci, cctx->connRsp, sizeof(cctx->connRsp));
+                    if (status == ER_OK) {
+                        uint32_t zero = 0;
+                        uint32_t timeout = CONNECT_RETRY_TIMEOUT * cctx->retries;
+                        qcc::AlarmListener* packetEngineListener = this;
+                        ci->connectRspAlarm = Alarm(timeout, packetEngineListener, ctx, zero);
+                        status = timer.AddAlarm(ci->connectRspAlarm);
+                    }
+                }
+                if (status != ER_OK) {
+                    /* Retries exhauseted. */
+                    QCC_DbgPrintf(("PacketEngine: cid=0x%x connect response ack timeout", ci->id));
+                    ci->state = ChannelInfo::CLOSED;
+                }
+                ReleaseChannelInfo(*ci);
+            }
+            break;
+        }
+
+    case AlarmContext::CONTEXT_XON:
+        {
+            XOnAlarmContext* cctx = static_cast<XOnAlarmContext*>(ctx);
+
+            // To make klocwork happy
+            if (!cctx) {
+                break;
+            }
+
+            ChannelInfo* ci = AcquireChannelInfo(cctx->chanId);
+            QStatus status = ER_FAIL;
+            if (ci) {
+                ci->rxLock.Lock();
+                /* Retry the Xon and reload the alarm only if this alarm is the
+                 * latest Xon alarm that has been setup. */
+                if (cctx->xoffSeqNum == ci->rxFlowSeqNum) {
+                    if (++cctx->retries < XON_RETRIES) {
+                        /* Rearm the timer and resend the XON */
+                        cctx->xon[1] = htole32(ci->rxAck);
+                        cctx->xon[2] = htole32(ci->rxDrain);
+                        status = DeliverControlMsg(*ci, cctx->xon, sizeof(cctx->xon), ci->rxFlowSeqNum);
+                        if (status != ER_OK) {
+                            QCC_LogError(status, ("Failed to send XON"));
+                        }
+
+                        uint32_t nextTime = GetRetryMs(*ci, cctx->retries);
+                        uint32_t zero = 0;
+                        qcc::AlarmListener* packetEngineListener = this;
+                        ci->xOnAlarm = Alarm(nextTime, packetEngineListener, ctx, zero);
+                        status = timer.AddAlarm(ci->xOnAlarm);
+                        //printf("rx(%d): xon retry=%d rxD=0x%x, next=%d\n", (GetTimestamp() / 100) % 100000, cctx->retries + 1, ci->rxDrain, nextTime);
+                    }
+                } else {
+                    QCC_DbgPrintf(("PacketEngine: cid=0x%x Not retrying stale XON", ci->id));
+
+                    /* Delete the context associated with the stale Xon alarm */
+                    if (cctx) {
+                        delete cctx;
+                        cctx = NULL;
                     }
 
-                    uint32_t nextTime = GetRetryMs(*ci, cctx->retries);
-                    uint32_t zero = 0;
-                    qcc::AlarmListener* packetEngineListener = this;
-                    ci->xOnAlarm = Alarm(nextTime, packetEngineListener, ctx, zero);
-                    status = timer.AddAlarm(ci->xOnAlarm);
-                    //printf("rx(%d): xon retry=%d rxD=0x%x, next=%d\n", (GetTimestamp() / 100) % 100000, cctx->retries + 1, ci->rxDrain, nextTime);
-                }
-            } else {
-                QCC_DbgPrintf(("PacketEngine: cid=0x%x Not retrying stale XON", ci->id));
-
-                /* Delete the context associated with the stale Xon alarm */
-                if (cctx) {
-                    delete cctx;
-                    cctx = NULL;
+                    status = ER_OK;
                 }
 
-                status = ER_OK;
+                ci->rxLock.Unlock();
+                if (status != ER_OK) {
+                    /* Retries exhauseted. */
+                    QCC_DbgPrintf(("PacketEngine: cid=0x%x XON retries exhausted. Attempting graceful disconnect", ci->id));
+                    CloseChannel(*ci);
+                }
+                ReleaseChannelInfo(*ci);
             }
-
-            ci->rxLock.Unlock();
-            if (status != ER_OK) {
-                /* Retries exhauseted. */
-                QCC_DbgPrintf(("PacketEngine: cid=0x%x XON retries exhausted. Attempting graceful disconnect", ci->id));
-                CloseChannel(*ci);
-            }
-            ReleaseChannelInfo(*ci);
+            break;
         }
-        break;
-    }
 
     case AlarmContext::CONTEXT_DELAY_ACK:
-    {
-        DelayAckAlarmContext* cctx = static_cast<DelayAckAlarmContext*>(ctx);
-        ChannelInfo* ci = AcquireChannelInfo(cctx->chanId);
-        if (ci) {
-            ci->rxLock.Lock();
-            ci->isAckAlarmArmed = false;
-            SendAckNow(*ci, ci->rxAdvancedSeqNum);
-            ci->rxLock.Unlock();
-            ReleaseChannelInfo(*ci);
+        {
+            DelayAckAlarmContext* cctx = static_cast<DelayAckAlarmContext*>(ctx);
+            ChannelInfo* ci = AcquireChannelInfo(cctx->chanId);
+            if (ci) {
+                ci->rxLock.Lock();
+                ci->isAckAlarmArmed = false;
+                SendAckNow(*ci, ci->rxAdvancedSeqNum);
+                ci->rxLock.Unlock();
+                ReleaseChannelInfo(*ci);
+            }
+            break;
         }
-        break;
-    }
 
     case AlarmContext::CONTEXT_CLOSING:
-    {
-        ClosingAlarmContext* cctx = static_cast<ClosingAlarmContext*>(ctx);
-        ChannelInfo* ci = AcquireChannelInfo(cctx->chanId);
-        if (ci) {
-            QCC_DbgPrintf(("PacketEngine::AlarmTriggered(CLOSING_CONTEXT): Closing id=0x%x", ci->id));
-            ci->state = ChannelInfo::CLOSED;
-            ReleaseChannelInfo(*ci);
+        {
+            ClosingAlarmContext* cctx = static_cast<ClosingAlarmContext*>(ctx);
+            ChannelInfo* ci = AcquireChannelInfo(cctx->chanId);
+            if (ci) {
+                QCC_DbgPrintf(("PacketEngine::AlarmTriggered(CLOSING_CONTEXT): Closing id=0x%x", ci->id));
+                ci->state = ChannelInfo::CLOSED;
+                ReleaseChannelInfo(*ci);
+            }
+            break;
         }
-        break;
-    }
 
     default:
-    {
-        uint32_t t = static_cast<uint32_t>(ctx->contextType);
-        QCC_LogError(ER_FAIL, ("Received AlarmContext with unknown type (%u)", t));
-        break;
-    }
+        {
+            uint32_t t = static_cast<uint32_t>(ctx->contextType);
+            QCC_LogError(ER_FAIL, ("Received AlarmContext with unknown type (%u)", t));
+            break;
+        }
     }
 }
 

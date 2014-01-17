@@ -35,84 +35,84 @@ static LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 {
     switch (msg) {
     case WM_INITDIALOG: {
-        QCC_DbgTrace(("%s(hwnd=%d,msg=WM_INITDIALOG,wParam=0x%x,lParam=0x%x)", __FUNCTION__, hwnd, wParam, lParam));
-        /*
-         * Save the context pointer.
-         */
-        RequestPermissionContext* context = reinterpret_cast<RequestPermissionContext*>(lParam);
-        SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(context));
-        /*
-         * Fill in the origin control with the right value.
-         */
-        int lenW = MultiByteToWideChar(CP_ACP, 0, context->origin.c_str(), -1, NULL, 0);
-        wchar_t* originW = new wchar_t[lenW];
-        MultiByteToWideChar(CP_ACP, 0, context->origin.c_str(), -1, originW, lenW);
-        if (!SetDlgItemText(hwnd, IDC_ORIGIN, originW)) {
-            QCC_LogError(ER_OS_ERROR, ("SetDlgItemText failed - %d", GetLastError()));
-        }
-        delete[] originW;
-        /*
-         * Center the dialog window.
-         */
-        HWND parent = GetParent(hwnd);
-        if (NULL == parent) {
-            parent = GetDesktopWindow();
-        }
-        RECT parentRect;
-        if (!GetWindowRect(parent, &parentRect)) {
-            QCC_LogError(ER_OS_ERROR, ("GetWindowRect(parent) failed - %d", GetLastError()));
+            QCC_DbgTrace(("%s(hwnd=%d,msg=WM_INITDIALOG,wParam=0x%x,lParam=0x%x)", __FUNCTION__, hwnd, wParam, lParam));
+            /*
+             * Save the context pointer.
+             */
+            RequestPermissionContext* context = reinterpret_cast<RequestPermissionContext*>(lParam);
+            SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(context));
+            /*
+             * Fill in the origin control with the right value.
+             */
+            int lenW = MultiByteToWideChar(CP_ACP, 0, context->origin.c_str(), -1, NULL, 0);
+            wchar_t* originW = new wchar_t[lenW];
+            MultiByteToWideChar(CP_ACP, 0, context->origin.c_str(), -1, originW, lenW);
+            if (!SetDlgItemText(hwnd, IDC_ORIGIN, originW)) {
+                QCC_LogError(ER_OS_ERROR, ("SetDlgItemText failed - %d", GetLastError()));
+            }
+            delete[] originW;
+            /*
+             * Center the dialog window.
+             */
+            HWND parent = GetParent(hwnd);
+            if (NULL == parent) {
+                parent = GetDesktopWindow();
+            }
+            RECT parentRect;
+            if (!GetWindowRect(parent, &parentRect)) {
+                QCC_LogError(ER_OS_ERROR, ("GetWindowRect(parent) failed - %d", GetLastError()));
+                break;
+            }
+            RECT rect;
+            if (!GetWindowRect(hwnd, &rect)) {
+                QCC_LogError(ER_OS_ERROR, ("GetWindowRect failed - %d", GetLastError()));
+                break;
+            }
+            RECT offset;
+            if (!CopyRect(&offset, &parentRect)) {
+                QCC_LogError(ER_OS_ERROR, ("CopyRect failed - %d", GetLastError()));
+                break;
+            }
+            if (!OffsetRect(&rect, -rect.left, -rect.top)) {
+                QCC_LogError(ER_OS_ERROR, ("OffsetRect failed - %d", GetLastError()));
+                break;
+            }
+            if (!OffsetRect(&offset, -offset.left, -offset.top)) {
+                QCC_LogError(ER_OS_ERROR, ("OffsetRect failed - %d", GetLastError()));
+                break;
+            }
+            if (!OffsetRect(&offset, -rect.right, -rect.bottom)) {
+                QCC_LogError(ER_OS_ERROR, ("OffsetRect failed - %d", GetLastError()));
+                break;
+            }
+            if (!SetWindowPos(hwnd, HWND_TOP, parentRect.left + (offset.right / 2), parentRect.top + (offset.bottom / 2),
+                              0, 0, SWP_NOSIZE)) {
+                QCC_LogError(ER_OS_ERROR, ("SetWindowPos failed - %d", GetLastError()));
+            }
             break;
         }
-        RECT rect;
-        if (!GetWindowRect(hwnd, &rect)) {
-            QCC_LogError(ER_OS_ERROR, ("GetWindowRect failed - %d", GetLastError()));
-            break;
-        }
-        RECT offset;
-        if (!CopyRect(&offset, &parentRect)) {
-            QCC_LogError(ER_OS_ERROR, ("CopyRect failed - %d", GetLastError()));
-            break;
-        }
-        if (!OffsetRect(&rect, -rect.left, -rect.top)) {
-            QCC_LogError(ER_OS_ERROR, ("OffsetRect failed - %d", GetLastError()));
-            break;
-        }
-        if (!OffsetRect(&offset, -offset.left, -offset.top)) {
-            QCC_LogError(ER_OS_ERROR, ("OffsetRect failed - %d", GetLastError()));
-            break;
-        }
-        if (!OffsetRect(&offset, -rect.right, -rect.bottom)) {
-            QCC_LogError(ER_OS_ERROR, ("OffsetRect failed - %d", GetLastError()));
-            break;
-        }
-        if (!SetWindowPos(hwnd, HWND_TOP, parentRect.left + (offset.right / 2), parentRect.top + (offset.bottom / 2),
-                          0, 0, SWP_NOSIZE)) {
-            QCC_LogError(ER_OS_ERROR, ("SetWindowPos failed - %d", GetLastError()));
-        }
-        break;
-    }
 
     case WM_COMMAND: {
-        QCC_DbgTrace(("%s(hwnd=%d,msg=WM_COMMAND,wParam=0x%x,lParam=0x%x)", __FUNCTION__, hwnd, wParam, lParam));
-        RequestPermissionContext* context = reinterpret_cast<RequestPermissionContext*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-        switch (LOWORD(wParam)) {
-        case IDYES:
-        case IDNO: {
-            if (context) {
-                context->remember = IsDlgButtonChecked(hwnd, IDC_REMEMBER);
-            } else {
-                QCC_LogError(ER_OS_ERROR, ("GetWindowLongPtr returned NULL"));
-            }
-            EndDialog(hwnd, LOWORD(wParam));
-            break;
-        }
+            QCC_DbgTrace(("%s(hwnd=%d,msg=WM_COMMAND,wParam=0x%x,lParam=0x%x)", __FUNCTION__, hwnd, wParam, lParam));
+            RequestPermissionContext* context = reinterpret_cast<RequestPermissionContext*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+            switch (LOWORD(wParam)) {
+            case IDYES:
+            case IDNO: {
+                    if (context) {
+                        context->remember = IsDlgButtonChecked(hwnd, IDC_REMEMBER);
+                    } else {
+                        QCC_LogError(ER_OS_ERROR, ("GetWindowLongPtr returned NULL"));
+                    }
+                    EndDialog(hwnd, LOWORD(wParam));
+                    break;
+                }
 
-        case IDCANCEL:
-            EndDialog(hwnd, IDCANCEL);
+            case IDCANCEL:
+                EndDialog(hwnd, IDCANCEL);
+                break;
+            }
             break;
         }
-        break;
-    }
 
     default:
         return FALSE;

@@ -175,9 +175,15 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                 QCC_LogError(status, ("Invalid name attribute for property in introspection data from %s", ident));
             } else {
                 uint8_t access = 0;
-                if (accessStr == "read") access = PROP_ACCESS_READ;
-                if (accessStr == "write") access = PROP_ACCESS_WRITE;
-                if (accessStr == "readwrite") access = PROP_ACCESS_RW;
+                if (accessStr == "read") {
+                    access = PROP_ACCESS_READ;
+                }
+                if (accessStr == "write") {
+                    access = PROP_ACCESS_WRITE;
+                }
+                if (accessStr == "readwrite") {
+                    access = PROP_ACCESS_RW;
+                }
                 status = intf.AddProperty(memberName.c_str(), sig.c_str(), access);
 
                 // add Property annotations

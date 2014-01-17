@@ -21,7 +21,7 @@ using namespace ajn;
 using namespace services;
 
 #define QCC_MODULE "ALLJOYN_ABOUT_ANNOUNCE_HANDLER"
-#define CHECK_RETURN(x) if ((status = x) != ER_OK) return;
+#define CHECK_RETURN(x) if ((status = x) != ER_OK) { return; }
 
 AnnounceHandler::AnnounceHandler() :
     announceSignalMember(NULL) {

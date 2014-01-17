@@ -162,7 +162,7 @@ class ClientBusListener : public BusListener, public SessionListener {
 
             mutex.Lock();
             bool shouldReturn = wasNameFoundAlready;
-            if ((s_transports & transport) == transport) wasNameFoundAlready = true;
+            if ((s_transports & transport) == transport) { wasNameFoundAlready = true; }
             mutex.Unlock();
 
             if (shouldReturn) {

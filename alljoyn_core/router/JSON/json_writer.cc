@@ -46,8 +46,9 @@ static bool isControlCharacter(char ch)
 static bool containsControlCharacter(const char* str)
 {
     while (*str) {
-        if (isControlCharacter(*(str++)))
+        if (isControlCharacter(*(str++))) {
             return true;
+        }
     }
     return false;
 }
@@ -66,11 +67,13 @@ std::string valueToString(Int value)
     char buffer[32];
     char*current = buffer + sizeof(buffer);
     bool isNegative = value < 0;
-    if (isNegative)
+    if (isNegative) {
         value = -value;
+    }
     uintToString(UInt(value), current);
-    if (isNegative)
+    if (isNegative) {
         *--current = '-';
+    }
     assert(current >= buffer);
     return current;
 }
@@ -94,7 +97,9 @@ std::string valueToString(double value)
     sprintf(buffer, "%#.16g", value);
 #endif
     char* ch = buffer + strlen(buffer) - 1;
-    if (*ch != '0') return buffer;  // nothing to truncate, so save time
+    if (*ch != '0') {
+        return buffer;              // nothing to truncate, so save time
+    }
     while (ch > buffer && *ch == '0') {
         --ch;
     }
@@ -135,8 +140,9 @@ std::string valueToString(bool value)
 std::string valueToQuotedString(const char*value)
 {
     // Not sure how to handle unicode...
-    if (strpbrk(value, "\"\\\b\f\n\r\t") == NULL && !containsControlCharacter(value))
+    if (strpbrk(value, "\"\\\b\f\n\r\t") == NULL && !containsControlCharacter(value)) {
         return std::string("\"") + value + "\"";
+    }
     // We have to walk value and escape any special characters.
     // Appending to std::string is not efficient, but this should be rare.
     // (Note: forward slashes are *not* rare, but I am not escaping them.)
@@ -257,36 +263,38 @@ void FastWriter::writeValue(const Value& value)
         break;
 
     case arrayValue:
-    {
-        document_ += "[";
-        int size = value.size();
-        for (int index = 0; index < size; ++index) {
-            if (index > 0)
-                document_ += ",";
-            writeValue(value[index]);
+        {
+            document_ += "[";
+            int size = value.size();
+            for (int index = 0; index < size; ++index) {
+                if (index > 0) {
+                    document_ += ",";
+                }
+                writeValue(value[index]);
+            }
+            document_ += "]";
         }
-        document_ += "]";
-    }
-    break;
+        break;
 
     case objectValue:
-    {
-        Value::Members members(value.getMemberNames());
-        document_ += "{";
-        for (Value::Members::iterator it = members.begin();
-             it != members.end();
-             ++it) {
-            const std::string& name = *it;
-            if (it != members.begin())
-                document_ += ",";
-            document_ += valueToQuotedString(name.c_str());
-            document_ += yamlCompatiblityEnabled_ ? ": "
-                         : ":";
-            writeValue(value[name]);
+        {
+            Value::Members members(value.getMemberNames());
+            document_ += "{";
+            for (Value::Members::iterator it = members.begin();
+                 it != members.end();
+                 ++it) {
+                const std::string& name = *it;
+                if (it != members.begin()) {
+                    document_ += ",";
+                }
+                document_ += valueToQuotedString(name.c_str());
+                document_ += yamlCompatiblityEnabled_ ? ": "
+                             : ":";
+                writeValue(value[name]);
+            }
+            document_ += "}";
         }
-        document_ += "}";
-    }
-    break;
+        break;
     }
 }
 
@@ -346,33 +354,33 @@ void StyledWriter::writeValue(const Value& value)
         break;
 
     case objectValue:
-    {
-        Value::Members members(value.getMemberNames());
-        if (members.empty())
-            pushValue("{}");
-        else {
-            writeWithIndent("{");
-            indent();
-            Value::Members::iterator it = members.begin();
-            while (true) {
-                const std::string& name = *it;
-                const Value& childValue = value[name];
-                writeCommentBeforeValue(childValue);
-                writeWithIndent(valueToQuotedString(name.c_str()));
-                document_ += " : ";
-                writeValue(childValue);
-                if (++it == members.end()) {
+        {
+            Value::Members members(value.getMemberNames());
+            if (members.empty()) {
+                pushValue("{}");
+            } else {
+                writeWithIndent("{");
+                indent();
+                Value::Members::iterator it = members.begin();
+                while (true) {
+                    const std::string& name = *it;
+                    const Value& childValue = value[name];
+                    writeCommentBeforeValue(childValue);
+                    writeWithIndent(valueToQuotedString(name.c_str()));
+                    document_ += " : ";
+                    writeValue(childValue);
+                    if (++it == members.end()) {
+                        writeCommentAfterValueOnSameLine(childValue);
+                        break;
+                    }
+                    document_ += ",";
                     writeCommentAfterValueOnSameLine(childValue);
-                    break;
                 }
-                document_ += ",";
-                writeCommentAfterValueOnSameLine(childValue);
+                unindent();
+                writeWithIndent("}");
             }
-            unindent();
-            writeWithIndent("}");
         }
-    }
-    break;
+        break;
     }
 }
 
@@ -380,9 +388,9 @@ void StyledWriter::writeValue(const Value& value)
 void StyledWriter::writeArrayValue(const Value& value)
 {
     unsigned size = value.size();
-    if (size == 0)
+    if (size == 0) {
         pushValue("[]");
-    else {
+    } else {
         bool isArrayMultiLine = isMultineArray(value);
         if (isArrayMultiLine) {
             writeWithIndent("[");
@@ -392,9 +400,9 @@ void StyledWriter::writeArrayValue(const Value& value)
             while (true) {
                 const Value& childValue = value[index];
                 writeCommentBeforeValue(childValue);
-                if (hasChildValue)
+                if (hasChildValue) {
                     writeWithIndent(childValues_[index]);
-                else {
+                } else {
                     writeIndent();
                     writeValue(childValue);
                 }
@@ -411,8 +419,9 @@ void StyledWriter::writeArrayValue(const Value& value)
             assert(childValues_.size() == size);
             document_ += "[ ";
             for (unsigned index = 0; index < size; ++index) {
-                if (index > 0)
+                if (index > 0) {
                     document_ += ", ";
+                }
                 document_ += childValues_[index];
             }
             document_ += " ]";
@@ -450,10 +459,11 @@ bool StyledWriter::isMultineArray(const Value& value)
 
 void StyledWriter::pushValue(const std::string& value)
 {
-    if (addChildValues_)
+    if (addChildValues_) {
         childValues_.push_back(value);
-    else
+    } else {
         document_ += value;
+    }
 }
 
 
@@ -461,10 +471,12 @@ void StyledWriter::writeIndent()
 {
     if (!document_.empty()) {
         char last = document_[document_.length() - 1];
-        if (last == ' ')     // already indented
+        if (last == ' ') {   // already indented
             return;
-        if (last != '\n')    // Comments may add new-line
+        }
+        if (last != '\n') {  // Comments may add new-line
             document_ += '\n';
+        }
     }
     document_ += indentString_;
 }
@@ -492,8 +504,9 @@ void StyledWriter::unindent()
 
 void StyledWriter::writeCommentBeforeValue(const Value& root)
 {
-    if (!root.hasComment(commentBefore))
+    if (!root.hasComment(commentBefore)) {
         return;
+    }
     document_ += normalizeEOL(root.getComment(commentBefore));
     document_ += "\n";
 }
@@ -501,8 +514,9 @@ void StyledWriter::writeCommentBeforeValue(const Value& root)
 
 void StyledWriter::writeCommentAfterValueOnSameLine(const Value& root)
 {
-    if (root.hasComment(commentAfterOnSameLine))
+    if (root.hasComment(commentAfterOnSameLine)) {
         document_ += " " + normalizeEOL(root.getComment(commentAfterOnSameLine));
+    }
 
     if (root.hasComment(commentAfter)) {
         document_ += "\n";
@@ -530,11 +544,13 @@ std::string StyledWriter::normalizeEOL(const std::string& text)
     while (current != end) {
         char c = *current++;
         if (c == '\r') { // mac or dos EOL
-            if (*current == '\n') // convert dos EOL
+            if (*current == '\n') { // convert dos EOL
                 ++current;
+            }
             normalized += '\n';
-        } else // handle unix EOL & other char
+        } else { // handle unix EOL & other char
             normalized += c;
+        }
     }
     return normalized;
 }

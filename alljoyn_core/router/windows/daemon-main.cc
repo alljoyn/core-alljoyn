@@ -346,11 +346,13 @@ DAEMONLIBRARY_API int LoadDaemon(int argc, char** argv)
     loggerSettings->SetSyslog(false);
     if (g_isManaged) {
         FILE* pFile = _fsopen(g_logFilePathName, "a+", _SH_DENYNO);
-        if (pFile == NULL)
+        if (pFile == NULL) {
             return 911;
+        }
         loggerSettings->SetFile(pFile);
-    } else
+    } else {
         loggerSettings->SetFile(stdout);
+    }
     OptParse opts(argc, argv);
     OptParse::ParseResultCode parseCode(opts.ParseResult());
 

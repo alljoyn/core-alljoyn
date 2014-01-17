@@ -2732,87 +2732,87 @@ void DaemonICETransport::AlarmTriggered(const Alarm& alarm, QStatus reason)
 
     switch (ctx->contextType) {
     case AlarmContext::CONTEXT_NAT_KEEPALIVE:
-    {
-        ICEPacketStream* ps = ctx->pktStream;
+        {
+            ICEPacketStream* ps = ctx->pktStream;
 
-        ICEPacketStreamInfo* pktStreamInfoPtr = NULL;
-        /* Make sure PacketStream is still alive before calling nat/refresh code */
-        QStatus status = AcquireICEPacketStreamByPointer(ps, &pktStreamInfoPtr);
+            ICEPacketStreamInfo* pktStreamInfoPtr = NULL;
+            /* Make sure PacketStream is still alive before calling nat/refresh code */
+            QStatus status = AcquireICEPacketStreamByPointer(ps, &pktStreamInfoPtr);
 
-        if (status == ER_OK) {
+            if (status == ER_OK) {
 
-            if (alarm == ps->GetTimeoutAlarm()) {
+                if (alarm == ps->GetTimeoutAlarm()) {
 
-                /* PacketEngine Accept timeout */
-                QCC_DbgPrintf(("DaemonICETransport::AlarmTriggered: Removing pktStream %p due to PacketEngine accept timeout", ps));
+                    /* PacketEngine Accept timeout */
+                    QCC_DbgPrintf(("DaemonICETransport::AlarmTriggered: Removing pktStream %p due to PacketEngine accept timeout", ps));
 
-                /* PacketEngineAccept on an ICEPacketStream timed out. So delete the AllocateICESessionThread
-                 * instance that setup that ICEPacketStream and also remove it from the allocateICESessionThreads list */
-                if (pktStreamInfoPtr->allocateICESessionThreadPtr) {
-                    DeleteAllocateICESessionThread(pktStreamInfoPtr->allocateICESessionThreadPtr);
+                    /* PacketEngineAccept on an ICEPacketStream timed out. So delete the AllocateICESessionThread
+                     * instance that setup that ICEPacketStream and also remove it from the allocateICESessionThreads list */
+                    if (pktStreamInfoPtr->allocateICESessionThreadPtr) {
+                        DeleteAllocateICESessionThread(pktStreamInfoPtr->allocateICESessionThreadPtr);
+                    }
+
+                    /* Set the ICEPacketStream connection state to disconnecting if the state is connecting */
+                    pktStreamMapLock.Lock(MUTEX_CONTEXT);
+                    if (pktStreamInfoPtr->IsConnecting()) {
+                        pktStreamInfoPtr->SetDisconnecting();
+                    }
+                    pktStreamMapLock.Unlock(MUTEX_CONTEXT);
+
+                    /* We have to release the packet stream here to negate the effect of acquiring the ICEPacketStream in
+                     * the AllocateICESessionThread::Run() */
+                    ReleaseICEPacketStream(*ps);
+
+                } else {
+                    /*
+                     * We need to send a NAT keep alive or TURN refresh only if the alarm has not
+                     * been triggered during a shutdown.
+                     */
+                    if (reason == ER_OK) {
+                        /* Send NAT keep alive and/or turn refresh */
+                        SendSTUNKeepAliveAndTURNRefreshRequest(*ps);
+                    }
                 }
 
-                /* Set the ICEPacketStream connection state to disconnecting if the state is connecting */
-                pktStreamMapLock.Lock(MUTEX_CONTEXT);
-                if (pktStreamInfoPtr->IsConnecting()) {
-                    pktStreamInfoPtr->SetDisconnecting();
-                }
-                pktStreamMapLock.Unlock(MUTEX_CONTEXT);
-
-                /* We have to release the packet stream here to negate the effect of acquiring the ICEPacketStream in
-                 * the AllocateICESessionThread::Run() */
+                /* Release the ICEPacketStream here to negate the effect of AcquireICEPacketStreamByPointer at the start of this
+                 * function */
                 ReleaseICEPacketStream(*ps);
 
             } else {
-                /*
-                 * We need to send a NAT keep alive or TURN refresh only if the alarm has not
-                 * been triggered during a shutdown.
-                 */
-                if (reason == ER_OK) {
-                    /* Send NAT keep alive and/or turn refresh */
-                    SendSTUNKeepAliveAndTURNRefreshRequest(*ps);
-                }
+                /* Cant find pktStream */
+                QCC_DbgPrintf(("DaemonICETransport::AlarmTriggered: PktStream=%p was not found. keepalive/refresh timer disabled for this pktStream", ps));
             }
-
-            /* Release the ICEPacketStream here to negate the effect of AcquireICEPacketStreamByPointer at the start of this
-             * function */
-            ReleaseICEPacketStream(*ps);
-
-        } else {
-            /* Cant find pktStream */
-            QCC_DbgPrintf(("DaemonICETransport::AlarmTriggered: PktStream=%p was not found. keepalive/refresh timer disabled for this pktStream", ps));
+            break;
         }
-        break;
-    }
 
     case AlarmContext::CONTEXT_SCHEDULE_RUN:
-    {
-        /*
-         * We need to wake the DaemonICETransport::Run thread only if the alarm was not
-         * triggered during a shutdown.
-         */
-        if (reason == ER_OK) {
-            /* Wake up the DaemonICETransport::Run() thread to purge the endpoints*/
-            wakeDaemonICETransportRun.SetEvent();
+        {
+            /*
+             * We need to wake the DaemonICETransport::Run thread only if the alarm was not
+             * triggered during a shutdown.
+             */
+            if (reason == ER_OK) {
+                /* Wake up the DaemonICETransport::Run() thread to purge the endpoints*/
+                wakeDaemonICETransportRun.SetEvent();
 
-            /* Reload the alarm */
-            uint32_t zero = 0;
-            AlarmContext* alarmCtx = new AlarmContext();
-            uint32_t period = DAEMON_ICE_TRANSPORT_RUN_SCHEDULING_INTERVAL;
-            DaemonICETransport* pTransport = this;
-            Alarm runAlarm(period, pTransport, alarmCtx, zero);
-            daemonICETransportTimer.AddAlarm(runAlarm);
+                /* Reload the alarm */
+                uint32_t zero = 0;
+                AlarmContext* alarmCtx = new AlarmContext();
+                uint32_t period = DAEMON_ICE_TRANSPORT_RUN_SCHEDULING_INTERVAL;
+                DaemonICETransport* pTransport = this;
+                Alarm runAlarm(period, pTransport, alarmCtx, zero);
+                daemonICETransportTimer.AddAlarm(runAlarm);
+            }
+
+            break;
         }
 
-        break;
-    }
-
     default:
-    {
-        uint32_t t = static_cast<uint32_t>(ctx->contextType);
-        QCC_LogError(ER_FAIL, ("Received AlarmContext with unknown type (%u)", t));
-        break;
-    }
+        {
+            uint32_t t = static_cast<uint32_t>(ctx->contextType);
+            QCC_LogError(ER_FAIL, ("Received AlarmContext with unknown type (%u)", t));
+            break;
+        }
     }
 
     delete ctx;

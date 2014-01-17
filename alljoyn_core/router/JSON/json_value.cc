@@ -78,8 +78,9 @@ static const unsigned int unknown = (unsigned int) -1;
 
 static char* duplicateStringValue(const char* value, unsigned int length = unknown)
 {
-    if (length == unknown)
+    if (length == unknown) {
         length = (unsigned int)strlen(value);
+    }
     char*newString = static_cast<char*>(malloc(length + 1));
     memcpy(newString, value, length);
     newString[length] = 0;
@@ -213,8 +214,9 @@ Value::CZString::CZString(const CZString& other)
 
 Value::CZString::~CZString()
 {
-    if (cstr_  &&  index_ == duplicate)
+    if (cstr_  &&  index_ == duplicate) {
         releaseMemberName(const_cast<char*>(cstr_));
+    }
 }
 
 void Value::CZString::swap(CZString& other)
@@ -232,15 +234,17 @@ Value::CZString& Value::CZString::operator=(const CZString& other)
 
 bool Value::CZString::operator<(const CZString& other) const
 {
-    if (cstr_)
+    if (cstr_) {
         return strcmp(cstr_, other.cstr_) < 0;
+    }
     return index_ < other.index_;
 }
 
 bool Value::CZString::operator==(const CZString& other) const
 {
-    if (cstr_)
+    if (cstr_) {
         return strcmp(cstr_, other.cstr_) == 0;
+    }
     return index_ == other.index_;
 }
 
@@ -494,8 +498,9 @@ Value::Value(const Value& other)
         comments_ = new CommentInfo[numberOfCommentPlacement];
         for (int comment = 0; comment < numberOfCommentPlacement; ++comment) {
             const CommentInfo& otherComment = other.comments_[comment];
-            if (otherComment.comment_)
+            if (otherComment.comment_) {
                 comments_[comment].setComment(otherComment.comment_);
+            }
         }
     }
 }
@@ -512,8 +517,9 @@ Value::~Value()
         break;
 
     case stringValue:
-        if (allocated_)
+        if (allocated_) {
             releaseStringValue(value_.string_);
+        }
         break;
 
 #ifndef JSON_VALUE_USE_INTERNAL_MAP
@@ -537,8 +543,9 @@ Value::~Value()
         break;
     }
 
-    if (comments_)
+    if (comments_) {
         delete[] comments_;
+    }
 }
 
 Value& Value::operator=(const Value& other)
@@ -566,8 +573,9 @@ void Value::swap(Value& other)
         comments_ = new CommentInfo[numberOfCommentPlacement];
         for (int comment = 0; comment < numberOfCommentPlacement; ++comment) {
             const CommentInfo& otherComment = other.comments_[comment];
-            if (otherComment.comment_)
+            if (otherComment.comment_) {
                 comments_[comment].setComment(otherComment.comment_);
+            }
         }
     }
 }
@@ -610,8 +618,9 @@ int Value::compare(const Value& other)
 bool Value::operator <(const Value& other) const
 {
     int typeDelta = type_ - other.type_;
-    if (typeDelta)
+    if (typeDelta) {
         return typeDelta < 0 ? true : false;
+    }
     switch (type_) {
     case nullValue:
         return false;
@@ -637,12 +646,13 @@ bool Value::operator <(const Value& other) const
 #ifndef JSON_VALUE_USE_INTERNAL_MAP
     case arrayValue:
     case objectValue:
-    {
-        int delta = int( value_.map_->size() - other.value_.map_->size());
-        if (delta)
-            return delta < 0;
-        return (*value_.map_) < (*other.value_.map_);
-    }
+        {
+            int delta = int( value_.map_->size() - other.value_.map_->size());
+            if (delta) {
+                return delta < 0;
+            }
+            return (*value_.map_) < (*other.value_.map_);
+        }
 
 #else
     case arrayValue:
@@ -681,8 +691,9 @@ bool Value::operator ==(const Value& other) const
     // attempt to take address of bit-field structure member `Json::Value::type_'
     // Beats me, but a temp solves the problem.
     int temp = other.type_;
-    if (type_ != temp)
+    if (type_ != temp) {
         return false;
+    }
     switch (type_) {
     case nullValue:
         return true;
@@ -984,10 +995,11 @@ Value::UInt Value::size() const
 
 bool Value::empty() const
 {
-    if (isNull() || isArray() || isObject())
+    if (isNull() || isArray() || isObject()) {
         return size() == 0u;
-    else
+    } else {
         return false;
+    }
 }
 
 
@@ -1026,15 +1038,16 @@ void Value::clear()
 void Value::resize(UInt newSize)
 {
     assert(type_ == nullValue  ||  type_ == arrayValue);
-    if (type_ == nullValue)
+    if (type_ == nullValue) {
         *this = Value(arrayValue);
+    }
 #ifndef JSON_VALUE_USE_INTERNAL_MAP
     UInt oldSize = size();
-    if (newSize == 0)
+    if (newSize == 0) {
         clear();
-    else if (newSize > oldSize)
+    } else if (newSize > oldSize) {
         (*this)[ newSize - 1 ];
-    else {
+    } else {
         for (UInt index = newSize; index < oldSize; ++index)
             value_.map_->erase(index);
         assert(size() == newSize);
@@ -1048,13 +1061,15 @@ void Value::resize(UInt newSize)
 Value& Value::operator[](UInt index)
 {
     assert(type_ == nullValue  ||  type_ == arrayValue);
-    if (type_ == nullValue)
+    if (type_ == nullValue) {
         *this = Value(arrayValue);
+    }
 #ifndef JSON_VALUE_USE_INTERNAL_MAP
     CZString key(index);
     ObjectValues::iterator it = value_.map_->lower_bound(key);
-    if (it != value_.map_->end()  &&  (*it).first == key)
+    if (it != value_.map_->end()  &&  (*it).first == key) {
         return (*it).second;
+    }
 
     ObjectValues::value_type defaultValue(key, null);
     it = value_.map_->insert(it, defaultValue);
@@ -1068,13 +1083,15 @@ Value& Value::operator[](UInt index)
 const Value& Value::operator[](UInt index) const
 {
     assert(type_ == nullValue  ||  type_ == arrayValue);
-    if (type_ == nullValue)
+    if (type_ == nullValue) {
         return null;
+    }
 #ifndef JSON_VALUE_USE_INTERNAL_MAP
     CZString key(index);
     ObjectValues::const_iterator it = value_.map_->find(key);
-    if (it == value_.map_->end())
+    if (it == value_.map_->end()) {
         return null;
+    }
     return (*it).second;
 #else
     Value*value = value_.array_->find(index);
@@ -1093,14 +1110,16 @@ Value& Value::resolveReference(const char*key,
                                bool isStatic)
 {
     assert(type_ == nullValue  ||  type_ == objectValue);
-    if (type_ == nullValue)
+    if (type_ == nullValue) {
         *this = Value(objectValue);
+    }
 #ifndef JSON_VALUE_USE_INTERNAL_MAP
     CZString actualKey(key, isStatic ? CZString::noDuplication
                        : CZString::duplicateOnCopy);
     ObjectValues::iterator it = value_.map_->lower_bound(actualKey);
-    if (it != value_.map_->end()  &&  (*it).first == actualKey)
+    if (it != value_.map_->end()  &&  (*it).first == actualKey) {
         return (*it).second;
+    }
 
     ObjectValues::value_type defaultValue(actualKey, null);
     it = value_.map_->insert(it, defaultValue);
@@ -1130,13 +1149,15 @@ bool Value::isValidIndex(UInt index) const
 const Value& Value::operator[](const char*key) const
 {
     assert(type_ == nullValue  ||  type_ == objectValue);
-    if (type_ == nullValue)
+    if (type_ == nullValue) {
         return null;
+    }
 #ifndef JSON_VALUE_USE_INTERNAL_MAP
     CZString actualKey(key, CZString::noDuplication);
     ObjectValues::const_iterator it = value_.map_->find(actualKey);
-    if (it == value_.map_->end())
+    if (it == value_.map_->end()) {
         return null;
+    }
     return (*it).second;
 #else
     const Value*value = value_.map_->find(key);
@@ -1199,13 +1220,15 @@ Value Value::get(const std::string& key,
 Value Value::removeMember(const char* key)
 {
     assert(type_ == nullValue  ||  type_ == objectValue);
-    if (type_ == nullValue)
+    if (type_ == nullValue) {
         return null;
+    }
 #ifndef JSON_VALUE_USE_INTERNAL_MAP
     CZString actualKey(key, CZString::noDuplication);
     ObjectValues::iterator it = value_.map_->find(actualKey);
-    if (it == value_.map_->end())
+    if (it == value_.map_->end()) {
         return null;
+    }
     Value old(it->second);
     value_.map_->erase(it);
     return old;
@@ -1257,8 +1280,9 @@ bool Value::isMember(const CppTL::ConstString& key) const
 Value::Members Value::getMemberNames() const
 {
     assert(type_ == nullValue  ||  type_ == objectValue);
-    if (type_ == nullValue)
+    if (type_ == nullValue) {
         return Value::Members();
+    }
     Members members;
     members.reserve(value_.map_->size());
 #ifndef JSON_VALUE_USE_INTERNAL_MAP
@@ -1368,8 +1392,9 @@ bool Value::isObject() const
 void Value::setComment(const char*comment,
                        CommentPlacement placement)
 {
-    if (!comments_)
+    if (!comments_) {
         comments_ = new CommentInfo[numberOfCommentPlacement];
+    }
     comments_[placement].setComment(comment);
 }
 
@@ -1388,8 +1413,9 @@ bool Value::hasComment(CommentPlacement placement) const
 
 std::string Value::getComment(CommentPlacement placement) const
 {
-    if (hasComment(placement))
+    if (hasComment(placement)) {
         return comments_[placement].comment_;
+    }
     return "";
 }
 
@@ -1424,8 +1450,9 @@ Value::const_iterator Value::begin() const
 #else
     case arrayValue:
     case objectValue:
-        if (value_.map_)
+        if (value_.map_) {
             return const_iterator(value_.map_->begin());
+        }
         break;
 
 #endif
@@ -1458,8 +1485,9 @@ Value::const_iterator Value::end() const
 #else
     case arrayValue:
     case objectValue:
-        if (value_.map_)
+        if (value_.map_) {
             return const_iterator(value_.map_->end());
+        }
         break;
 
 #endif
@@ -1493,8 +1521,9 @@ Value::iterator Value::begin()
 #else
     case arrayValue:
     case objectValue:
-        if (value_.map_)
+        if (value_.map_) {
             return iterator(value_.map_->begin());
+        }
         break;
 
 #endif
@@ -1527,8 +1556,9 @@ Value::iterator Value::end()
 #else
     case arrayValue:
     case objectValue:
-        if (value_.map_)
+        if (value_.map_) {
             return iterator(value_.map_->end());
+        }
         break;
 
 #endif
@@ -1597,16 +1627,17 @@ void Path::makePath(const std::string& path,
     while (current != end) {
         if (*current == '[') {
             ++current;
-            if (*current == '%')
+            if (*current == '%') {
                 addPathInArg(path, in, itInArg, PathArgument::kindIndex);
-            else {
+            } else {
                 Value::UInt index = 0;
                 for (; current != end && *current >= '0'  &&  *current <= '9'; ++current)
                     index = index * 10 + Value::UInt(*current - '0');
                 args_.push_back(index);
             }
-            if (current == end  ||  *current++ != ']')
+            if (current == end  ||  *current++ != ']') {
                 invalidPath(path, int(current - path.c_str()));
+            }
         } else if (*current == '%') {
             addPathInArg(path, in, itInArg, PathArgument::kindKey);
             ++current;
@@ -1675,15 +1706,18 @@ Value Path::resolve(const Value& root,
     for (Args::const_iterator it = args_.begin(); it != args_.end(); ++it) {
         const PathArgument& arg = *it;
         if (arg.kind_ == PathArgument::kindIndex) {
-            if (!node->isArray()  ||  node->isValidIndex(arg.index_))
+            if (!node->isArray()  ||  node->isValidIndex(arg.index_)) {
                 return defaultValue;
+            }
             node = &((*node)[arg.index_]);
         } else if (arg.kind_ == PathArgument::kindKey) {
-            if (!node->isObject())
+            if (!node->isObject()) {
                 return defaultValue;
+            }
             node = &((*node)[arg.key_]);
-            if (node == &Value::null)
+            if (node == &Value::null) {
                 return defaultValue;
+            }
         }
     }
     return *node;

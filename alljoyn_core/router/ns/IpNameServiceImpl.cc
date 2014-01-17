@@ -2781,32 +2781,32 @@ void IpNameServiceImpl::RewriteVersionSpecific(
         break;
 
     case 1:
-    {
-        QCC_DbgPrintf(("IpNameServiceImpl::RewriteVersionSpecific(): Answer gets version one"));
+        {
+            QCC_DbgPrintf(("IpNameServiceImpl::RewriteVersionSpecific(): Answer gets version one"));
 
-        isAt->SetVersion(1, 1);
+            isAt->SetVersion(1, 1);
 
-        uint32_t transportIndex = IndexFromBit(isAt->GetTransportMask());
-        assert(transportIndex < 16 && "IpNameServiceImpl::RewriteVersionSpecific(): Bad transport index in messageg");
+            uint32_t transportIndex = IndexFromBit(isAt->GetTransportMask());
+            assert(transportIndex < 16 && "IpNameServiceImpl::RewriteVersionSpecific(): Bad transport index in messageg");
 
-        //
-        // Now we can write the various addresses into the
-        // packet if they are called for.
-        //
-        if (haveIPv4address && m_reliableIPv4Port[transportIndex]) {
-            isAt->SetReliableIPv4(ipv4address.ToString(), m_reliableIPv4Port[transportIndex]);
+            //
+            // Now we can write the various addresses into the
+            // packet if they are called for.
+            //
+            if (haveIPv4address && m_reliableIPv4Port[transportIndex]) {
+                isAt->SetReliableIPv4(ipv4address.ToString(), m_reliableIPv4Port[transportIndex]);
+            }
+            if (haveIPv4address && m_unreliableIPv4Port[transportIndex]) {
+                isAt->SetUnreliableIPv4(ipv4address.ToString(), m_unreliableIPv4Port[transportIndex]);
+            }
+            if (haveIPv6address && m_reliableIPv6Port[transportIndex]) {
+                isAt->SetReliableIPv6(ipv6address.ToString(), m_reliableIPv6Port[transportIndex]);
+            }
+            if (haveIPv6address && m_unreliableIPv6Port[transportIndex]) {
+                isAt->SetUnreliableIPv6(ipv6address.ToString(), m_unreliableIPv6Port[transportIndex]);
+            }
+            break;
         }
-        if (haveIPv4address && m_unreliableIPv4Port[transportIndex]) {
-            isAt->SetUnreliableIPv4(ipv4address.ToString(), m_unreliableIPv4Port[transportIndex]);
-        }
-        if (haveIPv6address && m_reliableIPv6Port[transportIndex]) {
-            isAt->SetReliableIPv6(ipv6address.ToString(), m_reliableIPv6Port[transportIndex]);
-        }
-        if (haveIPv6address && m_unreliableIPv6Port[transportIndex]) {
-            isAt->SetUnreliableIPv6(ipv6address.ToString(), m_unreliableIPv6Port[transportIndex]);
-        }
-        break;
-    }
 
     default:
         assert(false && "IpNameServiceImpl::RewriteVersionSpecific(): Bad message version");
@@ -4783,12 +4783,24 @@ uint32_t IpNameServiceImpl::IndexFromBit(uint32_t data)
     uint32_t c = 32;
     data &= -signed(data);
 
-    if (data) --c;
-    if (data & 0x0000ffff) c -= 16;
-    if (data & 0x00ff00ff) c -= 8;
-    if (data & 0x0f0f0f0f) c -= 4;
-    if (data & 0x33333333) c -= 2;
-    if (data & 0x55555555) c -= 1;
+    if (data) {
+        --c;
+    }
+    if (data & 0x0000ffff) {
+        c -= 16;
+    }
+    if (data & 0x00ff00ff) {
+        c -= 8;
+    }
+    if (data & 0x0f0f0f0f) {
+        c -= 4;
+    }
+    if (data & 0x33333333) {
+        c -= 2;
+    }
+    if (data & 0x55555555) {
+        c -= 1;
+    }
 
     //
     // If the number of trailing bits that are set to zero is count, then the

@@ -87,34 +87,34 @@ QStatus Crypto::Encrypt(const _Message& message, const KeyBlob& keyBlob, uint8_t
     QStatus status;
     switch (keyBlob.GetType()) {
     case KeyBlob::AES:
-    {
-        uint8_t* body = msgBuf + hdrLen;
-        uint8_t nd[5];
-        uint32_t serial = message.GetCallSerial();
+        {
+            uint8_t* body = msgBuf + hdrLen;
+            uint8_t nd[5];
+            uint32_t serial = message.GetCallSerial();
 
-        nd[0] = (uint8_t)keyBlob.GetRole();
-        nd[1] = (uint8_t)(serial >> 24);
-        nd[2] = (uint8_t)(serial >> 16);
-        nd[3] = (uint8_t)(serial >> 8);
-        nd[4] = (uint8_t)(serial);
-        KeyBlob nonce(nd, sizeof(nd), KeyBlob::GENERIC);
+            nd[0] = (uint8_t)keyBlob.GetRole();
+            nd[1] = (uint8_t)(serial >> 24);
+            nd[2] = (uint8_t)(serial >> 16);
+            nd[3] = (uint8_t)(serial >> 8);
+            nd[4] = (uint8_t)(serial);
+            KeyBlob nonce(nd, sizeof(nd), KeyBlob::GENERIC);
 
-        QCC_DbgHLPrintf(("Encrypt key:   %s", BytesToHexString(keyBlob.GetData(), keyBlob.GetSize()).c_str()));
-        QCC_DbgHLPrintf(("        nonce: %s", BytesToHexString(nonce.GetData(), nonce.GetSize()).c_str()));
+            QCC_DbgHLPrintf(("Encrypt key:   %s", BytesToHexString(keyBlob.GetData(), keyBlob.GetSize()).c_str()));
+            QCC_DbgHLPrintf(("        nonce: %s", BytesToHexString(nonce.GetData(), nonce.GetSize()).c_str()));
 
-        Crypto_AES aes(keyBlob, Crypto_AES::CCM);
-        if (message.GetFlags() & ALLJOYN_FLAG_COMPRESSED) {
-            /*
-             * To prevent an attack where the attacker sends a bogus expansion rule we
-             * authenticate the compressed headers even though we won't be sending them.
-             */
-            qcc::String extHdr = ConcatenateCompressedFields(msgBuf, hdrLen, message.GetHeaderFields());
-            status = aes.Encrypt_CCM(body, body, bodyLen, nonce, extHdr.data(), extHdr.size(), MACLength);
-        } else {
-            status = aes.Encrypt_CCM(body, body, bodyLen, nonce, msgBuf, hdrLen, MACLength);
+            Crypto_AES aes(keyBlob, Crypto_AES::CCM);
+            if (message.GetFlags() & ALLJOYN_FLAG_COMPRESSED) {
+                /*
+                 * To prevent an attack where the attacker sends a bogus expansion rule we
+                 * authenticate the compressed headers even though we won't be sending them.
+                 */
+                qcc::String extHdr = ConcatenateCompressedFields(msgBuf, hdrLen, message.GetHeaderFields());
+                status = aes.Encrypt_CCM(body, body, bodyLen, nonce, extHdr.data(), extHdr.size(), MACLength);
+            } else {
+                status = aes.Encrypt_CCM(body, body, bodyLen, nonce, msgBuf, hdrLen, MACLength);
+            }
         }
-    }
-    break;
+        break;
 
     default:
         status = ER_BUS_KEYBLOB_OP_INVALID;
@@ -129,34 +129,34 @@ QStatus Crypto::Decrypt(const _Message& message, const KeyBlob& keyBlob, uint8_t
     QStatus status;
     switch (keyBlob.GetType()) {
     case KeyBlob::AES:
-    {
-        uint8_t* body = msgBuf + hdrLen;
-        uint8_t nd[5];
-        uint32_t serial = message.GetCallSerial();
+        {
+            uint8_t* body = msgBuf + hdrLen;
+            uint8_t nd[5];
+            uint32_t serial = message.GetCallSerial();
 
-        nd[0] = (uint8_t)keyBlob.GetAntiRole();
-        nd[1] = (uint8_t)(serial >> 24);
-        nd[2] = (uint8_t)(serial >> 16);
-        nd[3] = (uint8_t)(serial >> 8);
-        nd[4] = (uint8_t)(serial);
-        KeyBlob nonce(nd, sizeof(nd), KeyBlob::GENERIC);
+            nd[0] = (uint8_t)keyBlob.GetAntiRole();
+            nd[1] = (uint8_t)(serial >> 24);
+            nd[2] = (uint8_t)(serial >> 16);
+            nd[3] = (uint8_t)(serial >> 8);
+            nd[4] = (uint8_t)(serial);
+            KeyBlob nonce(nd, sizeof(nd), KeyBlob::GENERIC);
 
-        QCC_DbgHLPrintf(("Decrypt key:   %s", BytesToHexString(keyBlob.GetData(), keyBlob.GetSize()).c_str()));
-        QCC_DbgHLPrintf(("        nonce: %s", BytesToHexString(nonce.GetData(), nonce.GetSize()).c_str()));
+            QCC_DbgHLPrintf(("Decrypt key:   %s", BytesToHexString(keyBlob.GetData(), keyBlob.GetSize()).c_str()));
+            QCC_DbgHLPrintf(("        nonce: %s", BytesToHexString(nonce.GetData(), nonce.GetSize()).c_str()));
 
-        Crypto_AES aes(keyBlob, Crypto_AES::CCM);
-        if (message.GetFlags() & ALLJOYN_FLAG_COMPRESSED) {
-            /*
-             * To prevent an attack where the attacker sends a bogus expansion rule we
-             * authenticate the compressed headers even though we won't be sending them.
-             */
-            qcc::String extHdr = ConcatenateCompressedFields(msgBuf, hdrLen, message.GetHeaderFields());
-            status = aes.Decrypt_CCM(body, body, bodyLen, nonce, extHdr.data(), extHdr.size(), MACLength);
-        } else {
-            status = aes.Decrypt_CCM(body, body, bodyLen, nonce, msgBuf, hdrLen, MACLength);
+            Crypto_AES aes(keyBlob, Crypto_AES::CCM);
+            if (message.GetFlags() & ALLJOYN_FLAG_COMPRESSED) {
+                /*
+                 * To prevent an attack where the attacker sends a bogus expansion rule we
+                 * authenticate the compressed headers even though we won't be sending them.
+                 */
+                qcc::String extHdr = ConcatenateCompressedFields(msgBuf, hdrLen, message.GetHeaderFields());
+                status = aes.Decrypt_CCM(body, body, bodyLen, nonce, extHdr.data(), extHdr.size(), MACLength);
+            } else {
+                status = aes.Decrypt_CCM(body, body, bodyLen, nonce, msgBuf, hdrLen, MACLength);
+            }
         }
-    }
-    break;
+        break;
 
     default:
         status = ER_BUS_KEYBLOB_OP_INVALID;

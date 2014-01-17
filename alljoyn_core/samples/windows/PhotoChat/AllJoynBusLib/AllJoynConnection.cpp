@@ -42,8 +42,9 @@ AllJoynConnection::AllJoynConnection(FPPrintCallback output, FPJoinedCallback jo
 int AllJoynConnection::CreateProxy(const char* ifPath, const char* objPath, const char* name)
 {
     int ret = -1;
-    if (16 < nProxies + 1)
+    if (16 < nProxies + 1) {
         return ret;
+    }
     qcc::String path = ifPath;
     path += '.';
     path += name;
@@ -61,9 +62,9 @@ int AllJoynConnection::CreateProxy(const char* ifPath, const char* objPath, cons
 
 void AllJoynConnection::ReleaseProxy(int index)
 {
-    if (NULL == proxies[index])
+    if (NULL == proxies[index]) {
         NotifyUser(MSG_ERROR, "INVALID PROXY INDEX = %d", index);
-    else {
+    } else {
         delete proxies[index];
         proxies[index] = NULL;
     }
@@ -192,8 +193,9 @@ void AllJoynConnection::startMessageBus()
     if (connectSpec == NULL) {
         connectSpec = "tcp:addr=127.0.0.1,port=9956";
         NotifyUser(MSG_STATUS, "Connect spec defaulted to %s", connectSpec);
-    } else
+    } else {
         NotifyUser(MSG_STATUS, "Got environment BUS_ADDRESS %s", connectSpec);
+    }
 
     /* Connect to the local daemon */
     NotifyUser(MSG_STATUS, "Connect to the local daemon.");
@@ -232,8 +234,12 @@ void AllJoynConnection::createBusObjects(const char* localTag)
 
 AllJoynConnection::~AllJoynConnection()
 {
-    if (NULL != chatObject) delete chatObject;
-    if (NULL != xferObject) delete xferObject;
+    if (NULL != chatObject) {
+        delete chatObject;
+    }
+    if (NULL != xferObject) {
+        delete xferObject;
+    }
 }
 
 //----------------------------------------------------------------------------------------
@@ -473,8 +479,9 @@ void XferObject::InitiateXferIn(const InterfaceDescription::Member* member, Mess
     xferCallback("Initiate", accept);
     const char* filename = GetSaveAsFilename();
     commonSegSize = segmentSize;
-    if (openFile(filename))
+    if (openFile(filename)) {
         accept = 1;
+    }
     MsgArg outArg("i", accept);
     QStatus status = MethodReply(msg, &outArg, 1);
     if (ER_OK != status) {
@@ -491,8 +498,9 @@ void XferObject::ReceiveSegment(const InterfaceDescription::Member* member, Mess
     xferCallback("Receive", serialNum);
 
     uint8_t* bytes = (uint8_t*)ccptr;
-    if (writeSegment(serialNum, bytes, segSize))
+    if (writeSegment(serialNum, bytes, segSize)) {
         accept = 1;
+    }
     MsgArg outArg("i", accept);
     QStatus status = MethodReply(msg, &outArg, 1);
     if (ER_OK != status) {
@@ -521,8 +529,9 @@ void XferObject::ErrorCode(const InterfaceDescription::Member* member, Message& 
 void XferObject::EndXfer(const InterfaceDescription::Member* member, Message& msg)
 {
     closeFile();
-    if (state != -1)
+    if (state != -1) {
         state = 0;
+    }
     saveAsFilename = "";
     NotifyUser(MSG_SYSTEM, "Closed %s", saveAsFilename.c_str());
 }
@@ -547,8 +556,9 @@ void XferObject::closeFile()
 bool XferObject::writeSegment(int serial, const uint8_t* seg, int segSize)
 {
     long lDistance = serial - 1;
-    if (lDistance < 0)
+    if (lDistance < 0) {
         return false;
+    }
     lDistance *= commonSegSize;
     DWORD dwPtr = SetFilePointer(hFile, lDistance, NULL, FILE_BEGIN);
     if (dwPtr == INVALID_SET_FILE_POINTER) {   // Test for failure
