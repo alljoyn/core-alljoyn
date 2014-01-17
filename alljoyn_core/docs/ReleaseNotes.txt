@@ -48,6 +48,9 @@ RemoteEndpoint is stopped before it can be completely started.
 Known Issues
 ------------
 
+The ICE transport is still enabled on Android platforms in this version of
+AllJoyn; but the RDVS server needed to use it was shut down in Dec 2013.
+
 About feature not yet supported on platforms other than Linux and Android.
 
 ALLJOYN-1967: AllJoyn daemon cannot (quickly) detect disconnection of non-local
