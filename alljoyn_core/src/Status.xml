@@ -1,5 +1,5 @@
 <!--
-Copyright (c) 2010 - 2012, AllSeen Alliance. All rights reserved.
+Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
 
    Permission to use, copy, modify, and/or distribute this software for any
    purpose with or without fee is hereby granted, provided that the above
@@ -86,7 +86,7 @@ Copyright (c) 2010 - 2012, AllSeen Alliance. All rights reserved.
   <status name="ER_BUS_CANNOT_EXPAND_MESSAGE" value="0x9042" comment="Expansion information for a compressed message is not available"/>
   <status name="ER_BUS_NOT_COMPRESSED" value="0x9043" comment="Attempt to expand a message that is not compressed"/>
   <status name="ER_BUS_ALREADY_CONNECTED" value="0x9044" comment="Attempt to connect to a bus which is already connected"/>
-  <status name="ER_BUS_NOT_CONNECTED" value="0x9045" comment="Attempt to use a bus attachment that is not connected to a bus daemon"/>
+  <status name="ER_BUS_NOT_CONNECTED" value="0x9045" comment="Attempt to use a bus attachment that is not connected to a router"/>
   <status name="ER_BUS_ALREADY_LISTENING" value="0x9046" comment="Attempt to listen on a bus address which is already being listened on"/>
   <status name="ER_BUS_KEY_UNAVAILABLE" value="0x9047" comment="The request key is not available"/>
   <status name="ER_BUS_TRUNCATED" value="0x9048" comment="Insufficient memory to copy data"/>
@@ -164,7 +164,7 @@ Copyright (c) 2010 - 2012, AllSeen Alliance. All rights reserved.
   <status name="ER_BUS_SECURITY_NOT_ENABLED" value="0x909d" comment="Security is not enabled for this bus attachment"/>
   <status name="ER_BUS_LISTENER_ALREADY_SET" value="0x909e" comment="A listener has already been set"/>
   <status name="ER_BUS_PEER_AUTH_VERSION_MISMATCH" value="0x909f" comment="Incompatible peer authentication version numbers"/>
-  <status name="ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NOT_SUPPORTED" value="0x90a0" comment="Local daemon does not support SetLinkTimeout"/>
+  <status name="ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NOT_SUPPORTED" value="0x90a0" comment="Local router does not support SetLinkTimeout"/>
   <status name="ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NO_DEST_SUPPORT" value="0x90a1" comment="SetLinkTimeout not supported by destination"/>
   <status name="ER_ALLJOYN_SETLINKTIMEOUT_REPLY_FAILED" value="0x90a2" comment="SetLinkTimeout failed"/>
   <status name="ER_ALLJOYN_ACCESS_PERMISSION_WARNING" value="0x90a3" comment="No permission to use Wifi/Bluetooth"/>
@@ -234,7 +234,7 @@ Copyright (c) 2010 - 2012, AllSeen Alliance. All rights reserved.
   <status name="ER_BUS_OBJECT_NOT_REGISTERED" value="0x90e3" comment="Operation not permitted on unregistered bus object"/>  
   <status name="ER_P2P_DISABLED" value="0x90e4" comment="Wi-Fi Direct is disabled on the device"/>
   <status name="ER_P2P_BUSY" value="0x90e5" comment="Wi-Fi Direct resources are in busy state"/>
-  <status name="ER_BUS_INCOMPATIBLE_DAEMON" value="0x90e6" comment="The daemon version is too old to be used by this client"/>
+  <status name="ER_BUS_INCOMPATIBLE_DAEMON" value="0x90e6" comment="The router version is too old to be used by this client"/>
   <status name="ER_P2P_NO_GO" value="0x90e7" comment="Attempt to execute a Wi-Fi Direct GO-related operation while STA"/>
   <status name="ER_P2P_NO_STA" value="0x90e8" comment="Attempt to execute a Wi-Fi Direct STA-related operation while GO"/>
   <status name="ER_P2P_FORBIDDEN" value="0x90e9" comment="Attempt to execute a forbidden Wi-Fi Direct operation"/>
@@ -247,7 +247,7 @@ Copyright (c) 2010 - 2012, AllSeen Alliance. All rights reserved.
   <status name="ER_ALLJOYN_REMOVESESSIONMEMBER_NOT_BINDER" value="0x90f0" comment="RemoveSessionMember reply: Endpoint is not the binder of session"/>
   <status name="ER_ALLJOYN_REMOVESESSIONMEMBER_NOT_MULTIPOINT" value="0x90f1" comment="RemoveSessionMember reply: Session is not multipoint"/>
   <status name="ER_ALLJOYN_REMOVESESSIONMEMBER_NOT_FOUND" value="0x90f2" comment="RemoveSessionMember reply: Specified session member was not found"/>
-  <status name="ER_ALLJOYN_REMOVESESSIONMEMBER_INCOMPATIBLE_REMOTE_DAEMON" value="0x90f3" comment="RemoveSessionMember reply: The remote daemon does not support this feature"/>
+  <status name="ER_ALLJOYN_REMOVESESSIONMEMBER_INCOMPATIBLE_REMOTE_DAEMON" value="0x90f3" comment="RemoveSessionMember reply: The remote router does not support this feature"/>
   <status name="ER_ALLJOYN_REMOVESESSIONMEMBER_REPLY_FAILED" value="0x90f4" comment="RemoveSessionMember reply: Failed for unspecified reason"/>
   <status name="ER_BUS_REMOVED_BY_BINDER" value="0x90f5" comment="The session member was removed by the binder"/>
 </status_block>

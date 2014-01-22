@@ -51,10 +51,10 @@ cpp/    core AllJoyn functionality, implemented in C++
     lib/                        AllJoyn Core (C++) client libraries
 
         liballjoyn.a                    implements core API
-        libajdaemon.a                   implements bundled-daemon
+        libajrouter.a                   implements bundled-router
         liballjoyn-daemon.a
         libbbdaemon-lib.a
-        BundledDaemon.o
+        BundledRouter.o
 
     samples/                    C++ sample apps for Android (see README)
 

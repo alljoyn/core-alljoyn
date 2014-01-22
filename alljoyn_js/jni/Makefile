@@ -1,4 +1,4 @@
-# Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2012,2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -51,7 +51,7 @@ $(NPALLJOYN_C_OBJS) : $(NPALLJOYN_C_SRCS)
 	$(CXX) $(CXXFLAGS) $(CPPDEFINES) $(INCLUDE) -c -o $@ $<
 
 npalljoyn: $(NPALLJOYN_CC_OBJS) $(NPALLJOYN_C_OBJS)
-	$(CXX) -o $(TARGET) $(LINKFLAGS) $(NPALLJOYN_CC_OBJS) $(NPALLJOYN_C_OBJS) $(BUNDLED_OBJ) $(AJDAEMONLIB) $(ALLJOYNLIB) $(LIBS)
+	$(CXX) -o $(TARGET) $(LINKFLAGS) $(NPALLJOYN_CC_OBJS) $(NPALLJOYN_C_OBJS) $(BUNDLED_ROUTER_OBJ) $(AJROUTERLIB) $(ALLJOYNLIB) $(LIBS)
 	cp $(TARGET) $(INSTALLDIR)/dist/js/lib
 
 clean:

@@ -1,4 +1,4 @@
-# Copyright (c) 2011-2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2011-2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -91,9 +91,9 @@ else:
 
     unittest_env = env.Clone()
 
-    if unittest_env['BD'] == 'on':
+    if unittest_env['BR'] == 'on':
         # Build apps with bundled daemon support
-        unittest_env.Prepend(LIBS = [unittest_env['bdobj'], unittest_env['bdlib']])
+        unittest_env.Prepend(LIBS = [unittest_env['brobj'], unittest_env['ajrlib']])
 
     unittest_env.Append(CPPPATH = unittest_env.Dir('..').srcnode())
 

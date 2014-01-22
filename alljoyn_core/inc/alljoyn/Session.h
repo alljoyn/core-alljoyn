@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -80,7 +80,7 @@ class SessionOpts {
                                       all NameChanged to be sent, all names to be sent as a part of
                                       initial ExchangeNames */
         DAEMON_NAMES = 0x01     /** < No ExchangeNames and NameChanged propogation,
-                                      no NameChanged to be sent, only Daemon names to be sent as a part of
+                                      no NameChanged to be sent, only router names to be sent as a part of
                                       initial ExchangeNames */
     } NameTransferType;
     NameTransferType nameTransfer;

@@ -523,8 +523,8 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
-					"-lajdaemon",
-					"-lBundledDaemon.o",
+					"-lajrouter",
+					"-lBundledRouter.o",
 					"-lssl",
 					"-lcrypto",
 				);
@@ -563,8 +563,8 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
-					"-lajdaemon",
-					"-lBundledDaemon.o",
+					"-lajrouter",
+					"-lBundledRouter.o",
 					"-lssl",
 					"-lcrypto",
 				);

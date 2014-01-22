@@ -617,8 +617,8 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
-					"-lajdaemon",
-					"-lBundledDaemon.o",
+					"-lajrouter",
+					"-lBundledRouter.o",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SEPARATE_STRIP = YES;
@@ -645,8 +645,8 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
-					"-lajdaemon",
-					"-lBundledDaemon.o",
+					"-lajrouter",
+					"-lBundledRouter.o",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SEPARATE_STRIP = YES;

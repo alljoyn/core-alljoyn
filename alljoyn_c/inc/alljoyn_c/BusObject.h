@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -324,7 +324,7 @@ extern AJ_API QStatus alljoyn_busobject_signal(alljoyn_busobject bus,
                                                uint8_t flags,
                                                alljoyn_message msg);
 /**
- * Remove sessionless message sent from this object from local daemon's
+ * Remove sessionless message sent from this object from local router's
  * store/forward cache.
  *
  * @param bus             The bus used to send cancel the sessionless message
@@ -334,7 +334,7 @@ extern AJ_API QStatus alljoyn_busobject_signal(alljoyn_busobject bus,
 extern AJ_API QStatus alljoyn_busobject_cancelsessionlessmessage_serial(alljoyn_busobject bus, uint32_t serialNumber);
 
 /**
- * Remove sessionless message sent from this object from local daemon's
+ * Remove sessionless message sent from this object from local router's
  * store/forward cache.
  *
  * @param bus    The bus used to send cancel the sessionless message

@@ -389,7 +389,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 0450;
-				ORGANIZATIONNAME = "2012-2013 AllSeen Alliance.";
+				ORGANIZATIONNAME = "2012-2014 AllSeen Alliance.";
 			};
 			buildConfigurationList = AC3A97FC1576B59000CFF856 /* Build configuration list for PBXProject "AllJoyn iOS Project Template" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -603,8 +603,8 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
-					"-lajdaemon",
-					"-lBundledDaemon.o",
+					"-lajrouter",
+					"-lBundledRouter.o",
 					"-lssl",
 					"-lcrypto",
 				);
@@ -638,8 +638,8 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
-					"-lajdaemon",
-					"-lBundledDaemon.o",
+					"-lajrouter",
+					"-lBundledRouter.o",
 					"-lssl",
 					"-lcrypto",
 				);

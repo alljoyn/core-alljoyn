@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -26,7 +26,7 @@ import java.util.Map;
 
 /**
  * The standard org.freedesktop.DBus interface that is implemented by the local
- * AllJoyn daemon.  It is used to control bus operations such as obtaining
+ * AllJoyn router.  It is used to control bus operations such as obtaining
  * well-known names and establishing routing rules.
  * <p>
  * The functionality of DBusProxyObj is limited to functions that are available
@@ -98,7 +98,7 @@ public interface DBusProxyObj {
         Released,
 
         /**
-         * The name is unknown to the AllJoyn daemon and therefore cannot be
+         * The name is unknown to the AllJoyn router and therefore cannot be
          * released.
          */
         NonExistent,
@@ -120,8 +120,8 @@ public interface DBusProxyObj {
     String[] ListNames() throws BusException;
 
     /**
-     * Returns a list of well-known names that the local AllJoyn daemon has been
-     * configured to automatically start daemons for when the names are
+     * Returns a list of well-known names that the local AllJoyn router has been
+     * configured to automatically start routers for when the names are
      * accessed.
      *
      * @return the well-known names
@@ -175,7 +175,7 @@ public interface DBusProxyObj {
     }
 
     /**
-     * Starts the local daemon process responsible for a given well-known name.
+     * Starts the local router process responsible for a given well-known name.
      * Names for services that can be started in this manner are returned by
      * {@link #ListActivatableNames()}.
      *
@@ -199,22 +199,22 @@ public interface DBusProxyObj {
     String GetNameOwner(String name) throws BusException;
 
     /**
-     * Gets the uid of the process connected to the local AllJoyn daemon identified
+     * Gets the uid of the process connected to the local AllJoyn router identified
      * by the well-known or unique name.
      *
      * @param name well-known or unique name whose connection will be examined
-     * @return uid of process connected to local AllJoyn daemon with given name
+     * @return uid of process connected to local AllJoyn router with given name
      * @throws BusException if the uid cannot be determined
      */
     @BusMethod(signature = "s", replySignature = "u")
     int GetConnectionUnixUser(String name) throws BusException;
 
     /**
-     * Gets the pid of the process connected to the local AllJoyn daemon identified
+     * Gets the pid of the process connected to the local AllJoyn router identified
      * by the well-known or unique name.
      *
      * @param name well-known or unique name whose connection will be examined
-     * @return pid of process connected to local AllJoyn daemon with the given name
+     * @return pid of process connected to local AllJoyn router with the given name
      * @throws BusException if the pid cannot be determined
      */
     @BusMethod(signature = "s", replySignature = "u")
@@ -243,7 +243,7 @@ public interface DBusProxyObj {
     /**
      * Gets the unique id of the bus.
      *
-     * @return the GUID for the local AllJoyn daemon in string form
+     * @return the GUID for the local AllJoyn router in string form
      * @throws BusException
      */
     @BusMethod(replySignature = "s")

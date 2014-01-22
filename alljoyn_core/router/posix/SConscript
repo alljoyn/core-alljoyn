@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2011, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2011, 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -13,17 +13,17 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # 
 
-Import('daemon_env', 'daemon_objs')
+Import('router_env', 'router_objs')
 
-# Add OS specific daemon_objs
-if daemon_env['ICE'] == 'on':
-    os_objs = daemon_env.Object(['ProximityScanner.cc','Socket.cc'])
+# Add OS specific router_objs
+if router_env['ICE'] == 'on':
+    os_objs = router_env.Object(['ProximityScanner.cc','Socket.cc'])
 else:
     os_objs = []
 
 # Build the posix daemon and service launcher helper.
-if daemon_env['OS'] != 'darwin':
-    daemon = daemon_env.Program('alljoyn-daemon', ['daemon-main.cc'] + daemon_objs + os_objs)
+if router_env['OS'] != 'darwin':
+    daemon = router_env.Program('alljoyn-daemon', ['daemon-main.cc'] + router_objs + os_objs)
 else:
     daemon = []
 	
@@ -31,10 +31,10 @@ else:
 # On Android, build a static library that can be linked into a JNI dynamic 
 # library to implement the daemon as a Service
 #
-if daemon_env['OS'] == 'android':
-   libenv = daemon_env.Clone(CCFLAGS = '-DDAEMON_LIB')
+if router_env['OS'] == 'android':
+   libenv = router_env.Clone(CCFLAGS = '-DROUTER_LIB')
    libenv.Object(target = 'alljoyn-daemon', source = 'daemon-main.cc')
-   libdaemon = libenv.StaticLibrary(['alljoyn-daemon'] + daemon_objs + os_objs)
+   libdaemon = libenv.StaticLibrary(['alljoyn-daemon'] + router_objs + os_objs)
    dlibs = libenv.Install('$CPP_DISTDIR/lib', libdaemon)
 
 #progs = daemon + servicehelper

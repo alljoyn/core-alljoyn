@@ -26,9 +26,9 @@ if not env.has_key('_ALLJOYNCORE_'):
 
 jsenv = env.Clone()
 
-if jsenv['BD'] == 'on':
+if jsenv['BR'] == 'on':
     # Build JS with bundled daemon support
-    jsenv.Prepend(LIBS = [jsenv['bdobj'], jsenv['bdlib']])
+    jsenv.Prepend(LIBS = [jsenv['brobj'], jsenv['ajrlib']])
 
 vars = Variables()
 vars.Add(PathVariable('CORDOVA_BASE', 'Base directory of Cordova (aka PhoneGap)', os.environ.get('CORDOVA_BASE')))

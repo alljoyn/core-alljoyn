@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2011, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2011, 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -14,10 +14,10 @@
 # 
 
 import os
-Import ('daemon_env')
+Import ('router_env')
 
-srcs = [ f for f in daemon_env.Glob('*.cc') ]
-daemon_env.Append(CPPPATH = [daemon_env.Dir('.').srcnode()])
-daemon_env.Append(CPPPATH = [daemon_env.Dir('../../').srcnode()])
-proximObjs = daemon_env.Object(srcs)
+srcs = [ f for f in router_env.Glob('*.cc') ]
+router_env.Append(CPPPATH = [router_env.Dir('.').srcnode()])
+router_env.Append(CPPPATH = [router_env.Dir('../../').srcnode()])
+proximObjs = router_env.Object(srcs)
 Return('proximObjs')

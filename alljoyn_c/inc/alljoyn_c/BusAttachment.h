@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -374,7 +374,7 @@ extern AJ_API void alljoyn_busattachment_unregisterbuslistener(alljoyn_busattach
 
 /**
  * Register interest in a well-known name prefix for the purpose of discovery over transports included in TRANSPORT_ANY.
- * This method is a shortcut/helper that issues an org.alljoyn.Bus.FindAdvertisedName method call to the local daemon
+ * This method is a shortcut/helper that issues an org.alljoyn.Bus.FindAdvertisedName method call to the local router
  * and interprets the response.
  *
  * @param      bus           The alljoyn_busattachment on which to register interest in the namePrefix.
@@ -382,7 +382,7 @@ extern AJ_API void alljoyn_busattachment_unregisterbuslistener(alljoyn_busattach
  *                           alljoyn_buslistener_foundadvertisedname notifications about.
  *
  * @return
- *      - #ER_OK iff daemon response was received and discovery was successfully started.
+ *      - #ER_OK iff router response was received and discovery was successfully started.
  *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *      - Other error status codes indicating a failure.
  */
@@ -390,7 +390,7 @@ extern AJ_API QStatus alljoyn_busattachment_findadvertisedname(alljoyn_busattach
 
 /**
  * Register interest in a well-known name prefix for the purpose of discovery over specified transports.
- * This method is a shortcut/helper that issues an org.alljoyn.Bus.FindAdvertisedNameByTransport method call to the local daemon
+ * This method is a shortcut/helper that issues an org.alljoyn.Bus.FindAdvertisedNameByTransport method call to the local router
  * and interprets the response.
  *
  * @param      bus           The alljoyn_busattachment on which to register interest in the namePrefix.
@@ -399,7 +399,7 @@ extern AJ_API QStatus alljoyn_busattachment_findadvertisedname(alljoyn_busattach
  * @param[in]  transports    Set of transports to use for discovery.
  *
  * @return
- *      - #ER_OK iff daemon response was received and discovery was successfully started.
+ *      - #ER_OK iff router response was received and discovery was successfully started.
  *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *      - Other error status codes indicating a failure.
  */
@@ -410,14 +410,14 @@ extern AJ_API QStatus alljoyn_busattachment_findadvertisednamebytransport(alljoy
  * with alljoyn_busattachment_findadvertisedname over transports included in TRANSPORT_ANY.
  * This method is a shortcut/helper
  * that issues an org.alljoyn.Bus.CancelFindAdvertisedName method call to the
- * local daemon and interprets the response.
+ * local router and interprets the response.
  *
  * @param      bus           The alljoyn_busattachment from which to remove interest in the namePrefix.
  * @param[in]  namePrefix    Well-known name prefix that application is no longer interested in receiving
  *                           BusListener::FoundAdvertisedName notifications about.
  *
  * @return
- *      - #ER_OK iff daemon response was received and cancel was successfully completed.
+ *      - #ER_OK iff router response was received and cancel was successfully completed.
  *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *      - Other error status codes indicating a failure.
  */
@@ -427,7 +427,7 @@ extern AJ_API QStatus alljoyn_busattachment_cancelfindadvertisedname(alljoyn_bus
  * Cancel interest in a well-known name prefix that was previously registered
  * with alljoyn_busattachment_findadvertisedname over specified transports.  This method is a shortcut/helper
  * that issues an org.alljoyn.Bus.CancelFindAdvertisedNameByTransport method call to the
- * local daemon and interprets the response.
+ * local router and interprets the response.
  *
  * @param      bus           The alljoyn_busattachment from which to remove interest in the namePrefix.
  * @param[in]  namePrefix    Well-known name prefix that application is no longer interested in receiving
@@ -435,16 +435,16 @@ extern AJ_API QStatus alljoyn_busattachment_cancelfindadvertisedname(alljoyn_bus
  * @param[in]  transports    Set of transports to cancel discovery on.
  *
  * @return
- *      - #ER_OK iff daemon response was received and cancel was successfully completed.
+ *      - #ER_OK iff router response was received and cancel was successfully completed.
  *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *      - Other error status codes indicating a failure.
  */
 extern AJ_API QStatus alljoyn_busattachment_cancelfindadvertisednamebytransport(alljoyn_busattachment bus, const char* namePrefix, alljoyn_transportmask transports);
 
 /**
- * Advertise the existence of a well-known name to other (possibly disconnected) AllJoyn daemons.
+ * Advertise the existence of a well-known name to other (possibly disconnected) AllJoyn routers.
  *
- * This method is a shortcut/helper that issues an org.alljoyn.Bus.AdvertisedName method call to the local daemon
+ * This method is a shortcut/helper that issues an org.alljoyn.Bus.AdvertisedName method call to the local router
  * and interprets the response.
  *
  * @param[in]  bus           The bus on which to advertise the name.
@@ -452,23 +452,23 @@ extern AJ_API QStatus alljoyn_busattachment_cancelfindadvertisednamebytransport(
  * @param[in]  transports    Set of transports to use for sending advertisment.
  *
  * @return
- *      - #ER_OK iff daemon response was received and advertise was successful.
+ *      - #ER_OK iff router response was received and advertise was successful.
  *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *      - Other error status codes indicating a failure.
  */
 extern AJ_API QStatus alljoyn_busattachment_advertisename(alljoyn_busattachment bus, const char* name, alljoyn_transportmask transports);
 
 /**
- * Stop advertising the existence of a well-known name to other AllJoyn daemons.
+ * Stop advertising the existence of a well-known name to other AllJoyn routers.
  *
- * This method is a shortcut/helper that issues an org.alljoyn.Bus.CancelAdvertiseName method call to the local daemon
+ * This method is a shortcut/helper that issues an org.alljoyn.Bus.CancelAdvertiseName method call to the local router
  * and interprets the response.
  * @param[in]  bus           The bus on which we wish to cancel the name advertisement
  * @param[in]  name          A well-known name that was previously advertised via AdvertiseName.
  * @param[in]  transports    Set of transports whose name advertisment will be cancelled.
  *
  * @return
- *      - #ER_OK iff daemon response was received and advertisements were sucessfully stopped.
+ *      - #ER_OK iff router response was received and advertisements were sucessfully stopped.
  *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *      - Other error status codes indicating a failure.
  */
@@ -488,7 +488,7 @@ extern AJ_API const alljoyn_interfacedescription alljoyn_busattachment_getinterf
 
 /**
  * Join a session.
- * This method is a shortcut/helper that issues an org.alljoyn.Bus.JoinSession method call to the local daemon
+ * This method is a shortcut/helper that issues an org.alljoyn.Bus.JoinSession method call to the local router
  * and interprets the response.
  *
  * @param[in]  bus              alljoyn_busattachment with which to join a session.
@@ -499,7 +499,7 @@ extern AJ_API const alljoyn_interfacedescription alljoyn_busattachment_getinterf
  * @param[in,out] opts          Session options.
  *
  * @return
- *      - #ER_OK iff daemon response was received and the session was successfully joined.
+ *      - #ER_OK iff router response was received and the session was successfully joined.
  *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *      - Other error status codes indicating a failure.
  */
@@ -510,7 +510,7 @@ extern AJ_API QStatus alljoyn_busattachment_joinsession(alljoyn_busattachment bu
 
 /**
  * Join a session.
- * This method is a shortcut/helper that issues an org.alljoyn.Bus.JoinSession method call to the local daemon
+ * This method is a shortcut/helper that issues an org.alljoyn.Bus.JoinSession method call to the local router
  * and interprets the response.
  *
  * This call executes asynchronously. When the JoinSession response is received, the callback will be called.
@@ -524,7 +524,7 @@ extern AJ_API QStatus alljoyn_busattachment_joinsession(alljoyn_busattachment bu
  * @param[in]  context          User defined context which will be passed as-is to callback.
  *
  * @return
- *      - #ER_OK iff method call to local daemon response was was successful.
+ *      - #ER_OK iff method call to local router response was was successful.
  *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *      - Other error status codes indicating a failure.
  */
@@ -574,7 +574,7 @@ extern AJ_API void alljoyn_busattachment_unregisterbusobject(alljoyn_busattachme
 
 /**
  * Request a well-known name.
- * This method is a shortcut/helper that issues an org.freedesktop.DBus.RequestName method call to the local daemon
+ * This method is a shortcut/helper that issues an org.freedesktop.DBus.RequestName method call to the local router
  * and interprets the response.
  *
  * @param[in]  bus            The bus on which to request the specified name.
@@ -582,7 +582,7 @@ extern AJ_API void alljoyn_busattachment_unregisterbusobject(alljoyn_busattachme
  * @param[in]  flags          Bitmask of DBUS_NAME_FLAG_* defines (see DBusStdDefines.h)
  *
  * @return
- *      - #ER_OK iff daemon response was received and request was successful.
+ *      - #ER_OK iff router response was received and request was successful.
  *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *      - Other error status codes indicating a failure.
  */
@@ -590,14 +590,14 @@ extern AJ_API QStatus alljoyn_busattachment_requestname(alljoyn_busattachment bu
 
 /**
  * Release a previously requeted well-known name.
- * This method is a shortcut/helper that issues an org.freedesktop.DBus.ReleaseName method call to the local daemon
+ * This method is a shortcut/helper that issues an org.freedesktop.DBus.ReleaseName method call to the local router
  * and interprets the response.
  *
  * @param[in]  bus   The alljoyn_busattachment from which to release the name.
  * @param[in]  name  Well-known name being released.
  *
  * @return
- *      - #ER_OK iff daemon response was received amd the name was successfully released.
+ *      - #ER_OK iff router response was received amd the name was successfully released.
  *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *      - Other error status codes indicating a failure.
  */
@@ -633,7 +633,7 @@ extern AJ_API QStatus alljoyn_busattachment_releasename(alljoyn_busattachment bu
  * @param[in]     listener  Called by the bus when session related events occur.
  *
  * @return
- *      - #ER_OK iff daemon response was received and the bind operation was successful.
+ *      - #ER_OK iff router response was received and the bind operation was successful.
  *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *      - Other error status codes indicating a failure.
  */
@@ -647,7 +647,7 @@ extern AJ_API QStatus alljoyn_busattachment_bindsessionport(alljoyn_busattachmen
  * @param[in]   sessionPort    Existing session port to be un-bound.
  *
  * @return
- *      - #ER_OK iff daemon response was received and the bind operation was successful.
+ *      - #ER_OK iff router response was received and the bind operation was successful.
  *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *      - Other error status codes indicating a failure.
  */
@@ -820,11 +820,11 @@ extern AJ_API const alljoyn_proxybusobject alljoyn_busattachment_getalljoyndebug
 extern AJ_API const char* alljoyn_busattachment_getuniquename(const alljoyn_busattachment bus);
 
 /**
- * Get the guid of the local daemon as a string
+ * Get the guid of the local router as a string
  *
  * @param bus The bus to query.
  *
- * @return GUID of local AllJoyn daemon as a string.
+ * @return GUID of local AllJoyn router as a string.
  */
 extern AJ_API const char* alljoyn_busattachment_getglobalguidstring(const alljoyn_busattachment bus);
 
@@ -977,7 +977,7 @@ extern AJ_API QStatus alljoyn_busattachment_addlogonentry(alljoyn_busattachment 
 
 /**
  * Add a DBus match rule.
- * This method is a shortcut/helper that issues an org.freedesktop.DBus.AddMatch method call to the local daemon.
+ * This method is a shortcut/helper that issues an org.freedesktop.DBus.AddMatch method call to the local router.
  *
  * @param[in]  bus   The bus on which to add the match rule.
  * @param[in]  rule  Match rule to be added (see DBus specification for format of this string).
@@ -991,7 +991,7 @@ extern AJ_API QStatus alljoyn_busattachment_addmatch(alljoyn_busattachment bus, 
 
 /**
  * Remove a DBus match rule.
- * This method is a shortcut/helper that issues an org.freedesktop.DBus.RemoveMatch method call to the local daemon.
+ * This method is a shortcut/helper that issues an org.freedesktop.DBus.RemoveMatch method call to the local router.
  *
  * @param[in]  bus   The bus from which to remove the match rule.
  * @param[in]  rule  Match rule to be removed (see DBus specification for format of this string).
@@ -1018,14 +1018,14 @@ extern AJ_API QStatus alljoyn_busattachment_setsessionlistener(alljoyn_busattach
 
 /**
  * Leave an existing session.
- * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveSession method call to the local daemon
+ * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveSession method call to the local router
  * and interprets the response.
  *
  * @param[in]  bus           The bus on which to leave the session.
  * @param[in]  sessionId     Session id.
  *
  * @return
- *      - #ER_OK iff daemon response was received and the leave operation was successfully completed.
+ *      - #ER_OK iff router response was received and the leave operation was successfully completed.
  *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *      - Other error status codes indicating a failure.
  */
@@ -1035,7 +1035,7 @@ extern AJ_API QStatus alljoyn_busattachment_leavesession(alljoyn_busattachment b
  * Remove a member from an existing multipoint session.
  * This function may be called by the binder of the session to forcefully remove a member from a session.
  *
- * This method is a shortcut/helper that issues an org.alljoyn.Bus.RemoveSessionMember method call to the local daemon
+ * This method is a shortcut/helper that issues an org.alljoyn.Bus.RemoveSessionMember method call to the local router
  * and interprets the response.
  *
  * @param[in]  bus           The bus which the member is being removed from
@@ -1043,7 +1043,7 @@ extern AJ_API QStatus alljoyn_busattachment_leavesession(alljoyn_busattachment b
  * @param[in]  memberName    Member to remove.
  *
  * @return
- *      - #ER_OK iff daemon response was received and the remove member operation was successfully completed.
+ *      - #ER_OK iff router response was received and the remove member operation was successfully completed.
  *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *      - Other error status codes indicating a failure.
  */
@@ -1052,7 +1052,7 @@ extern AJ_API QStatus alljoyn_busattachment_removesessionmember(alljoyn_busattac
 /**
  * Set the link timeout for a session.
  *
- * Link timeout is the maximum number of seconds that an unresponsive daemon-to-daemon connection
+ * Link timeout is the maximum number of seconds that an unresponsive router-to-router connection
  * will be monitored before declaring the session lost (via SessionLost callback). Link timeout
  * defaults to 0 which indicates that AllJoyn link monitoring is disabled.
  *
@@ -1068,11 +1068,11 @@ extern AJ_API QStatus alljoyn_busattachment_removesessionmember(alljoyn_busattac
  *
  * @return
  *      - #ER_OK if successful
- *      - #ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NOT_SUPPORTED if local daemon does not support SetLinkTimeout
+ *      - #ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NOT_SUPPORTED if local router does not support SetLinkTimeout
  *      - #ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NO_DEST_SUPPORT if SetLinkTimeout not supported by destination
  *      - #ER_BUS_NO_SESSION if the Session id is not valid
  *      - #ER_ALLJOYN_SETLINKTIMEOUT_REPLY_FAILED if SetLinkTimeout failed
- *      - #ER_BUS_NOT_CONNECTED if the alljoyn_busattachment is not connected to the daemon
+ *      - #ER_BUS_NOT_CONNECTED if the alljoyn_busattachment is not connected to the router
  */
 extern AJ_API QStatus alljoyn_busattachment_setlinktimeout(alljoyn_busattachment bus, alljoyn_sessionid sessionid, uint32_t* linkTimeout);
 
@@ -1080,7 +1080,7 @@ extern AJ_API QStatus alljoyn_busattachment_setlinktimeout(alljoyn_busattachment
  * Set the link timeout for a session.
  *
  * Link timeout is the maximum number of seconds that an unresponsive
- * daemon-to-daemon connection will be monitored before declaring the session
+ * router-to-router connection will be monitored before declaring the session
  * lost (via SessionLost callback). Link timeout defaults to 0 which indicates
  * that AllJoyn link monitoring is disabled.
  *
@@ -1102,7 +1102,7 @@ extern AJ_API QStatus alljoyn_busattachment_setlinktimeout(alljoyn_busattachment
  * @param[in]  context      User defined context which will be passed as-is to callback.
  *
  * @return
- *      - #ER_OK iff method call to local daemon response was was successful.
+ *      - #ER_OK iff method call to local router response was was successful.
  *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *      - Other error status codes indicating a failure.
  */
@@ -1111,7 +1111,7 @@ extern AJ_API QStatus alljoyn_busattachment_setlinktimeoutasync(alljoyn_busattac
                                                                 void* context);
 /**
  * Determine whether a given well-known name exists on the bus.
- * This method is a shortcut/helper that issues an org.freedesktop.DBus.NameHasOwner method call to the daemon
+ * This method is a shortcut/helper that issues an org.freedesktop.DBus.NameHasOwner method call to the router
  * and interprets the response.
  *
  * @param[in]  bus        The bus to query.
@@ -1144,7 +1144,7 @@ extern AJ_API QStatus alljoyn_busattachment_namehasowner(alljoyn_busattachment b
 extern AJ_API QStatus alljoyn_busattachment_getpeerguid(alljoyn_busattachment bus, const char* name, char* guid, size_t* guidSz);
 
 /**
- * This sets the debug level of the local AllJoyn daemon if that daemon
+ * This sets the debug level of the local AllJoyn router if that router
  * was built in debug mode.
  *
  * The debug level can be set for individual subsystems or for "ALL"
@@ -1179,8 +1179,8 @@ extern AJ_API QStatus alljoyn_busattachment_getpeerguid(alljoyn_busattachment bu
  *
  * @return
  *     - #ER_OK if debug request was successfully sent to the AllJoyn
- *       daemon.
- *     - #ER_BUS_NO_SUCH_OBJECT if daemon was not built in debug mode.
+ *       router.
+ *     - #ER_BUS_NO_SUCH_OBJECT if router was not built in debug mode.
  */
 extern AJ_API QStatus alljoyn_busattachment_setdaemondebug(alljoyn_busattachment bus, const char* module, uint32_t level);
 

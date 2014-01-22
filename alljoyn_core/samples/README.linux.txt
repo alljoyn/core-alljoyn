@@ -19,6 +19,6 @@ FileTransfer -
 
 
 SampleDaemon -
-         This sample runs a Bundled AllJoyn daemon. It can be passed a name
+         This sample runs a bundled AllJoyn router. It can be passed a name
          via the command-line, that is quietly advertised, to be discovered
          by thin-client applications (eg. apps running on Arduino Due)

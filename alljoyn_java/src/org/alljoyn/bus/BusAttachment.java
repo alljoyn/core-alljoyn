@@ -64,7 +64,7 @@ public class BusAttachment {
 
     /**
      * Request a well-known name.
-     * This method is a shortcut/helper that issues an org.freedesktop.DBus.RequestName method call to the local daemon
+     * This method is a shortcut/helper that issues an org.freedesktop.DBus.RequestName method call to the local router
      * and interprets the response.
      *
      * @param name    Well-known name being requested.
@@ -104,7 +104,7 @@ public class BusAttachment {
 
     /**
      * Release a previously requeted well-known name.
-     * This method is a shortcut/helper that issues an org.freedesktop.DBus.ReleaseName method call to the local daemon
+     * This method is a shortcut/helper that issues an org.freedesktop.DBus.ReleaseName method call to the local router
      * and interprets the response.
      *
      * @param name  Well-known name being released.
@@ -120,7 +120,7 @@ public class BusAttachment {
 
     /**
      * Add a DBus match rule.
-     * This method is a shortcut/helper that issues an org.freedesktop.DBus.AddMatch method call to the local daemon.
+     * This method is a shortcut/helper that issues an org.freedesktop.DBus.AddMatch method call to the local router.
      *
      * @param rule  Match rule to be added (see the DBus specification for the
      *              format of this string).
@@ -136,7 +136,7 @@ public class BusAttachment {
 
     /**
      * Remove a DBus match rule.
-     * This method is a shortcut/helper that issues an org.freedesktop.DBus.RemoveMatch method call to the local daemon.
+     * This method is a shortcut/helper that issues an org.freedesktop.DBus.RemoveMatch method call to the local router.
      *
      * @param rule  Match rule to be removed (see the DBus specification for the
      *              format of this string).
@@ -151,9 +151,9 @@ public class BusAttachment {
     public native Status removeMatch(String rule);
 
     /**
-     * Advertise the existence of a well-known name to other (possibly disconnected) AllJoyn daemons.
+     * Advertise the existence of a well-known name to other (possibly disconnected) AllJoyn routers.
      *
-     * This method is a shortcut/helper that issues an org.allJoyn.Bus.AdvertisedName method call to the local daemon
+     * This method is a shortcut/helper that issues an org.allJoyn.Bus.AdvertisedName method call to the local router
      * and interprets the response.
      *
      * @param name        The well-known name to advertise. (Must be owned by the caller via RequestName).
@@ -169,11 +169,11 @@ public class BusAttachment {
     public native Status advertiseName(String name, short transports);
 
     /**
-     * Stop advertising the existence of a well-known name to other AllJoyn daemons.
+     * Stop advertising the existence of a well-known name to other AllJoyn routers.
      *
      * This method is a shortcut/helper that issues an
      * org.allJoyn.Bus.CancelAdvertiseName method call to the local
-     * daemon and interprets the response.
+     * router and interprets the response.
      *
      * @param name        A well-known name that was previously advertised via AdvertiseName.
      * @param transports  Set of transports whose name advertisment will be cancelled.
@@ -189,7 +189,7 @@ public class BusAttachment {
 
     /**
      * Register interest in a well-known name prefix for the purpose of discovery over transports included in TRANSPORT_ANY.
-     * This method is a shortcut/helper that issues an org.allJoyn.Bus.FindAdvertisedName method call to the local daemon
+     * This method is a shortcut/helper that issues an org.allJoyn.Bus.FindAdvertisedName method call to the local router
      * and interprets the response.
      *
      * @param namePrefix  Well-known name prefix that application is interested in receiving BusListener::FoundAdvertisedName
@@ -206,7 +206,7 @@ public class BusAttachment {
 
     /**
      * Register interest in a well-known name prefix for the purpose of discovery over specified transports.
-     * This method is a shortcut/helper that issues an org.allJoyn.Bus.FindAdvertisedName method call to the local daemon
+     * This method is a shortcut/helper that issues an org.allJoyn.Bus.FindAdvertisedName method call to the local router
      * and interprets the response.
      *
      * @param namePrefix  Well-known name prefix that application is interested in receiving BusListener::FoundAdvertisedName
@@ -227,7 +227,7 @@ public class BusAttachment {
      * registered with FindAdvertisedName. This cancels well-known name discovery
      * over transports included in TRANSPORT_ANY.  This method is a shortcut/helper
      * that issues an org.allJoyn.Bus.CancelFindAdvertisedName method
-     * call to the local daemon and interprets the response.
+     * call to the local router and interprets the response.
      *
      * @param namePrefix  Well-known name prefix that application is no longer interested in receiving
      *                    BusListener::FoundAdvertisedName notifications about.
@@ -246,7 +246,7 @@ public class BusAttachment {
      * registered with FindAdvertisedName. This cancels well-known name discovery
      * over the specified transports.  This method is a shortcut/helper
      * that issues an org.allJoyn.Bus.CancelFindAdvertisedName method
-     * call to the local daemon and interprets the response.
+     * call to the local router and interprets the response.
      *
      * @param namePrefix  Well-known name prefix that application is no longer interested in receiving
      *                    BusListener::FoundAdvertisedName notifications about.
@@ -319,7 +319,7 @@ public class BusAttachment {
      * @return
      * <ul>
      * <li>OK if the session port was unbound.</li>
-     * <li>BUS_NOT_CONNECTED if connection has not been made with the local daemon.</li>
+     * <li>BUS_NOT_CONNECTED if connection has not been made with the local router.</li>
      * <li>other error status codes indicating a failure</li>
      */
     public native Status unbindSessionPort(short sessionPort);
@@ -328,7 +328,7 @@ public class BusAttachment {
      * Join a session.
      *
      * This method is a shortcut/helper that issues an
-     * org.allJoyn.Bus.JoinSession method call to the local daemon and
+     * org.allJoyn.Bus.JoinSession method call to the local router and
      * interprets the response.
      *
      * @param sessionHost   Bus name of attachment that is hosting the session to be joined.
@@ -377,7 +377,7 @@ public class BusAttachment {
      *
      * @return
      * <ul>
-     * <li>OK iff method call to local daemon response was was successful.</li>
+     * <li>OK iff method call to local router response was was successful.</li>
      * <li>BUS_NOT_CONNECTED if a connection has not been made with a local bus.</li>
      * <li>Other error status codes indicating a failure.</li>
      * </ul>
@@ -395,14 +395,14 @@ public class BusAttachment {
      * Leave an existing session.
      *
      * This method is a shortcut/helper that issues an
-     * org.alljoyn.Bus.LeaveSession method call to the local daemon
+     * org.alljoyn.Bus.LeaveSession method call to the local router
      * and interprets the response.
      *
      * @param sessionId     Session id.
      *
      * @return
      * <ul>
-     * <li>OK if daemon response was left.</li>
+     * <li>OK if router response was left.</li>
      * <li>BUS_NOT_CONNECTED if a connection has not been made with a local bus</li>
      * <li>other error status codes indicating failures.</li>
      * </ul>
@@ -413,7 +413,7 @@ public class BusAttachment {
      * Remove a session member from an existing multipoint session.
      *
      * This method is a shortcut/helper that issues an
-     * org.alljoyn.Bus.RemoveSessionMember method call to the local daemon
+     * org.alljoyn.Bus.RemoveSessionMember method call to the local router
      * and interprets the response.
      *
      * @param sessionId             Session id.
@@ -421,7 +421,7 @@ public class BusAttachment {
      *
      * @return
      * <ul>
-     * <li>OK if daemon response was left.</li>
+     * <li>OK if router response was left.</li>
      * <li>BUS_NOT_CONNECTED if a connection has not been made with a local bus</li>
      * <li>other error status codes indicating failures.</li>
      * </ul>
@@ -460,7 +460,7 @@ public class BusAttachment {
      * Set the link timeout for a session.
      *
      * Link timeout is the maximum number of seconds that an unresponsive
-     * daemon-to-daemon connection will be monitored before delcaring the
+     * router-to-router connection will be monitored before delcaring the
      * session lost (via SessionLost callback). Link timeout defaults to 0 which
      * indicates that AllJoyn link monitoring is disabled.
      *
@@ -501,7 +501,7 @@ public class BusAttachment {
     public native Status getPeerGUID(String name, Mutable.StringValue guid);
 
     /**
-     * This sets the debug level of the local AllJoyn daemon if that daemon
+     * This sets the debug level of the local AllJoyn router if that router
      * was built in debug mode.
      *
      * The debug level can be set for individual subsystems or for "ALL"
@@ -536,8 +536,8 @@ public class BusAttachment {
      *
      * @return
      * <ul>
-     * <li>OK if debug request was successfully sent to the AllJoyn daemon</li>
-     * <li>BUS_NO_SUCH_OBJECT if daemon was not built in debug mode.</li>
+     * <li>OK if debug request was successfully sent to the AllJoyn router</li>
+     * <li>BUS_NO_SUCH_OBJECT if router was not built in debug mode.</li>
      * </ul>
      */
     public native Status setDaemonDebug(String module, int level);
@@ -917,7 +917,7 @@ public class BusAttachment {
     }
     private static boolean shutdownHookRegistered = false;
     /**
-     * Starts the message bus and connects to the local daemon.
+     * Starts the message bus and connects to the local router.
      * This method blocks until the connection attempt succeeds or fails.
      * <p>
      * {@link BusObjectListener#registered()} is called by the bus when the bus
@@ -963,7 +963,7 @@ public class BusAttachment {
     public native boolean isConnected();
 
     /**
-     * Disconnects from the local daemon and stops the message bus.
+     * Disconnects from the local router and stops the message bus.
      */
     public void disconnect() {
         if (address != null) {

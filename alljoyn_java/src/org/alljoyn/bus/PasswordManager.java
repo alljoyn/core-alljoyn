@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -21,9 +21,9 @@ package org.alljoyn.bus;
  * of thin clients.
  * Before invoking connect() to BusAttachment, the application should call SetCredentials
  * if it expects to be able to communicate to/from thin clients.
- * The bundled daemon will start advertising the name as soon as it is started and MUST have
+ * The bundled router will start advertising the name as soon as it is started and MUST have
  * the credentials set to be able to authenticate any thin clients that may try to use the
- * bundled daemon to communicate with the app.
+ * bundled router to communicate with the app.
  */
 public class PasswordManager {
 

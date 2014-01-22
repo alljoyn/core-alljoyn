@@ -49,7 +49,7 @@ Known Issues
 
 About feature not yet supported on platforms other than Linux and Android.
 
-ALLJOYN-1967: AllJoyn daemon cannot (quickly) detect disconnection of non-local
+ALLJOYN-1967: AllJoyn router cannot (quickly) detect disconnection of non-local
 client connection such as thin-client connection
 
 ALLJOYN-2192: AllJoyn thin client does not support header compression

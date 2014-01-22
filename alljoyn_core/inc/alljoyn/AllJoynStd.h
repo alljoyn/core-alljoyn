@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -31,7 +31,7 @@
  */
 #define QCC_MODULE  "ALLJOYN"
 
-/** Daemon-to-daemon protocol version number */
+/** Router-to-router protocol version number */
 #define ALLJOYN_PROTOCOL_VERSION  9
 
 namespace ajn {
@@ -90,7 +90,7 @@ QStatus CreateInterfaces(BusAttachment& bus);          /**< Create the org.alljo
  * Create a named session for other bus nodes to join.
  *
  * In params:
- *  inPort       - Session Port number to bind to or SESSION_PORT_ANY to have daemon allocate an available port number.
+ *  inPort       - Session Port number to bind to or SESSION_PORT_ANY to have router allocate an available port number.
  *  isMultipoint - true iff session supports more than two participants.
  *  opts         - Session options
  *
@@ -177,7 +177,7 @@ QStatus CreateInterfaces(BusAttachment& bus);          /**< Create the org.alljo
  *  Interface: org.alljoyn.Bus
  *  Method: UINT32 AdvertiseName(String wellKnownName)
  *
- *  Request the local daemon to advertise the already obtained well-known attachment name to other
+ *  Request the local router to advertise the already obtained well-known attachment name to other
  *  AllJoyn instances that might be interested in connecting to the named service.
  *
  *  wellKnownName = Well-known name of the attachment that wishes to be advertised to remote AllJoyn instances.
@@ -198,7 +198,7 @@ QStatus CreateInterfaces(BusAttachment& bus);          /**< Create the org.alljo
  *
  *  wellKnownName = Well-known name of the attachment that should end advertising.
  *
- *  Request the local daemon to stop advertising the well-known attachment name to other
+ *  Request the local router to stop advertising the well-known attachment name to other
  *  AllJoyn instances. The well-known name must have previously been advertised via a call
  *  to org.alljoyn.Bus.Advertise().
  *
@@ -218,7 +218,7 @@ QStatus CreateInterfaces(BusAttachment& bus);          /**< Create the org.alljo
  *  wellKnownNamePrefix = Well-known name prefix of the attachment that client is interested in.
  *
  *  Register interest in a well-known attachment name being advertised by a remote AllJoyn instance.
- *  When the local AllJoyn daemon receives such an advertisement it will send an org.alljoyn.Bus.FoundAdvertisedName
+ *  When the local AllJoyn router receives such an advertisement it will send an org.alljoyn.Bus.FoundAdvertisedName
  *  signal. This attachment can then choose to ignore the advertisement or to connect to the remote Bus by
  *  calling org.alljoyn.Bus.Connect().
  *
@@ -350,7 +350,7 @@ QStatus CreateInterfaces(BusAttachment& bus);          /**< Create the org.alljo
  * Collection of Session Port numbers defined for org.alljoyn endpoint.
  */
 // @{
-#define ALLJOYN_BTCONTROLLER_SESSION_PORT 0x0001  /**< Session port used by BT topology manager (daemon-to-daemon use only) */
+#define ALLJOYN_BTCONTROLLER_SESSION_PORT 0x0001  /**< Session port used by BT topology manager (router-to-router use only) */
 // @}
 
 /**
@@ -393,7 +393,7 @@ QStatus CreateInterfaces(BusAttachment& bus);          /**< Create the org.alljo
 #define ALLJOYN_REMOVESESSIONMEMBER_REPLY_NOT_BINDER                 3   /**< RemoveSessionMember reply: Session was found, but sender is not the binder */
 #define ALLJOYN_REMOVESESSIONMEMBER_REPLY_NOT_MULTIPOINT             4   /**< RemoveSessionMember reply: Session was found, but is not multipoint */
 #define ALLJOYN_REMOVESESSIONMEMBER_REPLY_NOT_FOUND                  5   /**< RemoveSessionMember reply: Session was found, but the specified session member was not found */
-#define ALLJOYN_REMOVESESSIONMEMBER_REPLY_INCOMPATIBLE_REMOTE_DAEMON 6   /**< RemoveSessionMember reply: Session was found, but the remote daemon does not support this feature */
+#define ALLJOYN_REMOVESESSIONMEMBER_REPLY_INCOMPATIBLE_REMOTE_DAEMON 6   /**< RemoveSessionMember reply: Session was found, but the remote router does not support this feature */
 #define ALLJOYN_REMOVESESSIONMEMBER_REPLY_FAILED                     7   /**< RemoveSessionMember reply: Failed for unspecified reason */
 // @}
 

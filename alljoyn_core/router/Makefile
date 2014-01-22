@@ -1,4 +1,4 @@
-# Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2012, 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -15,14 +15,14 @@
 
 .PHONY: all clean
 
-DAEMON_LIB = libajdaemon.a
+ROUTER_LIB = libajrouter.a
 
-all: $(DAEMON_LIB) daemon bundled_obj test_progs
+all: $(ROUTER_LIB) daemon bundled_router_obj test_progs
 
-DAEMON_SRCS = $(wildcard *.cc)
-DAEMON_SRCS += $(wildcard *.c)
-DAEMON_SRCS += $(wildcard ns/*.cc)
-DAEMON_SRCS += \
+ROUTER_SRCS = $(wildcard *.cc)
+ROUTER_SRCS += $(wildcard *.c)
+ROUTER_SRCS += $(wildcard ns/*.cc)
+ROUTER_SRCS += \
 	$(OS_GROUP)/ProximityScanner.cc \
 	$(OS_GROUP)/Socket.cc 
 
@@ -30,28 +30,28 @@ INCLUDE += -I$(PWD)/ice -I$(PWD)/$(OS_GROUP) -I$(PWD)/JSON -I$(PWD)/ns
 
 ifeq "$(OS)" "darwin"
     # Darwin has its own version of the daemon transport
-    DAEMON_SRCS += $(OS)/DaemonTransport.cc
+    ROUTER_SRCS += $(OS)/DaemonTransport.cc
 else
-    DAEMON_SRCS += $(OS_GROUP)/DaemonTransport.cc
+    ROUTER_SRCS += $(OS_GROUP)/DaemonTransport.cc
 endif
 
 ifeq "$(OS)" "android"
-    DAEMON_SRCS += $(OS)/PermissionMgr.cc
+    ROUTER_SRCS += $(OS)/PermissionMgr.cc
 else
-    DAEMON_SRCS += $(OS_GROUP)/PermissionMgr.cc
+    ROUTER_SRCS += $(OS_GROUP)/PermissionMgr.cc
 endif
 
 ifeq "$(ICE)" "on"
     # Use ICE
     INCLUDE += -I$(PWD)/packetengine
-    DAEMON_SRCS += $(wildcard ice/*.cc)
-    DAEMON_SRCS += $(wildcard JSON/*.cc)
-    DAEMON_SRCS += $(wildcard packetengine/*.cc)
+    ROUTER_SRCS += $(wildcard ice/*.cc)
+    ROUTER_SRCS += $(wildcard JSON/*.cc)
+    ROUTER_SRCS += $(wildcard packetengine/*.cc)
 
 endif
 
-DAEMON_OBJS = $(patsubst %.cc,%.o,$(DAEMON_SRCS))
-$(DAEMON_OBJS) : $(DAEMON_SRC)
+ROUTER_OBJS = $(patsubst %.cc,%.o,$(ROUTER_SRCS))
+$(ROUTER_OBJS) : $(ROUTER_SRCS)
 	$(CC) $(CXXFLAGS) $(CPPDEFINES) $(INCLUDE) -c -o $@ $(patsubst %.o,%.cc,$@)
 
 
@@ -67,40 +67,40 @@ $(TESTDIR)/advtunnel.o : $(TESTDIR)/advtunnel.cc
 $(TESTDIR)/bbdaemon.o : $(TESTDIR)/bbdaemon.cc
 $(TESTDIR)/mcmd.o : $(TESTDIR)/mcmd.cc
 
-BUNDLED_SRCS = bundled/BundledDaemon.cc
-BUNDLED_OBJ = $(patsubst %.cc,%.o,$(BUNDLED_SRCS))
+BUNDLED_ROUTER_SRCS = bundled/BundledRouter.cc
+BUNDLED_ROUTER_OBJ = $(patsubst %.cc,%.o,$(BUNDLED_ROUTER_SRCS))
 
 LIBS += -lalljoyn
 
 %.o:%.cc
 	$(CC) $(CXXFLAGS) $(CPPDEFINES) $(INCLUDE) -c -o $@ $<
 
-$(DAEMON_LIB): $(DAEMON_OBJS)
-	$(AR) r $(DAEMON_LIB) $(DAEMON_OBJS)
-	cp $(DAEMON_LIB) $(INSTALLDIR)/dist/lib
+$(ROUTER_LIB): $(ROUTER_OBJS)
+	$(AR) r $(ROUTER_LIB) $(ROUTER_OBJS)
+	cp $(ROUTER_LIB) $(INSTALLDIR)/dist/lib
 
-daemon : $(DAEMON_OBJS) $(DAEMON_MAIN_OBJ)
-	$(CC) $(CXXFLAGS) $(CPPDEFINES) $(INCLUDE) $(LINKFLAGS) -o alljoyn-daemon $(DAEMON_OBJS) $(DAEMON_MAIN_OBJ) $(LIBS)
+daemon : $(ROUTER_OBJS) $(DAEMON_MAIN_OBJ)
+	$(CC) $(CXXFLAGS) $(CPPDEFINES) $(INCLUDE) $(LINKFLAGS) -o alljoyn-daemon $(ROUTER_OBJS) $(DAEMON_MAIN_OBJ) $(LIBS)
 	cp alljoyn-daemon $(INSTALLDIR)/dist/bin
  
-bundled_obj : $(BUNDLED_OBJ)
-	cp $(BUNDLED_OBJ) $(INSTALLDIR)/dist/lib
+bundled_router_obj : $(BUNDLED_ROUTER_OBJ)
+	cp $(BUNDLED_ROUTER_OBJ) $(INSTALLDIR)/dist/lib
 
 test_progs: advtunnel bbdaemon
 
-advtunnel : $(DAEMON_OBJS) $(TESTDIR)/advtunnel.o
-	$(CC) $(CXXFLAGS) $(CPPDEFINES) $(INCLUDE) $(LINKFLAGS) -o advtunnel $(DAEMON_OBJS) $(TESTDIR)/advtunnel.o $(LIBS)
+advtunnel : $(ROUTER_OBJS) $(TESTDIR)/advtunnel.o
+	$(CC) $(CXXFLAGS) $(CPPDEFINES) $(INCLUDE) $(LINKFLAGS) -o advtunnel $(ROUTER_OBJS) $(TESTDIR)/advtunnel.o $(LIBS)
 	cp advtunnel $(INSTALLDIR)/dist/bin
 
-bbdaemon : $(DAEMON_OBJS) $(TESTDIR)/bbdaemon.o
-	$(CC) $(CXXFLAGS) $(CPPDEFINES) $(INCLUDE) $(LINKFLAGS) -o bbdaemon $(DAEMON_OBJS) $(TESTDIR)/bbdaemon.o $(LIBS)
+bbdaemon : $(ROUTER_OBJS) $(TESTDIR)/bbdaemon.o
+	$(CC) $(CXXFLAGS) $(CPPDEFINES) $(INCLUDE) $(LINKFLAGS) -o bbdaemon $(ROUTER_OBJS) $(TESTDIR)/bbdaemon.o $(LIBS)
 	cp bbdaemon $(INSTALLDIR)/dist/bin
 
-DaemonTest : $(DAEMON_OBJS) $(TESTDIR)/DaemonTest.o
-	$(CC) $(CXXFLAGS) $(CPPDEFINES) $(INCLUDE) $(LINKFLAGS) -o DaemonTest $(DAEMON_OBJS) $(TESTDIR)/DaemonTest.o $(LIBS)
+DaemonTest : $(ROUTER_OBJS) $(TESTDIR)/DaemonTest.o
+	$(CC) $(CXXFLAGS) $(CPPDEFINES) $(INCLUDE) $(LINKFLAGS) -o DaemonTest $(ROUTER_OBJS) $(TESTDIR)/DaemonTest.o $(LIBS)
 	cp DaemonTest $(INSTALLDIR)/dist/bin
 
 clean:
-	@rm -f *.o *~ $(OS_GROUP)/*.o $(TESTDIR)/*.o bt_bluez/*.o ice/*.o bundled/*.o JSON/*.o ns/*.o alljoyn-daemon $(DAEMON_LIB) advtunnel bbdaemon DaemonTest mcmd
+	@rm -f *.o *~ $(OS_GROUP)/*.o $(TESTDIR)/*.o bt_bluez/*.o ice/*.o bundled/*.o JSON/*.o ns/*.o alljoyn-daemon $(ROUTER_LIB) advtunnel bbdaemon DaemonTest mcmd
 
 

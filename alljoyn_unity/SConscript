@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2011, 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2011, 2013, 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -34,7 +34,7 @@ sys.path.append(str(unityenv.Dir('../build_core/tools/scons').srcnode()))
 
 # create the alljoyn_unity_native library this libary will link in the bundled daemon
 # similar to other language bindings.
-unityenv.Prepend(LIBS=[unityenv['bdobj'], unityenv['bdlib']])
+unityenv.Prepend(LIBS=[unityenv['brobj'], unityenv['ajrlib']])
 libaj_unity_native = unityenv.SharedLibrary('alljoyn_unity_native', [env['AJ_C_OBJS']])
 unityenv.Install('$UNITY_DISTDIR/lib', libaj_unity_native)
 

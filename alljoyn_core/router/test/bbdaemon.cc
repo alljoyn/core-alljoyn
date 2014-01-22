@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012,2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -362,7 +362,7 @@ static void usage(void)
 // is implemented as a static library which is linked into a JNI dynamic library and
 // called from the service code.
 //
-#if defined(DAEMON_LIB)
+#if defined(ROUTER_LIB)
 extern "C" int DaemonMain(int argc, char** argv)
 #else
 int main(int argc, char** argv)
@@ -425,7 +425,7 @@ int main(int argc, char** argv)
 #endif
 
 #if defined(QCC_OS_ANDROID)
-#if defined(DAEMON_LIB)
+#if defined(ROUTER_LIB)
 
     /*
      * If the daemon is being built as a daemon library, it implies that the
@@ -436,7 +436,7 @@ int main(int argc, char** argv)
      * (user, group) bluetooth:bluetooth but privilege BLUETOOTH or
      * BLUETOOTH_ADMIN don't help since the socket is apparently considered part
      * of DBus.  Permissions on the dbus need to be relaxed to 666 to make this
-     * work for everyday apps.  So if we are building for DAEMON_LIB we cannot
+     * work for everyday apps.  So if we are building for ROUTER_LIB we cannot
      * add bluetooth: to the transports list.
      *
      * The daemon lib version of the Android-based daemon supports the unix
@@ -446,7 +446,7 @@ int main(int argc, char** argv)
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES", "unix:abstract=alljoyn;tcp:;wfd:");
 
-#else /* !defined(DAEMON_LIB) */
+#else /* !defined(ROUTER_LIB) */
 
     /*
      * The native or bundled version of the Android-based daemon supports the
@@ -456,7 +456,7 @@ int main(int argc, char** argv)
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES", "unix:abstract=alljoyn;tcp:;wfd:");
 
-#endif /* !defined(DAEMON_LIB) */
+#endif /* !defined(ROUTER_LIB) */
 #endif /* defined(QCC_OS_ANDROID) */
 
 #if defined(QCC_OS_DARWIN)

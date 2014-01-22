@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -120,13 +120,13 @@ class ClientAuthListener : public AuthListener {
     uint32_t maxAuth;
 };
 
-class BundledDaemon : public DaemonLauncher, public TransportFactoryContainer {
+class BundledRouter : public DaemonLauncher, public TransportFactoryContainer {
 
   public:
 
-    BundledDaemon();
+    BundledRouter();
 
-    ~BundledDaemon();
+    ~BundledRouter();
 
     /**
      * Launch the bundled daemon
@@ -172,14 +172,14 @@ bool ExistFile(const char* fileName) {
  * How this works is via a fairly non-obvious mechanism, so we describe the
  * process here.  If it is desired to use the bundled daemon, the user (for
  * example bbclient or bbservice) includes this compilation unit.  Since the
- * following defines a C++ static initializer, an instance of the BundledDaemon
+ * following defines a C++ static initializer, an instance of the BundledRouter
  * object will be created before any call into a function in this file.  In
  * Linux, for example, this happens as a result of _init() being called before
  * the main() function of the program using the bundled daemon.  _init() loops
  * through the list of compilation units in link order and will eventually call
- * out to BundledDaemon.cc:__static_initialization_and_destruction_0().  This is
+ * out to BundledRouter.cc:__static_initialization_and_destruction_0().  This is
  * the initializer function for this file which will then calls the constructor
- * for the BundledDaemon object.  The constructor calls into a static method
+ * for the BundledRouter object.  The constructor calls into a static method
  * (RegisterDaemonLauncher) of the NullTransport to register itself as the
  * daemon to be launched.  This sets the stage for the use of the bundled
  * daemon.
@@ -191,11 +191,11 @@ bool ExistFile(const char* fileName) {
  *
  * The NullTransport::Connect() method looks to see if it (the null transport)
  * is running, and if it is not it looks to see if it has a daemonLauncher.
- * Recall that the constructor for the BundledDaemon object registered itself as
+ * Recall that the constructor for the BundledRouter object registered itself as
  * a daemon launcher, so the null transport will find the launcher since it
  * included the object file corresponding to this source.  The null transport
  * then does a daemonLauncher->Start() which calls back into the bundled daemon
- * object BundledDaemon::Start() method below, providing the daemon with the
+ * object BundledRouter::Start() method below, providing the daemon with the
  * NullTransport pointer.  The Start() method brings up the bundled daemon and
  * links the daemon to the bus attachment using the provided null transport.
  *
@@ -214,16 +214,16 @@ bool ExistFile(const char* fileName) {
  *
  * It's pretty magical.
  */
-static BundledDaemon bundledDaemon;
+static BundledRouter bundledRouter;
 
-BundledDaemon::BundledDaemon() : transportsInitialized(false), stopping(false), ajBus(NULL), ajBusController(NULL)
+BundledRouter::BundledRouter() : transportsInitialized(false), stopping(false), ajBus(NULL), ajBusController(NULL)
 {
     NullTransport::RegisterDaemonLauncher(this);
 }
 
-BundledDaemon::~BundledDaemon()
+BundledRouter::~BundledRouter()
 {
-    QCC_DbgPrintf(("BundledDaemon::~BundledDaemon"));
+    QCC_DbgPrintf(("BundledRouter::~BundledRouter"));
     lock.Lock(MUTEX_CONTEXT);
     while (!transports.empty()) {
         set<NullTransport*>::iterator iter = transports.begin();
@@ -237,15 +237,15 @@ BundledDaemon::~BundledDaemon()
     Join();
 }
 
-QStatus BundledDaemon::Start(NullTransport* nullTransport)
+QStatus BundledRouter::Start(NullTransport* nullTransport)
 {
     QStatus status = ER_OK;
 
-    QCC_DbgHLPrintf(("Using BundledDaemon"));
+    QCC_DbgHLPrintf(("Using BundledRouter"));
 
     /*
      * If the bundled daemon is in the process of stopping we need to wait until the operation is
-     * complete (BundledDaemon::Join has exited) before we attempt to start up again.
+     * complete (BundledRouter::Join has exited) before we attempt to start up again.
      */
     lock.Lock(MUTEX_CONTEXT);
     while (stopping) {
@@ -258,9 +258,9 @@ QStatus BundledDaemon::Start(NullTransport* nullTransport)
     }
     if (transports.empty()) {
 #if defined(QCC_OS_ANDROID)
-        LoggerSetting::GetLoggerSetting("bundled-daemon", LOG_DEBUG, true, NULL);
+        LoggerSetting::GetLoggerSetting("bundled-router", LOG_DEBUG, true, NULL);
 #else
-        LoggerSetting::GetLoggerSetting("bundled-daemon", LOG_DEBUG, false, stdout);
+        LoggerSetting::GetLoggerSetting("bundled-router", LOG_DEBUG, false, stdout);
 #endif
 
         /*
@@ -323,7 +323,7 @@ QStatus BundledDaemon::Start(NullTransport* nullTransport)
         /*
          * Create and start the daemon
          */
-        ajBus = new Bus("bundled-daemon", *this, listenSpecs.c_str());
+        ajBus = new Bus("bundled-router", *this, listenSpecs.c_str());
         if (PasswordManager::GetAuthMechanism() != "ANONYMOUS" && PasswordManager::GetPassword() != "") {
             ajBusController = new BusController(*ajBus, &authListener);
         } else {
@@ -361,9 +361,9 @@ ErrorExit:
     return status;
 }
 
-void BundledDaemon::Join()
+void BundledRouter::Join()
 {
-    QCC_DbgPrintf(("BundledDaemon::Join"));
+    QCC_DbgPrintf(("BundledRouter::Join"));
     lock.Lock(MUTEX_CONTEXT);
     if (transports.empty() && ajBus && ajBusController) {
         QCC_DbgPrintf(("Joining bundled daemon bus attachment"));
@@ -380,9 +380,9 @@ void BundledDaemon::Join()
     lock.Unlock(MUTEX_CONTEXT);
 }
 
-QStatus BundledDaemon::Stop(NullTransport* nullTransport)
+QStatus BundledRouter::Stop(NullTransport* nullTransport)
 {
-    QCC_DbgPrintf(("BundledDaemon::Stop"));
+    QCC_DbgPrintf(("BundledRouter::Stop"));
     lock.Lock(MUTEX_CONTEXT);
     transports.erase(nullTransport);
     QStatus status = ER_OK;

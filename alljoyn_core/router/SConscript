@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -17,83 +17,83 @@ from os.path import basename
 
 Import('env')
 
-daemon_env = env.Clone()
+router_env = env.Clone()
 
 vars = Variables()
 vars.Add(EnumVariable('ICE', 'Enable ICE Transport', 'off', allowed_values=('on', 'off')))
-vars.Update(daemon_env)
-Help(vars.GenerateHelpText(daemon_env))
+vars.Update(router_env)
+Help(vars.GenerateHelpText(router_env))
 
 
-if daemon_env['OS'] == 'android':
+if router_env['OS'] == 'android':
     # Android Dalvik code is tied to the hip of daemon for proximity scanner
     # functionality.  Let the build for Android know whether ICE support is
     # available or not.
-    env['ANDROID_PROXIMITY'] = daemon_env['ICE']
+    env['ANDROID_PROXIMITY'] = router_env['ICE']
 
 
-if daemon_env['OS'] == "darwin":
+if router_env['OS'] == "darwin":
     # Darwin has its own version of the daemon transport
-    srcs = [ f for f in daemon_env.Glob('*.cc') + daemon_env.Glob('*.c') + [daemon_env['OS'] + '/DaemonTransport.cc']]
+    srcs = [ f for f in router_env.Glob('*.cc') + router_env.Glob('*.c') + [router_env['OS'] + '/DaemonTransport.cc']]
 else:
-    srcs = [ f for f in daemon_env.Glob('*.cc') + daemon_env.Glob('*.c') + [daemon_env['OS_GROUP'] + '/DaemonTransport.cc']]
+    srcs = [ f for f in router_env.Glob('*.cc') + router_env.Glob('*.c') + [router_env['OS_GROUP'] + '/DaemonTransport.cc']]
 
-if daemon_env['OS'] != "android":
-    srcs += [daemon_env['OS_GROUP'] + '/PermissionMgr.cc']
+if router_env['OS'] != "android":
+    srcs += [router_env['OS_GROUP'] + '/PermissionMgr.cc']
 
-daemon_env.Append(CPPPATH = [ daemon_env.Dir('..').srcnode(),
-                              daemon_env.Dir('.').srcnode(),
-                              daemon_env.Dir('$OS_GROUP').srcnode() ])
+router_env.Append(CPPPATH = [ router_env.Dir('..').srcnode(),
+                              router_env.Dir('.').srcnode(),
+                              router_env.Dir('$OS_GROUP').srcnode() ])
 
-daemon_objs = daemon_env.Object(srcs)
+router_objs = router_env.Object(srcs)
 
-daemon_objs.extend(daemon_env.SConscript('ns/SConscript', exports = ['daemon_env']))
+router_objs.extend(router_env.SConscript('ns/SConscript', exports = ['router_env']))
 
 # Add in P2P Helper support for Android only
-if daemon_env['OS'] == "android":
-    daemon_objs.extend(daemon_env.SConscript('android/SConscript', exports = ['daemon_env']))
+if router_env['OS'] == "android":
+    router_objs.extend(router_env.SConscript('android/SConscript', exports = ['router_env']))
 
 
-if daemon_env['ICE'] == 'on':
-    daemon_env.Append(CPPDEFINES=['AJ_ENABLE_ICE'])
-    daemon_env.Append(CPPPATH = [ daemon_env.Dir('./packetengine').srcnode(),
-                                  daemon_env.Dir('./ice').srcnode() ])
-    pe_objs = daemon_env.SConscript('packetengine/SConscript', exports = ['daemon_env'])
-    ice_objs = daemon_env.SConscript('ice/SConscript', exports = ['daemon_env'])
-    json_objs = daemon_env.SConscript('JSON/SConscript', exports = ['daemon_env'])
-    daemon_objs.extend(pe_objs + ice_objs + json_objs)
+if router_env['ICE'] == 'on':
+    router_env.Append(CPPDEFINES=['AJ_ENABLE_ICE'])
+    router_env.Append(CPPPATH = [ router_env.Dir('./packetengine').srcnode(),
+                                  router_env.Dir('./ice').srcnode() ])
+    pe_objs = router_env.SConscript('packetengine/SConscript', exports = ['router_env'])
+    ice_objs = router_env.SConscript('ice/SConscript', exports = ['router_env'])
+    json_objs = router_env.SConscript('JSON/SConscript', exports = ['router_env'])
+    router_objs.extend(pe_objs + ice_objs + json_objs)
 
 # Bundled daemon object file
-bdobj = daemon_env.SConscript('bundled/SConscript', exports = ['daemon_env'])
+brobj = router_env.SConscript('bundled/SConscript', exports = ['router_env'])
 
 # AllJoyn Daemon
-if daemon_env['OS_GROUP']=='winrt':
+if router_env['OS_GROUP']=='winrt':
     Import('winrt_objs')
-    daemon_objs.extend(winrt_objs + [bdobj])
+    router_objs.extend(winrt_objs + [brobj])
 
-progs, os_objs = daemon_env.SConscript('${OS_GROUP}/SConscript', exports=['daemon_env', 'daemon_objs'])
+progs, os_objs = router_env.SConscript('${OS_GROUP}/SConscript', exports=['router_env', 'router_objs'])
 
-daemon_objs.extend(os_objs)
+router_objs.extend(os_objs)
 
 # Daemon library
-if daemon_env['OS_GROUP'] != 'winrt':
-    lib = daemon_env.StaticLibrary('ajdaemon', daemon_objs);
+if router_env['OS_GROUP'] != 'winrt':
+    lib = router_env.StaticLibrary('ajrouter', router_objs);
 else:
     lib = []
 
 # AllJoyn Daemon test programs
-if daemon_env['OS_GROUP'] == 'winrt':
+if router_env['OS_GROUP'] == 'winrt':
     tests = []
-elif daemon_env['OS'] == 'darwin':
-    if daemon_env['CPU'] in ['arm', 'armv7', 'armv7s']:
+elif router_env['OS'] == 'darwin':
+    if router_env['CPU'] in ['arm', 'armv7', 'armv7s']:
         print 'Not building unit tests for iOS...'    
         tests = []
     else:
         print 'Building unit tests for darwin...'
-        tests = daemon_env.SConscript('test/SConscript', exports = ['daemon_env', 'daemon_objs'])
+        tests = router_env.SConscript('test/SConscript', exports = ['router_env', 'router_objs'])
 else:
-    tests = daemon_env.SConscript('test/SConscript', exports = ['daemon_env', 'daemon_objs'])
+    tests = router_env.SConscript('test/SConscript', exports = ['router_env', 'router_objs'])
     
 # Return daemon and related tests
-ret = progs + tests, lib, bdobj
+ret = progs + tests, lib, brobj
 Return('ret')

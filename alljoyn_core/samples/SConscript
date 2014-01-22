@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -18,9 +18,9 @@ Import('env')
 if env['OS'] != 'win8':
     samples_env = env.Clone()
 
-    if samples_env['BD'] == 'on':
+    if samples_env['BR'] == 'on':
         # Build apps with bundled daemon support
-        samples_env.Prepend(LIBS = [samples_env['bdobj'], samples_env['bdlib']])
+        samples_env.Prepend(LIBS = [samples_env['brobj'], samples_env['ajrlib']])
 
     # Basic Sample programs
     samples_env.SConscript('basic/SConscript', exports = {'env': samples_env})

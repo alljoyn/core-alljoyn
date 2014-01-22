@@ -1,4 +1,4 @@
-# Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2012,2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -111,8 +111,8 @@ endif
 
 INSTALLDIR = $(PWD)/../build/$(OS)/$(CPU)/$(VARIANT)
 ALLJOYNLIB = $(INSTALLDIR)/dist/lib/liballjoyn.a
-AJDAEMONLIB = $(INSTALLDIR)/dist/lib/libajdaemon.a
-BUNDLED_OBJ = $(INSTALLDIR)/dist/lib/BundledDaemon.o
+AJROUTERLIB = $(INSTALLDIR)/dist/lib/libajrouter.a
+BUNDLED_ROUTER_OBJ = $(INSTALLDIR)/dist/lib/BundledRouter.o
 COMMONDIR = $(PWD)/../common
 
 INCLUDE += -I$(INSTALLDIR)/dist/inc -I$(INSTALLDIR)/dist/inc/alljoyn

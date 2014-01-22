@@ -1,7 +1,7 @@
 /* SampleDaemon - Allow thin client applications to slave off it */
 
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -107,11 +107,11 @@ int main(int argc, char** argv)
             ::org::alljoyn::SampleDaemon::ThinClientDefaultBusPwd
             );
 
-        // Force connecting to bundled daemon (i.e. null transport) to ensure
+        // Force connecting to bundled router (i.e. null transport) to ensure
         // that credentials are correctly set.
         //
         // NOTE: The above SetCredentials call doesn't take effect
-        //       when connecting to a pre-installed daemon.
+        //       when connecting to a daemon.
         status = msgBus.Connect("null:");
 
         if (ER_OK == status) {

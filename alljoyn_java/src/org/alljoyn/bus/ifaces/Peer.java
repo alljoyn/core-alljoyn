@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -37,10 +37,10 @@ public interface Peer {
 
     /**
      * Get the DBus machine id.
-     * The machine id corresponds to the AllJoyn daemon's guid in this
+     * The machine id corresponds to the AllJoyn router's guid in this
      * implementation.
      *
-     * @return guid of local AllJoyn daemon
+     * @return guid of local AllJoyn router
      * @throws BusException
      */
     @BusMethod

@@ -32,8 +32,8 @@
 		AC3A984F1577DE2900CFF856 /* AJNSecurityCredentials.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC3A984D1577DE2800CFF856 /* AJNSecurityCredentials.mm */; };
 		AC4FF04115A3A928006C2FB4 /* AuthenticationTests.m in Sources */ = {isa = PBXBuildFile; fileRef = AC4FF04015A3A928006C2FB4 /* AuthenticationTests.m */; };
 		AC5C55D51548B0CC00C13A0B /* BusAttachmentTests.m in Sources */ = {isa = PBXBuildFile; fileRef = AC5C55D41548B0CC00C13A0B /* BusAttachmentTests.m */; };
-		AC5C55D91548B53D00C13A0B /* BundledDaemon.o in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5C55D61548B53D00C13A0B /* BundledDaemon.o */; };
-		AC5C55DA1548B53D00C13A0B /* libajdaemon.a in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5C55D71548B53D00C13A0B /* libajdaemon.a */; };
+		AC5C55D91548B53D00C13A0B /* BundledRouter.o in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5C55D61548B53D00C13A0B /* BundledRouter.o */; };
+		AC5C55DA1548B53D00C13A0B /* libajrouter.a in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5C55D71548B53D00C13A0B /* libajrouter.a */; };
 		AC5C55E11548B65800C13A0B /* libstdc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5C55E01548B65800C13A0B /* libstdc++.dylib */; };
 		AC5C55E41548B6BF00C13A0B /* liballjoyn.a in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5C55D81548B53D00C13A0B /* liballjoyn.a */; };
 		AC5C55E81548B75B00C13A0B /* libpthread.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC5C55E71548B75B00C13A0B /* libpthread.dylib */; };
@@ -124,8 +124,8 @@
 		AC4FF04015A3A928006C2FB4 /* AuthenticationTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AuthenticationTests.m; sourceTree = "<group>"; };
 		AC5C55D31548B0CC00C13A0B /* BusAttachmentTests.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BusAttachmentTests.h; sourceTree = "<group>"; };
 		AC5C55D41548B0CC00C13A0B /* BusAttachmentTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BusAttachmentTests.m; sourceTree = "<group>"; };
-		AC5C55D61548B53D00C13A0B /* BundledDaemon.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; name = BundledDaemon.o; path = ../../alljoyn_core/build/darwin/x86/debug/dist/cpp/lib/BundledDaemon.o; sourceTree = "<group>"; };
-		AC5C55D71548B53D00C13A0B /* libajdaemon.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libajdaemon.a; path = ../../alljoyn_core/build/darwin/x86/debug/dist/cpp/lib/libajdaemon.a; sourceTree = "<group>"; };
+		AC5C55D61548B53D00C13A0B /* BundledRouter.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; name = BundledRouter.o; path = ../../alljoyn_core/build/darwin/x86/debug/dist/cpp/lib/BundledRouter.o; sourceTree = "<group>"; };
+		AC5C55D71548B53D00C13A0B /* libajrouter.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libajrouter.a; path = ../../alljoyn_core/build/darwin/x86/debug/dist/cpp/lib/libajrouter.a; sourceTree = "<group>"; };
 		AC5C55D81548B53D00C13A0B /* liballjoyn.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liballjoyn.a; path = ../../alljoyn_core/build/darwin/x86/debug/dist/cpp/lib/liballjoyn.a; sourceTree = "<group>"; };
 		AC5C55E01548B65800C13A0B /* libstdc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libstdc++.dylib"; path = "usr/lib/libstdc++.dylib"; sourceTree = SDKROOT; };
 		AC5C55E71548B75B00C13A0B /* libpthread.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpthread.dylib; path = usr/lib/libpthread.dylib; sourceTree = SDKROOT; };
@@ -219,8 +219,8 @@
 				AC9FD2CB15E4494B003BAE7C /* libssl.0.9.8.dylib in Frameworks */,
 				AC9FD2C915E44939003BAE7C /* libcrypto.0.9.8.dylib in Frameworks */,
 				AC5C55EC1548BED400C13A0B /* libobjc.dylib in Frameworks */,
-				AC5C55D91548B53D00C13A0B /* BundledDaemon.o in Frameworks */,
-				AC5C55DA1548B53D00C13A0B /* libajdaemon.a in Frameworks */,
+				AC5C55D91548B53D00C13A0B /* BundledRouter.o in Frameworks */,
+				AC5C55DA1548B53D00C13A0B /* libajrouter.a in Frameworks */,
 				AC5C55E41548B6BF00C13A0B /* liballjoyn.a in Frameworks */,
 				AC5C55E81548B75B00C13A0B /* libpthread.dylib in Frameworks */,
 				AC5C55E11548B65800C13A0B /* libstdc++.dylib in Frameworks */,
@@ -261,8 +261,8 @@
 				AC5C55EB1548BED400C13A0B /* libobjc.dylib */,
 				AC5C55E71548B75B00C13A0B /* libpthread.dylib */,
 				AC5C55E01548B65800C13A0B /* libstdc++.dylib */,
-				AC5C55D61548B53D00C13A0B /* BundledDaemon.o */,
-				AC5C55D71548B53D00C13A0B /* libajdaemon.a */,
+				AC5C55D61548B53D00C13A0B /* BundledRouter.o */,
+				AC5C55D71548B53D00C13A0B /* libajrouter.a */,
 				AC5C55D81548B53D00C13A0B /* liballjoyn.a */,
 				ACB44E5515485F3E00FF7DBC /* Cocoa.framework */,
 				ACB44E6715485F3E00FF7DBC /* SenTestingKit.framework */,
@@ -473,7 +473,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 0440;
-				ORGANIZATIONNAME = "2012-2013 AllSeen Alliance.";
+				ORGANIZATIONNAME = "2012-2014 AllSeen Alliance.";
 			};
 			buildConfigurationList = ACB44E4C15485F3E00FF7DBC /* Build configuration list for PBXProject "AllJoynFramework" */;
 			compatibilityVersion = "Xcode 3.2";

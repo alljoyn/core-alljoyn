@@ -509,8 +509,8 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
-					"-lajdaemon",
-					"-lBundledDaemon.o",
+					"-lajrouter",
+					"-lBundledRouter.o",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -540,8 +540,8 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
-					"-lajdaemon",
-					"-lBundledDaemon.o",
+					"-lajrouter",
+					"-lBundledRouter.o",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;

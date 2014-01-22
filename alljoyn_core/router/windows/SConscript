@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2011, 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2011, 2013 - 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -13,35 +13,35 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # 
 
-Import('daemon_env', 'daemon_objs')
+Import('router_env', 'router_objs')
 
 # OS specific objects for daemon
-if daemon_env['ICE'] == 'on':
-    os_objs = daemon_env.Object(['Socket.cc', 'ProximityScanner.cc'])
+if router_env['ICE'] == 'on':
+    os_objs = router_env.Object(['Socket.cc', 'ProximityScanner.cc'])
 else:
     os_objs = []
 
 # Build the resources for the dll
-rsc = daemon_env.RES('DaemonResources.rc')
+rsc = router_env.RES('DaemonResources.rc')
 
 daemon_static_lib = [];
 daemon_shared_lib = [];
 
 # Build the Windows daemon.
-daemon_libs = daemon_env.SharedLibrary('daemonlib', ['daemon-service.cc', 'daemon-main.cc'] + daemon_objs + rsc + os_objs)
+router_libs = router_env.SharedLibrary('daemonlib', ['daemon-service.cc', 'daemon-main.cc'] + router_objs + rsc + os_objs)
 
-# the variable daemon_libs contains the file nodes for the  static library and the 
+# the variable router_libs contains the file nodes for the  static library and the 
 # shared library however it may contain more files such as .pdb files on windows.  
 # Search through the list and assign the static library to daemon_static_lib  and 
 # the shared library to daemon_shared_lib variable.
-for x in daemon_libs: 
-    if daemon_env['LIBSUFFIX'] in str(x):
+for x in router_libs: 
+    if router_env['LIBSUFFIX'] in str(x):
         daemon_static_lib = x;
-    if daemon_env['SHLIBSUFFIX'] in str(x):
+    if router_env['SHLIBSUFFIX'] in str(x):
         daemon_shared_lib = x;
 
-daemon_env.Install('$CPP_DISTDIR/lib', daemon_static_lib) #put the *.lib file in the lib folder
-env2 = daemon_env.Clone();
+router_env.Install('$CPP_DISTDIR/lib', daemon_static_lib) #put the *.lib file in the lib folder
+env2 = router_env.Clone();
 env2.Append(LIBS = ['daemonlib'])
 daemon = []
 

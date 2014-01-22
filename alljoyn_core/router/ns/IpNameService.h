@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -51,7 +51,7 @@ class IpNameServiceImpl;
  * have a bundled daemon running, we are going to have to admit the possibility
  * of the ++ static initialization order fiasco.
  *
- * The BundledDaemon is a static and so the destruction order of the two objects
+ * The BundledRouter is a static and so the destruction order of the two objects
  * (him and us) depends on whatever the linker decides the order should be.
  *
  * We use a Meyers Singleton, and therefore we defer construction of the

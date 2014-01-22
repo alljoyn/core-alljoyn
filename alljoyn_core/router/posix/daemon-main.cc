@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -66,7 +66,7 @@
 #include "BusController.h"
 #include "DaemonConfig.h"
 
-#if !defined(DAEMON_LIB)
+#if !defined(ROUTER_LIB)
 
 #if defined(QCC_OS_LINUX) || defined(QCC_OS_ANDROID)
 #include <sys/prctl.h>
@@ -134,7 +134,7 @@ static const char
 
 static const char versionPreamble[] =
     "AllJoyn Message Bus Daemon version: %s\n"
-    "Copyright (c) 2009-2013 AllSeen Alliance.\n"
+    "Copyright (c) 2009-2014 AllSeen Alliance.\n"
     "\n"
     "Build: %s\n";
 
@@ -260,7 +260,7 @@ void OptParse::PrintUsage() {
     fprintf(
         stderr,
         "%s [--session | --system | --internal | --config-file=FILE"
-#if defined(QCC_OS_ANDROID) && defined(DAEMON_LIB)
+#if defined(QCC_OS_ANDROID) && defined(ROUTER_LIB)
         " | --config-service"
 #endif
         "]\n"
@@ -277,7 +277,7 @@ void OptParse::PrintUsage() {
         "        Use the standard configuration for the system message bus.\n\n"
         "    --internal\n"
         "        Use a basic internally defined message bus for AllJoyn.\n\n"
-#if defined(QCC_OS_ANDROID) && defined(DAEMON_LIB)
+#if defined(QCC_OS_ANDROID) && defined(ROUTER_LIB)
         "    --config-service\n"
         "        Use a configuration passed from the calling service.\n\n"
 #endif
@@ -373,7 +373,7 @@ OptParse::ParseResultCode OptParse::ParseResult()
                 goto exit;
             }
             configFile = arg.substr(sizeof("--config-file"));
-#if defined(QCC_OS_ANDROID) && defined(DAEMON_LIB)
+#if defined(QCC_OS_ANDROID) && defined(ROUTER_LIB)
         } else if (arg.compare(0, sizeof("--config-service") - 1, "--config-service") == 0) {
             if (!configFile.empty() || internal) {
                 result = PR_OPTION_CONFLICT;
@@ -674,13 +674,13 @@ int daemon(OptParse& opts) {
 // is implemented as a static library which is linked into a JNI dynamic library and
 // called from the Java service code.
 //
-#if defined(DAEMON_LIB)
+#if defined(ROUTER_LIB)
 int DaemonMain(int argc, char** argv, char* serviceConfig)
 #else
 int main(int argc, char** argv, char** env)
 #endif
 {
-#if defined(QCC_OS_ANDROID) && !defined(DAEMON_LIB)
+#if defined(QCC_OS_ANDROID) && !defined(ROUTER_LIB)
     //
     // Initialize the environment for Android if we use the command line to
     // run the daemon.  If we are using the Android service launcher, there is
@@ -714,7 +714,7 @@ int main(int argc, char** argv, char** env)
     if (opts.GetInternalConfig()) {
         StringSource src(internalConfig);
         config = DaemonConfig::Load(internalConfig);
-#if defined(QCC_OS_ANDROID) && defined(DAEMON_LIB)
+#if defined(QCC_OS_ANDROID) && defined(ROUTER_LIB)
     } else if (opts.GetServiceConfig()) {
         config = DaemonConfig::Load(serviceConfig);
 #endif
@@ -733,7 +733,7 @@ int main(int argc, char** argv, char** env)
 
     Log(LOG_NOTICE, versionPreamble, GetVersion(), GetBuildInfo());
 
-#if !defined(DAEMON_LIB)
+#if !defined(ROUTER_LIB)
     if (!opts.GetNoSwitchUser()) {
 #if defined(QCC_OS_LINUX) || defined(QCC_OS_ANDROID)
         // Keep all capabilities before switching users

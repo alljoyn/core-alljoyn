@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -588,11 +588,11 @@ class BusAttachment : public MessageReceiver {
     bool IsStopping() { return isStopping; }
 
     /**
-     * Connect to an AllJoyn daemon at a specific connectSpec destination.
+     * Connect to an AllJoyn router at a specific connectSpec destination.
      *
-     * If there is no daemon present at the given connectSpec or if the daemon
+     * If there is no router present at the given connectSpec or if the router
      * at the connectSpec has an incompatible AllJoyn version, this method will
-     * attempt to use an "application bundled" form of the daemon if one exists.
+     * attempt to use a bundled router if one exists.
      *
      * See also these sample file(s): @n
      * basic/basic_client.cc @n
@@ -643,10 +643,10 @@ class BusAttachment : public MessageReceiver {
     QStatus Connect(const char* connectSpec);
 
     /**
-     * Connect to local a AllJoyn daemon.
+     * Connect to a local AllJoyn router.
      *
-     * Locate a local AllJoyn daemon that is compatible with this
-     * AllJoyn client's version and connect to the daemon.
+     * Locate a local AllJoyn router that is compatible with this
+     * AllJoyn client's version and connect to the router.
      *
      * @return
      *      - #ER_OK if successful.
@@ -1092,7 +1092,7 @@ class BusAttachment : public MessageReceiver {
 
     /**
      * Request a well-known name.
-     * This method is a shortcut/helper that issues an org.freedesktop.DBus.RequestName method call to the local daemon
+     * This method is a shortcut/helper that issues an org.freedesktop.DBus.RequestName method call to the local router
      * and interprets the response.
      *
      * See also these sample file(s): @n
@@ -1125,7 +1125,7 @@ class BusAttachment : public MessageReceiver {
      * @param[in]  flags          Bitmask of DBUS_NAME_FLAG_* defines (see DBusStd.h)
      *
      * @return
-     *      - #ER_OK iff daemon response was received and request was successful.
+     *      - #ER_OK iff router response was received and request was successful.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
      *      - Other error status codes indicating a failure.
      */
@@ -1146,13 +1146,13 @@ class BusAttachment : public MessageReceiver {
      * csharp/Sessions/Sessions/Common/SessionOperations.cs @n
      * csharp/Sessions/Sessions/MainPage.xaml.cs @n
      *
-     * This method is a shortcut/helper that issues an org.freedesktop.DBus.ReleaseName method call to the local daemon
+     * This method is a shortcut/helper that issues an org.freedesktop.DBus.ReleaseName method call to the local router
      * and interprets the response.
      *
      * @param[in]  name          Well-known name being released.
      *
      * @return
-     *      - #ER_OK iff daemon response was received amd the name was successfully released.
+     *      - #ER_OK iff router response was received amd the name was successfully released.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
      *      - Other error status codes indicating a failure.
      */
@@ -1169,7 +1169,7 @@ class BusAttachment : public MessageReceiver {
      * cpp/Chat/Chat/MainPage.xaml.cpp @n
      * csharp/Basic/Signal_Consumer_Client/SignalConsumerClient/MainPage.xaml.cs @n
      *
-     * This method is a shortcut/helper that issues an org.freedesktop.DBus.AddMatch method call to the local daemon.
+     * This method is a shortcut/helper that issues an org.freedesktop.DBus.AddMatch method call to the local router.
      *
      * @param[in]  rule  Match rule to be added (see DBus specification for format of this string).
      *
@@ -1182,7 +1182,7 @@ class BusAttachment : public MessageReceiver {
 
     /**
      * Remove a DBus match rule.
-     * This method is a shortcut/helper that issues an org.freedesktop.DBus.RemoveMatch method call to the local daemon.
+     * This method is a shortcut/helper that issues an org.freedesktop.DBus.RemoveMatch method call to the local router.
      *
      * @param[in]  rule  Match rule to be removed (see DBus specification for format of this string).
      *
@@ -1194,7 +1194,7 @@ class BusAttachment : public MessageReceiver {
     QStatus RemoveMatch(const char* rule);
 
     /**
-     * Advertise the existence of a well-known name to other (possibly disconnected) AllJoyn daemons.
+     * Advertise the existence of a well-known name to other (possibly disconnected) AllJoyn routers.
      *
      * See also these sample file(s): @n
      * basic/basic_service.cc @n
@@ -1223,23 +1223,23 @@ class BusAttachment : public MessageReceiver {
      * csharp/Sessions/Sessions/Common/SessionOperations.cs @n
      * javascript/chat/chat/js/alljoyn.js @n
      *
-     * This method is a shortcut/helper that issues an org.alljoyn.Bus.AdvertisedName method call to the local daemon
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.AdvertisedName method call to the local router
      * and interprets the response.
      *
      * @param[in]  name          the well-known name to advertise. (Must be owned by the caller via RequestName).
      * @param[in]  transports    Set of transports to use for sending advertisement.
      *
      * @return
-     *      - #ER_OK iff daemon response was received and advertise was successful.
+     *      - #ER_OK iff router response was received and advertise was successful.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
      *      - Other error status codes indicating a failure.
      */
     QStatus AdvertiseName(const char* name, TransportMask transports);
 
     /**
-     * Stop advertising the existence of a well-known name to other AllJoyn daemons.
+     * Stop advertising the existence of a well-known name to other AllJoyn routers.
      *
-     * This method is a shortcut/helper that issues an org.alljoyn.Bus.CancelAdvertiseName method call to the local daemon
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.CancelAdvertiseName method call to the local router
      * and interprets the response.
      *
      * See also these sample file(s): @n
@@ -1257,7 +1257,7 @@ class BusAttachment : public MessageReceiver {
      * @param[in]  transports    Set of transports whose name advertisement will be canceled.
      *
      * @return
-     *      - #ER_OK iff daemon response was received and advertisements were successfully stopped.
+     *      - #ER_OK iff router response was received and advertisements were successfully stopped.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
      *      - Other error status codes indicating a failure.
      */
@@ -1296,14 +1296,14 @@ class BusAttachment : public MessageReceiver {
      * csharp/Secure/Secure/Common/Client.cs @n
      * csharp/Sessions/Sessions/Common/SessionOperations.cs @n
      *
-     * This method is a shortcut/helper that issues an org.alljoyn.Bus.FindAdvertisedName method call to the local daemon
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.FindAdvertisedName method call to the local router
      * and interprets the response.
      *
      * @param[in]  namePrefix    Well-known name prefix that application is interested in receiving
      *                           BusListener::FoundAdvertisedName notifications about.
      *
      * @return
-     *      - #ER_OK iff daemon response was received and discovery was successfully started.
+     *      - #ER_OK iff router response was received and discovery was successfully started.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
      *      - Other error status codes indicating a failure.
      */
@@ -1313,7 +1313,7 @@ class BusAttachment : public MessageReceiver {
      * Register interest in a well-known name prefix for the purpose of discovery over specified transports
      *
      *
-     * This method is a shortcut/helper that issues an org.alljoyn.Bus.FindAdvertisedName method call to the local daemon
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.FindAdvertisedName method call to the local router
      * and interprets the response.
      *
      * @param[in]  namePrefix    Well-known name prefix that application is interested in receiving
@@ -1321,7 +1321,7 @@ class BusAttachment : public MessageReceiver {
      * @param[in]  transports    Transports over which to do well-known name discovery
      *
      * @return
-     *      - #ER_OK iff daemon response was received and discovery was successfully started.
+     *      - #ER_OK iff router response was received and discovery was successfully started.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
      *      - Other error status codes indicating a failure.
      */
@@ -1332,7 +1332,7 @@ class BusAttachment : public MessageReceiver {
      * registered with FindAdvertisedName. This cancels well-known name discovery over transports
      * included in TRANSPORT_ANY.  This method is a shortcut/helper
      * that issues an org.alljoyn.Bus.CancelFindAdvertisedName method
-     * call to the local daemon and interprets the response.
+     * call to the local router and interprets the response.
      *
      * For Windows 8 see also these sample file(s): @n
      * csharp/BusStress/BusStress/Common/StressOperation.cs @n
@@ -1342,7 +1342,7 @@ class BusAttachment : public MessageReceiver {
      *                           BusListener::FoundAdvertisedName notifications about.
      *
      * @return
-     *      - #ER_OK iff daemon response was received and cancel was successfully completed.
+     *      - #ER_OK iff router response was received and cancel was successfully completed.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
      *      - Other error status codes indicating a failure.
      */
@@ -1353,14 +1353,14 @@ class BusAttachment : public MessageReceiver {
      * registered with FindAdvertisedName. This cancels well-known name discovery over
      * the specified transports.  This method is a shortcut/helper
      * that issues an org.alljoyn.Bus.CancelFindAdvertisedName method
-     * call to the local daemon and interprets the response.
+     * call to the local router and interprets the response.
      *
      * @param[in]  namePrefix    Well-known name prefix that application is no longer interested in receiving
      *                           BusListener::FoundAdvertisedName notifications about.
      * @param[in]  transports    Transports over which to cancel well-known name discovery
      *
      * @return
-     *      - #ER_OK iff daemon response was received and cancel was successfully completed.
+     *      - #ER_OK iff router response was received and cancel was successfully completed.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
      *      - Other error status codes indicating a failure.
      */
@@ -1419,7 +1419,7 @@ class BusAttachment : public MessageReceiver {
      * @param[in]     listener  Called by the bus when session related events occur.
      *
      * @return
-     *      - #ER_OK iff daemon response was received and the bind operation was successful.
+     *      - #ER_OK iff router response was received and the bind operation was successful.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
      *      - Other error status codes indicating a failure.
      */
@@ -1441,7 +1441,7 @@ class BusAttachment : public MessageReceiver {
      * @param[in]   sessionPort    Existing session port to be un-bound.
      *
      * @return
-     *      - #ER_OK iff daemon response was received and the bind operation was successful.
+     *      - #ER_OK iff router response was received and the bind operation was successful.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
      *      - Other error status codes indicating a failure.
      */
@@ -1449,7 +1449,7 @@ class BusAttachment : public MessageReceiver {
 
     /**
      * Join a session.
-     * This method is a shortcut/helper that issues an org.alljoyn.Bus.JoinSession method call to the local daemon
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.JoinSession method call to the local router
      * and interprets the response.
      *
      * See also these sample file(s): @n
@@ -1472,7 +1472,7 @@ class BusAttachment : public MessageReceiver {
      * @param[in,out] opts          Session options.
      *
      * @return
-     *      - #ER_OK iff daemon response was received and the session was successfully joined.
+     *      - #ER_OK iff router response was received and the session was successfully joined.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
      *      - Other error status codes indicating a failure.
      */
@@ -1481,7 +1481,7 @@ class BusAttachment : public MessageReceiver {
 
     /**
      * Join a session.
-     * This method is a shortcut/helper that issues an org.alljoyn.Bus.JoinSession method call to the local daemon
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.JoinSession method call to the local router
      * and interprets the response.
      *
      * For Windows 8 see also these sample file(s): @n
@@ -1511,7 +1511,7 @@ class BusAttachment : public MessageReceiver {
      * @param[in]  context          User defined context which will be passed as-is to callback.
      *
      * @return
-     *      - #ER_OK iff method call to local daemon response was was successful.
+     *      - #ER_OK iff method call to local router response was was successful.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
      *      - Other error status codes indicating a failure.
      */
@@ -1539,7 +1539,7 @@ class BusAttachment : public MessageReceiver {
 
     /**
      * Leave an existing session.
-     * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveSession method call to the local daemon
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveSession method call to the local router
      * and interprets the response.
      *
      * See also these sample file(s): @n
@@ -1559,7 +1559,7 @@ class BusAttachment : public MessageReceiver {
      * @param[in]  sessionId     Session id.
      *
      * @return
-     *      - #ER_OK iff daemon response was received and the leave operation was successfully completed.
+     *      - #ER_OK iff router response was received and the leave operation was successfully completed.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
      *      - Other error status codes indicating a failure.
      */
@@ -1569,14 +1569,14 @@ class BusAttachment : public MessageReceiver {
      * Remove a member from an existing multipoint session.
      * This function may be called by the binder of the session to forcefully remove a member from a session.
      *
-     * This method is a shortcut/helper that issues an org.alljoyn.Bus.RemoveSessionMember method call to the local daemon
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.RemoveSessionMember method call to the local router
      * and interprets the response.
      *
      * @param[in]  sessionId     Session id.
      * @param[in]  memberName    Member to remove.
      *
      * @return
-     *      - #ER_OK iff daemon response was received and the remove member operation was successfully completed.
+     *      - #ER_OK iff router response was received and the remove member operation was successfully completed.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
      *      - Other error status codes indicating a failure.
      */
@@ -1595,7 +1595,7 @@ class BusAttachment : public MessageReceiver {
     /**
      * Set the link timeout for a session.
      *
-     * Link timeout is the maximum number of seconds that an unresponsive daemon-to-daemon connection
+     * Link timeout is the maximum number of seconds that an unresponsive router-to-router connection
      * will be monitored before declaring the session lost (via SessionLost callback). Link timeout
      * defaults to 0 which indicates that AllJoyn link monitoring is disabled.
      *
@@ -1613,11 +1613,11 @@ class BusAttachment : public MessageReceiver {
      *
      * @return
      *      - #ER_OK if successful
-     *      - #ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NOT_SUPPORTED if local daemon does not support SetLinkTimeout
+     *      - #ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NOT_SUPPORTED if local router does not support SetLinkTimeout
      *      - #ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NO_DEST_SUPPORT if SetLinkTimeout not supported by destination
      *      - #ER_BUS_NO_SESSION if the Session id is not valid
      *      - #ER_ALLJOYN_SETLINKTIMEOUT_REPLY_FAILED if SetLinkTimeout failed
-     *      - #ER_BUS_NOT_CONNECTED if the BusAttachment is not connected to the daemon
+     *      - #ER_BUS_NOT_CONNECTED if the BusAttachment is not connected to the router
      */
     QStatus SetLinkTimeout(SessionId sessionid, uint32_t& linkTimeout);
 
@@ -1625,7 +1625,7 @@ class BusAttachment : public MessageReceiver {
     /**
      * Set the link timeout for a session.
      *
-     * Link timeout is the maximum number of seconds that an unresponsive daemon-to-daemon connection
+     * Link timeout is the maximum number of seconds that an unresponsive router-to-router connection
      * will be monitored before declaring the session lost (via SessionLost callback). Link timeout
      * defaults to 0 which indicates that AllJoyn link monitoring is disabled.
      *
@@ -1651,7 +1651,7 @@ class BusAttachment : public MessageReceiver {
      * @param[in]  context      User defined context which will be passed as-is to callback.
      *
      * @return
-     *      - #ER_OK iff method call to local daemon response was was successful.
+     *      - #ER_OK iff method call to local router response was was successful.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
      *      - Other error status codes indicating a failure.
      */
@@ -1662,7 +1662,7 @@ class BusAttachment : public MessageReceiver {
 
     /**
      * Determine whether a given well-known name exists on the bus.
-     * This method is a shortcut/helper that issues an org.freedesktop.DBus.NameHasOwner method call to the daemon
+     * This method is a shortcut/helper that issues an org.freedesktop.DBus.NameHasOwner method call to the router
      * and interprets the response.
      *
      * @param[in]  name       The well known name that the caller is inquiring about.
@@ -1692,7 +1692,7 @@ class BusAttachment : public MessageReceiver {
     QStatus GetPeerGUID(const char* name, qcc::String& guid);
 
     /**
-     * This sets the debug level of the local AllJoyn daemon if that daemon
+     * This sets the debug level of the local AllJoyn router if that router
      * was built in debug mode.
      *
      * The debug level can be set for individual subsystems or for "ALL"
@@ -1726,8 +1726,8 @@ class BusAttachment : public MessageReceiver {
      *
      * @return
      *     - #ER_OK if debug request was successfully sent to the AllJoyn
-     *       daemon.
-     *     - #ER_BUS_NO_SUCH_OBJECT if daemon was not built in debug mode.
+     *       router.
+     *     - #ER_BUS_NO_SUCH_OBJECT if router was not built in debug mode.
      */
     QStatus SetDaemonDebug(const char* module, uint32_t level);
 
@@ -1833,7 +1833,7 @@ class BusAttachment : public MessageReceiver {
     void WaitStopInternal();
 
     /**
-     * Try connect to the daemon with the spec.
+     * Try connect to the router with the spec.
      */
     QStatus TryConnect(const char* connectSpec);
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2013 AllSeen Alliance. All rights reserved.
+# Copyright (c) 2013, 2014 AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -21,8 +21,8 @@ prog = [ env.Program('SampleDaemon', 'SampleDaemon.cc') ]
 
 # The sample daemon binary is intended to be used by thin client apps and is
 # packaged with ThinClient SDK (Win7/Linux). It sets credentials so that
-# the thin client apps connect to it in a trusted manner (meaning: requires BD)
+# the thin client apps connect to it in a trusted manner (meaning: requires BR)
 
-if env['BD'] == 'on' and env['OS'] in ['linux', 'win7']:
+if env['BR'] == 'on' and env['OS'] in ['linux', 'win7']:
     env.Install('$DISTDIR/cpp/bin/samples', prog )
     env.Install(clientDistDir, env.Glob('*.cc'))

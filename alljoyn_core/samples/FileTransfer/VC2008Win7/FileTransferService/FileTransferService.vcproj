@@ -63,7 +63,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="alljoyn.lib ajdaemon.lib BundledDaemon.obj ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
+				AdditionalDependencies="alljoyn.lib ajrouter.lib BundledRouter.obj ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
 				AdditionalLibraryDirectories="&quot;$(ALLJOYN_SDK_HOME)\lib&quot;;&quot;$(ProjectDir)\..\..\..\..\lib&quot;"
 				IgnoreDefaultLibraryNames="libcmt.lib"
 				GenerateDebugInformation="true"
@@ -137,7 +137,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="alljoyn.lib ajdaemon.lib BundledDaemon.obj ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
+				AdditionalDependencies="alljoyn.lib ajrouter.lib BundledRouter.obj ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
 				AdditionalLibraryDirectories="&quot;$(ALLJOYN_SDK_HOME)\lib&quot;;&quot;$(ProjectDir)\..\..\..\..\lib&quot;"
 				IgnoreDefaultLibraryNames="libcmt.lib"
 				GenerateDebugInformation="true"
@@ -211,7 +211,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="alljoyn.lib ajdaemon.lib BundledDaemon.obj ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
+				AdditionalDependencies="alljoyn.lib ajrouter.lib BundledRouter.obj ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
 				AdditionalLibraryDirectories="$(ALLJOYN_SDK_HOME)\lib;$(ProjectDir)\..\..\..\..\lib"
 				IgnoreDefaultLibraryNames="libcmt.lib"
 				GenerateDebugInformation="true"
@@ -288,7 +288,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="alljoyn.lib ajdaemon.lib BundledDaemon.obj ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
+				AdditionalDependencies="alljoyn.lib ajrouter.lib BundledRouter.obj ws2_32.lib Secur32.lib crypt32.lib Bcrypt.lib Ncrypt.lib iphlpapi.lib"
 				AdditionalLibraryDirectories="&quot;$(ALLJOYN_SDK_HOME)\lib&quot;;&quot;$(ProjectDir)\..\..\..\..\lib&quot;"
 				IgnoreDefaultLibraryNames="libcmt.lib"
 				GenerateDebugInformation="true"

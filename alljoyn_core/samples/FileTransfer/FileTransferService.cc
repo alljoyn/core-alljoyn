@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------
 // <copyright file="FileTransferService.cc" company="AllSeen Alliance.">
-//     Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+//     Copyright (c) 2012, 2014, AllSeen Alliance. All rights reserved.
 //
 //        Permission to use, copy, modify, and/or distribute this software for any
 //        purpose with or without fee is hereby granted, provided that the above
@@ -294,8 +294,8 @@ QStatus StartMessageBus(void)
     return status;
 }
 
-/* Connect to the daemon, report the result to stdout, and return the status code. */
-QStatus ConnectToDaemon(void)
+/* Connect, report the result to stdout, and return the status code. */
+QStatus ConnectBusAttachment(void)
 {
     QStatus status = s_msgBus->Connect();
 
@@ -405,7 +405,7 @@ int main(int argc, char** argv, char** envArg)
 
 
     if (ER_OK == status) {
-        status = ConnectToDaemon();
+        status = ConnectBusAttachment();
     }
 
     /*

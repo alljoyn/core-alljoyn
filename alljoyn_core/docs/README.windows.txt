@@ -64,9 +64,9 @@ cpp/    core AllJoyn functionality, implemented in C++
     lib/                        AllJoyn Core (C++) client libraries
 
         alljoyn.lib                     implements core API
-        ajdaemon.lib                    implements bundled-daemon
+        ajrouter.lib                    implements bundled-router
         daemonlib.lib
-        BundledDaemon.obj
+        BundledRouter.obj
 
     samples/                    C++ sample programs (see README)
 

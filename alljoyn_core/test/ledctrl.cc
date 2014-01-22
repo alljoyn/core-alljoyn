@@ -1,7 +1,7 @@
 /* ledctrl - Control the led of the remote device.*/
 
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -168,7 +168,7 @@ int main(int argc, char** argv)
     /* Get env vars */
     Environ* env = Environ::GetAppEnviron();
 
-    /* Ensure that the BundledDaemon is used since the credentials will
+    /* Ensure that the BundledRouter is used since the credentials will
      * not take effect if the pre-installed daemon is used.
      */
     qcc::String connectArgs = "null:";

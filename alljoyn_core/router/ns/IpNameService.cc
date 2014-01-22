@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011,2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -58,7 +58,7 @@ IpNameService::~IpNameService()
     // all of the static objects in whatever order the linker has decided will
     // be best.
     //
-    // For us, the troublesome object is going to be the BundledDaemon.  It is
+    // For us, the troublesome object is going to be the BundledRouter.  It is
     // torn down by the call to its destructor which may happen before or after
     // the call to our destructor.  If we are destroyed first, the bundled
     // daemon may happily continue to call into the name service singleton since
@@ -75,7 +75,7 @@ IpNameService::~IpNameService()
     //
     // The exit handlers are going to be called by the main thread (that
     // originally called the main function), so the destructors will be called
-    // sequentially.  The interesting problem, though, is that the BundledDaemon
+    // sequentially.  The interesting problem, though, is that the BundledRouter
     // is going to have possibly more than one transport running, and typically
     // each of those transports has multiple threads that could conceivably be
     // making name service calls.  So, while our destructor is being called by

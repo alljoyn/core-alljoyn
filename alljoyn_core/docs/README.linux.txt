@@ -50,8 +50,8 @@ cpp/    core AllJoyn functionality, implemented in C++
         liballjoyn.a                    implements core API
         liballjoyn.so                   requires LD_LIBRARY_PATH=/path/to/lib/folder
 
-        libajdaemon.a                   implements bundled-daemon
-        BundledDaemon.o
+        libajrouter.a                   implements bundled-router
+        BundledRouter.o
 
     samples/                    C++ sample programs (see README)
 

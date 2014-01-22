@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -96,23 +96,23 @@ if ajenv['OS_GROUP'] != 'winrt':
 # AllJoyn Daemon, daemon library, and bundled daemon object file
 if ajenv['OS_GROUP'] == 'winrt':
     winrt_objs = static_objs
-    daemon_progs, bdlib, bdobj = ajenv.SConscript('$OBJDIR/router/SConscript', exports = ['winrt_objs'])
+    daemon_progs, ajrlib, brobj = ajenv.SConscript('$OBJDIR/router/SConscript', exports = ['winrt_objs'])
     ajenv.Install('$WINRT_DISTDIR/bin', daemon_progs)
     # WinRT needs the full path to the exact file.
-    daemon_obj = bdobj
-    daemon_lib = bdlib
+    bundled_router_obj = brobj
+    router_lib = ajrlib
 
 else:
-    daemon_progs, bdlib, bdobj = ajenv.SConscript('$OBJDIR/router/SConscript')
+    daemon_progs, ajrlib, brobj = ajenv.SConscript('$OBJDIR/router/SConscript')
     ajenv.Install('$CPP_DISTDIR/bin', daemon_progs)
-    ajenv.Install('$CPP_DISTDIR/lib', bdlib)
-    daemon_obj = ajenv.Install('$CPP_DISTDIR/lib', bdobj)
-    daemon_lib = 'ajdaemon'
+    ajenv.Install('$CPP_DISTDIR/lib', ajrlib)
+    bundled_router_obj = ajenv.Install('$CPP_DISTDIR/lib', brobj)
+    router_lib = 'ajrouter'
 
 
-# The global env needs the 'bdobj' for the Java binding
-env['bdobj'] = daemon_obj
-env['bdlib'] = daemon_lib
+# The global env needs the 'brobj' for the Java binding
+env['brobj'] = bundled_router_obj
+env['ajrlib'] = router_lib
 
 
 # only include command line samples, unit test, test programs if we are not 
