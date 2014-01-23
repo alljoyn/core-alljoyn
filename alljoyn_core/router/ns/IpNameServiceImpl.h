@@ -110,7 +110,8 @@ class IpNameServiceImpl : public qcc::Thread {
     static const uint32_t QUESTION_MODULUS = 10;
 
     /**
-     * @brief The number of times we resend WhoHas requests.
+     * @brief The number of times we resend WhoHas requests with the time
+     * between each request.
      *
      * Legacy 802.11 MACs do not do backoff and retransmission of packets
      * destined for multicast addresses.  Therefore if there is a collision
@@ -118,15 +119,18 @@ class IpNameServiceImpl : public qcc::Thread {
      * no indication of this at all up at the Socket level.  To avoid this
      * unfortunately common occurrence, which would force a user to wait
      * for the next successful retransmission of exported names, we resend
-     * each Locate request this many times.
+     * each Locate request multiple times.
+     *
+     * The number of retries is based on the size of the RETRY_INTERVALS array.
+     * The time between each Locate retries is the number of seconds indicated.
+     *
+     * If the array is { 1, 2, 3, 3 }
+     * the first retry will occure in 1 second, second retry 2 seconds later, and
+     * so on up till all intervals have been tried.
+     *
+     * RETRY_INTERVALS is set to { 1, 2, 3, 3 } by default
      */
-    static const uint32_t NUMBER_RETRIES = 2;
-
-    /**
-     * The time value indicating the time between Locate retries.  Units are
-     * seconds.
-     */
-    static const uint32_t RETRY_INTERVAL = 5;
+    static const uint32_t RETRY_INTERVALS[];
 
     /**
      * The modulus indicating the minimum time between interface lazy updates.

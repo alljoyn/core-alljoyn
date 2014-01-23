@@ -445,11 +445,13 @@ bool IpNameServiceImplWildcardMatch(qcc::String str, qcc::String pat)
     return true;
 }
 
+const uint32_t IpNameServiceImpl::RETRY_INTERVALS[] = { 1, 2, 3, 3 };
+
 IpNameServiceImpl::IpNameServiceImpl()
     : Thread("IpNameServiceImpl"), m_state(IMPL_SHUTDOWN), m_isProcSuspending(false),
     m_terminal(false), m_protect_callback(false), m_timer(0), m_tDuration(DEFAULT_DURATION),
     m_tRetransmit(RETRANSMIT_TIME), m_tQuestion(QUESTION_TIME),
-    m_modulus(QUESTION_MODULUS), m_retries(NUMBER_RETRIES),
+    m_modulus(QUESTION_MODULUS), m_retries(sizeof(RETRY_INTERVALS) / sizeof(RETRY_INTERVALS[0])),
     m_loopback(false), m_enableIPv4(false), m_enableIPv6(false),
     m_wakeEvent(), m_forceLazyUpdate(false),
     m_enabled(false), m_doEnable(false), m_doDisable(false),
@@ -3719,7 +3721,7 @@ void IpNameServiceImpl::Retry(void)
         // retry time.
         //
         if (retryTick == 0) {
-            (*i).SetRetryTick(tick + RETRY_INTERVAL);
+            (*i).SetRetryTick(tick + RETRY_INTERVALS[0]);
             ++i;
             continue;
         }
@@ -3737,12 +3739,11 @@ void IpNameServiceImpl::Retry(void)
 
             uint32_t count = (*i).GetRetries();
             ++count;
-
             if (count == m_retries) {
                 m_retry.erase(i++);
             } else {
                 (*i).SetRetries(count);
-                (*i).SetRetryTick(tick + RETRY_INTERVAL);
+                (*i).SetRetryTick(tick + RETRY_INTERVALS[count]);
                 ++i;
             }
         } else {
