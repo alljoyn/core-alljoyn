@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -211,9 +211,9 @@ QStatus AdvTunnel::Listen(uint16_t port)
         return status;
     }
     /* Allow reuse of the same port */
-    status = qcc::SetReuseAddrPort(listenSock, true);
+    status = qcc::SetReusePort(listenSock, true);
     if (status != ER_OK) {
-        QCC_LogError(status, ("AdvTunnel::Listen(): SetReuseAddrPort() failed"));
+        QCC_LogError(status, ("AdvTunnel::Listen(): SetReuse() failed"));
         qcc::Close(listenSock);
         return status;
     }

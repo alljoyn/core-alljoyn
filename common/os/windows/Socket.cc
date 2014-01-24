@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -847,7 +847,7 @@ QStatus SetNagle(SocketFd sockfd, bool useNagle)
     return status;
 }
 
-QStatus SetReuseAddrPort(SocketFd sockfd, bool reuse)
+QStatus SetReuseAddress(SocketFd sockfd, bool reuse)
 {
     QStatus status = ER_OK;
     /*
@@ -861,6 +861,18 @@ QStatus SetReuseAddrPort(SocketFd sockfd, bool reuse)
         if (r != 0) {
             QCC_LogError(ER_OS_ERROR, ("Setting SO_EXCLUSIVEADDRUSE failed: (%d) %s", GetLastError(), GetLastErrorString().c_str()));
         }
+    }
+    return status;
+}
+
+QStatus SetReusePort(SocketFd sockfd, bool reuse)
+{
+    QStatus status = ER_OK;
+    int arg = reuse ? 1 : -0;
+    int r = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&arg, sizeof(arg));
+    if (r != 0) {
+        status = ER_OS_ERROR;
+        QCC_LogError(status, ("Setting SO_REUSEADDR failed: (%d) %s", GetLastError(), GetLastErrorString().c_str()));
     }
     return status;
 }

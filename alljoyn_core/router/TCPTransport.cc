@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -3265,10 +3265,10 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
      * Set the SO_REUSEADDR socket option so we don't have to wait for four
      * minutes while the endpoint is in TIME_WAIT if we crash (or control-C).
      */
-    status = qcc::SetReuseAddrPort(listenFd, true);
+    status = qcc::SetReuseAddress(listenFd, true);
     if (status != ER_OK && status != ER_NOT_IMPLEMENTED) {
         m_listenFdsLock.Unlock(MUTEX_CONTEXT);
-        QCC_LogError(status, ("TCPTransport::DoStartListen(): SetReuseAddrPort() failed"));
+        QCC_LogError(status, ("TCPTransport::DoStartListen(): SetReuseAddress() failed"));
         qcc::Close(listenFd);
         return status;
     }

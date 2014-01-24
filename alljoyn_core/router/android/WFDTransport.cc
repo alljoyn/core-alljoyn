@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -3292,10 +3292,10 @@ void WFDTransport::DoStartListen(qcc::String& normSpec)
      * Set the SO_REUSEADDR socket option so we don't have to wait for four
      * minutes while the endpoint is in TIME_WAIT if we crash (or control-C).
      */
-    status = qcc::SetReuseAddrPort(listenFd, true);
+    status = qcc::SetReuseAddress(listenFd, true);
     if (status != ER_OK && status != ER_NOT_IMPLEMENTED) {
         m_listenFdsLock.Unlock(MUTEX_CONTEXT);
-        QCC_LogError(status, ("WFDTransport::DoStartListen(): SetReuseAddrPort() failed"));
+        QCC_LogError(status, ("WFDTransport::DoStartListen(): SetReuseAddress() failed"));
         qcc::Close(listenFd);
         return;
     }
