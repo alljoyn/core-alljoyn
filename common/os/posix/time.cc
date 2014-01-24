@@ -31,9 +31,8 @@
 
 #include <sys/time.h>
 #include <mach/mach_time.h>
-
-#define NANO_CONVERSION (+1.0E-9)
-#define GIGA_CONVERSION UINT64_C(1000000000)
+#include <mach/clock.h>
+#include <mach/mach.h>
 
 #endif
 
@@ -44,9 +43,14 @@ using namespace qcc;
 static void platform_gettime(struct timespec* ts)
 {
 #if defined(QCC_OS_DARWIN)
-    uint64_t time = mach_absolute_time();
-    ts->tv_sec = time * NANO_CONVERSION;
-    ts->tv_nsec = time - (ts->tv_sec * GIGA_CONVERSION);
+    clock_serv_t cclock;
+    mach_timespec_t mts;
+    host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+    clock_get_time(cclock, &mts);
+    mach_port_deallocate(mach_task_self(), cclock);
+    ts->tv_sec = mts.tv_sec;
+    ts->tv_nsec = mts.tv_nsec;
+
 #else
     clock_gettime(CLOCK_MONOTONIC, ts);
 #endif
