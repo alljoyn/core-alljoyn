@@ -235,8 +235,11 @@ if env['WS'] != 'off' and not env.GetOption('clean'):
 
     def wsbuild(target, source, env):
         print "Evaluating whitespace compliance..."
+        curdir = os.path.abspath(os.path.dirname(wsbuild.func_code.co_filename))
+        config = os.path.join(curdir, 'tools', 'conf', 'ajuncrustify.cfg')
+        print "Config:", config
         print "Note: enter 'scons -h' to see whitespace (WS) options"
-        return whitespace.main([env['WS'],])
+        return whitespace.main([env['WS'], config])
 
     ws = env.Command('#/ws', Dir('$DISTDIR'), wsbuild)
 if env['WS'] != 'off':
