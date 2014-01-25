@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1229,7 +1229,7 @@ class PendingAsyncJoin;
  */
 class JBusAttachment : public BusAttachment {
   public:
-    JBusAttachment(const char* applicationName, bool allowRemoteMessages);
+    JBusAttachment(const char* applicationName, bool allowRemoteMessages, int concurrency);
     QStatus Connect(const char* connectArgs, jobject jkeyStoreListener, const char* authMechanisms,
                     jobject jauthListener, const char* keyStoreFileName, jboolean isShared);
     void Disconnect(const char* connectArgs);
@@ -3942,8 +3942,8 @@ void JAuthListener::AuthenticationComplete(const char* authMechanism, const char
  * an intrusively reference counted object so the destructor should never be
  * called directly.
  */
-JBusAttachment::JBusAttachment(const char* applicationName, bool allowRemoteMessages)
-    : BusAttachment(applicationName, allowRemoteMessages),
+JBusAttachment::JBusAttachment(const char* applicationName, bool allowRemoteMessages, int concurrency)
+    : BusAttachment(applicationName, allowRemoteMessages, concurrency),
     keyStoreListener(NULL),
     jkeyStoreListenerRef(NULL),
     authListener(NULL),
@@ -4702,7 +4702,7 @@ void JBusAttachment::UnregisterSignalHandler(jobject jsignalHandler, jobject jme
  * @param allowRemoteMessages If true allow communication with attachments
  *                            on physically remote attachments.
  */
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_create(JNIEnv* env, jobject thiz, jstring japplicationName, jboolean allowRemoteMessages)
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_create(JNIEnv* env, jobject thiz, jstring japplicationName, jboolean allowRemoteMessages, jint concurrency)
 {
     // Temporary debugging use
     // QCC_UseOSLogging(true);
@@ -4721,7 +4721,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_create(JNIEnv* env, jo
      * Create a new C++ backing object for the Java BusAttachment.  This is
      * an intrusively reference counted object.
      */
-    JBusAttachment* busPtr = new JBusAttachment(name, allowRemoteMessages);
+    JBusAttachment* busPtr = new JBusAttachment(name, allowRemoteMessages, concurrency);
     if (!busPtr) {
         Throw("java/lang/OutOfMemoryError", NULL);
         return;

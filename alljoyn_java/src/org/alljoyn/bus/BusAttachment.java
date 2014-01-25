@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -49,7 +49,6 @@ import org.alljoyn.bus.ifaces.DBusProxyObj;
  * objects that have been registered by other processes and/or remote devices.
  */
 public class BusAttachment {
-
 
     /**
      * Emit PropertiesChanged to signal the bus that this property has been updated
@@ -722,11 +721,12 @@ public class BusAttachment {
      * Constructs a BusAttachment.
      *
      * @param applicationName the name of the application
-     * @param policy if this attachment is allowed to receive messages
-     *               from remote devices
+     * @param policy if this attachment is allowed to receive messages from
+     *               remote devices
+     * @param concurrency The maximum number of concurrent method and signal
+     *                    handlers locally executing.
      */
-    public BusAttachment(String applicationName, RemoteMessage policy) {
-		
+    public BusAttachment(String applicationName, RemoteMessage policy, int concurrency) {
         isShared = false;
         isConnected = false;
         this.allowRemoteMessages = (policy == RemoteMessage.Receive);
@@ -741,7 +741,7 @@ public class BusAttachment {
         } catch (NoSuchMethodException ex) {
             /* This will not happen */
         }
-        create(applicationName, allowRemoteMessages);
+        create(applicationName, allowRemoteMessages, concurrency);
 
         /*
          * Create a separate dbus bus object (dbusbo) and interface so we get at
@@ -753,39 +753,51 @@ public class BusAttachment {
         dbus = dbusbo.getInterface(DBusProxyObj.class);
         executor = Executors.newSingleThreadExecutor();
     }
-    /* Set of all the connected BusAttachments. Maintain a weakreference so we dont delay garbage collection */
-    private static HashSet<WeakReference<BusAttachment>> busAttachmentSet = new HashSet<WeakReference<BusAttachment>>();
 
-    /* Shutdown hook used to release any connected BusAttachments when the VM exits */
-    private static class ShutdownHookThread extends Thread{
-	public void run(){
-
-		/* Iterate through the busAttachmentSet and release any BusAttachments that havent been released yet.*/
-		Iterator<WeakReference<BusAttachment>> iterator = busAttachmentSet.iterator();
-		while(iterator.hasNext()){
-			WeakReference<BusAttachment> temp = iterator.next();
-			BusAttachment temp1 = temp.get();
-			if(temp1 != null){
-				temp1.release();
-			} else{
-				busAttachmentSet.remove(temp);
-			}
-			iterator = busAttachmentSet.iterator();
-		}
-	}
-
+    /**
+     * Constructs a BusAttachment.
+     *
+     * @param applicationName the name of the application
+     * @param policy if this attachment is allowed to receive messages
+     *               from remote devices
+     */
+    public BusAttachment(String applicationName, RemoteMessage policy) {
+        this(applicationName, policy, DEFAULT_CONCURRENCY);
     }
+
     /**
      * Construct a BusAttachment that will only communicate on the local device.
      *
      * @param applicationName the name of the application
      */
     public BusAttachment(String applicationName) {
-        this(applicationName, RemoteMessage.Ignore);
+        this(applicationName, RemoteMessage.Ignore, DEFAULT_CONCURRENCY);
+    }
+
+    /* Set of all the connected BusAttachments. Maintain a weakreference so we dont delay garbage collection */
+    private static HashSet<WeakReference<BusAttachment>> busAttachmentSet = new HashSet<WeakReference<BusAttachment>>();
+
+    /* Shutdown hook used to release any connected BusAttachments when the VM exits */
+    private static class ShutdownHookThread extends Thread{
+        public void run(){
+
+            /* Iterate through the busAttachmentSet and release any BusAttachments that havent been released yet.*/
+            Iterator<WeakReference<BusAttachment>> iterator = busAttachmentSet.iterator();
+            while(iterator.hasNext()){
+                WeakReference<BusAttachment> temp = iterator.next();
+                BusAttachment temp1 = temp.get();
+                if(temp1 != null){
+                    temp1.release();
+                } else{
+                    busAttachmentSet.remove(temp);
+                }
+                iterator = busAttachmentSet.iterator();
+            }
+        }
     }
 
     /** Allocate native resources. */
-    private native void create(String applicationName, boolean allowRemoteMessages);
+    private native void create(String applicationName, boolean allowRemoteMessages, int concurrency);
 
     /** Release native resources. */
     private synchronized native void destroy();
@@ -832,7 +844,6 @@ public class BusAttachment {
      * after the release() method has been called.
      */
     public void release() {
-	
         if (isConnected == true) {
             disconnect();
         }
@@ -842,16 +853,16 @@ public class BusAttachment {
         }
         dbus = null;
         destroy();
-	/* Remove this bus attachment from the busAttachmentSet */
-	synchronized(busAttachmentSet){
-		Iterator<WeakReference<BusAttachment>> iterator = busAttachmentSet.iterator();
-		while(iterator.hasNext()){
-			BusAttachment temp = iterator.next().get();
-			if(temp!=null && temp.equals(this)){
-				iterator.remove();
-			}
-		}
-	}
+        /* Remove this bus attachment from the busAttachmentSet */
+        synchronized(busAttachmentSet){
+            Iterator<WeakReference<BusAttachment>> iterator = busAttachmentSet.iterator();
+            while(iterator.hasNext()){
+                BusAttachment temp = iterator.next().get();
+                if(temp!=null && temp.equals(this)){
+                    iterator.remove();
+                }
+            }
+        }
     }
 
     /**
@@ -859,7 +870,6 @@ public class BusAttachment {
      */
     @Override
     protected void finalize() throws Throwable {
-
         if (isConnected == true) {
             disconnect();
         }
@@ -928,15 +938,15 @@ public class BusAttachment {
         if (address != null) {
             Status status = connect(address, keyStoreListener, authMechanisms, busAuthListener, keyStoreFileName, isShared);
             if (status == Status.OK) {
-		/* Add this BusAttachment to the busAttachmentSet */
-		synchronized(busAttachmentSet){
-			/* Register a shutdown hook if it is not already registered. */
-			if(shutdownHookRegistered == false){
-				Runtime.getRuntime().addShutdownHook(new ShutdownHookThread());
-				shutdownHookRegistered = true;
-			}
-			busAttachmentSet.add(new WeakReference<BusAttachment>(this));
-		}
+                /* Add this BusAttachment to the busAttachmentSet */
+                synchronized(busAttachmentSet){
+                    /* Register a shutdown hook if it is not already registered. */
+                    if(shutdownHookRegistered == false){
+                        Runtime.getRuntime().addShutdownHook(new ShutdownHookThread());
+                        shutdownHookRegistered = true;
+                    }
+                    busAttachmentSet.add(new WeakReference<BusAttachment>(this));
+                }
                 isConnected = true;
             }
             return status;
@@ -1432,4 +1442,10 @@ public class BusAttachment {
      * AllJoyn limits arrays to a maximum sze of 2^16
      */
     public static final int ALLJOYN_MAX_ARRAY_LEN = 131072;
+    
+    /**
+     * The maximum number of concurrent method and signal handlers locally 
+     * executing by default.
+     */
+    private static final int DEFAULT_CONCURRENCY = 4;
 }
