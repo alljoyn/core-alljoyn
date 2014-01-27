@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -716,7 +716,17 @@ QStatus SetNagle(SocketFd sockfd, bool useNagle)
     return status;
 }
 
-QStatus SetReuseAddrPort(SocketFd sockfd, bool reuse)
+/*
+ * Some systems do not define SO_REUSEPORT (which is a BSD-ism from the first
+ * days of multicast support).  In this case they special case SO_REUSEADDR in
+ * the presence of multicast addresses to perform the same function, which is to
+ * allow multiple processes to bind to the same multicast address/port.  In this
+ * case, SO_REUSEADDR provides the equivalent functionality of SO_REUSEPORT, so
+ * it is quite safe to substitute them.  Interestingly, Darwin which is actually
+ * BSD-derived does not define SO_REUSEPORT, but Linux which is supposedly not
+ * BSD does.  Go figure.
+ */
+QStatus SetReuseAddress(SocketFd sockfd, bool reuse)
 {
     QStatus status = ER_OK;
     int arg = reuse ? 1 : -0;
@@ -735,6 +745,12 @@ QStatus SetReuseAddrPort(SocketFd sockfd, bool reuse)
     return status;
 }
 
+
+
+QStatus SetReusePort(SocketFd sockfd, bool reuse)
+{
+    return SetReuseAddress(sockfd, reuse);
+}
 
 #ifndef IPV6_ADD_MEMBERSHIP
 #define IPV6_ADD_MEMBERSHIP IPV6_JOIN_GROUP
