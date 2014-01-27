@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1507,10 +1507,6 @@ size_t Header::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     uint8_t nsVersion, msgVersion;
     nsVersion = buffer[0] >> 4;
     msgVersion = buffer[0] & 0xf;
-    if (nsVersion != 0 && nsVersion != 1) {
-        QCC_DbgPrintf(("Header::Deserialize(): Bad remote name service version %d", nsVersion));
-        return 0;
-    }
 
     if (msgVersion != 0 && msgVersion != 1) {
         QCC_DbgPrintf(("Header::Deserialize(): Bad message version %d", msgVersion));
