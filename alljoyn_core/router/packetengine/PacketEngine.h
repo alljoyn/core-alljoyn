@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011-2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -252,7 +252,7 @@ class PacketEngine : public qcc::AlarmListener {
     std::map<qcc::Event*, std::pair<PacketStream*, PacketEngineListener*> > packetStreams;
     qcc::Timer timer;
     qcc::Mutex channelInfoLock;
-    std::map<uint32_t, ChannelInfo> channelInfos;
+    std::map<uint32_t, ChannelInfo*> channelInfos;
     uint32_t maxWindowSize;
     bool isRunning;
     bool rxPacketThreadReload;

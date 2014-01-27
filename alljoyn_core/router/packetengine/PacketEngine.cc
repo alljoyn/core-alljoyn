@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011-2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -752,7 +752,7 @@ PacketEngine::ChannelInfo* PacketEngine::CreateChannelInfo(uint32_t chanId, cons
 
         /* Add ChannelInfo if packetStream was valid */
         if (found) {
-            ret = &(channelInfos.insert(pair<uint32_t, ChannelInfo>(chanId, ChannelInfo(*this, chanId, dest, packetStream, listener, windowSize))).first->second);
+            ret = (channelInfos.insert(pair<uint32_t, ChannelInfo*>(chanId, new ChannelInfo(*this, chanId, dest, packetStream, listener, windowSize))).first->second);
             ret->useCount = 1;
         }
     }
@@ -764,9 +764,9 @@ PacketEngine::ChannelInfo* PacketEngine::AcquireChannelInfo(uint32_t chanId)
 {
     ChannelInfo* ret = NULL;
     channelInfoLock.Lock();
-    map<uint32_t, ChannelInfo>::iterator it = channelInfos.find(chanId);
+    map<uint32_t, ChannelInfo*>::iterator it = channelInfos.find(chanId);
     if (it != channelInfos.end()) {
-        ret = &(it->second);
+        ret = it->second;
         ret->useCount++;
     }
     channelInfoLock.Unlock();
@@ -777,7 +777,7 @@ PacketEngine::ChannelInfo* PacketEngine::AcquireNextChannelInfo(PacketEngine::Ch
 {
     ChannelInfo* ret = NULL;
     channelInfoLock.Lock();
-    map<uint32_t, ChannelInfo>::iterator it = channelInfos.begin();
+    map<uint32_t, ChannelInfo*>::iterator it = channelInfos.begin();
     if (inCi) {
         it = channelInfos.find(inCi->id);
         if (it != channelInfos.end()) {
@@ -785,7 +785,7 @@ PacketEngine::ChannelInfo* PacketEngine::AcquireNextChannelInfo(PacketEngine::Ch
         }
     }
     if (it != channelInfos.end()) {
-        ret = &(it->second);
+        ret = it->second;
         ret->useCount++;
     }
     channelInfoLock.Unlock();
@@ -802,13 +802,15 @@ void PacketEngine::ReleaseChannelInfo(ChannelInfo& ci)
         PacketEngineStream stream = ci.stream;
         PacketEngineListener& listener = ci.listener;
         PacketDest dest = ci.dest;
-
         /* Erase entry in channelInfos */
+        map<uint32_t, ChannelInfo*>::iterator it = channelInfos.find(ci.id);
+        ChannelInfo* ciEntry = it->second;
         channelInfos.erase(ci.id);
 
         /* Notify disconnect cb (Must be done without holding channelInfoLock) */
         channelInfoLock.Unlock();
         listener.PacketEngineDisconnectCB(*this, stream, dest);
+        delete ciEntry;
     } else {
         channelInfoLock.Unlock();
     }
@@ -1148,7 +1150,7 @@ void PacketEngine::RxPacketThread::HandleDataPacket(Packet* p)
         }
         engine->ReleaseChannelInfo(*ci);
     } else {
-        QCC_DbgPrintf(("Received packet from %s with invalid chanId (0x%x)", engine->ToString(ci->packetStream, p->GetSender()).c_str(), p->chanId));
+        QCC_DbgPrintf(("Received packet with invalid chanId (0x%x)", p->chanId));
         engine->pool.ReturnPacket(p);
     }
 }
@@ -1666,10 +1668,10 @@ PacketStream* PacketEngine::GetPacketStream(const PacketEngineStream& stream)
 {
     PacketStream* ret = NULL;
     channelInfoLock.Lock();
-    map<uint32_t, ChannelInfo>::iterator it = channelInfos.begin();
+    map<uint32_t, ChannelInfo*>::iterator it = channelInfos.begin();
     while (it != channelInfos.end()) {
-        if (&(it->second.stream) == &stream) {
-            ret = &(it->second.packetStream);
+        if (&(it->second->stream) == &stream) {
+            ret = &(it->second->packetStream);
             break;
         }
         ++it;
