@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -16,17 +16,15 @@
 
 package org.alljoyn.bus.alljoyn;
 
+// import org.alljoyn.bus.p2p.service.P2pHelperService;
+
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
-import android.os.Process;
-
-import org.alljoyn.bus.AllJoynAndroidExt;
-import org.alljoyn.bus.ScanResultsReceiver;
-//import org.alljoyn.bus.p2p.service.P2pHelperService;
-import android.net.wifi.WifiManager;
-import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.wifi.WifiManager;
+import android.os.Process;
+import android.util.Log;
 
 /**
  * This class is to ensure that AllJoyn daemon is initialized to be ready for accepting connections from clients.
@@ -39,10 +37,10 @@ public class DaemonInit {
     
     private final static String TAG = "DaemonInit";
     private static Context sContext;
-    public static AllJoynAndroidExt alljoynAndroidExt;
-    public static ScanResultsReceiver receiver;
-//    public static P2pHelperService sP2pHelper;
-    
+
+    public static BroadcastReceiver receiver;
+    // public static P2pHelperService sP2pHelper;
+
     public static Context getContext(){
     	return sContext;
     }
@@ -57,25 +55,27 @@ public class DaemonInit {
      *         false if no daemon is available
      */
     public static boolean PrepareDaemon(Context context) {
-        sContext = context.getApplicationContext();
-        Log.v(TAG,"Saved Application Context");
-        
-        // Here could instantiate the AllJoynAndroidExt so the jvm is able to access this class 
-        alljoynAndroidExt = new AllJoynAndroidExt(sContext);
+        Log.v(TAG, "Android version : " + android.os.Build.VERSION.SDK_INT);
 
-        Log.v(TAG,"Android version : "+android.os.Build.VERSION.SDK_INT);
-        if(android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN){
-	        // Instantiate and start the P2pHelperService
-//	        sP2pHelper = new P2pHelperService(sContext, "null:");
-//	        sP2pHelper.startup();
-        }
+        sContext = context.getApplicationContext();
+        Log.v(TAG, "Saved application context");
         
-		if(receiver == null){
-		// Pass the map and the boolean scanResultsObtained here and use the same map to form the return message 
-		receiver = new ScanResultsReceiver(alljoynAndroidExt);
-		sContext.registerReceiver(receiver, new IntentFilter(
-				WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
-		}
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+	    // Instantiate and start the P2pHelperService
+	    // sP2pHelper = new P2pHelperService(sContext, "null:");
+	    // sP2pHelper.startup();
+        }
+
+	if (receiver == null) {
+	    try {
+		Class<?> cls = Class.forName("org.alljoyn.bus.proximity.ScanResultsReceiver");
+		receiver = (BroadcastReceiver) cls.getConstructor(Context.class).newInstance(sContext);
+		sContext.registerReceiver(receiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+		Log.v(TAG, "Registered scan results receiver");
+	    } catch (Exception ex) {
+		Log.d(TAG, "Scan results receiver not found, proximity support disabled");
+	    }
+	}
         return true;
     }
     

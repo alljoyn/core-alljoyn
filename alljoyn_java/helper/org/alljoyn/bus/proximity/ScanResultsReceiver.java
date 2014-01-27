@@ -3,7 +3,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012,2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -17,11 +17,11 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-package org.alljoyn.bus;
+package org.alljoyn.bus.proximity;
 
 import android.content.BroadcastReceiver;
-import org.alljoyn.bus.ScanResultMessage;
-import org.alljoyn.bus.AllJoynAndroidExt;
+import org.alljoyn.bus.proximity.ScanResultMessage;
+import org.alljoyn.bus.proximity.AllJoynAndroidExt;
 
 import android.content.Intent;
 import android.content.Context;
@@ -36,6 +36,12 @@ import java.util.List;
 public class ScanResultsReceiver extends BroadcastReceiver{
 
 	AllJoynAndroidExt jniProximity;
+
+	public ScanResultsReceiver(Context context){
+		super();
+		this.jniProximity = new AllJoynAndroidExt(context); 
+	}
+
 	//
 	// Need a constructor that will take the instance on Proximity Service
 	//

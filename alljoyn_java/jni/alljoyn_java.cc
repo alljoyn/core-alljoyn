@@ -957,18 +957,18 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
 
 #if defined (QCC_OS_ANDROID) && defined(AJ_ENABLE_PROXIMITY_SCANNER)
 
-        clazz = env->FindClass("org/alljoyn/bus/ScanResultMessage");
+        clazz = env->FindClass("org/alljoyn/bus/proximity/ScanResultMessage");
         if (!clazz) {
             return JNI_ERR;
         }
         CLS_ScanResultMessage = (jclass)env->NewGlobalRef(clazz);
 
-        clazz = env->FindClass("org/alljoyn/bus/AllJoynAndroidExt");
+        clazz = env->FindClass("org/alljoyn/bus/proximity/AllJoynAndroidExt");
         if (!clazz) {
             return JNI_ERR;
         }
         CLS_AllJoynAndroidExt = (jclass)env->NewGlobalRef(clazz);
-        MID_AllJoynAndroidExt_Scan = env->GetStaticMethodID(CLS_AllJoynAndroidExt, "Scan", "(Z)[Lorg/alljoyn/bus/ScanResultMessage;");
+        MID_AllJoynAndroidExt_Scan = env->GetStaticMethodID(CLS_AllJoynAndroidExt, "Scan", "(Z)[Lorg/alljoyn/bus/proximity/ScanResultMessage;");
         if (!MID_AllJoynAndroidExt_Scan) {
             return JNI_ERR;
         }
