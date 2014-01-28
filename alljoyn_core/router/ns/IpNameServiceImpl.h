@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2012,2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1244,6 +1244,17 @@ class IpNameServiceImpl : public qcc::Thread {
      * of our desired interfaces as possible.
      */
     void LazyUpdateInterfaces(void);
+
+    /**
+     * @internal
+     * @brief Quick check that the cached ipv4address is still correct.
+     *
+     * The cached value may get stale between calls to LazyUpdateInterfaces if
+     * we're switching networks.  Also, this is much lighter weight than
+     * LazyUpdateInterfaces, so it's appropriate to call it on each outbound
+     * message.
+     */
+    bool LiveInterfacesNeedsUpdate(void);
 
     /**
      * @internal

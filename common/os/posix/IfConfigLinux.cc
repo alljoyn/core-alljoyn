@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011,2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -44,6 +44,7 @@
 #include <errno.h>
 #include <net/if.h>
 #include <arpa/inet.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 
 #include <linux/netlink.h>
@@ -663,6 +664,55 @@ QStatus IfConfig(std::vector<IfConfigEntry>& entries)
         }
     }
 
+    return ER_OK;
+}
+
+QStatus IfConfigIPv4(std::vector<IfConfigEntry>& entries)
+{
+    int sockFd = socket(PF_INET, SOCK_DGRAM, 0);
+    if (sockFd < 0) {
+        QCC_LogError(ER_OS_ERROR, ("Opening socket: %d - %s", errno, strerror(errno)));
+        return ER_OS_ERROR;
+    }
+
+    std::vector<struct ifreq> requests(10);
+    struct ifconf config;
+retry:
+    config.ifc_len = sizeof(struct ifreq) * requests.capacity();
+    config.ifc_ifcu.ifcu_buf = (caddr_t)&requests[0];
+
+    if (ioctl(sockFd, SIOCGIFCONF, &config) == -1) {
+        QCC_LogError(ER_OS_ERROR, ("ioctl(SIOCGIFCONF) failed: (%d) %s", errno, strerror(errno)));
+        qcc::Close(sockFd);
+        return ER_OS_ERROR;
+    }
+
+    /*
+     * The kernel returns the actual length in ifc_len.  If ifc_len is
+     * equal to original length, the buffer has probably overflowed,
+     * and we need to retry with a bigger buffer.
+     */
+    size_t numRequests = config.ifc_len / sizeof(struct ifreq);
+    if (numRequests == requests.capacity()) {
+        requests.resize(requests.capacity() * 2);
+        goto retry;
+    }
+
+    for (size_t i = 0; i < numRequests; ++i) {
+        struct sockaddr_in*addr = (struct sockaddr_in*)(&requests[i].ifr_addr);
+        if (addr->sin_family != AF_INET) {
+            continue;
+        }
+        IfConfigEntry entry;
+        entry.m_name = requests[i].ifr_name;
+        char buffer[17];
+        inet_ntop(AF_INET, &addr->sin_addr, buffer, sizeof(buffer));
+        entry.m_addr = qcc::String(buffer);
+        entry.m_family = TranslateFamily(addr->sin_family);
+        entries.push_back(entry);
+    }
+
+    qcc::Close(sockFd);
     return ER_OK;
 }
 

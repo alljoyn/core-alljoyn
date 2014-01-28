@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -3504,7 +3504,8 @@ void* IpNameServiceImpl::Run(void* arg)
         //
         if (m_forceLazyUpdate ||
             (m_outbound.size() && tLastLazyUpdate + qcc::Timespec(LAZY_UPDATE_MIN_INTERVAL * MS_PER_SEC) < tNow) ||
-            (tLastLazyUpdate + qcc::Timespec(LAZY_UPDATE_MAX_INTERVAL * MS_PER_SEC) < tNow)) {
+            (tLastLazyUpdate + qcc::Timespec(LAZY_UPDATE_MAX_INTERVAL * MS_PER_SEC) < tNow) ||
+            LiveInterfacesNeedsUpdate()) {
 
             QCC_DbgPrintf(("IpNameServiceImpl::Run(): LazyUpdateInterfaces()"));
             LazyUpdateInterfaces();
@@ -3552,6 +3553,20 @@ void* IpNameServiceImpl::Run(void* arg)
             QCC_LogError(status, ("IpNameServiceImpl::Run(): Event::Wait(): Failed"));
             break;
         }
+
+        //
+        // While waiting, the interfaces may have changed.  Do a quick check before
+        // handling any events.
+        //
+        m_mutex.Lock();
+        if (LiveInterfacesNeedsUpdate()) {
+            GetTimeNow(&tNow);
+            LazyUpdateInterfaces();
+            tLastLazyUpdate = tNow;
+            m_forceLazyUpdate = false;
+        }
+        m_mutex.Unlock();
+
         //
         // Loop over the events for which we expect something has happened
         //
@@ -4833,6 +4848,29 @@ TransportMask IpNameServiceImpl::MaskFromIndex(uint32_t index)
     uint32_t result = 1 << index;
     QCC_DbgPrintf(("IpNameServiceImpl::MaskFromIndex(): Bit is 0x%x", result));
     return result;
+}
+
+bool IpNameServiceImpl::LiveInterfacesNeedsUpdate()
+{
+    std::vector<qcc::IfConfigEntry> entries;
+    QStatus status = IfConfigIPv4(entries);
+    if (ER_OK != status) {
+        return false;
+    }
+    for (size_t i = 0; i < m_liveInterfaces.size(); ++i) {
+        if (!m_liveInterfaces[i].m_address.IsIPv4()) {
+            continue;
+        }
+        for (size_t j = 0; j < entries.size(); ++j) {
+            if ((m_liveInterfaces[i].m_interfaceName == entries[j].m_name) &&
+                (m_liveInterfaces[i].m_interfaceAddr != entries[j].m_addr)) {
+                QCC_DbgPrintf(("%s IPv4 address has changed from %s to %s", m_liveInterfaces[i].m_interfaceName.c_str(),
+                               m_liveInterfaces[i].m_interfaceAddr.ToString().c_str(), entries[j].m_addr.c_str()));
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 } // namespace ajn
