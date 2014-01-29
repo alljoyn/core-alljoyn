@@ -1,0 +1,401 @@
+From b33e6b516e725a4c0d4cd1a38002020e1f08e761 Mon Sep 17 00:00:00 2001
+From: Steve Kinneberg <stevek@qce.qualcomm.com>
+Date: Wed, 8 Jan 2014 14:54:29 -0800
+Subject: [PATCH 1/1] AJCORE-746: Fix usage of SO_REUSEPORT/SO_REUSEADDR for
+ posix platforms.
+
+Change-Id: I3b583c76dc6a09b19dc8b87f902ac7d23d1244c0
+---
+ alljoyn_core/daemon/TCPTransport.cc                |    6 ++--
+ alljoyn_core/daemon/android/WFDTransport.cc        |    6 ++--
+ alljoyn_core/daemon/ns/IpNameServiceImpl.cc        |    6 ++--
+ alljoyn_core/daemon/test/advtunnel.cc              |    6 ++--
+ alljoyn_core/daemon/windows/DaemonTransport.cc     |    6 ++--
+ alljoyn_core/daemon/winrt/DaemonTransport.cc       |    6 ++--
+ .../daemon/winrt/proximity/ProximityTransport.cc   |    6 ++--
+ common/inc/qcc/Socket.h                            |   32 +++--------------
+ common/os/posix/Socket.cc                          |   36 +++++---------------
+ common/os/windows/Socket.cc                        |   16 ++-------
+ common/os/winrt/Socket.cc                          |   13 ++-----
+ 11 files changed, 39 insertions(+), 100 deletions(-)
+
+diff --git a/alljoyn_core/daemon/TCPTransport.cc b/alljoyn_core/daemon/TCPTransport.cc
+index 0f67cd8..10650a0 100644
+--- a/alljoyn_core/daemon/TCPTransport.cc
++++ b/alljoyn_core/daemon/TCPTransport.cc
+@@ -4,7 +4,7 @@
+  */
+ 
+ /******************************************************************************
+- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
++ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+  *
+  *    Permission to use, copy, modify, and/or distribute this software for any
+  *    purpose with or without fee is hereby granted, provided that the above
+@@ -3265,10 +3265,10 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
+      * Set the SO_REUSEADDR socket option so we don't have to wait for four
+      * minutes while the endpoint is in TIME_WAIT if we crash (or control-C).
+      */
+-    status = qcc::SetReuseAddress(listenFd, true);
++    status = qcc::SetReuseAddrPort(listenFd, true);
+     if (status != ER_OK && status != ER_NOT_IMPLEMENTED) {
+         m_listenFdsLock.Unlock(MUTEX_CONTEXT);
+-        QCC_LogError(status, ("TCPTransport::DoStartListen(): SetReuseAddress() failed"));
++        QCC_LogError(status, ("TCPTransport::DoStartListen(): SetReuseAddrPort() failed"));
+         qcc::Close(listenFd);
+         return status;
+     }
+diff --git a/alljoyn_core/daemon/android/WFDTransport.cc b/alljoyn_core/daemon/android/WFDTransport.cc
+index c9ecf03..9d61394 100644
+--- a/alljoyn_core/daemon/android/WFDTransport.cc
++++ b/alljoyn_core/daemon/android/WFDTransport.cc
+@@ -5,7 +5,7 @@
+  */
+ 
+ /******************************************************************************
+- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
++ * Copyright (c) 2012, 2014, AllSeen Alliance. All rights reserved.
+  *
+  *    Permission to use, copy, modify, and/or distribute this software for any
+  *    purpose with or without fee is hereby granted, provided that the above
+@@ -3292,10 +3292,10 @@ void WFDTransport::DoStartListen(qcc::String& normSpec)
+      * Set the SO_REUSEADDR socket option so we don't have to wait for four
+      * minutes while the endpoint is in TIME_WAIT if we crash (or control-C).
+      */
+-    status = qcc::SetReuseAddress(listenFd, true);
++    status = qcc::SetReuseAddrPort(listenFd, true);
+     if (status != ER_OK && status != ER_NOT_IMPLEMENTED) {
+         m_listenFdsLock.Unlock(MUTEX_CONTEXT);
+-        QCC_LogError(status, ("WFDTransport::DoStartListen(): SetReuseAddress() failed"));
++        QCC_LogError(status, ("WFDTransport::DoStartListen(): SetReuseAddrPort() failed"));
+         qcc::Close(listenFd);
+         return;
+     }
+diff --git a/alljoyn_core/daemon/ns/IpNameServiceImpl.cc b/alljoyn_core/daemon/ns/IpNameServiceImpl.cc
+index c76f90b..519e31c 100644
+--- a/alljoyn_core/daemon/ns/IpNameServiceImpl.cc
++++ b/alljoyn_core/daemon/ns/IpNameServiceImpl.cc
+@@ -4,7 +4,7 @@
+  */
+ 
+ /******************************************************************************
+- * Copyright (c) 2010-2013, AllSeen Alliance. All rights reserved.
++ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
+  *
+  *    Permission to use, copy, modify, and/or distribute this software for any
+  *    purpose with or without fee is hereby granted, provided that the above
+@@ -1220,9 +1220,9 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
+         // This will set the SO_REUSEPORT socket option if available or fall
+         // back onto SO_REUSEADDR if not.
+         //
+-        status = qcc::SetReusePort(sockFd, true);
++        status = qcc::SetReuseAddrPort(sockFd, true);
+         if (status != ER_OK && status != ER_NOT_IMPLEMENTED) {
+-            QCC_LogError(status, ("IpNameServiceImpl::LazyUpdateInterfaces(): SetReusePort() failed"));
++            QCC_LogError(status, ("IpNameServiceImpl::LazyUpdateInterfaces(): SetReuseAddrPort() failed"));
+             qcc::Close(sockFd);
+             continue;
+         }
+diff --git a/alljoyn_core/daemon/test/advtunnel.cc b/alljoyn_core/daemon/test/advtunnel.cc
+index 7c3e67e..a2d95f9 100644
+--- a/alljoyn_core/daemon/test/advtunnel.cc
++++ b/alljoyn_core/daemon/test/advtunnel.cc
+@@ -4,7 +4,7 @@
+  */
+ 
+ /******************************************************************************
+- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
++ * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
+  *
+  *    Permission to use, copy, modify, and/or distribute this software for any
+  *    purpose with or without fee is hereby granted, provided that the above
+@@ -211,9 +211,9 @@ QStatus AdvTunnel::Listen(uint16_t port)
+         return status;
+     }
+     /* Allow reuse of the same port */
+-    status = qcc::SetReusePort(listenSock, true);
++    status = qcc::SetReuseAddrPort(listenSock, true);
+     if (status != ER_OK) {
+-        QCC_LogError(status, ("AdvTunnel::Listen(): SetReuse() failed"));
++        QCC_LogError(status, ("AdvTunnel::Listen(): SetReuseAddrPort() failed"));
+         qcc::Close(listenSock);
+         return status;
+     }
+diff --git a/alljoyn_core/daemon/windows/DaemonTransport.cc b/alljoyn_core/daemon/windows/DaemonTransport.cc
+index a8bc4cd..d7d3c87 100644
+--- a/alljoyn_core/daemon/windows/DaemonTransport.cc
++++ b/alljoyn_core/daemon/windows/DaemonTransport.cc
+@@ -4,7 +4,7 @@
+  */
+ 
+ /******************************************************************************
+- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
++ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
+  *
+  *    Permission to use, copy, modify, and/or distribute this software for any
+  *    purpose with or without fee is hereby granted, provided that the above
+@@ -188,9 +188,9 @@ static QStatus ListenFd(map<qcc::String, qcc::String>& argMap, SocketFd& listenF
+      * Set the SO_REUSEADDR socket option so we don't have to wait for four
+      * minutes while the endponit is in TIME_WAIT if we crash (or control-C).
+      */
+-    status = qcc::SetReuseAddress(listenFd, true);
++    status = qcc::SetReuseAddrPort(listenFd, true);
+     if (status != ER_OK) {
+-        QCC_LogError(status, ("DaemonTransport::ListenFd(): SetReuseAddress() failed"));
++        QCC_LogError(status, ("DaemonTransport::ListenFd(): SetReuseAddrPort() failed"));
+         return status;
+     }
+     /*
+diff --git a/alljoyn_core/daemon/winrt/DaemonTransport.cc b/alljoyn_core/daemon/winrt/DaemonTransport.cc
+index bdffe00..9056a04 100644
+--- a/alljoyn_core/daemon/winrt/DaemonTransport.cc
++++ b/alljoyn_core/daemon/winrt/DaemonTransport.cc
+@@ -4,7 +4,7 @@
+  */
+ 
+ /******************************************************************************
+- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
++ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
+  *
+  *    Permission to use, copy, modify, and/or distribute this software for any
+  *    purpose with or without fee is hereby granted, provided that the above
+@@ -188,9 +188,9 @@ static QStatus ListenFd(map<qcc::String, qcc::String>& argMap, SocketFd& listenF
+      * Set the SO_REUSEADDR socket option so we don't have to wait for four
+      * minutes while the endponit is in TIME_WAIT if we crash (or control-C).
+      */
+-    status = qcc::SetReuseAddress(listenFd, true);
++    status = qcc::SetReuseAddrPort(listenFd, true);
+     if (status != ER_OK) {
+-        QCC_LogError(status, ("DaemonTransport::ListenFd(): SetReuseAddress() failed"));
++        QCC_LogError(status, ("DaemonTransport::ListenFd(): SetReuseAddrPort() failed"));
+         return status;
+     }
+     /*
+diff --git a/alljoyn_core/daemon/winrt/proximity/ProximityTransport.cc b/alljoyn_core/daemon/winrt/proximity/ProximityTransport.cc
+index bcb44ff..34f18f7 100644
+--- a/alljoyn_core/daemon/winrt/proximity/ProximityTransport.cc
++++ b/alljoyn_core/daemon/winrt/proximity/ProximityTransport.cc
+@@ -4,7 +4,7 @@
+  */
+ 
+ /******************************************************************************
+- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
++ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
+  *
+  *    Permission to use, copy, modify, and/or distribute this software for any
+  *    purpose with or without fee is hereby granted, provided that the above
+@@ -2387,10 +2387,10 @@ void ProximityTransport::DoStartListen(qcc::String& normSpec)
+      * Set the SO_REUSEADDR socket option so we don't have to wait for four
+      * minutes while the endpoint is in TIME_WAIT if we crash (or control-C).
+      */
+-    status = qcc::SetReuseAddress(listenFd, true);
++    status = qcc::SetReuseAddrPort(listenFd, true);
+     if (status != ER_OK && status != ER_NOT_IMPLEMENTED) {
+         m_listenFdsLock.Unlock(MUTEX_CONTEXT);
+-        QCC_LogError(status, ("ProximityTransport::DoStartListen(): SetReuseAddress() failed"));
++        QCC_LogError(status, ("ProximityTransport::DoStartListen(): SetReuseAddrPort() failed"));
+         qcc::Close(listenFd);
+         return;
+     }
+diff --git a/common/inc/qcc/Socket.h b/common/inc/qcc/Socket.h
+index 6b7954b..e36ba7c 100644
+--- a/common/inc/qcc/Socket.h
++++ b/common/inc/qcc/Socket.h
+@@ -5,7 +5,7 @@
+  */
+ 
+ /******************************************************************************
+- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
++ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
+  *
+  *    Permission to use, copy, modify, and/or distribute this software for any
+  *    purpose with or without fee is hereby granted, provided that the above
+@@ -290,21 +290,6 @@ QStatus SetBlocking(SocketFd sockfd, bool blocking);
+ QStatus SetNagle(SocketFd sockfd, bool useNagle);
+ 
+ /**
+- * @brief Allow a service to bind to a TCP endpoint which is in the TIME_WAIT
+- * state.
+- *
+- * Setting this option allows a service to be restarted after a crash (or
+- * contrl-C) and then be restarted without having to wait for some possibly
+- * significant (on the order of minutes) time.
+- *
+- * @see SetReusePort()
+- *
+- * @param sockfd The socket descriptor identifying the resource.
+- * @param reuse  Set to true to allow address and/or port reuse.
+- */
+-QStatus SetReuseAddress(SocketFd sockfd, bool reuse);
+-
+-/**
+  * @brief Allow multiple services to bind to the same address and port.
+  *
+  * Setting this option allows a multiple services to bind to the same address
+@@ -313,21 +298,14 @@ QStatus SetReuseAddress(SocketFd sockfd, bool reuse);
+  * order to use this function successfully, ALL processes that want to listen on
+  * a common port must set this option.
+  *
+- * @warning This function sets the socket option SO_REUSEPORT when it is
+- * available but falls back to SO_REUSEADDR if it is not.  The original socket
+- * option was a BSD-ism that was introduced when multicast was added there.  Not
+- * all stacks support SO_REUSEPORT, but to accomplish the same thing they will
+- * special-case SO_REUSEADDR in the presence of multicast to accomplish the same
+- * functionality.  In this case, there is no functional difference between
+- * SetReusePort() and SetReuseAddress(), but the two functions remain for
+- * clarity of purpose.
+- *
+- * @see SetReuseAddress()
++ * @warning Implementation detail: The Darwin platform uses SO_REUSEPORT while
++ * Windows uses SO_EXCLUSIVEADDRUSE.  SO_REUSEADDR is used for all Linux based
++ * platforms (including Android).
+  *
+  * @param sockfd The socket descriptor identifying the resource.
+  * @param reuse  Set to true to allow address and/or port reuse.
+  */
+-QStatus SetReusePort(SocketFd sockfd, bool reuse);
++QStatus SetReuseAddrPort(SocketFd sockfd, bool reuse);
+ 
+ /**
+  * Ask a UDP-based socket to join the specified multicast group.
+diff --git a/common/os/posix/Socket.cc b/common/os/posix/Socket.cc
+index 5427562..b9df4dc 100644
+--- a/common/os/posix/Socket.cc
++++ b/common/os/posix/Socket.cc
+@@ -5,7 +5,7 @@
+  */
+ 
+ /******************************************************************************
+- * Copyright (c) 2009-2013 AllSeen Alliance. All rights reserved.
++ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
+  *
+  *    Permission to use, copy, modify, and/or distribute this software for any
+  *    purpose with or without fee is hereby granted, provided that the above
+@@ -716,44 +716,26 @@ QStatus SetNagle(SocketFd sockfd, bool useNagle)
+     return status;
+ }
+ 
+-QStatus SetReuseAddress(SocketFd sockfd, bool reuse)
++QStatus SetReuseAddrPort(SocketFd sockfd, bool reuse)
+ {
+     QStatus status = ER_OK;
+     int arg = reuse ? 1 : -0;
+-    int r = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (void*)&arg, sizeof(arg));
+-    if (r != 0) {
+-        status = ER_OS_ERROR;
+-        QCC_LogError(status, ("Setting SO_REUSEADDR failed: (%d) %s", errno, strerror(errno)));
+-    }
+-    return status;
+-}
+ 
+-/*
+- * Some systems do not define SO_REUSEPORT (which is a BSD-ism from the first
+- * days of multicast support).  In this case they special case SO_REUSEADDR in
+- * the presence of multicast addresses to perform the same function, which is to
+- * allow multiple processes to bind to the same multicast address/port.  In this
+- * case, SO_REUSEADDR provides the equivalent functionality of SO_REUSEPORT, so
+- * it is quite safe to substitute them.  Interestingly, Darwin which is actually
+- * BSD-derived does not define SO_REUSEPORT, but Linux which is supposedly not
+- * BSD does.  Go figure.
+- */
+-#ifndef SO_REUSEPORT
+-#define SO_REUSEPORT SO_REUSEADDR
++    /* Linux kernels prior to 3.9 needs SO_REUSEADDR but Darwin needs SO_REUSEPORT for this to work. */
++#if defined(QCC_OS_DARWIN)
++    int r = setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, (void*)&arg, sizeof(arg));
++#else
++    int r = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (void*)&arg, sizeof(arg));
+ #endif
+ 
+-QStatus SetReusePort(SocketFd sockfd, bool reuse)
+-{
+-    QStatus status = ER_OK;
+-    int arg = reuse ? 1 : -0;
+-    int r = setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, (void*)&arg, sizeof(arg));
+     if (r != 0) {
+         status = ER_OS_ERROR;
+-        QCC_LogError(status, ("Setting SO_REUSEPORT failed: (%d) %s", errno, strerror(errno)));
++        QCC_LogError(status, ("Setting SO_REUSEADDR failed: (%d) %s", errno, strerror(errno)));
+     }
+     return status;
+ }
+ 
++
+ #ifndef IPV6_ADD_MEMBERSHIP
+ #define IPV6_ADD_MEMBERSHIP IPV6_JOIN_GROUP
+ #endif
+diff --git a/common/os/windows/Socket.cc b/common/os/windows/Socket.cc
+index 0a7cd59..12d0ac8 100644
+--- a/common/os/windows/Socket.cc
++++ b/common/os/windows/Socket.cc
+@@ -5,7 +5,7 @@
+  */
+ 
+ /******************************************************************************
+- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
++ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
+  *
+  *    Permission to use, copy, modify, and/or distribute this software for any
+  *    purpose with or without fee is hereby granted, provided that the above
+@@ -847,7 +847,7 @@ QStatus SetNagle(SocketFd sockfd, bool useNagle)
+     return status;
+ }
+ 
+-QStatus SetReuseAddress(SocketFd sockfd, bool reuse)
++QStatus SetReuseAddrPort(SocketFd sockfd, bool reuse)
+ {
+     QStatus status = ER_OK;
+     /*
+@@ -865,18 +865,6 @@ QStatus SetReuseAddress(SocketFd sockfd, bool reuse)
+     return status;
+ }
+ 
+-QStatus SetReusePort(SocketFd sockfd, bool reuse)
+-{
+-    QStatus status = ER_OK;
+-    int arg = reuse ? 1 : -0;
+-    int r = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&arg, sizeof(arg));
+-    if (r != 0) {
+-        status = ER_OS_ERROR;
+-        QCC_LogError(status, ("Setting SO_REUSEADDR failed: (%d) %s", GetLastError(), GetLastErrorString().c_str()));
+-    }
+-    return status;
+-}
+-
+ void IfConfigByFamily(uint32_t family, std::vector<IfConfigEntry>& entries);
+ 
+ /*
+diff --git a/common/os/winrt/Socket.cc b/common/os/winrt/Socket.cc
+index e19423e..d3c6f03 100644
+--- a/common/os/winrt/Socket.cc
++++ b/common/os/winrt/Socket.cc
+@@ -6,7 +6,7 @@
+ 
+ /******************************************************************************
+  *
+- * Copyright (c) 2011-2012, AllSeen Alliance. All rights reserved.
++ * Copyright (c) 2011-2012, 2014, AllSeen Alliance. All rights reserved.
+  *
+  *    Permission to use, copy, modify, and/or distribute this software for any
+  *    purpose with or without fee is hereby granted, provided that the above
+@@ -542,16 +542,7 @@ QStatus SetNagle(SocketFd sockfd, bool useNagle)
+     return status;
+ }
+ 
+-QStatus SetReuseAddress(SocketFd sockfd, bool reuse)
+-{
+-    QStatus status = ER_NOT_IMPLEMENTED;
+-
+-    // Not available in WinRT
+-
+-    return status;
+-}
+-
+-QStatus SetReusePort(SocketFd sockfd, bool reuse)
++QStatus SetReuseAddrPort(SocketFd sockfd, bool reuse)
+ {
+     QStatus status = ER_NOT_IMPLEMENTED;
+ 
+-- 
+1.7.10.4
+
