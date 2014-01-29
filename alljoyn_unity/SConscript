@@ -32,15 +32,15 @@ Help(vars.GenerateHelpText(unityenv))
 
 sys.path.append(str(unityenv.Dir('../build_core/tools/scons').srcnode()))
 
+# Make alljoyn_unity dist a sub-directory of the alljoyn dist.  This avoids any conflicts with alljoyn dist targets.
+unityenv['UNITY_DISTDIR'] = unityenv['DISTDIR'] + '/unity'
+unityenv['UNITY_TESTDIR'] = unityenv['TESTDIR'] + '/unity'
+
 # create the alljoyn_unity_native library this libary will link in the bundled daemon
 # similar to other language bindings.
 unityenv.Prepend(LIBS=[unityenv['brobj'], unityenv['ajrlib']])
 libaj_unity_native = unityenv.SharedLibrary('alljoyn_unity_native', [env['AJ_C_OBJS']])
 unityenv.Install('$UNITY_DISTDIR/lib', libaj_unity_native)
-
-# Make alljoyn_unity dist a sub-directory of the alljoyn dist.  This avoids any conflicts with alljoyn dist targets.
-unityenv['UNITY_DISTDIR'] = unityenv['DISTDIR'] + '/unity'
-unityenv['UNITY_TESTDIR'] = unityenv['TESTDIR'] + '/unity'
 
 # Add support for multiple build targets in the same workset
 unityenv.VariantDir('$OBJDIR', 'src', duplicate = 0)
