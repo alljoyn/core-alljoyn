@@ -16,8 +16,9 @@
 
 #import <Foundation/Foundation.h>
 #import "AJNStatus.h"
+#import "AJNObject.h"
 
-@interface AJNPasswordManager
+@interface AJNPasswordManager : AJNObject
 
 /**
  * Set credentials used for the authentication of thin clients.

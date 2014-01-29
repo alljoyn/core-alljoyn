@@ -21,6 +21,8 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		7D682D661899BC54009424AA /* AJNPasswordManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 7D682D651899BC54009424AA /* AJNPasswordManager.h */; };
+		7D682D681899BC96009424AA /* AJNPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7D682D671899BC96009424AA /* AJNPasswordManager.mm */; };
 		AC1030AC156EC82300D2853A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC1030AB156EC82300D2853A /* Foundation.framework */; };
 		AC1030BA156EC82300D2853A /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC1030B9156EC82300D2853A /* SenTestingKit.framework */; };
 		AC1030BD156EC82300D2853A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC1030AB156EC82300D2853A /* Foundation.framework */; };
@@ -106,6 +108,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		7D682D651899BC54009424AA /* AJNPasswordManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPasswordManager.h; path = ../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.h; sourceTree = "<group>"; };
+		7D682D671899BC96009424AA /* AJNPasswordManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPasswordManager.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.mm; sourceTree = "<group>"; };
 		AC1030A8156EC82300D2853A /* libAllJoynFramework_iOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libAllJoynFramework_iOS.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		AC1030AB156EC82300D2853A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		AC1030AF156EC82300D2853A /* AllJoynFramework_iOS-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "AllJoynFramework_iOS-Prefix.pch"; sourceTree = "<group>"; };
@@ -252,6 +256,8 @@
 		AC1030AD156EC82300D2853A /* AllJoynFramework_iOS */ = {
 			isa = PBXGroup;
 			children = (
+				7D682D671899BC96009424AA /* AJNPasswordManager.mm */,
+				7D682D651899BC54009424AA /* AJNPasswordManager.h */,
 				AC3A98531578079200CFF856 /* AJNAuthenticationListener.h */,
 				AC3A98541578079200CFF856 /* AJNAuthenticationListenerImpl.h */,
 				AC3A98551578079200CFF856 /* AJNAuthenticationListenerImpl.mm */,
@@ -377,6 +383,7 @@
 				AC10311D156EC85100D2853A /* AJNSessionListenerImpl.h in Headers */,
 				AC10311F156EC85100D2853A /* AJNSessionOptions.h in Headers */,
 				AC103121156EC85100D2853A /* AJNSessionPortListener.h in Headers */,
+				7D682D661899BC54009424AA /* AJNPasswordManager.h in Headers */,
 				AC103122156EC85100D2853A /* AJNSessionPortListenerImpl.h in Headers */,
 				AC103124156EC85100D2853A /* AJNSignalHandler.h in Headers */,
 				AC103125156EC85100D2853A /* AJNSignalHandlerImpl.h in Headers */,
@@ -505,6 +512,7 @@
 				AC103117156EC85100D2853A /* AJNMessageArgument.mm in Sources */,
 				AC103119156EC85100D2853A /* AJNObject.m in Sources */,
 				AC10311B156EC85100D2853A /* AJNProxyBusObject.mm in Sources */,
+				7D682D681899BC96009424AA /* AJNPasswordManager.mm in Sources */,
 				AC10311E156EC85100D2853A /* AJNSessionListenerImpl.mm in Sources */,
 				AC103120156EC85100D2853A /* AJNSessionOptions.mm in Sources */,
 				AC103123156EC85100D2853A /* AJNSessionPortListenerImpl.mm in Sources */,
