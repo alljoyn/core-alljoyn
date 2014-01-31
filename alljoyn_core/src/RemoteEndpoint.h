@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -408,6 +408,14 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      */
     QStatus SetLinkTimeout(uint32_t idleTimeout, uint32_t probeTimeout, uint32_t maxIdleProbes);
 
+    /**
+     * Internal callback used to indicate that one of the internal threads (rx or tx) has exited.
+     * RemoteEndpoint users should not call this method.
+     *
+     * @param thread   Thread that exited.
+     */
+    virtual void ThreadExit(qcc::Thread* thread);
+
   private:
 
     class Internal;
@@ -440,14 +448,6 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * @return  true if message is ProbeReq or ProbeAck.
      */
     bool IsProbeMsg(const Message& msg, bool& isAck);
-
-    /**
-     * Internal callback used to indicate that one of the internal threads (rx or tx) has exited.
-     * RemoteEndpoint users should not call this method.
-     *
-     * @param thread   Thread that exited.
-     */
-    void ThreadExit(qcc::Thread* thread);
 
     /**
      * Internal callback used to indicate that data is available on the File descriptor.

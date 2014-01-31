@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -527,11 +527,6 @@ class _TCPEndpoint : public _RemoteEndpoint {
         m_authState = AUTH_DONE;
     }
 
-    void SetAuthenticating(void)
-    {
-        m_authState = AUTH_AUTHENTICATING;
-    }
-
     EndpointState GetEpState(void) { return m_epState; }
 
     void SetEpFailed(void)
@@ -592,6 +587,7 @@ class _TCPEndpoint : public _RemoteEndpoint {
     {
         return m_authThread.IsRunning();
     }
+    virtual void ThreadExit(qcc::Thread* thread);
 
   private:
     class AuthThread : public qcc::Thread {
@@ -614,6 +610,18 @@ class _TCPEndpoint : public _RemoteEndpoint {
     uint16_t m_port;                  /**< Remote port. */
     bool m_wasSuddenDisconnect;       /**< If true, assumption is that any disconnect is unexpected due to lower level error */
 };
+
+void _TCPEndpoint::ThreadExit(qcc::Thread* thread)
+{
+    /* If the auth thread exits before it even enters the AuthThread::Run() function, set the state to AUTH_FAILED. */
+    if (thread == &m_authThread) {
+        if (m_authState == AUTH_INITIALIZED) {
+            m_authState = AUTH_FAILED;
+            m_transport->Alert();
+        }
+    }
+    _RemoteEndpoint::ThreadExit(thread);
+}
 
 QStatus _TCPEndpoint::Authenticate(void)
 {
@@ -2842,7 +2850,6 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
          * thread to run since we have the caller thread to fill that role.
          */
         tcpEp->SetActive();
-        tcpEp->SetAuthenticating();
 
         /*
          * Initialize the "features" for this endpoint
