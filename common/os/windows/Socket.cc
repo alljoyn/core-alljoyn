@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -158,7 +158,7 @@ QStatus Socket(AddressFamily addrFamily, SocketType type, SocketFd& sockfd)
 {
     WinsockCheck();
     QStatus status = ER_OK;
-    uint32_t ret;
+    SOCKET ret;
 
 
     QCC_DbgTrace(("Socket(addrFamily = %d, type = %d, sockfd = <>)", addrFamily, type));
@@ -273,7 +273,7 @@ QStatus Listen(SocketFd sockfd, int backlog)
 QStatus Accept(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort, SocketFd& newSockfd)
 {
     QStatus status = ER_OK;
-    uint32_t ret;
+    SOCKET ret;
     struct sockaddr_storage addr;
     socklen_t addrLen = sizeof(addr);
 
@@ -305,7 +305,7 @@ QStatus Accept(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort, Soc
         } else {
             remotePort = 0;
         }
-        newSockfd = static_cast<SocketFd>(ret);
+        newSockfd = ret;
         u_long mode = 1; // Non-blocking
         ret = ioctlsocket(newSockfd, FIONBIO, &mode);
         if (ret == SOCKET_ERROR) {
@@ -356,7 +356,7 @@ QStatus Shutdown(SocketFd sockfd)
 
 void Close(SocketFd sockfd)
 {
-    uint32_t ret;
+    int ret;
 
     QCC_DbgTrace(("Close (sockfd = %d)", sockfd));
     ret = closesocket(static_cast<SOCKET>(sockfd));
