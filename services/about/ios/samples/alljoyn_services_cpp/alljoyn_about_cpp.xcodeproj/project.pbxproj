@@ -1,0 +1,454 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		9AA93A721855C17900378361 /* AboutClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFDD18547EFA004660C5 /* AboutClient.h */; };
+		9AA93A731855C17900378361 /* AboutIconClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFDE18547EFA004660C5 /* AboutIconClient.h */; };
+		9AA93A741855C17900378361 /* AboutIconService.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFDF18547EFA004660C5 /* AboutIconService.h */; };
+		9AA93A751855C17900378361 /* AboutPropertyStoreImpl.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFE018547EFA004660C5 /* AboutPropertyStoreImpl.h */; };
+		9AA93A761855C17900378361 /* AboutService.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFE118547EFA004660C5 /* AboutService.h */; };
+		9AA93A771855C17900378361 /* AboutServiceApi.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFE218547EFA004660C5 /* AboutServiceApi.h */; };
+		9AA93A781855C17900378361 /* AnnounceHandler.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFE318547EFA004660C5 /* AnnounceHandler.h */; };
+		9AA93A791855C17900378361 /* AnnouncementRegistrar.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFE418547EFA004660C5 /* AnnouncementRegistrar.h */; };
+		9AA93A7A1855C17900378361 /* PropertyStore.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFE518547EFA004660C5 /* PropertyStore.h */; };
+		9AA93A7B1855C17900378361 /* PropertyStoreProperty.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFE618547EFA004660C5 /* PropertyStoreProperty.h */; };
+		9AB9CDD618547B37004660C5 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AB9CDD518547B37004660C5 /* Foundation.framework */; };
+		9AB9D0CD18547EFB004660C5 /* AboutClient.cc in Sources */ = {isa = PBXBuildFile; fileRef = 9AB9CFFC18547EFA004660C5 /* AboutClient.cc */; };
+		9AB9D0CE18547EFB004660C5 /* AboutIconClient.cc in Sources */ = {isa = PBXBuildFile; fileRef = 9AB9CFFD18547EFA004660C5 /* AboutIconClient.cc */; };
+		9AB9D0CF18547EFB004660C5 /* AboutIconService.cc in Sources */ = {isa = PBXBuildFile; fileRef = 9AB9CFFE18547EFA004660C5 /* AboutIconService.cc */; };
+		9AB9D0D018547EFB004660C5 /* AboutPropertyStoreImpl.cc in Sources */ = {isa = PBXBuildFile; fileRef = 9AB9CFFF18547EFA004660C5 /* AboutPropertyStoreImpl.cc */; };
+		9AB9D0D118547EFB004660C5 /* AboutService.cc in Sources */ = {isa = PBXBuildFile; fileRef = 9AB9D00018547EFA004660C5 /* AboutService.cc */; };
+		9AB9D0D218547EFB004660C5 /* AboutServiceApi.cc in Sources */ = {isa = PBXBuildFile; fileRef = 9AB9D00118547EFA004660C5 /* AboutServiceApi.cc */; };
+		9AB9D0D318547EFB004660C5 /* AnnounceHandler.cc in Sources */ = {isa = PBXBuildFile; fileRef = 9AB9D00218547EFA004660C5 /* AnnounceHandler.cc */; };
+		9AB9D0D418547EFB004660C5 /* AnnouncementRegistrar.cc in Sources */ = {isa = PBXBuildFile; fileRef = 9AB9D00318547EFA004660C5 /* AnnouncementRegistrar.cc */; };
+		9AB9D0D518547EFB004660C5 /* PropertyStoreProperty.cc in Sources */ = {isa = PBXBuildFile; fileRef = 9AB9D00418547EFA004660C5 /* PropertyStoreProperty.cc */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		9AA93A7C1855C1B200378361 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = inc/alljoyn/services_common;
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9AA93A7F1855C1F600378361 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = inc/alljoyn/notification;
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9AB9CDD018547B37004660C5 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = inc/alljoyn/about;
+			dstSubfolderSpec = 16;
+			files = (
+				9AA93A721855C17900378361 /* AboutClient.h in CopyFiles */,
+				9AA93A731855C17900378361 /* AboutIconClient.h in CopyFiles */,
+				9AA93A741855C17900378361 /* AboutIconService.h in CopyFiles */,
+				9AA93A751855C17900378361 /* AboutPropertyStoreImpl.h in CopyFiles */,
+				9AA93A761855C17900378361 /* AboutService.h in CopyFiles */,
+				9AA93A771855C17900378361 /* AboutServiceApi.h in CopyFiles */,
+				9AA93A781855C17900378361 /* AnnounceHandler.h in CopyFiles */,
+				9AA93A791855C17900378361 /* AnnouncementRegistrar.h in CopyFiles */,
+				9AA93A7A1855C17900378361 /* PropertyStore.h in CopyFiles */,
+				9AA93A7B1855C17900378361 /* PropertyStoreProperty.h in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		9AB9CDD218547B37004660C5 /* liballjoyn_about_cpp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = liballjoyn_about_cpp.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		9AB9CDD518547B37004660C5 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		9AB9CDD918547B37004660C5 /* alljoyn_about_cpp-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "alljoyn_about_cpp-Prefix.pch"; sourceTree = "<group>"; };
+		9AB9CDE318547B37004660C5 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
+		9AB9CDE618547B37004660C5 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
+		9AB9CFDD18547EFA004660C5 /* AboutClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AboutClient.h; sourceTree = "<group>"; };
+		9AB9CFDE18547EFA004660C5 /* AboutIconClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AboutIconClient.h; sourceTree = "<group>"; };
+		9AB9CFDF18547EFA004660C5 /* AboutIconService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AboutIconService.h; sourceTree = "<group>"; };
+		9AB9CFE018547EFA004660C5 /* AboutPropertyStoreImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AboutPropertyStoreImpl.h; sourceTree = "<group>"; };
+		9AB9CFE118547EFA004660C5 /* AboutService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AboutService.h; sourceTree = "<group>"; };
+		9AB9CFE218547EFA004660C5 /* AboutServiceApi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AboutServiceApi.h; sourceTree = "<group>"; };
+		9AB9CFE318547EFA004660C5 /* AnnounceHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AnnounceHandler.h; sourceTree = "<group>"; };
+		9AB9CFE418547EFA004660C5 /* AnnouncementRegistrar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AnnouncementRegistrar.h; sourceTree = "<group>"; };
+		9AB9CFE518547EFA004660C5 /* PropertyStore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PropertyStore.h; sourceTree = "<group>"; };
+		9AB9CFE618547EFA004660C5 /* PropertyStoreProperty.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PropertyStoreProperty.h; sourceTree = "<group>"; };
+		9AB9CFFC18547EFA004660C5 /* AboutClient.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AboutClient.cc; sourceTree = "<group>"; };
+		9AB9CFFD18547EFA004660C5 /* AboutIconClient.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AboutIconClient.cc; sourceTree = "<group>"; };
+		9AB9CFFE18547EFA004660C5 /* AboutIconService.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AboutIconService.cc; sourceTree = "<group>"; };
+		9AB9CFFF18547EFA004660C5 /* AboutPropertyStoreImpl.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AboutPropertyStoreImpl.cc; sourceTree = "<group>"; };
+		9AB9D00018547EFA004660C5 /* AboutService.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AboutService.cc; sourceTree = "<group>"; };
+		9AB9D00118547EFA004660C5 /* AboutServiceApi.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AboutServiceApi.cc; sourceTree = "<group>"; };
+		9AB9D00218547EFA004660C5 /* AnnounceHandler.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AnnounceHandler.cc; sourceTree = "<group>"; };
+		9AB9D00318547EFA004660C5 /* AnnouncementRegistrar.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AnnouncementRegistrar.cc; sourceTree = "<group>"; };
+		9AB9D00418547EFA004660C5 /* PropertyStoreProperty.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PropertyStoreProperty.cc; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9AB9CDCF18547B37004660C5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9AB9CDD618547B37004660C5 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		9AB9CDC918547B37004660C5 = {
+			isa = PBXGroup;
+			children = (
+				9AB9CDD718547B37004660C5 /* alljoyn_services_cpp */,
+				9AB9CDD418547B37004660C5 /* Frameworks */,
+				9AB9CDD318547B37004660C5 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9AB9CDD318547B37004660C5 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9AB9CDD218547B37004660C5 /* liballjoyn_about_cpp.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9AB9CDD418547B37004660C5 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				9AB9CDD518547B37004660C5 /* Foundation.framework */,
+				9AB9CDE318547B37004660C5 /* XCTest.framework */,
+				9AB9CDE618547B37004660C5 /* UIKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		9AB9CDD718547B37004660C5 /* alljoyn_services_cpp */ = {
+			isa = PBXGroup;
+			children = (
+				9AB9CFD318547EFA004660C5 /* about */,
+				9AB9CDD818547B37004660C5 /* Supporting Files */,
+			);
+			path = alljoyn_services_cpp;
+			sourceTree = "<group>";
+		};
+		9AB9CDD818547B37004660C5 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				9AB9CDD918547B37004660C5 /* alljoyn_about_cpp-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		9AB9CFD318547EFA004660C5 /* about */ = {
+			isa = PBXGroup;
+			children = (
+				9AB9CFD518547EFA004660C5 /* cpp */,
+			);
+			name = about;
+			path = ../../../../../about;
+			sourceTree = "<group>";
+		};
+		9AB9CFD518547EFA004660C5 /* cpp */ = {
+			isa = PBXGroup;
+			children = (
+				9AB9CFDA18547EFA004660C5 /* inc */,
+				9AB9CFFB18547EFA004660C5 /* src */,
+			);
+			path = cpp;
+			sourceTree = "<group>";
+		};
+		9AB9CFDA18547EFA004660C5 /* inc */ = {
+			isa = PBXGroup;
+			children = (
+				9AB9CFDB18547EFA004660C5 /* alljoyn */,
+			);
+			path = inc;
+			sourceTree = "<group>";
+		};
+		9AB9CFDB18547EFA004660C5 /* alljoyn */ = {
+			isa = PBXGroup;
+			children = (
+				9AB9CFDC18547EFA004660C5 /* about */,
+			);
+			path = alljoyn;
+			sourceTree = "<group>";
+		};
+		9AB9CFDC18547EFA004660C5 /* about */ = {
+			isa = PBXGroup;
+			children = (
+				9AB9CFDD18547EFA004660C5 /* AboutClient.h */,
+				9AB9CFDE18547EFA004660C5 /* AboutIconClient.h */,
+				9AB9CFDF18547EFA004660C5 /* AboutIconService.h */,
+				9AB9CFE018547EFA004660C5 /* AboutPropertyStoreImpl.h */,
+				9AB9CFE118547EFA004660C5 /* AboutService.h */,
+				9AB9CFE218547EFA004660C5 /* AboutServiceApi.h */,
+				9AB9CFE318547EFA004660C5 /* AnnounceHandler.h */,
+				9AB9CFE418547EFA004660C5 /* AnnouncementRegistrar.h */,
+				9AB9CFE518547EFA004660C5 /* PropertyStore.h */,
+				9AB9CFE618547EFA004660C5 /* PropertyStoreProperty.h */,
+			);
+			path = about;
+			sourceTree = "<group>";
+		};
+		9AB9CFFB18547EFA004660C5 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				9AB9CFFC18547EFA004660C5 /* AboutClient.cc */,
+				9AB9CFFD18547EFA004660C5 /* AboutIconClient.cc */,
+				9AB9CFFE18547EFA004660C5 /* AboutIconService.cc */,
+				9AB9CFFF18547EFA004660C5 /* AboutPropertyStoreImpl.cc */,
+				9AB9D00018547EFA004660C5 /* AboutService.cc */,
+				9AB9D00118547EFA004660C5 /* AboutServiceApi.cc */,
+				9AB9D00218547EFA004660C5 /* AnnounceHandler.cc */,
+				9AB9D00318547EFA004660C5 /* AnnouncementRegistrar.cc */,
+				9AB9D00418547EFA004660C5 /* PropertyStoreProperty.cc */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9AB9CDD118547B37004660C5 /* alljoyn_about_cpp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9AB9CDF518547B37004660C5 /* Build configuration list for PBXNativeTarget "alljoyn_about_cpp" */;
+			buildPhases = (
+				9AB9CDCE18547B37004660C5 /* Sources */,
+				9AB9CDCF18547B37004660C5 /* Frameworks */,
+				9AB9CDD018547B37004660C5 /* CopyFiles */,
+				9AA93A7C1855C1B200378361 /* CopyFiles */,
+				9AA93A7F1855C1F600378361 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = alljoyn_about_cpp;
+			productName = alljoyn_services_cpp;
+			productReference = 9AB9CDD218547B37004660C5 /* liballjoyn_about_cpp.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9AB9CDCA18547B37004660C5 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0500;
+				ORGANIZATIONNAME = AllJoyn;
+			};
+			buildConfigurationList = 9AB9CDCD18547B37004660C5 /* Build configuration list for PBXProject "alljoyn_about_cpp" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 9AB9CDC918547B37004660C5;
+			productRefGroup = 9AB9CDD318547B37004660C5 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9AB9CDD118547B37004660C5 /* alljoyn_about_cpp */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9AB9CDCE18547B37004660C5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9AB9D0CD18547EFB004660C5 /* AboutClient.cc in Sources */,
+				9AB9D0D418547EFB004660C5 /* AnnouncementRegistrar.cc in Sources */,
+				9AB9D0CF18547EFB004660C5 /* AboutIconService.cc in Sources */,
+				9AB9D0CE18547EFB004660C5 /* AboutIconClient.cc in Sources */,
+				9AB9D0D118547EFB004660C5 /* AboutService.cc in Sources */,
+				9AB9D0D518547EFB004660C5 /* PropertyStoreProperty.cc in Sources */,
+				9AB9D0D018547EFB004660C5 /* AboutPropertyStoreImpl.cc in Sources */,
+				9AB9D0D218547EFB004660C5 /* AboutServiceApi.cc in Sources */,
+				9AB9D0D318547EFB004660C5 /* AnnounceHandler.cc in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		9AB9CDF318547B37004660C5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				ONLY_ACTIVE_ARCH = NO;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		9AB9CDF418547B37004660C5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		9AB9CDF618547B37004660C5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LIBRARY = "compiler-default";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES;
+				DSTROOT = /tmp/alljoyn_services_cpp.dst;
+				GCC_C_LANGUAGE_STANDARD = "compiler-default";
+				GCC_ENABLE_CPP_EXCEPTIONS = NO;
+				GCC_ENABLE_CPP_RTTI = NO;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "alljoyn_services_cpp/alljoyn_about_cpp-Prefix.pch";
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				HEADER_SEARCH_PATHS = (
+					"\"$(SRCROOT)/../../../../../alljoyn_core/build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/\"",
+					"$(inherited)",
+					"/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include;\"$(SRCROOT)/../../../../../alljoyn_core/build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../../services\"/**",
+					"\"$(SRCROOT)/../../../../../applications\"/**",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../../alljoyn_core/build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"";
+				OTHER_CFLAGS = (
+					"-DQCC_OS_GROUP_POSIX",
+					"-DQCC_OS_DARWIN",
+					"-DUSE_SAMPLE_LOGGER",
+				);
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = alljoyn_about_cpp;
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		9AB9CDF718547B37004660C5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LIBRARY = "compiler-default";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES;
+				DSTROOT = /tmp/alljoyn_services_cpp.dst;
+				GCC_C_LANGUAGE_STANDARD = "compiler-default";
+				GCC_ENABLE_CPP_EXCEPTIONS = NO;
+				GCC_ENABLE_CPP_RTTI = NO;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "alljoyn_services_cpp/alljoyn_about_cpp-Prefix.pch";
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				HEADER_SEARCH_PATHS = (
+					"\"$(SRCROOT)/../../../../../alljoyn_core/build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/\"",
+					"$(inherited)",
+					"/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include;\"$(SRCROOT)/../../../../../alljoyn_core/build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../../services\"/**",
+					"\"$(SRCROOT)/../../../../../applications\"/**",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../../alljoyn_core/build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"";
+				OTHER_CFLAGS = (
+					"-DQCC_OS_GROUP_POSIX",
+					"-DQCC_OS_DARWIN",
+					"-DUSE_SAMPLE_LOGGER",
+				);
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = alljoyn_about_cpp;
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		9AB9CDCD18547B37004660C5 /* Build configuration list for PBXProject "alljoyn_about_cpp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9AB9CDF318547B37004660C5 /* Debug */,
+				9AB9CDF418547B37004660C5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9AB9CDF518547B37004660C5 /* Build configuration list for PBXNativeTarget "alljoyn_about_cpp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9AB9CDF618547B37004660C5 /* Debug */,
+				9AB9CDF718547B37004660C5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 9AB9CDCA18547B37004660C5 /* Project object */;
+}

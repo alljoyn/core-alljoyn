@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:sampleApp/AboutService.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:../../../../alljoyn_objc/AllJoynFramework_iOS/AllJoynFramework_iOS.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:alljoyn_services_objc/alljoyn_about_objc.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:alljoyn_services_cpp/alljoyn_about_cpp.xcodeproj">
+   </FileRef>
+</Workspace>
