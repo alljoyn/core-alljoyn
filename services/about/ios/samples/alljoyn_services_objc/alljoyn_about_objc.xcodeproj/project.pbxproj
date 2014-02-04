@@ -1,0 +1,644 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		9A0118C9187403AB00975CE6 /* QASConvertUtil.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A0118C8187403AB00975CE6 /* QASConvertUtil.mm */; };
+		9A0118D61874090200975CE6 /* QASConvertUtil.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9A0118C61874039100975CE6 /* QASConvertUtil.h */; };
+		9A0B1A181861A77F00188544 /* QASPropertyStoreProperty.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A0B1A171861A77F00188544 /* QASPropertyStoreProperty.mm */; };
+		9A0B1A191861A7A000188544 /* QASPropertyStoreProperty.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9A0B1A161861A77300188544 /* QASPropertyStoreProperty.h */; };
+		9A2A846418855CBA0095FD0D /* QASPasswordManager.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9A2A846318851E360095FD0D /* QASPasswordManager.h */; };
+		9AA935ED1854BC2B00378361 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA935EC1854BC2B00378361 /* Foundation.framework */; };
+		9AA935FB1854BC2B00378361 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA935FA1854BC2B00378361 /* XCTest.framework */; };
+		9AA935FC1854BC2B00378361 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA935EC1854BC2B00378361 /* Foundation.framework */; };
+		9AA935FE1854BC2B00378361 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA935FD1854BC2B00378361 /* UIKit.framework */; };
+		9AA936011854BC2B00378361 /* liballjoyn_about_objc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA935E91854BC2B00378361 /* liballjoyn_about_objc.a */; };
+		9AA936071854BC2B00378361 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9AA936051854BC2B00378361 /* InfoPlist.strings */; };
+		9AA936091854BC2B00378361 /* alljoyn_services_objcTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936081854BC2B00378361 /* alljoyn_services_objcTests.m */; };
+		9AA938FB1854BD1800378361 /* AnnounceHandlerAdapter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936DE1854BD1700378361 /* AnnounceHandlerAdapter.mm */; };
+		9AA938FC1854BD1800378361 /* QASAboutClient.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936DF1854BD1700378361 /* QASAboutClient.mm */; };
+		9AA938FD1854BD1800378361 /* QASAboutDataConverter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E01854BD1700378361 /* QASAboutDataConverter.mm */; };
+		9AA938FE1854BD1800378361 /* QASAboutIconClient.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E11854BD1700378361 /* QASAboutIconClient.mm */; };
+		9AA938FF1854BD1800378361 /* QASAboutIconService.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E21854BD1700378361 /* QASAboutIconService.mm */; };
+		9AA939011854BD1800378361 /* QASAboutPropertyStoreImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E41854BD1700378361 /* QASAboutPropertyStoreImpl.mm */; };
+		9AA939021854BD1800378361 /* QASAboutService.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E51854BD1700378361 /* QASAboutService.mm */; };
+		9AA939031854BD1800378361 /* QASAboutServiceApi.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E61854BD1700378361 /* QASAboutServiceApi.mm */; };
+		9AA939041854BD1800378361 /* QASAnnouncement.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E71854BD1700378361 /* QASAnnouncement.mm */; };
+		9AA939051854BD1800378361 /* QASAnnouncementReceiver.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E81854BD1700378361 /* QASAnnouncementReceiver.mm */; };
+		9AA93A8A1855CC8200378361 /* AnnounceHandlerAdapter.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B01854BD1600378361 /* AnnounceHandlerAdapter.h */; };
+		9AA93A8B1855CC8200378361 /* QASAboutClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B11854BD1600378361 /* QASAboutClient.h */; };
+		9AA93A8C1855CC8200378361 /* QASAboutDataConverter.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B21854BD1600378361 /* QASAboutDataConverter.h */; };
+		9AA93A8D1855CC8200378361 /* QASAboutIconClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B31854BD1600378361 /* QASAboutIconClient.h */; };
+		9AA93A8E1855CC8200378361 /* QASAboutIconService.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B41854BD1600378361 /* QASAboutIconService.h */; };
+		9AA93A901855CC8200378361 /* QASAboutPropertyStoreImpl.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B61854BD1600378361 /* QASAboutPropertyStoreImpl.h */; };
+		9AA93A911855CC8200378361 /* QASAboutService.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B71854BD1600378361 /* QASAboutService.h */; };
+		9AA93A921855CC8200378361 /* QASAboutServiceApi.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B81854BD1600378361 /* QASAboutServiceApi.h */; };
+		9AA93A931855CC8200378361 /* QASAnnouncement.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B91854BD1600378361 /* QASAnnouncement.h */; };
+		9AA93A941855CC8200378361 /* QASAnnouncementListener.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936BA1854BD1600378361 /* QASAnnouncementListener.h */; };
+		9AA93A951855CC8200378361 /* QASAnnouncementReceiver.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936BB1854BD1600378361 /* QASAnnouncementReceiver.h */; };
+		9AA93A961855CC8200378361 /* QASPropertyStore.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936BC1854BD1600378361 /* QASPropertyStore.h */; };
+		9AB8993D18755E7B00BC53DA /* QASPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AB8993C18755E7B00BC53DA /* QASPasswordManager.mm */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9AA935FF1854BC2B00378361 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9AA935E11854BC2B00378361 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9AA935E81854BC2B00378361;
+			remoteInfo = alljoyn_services_objc;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		9AA935E71854BC2B00378361 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = inc/alljoyn/about;
+			dstSubfolderSpec = 16;
+			files = (
+				9A2A846418855CBA0095FD0D /* QASPasswordManager.h in CopyFiles */,
+				9AA93A8A1855CC8200378361 /* AnnounceHandlerAdapter.h in CopyFiles */,
+				9AA93A8B1855CC8200378361 /* QASAboutClient.h in CopyFiles */,
+				9AA93A8C1855CC8200378361 /* QASAboutDataConverter.h in CopyFiles */,
+				9AA93A8D1855CC8200378361 /* QASAboutIconClient.h in CopyFiles */,
+				9AA93A8E1855CC8200378361 /* QASAboutIconService.h in CopyFiles */,
+				9AA93A901855CC8200378361 /* QASAboutPropertyStoreImpl.h in CopyFiles */,
+				9AA93A911855CC8200378361 /* QASAboutService.h in CopyFiles */,
+				9AA93A921855CC8200378361 /* QASAboutServiceApi.h in CopyFiles */,
+				9AA93A931855CC8200378361 /* QASAnnouncement.h in CopyFiles */,
+				9AA93A941855CC8200378361 /* QASAnnouncementListener.h in CopyFiles */,
+				9AA93A951855CC8200378361 /* QASAnnouncementReceiver.h in CopyFiles */,
+				9AA93A961855CC8200378361 /* QASPropertyStore.h in CopyFiles */,
+				9A0B1A191861A7A000188544 /* QASPropertyStoreProperty.h in CopyFiles */,
+				9A0118D61874090200975CE6 /* QASConvertUtil.h in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		9A0118C61874039100975CE6 /* QASConvertUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASConvertUtil.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9A0118C8187403AB00975CE6 /* QASConvertUtil.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASConvertUtil.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9A0B1A161861A77300188544 /* QASPropertyStoreProperty.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASPropertyStoreProperty.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9A0B1A171861A77F00188544 /* QASPropertyStoreProperty.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASPropertyStoreProperty.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9A2A846318851E360095FD0D /* QASPasswordManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QASPasswordManager.h; sourceTree = "<group>"; };
+		9AA935E91854BC2B00378361 /* liballjoyn_about_objc.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = liballjoyn_about_objc.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		9AA935EC1854BC2B00378361 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		9AA935F01854BC2B00378361 /* alljoyn_about_objc-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "alljoyn_about_objc-Prefix.pch"; sourceTree = "<group>"; };
+		9AA935F91854BC2B00378361 /* alljoyn_about_objcTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = alljoyn_about_objcTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9AA935FA1854BC2B00378361 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
+		9AA935FD1854BC2B00378361 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
+		9AA936041854BC2B00378361 /* alljoyn_about_objcTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "alljoyn_about_objcTests-Info.plist"; sourceTree = "<group>"; };
+		9AA936061854BC2B00378361 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		9AA936081854BC2B00378361 /* alljoyn_services_objcTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = alljoyn_services_objcTests.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
+		9AA936B01854BD1600378361 /* AnnounceHandlerAdapter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = AnnounceHandlerAdapter.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936B11854BD1600378361 /* QASAboutClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAboutClient.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936B21854BD1600378361 /* QASAboutDataConverter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAboutDataConverter.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936B31854BD1600378361 /* QASAboutIconClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAboutIconClient.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936B41854BD1600378361 /* QASAboutIconService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAboutIconService.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936B61854BD1600378361 /* QASAboutPropertyStoreImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAboutPropertyStoreImpl.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936B71854BD1600378361 /* QASAboutService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAboutService.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936B81854BD1600378361 /* QASAboutServiceApi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAboutServiceApi.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936B91854BD1600378361 /* QASAnnouncement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAnnouncement.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936BA1854BD1600378361 /* QASAnnouncementListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAnnouncementListener.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936BB1854BD1600378361 /* QASAnnouncementReceiver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAnnouncementReceiver.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936BC1854BD1600378361 /* QASPropertyStore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASPropertyStore.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936DE1854BD1700378361 /* AnnounceHandlerAdapter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = AnnounceHandlerAdapter.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936DF1854BD1700378361 /* QASAboutClient.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAboutClient.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936E01854BD1700378361 /* QASAboutDataConverter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAboutDataConverter.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936E11854BD1700378361 /* QASAboutIconClient.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAboutIconClient.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936E21854BD1700378361 /* QASAboutIconService.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAboutIconService.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936E41854BD1700378361 /* QASAboutPropertyStoreImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAboutPropertyStoreImpl.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936E51854BD1700378361 /* QASAboutService.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAboutService.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936E61854BD1700378361 /* QASAboutServiceApi.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAboutServiceApi.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936E71854BD1700378361 /* QASAnnouncement.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAnnouncement.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AA936E81854BD1700378361 /* QASAnnouncementReceiver.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAnnouncementReceiver.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AB8993C18755E7B00BC53DA /* QASPasswordManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASPasswordManager.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9AA935E61854BC2B00378361 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9AA935ED1854BC2B00378361 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9AA935F61854BC2B00378361 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9AA935FB1854BC2B00378361 /* XCTest.framework in Frameworks */,
+				9AA936011854BC2B00378361 /* liballjoyn_about_objc.a in Frameworks */,
+				9AA935FE1854BC2B00378361 /* UIKit.framework in Frameworks */,
+				9AA935FC1854BC2B00378361 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		9AA935E01854BC2B00378361 = {
+			isa = PBXGroup;
+			children = (
+				9AA936781854BD1600378361 /* about */,
+				9AA935EE1854BC2B00378361 /* alljoyn_services_objc */,
+				9AA936021854BC2B00378361 /* alljoyn_services_objcTests */,
+				9AA935EB1854BC2B00378361 /* Frameworks */,
+				9AA935EA1854BC2B00378361 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9AA935EA1854BC2B00378361 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9AA935E91854BC2B00378361 /* liballjoyn_about_objc.a */,
+				9AA935F91854BC2B00378361 /* alljoyn_about_objcTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9AA935EB1854BC2B00378361 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				9AA935EC1854BC2B00378361 /* Foundation.framework */,
+				9AA935FA1854BC2B00378361 /* XCTest.framework */,
+				9AA935FD1854BC2B00378361 /* UIKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		9AA935EE1854BC2B00378361 /* alljoyn_services_objc */ = {
+			isa = PBXGroup;
+			children = (
+				9AA935EF1854BC2B00378361 /* Supporting Files */,
+			);
+			path = alljoyn_services_objc;
+			sourceTree = "<group>";
+		};
+		9AA935EF1854BC2B00378361 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				9AA935F01854BC2B00378361 /* alljoyn_about_objc-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		9AA936021854BC2B00378361 /* alljoyn_services_objcTests */ = {
+			isa = PBXGroup;
+			children = (
+				9AA936081854BC2B00378361 /* alljoyn_services_objcTests.m */,
+				9AA936031854BC2B00378361 /* Supporting Files */,
+			);
+			path = alljoyn_services_objcTests;
+			sourceTree = "<group>";
+		};
+		9AA936031854BC2B00378361 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				9AA936041854BC2B00378361 /* alljoyn_about_objcTests-Info.plist */,
+				9AA936051854BC2B00378361 /* InfoPlist.strings */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		9AA936781854BD1600378361 /* about */ = {
+			isa = PBXGroup;
+			children = (
+				9AA936AB1854BD1600378361 /* ios */,
+			);
+			name = about;
+			path = ../../../../about;
+			sourceTree = "<group>";
+		};
+		9AA936AB1854BD1600378361 /* ios */ = {
+			isa = PBXGroup;
+			children = (
+				9AA936AD1854BD1600378361 /* inc */,
+				9AA936DD1854BD1700378361 /* src */,
+			);
+			path = ios;
+			sourceTree = "<group>";
+		};
+		9AA936AD1854BD1600378361 /* inc */ = {
+			isa = PBXGroup;
+			children = (
+				9AA936AE1854BD1600378361 /* alljoyn */,
+			);
+			path = inc;
+			sourceTree = "<group>";
+		};
+		9AA936AE1854BD1600378361 /* alljoyn */ = {
+			isa = PBXGroup;
+			children = (
+				9AA936AF1854BD1600378361 /* about */,
+			);
+			path = alljoyn;
+			sourceTree = "<group>";
+		};
+		9AA936AF1854BD1600378361 /* about */ = {
+			isa = PBXGroup;
+			children = (
+				9A2A846318851E360095FD0D /* QASPasswordManager.h */,
+				9A0118C61874039100975CE6 /* QASConvertUtil.h */,
+				9A0B1A161861A77300188544 /* QASPropertyStoreProperty.h */,
+				9AA936B01854BD1600378361 /* AnnounceHandlerAdapter.h */,
+				9AA936B11854BD1600378361 /* QASAboutClient.h */,
+				9AA936B21854BD1600378361 /* QASAboutDataConverter.h */,
+				9AA936B31854BD1600378361 /* QASAboutIconClient.h */,
+				9AA936B41854BD1600378361 /* QASAboutIconService.h */,
+				9AA936B61854BD1600378361 /* QASAboutPropertyStoreImpl.h */,
+				9AA936B71854BD1600378361 /* QASAboutService.h */,
+				9AA936B81854BD1600378361 /* QASAboutServiceApi.h */,
+				9AA936B91854BD1600378361 /* QASAnnouncement.h */,
+				9AA936BA1854BD1600378361 /* QASAnnouncementListener.h */,
+				9AA936BB1854BD1600378361 /* QASAnnouncementReceiver.h */,
+				9AA936BC1854BD1600378361 /* QASPropertyStore.h */,
+			);
+			path = about;
+			sourceTree = "<group>";
+		};
+		9AA936DD1854BD1700378361 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				9AB8993C18755E7B00BC53DA /* QASPasswordManager.mm */,
+				9A0118C8187403AB00975CE6 /* QASConvertUtil.mm */,
+				9A0B1A171861A77F00188544 /* QASPropertyStoreProperty.mm */,
+				9AA936DE1854BD1700378361 /* AnnounceHandlerAdapter.mm */,
+				9AA936DF1854BD1700378361 /* QASAboutClient.mm */,
+				9AA936E01854BD1700378361 /* QASAboutDataConverter.mm */,
+				9AA936E11854BD1700378361 /* QASAboutIconClient.mm */,
+				9AA936E21854BD1700378361 /* QASAboutIconService.mm */,
+				9AA936E41854BD1700378361 /* QASAboutPropertyStoreImpl.mm */,
+				9AA936E51854BD1700378361 /* QASAboutService.mm */,
+				9AA936E61854BD1700378361 /* QASAboutServiceApi.mm */,
+				9AA936E71854BD1700378361 /* QASAnnouncement.mm */,
+				9AA936E81854BD1700378361 /* QASAnnouncementReceiver.mm */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9AA935E81854BC2B00378361 /* alljoyn_about_objc */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9AA9360C1854BC2B00378361 /* Build configuration list for PBXNativeTarget "alljoyn_about_objc" */;
+			buildPhases = (
+				9AA935E51854BC2B00378361 /* Sources */,
+				9AA935E61854BC2B00378361 /* Frameworks */,
+				9AA935E71854BC2B00378361 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = alljoyn_about_objc;
+			productName = alljoyn_services_objc;
+			productReference = 9AA935E91854BC2B00378361 /* liballjoyn_about_objc.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		9AA935F81854BC2B00378361 /* alljoyn_about_objcTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9AA9360F1854BC2B00378361 /* Build configuration list for PBXNativeTarget "alljoyn_about_objcTests" */;
+			buildPhases = (
+				9AA935F51854BC2B00378361 /* Sources */,
+				9AA935F61854BC2B00378361 /* Frameworks */,
+				9AA935F71854BC2B00378361 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9AA936001854BC2B00378361 /* PBXTargetDependency */,
+			);
+			name = alljoyn_about_objcTests;
+			productName = alljoyn_services_objcTests;
+			productReference = 9AA935F91854BC2B00378361 /* alljoyn_about_objcTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9AA935E11854BC2B00378361 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0500;
+				ORGANIZATIONNAME = AllJoyn;
+			};
+			buildConfigurationList = 9AA935E41854BC2B00378361 /* Build configuration list for PBXProject "alljoyn_about_objc" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 9AA935E01854BC2B00378361;
+			productRefGroup = 9AA935EA1854BC2B00378361 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9AA935E81854BC2B00378361 /* alljoyn_about_objc */,
+				9AA935F81854BC2B00378361 /* alljoyn_about_objcTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		9AA935F71854BC2B00378361 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9AA936071854BC2B00378361 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9AA935E51854BC2B00378361 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9AA938FD1854BD1800378361 /* QASAboutDataConverter.mm in Sources */,
+				9AA939011854BD1800378361 /* QASAboutPropertyStoreImpl.mm in Sources */,
+				9AA938FB1854BD1800378361 /* AnnounceHandlerAdapter.mm in Sources */,
+				9A0B1A181861A77F00188544 /* QASPropertyStoreProperty.mm in Sources */,
+				9AA939021854BD1800378361 /* QASAboutService.mm in Sources */,
+				9AA938FE1854BD1800378361 /* QASAboutIconClient.mm in Sources */,
+				9A0118C9187403AB00975CE6 /* QASConvertUtil.mm in Sources */,
+				9AA939031854BD1800378361 /* QASAboutServiceApi.mm in Sources */,
+				9AA939041854BD1800378361 /* QASAnnouncement.mm in Sources */,
+				9AA939051854BD1800378361 /* QASAnnouncementReceiver.mm in Sources */,
+				9AA938FF1854BD1800378361 /* QASAboutIconService.mm in Sources */,
+				9AB8993D18755E7B00BC53DA /* QASPasswordManager.mm in Sources */,
+				9AA938FC1854BD1800378361 /* QASAboutClient.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9AA935F51854BC2B00378361 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9AA936091854BC2B00378361 /* alljoyn_services_objcTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9AA936001854BC2B00378361 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9AA935E81854BC2B00378361 /* alljoyn_about_objc */;
+			targetProxy = 9AA935FF1854BC2B00378361 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		9AA936051854BC2B00378361 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				9AA936061854BC2B00378361 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		9AA9360A1854BC2B00378361 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		9AA9360B1854BC2B00378361 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		9AA9360D1854BC2B00378361 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LIBRARY = "compiler-default";
+				DSTROOT = /tmp/alljoyn_services_objc.dst;
+				GCC_ENABLE_CPP_EXCEPTIONS = NO;
+				GCC_ENABLE_CPP_RTTI = NO;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "alljoyn_services_objc/alljoyn_about_objc-Prefix.pch";
+				HEADER_SEARCH_PATHS = (
+					"\"$(SRCROOT)/../../../../../alljoyn_core/build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
+					"\"$(SRCROOT)/../../../../../alljoyn_core/build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../../common/inc\"",
+					"\"$(SRCROOT)/../../../../../alljoyn_objc/AllJoynFramework/AllJoynFramework\"",
+					"\"$(SRCROOT)/../../../../../applications\"/**",
+					"\"$(SRCROOT)/../../../../../services/about/cpp/inc/alljoyn/about \"$(SRCROOT)/../../../../../services/services_common/cpp/inc/alljoyn/services_common",
+					"\"$(SRCROOT)/../../../../../services/about/cpp/inc/alljoyn/about/\"",
+					"\"$(SRCROOT)/../../../../../services/services_common/cpp/inc/alljoyn/services_common/\"",
+					"\"$(SRCROOT)/../../../../../services/about/cpp/inc/\"",
+					"\"$(SRCROOT)/../../../../../services/about/ios/inc/\"",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(USER_LIBRARY_DIR)/Developer/Xcode/DerivedData/AboutServiceWorkspace-diiswixxecsgjablfhnnpcwwvocf/Build/Products/Debug-iphoneos",
+				);
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CFLAGS = (
+					"-DQCC_OS_GROUP_POSIX",
+					"-DQCC_OS_DARWIN",
+					"-DUSE_SAMPLE_LOGGER",
+				);
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = alljoyn_about_objc;
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		9AA9360E1854BC2B00378361 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LIBRARY = "compiler-default";
+				DSTROOT = /tmp/alljoyn_services_objc.dst;
+				GCC_ENABLE_CPP_EXCEPTIONS = NO;
+				GCC_ENABLE_CPP_RTTI = NO;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "alljoyn_services_objc/alljoyn_about_objc-Prefix.pch";
+				HEADER_SEARCH_PATHS = (
+					"\"$(SRCROOT)/../../../../../alljoyn_core/build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
+					"\"$(SRCROOT)/../../../../../alljoyn_core/build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../../common/inc\"",
+					"\"$(SRCROOT)/../../../../../alljoyn_objc/AllJoynFramework/AllJoynFramework\"",
+					"\"$(SRCROOT)/../../../../../applications\"/**",
+					"\"$(SRCROOT)/../../../../../services/about/cpp/inc/alljoyn/about \"$(SRCROOT)/../../../../../services/services_common/cpp/inc/alljoyn/services_common",
+					"\"$(SRCROOT)/../../../../../services/about/cpp/inc/alljoyn/about/\"",
+					"\"$(SRCROOT)/../../../../../services/services_common/cpp/inc/alljoyn/services_common/\"",
+					"\"$(SRCROOT)/../../../../../services/about/cpp/inc/\"",
+					"\"$(SRCROOT)/../../../../../services/about/ios/inc/\"",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(USER_LIBRARY_DIR)/Developer/Xcode/DerivedData/AboutServiceWorkspace-diiswixxecsgjablfhnnpcwwvocf/Build/Products/Debug-iphoneos",
+				);
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CFLAGS = (
+					"-DQCC_OS_GROUP_POSIX",
+					"-DQCC_OS_DARWIN",
+					"-DUSE_SAMPLE_LOGGER",
+				);
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = alljoyn_about_objc;
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		9AA936101854BC2B00378361 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(inherited)",
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "alljoyn_services_objc/alljoyn_services_objc-Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"\"$(SRCROOT)/../../../../../alljoyn_core/build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../../alljoyn_core/build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"/**",
+					"\"$(SRCROOT)/../../../../../services\"/**",
+					"\"$(SRCROOT)/../../../../../common/inc\"",
+					"\"$(SRCROOT)/../../../../../alljoyn_objc/AllJoynFramework/AllJoynFramework\"",
+					"\"$(SRCROOT)/../../../../../applications\"/**",
+					"\"$(SRCROOT)/../../../../../services/notification/cpp/inc/alljoyn/notification/",
+				);
+				INFOPLIST_FILE = "alljoyn_services_objcTests/alljoyn_about_objcTests-Info.plist";
+				PRODUCT_NAME = alljoyn_about_objcTests;
+				WRAPPER_EXTENSION = xctest;
+			};
+			name = Debug;
+		};
+		9AA936111854BC2B00378361 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(inherited)",
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "alljoyn_services_objc/alljoyn_services_objc-Prefix.pch";
+				HEADER_SEARCH_PATHS = (
+					"\"$(SRCROOT)/../../../../../alljoyn_core/build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../../alljoyn_core/build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"/**",
+					"\"$(SRCROOT)/../../../../../services\"/**",
+					"\"$(SRCROOT)/../../../../../common/inc\"",
+					"\"$(SRCROOT)/../../../../../alljoyn_objc/AllJoynFramework/AllJoynFramework\"",
+					"\"$(SRCROOT)/../../../../../applications\"/**",
+				);
+				INFOPLIST_FILE = "alljoyn_services_objcTests/alljoyn_about_objcTests-Info.plist";
+				PRODUCT_NAME = alljoyn_about_objcTests;
+				WRAPPER_EXTENSION = xctest;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		9AA935E41854BC2B00378361 /* Build configuration list for PBXProject "alljoyn_about_objc" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9AA9360A1854BC2B00378361 /* Debug */,
+				9AA9360B1854BC2B00378361 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9AA9360C1854BC2B00378361 /* Build configuration list for PBXNativeTarget "alljoyn_about_objc" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9AA9360D1854BC2B00378361 /* Debug */,
+				9AA9360E1854BC2B00378361 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9AA9360F1854BC2B00378361 /* Build configuration list for PBXNativeTarget "alljoyn_about_objcTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9AA936101854BC2B00378361 /* Debug */,
+				9AA936111854BC2B00378361 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 9AA935E11854BC2B00378361 /* Project object */;
+}
