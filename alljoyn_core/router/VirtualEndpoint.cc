@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -180,11 +180,17 @@ bool _VirtualEndpoint::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
     bool isEmpty;
     if (m_hasRefs) {
         isEmpty = (m_b2bEndpoints.lower_bound(1) == m_b2bEndpoints.end());
+        size_t pos = GetUniqueName().find_first_of(".");
+        String vepGUID = GetUniqueName().substr(1, pos - 1);
         if (isEmpty) {
             const qcc::GUID128& guid = endpoint->GetRemoteGUID();
             it = m_b2bEndpoints.begin();
             while (it != m_b2bEndpoints.end()) {
-                if (it->second->GetRemoteGUID() == guid) {
+                /* If the endpoint going away has the same remote GUID as another one in the m_b2bEndpoints map OR
+                 * If the Remote guid of a endpoint in the m_b2bEndpoints map is the same as the VirtualEndpoint GUID:
+                 * then this Virtual endpoint is still valid.
+                 */
+                if ((it->second->GetRemoteGUID() == guid) || (it->second->GetRemoteGUID().ToShortString() == vepGUID)) {
                     isEmpty = false;
                     break;
                 }
