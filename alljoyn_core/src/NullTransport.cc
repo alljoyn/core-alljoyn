@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -57,7 +57,7 @@ namespace ajn {
 
 const char* NullTransport::TransportName = "null";
 
-DaemonLauncher* NullTransport::daemonLauncher;
+RouterLauncher* NullTransport::routerLauncher;
 
 class _NullEndpoint;
 
@@ -65,7 +65,7 @@ typedef ManagedObj<_NullEndpoint> NullEndpoint;
 
 /*
  * The null endpoint simply moves messages between the daemon router to the client router and lets
- * the routers handle it from there. The only wrinkle is that messages forwarded to the daemon may
+ * the routers handle it from there. The only wrinkle is that messages forwarded to the routing node may
  * need to be encrypted because in the non-bundled case encryption is done in _Message::Deliver()
  * and that method does not get called in this case.
  */
@@ -75,7 +75,7 @@ class _NullEndpoint : public _BusEndpoint {
 
   public:
 
-    _NullEndpoint(BusAttachment& clientBus, BusAttachment& daemonBus);
+    _NullEndpoint(BusAttachment& clientBus, BusAttachment& routerBus);
 
     ~_NullEndpoint();
 
@@ -101,12 +101,12 @@ class _NullEndpoint : public _BusEndpoint {
 
     int32_t clientReady;
     BusAttachment& clientBus;
-    BusAttachment& daemonBus;
+    BusAttachment& routerBus;
 
     qcc::String uniqueName;
 
     /*
-     * Register the endpoint with the client on receiving the first message from the daemon.
+     * Register the endpoint with the client on receiving the first message from the router.
      */
     inline void CheckRegisterEndpoint()
     {
@@ -123,17 +123,17 @@ class _NullEndpoint : public _BusEndpoint {
     }
 };
 
-_NullEndpoint::_NullEndpoint(BusAttachment& clientBus, BusAttachment& daemonBus) :
+_NullEndpoint::_NullEndpoint(BusAttachment& clientBus, BusAttachment& routerBus) :
     _BusEndpoint(ENDPOINT_TYPE_NULL),
     clientReady(0),
     clientBus(clientBus),
-    daemonBus(daemonBus)
+    routerBus(routerBus)
 {
     /*
      * We short-circuit all of the normal authentication and hello handshakes and
-     * simply get a unique name for the null endpoint directly from the daemon.
+     * simply get a unique name for the null endpoint directly from the router.
      */
-    uniqueName = daemonBus.GetInternal().GetRouter().GenerateUniqueName();
+    uniqueName = routerBus.GetInternal().GetRouter().GenerateUniqueName();
     QCC_DbgHLPrintf(("Creating null endpoint %s", uniqueName.c_str()));
 }
 
@@ -157,20 +157,20 @@ QStatus _NullEndpoint::PushMessage(Message& msg)
 
     QStatus status = ER_OK;
     /*
-     * In the un-bundled daemon case messages store the name of the endpoint they were received
+     * In the un-bundled router case messages store the name of the endpoint they were received
      * on. As far as the client and daemon routers are concerned the message was received from
      * this endpoint so we must set the received name to the unique name of this endpoint.
      */
     msg->rcvEndpointName = uniqueName;
     /*
-     * If the message came from the client forward it to the daemon and visa versa. Note that
+     * If the message came from the client forward it to the routing node and visa versa. Note that
      * if the message didn't come from the client it must be assumed that it came from the
-     * daemon to handle to the (rare) case of a broadcast signal being sent to multiple bus
+     * routing node to handle to the (rare) case of a broadcast signal being sent to multiple bus
      * attachments in a single application.
      */
     if (msg->bus == &clientBus) {
         /*
-         * In the non-bundled case messages are encrypted when they are delivered to the daemon
+         * In the non-bundled case messages are encrypted when they are delivered to the routing node
          * endpoint by a call to Message::Deliver. The null transport bypasses Message::Deliver
          * by pushing the messages directly to the daemon router. This means we need to encrypt
          * messages here before we do the push.
@@ -183,8 +183,8 @@ QStatus _NullEndpoint::PushMessage(Message& msg)
             }
         }
         if (status == ER_OK) {
-            msg->bus = &daemonBus;
-            status = daemonBus.GetInternal().GetRouter().PushMessage(msg, busEndpoint);
+            msg->bus = &routerBus;
+            status = routerBus.GetInternal().GetRouter().PushMessage(msg, busEndpoint);
             if (status != ER_STOPPING_THREAD) {
                 /* The NullEndpoint is a special case where the message is pushed to the DaemonRouter.
                  * In case of the RemoteEndpoint, the return value from PushMessage only indicates whether
@@ -202,7 +202,7 @@ QStatus _NullEndpoint::PushMessage(Message& msg)
             status = ER_OK;
         }
     } else {
-        assert(msg->bus == &daemonBus);
+        assert(msg->bus == &routerBus);
         /*
          * Register the endpoint with the client router if needed
          */
@@ -223,7 +223,7 @@ QStatus _NullEndpoint::PushMessage(Message& msg)
     return status;
 }
 
-NullTransport::NullTransport(BusAttachment& bus) : bus(bus), running(false), daemonBus(NULL)
+NullTransport::NullTransport(BusAttachment& bus) : bus(bus), running(false), routerBus(NULL)
 {
 }
 
@@ -252,8 +252,8 @@ QStatus NullTransport::Stop(void)
 
 QStatus NullTransport::Join(void)
 {
-    if (daemonLauncher) {
-        daemonLauncher->Join();
+    if (routerLauncher) {
+        routerLauncher->Join();
     }
     return ER_OK;
 }
@@ -266,7 +266,7 @@ QStatus NullTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& o
 
 QStatus NullTransport::LinkBus(BusAttachment* otherBus)
 {
-    QCC_DbgHLPrintf(("Linking client and daemon busses"));
+    QCC_DbgHLPrintf(("Linking leaf node and routing node busses"));
 
     assert(otherBus);
 
@@ -275,7 +275,7 @@ QStatus NullTransport::LinkBus(BusAttachment* otherBus)
      */
     NullEndpoint ep(bus, *otherBus);
     /*
-     * The compression rules are shared between the client bus and the daemon bus
+     * The compression rules are shared between the client bus and the routing node bus
      */
     bus.GetInternal().OverrideCompressionRules(otherBus->GetInternal().GetCompressionRules());
     /*
@@ -283,7 +283,7 @@ QStatus NullTransport::LinkBus(BusAttachment* otherBus)
      * router either below or in PushMessage if a message is received before the call to register
      * the endpoint with the daemon router returns.
      */
-    QCC_DbgHLPrintf(("Registering null endpoint with daemon"));
+    QCC_DbgHLPrintf(("Registering null endpoint with routing node"));
 
     endpoint = BusEndpoint::cast(ep);
     QStatus status = otherBus->GetInternal().GetRouter().RegisterEndpoint(endpoint);
@@ -305,11 +305,11 @@ QStatus NullTransport::Connect(const char* connectSpec, const SessionOpts& opts,
     if (!running) {
         return ER_BUS_TRANSPORT_NOT_STARTED;
     }
-    if (!daemonLauncher) {
+    if (!routerLauncher) {
         return ER_BUS_TRANSPORT_NOT_AVAILABLE;
     }
 
-    status = daemonLauncher->Start(this);
+    status = routerLauncher->Start(this);
     if (status == ER_OK) {
         newep = endpoint;
     }
@@ -320,13 +320,17 @@ QStatus NullTransport::Disconnect(const char* connectSpec)
 {
     if (endpoint->IsValid()) {
         NullEndpoint ep = NullEndpoint::cast(endpoint);
-        assert(daemonLauncher);
+        assert(routerLauncher);
         ep->clientBus.GetInternal().GetRouter().UnregisterEndpoint(ep->GetUniqueName(), ep->GetEndpointType());
-        ep->daemonBus.GetInternal().GetRouter().UnregisterEndpoint(ep->GetUniqueName(), ep->GetEndpointType());
+        ep->routerBus.GetInternal().GetRouter().UnregisterEndpoint(ep->GetUniqueName(), ep->GetEndpointType());
         ep->Invalidate();
+
+        /* Stop the routerLauncher first, so that all the Routing node bus objects are stopped */
+        routerLauncher->Stop(this);
+
         /* Wait for any threads that are in PushMessage to finish
-         * before the daemon-side BusAttachment is deleted as
-         * a part of the daemonLauncher Stop and Join.
+         * before the router-side BusAttachment is deleted as
+         * a part of the RouterLauncher Join.
          */
         while (endpoint.GetRefCount() > NULLEP_REFS_AT_DELETION) {
             qcc::Sleep(4);
@@ -338,15 +342,14 @@ QStatus NullTransport::Disconnect(const char* connectSpec)
          *     NullTransport::endpoint
          */
 
-        daemonLauncher->Stop(this);
-        daemonLauncher->Join();
+        routerLauncher->Join();
     }
     return ER_OK;
 }
 
-void NullTransport::RegisterDaemonLauncher(DaemonLauncher* launcher)
+void NullTransport::RegisterRouterLauncher(RouterLauncher* launcher)
 {
-    daemonLauncher = launcher;
+    routerLauncher = launcher;
 }
 
 } // namespace ajn
