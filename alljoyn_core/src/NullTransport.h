@@ -1,10 +1,10 @@
 /**
  * @file
- * NullTransport is the transport mechanism for bundled daemons.
+ * NullTransport is the transport mechanism for bundled routers.
  */
 
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -46,9 +46,9 @@ namespace ajn {
 class NullTransport;
 
 /**
- * Class for launching a bundled daemon.
+ * Class for launching a bundled router.
  */
-struct DaemonLauncher {
+struct RouterLauncher {
 
     virtual QStatus Start(NullTransport* nullTransport) = 0;
 
@@ -56,11 +56,11 @@ struct DaemonLauncher {
 
     virtual void Join() = 0;
 
-    virtual ~DaemonLauncher() { }
+    virtual ~RouterLauncher() { }
 };
 
 /**
- * @brief A class for communicating from a client to a bundled daemon
+ * @brief A class for communicating from a leaf node to a bundled router
  *
  * The NullTransport class has different incarnations depending on the platform.
  */
@@ -127,7 +127,7 @@ class NullTransport : public Transport {
     QStatus NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, std::map<qcc::String, qcc::String>& argMap) const;
 
     /**
-     * Connect to the bundled daemon
+     * Connect to the bundled router
      *
      * @param connectSpec    Transport specific key/value args used to configure the client-side endpoint.
      *                       The form of this string is @c "<transport>:<key1>=<val1>,<key2>=<val2>..."
@@ -140,7 +140,7 @@ class NullTransport : public Transport {
     QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep);
 
     /**
-     * Disconnect from the bundled daemon.
+     * Disconnect from the bundled router.
      *
      * @param connectSpec    The connectSpec used in Connect.
      *
@@ -172,29 +172,29 @@ class NullTransport : public Transport {
     /**
      * Indicates whether this transport is used for client-to-bus or bus-to-bus connections.
      *
-     * @return  Always returns false, NullTransports are only used to connect to a local daemon.
+     * @return  Always returns false, NullTransports are only used to connect to a local router.
      */
     bool IsBusToBus() const { return false; }
 
     /**
-     * Link the daemon bus to the client bus
+     * Link the router bus to the leaf node bus
      */
     QStatus LinkBus(BusAttachment* otherBus);
 
     /**
-     * If there is a bundled daemon it will call in to register a launcher with the
-     * null transport. The bundled daemon is launched the first time a null transport
+     * If there is a bundled router it will call in to register a launcher with the
+     * null transport. The bundled router is launched the first time a null transport
      * is connected.
      */
-    static void RegisterDaemonLauncher(DaemonLauncher* launcher);
+    static void RegisterRouterLauncher(RouterLauncher* launcher);
 
     /**
-     * The null transport is only available if the application has been linked with bundled daemon
+     * The null transport is only available if the application has been linked with bundled router
      * support. Check if the null transport is available.
      *
      * @return  Returns true if the null transport is available.
      */
-    static bool IsAvailable() { return daemonLauncher != NULL; }
+    static bool IsAvailable() { return routerLauncher != NULL; }
 
     /**
      * Name of transport used in transport specs.
@@ -205,9 +205,9 @@ class NullTransport : public Transport {
     BusAttachment& bus;           /**< The message bus for this transport */
     bool running;                 /**< True after Start() has been called, before Stop() */
     BusEndpoint endpoint;         /**< The active endpoint */
-    BusAttachment* daemonBus;     /**< The daemon bus attachment if the a bundled daemon was launched */
+    BusAttachment* routerBus;     /**< The router bus attachment if the a bundled router was launched */
 
-    static DaemonLauncher* daemonLauncher; /**< The daemon launcher if there is bundled daemon present */
+    static RouterLauncher* routerLauncher; /**< The router launcher if there is bundled router present */
 };
 
 } // namespace ajn

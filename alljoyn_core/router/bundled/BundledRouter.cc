@@ -1,6 +1,6 @@
 /**
  * @file
- * Implementation of class for launching a bundled daemon
+ * Implementation of class for launching a bundled router
  */
 
 /******************************************************************************
@@ -56,7 +56,7 @@
 //#include "android/WFDTransport.h"
 #endif
 
-#define QCC_MODULE "ALLJOYN_DAEMON"
+#define QCC_MODULE "ALLJOYN_ROUTER"
 
 using namespace qcc;
 using namespace std;
@@ -120,7 +120,7 @@ class ClientAuthListener : public AuthListener {
     uint32_t maxAuth;
 };
 
-class BundledRouter : public DaemonLauncher, public TransportFactoryContainer {
+class BundledRouter : public RouterLauncher, public TransportFactoryContainer {
 
   public:
 
@@ -129,17 +129,17 @@ class BundledRouter : public DaemonLauncher, public TransportFactoryContainer {
     ~BundledRouter();
 
     /**
-     * Launch the bundled daemon
+     * Launch the bundled router
      */
     QStatus Start(NullTransport* nullTransport);
 
     /**
-     * Terminate the bundled daemon
+     * Terminate the bundled router
      */
     QStatus Stop(NullTransport* nullTransport);
 
     /**
-     * Wait for bundled daemon to exit
+     * Wait for bundled router to exit
      */
     void Join();
 
@@ -164,52 +164,52 @@ bool ExistFile(const char* fileName) {
 }
 
 /*
- * Create the singleton bundled daemon instance.
+ * Create the singleton bundled router instance.
  *
- * Sidebar on starting a bundled daemon
+ * Sidebar on starting a bundled router
  * ====================================
  *
  * How this works is via a fairly non-obvious mechanism, so we describe the
- * process here.  If it is desired to use the bundled daemon, the user (for
+ * process here.  If it is desired to use the bundled router, the user (for
  * example bbclient or bbservice) includes this compilation unit.  Since the
  * following defines a C++ static initializer, an instance of the BundledRouter
  * object will be created before any call into a function in this file.  In
  * Linux, for example, this happens as a result of _init() being called before
- * the main() function of the program using the bundled daemon.  _init() loops
+ * the main() function of the program using the bundled router.  _init() loops
  * through the list of compilation units in link order and will eventually call
  * out to BundledRouter.cc:__static_initialization_and_destruction_0().  This is
  * the initializer function for this file which will then calls the constructor
  * for the BundledRouter object.  The constructor calls into a static method
- * (RegisterDaemonLauncher) of the NullTransport to register itself as the
- * daemon to be launched.  This sets the stage for the use of the bundled
- * daemon.
+ * (RegisterRouterLauncher) of the NullTransport to register itself as the
+ * router to be launched.  This sets the stage for the use of the bundled
+ * router.
  *
- * When the program using the bundled daemon tries to connect to a bus
+ * When the program using the bundled router tries to connect to a bus
  * attachment it calls BusAttachment::Connect().  This tries to connect to an
- * existing daemon first and if that connect does not succeed, it tries to
- * connect over the NullTransport to the bundled daemon.
+ * existing router first and if that connect does not succeed, it tries to
+ * connect over the NullTransport to the bundled router.
  *
  * The NullTransport::Connect() method looks to see if it (the null transport)
- * is running, and if it is not it looks to see if it has a daemonLauncher.
+ * is running, and if it is not it looks to see if it has a routerLauncher.
  * Recall that the constructor for the BundledRouter object registered itself as
- * a daemon launcher, so the null transport will find the launcher since it
+ * a router launcher, so the null transport will find the launcher since it
  * included the object file corresponding to this source.  The null transport
- * then does a daemonLauncher->Start() which calls back into the bundled daemon
- * object BundledRouter::Start() method below, providing the daemon with the
- * NullTransport pointer.  The Start() method brings up the bundled daemon and
- * links the daemon to the bus attachment using the provided null transport.
+ * then does a routerLauncher->Start() which calls back into the bundled router
+ * object BundledRouter::Start() method below, providing the router with the
+ * NullTransport pointer.  The Start() method brings up the bundled router and
+ * links the routing node to the bus attachment using the provided null transport.
  *
- * So to summarize, one uses the bundled daemon simply by linking to the object
+ * So to summarize, one uses the bundled router simply by linking to the object
  * file corresponding to this source file.  This automagically creates a bundled
- * daemon static object and registers it with the null transport.  When trying
- * to connect to a daemon using a bus attachment in the usual way, if there is
- * no currently running native daemon process, the bus attachment will
- * automagically try to connect to a registered bundled daemon using the null
- * transport.  This will start the bundled daemon and then connect to it.
+ * router static object and registers it with the null transport.  When trying
+ * to connect to a router using a bus attachment in the usual way, if there is
+ * no currently running native router process, the bus attachment will
+ * automagically try to connect to a registered bundled router using the null
+ * transport.  This will start the bundled router and then connect to it.
  *
- * The client uses the bundled daemon transparently -- it only has to link to it.
+ * The client uses the bundled router transparently -- it only has to link to it.
  *
- * Stopping the bundled daemon happens in the destructor for the C++ static
+ * Stopping the bundled router happens in the destructor for the C++ static
  * global object, again transparently to the client.
  *
  * It's pretty magical.
@@ -218,7 +218,7 @@ static BundledRouter bundledRouter;
 
 BundledRouter::BundledRouter() : transportsInitialized(false), stopping(false), ajBus(NULL), ajBusController(NULL)
 {
-    NullTransport::RegisterDaemonLauncher(this);
+    NullTransport::RegisterRouterLauncher(this);
 }
 
 BundledRouter::~BundledRouter()
@@ -244,7 +244,7 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
     QCC_DbgHLPrintf(("Using BundledRouter"));
 
     /*
-     * If the bundled daemon is in the process of stopping we need to wait until the operation is
+     * If the bundled router is in the process of stopping we need to wait until the operation is
      * complete (BundledRouter::Join has exited) before we attempt to start up again.
      */
     lock.Lock(MUTEX_CONTEXT);
@@ -319,9 +319,9 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
 #endif
             transportsInitialized = true;
         }
-        QCC_DbgPrintf(("Starting bundled daemon bus attachment"));
+        QCC_DbgPrintf(("Starting bundled router bus attachment"));
         /*
-         * Create and start the daemon
+         * Create and start the routing node
          */
         ajBus = new Bus("bundled-router", *this, listenSpecs.c_str());
         if (PasswordManager::GetAuthMechanism() != "ANONYMOUS" && PasswordManager::GetPassword() != "") {
@@ -336,7 +336,7 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
         }
     }
     /*
-     * Use the null transport to link the daemon and client bus together
+     * Use the null transport to link the routing node and client bus together
      */
     status = nullTransport->LinkBus(ajBus);
     if (status != ER_OK) {
@@ -366,7 +366,7 @@ void BundledRouter::Join()
     QCC_DbgPrintf(("BundledRouter::Join"));
     lock.Lock(MUTEX_CONTEXT);
     if (transports.empty() && ajBus && ajBusController) {
-        QCC_DbgPrintf(("Joining bundled daemon bus attachment"));
+        QCC_DbgPrintf(("Joining bundled router bus attachment"));
         ajBusController->Join();
         delete ajBusController;
         ajBusController = NULL;
