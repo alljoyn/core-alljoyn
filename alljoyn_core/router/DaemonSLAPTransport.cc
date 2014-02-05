@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -119,6 +119,8 @@ class _DaemonSLAPEndpoint : public _RemoteEndpoint {
     QStatus Stop();
     QStatus Join();
 
+    virtual void ThreadExit(qcc::Thread* thread);
+
   private:
     class AuthThread : public qcc::Thread {
       public:
@@ -140,6 +142,17 @@ class _DaemonSLAPEndpoint : public _RemoteEndpoint {
     UARTController m_uartController;  /**< Controller responsible for reading from UART */
 };
 
+void _DaemonSLAPEndpoint::ThreadExit(qcc::Thread* thread)
+{
+    if (thread == &m_authThread) {
+        if (m_authState == AUTH_INITIALIZED) {
+            m_authState = AUTH_FAILED;
+            m_transport->Alert();
+        }
+    }
+    _RemoteEndpoint::ThreadExit(thread);
+}
+
 QStatus _DaemonSLAPEndpoint::Authenticate(void)
 {
     QCC_DbgTrace(("DaemonSLAPEndpoint::Authenticate()"));
@@ -152,7 +165,7 @@ QStatus _DaemonSLAPEndpoint::Authenticate(void)
      * Start the authentication thread.
      */
     if (status == ER_OK) {
-        status = m_authThread.Start(this);
+        status = m_authThread.Start(this, this);
     }
     if (status != ER_OK) {
         QCC_DbgPrintf(("DaemonSLAPEndpoint::Authenticate() Failed to authenticate endpoint"));
