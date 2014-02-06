@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2011 - 2013 AllSeen Alliance. All rights reserved.
+# Copyright (c) 2011 - 2014 AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -21,7 +21,7 @@ from subprocess import Popen, STDOUT, PIPE
 
 def main(argv=None):
     start_time = time.clock()
-    dir_ignore = ["stlport", "build", ".git", ".repo", "alljoyn_objc", "win8_apps",]
+    dir_ignore = ["stlport", "build", ".git", ".repo", "alljoyn_objc", "win8_apps", "ios"]
     file_ignore_patterns = ['\.#.*', 'alljoyn_java\.h', 'Status\.h', 'Status_CPP0x\.h', 'Internal\.h']
     file_patterns = ['*.c', '*.h', '*.cpp', '*.cc']
     valid_commands = ["check", "detail", "fix", "off"]
