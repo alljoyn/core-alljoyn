@@ -2728,7 +2728,20 @@ bool IpNameServiceImpl::InterfaceRequested(uint32_t transportIndex, uint32_t liv
     // message out the current interface.
     //
     for (uint32_t i = 0; i < m_requestedInterfaces[transportIndex].size(); ++i) {
+        //
+        // If the current interface name matches the name in the requestedInterface list,
+        // we will send this message out the current interface.
+        //
         if (m_requestedInterfaces[transportIndex][i].m_interfaceName == m_liveInterfaces[liveIndex].m_interfaceName) {
+            QCC_DbgPrintf(("IpNameServiceImpl::InterfaceRequested(): Interface \"%s\" approved.", m_liveInterfaces[liveIndex].m_interfaceName.c_str()));
+            return true;
+        }
+        //
+        // If the current interface IP address matches the IP address in the
+        // requestedInterface list, we will send this message out the current interface.
+        //
+        if (m_requestedInterfaces[transportIndex][i].m_interfaceName.size() == 0 &&
+            m_requestedInterfaces[transportIndex][i].m_interfaceAddr == qcc::IPAddress(m_liveInterfaces[liveIndex].m_interfaceAddr)) {
             QCC_DbgPrintf(("IpNameServiceImpl::InterfaceRequested(): Interface \"%s\" approved.", m_liveInterfaces[liveIndex].m_interfaceName.c_str()));
             return true;
         }
