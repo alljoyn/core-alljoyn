@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AssemblyInfo.cs" company="AllSeen Alliance.">
-//     Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+//     Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
 //
 //        Permission to use, copy, modify, and/or distribute this software for any
 //        purpose with or without fee is hereby granted, provided that the above
@@ -28,7 +28,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("AllSeen Alliance.")]
 [assembly: AssemblyProduct("AllJoynSDK")]
-[assembly: AssemblyCopyright("Copyright (c) 2009-2013, AllSeen Alliance.")]
+[assembly: AssemblyCopyright("Copyright (c) 2009-2014, AllSeen Alliance.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -47,5 +47,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("0.0.1.0")]
-[assembly: AssemblyFileVersion("0.0.1.0")]
+[assembly: AssemblyVersion("14.02.00.00")]
+[assembly: AssemblyFileVersion("14.02.00.00")]
