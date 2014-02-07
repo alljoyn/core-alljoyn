@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -261,6 +261,8 @@ static const AJNSessionPort kBasicServicePort = 25;
 - (void)didJoin:(NSString*)joiner inSessionWithId:(AJNSessionId)sessionId onSessionPort:(AJNSessionPort)sessionPort
 {
     NSLog(@"AJNSessionPortListener::didJoin:%@ inSessionWithId:%u onSessionPort:%u withSessionOptions:", joiner, sessionId, sessionPort);
+    [self.bus enableConcurrentCallbacks];
+    [self.bus bindSessionListener:self toSession:sessionId];
     [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"%@ successfully joined session %u on port %d.\n", joiner, sessionId, sessionPort]];
     
 }
