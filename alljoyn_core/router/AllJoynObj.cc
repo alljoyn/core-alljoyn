@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -4016,6 +4016,7 @@ QStatus AllJoynObj::SendLostAdvertisedName(const String& name, TransportMask tra
 void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 {
     if (ER_OK == reason) {
+        set<pair<String, TransportMask> > lostNameSet;
         AcquireLocks();
         if ((bool)alarm->GetContext()) {
             multimap<String, NameMapEntry>::iterator it = nameMap.begin();
@@ -4023,11 +4024,8 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
             while (it != nameMap.end()) {
                 NameMapEntry& nme = it->second;
                 if ((now - nme.timestamp) >= nme.ttl) {
-                    /* Send LostAdvertisedName */
                     QCC_DbgPrintf(("Expiring discovered name %s for guid %s", it->first.c_str(), nme.guid.c_str()));
-                    SendLostAdvertisedName(it->first, nme.transport);
-                    /* Clean advAliasMap */
-                    CleanAdvAliasMap(it->first, nme.transport);
+                    lostNameSet.insert(pair<String, TransportMask>(it->first, nme.transport));
                     /* Remove alarm */
                     timer.RemoveAlarm(nme.alarm, false);
                     nme.alarm->SetContext((void*)false);
@@ -4038,6 +4036,15 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
             }
         }
         ReleaseLocks();
+        set<pair<String, TransportMask> >::const_iterator lit = lostNameSet.begin();
+        while (lit != lostNameSet.end()) {
+            /* Send LostAdvetisedName signals */
+            SendLostAdvertisedName(lit->first, lit->second);
+            /* Clean advAliasMap */
+            CleanAdvAliasMap(lit->first, lit->second);
+            lit++;
+        }
+
     }
 }
 
