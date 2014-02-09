@@ -15,27 +15,33 @@
  ******************************************************************************/
 
 #import <Foundation/Foundation.h>
-
-/** QASAnnouncement is a storage class that holds information received from the server during announce
- */
-@interface QASAnnouncement : NSObject
-
-@property uint16_t version;
-@property uint16_t port;
-@property (strong, nonatomic) NSString *busName;
-@property (strong, nonatomic) NSMutableDictionary *objectDescriptions;
-@property (strong, nonatomic) NSMutableDictionary *aboutData;
+#import "AJNBusAttachment.h"
+#import "AJNAnnouncementListener.h"
 
 /**
- Designated initializer
- Create QASAnnouncement Object using the passed parameters.
- @param version The version of the AboutService.
- @param port The port used by the AboutService.
- @param busName Unique or well-known name of AllJoyn bus.
- @param objectDescs Map of ObjectDescriptions using NSMutableDictionary, describing interfaces.
- @param aboutData Map of AboutData using NSMutableDictionary.
- @return QASAnnouncement if successful.
+ AJNAnnouncementReceiver enable registering an announcement listener to receive org.alljoyn.about Announce signals
  */
-- (id)initWithVersion:(uint16_t)version port:(uint16_t)port busName:(NSString *)busName objectDescriptions:(NSMutableDictionary *)objectDescs aboutData:(NSMutableDictionary **)aboutData;
+@interface AJNAnnouncementReceiver : NSObject
+
+/**
+ Designated initializer.
+ Create an AJNAnnouncementReceiver Object using the passed announcementListener an an AJNBusAttachment.
+ @param announcementListener A reference to an announcement listener.
+ @param bus A reference to the AJNBusAttachment.
+ @return ER_OK if successful.
+ */
+- (id)initWithAnnouncementListener:(id <AJNAnnouncementListener> )announcementListener andBus:(AJNBusAttachment *)bus;
+
+/**
+ Register the to announcement listener to receive org.alljoyn.about Announce signals.
+ @return ER_OK if successful.
+ */
+- (QStatus)registerAnnouncementReceiver;
+
+/**
+ Unregister the announcement listener from receiving org.alljoyn.about Announce signal.
+ @return ER_OK if successful.
+ */
+- (QStatus)unRegisterAnnouncementReceiver;
 
 @end

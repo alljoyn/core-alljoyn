@@ -16,9 +16,9 @@
 
 #import <UIKit/UIKit.h>
 #import "AJNBusListener.h"
-#import "QASAnnouncementListener.h"
+#import "AJNAnnouncementListener.h"
 
-@interface ViewController : UIViewController <AJNBusListener, QASAnnouncementListener, UITableViewDataSource, UITableViewDelegate>
+@interface ViewController : UIViewController <AJNBusListener, AJNAnnouncementListener, UITableViewDataSource, UITableViewDelegate>
 @property (weak, nonatomic) IBOutlet UIButton *connectButton;
 @property (weak, nonatomic) IBOutlet UITableView *servicesTable;
 

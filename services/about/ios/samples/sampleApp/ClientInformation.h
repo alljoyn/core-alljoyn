@@ -15,10 +15,10 @@
  ******************************************************************************/
 
 #import <Foundation/Foundation.h>
-#import "QASAnnouncement.h"
+#import "AJNAnnouncement.h"
 #import "AJNTransportMask.h"
 
 @interface ClientInformation : NSObject
-@property (strong, nonatomic) QASAnnouncement *announcement;
+@property (strong, nonatomic) AJNAnnouncement *announcement;
 @property (strong, nonatomic) NSString *currLang;
 @end

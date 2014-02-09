@@ -15,38 +15,31 @@
  ******************************************************************************/
 
 #import <Foundation/Foundation.h>
-#include "qcc/String.h"
+#import "AJNBusAttachment.h"
+#import "AJNBusObject.h"
 
 /**
- QASConvertUtil class includes a string convert methods.
+ AJNAboutIconService is an AJNBusObject that implements the org.alljoyn.Icon standard interface.
+ Applications that provide AllJoyn IoE services to receive info about the Icon of the service.
  */
-@interface QASConvertUtil : NSObject
+@interface AJNAboutIconService : AJNBusObject
 
 /**
- Convert NSString to qcc::String.
- @param nsstring String from type NSString.
- @return qcc::String.
+ Designated initializer
+ Create an AJNAboutIconService Object using the passed parameters.
+ @param bus A reference to the AJNBusAttachment.
+ @param mimetype The mimetype of the icon.
+ @param url The url of the icon.
+ @param content The content of the icon.
+ @param csize The size of the content in bytes.
+ @return AJNAboutIconService if successful.
  */
-+ (qcc ::String)convertNSStringToQCCString:(NSString *)nsstring;
+- (id)initWithBus:(AJNBusAttachment *)bus mimeType:(NSString *)mimetype url:(NSString *)url content:(uint8_t *)content csize:(size_t)csize;
 
 /**
- Convert qcc::String to NSString.
- @param qccstring String from type qcc::String.
- @return NSString.
+ Register the AJNAboutIconService  on the AllJoyn bus.
+ @return ER_OK if successful.
  */
-+ (NSString *)convertQCCStringtoNSString:(qcc ::String)qccstring;
+- (QStatus)registerAboutIconService;
 
-/**
- Convert NSString to const char.
- @param nsstring String from type NSString.
- @return const char.
- */
-+ (const char *)convertNSStringToConstChar:(NSString *)nsstring;
-
-/**
- Convert const char to NSString.
- @param constchar const char.
- @return NSString.
- */
-+ (NSString *)convertConstCharToNSString:(const char *)constchar;
 @end

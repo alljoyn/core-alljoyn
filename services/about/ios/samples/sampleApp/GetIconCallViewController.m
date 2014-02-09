@@ -18,7 +18,7 @@
 #import <SystemConfiguration/CaptiveNetwork.h>
 #import "qcc/String.h"
 #import "GetIconCallViewController.h"
-#import "QASAboutIconClient.h"
+#import "AJNAboutIconClient.h"
 #import "IconUrlViewController.h"
 
 @interface GetIconCallViewController ()
@@ -29,7 +29,7 @@
 @property (weak, nonatomic) IBOutlet UIImageView *iconView;
 
 @property (nonatomic) NSString *currLanguage;
-@property (nonatomic) QASAboutIconClient *qasAboutIconClient;
+@property (nonatomic) AJNAboutIconClient *ajnAboutIconClient;
 @property (nonatomic) AJNSessionId sessionID;
 
 @property (weak, nonatomic) IBOutlet UIButton *btnIconUrl;
@@ -64,13 +64,13 @@
 	self.btnIconUrlTitle = @"";
     
 	//  create about client
-	self.qasAboutIconClient = [[QASAboutIconClient alloc] initWithBus:self.clientBusAttachment];
+	self.ajnAboutIconClient = [[AJNAboutIconClient alloc] initWithBus:self.clientBusAttachment];
     
 	//  create sessionOptions
 	AJNSessionOptions *opt1 = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:false proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
 	//  call joinSession
-	self.sessionID = [self.clientBusAttachment joinSessionWithName:[self.qasAnnouncement busName] onPort:[self.qasAnnouncement port] withDelegate:(nil) options:opt1];
+	self.sessionID = [self.clientBusAttachment joinSessionWithName:[self.ajnAnnouncement busName] onPort:[self.ajnAnnouncement port] withDelegate:(nil) options:opt1];
     
 	if (self.sessionID == 0 || self.sessionID == -1) {
         
@@ -124,26 +124,26 @@
     QStatus status;
     
 	//  Icon Data
-	NSString *announcementBusName = [self.qasAnnouncement busName];
+	NSString *announcementBusName = [self.ajnAnnouncement busName];
     
-	if (self.qasAboutIconClient) {
+	if (self.ajnAboutIconClient) {
 		//  version
 		int version;
-		status = [self.qasAboutIconClient versionFromBusName:announcementBusName version:version sessionId:self.sessionID];
+		status = [self.ajnAboutIconClient versionFromBusName:announcementBusName version:version sessionId:self.sessionID];
 		if (status == ER_OK) {
 			self.lblVersion.text = [NSString stringWithFormat:@"%d", version];
 		}
 		//  mimeType
 		NSString *mimeType;
-		status = [self.qasAboutIconClient mimeTypeFromBusName:announcementBusName mimeType:&mimeType sessionId:self.sessionID];
+		status = [self.ajnAboutIconClient mimeTypeFromBusName:announcementBusName mimeType:&mimeType sessionId:self.sessionID];
 		self.lblMimeType.text = (status == ER_OK && [mimeType length]) ? mimeType : @"";
 		//  size
 		size_t contentSize;
-		status = [self.qasAboutIconClient sizeFromBusName:announcementBusName size:contentSize sessionId:self.sessionID];
+		status = [self.ajnAboutIconClient sizeFromBusName:announcementBusName size:contentSize sessionId:self.sessionID];
 		self.lblSize.text = (status == ER_OK && contentSize) ? [NSString stringWithFormat:@"%zu", contentSize] : @"";
 		//  url
 		NSString *url;
-		status = [self.qasAboutIconClient urlFromBusName:announcementBusName url:&url sessionId:self.sessionID];
+		status = [self.ajnAboutIconClient urlFromBusName:announcementBusName url:&url sessionId:self.sessionID];
 		self.btnIconUrlTitle = (status == ER_OK && [url length]) ? url : @"";
 		[self.btnIconUrl setTitle:self.btnIconUrlTitle forState:UIControlStateNormal];
         
@@ -153,7 +153,7 @@
         
 		if (contentSize) {
 			uint8_t *content;
-			status = [self.qasAboutIconClient contentFromBusName:announcementBusName content:&content contentSize:contentSize sessionId:self.sessionID];
+			status = [self.ajnAboutIconClient contentFromBusName:announcementBusName content:&content contentSize:contentSize sessionId:self.sessionID];
             
 			if (status != ER_OK) {
                 NSLog(@"[%@] [%@] Failed to get image content", @"ERROR", [[self class] description]);

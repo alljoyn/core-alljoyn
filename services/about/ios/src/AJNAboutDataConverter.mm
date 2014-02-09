@@ -14,12 +14,12 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#import "QASAboutDataConverter.h"
-#import "QASConvertUtil.h"
+#import "AJNAboutDataConverter.h"
+#import "AJNConvertUtil.h"
 
 static NSString *ERRORSTRING = @"";
 
-@implementation QASAboutDataConverter
+@implementation AJNAboutDataConverter
 
 + (NSString *)aboutDataDictionaryToString:(NSMutableDictionary *)aboutDataDict
 {
@@ -57,7 +57,7 @@ static NSString *ERRORSTRING = @"";
 	// AJNMessageArgument is a string
 	if ([ajnMsgArgSignature isEqualToString:(@"s")]) {
 		status = [ajnMsgArg value:ajnMsgArgSignature, &ajnMsgArgContent_id];
-		return (status == ER_OK) ? ([QASConvertUtil convertConstCharToNSString:ajnMsgArgContent_id]) : ERRORSTRING;
+		return (status == ER_OK) ? ([AJNConvertUtil convertConstCharToNSString:ajnMsgArgContent_id]) : ERRORSTRING;
 	} else if ([ajnMsgArgSignature isEqualToString:(@"q")]) {
 		status = [ajnMsgArg value:ajnMsgArgSignature, &short_number];
 		return (status == ER_OK) ? ([NSString stringWithFormat:@"%d",short_number]): ERRORSTRING;
@@ -95,22 +95,22 @@ static NSString *ERRORSTRING = @"";
 
 + (NSMutableDictionary *)convertToAboutDataDictionary:(const ajn::services::AnnounceHandler::AboutData&)aboutData
 {
-	NSString *qasAboutDataKey;
-	AJNMessageArgument *qasAboutDataValue;
-	NSMutableDictionary *qasAboutData = [[NSMutableDictionary alloc] init];
+	NSString *ajnAboutDataKey;
+	AJNMessageArgument *ajnAboutDataValue;
+	NSMutableDictionary *ajnAboutData = [[NSMutableDictionary alloc] init];
     
 	//  iterate over std::map<qcc::String, ajn::MsgArg>
 	for (ajn::services::AnnounceHandler::AboutData::const_iterator mapIt = aboutData.begin(); mapIt != aboutData.end(); mapIt++) {
-		qasAboutDataKey = [QASConvertUtil convertQCCStringtoNSString:(mapIt->first)];
+		ajnAboutDataKey = [AJNConvertUtil convertQCCStringtoNSString:(mapIt->first)];
 		ajn::MsgArg *tMsgArg = new ajn::MsgArg(mapIt->second);
 		// Convert ajn::MsgArg to AJNMessageArgument
-		qasAboutDataValue = [[AJNMessageArgument alloc] initWithHandle:tMsgArg];
-		[qasAboutDataValue setOwnershipFlags:2 shouldApplyRecursively:true];
-		[qasAboutDataValue stabilize];
-		[qasAboutData setValue:qasAboutDataValue forKey:qasAboutDataKey];
-		qasAboutDataValue = nil;
+		ajnAboutDataValue = [[AJNMessageArgument alloc] initWithHandle:tMsgArg];
+		[ajnAboutDataValue setOwnershipFlags:2 shouldApplyRecursively:true];
+		[ajnAboutDataValue stabilize];
+		[ajnAboutData setValue:ajnAboutDataValue forKey:ajnAboutDataKey];
+		ajnAboutDataValue = nil;
 	}
-	return qasAboutData;
+	return ajnAboutData;
 }
 
 + (NSMutableDictionary *)convertToObjectDescriptionsDictionary:(const ajn::services::AnnounceHandler::ObjectDescriptions &)objectDescs
@@ -118,26 +118,26 @@ static NSString *ERRORSTRING = @"";
 	NSString *path;
 	NSMutableArray *intrfArray;
 	std::vector <qcc::String> intrfVector;
-	NSMutableDictionary *qasObjectDescsDict = [[NSMutableDictionary alloc] init];
+	NSMutableDictionary *ajnObjectDescsDict = [[NSMutableDictionary alloc] init];
     
 	// Iterate over the c++ object descriptions map
 	for (ajn::services::AnnounceHandler::ObjectDescriptions::const_iterator mapIt = objectDescs.begin(); mapIt != objectDescs.end(); mapIt++) {
 		// Convert key to NSString
-		path = [QASConvertUtil convertQCCStringtoNSString:(mapIt->first)];
+		path = [AJNConvertUtil convertQCCStringtoNSString:(mapIt->first)];
 		// Get the c++ vector address
 		intrfVector = mapIt->second;
 		intrfArray = [[NSMutableArray alloc] init];
 		//  Iterate over c++ vector
 		for (std::vector <qcc::String>::iterator vectorIt = intrfVector.begin(); vectorIt != intrfVector.end(); ++vectorIt) {
 			// Convert the each element in the c++ vector to  NSString and insert into NSMutableArray
-			[intrfArray addObject:([QASConvertUtil convertQCCStringtoNSString:(*vectorIt)])];
+			[intrfArray addObject:([AJNConvertUtil convertQCCStringtoNSString:(*vectorIt)])];
 		}
 		// Add key/value into the dictionary
-		[qasObjectDescsDict setValue:intrfArray forKey:path];
+		[ajnObjectDescsDict setValue:intrfArray forKey:path];
 		//  Clear container
 		intrfVector.clear();
 	}
-	return qasObjectDescsDict;
+	return ajnObjectDescsDict;
 }
 
 + (NSString *)objectDescriptionsDictionaryToString:(NSMutableDictionary *)objectDescDict

@@ -18,19 +18,19 @@
 #import <UIKit/UIKit.h>
 
 #import "ViewController.h"
-#import "QASAnnouncementReceiver.h"
-#import "QASAnnouncement.h"
-#import "QASConvertUtil.h"
-#import "QASAboutDataConverter.h"
+#import "AJNAnnouncementReceiver.h"
+#import "AJNAnnouncement.h"
+#import "AJNConvertUtil.h"
+#import "AJNAboutDataConverter.h"
 #import "AJNMessageArgument.h"
-#import "QASAboutClient.h"
+#import "AJNAboutClient.h"
 
 #import <SystemConfiguration/CaptiveNetwork.h>
 #import <CoreFoundation/CFDictionary.h>
 
-#import "QASAboutIconService.h"
-#import "QASAboutServiceApi.h"
-#import "QASAboutService.h"
+#import "AJNAboutIconService.h"
+#import "AJNAboutServiceApi.h"
+#import "AJNAboutService.h"
 #import "AJNVersion.h"
 #import "AJNProxyBusObject.h"
 

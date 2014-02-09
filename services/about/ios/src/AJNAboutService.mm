@@ -14,22 +14,22 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#import "QASAboutService.h"
+#import "AJNAboutService.h"
 #import "AJNSessionOptions.h"
 #import "TransportMask.h"
 #import "AboutService.h"
 #import "AboutServiceApi.h"
-#import "QASConvertUtil.h"
+#import "AJNConvertUtil.h"
 
-@interface QASAboutService ()
+@interface AJNAboutService ()
 @property (nonatomic) ajn::services::AboutService *handle;
 @property (nonatomic) ajn::BusAttachment *k_bus;
-@property (nonatomic) id <QASPropertyStore> k_store;
+@property (nonatomic) id <AJNPropertyStore> k_store;
 @property (nonatomic) std::vector <qcc::String> *stdVect;
 
 @end
 
-@implementation QASAboutService
+@implementation AJNAboutService
 
 
 
@@ -70,7 +70,7 @@
 }
 
 - (void)registerBus:(AJNBusAttachment *)bus
-   andPropertystore:(id <QASPropertyStore> )store
+   andPropertystore:(id <AJNPropertyStore> )store
 {
 	self.k_bus = (ajn::BusAttachment *)bus.handle;
 	self.k_store = store;
@@ -106,7 +106,7 @@
 	}
     
 	std::vector <qcc::String> *tvect = [self convertNSMutableArrayToStdVector:(interfaceNames)];
-	return (ajn::services::AboutServiceApi::getInstance()->AddObjectDescription([QASConvertUtil convertNSStringToConstChar:(path)], *tvect));
+	return (ajn::services::AboutServiceApi::getInstance()->AddObjectDescription([AJNConvertUtil convertNSStringToConstChar:(path)], *tvect));
 }
 
 - (QStatus)removeObjectDescriptionWithPath:(NSString *)path
@@ -117,7 +117,7 @@
         
         return ER_FAIL;
 	}
-	return (ajn::services::AboutServiceApi::getInstance()->RemoveObjectDescription([QASConvertUtil convertNSStringToConstChar:(path)], *[self convertNSMutableArrayToStdVector:(interfaceNames)]));
+	return (ajn::services::AboutServiceApi::getInstance()->RemoveObjectDescription([AJNConvertUtil convertNSStringToConstChar:(path)], *[self convertNSMutableArrayToStdVector:(interfaceNames)]));
 }
 
 - (QStatus)announce
@@ -139,7 +139,7 @@
 	}
 	//  Convert NSMutableArray to std::vector<qcc::String>
 	for (NSString *tStr in mutableArr) {
-		self.stdVect->push_back([QASConvertUtil convertNSStringToQCCString:(tStr)]);
+		self.stdVect->push_back([AJNConvertUtil convertNSStringToQCCString:(tStr)]);
 	}
 	return self.stdVect;
 }

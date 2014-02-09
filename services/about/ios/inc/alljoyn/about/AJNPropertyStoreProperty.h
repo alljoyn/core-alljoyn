@@ -15,14 +15,14 @@
  ******************************************************************************/
 
 #import <Foundation/Foundation.h>
-#import "PropertyStoreProperty.h"
+#import "alljoyn/about/PropertyStoreProperty.h"
 @class AJNMessageArgument;
 
 /**
- QASPropertyStoreProperty is a wrapper of AJNMessageArgument for use in the property store
+ AJNPropertyStoreProperty is a wrapper of AJNMessageArgument for use in the property store
  */
 
-@interface QASPropertyStoreProperty : NSObject
+@interface AJNPropertyStoreProperty : NSObject
 
 @property (strong, nonatomic) NSString *keyName;
 @property (strong, nonatomic) AJNMessageArgument *value;

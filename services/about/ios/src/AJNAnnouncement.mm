@@ -14,27 +14,28 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#import "AnnounceHandlerAdapter.h"
-#import "QASConvertUtil.h"
-#import "QASAboutDataConverter.h"
+#import "AJNAnnouncement.h"
 
-AnnounceHandlerAdapter::AnnounceHandlerAdapter(id <QASAnnouncementListener> announcementListener)
+@interface AJNAnnouncement ()
+
+@end
+
+@implementation AJNAnnouncement
+
+- (id)initWithVersion:(uint16_t)version port:(uint16_t)port
+              busName:(NSString *)busName
+   objectDescriptions:(NSMutableDictionary *)objectDescs
+            aboutData:(NSMutableDictionary **)aboutData
 {
-	qasAnnouncementListener = announcementListener;
+	self = [super init];
+	if (self) {
+		self.version = version;
+		self.port = port;
+		self.busName = busName;
+		self.objectDescriptions = objectDescs;
+		self.aboutData = *aboutData;
+	}
+	return self;
 }
 
-AnnounceHandlerAdapter::~AnnounceHandlerAdapter()
-{
-}
-
-void AnnounceHandlerAdapter::Announce(uint16_t version, uint16_t port, const char *busName, const ObjectDescriptions& objectDescs, const AboutData& aboutData)
-{
-	NSMutableDictionary *qasAboutData;
-    
-    NSLog(@"[%@] [%@] Received an announcemet from %s ", @"DEBUG", @"AnnounceHandlerAdapter", busName);
-        
-	// Convert AboutData to QASAboutData
-	qasAboutData = [QASAboutDataConverter convertToAboutDataDictionary:aboutData];
-    
-	[qasAnnouncementListener announceWithVersion:version port:port busName:[QASConvertUtil convertConstCharToNSString:busName] objectDescriptions:[QASAboutDataConverter convertToObjectDescriptionsDictionary:objectDescs] aboutData:&qasAboutData];
-}
+@end

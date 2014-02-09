@@ -14,15 +14,15 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#import "QASAboutIconService.h"
+#import "AJNAboutIconService.h"
 #import "AboutIconService.h"
-#import "QASConvertUtil.h"
+#import "AJNConvertUtil.h"
 
-@interface QASAboutIconService ()
+@interface AJNAboutIconService ()
 @property ajn::services::AboutIconService *aboutIconServiceHandler;
 @end
 
-@implementation QASAboutIconService
+@implementation AJNAboutIconService
 
 - (void)dealloc
 {
@@ -40,7 +40,7 @@
 {
 	self = [super init];
 	if (self) {
-		self.aboutIconServiceHandler = new ajn::services::AboutIconService((ajn::BusAttachment&)(*bus.handle), [QASConvertUtil convertNSStringToQCCString:(mimetype)], [QASConvertUtil convertNSStringToQCCString:(url)], content, csize);
+		self.aboutIconServiceHandler = new ajn::services::AboutIconService((ajn::BusAttachment&)(*bus.handle), [AJNConvertUtil convertNSStringToQCCString:(mimetype)], [AJNConvertUtil convertNSStringToQCCString:(url)], content, csize);
 		//  RegisterAboutIconService calls Register(RegisterBusObject) which uses self.handle
 		self.handle = self.aboutIconServiceHandler;
 	}

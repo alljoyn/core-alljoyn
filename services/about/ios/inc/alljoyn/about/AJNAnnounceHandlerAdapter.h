@@ -14,29 +14,29 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef AnnounceHandlerAdapter_H
-#define AnnounceHandlerAdapter_H
+#ifndef AJNAnnounceHandlerAdapter_H
+#define AJNAnnounceHandlerAdapter_H
 
 #import "AnnounceHandler.h"
-#import "QASAnnouncementListener.h"
+#import "AJNAnnouncementListener.h"
 
 /**
  AnnounceHandlerAdapter enable bind the C++ AnnounceHandler API with an objective-c announcement listener
  */
-class AnnounceHandlerAdapter : public ajn::services::AnnounceHandler {
+class AJNAnnounceHandlerAdapter : public ajn::services::AnnounceHandler {
 public:
     // Handle to the objective-c announcement listener
-    id<QASAnnouncementListener> qasAnnouncementListener;
+    id<AJNAnnouncementListener> AJNAnnouncementListener;
     
     /**
      Constructor
      */
-    AnnounceHandlerAdapter(id<QASAnnouncementListener> announcementListener);
+    AJNAnnounceHandlerAdapter(id<AJNAnnouncementListener> announcementListener);
     
     /**
      Destructor
      */
-    ~AnnounceHandlerAdapter();
+    ~AJNAnnounceHandlerAdapter();
     
     /**
      Called when a new announcement is received.
