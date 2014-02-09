@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -635,6 +635,25 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                                                        Thread::GetThreadName(), std::abs((long)delay)));
                 }
 
+                state = RUNNING;
+                stopEvent.ResetEvent();
+                timer->lock.Unlock();
+
+                /* Get the reentrancy lock if necessary */
+                hasTimerLock = timer->preventReentrancy;
+                if (hasTimerLock) {
+                    timer->reentrancyLock.Lock();
+                }
+
+                /*
+                 * There is an alarm due to be executed now, and we are either
+                 * the controller thread or a worker thread executing now.  in
+                 * either case, we are going to handle the alarm at the head of
+                 * the list.
+                 */
+                timer->lock.Lock();
+
+
                 TimerThread* tt = NULL;
                 int nullIdx = -1;
                 /*
@@ -736,39 +755,18 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                             }
                         }
                     }
-                }
 
-                /*
-                 * If we are the controller, then we are going to have to yield
-                 * our role since the alarm may take an arbitrary length of time
-                 * to execute.  The next thread that wends its way through this
-                 * run loop will assume the role.
-                 */
-                if (isController) {
+                    /*
+                     * If we are the controller, then we are going to have to yield
+                     * our role since the alarm may take an arbitrary length of time
+                     * to execute.  The next thread that wends its way through this
+                     * run loop will assume the role.
+                     */
                     timer->controllerIdx = -1;
                     GetTimeNow(&timer->yieldControllerTime);
                     QCC_DbgPrintf(("TimerThread::Run(): Yielding controller role"));
                     isController = false;
                 }
-
-                state = RUNNING;
-                stopEvent.ResetEvent();
-                timer->lock.Unlock();
-
-                /* Get the reentrancy lock if necessary */
-                hasTimerLock = timer->preventReentrancy;
-                if (hasTimerLock) {
-                    timer->reentrancyLock.Lock();
-                }
-
-                /*
-                 * There is an alarm due to be executed now, and we are either
-                 * the controller thread or a worker thread executing now.  in
-                 * either case, we are going to handle the alarm at the head of
-                 * the list.
-                 */
-                timer->lock.Lock();
-
                 /* Make sure the alarm has not been serviced yet.
                  * If it has already been serviced by another thread, just ignore
                  * and go back to the top of the loop.
