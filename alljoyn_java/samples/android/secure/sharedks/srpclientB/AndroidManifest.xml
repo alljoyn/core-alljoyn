@@ -4,6 +4,7 @@
     android:sharedUserId="org.alljoyn.bus.sample.centralks"
     android:versionCode="1"
     android:versionName="1.0">
+    <uses-sdk android:minSdkVersion="10" />
     
     <!-- Permission required to use the TCP transport -->
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
