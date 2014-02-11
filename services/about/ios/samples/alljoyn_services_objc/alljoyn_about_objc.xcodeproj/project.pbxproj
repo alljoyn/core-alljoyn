@@ -11,7 +11,6 @@
 		9A0118D61874090200975CE6 /* QASConvertUtil.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9A0118C61874039100975CE6 /* QASConvertUtil.h */; };
 		9A0B1A181861A77F00188544 /* QASPropertyStoreProperty.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A0B1A171861A77F00188544 /* QASPropertyStoreProperty.mm */; };
 		9A0B1A191861A7A000188544 /* QASPropertyStoreProperty.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9A0B1A161861A77300188544 /* QASPropertyStoreProperty.h */; };
-		9A2A846418855CBA0095FD0D /* QASPasswordManager.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9A2A846318851E360095FD0D /* QASPasswordManager.h */; };
 		9AA935ED1854BC2B00378361 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA935EC1854BC2B00378361 /* Foundation.framework */; };
 		9AA935FB1854BC2B00378361 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA935FA1854BC2B00378361 /* XCTest.framework */; };
 		9AA935FC1854BC2B00378361 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA935EC1854BC2B00378361 /* Foundation.framework */; };
@@ -41,7 +40,6 @@
 		9AA93A941855CC8200378361 /* QASAnnouncementListener.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936BA1854BD1600378361 /* QASAnnouncementListener.h */; };
 		9AA93A951855CC8200378361 /* QASAnnouncementReceiver.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936BB1854BD1600378361 /* QASAnnouncementReceiver.h */; };
 		9AA93A961855CC8200378361 /* QASPropertyStore.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936BC1854BD1600378361 /* QASPropertyStore.h */; };
-		9AB8993D18755E7B00BC53DA /* QASPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AB8993C18755E7B00BC53DA /* QASPasswordManager.mm */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,7 +59,6 @@
 			dstPath = inc/alljoyn/about;
 			dstSubfolderSpec = 16;
 			files = (
-				9A2A846418855CBA0095FD0D /* QASPasswordManager.h in CopyFiles */,
 				9AA93A8A1855CC8200378361 /* AnnounceHandlerAdapter.h in CopyFiles */,
 				9AA93A8B1855CC8200378361 /* QASAboutClient.h in CopyFiles */,
 				9AA93A8C1855CC8200378361 /* QASAboutDataConverter.h in CopyFiles */,
@@ -86,7 +83,6 @@
 		9A0118C8187403AB00975CE6 /* QASConvertUtil.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASConvertUtil.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		9A0B1A161861A77300188544 /* QASPropertyStoreProperty.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASPropertyStoreProperty.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		9A0B1A171861A77F00188544 /* QASPropertyStoreProperty.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASPropertyStoreProperty.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9A2A846318851E360095FD0D /* QASPasswordManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QASPasswordManager.h; sourceTree = "<group>"; };
 		9AA935E91854BC2B00378361 /* liballjoyn_about_objc.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = liballjoyn_about_objc.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		9AA935EC1854BC2B00378361 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		9AA935F01854BC2B00378361 /* alljoyn_about_objc-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "alljoyn_about_objc-Prefix.pch"; sourceTree = "<group>"; };
@@ -118,7 +114,6 @@
 		9AA936E61854BD1700378361 /* QASAboutServiceApi.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAboutServiceApi.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		9AA936E71854BD1700378361 /* QASAnnouncement.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAnnouncement.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		9AA936E81854BD1700378361 /* QASAnnouncementReceiver.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAnnouncementReceiver.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AB8993C18755E7B00BC53DA /* QASPasswordManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASPasswordManager.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -245,7 +240,6 @@
 		9AA936AF1854BD1600378361 /* about */ = {
 			isa = PBXGroup;
 			children = (
-				9A2A846318851E360095FD0D /* QASPasswordManager.h */,
 				9A0118C61874039100975CE6 /* QASConvertUtil.h */,
 				9A0B1A161861A77300188544 /* QASPropertyStoreProperty.h */,
 				9AA936B01854BD1600378361 /* AnnounceHandlerAdapter.h */,
@@ -267,7 +261,6 @@
 		9AA936DD1854BD1700378361 /* src */ = {
 			isa = PBXGroup;
 			children = (
-				9AB8993C18755E7B00BC53DA /* QASPasswordManager.mm */,
 				9A0118C8187403AB00975CE6 /* QASConvertUtil.mm */,
 				9A0B1A171861A77F00188544 /* QASPropertyStoreProperty.mm */,
 				9AA936DE1854BD1700378361 /* AnnounceHandlerAdapter.mm */,
@@ -376,7 +369,6 @@
 				9AA939041854BD1800378361 /* QASAnnouncement.mm in Sources */,
 				9AA939051854BD1800378361 /* QASAnnouncementReceiver.mm in Sources */,
 				9AA938FF1854BD1800378361 /* QASAboutIconService.mm in Sources */,
-				9AB8993D18755E7B00BC53DA /* QASPasswordManager.mm in Sources */,
 				9AA938FC1854BD1800378361 /* QASAboutClient.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
