@@ -15,33 +15,20 @@
  ******************************************************************************/
 
 #import <Foundation/Foundation.h>
-#import "AJNBusAttachment.h"
-#import "QASAnnouncementListener.h"
 
 /**
- QASAnnouncementReceiver enable registering an announcement listener to receive org.alljoyn.about Announce signals
+ AJNAnnouncementListener is a helper protocol used by AnnounceHandlerAdapter to receive AboutService signal notification.
+ The user of the class need to implement the protocol method.
  */
-@interface QASAnnouncementReceiver : NSObject
+@protocol AJNAnnouncementListener <NSObject>
 
 /**
- Designated initializer.
- Create an QASAnnouncementReceiver Object using the passed announcementListener an an AJNBusAttachment.
- @param announcementListener A reference to an announcement listener.
- @param bus A reference to the AJNBusAttachment.
- @return ER_OK if successful.
+ Called by the AnnounceHandlerAdapter when a new announcement received. This gives the listener implementation the opportunity to save a reference to announcemet parameters.
+ @param version The version of the AboutService.
+ @param port The port used by the AboutService
+ @param busName Unique or well-known name of AllJoyn bus.
+ @param objectDescs Map of ObjectDescriptions using NSMutableDictionary, describing interfaces
+ @param aboutData Map of AboutData using NSMutableDictionary, describing message args
  */
-- (id)initWithAnnouncementListener:(id <QASAnnouncementListener> )announcementListener andBus:(AJNBusAttachment *)bus;
-
-/**
- Register the to announcement listener to receive org.alljoyn.about Announce signals.
- @return ER_OK if successful.
- */
-- (QStatus)registerAnnouncementReceiver;
-
-/**
- Unregister the announcement listener from receiving org.alljoyn.about Announce signal.
- @return ER_OK if successful.
- */
-- (QStatus)unRegisterAnnouncementReceiver;
-
+- (void)announceWithVersion:(uint16_t)version port:(uint16_t)port busName:(NSString *)busName objectDescriptions:(NSMutableDictionary *)objectDescs aboutData:(NSMutableDictionary **)aboutData;
 @end

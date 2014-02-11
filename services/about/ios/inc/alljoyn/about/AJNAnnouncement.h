@@ -15,35 +15,27 @@
  ******************************************************************************/
 
 #import <Foundation/Foundation.h>
-#import "QASAboutService.h"
-#import "QASAboutPropertyStoreImpl.h"
+
+/** AJNAnnouncement is a storage class that holds information received from the server during announce
+ */
+@interface AJNAnnouncement : NSObject
+
+@property uint16_t version;
+@property uint16_t port;
+@property (strong, nonatomic) NSString *busName;
+@property (strong, nonatomic) NSMutableDictionary *objectDescriptions;
+@property (strong, nonatomic) NSMutableDictionary *aboutData;
 
 /**
- QASAboutServiceApi is wrapper class that encapsulates the QASAboutService using a shared instance.
+ Designated initializer
+ Create AJNAnnouncement Object using the passed parameters.
+ @param version The version of the AboutService.
+ @param port The port used by the AboutService.
+ @param busName Unique or well-known name of AllJoyn bus.
+ @param objectDescs Map of ObjectDescriptions using NSMutableDictionary, describing interfaces.
+ @param aboutData Map of AboutData using NSMutableDictionary.
+ @return AJNAnnouncement if successful.
  */
-@interface QASAboutServiceApi : QASAboutService
-
-/**
- Destroy the shared instance.
- */
-- (void)destroyInstance;
-
-/**
- * Create an AboutServiceApi Shared instance.
- * @return AboutServiceApi instance(created only once).
- */
-+ (id)sharedInstance;
-
-/**
- Start teh service using a given AJNBusAttachment and PropertyStore.
- @param bus A reference to the AJNBusAttachment.
- @param store A reference to a property store.
- */
-- (void)startWithBus:(AJNBusAttachment *)bus andPropertyStore:(QASAboutPropertyStoreImpl *)store;
-
-/**
- Return a reference to the property store.
- */
-- (ajn ::services ::AboutPropertyStoreImpl *)getPropertyStore;
+- (id)initWithVersion:(uint16_t)version port:(uint16_t)port busName:(NSString *)busName objectDescriptions:(NSMutableDictionary *)objectDescs aboutData:(NSMutableDictionary **)aboutData;
 
 @end

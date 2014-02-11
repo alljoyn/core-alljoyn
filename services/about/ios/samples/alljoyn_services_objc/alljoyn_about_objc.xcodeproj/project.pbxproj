@@ -7,10 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		9A0118C9187403AB00975CE6 /* QASConvertUtil.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A0118C8187403AB00975CE6 /* QASConvertUtil.mm */; };
-		9A0118D61874090200975CE6 /* QASConvertUtil.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9A0118C61874039100975CE6 /* QASConvertUtil.h */; };
-		9A0B1A181861A77F00188544 /* QASPropertyStoreProperty.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A0B1A171861A77F00188544 /* QASPropertyStoreProperty.mm */; };
-		9A0B1A191861A7A000188544 /* QASPropertyStoreProperty.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9A0B1A161861A77300188544 /* QASPropertyStoreProperty.h */; };
 		9AA935ED1854BC2B00378361 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA935EC1854BC2B00378361 /* Foundation.framework */; };
 		9AA935FB1854BC2B00378361 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA935FA1854BC2B00378361 /* XCTest.framework */; };
 		9AA935FC1854BC2B00378361 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA935EC1854BC2B00378361 /* Foundation.framework */; };
@@ -18,28 +14,31 @@
 		9AA936011854BC2B00378361 /* liballjoyn_about_objc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA935E91854BC2B00378361 /* liballjoyn_about_objc.a */; };
 		9AA936071854BC2B00378361 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9AA936051854BC2B00378361 /* InfoPlist.strings */; };
 		9AA936091854BC2B00378361 /* alljoyn_services_objcTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936081854BC2B00378361 /* alljoyn_services_objcTests.m */; };
-		9AA938FB1854BD1800378361 /* AnnounceHandlerAdapter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936DE1854BD1700378361 /* AnnounceHandlerAdapter.mm */; };
-		9AA938FC1854BD1800378361 /* QASAboutClient.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936DF1854BD1700378361 /* QASAboutClient.mm */; };
-		9AA938FD1854BD1800378361 /* QASAboutDataConverter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E01854BD1700378361 /* QASAboutDataConverter.mm */; };
-		9AA938FE1854BD1800378361 /* QASAboutIconClient.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E11854BD1700378361 /* QASAboutIconClient.mm */; };
-		9AA938FF1854BD1800378361 /* QASAboutIconService.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E21854BD1700378361 /* QASAboutIconService.mm */; };
-		9AA939011854BD1800378361 /* QASAboutPropertyStoreImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E41854BD1700378361 /* QASAboutPropertyStoreImpl.mm */; };
-		9AA939021854BD1800378361 /* QASAboutService.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E51854BD1700378361 /* QASAboutService.mm */; };
-		9AA939031854BD1800378361 /* QASAboutServiceApi.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E61854BD1700378361 /* QASAboutServiceApi.mm */; };
-		9AA939041854BD1800378361 /* QASAnnouncement.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E71854BD1700378361 /* QASAnnouncement.mm */; };
-		9AA939051854BD1800378361 /* QASAnnouncementReceiver.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AA936E81854BD1700378361 /* QASAnnouncementReceiver.mm */; };
-		9AA93A8A1855CC8200378361 /* AnnounceHandlerAdapter.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B01854BD1600378361 /* AnnounceHandlerAdapter.h */; };
-		9AA93A8B1855CC8200378361 /* QASAboutClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B11854BD1600378361 /* QASAboutClient.h */; };
-		9AA93A8C1855CC8200378361 /* QASAboutDataConverter.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B21854BD1600378361 /* QASAboutDataConverter.h */; };
-		9AA93A8D1855CC8200378361 /* QASAboutIconClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B31854BD1600378361 /* QASAboutIconClient.h */; };
-		9AA93A8E1855CC8200378361 /* QASAboutIconService.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B41854BD1600378361 /* QASAboutIconService.h */; };
-		9AA93A901855CC8200378361 /* QASAboutPropertyStoreImpl.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B61854BD1600378361 /* QASAboutPropertyStoreImpl.h */; };
-		9AA93A911855CC8200378361 /* QASAboutService.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B71854BD1600378361 /* QASAboutService.h */; };
-		9AA93A921855CC8200378361 /* QASAboutServiceApi.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B81854BD1600378361 /* QASAboutServiceApi.h */; };
-		9AA93A931855CC8200378361 /* QASAnnouncement.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936B91854BD1600378361 /* QASAnnouncement.h */; };
-		9AA93A941855CC8200378361 /* QASAnnouncementListener.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936BA1854BD1600378361 /* QASAnnouncementListener.h */; };
-		9AA93A951855CC8200378361 /* QASAnnouncementReceiver.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936BB1854BD1600378361 /* QASAnnouncementReceiver.h */; };
-		9AA93A961855CC8200378361 /* QASPropertyStore.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA936BC1854BD1600378361 /* QASPropertyStore.h */; };
+		9AC3005218A38FC50007C679 /* AJNAboutClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004318A38FB70007C679 /* AJNAboutClient.h */; };
+		9AC3005318A38FC50007C679 /* AJNAboutDataConverter.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004418A38FB70007C679 /* AJNAboutDataConverter.h */; };
+		9AC3005418A38FC50007C679 /* AJNAboutIconClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004518A38FB70007C679 /* AJNAboutIconClient.h */; };
+		9AC3005518A38FC50007C679 /* AJNAboutIconService.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004618A38FB70007C679 /* AJNAboutIconService.h */; };
+		9AC3005618A38FC50007C679 /* AJNAboutPropertyStoreImpl.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004718A38FB70007C679 /* AJNAboutPropertyStoreImpl.h */; };
+		9AC3005718A38FC60007C679 /* AJNAboutService.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004818A38FB70007C679 /* AJNAboutService.h */; };
+		9AC3005818A38FC60007C679 /* AJNAboutServiceApi.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004918A38FB70007C679 /* AJNAboutServiceApi.h */; };
+		9AC3005918A38FC60007C679 /* AJNAnnouncement.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004A18A38FB70007C679 /* AJNAnnouncement.h */; };
+		9AC3005A18A38FC60007C679 /* AJNAnnouncementListener.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004B18A38FB70007C679 /* AJNAnnouncementListener.h */; };
+		9AC3005B18A38FC60007C679 /* AJNAnnouncementReceiver.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004C18A38FB70007C679 /* AJNAnnouncementReceiver.h */; };
+		9AC3005C18A38FC60007C679 /* AJNConvertUtil.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004D18A38FB70007C679 /* AJNConvertUtil.h */; };
+		9AC3005E18A38FC60007C679 /* AJNPropertyStore.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004F18A38FB70007C679 /* AJNPropertyStore.h */; };
+		9AC3005F18A38FC60007C679 /* AJNPropertyStoreProperty.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3005018A38FB70007C679 /* AJNPropertyStoreProperty.h */; };
+		9ADE4C2A18A7770900742C05 /* AJNAnnounceHandlerAdapter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9ADE4C2918A7770900742C05 /* AJNAnnounceHandlerAdapter.mm */; };
+		9AEB17FF18A3DA8B00A4F130 /* AJNAboutClient.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AEB17F318A3DA8B00A4F130 /* AJNAboutClient.mm */; };
+		9AEB180018A3DA8B00A4F130 /* AJNAboutDataConverter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AEB17F418A3DA8B00A4F130 /* AJNAboutDataConverter.mm */; };
+		9AEB180118A3DA8B00A4F130 /* AJNAboutIconClient.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AEB17F518A3DA8B00A4F130 /* AJNAboutIconClient.mm */; };
+		9AEB180218A3DA8B00A4F130 /* AJNAboutIconService.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AEB17F618A3DA8B00A4F130 /* AJNAboutIconService.mm */; };
+		9AEB180318A3DA8B00A4F130 /* AJNAboutPropertyStoreImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AEB17F718A3DA8B00A4F130 /* AJNAboutPropertyStoreImpl.mm */; };
+		9AEB180418A3DA8B00A4F130 /* AJNAboutService.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AEB17F818A3DA8B00A4F130 /* AJNAboutService.mm */; };
+		9AEB180518A3DA8B00A4F130 /* AJNAboutServiceApi.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AEB17F918A3DA8B00A4F130 /* AJNAboutServiceApi.mm */; };
+		9AEB180618A3DA8B00A4F130 /* AJNAnnouncement.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AEB17FA18A3DA8B00A4F130 /* AJNAnnouncement.mm */; };
+		9AEB180718A3DA8B00A4F130 /* AJNAnnouncementReceiver.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AEB17FB18A3DA8B00A4F130 /* AJNAnnouncementReceiver.mm */; };
+		9AEB180818A3DA8B00A4F130 /* AJNConvertUtil.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AEB17FC18A3DA8B00A4F130 /* AJNConvertUtil.mm */; };
+		9AEB180918A3DA8B00A4F130 /* AJNPropertyStoreProperty.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AEB17FD18A3DA8B00A4F130 /* AJNPropertyStoreProperty.mm */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,30 +58,25 @@
 			dstPath = inc/alljoyn/about;
 			dstSubfolderSpec = 16;
 			files = (
-				9AA93A8A1855CC8200378361 /* AnnounceHandlerAdapter.h in CopyFiles */,
-				9AA93A8B1855CC8200378361 /* QASAboutClient.h in CopyFiles */,
-				9AA93A8C1855CC8200378361 /* QASAboutDataConverter.h in CopyFiles */,
-				9AA93A8D1855CC8200378361 /* QASAboutIconClient.h in CopyFiles */,
-				9AA93A8E1855CC8200378361 /* QASAboutIconService.h in CopyFiles */,
-				9AA93A901855CC8200378361 /* QASAboutPropertyStoreImpl.h in CopyFiles */,
-				9AA93A911855CC8200378361 /* QASAboutService.h in CopyFiles */,
-				9AA93A921855CC8200378361 /* QASAboutServiceApi.h in CopyFiles */,
-				9AA93A931855CC8200378361 /* QASAnnouncement.h in CopyFiles */,
-				9AA93A941855CC8200378361 /* QASAnnouncementListener.h in CopyFiles */,
-				9AA93A951855CC8200378361 /* QASAnnouncementReceiver.h in CopyFiles */,
-				9AA93A961855CC8200378361 /* QASPropertyStore.h in CopyFiles */,
-				9A0B1A191861A7A000188544 /* QASPropertyStoreProperty.h in CopyFiles */,
-				9A0118D61874090200975CE6 /* QASConvertUtil.h in CopyFiles */,
+				9AC3005218A38FC50007C679 /* AJNAboutClient.h in CopyFiles */,
+				9AC3005318A38FC50007C679 /* AJNAboutDataConverter.h in CopyFiles */,
+				9AC3005418A38FC50007C679 /* AJNAboutIconClient.h in CopyFiles */,
+				9AC3005518A38FC50007C679 /* AJNAboutIconService.h in CopyFiles */,
+				9AC3005618A38FC50007C679 /* AJNAboutPropertyStoreImpl.h in CopyFiles */,
+				9AC3005718A38FC60007C679 /* AJNAboutService.h in CopyFiles */,
+				9AC3005818A38FC60007C679 /* AJNAboutServiceApi.h in CopyFiles */,
+				9AC3005918A38FC60007C679 /* AJNAnnouncement.h in CopyFiles */,
+				9AC3005A18A38FC60007C679 /* AJNAnnouncementListener.h in CopyFiles */,
+				9AC3005B18A38FC60007C679 /* AJNAnnouncementReceiver.h in CopyFiles */,
+				9AC3005C18A38FC60007C679 /* AJNConvertUtil.h in CopyFiles */,
+				9AC3005E18A38FC60007C679 /* AJNPropertyStore.h in CopyFiles */,
+				9AC3005F18A38FC60007C679 /* AJNPropertyStoreProperty.h in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		9A0118C61874039100975CE6 /* QASConvertUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASConvertUtil.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9A0118C8187403AB00975CE6 /* QASConvertUtil.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASConvertUtil.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9A0B1A161861A77300188544 /* QASPropertyStoreProperty.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASPropertyStoreProperty.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9A0B1A171861A77F00188544 /* QASPropertyStoreProperty.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASPropertyStoreProperty.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		9AA935E91854BC2B00378361 /* liballjoyn_about_objc.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = liballjoyn_about_objc.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		9AA935EC1854BC2B00378361 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		9AA935F01854BC2B00378361 /* alljoyn_about_objc-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "alljoyn_about_objc-Prefix.pch"; sourceTree = "<group>"; };
@@ -92,28 +86,32 @@
 		9AA936041854BC2B00378361 /* alljoyn_about_objcTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "alljoyn_about_objcTests-Info.plist"; sourceTree = "<group>"; };
 		9AA936061854BC2B00378361 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		9AA936081854BC2B00378361 /* alljoyn_services_objcTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = alljoyn_services_objcTests.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
-		9AA936B01854BD1600378361 /* AnnounceHandlerAdapter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = AnnounceHandlerAdapter.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936B11854BD1600378361 /* QASAboutClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAboutClient.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936B21854BD1600378361 /* QASAboutDataConverter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAboutDataConverter.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936B31854BD1600378361 /* QASAboutIconClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAboutIconClient.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936B41854BD1600378361 /* QASAboutIconService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAboutIconService.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936B61854BD1600378361 /* QASAboutPropertyStoreImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAboutPropertyStoreImpl.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936B71854BD1600378361 /* QASAboutService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAboutService.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936B81854BD1600378361 /* QASAboutServiceApi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAboutServiceApi.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936B91854BD1600378361 /* QASAnnouncement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAnnouncement.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936BA1854BD1600378361 /* QASAnnouncementListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAnnouncementListener.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936BB1854BD1600378361 /* QASAnnouncementReceiver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASAnnouncementReceiver.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936BC1854BD1600378361 /* QASPropertyStore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = QASPropertyStore.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936DE1854BD1700378361 /* AnnounceHandlerAdapter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = AnnounceHandlerAdapter.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936DF1854BD1700378361 /* QASAboutClient.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAboutClient.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936E01854BD1700378361 /* QASAboutDataConverter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAboutDataConverter.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936E11854BD1700378361 /* QASAboutIconClient.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAboutIconClient.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936E21854BD1700378361 /* QASAboutIconService.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAboutIconService.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936E41854BD1700378361 /* QASAboutPropertyStoreImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAboutPropertyStoreImpl.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936E51854BD1700378361 /* QASAboutService.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAboutService.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936E61854BD1700378361 /* QASAboutServiceApi.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAboutServiceApi.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936E71854BD1700378361 /* QASAnnouncement.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAnnouncement.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		9AA936E81854BD1700378361 /* QASAnnouncementReceiver.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; lineEnding = 0; path = QASAnnouncementReceiver.mm; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		9AC3004318A38FB70007C679 /* AJNAboutClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutClient.h; sourceTree = "<group>"; };
+		9AC3004418A38FB70007C679 /* AJNAboutDataConverter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutDataConverter.h; sourceTree = "<group>"; };
+		9AC3004518A38FB70007C679 /* AJNAboutIconClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutIconClient.h; sourceTree = "<group>"; };
+		9AC3004618A38FB70007C679 /* AJNAboutIconService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutIconService.h; sourceTree = "<group>"; };
+		9AC3004718A38FB70007C679 /* AJNAboutPropertyStoreImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutPropertyStoreImpl.h; sourceTree = "<group>"; };
+		9AC3004818A38FB70007C679 /* AJNAboutService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutService.h; sourceTree = "<group>"; };
+		9AC3004918A38FB70007C679 /* AJNAboutServiceApi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutServiceApi.h; sourceTree = "<group>"; };
+		9AC3004A18A38FB70007C679 /* AJNAnnouncement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAnnouncement.h; sourceTree = "<group>"; };
+		9AC3004B18A38FB70007C679 /* AJNAnnouncementListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAnnouncementListener.h; sourceTree = "<group>"; };
+		9AC3004C18A38FB70007C679 /* AJNAnnouncementReceiver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAnnouncementReceiver.h; sourceTree = "<group>"; };
+		9AC3004D18A38FB70007C679 /* AJNConvertUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNConvertUtil.h; sourceTree = "<group>"; };
+		9AC3004F18A38FB70007C679 /* AJNPropertyStore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNPropertyStore.h; sourceTree = "<group>"; };
+		9AC3005018A38FB70007C679 /* AJNPropertyStoreProperty.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNPropertyStoreProperty.h; sourceTree = "<group>"; };
+		9ADE4C2818A776C900742C05 /* AJNAnnounceHandlerAdapter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAnnounceHandlerAdapter.h; sourceTree = "<group>"; };
+		9ADE4C2918A7770900742C05 /* AJNAnnounceHandlerAdapter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAnnounceHandlerAdapter.mm; sourceTree = "<group>"; };
+		9AEB17F318A3DA8B00A4F130 /* AJNAboutClient.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutClient.mm; sourceTree = "<group>"; };
+		9AEB17F418A3DA8B00A4F130 /* AJNAboutDataConverter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutDataConverter.mm; sourceTree = "<group>"; };
+		9AEB17F518A3DA8B00A4F130 /* AJNAboutIconClient.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutIconClient.mm; sourceTree = "<group>"; };
+		9AEB17F618A3DA8B00A4F130 /* AJNAboutIconService.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutIconService.mm; sourceTree = "<group>"; };
+		9AEB17F718A3DA8B00A4F130 /* AJNAboutPropertyStoreImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutPropertyStoreImpl.mm; sourceTree = "<group>"; };
+		9AEB17F818A3DA8B00A4F130 /* AJNAboutService.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutService.mm; sourceTree = "<group>"; };
+		9AEB17F918A3DA8B00A4F130 /* AJNAboutServiceApi.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutServiceApi.mm; sourceTree = "<group>"; };
+		9AEB17FA18A3DA8B00A4F130 /* AJNAnnouncement.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAnnouncement.mm; sourceTree = "<group>"; };
+		9AEB17FB18A3DA8B00A4F130 /* AJNAnnouncementReceiver.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAnnouncementReceiver.mm; sourceTree = "<group>"; };
+		9AEB17FC18A3DA8B00A4F130 /* AJNConvertUtil.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNConvertUtil.mm; sourceTree = "<group>"; };
+		9AEB17FD18A3DA8B00A4F130 /* AJNPropertyStoreProperty.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNPropertyStoreProperty.mm; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -240,20 +238,20 @@
 		9AA936AF1854BD1600378361 /* about */ = {
 			isa = PBXGroup;
 			children = (
-				9A0118C61874039100975CE6 /* QASConvertUtil.h */,
-				9A0B1A161861A77300188544 /* QASPropertyStoreProperty.h */,
-				9AA936B01854BD1600378361 /* AnnounceHandlerAdapter.h */,
-				9AA936B11854BD1600378361 /* QASAboutClient.h */,
-				9AA936B21854BD1600378361 /* QASAboutDataConverter.h */,
-				9AA936B31854BD1600378361 /* QASAboutIconClient.h */,
-				9AA936B41854BD1600378361 /* QASAboutIconService.h */,
-				9AA936B61854BD1600378361 /* QASAboutPropertyStoreImpl.h */,
-				9AA936B71854BD1600378361 /* QASAboutService.h */,
-				9AA936B81854BD1600378361 /* QASAboutServiceApi.h */,
-				9AA936B91854BD1600378361 /* QASAnnouncement.h */,
-				9AA936BA1854BD1600378361 /* QASAnnouncementListener.h */,
-				9AA936BB1854BD1600378361 /* QASAnnouncementReceiver.h */,
-				9AA936BC1854BD1600378361 /* QASPropertyStore.h */,
+				9ADE4C2818A776C900742C05 /* AJNAnnounceHandlerAdapter.h */,
+				9AC3004318A38FB70007C679 /* AJNAboutClient.h */,
+				9AC3004418A38FB70007C679 /* AJNAboutDataConverter.h */,
+				9AC3004518A38FB70007C679 /* AJNAboutIconClient.h */,
+				9AC3004618A38FB70007C679 /* AJNAboutIconService.h */,
+				9AC3004718A38FB70007C679 /* AJNAboutPropertyStoreImpl.h */,
+				9AC3004818A38FB70007C679 /* AJNAboutService.h */,
+				9AC3004918A38FB70007C679 /* AJNAboutServiceApi.h */,
+				9AC3004A18A38FB70007C679 /* AJNAnnouncement.h */,
+				9AC3004B18A38FB70007C679 /* AJNAnnouncementListener.h */,
+				9AC3004C18A38FB70007C679 /* AJNAnnouncementReceiver.h */,
+				9AC3004D18A38FB70007C679 /* AJNConvertUtil.h */,
+				9AC3004F18A38FB70007C679 /* AJNPropertyStore.h */,
+				9AC3005018A38FB70007C679 /* AJNPropertyStoreProperty.h */,
 			);
 			path = about;
 			sourceTree = "<group>";
@@ -261,18 +259,18 @@
 		9AA936DD1854BD1700378361 /* src */ = {
 			isa = PBXGroup;
 			children = (
-				9A0118C8187403AB00975CE6 /* QASConvertUtil.mm */,
-				9A0B1A171861A77F00188544 /* QASPropertyStoreProperty.mm */,
-				9AA936DE1854BD1700378361 /* AnnounceHandlerAdapter.mm */,
-				9AA936DF1854BD1700378361 /* QASAboutClient.mm */,
-				9AA936E01854BD1700378361 /* QASAboutDataConverter.mm */,
-				9AA936E11854BD1700378361 /* QASAboutIconClient.mm */,
-				9AA936E21854BD1700378361 /* QASAboutIconService.mm */,
-				9AA936E41854BD1700378361 /* QASAboutPropertyStoreImpl.mm */,
-				9AA936E51854BD1700378361 /* QASAboutService.mm */,
-				9AA936E61854BD1700378361 /* QASAboutServiceApi.mm */,
-				9AA936E71854BD1700378361 /* QASAnnouncement.mm */,
-				9AA936E81854BD1700378361 /* QASAnnouncementReceiver.mm */,
+				9ADE4C2918A7770900742C05 /* AJNAnnounceHandlerAdapter.mm */,
+				9AEB17F318A3DA8B00A4F130 /* AJNAboutClient.mm */,
+				9AEB17F418A3DA8B00A4F130 /* AJNAboutDataConverter.mm */,
+				9AEB17F518A3DA8B00A4F130 /* AJNAboutIconClient.mm */,
+				9AEB17F618A3DA8B00A4F130 /* AJNAboutIconService.mm */,
+				9AEB17F718A3DA8B00A4F130 /* AJNAboutPropertyStoreImpl.mm */,
+				9AEB17F818A3DA8B00A4F130 /* AJNAboutService.mm */,
+				9AEB17F918A3DA8B00A4F130 /* AJNAboutServiceApi.mm */,
+				9AEB17FA18A3DA8B00A4F130 /* AJNAnnouncement.mm */,
+				9AEB17FB18A3DA8B00A4F130 /* AJNAnnouncementReceiver.mm */,
+				9AEB17FC18A3DA8B00A4F130 /* AJNConvertUtil.mm */,
+				9AEB17FD18A3DA8B00A4F130 /* AJNPropertyStoreProperty.mm */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -358,18 +356,18 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9AA938FD1854BD1800378361 /* QASAboutDataConverter.mm in Sources */,
-				9AA939011854BD1800378361 /* QASAboutPropertyStoreImpl.mm in Sources */,
-				9AA938FB1854BD1800378361 /* AnnounceHandlerAdapter.mm in Sources */,
-				9A0B1A181861A77F00188544 /* QASPropertyStoreProperty.mm in Sources */,
-				9AA939021854BD1800378361 /* QASAboutService.mm in Sources */,
-				9AA938FE1854BD1800378361 /* QASAboutIconClient.mm in Sources */,
-				9A0118C9187403AB00975CE6 /* QASConvertUtil.mm in Sources */,
-				9AA939031854BD1800378361 /* QASAboutServiceApi.mm in Sources */,
-				9AA939041854BD1800378361 /* QASAnnouncement.mm in Sources */,
-				9AA939051854BD1800378361 /* QASAnnouncementReceiver.mm in Sources */,
-				9AA938FF1854BD1800378361 /* QASAboutIconService.mm in Sources */,
-				9AA938FC1854BD1800378361 /* QASAboutClient.mm in Sources */,
+				9AEB180318A3DA8B00A4F130 /* AJNAboutPropertyStoreImpl.mm in Sources */,
+				9AEB180218A3DA8B00A4F130 /* AJNAboutIconService.mm in Sources */,
+				9AEB17FF18A3DA8B00A4F130 /* AJNAboutClient.mm in Sources */,
+				9AEB180418A3DA8B00A4F130 /* AJNAboutService.mm in Sources */,
+				9AEB180518A3DA8B00A4F130 /* AJNAboutServiceApi.mm in Sources */,
+				9AEB180718A3DA8B00A4F130 /* AJNAnnouncementReceiver.mm in Sources */,
+				9AEB180118A3DA8B00A4F130 /* AJNAboutIconClient.mm in Sources */,
+				9ADE4C2A18A7770900742C05 /* AJNAnnounceHandlerAdapter.mm in Sources */,
+				9AEB180618A3DA8B00A4F130 /* AJNAnnouncement.mm in Sources */,
+				9AEB180818A3DA8B00A4F130 /* AJNConvertUtil.mm in Sources */,
+				9AEB180018A3DA8B00A4F130 /* AJNAboutDataConverter.mm in Sources */,
+				9AEB180918A3DA8B00A4F130 /* AJNPropertyStoreProperty.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

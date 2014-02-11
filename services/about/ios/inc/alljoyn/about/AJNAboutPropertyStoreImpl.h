@@ -17,18 +17,18 @@
 #import <Foundation/Foundation.h>
 #import "alljoyn/Status.h"
 #import "AJNMessageArgument.h"
-#import "AboutPropertyStoreImpl.h"
-#import "QASPropertyStore.h"
-#import "QASPropertyStoreProperty.h"
+#import "alljoyn/about/AboutPropertyStoreImpl.h"
+#import "AJNPropertyStore.h"
+#import "AJNPropertyStoreProperty.h"
 @class PropertyStoreImpl;
 @class AJNMessageArgument;
 
 typedef ajn::services::AboutPropertyStoreImpl * (^HandleAllocationBlock)(void);
 
 /**
- QASAboutPropertyStoreImpl is the default implementation , it is responsible to store the properties of the QASAboutService and QCSConfigService in memory.
+ AJNAboutPropertyStoreImpl is the default implementation , it is responsible to store the properties of the AJNAboutService and QCSConfigService in memory.
  */
-@interface QASAboutPropertyStoreImpl : NSObject <QASPropertyStore>
+@interface AJNAboutPropertyStoreImpl : NSObject <AJNPropertyStore>
 
 /**
  List of PropertyStore keys.
@@ -49,7 +49,7 @@ typedef enum {
     HARDWARE_VERSION = 12,
     SUPPORT_URL = 13,
     NUMBER_OF_KEYS = 14
-} QASPropertyStoreKey;
+} AJNPropertyStoreKey;
 
 /**
  Initializer
@@ -58,9 +58,9 @@ typedef enum {
 
 /**
  Designated initializer
- Create an QASAboutPropertyStoreImpl Object using the passed parameters.
+ Create an AJNAboutPropertyStoreImpl Object using the passed parameters.
  @param Block a block that return a pointer to the C++ property store implementation.
- @return QASAboutPropertyStoreImpl if successful.
+ @return AJNAboutPropertyStoreImpl if successful.
  */
 - (id)initWithHandleAllocationBlock:(HandleAllocationBlock) Block;
 
@@ -91,19 +91,19 @@ typedef enum {
 - (QStatus)delete:(const char *)name languageTag:(const char *)languageTag;
 
 /**
- property will return a QASPropertyStoreProperty according to a property key. Each property key defines one kind of properties
- @param propertyKey one of QASPropertyStoreKey
- @return QASPropertyStoreProperty*
+ property will return a AJNPropertyStoreProperty according to a property key. Each property key defines one kind of properties
+ @param propertyKey one of AJNPropertyStoreKey
+ @return AJNPropertyStoreProperty*
  */
-- (QASPropertyStoreProperty*) property:(QASPropertyStoreKey)propertyKey;
+- (AJNPropertyStoreProperty*) property:(AJNPropertyStoreKey)propertyKey;
 
 /**
  property same as above with language
- @param propertyKey one of QASPropertyStoreKey
+ @param propertyKey one of AJNPropertyStoreKey
  @param language The language to use for the action (NULL means default).
- @return QASPropertyStoreProperty*
+ @return AJNPropertyStoreProperty*
  */
-- (QASPropertyStoreProperty*) property:(QASPropertyStoreKey)propertyKey withLanguage:(NSString *)language;
+- (AJNPropertyStoreProperty*) property:(AJNPropertyStoreKey)propertyKey withLanguage:(NSString *)language;
 
 /**
  setDeviceId sets the device ID property in the property store
@@ -200,10 +200,10 @@ typedef enum {
 
 /**
  propertyStoreName returns the property store name for a specific property store key
- @param propertyStoreKey one of QASPropertyStoreKey
+ @param propertyStoreKey one of AJNPropertyStoreKey
  @return the name corresponding to the key
  */
-- (NSString*)propertyStoreName:(QASPropertyStoreKey) propertyStoreKey;
+- (NSString*)propertyStoreName:(AJNPropertyStoreKey) propertyStoreKey;
 
 /**
  getHandle get the C++ handle of the property store in use

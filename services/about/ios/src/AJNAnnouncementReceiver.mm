@@ -14,20 +14,20 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#import "QASAnnouncementReceiver.h"
+#import "AJNAnnouncementReceiver.h"
 #import "BusAttachment.h"
-#import "AnnounceHandlerAdapter.h"
+#import "AJNAnnounceHandlerAdapter.h"
 #import "AnnouncementRegistrar.h"
 
-@interface QASAnnouncementReceiver ()
+@interface AJNAnnouncementReceiver ()
 
-@property id <QASAnnouncementListener> qasAnnouncementListener;
-@property AnnounceHandlerAdapter *announceHandlerAdapter;
+@property id <AJNAnnouncementListener> AJNAnnouncementListener;
+@property AJNAnnounceHandlerAdapter *announceHandlerAdapter;
 @property ajn::BusAttachment *busAttachment;
 
 @end
 
-@implementation QASAnnouncementReceiver
+@implementation AJNAnnouncementReceiver
 
 - (void)dealloc
 {
@@ -37,11 +37,11 @@
 	}
 }
 
-- (id)initWithAnnouncementListener:(id <QASAnnouncementListener> )announcementListener
+- (id)initWithAnnouncementListener:(id <AJNAnnouncementListener> )announcementListener
                             andBus:(AJNBusAttachment *)bus
 {
 	// Create announceHandlerAdapter and save a reference
-	self.announceHandlerAdapter = new AnnounceHandlerAdapter(announcementListener);
+	self.announceHandlerAdapter = new AJNAnnounceHandlerAdapter(announcementListener);
 	// Save a reference to the BusAttachment
 	self.busAttachment = (ajn::BusAttachment *)bus.handle;
     

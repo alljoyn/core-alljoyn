@@ -15,15 +15,15 @@
  ******************************************************************************/
 
 #import "ClientInformation.h"
-#import "QASAboutDataConverter.h"
+#import "AJNAboutDataConverter.h"
 
 @implementation ClientInformation
 
-- (void)setAnnouncement:(QASAnnouncement *)announcement
+- (void)setAnnouncement:(AJNAnnouncement *)announcement
 {
 	_announcement = announcement;
     
-	_currLang = [QASAboutDataConverter messageArgumentToString:[_announcement aboutData][@"DefaultLanguage"]];
+	_currLang = [AJNAboutDataConverter messageArgumentToString:[_announcement aboutData][@"DefaultLanguage"]];
 }
 
 @end

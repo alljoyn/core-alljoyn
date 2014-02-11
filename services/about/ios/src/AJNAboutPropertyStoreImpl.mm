@@ -14,17 +14,17 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#import "QASAboutPropertyStoreImpl.h"
+#import "AJNAboutPropertyStoreImpl.h"
 #import "AJNMessageArgument.h"
-#import "QASConvertUtil.h"
+#import "AJNConvertUtil.h"
 
-@interface QASAboutPropertyStoreImpl ()
+@interface AJNAboutPropertyStoreImpl ()
 
 @property (nonatomic) ajn::services::AboutPropertyStoreImpl *handle;
 
 @end
 
-@implementation QASAboutPropertyStoreImpl
+@implementation AJNAboutPropertyStoreImpl
 
 - (void)dealloc
 {
@@ -76,23 +76,23 @@
 	return ER_NOT_IMPLEMENTED;
 }
 
-- (QASPropertyStoreProperty *)property:(QASPropertyStoreKey)propertyKey
+- (AJNPropertyStoreProperty *)property:(AJNPropertyStoreKey)propertyKey
 {
 	ajn::services::PropertyStoreProperty *psp = self.handle->getProperty((ajn::services::PropertyStoreKey)propertyKey);
     
-	QASPropertyStoreProperty *qasPsp = [[QASPropertyStoreProperty alloc] initWithHandle:psp];
+	AJNPropertyStoreProperty *ajnPsp = [[AJNPropertyStoreProperty alloc] initWithHandle:psp];
     
-	return qasPsp;
+	return ajnPsp;
 }
 
-- (QASPropertyStoreProperty *)property:(QASPropertyStoreKey)propertyKey
+- (AJNPropertyStoreProperty *)property:(AJNPropertyStoreKey)propertyKey
                           withLanguage:(NSString *)language
 {
 	ajn::services::PropertyStoreProperty *psp = self.handle->getProperty((ajn::services::PropertyStoreKey)propertyKey, [language UTF8String]);
     
-	QASPropertyStoreProperty *qasPsp = [[QASPropertyStoreProperty alloc] initWithHandle:psp];
+	AJNPropertyStoreProperty *ajnPsp = [[AJNPropertyStoreProperty alloc] initWithHandle:psp];
     
-	return qasPsp;
+	return ajnPsp;
 }
 
 - (QStatus)setDeviceId:(NSString *)deviceId
@@ -174,11 +174,11 @@
 	return self.handle->setSupportUrl([supportUrl UTF8String]);
 }
 
-- (NSString *)propertyStoreName:(QASPropertyStoreKey)propertyStoreKey
+- (NSString *)propertyStoreName:(AJNPropertyStoreKey)propertyStoreKey
 {
 	qcc::String str = self.handle->getPropertyStoreName((ajn::services::PropertyStoreKey)propertyStoreKey);
     
-	return [QASConvertUtil convertQCCStringtoNSString:str];
+	return [AJNConvertUtil convertQCCStringtoNSString:str];
 }
 
 - (QStatus)reset

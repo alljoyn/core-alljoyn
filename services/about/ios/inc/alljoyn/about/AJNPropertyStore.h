@@ -14,16 +14,16 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef QASAboutService_PropertyStore_h
-#define QASAboutService_PropertyStore_h
+#ifndef AJNAboutService_PropertyStore_h
+#define AJNAboutService_PropertyStore_h
 
 #import <Foundation/Foundation.h>
 #import "alljoyn/Status.h"
 
 /**
- QASPropertyStore protocol overview
+ AJNPropertyStore protocol overview
  */
-@protocol QASPropertyStore <NSObject>
+@protocol AJNPropertyStore <NSObject>
 
 #pragma mark – Protocol enum
 ///---------------------
@@ -74,4 +74,4 @@ typedef enum {
 
 @end
 
-#endif //  QASAboutService_PropertyStore_h
+#endif //  AJNAboutService_PropertyStore_h

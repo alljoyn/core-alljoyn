@@ -19,10 +19,10 @@
 #import "AJNSessionOptions.h"
 
 /**
- QASAboutIconClient enables the user of the class to interact with the remote AboutServiceIcon instance.
+ AJNAboutIconClient enables the user of the class to interact with the remote AboutServiceIcon instance.
  */
 
-@interface QASAboutIconClient : NSObject
+@interface AJNAboutIconClient : NSObject
 /**
  Designated initializer.
  Create an AboutIconClient Object using the passed AJNBusAttachment.

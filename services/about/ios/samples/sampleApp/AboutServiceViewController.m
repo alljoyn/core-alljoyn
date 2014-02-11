@@ -16,9 +16,9 @@
 
 #import "AboutServiceViewController.h"
 #import "AJNVersion.h"
-#import "QASAboutIconService.h"
-#import "QASAboutServiceApi.h"
-#import "QASAboutService.h"
+#import "AJNAboutIconService.h"
+#import "AJNAboutServiceApi.h"
+#import "AJNAboutService.h"
 #import "CommonBusListener.h"
 
 
@@ -42,10 +42,10 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 @property NSString *className;
 // About Service
 @property (strong, nonatomic) AJNBusAttachment *serviceBusAttachment;
-@property (strong, nonatomic) QASAboutPropertyStoreImpl *aboutPropertyStoreImpl;
-@property (strong, nonatomic) QASAboutServiceApi *aboutServiceApi;
+@property (strong, nonatomic) AJNAboutPropertyStoreImpl *aboutPropertyStoreImpl;
+@property (strong, nonatomic) AJNAboutServiceApi *aboutServiceApi;
 @property (strong, nonatomic) CommonBusListener *aboutSessionPortListener;
-@property (strong, nonatomic) QASAboutIconService *aboutIconService;
+@property (strong, nonatomic) AJNAboutIconService *aboutIconService;
 @property (nonatomic) bool isAboutServiceConnected;
 @property (strong, nonatomic) NSString *uniqueID;
 @end
@@ -146,7 +146,7 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 	}
     
 	// prepare data for propertyStoreImpl
-	self.aboutPropertyStoreImpl = [[QASAboutPropertyStoreImpl alloc] init];
+	self.aboutPropertyStoreImpl = [[AJNAboutPropertyStoreImpl alloc] init];
     
 	if (!self.aboutPropertyStoreImpl) {
         NSLog(@"[%@] [%@] Failed to create propertyStoreImpl object - exiting application", @"FATAL", [[self class] description]);
@@ -165,7 +165,7 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
     
      NSLog(@"[%@] [%@] Create aboutServiceApi", @"DEBUG", [[self class] description]);
 
-	self.aboutServiceApi = [QASAboutServiceApi sharedInstance];
+	self.aboutServiceApi = [AJNAboutServiceApi sharedInstance];
 	if (!self.aboutServiceApi) {
         NSLog(@"[%@] [%@] Failed to create aboutServiceApi - exiting application", @"FATAL", [[self class] description]);
 
@@ -247,7 +247,7 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 	NSString *mimeType = @"image/png";
 	NSString *url = @"http://tinyurl.com/llrqvrb";
 	size_t csize = sizeof(aboutIconContent) / sizeof(*aboutIconContent);
-	self.aboutIconService = [[QASAboutIconService alloc] initWithBus:self.serviceBusAttachment mimeType:mimeType url:url content:aboutIconContent csize:csize];
+	self.aboutIconService = [[AJNAboutIconService alloc] initWithBus:self.serviceBusAttachment mimeType:mimeType url:url content:aboutIconContent csize:csize];
     
 	aboutIconStatus = [self.aboutIconService registerAboutIconService];
 	if (aboutIconStatus != ER_OK) {

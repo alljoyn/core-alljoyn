@@ -14,17 +14,17 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#import "QASAboutIconClient.h"
+#import "AJNAboutIconClient.h"
 #import "AboutIconClient.h"
-#import "QASConvertUtil.h"
+#import "AJNConvertUtil.h"
 
 static int SESSIONID=0;
 
-@interface QASAboutIconClient ()
+@interface AJNAboutIconClient ()
 @property ajn::services::AboutIconClient *handle;
 
 @end
-@implementation QASAboutIconClient
+@implementation AJNAboutIconClient
 
 - (void)dealloc
 {
@@ -54,12 +54,12 @@ static int SESSIONID=0;
                 sessionId:(AJNSessionId)sessionId
 {
 	QStatus status;
-	const char *tBus = const_cast <char *>([QASConvertUtil convertNSStringToConstChar:busName]);
+	const char *tBus = const_cast <char *>([AJNConvertUtil convertNSStringToConstChar:busName]);
 	qcc::String tUrl;
     
 	status = self.handle->GetUrl(tBus, tUrl, sessionId);
 	// Convert the url
-	*url = [QASConvertUtil convertQCCStringtoNSString:tUrl];
+	*url = [AJNConvertUtil convertQCCStringtoNSString:tUrl];
 	return status;
 }
 
@@ -75,7 +75,7 @@ static int SESSIONID=0;
                   contentSize:(size_t&)contentSize
                     sessionId:(AJNSessionId)sessionId
 {
-	const char *tBus = const_cast <char *>([QASConvertUtil convertNSStringToConstChar:busName]);
+	const char *tBus = const_cast <char *>([AJNConvertUtil convertNSStringToConstChar:busName]);
 	return self.handle->GetContent(tBus, content, contentSize, sessionId);
 }
 
@@ -89,7 +89,7 @@ static int SESSIONID=0;
                       version:(int&)version
                     sessionId:(AJNSessionId)sessionId
 {
-	const char *tBus = const_cast <char *>([QASConvertUtil convertNSStringToConstChar:busName]);
+	const char *tBus = const_cast <char *>([AJNConvertUtil convertNSStringToConstChar:busName]);
 	return self.handle->GetVersion(tBus, version, sessionId);
 }
 
@@ -104,12 +104,12 @@ static int SESSIONID=0;
                      sessionId:(AJNSessionId)sessionId
 {
 	QStatus status;
-	const char *tBus = const_cast <char *>([QASConvertUtil convertNSStringToConstChar:busName]);
+	const char *tBus = const_cast <char *>([AJNConvertUtil convertNSStringToConstChar:busName]);
 	qcc::String tMimeType;
     
 	status = self.handle->GetMimeType(tBus, tMimeType, sessionId);
     
-	*mimeType = [QASConvertUtil convertQCCStringtoNSString:tMimeType];
+	*mimeType = [AJNConvertUtil convertQCCStringtoNSString:tMimeType];
     
 	return status;
 }
@@ -124,7 +124,7 @@ static int SESSIONID=0;
                       size:(size_t&)size
                  sessionId:(AJNSessionId)sessionId
 {
-	const char *tBus = const_cast <char *>([QASConvertUtil convertNSStringToConstChar:busName]);
+	const char *tBus = const_cast <char *>([AJNConvertUtil convertNSStringToConstChar:busName]);
 	return self.handle->GetSize(tBus, size, sessionId);
 }
 
