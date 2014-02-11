@@ -147,8 +147,8 @@ void _DaemonSLAPEndpoint::ThreadExit(qcc::Thread* thread)
     if (thread == &m_authThread) {
         if (m_authState == AUTH_INITIALIZED) {
             m_authState = AUTH_FAILED;
-            m_transport->Alert();
         }
+        m_transport->Alert();
     }
     _RemoteEndpoint::ThreadExit(thread);
 }

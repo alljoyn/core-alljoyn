@@ -617,8 +617,8 @@ void _TCPEndpoint::ThreadExit(qcc::Thread* thread)
     if (thread == &m_authThread) {
         if (m_authState == AUTH_INITIALIZED) {
             m_authState = AUTH_FAILED;
-            m_transport->Alert();
         }
+        m_transport->Alert();
     }
     _RemoteEndpoint::ThreadExit(thread);
 }
@@ -629,7 +629,7 @@ QStatus _TCPEndpoint::Authenticate(void)
     /*
      * Start the authentication thread.
      */
-    QStatus status = m_authThread.Start(this);
+    QStatus status = m_authThread.Start(this, this);
     if (status != ER_OK) {
         m_authState = AUTH_FAILED;
     }
@@ -1635,20 +1635,21 @@ void* TCPTransport::Run(void* arg)
          */
         for (vector<Event*>::iterator i = signaledEvents.begin(); i != signaledEvents.end(); ++i) {
             /*
+             * The stopEvent may get set indirectly by ManageEndpoints below, so
+             * make sure to reset it before calling ManageEndpoints.
+             */
+            if (*i == &stopEvent) {
+                stopEvent.ResetEvent();
+            }
+
+            /*
              * In order to rationalize management of resources, we manage the
              * various lists in one place on one thread.  This thread is a
              * convenient victim, so we do it here.
              */
             ManageEndpoints(authTimeout, sessionSetupTimeout);
 
-            /*
-             * Reset an existing Alert() or Stop().  If it's an alert, we
-             * will deal with looking for the incoming listen requests at
-             * the bottom of the server loop.  If it's a stop we will
-             * exit the next time through the top of the server loop.
-             */
             if (*i == &stopEvent) {
-                stopEvent.ResetEvent();
                 continue;
             }
 
