@@ -3246,11 +3246,28 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
          * to disallow hostnames otherwise SetAddress will attempt to treat
          * the interface name as a host name and start doing DNS lookups.
          */
+        bool any = (listenAddr == qcc::IPAddress(INADDR_ANY)) || (listenAddr == qcc::IPAddress("::"));
         IPAddress currentAddress;
         if (currentAddress.SetAddress(currentInterface, false) == ER_OK) {
-            status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, currentAddress);
+            if (any || (listenAddr == currentAddress)) {
+                status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, currentAddress);
+            } else {
+                status = ER_INVALID_ADDRESS;
+            }
         } else {
-            status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, currentInterface);
+            if (any) {
+                status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, currentInterface);
+            } else if (currentInterface == INTERFACES_DEFAULT) {
+                /*
+                 * If the listenAddr is not INADDR_ANY and the interfaces is the
+                 * wildcard, we'll open only the interface of the listenAddr.
+                 * This prevents us from advertising on an interface that we're
+                 * not listening on.
+                 */
+                status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, listenAddr);
+            } else {
+                status = ER_INVALID_ADDRESS;
+            }
         }
         if (status != ER_OK) {
             QCC_LogError(status, ("TCPTransport::DoStartListen(): OpenInterface() failed for %s", currentInterface.c_str()));
