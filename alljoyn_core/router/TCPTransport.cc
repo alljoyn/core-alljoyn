@@ -3255,19 +3255,17 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
                 status = ER_INVALID_ADDRESS;
             }
         } else {
-            if (any) {
-                status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, currentInterface);
-            } else if (currentInterface == INTERFACES_DEFAULT) {
+            if (!any && (currentInterface != INTERFACES_DEFAULT)) {
                 /*
-                 * If the listenAddr is not INADDR_ANY and the interfaces is the
-                 * wildcard, we'll open only the interface of the listenAddr.
-                 * This prevents us from advertising on an interface that we're
-                 * not listening on.
+                 * If the listenAddr is not INADDR_ANY and the interfaces is not
+                 * the interface of the listenAddr we could advertise on an
+                 * interface that we're not listening on.
                  */
-                status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, listenAddr);
-            } else {
-                status = ER_INVALID_ADDRESS;
+                QCC_LogError(ER_WARNING,
+                             ("May advertise unconnectable address: IP address of '%s' may not be the same as the listen address '%s'",
+                              currentInterface.c_str(), listenAddr.ToString().c_str()));
             }
+            status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, listenAddr);
         }
         if (status != ER_OK) {
             QCC_LogError(status, ("TCPTransport::DoStartListen(): OpenInterface() failed for %s", currentInterface.c_str()));
