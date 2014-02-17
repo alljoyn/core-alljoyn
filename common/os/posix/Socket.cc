@@ -722,21 +722,15 @@ QStatus SetNagle(SocketFd sockfd, bool useNagle)
  * the presence of multicast addresses to perform the same function, which is to
  * allow multiple processes to bind to the same multicast address/port.  In this
  * case, SO_REUSEADDR provides the equivalent functionality of SO_REUSEPORT, so
- * it is quite safe to substitute them.  Interestingly, Darwin which is actually
- * BSD-derived does not define SO_REUSEPORT, but Linux which is supposedly not
- * BSD does.  Go figure.
+ * it is quite safe to substitute them.
  */
 QStatus SetReuseAddress(SocketFd sockfd, bool reuse)
 {
     QStatus status = ER_OK;
-    int arg = reuse ? 1 : -0;
+    int arg = reuse ? 1 : 0;
 
-    /* Linux kernels prior to 3.9 needs SO_REUSEADDR but Darwin needs SO_REUSEPORT for this to work. */
-#if defined(QCC_OS_DARWIN)
-    int r = setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, (void*)&arg, sizeof(arg));
-#else
+    /* Linux kernels prior to 3.9 needs SO_REUSEADDR */
     int r = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (void*)&arg, sizeof(arg));
-#endif
 
     if (r != 0) {
         status = ER_OS_ERROR;
@@ -749,7 +743,18 @@ QStatus SetReuseAddress(SocketFd sockfd, bool reuse)
 
 QStatus SetReusePort(SocketFd sockfd, bool reuse)
 {
+#if defined(QCC_OS_DARWIN)
+    QStatus status = ER_OK;
+    int arg = reuse ? 1 : 0;
+    int r = setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, (void*)&arg, sizeof(arg));
+    if (r != 0) {
+        status = ER_OS_ERROR;
+        QCC_LogError(status, ("Setting SO_REUSEPORT failed: (%d) %s", errno, strerror(errno)));
+    }
+    return status;
+#else
     return SetReuseAddress(sockfd, reuse);
+#endif
 }
 
 #ifndef IPV6_ADD_MEMBERSHIP
