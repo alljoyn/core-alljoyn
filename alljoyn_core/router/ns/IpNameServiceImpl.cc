@@ -4222,6 +4222,24 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
     m_mutex.Lock();
 
     //
+    // We check the version of WhoHas packet
+    // If it is version 0 that we got from a routing node capable of sending a
+    // version 1 WhoHas then we drop this packet. This reduces the number of
+    // IS-AT packets that we send over the wire
+    //
+    uint32_t nsVersion, msgVersion;
+    whoHas.GetVersion(nsVersion, msgVersion);
+    if (nsVersion == 0 && msgVersion == 0) {
+        if (whoHas.GetUdpFlag()) {
+            QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuestion(): Ignoring version zero message from version one peer"));
+            // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
+            m_mutex.Unlock();
+            return;
+        }
+    }
+
+
+    //
     // The who-has message doesn't specify which transport is doing the asking.
     // This is an oversight and should be fixed in a subsequent version.  The
     // only reasonable thing to do is to return name matches found in all of
