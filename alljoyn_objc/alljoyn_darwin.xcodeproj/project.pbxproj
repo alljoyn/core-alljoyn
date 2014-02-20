@@ -47,12 +47,12 @@
 		};
 		AC0DC84C151A46F0000E302F /* alljoyn_core_ios */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u OS=darwin CPU=arm BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildArgumentsString = "-u OS=darwin CPU=arm BR=on BINDINGS=\"cpp\" WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
 			buildConfigurationList = AC0DC84D151A46F0000E302F /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios" */;
 			buildPhases = (
 			);
 			buildToolPath = /usr/local/bin/scons;
-			buildWorkingDirectory = ../alljoyn_core;
+			buildWorkingDirectory = ../.;
 			dependencies = (
 			);
 			name = alljoyn_core_ios;
@@ -117,12 +117,12 @@
 		};
 		ACB2C746160B8D9900D7E3A6 /* alljoyn_core_ios_armv7s */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u OS=darwin CPU=armv7s BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildArgumentsString = "-u OS=darwin CPU=armv7s BR=on BINDINGS=\"cpp\" WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
 			buildConfigurationList = ACB2C747160B8D9900D7E3A6 /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios_armv7s" */;
 			buildPhases = (
 			);
 			buildToolPath = /usr/local/bin/scons;
-			buildWorkingDirectory = ../alljoyn_core;
+			buildWorkingDirectory = ../.;
 			dependencies = (
 			);
 			name = alljoyn_core_ios_armv7s;
@@ -131,12 +131,12 @@
 		};
 		ACB2C74B160B8EFF00D7E3A6 /* alljoyn_core_ios_armv7 */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u OS=darwin CPU=armv7 BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildArgumentsString = "-u OS=darwin CPU=armv7 BR=on BINDINGS=\"cpp\" WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
 			buildConfigurationList = ACB2C74C160B8EFF00D7E3A6 /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios_armv7" */;
 			buildPhases = (
 			);
 			buildToolPath = /usr/local/bin/scons;
-			buildWorkingDirectory = ../alljoyn_core;
+			buildWorkingDirectory = ../.;
 			dependencies = (
 			);
 			name = alljoyn_core_ios_armv7;
@@ -145,12 +145,12 @@
 		};
 		ACB4AFB6150E631F0054D964 /* alljoyn_core_osx */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u OS=darwin CPU=x86 DOCS=html BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildArgumentsString = "-u OS=darwin CPU=x86 DOCS=html BR=on BINDINGS=\"cpp\" WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
 			buildConfigurationList = ACB4AFB9150E631F0054D964 /* Build configuration list for PBXLegacyTarget "alljoyn_core_osx" */;
 			buildPhases = (
 			);
 			buildToolPath = /usr/local/bin/scons;
-			buildWorkingDirectory = ../alljoyn_core;
+			buildWorkingDirectory = ../.;
 			dependencies = (
 			);
 			name = alljoyn_core_osx;

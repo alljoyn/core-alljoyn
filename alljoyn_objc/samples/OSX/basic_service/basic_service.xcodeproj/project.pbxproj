@@ -607,13 +607,13 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "basic_service/basic_service-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../alljoyn_core/build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../alljoyn_core/build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"",
 				);
 				INFOPLIST_FILE = "basic_service/basic_service-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../../../alljoyn_core/build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
@@ -622,7 +622,7 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SEPARATE_STRIP = YES;
-				USER_HEADER_SEARCH_PATHS = "$(inherited) \"$(SDKROOT)/usr/lib/i686-apple-darwin11/4.2.1\" \"$(SRCROOT)/../../../alljoyn_core/build/darwin/x86/debug/dist/cpp/lib\"";
+				USER_HEADER_SEARCH_PATHS = "$(inherited) \"$(SDKROOT)/usr/lib/i686-apple-darwin11/4.2.1\" \"$(SRCROOT)/../../../build/darwin/x86/debug/dist/cpp/lib\"";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -635,13 +635,13 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "basic_service/basic_service-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../alljoyn_core/build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../alljoyn_core/build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"",
 				);
 				INFOPLIST_FILE = "basic_service/basic_service-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../../../alljoyn_core/build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
@@ -650,7 +650,7 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SEPARATE_STRIP = YES;
-				USER_HEADER_SEARCH_PATHS = "$(inherited) \"$(SDKROOT)/usr/lib/i686-apple-darwin11/4.2.1\" \"$(SRCROOT)/../../../alljoyn_core/build/darwin/x86/debug/dist/cpp/lib\"";
+				USER_HEADER_SEARCH_PATHS = "$(inherited) \"$(SDKROOT)/usr/lib/i686-apple-darwin11/4.2.1\" \"$(SRCROOT)/../../../build/darwin/x86/debug/dist/cpp/lib\"";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;

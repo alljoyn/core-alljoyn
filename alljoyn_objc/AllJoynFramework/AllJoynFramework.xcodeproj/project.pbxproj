@@ -124,9 +124,9 @@
 		AC4FF04015A3A928006C2FB4 /* AuthenticationTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AuthenticationTests.m; sourceTree = "<group>"; };
 		AC5C55D31548B0CC00C13A0B /* BusAttachmentTests.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BusAttachmentTests.h; sourceTree = "<group>"; };
 		AC5C55D41548B0CC00C13A0B /* BusAttachmentTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BusAttachmentTests.m; sourceTree = "<group>"; };
-		AC5C55D61548B53D00C13A0B /* BundledRouter.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; name = BundledRouter.o; path = ../../alljoyn_core/build/darwin/x86/debug/dist/cpp/lib/BundledRouter.o; sourceTree = "<group>"; };
-		AC5C55D71548B53D00C13A0B /* libajrouter.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libajrouter.a; path = ../../alljoyn_core/build/darwin/x86/debug/dist/cpp/lib/libajrouter.a; sourceTree = "<group>"; };
-		AC5C55D81548B53D00C13A0B /* liballjoyn.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liballjoyn.a; path = ../../alljoyn_core/build/darwin/x86/debug/dist/cpp/lib/liballjoyn.a; sourceTree = "<group>"; };
+		AC5C55D61548B53D00C13A0B /* BundledRouter.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; name = BundledRouter.o; path = ../../build/darwin/x86/debug/dist/cpp/lib/BundledRouter.o; sourceTree = "<group>"; };
+		AC5C55D71548B53D00C13A0B /* libajrouter.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libajrouter.a; path = ../../build/darwin/x86/debug/dist/cpp/lib/libajrouter.a; sourceTree = "<group>"; };
+		AC5C55D81548B53D00C13A0B /* liballjoyn.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liballjoyn.a; path = ../../build/darwin/x86/debug/dist/cpp/lib/liballjoyn.a; sourceTree = "<group>"; };
 		AC5C55E01548B65800C13A0B /* libstdc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libstdc++.dylib"; path = "usr/lib/libstdc++.dylib"; sourceTree = SDKROOT; };
 		AC5C55E71548B75B00C13A0B /* libpthread.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpthread.dylib; path = usr/lib/libpthread.dylib; sourceTree = SDKROOT; };
 		AC5C55EB1548BED400C13A0B /* libobjc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libobjc.dylib; path = usr/lib/libobjc.dylib; sourceTree = SDKROOT; };
@@ -663,10 +663,10 @@
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "AllJoynFramework/AllJoynFramework-Prefix.pch";
-				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../alljoyn_core/build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"";
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../alljoyn_core/build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
 				);
 				OTHER_CFLAGS = (
 					"-DQCC_OS_GROUP_POSIX",
@@ -689,10 +689,10 @@
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "AllJoynFramework/AllJoynFramework-Prefix.pch";
-				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../alljoyn_core/build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"";
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../alljoyn_core/build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
 				);
 				OTHER_CFLAGS = (
 					"-DQCC_OS_GROUP_POSIX",
@@ -714,11 +714,11 @@
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "AllJoynFramework/AllJoynFramework-Prefix.pch";
-				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../alljoyn_core/build/darwin/x86/debug/dist/cpp/inc\"";
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../build/darwin/x86/debug/dist/cpp/inc\"";
 				INFOPLIST_FILE = "AllJoynFrameworkTests/AllJoynFrameworkTests-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../alljoyn_core/build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
 					"\"$(SDKROOT)/usr/lib/system\"",
 				);
 				OTHER_CFLAGS = (
@@ -740,11 +740,11 @@
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "AllJoynFramework/AllJoynFramework-Prefix.pch";
-				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../alljoyn_core/build/darwin/x86/release/dist/cpp/inc\"";
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../build/darwin/x86/release/dist/cpp/inc\"";
 				INFOPLIST_FILE = "AllJoynFrameworkTests/AllJoynFrameworkTests-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../alljoyn_core/build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
 					"\"$(SDKROOT)/usr/lib/system\"",
 				);
 				OTHER_CFLAGS = (
