@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -718,6 +718,8 @@ int main(int argc, char** argv)
 
     g_wellKnownName = (char*)DEFAULT_WELLKNOWN_NAME;
 
+    g_sessionOpts = alljoyn_sessionopts_create(ALLJOYN_TRAFFIC_TYPE_MESSAGES, QCC_FALSE, ALLJOYN_PROXIMITY_ANY, ALLJOYN_TRANSPORT_ANY);
+
     /* Parse command line args */
     for (i = 1; i < argc; ++i) {
         if (0 == strcmp("-h", argv[i]) || 0 == strcmp("-?", argv[i])) {
@@ -796,7 +798,6 @@ int main(int argc, char** argv)
             exit(1);
         }
     }
-    g_sessionOpts = alljoyn_sessionopts_create(ALLJOYN_TRAFFIC_TYPE_MESSAGES, QCC_FALSE, ALLJOYN_PROXIMITY_ANY, ALLJOYN_TRANSPORT_ANY);
 
     //Create bus attachment
     g_msgBus = alljoyn_busattachment_create("bbcservice", QCC_TRUE);
