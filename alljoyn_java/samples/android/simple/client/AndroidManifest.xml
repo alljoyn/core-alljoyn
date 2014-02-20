@@ -4,7 +4,7 @@
       android:versionCode="1"
       android:versionName="1.0">
     <!-- Permission required to use the TCP transport -->
-    <uses-sdk android:minSdkVersion="3"></uses-sdk>
+    <uses-sdk android:minSdkVersion="10"></uses-sdk>
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"></uses-permission>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"></uses-permission>

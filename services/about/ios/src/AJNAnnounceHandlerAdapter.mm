@@ -14,33 +14,27 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#import "QASConvertUtil.h"
+#import "AJNAnnounceHandlerAdapter.h"
+#import "AJNConvertUtil.h"
+#import "AJNAboutDataConverter.h"
 
-@implementation QASConvertUtil
-
-+ (qcc::String)convertNSStringToQCCString:(NSString *)nsstring
+AJNAnnounceHandlerAdapter::AJNAnnounceHandlerAdapter(id <AJNAnnouncementListener> announcementListener)
 {
-	return ((qcc::String)[nsstring UTF8String]);
+	AJNAnnouncementListener = announcementListener;
 }
 
-+ (NSString *)convertQCCStringtoNSString:(qcc::String)qccstring
+AJNAnnounceHandlerAdapter::~AJNAnnounceHandlerAdapter()
 {
-	return (@(qccstring.c_str()));
 }
 
-+ (const char *)convertNSStringToConstChar:(NSString *)nsstring
+void AJNAnnounceHandlerAdapter::Announce(uint16_t version, uint16_t port, const char *busName, const ObjectDescriptions& objectDescs, const AboutData& aboutData)
 {
-	return([nsstring UTF8String]);
+	NSMutableDictionary *ajnAboutData;
+    
+    NSLog(@"[%@] [%@] Received an announcemet from %s ", @"DEBUG", @"AnnounceHandlerAdapter", busName);
+        
+	// Convert AboutData to QASAboutData
+	ajnAboutData = [AJNAboutDataConverter convertToAboutDataDictionary:aboutData];
+    
+	[AJNAnnouncementListener announceWithVersion:version port:port busName:[AJNConvertUtil convertConstCharToNSString:busName] objectDescriptions:[AJNAboutDataConverter convertToObjectDescriptionsDictionary:objectDescs] aboutData:&ajnAboutData];
 }
-
-+ (NSString *)convertConstCharToNSString:(const char *)constchar
-{
-	if ((constchar == NULL) || (constchar[0] == 0)) {
-		return @"";
-	}
-	else {
-		return(@(constchar));
-	}
-}
-
-@end

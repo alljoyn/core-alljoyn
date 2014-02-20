@@ -313,7 +313,6 @@ QStatus IfConfig(std::vector<IfConfigEntry>& entries)
         if (if_addr->ifa_netmask) {
             uint32_t prefixlen = 0;
             if (if_addr->ifa_netmask->sa_family == AF_INET) {
-                uint32_t prefixlen = 0;
                 uint32_t mask = ntohl(((struct sockaddr_in*)(if_addr->ifa_netmask))->sin_addr.s_addr);
                 while (mask & 0x80000000) {
                     ++prefixlen;

@@ -16,11 +16,11 @@
 //
 
 #import <UIKit/UIKit.h>
-#import "QASAnnouncement.h"
+#import "AJNAnnouncement.h"
 #import "AJNBusAttachment.h"
 
 @interface GetIconCallViewController : UIViewController
-@property (weak, nonatomic) QASAnnouncement *qasAnnouncement;
+@property (weak, nonatomic) AJNAnnouncement *ajnAnnouncement;
 @property (weak, nonatomic) AJNBusAttachment *clientBusAttachment;
 
 @end

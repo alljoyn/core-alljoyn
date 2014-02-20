@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 #import "AnnounceTextViewController.h"
-#import "QASAboutDataConverter.h"
+#import "AJNAboutDataConverter.h"
 
 @interface AnnounceTextViewController ()
 @property (weak, nonatomic) IBOutlet UITextView *announceInformation;
@@ -48,34 +48,34 @@
 {
 	[super viewDidLoad];
     
-	//  retrive QASAnnouncement by the  announcementButtonCurrentTitle unique name
+	//  retrive AJNAnnouncement by the  announcementButtonCurrentTitle unique name
 	NSString *txt = [[NSString alloc] init];
     
 	//  set title
-	NSString *title = [self.qasAnnouncement busName];
+	NSString *title = [self.ajnAnnouncement busName];
     
 	txt = [txt stringByAppendingFormat:@"%@\n%@\n", title, [@"" stringByPaddingToLength :[title length] + 10 withString : @"-" startingAtIndex : 0]];
     
 	//  set body
-	txt = [txt stringByAppendingFormat:@"BusName: %@\n", [self.qasAnnouncement busName]];
+	txt = [txt stringByAppendingFormat:@"BusName: %@\n", [self.ajnAnnouncement busName]];
     
-	txt = [txt stringByAppendingFormat:@"Port: %hu\n", [self.qasAnnouncement port]];
+	txt = [txt stringByAppendingFormat:@"Port: %hu\n", [self.ajnAnnouncement port]];
     
-    txt = [txt stringByAppendingFormat:@"Version: %u\n", [self.qasAnnouncement version]];
+    txt = [txt stringByAppendingFormat:@"Version: %u\n", [self.ajnAnnouncement version]];
     
 	txt = [txt stringByAppendingString:@"\n\n"];
     
 	//  set AboutMap info
 	txt = [txt stringByAppendingFormat:@"About map:\n"];
     
-	txt = [txt stringByAppendingString:[QASAboutDataConverter aboutDataDictionaryToString:([self.qasAnnouncement aboutData])]];
+	txt = [txt stringByAppendingString:[AJNAboutDataConverter aboutDataDictionaryToString:([self.ajnAnnouncement aboutData])]];
     
 	txt = [txt stringByAppendingString:@"\n\n"];
     
 	//  set ObjectDesc info
 	txt = [txt stringByAppendingFormat:@"Bus Object Description:\n"];
     
-	txt = [txt stringByAppendingString:[self objectDescriptionsToString:[self.qasAnnouncement objectDescriptions]]];
+	txt = [txt stringByAppendingString:[self objectDescriptionsToString:[self.ajnAnnouncement objectDescriptions]]];
     
 	self.announceInformation.text = txt;
 }

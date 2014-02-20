@@ -40,3 +40,7 @@ ios/samples/sampleApp/AboutService/.DS_Store
 ios/samples/sampleApp/AboutService.xcodeproj/xcuserdata/*.xcuserdatad/*
 ios/samples/sampleApp/AboutService.xcodeproj/project.xcworkspace/xcuserdata/*.xcuserdatad/*
 ios/samples/sampleApp/AboutService.xcodeproj/project.xcworkspace/xcshareddata/AboutService.xccheckout
+ios/samples/AboutServiceWorkspace.xcworkspace/xcshareddata/
+ios/samples/AboutServiceWorkspace.xcworkspace/xcuserdata/
+ios/samples/alljoyn_services_cpp/alljoyn_about_cpp.xcodeproj/xcuserdata/
+ios/samples/alljoyn_services_objc/alljoyn_about_objc.xcodeproj/xcuserdata/

@@ -14,28 +14,33 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#import "QASAnnouncement.h"
+#import "AJNConvertUtil.h"
 
-@interface QASAnnouncement ()
+@implementation AJNConvertUtil
 
-@end
-
-@implementation QASAnnouncement
-
-- (id)initWithVersion:(uint16_t)version port:(uint16_t)port
-              busName:(NSString *)busName
-   objectDescriptions:(NSMutableDictionary *)objectDescs
-            aboutData:(NSMutableDictionary **)aboutData
++ (qcc::String)convertNSStringToQCCString:(NSString *)nsstring
 {
-	self = [super init];
-	if (self) {
-		self.version = version;
-		self.port = port;
-		self.busName = busName;
-		self.objectDescriptions = objectDescs;
-		self.aboutData = *aboutData;
+	return ((qcc::String)[nsstring UTF8String]);
+}
+
++ (NSString *)convertQCCStringtoNSString:(qcc::String)qccstring
+{
+	return (@(qccstring.c_str()));
+}
+
++ (const char *)convertNSStringToConstChar:(NSString *)nsstring
+{
+	return([nsstring UTF8String]);
+}
+
++ (NSString *)convertConstCharToNSString:(const char *)constchar
+{
+	if ((constchar == NULL) || (constchar[0] == 0)) {
+		return @"";
 	}
-	return self;
+	else {
+		return(@(constchar));
+	}
 }
 
 @end

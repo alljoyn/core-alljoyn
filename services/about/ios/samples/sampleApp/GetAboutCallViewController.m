@@ -91,7 +91,7 @@ static NSString * const CLIENTDEFAULTLANG=@"";
 		{
 			if (buttonIndex == 1) { //user pressed OK
                 if ([self.alertChooseLanguage.text isEqualToString:@""]) {
-                    self.alertChooseLanguage.text = [QASAboutDataConverter messageArgumentToString:[self.clientInformation.announcement aboutData][@"DefaultLanguage"]];
+                    self.alertChooseLanguage.text = [AJNAboutDataConverter messageArgumentToString:[self.clientInformation.announcement aboutData][@"DefaultLanguage"]];
                 }
 				if (![self isValidLanguage:self.alertChooseLanguage.text]) {
 					[[[UIAlertView alloc] initWithTitle:@"Error" message:@"Requested language is not supported" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil, nil] show];
@@ -116,7 +116,7 @@ static NSString * const CLIENTDEFAULTLANG=@"";
 				[self UpdateCallViewInformation];
 			}
 			else if (buttonIndex == 2) {
-				self.alertBusName.message = [NSString stringWithFormat:@"Available:%@", [QASAboutDataConverter messageArgumentToString:self.supportedLanguagesMsgArg]];
+				self.alertBusName.message = [NSString stringWithFormat:@"Available:%@", [AJNAboutDataConverter messageArgumentToString:self.supportedLanguagesMsgArg]];
 				[self.alertBusName show];
 			}
 		}
@@ -162,9 +162,9 @@ static NSString * const CLIENTDEFAULTLANG=@"";
 		__block NSMutableDictionary *objDesc;
         
         
-		QASAboutClient *qasAboutClient = [[QASAboutClient alloc] initWithBus:self.clientBusAttachment];
+		AJNAboutClient *ajnAboutClient = [[AJNAboutClient alloc] initWithBus:self.clientBusAttachment];
         
-        QStatus qStatus = [qasAboutClient aboutDataWithBusName:[self.clientInformation.announcement busName] andLanguageTag:self.clientInformation.currLang andAboutData:&aboutData andSessionId:self.sessionId];
+        QStatus qStatus = [ajnAboutClient aboutDataWithBusName:[self.clientInformation.announcement busName] andLanguageTag:self.clientInformation.currLang andAboutData:&aboutData andSessionId:self.sessionId];
         
              dispatch_async(dispatch_get_main_queue(), ^{
             
@@ -174,18 +174,18 @@ static NSString * const CLIENTDEFAULTLANG=@"";
             [errorAlert show];
         }
         else {
-            [qasAboutClient objectDescriptionsWithBusName:[self.clientInformation.announcement busName] andObjectDescriptions:&objDesc andSessionId:self.sessionId];
+            [ajnAboutClient objectDescriptionsWithBusName:[self.clientInformation.announcement busName] andObjectDescriptions:&objDesc andSessionId:self.sessionId];
             
-            NSLog(@"[%@] [%@] AboutData:  %@", @"DEBUG", [[self class] description], [QASAboutDataConverter aboutDataDictionaryToString:aboutData]);
+            NSLog(@"[%@] [%@] AboutData:  %@", @"DEBUG", [[self class] description], [AJNAboutDataConverter aboutDataDictionaryToString:aboutData]);
             
-            NSLog(@"[%@] [%@] objectDescriptions:  %@", @"DEBUG", [[self class] description], [QASAboutDataConverter objectDescriptionsDictionaryToString:objDesc]);
+            NSLog(@"[%@] [%@] objectDescriptions:  %@", @"DEBUG", [[self class] description], [AJNAboutDataConverter objectDescriptionsDictionaryToString:objDesc]);
 
             self.supportedLanguagesMsgArg = aboutData[@"SupportedLanguages"];
             
             
             self.lblAboutLanguage.text = self.clientInformation.currLang;
-            self.txtViewAboutMap.text = [QASAboutDataConverter aboutDataDictionaryToString:aboutData];
-            self.txtViewBusObjectDesc.text = [QASAboutDataConverter objectDescriptionsDictionaryToString:objDesc];
+            self.txtViewAboutMap.text = [AJNAboutDataConverter aboutDataDictionaryToString:aboutData];
+            self.txtViewBusObjectDesc.text = [AJNAboutDataConverter objectDescriptionsDictionaryToString:objDesc];
         }
             
            

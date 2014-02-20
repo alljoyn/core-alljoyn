@@ -2728,7 +2728,20 @@ bool IpNameServiceImpl::InterfaceRequested(uint32_t transportIndex, uint32_t liv
     // message out the current interface.
     //
     for (uint32_t i = 0; i < m_requestedInterfaces[transportIndex].size(); ++i) {
+        //
+        // If the current interface name matches the name in the requestedInterface list,
+        // we will send this message out the current interface.
+        //
         if (m_requestedInterfaces[transportIndex][i].m_interfaceName == m_liveInterfaces[liveIndex].m_interfaceName) {
+            QCC_DbgPrintf(("IpNameServiceImpl::InterfaceRequested(): Interface \"%s\" approved.", m_liveInterfaces[liveIndex].m_interfaceName.c_str()));
+            return true;
+        }
+        //
+        // If the current interface IP address matches the IP address in the
+        // requestedInterface list, we will send this message out the current interface.
+        //
+        if (m_requestedInterfaces[transportIndex][i].m_interfaceName.size() == 0 &&
+            m_requestedInterfaces[transportIndex][i].m_interfaceAddr == qcc::IPAddress(m_liveInterfaces[liveIndex].m_interfaceAddr)) {
             QCC_DbgPrintf(("IpNameServiceImpl::InterfaceRequested(): Interface \"%s\" approved.", m_liveInterfaces[liveIndex].m_interfaceName.c_str()));
             return true;
         }
@@ -4207,6 +4220,24 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
     //
     // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
+
+    //
+    // We check the version of WhoHas packet
+    // If it is version 0 that we got from a routing node capable of sending a
+    // version 1 WhoHas then we drop this packet. This reduces the number of
+    // IS-AT packets that we send over the wire
+    //
+    uint32_t nsVersion, msgVersion;
+    whoHas.GetVersion(nsVersion, msgVersion);
+    if (nsVersion == 0 && msgVersion == 0) {
+        if (whoHas.GetUdpFlag()) {
+            QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuestion(): Ignoring version zero message from version one peer"));
+            // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
+            m_mutex.Unlock();
+            return;
+        }
+    }
+
 
     //
     // The who-has message doesn't specify which transport is doing the asking.

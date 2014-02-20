@@ -15,8 +15,8 @@
  ******************************************************************************/
 
 #import <UIKit/UIKit.h>
-#import "QASAnnouncement.h"
+#import "AJNAnnouncement.h"
 
 @interface AnnounceTextViewController : UIViewController
-@property (strong, nonatomic) QASAnnouncement *qasAnnouncement;
+@property (strong, nonatomic) AJNAnnouncement *ajnAnnouncement;
 @end

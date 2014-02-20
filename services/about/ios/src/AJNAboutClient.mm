@@ -14,18 +14,18 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#import "QASAboutClient.h"
+#import "AJNAboutClient.h"
 #import "AboutClient.h"
-#import "QASAboutDataConverter.h"
-#import "QASConvertUtil.h"
+#import "AJNAboutDataConverter.h"
+#import "AJNConvertUtil.h"
 
-@interface QASAboutClient ()
+@interface AJNAboutClient ()
 
 @property ajn::services::AboutClient *handle;
 
 @end
 
-@implementation QASAboutClient
+@implementation AJNAboutClient
 
 - (void)dealloc
 {
@@ -49,8 +49,8 @@
                             andSessionId:(uint32_t)sessionId
 {
 	ajn::services::AboutClient::ObjectDescriptions objectDescriptions;
-	QStatus status = self.handle->GetObjectDescriptions([QASConvertUtil convertNSStringToConstChar:busName], objectDescriptions, (ajn::SessionId)sessionId);
-	*objectDescs = [QASAboutDataConverter convertToObjectDescriptionsDictionary:objectDescriptions];
+	QStatus status = self.handle->GetObjectDescriptions([AJNConvertUtil convertNSStringToConstChar:busName], objectDescriptions, (ajn::SessionId)sessionId);
+	*objectDescs = [AJNAboutDataConverter convertToObjectDescriptionsDictionary:objectDescriptions];
     
 	return status;
 }
@@ -62,8 +62,8 @@
 {
 	ajn::services::AboutClient::AboutData aboutData;
     
-	QStatus status =  self.handle->GetAboutData([QASConvertUtil convertNSStringToConstChar:busName], [QASConvertUtil convertNSStringToConstChar:languageTag], aboutData, (ajn::SessionId)sessionId);
-	*data = [QASAboutDataConverter convertToAboutDataDictionary:aboutData];
+	QStatus status =  self.handle->GetAboutData([AJNConvertUtil convertNSStringToConstChar:busName], [AJNConvertUtil convertNSStringToConstChar:languageTag], aboutData, (ajn::SessionId)sessionId);
+	*data = [AJNAboutDataConverter convertToAboutDataDictionary:aboutData];
 	return status;
 }
 
@@ -71,7 +71,7 @@
                    andVersion:(int)version
                  andSessionId:(AJNSessionId)sessionId
 {
-	return (self.handle->GetVersion([QASConvertUtil convertNSStringToConstChar:busName], version, (ajn::SessionId)sessionId));
+	return (self.handle->GetVersion([AJNConvertUtil convertNSStringToConstChar:busName], version, (ajn::SessionId)sessionId));
 }
 
 @end

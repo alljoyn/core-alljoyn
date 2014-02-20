@@ -17,14 +17,14 @@
 #import <Foundation/Foundation.h>
 #import "MsgArg.h"
 #import "AJNMessageArgument.h"
-#import "AnnounceHandler.h"
-#import "QASAboutClient.h"
+#import "alljoyn/about/AnnounceHandler.h"
+#import "alljoyn/about/AJNAboutClient.h"
 
 /**
- QASAboutDataConverter is a utility class to convert About Service data structurs into an Objective-c objects.
+ AJNAboutDataConverter is a utility class to convert About Service data structurs into an Objective-c objects.
  Note that incase of illegal content - an emty string will be in use:  ERRORSTRING = @"";
  */
-@interface QASAboutDataConverter : NSObject
+@interface AJNAboutDataConverter : NSObject
 
 /**
  Convert AJNMessageArgument to NSString.

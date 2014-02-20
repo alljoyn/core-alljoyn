@@ -16,14 +16,14 @@
 
 #import <Foundation/Foundation.h>
 #import "AJNBusAttachment.h"
-#import "QASPropertyStore.h"
+#import "AJNPropertyStore.h"
 
 /**
- QASAboutService is a wrapper for AboutService which uses AllJoyn BusObject and implements the org.alljoyn.About standard interface.
+ AJNAboutService is a wrapper for AboutService which uses AllJoyn BusObject and implements the org.alljoyn.About standard interface.
  Applications that provide AllJoyn IoE services use an instance of this class to announce
  their capabilities and other identifying details of the services being provided.
  */
-@interface QASAboutService : NSObject
+@interface AJNAboutService : NSObject
 
 /**
  A flag that indicate the service mode.
@@ -31,26 +31,26 @@
 @property bool isServiceStarted;
 
 /**
- Register the bus and the property store to be used by QASAboutService and set the isServiceStarted to true.
+ Register the bus and the property store to be used by AJNAboutService and set the isServiceStarted to true.
  @param bus A reference to the AJNBusAttachment.
  @param store A reference to a property store.
  */
-- (void)registerBus:(AJNBusAttachment *)bus andPropertystore:(id <QASPropertyStore> )store;
+- (void)registerBus:(AJNBusAttachment *)bus andPropertystore:(id <AJNPropertyStore> )store;
 
 /**
- Register the QASAboutService on the AllJoyn bus passing the port to be announced - only if isServiceStarted is true.
+ Register the AJNAboutService on the AllJoyn bus passing the port to be announced - only if isServiceStarted is true.
  @param port used to bind the session.
  @return ER_OK if successful.
  */
 - (QStatus)registerPort:(AJNSessionPort)port;
 
 /**
- * Unregister the QASAboutService  from the bus.
+ * Unregister the AJNAboutService  from the bus.
  */
 - (void)unregister;
 
 /**
- Add object Descriptions to the QASAboutService announcement.
+ Add object Descriptions to the AJNAboutService announcement.
  @param path The path of the interface.
  @param interfaceNames The name of the interface.
  @return ER_OK if successful.

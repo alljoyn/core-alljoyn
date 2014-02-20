@@ -404,10 +404,10 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
-					"-lajdaemon",
-					"-lBundledDaemon.o",
 					"-lssl",
 					"-lcrypto",
+					"-lajrouter",
+					"-lBundledRouter.o",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
@@ -453,10 +453,10 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
-					"-lajdaemon",
-					"-lBundledDaemon.o",
 					"-lssl",
 					"-lcrypto",
+					"-lajrouter",
+					"-lBundledRouter.o",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";

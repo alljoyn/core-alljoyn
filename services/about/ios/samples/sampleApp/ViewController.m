@@ -16,10 +16,10 @@
 
 #import "ViewController.h"
 #import "AJNStatus.h"
-#import "QASAnnouncement.h"
-#import "QASAnnouncementReceiver.h"
-#import "QASAboutDataConverter.h"
-#import "QASPasswordManager.h"
+#import "AJNAnnouncement.h"
+#import "AJNAnnouncementReceiver.h"
+#import "AJNAboutDataConverter.h"
+#import "AJNPasswordManager.h"
 #import "ClientInformation.h"
 #import "AnnounceTextViewController.h"
 #import "GetAboutCallViewController.h"
@@ -36,7 +36,7 @@ static NSString * const ABOUT_ICON_INTERFACE_NAME = @"org.alljoyn.Icon";   //Abo
 
 // About Client properties
 @property (strong, nonatomic) AJNBusAttachment *clientBusAttachment;
-@property (strong, nonatomic) QASAnnouncementReceiver *announcementReceiver;
+@property (strong, nonatomic) AJNAnnouncementReceiver *announcementReceiver;
 @property (strong, nonatomic) NSString *realmBusName;
 @property (nonatomic) bool isAboutClientConnected;
 @property (strong, nonatomic) NSMutableDictionary *clientInformationDict; // Store the client related information
@@ -109,12 +109,12 @@ static NSString * const ABOUT_ICON_INTERFACE_NAME = @"org.alljoyn.Icon";   //Abo
 	}
 	else if ([segue.destinationViewController isKindOfClass:[GetIconCallViewController class]]) {
 		GetIconCallViewController *getIconCallView = segue.destinationViewController;
-		getIconCallView.qasAnnouncement = [(ClientInformation *)(self.clientInformationDict)[self.announcementButtonCurrentTitle] announcement];
+		getIconCallView.ajnAnnouncement = [(ClientInformation *)(self.clientInformationDict)[self.announcementButtonCurrentTitle] announcement];
 		getIconCallView.clientBusAttachment = self.clientBusAttachment;
 	}
 	else if ([segue.destinationViewController isKindOfClass:[AnnounceTextViewController class]]) {
 		AnnounceTextViewController *announceTextViewController = segue.destinationViewController;
-		announceTextViewController.qasAnnouncement = [(ClientInformation *)(self.clientInformationDict)[self.announcementButtonCurrentTitle] announcement];
+		announceTextViewController.ajnAnnouncement = [(ClientInformation *)(self.clientInformationDict)[self.announcementButtonCurrentTitle] announcement];
 	}
 }
 
@@ -134,7 +134,7 @@ static NSString * const ABOUT_ICON_INTERFACE_NAME = @"org.alljoyn.Icon";   //Abo
 	}
 }
 
-#pragma mark - QASAnnouncementListener protocol method
+#pragma mark - AJNAnnouncementListener protocol method
 // Here we receive an announcement from AJN and add it to the client's list of services avaialble
 - (void)announceWithVersion:(uint16_t)version
                        port:(uint16_t)port
@@ -145,11 +145,11 @@ static NSString * const ABOUT_ICON_INTERFACE_NAME = @"org.alljoyn.Icon";   //Abo
 	NSString *announcementUniqueName; // Announcement unique name in a format of <busName DeviceName>
 	ClientInformation *clientInformation = [[ClientInformation alloc] init];
     
-	// Save the announcement in a QASAnnouncement
-	clientInformation.announcement = [[QASAnnouncement alloc] initWithVersion:version port:port busName:busName objectDescriptions:objectDescs aboutData:aboutData];
+	// Save the announcement in a AJNAnnouncement
+	clientInformation.announcement = [[AJNAnnouncement alloc] initWithVersion:version port:port busName:busName objectDescriptions:objectDescs aboutData:aboutData];
     
 	// Generate an announcement unique name in a format of <busName DeviceName>
-	announcementUniqueName = [NSString stringWithFormat:@"%@ %@", [clientInformation.announcement busName], [QASAboutDataConverter messageArgumentToString:[clientInformation.announcement aboutData][@"DeviceName"]]];
+	announcementUniqueName = [NSString stringWithFormat:@"%@ %@", [clientInformation.announcement busName], [AJNAboutDataConverter messageArgumentToString:[clientInformation.announcement aboutData][@"DeviceName"]]];
     
     NSLog(@"[%@] [%@] Announcement unique name [%@]", @"DEBUG", [[self class] description], announcementUniqueName);
     
@@ -177,7 +177,7 @@ static NSString * const ABOUT_ICON_INTERFACE_NAME = @"org.alljoyn.Icon";   //Abo
 	    // Iterate over the announcements dictionary
 	    for (NSString *key in self.clientInformationDict.allKeys) {
 	        ClientInformation *clientInfo = [self.clientInformationDict valueForKey:key];
-	        QASAnnouncement *announcement = [clientInfo announcement];
+	        AJNAnnouncement *announcement = [clientInfo announcement];
 	        AJNMessageArgument *tmpMsgrg = [announcement aboutData][@"AppId"];
             
 	        tStatus = [tmpMsgrg value:@"ay", &tmpAppIdNumElements, &tmpAppIdBuffer];
@@ -380,7 +380,7 @@ static NSString * const ABOUT_ICON_INTERFACE_NAME = @"org.alljoyn.Icon";   //Abo
 
 	[self.clientBusAttachment registerBusListener:self];
     
-	self.announcementReceiver = [[QASAnnouncementReceiver alloc] initWithAnnouncementListener:self andBus:self.clientBusAttachment];
+	self.announcementReceiver = [[AJNAnnouncementReceiver alloc] initWithAnnouncementListener:self andBus:self.clientBusAttachment];
 	status = [self.announcementReceiver registerAnnouncementReceiver];
 	if (status != ER_OK) {
         NSLog(@"[%@] [%@] Failed to registerAnnouncementReceiver - exiting application", @"FATAL", [[self class] description]);
@@ -399,7 +399,7 @@ static NSString * const ABOUT_ICON_INTERFACE_NAME = @"org.alljoyn.Icon";   //Abo
 		exit(1);
 	}
     
-	status = [QASPasswordManager setCredentialsWithAuthMechanism:@"ALLJOYN_PIN_KEYX" andPassword:@"000000"];
+	status = [AJNPasswordManager setCredentialsForAuthMechanism:@"ALLJOYN_PIN_KEYX" usingPassword:@"000000"];
 	if (status != ER_OK) {
         NSLog(@"[%@] [%@] Failed to SetCredentials %@", @"FATAL", [[self class] description],[AJNStatus descriptionForStatusCode:status]);
 
@@ -463,7 +463,7 @@ static NSString * const ABOUT_ICON_INTERFACE_NAME = @"org.alljoyn.Icon";   //Abo
 - (bool)announcementHasIcon:(NSString *)announcementKey
 {
 	bool hasIconInterface = false;
-	QASAnnouncement *announcement = [(ClientInformation *)[self.clientInformationDict valueForKey:announcementKey] announcement];
+	AJNAnnouncement *announcement = [(ClientInformation *)[self.clientInformationDict valueForKey:announcementKey] announcement];
 	NSMutableDictionary *announcementObjDecs = [announcement objectDescriptions]; //Dictionary of ObjectDescriptions NSStrings
     
 	// iterate over the object descriptions dictionary

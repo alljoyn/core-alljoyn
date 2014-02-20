@@ -617,8 +617,8 @@ void _TCPEndpoint::ThreadExit(qcc::Thread* thread)
     if (thread == &m_authThread) {
         if (m_authState == AUTH_INITIALIZED) {
             m_authState = AUTH_FAILED;
-            m_transport->Alert();
         }
+        m_transport->Alert();
     }
     _RemoteEndpoint::ThreadExit(thread);
 }
@@ -629,7 +629,7 @@ QStatus _TCPEndpoint::Authenticate(void)
     /*
      * Start the authentication thread.
      */
-    QStatus status = m_authThread.Start(this);
+    QStatus status = m_authThread.Start(this, this);
     if (status != ER_OK) {
         m_authState = AUTH_FAILED;
     }
@@ -1635,20 +1635,21 @@ void* TCPTransport::Run(void* arg)
          */
         for (vector<Event*>::iterator i = signaledEvents.begin(); i != signaledEvents.end(); ++i) {
             /*
+             * The stopEvent may get set indirectly by ManageEndpoints below, so
+             * make sure to reset it before calling ManageEndpoints.
+             */
+            if (*i == &stopEvent) {
+                stopEvent.ResetEvent();
+            }
+
+            /*
              * In order to rationalize management of resources, we manage the
              * various lists in one place on one thread.  This thread is a
              * convenient victim, so we do it here.
              */
             ManageEndpoints(authTimeout, sessionSetupTimeout);
 
-            /*
-             * Reset an existing Alert() or Stop().  If it's an alert, we
-             * will deal with looking for the incoming listen requests at
-             * the bottom of the server loop.  If it's a stop we will
-             * exit the next time through the top of the server loop.
-             */
             if (*i == &stopEvent) {
-                stopEvent.ResetEvent();
                 continue;
             }
 
@@ -3245,11 +3246,26 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
          * to disallow hostnames otherwise SetAddress will attempt to treat
          * the interface name as a host name and start doing DNS lookups.
          */
+        bool any = (listenAddr == qcc::IPAddress(INADDR_ANY)) || (listenAddr == qcc::IPAddress("::"));
         IPAddress currentAddress;
         if (currentAddress.SetAddress(currentInterface, false) == ER_OK) {
-            status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, currentAddress);
+            if (any || (listenAddr == currentAddress)) {
+                status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, currentAddress);
+            } else {
+                status = ER_INVALID_ADDRESS;
+            }
         } else {
-            status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, currentInterface);
+            if (!any && (currentInterface != INTERFACES_DEFAULT)) {
+                /*
+                 * If the listenAddr is not INADDR_ANY and the interfaces is not
+                 * the interface of the listenAddr we could advertise on an
+                 * interface that we're not listening on.
+                 */
+                QCC_LogError(ER_WARNING,
+                             ("May advertise unconnectable address: IP address of '%s' may not be the same as the listen address '%s'",
+                              currentInterface.c_str(), listenAddr.ToString().c_str()));
+            }
+            status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, listenAddr);
         }
         if (status != ER_OK) {
             QCC_LogError(status, ("TCPTransport::DoStartListen(): OpenInterface() failed for %s", currentInterface.c_str()));

@@ -14,8 +14,8 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#import "QASPropertyStoreProperty.h"
-#import "QASConvertUtil.h"
+#import "AJNPropertyStoreProperty.h"
+#import "AJNConvertUtil.h"
 #import "AJNMessageArgument.h"
 
 @interface AJNMessageArgument (Private)
@@ -24,12 +24,12 @@
 
 @end
 
-@interface QASPropertyStoreProperty ()
+@interface AJNPropertyStoreProperty ()
 @property (nonatomic) ajn::services::PropertyStoreProperty *handle;
 
 @end
 
-@implementation QASPropertyStoreProperty
+@implementation AJNPropertyStoreProperty
 
 - (id)initWithHandle:(ajn::services::PropertyStoreProperty *)handle
 {
@@ -130,7 +130,7 @@
 
 - (NSString *)language
 {
-	return [QASConvertUtil convertQCCStringtoNSString:self.handle->getLanguage()];
+	return [AJNConvertUtil convertQCCStringtoNSString:self.handle->getLanguage()];
 }
 
 @end

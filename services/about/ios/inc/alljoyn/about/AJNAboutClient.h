@@ -18,11 +18,11 @@
 #import "AJNBusAttachment.h"
 
 /**
- QASAboutClient is a helper class used by an AllJoyn IoE client application to discover services being offered by nearby AllJoyn
- IoE service applications. QASAboutClient enables the user of the class to interact with the remote AboutService instance.
+ AJNAboutClient is a helper class used by an AllJoyn IoE client application to discover services being offered by nearby AllJoyn
+ IoE service applications. AJNAboutClient enables the user of the class to interact with the remote AboutService instance.
  */
 
-@interface QASAboutClient : NSObject
+@interface AJNAboutClient : NSObject
 
 /**
  Designated initializer

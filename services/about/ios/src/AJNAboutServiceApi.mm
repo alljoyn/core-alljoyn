@@ -14,19 +14,19 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#import "QASAboutServiceApi.h"
+#import "AJNAboutServiceApi.h"
 #import "AboutServiceApi.h"
 #import "PropertyStore.h"
-#import "QASPropertyStore.h"
+#import "AJNPropertyStore.h"
 
-@interface QASAboutServiceApi ()
+@interface AJNAboutServiceApi ()
 @property (nonatomic) ajn::services::AboutPropertyStoreImpl *handle;
 
 - (id)init;
 
 @end
 
-@implementation QASAboutServiceApi
+@implementation AJNAboutServiceApi
 
 // Destroy the instance after finished
 - (void)destroyInstance
@@ -41,12 +41,12 @@
 
 + (id)sharedInstance
 {
-	static QASAboutServiceApi *qasAboutServiceApi;
+	static AJNAboutServiceApi *ajnAboutServiceApi;
 	static dispatch_once_t donce;
 	dispatch_once(&donce, ^{
-	    qasAboutServiceApi = [[self alloc] init];
+	    ajnAboutServiceApi = [[self alloc] init];
 	});
-	return qasAboutServiceApi;
+	return ajnAboutServiceApi;
 }
 
 - (id)init
@@ -57,7 +57,7 @@
 }
 
 - (void)startWithBus:(AJNBusAttachment *)bus
-    andPropertyStore:(QASAboutPropertyStoreImpl *)store
+    andPropertyStore:(AJNAboutPropertyStoreImpl *)store
 {
 	if (self.isServiceStarted) {
          NSLog(@"[%@] [%@] Service already started", @"DEBUG", [[self class] description]);
