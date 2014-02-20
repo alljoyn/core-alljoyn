@@ -30,7 +30,7 @@ if platform.system() == 'Linux':
 
 elif platform.system() == 'Windows':
     default_target_os = 'win7'
-    allowed_target_oss = ('winxp', 'win7', 'win8', 'android')
+    allowed_target_oss = ('winxp', 'win7', 'android')
 
     if platform.machine() == 'x86_64':
         default_target_cpu = 'x86_64'
@@ -79,12 +79,10 @@ vars.AddVariables(('OBJDIR', '', build_dir + '/obj'),
 target_os = ARGUMENTS.get('OS', default_target_os)
 target_cpu = ARGUMENTS.get('CPU', default_target_cpu)
 
-if target_os in ['win8', 'win7', 'winxp']:
+if target_os in ['win7', 'winxp']:
     # The Win7 MSI installation package takes a long time to build. Let it be optional.
     if target_os == 'win7':
         vars.Add(EnumVariable('WIN7_MSI', 'Build the .MSI installation package', 'false', allowed_values=('false', 'true')))
-    if target_os == 'win8':
-        vars.Add(EnumVariable('APPX_CXXFLAGS', 'Include appx dependencies', 'true', allowed_values=('false', 'true')))
 
     path = []
     if os.environ.has_key('MIKTEX_HOME'):
@@ -140,10 +138,6 @@ if 'invalid' != env['BD']:
 if env['OS'] == 'linux':
     env['OS_GROUP'] = 'posix'
     env['OS_CONF'] = 'linux'
-
-elif env['OS'] == 'win8': 
-    env['OS_GROUP'] = 'winrt'
-    env['OS_CONF'] = 'winrt'
 
 elif env['OS'] in ['win7', 'winxp']:
     env['OS_GROUP'] = 'windows'
