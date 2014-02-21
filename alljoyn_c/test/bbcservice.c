@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -846,7 +846,7 @@ int main(int argc, char** argv)
     alljoyn_interfacedescription_activate(intf);
 
     /*Activate org.alljoyn.alljoyn_test.values */
-    status = alljoyn_interfacedescription_addproperty(intfvalue, "int_val", "i", ALLJOYN_PROP_ACCESS_WRITE);
+    status = alljoyn_interfacedescription_addproperty(intfvalue, "int_val", "i", ALLJOYN_PROP_ACCESS_RW);
     if (status != ER_OK) {
         printf("Could not add property %s to interface %s because of %s. \n", "int_val", INTERFACE_VALUE_NAME, QCC_StatusText(status));
         return status;
