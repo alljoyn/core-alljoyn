@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -150,7 +150,11 @@ QStatus NameTable::AddAlias(const qcc::String& aliasName,
     if (it != uniqueNames.end()) {
         unordered_map<qcc::String, deque<NameQueueEntry>, Hash, Equal>::iterator wasIt = aliasNames.find(aliasName);
         NameQueueEntry entry = { uniqueName, flags };
-        const qcc::String* origOwner = NULL;
+        /*
+         * The value of origOwner comes from data that may be freed after the lock is released, so we can't
+         * just use a pointer here, must make a copy.  newOwner does not have the same problem.
+         */
+        qcc::String origOwner;
         const qcc::String* newOwner = NULL;
 
         if (wasIt != aliasNames.end()) {
@@ -163,7 +167,7 @@ QStatus NameTable::AddAlias(const qcc::String& aliasName,
                 /* Make endpoint the current owner */
                 wasIt->second.push_front(entry);
                 disposition = DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER;
-                origOwner = &primary.endpointName;
+                origOwner = primary.endpointName;
                 newOwner = &uniqueName;
             } else {
                 if (flags & DBUS_NAME_FLAG_DO_NOT_QUEUE) {
@@ -184,7 +188,7 @@ QStatus NameTable::AddAlias(const qcc::String& aliasName,
             /* Check to see if we are overriding a virtual (remote) name */
             map<qcc::StringMapKey, VirtualEndpoint>::const_iterator vit = virtualAliasNames.find(aliasName);
             if (vit != virtualAliasNames.end()) {
-                origOwner = &vit->second->GetUniqueName();
+                origOwner = vit->second->GetUniqueName();
             }
         }
         lock.Unlock(MUTEX_CONTEXT);
@@ -193,7 +197,7 @@ QStatus NameTable::AddAlias(const qcc::String& aliasName,
             listener->AddAliasComplete(aliasName, disposition, context);
         }
         if (newOwner) {
-            CallListeners(aliasName, origOwner, newOwner);
+            CallListeners(aliasName, origOwner.empty() ? NULL : &origOwner, newOwner);
         }
         status = ER_OK;
     } else {
