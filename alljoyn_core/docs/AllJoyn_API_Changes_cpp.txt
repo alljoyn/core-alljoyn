@@ -10,6 +10,14 @@ Each Status, class, Method, Function, or MACRO will be marked as follows:
 Each addition should contain a short explanation of what added or changed.
 For more information please refer to the API documentation.
 -------------------------------------------------------------------------------
+AllJoyn API Changes between v3.4.0 and v14.02 (C++ API)
+
+DEPRECATED LISTENER CALLBACK
+SessionListener.SessionLost(SessionId sessionId)
+    callback replaced with new listener that takes two parameters
+    SessionLost(SessionId sessionId, SessionLostReason reason)
+
+-------------------------------------------------------------------------------
 AllJoyn API Changes between v3.3.2 and v3.4.0 (C++ API)
 NEW MACRO
 ALLJOYN_REMOVESESSIONMEMBER_REPLY_SUCCESS value = 1
