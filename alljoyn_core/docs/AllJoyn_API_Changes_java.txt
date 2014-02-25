@@ -10,6 +10,17 @@ Each Status, Method, or class will be marked as follows:
 Each addition should contain a short explanation of what added or changed.
 For more information please refer to the API documentation.
 -------------------------------------------------------------------------------
+AllJoyn API Changes between v3.4.0 and v14.02 (Java API)
+NEW CONSTRUCTER
+BusAttachment.BusAttachment(String applicationName, RemoteMessage policy, int concurrency)
+    Constructs a BusAttachment. New Parameter that allows setting concurrency
+    [param] applicationName - the name of the application
+    [param] policy - if this attachment is allowed to receive messages from
+                     remote devices
+    [param] concurrency - The maximum number of concurrent method and signal
+                          handlers locally executing.
+
+-------------------------------------------------------------------------------
 AllJoyn API Changes between v3.3.2 and v3.4.0 (Java API)
 NEW STATUS
 ER_IODISPATCH_STOPPING value = 0x1023
