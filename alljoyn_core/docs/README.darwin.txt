@@ -22,12 +22,12 @@ IOS is a trademark or registered trademark of Cisco in the U.S. and other countr
 Summary of file and directory structure:
 ----------------------------------------
 
-alljoyn_core/       core AllJoyn functionality, implemented in C++
+build/              core AllJoyn functionality, implemented in C++
                       - built from Git projects alljoyn_core, common, alljoyn_objc
                       - required for all AllJoyn applications
 
-    build/darwin/.../dist/cpp/inc/          headers and client libraries,
-    build/darwin/.../dist/cpp/lib/            in sub-folders by target platform.
+    darwin/.../dist/cpp/inc/                headers and client libraries,
+    darwin/.../dist/cpp/lib/                  in sub-folders by target platform.
 
     docs/html/                              AllJoyn Core API documentation
     AllJoyn_API_Changes_cpp.txt

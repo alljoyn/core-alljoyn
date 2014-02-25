@@ -68,7 +68,9 @@ Installation
 
 Tour
 
-The SDK contains an alljoyn_core folder and an alljoyn_objc folder.
+The SDK contains a "build" folder and an "alljoyn_objc" folder. "Build" contains the AllJoyn
+Core Standard Client libraries for each of the supported binary types.  These libraries are used
+by the AllJoyn Obj-C binding found in alljoyn_objc.
 
 Samples for iOS and OS/X. The samples are located under alljoyn_objc/samples.
 
