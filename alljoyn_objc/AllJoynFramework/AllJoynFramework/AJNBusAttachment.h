@@ -26,6 +26,7 @@
 #import "AJNSessionPortListener.h"
 #import "AJNSignalHandler.h"
 #import "AJNStatus.h"
+#import "AJNInterfaceDescription.h"
 
 @protocol AJNBusObject;
 
@@ -240,7 +241,39 @@ typedef void (^ AJNLinkTimeoutBlock)(QStatus status, uint32_t timeout, void *con
  * @return  - Interface description
  *          - nil if cannot be created.
  */
+
 - (AJNInterfaceDescription *)createInterfaceWithName:(NSString *)interfaceName enableSecurity:(BOOL)shouldEnableSecurity;
+
+/**
+ * Create an interface description with a given name.
+ *
+ * Typically, interfaces that are implemented by BusObjects are created here.
+ * Interfaces that are implemented by remote objects are added automatically by
+ * the bus if they are not already present via ProxyBusObject::IntrospectRemoteObject().
+ *
+ * Because interfaces are added both explicitly (via this method) and implicitly
+ * (via ProxyBusObject::IntrospectRemoteObject), there is the possibility that creating
+ * an interface here will fail because the interface already exists. If this happens, the
+ * ER_BUS_IFACE_ALREADY_EXISTS will be returned and NULL will be returned in the iface [OUT]
+ * parameter.
+ *
+ * Interfaces created with this method need to be activated using InterfaceDescription::Activate()
+ * once all of the methods, signals, etc have been added to the interface. The interface will
+ * be unaccessible (via BusAttachment::GetInterfaces() or BusAttachment::GetInterface()) until
+ * it is activated.
+ *
+ * @param name   The requested interface name.
+ * @param[out] iface
+ *      - Interface description
+ *      - NULL if cannot be created.
+ * @param secPolicy The security policy for this interface
+ *
+ * @return
+ *      - #ER_OK if creation was successful.
+ *      - #ER_BUS_IFACE_ALREADY_EXISTS if requested interface already exists
+ */
+
+- (AJNInterfaceDescription *)createInterfaceWithName:(NSString *)interfaceName withInterfaceSecPolicy:(enum AJNInterfaceSecurityPolicy)interfaceSecurityPolicy;
 
 /**
  * Retrieve an existing activated InterfaceDescription.

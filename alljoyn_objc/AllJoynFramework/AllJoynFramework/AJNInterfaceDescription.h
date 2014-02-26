@@ -76,10 +76,10 @@
  * required even when the implemented by a secure object. For example, security does not apply to
  * the Introspection interface otherwise secure objects would not be introspectable.
  */
-typedef enum{
-    AJ_IFC_SECURITY_INHERIT,       /**< Inherit the security of the object that implements the interface */
-    AJ_IFC_SECURITY_REQUIRED,      /**< Security is required for an interface */
-    AJ_IFC_SECURITY_OFF            /**< Security does not apply to this interface */
+typedef enum AJNInterfaceSecurityPolicy{
+    AJN_IFC_SECURITY_INHERIT=0,       /**< Inherit the security of the object that implements the interface */
+    AJN_IFC_SECURITY_REQUIRED=1,      /**< Security is required for an interface */
+    AJN_IFC_SECURITY_OFF=2            /**< Security does not apply to this interface */
 }AJNInterfaceSecurityPolicy;
 
 /**
@@ -88,6 +88,7 @@ typedef enum{
  * @return Returns the security policy for this interface.
  */
 @property (readonly, nonatomic) AJNInterfaceSecurityPolicy securityPolicy;
+
 
 /**
  * Add a method call member to the interface.
