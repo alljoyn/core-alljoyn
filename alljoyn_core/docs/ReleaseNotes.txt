@@ -1,5 +1,5 @@
-AllJoyn Version 3.4.3 Release Notes
------------------------------------
+AllJoyn Version 14.02.00 Release Notes
+--------------------------------------
 
 Platform Support
 ----------------
@@ -9,45 +9,85 @@ Platform Support
  4) Android JellyBean 4.1 (ARM7)
  5) Windows 7 (32 and 64 bit x86)
  6) Windows 8 (32 and 64 bit x86)
- 7) Windows RT (ARM)
- 8) iOS 7
- 9) OSX 10.7 Lion
-10) OpenWRT (trunk)
+ 7) iOS 7
+ 8) OSX 10.7 Lion
+ 9) OpenWRT (trunk)
 
 
-Features added in Version 3.4.3
--------------------------------
+Features added in Version 14.02.00
+----------------------------------
 
-None
+About feature support added for iOS.
 
 
-Issues Addressed in Version 3.4.3
----------------------------------
+Issues Addressed in Version 14.02.00
+------------------------------------
 
-ALLJOYN-2431: Support configuring databits, parity, and stopbits of SLAP
-transport.
+AJCORE-221: Added DISCONN and DISCONN_RESP messages as a part of the SLAP
+protocol.
 
-ALLJOYN-2483: Final cancel of advertisement is not sent if application
-terminates abruptly.
+AJCORE-283: Enable the ipv4 loopback interface for the name service.
 
-ALLJOYN-2502: Increase timeout of session route setup to be more robust under
-stressful conditions.
+AJCORE-300: Check that our advertised IPv4 address is correct before sending out
+advertisement.
 
-ALLJOYN-2507: LostAdvertisedName not always triggered for quiet advertisements.
+AJCORE-339: AuthJoin endpoints in addition to Joining them, to fix the crash
+that occurs if the endpoint exits before the auth thread has been joined.
 
-ALLJOYN-2514: Authentication error between little-endian and big-endian hosts.
+AJCORE-701: ProxyBusObject MethodCall() timeout is not honored in C++ on darwin.
 
-ALLJOYN-VARIOUS: Added support to JavaScript bindings for new API changes to
-report reason for lost session.
+AJCORE-702: Remove default support for rendezvous server.
 
-ALLJOYN-VARIOUS: Added support to JavaScript bindings for new API changes to
-allow removal of member from multipoint session.
+AJCORE-712: XML parser should allow singles quotes around attributes.
+
+AJCORE-720: XmlElement constructor does not properly add children to parent
+element.
+
+AJCORE-733: Avoid propagating names over sessions created for SLS.
+
+AJCORE-740: Change order of StartStream and RegisterEndpoint to fix
+deadlock.
+
+AJCORE-762: Fix assert failure in IODispatch for ctxt->type.
+
+AJCORE-780: Added a new BusAttachment constructor to Java that allows the
+programmer to specify the maximum number of concurrent methods and signal
+handlers.
+
+AJCORE-783: Fix deadlock in NullTransport::Disconnect
+
+AJCORE-788: Fix IpNameService to not ignore packets from other higher capable
+NS.
+
+AJCORE-802: Add AJNPasswordManager.h/.mm reference to all .xcodeproj files.
+
+AJCORE-806: Update AndroidManifest.xml files to specify minSdkVersion of
+Gingerbread.
+
+AJCORE-807: Ignore lower version Who-HAS packet if it is known that the remote
+router supports higher version.
+
+AJCORE-809: Endpoint is not cleaned up if the auth thread is stopped before it
+enters the Run() function.
+
+AJCORE-817: SendLostAdvertisedName must not be called with the NameTable
+lock.lock.
+
+AJCORE-820: JoinSession fails in stress mode because the SessionHost endpoint
+was not found.
+
+AJCORE-824: Don't advertise over interfaces we're not listening on.
+
+AJCORE-847: Timer controller thread must create a worker thread only after
+grabbing the re-entrancy lock.
+
+AJCORE-859: Compute netmask for IPv4 interfaces on darwin correctly.
+
+AJCORE-872: Fix crash when pointing to freed data in NameTable::AddAlias.
 
 
 Known Issues
 ------------
-
-About feature not yet supported on platforms other than Linux and Android.
 
 ALLJOYN-1967: AllJoyn router cannot (quickly) detect disconnection of non-local
 client connection such as thin-client connection
@@ -60,15 +100,7 @@ than 55KB
 ALLJOYN-2504: Calling GetPeerGUID from RequestCredentialsAsync callback may
 cause deadlock when AllJoyn is built with OpenSSL without multi-thread support
 
-ALLJOYN-VARIOUS: JavaScript and Win8/RT language bindings do not currently
-support the new object based security APIs.
-
-ALLJOYN-VARIOUS: Win8/RT bindings do not currently support new API changes to
-report reason for lost session
-
-ALLJOYN-VARIOUS: Win8/RT bindings do not currently support new API changes to
-allow removal of member from multipoint session
-
+AJCORE-271: Infrequent crash when running thread stress test on OpenWRT.
 
 Compatibility
 -------------
@@ -123,9 +155,15 @@ Version 3.4 of the AllJoyn ICE transport changed the hostname for the Rendezvous
 server from rdvz.alljoyn.org to connect.alljoyn.org. As a result, pre-3.4 versions
 of AllJoyn cannot discover or connect using the ICE transport.
 
+Version 14.02.00 renamed libajdaemon.a and BundledDaemon.o to libajrouter.a and
+BundledRouter.o to match the AllJoyn terminology of leaf and router nodes.
 
 Change history
 --------------
+
+14.02.00 - Bug fixes.  Removed support for Windows RT.
+
+3.4.6 - Bug fixes.  Improve CPU and memory usage when using sessionless signals.
 
 3.4.3 - Bug fixes.
 
