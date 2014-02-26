@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -304,13 +304,11 @@ void SessionlessObj::RemoveRule(const qcc::String& epName, Rule& rule)
         router.LockNameTable();
         lock.Lock();
         map<String, uint32_t>::iterator it = ruleCountMap.find(epName);
-        if (it != ruleCountMap.end()) {
-            if (--it->second == 0) {
-                ruleCountMap.erase(it);
-            }
+        if (it != ruleCountMap.end() && it->second) {
+            --it->second;
         }
 
-        if (isDiscoveryStarted && ruleCountMap.empty()) {
+        if (isDiscoveryStarted && RuleCount() == 0) {
             bus.EnableConcurrentCallbacks();
             QStatus status = bus.CancelFindAdvertisedNameByTransport(findPrefix.c_str(), TRANSPORT_ANY & ~TRANSPORT_ICE & ~TRANSPORT_LOCAL);
             if (status != ER_OK) {
@@ -531,7 +529,7 @@ void SessionlessObj::NameOwnerChanged(const String& name,
         }
 
         /* Stop discovery if nobody is looking for sessionless signals */
-        if (isDiscoveryStarted && ruleCountMap.empty()) {
+        if (isDiscoveryStarted && RuleCount() == 0) {
             QStatus status = bus.CancelFindAdvertisedNameByTransport(findPrefix.c_str(), TRANSPORT_ANY & ~TRANSPORT_ICE & ~TRANSPORT_LOCAL);
             if (status != ER_OK) {
                 QCC_LogError(status, ("CancelFindAdvertisedNameByTransport failed"));
@@ -992,6 +990,15 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId id, const SessionOp
     }
 
     delete ctx1;
+}
+
+uint32_t SessionlessObj::RuleCount() const
+{
+    uint32_t count = 0;
+    for (map<String, uint32_t>::const_iterator it = ruleCountMap.begin(); it != ruleCountMap.end(); ++it) {
+        count += it->second;
+    }
+    return count;
 }
 
 }

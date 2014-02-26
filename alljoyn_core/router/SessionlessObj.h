@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -249,6 +249,15 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param sessionId    Session id of lost session.
      */
     void DoSessionLost(uint32_t sessionId);
+
+    /**
+     * Returns the number of rules that specify sessionless=TRUE.
+     *
+     * This must be called with this lock.
+     *
+     * @return the number of rules that specify sessionless=TRUE.
+     */
+    uint32_t RuleCount() const;
 
     Bus& bus;                             /**< The bus */
     BusController* busController;         /**< BusController that created this BusObject */
