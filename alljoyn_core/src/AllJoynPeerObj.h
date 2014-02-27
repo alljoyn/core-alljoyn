@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2012,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -66,11 +66,13 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     /**
      * Initialize and register this AllJoynPeerObj instance.
      *
+     * @param bus          Bus to associate with /org/alljoyn/Bus/Peer message handler.
+     *
      * @return
      *      - ER_OK if successful.
      *      - An error status otherwise
      */
-    QStatus Init();
+    QStatus Init(BusAttachment& bus);
 
     /**
      * Called when object is successfully registered.

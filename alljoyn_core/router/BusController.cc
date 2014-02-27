@@ -8,7 +8,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -42,7 +42,7 @@ BusController::BusController(Bus& alljoynBus, AuthListener* authListener) :
     alljoynObj(bus, this),
     sessionlessObj(bus, this),
 #ifndef NDEBUG
-    alljoynDebugObj(bus, this),
+    alljoynDebugObj(this),
 #endif
     initComplete(false)
 
