@@ -11,7 +11,6 @@ AllJoyn Programming Guide for the Objective-C Language
 Minimum Requirements for AllJoyn Development System
 
 1. OS/X 10.7 (Lion) or higher
-2. Xcode 4.5 or higher
 
 Prerequisites
 
