@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -152,19 +152,19 @@ QStatus RuleTable::AddRule(BusEndpoint& endpoint, const Rule& rule)
 
 QStatus RuleTable::RemoveRule(BusEndpoint& endpoint, Rule& rule)
 {
+    QStatus status = ER_BUS_MATCH_RULE_NOT_FOUND;
     Lock();
-
-    //std::pair<std::multimap<BusEndpoint, Rule>::const_iterator, RuleIterator> range = rules.equal_range(endpoint);
     std::pair<RuleIterator, RuleIterator> range = rules.equal_range(endpoint);
     while (range.first != range.second) {
         if (range.first->second == rule) {
             rules.erase(range.first);
+            status = ER_OK;
             break;
         }
         ++range.first;
     }
     Unlock();
-    return ER_OK;
+    return status;
 }
 
 QStatus RuleTable::RemoveAllRules(BusEndpoint& endpoint)
