@@ -96,6 +96,25 @@ if target_os in ['win8', 'win7', 'winxp']:
 else:
     env = Environment(variables = vars, tools = ['gnulink', 'gcc', 'g++', 'ar', 'as', 'javac', 'javah', 'jar', 'pdf', 'pdflatex'])
 
+if os.environ.has_key('CROSS_PREFIX'):
+    env.Replace(CC = os.environ['CROSS_PREFIX'] + 'gcc')
+    env.Replace(CXX = os.environ['CROSS_PREFIX'] + 'g++')
+    env.Replace(LINK = os.environ['CROSS_PREFIX'] + 'gcc')
+    env.Replace(AR = os.environ['CROSS_PREFIX'] + 'ar')
+    env['ENV']['STAGING_DIR'] = os.environ.get('STAGING_DIR', '')
+
+if os.environ.has_key('CROSS_PATH'):
+    env['ENV']['PATH'] = ':'.join([ os.environ['CROSS_PATH'], env['ENV']['PATH'] ] )
+
+if os.environ.has_key('CROSS_CFLAGS'):
+    env.Append(CFLAGS=os.environ['CROSS_CFLAGS'].split())
+
+if os.environ.has_key('CROSS_CPPFLAGS'):
+    env.Append(CPPFLAGS=os.environ['CROSS_CPPFLAGS'].split())
+
+if os.environ.has_key('CROSS_LINKFLAGS'):
+    env.Append(LINKFLAGS=os.environ['CROSS_LINKFLAGS'].split())
+
 if env['V'] == '0':
     env.Replace(CCCOMSTR =     '\t[CC]      $SOURCE',
                 SHCCCOMSTR =   '\t[CC-SH]   $SOURCE',
