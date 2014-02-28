@@ -2,8 +2,10 @@
 Makefile-based build instructions for AllJoyn core and daemon
 -------------------------------------------------------------
 
-The makefile in this directory works only on Ubuntu x86, It builds 
-the AllJoyn daemon, client library and daemon support library.
+The makefile in this directory works only on Ubuntu x86, and only if
+certain files (such as Status.h, Status.cc, and version.cc) are
+manually created. It builds the AllJoyn daemon, client library and
+daemon support library.
 
     Note:  The Makefiles found under "samples" are not part of this Make build.
     Those Makefiles have always been part of the native-code sample programs for
