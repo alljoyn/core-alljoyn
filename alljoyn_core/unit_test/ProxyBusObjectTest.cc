@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -44,13 +44,56 @@ class ProxyBusObjectTestMethodHandlers {
     }
 };
 
+bool auth_complete_listener1_flag;
+bool auth_complete_listener2_flag;
+class ProxyBusObjectTestAuthListenerOne : public AuthListener {
+
+    QStatus RequestCredentialsAsync(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, void* context)
+    {
+        Credentials creds;
+        EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
+        if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
+            if (credMask & AuthListener::CRED_PASSWORD) {
+                creds.SetPassword("123456");
+            }
+            return RequestCredentialsResponse(context, true, creds);
+        }
+        return RequestCredentialsResponse(context, false, creds);
+    }
+
+    void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
+        EXPECT_TRUE(success);
+        auth_complete_listener1_flag = true;
+    }
+};
+
+class ProxyBusObjectTestAuthListenerTwo : public AuthListener {
+
+    QStatus RequestCredentialsAsync(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, void* context)
+    {
+        Credentials creds;
+        creds.SetPassword("123456");
+        return RequestCredentialsResponse(context, true, creds);
+    }
+
+    void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+
+        EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
+        EXPECT_TRUE(success);
+        auth_complete_listener2_flag = true;
+    }
+};
+
 class ProxyBusObjectTest : public testing::Test {
   public:
     ProxyBusObjectTest() :
         status(ER_FAIL),
         bus("ProxyBusObjectTest", false),
-        servicebus("ProxyBusObjectTestservice", false)
-    { };
+        servicebus("ProxyBusObjectTestservice", false),
+        proxyBusObjectTestAuthListenerOne(NULL),
+        proxyBusObjectTestAuthListenerTwo(NULL)
+    { }
 
     virtual void SetUp() {
         status = bus.Start();
@@ -62,6 +105,8 @@ class ProxyBusObjectTest : public testing::Test {
     virtual void TearDown() {
         bus.Stop();
         bus.Join();
+        delete proxyBusObjectTestAuthListenerOne;
+        delete proxyBusObjectTestAuthListenerTwo;
     }
 
     void SetUpProxyBusObjectTestService()
@@ -176,6 +221,9 @@ class ProxyBusObjectTest : public testing::Test {
     BusAttachment servicebus;
 
     ProxyBusObjectTestBusListener buslistener;
+
+    ProxyBusObjectTestAuthListenerOne* proxyBusObjectTestAuthListenerOne;
+    ProxyBusObjectTestAuthListenerTwo* proxyBusObjectTestAuthListenerTwo;
 };
 
 
@@ -222,47 +270,6 @@ TEST_F(ProxyBusObjectTest, ParseXml) {
     EXPECT_STREQ(expectedIntrospect, introspect.c_str());
 }
 
-bool auth_complete_listener1_flag;
-bool auth_complete_listener2_flag;
-class ProxyBusObjectTestAuthListenerOne : public AuthListener {
-
-    QStatus RequestCredentialsAsync(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, void* context)
-    {
-        Credentials creds;
-        EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
-        if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
-            if (credMask & AuthListener::CRED_PASSWORD) {
-                creds.SetPassword("123456");
-            }
-            return RequestCredentialsResponse(context, true, creds);
-        }
-        return RequestCredentialsResponse(context, false, creds);
-    }
-
-    void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
-        EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
-        EXPECT_TRUE(success);
-        auth_complete_listener1_flag = true;
-    }
-};
-
-class ProxyBusObjectTestAuthListenerTwo : public AuthListener {
-
-    QStatus RequestCredentialsAsync(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, void* context)
-    {
-        Credentials creds;
-        creds.SetPassword("123456");
-        return RequestCredentialsResponse(context, true, creds);
-    }
-
-    void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
-
-        EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
-        EXPECT_TRUE(success);
-        auth_complete_listener2_flag = true;
-    }
-};
-
 TEST_F(ProxyBusObjectTest, SecureConnection) {
     auth_complete_listener1_flag = false;
     auth_complete_listener2_flag = false;
@@ -289,12 +296,13 @@ TEST_F(ProxyBusObjectTest, SecureConnection) {
 
     status = servicebus.RequestName(OBJECT_NAME, 0);
 
-    status = servicebus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", new ProxyBusObjectTestAuthListenerOne());
+    proxyBusObjectTestAuthListenerOne = new ProxyBusObjectTestAuthListenerOne();
+    status = servicebus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", proxyBusObjectTestAuthListenerOne);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     servicebus.ClearKeyStore();
 
-
-    status = bus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", new ProxyBusObjectTestAuthListenerTwo());
+    proxyBusObjectTestAuthListenerTwo = new ProxyBusObjectTestAuthListenerTwo();
+    status = bus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", proxyBusObjectTestAuthListenerTwo);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     bus.ClearKeyStore();
 
@@ -331,12 +339,13 @@ TEST_F(ProxyBusObjectTest, SecureConnectionAsync) {
 
     status = servicebus.RequestName(OBJECT_NAME, 0);
 
-    status = servicebus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", new ProxyBusObjectTestAuthListenerOne());
+    proxyBusObjectTestAuthListenerOne = new ProxyBusObjectTestAuthListenerOne();
+    status = servicebus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", proxyBusObjectTestAuthListenerOne);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     servicebus.ClearKeyStore();
 
-
-    status = bus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", new ProxyBusObjectTestAuthListenerTwo());
+    proxyBusObjectTestAuthListenerTwo = new ProxyBusObjectTestAuthListenerTwo();
+    status = bus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", proxyBusObjectTestAuthListenerTwo);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     bus.ClearKeyStore();
 
@@ -416,6 +425,7 @@ TEST_F(ProxyBusObjectTest, GetChildren) {
 
     ProxyBusObject* removedProxyChild = proxyObj.GetChild("/org/alljoyn/test/ProxyObjectTest/ChildOne");
     EXPECT_EQ(NULL, removedProxyChild);
+    delete [] children;
 }
 
 // ALLJOYN-1908

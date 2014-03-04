@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2011-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -253,7 +253,7 @@ TEST(MarshalTest, NestedArraysAndStructs) {
 TEST(MarshalTest, TestMsgUnpack) {
     QStatus status = ER_OK;
 
-    BusAttachment*bus = new BusAttachment("TestMsgUnPack", false);
+    BusAttachment* bus = new BusAttachment("TestMsgUnPack", false);
     bus->Start();
 
     TestPipe stream;
@@ -693,6 +693,7 @@ QStatus MarshalTests()
         if (status == ER_OK) {
             status = TestMarshal(&arg, 1, result);
         }
+        arg.SetOwnershipFlags(MsgArg::OwnsArgs);
     }
     if (!fuzzing) {
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
@@ -717,6 +718,7 @@ QStatus MarshalTests()
         if (status == ER_OK) {
             status = TestMarshal(&dict, 1);
         }
+        dict.SetOwnershipFlags(MsgArg::OwnsArgs, true);
     }
     if (!fuzzing) {
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
@@ -922,6 +924,7 @@ QStatus MarshalTests()
         if (status == ER_OK) {
             status = TestMarshal(&arg, 1, result);
         }
+        arg.SetOwnershipFlags(MsgArg::OwnsArgs, true);
     }
     if (!fuzzing) {
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();

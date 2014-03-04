@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -43,40 +43,31 @@ const char* InterfaceName3 = "org.alljoyn.test_services.values.dummy.Interface3"
 }   // end of cl
 
 /* Client setup */
-ClientSetup::ClientSetup(const char* default_bus_addr)
+ClientSetup::ClientSetup(const char* default_bus_addr) :
+    clientMsgBus("clientSetup", true)
 {
     QStatus status = ER_OK;
     {
-        clientMsgBus = new BusAttachment("clientSetup", true);
-
         /* Get env vars */
         Environ*env = Environ::GetAppEnviron();
         clientArgs = env->Find("BUS_ADDRESS", default_bus_addr);
 
         /* Start the msg bus */
-        status = clientMsgBus->Start();
+        status = clientMsgBus.Start();
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Client bus start failed";
 
         if (status == ER_OK) {
             /* Connect to the Bus */
-            status = clientMsgBus->Connect(clientArgs.c_str());
+            status = clientMsgBus.Connect(clientArgs.c_str());
             EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Client Bus connect failed";
         }
     }
     return;
 }
 
-ClientSetup::~ClientSetup()
-{
-    /* Deallocate bus */
-    BusAttachment* deleteMe = clientMsgBus;
-    clientMsgBus = NULL;
-    delete deleteMe;
-}
-
 BusAttachment* ClientSetup::getClientMsgBus()
 {
-    return clientMsgBus;
+    return &clientMsgBus;
 }
 
 qcc::String ClientSetup::getClientArgs()
@@ -88,13 +79,12 @@ QStatus ClientSetup::MethodCall(int noOfCalls, int type)
 {
     QStatus status = ER_OK;
 
-    assert(clientMsgBus);
-    ProxyBusObject remoteObj(*clientMsgBus,
+    ProxyBusObject remoteObj(clientMsgBus,
                              ::cl::org::alljoyn::alljoyn_test::WellKnownName,
                              ::cl::org::alljoyn::alljoyn_test::ObjectPath,
                              0);
 
-    Message reply(*clientMsgBus);
+    Message reply(clientMsgBus);
 
     status = remoteObj.IntrospectRemoteObject();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Problem while introspecting remote object";
@@ -226,14 +216,13 @@ QStatus ClientSetup::AsyncMethodCall(int noOfCalls, int type)
 {
     QStatus status = ER_OK;
 
-    assert(clientMsgBus);
     ProxyBusObject remoteObj(
-        *clientMsgBus,
+        clientMsgBus,
         ::cl::org::alljoyn::alljoyn_test::WellKnownName,
         ::cl::org::alljoyn::alljoyn_test::ObjectPath,
         0);
 
-    Message reply(*clientMsgBus);
+    Message reply(clientMsgBus);
 
     status = remoteObj.IntrospectRemoteObject();
 
@@ -298,9 +287,8 @@ QStatus ClientSetup::SignalHandler(int noOfCalls, int type)
     const InterfaceDescription::Member* mysignal_2 = NULL;
 
     /* Create a remote object */
-    assert(clientMsgBus);
-    ProxyBusObject remoteObj(*clientMsgBus, ::cl::org::alljoyn::alljoyn_test::WellKnownName, ::cl::org::alljoyn::alljoyn_test::ObjectPath, 0);
-    Message reply(*clientMsgBus);
+    ProxyBusObject remoteObj(clientMsgBus, ::cl::org::alljoyn::alljoyn_test::WellKnownName, ::cl::org::alljoyn::alljoyn_test::ObjectPath, 0);
+    Message reply(clientMsgBus);
 
     status = remoteObj.IntrospectRemoteObject();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Problem while introspecting the remote object";
@@ -317,10 +305,10 @@ QStatus ClientSetup::SignalHandler(int noOfCalls, int type)
     assert("mysignal_2");
 
     /* register the signal handler for the the 'my_signal' signal */
-    status =  clientMsgBus->RegisterSignalHandler(this,
-                                                  static_cast<MessageReceiver::SignalHandler>(&ClientSetup::MySignalHandler),
-                                                  mysignal,
-                                                  NULL);
+    status =  clientMsgBus.RegisterSignalHandler(this,
+                                                 static_cast<MessageReceiver::SignalHandler>(&ClientSetup::MySignalHandler),
+                                                 mysignal,
+                                                 NULL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: "
                              << QCC_StatusText(status)
                              << " Problem while registering signal handler";
@@ -329,21 +317,21 @@ QStatus ClientSetup::SignalHandler(int noOfCalls, int type)
     }
 
     /* register the signal handler for the the 'my_signal' signal */
-    status =  clientMsgBus->RegisterSignalHandler(this,
-                                                  static_cast<MessageReceiver::SignalHandler>(&ClientSetup::MySignalHandler2),
-                                                  mysignal_2,
-                                                  NULL);
+    status =  clientMsgBus.RegisterSignalHandler(this,
+                                                 static_cast<MessageReceiver::SignalHandler>(&ClientSetup::MySignalHandler2),
+                                                 mysignal_2,
+                                                 NULL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: "
                              << QCC_StatusText(status)
                              << " Problem while registering signal handler";
 
     /* add the match rules */
-    status = clientMsgBus->AddMatch("type='signal',interface='org.alljoyn.test_services.Interface',member='my_signal1'");
+    status = clientMsgBus.AddMatch("type='signal',interface='org.alljoyn.test_services.Interface',member='my_signal1'");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: "
                              << QCC_StatusText(status)
                              << "Failed to register Match rule for 'org.alljoyn.test_services.my_signal1'";
 
-    status = clientMsgBus->AddMatch("type='signal',interface='org.alljoyn.test_services.Interface',member='my_signal_string'");
+    status = clientMsgBus.AddMatch("type='signal',interface='org.alljoyn.test_services.Interface',member='my_signal_string'");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: "
                              << QCC_StatusText(status)
                              << "Failed to register Match rule for 'org.alljoyn.test_services.my_signal_string'";

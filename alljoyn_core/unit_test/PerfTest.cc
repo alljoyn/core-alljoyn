@@ -4,7 +4,7 @@
  * automation framework.
  */
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -31,9 +31,34 @@
 /* client waits for this event during findAdvertisedName */
 static Event g_discoverEvent;
 
+/** Client Listener to receive advertisements  */
+class ClientBusListener : public BusListener {
+  public:
+    ClientBusListener() : BusListener() { }
+
+    void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
+    {
+        //QCC_SyncPrintf("FoundAdvertisedName(name=%s, transport=0x%x, prefix=%s)\n", name, transport, namePrefix);
+        g_discoverEvent.SetEvent();
+    }
+
+    void LostAdvertisedName(const char* name, const char* guid, const char* prefix, const char* busAddress)
+    {
+        //QCC_SyncPrintf("LostAdvertisedName(name=%s, guid=%s, prefix=%s, addr=%s)\n", name, guid, prefix, busAddress);
+    }
+};
+
 class PerfTest : public::testing::Test {
   protected:
-    static void SetUpTestCase() {
+    PerfTest() : serviceBus(NULL),
+        myService(NULL),
+        serviceTestObject(NULL),
+        myBusListener(NULL),
+        clientListener(NULL)
+    { }
+
+    virtual void SetUp()
+    {
         QStatus status = ER_OK;
         InterfaceDescription* regTestIntf = NULL;
 
@@ -47,10 +72,10 @@ class PerfTest : public::testing::Test {
             /* Connect to the daemon and wait for the bus to exit */
             status = serviceBus->Connect(getConnectArg().c_str());
         }
-        ServiceObject* myService = new ServiceObject(*serviceBus, "/org/alljoyn/test_services");
+        myService = new ServiceObject(*serviceBus, "/org/alljoyn/test_services");
 
         /* Invoking the Bus Listener */
-        MyBusListener* myBusListener = new MyBusListener();
+        myBusListener = new MyBusListener();
         serviceBus->RegisterBusListener(*myBusListener);
 
 
@@ -116,8 +141,7 @@ class PerfTest : public::testing::Test {
 
         /* Adding the second object */
         status = ER_OK;
-        ServiceTestObject* serviceTestObject = new ServiceTestObject(*serviceBus,
-                                                                     myService->getServiceObjectPath());
+        serviceTestObject = new ServiceTestObject(*serviceBus, myService->getServiceObjectPath());
 
         InterfaceDescription* regTestIntf2 = NULL;
         status = serviceBus->CreateInterface(myService->getServiceInterfaceName(), regTestIntf2);
@@ -165,16 +189,32 @@ class PerfTest : public::testing::Test {
         status =  serviceBus->RegisterBusObject(*serviceTestObject);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     }
-    static void TearDownTestCase() {
+
+    virtual void TearDown() {
         BusAttachment* deleteMe = serviceBus;
         serviceBus = NULL;
         delete deleteMe;
+        ServiceTestObject* deleteTestObj = serviceTestObject;
+        serviceTestObject = NULL;
+        delete deleteTestObj;
+        ServiceObject* deleteServiceObject = myService;
+        myService = NULL;
+        delete deleteServiceObject;
+        MyBusListener* deleteBusListener = myBusListener;
+        myBusListener = NULL;
+        delete deleteBusListener;
+        delete clientListener;
     }
 
-    static BusAttachment* serviceBus;
+    BusAttachment* serviceBus;
+
+    ServiceObject* myService;
+    ServiceTestObject* serviceTestObject;
+    MyBusListener* myBusListener;
+    ClientBusListener* clientListener;
 };
 
-BusAttachment* PerfTest::serviceBus = NULL;
+//BusAttachment* PerfTest::serviceBus = NULL;
 
 TEST_F(PerfTest, Introspect_CorrectParameters)
 {
@@ -452,7 +492,7 @@ TEST_F(PerfTest, BusObject_ALLJOYN_328_BusObject_destruction)
     serviceBus->Start();
 
     /* Dynamically create a BusObject and register it with the Bus */
-    BusObject*obj1 = new  BusObject("/home/narasubr", true);
+    BusObject* obj1 = new  BusObject("/home/narasubr", true);
 
     QStatus status = serviceBus->RegisterBusObject(*obj1);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -461,7 +501,7 @@ TEST_F(PerfTest, BusObject_ALLJOYN_328_BusObject_destruction)
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     /*Delete the bus object..Now as per fix for ALLJOYN-328 deregisterbusobject will be called */
-    BusObject*obj2 = obj1;
+    BusObject* obj2 = obj1;
     obj1 = NULL;
     delete obj2;
     //TODO nothing is checked after Deleting the busObject what should this test be looking for?
@@ -561,23 +601,6 @@ TEST_F(PerfTest, Marshal_ByteArrayTest) {
     delete [] bigd;
 }
 
-/** Client Listener to receive advertisements  */
-class ClientBusListener : public BusListener {
-  public:
-    ClientBusListener() : BusListener() { }
-
-    void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
-    {
-        //QCC_SyncPrintf("FoundAdvertisedName(name=%s, transport=0x%x, prefix=%s)\n", name, transport, namePrefix);
-        g_discoverEvent.SetEvent();
-    }
-
-    void LostAdvertisedName(const char* name, const char* guid, const char* prefix, const char* busAddress)
-    {
-        //QCC_SyncPrintf("LostAdvertisedName(name=%s, guid=%s, prefix=%s, addr=%s)\n", name, guid, prefix, busAddress);
-    }
-};
-
 TEST_F(PerfTest, FindAdvertisedName_MatchAll_Success)
 {
     QStatus status = ER_OK;
@@ -589,7 +612,7 @@ TEST_F(PerfTest, FindAdvertisedName_MatchAll_Success)
     g_discoverEvent.ResetEvent();
 
     /* Initializing the bus listener */
-    ClientBusListener*clientListener = new ClientBusListener();
+    clientListener = new ClientBusListener();
     client_msgBus->RegisterBusListener(*clientListener);
 
     /* find every name */
@@ -598,7 +621,6 @@ TEST_F(PerfTest, FindAdvertisedName_MatchAll_Success)
 
     status = Event::Wait(g_discoverEvent, 5000);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
 }
 
 TEST_F(PerfTest, FindAdvertisedName_MatchExactName_Success)
@@ -615,7 +637,7 @@ TEST_F(PerfTest, FindAdvertisedName_MatchExactName_Success)
     g_discoverEvent.ResetEvent();
 
     /* Initializing the bus listener */
-    ClientBusListener*clientListener = new ClientBusListener();
+    clientListener = new ClientBusListener();
     client_msgBus->RegisterBusListener(*clientListener);
 
     /* find every name */
@@ -641,7 +663,7 @@ TEST_F(PerfTest, FindAdvertisedName_InvalidName_Fail)
     g_discoverEvent.ResetEvent();
 
     /* Initializing the bus listener */
-    ClientBusListener*clientListener = new ClientBusListener();
+    clientListener = new ClientBusListener();
     client_msgBus->RegisterBusListener(*clientListener);
 
     /* invalid name find */
@@ -651,7 +673,6 @@ TEST_F(PerfTest, FindAdvertisedName_InvalidName_Fail)
     QCC_SyncPrintf("Waiting FoundAdvertisedName 3 seconds...\n");
     status = Event::Wait(g_discoverEvent, 3000);
     ASSERT_EQ(ER_TIMEOUT, status);
-
 }
 
 TEST_F(PerfTest, JoinSession_BusNotConnected_Fail)
@@ -732,7 +753,7 @@ TEST_F(PerfTest, ClientTest_BasicDiscovery) {
     g_discoverEvent.ResetEvent();
 
     /* Initializing the bus listener */
-    ClientBusListener* clientListener = new ClientBusListener();
+    clientListener = new ClientBusListener();
     client_msgBus->RegisterBusListener(*clientListener);
 
     //QCC_SyncPrintf("Finding AdvertisedName\n");

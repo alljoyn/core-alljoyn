@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -130,6 +130,7 @@ TEST(MsgArgTest, Variants)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = arg.Get("u", &i);
     EXPECT_EQ(ER_BUS_SIGNATURE_MISMATCH, status) << "  Actual Status: " << QCC_StatusText(status);
+    arg.SetOwnershipFlags(MsgArg::OwnsArgs);
 
     status = arg.Set("v", new MsgArg("d", &d));
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -139,6 +140,7 @@ TEST(MsgArgTest, Variants)
     EXPECT_EQ(ER_BUS_SIGNATURE_MISMATCH, status) << "  Actual Status: " << QCC_StatusText(status);
     status = arg.Get("d", &dt);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    arg.SetOwnershipFlags(MsgArg::OwnsArgs);
 
     status = arg.Set("v", new MsgArg("s", s));
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -146,6 +148,7 @@ TEST(MsgArgTest, Variants)
     EXPECT_EQ(ER_BUS_SIGNATURE_MISMATCH, status) << "  Actual Status: " << QCC_StatusText(status);
     status = arg.Get("s", &str);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    arg.SetOwnershipFlags(MsgArg::OwnsArgs);
 }
 
 TEST(MsgArgTest, Scalars)
@@ -374,10 +377,10 @@ TEST(MsgArgTest, DiffStrings)
 
 TEST(MsgArgTest, Dictionary)
 {
-    const char*keys[] = { "red", "green", "blue", "yellow" };
+    const char* keys[] = { "red", "green", "blue", "yellow" };
     MsgArg dict(ALLJOYN_ARRAY);
     size_t numEntries = sizeof(keys) / sizeof(keys[0]);
-    MsgArg*dictEntries = new MsgArg[sizeof(keys) / sizeof(keys[0])];
+    MsgArg* dictEntries = new MsgArg[sizeof(keys) / sizeof(keys[0])];
 
     dictEntries[0].Set("{iv}", 1, new MsgArg("s", keys[0]));
     dictEntries[1].Set("{iv}", 1, new MsgArg("(ss)", keys[1], "bean"));
@@ -387,7 +390,9 @@ TEST(MsgArgTest, Dictionary)
     QStatus status = dict.v_array.SetElements("{iv}", numEntries, dictEntries);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    MsgArg*entries;
+    dict.SetOwnershipFlags(MsgArg::OwnsArgs, true);
+
+    MsgArg* entries;
     size_t num;
     status = dict.Get("a{iv}", &num, &entries);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);

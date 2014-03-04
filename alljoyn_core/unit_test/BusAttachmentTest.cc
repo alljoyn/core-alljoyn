@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -449,11 +449,12 @@ class JoinSession_BusListener : public BusListener {
         // Since we are using blocking form of joinSession, we need to enable concurrency
         bus->EnableConcurrentCallbacks();
         // Join session once the AdvertisedName has been found
-        joinSessionStatus = bus->JoinSession(name, 42, new SessionListener(), sessionId, sessionOpts);
+        joinSessionStatus = bus->JoinSession(name, 42, &sessionListener, sessionId, sessionOpts);
         otherBusSessionId = sessionId;
 
     }
     BusAttachment* bus;
+    SessionListener sessionListener;
 };
 
 TEST_F(BusAttachmentTest, JoinLeaveSession) {

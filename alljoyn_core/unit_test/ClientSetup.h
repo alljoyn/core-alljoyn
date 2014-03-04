@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -44,7 +44,6 @@ using namespace ajn;
 class ClientSetup : public MessageReceiver {
   public:
     ClientSetup(const char* default_bus_addr);
-    ~ClientSetup();
 
     BusAttachment* getClientMsgBus();
     qcc::String getClientArgs();
@@ -77,7 +76,7 @@ class ClientSetup : public MessageReceiver {
   private:
     Event waitEvent;
     int g_Signal_flag;
-    BusAttachment* clientMsgBus;
+    BusAttachment clientMsgBus;
     qcc::String clientArgs;
 };
 

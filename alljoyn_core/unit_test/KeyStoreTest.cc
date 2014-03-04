@@ -8,7 +8,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -55,6 +55,7 @@ TEST(KeyStoreTest, basic_encryption_decryption) {
     KeyBlob key;
 
     Crypto_AES::Block* encrypted = new Crypto_AES::Block[Crypto_AES::NumBlocks(sizeof(testData))];
+    char* out = NULL;
     /*
      *  Testing basic key encryption/decryption
      */
@@ -114,12 +115,14 @@ TEST(KeyStoreTest, basic_encryption_decryption) {
          * Decrypt and verify the test string
          */
         {
-            char* out = new char[sizeof(testData)];
+            out = new char[sizeof(testData)];
             Crypto_AES aes(inKey, Crypto_AES::ECB_DECRYPT);
             status = aes.Decrypt(encrypted, Crypto_AES::NumBlocks(sizeof(testData)), out, sizeof(testData));
             ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << " Encrypt failed";
 
             ASSERT_STREQ(testData, out) << "Encryt/decrypt of test data failed";
+            delete [] out;
+            out = NULL;
         }
         /*
          * Read the key with expiration
@@ -136,6 +139,7 @@ TEST(KeyStoreTest, basic_encryption_decryption) {
         ASSERT_STREQ("My Favorite Key", inKey.GetTag().c_str()) << "Tag was incorrect";
     }
     DeleteFile("keystore_test");
+    delete [] encrypted;
 }
 
 TEST(KeyStoreTest, keystore_store_load_merge) {
