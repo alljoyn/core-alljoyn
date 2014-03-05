@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011,2012 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011,2012,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -58,8 +58,7 @@ QStatus AllJoynDebugObj::Init()
     QStatus status;
 
     /* Make this object implement org.alljoyn.Debug */
-    assert(bus);
-    const InterfaceDescription* alljoynDbgIntf = bus->GetInterface(org::alljoyn::Daemon::Debug::InterfaceName);
+    const InterfaceDescription* alljoynDbgIntf = busController->GetBus().GetInterface(org::alljoyn::Daemon::Debug::InterfaceName);
     if (!alljoynDbgIntf) {
         status = ER_BUS_NO_SUCH_INTERFACE;
         return status;
@@ -76,7 +75,7 @@ QStatus AllJoynDebugObj::Init()
         status = AddMethodHandlers(methodEntries, ArraySize(methodEntries));
 
         if (status == ER_OK) {
-            status = bus->RegisterBusObject(*this);
+            status = busController->GetBus().RegisterBusObject(*this);
         }
     }
     return status;
@@ -91,15 +90,14 @@ QStatus AllJoynDebugObj::AddDebugInterface(AllJoynDebugObjAddon* addon,
 {
     assert(addon);
     assert(ifaceName);
-    assert(bus);
 
     InterfaceDescription* ifc;
     MethodEntry* methodEntries = methodInfoSize ? new MethodEntry[methodInfoSize] : NULL;
     qcc::String ifaceNameStr = ifaceName;
 
-    bus->UnregisterBusObject(*this);
+    busController->GetBus().UnregisterBusObject(*this);
 
-    QStatus status = bus->CreateInterface(ifaceName, ifc);
+    QStatus status = busController->GetBus().CreateInterface(ifaceName, ifc);
     if (status != ER_OK) {
         goto exit;
     }
@@ -165,9 +163,7 @@ QStatus AllJoynDebugObj::Set(const char* ifcName, const char* propName, MsgArg& 
 
 void AllJoynDebugObj::GetProp(const InterfaceDescription::Member* member, Message& msg)
 {
-    assert(bus);
-
-    const qcc::String guid(bus->GetInternal().GetGlobalGUID().ToShortString());
+    const qcc::String guid(busController->GetBus().GetInternal().GetGlobalGUID().ToShortString());
     qcc::String sender(msg->GetSender());
     // Only allow local connections to get properties
     if (sender.substr(1, guid.size()) == guid) {
@@ -176,7 +172,9 @@ void AllJoynDebugObj::GetProp(const InterfaceDescription::Member* member, Messag
 }
 
 
-AllJoynDebugObj::AllJoynDebugObj(Bus& bus, BusController* busController) : BusObject(bus, org::alljoyn::Daemon::Debug::ObjectPath), busController(busController)
+AllJoynDebugObj::AllJoynDebugObj(BusController* busController) :
+    BusObject(org::alljoyn::Daemon::Debug::ObjectPath),
+    busController(busController)
 {
     self = this;
 }
@@ -205,8 +203,7 @@ void AllJoynDebugObj::ObjectRegistered() {
  */
 void AllJoynDebugObj::SetDebugLevel(const InterfaceDescription::Member* member, Message& msg)
 {
-    assert(bus);
-    const qcc::String guid(bus->GetInternal().GetGlobalGUID().ToShortString());
+    const qcc::String guid(busController->GetBus().GetInternal().GetGlobalGUID().ToShortString());
     qcc::String sender(msg->GetSender());
     // Only allow local connections to set the debug level
     if (sender.substr(1, guid.size()) == guid) {
