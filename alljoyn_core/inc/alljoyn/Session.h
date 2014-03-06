@@ -75,14 +75,23 @@ class SessionOpts {
     /** Allowed Transports  */
     TransportMask transports;
 
+    /**
+     * NameTransferType when a session is established list of names are exchanged.
+     * The NameTransferType specifies what information is exchanged.
+     */
     typedef enum {
-        ALL_NAMES = 0x00,       /** < ExchangeNames and NameChanged to be propogated to this session,
+        ALL_NAMES = 0x00,       /** < ExchangeNames and NameChanged to be propagated to this session,
                                       all NameChanged to be sent, all names to be sent as a part of
                                       initial ExchangeNames */
-        DAEMON_NAMES = 0x01     /** < No ExchangeNames and NameChanged propogation,
+        DAEMON_NAMES = 0x01     /** < No ExchangeNames and NameChanged propagation,
                                       no NameChanged to be sent, only router names to be sent as a part of
                                       initial ExchangeNames */
     } NameTransferType;
+
+    /**
+     * NameTransferType used for specifying the name propagation during initial
+     * ExchangeNames
+     */
     NameTransferType nameTransfer;
 
     /**
