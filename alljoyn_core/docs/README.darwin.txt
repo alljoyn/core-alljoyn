@@ -23,7 +23,7 @@ Summary of file and directory structure:
 ----------------------------------------
 
 build/              core AllJoyn functionality, implemented in C++
-                      - built from Git projects alljoyn_core, common, alljoyn_objc
+                      - built from alljoyn.git subtrees alljoyn_core, common, alljoyn_objc
                       - required for all AllJoyn applications
 
     darwin/.../dist/cpp/inc/                headers and client libraries,
@@ -33,8 +33,8 @@ build/              core AllJoyn functionality, implemented in C++
     AllJoyn_API_Changes_cpp.txt
 
 
-alljoyn_objc/       Objective-C language binding for OSX/iOS
-                      - Git project alljoyn_objc, as source library
+alljoyn_objc/       Objective-C language binding for core AllJoyn functionality
+                      - a direct copy of alljoyn.git subtree alljoyn_objc
 
     AllJoynFramework/                       OBJC language binding
     AllJoynFramework_iOS/
@@ -47,3 +47,9 @@ alljoyn_objc/       Objective-C language binding for OSX/iOS
 
     samples/OSX/                            sample apps
     samples/iOS/
+
+services/about/     AllJoyn "About" Service
+                      - a direct copy of alljoyn.git subtree services/about
+
+    cpp                                     CPP implementation
+    ios                                     OBJC binding
