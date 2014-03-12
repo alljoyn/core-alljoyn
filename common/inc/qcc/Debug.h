@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011, 2013 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2013-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -44,15 +44,15 @@
 #if defined(NDEBUG)
 #define QCC_LogError(_status, _msg)                                     \
     do {                                                                \
-        void* ctx = _QCC_DbgPrintContext(" 0x%04x", _status);           \
-        _QCC_DbgPrintProcess(ctx, DBG_LOCAL_ERROR, QCC_MODULE, __FILE__, __LINE__); \
+        void* _ctx = _QCC_DbgPrintContext(" 0x%04x", _status);          \
+        _QCC_DbgPrintProcess(_ctx, DBG_LOCAL_ERROR, QCC_MODULE, __FILE__, __LINE__); \
     } while (0)
 #else
 #define QCC_LogError(_status, _msg)                                     \
     do {                                                                \
-        void* ctx = _QCC_DbgPrintContext _msg;                          \
-        _QCC_DbgPrintAppend(ctx, ": %s", QCC_StatusText(_status));      \
-        _QCC_DbgPrintProcess(ctx, DBG_LOCAL_ERROR, QCC_MODULE, __FILE__, __LINE__); \
+        void* _ctx = _QCC_DbgPrintContext _msg;                         \
+        _QCC_DbgPrintAppend(_ctx, ": %s", QCC_StatusText(_status));     \
+        _QCC_DbgPrintProcess(_ctx, DBG_LOCAL_ERROR, QCC_MODULE, __FILE__, __LINE__); \
     } while (0)
 #endif
 
