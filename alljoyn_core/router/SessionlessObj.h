@@ -307,14 +307,14 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     struct ChangeIdEntry {
       public:
         ChangeIdEntry(const char* advName, TransportMask transport, uint32_t changeId, uint32_t advChangeId, uint64_t nextJoinTimestamp) :
-            advName(advName), transport(transport), changeId(changeId), advChangeId(advChangeId), nextJoinTimestamp(nextJoinTimestamp), retries(0), inProgress(false), sessionId(0), catchupList() { }
+            advName(advName), transport(transport), changeId(changeId), advChangeId(advChangeId), nextJoinTimestamp(nextJoinTimestamp), retries(0), sessionId(0), catchupList() { }
         qcc::String advName;
         TransportMask transport;
         uint32_t changeId;
         uint32_t advChangeId;
         uint64_t nextJoinTimestamp;
         uint32_t retries;
-        bool inProgress;
+        qcc::String inProgress;
         SessionId sessionId;
         std::queue<CatchupState> catchupList;
     };
@@ -331,6 +331,46 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     SessionOpts sessionOpts;    /**< SessionOpts used by internal session */
     SessionPort sessionPort;    /**< SessionPort used by internal session */
     bool advanceChangeId;       /**< Set to true when changeId should be advanced on next SLS send request */
+
+    /**
+     * Retry join with random backoff of 200ms to ~8.5s.
+     *
+     * @param[in,out] entry the host to schedule the retry for
+     *
+     * @return ER_OK if retry scheduled, failure if retries exhausted
+     */
+    QStatus ScheduleRetry(ChangeIdEntry& entry);
+
+    /**
+     * Internal helper for parsing an advertised name into its guid and change
+     * ID parts.
+     *
+     * @param[in] name
+     * @param[out] guid
+     * @param[out] changeId
+     *
+     * @return ER_OK if parsed succesfully
+     */
+    QStatus ParseAdvertisedName(const qcc::String& name, qcc::String* guid, uint32_t* changeId);
+
+    /**
+     * Internal helper for sending the RequestSignals signal.
+     *
+     * @param[in] name   Advertised name of sender
+     * @param[in] sid    Session id
+     * @param[in] fromId Beginning of changeId range (inclusive)
+     */
+    QStatus RequestSignals(const char* name, SessionId sid, uint32_t fromId);
+
+    /**
+     * Internal helper for sending the RequestRange signal.
+     *
+     * @param[in] name   Advertised name of sender
+     * @param[in] sid    Session id
+     * @param[in] fromId Beginning of changeId range (inclusive)
+     * @param[in] toId   End of changeId range (exclusive)
+     */
+    QStatus RequestRange(const char* name, SessionId sid, uint32_t fromId, uint32_t toId);
 };
 
 }
