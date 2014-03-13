@@ -870,21 +870,21 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 
 void SessionlessObj::JoinSessionCB(QStatus status, SessionId id, const SessionOpts& opts, void* context)
 {
-    SessionlessJoinContext* ctx1 = reinterpret_cast<SessionlessJoinContext*>(context);
+    SessionlessJoinContext* ctx = reinterpret_cast<SessionlessJoinContext*>(context);
 
-    QCC_DbgTrace(("SessionlessObj::JoinSessionCB(%s, 0x%x, creator=%s, changeId=%d)", QCC_StatusText(status), id, ctx1->name.c_str(), ctx1->changeId));
+    QCC_DbgTrace(("SessionlessObj::JoinSessionCB(%s, 0x%x, creator=%s, changeId=%d)", QCC_StatusText(status), id, ctx->name.c_str(), ctx->changeId));
 
     /* Extract guid from creator name */
     String guid;
-    size_t changePos = ctx1->name.find_last_of('.');
+    size_t changePos = ctx->name.find_last_of('.');
     if (changePos != String::npos) {
-        size_t guidPos = ctx1->name.find_last_of('.', changePos);
+        size_t guidPos = ctx->name.find_last_of('.', changePos);
         if (guidPos != String::npos) {
-            guid = ctx1->name.substr(guidPos + 2, changePos - guidPos - 2);
+            guid = ctx->name.substr(guidPos + 2, changePos - guidPos - 2);
         }
     }
     if (guid.empty()) {
-        QCC_LogError(ER_FAIL, ("Cant extract guid from name \"%s\"", ctx1->name.c_str()));
+        QCC_LogError(ER_FAIL, ("Cant extract guid from name \"%s\"", ctx->name.c_str()));
         return;
     }
 
@@ -905,11 +905,11 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId id, const SessionOp
 
             if (cit->second.catchupList.empty()) {
                 /* No catchups pending. Update changeIdMap */
-                cit->second.changeId = ctx1->changeId;
+                cit->second.changeId = ctx->changeId;
             } else {
                 /* Check to see if session host is capable of handling RequestSignalRange */
                 bool rangeCapable = false;
-                BusEndpoint ep = router.FindEndpoint(ctx1->name);
+                BusEndpoint ep = router.FindEndpoint(ctx->name);
                 if (ep->IsValid() && (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL)) {
                     RemoteEndpoint rep = VirtualEndpoint::cast(ep)->GetBusToBusEndpoint(id);
                     if (rep->IsValid()) {
@@ -989,7 +989,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId id, const SessionOp
         QCC_LogError(ER_FAIL, ("Missing entry in changeIdMap for %s", guid.c_str()));
     }
 
-    delete ctx1;
+    delete ctx;
 }
 
 uint32_t SessionlessObj::RuleCount() const
