@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012,2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -34,6 +34,7 @@
 #include <qcc/Mutex.h>
 #include <qcc/Socket.h>
 #include <qcc/IfConfig.h>
+#include <qcc/Timer.h>
 
 #include <alljoyn/TransportMask.h>
 
@@ -62,7 +63,7 @@ namespace ajn {
  * 9955 and another is at IP address 10.0.0.2, listening on port 9955".  The
  * client can then do a TCP connect to one of those addresses and ports.
  */
-class IpNameServiceImpl : public qcc::Thread {
+class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
   public:
 
     /**
@@ -150,6 +151,18 @@ class IpNameServiceImpl : public qcc::Thread {
     static const uint32_t DURATION_INFINITE = 255;
 
     /**
+     * The modulus indicating minimum time interval between the initial burst of
+     * unsolicited IS-AT packets. Units are in mill-seconds.
+     */
+    static const uint32_t BURST_RESPONSE_INTERVAL = 100;
+
+    /**
+     * The number burst responses sent each time the burst response is sent.
+     * The BURST_RESPONSE_RETRIES must be greater than or equal 1
+     */
+    static const uint32_t BURST_RESPONSE_RETRIES = 3;
+
+    /**
      * @brief The maximum size of the payload of a name service message.
      *
      * An easy choice for this number would be 64K - 8 bytes (the max size of
@@ -164,7 +177,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * different times based on different configurations.
      *
      * It seems better to have a hard limit that can be easily worked around
-     * than a possibly confusing limit that imlplies flakiness.  We can always
+     * than a possibly confusing limit that implies flakiness.  We can always
      * support 1500 bytes through UDP fragmentation, and we will be using
      * IP and multicast-capable devices, so we expect an MTU of 1500 in the
      * typical case.  So we just work with that as a compromise.  We then take
@@ -267,7 +280,7 @@ class IpNameServiceImpl : public qcc::Thread {
     /**
      * @brief Delete a virtual network interface. In normal cases WiFi-Direct
      * creates a soft-AP for a temporary network. Once the P2P keep-alive connection is
-     * terminated, we delete the virual network interface that represents the
+     * terminated, we delete the virtual network interface that represents the
      * soft-AP.
      *
      * @param ifceName The virtual network interface name
@@ -283,7 +296,7 @@ class IpNameServiceImpl : public qcc::Thread {
      *
      * There may be a choice of network interfaces available to run the name
      * service protocol over.  A user of the name service can find these
-     * interfaces and explore their charactersistics using qcc::IfConfig().
+     * interfaces and explore their characteristics using qcc::IfConfig().
      * When it is decided to actually use one of the interfaces, one can pass
      * the m_name (interface name) variable provided in the selected
      * qcc::IfConfigEntry into this method to enable the name service for that
@@ -311,7 +324,7 @@ class IpNameServiceImpl : public qcc::Thread {
      *
      * There may be a choice of network interfaces available to run the name
      * service protocol over.  A user of the name service can find these
-     * interfaces and explore their charactersistics using qcc::IfConfig().
+     * interfaces and explore their characteristics using qcc::IfConfig().
      * When it is decided to actually use one of the interfaces, pass an
      * IPAddress constructed using the m_addr (interface address) variable
      * provided in the selected qcc::IfConfigEntry into this method to enable
@@ -555,7 +568,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * or reaffirms its existence on the network.  This method provides the
      * mechanism for specifying the callback.
      *
-     * The method singature for the Callback method must be:
+     * The method signature for the Callback method must be:
      *
      * @code
      *     void Found(const qcc::String &, const qcc::String &, std::vector<qcc::String> &, uint8_t);
@@ -609,7 +622,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * your thread, so your Found callback code must be multithread safe (or aware
      * at least).
      *
-     * @warning Services may come and go constanly during real network operation.
+     * @warning Services may come and go constantly during real network operation.
      * Just because a service was found on the network it does not mean that there
      * will be a service waiting on the provided IP address and port.  This
      * service may be gone by the time you connect; and this is a perfectly
@@ -650,7 +663,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @param[in] wkn The AllJoyn interface (e.g., "org.freedesktop.Sensor").
      * @param[in] quietly The quietly parameter, if true, specifies to not do
      *     gratuitous advertisements (send periodic is-at messages indicating we
-     *     have the provided name avialable) but do respond to who-has requests
+     *     have the provided name available) but do respond to who-has requests
      *     for the name.
      *
      * @return Status of the operation.  Returns ER_OK on success.
@@ -784,7 +797,7 @@ class IpNameServiceImpl : public qcc::Thread {
     /**
      * @brief The port number for the broadcast name service packets.
      * Typically the same port as the multicast case, but can be made
-     * different (with a litle work).
+     * different (with a little work).
      */
     static const uint16_t BROADCAST_PORT;
 
@@ -840,7 +853,7 @@ class IpNameServiceImpl : public qcc::Thread {
 
     /**
      * @internal
-     * @brief A vector of information specifying any interfaces we have mannual created
+     * @brief A vector of information specifying any interfaces we have manual created
      */
     std::vector<qcc::IfConfigEntry> m_virtualInterfaces;
 
@@ -926,7 +939,7 @@ class IpNameServiceImpl : public qcc::Thread {
      *     to decide if the network is broadcast- or multicast-capable.
      * @param sockFdIsIPv4 Used to tell what address family sockFd has been
      *     initialized to and therefore what kind of multicast needs to be done
-     *     or whether or not broadcast is meaninful.
+     *     or whether or not broadcast is meaningful.
      * @param interfaceIndex The index into the live interfaces array
      *     corresponding to the interface we're going to send to.  Really just
      *     used for debugging.
@@ -955,7 +968,7 @@ class IpNameServiceImpl : public qcc::Thread {
     /**
      * @internal
      * @brief Rewrite (set) the IPv4 and IPv6 addresses of the provided is-at message
-     * respecting the version of the messagd as specified by msgVersion.
+     * respecting the version of the message as specified by msgVersion.
      *
      * @param msgVersion The version of the message that is being constructed.
      * @param isAt A pointer to the is-at message that is to be rewritten.
@@ -981,7 +994,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * both appear to be on the same network, then return true.
      *
      * @warning This method does not take the interface index of an IP address
-     * into account, so two netwok interfaces, both connected to a private
+     * into account, so two network interfaces, both connected to a private
      * network address (192.168.x.x) may be erroneously identified as belonging
      * to the same network.  In this case, it might result in a name service
      * packet being unintentionally sent to the "duplicate" network as well as
@@ -1313,6 +1326,30 @@ class IpNameServiceImpl : public qcc::Thread {
      * communication with the outside world.
      */
     bool m_doDisable;
+
+    /**
+     * @internal
+     * timer responsible for sending burst IS-AT responses
+     */
+    qcc::Timer m_burstResponseTimer;
+
+    /**
+     * AlarmTriggered listener that is triggered when a burst response is sent.
+     * this trigger is responsible for responding when new names have been added
+     * to the advertised names list.
+     */
+    void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
+
+    /**
+     * The BurstResponceHeader struct holds a copy of the header that will be
+     * sent using the burst response.  The struct also tracks how many times the
+     * header had been added to the outbound queue.
+     */
+    struct BurstResponseHeader {
+        BurstResponseHeader(Header header) : header(header), burstResponseCount(0) { }
+        Header header;
+        uint32_t burstResponseCount;
+    };
 
     qcc::SocketFd m_ipv4QuietSockFd;
     qcc::SocketFd m_ipv6QuietSockFd;

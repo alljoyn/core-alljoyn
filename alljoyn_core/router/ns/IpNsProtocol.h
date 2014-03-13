@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1163,6 +1163,20 @@ class IsAt : public ProtocolElement {
 
     /**
      * @internal
+     * Remove the well-known or bus name from the answer.
+     *
+     * This method removed a well-known name or bus name from the list of answers
+     * regarding the names supported by the calling daemon.
+     *
+     * @note complexity constant time plus the number of element after the last
+     * element deleted
+     *
+     * @param index the index value for the name to be removed
+     */
+    void RemoveName(uint32_t index);
+
+    /**
+     * @internal
      * @brief Get the number of well-known or bus names represented by this
      * object.
      *
@@ -1843,6 +1857,20 @@ class Header : public ProtocolElement {
      * @param isAt The answer object to add to the protocol message.
      */
     void AddAnswer(IsAt isAt);
+
+    /**
+     * @internal
+     * Remove an answer object from the list of answers represented by this header.
+     *
+     * This method removed an answer (IsAt) object from an internal list of answers
+     * the calling daemon is providing.
+     *
+     * @note complexity is constant time plus the number of elements after the
+     * deleted element.
+     *
+     * @param index the index value of the answer to be removed
+     */
+    void RemoveAnswer(uint32_t index);
 
     /**
      * @internal

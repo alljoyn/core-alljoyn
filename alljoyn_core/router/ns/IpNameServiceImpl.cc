@@ -455,7 +455,8 @@ IpNameServiceImpl::IpNameServiceImpl()
     m_loopback(false), m_enableIPv4(false), m_enableIPv6(false),
     m_wakeEvent(), m_forceLazyUpdate(false),
     m_enabled(false), m_doEnable(false), m_doDisable(false),
-    m_ipv4QuietSockFd(-1), m_ipv6QuietSockFd(-1)
+    m_ipv4QuietSockFd(-1), m_ipv6QuietSockFd(-1),
+    m_burstResponseTimer("BurstResponseTimer")
 {
     QCC_DbgHLPrintf(("IpNameServiceImpl::IpNameServiceImpl()"));
 
@@ -955,7 +956,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
     // In Linux and Windows, an IGMP join must be done on an interface that
     // is currently IFF_UP and IFF_MULTICAST with an assigned IP address.
     // On Linux, that join remains in effect (net devices will continue to
-    // recieve multicast packets destined for our group) even if the net
+    // receive multicast packets destined for our group) even if the net
     // device goes down and comes back up with a different IP address.  On
     // Windows, however, if the interface goes down, an IGMP drop is done
     // and multicast receives will stop.  Since the socket never returns
@@ -1980,7 +1981,13 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
             //
             // Queue this message for transmission out on the various live interfaces.
             //
-            QueueProtocolMessage(header);
+            BurstResponseHeader* brh_ptr = new BurstResponseHeader(header);
+            //launch timer
+            uint32_t zero = 0;
+            AlarmListener* burstResponceTimerListener = this;
+            void* context = (void*)brh_ptr;
+            qcc::Alarm startBurstAlarm(zero, burstResponceTimerListener, context);
+            m_burstResponseTimer.AddAlarm(startBurstAlarm);
         } else {
             QCC_LogError(ER_PACKET_TOO_LARGE, ("IpNameServiceImpl::AdvertiseName(): Resulting NS message too large"));
             return ER_PACKET_TOO_LARGE;
@@ -2071,7 +2078,13 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
             //
             // Queue this message for transmission out on the various live interfaces.
             //
-            QueueProtocolMessage(header);
+            BurstResponseHeader* brh_ptr = new BurstResponseHeader(header);
+            //launch timer
+            uint32_t zero = 0;
+            AlarmListener* burstResponceTimerListener = this;
+            void* context = (void*)brh_ptr;
+            qcc::Alarm startBurstAlarm(zero, burstResponceTimerListener, context);
+            m_burstResponseTimer.AddAlarm(startBurstAlarm);
         } else {
             QCC_LogError(ER_PACKET_TOO_LARGE, ("IpNameServiceImpl::AdvertiseName(): Resulting NS message too large"));
             return ER_PACKET_TOO_LARGE;
@@ -2176,7 +2189,7 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
     //
     // We are now at version one of the protocol.  There is a significant
     // difference between version zero and version one messages, so down-version
-    // (version zero) clients will not know what to do with versino one
+    // (version zero) clients will not know what to do with version one
     // messages.  This means that if we want to have clients running older
     // daemons be able to hear our advertisements, we need to send both flavors
     // of message.  Since the version is located in the message header, this
@@ -2206,7 +2219,7 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
 
         //
         // We don't actually send the transport mask in version zero packets
-        // but we make a note to ourselves to let us know on behalf ow what
+        // but we make a note to ourselves to let us know on behalf of what
         // transport we will be sending.
         //
         isAt.SetTransportMask(transportMask);
@@ -2222,7 +2235,7 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
         isAt.SetUdpFlag(true);
 
         //
-        // Always send the provided daemon GUID out with the reponse.
+        // Always send the provided daemon GUID out with the response.
         //
         isAt.SetGuid(m_guid);
 
@@ -2399,7 +2412,7 @@ void IpNameServiceImpl::QueueProtocolMessage(Header& header)
 // simulates the daemon happily wandering in and out of range of an
 // imaginary access point.
 //
-// It is essentially a trivial one-dimentional random walk across a fixed
+// It is essentially a trivial one-dimensional random walk across a fixed
 // domain.  When Wander() is called, der froliche wandering daemon moves
 // in a random direction for one meter.  When the daemon "walks" out of
 // range, Wander() returns false and the test will arrange that name
@@ -2590,7 +2603,7 @@ void IpNameServiceImpl::SendProtocolMessage(
     //
     if (sockFdIsIPv4) {
         //
-        // If the underlying interface told us that it suported multicast, send
+        // If the underlying interface told us that it supported multicast, send
         // the packet out on our IPv4 multicast groups (IANA registered and
         // legacy).
         //
@@ -2631,7 +2644,7 @@ void IpNameServiceImpl::SendProtocolMessage(
             // length, it will come in as -1.  In this case, we can't form
             // a proper subnet directed broadcast and so we don't try.  An
             // error will have been logged when we did the IfConfig, so
-            // don't flood out any more, just silenty ignore the problem.
+            // don't flood out any more, just silently ignore the problem.
             //
             if (m_broadcast && interfaceAddressPrefixLen != static_cast<uint32_t>(-1)) {
                 //
@@ -2761,8 +2774,8 @@ void IpNameServiceImpl::RewriteVersionSpecific(
     QCC_DbgPrintf(("IpNameServiceImpl::RewriteVersionSpecific()"));
 
     //
-    // We're modifying answsers in-place so clear any state we might have
-    // previosly added.
+    // We're modifying answers in-place so clear any state we might have
+    // previously added.
     //
     isAt->ClearIPv4();
     isAt->ClearIPv6();
@@ -3004,7 +3017,7 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Header& header)
         //
         // We need to start doing cuts to figure out where (not) to send this
         // message.  The easiest cut is on address type.  If we have an IPv4
-        // destination address we quite obviously aren't giong to send it out an
+        // destination address we quite obviously aren't going to send it out an
         // interface with an IPv6 address or vice versa.
         //
         if ((destination.addr.IsIPv4() && m_liveInterfaces[i].m_address.IsIPv6()) || (destination.addr.IsIPv4() && m_liveInterfaces[i].m_address.IsIPv6())) {
@@ -3058,7 +3071,7 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Header& header)
             }
 
             //
-            // Each interface in our list is going to have eiter an IPv4 or an IPv6
+            // Each interface in our list is going to have either an IPv4 or an IPv6
             // address.  When we send the message, we want to send out both flavors
             // (Ipv4 and IPv6) over each interface since we want to maximize the
             // possibility that clients will actually receive this information
@@ -3112,7 +3125,7 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Header& header)
 
             //
             // Send the protocol message described by the header, with its contained
-            // rewritten is-at messages out on the socket that corresonds to the
+            // rewritten is-at messages out on the socket that corresponds to the
             // live interface we chose for sending.  Note that the actual destination
             //
             QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): SendProtocolMessage()"));
@@ -3165,7 +3178,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Header& header)
         // The requested interfaces are stored on a per-transport basis.  Each
         // transport can open a different list of interfaces, and these lists
         // are selected by the <transportIndex> which is derived from the
-        // transport mask passed to the originating advertisement or disdovery
+        // transport mask passed to the originating advertisement or discovery
         // operation.  The transport mask comes to us in the questions and
         // answers stored in the message (header).
         //
@@ -3285,7 +3298,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Header& header)
         uint32_t flags = m_liveInterfaces[i].m_flags;
 
         //
-        // Each interface in our list is going to have eiter an IPv4 or an IPv6
+        // Each interface in our list is going to have either an IPv4 or an IPv6
         // address.  When we send the message, we want to send out both flavors
         // (Ipv4 and IPv6) over each interface since we want to maximize the
         // possibility that clients will actually receive this information
@@ -3342,7 +3355,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Header& header)
 
         //
         // Send the protocol message described by the header, with its contained
-        // rewritten is-at messages out on the socket that corresonds to the
+        // rewritten is-at messages out on the socket that corresponds to the
         // live interface we approved for sending.
         //
         QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively(): SendProtocolMessage()"));
@@ -4747,6 +4760,7 @@ QStatus IpNameServiceImpl::Start()
     QCC_DbgPrintf(("IpNameServiceImpl::Start(): Started"));
     // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
+    m_burstResponseTimer.Start();
     return status;
 }
 
@@ -4768,11 +4782,14 @@ QStatus IpNameServiceImpl::Stop()
     QCC_DbgPrintf(("IpNameServiceImpl::Stop(): Stopped"));
     // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
+    m_burstResponseTimer.RemoveAlarmsWithListener(*this);
+    m_burstResponseTimer.Stop();
     return status;
 }
 
 QStatus IpNameServiceImpl::Join()
 {
+    m_burstResponseTimer.Join();
     QCC_DbgPrintf(("IpNameServiceImpl::Join()"));
     assert(m_state == IMPL_STOPPING || m_state == IMPL_SHUTDOWN);
     QCC_DbgPrintf(("IpNameServiceImpl::Join(): Joining thread"));
@@ -4811,7 +4828,7 @@ uint32_t IpNameServiceImpl::CountOnes(uint32_t data)
 //
 // Convert a data word with one bit set to an index into a table corresponding
 // to that bit.  This uses one of the many well-known high performance
-// algorithms for counting the nunber of consecutive trailing zero bits in an
+// algorithms for counting the number of consecutive trailing zero bits in an
 // integer.  This is similar to finding log base two of the data word.  Google
 // consecutive trailing zero bits if you dare.
 //
@@ -4862,7 +4879,7 @@ uint32_t IpNameServiceImpl::IndexFromBit(uint32_t data)
 //
 // Convert a data word with one bit set to an index into a table corresponding
 // to that bit.  This uses one of the many well-known high performance
-// algorithms for counting the nunber of consecutive trailing zero bits in an
+// algorithms for counting the number of consecutive trailing zero bits in an
 // integer.  This is similar to finding log base two of the data word.  Google
 // consecutive trailing zero bits if you dare.
 //
@@ -4905,4 +4922,57 @@ bool IpNameServiceImpl::LiveInterfacesNeedsUpdate()
     return false;
 }
 
+void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) {
+    void* context = alarm->GetContext();
+    BurstResponseHeader* brh_ptr = (BurstResponseHeader*) context;
+
+    // the the BurstResponse Header has already reached then number of RETRIES then
+    // free the burst response header.
+    if (brh_ptr->burstResponseCount < BURST_RESPONSE_RETRIES) {
+        // before Queuing the header make sure none of the names contained in the
+        // header have been canceled. If the advertisement of the name has been
+        // canceled remove the name from the header.
+        // if the header no longer contains any names. Don't queue the header and
+        // free the burst response header.
+        uint32_t answerCount = brh_ptr->header.GetNumberAnswers();
+        for (uint32_t j = 0; j < answerCount; j++) {
+            IsAt isAt = brh_ptr->header.GetAnswer(j);
+            uint32_t numNames = isAt.GetNumberNames();
+            for (uint32_t k = 0; k < numNames; k++) {
+                m_mutex.Lock();
+                uint32_t transportIndex = IndexFromBit(isAt.GetTransportMask());
+                if (std::find(m_advertised[transportIndex].begin(), m_advertised[transportIndex].end(), isAt.GetName(k)) == m_advertised[transportIndex].end()) {
+                    isAt.RemoveName(k);
+                    // a name has been removed from the IsAt response header make
+                    // sure the numNames used in the for loop is updated to reflect
+                    // the removal of that name.
+                    numNames = isAt.GetNumberNames();
+                }
+                m_mutex.Unlock();
+            }
+            if (numNames == 0) {
+                brh_ptr->header.RemoveAnswer(j);
+                // an IsAt response has been removed from the Header make sure the
+                // answerCount used in the for loop has been updated.
+                answerCount = brh_ptr->header.GetNumberAnswers();
+            }
+        }
+
+        // As long as the BurstResponse Header still contains at least one IsAt
+        // header (answers) we will Queue The header.  If there are no IsAt headers
+        // then delete the BurstRespnse Header.
+        if (answerCount > 0) {
+            QueueProtocolMessage(brh_ptr->header);
+            brh_ptr->burstResponseCount++;
+            uint32_t count = BURST_RESPONSE_INTERVAL;
+            AlarmListener* burstResponceTimerListener = this;
+            qcc::Alarm startBurstAlarm(count, burstResponceTimerListener, context);
+            m_burstResponseTimer.AddAlarm(startBurstAlarm);
+        } else {
+            delete brh_ptr;
+        }
+    } else {
+        delete brh_ptr;
+    }
+}
 } // namespace ajn

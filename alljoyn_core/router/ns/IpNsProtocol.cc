@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -281,6 +281,13 @@ void IsAt::Reset(void)
 void IsAt::AddName(qcc::String name)
 {
     m_names.push_back(name);
+}
+
+void IsAt::RemoveName(uint32_t index)
+{
+    if (index < m_names.size()) {
+        m_names.erase(m_names.begin() + index);
+    }
 }
 
 uint32_t IsAt::GetNumberNames(void) const
@@ -1365,6 +1372,13 @@ void Header::GetQuestion(uint32_t index, WhoHas** question)
 void Header::AddAnswer(IsAt answer)
 {
     m_answers.push_back(answer);
+}
+
+void Header::RemoveAnswer(uint32_t index)
+{
+    if (index < m_answers.size()) {
+        m_answers.erase(m_answers.begin() + index);
+    }
 }
 
 uint32_t Header::GetNumberAnswers(void) const
