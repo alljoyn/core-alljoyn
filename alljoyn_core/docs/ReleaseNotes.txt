@@ -102,6 +102,15 @@ cause deadlock when AllJoyn is built with OpenSSL without multi-thread support
 
 AJCORE-271: Infrequent crash when running thread stress test on OpenWRT.
 
+AJCORE-920: The About library liballjoyn_about.a present in the iOS/OS X SDK
+is not used by the About service Objective C framework. It builds the About
+service libraries using an xcode file of its own. As a result, the About
+service library liballjoyn_about.a present in the core SDK would not get used
+for someone trying to use About service on iOS. They would need to build it
+using the source provided in the SDK using the About service workspace or
+project. The liballjoyn_about.a provided would however be useful for someone
+trying to use About on OS X using C++
+
 Compatibility
 -------------
 
