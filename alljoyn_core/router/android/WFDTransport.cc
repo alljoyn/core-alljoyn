@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -33,9 +33,9 @@
 #include <alljoyn/Session.h>
 
 #include "BusInternal.h"
+#include "ConfigDB.h"
 #include "RemoteEndpoint.h"
 #include "Router.h"
-#include "DaemonConfig.h"
 #include "ns/IpNameService.h"
 #include "WFDTransport.h"
 
@@ -1097,28 +1097,28 @@ void* WFDTransport::Run(void* arg)
      * used for DBus.  If any of those are present, we use them, otherwise we
      * provide some hopefully reasonable defaults.
      */
-    DaemonConfig* config = DaemonConfig::Access();
+    ConfigDB* config = ConfigDB::GetConfigDB();
 
     /*
      * tTimeout is the maximum amount of time we allow incoming connections to
      * mess about while they should be authenticating.  If they take longer
      * than this time, we feel free to disconnect them as deniers of service.
      */
-    Timespec tTimeout = config->Get("limit@auth_timeout", ALLJOYN_AUTH_TIMEOUT_DEFAULT);
+    Timespec tTimeout = config->GetLimit("auth_timeout", ALLJOYN_AUTH_TIMEOUT_DEFAULT);
 
     /*
      * maxAuth is the maximum number of incoming connections that can be in
      * the process of authenticating.  If starting to authenticate a new
      * connection would mean exceeding this number, we drop the new connection.
      */
-    uint32_t maxAuth = config->Get("limit@max_incomplete_connections", ALLJOYN_MAX_INCOMPLETE_CONNECTIONS_WFD_DEFAULT);
+    uint32_t maxAuth = config->GetLimit("max_incomplete_connections", ALLJOYN_MAX_INCOMPLETE_CONNECTIONS_WFD_DEFAULT);
 
     /*
      * maxConn is the maximum number of active connections possible over the
      * WFD transport.  If starting to process a new connection would mean
      * exceeding this number, we drop the new connection.
      */
-    uint32_t maxConn = config->Get("limit@max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_WFD_DEFAULT);
+    uint32_t maxConn = config->GetLimit("max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_WFD_DEFAULT);
 
     QStatus status = ER_OK;
 

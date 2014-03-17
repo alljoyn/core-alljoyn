@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -32,9 +32,13 @@
 #include <alljoyn/BusAttachment.h>
 
 #include "BusInternal.h"
+#include "ConfigDB.h"
 #include "RemoteEndpoint.h"
 #include "Router.h"
 #include "DaemonTransport.h"
+#ifdef ENABLE_POLICYDB
+#include "PolicyDB.h"
+#endif
 
 #define QCC_MODULE "ALLJOYN"
 
@@ -218,19 +222,28 @@ void* DaemonTransport::Run(void* arg)
 
         status = Accept(listenFd, newSock);
 
-        uid_t uid;
-        gid_t gid;
-        pid_t pid;
+        uid_t uid = -1;  // Initialize to suppress compiler warnings.
+        gid_t gid = -1;
+        pid_t pid = -1;
 
         if (status == ER_OK) {
             status = GetSocketCreds(newSock, &uid, &gid, &pid);
         }
+
+#ifdef ENABLE_POLICYDB
+        PolicyDB policyDB = ConfigDB::GetConfigDB()->GetPolicyDB();
+        if (status == ER_OK && !policyDB->OKToConnect(uid, gid)) {
+            Close(newSock);
+            status = ER_BUS_POLICY_VIOLATION;
+        }
+#endif
 
         if (status == ER_OK) {
             qcc::String authName;
             qcc::String redirection;
             static const bool truthiness = true;
             DaemonEndpoint conn = DaemonEndpoint(bus, truthiness, DaemonTransport::TransportName, newSock);
+
             conn->SetUserId(uid);
             conn->SetGroupId(gid);
             conn->SetProcessId(pid);

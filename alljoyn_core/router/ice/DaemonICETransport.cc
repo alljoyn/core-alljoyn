@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012-2013 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -36,9 +36,9 @@
 #include <alljoyn/version.h>
 
 #include "BusInternal.h"
+#include "ConfigDB.h"
 #include "RemoteEndpoint.h"
 #include "Router.h"
-#include "DaemonConfig.h"
 #include "DiscoveryManager.h"
 #include "DaemonICETransport.h"
 #include "ICEManager.h"
@@ -1627,28 +1627,28 @@ void* DaemonICETransport::Run(void* arg)
      * used for DBus.  If any of those are present, we use them, otherwise we
      * provide some hopefully reasonable defaults.
      */
-    DaemonConfig* config = DaemonConfig::Access();
+    ConfigDB* config = ConfigDB::GetConfigDB();
 
     /*
      * tTimeout is the maximum amount of time we allow incoming connections to
      * mess about while they should be authenticating.  If they take longer
      * than this time, we feel free to disconnect them as deniers of service.
      */
-    Timespec tTimeout = config->Get("limit@auth_timeout", ALLJOYN_AUTH_TIMEOUT_DEFAULT);
+    Timespec tTimeout = config->GetLimit("auth_timeout", ALLJOYN_AUTH_TIMEOUT_DEFAULT);
 
     /*
      * maxAuth is the maximum number of incoming connections that can be in
      * the process of authenticating.  If starting to authenticate a new
      * connection would mean exceeding this number, we drop the new connection.
      */
-    uint32_t maxAuth = config->Get("ice/limit@max_incomplete_connections", ALLJOYN_MAX_INCOMPLETE_CONNECTIONS_ICE_DEFAULT);
+    uint32_t maxAuth = config->GetLimit("max_incomplete_connections", ALLJOYN_MAX_INCOMPLETE_CONNECTIONS_ICE_DEFAULT);
 
     /*
      * maxConn is the maximum number of active connections possible over the
      * ICE transport.  If starting to process a new connection would mean
      * exceeding this number, we drop the new connection.
      */
-    uint32_t maxConn = config->Get("ice/limit@max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_ICE_DEFAULT);
+    uint32_t maxConn = config->GetLimit("max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_ICE_DEFAULT);
 
     QStatus status = ER_OK;
 
@@ -2404,7 +2404,7 @@ QStatus DaemonICETransport::StartListen(const char* listenSpec)
      * meaning all suitable interfaces.  If the configuration item is
      * empty (not assigned in the configuration database) it defaults to "*".
      */
-    qcc::String interfaces = DaemonConfig::Access()->Get("ice_discovery_manager/property@interfaces", INTERFACES_DEFAULT);
+    qcc::String interfaces = ConfigDB::GetConfigDB()->GetProperty("ice_interfaces", INTERFACES_DEFAULT);
 
     while (interfaces.size()) {
         String currentInterface;

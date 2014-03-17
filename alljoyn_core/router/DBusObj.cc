@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -36,11 +36,15 @@
 #include <alljoyn/MessageReceiver.h>
 
 #include "Bus.h"
+#include "BusController.h"
 #include "BusInternal.h"
 #include "BusUtil.h"
+#include "ConfigDB.h"
 #include "DBusObj.h"
 #include "NameTable.h"
-#include "BusController.h"
+#ifdef ENABLE_POLICYDB
+#include "PolicyDB.h"
+#endif
 
 #define QCC_MODULE "ALLJOYN"
 
@@ -209,8 +213,15 @@ void DBusObj::RequestName(const InterfaceDescription::Member* member, Message& m
 
     const char* nameArg = msg->GetArg(0)->v_string.str;
     const uint32_t flagsArg = msg->GetArg(1)->v_uint32;
+#ifdef ENABLE_POLICYDB
+    PolicyDB policyDB = ConfigDB::GetConfigDB()->GetPolicyDB();
+    String sender = msg->GetSender();
+    BusEndpoint ep = router.FindEndpoint(sender);
 
+    if (*nameArg != ':' && IsLegalBusName(nameArg) && policyDB->OKToOwn(nameArg, ep)) {
+#else
     if (*nameArg != ':' && IsLegalBusName(nameArg)) {
+#endif
         /* Attempt to add the alias */
         /* Response will be handled in AddAliasCB */
         uint32_t disposition;

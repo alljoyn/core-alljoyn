@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,17 +18,19 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#include "PermissionMgr.h"
+
 #include <alljoyn/AllJoynStd.h>
+#include "ConfigDB.h"
+#include "PermissionMgr.h"
 #include "RemoteEndpoint.h"
-#include <DaemonConfig.h>
+
 #define QCC_MODULE "PERMISSION_MGR"
 
 namespace ajn {
 
 PermissionMgr::DaemonBusCallPolicy PermissionMgr::GetDaemonBusCallPolicy(BusEndpoint sender)
 {
-    static bool enableRestrict = (DaemonConfig::Access())->Get("property@restrict_untrusted_clients", "true") == "true";
+    static bool enableRestrict = ConfigDB::GetConfigDB()->GetFlag("restrict_untrusted_clients");
 
     QCC_DbgTrace(("PermissionMgr::GetDaemonBusCallPolicy(send=%s)", sender->GetUniqueName().c_str()));
     DaemonBusCallPolicy policy = STDBUSCALL_ALLOW_ACCESS_SERVICE_ANY;
@@ -38,6 +40,7 @@ PermissionMgr::DaemonBusCallPolicy PermissionMgr::GetDaemonBusCallPolicy(BusEndp
         } else if (sender->GetEndpointType() == ENDPOINT_TYPE_REMOTE) {
             RemoteEndpoint rEndpoint = RemoteEndpoint::cast(sender);
             QCC_DbgPrintf(("This is a RemoteEndpoint. ConnSpec = %s", rEndpoint->GetConnectSpec().c_str()));
+
             if ((rEndpoint->GetConnectSpec() == "unix") || (rEndpoint->GetConnectSpec() == "localhost") || (rEndpoint->GetConnectSpec() == "slap")) {
                 policy = STDBUSCALL_ALLOW_ACCESS_SERVICE_ANY;
             } else if (rEndpoint->GetConnectSpec() == "tcp") {

@@ -538,6 +538,8 @@ TEST_F(BusAttachmentTest, JoinLeaveSession) {
     EXPECT_TRUE(sessionLost);
     EXPECT_EQ(SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION, sessionLostReason);
 
+    otherBus.Stop();
+    otherBus.Join();
 }
 
 TEST_F(BusAttachmentTest, GetDBusProxyObj) {

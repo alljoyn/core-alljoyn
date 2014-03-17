@@ -426,6 +426,23 @@ size_t String::find_first_of(const char* set, size_t pos) const
     return npos;
 }
 
+size_t String::find_last_of(const char* set, size_t pos) const
+{
+    if (context == &nullContext) {
+        return npos;
+    }
+
+    size_t i = MIN(pos, size());
+    while (i-- > 0) {
+        for (const char* c = set; *c != '\0'; ++c) {
+            if (*c == context->c_str[i]) {
+                return i;
+            }
+        }
+    }
+    return npos;
+}
+
 size_t String::find_first_not_of(const char* set, size_t pos) const
 {
     if (context == &nullContext) {

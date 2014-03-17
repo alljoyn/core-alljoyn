@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -51,7 +51,7 @@
 
 #include "Bus.h"
 #include "BusController.h"
-#include "DaemonConfig.h"
+#include "ConfigDB.h"
 #include "BusInternal.h"
 
 #define DAEMONLIBRARY_EXPORTS
@@ -72,25 +72,20 @@ using namespace std;
 
 static const char defaultConfig[] =
     "<busconfig>"
+    "  <limit name=\"auth_timeout\">5000</limit>"
+    "  <limit name=\"max_incomplete_connections\">16</limit>"
+    "  <limit name=\"max_completed_connections\">64</limit>"
+    "  <limit name=\"max_untrusted_clients\">0</limit>"
+    "  <flag name=\"restrict_untrusted_clients\">true</flag>"
+    "</busconfig>";
+
+static const char internalConfig[] =
+    "<busconfig>"
     "  <type>alljoyn</type>"
     "  <listen>tcp:r4addr=0.0.0.0,r4port=9956</listen>"
     "  <listen>localhost:port=9955</listen>"
     "  <listen>localhost:port=9956</listen>"
-    "  <listen>bluetooth:</listen>"
-    "  <limit auth_timeout=\"32768\"/>"
-    "  <limit max_incomplete_connections=\"16\"/>"
-    "  <limit max_completed_connections=\"64\"/>"
-    "  <limit max_untrusted_clients=\"0\"/>"
-    "  <property restrict_untrusted_clients=\"true\"/>"
-    "  <ip_name_service>"
-    "    <property interfaces=\"*\"/>"
-    "    <property disable_directed_broadcast=\"false\"/>"
-    "    <property enable_ipv4=\"true\"/>"
-    "    <property enable_ipv6=\"true\"/>"
-    "  </ip_name_service>"
-    "  <tcp>"
-//    "    <property router_advertisement_prefix=\"org.alljoyn.BusNode.\"/>"
-    "  </tcp>"
+    "  <property name=\"ns_interfaces\">*</property>"
     "</busconfig>";
 
 static volatile sig_atomic_t g_interrupt = false;
@@ -113,7 +108,7 @@ class OptParse {
     OptParse(int argc, char** argv) :
         argc(argc),
         argv(argv),
-        useDefaultConfig(true),
+        useInternalConfig(true),
         noBT(false),
         printAddress(false),
         verbosity(LOG_WARNING)
@@ -122,7 +117,7 @@ class OptParse {
     ParseResultCode ParseResult();
 
     qcc::String GetConfigFile() const { return configFile; }
-    bool UseDefaultConfig() const { return useDefaultConfig; }
+    bool UseInternalConfig() const { return useInternalConfig; }
     bool PrintAddress() const { return printAddress; }
     int GetVerbosity() const { return verbosity; }
     bool GetNoBT() const { return noBT; }
@@ -132,7 +127,7 @@ class OptParse {
     char** argv;
 
     qcc::String configFile;
-    bool useDefaultConfig;
+    bool useInternalConfig;
     bool noBT;
     bool printAddress;
     int verbosity;
@@ -194,14 +189,14 @@ OptParse::ParseResultCode OptParse::ParseResult()
                 goto exit;
             }
             configFile = argv[i];
-            useDefaultConfig = false;
+            useInternalConfig = false;
         } else if (arg.compare(0, sizeof("--config-file") - 1, "--config-file") == 0) {
             if (!configFile.empty()) {
                 result = PR_OPTION_CONFLICT;
                 goto exit;
             }
             configFile = arg.substr(sizeof("--config-file"));
-            useDefaultConfig = false;
+            useInternalConfig = false;
         } else if (arg.compare("--print-address") == 0) {
             printAddress = true;
         } else if (arg.compare("--no-bt") == 0) {
@@ -242,7 +237,7 @@ exit:
 
 int daemon(OptParse& opts)
 {
-    DaemonConfig* config = DaemonConfig::Access();
+    ConfigDB* config = ConfigDB::GetConfigDB();
 
     signal(SIGTERM, SignalHandler);
     signal(SIGINT, SignalHandler);
@@ -250,21 +245,20 @@ int daemon(OptParse& opts)
     /*
      * Extract the listen specs
      */
-    std::vector<qcc::String> listenList = config->GetList("listen");
-    std::vector<qcc::String>::const_iterator it = listenList.begin();
+    const ConfigDB::ListenList& listenList = config->GetListen();
     String listenSpecs;
 
-    while (it != listenList.end()) {
+    for (ConfigDB::_ListenList::const_iterator it = listenList->begin(); it != listenList->end(); ++it) {
+        String addrStr = *it;
         bool skip = false;
-        if (it->compare(0, sizeof("tcp:") - 1, "tcp:") == 0) {
+        if (addrStr.compare(0, sizeof("tcp:") - 1, "tcp:") == 0) {
             // No special processing needed for TCP.
-        } else if (it->compare(0, sizeof("localhost:") - 1, "localhost:") == 0) {
+        } else if (addrStr.compare(0, sizeof("localhost:") - 1, "localhost:") == 0) {
             // No special processing needed for localhost.
-        } else if (it->compare("bluetooth:") == 0) {
+        } else if (addrStr.compare("bluetooth:") == 0) {
             skip = opts.GetNoBT();
         } else {
             Log(LOG_ERR, "Unsupported listen address: %s (ignoring)\n", it->c_str());
-            ++it;
             continue;
         }
 
@@ -277,7 +271,6 @@ int daemon(OptParse& opts)
             }
             listenSpecs.append(*it);
         }
-        ++it;
     }
 
     if (listenSpecs.empty()) {
@@ -304,8 +297,8 @@ int daemon(OptParse& opts)
     /*
      * Check we have at least one authentication mechanism registered.
      */
-    if (!config->Get("auth").empty()) {
-        if (ajBus.GetInternal().FilterAuthMechanisms(config->Get("auth")) == 0) {
+    if (!config->GetAuth().empty()) {
+        if (ajBus.GetInternal().FilterAuthMechanisms(config->GetAuth()) == 0) {
             Log(LOG_ERR, "No supported authentication mechanisms.  Aborting...\n");
             return DAEMON_EXIT_STARTUP_ERROR;
         }
@@ -369,17 +362,22 @@ DAEMONLIBRARY_API int LoadDaemon(int argc, char** argv)
 
     loggerSettings->SetLevel(opts.GetVerbosity());
 
-    DaemonConfig* config;
-    if (opts.UseDefaultConfig()) {
-        config = DaemonConfig::Load(defaultConfig);
-    } else {
-        FileSource fs(opts.GetConfigFile());
-        if (fs.IsValid()) {
-            config = DaemonConfig::Load(fs);
+
+    String configStr = defaultConfig;
+    if (opts.UseInternalConfig()) {
+        configStr.append(internalConfig);
+    }
+
+    ConfigDB config(configStr, opts.GetConfigFile());
+    if (!config.LoadConfig()) {
+        const char* errsrc;
+        if (opts.UseInternalConfig()) {
+            errsrc = "internal default config";
         } else {
-            fprintf(stderr, "Invalid configuration file specified: \"%s\"\n", opts.GetConfigFile().c_str());
-            return DAEMON_EXIT_CONFIG_ERROR;
+            errsrc = opts.GetConfigFile().c_str();
         }
+        Log(LOG_ERR, "Failed to load the configuration - problem with %s.\n", errsrc);
+        return DAEMON_EXIT_CONFIG_ERROR;
     }
 
     return daemon(opts);

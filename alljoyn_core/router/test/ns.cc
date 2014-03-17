@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -36,7 +36,7 @@
 #include <alljoyn/Status.h>
 #include <ns/IpNameService.h>
 #include <ns/IpNameServiceImpl.h>
-#include <DaemonConfig.h>
+#include <ConfigDB.h>
 
 #define QCC_MODULE "ALLJOYN"
 
@@ -44,11 +44,9 @@ using namespace ajn;
 
 static const char config[] =
     "<busconfig>"
-    "  <ip_name_service>"
-    "    <property disable_directed_broadcast=\"false\"/>"
-    "    <property enable_ipv4=\"true\"/>"
-    "    <property enable_ipv6=\"true\"/>"
-    "  </ip_name_service>"
+    "    <flag name=\"ns_disable_directed_broadcast\">false</flag>"
+    "    <flag name=\"ns_disable_ipv4\">false</flag>"
+    "    <flag name=\"ns_disable_ipv6\">false</flag>"
     "</busconfig>";
 
 char const* g_names[] = {
@@ -244,7 +242,11 @@ int main(int argc, char** argv)
     //
     // Load the configuration information
     //
-    DaemonConfig::Load(config);
+    ConfigDB configdb(config);
+    if (!configdb.LoadConfig()) {
+        printf("Failed to load the internal config.\n");
+        ERROR_EXIT;
+    }
 
     //
     // Test code

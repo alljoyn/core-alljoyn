@@ -401,6 +401,15 @@ class String {
     size_t find_first_of(const char* inChars, size_t pos = 0) const;
 
     /**
+     * Find last occurence of any of a set of characters within string.
+     *
+     * @param inChars    Array of characters to look for in this string.
+     * @param pos        Optional starting position within this string for search.
+     * @return           Position of last occurrence of one of inChars within string or npos if not found.
+     */
+    size_t find_last_of(const char* inChars, size_t pos = npos) const;
+
+    /**
      * Find first occurrence of a character NOT in a set of characters within string.
      *
      * @param setChars   Array of characters to (NOT) look for in this string.

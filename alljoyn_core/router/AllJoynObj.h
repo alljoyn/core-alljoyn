@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -369,6 +369,16 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      *
      */
     void GetHostInfo(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * Method handler for org.alljoyn.Bus.ReloadConfig
+     *
+     * @param member    Interface member.
+     * @param msg       The incoming method call message.
+     *
+     */
+    void ReloadConfig(const InterfaceDescription::Member* member, Message& msg);
+
     /**
      * Add a new Bus-to-bus endpoint.
      *

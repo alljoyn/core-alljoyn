@@ -35,9 +35,12 @@
 
 #include "BusController.h"
 #include "BusEndpoint.h"
+#include "ConfigDB.h"
 #include "DaemonRouter.h"
 #include "EndpointHelper.h"
-#include "DaemonConfig.h"
+#ifdef ENABLE_POLICYDB
+#include "PolicyDB.h"
+#endif
 
 #define QCC_MODULE "ALLJOYN"
 
@@ -50,6 +53,9 @@ namespace ajn {
 
 DaemonRouter::DaemonRouter() : ruleTable(), nameTable(), busController(NULL)
 {
+#ifdef ENABLE_POLICYDB
+    AddBusNameListener(ConfigDB::GetConfigDB());
+#endif
 }
 
 DaemonRouter::~DaemonRouter()
@@ -86,6 +92,16 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
     const char* destination = msg->GetDestination();
     SessionId sessionId = msg->GetSessionId();
     bool isSessionless = msg->GetFlags() & ALLJOYN_FLAG_SESSIONLESS;
+
+#ifdef ENABLE_POLICYDB
+    PolicyDB policyDB = ConfigDB::GetConfigDB()->GetPolicyDB();
+    NormalizedMsgHdr nmh(msg, policyDB);
+
+    if (!policyDB->OKToSend(nmh, sender)) {
+        /* The sender is not allowed to send this message. */
+        return ER_BUS_POLICY_VIOLATION;
+    }
+#endif
 
     /*
      * Sessionless messages don't have a session id even though they have a dedicated
@@ -134,6 +150,23 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                     msg->ErrorMsg(msg, "org.alljoyn.Bus.Blocked", "Method reply would be blocked because caller does not allow remote messages");
                     BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
                     PushMessage(msg, busEndpoint);
+#ifdef ENABLE_POLICYDB
+                } else if (!policyDB->OKToReceive(nmh, destEndpoint)) {
+                    /*
+                     * The destination is not allowed to recieve the message.
+                     * If a reply is expected, return an error to the sender.
+                     */
+                    if (replyExpected) {
+                        QCC_DbgPrintf(("Blocking method call from %s to %s (serial=%d) because caller does not allow remote messages",
+                                       msg->GetSender(),
+                                       destEndpoint->GetUniqueName().c_str(),
+                                       msg->GetCallSerial()));
+                        msg->ErrorMsg(msg, "org.alljoyn.Bus.Blocked", "Destination not allowed to receive method call");
+                        BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
+                        PushMessage(msg, busEndpoint);
+                    }
+                    status = ER_BUS_POLICY_VIOLATION;
+#endif
                 } else {
                     nameTable.Unlock();
                     status = SendThroughEndpoint(msg, destEndpoint, sessionId);
@@ -183,7 +216,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                      * shutting down this will result in a no route error. Although
                      * it is a valid error it is not a LogError. This is typically
                      * something like a NameLost signal because the program with the
-                     * bundled daemon just shutdown.
+                     * bundled router just shutdown.
                      */
                     if (ER_BUS_NO_ROUTE == status) {
                         QCC_DbgHLPrintf(("Discarding %s no route to %s:%d : %s", msg->Description().c_str(), destination, sessionId, QCC_StatusText(status)));
@@ -209,7 +242,12 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                  * If the message originated locally or the destination allows remote messages
                  * forward the message, otherwise silently ignore it.
                  */
+#ifdef ENABLE_POLICYDB
+                if (!((sender->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) && !dest->AllowRemoteMessages()) &&
+                    policyDB->OKToReceive(nmh, dest)) {
+#else
                 if (!((sender->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) && !dest->AllowRemoteMessages())) {
+#endif
                     ruleTable.Unlock();
                     nameTable.Unlock();
                     QStatus tStatus = SendThroughEndpoint(msg, dest, sessionId);
@@ -266,12 +304,18 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
             while (it != m_b2bEndpoints.end()) {
                 RemoteEndpoint ep = *it;
                 if ((ep != origSender) && ((sessionId == 0) || ep->GetSessionId() == sessionId)) {
-                    m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
                     BusEndpoint busEndpoint = BusEndpoint::cast(ep);
-                    QStatus tStatus = SendThroughEndpoint(msg, busEndpoint, sessionId);
-                    status = (status == ER_OK) ? tStatus : status;
-                    m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
-                    it = m_b2bEndpoints.lower_bound(ep);
+#ifdef ENABLE_POLICYDB
+                    if (policyDB->OKToReceive(nmh, busEndpoint)) {
+#else
+                    {
+#endif
+                        m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
+                        QStatus tStatus = SendThroughEndpoint(msg, busEndpoint, sessionId);
+                        status = (status == ER_OK) ? tStatus : status;
+                        m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
+                        it = m_b2bEndpoints.lower_bound(ep);
+                    }
                 }
                 if (it != m_b2bEndpoints.end()) {
                     ++it;
@@ -296,6 +340,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
         SessionCastEntry sce(sessionId - 1, msg->GetSender());
         set<SessionCastEntry>::iterator sit = sessionCastSet.upper_bound(sce);
         bool foundDest = false;
+        bool okToReceive = true;
 
         /* In other cases, it may return the iterator to an element that has the desired src and
          * (sessionId - 1). In that case iterate, until the id is less than the desired one.
@@ -306,22 +351,28 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
 
         while ((sit != sessionCastSet.end()) && (sit->id == sessionId) && (sit->src == sce.src)) {
             if (sit->b2bEp != lastB2b) {
-                foundDest = true;
-                lastB2b = sit->b2bEp;
-                SessionCastEntry entry = *sit;
                 BusEndpoint ep = sit->destEp;
-                sessionCastSetLock.Unlock(MUTEX_CONTEXT);
-                QStatus tStatus = SendThroughEndpoint(msg, ep, sessionId);
-                status = (status == ER_OK) ? tStatus : status;
-                sessionCastSetLock.Lock(MUTEX_CONTEXT);
-                sit = sessionCastSet.lower_bound(entry);
+
+#ifdef ENABLE_POLICYDB
+                okToReceive = policyDB->OKToReceive(nmh, ep);
+#endif
+                if (okToReceive) {
+                    foundDest = true;
+                    lastB2b = sit->b2bEp;
+                    SessionCastEntry entry = *sit;
+                    sessionCastSetLock.Unlock(MUTEX_CONTEXT);
+                    QStatus tStatus = SendThroughEndpoint(msg, ep, sessionId);
+                    status = (status == ER_OK) ? tStatus : status;
+                    sessionCastSetLock.Lock(MUTEX_CONTEXT);
+                    sit = sessionCastSet.lower_bound(entry);
+                }
             }
             if (sit != sessionCastSet.end()) {
                 ++sit;
             }
         }
         if (!foundDest) {
-            status = ER_BUS_NO_ROUTE;
+            status = okToReceive ? ER_BUS_NO_ROUTE : ER_BUS_POLICY_VIOLATION;
         }
         sessionCastSetLock.Unlock(MUTEX_CONTEXT);
     }

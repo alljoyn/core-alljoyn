@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012,2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -45,7 +45,7 @@
 
 #include "Bus.h"
 #include "BusController.h"
-#include "DaemonConfig.h"
+#include "ConfigDB.h"
 #include "Transport.h"
 #include "TransportList.h"
 
@@ -62,20 +62,15 @@ using namespace ajn;
 static const char daemonConfig[] =
     "<busconfig>"
     "  <type>alljoyn</type>"
-    "  <limit auth_timeout=\"5000\"/>"
-    "  <limit max_incomplete_connections=\"4\"/>"
-    "  <limit max_completed_connections=\"16\"/>"
-    "  <limit max_untrusted_clients=\"0\"/>"
-    "  <property restrict_untrusted_clients=\"true\"/>"
-    "  <ip_name_service>"
-    "    <property interfaces=\"*\"/>"
-    "    <property disable_directed_broadcast=\"false\"/>"
-    "    <property enable_ipv4=\"true\"/>"
-    "    <property enable_ipv6=\"true\"/>"
-    "  </ip_name_service>"
-    "  <tcp>"
-//    "    <property router_advertisement_prefix=\"org.alljoyn.BusNode.\"/>"
-    "  </tcp>"
+    "  <limit name=\"auth_timeout\">5000</limit>"
+    "  <limit name=\"max_incomplete_connections\">4</limit>"
+    "  <limit name=\"max_completed_connections\">16</limit>"
+    "  <limit name=\"max_untrusted_clients\">0</limit>"
+    "  <flag name=\"restrict_untrusted_clients\">true</flag>"
+    "  <property name=\"ns_interfaces\">*</property>"
+    "  <flag name=\"ns_disable_directed_broadcast\">false</flag>"
+    "  <flag name=\"ns_disable_ipv4\">false</flag>"
+    "  <flag name=\"ns_disable_ipv6\">false</flag>"
     "</busconfig>";
 
 /** Static top level message bus object */
@@ -377,15 +372,18 @@ int main(int argc, char** argv)
     QStatus status = ER_OK;
     qcc::GUID128 guid;
     bool mimicBbservice = false;
+    ConfigDB config(daemonConfig);
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
 
+    if (!config.LoadConfig()) {
+        printf("Failed to load the internal config.\n");
+        exit(1);
+    }
+
     /* Install SIGINT handler */
     signal(SIGINT, SigIntHandler);
-
-    /* Load the configuration information */
-    DaemonConfig::Load(daemonConfig);
 
     /* Parse command line args */
     for (int i = 1; i < argc; ++i) {
