@@ -119,11 +119,12 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /**
      * Route an incoming sessionless signal if possible.
      *
-     * @param sessionId   Session Id associated with sessionless message.
-     * @param msg         Sesionless messgae to be routed.
+     * @param sid   Session ID associated with sessionless message.
+     * @param msg   Sesionless messgae to be routed.
+     *
      * @return true if message was delivered, false otherwise.
      */
-    bool RouteSessionlessMessage(uint32_t sessionId, Message& msg);
+    bool RouteSessionlessMessage(uint32_t sid, Message& msg);
 
     /**
      * Remove a sessionless signal with a given serial number from the store/forward cache.
@@ -222,17 +223,17 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /**
      * JoinSession Callback.
      */
-    void JoinSessionCB(QStatus status, SessionId id, const SessionOpts& opts, void* context);
+    void JoinSessionCB(QStatus status, SessionId sid, const SessionOpts& opts, void* context);
 
     /**
      * Emit the range of cached sessionless signals [fromId, toId)
      *
      * @param sender    Unique name of requestor/sender
-     * @param sessionId Session id
+     * @param sid       Session ID
      * @param fromId    Beginning of changeId range (inclusive)
      * @param toId      End of changeId range (exclusive)
      */
-    void HandleRangeRequest(const char* sender, SessionId sessionId, uint32_t fromId, uint32_t toId);
+    void HandleRangeRequest(const char* sender, SessionId sid, uint32_t fromId, uint32_t toId);
 
     /**
      * Internal helper for FoundAdvertisedName.
@@ -246,9 +247,10 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /**
      * SessionLost helper handler.
      *
-     * @param sessionId    Session id of lost session.
+     * @param sid    Session ID of lost session.
+     * @param reason The reason for the session being lost.
      */
-    void DoSessionLost(uint32_t sessionId);
+    void DoSessionLost(SessionId sid, SessionLostReason reason);
 
     /**
      * Returns the number of rules that specify sessionless=TRUE.
@@ -293,21 +295,28 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
 
     /** CatchupState is used to track individual local clients that are behind the state of the server for a particular remote host */
     struct CatchupState {
-        CatchupState() : changeId(0), sessionId(0) { }
-        CatchupState(const qcc::String& sender, const qcc::String& guid, uint32_t changeId, uint32_t sessionId) : sender(sender), guid(guid), changeId(changeId), sessionId(sessionId) { }
+        CatchupState() : changeId(0), sid(0) { }
+        CatchupState(const qcc::String& sender, const qcc::String& guid, uint32_t changeId, SessionId sid) : sender(sender), guid(guid), changeId(changeId), sid(sid) { }
         qcc::String sender;
         qcc::String guid;
         uint32_t changeId;
-        uint32_t sessionId;
+        uint32_t sid;
     };
-    /** Map sessionIds to catupStates */
+    /** Map session IDs to catchupStates */
     std::map<uint32_t, CatchupState> catchupMap;
+
+    struct RoutedMessage {
+        RoutedMessage(const Message& msg) : sender(msg->GetSender()), serial(msg->GetCallSerial()) { }
+        qcc::String sender;
+        uint32_t serial;
+        bool operator==(const RoutedMessage& other) const { return (sender == other.sender) && (serial == other.serial); }
+    };
 
     /** Track the changeIds of the advertisments coming from other daemons */
     struct ChangeIdEntry {
       public:
         ChangeIdEntry(const char* advName, TransportMask transport, uint32_t changeId, uint32_t advChangeId, uint64_t nextJoinTimestamp) :
-            advName(advName), transport(transport), changeId(changeId), advChangeId(advChangeId), nextJoinTimestamp(nextJoinTimestamp), retries(0), sessionId(0), catchupList() { }
+            advName(advName), transport(transport), changeId(changeId), advChangeId(advChangeId), nextJoinTimestamp(nextJoinTimestamp), retries(0), sid(0), catchupList() { }
         qcc::String advName;
         TransportMask transport;
         uint32_t changeId;
@@ -315,11 +324,15 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
         uint64_t nextJoinTimestamp;
         uint32_t retries;
         qcc::String inProgress;
-        SessionId sessionId;
+        SessionId sid;
         std::queue<CatchupState> catchupList;
+        std::list<RoutedMessage> routedMessages;
     };
     /** Map remote guid to ChangeIdEntry */
     std::map<qcc::String, ChangeIdEntry> changeIdMap;
+
+    /** Find the ChangeIdEntry with the matching session ID */
+    std::map<qcc::String, ChangeIdEntry>::iterator FindChangeIdEntry(SessionId sid);
 
     qcc::Mutex lock;            /**< Mutex that protects messageMap this obj's data structures */
     uint32_t curChangeId;       /**< Change id assoc with current pushed signal(s) */
@@ -357,7 +370,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * Internal helper for sending the RequestSignals signal.
      *
      * @param[in] name   Advertised name of sender
-     * @param[in] sid    Session id
+     * @param[in] sid    Session ID
      * @param[in] fromId Beginning of changeId range (inclusive)
      */
     QStatus RequestSignals(const char* name, SessionId sid, uint32_t fromId);
@@ -366,7 +379,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * Internal helper for sending the RequestRange signal.
      *
      * @param[in] name   Advertised name of sender
-     * @param[in] sid    Session id
+     * @param[in] sid    Session ID
      * @param[in] fromId Beginning of changeId range (inclusive)
      * @param[in] toId   End of changeId range (exclusive)
      */
