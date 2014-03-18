@@ -273,7 +273,7 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
             if (!changeIdMap.empty() || !messageMap.empty()) {
                 lock.Unlock();
                 router.UnlockNameTable();
-                RereceiveMessages(epName, "");
+                RereceiveMessages(epName);
                 router.LockNameTable();
                 lock.Lock();
             }
@@ -443,16 +443,16 @@ QStatus SessionlessObj::CancelMessage(const qcc::String& sender, uint32_t serial
     return status;
 }
 
-QStatus SessionlessObj::RereceiveMessages(const qcc::String& sender, const qcc::String& guid)
+QStatus SessionlessObj::RereceiveMessages(const qcc::String& sender)
 {
     QStatus status = ER_OK;
-    QCC_DbgTrace(("SessionlessObj::RereceiveMessages(%s, %s)", sender.c_str(), guid.c_str()));
+    QCC_DbgTrace(("SessionlessObj::RereceiveMessages(%s)", sender.c_str()));
     uint64_t now = GetTimestamp64();
     const uint64_t timeoutValue = 18000;
     String selfGuid = bus.GetGlobalGUIDShortString();
     lock.Lock();
 
-    map<String, ChangeIdEntry>::iterator it = guid.empty() ? changeIdMap.begin() : changeIdMap.find(guid);
+    map<String, ChangeIdEntry>::iterator it = changeIdMap.begin();
     while ((status == ER_OK) && (it != changeIdMap.end())) {
         String lastGuid = it->first;
 
@@ -493,17 +493,13 @@ QStatus SessionlessObj::RereceiveMessages(const qcc::String& sender, const qcc::
         }
 
         /* Continue with other guids if guid is empty. (empty means all) */
-        if (!guid.empty()) {
-            break;
-        } else if ((it != changeIdMap.end()) && (it->first == lastGuid)) {
+        if ((it != changeIdMap.end()) && (it->first == lastGuid)) {
             ++it;
         }
     }
 
-    /* If all guids or self guid, retrieve from our own cache */
-    if (guid.empty() || (guid == selfGuid)) {
-        HandleRangeRequest(sender.c_str(), 0, curChangeId - (numeric_limits<uint32_t>::max() >> 1), curChangeId + 1);
-    }
+    /* Retrieve from our own cache */
+    HandleRangeRequest(sender.c_str(), 0, curChangeId - (numeric_limits<uint32_t>::max() >> 1), curChangeId + 1);
 
     lock.Unlock();
 
