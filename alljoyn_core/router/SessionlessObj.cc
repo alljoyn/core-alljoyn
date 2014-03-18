@@ -483,12 +483,9 @@ QStatus SessionlessObj::RereceiveMessages(const qcc::String& sender)
             uint32_t beginState = it->second.changeId - (numeric_limits<uint32_t>::max() >> 1);
             it->second.catchupList.push(CatchupState(sender, it->first, beginState, 0));
 
-            /* Trigger an artificial FoundAdvertisedName to get the sessions rolling */
-            String advName = it->second.advName;
-            TransportMask mask = it->second.transport;
-            lock.Unlock();
-            HandleFoundAdvertisedName(advName.c_str(), mask, false);
-            lock.Lock();
+            /* Get the sessions rolling */
+            ScheduleTry(it->second);
+
             it = changeIdMap.lower_bound(lastGuid);
         }
 
@@ -569,17 +566,11 @@ void SessionlessObj::FoundAdvertisedNameSignalHandler(const InterfaceDescription
     TransportMask transport;
     const char* prefix;
     QStatus status = msg->GetArgs("sqs", &name, &transport, &prefix);
-    if (status == ER_OK) {
-        QCC_DbgPrintf(("FoundAdvertisedName(name=%s,transport=0x%x,...)", name, transport));
-        HandleFoundAdvertisedName(name, transport, true);
-    } else {
+    if (status != ER_OK) {
         QCC_LogError(status, ("GetArgs failed"));
+        return;
     }
-}
-
-QStatus SessionlessObj::HandleFoundAdvertisedName(const char* name, TransportMask transport, bool isNewAdv)
-{
-    QStatus status = ER_OK;
+    QCC_DbgPrintf(("FoundAdvertisedName(name=%s,transport=0x%x,...)", name, transport));
 
     /* Examine found name to see if we need to connect to it */
     String guid;
@@ -587,38 +578,27 @@ QStatus SessionlessObj::HandleFoundAdvertisedName(const char* name, TransportMas
     status = ParseAdvertisedName(name, &guid, &changeId);
     if (status != ER_OK) {
         QCC_LogError(status, ("Found invalid name \"%s\"", name));
-        return status;
+        return;
     }
 
     /* Join session if we need signals from this advertiser and we aren't already getting them */
+    bool doJoin = false;
     lock.Lock();
     map<String, ChangeIdEntry>::iterator it = changeIdMap.find(guid);
-    bool updateChangeIdMap = (it == changeIdMap.end()) || IS_GREATER(uint32_t, changeId, it->second.changeId);
-    if (updateChangeIdMap || !isNewAdv) {
-        SessionlessObj* slObj = this;
-
-        /* Setup for JoinSession at random time between now and 256ms from now */
-        uint32_t delay = qcc::Rand8();
-        if (it == changeIdMap.end()) {
-            changeIdMap.insert(pair<String, ChangeIdEntry>(guid, ChangeIdEntry(name, transport, numeric_limits<uint32_t>::max(), changeId, qcc::GetTimestamp64() + delay)));
-            ++delay;
-            status = timer.AddAlarm(Alarm(delay, slObj));
-        } else {
-            if (isNewAdv) {
-                it->second.advName = name;
-                it->second.advChangeId = changeId;
-                it->second.transport = transport;
-                it->second.retries = 0;
-            }
-            if (it->second.inProgress.empty()) {
-                it->second.nextJoinTimestamp = qcc::GetTimestamp64() + delay;
-                ++delay;
-                status = timer.AddAlarm(Alarm(delay, slObj));
-            }
-        }
+    if (it == changeIdMap.end()) {
+        it = changeIdMap.insert(pair<String, ChangeIdEntry>(guid, ChangeIdEntry(name, transport, changeId))).first;
+        doJoin = true;
+    } else if (IS_GREATER(uint32_t, changeId, it->second.changeId)) {
+        it->second.advName = name;
+        it->second.advChangeId = changeId;
+        it->second.transport = transport;
+        it->second.retries = 0;
+        doJoin = true;
+    }
+    if (doJoin) {
+        ScheduleTry(it->second);
     }
     lock.Unlock();
-    return status;
 }
 
 bool SessionlessObj::AcceptSessionJoiner(SessionPort port,
@@ -669,13 +649,9 @@ void SessionlessObj::DoSessionLost(SessionId sid, SessionLostReason reason)
             }
             cit->second.routedMessages.clear();
 
-            /* Retrigger FoundAdvName if necessary */
+            /* Get the sessions rolling if necessary */
             if (cit->second.changeId != cit->second.advChangeId) {
-                String advName = cit->second.advName;
-                TransportMask transport = cit->second.transport;
-                lock.Unlock();
-                HandleFoundAdvertisedName(advName.c_str(), transport, false);
-                lock.Lock();
+                ScheduleTry(cit->second);
             }
         } else {
             /* An error occurred while getting the signals, so retry */
@@ -1020,21 +996,33 @@ uint32_t SessionlessObj::RuleCount() const
     return count;
 }
 
+void SessionlessObj::ScheduleTry(ChangeIdEntry& entry)
+{
+    if (entry.inProgress.empty()) {
+        /* Setup for JoinSession at random time between now and 256ms from now */
+        ScheduleJoin(entry, qcc::Rand8());
+    }
+}
+
 QStatus SessionlessObj::ScheduleRetry(ChangeIdEntry& entry)
 {
     if (entry.retries < MAX_JOINSESSION_RETRIES) {
-        uint32_t delay = 200 + (qcc::Rand16() >> 3);
-        entry.nextJoinTimestamp = GetTimestamp64() + delay;
-        ++delay;
-        SessionlessObj* slObj = this;
-        QStatus status = timer.AddAlarm(Alarm(delay, slObj));
-        if (status != ER_OK) {
-            QCC_LogError(status, ("Timer::AddAlarm failed"));
-        }
+        ScheduleJoin(entry, 200 + (qcc::Rand16() >> 3));
         return ER_OK;
     } else {
         QCC_LogError(ER_FAIL, ("Exhausted JoinSession retries to %s", entry.advName.c_str()));
         return ER_FAIL;
+    }
+}
+
+void SessionlessObj::ScheduleJoin(ChangeIdEntry& entry, uint32_t delayMs)
+{
+    entry.nextJoinTimestamp = GetTimestamp64() + delayMs;
+    ++delayMs;
+    SessionlessObj* slObj = this;
+    QStatus status = timer.AddAlarm(Alarm(delayMs, slObj));
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Timer::AddAlarm failed"));
     }
 }
 

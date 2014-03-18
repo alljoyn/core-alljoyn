@@ -234,15 +234,6 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     void HandleRangeRequest(const char* sender, SessionId sid, uint32_t fromId, uint32_t toId);
 
     /**
-     * Internal helper for FoundAdvertisedName.
-     *
-     * @param name        Advertised name that has been found.
-     * @param transport   Transport that received the advertisment
-     * @param catchUp     true if caller is intending to trigger rereceiption of sessionless signals.
-     */
-    QStatus HandleFoundAdvertisedName(const char* name, TransportMask transport, bool catchUp);
-
-    /**
      * SessionLost helper handler.
      *
      * @param sid    Session ID of lost session.
@@ -313,8 +304,9 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /** Track the changeIds of the advertisments coming from other daemons */
     struct ChangeIdEntry {
       public:
-        ChangeIdEntry(const char* advName, TransportMask transport, uint32_t changeId, uint32_t advChangeId, uint64_t nextJoinTimestamp) :
-            advName(advName), transport(transport), changeId(changeId), advChangeId(advChangeId), nextJoinTimestamp(nextJoinTimestamp), retries(0), sid(0), catchupList() { }
+        ChangeIdEntry(const char* advName, TransportMask transport, uint32_t advChangeId) :
+            advName(advName), transport(transport), changeId(std::numeric_limits<uint32_t>::max()),
+            advChangeId(advChangeId), nextJoinTimestamp(0), retries(0), sid(0), catchupList() { }
         qcc::String advName;
         TransportMask transport;
         uint32_t changeId;
@@ -344,6 +336,13 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     bool advanceChangeId;       /**< Set to true when changeId should be advanced on next SLS send request */
 
     /**
+     * Try join with random backoff of 1 to 256ms.
+     *
+     * @param[in,out] entry the host to schedule the retry for
+     */
+    void ScheduleTry(ChangeIdEntry& entry);
+
+    /**
      * Retry join with random backoff of 200ms to ~8.5s.
      *
      * @param[in,out] entry the host to schedule the retry for
@@ -351,6 +350,14 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @return ER_OK if retry scheduled, failure if retries exhausted
      */
     QStatus ScheduleRetry(ChangeIdEntry& entry);
+
+    /**
+     * Internal helper for scheduling a join try or retry.
+     *
+     * @param[in,out] entry the host to schedule the join for
+     * @param[in] delay the delay in msecs
+     */
+    void ScheduleJoin(ChangeIdEntry& entry, uint32_t delayMs);
 
     /**
      * Internal helper for parsing an advertised name into its guid and change
