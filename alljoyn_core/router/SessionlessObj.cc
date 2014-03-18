@@ -256,9 +256,9 @@ void SessionlessObj::ObjectRegistered(void)
 
 void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
 {
-    QCC_DbgTrace(("SessionlessObj::AddRule(%s, ...)", epName.c_str()));
-
     if (rule.sessionless == Rule::SESSIONLESS_TRUE) {
+        QCC_DbgPrintf(("AddRule(epName=%s,rule=%s)", epName.c_str(), rule.ToString().c_str()));
+
         router.LockNameTable();
         lock.Lock();
         map<String, uint32_t>::iterator it = ruleCountMap.find(epName);
@@ -667,8 +667,10 @@ void SessionlessObj::DoSessionLost(SessionId sid, SessionLostReason reason)
         cit->second.sid = 0;
 
         if (reason == ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION) {
-            /* We got all the signals, so update the ChangeIdEntry */
-            ParseAdvertisedName(inProgress, NULL, &cit->second.changeId);
+            /* We got all the signals */
+            if (!isCatchup) {
+                ParseAdvertisedName(inProgress, NULL, &cit->second.changeId);
+            }
             cit->second.routedMessages.clear();
 
             /* Retrigger FoundAdvName if necessary */
@@ -1072,7 +1074,7 @@ QStatus SessionlessObj::RequestRange(const char* name, SessionId sid, uint32_t f
     MsgArg args[2];
     args[0].Set("u", fromId);
     args[1].Set("u", toId);
-    QCC_DbgPrintf(("RequestRange(name=%s,sid=%d,fromId=%d,toId=%d) to %s", name, sid, fromId, toId));
+    QCC_DbgPrintf(("RequestRange(name=%s,sid=%d,fromId=%d,toId=%d)", name, sid, fromId, toId));
     return Signal(name, sid, *requestRangeSignal, args, ArraySize(args));
 }
 
