@@ -284,12 +284,10 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
 
     /** CatchupState is used to track individual local clients that are behind the state of the server for a particular remote host */
     struct CatchupState {
-        CatchupState() : changeId(0), sid(0) { }
-        CatchupState(const qcc::String& sender, const qcc::String& guid, uint32_t changeId, SessionId sid) : sender(sender), guid(guid), changeId(changeId), sid(sid) { }
+        CatchupState() : changeId(0) { }
+        CatchupState(const qcc::String& sender, uint32_t changeId) : sender(sender), changeId(changeId) { }
         qcc::String sender;
-        qcc::String guid;
         uint32_t changeId;
-        uint32_t sid;
     };
     /** Map session IDs to catchupStates */
     std::map<uint32_t, CatchupState> catchupMap;

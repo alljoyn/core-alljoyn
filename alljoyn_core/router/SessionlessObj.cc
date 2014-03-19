@@ -481,7 +481,7 @@ QStatus SessionlessObj::RereceiveMessages(const qcc::String& sender)
 
             /* Add new catchup state */
             uint32_t beginState = it->second.changeId - (numeric_limits<uint32_t>::max() >> 1);
-            it->second.catchupList.push(CatchupState(sender, it->first, beginState, 0));
+            it->second.catchupList.push(CatchupState(sender, beginState));
 
             /* Get the sessions rolling */
             ScheduleTry(it->second);
