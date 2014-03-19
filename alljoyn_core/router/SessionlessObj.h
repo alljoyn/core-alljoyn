@@ -206,9 +206,9 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /**
      * Trigger (re)reception of sessionless signals from all remote daemons.
      *
-     * @param sender    Unique name of client that is requesting to re-receive sessionless messages.
+     * @param epName   The name of the endpoint that is requesting to re-receive sessionless messages.
      */
-    QStatus RereceiveMessages(const qcc::String& sender);
+    QStatus RereceiveMessages(const qcc::String& epName);
 
   private:
     /**
@@ -285,8 +285,8 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /** CatchupState is used to track individual local clients that are behind the state of the server for a particular remote host */
     struct CatchupState {
         CatchupState() : changeId(0) { }
-        CatchupState(const qcc::String& sender, uint32_t changeId) : sender(sender), changeId(changeId) { }
-        qcc::String sender;
+        CatchupState(const qcc::String& epName, uint32_t changeId) : epName(epName), changeId(changeId) { }
+        qcc::String epName;
         uint32_t changeId;
     };
     /** Map session IDs to catchupStates */
@@ -387,6 +387,15 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param[in] toId   End of changeId range (exclusive)
      */
     QStatus RequestRange(const char* name, SessionId sid, uint32_t fromId, uint32_t toId);
+
+    /**
+     * Internal helper for sending sessionless signals.
+     *
+     * @param[in] msg The sessionless signal
+     * @param[in] ep The destination endpoint
+     * @param[in] sid Session ID
+     */
+    QStatus SendThroughEndpoint(Message& msg, BusEndpoint& ep, SessionId sid);
 };
 
 }
