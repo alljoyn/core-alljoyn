@@ -204,13 +204,11 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
                                    Message& msg);
 
     /**
-     * Trigger (re)reception of sessionless signals from a single or from all
-     * remote daemons.
+     * Trigger (re)reception of sessionless signals from all remote daemons.
      *
      * @param sender    Unique name of client that is requesting to re-receive sessionless messages.
-     * @param guid      GUID of remote host that sender wants to re-receive messages from or empty for all remote hosts
      */
-    QStatus RereceiveMessages(const qcc::String& sender, const qcc::String& guid);
+    QStatus RereceiveMessages(const qcc::String& sender);
 
   private:
     /**
