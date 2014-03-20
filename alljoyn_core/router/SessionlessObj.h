@@ -248,7 +248,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      *
      * @return the number of rules that specify sessionless=TRUE.
      */
-    uint32_t RuleCount() const;
+    uint32_t RuleCount();
 
     Bus& bus;                             /**< The bus */
     BusController* busController;         /**< BusController that created this BusObject */
@@ -304,7 +304,21 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
       public:
         ChangeIdEntry(const char* advName, TransportMask transport, uint32_t advChangeId) :
             advName(advName), transport(transport), changeId(std::numeric_limits<uint32_t>::max()),
-            advChangeId(advChangeId), nextJoinTimestamp(0), retries(0), sid(0), catchupList() { }
+            advChangeId(advChangeId), nextJoinTimestamp(0), retries(0), inProgressTimestamp(0), sid(0) { }
+
+        void Started() {
+            inProgress = advName;
+            inProgressTimestamp = qcc::GetTimestamp64();
+        }
+        bool InProgress() {
+            return !inProgress.empty();
+        }
+        void Completed() {
+            inProgress.clear();
+            inProgressTimestamp = 0;
+            sid = 0;
+        }
+
         qcc::String advName;
         TransportMask transport;
         uint32_t changeId;
@@ -312,6 +326,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
         uint64_t nextJoinTimestamp;
         uint32_t retries;
         qcc::String inProgress;
+        uint64_t inProgressTimestamp;
         SessionId sid;
         std::queue<CatchupState> catchupList;
         std::list<RoutedMessage> routedMessages;
@@ -396,6 +411,21 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param[in] sid Session ID
      */
     QStatus SendThroughEndpoint(Message& msg, BusEndpoint& ep, SessionId sid);
+
+    /**
+     * A match rule that includes a timestamp for recording when it was entered
+     * into the rule table.
+     */
+    struct TimestampedRule : public Rule {
+        TimestampedRule(Rule& rule) : Rule(rule), timestamp(qcc::GetTimestamp64()) { }
+        uint64_t timestamp;
+    };
+
+    /** Table of endpoint name, timestamped rule. */
+    std::multimap<qcc::String, TimestampedRule> rules;
+
+    /** Rule iterator */
+    typedef std::multimap<qcc::String, TimestampedRule>::iterator RuleIterator;
 };
 
 }
