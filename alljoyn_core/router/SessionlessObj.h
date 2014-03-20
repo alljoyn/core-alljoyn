@@ -207,8 +207,9 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * Trigger (re)reception of sessionless signals from all remote daemons.
      *
      * @param epName   The name of the endpoint that is requesting to re-receive sessionless messages.
+     * @param rule     The rule that triggered the re-receive.
      */
-    QStatus RereceiveMessages(const qcc::String& epName);
+    QStatus RereceiveMessages(const qcc::String& epName, const Rule& rule);
 
   private:
     /**
@@ -285,8 +286,10 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /** CatchupState is used to track individual local clients that are behind the state of the server for a particular remote host */
     struct CatchupState {
         CatchupState() : changeId(0) { }
-        CatchupState(const qcc::String& epName, uint32_t changeId) : epName(epName), changeId(changeId) { }
+        CatchupState(const qcc::String& epName, const Rule& rule, uint32_t changeId) :
+            epName(epName), rule(rule), changeId(changeId) { }
         qcc::String epName;
+        Rule rule;
         uint32_t changeId;
     };
     /** Map session IDs to catchupStates */
