@@ -916,7 +916,12 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
             /* Update session ID */
             cit->second.sid = sid;
 
-            if (!cit->second.catchupList.empty()) {
+            /*
+             * Check first if routedMessages is empty.  If not it means we're
+             * retrying a request in progress and want to continue retrying
+             * before beginning a new catchup request.
+             */
+            if (cit->second.routedMessages.empty() && !cit->second.catchupList.empty()) {
                 /* Check to see if session host is capable of handling RequestSignalRange */
                 bool rangeCapable = false;
                 BusEndpoint ep = router.FindEndpoint(ctx->name);
