@@ -1,6 +1,6 @@
 /**
  * @file
- * SessionObj is for implementing the daemon-to-daemon inteface org.alljoyn.Sessionless
+ * SessionObj is for implementing the daemon-to-daemon inteface org.alljoyn.sl
  */
 
 /******************************************************************************
@@ -47,7 +47,7 @@ namespace ajn {
 class BusController;
 
 /**
- * BusObject responsible for implementing the standard AllJoyn interface org.alljoyn.Sessionless.
+ * BusObject responsible for implementing the standard AllJoyn interface org.alljoyn.sl.
  */
 class SessionlessObj : public BusObject, public NameListener, public SessionListener, public SessionPortListener,
     public BusAttachment::JoinSessionAsyncCB, public qcc::AlarmListener {
@@ -255,10 +255,10 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     BusController* busController;         /**< BusController that created this BusObject */
     DaemonRouter& router;                 /**< The router */
 
-    const InterfaceDescription* sessionlessIface;  /**< org.alljoyn.Sessionless interface */
+    const InterfaceDescription* sessionlessIface;  /**< org.alljoyn.sl interface */
 
-    const InterfaceDescription::Member* requestSignalsSignal;   /**< org.alljoyn.Sessionless.RequestSignal signal */
-    const InterfaceDescription::Member* requestRangeSignal;     /**< org.alljoyn.Sessionless.RequestRange signal */
+    const InterfaceDescription::Member* requestSignalsSignal;   /**< org.alljoyn.sl.RequestSignal signal */
+    const InterfaceDescription::Member* requestRangeSignal;     /**< org.alljoyn.sl.RequestRange signal */
 
     qcc::Timer timer;                     /**< Timer object for reaping expired names */
 

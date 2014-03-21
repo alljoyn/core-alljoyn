@@ -121,7 +121,7 @@ QStatus SessionlessObj::Init()
 
     QStatus status;
 
-    /* Create the org.alljoyn.Sessionless interface */
+    /* Create the org.alljoyn.sl interface */
     InterfaceDescription* intf = NULL;
     status = bus.CreateInterface(InterfaceName, intf);
     if (status != ER_OK) {
@@ -132,7 +132,7 @@ QStatus SessionlessObj::Init()
     intf->AddSignal("RequestRange", "uu", NULL, 0);
     intf->Activate();
 
-    /* Make this object implement org.alljoyn.Sessionless */
+    /* Make this object implement org.alljoyn.sl */
     const InterfaceDescription* sessionlessIntf = bus.GetInterface(InterfaceName);
     if (!sessionlessIntf) {
         status = ER_BUS_NO_SUCH_INTERFACE;
@@ -225,7 +225,7 @@ void SessionlessObj::ObjectRegistered(void)
 
     QStatus status;
 
-    /* Acquire org.alljoyn.Sessionless name */
+    /* Acquire org.alljoyn.sl name */
     uint32_t disposition = DBUS_REQUEST_NAME_REPLY_EXISTS;
     status = router.AddAlias(WellKnownName,
                              bus.GetInternal().GetLocalEndpoint()->GetUniqueName(),
@@ -236,14 +236,6 @@ void SessionlessObj::ObjectRegistered(void)
     if ((ER_OK != status) || (DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER != disposition)) {
         status = (ER_OK == status) ? ER_FAIL : status;
         QCC_LogError(status, ("Failed to register well-known name \"%s\" (disposition=%d)", WellKnownName, disposition));
-    }
-
-    /* Add a broadcast Rule rule to receive org.alljoyn.Sessionless signals */
-    if (status == ER_OK) {
-        status = bus.AddMatch("type='signal',interface='org.alljoyn.Sessionless'");
-        if (status != ER_OK) {
-            QCC_LogError(status, ("Failed to add match rule for org.alljoyn.Sessionless"));
-        }
     }
 
     /* Must call base class */
