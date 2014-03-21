@@ -600,6 +600,9 @@ void SessionlessObj::FoundAdvertisedNameSignalHandler(const InterfaceDescription
         return;
     }
 
+    /* Add/replace sessionless adv name for remote daemon */
+    busController->GetAllJoynObj().SetAdvNameAlias(guid, transport, name);
+
     /* Join session if we need signals from this advertiser and we aren't already getting them */
     bool doJoin = false;
     lock.Lock();
@@ -965,10 +968,6 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
         router.UnlockNameTable();
 
         if (status == ER_OK) {
-            /* Add/replace sessionless adv name for remote daemon */
-            String guid = advName.substr(::strlen(WellKnownName) + 2, qcc::GUID128::SHORT_SIZE);
-            busController->GetAllJoynObj().SetAdvNameAlias(guid, opts.transports, advName);
-
             /* Send the signal if join was successful */
             if (isCatchup) {
                 status = RequestRange(advName.c_str(), sid, catchup.changeId, requestChangeId);
