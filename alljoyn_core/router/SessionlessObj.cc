@@ -261,22 +261,25 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
         router.LockNameTable();
         lock.Lock();
 
-        bool isFirst = (rules.find(epName) == rules.end());
-        rules.insert(std::pair<String, TimestampedRule>(epName, rule));
-        if (isFirst) {
-            /*
-             * Since this is the first addMatch that specifies sessionless='t'
-             * from this client, we need to re-receive previous signals for
-             * this client (implicitly) if this daemon has previously received
-             * sessionless signals for any client.
-             */
-            if (!changeIdMap.empty() || !messageMap.empty()) {
-                lock.Unlock();
-                router.UnlockNameTable();
-                RereceiveMessages(epName);
-                router.LockNameTable();
-                lock.Lock();
+        bool isNewRule = true;
+        for (std::pair<RuleIterator, RuleIterator> range = rules.equal_range(epName); range.first != range.second; ++range.first) {
+            if (range.first->second == rule) {
+                isNewRule = false;
+                break;
             }
+        }
+        rules.insert(std::pair<String, TimestampedRule>(epName, rule));
+
+        /*
+         * We need to re-receive previous signals for a new rule from any
+         * senders we've previously received from.
+         */
+        if (isNewRule && (!changeIdMap.empty() || !messageMap.empty())) {
+            lock.Unlock();
+            router.UnlockNameTable();
+            RereceiveMessages(epName, rule);
+            router.LockNameTable();
+            lock.Lock();
         }
 
         if (!isDiscoveryStarted) {
@@ -378,16 +381,16 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
      * Check to see if this session ID is for a catchup. If it is, we'll route
      * it below.
      */
-    String catchupEpName;
+    CatchupState catchup;
     map<uint32_t, CatchupState>::const_iterator it = catchupMap.find(sid);
     if (it != catchupMap.end()) {
-        catchupEpName = it->second.epName;
+        catchup = it->second;
     }
 
     if (!didRoute) {
-        if (!catchupEpName.empty()) {
-            BusEndpoint ep = router.FindEndpoint(catchupEpName);
-            if (ep->IsValid()) {
+        if (!catchup.epName.empty()) {
+            BusEndpoint ep = router.FindEndpoint(catchup.epName);
+            if (ep->IsValid() && ep->AllowRemoteMessages() && catchup.rule.IsMatch(msg)) {
                 lock.Unlock();
                 router.UnlockNameTable();
                 SendThroughEndpoint(msg, ep, sid);
@@ -459,7 +462,7 @@ QStatus SessionlessObj::CancelMessage(const qcc::String& sender, uint32_t serial
     return status;
 }
 
-QStatus SessionlessObj::RereceiveMessages(const qcc::String& epName)
+QStatus SessionlessObj::RereceiveMessages(const qcc::String& epName, const Rule& rule)
 {
     QStatus status = ER_OK;
     QCC_DbgTrace(("SessionlessObj::RereceiveMessages(%s)", epName.c_str()));
@@ -497,7 +500,7 @@ QStatus SessionlessObj::RereceiveMessages(const qcc::String& epName)
 
             /* Add new catchup state */
             uint32_t beginState = it->second.changeId - (numeric_limits<uint32_t>::max() >> 1);
-            it->second.catchupList.push(CatchupState(epName, beginState));
+            it->second.catchupList.push(CatchupState(epName, rule, beginState));
 
             /* Get the sessions rolling */
             ScheduleTry(it->second);
