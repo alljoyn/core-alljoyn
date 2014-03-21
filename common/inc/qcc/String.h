@@ -263,10 +263,16 @@ class String {
     /**
      * Return true if string is equal to this string.
      *
-     * @param str  String to compare against this string.
+     * @param str  %String to compare against this string.
      * @return true iff other is equal to this string.
      */
     bool operator==(const String& str) const;
+
+    /**
+     * @overload
+     * @copydoc String::operator==
+     */
+    bool operator==(const char* str) const { return compare(str) == 0; }
 
     /**
      * Return true if string is not equal to this string.
@@ -277,12 +283,24 @@ class String {
     bool operator!=(const String& str) const { return !operator==(str); }
 
     /**
+     * @overload
+     * @copydoc String::operator!=
+     */
+    bool operator!=(const char* str) const { return !operator==(str); }
+
+    /**
      * Return true if this string is less than other string.
      *
      * @param str  String to compare against this string.
      * @return true iff this string is less than other string
      */
     bool operator<(const String& str) const;
+
+    /**
+     * @overload
+     * @copydoc String::operator<
+     */
+    bool operator<(const char* str) const { return compare(str) < 0; }
 
     /**
      * Get a reference to the character at a given position.
@@ -448,6 +466,17 @@ class String {
      * @return  &lt;0 if this string is less than other, &gt;0 if this string is greater than other, 0 if equal.
      */
     int compare(size_t pos, size_t n, const String& other) const;
+
+    /**
+     * @overload
+     * Compare a substring of this string with other.
+     *
+     * @param pos    Start position of this string.
+     * @param n      Number of characters of this string to use for compare.
+     * @param other  String to compare with.
+     * @return  &lt;0 if this string is less than other, &gt;0 if this string is greater than other, 0 if equal.
+     */
+    int compare(size_t pos, size_t n, const char* other) const { return ::strncmp(context->c_str + pos, other, n < context->offset ? n : context->offset); }
 
     /**
      * Compare this string with an array of chars.
