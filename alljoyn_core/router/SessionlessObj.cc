@@ -890,10 +890,12 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
     QCC_DbgPrintf(("JoinSessionCB(status=%s,sid=%u) name=%s", QCC_StatusText(status), sid, ctx->name.c_str()));
 
     /* Extract guid from creator name */
+    String advName = ctx->name;
     String guid;
-    QStatus sts = ParseAdvertisedName(ctx->name, &guid, NULL);
+    uint32_t advChangeId;
+    QStatus sts = ParseAdvertisedName(advName, &guid, &advChangeId);
     if (sts != ER_OK) {
-        QCC_LogError(sts, ("Cant extract guid from name \"%s\"", ctx->name.c_str()));
+        QCC_LogError(sts, ("Cant extract guid from name \"%s\"", advName.c_str()));
         if (status == ER_OK) {
             bus.LeaveSession(sid);
         }
@@ -906,7 +908,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
     lock.Lock();
     map<String, ChangeIdEntry>::iterator cit = changeIdMap.find(guid);
     if (cit != changeIdMap.end()) {
-        String advName = cit->second.advName;
+        bool rangeCapable = false;
         bool isCatchup = false;
         CatchupState catchup;
 
@@ -916,21 +918,21 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
             /* Update session ID */
             cit->second.sid = sid;
 
+            /* Check to see if session host is capable of handling RequestRange */
+            BusEndpoint ep = router.FindEndpoint(ctx->name);
+            if (ep->IsValid() && (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL)) {
+                RemoteEndpoint rep = VirtualEndpoint::cast(ep)->GetBusToBusEndpoint(sid);
+                if (rep->IsValid()) {
+                    rangeCapable = (rep->GetRemoteProtocolVersion() >= 6);
+                }
+            }
+
             /*
              * Check first if routedMessages is empty.  If not it means we're
              * retrying a request in progress and want to continue retrying
              * before beginning a new catchup request.
              */
             if (cit->second.routedMessages.empty() && !cit->second.catchupList.empty()) {
-                /* Check to see if session host is capable of handling RequestSignalRange */
-                bool rangeCapable = false;
-                BusEndpoint ep = router.FindEndpoint(ctx->name);
-                if (ep->IsValid() && (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL)) {
-                    RemoteEndpoint rep = VirtualEndpoint::cast(ep)->GetBusToBusEndpoint(sid);
-                    if (rep->IsValid()) {
-                        rangeCapable = (rep->GetRemoteProtocolVersion() >= 6);
-                    }
-                }
                 if (rangeCapable) {
                     /* Handle head of catchup list */
                     isCatchup = true;
@@ -962,9 +964,15 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
         router.UnlockNameTable();
 
         if (status == ER_OK) {
-            /* Send the signal if join was successful */
+            /*
+             * Send the request signal if join was successful.  Prefer
+             * RequestRange since it may be possible to receive duplicates when
+             * RequestSignals is used together with RequestRange.
+             */
             if (isCatchup) {
                 status = RequestRange(advName.c_str(), sid, catchup.changeId, requestChangeId);
+            } else if (rangeCapable) {
+                status = RequestRange(advName.c_str(), sid, requestChangeId, advChangeId + 1);
             } else {
                 status = RequestSignals(advName.c_str(), sid, requestChangeId);
             }
