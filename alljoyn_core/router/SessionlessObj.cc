@@ -352,8 +352,11 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
     QCC_DbgPrintf(("RouteSessionlessMessage(sid=%u,msg={sender='%s',interface='%s',member='%s',path='%s'})",
                    sid, msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath()));
 
+    static const Rule legacyRule("type='error',sessionless='t'");
+
     router.LockNameTable();
     lock.Lock();
+
     /*
      * Check if we've already routed this message.  This may occur if we are
      * retrying and only received a subset of the sessionless signals during our
@@ -369,53 +372,74 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
             cit->second.routedMessages.push_back(RoutedMessage(msg));
         }
     }
+    if (didRoute) {
+        lock.Unlock();
+        router.UnlockNameTable();
+        return true;
+    }
+
     /*
      * Check to see if this session ID is for a catchup. If it is, we'll route
      * it below.
      */
-    CatchupState catchup;
-    map<uint32_t, CatchupState>::const_iterator it = catchupMap.find(sid);
-    if (it != catchupMap.end()) {
-        catchup = it->second;
+    map<uint32_t, CatchupState>::iterator cuit = catchupMap.find(sid);
+    if (cuit != catchupMap.end()) {
+        bool isMatch = false;
+        BusEndpoint ep = router.FindEndpoint(cuit->second.epName);
+        if (ep->IsValid() && ep->AllowRemoteMessages() && cuit->second.rule.IsMatch(msg)) {
+            isMatch = true;
+        }
+        lock.Unlock();
+        router.UnlockNameTable();
+        if (isMatch) {
+            SendThroughEndpoint(msg, ep, sid);
+        }
+        return true;
     }
 
-    if (!didRoute) {
-        if (!catchup.epName.empty()) {
-            BusEndpoint ep = router.FindEndpoint(catchup.epName);
-            if (ep->IsValid() && ep->AllowRemoteMessages() && catchup.rule.IsMatch(msg)) {
-                lock.Unlock();
-                router.UnlockNameTable();
-                SendThroughEndpoint(msg, ep, sid);
-                router.LockNameTable();
-                lock.Lock();
-            }
-        } else {
-            RuleIterator it = rules.begin();
-            while (it != rules.end()) {
+    /*
+     * Not a catchup so multiple receivers may be interested in this message.
+     */
+    RuleIterator rit = rules.begin();
+    while (rit != rules.end()) {
+        bool isMatch = false;
+        /*
+         * Only apply the rule if it was added before we started the request,
+         * otherwise there is a possibilty of duplicate messages received.  A
+         * rule added while in progress will trigger a catchup request.
+         */
+        String epName = rit->first;
+        BusEndpoint ep = router.FindEndpoint(epName);
+        if (rit->second.timestamp < cit->second.inProgressTimestamp && ep->IsValid() && ep->AllowRemoteMessages()) {
+            if (rit->second.IsMatch(msg)) {
+                isMatch = true;
+            } else if (rit->second == legacyRule) {
                 /*
-                 * Only apply the rule if it was added before we started the
-                 * request, otherwise there is a possibilty of duplicate
-                 * messages received.  A rule added while in progress will
-                 * trigger a catchup request.
+                 * Legacy clients will add the "type='error',sessionless='t'"
+                 * rule.  In that case the expected behavior is that incoming
+                 * sessionless signals will route through the daemon router's
+                 * rule table.
                  */
-                String epName = it->first;
-                if ((it->second.timestamp < cit->second.inProgressTimestamp) && it->second.IsMatch(msg)) {
-                    BusEndpoint ep = router.FindEndpoint(epName);
-                    if (ep->IsValid() && ep->AllowRemoteMessages()) {
-                        lock.Unlock();
-                        router.UnlockNameTable();
-                        SendThroughEndpoint(msg, ep, sid);
-                        router.LockNameTable();
-                        lock.Lock();
-                    }
-                    it = rules.upper_bound(epName);
-                } else {
-                    ++it;
+                router.GetRuleTable().Lock();
+                for (ajn::RuleIterator drit = router.GetRuleTable().FindRulesForEndpoint(ep);
+                     !isMatch && (drit != router.GetRuleTable().End()) && (drit->first == ep);
+                     ++drit) {
+                    isMatch = drit->second.IsMatch(msg);
                 }
+                router.GetRuleTable().Unlock();
             }
         }
+        if (isMatch) {
+            lock.Unlock();
+            router.UnlockNameTable();
+            SendThroughEndpoint(msg, ep, sid);
+            router.LockNameTable();
+            lock.Lock();
+            rit = rules.upper_bound(epName);
+        } else {
+            ++rit;
+        }
     }
-
     lock.Unlock();
     router.UnlockNameTable();
     return true;

@@ -351,6 +351,13 @@ class DaemonRouter : public Router {
      */
     void RemoveSessionRoutes(const char* uniqueName, SessionId id);
 
+    /**
+     * Return the routing rule table.
+     *
+     * @return the routing rule table.
+     */
+    RuleTable& GetRuleTable() { return ruleTable; }
+
   private:
     LocalEndpoint localEndpoint;    /**< The local endpoint */
     RuleTable ruleTable;            /**< Routing rule table */
