@@ -506,10 +506,12 @@ QStatus SessionlessObj::RereceiveMessages(const qcc::String& epName, const Rule&
         }
     }
 
-    /* Retrieve from our own cache */
-    HandleRangeRequest(epName.c_str(), 0, curChangeId - (numeric_limits<uint32_t>::max() >> 1), curChangeId + 1);
-
+    uint32_t fromChangeId = curChangeId - (numeric_limits<uint32_t>::max() >> 1);
+    uint32_t toChangeId = curChangeId + 1;
     lock.Unlock();
+
+    /* Retrieve from our own cache */
+    HandleRangeRequest(epName.c_str(), 0, fromChangeId, toChangeId);
 
     return status;
 }
