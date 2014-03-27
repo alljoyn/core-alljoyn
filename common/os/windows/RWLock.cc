@@ -43,7 +43,6 @@ RWLock::~RWLock()
         return;
     }
 
-    ReleaseSRWLockShared(&rwlock);
     isInitialized = false;
     isWriteLock = false;
 }
