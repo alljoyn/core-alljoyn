@@ -2199,23 +2199,33 @@ qcc::String MDNSPtrRData::GetPtrDName() const
 
 size_t MDNSPtrRData::GetSerializedSize(void) const
 {
-    //2 bytes length
-    return 2 + m_rDataStr.length();
+    // 2 bytes length + 1 null byte
+    return 3 + m_rDataStr.length();
 }
 
 size_t MDNSPtrRData::Serialize(uint8_t* buffer) const
 {
 
-    buffer[0] = (m_rDataStr.length() & 0xFF00) >> 8;
-    buffer[1] = (m_rDataStr.length() & 0xFF);
-    memcpy(reinterpret_cast<void*>(&buffer[2]), const_cast<void*>(reinterpret_cast<const void*>(m_rDataStr.c_str())), m_rDataStr.length());
-
-    return 2 + m_rDataStr.length();
+    buffer[0] = ((m_rDataStr.length() + 1) & 0xFF00) >> 8;
+    buffer[1] = ((m_rDataStr.length() + 1) & 0xFF);
+    size_t pos = 0;
+    size_t newPos;
+    size_t size = 2;
+    while (pos != String::npos) {
+        newPos = m_rDataStr.find_first_of('.', pos);
+        String temp = m_rDataStr.substr(pos, newPos - pos);
+        buffer[size++] = temp.length();
+        memcpy(reinterpret_cast<void*>(&buffer[size]), const_cast<void*>(reinterpret_cast<const void*>(temp.c_str())), temp.size());
+        size += temp.length();
+        pos = (newPos == String::npos) ? String::npos : (newPos + 1);
+    }
+    return size;
 }
 
 size_t MDNSPtrRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
 {
 
+    m_rDataStr.clear();
     //
     // If there's not enough data in the buffer to even get the string size out
     // then bail.
@@ -2228,6 +2238,7 @@ size_t MDNSPtrRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     uint16_t szStr = buffer[0] << 8 | buffer[1];
     bufsize -= 2;
 
+    size_t size = 2;
     //
     // If there's not enough data in the buffer then bail.
     //
@@ -2235,15 +2246,29 @@ size_t MDNSPtrRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         QCC_DbgPrintf(("MDNSPtrRecord::Deserialize(): Insufficient bufsize %d", bufsize));
         return 0;
     }
-    if (szStr > 0) {
-        m_rDataStr.assign(reinterpret_cast<const char*>(buffer + 2), szStr);
-    } else {
-        m_rDataStr.clear();
-    }
-    QCC_DbgPrintf(("MDNSPtrRecord::Deserialize(): %s from buffer", m_rDataStr.c_str()));
 
-    bufsize -= m_rDataStr.length();
-    return m_rDataStr.length() + 2;
+    while (bufsize > 0) {
+        size_t temp_size = buffer[size++];
+        bufsize--;
+        //
+        // If there's not enough data in the buffer then bail.
+        //
+        if (bufsize < temp_size) {
+            QCC_DbgPrintf(("MDNSPtrRecord::Deserialize(): Insufficient bufsize %d", bufsize));
+            return 0;
+        }
+        if (m_rDataStr.length() > 0) {
+            m_rDataStr.append('.');
+        }
+        if (temp_size > 0) {
+            m_rDataStr.append(reinterpret_cast<const char*>(buffer + size), temp_size);
+            bufsize -= temp_size;
+            size += temp_size;
+        } else {
+            break;
+        }
+    }
+    return size;
 }
 
 //MDNSSrvRData
