@@ -440,3 +440,34 @@ TEST(MsgArgTest, InvalidValues)
     status = arg.Set("g", "a{si)"); //dictionaries must end in '}'
     ASSERT_EQ(ER_BUS_BAD_SIGNATURE, status) << "  Actual Status: " << QCC_StatusText(status);
 }
+
+TEST(MsgArgTest, StructContainingEmptyDict)
+{
+    QStatus status = ER_FAIL;
+    MsgArg arg;
+
+    static uint32_t u = 0x32323232;
+    static const char* s = "this is a string";
+
+    size_t numEntries = 0;
+    MsgArg* dictEntries = NULL;
+
+    status = arg.Set("(usa{sv})", u, s, numEntries, dictEntries);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    uint32_t uOut = 0;
+    const char* sOut = NULL;
+
+    //values given that are wrong and must be changed by the arg.Get call
+    //if the values are not changed then the test should report failure.
+    size_t numEntriesOut = 1000;
+    MsgArg dummyArg;
+    MsgArg* dictEntriesOut = &dummyArg;
+
+    status = arg.Get("(usa{sv})", &uOut, &sOut, &numEntriesOut, &dictEntriesOut);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(u, uOut);
+    EXPECT_STREQ(s, sOut);
+    EXPECT_EQ(numEntries, numEntriesOut);
+    EXPECT_TRUE(dictEntriesOut == NULL);
+}
