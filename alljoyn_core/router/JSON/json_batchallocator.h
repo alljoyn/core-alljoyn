@@ -1,6 +1,5 @@
 /**
- * @file
- * json_batchallocator.h
+ * @file json_batchallocator.h
  */
 
 /******************************************************************************
@@ -11,7 +10,7 @@
  ******************************************************************************/
 
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -67,8 +66,8 @@ class BatchAllocator {
 
     ~BatchAllocator()
     {
-        for (BatchInfo*batch = batches_; batch;) {
-            BatchInfo*nextBatch = batch->next_;
+        for (BatchInfo* batch = batches_; batch;) {
+            BatchInfo* nextBatch = batch->next_;
             free(batch);
             batch = nextBatch;
         }
@@ -110,9 +109,9 @@ class BatchAllocator {
 
   private:
     struct BatchInfo {
-        BatchInfo*next_;
-        AllocatedType*used_;
-        AllocatedType*end_;
+        BatchInfo* next_;
+        AllocatedType* used_;
+        AllocatedType* end_;
         AllocatedType buffer_[objectPerAllocation];
     };
 
@@ -131,10 +130,10 @@ class BatchAllocator {
         return batch;
     }
 
-    BatchInfo*batches_;
-    BatchInfo*currentBatch_;
+    BatchInfo* batches_;
+    BatchInfo* currentBatch_;
     /// Head of a single linked list within the allocated space of freeed object
-    AllocatedType*freeHead_;
+    AllocatedType* freeHead_;
     unsigned int objectsPerPage_;
 };
 
