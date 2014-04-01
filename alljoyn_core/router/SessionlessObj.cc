@@ -1,6 +1,6 @@
 /**
  * @file
- * * This file implements the org.alljoyn.Bus and org.alljoyn.Daemon interfaces
+ * This file implements the org.alljoyn.sl interfaces.
  */
 
 /******************************************************************************
@@ -26,6 +26,7 @@
 
 #include "SessionlessObj.h"
 #include "BusController.h"
+#include "DaemonConfig.h"
 
 #define QCC_MODULE "SESSIONLESS"
 
@@ -124,6 +125,13 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController) :
     sessionPort(SESSIONLESS_SESSION_PORT),
     advanceChangeId(false)
 {
+    /*
+     * Configurable for testing purposes only.  1500 msecs is chosen to minimize
+     * the probability of needing to do a retry.  This keeps the mean delay to
+     * 750 msecs and provides an optimal trade-off against the maximum number of
+     * connections allowed at the producer.
+     */
+    backoffDelayMs = DaemonConfig::Access()->Get("limit@sls_backoff", 1500);
 }
 
 SessionlessObj::~SessionlessObj()
@@ -542,7 +550,7 @@ QStatus SessionlessObj::RereceiveMessages(const qcc::String& epName, const Rule&
             }
 
             /* Get the sessions rolling */
-            ScheduleTry(cit->second);
+            ScheduleJoin(cit->second);
 
             cit = remoteQueues.lower_bound(lastKey);
         }
@@ -656,7 +664,7 @@ void SessionlessObj::FoundAdvertisedNameSignalHandler(const InterfaceDescription
         doJoin = true;
     }
     if (doJoin) {
-        ScheduleTry(it->second);
+        ScheduleJoin(it->second);
     }
     lock.Unlock();
 }
@@ -665,8 +673,15 @@ bool SessionlessObj::AcceptSessionJoiner(SessionPort port,
                                          const char* joiner,
                                          const SessionOpts& opts)
 {
-    QCC_DbgTrace(("SessionlessObj::AcceptSessionJoiner(%d, %s, ...)", port, joiner));
+    QCC_DbgPrintf(("AcceptSessionJoiner(port=%d,joiner=%s,...)", port, joiner));
     return true;
+}
+
+void SessionlessObj::SessionJoined(SessionPort port,
+                                   SessionId sid,
+                                   const char* joiner)
+{
+    QCC_DbgPrintf(("SessionJoined(port=%d,sid=%u,joiner=%s)", port, sid, joiner));
 }
 
 void SessionlessObj::SessionLostSignalHandler(const InterfaceDescription::Member* member,
@@ -710,14 +725,14 @@ void SessionlessObj::DoSessionLost(SessionId sid, SessionLostReason reason)
 
             /* Get the sessions rolling if necessary */
             if (cit->second.lastReceivedChangeId != cit->second.changeId) {
-                ScheduleTry(cit->second);
+                ScheduleJoin(cit->second);
             }
         } else {
             /* An error occurred while getting the signals, so retry */
             if (isCatchup) {
                 cit->second.catchupList.push(catchup);
             }
-            if (ScheduleRetry(cit->second) != ER_OK) {
+            if (ScheduleJoin(cit->second) != ER_OK) {
                 /* Retries exhausted. Clear state and wait for new advertisment */
                 remoteQueues.erase(cit);
             }
@@ -731,11 +746,11 @@ void SessionlessObj::RequestSignalsSignalHandler(const InterfaceDescription::Mem
                                                  const char* sourcePath,
                                                  Message& msg)
 {
-    QCC_DbgTrace(("SessionlessObj::RequestSignalsHandler(%s, %s, ...)", member->name.c_str(), sourcePath));
     uint32_t fromId;
     QStatus status = msg->GetArgs("u", &fromId);
     if (status == ER_OK) {
         /* Send all signals in the range [fromId, curChangeId] */
+        QCC_DbgPrintf(("RequestSignals(sender=%s,sid=%u,fromId=%u)", msg->GetSender(), msg->GetSessionId(), fromId));
         HandleRangeRequest(msg->GetSender(), msg->GetSessionId(), fromId, curChangeId + 1);
     } else {
         QCC_LogError(status, ("Message::GetArgs failed"));
@@ -746,10 +761,10 @@ void SessionlessObj::RequestRangeSignalHandler(const InterfaceDescription::Membe
                                                const char* sourcePath,
                                                Message& msg)
 {
-    QCC_DbgTrace(("SessionlessObj::RequestRangeHandler(%s, %s, ...)", member->name.c_str(), sourcePath));
     uint32_t fromId, toId;
     QStatus status = msg->GetArgs("uu", &fromId, &toId);
     if (status == ER_OK) {
+        QCC_DbgPrintf(("RequestRange(sender=%s,sid=%u,fromId=%u,toId=%u)", msg->GetSender(), msg->GetSessionId(), fromId, toId));
         HandleRangeRequest(msg->GetSender(), msg->GetSessionId(), fromId, toId);
     } else {
         QCC_LogError(status, ("Message::GetArgs failed"));
@@ -789,6 +804,7 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid, uint3
                 BusEndpoint ep = router.FindEndpoint(sender);
                 if (ep->IsValid()) {
                     router.UnlockNameTable();
+                    QCC_DbgPrintf(("Send cid=%u,serialNum=%u to sid=%u", it->second.first, it->second.second->GetCallSerial(), sid));
                     SendThroughEndpoint(it->second.second, ep, sid);
                 } else {
                     router.UnlockNameTable();
@@ -812,8 +828,10 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid, uint3
     /* Close the session */
     if (sid != 0) {
         status = bus.LeaveSession(sid);
-        if (status != ER_OK) {
-            QCC_LogError(status, ("LeaveSession failed"));
+        if (status == ER_OK) {
+            QCC_DbgPrintf(("LeaveSession(sid=%u)", sid));
+        } else {
+            QCC_LogError(status, ("LeaveSession sid=%u failed", sid));
         }
     }
 }
@@ -826,7 +844,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
     QStatus status = ER_OK;
 
     if (reason == ER_OK) {
-        uint32_t tilExpire = ::numeric_limits<uint32_t>::max();
+        Timespec tilExpire;
         uint32_t expire;
 
         /* Purge the local queue of expired messages */
@@ -847,11 +865,12 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         /* Look for new/failed joinsessions to try/retry (after backoff) */
         router.LockNameTable();
         lock.Lock();
+        Timespec now;
+        GetTimeNow(&now);
         for (RemoteQueues::iterator cit = remoteQueues.begin(); cit != remoteQueues.end(); ++cit) {
             RemoteQueue& queue = cit->second;
-            uint64_t now = qcc::GetTimestamp64();
             bool doJoin =
-                (queue.nextJoinTimestamp <= now) &&
+                (queue.nextJoinTime <= now) &&
                 !queue.IsReceiveInProgress() &&
                 ((queue.lastReceivedChangeId != queue.changeId) || !queue.catchupList.empty()) &&
                 ((queue.version == 0) || IsMatch(queue));
@@ -869,9 +888,10 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                         queue.ReceiveCompleted();
                         delete ctx;
                         /* Retry the join session with random backoff */
-                        uint32_t delay = qcc::Rand8();
-                        queue.nextJoinTimestamp = qcc::GetTimestamp64() + delay;
-                        tilExpire = min(tilExpire, delay + 1);
+                        ScheduleJoin(queue, false);
+                        if ((tilExpire == Timespec::Zero) || (queue.nextJoinTime < tilExpire)) {
+                            tilExpire = queue.nextJoinTime;
+                        }
                     }
                 } else {
                     QCC_LogError(ER_FAIL, ("Exhausted JoinSession retries to %s", queue.guid.c_str()));
@@ -883,7 +903,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         router.UnlockNameTable();
 
         /* Rearm alarm */
-        if (tilExpire != ::numeric_limits<uint32_t>::max()) {
+        if (tilExpire != Timespec::Zero) {
             SessionlessObj* slObj = this;
             timer.AddAlarm(Alarm(tilExpire, slObj));
         }
@@ -948,7 +968,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
             /* Clear inProgress */
             cit->second.ReceiveCompleted();
 
-            if (ScheduleRetry(cit->second) != ER_OK) {
+            if (ScheduleJoin(cit->second) != ER_OK) {
                 /* Retries exhausted. Clear state and wait for new advertisment */
                 remoteQueues.erase(cit);
             }
@@ -981,7 +1001,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
                 /* Clear inProgress */
                 cit->second.ReceiveCompleted();
 
-                if (ScheduleRetry(cit->second) != ER_OK) {
+                if (ScheduleJoin(cit->second) != ER_OK) {
                     /* Retries exhausted. Clear state and wait for new advertisment */
                     remoteQueues.erase(cit);
                 }
@@ -997,33 +1017,45 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
     delete ctx;
 }
 
-void SessionlessObj::ScheduleTry(RemoteQueue& queue)
+QStatus SessionlessObj::ScheduleJoin(RemoteQueue& queue, bool addAlarm)
 {
-    if (!queue.IsReceiveInProgress()) {
-        ScheduleJoin(queue, qcc::Rand8());
-    }
-}
-
-QStatus SessionlessObj::ScheduleRetry(RemoteQueue& queue)
-{
-    if (queue.retries < MAX_JOINSESSION_RETRIES) {
-        ScheduleJoin(queue, 200 + (qcc::Rand16() >> 3));
+    if (queue.IsReceiveInProgress()) {
         return ER_OK;
-    } else {
+    }
+    if (queue.retries >= MAX_JOINSESSION_RETRIES) {
         QCC_LogError(ER_FAIL, ("Exhausted JoinSession retries to %s", queue.guid.c_str()));
         return ER_FAIL;
     }
-}
 
-void SessionlessObj::ScheduleJoin(RemoteQueue& queue, uint32_t delayMs)
-{
-    queue.nextJoinTimestamp = GetTimestamp64() + delayMs;
-    ++delayMs;
-    SessionlessObj* slObj = this;
-    QStatus status = timer.AddAlarm(Alarm(delayMs, slObj));
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Timer::AddAlarm failed"));
+    /*
+     * Shorten the schedule if we're doing a retry.  The model is that the first
+     * try should succeed with a high probability.  Therefore only a small
+     * percentage of the consumers will attempt to retry, thus the interval can
+     * be shorter.  Go exponentially shorter down to 250 msecs.
+     */
+    if (queue.retries == 0) {
+        GetTimeNow(&queue.firstJoinTime);
     }
+    qcc::Timespec startTime;
+    uint32_t delayMs;
+    for (uint32_t i = 0; i <= queue.retries; ++i) {
+        if (i == 0) {
+            startTime = queue.firstJoinTime;
+            delayMs = backoffDelayMs;
+        } else {
+            startTime += delayMs;
+            delayMs = (delayMs > 500) ? (delayMs >> 1) : delayMs;
+        }
+    }
+    queue.nextJoinTime = startTime + qcc::Rand32() % delayMs;
+    if (addAlarm) {
+        SessionlessObj* slObj = this;
+        QStatus status = timer.AddAlarm(Alarm(queue.nextJoinTime, slObj));
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Timer::AddAlarm failed"));
+        }
+    }
+    return ER_OK;
 }
 
 QStatus SessionlessObj::ParseAdvertisedName(const qcc::String& name, uint32_t* version, qcc::String* guid, qcc::String* iface, uint32_t* changeId)

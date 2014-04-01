@@ -159,16 +159,29 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
 
     /**
      * Accept/reject join attempt on sessionlesss port.
-     * Implements SessionPortListener::AceptSessionJoiner.
+     * Implements SessionPortListener::AcceptSessionJoiner.
      *
      * @param port    Session port of join attempt.
      * @param joiner  Unique name of joiner.
      * @param opts    SesionOpts specified by joiner.
-     * @return   true if session is accepted. false otherwise.
+     *
+     * @return true if session is accepted. false otherwise.
      */
     bool AcceptSessionJoiner(SessionPort port,
                              const char* joiner,
                              const SessionOpts& opts);
+
+    /**
+     * Called by the bus when a session has been successfully joined.
+     * Implements SessionPortListener::SessionJoined.
+     *
+     * @param port    Session port of join attempt.
+     * @param sid     Id of session.
+     * @param joiner  Unique name of joiner.
+     */
+    void SessionJoined(SessionPort port,
+                       SessionId sid,
+                       const char* joiner);
 
     /**
      * Receive SessionLost signals.
@@ -316,7 +329,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
         RemoteQueue(uint32_t version, const qcc::String& guid, const qcc::String& iface, uint32_t changeId, TransportMask transport) :
             version(version), guid(guid), iface(iface), changeId(changeId), transport(transport),
             lastReceivedChangeId(std::numeric_limits<uint32_t>::max()), inProgressChangeId(0), inProgressTimestamp(0),
-            nextJoinTimestamp(0), retries(0), sid(0) { }
+            retries(0), sid(0) { }
 
         void ReceiveStarted() {
             inProgressChangeId = changeId;
@@ -340,7 +353,8 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
         uint32_t lastReceivedChangeId;
         uint32_t inProgressChangeId;
         uint64_t inProgressTimestamp;
-        uint64_t nextJoinTimestamp;
+        qcc::Timespec firstJoinTime;
+        qcc::Timespec nextJoinTime;
         uint32_t retries;
         SessionId sid;
         std::queue<CatchupState> catchupList;
@@ -361,29 +375,18 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     SessionPort sessionPort;    /**< SessionPort used by internal session */
     bool advanceChangeId;       /**< Set to true when changeId should be advanced on next SLS send request */
 
-    /**
-     * Try join with random backoff of 1 to 256ms.
-     *
-     * @param[in,out] queue the host to schedule the retry for
-     */
-    void ScheduleTry(RemoteQueue& queue);
+    uint32_t backoffDelayMs; /**< The backoff delay is in the range [0,backoffDelayMs] */
 
     /**
-     * Retry join with random backoff of 200ms to ~8.5s.
-     *
-     * @param[in,out] queue the host to schedule the retry for
-     *
-     * @return ER_OK if retry scheduled, failure if retries exhausted
-     */
-    QStatus ScheduleRetry(RemoteQueue& queue);
-
-    /**
-     * Internal helper for scheduling a join try or retry.
+     * Try a join with random backoff of 0 to backoffDelayMs msecs.
      *
      * @param[in,out] queue the host to schedule the join for
-     * @param[in] delay the delay in msecs
+     * @param[in] addAlarm true to add an alarm for the next try, false if the
+     *                     caller will take care of it
+     *
+     * @return ER_OK if the try is scheduled else failure if retries exhausted
      */
-    void ScheduleJoin(RemoteQueue& queue, uint32_t delayMs);
+    QStatus ScheduleJoin(RemoteQueue& queue, bool addAlarm = true);
 
     /**
      * Internal helper for parsing an advertised name into its guid, change
