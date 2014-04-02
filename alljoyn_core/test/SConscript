@@ -47,7 +47,6 @@ if test_env['OS'] != 'win8':
         test_env.Program('rawclient',     ['rawclient.cc']),
         test_env.Program('rawservice',    ['rawservice.cc']),
         test_env.Program('sessions',      ['sessions.cc']),
-        test_env.Program('ledctrl',       ['ledctrl.cc'])
         ]
 
     if test_env['OS'] == 'linux' or test_env['OS'] == 'android':
