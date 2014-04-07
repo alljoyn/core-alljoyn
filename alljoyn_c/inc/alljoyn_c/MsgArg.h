@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -935,7 +935,7 @@ extern AJ_API QStatus alljoyn_msgarg_get_double(const alljoyn_msgarg arg, double
  *      - #ER_BUS_SIGNATURE_MISMATCH if the signature did not match.
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_msgarg_get_string(const alljoyn_msgarg arg, char* s);
+extern AJ_API QStatus alljoyn_msgarg_get_string(const alljoyn_msgarg arg, char** s);
 /**
  * Get an object path from an alljoyn_msgarg
  * @remark This function exists for development of other language bindings and may
@@ -951,7 +951,7 @@ extern AJ_API QStatus alljoyn_msgarg_get_string(const alljoyn_msgarg arg, char* 
  *      - #ER_BUS_SIGNATURE_MISMATCH if the signature did not match.
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_msgarg_get_objectpath(const alljoyn_msgarg arg, char* o);
+extern AJ_API QStatus alljoyn_msgarg_get_objectpath(const alljoyn_msgarg arg, char** o);
 /**
  * Get a signature from an alljoyn_msgarg
  * @remark This function exists for development of other language bindings and may
@@ -967,7 +967,7 @@ extern AJ_API QStatus alljoyn_msgarg_get_objectpath(const alljoyn_msgarg arg, ch
  *      - #ER_BUS_SIGNATURE_MISMATCH if the signature did not match.
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_msgarg_get_signature(const alljoyn_msgarg arg, char* g);
+extern AJ_API QStatus alljoyn_msgarg_get_signature(const alljoyn_msgarg arg, char** g);
 
 /**
  * Get the alljoyn_msgarg from an variant alljoyn_msgarg
