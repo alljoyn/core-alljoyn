@@ -27,17 +27,17 @@
 /** Bitmask of all transport types */
 typedef uint16_t alljoyn_transportmask;
 
-const alljoyn_transportmask ALLJOYN_TRANSPORT_NONE      = 0x0000;   /**< no transports */
-const alljoyn_transportmask ALLJOYN_TRANSPORT_ANY       = 0xFFFF;   /**< ANY transport */
-const alljoyn_transportmask ALLJOYN_TRANSPORT_LOCAL     = 0x0001;   /**< Local (same device) transport */
-const alljoyn_transportmask ALLJOYN_TRANSPORT_BLUETOOTH = 0x0002;   /**< Bluetooth transport */
-const alljoyn_transportmask ALLJOYN_TRANSPORT_WLAN      = 0x0004;   /**< Wireless local-area network transport */
-const alljoyn_transportmask ALLJOYN_TRANSPORT_WWAN      = 0x0008;   /**< Wireless wide-area network transport */
-const alljoyn_transportmask ALLJOYN_TRANSPORT_LAN       = 0x0010;   /**< Wired local-area network transport */
-const alljoyn_transportmask ALLJOYN_TRANSPORT_PROXIMITY = 0x0040;   /**< Transport using WinRT Proximity Framework */
-const alljoyn_transportmask ALLJOYN_TRANSPORT_WFD       = 0x0080;   /**< Transport using Wi-Fi Direct transport */
-const alljoyn_transportmask ALLJOYN_TRANSPORT_TCP       = 0x0004;   /**< TCP/IP transport */
-const alljoyn_transportmask ALLJOYN_TRANSPORT_UDP       = 0x0100;   /**< UDP/IP transport */
-const alljoyn_transportmask ALLJOYN_TRANSPORT_IP        = 0x0004;   /**< IP transport (system chooses actual IP-based transport */
+#define ALLJOYN_TRANSPORT_NONE      (alljoyn_transportmask)0x0000   /**< no transports */
+#define ALLJOYN_TRANSPORT_ANY       (alljoyn_transportmask)0xFFFF   /**< ANY transport */
+#define ALLJOYN_TRANSPORT_LOCAL     (alljoyn_transportmask)0x0001   /**< Local (same device) transport */
+#define ALLJOYN_TRANSPORT_BLUETOOTH (alljoyn_transportmask)0x0002   /**< Bluetooth transport */
+#define ALLJOYN_TRANSPORT_WLAN      (alljoyn_transportmask)0x0004   /**< Wireless local-area network transport */
+#define ALLJOYN_TRANSPORT_WWAN      (alljoyn_transportmask)0x0008   /**< Wireless wide-area network transport */
+#define ALLJOYN_TRANSPORT_LAN       (alljoyn_transportmask)0x0010   /**< Wired local-area network transport */
+#define ALLJOYN_TRANSPORT_PROXIMITY (alljoyn_transportmask)0x0040   /**< Transport using WinRT Proximity Framework */
+#define ALLJOYN_TRANSPORT_WFD       (alljoyn_transportmask)0x0080   /**< Transport using Wi-Fi Direct transport */
+#define ALLJOYN_TRANSPORT_TCP       (alljoyn_transportmask)0x0004   /**< TCP/IP transport */
+#define ALLJOYN_TRANSPORT_UDP       (alljoyn_transportmask)0x0100   /**< UDP/IP transport */
+#define ALLJOYN_TRANSPORT_IP        (alljoyn_transportmask)0x0004   /**< IP transport (system chooses actual IP-based transport) */
 
 #endif
