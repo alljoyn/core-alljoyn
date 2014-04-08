@@ -1,5 +1,5 @@
 
-# Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -18,6 +18,7 @@ import getopt
 import os
 import re
 import sys
+import subprocess
 
 def usage():
     print >> sys.stderr, """
@@ -162,6 +163,7 @@ def main(argv=None):
     if not ( os.path.exists( command ) or os.path.exists( command + '.exe' ) ):
         print >> sys.stderr, 'error, GTestFile="%s" not found' % command
         return 2
+    command=[command]
 
     # assemble the gtest filter, if any
 
@@ -176,12 +178,12 @@ def main(argv=None):
 
     if filter != '':
         print '[TestCases]\n\t%s' % filter
-        command = command + ' --gtest_filter=' + filter
+        command.append('--gtest_filter=' + filter)
 
     # execute the gtestfile with filter argument, if any
     # exit status 0 if no errors, 1 if any tests failed, 2 if system error
 
-    if os.system( command ) == 0:
+    if subprocess.call(command) == 0:
         return 0
     else:
         return 1
