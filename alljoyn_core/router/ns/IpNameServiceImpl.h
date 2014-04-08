@@ -131,8 +131,8 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      *
      * RETRY_INTERVALS is set to { 1, 2, 3, 3 } by default
      */
-    static const uint32_t RETRY_INTERVALS[];
-
+    static const uint32_t RETRY_INTERVALS_V0_V1[];
+    static const uint32_t RETRY_INTERVALS_V2[];
     /**
      * The modulus indicating the minimum time between interface lazy updates.
      * Units are seconds.
@@ -200,6 +200,9 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
         IPV4 = 1,   /**< Return the address in IPv4 suitable form */
         IPV6 = 2    /**< Return the address in IPv6 suitable form */
     };
+
+    const static uint8_t TRANSMIT_V0_V1 = 1;
+    const static uint8_t TRANSMIT_V2 = 2;
 
     /**
      * @internal
@@ -766,7 +769,7 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * @brief The IANA assigned IPv4 multicast address for the multicast name
      * service.
      *
-     * @see http://www.iana.org/assignments/multicast-addresses/
+     * @see IPv4 Multicast Address space Registry IANA
      */
     static const char* IPV4_ALLJOYN_MULTICAST_GROUP;
 
@@ -774,7 +777,7 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * @brief The temporary IPv6 multicast address for the multicast name
      * service.
      *
-     * @see http://www.iana.org/assignments/multicast-addresses/
+     * @see IPv4 Multicast Address space Registry IANA
      */
     static const char* IPV6_MULTICAST_GROUP;
 
@@ -782,15 +785,31 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * @brief The IANA assigned IPv6 multicast address for the multicast name
      * service.
      *
-     * @see http://www.iana.org/assignments/multicast-addresses/
+     * @see IPv4 Multicast Address space Registry IANA
      */
     static const char* IPV6_ALLJOYN_MULTICAST_GROUP;
+
+    /**
+     * @brief The IANA assigned IPv4 multicast address for the MDNS
+     * service.
+     *
+     * @see IPv4 Multicast Address space Registry IANA
+     */
+    static const char* IPV4_MDNS_MULTICAST_GROUP;
+
+    /**
+     * @brief The IANA assigned IPv6 multicast address for the MDNS
+     * service.
+     *
+     * @see IPv4 Multicast Address space Registry IANA
+     */
+    static const char* IPV6_MDNS_MULTICAST_GROUP;
 
     /**
      * @brief The port number for the  multicast name service.
      * Should eventually be registered with IANA.
      *
-     * @see http://www.iana.org/assignments/multicast-addresses/
+     * @see IPv4 Multicast Address space Registry IANA
      */
     static const uint16_t MULTICAST_PORT;
 
@@ -800,6 +819,20 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * different (with a little work).
      */
     static const uint16_t BROADCAST_PORT;
+
+    /**
+     * @brief The port number for the  MDNS name service.
+     *
+     * @see IPv4 Multicast Address space Registry IANA
+     */
+    static const uint16_t MULTICAST_MDNS_PORT;
+
+    /**
+     * @brief The port number for the broadcast MDNS name service packets.
+     * Typically the same port as the multicast case, but can be made
+     * different (with a litle work).
+     */
+    static const uint16_t BROADCAST_MDNS_PORT;
 
     /**
      * @brief
@@ -843,9 +876,19 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
     class LiveInterface : public InterfaceSpecifier {
       public:
         qcc::IPAddress m_address;   /**< The address of the interface we are talking to */
+        uint16_t m_multicastPort;       /**< The multicast port we are using to talk */
+        uint16_t m_unicastPort;         /**< The unicast port we are using to talk */
+        uint16_t m_multicastMDNSPort;   /**< The multicast MDNS port we are using to talk */
         uint32_t m_prefixlen;       /**< The address prefix (cf netmask) of the interface we are talking to */
-        qcc::SocketFd m_sockFd;     /**< The socket we are using to talk over */
-        qcc::Event* m_event;        /**< The event we use to get read notifications over */
+
+        qcc::SocketFd m_multicastsockFd;     /**< The multicast socket we are using to talk over */
+        qcc::SocketFd m_unicastsockFd;       /**< The unicast socket we are using to talk over */
+        qcc::SocketFd m_multicastMDNSsockFd; /**< The multicast MDNS socket we are using to talk over */
+
+        qcc::Event* m_multicastevent;      /**< The event for the multicast socket we use to get read notifications over */
+        qcc::Event* m_unicastevent;        /**< The event for the unicast socket we use to get read notifications over */
+        qcc::Event* m_multicastMDNSevent;  /**< The event for the multicast MDNS socket we use to get read notifications over */
+
         uint32_t m_mtu;             /**< The MTU of the protocol/device we are using */
         uint32_t m_index;           /**< The interface index of the protocol/device we are using if IPv6 */
         uint32_t m_flags;           /**< The flags we found during the qcc::IfConfig() that originally discovered this iface */
@@ -900,13 +943,13 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * Send outbound name service messages over unicast, out the network
      * interfaces implied by the destination address in the header.
      */
-    void SendOutboundMessageQuietly(Header& header);
+    void SendOutboundMessageQuietly(Packet packet);
 
     /**
      * Send outbound name service messages over multicast, out the list of live
      * interfaces implied by the transport masks in the message.
      */
-    void SendOutboundMessageActively(Header& header);
+    void SendOutboundMessageActively(Packet packet);
 
     /**
      * Main thread entry point.
@@ -920,7 +963,7 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * @brief Queue a protocol message for transmission out on the multicast
      * group.
      */
-    void QueueProtocolMessage(Header& header);
+    void QueueProtocolMessage(Packet packet);
 
     /**
      * @internal
@@ -950,7 +993,7 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
         uint32_t interfaceAddressPrefixLen,
         uint32_t flags,
         bool sockFdIsIPv4,
-        Header& header,
+        Packet packet,
         uint32_t interfaceIndex);
 
     /**
@@ -980,10 +1023,15 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      *      should be used.
      * @param iPv6address The qcc::IPAddress of the IPv6 interface for which
      *     the is-at message is eventually destined.
+     * @param iPv4port The port that the daemon is listening to of the IPv4
+     *     interface for which the is-at message is eventually destined.
+     * @param iPv6port The port that the daemon is listening to of the IPv6
+     *     interface for which the is-at message is eventually destined.
      */
-    void RewriteVersionSpecific(uint32_t msgVersion, IsAt* isAt,
+    void RewriteVersionSpecific(uint32_t msgVersion, Packet packet,
                                 bool haveIPv4address, qcc::IPAddress ipv4address,
-                                bool haveIPv6Address, qcc::IPAddress ipv6address);
+                                bool haveIPv6Address, qcc::IPAddress ipv6address,
+                                uint16_t unicastIpv4Port = 0, uint16_t unicastIpv6Port = 0);
 
     /**
      * @internal
@@ -1011,7 +1059,7 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * @internal
      * @brief Do something with a received protocol message.
      */
-    void HandleProtocolMessage(uint8_t const* const buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint);
+    void HandleProtocolMessage(uint8_t const* const buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint, const uint16_t recv_port);
 
     /**
      * @internal
@@ -1024,6 +1072,18 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * @brief Do something with a received protocol answer.
      */
     void HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qcc::IPEndpoint& address);
+
+    /**
+     * @internal
+     * @brief Do something with a received MDNS protocol query.
+     */
+    void HandleProtocolQuery(MDNSPacket packet);
+
+    /**
+     * @internal
+     * @brief Do something with a received MDNS protocol response.
+     */
+    void HandleProtocolResponse(MDNSPacket mdnsPacket);
 
     /**
      * One possible callback for each of the corresponding transport masks in a
@@ -1155,7 +1215,7 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * @internal
      * @brief Retransmit exported advertisements.
      */
-    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination);
+    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type);
 
     /**
      * @internal
@@ -1164,7 +1224,7 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * we need to support some form of retry, even though we never get
      * an indication that our send failed.
      */
-    std::list<Header> m_retry;
+    std::list<Packet> m_retry;
 
     /**
      * @internal
@@ -1238,7 +1298,7 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * @brief A list of name service messages queued for transmission out on
      * the multicast group.
      */
-    std::list<Header> m_outbound;
+    std::list<Packet> m_outbound;
 
 #if defined(QCC_OS_GROUP_WINDOWS)
     /**
@@ -1346,8 +1406,9 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * header had been added to the outbound queue.
      */
     struct BurstResponseHeader {
-        BurstResponseHeader(Header header) : header(header), burstResponseCount(0) { }
-        Header header;
+        BurstResponseHeader(Packet packet) : packet(packet), burstResponseCount(0) { }
+        ~BurstResponseHeader() { }
+        Packet packet;
         uint32_t burstResponseCount;
     };
 

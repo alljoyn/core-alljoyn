@@ -316,6 +316,20 @@ class IPEndpoint {
      */
     IPEndpoint(qcc::IPAddress& addr, uint16_t port) : addr(addr), port(port) { }
 
+    /**
+     * Get the port for the IPEndpoint.
+     *
+     * @return  The port for this endpoint.
+     */
+    uint16_t GetPort() const { return port; }
+
+    /**
+     * Get the IP Address for the IPEndpoint.
+     *
+     * @return  The IP Address for this endpoint.
+     */
+    qcc::IPAddress GetAddress() const { return addr; }
+
     /** Address */
     qcc::IPAddress addr;
 
