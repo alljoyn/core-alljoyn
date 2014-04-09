@@ -57,7 +57,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
 	/********* Client *********/	
 	// the AnnouncmentReceiver will specify the interface and signal names.
-	private static final String ANNOUNCE_MATCH_RULE	= "interface='" + ANNOUNCE_IFNAME + "'";
+	private static final String ANNOUNCE_MATCH_RULE	= "interface='" + ANNOUNCE_IFNAME + "',sessionless='t'";
 
 
 	private static AboutServiceImpl m_instance      = new AboutServiceImpl();
@@ -377,7 +377,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 				private boolean m_isAnnouncing = true;
 
 				/**
-				 * Announce the about table. Whoever called addMatch("sessionless='t',interface='org.alljoyn.About'") will be notified
+				 * Announce the about table.
 				 */
 				@Override
 				public void announce()
