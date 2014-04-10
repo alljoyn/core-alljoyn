@@ -294,7 +294,7 @@ public class BusAttachment {
      * <li>OK if the new session port was bound.</li>
      * <li>BUS_NOT_CONNECTED if a connection has not been made with a local bus</li>
      * <li>other error status codes indicating a failure.</li>
-     * <ul>
+     * </ul>
      */
     public native Status bindSessionPort(Mutable.ShortValue sessionPort,
             SessionOpts opts,
@@ -331,6 +331,7 @@ public class BusAttachment {
      * <li>OK if the session port was unbound.</li>
      * <li>BUS_NOT_CONNECTED if connection has not been made with the local router.</li>
      * <li>other error status codes indicating a failure</li>
+     * </ul>
      */
     public native Status unbindSessionPort(short sessionPort);
 
@@ -488,6 +489,7 @@ public class BusAttachment {
      * <ul>
      * <li>Status.OK if the linkTimeout was successfully modified</li>
      * <li>ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus</li>
+     * </ul>
      */
     public native Status setLinkTimeout(int sessionId, Mutable.IntegerValue linkTimeout);
 
@@ -506,7 +508,7 @@ public class BusAttachment {
      * <ul>
      * <li>OK if the requested GUID was obtained</li>
      * <li>other error status codes indicating a failure</li>
-     * <ul>
+     * </ul>
      */
     public native Status getPeerGUID(String name, Mutable.StringValue guid);
 
@@ -1335,7 +1337,7 @@ public class BusAttachment {
      * <li>OK if the key was cleared</li>
      * <li>UNKNOWN GUID if theere is no peer with the specified GUID</li>
      * <li>other error status codes indicating a failure</li>
-     * <ul>
+     * </ul>
      */
     public native Status clearKeys(String guid);
 
@@ -1382,6 +1384,7 @@ public class BusAttachment {
      * <ul>
      * <li>OK if the key store was succesfully reloaded</li>
      * <li>An error status indicating that the key store reload failed</li>
+     * </ul>
      */
     public native Status reloadKeyStore();
 

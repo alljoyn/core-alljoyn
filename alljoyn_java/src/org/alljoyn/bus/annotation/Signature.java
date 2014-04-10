@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -26,7 +26,7 @@ import java.lang.annotation.Target;
  * Declares the AllJoyn data type of a Java data type.
  *
  * Valid type declarations are:
- * <table border="1" width="100%" cellpadding="3" cellspacing="0">
+ * <table border="1" width="100%" cellpadding="3" cellspacing="0" summary="All valid declarations">
  *   <tr bgcolor="#ccccff" class="tableheadingcolor"><th><b>Type Id</b></th>
  *      <th><b>AllJoyn type</b></th><th><b>Compatible Java types</b></th></tr>
  *   <tr><td>y</td><td>BYTE</td><td>byte, Enum<a href="#note-1"><sup>[1]</sup></a></td></tr>
@@ -50,11 +50,11 @@ import java.lang.annotation.Target;
  *      JS are compatible Java types</td></tr>
  * </table>
  * <ol>
- * <a name="note-1"><li>The ordinal numbers of the enumeration constant must correspond to the values of the
- *      AllJoyn type.</li></a>
- * <a name="note-2"><li>Automatically converted to/from UTF-8(AllJoyn) to UTF-16 (Java).</li></a>
- * <a name="note-3"><li>The user-defined type must supply a parameterless constructor.  Any nested classes
- *        of the user-defined type must be static nested classes.</li></a>
+ * <li><a name="note-1">The ordinal numbers of the enumeration constant must correspond to the values of the
+ *      AllJoyn type.</a></li>
+ * <li><a name="note-2">Automatically converted to/from UTF-8(AllJoyn) to UTF-16 (Java).</a></li>
+ * <li><a name="note-3">The user-defined type must supply a parameterless constructor.  Any nested classes
+ *        of the user-defined type must be static nested classes.</a></li>
  * </ol>
  */
 @Documented
