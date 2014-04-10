@@ -57,3 +57,4 @@ samples/Unity/BasicServer/BasicServer_Data/
 
 #BasicClient
 samples/Unity/BasicClient/BasicClient_Data/
+*.so
