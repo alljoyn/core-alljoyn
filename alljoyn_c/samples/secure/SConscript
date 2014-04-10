@@ -13,7 +13,7 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # 
 
-Import('sample_env')
+Import('env')
 
 # Sample Programs
-sample_env.Program('DeskTopSharedKSClientC',  ['DeskTopSharedKSClientC.c']),
+env.Program('DeskTopSharedKSClientC',  ['DeskTopSharedKSClientC.c']),

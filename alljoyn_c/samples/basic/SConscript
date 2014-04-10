@@ -13,8 +13,16 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # 
 
-Import('sample_env')
+Import('env')
+
+clientDistDir = '$C_DISTDIR/samples/basic'
 
 # Sample Programs
-sample_env.Program('basic_c_service',  ['basic_c_service.c']),
-sample_env.Program('basic_c_client',   ['basic_c_client.c']),
+progs = [
+    env.Program('basic_c_service',  ['basic_c_service.c']),
+    env.Program('basic_c_client',   ['basic_c_client.c']),
+]
+
+if env['OS'] in ['linux', 'darwin']:
+    env.Install('$C_DISTDIR/bin/samples', progs )
+    env.Install(clientDistDir, env.Glob('*.c'))
