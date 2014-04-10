@@ -14,9 +14,8 @@ alljoyn_unity_native.ilk
 alljoyn_unity_native.lib
 alljoyn_unity.dll
 xunit.dll
-liballjoyn_c.so
-liballjoyn_java.so
 whitespace.db
+*.so
 
 #Files created by Microsoft Visual Studio
 unit_test/AllJoynUnityTest.csproj.user
