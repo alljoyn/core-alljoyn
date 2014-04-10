@@ -15,16 +15,16 @@
 
 Import('env')
 
-sample_env = env.Clone()
+samples_env = env.Clone()
 
-sample_env.Prepend(LIBS = sample_env['ALLJOYN_C_LIB_STATIC'])
+samples_env.Prepend(LIBS = samples_env['ALLJOYN_C_LIB_STATIC'])
 
-if sample_env['BR'] == 'on':
+if samples_env['BR'] == 'on':
     # Build apps with bundled daemon support
-    sample_env.Prepend(LIBS = [sample_env['brobj'], sample_env['ajrlib']])
+    samples_env.Prepend(LIBS = [samples_env['brobj'], samples_env['ajrlib']])
 
 # Basic Sample programs
-sample_env.SConscript('basic/SConscript', exports = ['sample_env'])
+samples_env.SConscript('basic/SConscript', exports = {'env': samples_env })
 
 # Security Sample programs
-sample_env.SConscript('secure/SConscript', exports = ['sample_env'])
+samples_env.SConscript('secure/SConscript', exports = {'env': samples_env })
