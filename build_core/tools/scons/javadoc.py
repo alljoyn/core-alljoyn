@@ -64,7 +64,7 @@ def javadoc_emitter(source, target, env):
                f = d.File(fn)
                f.attributes.javadoc_src = source
                if os.path.basename(str(f)) == 'overview.html':
-                  f.attributes.javadoc_overview = env.File(str(f)).abspath
+                  f.attributes.javadoc_overview = '"' + env.File(str(f)).abspath + '"'
                slist.append(f)
       os.path.walk(entry.abspath, visit, slist)
    slist = env.Flatten(slist)
