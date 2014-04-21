@@ -353,7 +353,8 @@ QStatus AboutPropertyStoreImpl::setSupportedLangs(const std::vector<qcc::String>
         supportedLangsVec[indx] = supportedLangs[indx].c_str();
     }
 
-    MsgArg msgArg("as", supportedLangsVec.size(), supportedLangsVec.data());
+
+    MsgArg msgArg("as", supportedLangsVec.size(), (supportedLangsVec.empty()) ? NULL : &supportedLangsVec.front());
 
     status = validateValue(propertyKey, msgArg);
     if (status != ER_OK) {

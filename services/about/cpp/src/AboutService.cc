@@ -152,13 +152,13 @@ QStatus AboutService::Announce() {
             interfacesVector[interfaceIndex++] = interfaceIt->c_str();
         }
 
-        status = announceObjectsArg[objIndex].Set("(oas)", objectPath.c_str(), interfacesVector.size(), interfacesVector.data());
+        status = announceObjectsArg[objIndex].Set("(oas)", objectPath.c_str(), interfacesVector.size(), (interfacesVector.empty()) ? NULL : &interfacesVector.front());
         if (status != ER_OK) {
             return status;
         }
         objIndex++;
     }
-    status = announceArgs[2].Set("a(oas)", objIndex, announceObjectsArg.data());
+    status = announceArgs[2].Set("a(oas)", objIndex, (announceObjectsArg.empty()) ? NULL : &announceObjectsArg.front());
     if (status != ER_OK) {
         return status;
     }
@@ -225,10 +225,10 @@ void AboutService::GetObjectDescription(const ajn::InterfaceDescription::Member*
                 interfacesVec[interfaceIndex] = interfaceIt->c_str();
             }
 
-            objectArg[objIndex].Set("(oas)", key.c_str(), interfacesVec.size(), interfacesVec.data());
+            objectArg[objIndex].Set("(oas)", key.c_str(), interfacesVec.size(), (interfacesVec.empty()) ? NULL : &interfacesVec.front());
             objIndex++;
         }
-        retargs[0].Set("a(oas)", objectArg.size(), objectArg.data());
+        retargs[0].Set("a(oas)", objectArg.size(), (objectArg.empty()) ? NULL : &objectArg.front());
         MethodReply(msg, retargs, 1);
     } else {
         MethodReply(msg, ER_INVALID_DATA);
