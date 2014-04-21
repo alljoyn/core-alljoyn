@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -25,8 +25,6 @@
 
 using namespace ajn;
 using namespace services;
-
-#define CHECK_RETURN(x) if ((status = x) != ER_OK) { return status; }
 
 #define SERVICE_EXIT_OK       0
 #define SERVICE_OPTION_ERROR  1
@@ -114,33 +112,97 @@ static QStatus FillAboutPropertyStoreImplData(AboutPropertyStoreImpl* propStore,
 {
     QStatus status = ER_OK;
 
-    CHECK_RETURN(propStore->setDeviceId(opts.GetDeviceId()))
-    CHECK_RETURN(propStore->setDeviceName(opts.GetDeviceName()))
-    CHECK_RETURN(propStore->setAppId(opts.GetAppId()))
+    status = propStore->setDeviceId(opts.GetDeviceId());
+    if (status != ER_OK) {
+        return status;
+    }
+    status = propStore->setDeviceName(opts.GetDeviceName());
+    if (status != ER_OK) {
+        return status;
+    }
+    status = propStore->setAppId(opts.GetAppId());
+    if (status != ER_OK) {
+        return status;
+    }
+
 
     std::vector<qcc::String> languages(3);
     languages[0] = "en";
     languages[1] = "sp";
     languages[2] = "fr";
-    CHECK_RETURN(propStore->setSupportedLangs(languages))
-    CHECK_RETURN(propStore->setDefaultLang(opts.GetDefaultLanguage()))
+    status = propStore->setSupportedLangs(languages);
+    if (status != ER_OK) {
+        return status;
+    }
+    status = propStore->setDefaultLang(opts.GetDefaultLanguage());
+    if (status != ER_OK) {
+        return status;
+    }
 
-    CHECK_RETURN(propStore->setAppName("AboutConfig"))
-    CHECK_RETURN(propStore->setModelNumber("Wxfy388i"))
-    CHECK_RETURN(propStore->setDateOfManufacture("10/1/2199"))
-    CHECK_RETURN(propStore->setSoftwareVersion("12.20.44 build 44454"))
-    CHECK_RETURN(propStore->setAjSoftwareVersion(ajn::GetVersion()))
-    CHECK_RETURN(propStore->setHardwareVersion("355.499. b"))
+    status = propStore->setAppName("AboutConfig");
+    if (status != ER_OK) {
+        return status;
+    }
 
-    CHECK_RETURN(propStore->setDescription("This is an Alljoyn Application", "en"))
-    CHECK_RETURN(propStore->setDescription("Esta es una Alljoyn aplicacion", "sp"))
-    CHECK_RETURN(propStore->setDescription("C'est une Alljoyn application", "fr"))
+    status = propStore->setModelNumber("Wxfy388i");
+    if (status != ER_OK) {
+        return status;
+    }
 
-    CHECK_RETURN(propStore->setManufacturer("Company", "en"))
-    CHECK_RETURN(propStore->setManufacturer("Empresa", "sp"))
-    CHECK_RETURN(propStore->setManufacturer("Entreprise", "fr"))
+    status = propStore->setDateOfManufacture("10/1/2199");
+    if (status != ER_OK) {
+        return status;
+    }
 
-    CHECK_RETURN(propStore->setSupportUrl("http://www.alljoyn.org"))
+    status = propStore->setSoftwareVersion("12.20.44 build 44454");
+    if (status != ER_OK) {
+        return status;
+    }
+
+    status = propStore->setAjSoftwareVersion(ajn::GetVersion());
+    if (status != ER_OK) {
+        return status;
+    }
+
+    status = propStore->setHardwareVersion("355.499. b");
+    if (status != ER_OK) {
+        return status;
+    }
+
+    status = propStore->setDescription("This is an Alljoyn Application", "en");
+    if (status != ER_OK) {
+        return status;
+    }
+
+    status = propStore->setDescription("Esta es una Alljoyn aplicacion", "sp");
+    if (status != ER_OK) {
+        return status;
+    }
+
+    status = propStore->setDescription("C'est une Alljoyn application", "fr");
+    if (status != ER_OK) {
+        return status;
+    }
+
+    status = propStore->setManufacturer("Company", "en");
+    if (status != ER_OK) {
+        return status;
+    }
+
+    status = propStore->setManufacturer("Empresa", "sp");
+    if (status != ER_OK) {
+        return status;
+    }
+
+    status = propStore->setManufacturer("Entreprise", "fr");
+    if (status != ER_OK) {
+        return status;
+    }
+
+    status = propStore->setSupportUrl("http://www.alljoyn.org");
+    if (status != ER_OK) {
+        return status;
+    }
     return status;
 }
 

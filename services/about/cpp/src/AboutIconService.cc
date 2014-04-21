@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -19,7 +19,6 @@
 #include <alljoyn/BusAttachment.h>
 
 #define QCC_MODULE "ALLJOYN_ABOUT_ICON_SERVICE"
-#define CHECK_RETURN(x) if ((status = x) != ER_OK) { return status; }
 
 using namespace ajn;
 using namespace services;
@@ -39,23 +38,50 @@ QStatus AboutIconService::Register() {
 
     InterfaceDescription* intf = const_cast<InterfaceDescription*>(m_BusAttachment->GetInterface(ABOUT_ICON_INTERFACE_NAME));
     if (!intf) {
-        CHECK_RETURN(m_BusAttachment->CreateInterface(ABOUT_ICON_INTERFACE_NAME, intf, false))
+        status = m_BusAttachment->CreateInterface(ABOUT_ICON_INTERFACE_NAME, intf, false);
+        if (status != ER_OK) {
+            return status;
+        }
         if (!intf) {
             return ER_BUS_CANNOT_ADD_INTERFACE;
         }
 
-        CHECK_RETURN(intf->AddMethod("GetUrl", NULL, "s", "url"))
-        CHECK_RETURN(intf->AddMethod("GetContent", NULL, "ay", "content"))
-        CHECK_RETURN(intf->AddProperty("Version", "q", (uint8_t) PROP_ACCESS_READ))
-        CHECK_RETURN(intf->AddProperty("MimeType", "s", (uint8_t) PROP_ACCESS_READ))
-        CHECK_RETURN(intf->AddProperty("Size", "u", (uint8_t) PROP_ACCESS_READ))
+        status = intf->AddMethod("GetUrl", NULL, "s", "url");
+        if (status != ER_OK) {
+            return status;
+        }
+        status = intf->AddMethod("GetContent", NULL, "ay", "content");
+        if (status != ER_OK) {
+            return status;
+        }
+        status = intf->AddProperty("Version", "q", (uint8_t) PROP_ACCESS_READ);
+        if (status != ER_OK) {
+            return status;
+        }
+        status = intf->AddProperty("MimeType", "s", (uint8_t) PROP_ACCESS_READ);
+        if (status != ER_OK) {
+            return status;
+        }
+        status = intf->AddProperty("Size", "u", (uint8_t) PROP_ACCESS_READ);
+        if (status != ER_OK) {
+            return status;
+        }
         intf->Activate();
     }
-    CHECK_RETURN(AddInterface(*intf))
-    CHECK_RETURN(AddMethodHandler(intf->GetMember("GetUrl"),
-                                  static_cast<MessageReceiver::MethodHandler>(&AboutIconService::GetUrl)))
-    CHECK_RETURN(AddMethodHandler(intf->GetMember("GetContent"),
-                                  static_cast<MessageReceiver::MethodHandler>(&AboutIconService::GetContent)))
+    status = AddInterface(*intf);
+    if (status != ER_OK) {
+        return status;
+    }
+    status = AddMethodHandler(intf->GetMember("GetUrl"),
+                              static_cast<MessageReceiver::MethodHandler>(&AboutIconService::GetUrl));
+    if (status != ER_OK) {
+        return status;
+    }
+    status = AddMethodHandler(intf->GetMember("GetContent"),
+                              static_cast<MessageReceiver::MethodHandler>(&AboutIconService::GetContent));
+    if (status != ER_OK) {
+        return status;
+    }
     return status;
 }
 

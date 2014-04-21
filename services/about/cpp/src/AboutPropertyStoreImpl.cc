@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,8 +18,6 @@
 #include <qcc/Debug.h>
 #include <algorithm>
 
-#define CHECK(x) if ((status = x) != ER_OK) { break; }
-#define CHECK_RETURN(x) if ((status = x) != ER_OK) { return status; }
 #define QCC_MODULE "ALLJOYN_ABOUT_PROPERTYSTORE"
 
 namespace ajn {
@@ -109,13 +107,19 @@ QStatus AboutPropertyStoreImpl::ReadAll(const char* languageTag, Filter filter, 
                     continue;
                 }
 
-                CHECK(argsAnnounceData[announceArgCount].Set("{sv}", property.getPropertyName().c_str(),
-                                                             new MsgArg(property.getPropertyValue())))
+                status = argsAnnounceData[announceArgCount].Set("{sv}", property.getPropertyName().c_str(),
+                                                                new MsgArg(property.getPropertyValue()));
+                if (status != ER_OK) {
+                    break;
+                }
                 argsAnnounceData[announceArgCount].SetOwnershipFlags(MsgArg::OwnsArgs, true);
                 announceArgCount++;
             }
 
-            CHECK(all.Set("a{sv}", announceArgCount, argsAnnounceData))
+            status = all.Set("a{sv}", announceArgCount, argsAnnounceData);
+            if (status != ER_OK) {
+                break;
+            }
             all.SetOwnershipFlags(MsgArg::OwnsArgs, true);
         } while (0);
         if (status != ER_OK) {
@@ -125,13 +129,19 @@ QStatus AboutPropertyStoreImpl::ReadAll(const char* languageTag, Filter filter, 
     } else if (filter == READ) {
 
         if (languageTag != NULL && languageTag[0] != 0) { // check that the language is in the supported languages;
-            CHECK_RETURN(isLanguageSupported(languageTag))
+            status = isLanguageSupported(languageTag);
+            if (status != ER_OK) {
+                return status;
+            }
         } else {
             PropertyMap::iterator it = m_Properties.find(DEFAULT_LANG);
             if (it == m_Properties.end()) {
                 return ER_LANGUAGE_NOT_SUPPORTED;
             }
-            CHECK_RETURN(it->second.getPropertyValue().Get("s", &languageTag))
+            status = it->second.getPropertyValue().Get("s", &languageTag);
+            if (status != ER_OK) {
+                return status;
+            }
         }
 
         MsgArg* argsReadData = new MsgArg[m_Properties.size()];
@@ -149,13 +159,19 @@ QStatus AboutPropertyStoreImpl::ReadAll(const char* languageTag, Filter filter, 
                     continue;
                 }
 
-                CHECK(argsReadData[readArgCount].Set("{sv}", property.getPropertyName().c_str(),
-                                                     new MsgArg(property.getPropertyValue())))
+                status = argsReadData[readArgCount].Set("{sv}", property.getPropertyName().c_str(),
+                                                        new MsgArg(property.getPropertyValue()));
+                if (status != ER_OK) {
+                    break;
+                }
                 argsReadData[readArgCount].SetOwnershipFlags(MsgArg::OwnsArgs, true);
                 readArgCount++;
             }
 
-            CHECK(all.Set("a{sv}", readArgCount, argsReadData))
+            status = all.Set("a{sv}", readArgCount, argsReadData);
+            if (status != ER_OK) {
+                break;
+            }
             all.SetOwnershipFlags(MsgArg::OwnsArgs, true);
         } while (0);
         if (status != ER_OK) {
@@ -204,7 +220,10 @@ QStatus AboutPropertyStoreImpl::setProperty(PropertyStoreKey propertyKey, const 
 {
     QStatus status = ER_OK;
     MsgArg msgArg("s", value.c_str());
-    CHECK_RETURN(validateValue(propertyKey, msgArg));
+    status = validateValue(propertyKey, msgArg);
+    if (status != ER_OK) {
+        return status;
+    }
 
     removeExisting(propertyKey);
 
@@ -218,7 +237,10 @@ QStatus AboutPropertyStoreImpl::setProperty(PropertyStoreKey propertyKey, const 
 {
     QStatus status = ER_OK;
     MsgArg msgArg("s", value.c_str());
-    CHECK_RETURN(validateValue(propertyKey, msgArg, language));
+    status = validateValue(propertyKey, msgArg, language);
+    if (status != ER_OK) {
+        return status;
+    }
 
     removeExisting(propertyKey, language);
 
@@ -311,7 +333,10 @@ QStatus AboutPropertyStoreImpl::setAppId(const qcc::String& appId, bool isPublic
     HexStringToBytes(appId, AppId, 16);
     MsgArg msgArg("ay", sizeof(AppId) / sizeof(*AppId), AppId);
 
-    CHECK_RETURN(validateValue(propertyKey, msgArg));
+    status = validateValue(propertyKey, msgArg);
+    if (status != ER_OK) {
+        return status;
+    }
     removeExisting(propertyKey);
 
     PropertyStoreProperty property(PropertyStoreName[propertyKey], msgArg, isPublic, isWritable, isAnnouncable);
@@ -330,7 +355,10 @@ QStatus AboutPropertyStoreImpl::setSupportedLangs(const std::vector<qcc::String>
 
     MsgArg msgArg("as", supportedLangsVec.size(), supportedLangsVec.data());
 
-    CHECK_RETURN(validateValue(propertyKey, msgArg));
+    status = validateValue(propertyKey, msgArg);
+    if (status != ER_OK) {
+        return status;
+    }
     removeExisting(propertyKey);
     m_SupportedLangs = supportedLangs;
 

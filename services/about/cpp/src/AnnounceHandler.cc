@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -21,7 +21,6 @@ using namespace ajn;
 using namespace services;
 
 #define QCC_MODULE "ALLJOYN_ABOUT_ANNOUNCE_HANDLER"
-#define CHECK_RETURN(x) if ((status = x) != ER_OK) { return; }
 
 AnnounceHandler::AnnounceHandler() :
     announceSignalMember(NULL) {
@@ -54,34 +53,55 @@ void AnnounceHandler::AnnounceSignalHandler(const ajn::InterfaceDescription::Mem
         AboutData aboutData;
         ObjectDescriptions objectDescriptions;
 
-        CHECK_RETURN(args[0].Get("q", &version))
-        CHECK_RETURN(args[1].Get("q", &receivedPort))
+        status = args[0].Get("q", &version);
+        if (status != ER_OK) {
+            return;
+        }
+        status = args[1].Get("q", &receivedPort);
+        if (status != ER_OK) {
+            return;
+        }
 
-        MsgArg * objectDescriptionsArgs;
+        MsgArg* objectDescriptionsArgs;
         size_t objectNum;
-        CHECK_RETURN(args[2].Get("a(oas)", &objectNum, &objectDescriptionsArgs))
+        status = args[2].Get("a(oas)", &objectNum, &objectDescriptionsArgs);
+        if (status != ER_OK) {
+            return;
+        }
 
         for (size_t i = 0; i < objectNum; i++) {
             char* objectDescriptionPath;
             MsgArg* interfaceEntries;
             size_t interfaceNum;
-            CHECK_RETURN(objectDescriptionsArgs[i].Get("(oas)", &objectDescriptionPath, &interfaceNum, &interfaceEntries))
+            status = objectDescriptionsArgs[i].Get("(oas)", &objectDescriptionPath, &interfaceNum, &interfaceEntries);
+            if (status != ER_OK) {
+                return;
+            }
 
             std::vector<qcc::String> localVector;
             for (size_t i = 0; i < interfaceNum; i++) {
                 char* interfaceName;
-                CHECK_RETURN(interfaceEntries[i].Get("s", &interfaceName))
+                status = interfaceEntries[i].Get("s", &interfaceName);
+                if (status != ER_OK) {
+                    return;
+                }
                 localVector.push_back(interfaceName);
             }
             objectDescriptions.insert(std::pair<qcc::String, std::vector<qcc::String> >(objectDescriptionPath, localVector));
         }
         MsgArg* tempControlArg2;
         size_t languageTagNumElements;
-        CHECK_RETURN(args[3].Get("a{sv}", &languageTagNumElements, &tempControlArg2))
+        status = args[3].Get("a{sv}", &languageTagNumElements, &tempControlArg2);
+        if (status != ER_OK) {
+            return;
+        }
         for (size_t i = 0; i < languageTagNumElements; i++) {
             char* tempKey;
             MsgArg* tempValue;
-            CHECK_RETURN(tempControlArg2[i].Get("{sv}", &tempKey, &tempValue))
+            status = tempControlArg2[i].Get("{sv}", &tempKey, &tempValue);
+            if (status != ER_OK) {
+                return;
+            }
             aboutData.insert(std::pair<qcc::String, ajn::MsgArg>(tempKey, *tempValue));
         }
 

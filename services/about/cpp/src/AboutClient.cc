@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -26,8 +26,6 @@ using namespace services;
 static const char* ABOUT_OBJECT_PATH = "/About";
 static const char* ABOUT_INTERFACE_NAME = "org.alljoyn.About";
 
-#define CHECK_BREAK(x) if ((status = x) != ER_OK) { break; }
-
 AboutClient::AboutClient(ajn::BusAttachment& bus) :
     m_BusAttachment(&bus)
 {
@@ -40,11 +38,22 @@ AboutClient::AboutClient(ajn::BusAttachment& bus) :
         status = m_BusAttachment->CreateInterface(ABOUT_INTERFACE_NAME, p_InterfaceDescription, false);
         if (p_InterfaceDescription && status == ER_OK) {
             do {
-                CHECK_BREAK(p_InterfaceDescription->AddMethod("GetAboutData", "s", "a{sv}", "languageTag,aboutData"))
-                CHECK_BREAK(p_InterfaceDescription->AddMethod("GetObjectDescription", NULL, "a(oas)", "Control"))
-                CHECK_BREAK(p_InterfaceDescription->AddProperty("Version", "q", PROP_ACCESS_READ))
-                CHECK_BREAK(p_InterfaceDescription->AddSignal("Announce", "qqa(oas)a{sv}",
-                                                              "version,port,objectDescription,servMetadata", 0))
+                status = p_InterfaceDescription->AddMethod("GetAboutData", "s", "a{sv}", "languageTag,aboutData");
+                if (status != ER_OK) {
+                    break;
+                }
+                status = p_InterfaceDescription->AddMethod("GetObjectDescription", NULL, "a(oas)", "Control");
+                if (status != ER_OK) {
+                    break;
+                }
+                status = p_InterfaceDescription->AddProperty("Version", "q", PROP_ACCESS_READ);
+                if (status != ER_OK) {
+                    break;
+                }
+                status = p_InterfaceDescription->AddSignal("Announce", "qqa(oas)a{sv}", "version,port,objectDescription,servMetadata", 0);
+                if (status != ER_OK) {
+                    break;
+                }
                 p_InterfaceDescription->Activate();
                 return;
             } while (0);
@@ -74,29 +83,44 @@ QStatus AboutClient::GetObjectDescriptions(const char* busName, AboutClient::Obj
     }
 
     do {
-        CHECK_BREAK(proxyBusObj->AddInterface(*p_InterfaceDescription))
+        status = proxyBusObj->AddInterface(*p_InterfaceDescription);
+        if (status != ER_OK) {
+            break;
+        }
 
         Message replyMsg(*m_BusAttachment);
-        CHECK_BREAK(proxyBusObj->MethodCall(ABOUT_INTERFACE_NAME, "GetObjectDescription", NULL, 0, replyMsg))
+        status = proxyBusObj->MethodCall(ABOUT_INTERFACE_NAME, "GetObjectDescription", NULL, 0, replyMsg);
+        if (status != ER_OK) {
+            break;
+        }
 
-        const ajn::MsgArg * returnArgs = 0;
+        const ajn::MsgArg* returnArgs = 0;
         size_t numArgs = 0;
         replyMsg->GetArgs(numArgs, returnArgs);
         if (numArgs == 1) {
             MsgArg* objectDescriptionsArgs;
             size_t objectNum;
-            CHECK_BREAK(returnArgs[0].Get("a(oas)", &objectNum, &objectDescriptionsArgs))
+            status = returnArgs[0].Get("a(oas)", &objectNum, &objectDescriptionsArgs);
+            if (status != ER_OK) {
+                break;
+            }
 
             for (size_t i = 0; i < objectNum; i++) {
                 char* objectDescriptionPath;
                 MsgArg* interfaceEntries;
                 size_t interfaceNum;
-                CHECK_BREAK(objectDescriptionsArgs[i].Get("(oas)", &objectDescriptionPath, &interfaceNum, &interfaceEntries))
+                status = objectDescriptionsArgs[i].Get("(oas)", &objectDescriptionPath, &interfaceNum, &interfaceEntries);
+                if (status != ER_OK) {
+                    break;
+                }
 
                 std::vector<qcc::String> localVector;
                 for (size_t i = 0; i < interfaceNum; i++) {
                     char* interfaceName;
-                    CHECK_BREAK(interfaceEntries[i].Get("s", &interfaceName))
+                    status = interfaceEntries[i].Get("s", &interfaceName);
+                    if (status != ER_OK) {
+                        break;
+                    }
                     localVector.push_back(interfaceName);
                 }
                 if (status != ER_OK) {
@@ -126,11 +150,17 @@ QStatus AboutClient::GetAboutData(const char* busName, const char* languageTag, 
         return ER_FAIL;
     }
     do {
-        CHECK_BREAK(proxyBusObj->AddInterface(*p_InterfaceDescription))
+        status = proxyBusObj->AddInterface(*p_InterfaceDescription);
+        if (status != ER_OK) {
+            break;
+        }
 
         Message replyMsg(*m_BusAttachment);
         MsgArg args[1];
-        CHECK_BREAK(args[0].Set("s", languageTag))
+        status = args[0].Set("s", languageTag);
+        if (status != ER_OK) {
+            break;
+        }
         status = proxyBusObj->MethodCall(ABOUT_INTERFACE_NAME, "GetAboutData", args, 1, replyMsg);
         if (status == ER_BUS_REPLY_IS_ERROR_MESSAGE) {
             qcc::String errorMessage;
@@ -147,11 +177,17 @@ QStatus AboutClient::GetAboutData(const char* busName, const char* languageTag, 
         if (numArgs == 1) {
             size_t languageTagNumElements;
             MsgArg* tempControlArg;
-            CHECK_BREAK(returnArgs[0].Get("a{sv}", &languageTagNumElements, &tempControlArg))
+            status = returnArgs[0].Get("a{sv}", &languageTagNumElements, &tempControlArg);
+            if (status != ER_OK) {
+                break;
+            }
             for (unsigned int i = 0; i < languageTagNumElements; i++) {
                 char* tempKey;
                 MsgArg* tempValue;
-                CHECK_BREAK(tempControlArg[i].Get("{sv}", &tempKey, &tempValue))
+                status = tempControlArg[i].Get("{sv}", &tempKey, &tempValue);
+                if (status != ER_OK) {
+                    break;
+                }
                 data.insert(std::pair<qcc::String, ajn::MsgArg>(tempKey, *tempValue));
             }
         }
