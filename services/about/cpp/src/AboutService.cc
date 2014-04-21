@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -99,7 +99,11 @@ QStatus AboutService::RemoveObjectDescription(qcc::String const& path, std::vect
                 it->second.erase(findIterator);
             }
         }
+        if (it->second.empty()) {
+            m_AnnounceObjectsMap.erase(it);
+        }
     }
+
     return status;
 }
 
@@ -126,10 +130,10 @@ QStatus AboutService::Announce() {
             interfacesVector[interfaceIndex++] = interfaceIt->c_str();
         }
 
-        CHECK_RETURN(announceObjectsArg[objIndex].Set("(oas)", objectPath.c_str(), interfacesVector.size(), interfacesVector.data()))
+        CHECK_RETURN(announceObjectsArg[objIndex].Set("(oas)", objectPath.c_str(), interfacesVector.size(), (interfacesVector.empty()) ? NULL : &interfacesVector.front()))
         objIndex++;
     }
-    CHECK_RETURN(announceArgs[2].Set("a(oas)", objIndex, announceObjectsArg.data()))
+    CHECK_RETURN(announceArgs[2].Set("a(oas)", objIndex, (announceObjectsArg.empty()) ? NULL : &announceObjectsArg.front()))
     CHECK_RETURN(m_PropertyStore->ReadAll(NULL, PropertyStore::ANNOUNCE, announceArgs[3]))
     Message msg(*m_BusAttachment);
     uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
@@ -190,10 +194,10 @@ void AboutService::GetObjectDescription(const ajn::InterfaceDescription::Member*
                 interfacesVec[interfaceIndex] = interfaceIt->c_str();
             }
 
-            objectArg[objIndex].Set("(oas)", key.c_str(), interfacesVec.size(), interfacesVec.data());
+            objectArg[objIndex].Set("(oas)", key.c_str(), interfacesVec.size(), (interfacesVec.empty()) ? NULL : &interfacesVec.front());
             objIndex++;
         }
-        retargs[0].Set("a(oas)", objectArg.size(), objectArg.data());
+        retargs[0].Set("a(oas)", objectArg.size(), (objectArg.empty()) ? NULL : &objectArg.front());
         MethodReply(msg, retargs, 1);
     } else {
         MethodReply(msg, ER_INVALID_DATA);

@@ -298,7 +298,7 @@ public abstract class ClientBaseImpl implements ClientBase
 		Status status = m_bus.joinSession(getPeerName(), m_port, sessionId, sessionOpts, new SessionListener()
 		{
 			@Override
-			public void sessionLost(int sessionId) 
+			public void sessionLost(int sessionId, int reason) 
 			{
 				if (getSessionId() == sessionId)
 				{
