@@ -2588,12 +2588,12 @@ void MDNSRefRData::SetTransportMask(uint16_t transportMask)
     MDNSTextRData::SetValue("trans", U32ToString(transportMask));
 }
 
-uint16_t MDNSRefRData::GetSearchID()
+uint16_t MDNSRefRData::GetBurstID()
 {
     return StringToU32(MDNSTextRData::GetValue("sid"));
 }
 
-void MDNSRefRData::SetSearchID(uint16_t searchId)
+void MDNSRefRData::SetBurstID(uint16_t searchId)
 {
     MDNSTextRData::SetValue("sid", U32ToString(searchId));
 }

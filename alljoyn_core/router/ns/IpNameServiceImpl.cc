@@ -454,19 +454,19 @@ bool IpNameServiceImplWildcardMatch(qcc::String str, qcc::String pat)
     return true;
 }
 
-const uint32_t IpNameServiceImpl::RETRY_INTERVALS_V0_V1[] = { 0, 5, 5 };
-const uint32_t IpNameServiceImpl::RETRY_INTERVALS_V2[] = { 0, 1, 2, 6 };
+const uint32_t IpNameServiceImpl::RETRY_INTERVALS[] = { 1, 2, 6, 18 };
+
 
 IpNameServiceImpl::IpNameServiceImpl()
     : Thread("IpNameServiceImpl"), m_state(IMPL_SHUTDOWN), m_isProcSuspending(false),
     m_terminal(false), m_protect_callback(false), m_timer(0), m_tDuration(DEFAULT_DURATION),
     m_tRetransmit(RETRANSMIT_TIME), m_tQuestion(QUESTION_TIME),
-    m_modulus(QUESTION_MODULUS), m_retries(sizeof(RETRY_INTERVALS_V2) / sizeof(RETRY_INTERVALS_V2[0])),
+    m_modulus(QUESTION_MODULUS), m_retries(sizeof(RETRY_INTERVALS) / sizeof(RETRY_INTERVALS[0])),
     m_loopback(false), m_enableIPv4(false), m_enableIPv6(false),
     m_wakeEvent(), m_forceLazyUpdate(false),
     m_enabled(false), m_doEnable(false), m_doDisable(false),
     m_ipv4QuietSockFd(-1), m_ipv6QuietSockFd(-1),
-    m_burstResponseTimer("BurstResponseTimer")
+    m_burstResponseTimer("BurstResponseTimer", false, 1, false, 50)
 {
     QCC_DbgHLPrintf(("IpNameServiceImpl::IpNameServiceImpl()"));
 
@@ -1642,11 +1642,28 @@ QStatus IpNameServiceImpl::Enabled(TransportMask transportMask,
     return ER_OK;
 }
 
+void IpNameServiceImpl::TriggerTransmission(Packet packet)
+{
+    m_mutex.Lock();
+    BurstResponseHeader* brh_ptr = new BurstResponseHeader(packet);
+    //launch timer
+    uint32_t zero = 0;
+    AlarmListener* burstResponceTimerListener = this;
+    void* context = (void*)brh_ptr;
+    qcc::Alarm startBurstAlarm(zero, burstResponceTimerListener, context);
+    QStatus status = ER_TIMER_FULL;
+    while (status == ER_TIMER_FULL) {
+        status = m_burstResponseTimer.AddAlarmNonBlocking(startBurstAlarm);
+        if (status == ER_TIMER_FULL) {
+            m_mutex.Unlock();
+            qcc::Sleep(10);
+            m_mutex.Lock();
+        }
+    }
+    m_mutex.Unlock();
+}
 QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const qcc::String& wkn, LocatePolicy policy)
 {
-    // Maximum number of IpNameService protocol messages that can be queued.
-    static const size_t MAX_RETRY_MESSAGES = 50;
-
     QCC_DbgHLPrintf(("IpNameServiceImpl::FindAdvertisedName(0x%x, \"%s\", %d)", transportMask, wkn.c_str(), policy));
 
     //
@@ -1705,51 +1722,7 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         nspacket->SetTimer(m_tDuration);
         nspacket->AddQuestion(whoHas);
 
-        //
-        // We may want to retransmit this request a few times depending on our
-        // retry policy, so add it to the list of messages to retry.
-        //
-        // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
-        m_mutex.Lock();
-
-        // First check if this wkn is already in the m_retry list.
-        // In that case, just update the Retries for it.
-        bool found = false;
-        std::list<Packet>::iterator it = m_retry.begin();
-        while (it != m_retry.end()) {
-            uint32_t nsVersion;
-            uint32_t msgVersion;
-
-            Packet pkt = *it;
-            pkt->GetVersion(nsVersion, msgVersion);
-            if (msgVersion == 0) {
-                NSPacket nspkt = NSPacket::cast(pkt);
-                if (nspkt->GetQuestion(0).GetName(0) == wkn) {
-                    nspkt->SetRetries(0);
-                    found = true;
-                    break;
-                }
-            }
-            it++;
-
-        }
-        // If the entry wasnt found, add a new one.
-        if (!found) {
-            while (m_retry.size() >= MAX_RETRY_MESSAGES) {
-                m_mutex.Unlock();
-                qcc::Sleep(10);
-                m_mutex.Lock();
-            }
-            m_retry.push_back(Packet::cast(nspacket));
-        }
-        // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
-        m_mutex.Unlock();
-
-        //
-        // Queue this message for transmission out on the various live interfaces.
-        //
-        QueueProtocolMessage(Packet::cast(nspacket));
-
+        TriggerTransmission(Packet::cast(nspacket));
     }
 
     //
@@ -1770,50 +1743,9 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         nspacket->SetVersion(1, 1);
         nspacket->SetTimer(m_tDuration);
         nspacket->AddQuestion(whoHas);
-        //
-        // We may want to retransmit this request a few times depending on our
-        // retry policy, so add it to the list of messages to retry.
-        //
-        // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
-        m_mutex.Lock();
 
-        // First check if this wkn is already in the m_retry list.
-        // In that case, just update the Retries for it.
-        bool found = false;
-        std::list<Packet>::iterator it = m_retry.begin();
-        while (it != m_retry.end()) {
-            uint32_t nsVersion;
-            uint32_t msgVersion;
+        TriggerTransmission(Packet::cast(nspacket));
 
-            Packet pkt = *it;
-            pkt->GetVersion(nsVersion, msgVersion);
-            if (msgVersion == 1) {
-                NSPacket nspkt = NSPacket::cast(pkt);
-                if (nspkt->GetQuestion(0).GetName(0) == wkn) {
-                    nspkt->SetRetries(0);
-                    found = true;
-                    break;
-                }
-            }
-            it++;
-        }
-        // If the entry wasnt found, add a new one.
-        if (!found) {
-            while (m_retry.size() >= MAX_RETRY_MESSAGES) {
-                m_mutex.Unlock();
-                qcc::Sleep(10);
-                m_mutex.Lock();
-            }
-            m_retry.push_back(Packet::cast(nspacket));
-        }
-
-        // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
-        m_mutex.Unlock();
-
-        //
-        // Queue this message for transmission out on the various live interfaces.
-        //
-        QueueProtocolMessage(Packet::cast(nspacket));
     }
     //
     // Do it again for version two.
@@ -1827,7 +1759,7 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         MDNSResourceRecord searchRecord("search.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
 
         MDNSRefRData* refRData =  new MDNSRefRData();
-        refRData->SetSearchID(id);
+        refRData->SetBurstID(id);
         refRData->SetTransportMask(transportMask);
         refRData->SetGuid(m_guid);
         MDNSResourceRecord refRecord("reference.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
@@ -1839,61 +1771,7 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         mdnsPacket->AddAdditionalRecord(refRecord);
         mdnsPacket->SetVersion(2, 2);
 
-        //
-        // We may want to retransmit this request a few times depending on our
-        // retry policy, so add it to the list of messages to retry.
-        //
-        // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
-        m_mutex.Lock();
-
-        // First check if this wkn is already in the m_retry list.
-        // In that case, just update the Retries for it.
-        bool found = false;
-        std::list<Packet>::iterator it = m_retry.begin();
-        while (it != m_retry.end()) {
-            uint32_t nsVersion;
-            uint32_t msgVersion;
-
-            Packet tmpPkt = *it;
-            tmpPkt->GetVersion(nsVersion, msgVersion);
-            if (msgVersion == 2) {
-                MDNSPacket tmpMDNSPkt = MDNSPacket::cast(tmpPkt);
-                MDNSResourceRecord* searchRecord;
-                assert(tmpMDNSPkt->GetAdditionalRecord("search.", MDNSResourceRecord::TXT, &searchRecord));
-
-                MDNSSearchRData*  searchRData = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
-                if (searchRData->GetWellKnownName() == wkn) {
-                    mdnsPacket->SetRetries(0);
-                    found = true;
-                    break;
-                }
-            }
-            it++;
-        }
-        // If the entry wasnt found, add a new one.
-        if (!found) {
-            while (m_retry.size() >= MAX_RETRY_MESSAGES) {
-                m_mutex.Unlock();
-                qcc::Sleep(10);
-                m_mutex.Lock();
-            }
-            m_retry.push_back(Packet::cast(mdnsPacket));
-        }
-
-        // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
-        m_mutex.Unlock();
-
-        //
-        // Queue this message for transmission out on the various live interfaces.
-        //
-        BurstResponseHeader* brh_ptr = new BurstResponseHeader(Packet::cast(mdnsPacket));
-        //launch timer
-        uint32_t zero = 0;
-        AlarmListener* burstResponceTimerListener = this;
-        void* context = (void*)brh_ptr;
-        qcc::Alarm startBurstAlarm(zero, burstResponceTimerListener, context);
-        m_burstResponseTimer.AddAlarm(startBurstAlarm);
-
+        TriggerTransmission(Packet::cast(mdnsPacket));
     }
 
     return ER_OK;
@@ -2361,7 +2239,7 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
         MDNSResourceRecord advRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
 
         MDNSRefRData* refRData =  new MDNSRefRData();
-        refRData->SetSearchID(id);
+        refRData->SetBurstID(id);
         refRData->SetGuid(m_guid);
         refRData->SetTransportMask(transportMask);
 
@@ -2405,13 +2283,7 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
             //
             // Queue this message for transmission out on the various live interfaces.
             //
-            BurstResponseHeader* brh_ptr = new BurstResponseHeader(Packet::cast(mdnsPacket));
-            //launch timer
-            uint32_t zero = 0;
-            AlarmListener* burstResponceTimerListener = this;
-            void* context = (void*)brh_ptr;
-            qcc::Alarm startBurstAlarm(zero, burstResponceTimerListener, context);
-            m_burstResponseTimer.AddAlarm(startBurstAlarm);
+            TriggerTransmission(Packet::cast(mdnsPacket));
         } else {
             QCC_LogError(ER_PACKET_TOO_LARGE, ("IpNameServiceImpl::AdvertiseName(): Resulting NS message too large"));
             return ER_PACKET_TOO_LARGE;
@@ -2739,7 +2611,7 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
         MDNSResourceRecord advRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 0, advRData);
 
         MDNSRefRData* refRData =  new MDNSRefRData();
-        refRData->SetSearchID(id);
+        refRData->SetBurstID(id);
         refRData->SetGuid(m_guid);
         refRData->SetTransportMask(transportMask);
         MDNSResourceRecord refRecord("reference.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 0, refRData);
@@ -2783,14 +2655,7 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
             //
             // Queue this message for transmission out on the various live interfaces.
             //
-            BurstResponseHeader* brh_ptr = new BurstResponseHeader(Packet::cast(mdnsPacket));
-            //launch timer
-            uint32_t zero = 0;
-            AlarmListener* burstResponceTimerListener = this;
-            void* context = (void*)brh_ptr;
-            qcc::Alarm startBurstAlarm(zero, burstResponceTimerListener, context);
-            m_burstResponseTimer.AddAlarm(startBurstAlarm);
-
+            TriggerTransmission(Packet::cast(mdnsPacket));
         } else {
             QCC_LogError(ER_PACKET_TOO_LARGE, ("IpNameServiceImpl::CancelAdvertiseName(): Resulting NS message too large"));
             return ER_PACKET_TOO_LARGE;
@@ -3340,7 +3205,7 @@ void IpNameServiceImpl::RewriteVersionSpecific(
             MDNSHeader mdnsheader = mdnspacket->GetHeader();
             if (mdnsheader.GetQRType() == MDNSHeader::MDNS_QUERY) {
                 MDNSResourceRecord* refRecord;
-                assert(mdnspacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord));
+                mdnspacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord);
                 MDNSRefRData* refRData = static_cast<MDNSRefRData*>(refRecord->GetRData());
                 if (haveIPv4address && (unicastIpv4Port != 0)) {
                     refRData->SetIPV4ResponsePort(unicastIpv4Port);
@@ -3352,7 +3217,7 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                 }
             } else {
                 MDNSResourceRecord* refRecord;
-                assert(mdnspacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord));
+                mdnspacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord);
                 MDNSRefRData* refRData = static_cast<MDNSRefRData*>(refRecord->GetRData());
                 TransportMask transportMask = refRData->GetTransportMask();
 
@@ -3895,7 +3760,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet)
             //version two
             MDNSPacket mdnspacket = MDNSPacket::cast(packet);
             MDNSResourceRecord* resourceRecord;
-            assert(mdnspacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &resourceRecord));
+            mdnspacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &resourceRecord);
             MDNSRefRData* refRData = static_cast<MDNSRefRData*>(resourceRecord->GetRData());
             TransportMask transportMask = refRData->GetTransportMask();
             assert(transportMask != TRANSPORT_NONE && "IpNameServiceImpl::SendOutboundMessageActively(): TransportMask must always be set");
@@ -4448,70 +4313,6 @@ void* IpNameServiceImpl::Run(void* arg)
     return 0;
 }
 
-void IpNameServiceImpl::Retry(void)
-{
-    static uint32_t tick = 0;
-
-    //
-    // tick holds 136 years of ticks at one per second, so we don't worry about
-    // rolling over.
-    //
-    ++tick;
-
-    //
-    // use Meyers' idiom to keep iterators sane.
-    //
-    for (list<Packet>::iterator i = m_retry.begin(); (m_state == IMPL_RUNNING) && (i != m_retry.end());) {
-        Packet packet = (*i);
-        uint32_t retryTick = packet->GetRetryTick();
-        uint32_t nsVersion, msgVersion;
-        packet->GetVersion(nsVersion, msgVersion);
-
-        //
-        // If this is the first time we've seen this entry, set the first
-        // retry time.
-        //
-        if (retryTick == 0) {
-            if (msgVersion == 2) {
-                (*packet).SetRetryTick(tick + RETRY_INTERVALS_V2[0]);
-            } else {
-                (*packet).SetRetryTick(tick + RETRY_INTERVALS_V0_V1[0]);
-            }
-            ++i;
-            continue;
-        }
-
-        if (tick >= retryTick) {
-            //
-            // Send the message out over the multicast link (again).
-            //
-            if (packet->DestinationSet()) {
-                SendOutboundMessageQuietly(packet);
-            } else {
-                SendOutboundMessageActively(packet);
-            }
-            qcc::Sleep(rand() % 128);
-
-            uint32_t count = packet->GetRetries();
-            ++count;
-            uint8_t retries = (msgVersion == 2) ? (sizeof(RETRY_INTERVALS_V2) / sizeof(RETRY_INTERVALS_V2[0])) : (sizeof(RETRY_INTERVALS_V0_V1) / sizeof(RETRY_INTERVALS_V0_V1[0]));
-            if (count == retries) {
-                m_retry.erase(i++);
-            } else {
-                packet->SetRetries(count);
-                if (msgVersion == 2) {
-                    packet->SetRetryTick(tick + RETRY_INTERVALS_V2[count]);
-                } else {
-                    packet->SetRetryTick(tick + RETRY_INTERVALS_V0_V1[count]);
-                }
-                ++i;
-            }
-        } else {
-            ++i;
-        }
-    }
-}
-
 void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type)
 {
     // Type can be one of the following 3 values:
@@ -4987,7 +4788,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         MDNSResourceRecord advertiseRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
 
         MDNSRefRData* refRData =  new MDNSRefRData();
-        refRData->SetSearchID(id);
+        refRData->SetBurstID(id);
         refRData->SetGuid(m_guid);
         refRData->SetTransportMask(MaskFromIndex(transportIndex));
         MDNSResourceRecord refRecord("reference.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
@@ -5006,12 +4807,12 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         mdnsPacket->AddAdditionalRecord(aRecord);
         mdnsPacket->SetVersion(2, 2);
         MDNSResourceRecord* advRecord;
-        assert(mdnsPacket->GetAdditionalRecord("advertise.", MDNSResourceRecord::TXT, &advRecord));
+        mdnsPacket->GetAdditionalRecord("advertise.", MDNSResourceRecord::TXT, &advRecord);
 
         advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
 
         MDNSResourceRecord* refRecord1;
-        assert(mdnsPacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord1));
+        mdnsPacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord1);
 
         refRData = static_cast<MDNSRefRData*>(refRecord1->GetRData());
         for (list<qcc::String>::iterator i = m_advertised[transportIndex].begin(); i != m_advertised[transportIndex].end(); ++i) {
@@ -5076,7 +4877,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                 advRData->Reset();
                 advRData->AddName(*i);
                 id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
-                refRData->SetSearchID(id);
+                refRData->SetBurstID(id);
 
             } else {
                 QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Message has room.  Adding \"%s\"", (*i).c_str()));
@@ -5118,12 +4919,6 @@ void IpNameServiceImpl::DoPeriodicMaintenance(void)
 #endif
     // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
-
-    //
-    // Retry all Locate requests to ensure that those requests actually make
-    // it out on the wire.
-    //
-    Retry();
 
     //
     // If we have something exported, we will have a retransmit timer value
@@ -5735,7 +5530,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket)
     uint32_t timer = ptrRecord->GetRRttl(); //Need to make callbacks take uint32 instead of uint8
 
     MDNSResourceRecord* srvAnswer;
-    assert(mdnsPacket->GetAnswer(ptrrdata->GetPtrDName(), MDNSResourceRecord::SRV, &srvAnswer));
+    mdnsPacket->GetAnswer(ptrrdata->GetPtrDName(), MDNSResourceRecord::SRV, &srvAnswer);
     MDNSSrvRData* srvrdata = static_cast<MDNSSrvRData*>(srvAnswer->GetRData());
     assert(srvrdata);
     MDNSResourceRecord* aRecord;
@@ -5746,7 +5541,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket)
         r4addr = aRData->GetAddr();
     }
     MDNSResourceRecord* txtAnswer;
-    assert(mdnsPacket->GetAnswer(ptrrdata->GetPtrDName(), MDNSResourceRecord::TXT, &txtAnswer));
+    mdnsPacket->GetAnswer(ptrrdata->GetPtrDName(), MDNSResourceRecord::TXT, &txtAnswer);
     MDNSTextRData* txtrdata = static_cast<MDNSTextRData*>(txtAnswer->GetRData());
     assert(txtrdata);
     uint32_t r6port = StringToU32(txtrdata->GetValue("r6port"));
@@ -6251,70 +6046,105 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
     BurstResponseHeader* brh_ptr = (BurstResponseHeader*) context;
     // the the BurstResponse Header has already reached then number of RETRIES then
     // free the burst response header.
+    uint32_t nsVersion;
+    uint32_t msgVersion;
+    brh_ptr->packet->GetVersion(nsVersion, msgVersion);
+
+    if (msgVersion <= 1) {
+
+        if (brh_ptr->scheduleCount < m_retries) {
+            m_mutex.Lock();
+            QueueProtocolMessage(brh_ptr->packet);
+            uint32_t count = RETRY_INTERVALS[brh_ptr->scheduleCount] * 1000;
+            brh_ptr->scheduleCount++;
+            AlarmListener* burstResponceTimerListener = this;
+            qcc::Alarm startBurstAlarm(count, burstResponceTimerListener, context);
+            m_burstResponseTimer.AddAlarm(startBurstAlarm);
+            m_mutex.Unlock();
+        }
+        return;
+    }
+    MDNSPacket mdnspacket = MDNSPacket::cast(brh_ptr->packet);
+
     if (brh_ptr->burstResponseCount < BURST_RESPONSE_RETRIES) {
         // before Queuing the header make sure none of the names contained in the
         // header have been canceled. If the advertisement of the name has been
         // canceled remove the name from the header.
         // if the header no longer contains any names. Don't queue the header and
         // free the burst response header.
-        uint32_t nsVersion;
-        uint32_t msgVersion;
-        brh_ptr->packet->GetVersion(nsVersion, msgVersion);
-        if (msgVersion <= 1) {
-            return;
-        } else {
-            //version two
-            MDNSPacket mdnspacket = MDNSPacket::cast(brh_ptr->packet);
-            if (mdnspacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
 
+        //version two
+        if (mdnspacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
+            m_mutex.Lock();
+            QueueProtocolMessage(brh_ptr->packet);
+            brh_ptr->burstResponseCount++;
+            uint32_t count = BURST_RESPONSE_INTERVAL;
+            AlarmListener* burstResponceTimerListener = this;
+            qcc::Alarm startBurstAlarm(count, burstResponceTimerListener, context);
+            m_burstResponseTimer.AddAlarm(startBurstAlarm);
+            m_mutex.Unlock();
+        } else {
+            MDNSResourceRecord* advRecord;
+            mdnspacket->GetAdditionalRecord("advertise.", MDNSResourceRecord::TXT, &advRecord);
+            MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
+            MDNSResourceRecord* refRecord;
+
+            mdnspacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord);
+            MDNSRefRData* refRData = static_cast<MDNSRefRData*>(refRecord->GetRData());
+            TransportMask transportMask = refRData->GetTransportMask();
+
+            uint32_t numNames = advRData->GetNumNames();
+            for (uint32_t k = 0; k < numNames; k++) {
+                m_mutex.Lock();
+                uint32_t transportIndex = IndexFromBit(transportMask);
+                if (std::find(m_advertised[transportIndex].begin(), m_advertised[transportIndex].end(), advRData->GetNameAt(k)) == m_advertised[transportIndex].end()) {
+                    advRData->RemoveName(k);
+                    // a name has been removed from the IsAt response header make
+                    // sure the numNames used in the for loop is updated to reflect
+                    // the removal of that name.
+                    k = k - 1;
+                    numNames = advRData->GetNumNames();
+                }
+                m_mutex.Unlock();
+            }
+
+            // As long as the BurstResponse Header still contains at least one IsAt
+            // header (answers) we will Queue The header.  If there are no IsAt headers
+            // then delete the BurstRespnse Header.
+            if (numNames > 0) {
+                m_mutex.Lock();
                 QueueProtocolMessage(brh_ptr->packet);
                 brh_ptr->burstResponseCount++;
                 uint32_t count = BURST_RESPONSE_INTERVAL;
                 AlarmListener* burstResponceTimerListener = this;
                 qcc::Alarm startBurstAlarm(count, burstResponceTimerListener, context);
                 m_burstResponseTimer.AddAlarm(startBurstAlarm);
+                m_mutex.Unlock();
             } else {
-
-                MDNSResourceRecord* advRecord;
-                assert(mdnspacket->GetAdditionalRecord("advertise.", MDNSResourceRecord::TXT, &advRecord));
-                MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
-                MDNSResourceRecord* refRecord;
-
-                assert(mdnspacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord));
-                MDNSRefRData* refRData = static_cast<MDNSRefRData*>(refRecord->GetRData());
-                TransportMask transportMask = refRData->GetTransportMask();
-
-                uint32_t numNames = advRData->GetNumNames();
-                for (uint32_t k = 0; k < numNames; k++) {
-                    m_mutex.Lock();
-                    uint32_t transportIndex = IndexFromBit(transportMask);
-                    if (std::find(m_advertised[transportIndex].begin(), m_advertised[transportIndex].end(), advRData->GetNameAt(k)) == m_advertised[transportIndex].end()) {
-                        advRData->RemoveName(k);
-                        // a name has been removed from the IsAt response header make
-                        // sure the numNames used in the for loop is updated to reflect
-                        // the removal of that name.
-                        numNames = advRData->GetNumNames();
-                    }
-                    m_mutex.Unlock();
-                }
-
-                // As long as the BurstResponse Header still contains at least one IsAt
-                // header (answers) we will Queue The header.  If there are no IsAt headers
-                // then delete the BurstRespnse Header.
-                if (numNames > 0) {
-                    QueueProtocolMessage(brh_ptr->packet);
-                    brh_ptr->burstResponseCount++;
-                    uint32_t count = BURST_RESPONSE_INTERVAL;
-                    AlarmListener* burstResponceTimerListener = this;
-                    qcc::Alarm startBurstAlarm(count, burstResponceTimerListener, context);
-                    m_burstResponseTimer.AddAlarm(startBurstAlarm);
-                } else {
-                    delete brh_ptr;
-                }
+                delete brh_ptr;
             }
         }
     } else {
-        delete brh_ptr;
+        if (brh_ptr->scheduleCount == m_retries) {
+            delete brh_ptr;
+        } else {
+            MDNSResourceRecord* refRecord;
+
+            mdnspacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord);
+            MDNSRefRData* refRData = static_cast<MDNSRefRData*>(refRecord->GetRData());
+            int32_t id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
+
+            refRData->SetBurstID(id);
+            m_mutex.Lock();
+            uint32_t count = RETRY_INTERVALS[brh_ptr->scheduleCount] * 1000;
+            AlarmListener* burstResponceTimerListener = this;
+
+            brh_ptr->scheduleCount++;
+            brh_ptr->burstResponseCount = 0;
+            qcc::Alarm startBurstAlarm(count, burstResponceTimerListener, context);
+            m_burstResponseTimer.AddAlarm(startBurstAlarm);
+            m_mutex.Unlock();
+        }
     }
 }
 } // namespace ajn

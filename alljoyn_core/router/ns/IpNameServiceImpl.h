@@ -125,14 +125,13 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * The number of retries is based on the size of the RETRY_INTERVALS array.
      * The time between each Locate retries is the number of seconds indicated.
      *
-     * If the array is { 1, 2, 3, 3 }
-     * the first retry will occure in 1 second, second retry 2 seconds later, and
+     * If the array is { 1, 2, 6, 18 }
+     * the first retry will occure in 1 second, second retry 3 seconds later, and
      * so on up till all intervals have been tried.
      *
-     * RETRY_INTERVALS is set to { 1, 2, 3, 3 } by default
+     * RETRY_INTERVALS is set to { 1, 2, 6, 18 } by default
      */
-    static const uint32_t RETRY_INTERVALS_V0_V1[];
-    static const uint32_t RETRY_INTERVALS_V2[];
+    static const uint32_t RETRY_INTERVALS[];
     /**
      * The modulus indicating the minimum time between interface lazy updates.
      * Units are seconds.
@@ -967,6 +966,13 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
 
     /**
      * @internal
+     * @brief Trigger transmission of a particular packet at a defined schedule.
+     * group.
+     */
+    void TriggerTransmission(Packet packet);
+
+    /**
+     * @internal
      * @brief Send a protocol message out on the multicast group.
      *
      * @param sockFd The socket FD that is used to send and receive to and from
@@ -1219,15 +1225,6 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
 
     /**
      * @internal
-     * @brief Vector of name service messages reflecting recent locate
-     * requests.  Since wifi MACs don't retry multicast after collision
-     * we need to support some form of retry, even though we never get
-     * an indication that our send failed.
-     */
-    std::list<Packet> m_retry;
-
-    /**
-     * @internal
      * @brief Retry locate requests.
      */
     void Retry(void);
@@ -1397,12 +1394,6 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
     bool m_doDisable;
 
     /**
-     * @internal
-     * timer responsible for sending burst IS-AT responses
-     */
-    qcc::Timer m_burstResponseTimer;
-
-    /**
      * AlarmTriggered listener that is triggered when a burst response is sent.
      * this trigger is responsible for responding when new names have been added
      * to the advertised names list.
@@ -1415,14 +1406,22 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * header had been added to the outbound queue.
      */
     struct BurstResponseHeader {
-        BurstResponseHeader(Packet packet) : packet(packet), burstResponseCount(0) { }
+        BurstResponseHeader(Packet packet) : packet(packet), burstResponseCount(0), scheduleCount(0) { }
         ~BurstResponseHeader() { }
         Packet packet;
         uint32_t burstResponseCount;
+        uint32_t scheduleCount;
     };
 
     qcc::SocketFd m_ipv4QuietSockFd;
     qcc::SocketFd m_ipv6QuietSockFd;
+
+    /**
+     * @internal
+     * timer responsible for sending burst IS-AT responses
+     */
+    qcc::Timer m_burstResponseTimer;
+
 };
 
 } // namespace ajn

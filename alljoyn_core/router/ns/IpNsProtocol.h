@@ -2957,14 +2957,14 @@ class MDNSRefRData : public MDNSTextRData {
      * @brief Set the search ID for this Reference RData.
      * @param searchId The search ID to set.
      */
-    void SetSearchID(uint16_t searchId);
+    void SetBurstID(uint16_t searchId);
 
     /**
      * @internal
      * @brief Get the search ID for this Reference RData.
      * @return The search ID contained in this Reference Rdata.
      */
-    uint16_t GetSearchID();
+    uint16_t GetBurstID();
 
     /**
      * @internal
