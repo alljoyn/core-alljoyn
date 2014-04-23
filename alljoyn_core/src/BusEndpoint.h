@@ -1,12 +1,13 @@
 #ifndef _ALLJOYN_BUSENDPOINT_H
 #define _ALLJOYN_BUSENDPOINT_H
 /**
- * @file This file defines the class for handling the client and server
+ * @file
+ * This file defines the class for handling the client and server
  * endpoints for the message bus wire protocol
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above

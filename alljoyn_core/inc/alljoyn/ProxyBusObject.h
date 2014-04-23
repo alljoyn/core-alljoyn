@@ -8,7 +8,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -943,24 +943,36 @@ class ProxyBusObject : public MessageReceiver {
     /**
      * @internal
      * Introspection method_reply handler. (Internal use only)
+     *
+     * @param message Method return Message
+     * @param context Opaque context passed from method_call to method_return
      */
     void IntrospectMethodCB(Message& message, void* context);
 
     /**
      * @internal
      * GetProperty method_reply handler. (Internal use only)
+     *
+     * @param message Method return Message
+     * @param context Opaque context passed from method_call to method_return
      */
     void GetPropMethodCB(Message& message, void* context);
 
     /**
      * @internal
      * GetAllProperties method_reply handler. (Internal use only)
+     *
+     * @param message Method return Message
+     * @param context Opaque context passed from method_call to method_return
      */
     void GetAllPropsMethodCB(Message& message, void* context);
 
     /**
      * @internal
      * SetProperty method_reply handler. (Internal use only)
+     *
+     * @param message Method return Message
+     * @param context Opaque context passed from method_call to method_return
      */
     void SetPropMethodCB(Message& message, void* context);
 
@@ -968,6 +980,8 @@ class ProxyBusObject : public MessageReceiver {
      * @internal
      * Set the B2B endpoint to use for all communication with remote object.
      * This method is for internal use only.
+     *
+     * @param b2bEp the RemoteEndpoint for Bus to Bus communication
      */
     void SetB2BEndpoint(RemoteEndpoint& b2bEp);
 
@@ -985,9 +999,9 @@ class ProxyBusObject : public MessageReceiver {
 
     /**
      * @internal
-     * Parse a single introspection <node> element.
+     * Parse a single introspection @<node@> element.
      *
-     * @param parseNode  XML element (must be a <node>).
+     * @param node  XML element (must be a @<node@>).
      *
      * @return
      *       - #ER_OK if completely successful.
@@ -997,9 +1011,9 @@ class ProxyBusObject : public MessageReceiver {
 
     /**
      * @internal
-     * Parse a single introspection <interface> element.
+     * Parse a single introspection @<interface@> element.
      *
-     * @param parseNode  XML element (must be an <interface>).
+     * @param ifc  XML element (must be an @<interface@>).
      *
      * @return
      *       - #ER_OK if completely successful.

@@ -58,13 +58,17 @@ class PasswordManager {
     }
 
     /// @cond ALLJOYN_DEV
-    /* @internal Get the password set by the user/app
+    /**
+     * @internal
+     * Get the password set by the user/app
      *
      * @return Returns the password set by the user/app.
      */
     static qcc::String GetPassword() { return password; }
 
-    /* @internal Get the authMechanism set by the user/app
+    /**
+     * @internal
+     * Get the authMechanism set by the user/app
      *
      * @return Returns the authMechanism set by the user/app.
      */

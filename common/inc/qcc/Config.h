@@ -1,6 +1,7 @@
 /**
- * @file Config.h
- *
+ * @file
+ * implements a file-based key/value store. A simplified version of INI file
+ * format
  */
 
 /******************************************************************************

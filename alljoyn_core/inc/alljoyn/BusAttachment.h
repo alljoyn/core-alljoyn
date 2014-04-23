@@ -1773,7 +1773,9 @@ class BusAttachment : public MessageReceiver {
      * @internal
      * Construct a BusAttachment.
      *
-     * @param internal  Internal state.
+     * @param internal     Internal state.
+     * @param concurrency  The maximum number of concurrent method and signal
+     *                     handlers locally executing.
      */
     BusAttachment(Internal* internal, uint32_t concurrency);
     /// @endcond
@@ -1788,7 +1790,7 @@ class BusAttachment : public MessageReceiver {
      * @return
      *      - #ER_OK on success
      *      - #ER_BUS_NOT_CONNECTED if BusAttachment is not connected
-     *      - #ER_ALLJOYN_ONAPPSUSPEND_REPLY_FAILED if the app suspend request faild
+     *      - #ER_ALLJOYN_ONAPPSUSPEND_REPLY_FAILED if the app suspend request failed
      *      - #ER_ALLJOYN_ONAPPSUSPEND_REPLY_UNSUPPORTED if app suspend is not supported
      *      - #ER_BUS_UNEXPECTED_DISPOSITION if OnAppSuspend enters an unexpected state
      */
@@ -1804,7 +1806,7 @@ class BusAttachment : public MessageReceiver {
      * @return
      *      - #ER_OK on success
      *      - #ER_BUS_NOT_CONNECTED if BusAttachment is not connected
-     *      - #ER_ALLJOYN_ONAPPRESUME_REPLY_FAILED if the app resume request faild
+     *      - #ER_ALLJOYN_ONAPPRESUME_REPLY_FAILED if the app resume request failed
      *      - #ER_ALLJOYN_ONAPPRESUME_REPLY_UNSUPPORTED if app resume is not supported
      *      - #ER_BUS_UNEXPECTED_DISPOSITION if OnAppResume enters an unexpected state
      */
@@ -1853,10 +1855,16 @@ class BusAttachment : public MessageReceiver {
     uint32_t concurrency;     /**< The maximum number of concurrent method and signal handlers locally executing */
     Internal* busInternal;    /**< Internal state information */
 
+    /**
+     * Internal Class used to insure that the BusAttachment is the last object
+     * destroyed.
+     */
     class JoinObj {
       public:
         /**
          * Construct a JoinObj.
+         *
+         * @param bus the `this` pointer that the internal JoinObj is a member of
          */
         JoinObj(BusAttachment* bus) : bus(bus) { }
         /**
@@ -1866,9 +1874,24 @@ class BusAttachment : public MessageReceiver {
             bus->WaitStopInternal();
         }
       private:
+        /**
+         * private copy constructor to ensure the JoinObj is never copied
+         *
+         * @param other a JoinObj
+         */
         JoinObj(const JoinObj& other);
+        /**
+         * private assignment operator to ensure the JoinObj is never copied
+         *
+         * @param other a JoinObj
+         * @return nothing is returned this is here to prevent the auto
+         *         generation of an assignment operator by the compiler.
+         */
         JoinObj& operator =(const JoinObj& other);
 
+        /**
+         * pointer to the BusAttachment containing the JoinObj
+         */
         BusAttachment* bus;
     };
 
