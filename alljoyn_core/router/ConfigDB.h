@@ -80,7 +80,7 @@ class ConfigDB {
      *                          flags, and properties.
      * @param   fileName        [optional] Name of the config file to load.
      */
-    ConfigDB(const qcc::String defaultXml, const qcc::String fileName = qcc::String::Empty);
+    ConfigDB(const qcc::String defaultXml, const qcc::String fileName = "");
 
     /**
      * Destructor.

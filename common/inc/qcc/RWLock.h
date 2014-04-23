@@ -24,7 +24,12 @@
 
 #include <qcc/platform.h>
 
-#if defined(QCC_OS_GROUP_POSIX)
+/*
+ * Note: The Android NDK does not include support for pThread's rwlock
+ * implementation, therefore we must fallback to using Mutexes instead.
+ */
+
+#if defined(QCC_OS_GROUP_POSIX) && !defined(QCC_OS_ANDROID)
 #include <qcc/posix/RWLock.h>
 
 #elif defined(QCC_OS_GROUP_WINDOWS)

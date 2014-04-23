@@ -21,6 +21,13 @@
  ******************************************************************************/
 #include <qcc/platform.h>
 
+/*
+ * When building for Android, the Mutex fallback implementation in
+ * qcc/RWLock.h is used instead of the pThread based version since the rwlock
+ * functionality is missing from the Android version of pThread.
+ */
+#if !defined(QCC_OS_ANDROID)
+
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
@@ -136,3 +143,5 @@ bool RWLock::TryWRLock(void)
     }
     return pthread_rwlock_trywrlock(&rwlock) == 0;
 }
+
+#endif
