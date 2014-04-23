@@ -1293,6 +1293,15 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      */
     bool m_forceLazyUpdate;
 
+#ifndef QCC_OS_GROUP_WINDOWS
+    /**
+     * @internal
+     * @brief Set to true to force a refresh of advertisements/queries if one or
+     * more new interfaces are detected.
+     */
+    bool m_refreshAdvertisements;
+#endif
+
     /**
      * @internal
      * @brief A list of name service messages queued for transmission out on
