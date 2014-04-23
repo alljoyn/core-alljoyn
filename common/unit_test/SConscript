@@ -1,4 +1,4 @@
-# Copyright (c) 2011-2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2011-2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -57,7 +57,7 @@ else:
 
     # Microsoft Visual Studio 2012 has a different _VARIADIC_MAX default value.
     # See: http://blogs.msdn.com/b/vcblog/archive/2011/09/12/10209291.aspx
-    if gtest_env['OS_CONF'] == 'windows' and gtest_env['MSVC_VERSION'] == '11.0':
+    if gtest_env['OS_CONF'] == 'windows' and (gtest_env['MSVC_VERSION'] == '11.0' or gtest_env['MSVC_VERSION'] == '11.0Exp'):
         gtest_env.Append(CPPDEFINES = ['_VARIADIC_MAX=10'])
 
     # we compile with no rtti and we are not using exceptions. 
