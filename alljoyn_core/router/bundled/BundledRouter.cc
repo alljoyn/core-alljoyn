@@ -212,7 +212,7 @@ BundledRouter::BundledRouter() : transportsInitialized(false), stopping(false), 
 #ifndef NDEBUG
 #if defined(QCC_OS_ANDROID)
     qcc::String configFile = "/mnt/sdcard/.alljoyn/config.xml";
-#elif defined(QCC_OS_LINUX) || defined(QCC_OS_GROUP_WINDOWS) || defined(QCC_OS_GROUP_WINRT)
+#else
     qcc::String configFile = "./config.xml";
 #endif
     if (!ExistFile(configFile.c_str())) {

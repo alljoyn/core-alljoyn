@@ -480,8 +480,6 @@ void _PolicyDB::Finalize(Bus* bus)
 
 void _PolicyDB::NameOwnerChanged(const String& alias, const String* oldOwner, const String* newOwner)
 {
-    QCC_DEBUG_ONLY(Log(LOG_DEBUG, "POLICYDB: %s(\"%s\", \"%s\", \"%s\")\n", __PRETTY_FUNCTION__, alias.c_str(), oldOwner ? oldOwner->c_str() : NULL, newOwner ? newOwner->c_str() : NULL));
-
     /*
      * Bus name matching rules must treat all aliases (well known names) they
      * resolve to as thesame, otherwise it would be relatively trivial to
