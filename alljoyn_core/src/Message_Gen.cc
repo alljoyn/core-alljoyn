@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -370,8 +370,8 @@ QStatus _Message::MarshalArgs(const MsgArg* arg, size_t numArgs)
                 status = ER_BUS_BAD_OBJ_PATH;
                 break;
             }
+        /* no break FALLTHROUGH*/
 
-        // FALLTHROUGH
         case ALLJOYN_STRING:
             if (arg->v_string.str) {
                 if (arg->v_string.str[arg->v_string.len]) {
@@ -562,6 +562,7 @@ QStatus _Message::DeliverNonBlocking(RemoteEndpoint& endpoint)
             }
         }
         writeState = MESSAGE_HEADERFIELDS;
+    /* no break  FALLTHROUGH*/
 
     case MESSAGE_HEADERFIELDS:
         if (handles) {
@@ -575,6 +576,7 @@ QStatus _Message::DeliverNonBlocking(RemoteEndpoint& endpoint)
             writePtr += pushed;
             writeState = MESSAGE_HEADER_BODY;
         } else { break; }
+    /* no break FALLTHROUGH*/
 
     case MESSAGE_HEADER_BODY:
         status = ER_OK;
