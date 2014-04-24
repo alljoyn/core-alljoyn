@@ -513,6 +513,109 @@ QStatus Recv(SocketFd sockfd, void* buf, size_t len, size_t& received)
     return status;
 }
 
+QStatus RecvWithAncillaryData(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort, IPAddress& localAddr,
+                              void* buf, size_t len, size_t& received, int32_t& interfaceIndex)
+{
+    QStatus status = ER_OK;
+    received = 0;
+    interfaceIndex = -1;
+    uint16_t localPort;
+
+    WSABUF iov[] = { { len, reinterpret_cast<char*>(buf) } };
+
+    char cbuf[1024];
+
+    WSAMSG msg;
+    memset(&msg, 0, sizeof(msg));
+
+    msg.lpBuffers = iov;
+    msg.dwBufferCount = ArraySize(iov);
+    msg.Control.buf  = cbuf;
+    msg.Control.len = (sizeof(cbuf) / sizeof(cbuf[0]));
+
+    SOCKADDR_STORAGE src;
+    SOCKADDR_STORAGE dst;
+    memset(&src, 0, sizeof(SOCKADDR_STORAGE));
+    memset(&dst, 0, sizeof(SOCKADDR_STORAGE));
+
+    IPAddress addr;
+    uint16_t port;
+    status = GetLocalAddress(sockfd, addr, port);
+
+    if (status == ER_OK && addr.GetAddressFamily() == QCC_AF_INET) {
+        reinterpret_cast<LPSOCKADDR_IN>(&src)->sin_port = port;
+        reinterpret_cast<LPSOCKADDR_IN>(&src)->sin_family = AF_INET;
+        msg.name = reinterpret_cast<LPSOCKADDR>(&src);
+        msg.namelen = sizeof(SOCKADDR_IN);
+    } else if (status == ER_OK && addr.GetAddressFamily()  == QCC_AF_INET6) {
+        reinterpret_cast<LPSOCKADDR_IN6>(&src)->sin6_port = port;
+        reinterpret_cast<LPSOCKADDR_IN6>(&src)->sin6_family = AF_INET6;
+        msg.name = reinterpret_cast<LPSOCKADDR>(&src);
+        msg.namelen = sizeof(SOCKADDR_IN6);
+    } else {
+        status = ER_OS_ERROR;
+        QCC_LogError(status, ("RecvWithAncillaryData (sockfd = %u): unknown address family", sockfd));
+        return status;
+    }
+
+    static LPFN_WSARECVMSG WSARecvMsg = NULL;
+    DWORD recv;
+    DWORD ret;
+    if (!WSARecvMsg) {
+        GUID guid = WSAID_WSARECVMSG;
+        ret = WSAIoctl(static_cast<SOCKET>(sockfd), SIO_GET_EXTENSION_FUNCTION_POINTER,
+                       &guid, sizeof(guid),
+                       &WSARecvMsg, sizeof(WSARecvMsg),
+                       &recv, NULL, NULL);
+        if (ret == SOCKET_ERROR) {
+            status = ER_OS_ERROR;
+            QCC_LogError(status, ("RecvWithAncillaryData (sockfd = %u): %s", sockfd, StrError().c_str()));
+            return status;
+        }
+    }
+
+    assert(buf != NULL);
+
+    ret = WSARecvMsg(static_cast<SOCKET>(sockfd), &msg, &recv, NULL, NULL);
+
+    if (ret == SOCKET_ERROR) {
+        status = ER_OS_ERROR;
+        QCC_LogError(status, ("RecvWithAncillaryData (sockfd = %u): %s", sockfd, errno, StrError().c_str()));
+        return status;
+    }
+    received = recv;
+
+    LPWSACMSGHDR cmsg;
+    for (cmsg = WSA_CMSG_FIRSTHDR(&msg); cmsg != NULL; cmsg = WSA_CMSG_NXTHDR(&msg, cmsg)) {
+        if (cmsg->cmsg_level == IPPROTO_IP && cmsg->cmsg_type == IP_PKTINFO) {
+            struct in_pktinfo* i = reinterpret_cast<struct in_pktinfo*>(WSA_CMSG_DATA(cmsg));
+            reinterpret_cast<struct sockaddr_in*>(&dst)->sin_addr = i->ipi_addr;
+            reinterpret_cast<struct sockaddr_in*>(&dst)->sin_family = AF_INET;
+            interfaceIndex =  i->ipi_ifindex;
+            reinterpret_cast<struct sockaddr*>(&src)->sa_family = AF_INET;
+            status = GetSockAddr(&src, sizeof(struct sockaddr_in), remoteAddr, remotePort);
+            if (status == ER_OK) {
+                status = GetSockAddr(&dst, sizeof(struct sockaddr_in), localAddr, localPort);
+            }
+            break;
+        }
+        if (cmsg->cmsg_level == IPPROTO_IPV6  &&  cmsg->cmsg_type == IPV6_PKTINFO) {
+            struct in6_pktinfo* i = reinterpret_cast<struct in6_pktinfo*>(WSA_CMSG_DATA(cmsg));
+            reinterpret_cast<struct sockaddr_in6*>(&dst)->sin6_addr = i->ipi6_addr;
+            reinterpret_cast<struct sockaddr_in6*>(&dst)->sin6_family = AF_INET6;
+            interfaceIndex =  i->ipi6_ifindex;
+            reinterpret_cast<struct sockaddr*>(&src)->sa_family = AF_INET6;
+            status = GetSockAddr(&src, sizeof(struct sockaddr_in6), remoteAddr, remotePort);
+            if (status == ER_OK) {
+                status = GetSockAddr(&dst, sizeof(struct sockaddr_in6), localAddr, localPort);
+            }
+            break;
+        }
+    }
+    QCC_DbgRemoteData(buf, received);
+
+    return status;
+}
 
 QStatus RecvFrom(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort,
                  void* buf, size_t len, size_t& received)
@@ -1124,4 +1227,44 @@ QStatus SetBroadcast(SocketFd sockfd, bool broadcast)
     }
     return status;
 }
+
+QStatus SetRecvPktAncillaryData(SocketFd sockfd, AddressFamily addrFamily, bool recv)
+{
+    /*
+     * We assume that No external API will be trying to call here and so asserts
+     * are appropriate when checking for completely bogus parameters.
+     */
+    assert(sockfd);
+    assert(addrFamily == AF_INET || addrFamily == AF_INET6);
+
+    QStatus status = ER_OK;
+    int arg = recv ? 1 : -0;
+    if (addrFamily == QCC_AF_INET) {
+        int r = setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, (char*)&arg, sizeof(arg));
+        if (r != 0) {
+            status = ER_OS_ERROR;
+            QCC_LogError(status, ("Setting IP_PKTINFO failed: (%d) %s", errno, strerror(errno)));
+        }
+    } else if (addrFamily == QCC_AF_INET6) {
+        int r = setsockopt(sockfd, IPPROTO_IPV6, IPV6_PKTINFO, (char*)&arg, sizeof(arg));
+        if (r != 0) {
+            status = ER_OS_ERROR;
+            QCC_LogError(status, ("Setting IPV6_PKTINFO failed: (%d) %s", errno, strerror(errno)));
+        }
+    }
+    return status;
+}
+
+QStatus SetRecvIPv6Only(SocketFd sockfd, bool recv)
+{
+    QStatus status = ER_OK;
+    int arg = recv ? 1 : -0;
+    int r = setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&arg, sizeof(arg));
+    if (r != 0) {
+        status = ER_OS_ERROR;
+        QCC_LogError(status, ("Setting IPV6_V6ONLY failed: (%d) %s", errno, strerror(errno)));
+    }
+    return status;
+}
+
 }   /* namespace */

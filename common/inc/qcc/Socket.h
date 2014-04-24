@@ -242,6 +242,22 @@ QStatus RecvFrom(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort,
                  void* buf, size_t len, size_t& received);
 
 /**
+ * Receive a buffer of data and ancillary data from a remote host on a socket.
+ *
+ * @param sockfd          Socket descriptor.
+ * @param remoteAddr      IP Address of remote host.
+ * @param remotePort      IP Port on remote host.
+ * @param buf             Pointer to the buffer where received data will be stored.
+ * @param len             Size of the buffer in octets.
+ * @param received        OUT: Number of octets received.
+ * @param interfaceIndex  OUT: Interface index.
+ *
+ * @return  Indication of success of failure.
+ */
+QStatus RecvWithAncillaryData(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort, IPAddress& localAddr,
+                              void* buf, size_t len, size_t& received, int32_t& interfaceIndex);
+
+/**
  * Receive a buffer of data from a remote host on a socket and any file descriptors accompanying the
  * data.  This call will block until data is available, the socket is closed.
  *
@@ -397,6 +413,22 @@ QStatus SetMulticastHops(SocketFd socketFd, AddressFamily family, uint32_t hops)
  * @param broadcast  Set to true to enable broadcast on the socket.
  */
 QStatus SetBroadcast(SocketFd sockfd, bool broadcast);
+
+/**
+ * Set the option to receive ancillary data on the provided socket.
+ *
+ * @param sockfd The socket descriptor identifying the resource.
+ * @param recv Set to true to enable receipt of ancillary data.
+ */
+QStatus SetRecvPktAncillaryData(SocketFd sockfd, AddressFamily addrFamily, bool recv);
+
+/**
+ * Set the option to receive only IPv6 packets on the provided socket.
+ *
+ * @param sockfd The socket descriptor identifying the resource.
+ * @param recv  Set to true to enable receipt of only IPv6 packets.
+ */
+QStatus SetRecvIPv6Only(SocketFd sockfd, bool recv);
 
 } // namespace qcc
 
