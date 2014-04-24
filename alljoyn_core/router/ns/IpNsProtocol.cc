@@ -1717,7 +1717,7 @@ size_t MDNSDomainName::Deserialize(uint8_t const* buffer, uint32_t bufsize)
 //MDNSQuestion
 MDNSQuestion::MDNSQuestion(qcc::String qName, uint16_t qType, uint16_t qClass) :
     m_qType(qType),
-    m_qClass(qClass)
+    m_qClass(qClass | QU_BIT)
 {
     m_qName.SetName(qName);
 }
@@ -1743,12 +1743,13 @@ uint16_t MDNSQuestion::GetQType()
 
 void MDNSQuestion::SetQClass(uint16_t qClass)
 {
-    m_qClass = qClass;
+    m_qClass = qClass | QU_BIT;
+    QCC_DbgPrintf(("%X %X ", qClass, m_qClass));
 }
 
 uint16_t MDNSQuestion::GetQClass()
 {
-    return m_qClass;
+    return m_qClass & ~QU_BIT;
 }
 size_t MDNSQuestion::GetSerializedSize(void) const
 {
@@ -1766,7 +1767,7 @@ size_t MDNSQuestion::Serialize(uint8_t* buffer) const
     //Next two octets are QCLASS
     buffer[size + 2] = (m_qClass & 0xFF00) >> 8;
     buffer[size + 3] = (m_qClass & 0xFF);
-
+    QCC_DbgPrintf(("Set %X %X", buffer[size + 2], buffer[size + 3]));
     return size + 4;
 }
 
@@ -1937,6 +1938,7 @@ size_t MDNSResourceRecord::DeserializeExt(uint8_t const* buffer, uint32_t bufsiz
         break;
 
     default:
+        m_rdata = new MDNSDefaultRData();
         QCC_DbgPrintf(("Ignoring unrecognized rrtype %d", m_rrType));
         break;
     }
@@ -2018,7 +2020,37 @@ MDNSRData* MDNSResourceRecord::GetRData()
     return m_rdata;
 }
 
-//MDNSTextRecord
+//MDNSDefaultRData
+size_t MDNSDefaultRData::GetSerializedSize(void) const
+{
+    return 0;
+}
+
+size_t MDNSDefaultRData::Serialize(uint8_t* buffer) const
+{
+    return 0;
+}
+size_t MDNSDefaultRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+{
+    //
+    // If there's not enough data in the buffer to even get the string size out
+    // then bail.
+    //
+    if (bufsize < 2) {
+        QCC_DbgPrintf(("MDNSDefaultRData::Deserialize(): Insufficient bufsize %d", bufsize));
+        return 0;
+    }
+    uint16_t rdlen = buffer[0] << 8 | buffer[1];
+    bufsize -= 2;
+    return rdlen + 2;
+}
+
+size_t MDNSDefaultRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
+{
+    return 0;
+}
+
+//MDNSTextRData
 void MDNSTextRData::Reset()
 {
     m_fields.clear();
@@ -2150,7 +2182,7 @@ size_t MDNSTextRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, st
 size_t MDNSTextRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
 {
     std::map<uint32_t, qcc::String> compressedOffsets;
-    uint32_t headerOffset;
+    uint32_t headerOffset = 0;
     return DeserializeExt(buffer, bufsize, compressedOffsets, headerOffset);
 }
 
@@ -2547,14 +2579,14 @@ void MDNSSearchRData::SetWellKnownName(qcc::String wkn)
     MDNSTextRData::SetValue("wkn", wkn);
 }
 
-//MDNSRefRData
-MDNSRefRData::MDNSRefRData()
+//MDNSSenderRData
+MDNSSenderRData::MDNSSenderRData()
 {
 
 }
 
-MDNSRefRData::MDNSRefRData(uint16_t searchId, qcc::String ipv4Addr, uint16_t ipv4Port,
-                           qcc::String ipv6Addr, uint16_t ipv6Port, TransportMask transportMask, String guid)
+MDNSSenderRData::MDNSSenderRData(uint16_t searchId, qcc::String ipv4Addr, uint16_t ipv4Port,
+                                 qcc::String ipv6Addr, uint16_t ipv6Port, TransportMask transportMask, String guid)
 {
 
     MDNSTextRData::SetValue("sid", U32ToString(searchId));
@@ -2568,72 +2600,72 @@ MDNSRefRData::MDNSRefRData(uint16_t searchId, qcc::String ipv4Addr, uint16_t ipv
 
 }
 
-qcc::String MDNSRefRData::GetGuid()
+qcc::String MDNSSenderRData::GetGuid()
 {
     return MDNSTextRData::GetValue("guid");
 }
 
-void MDNSRefRData::SetGuid(qcc::String guid)
+void MDNSSenderRData::SetGuid(qcc::String guid)
 {
     MDNSTextRData::SetValue("guid", guid);
 }
 
-uint16_t MDNSRefRData::GetTransportMask()
+uint16_t MDNSSenderRData::GetTransportMask()
 {
     return StringToU32(MDNSTextRData::GetValue("trans"));
 }
 
-void MDNSRefRData::SetTransportMask(uint16_t transportMask)
+void MDNSSenderRData::SetTransportMask(uint16_t transportMask)
 {
     MDNSTextRData::SetValue("trans", U32ToString(transportMask));
 }
 
-uint16_t MDNSRefRData::GetBurstID()
+uint16_t MDNSSenderRData::GetSearchID()
 {
     return StringToU32(MDNSTextRData::GetValue("sid"));
 }
 
-void MDNSRefRData::SetBurstID(uint16_t searchId)
+void MDNSSenderRData::SetSearchID(uint16_t searchId)
 {
     MDNSTextRData::SetValue("sid", U32ToString(searchId));
 }
 
-uint16_t MDNSRefRData::GetIPV4ResponsePort()
+uint16_t MDNSSenderRData::GetIPV4ResponsePort()
 {
     return StringToU32(MDNSTextRData::GetValue("upcv4"));
 }
 
-void MDNSRefRData::SetIPV4ResponsePort(uint16_t ipv4Port)
+void MDNSSenderRData::SetIPV4ResponsePort(uint16_t ipv4Port)
 {
     MDNSTextRData::SetValue("upcv4", U32ToString(ipv4Port));
 }
 
-qcc::String MDNSRefRData::GetIPV4ResponseAddr()
+qcc::String MDNSSenderRData::GetIPV4ResponseAddr()
 {
     return MDNSTextRData::GetValue("ipv4");
 }
 
-void MDNSRefRData::SetIPV4ResponseAddr(qcc::String ipv4Addr)
+void MDNSSenderRData::SetIPV4ResponseAddr(qcc::String ipv4Addr)
 {
     MDNSTextRData::SetValue("ipv4", ipv4Addr);
 }
 
-uint16_t MDNSRefRData::GetIPV6ResponsePort()
+uint16_t MDNSSenderRData::GetIPV6ResponsePort()
 {
     return StringToU32(MDNSTextRData::GetValue("upcv6"));
 }
 
-void MDNSRefRData::SetIPV6ResponsePort(uint16_t ipv6Port)
+void MDNSSenderRData::SetIPV6ResponsePort(uint16_t ipv6Port)
 {
     MDNSTextRData::SetValue("upcv6", U32ToString(ipv6Port));
 }
 
-qcc::String MDNSRefRData::GetIPV6ResponseAddr()
+qcc::String MDNSSenderRData::GetIPV6ResponseAddr()
 {
     return MDNSTextRData::GetValue("ipv6");
 }
 
-void MDNSRefRData::SetIPV6ResponseAddr(qcc::String ipv6Addr)
+void MDNSSenderRData::SetIPV6ResponseAddr(qcc::String ipv6Addr)
 {
     MDNSTextRData::SetValue("ipv6", ipv6Addr);
 }

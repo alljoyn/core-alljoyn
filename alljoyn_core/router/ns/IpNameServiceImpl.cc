@@ -1758,11 +1758,11 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         //TODO: Will this be 120 ttl?
         MDNSResourceRecord searchRecord("search.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
 
-        MDNSRefRData* refRData =  new MDNSRefRData();
-        refRData->SetBurstID(id);
+        MDNSSenderRData* refRData =  new MDNSSenderRData();
+        refRData->SetSearchID(id);
         refRData->SetTransportMask(transportMask);
         refRData->SetGuid(m_guid);
-        MDNSResourceRecord refRecord("reference.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
+        MDNSResourceRecord refRecord("sender-info.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
 
         MDNSPacket mdnsPacket;
         mdnsPacket->SetHeader(mdnsHeader);
@@ -1772,6 +1772,7 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         mdnsPacket->SetVersion(2, 2);
 
         TriggerTransmission(Packet::cast(mdnsPacket));
+
     }
 
     return ER_OK;
@@ -2238,12 +2239,12 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
 
         MDNSResourceRecord advRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
 
-        MDNSRefRData* refRData =  new MDNSRefRData();
-        refRData->SetBurstID(id);
+        MDNSSenderRData* refRData =  new MDNSSenderRData();
+        refRData->SetSearchID(id);
         refRData->SetGuid(m_guid);
         refRData->SetTransportMask(transportMask);
 
-        MDNSResourceRecord refRecord("reference.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
+        MDNSResourceRecord refRecord("sender-info.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
 
         MDNSARData* aRData = new MDNSARData();
         MDNSResourceRecord aRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, aRData);
@@ -2610,11 +2611,11 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
 
         MDNSResourceRecord advRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 0, advRData);
 
-        MDNSRefRData* refRData =  new MDNSRefRData();
-        refRData->SetBurstID(id);
+        MDNSSenderRData* refRData =  new MDNSSenderRData();
+        refRData->SetSearchID(id);
         refRData->SetGuid(m_guid);
         refRData->SetTransportMask(transportMask);
-        MDNSResourceRecord refRecord("reference.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 0, refRData);
+        MDNSResourceRecord refRecord("sender-info.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 0, refRData);
 
         MDNSARData* ar = new MDNSARData();
         MDNSResourceRecord aRData(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 0, ar);
@@ -3205,8 +3206,8 @@ void IpNameServiceImpl::RewriteVersionSpecific(
             MDNSHeader mdnsheader = mdnspacket->GetHeader();
             if (mdnsheader.GetQRType() == MDNSHeader::MDNS_QUERY) {
                 MDNSResourceRecord* refRecord;
-                mdnspacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord);
-                MDNSRefRData* refRData = static_cast<MDNSRefRData*>(refRecord->GetRData());
+                mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
+                MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
                 if (haveIPv4address && (unicastIpv4Port != 0)) {
                     refRData->SetIPV4ResponsePort(unicastIpv4Port);
                     refRData->SetIPV4ResponseAddr(ipv4address.ToString());
@@ -3217,8 +3218,8 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                 }
             } else {
                 MDNSResourceRecord* refRecord;
-                mdnspacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord);
-                MDNSRefRData* refRData = static_cast<MDNSRefRData*>(refRecord->GetRData());
+                mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
+                MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
                 TransportMask transportMask = refRData->GetTransportMask();
 
                 uint32_t transportIndex = IndexFromBit(transportMask);
@@ -3760,8 +3761,8 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet)
             //version two
             MDNSPacket mdnspacket = MDNSPacket::cast(packet);
             MDNSResourceRecord* resourceRecord;
-            mdnspacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &resourceRecord);
-            MDNSRefRData* refRData = static_cast<MDNSRefRData*>(resourceRecord->GetRData());
+            mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &resourceRecord);
+            MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(resourceRecord->GetRData());
             TransportMask transportMask = refRData->GetTransportMask();
             assert(transportMask != TRANSPORT_NONE && "IpNameServiceImpl::SendOutboundMessageActively(): TransportMask must always be set");
 
@@ -4787,11 +4788,11 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
         MDNSResourceRecord advertiseRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
 
-        MDNSRefRData* refRData =  new MDNSRefRData();
-        refRData->SetBurstID(id);
+        MDNSSenderRData* refRData =  new MDNSSenderRData();
+        refRData->SetSearchID(id);
         refRData->SetGuid(m_guid);
         refRData->SetTransportMask(MaskFromIndex(transportIndex));
-        MDNSResourceRecord refRecord("reference.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
+        MDNSResourceRecord refRecord("sender-info.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
 
         MDNSARData* addrRData = new MDNSARData();
         MDNSResourceRecord aRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, addrRData);
@@ -4812,9 +4813,9 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
 
         MDNSResourceRecord* refRecord1;
-        mdnsPacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord1);
+        mdnsPacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord1);
 
-        refRData = static_cast<MDNSRefRData*>(refRecord1->GetRData());
+        refRData = static_cast<MDNSSenderRData*>(refRecord1->GetRData());
         for (list<qcc::String>::iterator i = m_advertised[transportIndex].begin(); i != m_advertised[transportIndex].end(); ++i) {
             QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Accumulating \"%s\"", (*i).c_str()));
 
@@ -4877,7 +4878,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                 advRData->Reset();
                 advRData->AddName(*i);
                 id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
-                refRData->SetBurstID(id);
+                refRData->SetSearchID(id);
 
             } else {
                 QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Message has room.  Adding \"%s\"", (*i).c_str()));
@@ -5512,14 +5513,14 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket)
 {
     //Check if someone is providing info. about an alljoyn service.
     MDNSResourceRecord* ptrRecord;
-    if (!mdnsPacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &ptrRecord)) { //TODO also need to use .udp.local
+    if (!mdnsPacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &ptrRecord)) { //TODO also need to use .udp.local. Transport mask related
         QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolResponse Ignoring Non-AllJoyn related response"));
         return;
     }
 
     MDNSResourceRecord* refRecord;
-    mdnsPacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord);
-    MDNSRefRData* refrdata = static_cast<MDNSRefRData*>(refRecord->GetRData());
+    mdnsPacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
+    MDNSSenderRData* refrdata = static_cast<MDNSSenderRData*>(refRecord->GetRData());
     if (refrdata->GetGuid() == m_guid) {
         QCC_DbgPrintf(("Ignoring my own response"));
         return;
@@ -5527,7 +5528,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket)
 
     MDNSPtrRData* ptrrdata = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
     assert(ptrrdata);
-    uint32_t timer = ptrRecord->GetRRttl(); //Need to make callbacks take uint32 instead of uint8
+    uint32_t timer = ptrRecord->GetRRttl(); //TODO: Need to make callbacks take uint32 instead of uint8
 
     MDNSResourceRecord* srvAnswer;
     mdnsPacket->GetAnswer(ptrrdata->GetPtrDName(), MDNSResourceRecord::SRV, &srvAnswer);
@@ -5664,7 +5665,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket)
         needComma = true;
     }
 
-/* TODO: Check this
+/* TODO: Check this. Transport mask related
    if (isAt.GetUnreliableIPv4Flag()) {
         snprintf(addr4buf, sizeof(addr4buf), ",u4addr=%s,u4port=%d",
                  isAt.GetUnreliableIPv4Address().c_str(), isAt.GetUnreliableIPv4Port());
@@ -5748,8 +5749,8 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket) {
     MDNSSearchRData* searchrdata = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
 
     MDNSResourceRecord* refRecord;
-    mdnsPacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord);
-    MDNSRefRData* refRData = static_cast<MDNSRefRData*>(refRecord->GetRData());
+    mdnsPacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
+    MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
 
     if (refRData->GetGuid() == m_guid) {
         QCC_DbgPrintf(("Ignoring my own query"));
@@ -6089,8 +6090,8 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
             MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
             MDNSResourceRecord* refRecord;
 
-            mdnspacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord);
-            MDNSRefRData* refRData = static_cast<MDNSRefRData*>(refRecord->GetRData());
+            mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
+            MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
             TransportMask transportMask = refRData->GetTransportMask();
 
             uint32_t numNames = advRData->GetNumNames();
@@ -6129,12 +6130,11 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
             delete brh_ptr;
         } else {
             MDNSResourceRecord* refRecord;
-
-            mdnspacket->GetAdditionalRecord("reference.", MDNSResourceRecord::TXT, &refRecord);
-            MDNSRefRData* refRData = static_cast<MDNSRefRData*>(refRecord->GetRData());
+            mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
+            MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
             int32_t id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
 
-            refRData->SetBurstID(id);
+            refRData->SetSearchID(id);
             m_mutex.Lock();
             uint32_t count = RETRY_INTERVALS[brh_ptr->scheduleCount] * 1000;
             AlarmListener* burstResponceTimerListener = this;

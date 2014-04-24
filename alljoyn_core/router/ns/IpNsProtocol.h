@@ -2098,7 +2098,86 @@ class MDNSRData : public ProtocolElement {
      */
     virtual MDNSRData* GetDeepCopy() = 0;
 };
+/**
+ * @internal
+ * @brief A class representing an unknown RData type to this version of NS.
+ * It just calculates the RDLength and skips the specified number of bytes during deserialization.
+ * Serialization of this RData does not add any bytes.
+ */
+class MDNSDefaultRData : public MDNSRData {
+  public:
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS Default RData.
+     */
+    MDNSDefaultRData() { }
 
+    /**
+     * @internal
+     * @brief Destructor for MDNSDefaultRData.
+     */
+    ~MDNSDefaultRData() { }
+
+    /**
+     * @internal
+     * @brief returns a deep copy of this object.
+     * @return A deep copy of this MDNSDefaultRData
+     */
+    virtual MDNSRData* GetDeepCopy() { return new MDNSDefaultRData(*this); }
+
+    /**
+     * @internal
+     * @brief Get the size of a buffer that will allow the Resource Record object
+     * and all of its children fields and data objects to be successfully
+     * serialized.
+     *
+     * @return The size of the buffer required to serialize the object
+     */
+    virtual size_t GetSerializedSize(void) const;
+
+    /**
+     * @internal
+     * @brief Serialize this resource record all of its children fields and
+     * data objects to the provided buffer.
+     *
+     * @warning The buffer should be at least as large as the size returned
+     * by GetSerializedSize().
+     *
+     * @return The number of octets written to the buffer.
+     */
+    virtual size_t Serialize(uint8_t* buffer) const;
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer.
+     *
+     * @see ProtocolElement::Deserialize()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    virtual size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+};
 /**
  * @internal
  * @brief A class representing an MDNSTextRData.
@@ -2887,16 +2966,16 @@ class MDNSAdvertiseRData : public MDNSTextRData {
 
 /**
  * @internal
- * @brief A class representing an MDNSRefRData.
+ * @brief A class representing an MDNSSenderRData.
  *
- * MDNSRefRData is a specialization of MDNSTextData and contains the search ID,
+ * MDNSSenderRData is a specialization of MDNSTextData and contains the search ID,
  * protocol version, ipv4 unicast port that the NS is listening on,
  * ipv6 NS unicast port that the NS is listening on, transport mask for the query/response,
  * guid of the NS router and ipv4 and ipv6 addresses in case of a query.
  * Note: In case of a response the ipv4 and ipv6 addresses are included as
  * A and AAAA additionalrecords.
  */
-class MDNSRefRData : public MDNSTextRData {
+class MDNSSenderRData : public MDNSTextRData {
   public:
     /*
      * The current version of the MDNS nameservice
@@ -2908,7 +2987,7 @@ class MDNSRefRData : public MDNSTextRData {
      * @brief Construct an in-memory object representation of an on-the-wire
      * MDNS Reference RData.
      */
-    MDNSRefRData();
+    MDNSSenderRData();
 
     /**
      * @internal
@@ -2923,116 +3002,116 @@ class MDNSRefRData : public MDNSTextRData {
      * @param transportMask	The transport mask.
      * @param guid		The GUID of the NS Router.
      */
-    MDNSRefRData(uint16_t searchId, qcc::String ipv4Addr, uint16_t ipv4Port, qcc::String ipv6Addr, uint16_t ipv6Port, TransportMask transportMask, qcc::String guid);
+    MDNSSenderRData(uint16_t searchId, qcc::String ipv4Addr, uint16_t ipv4Port, qcc::String ipv6Addr, uint16_t ipv6Port, TransportMask transportMask, qcc::String guid);
 
     /**
      * @internal
-     * @brief Destructor for MDNSRefRData.
+     * @brief Destructor for MDNSSenderRData.
      */
-    ~MDNSRefRData() { }
+    ~MDNSSenderRData() { }
 
     /**
      * @internal
      * @brief returns a deep copy of this object.
-     * @return A deep copy of this MDNSRefRData
+     * @return A deep copy of this MDNSSenderRData
      */
-    virtual MDNSRData* GetDeepCopy() { return new MDNSRefRData(*this); }
+    virtual MDNSRData* GetDeepCopy() { return new MDNSSenderRData(*this); }
 
     /**
      * @internal
-     * @brief Set the GUID for this Reference RData.
+     * @brief Set the GUID for this Sender RData.
      * @param guid The GUID to set.
      */
     void SetGuid(qcc::String guid);
 
     /**
      * @internal
-     * @brief Get the GUID for this Reference RData.
-     * @return The GUID contained in this Reference Rdata.
+     * @brief Get the GUID for this Sender RData.
+     * @return The GUID contained in this Sender Rdata.
      */
     qcc::String GetGuid();
 
     /**
      * @internal
-     * @brief Set the search ID for this Reference RData.
+     * @brief Set the search ID for this Sender RData.
      * @param searchId The search ID to set.
      */
-    void SetBurstID(uint16_t searchId);
+    void SetSearchID(uint16_t searchId);
 
     /**
      * @internal
-     * @brief Get the search ID for this Reference RData.
-     * @return The search ID contained in this Reference Rdata.
+     * @brief Get the search ID for this Sender RData.
+     * @return The search ID contained in this Sender Rdata.
      */
-    uint16_t GetBurstID();
+    uint16_t GetSearchID();
 
     /**
      * @internal
-     * @brief Set the transportMask for this Reference RData.
+     * @brief Set the transportMask for this Sender RData.
      * @param transportMask The transportMask to set.
      */
     void SetTransportMask(uint16_t transportMask);
 
     /**
      * @internal
-     * @brief Get the transportMask for this Reference RData.
-     * @return The transportMask contained in this Reference Rdata.
+     * @brief Get the transportMask for this Sender RData.
+     * @return The transportMask contained in this Sender Rdata.
      */
     uint16_t GetTransportMask();
 
     /**
      * @internal
-     * @brief Set the ipv4Port for this Reference RData.
+     * @brief Set the ipv4Port for this Sender RData.
      * @param ipv4Port The ipv4Port to set.
      */
     void SetIPV4ResponsePort(uint16_t ipv4Port);
 
     /**
      * @internal
-     * @brief Get the ipv4Port for this Reference RData.
-     * @return The ipv4Port contained in this Reference Rdata.
+     * @brief Get the ipv4Port for this Sender RData.
+     * @return The ipv4Port contained in this Sender Rdata.
      */
     uint16_t GetIPV4ResponsePort();
 
     /**
      * @internal
-     * @brief Set the ipv4Addr for this Reference RData.
+     * @brief Set the ipv4Addr for this Sender RData.
      * @param ipv4Addr The ipv4Addr to set.
      */
     void SetIPV4ResponseAddr(qcc::String ipv4Addr);
 
     /**
      * @internal
-     * @brief Get the ipv4Addr for this Reference RData.
-     * @return The ipv4Addr contained in this Reference Rdata.
+     * @brief Get the ipv4Addr for this Sender RData.
+     * @return The ipv4Addr contained in this Sender Rdata.
      */
     qcc::String GetIPV4ResponseAddr();
 
     /**
      * @internal
-     * @brief Set the ipv6Port for this Reference RData.
+     * @brief Set the ipv6Port for this Sender RData.
      * @param ipv6Port The ipv6Port to set.
      */
     void SetIPV6ResponsePort(uint16_t ipv6Port);
 
     /**
      * @internal
-     * @brief Get the ipv6Port for this Reference RData.
-     * @return The ipv6Port contained in this Reference Rdata.
+     * @brief Get the ipv6Port for this Sender RData.
+     * @return The ipv6Port contained in this Sender Rdata.
      */
     uint16_t GetIPV6ResponsePort();
 
     /**
      * @internal
-     * @brief Set the ipv6Addr for this Reference RData.
+     * @brief Set the ipv6Addr for this Sender RData.
      * @param ipv6Addr The ipv6Addr to set.
      */
     void SetIPV6ResponseAddr(qcc::String ipv6Addr);
 
     /**
      * @internal
-     * @brief Get the ipv6Addr for this Reference RData.
-     * @return The ipv6Addr contained in this Reference Rdata.
+     * @brief Get the ipv6Addr for this Sender RData.
+     * @return The ipv6Addr contained in this Sender Rdata.
      */
     qcc::String GetIPV6ResponseAddr();
 
@@ -3258,6 +3337,7 @@ class MDNSResourceRecord : public ProtocolElement {
  */
 class MDNSQuestion : public ProtocolElement {
   public:
+    static const uint16_t QU_BIT = 0x8000;
 
     /**
      * @internal
