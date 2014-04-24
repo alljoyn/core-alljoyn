@@ -1652,7 +1652,7 @@ size_t MDNSDomainName::GetSerializedSize(void) const
     return m_name.length() + 1;
 }
 
-size_t MDNSDomainName::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+size_t MDNSDomainName::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
 {
     m_name.clear();
     size_t size = 0;
@@ -1660,7 +1660,22 @@ size_t MDNSDomainName::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         QCC_DbgPrintf(("MDNSDomainName::Deserialize(): Insufficient bufsize %d", bufsize));
         return 0;
     }
+    vector<uint32_t> offsets;
+
     while (bufsize > 0) {
+        if (((buffer[size] & 0xc0) >> 6) == 3 && bufsize > 1) {
+            uint32_t pointer = ((buffer[size] << 8 | buffer[size + 1]) & 0x3FFF);
+            if (compressedOffsets.find(pointer) != compressedOffsets.end()) {
+                if (m_name.length() > 0) {
+                    m_name.append('.');
+                }
+                m_name.append(compressedOffsets[pointer]);
+                size += 2;
+                break;
+            } else {
+                return 0;
+            }
+        }
         size_t temp_size = buffer[size++];
         bufsize--;
         //
@@ -1675,6 +1690,7 @@ size_t MDNSDomainName::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         }
         if (temp_size > 0) {
 
+            offsets.push_back(headerOffset + size - 1);
             m_name.append(reinterpret_cast<const char*>(buffer + size), temp_size);
             bufsize -= temp_size;
             size += temp_size;
@@ -1684,7 +1700,18 @@ size_t MDNSDomainName::Deserialize(uint8_t const* buffer, uint32_t bufsize)
 
     }
 
+    for (uint32_t i = 0; i < offsets.size(); ++i) {
+        compressedOffsets[offsets[i]] = m_name.substr(offsets[i] - headerOffset);
+    }
+
     return size;
+}
+
+size_t MDNSDomainName::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+{
+    std::map<uint32_t, qcc::String> compressedOffsets;
+    uint32_t headerOffset = 0;
+    return DeserializeExt(buffer, bufsize, compressedOffsets, headerOffset);
 }
 
 //MDNSQuestion
@@ -1743,10 +1770,10 @@ size_t MDNSQuestion::Serialize(uint8_t* buffer) const
     return size + 4;
 }
 
-size_t MDNSQuestion::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+size_t MDNSQuestion::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
 {
     // Deserialize the QNAME first
-    size_t size = m_qName.Deserialize(buffer, bufsize);
+    size_t size = m_qName.DeserializeExt(buffer, bufsize, compressedOffsets, headerOffset);
     bufsize -= size;
     if (size == 0 || bufsize < 4) {
         //Error while deserializing QNAME or insufficient buffer size
@@ -1763,6 +1790,13 @@ size_t MDNSQuestion::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     size += 2;
 
     return size;
+}
+
+size_t MDNSQuestion::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+{
+    std::map<uint32_t, qcc::String> compressedOffsets;
+    uint32_t headerOffset = 0;
+    return DeserializeExt(buffer, bufsize, compressedOffsets, headerOffset);
 }
 
 MDNSRData::~MDNSRData()
@@ -1854,7 +1888,7 @@ size_t MDNSResourceRecord::Serialize(uint8_t* buffer) const
     return size;
 }
 
-size_t MDNSResourceRecord::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+size_t MDNSResourceRecord::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
 {
     if (m_rdata) {
         delete m_rdata;
@@ -1863,39 +1897,50 @@ size_t MDNSResourceRecord::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     //
     // Deserialize the NAME first
     //
-    size_t size = m_rrDomainName.Deserialize(buffer, bufsize);
+    size_t size = m_rrDomainName.DeserializeExt(buffer, bufsize, compressedOffsets, headerOffset);
     if (size == 0 || bufsize < 8) {
         //error
         QCC_DbgPrintf((" MDNSResourceRecord::Deserialize() Error occured while deserializing domain name or insufficient buffer"));
         return 0;
     }
+
     //Next two octets are TYPE
     m_rrType = (RRType)((buffer[size] << 8) | buffer[size + 1]);
     switch (m_rrType) {
-    case TXT:
-        m_rdata = new MDNSTextRData();
+    case A:
+        m_rdata = new MDNSARData();
         break;
 
-    case SRV:
-        m_rdata = new MDNSSrvRData();
-        break;
-
+    case NS:
+    case MD:
+    case MF:
+    case CNAME:
+    case MB:
+    case MG:
+    case MR:
     case PTR:
         m_rdata = new MDNSPtrRData();
         break;
 
-    case A:
-        m_rdata = new MDNSARData();
+    case RNULL:
+    case HINFO:
+    case TXT:
+        m_rdata = new MDNSTextRData();
         break;
 
     case AAAA:
         m_rdata = new MDNSAAAARData();
         break;
 
+    case SRV:
+        m_rdata = new MDNSSrvRData();
+        break;
+
     default:
         QCC_DbgPrintf(("Ignoring unrecognized rrtype %d", m_rrType));
         break;
     }
+
     if (!m_rdata) {
         return 0;
     }
@@ -1906,9 +1951,17 @@ size_t MDNSResourceRecord::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     m_rrTTL = (buffer[size + 4] << 24) | (buffer[size + 5] << 16) | (buffer[size + 6] << 8) | buffer[size + 7];
     bufsize -= 8;
     size += 8;
+    headerOffset += size;
     uint8_t const* p = &buffer[size];
-    size += m_rdata->Deserialize(p, bufsize);
+    size += m_rdata->DeserializeExt(p, bufsize, compressedOffsets, headerOffset);
     return size;
+}
+
+size_t MDNSResourceRecord::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+{
+    std::map<uint32_t, qcc::String> compressedOffsets;
+    uint32_t headerOffset = 0;
+    return DeserializeExt(buffer, bufsize, compressedOffsets, headerOffset);
 }
 
 void MDNSResourceRecord::SetDomainName(qcc::String domainName)
@@ -2045,7 +2098,7 @@ size_t MDNSTextRData::Serialize(uint8_t* buffer) const
 
 }
 
-size_t MDNSTextRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+size_t MDNSTextRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
 {
 //
     // If there's not enough data in the buffer to even get the string size out
@@ -2094,6 +2147,13 @@ size_t MDNSTextRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     return size;
 }
 
+size_t MDNSTextRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+{
+    std::map<uint32_t, qcc::String> compressedOffsets;
+    uint32_t headerOffset;
+    return DeserializeExt(buffer, bufsize, compressedOffsets, headerOffset);
+}
+
 //MDNSARecord
 void MDNSARData::SetAddr(qcc::String ipAddr)
 {
@@ -2125,7 +2185,7 @@ size_t MDNSARData::Serialize(uint8_t* buffer) const
     return 6;
 }
 
-size_t MDNSARData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+size_t MDNSARData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
 {
 
     if (bufsize < 6) {
@@ -2141,6 +2201,13 @@ size_t MDNSARData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     m_ipv4Addr = qcc::IPAddress::IPv4ToString(p);
     bufsize -= 6;
     return 6;
+}
+
+size_t MDNSARData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+{
+    std::map<uint32_t, qcc::String> compressedOffsets;
+    uint32_t headerOffset = 0;
+    return DeserializeExt(buffer, bufsize, compressedOffsets, headerOffset);
 }
 
 //MDNSAAAARecord
@@ -2169,7 +2236,7 @@ size_t MDNSAAAARData::Serialize(uint8_t* buffer) const
     return 18;
 }
 
-size_t MDNSAAAARData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+size_t MDNSAAAARData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
 {
     if (bufsize < 18) {
         QCC_DbgPrintf(("MDNSTextRecord::Deserialize(): Insufficient bufsize %d", bufsize));
@@ -2184,6 +2251,13 @@ size_t MDNSAAAARData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     m_ipv6Addr = qcc::IPAddress::IPv6ToString(p);
     bufsize -= 18;
     return 18;
+}
+
+size_t MDNSAAAARData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+{
+    std::map<uint32_t, qcc::String> compressedOffsets;
+    uint32_t headerOffset = 0;
+    return DeserializeExt(buffer, bufsize, compressedOffsets, headerOffset);
 }
 
 //MDNSPtrRData
@@ -2222,7 +2296,7 @@ size_t MDNSPtrRData::Serialize(uint8_t* buffer) const
     return size;
 }
 
-size_t MDNSPtrRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+size_t MDNSPtrRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
 {
 
     m_rDataStr.clear();
@@ -2239,7 +2313,9 @@ size_t MDNSPtrRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     bufsize -= 2;
 
     size_t size = 2;
-    //
+
+    vector<uint32_t> offsets;
+
     // If there's not enough data in the buffer then bail.
     //
     if (bufsize < szStr) {
@@ -2248,6 +2324,19 @@ size_t MDNSPtrRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     }
 
     while (bufsize > 0) {
+        if (((buffer[size] & 0xc0) >> 6) == 3 && bufsize > 1) {
+            uint32_t pointer = ((buffer[size] << 8 | buffer[size + 1]) & 0x3FFF);
+            if (compressedOffsets.find(pointer) != compressedOffsets.end()) {
+                if (m_rDataStr.length() > 0) {
+                    m_rDataStr.append('.');
+                }
+                m_rDataStr.append(compressedOffsets[pointer]);
+                size += 2;
+                break;
+            } else {
+                return 0;
+            }
+        }
         size_t temp_size = buffer[size++];
         bufsize--;
         //
@@ -2261,14 +2350,30 @@ size_t MDNSPtrRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
             m_rDataStr.append('.');
         }
         if (temp_size > 0) {
+
+            offsets.push_back(headerOffset + size - 1);
             m_rDataStr.append(reinterpret_cast<const char*>(buffer + size), temp_size);
             bufsize -= temp_size;
             size += temp_size;
         } else {
             break;
         }
+
     }
+
+
+    for (uint32_t i = 0; i < offsets.size(); ++i) {
+        compressedOffsets[offsets[i]] = m_rDataStr.substr(offsets[i] - headerOffset);
+    }
+
     return size;
+}
+
+size_t MDNSPtrRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+{
+    std::map<uint32_t, qcc::String> compressedOffsets;
+    uint32_t headerOffset = 0;
+    return DeserializeExt(buffer, bufsize, compressedOffsets, headerOffset);
 }
 
 //MDNSSrvRData
@@ -2352,7 +2457,7 @@ size_t MDNSSrvRData::Serialize(uint8_t* buffer) const
     return size;
 }
 
-size_t MDNSSrvRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+size_t MDNSSrvRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
 {
 
 //
@@ -2381,10 +2486,18 @@ size_t MDNSSrvRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     bufsize -= 2;
 
     size_t size = 8;
+    headerOffset += 8;
     uint8_t const* p = &buffer[size];
-    size += m_target.Deserialize(p, bufsize);
+    size += m_target.DeserializeExt(p, bufsize, compressedOffsets, headerOffset);
 
     return size;
+}
+
+size_t MDNSSrvRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
+{
+    std::map<uint32_t, qcc::String> compressedOffsets;
+    uint32_t headerOffset = 0;
+    return DeserializeExt(buffer, bufsize, compressedOffsets, headerOffset);
 }
 
 //MDNSAdvertiseRecord
@@ -2979,6 +3092,7 @@ size_t _MDNSPacket::Serialize(uint8_t* buffer) const
 size_t _MDNSPacket::Deserialize(uint8_t const* buffer, uint32_t bufsize)
 {
     Clear();
+    std::map<uint32_t, qcc::String> compressedOffsets;
     size_t size = m_header.Deserialize(buffer, bufsize);
     size_t ret;
     if (size == 0) {
@@ -2991,9 +3105,10 @@ size_t _MDNSPacket::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     }
     bufsize -= size;
     uint8_t const* p = &buffer[size];
+    size_t headerOffset = size;
     for (int i = 0; i < m_header.GetQDCount(); i++) {
         MDNSQuestion q;
-        ret = q.Deserialize(p, bufsize);
+        ret = q.DeserializeExt(p, bufsize, compressedOffsets, headerOffset);
         if (ret == 0) {
             QCC_DbgPrintf(("Error while deserializing question"));
             return 0;
@@ -3002,12 +3117,13 @@ size_t _MDNSPacket::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         size += ret;
         bufsize -= ret;
         p += ret;
+        headerOffset += ret;
         m_questions.push_back(q);
 
     }
     for (int i = 0; i < m_header.GetANCount(); i++) {
         MDNSResourceRecord r;
-        ret = r.Deserialize(p, bufsize);
+        ret = r.DeserializeExt(p, bufsize, compressedOffsets, headerOffset);
         if (ret == 0) {
             QCC_DbgPrintf(("Error while deserializing answer"));
             return 0;
@@ -3016,11 +3132,12 @@ size_t _MDNSPacket::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         size += ret;
         bufsize -= ret;
         p += ret;
+        headerOffset += ret;
         m_answers.push_back(r);
     }
     for (int i = 0; i < m_header.GetNSCount(); i++) {
         MDNSResourceRecord r;
-        ret = r.Deserialize(p, bufsize);
+        ret = r.DeserializeExt(p, bufsize, compressedOffsets, headerOffset);
         if (ret == 0) {
             QCC_DbgPrintf(("Error while deserializing NS"));
             return 0;
@@ -3029,11 +3146,12 @@ size_t _MDNSPacket::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         size += ret;
         bufsize -= ret;
         p += ret;
+        headerOffset += ret;
         m_authority.push_back(r);
     }
     for (int i = 0; i < m_header.GetARCount(); i++) {
         MDNSResourceRecord r;
-        ret = r.Deserialize(p, bufsize);
+        ret = r.DeserializeExt(p, bufsize, compressedOffsets, headerOffset);
 
         if (ret == 0) {
             QCC_DbgPrintf(("Error while deserializing additional"));
@@ -3043,6 +3161,7 @@ size_t _MDNSPacket::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         size += ret;
         bufsize -= ret;
         p += ret;
+        headerOffset += ret;
         m_additional.push_back(r);
     }
     return size;

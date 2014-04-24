@@ -2078,6 +2078,21 @@ class MDNSRData : public ProtocolElement {
 
     /**
      * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    virtual size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset) = 0;
+
+    /**
+     * @internal
      * @brief returns a deep copy of this object.
      * @return A deep copy of the MDNSRData
      */
@@ -2190,6 +2205,21 @@ class MDNSTextRData : public MDNSRData {
      * occurred.
      */
     virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    virtual size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
     qcc::String GetText() const;
     std::map<qcc::String, qcc::String> m_fields;
@@ -2275,6 +2305,21 @@ class MDNSARData : public MDNSRData {
      * occurred.
      */
     size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
     qcc::String m_ipv4Addr;
 };
@@ -2359,6 +2404,21 @@ class MDNSAAAARData : public MDNSRData {
      * occurred.
      */
     size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
     qcc::String m_ipv6Addr;
 };
@@ -2443,6 +2503,21 @@ class MDNSPtrRData : public MDNSRData {
      * occurred.
      */
     size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
     qcc::String m_rDataStr;
 };
@@ -2525,6 +2600,21 @@ class MDNSDomainName : public ProtocolElement {
      * occurred.
      */
     size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its children
+     * questinos and answers from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
     qcc::String m_name;
 };
@@ -2661,6 +2751,21 @@ class MDNSSrvRData : public MDNSRData {
      * occurred.
      */
     size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
     uint16_t m_priority;
     uint16_t m_weight;
@@ -2964,7 +3069,9 @@ class MDNSResourceRecord : public ProtocolElement {
         MX = 15,        //Mail Exchange
         TXT = 16,       //Text strings
         AAAA = 28,      //Host IPv6 Address
-        SRV = 33        //SRV record
+        SRV = 33,       //SRV record
+        OPT = 41,       //OPT record
+        NSEC = 47       //NSEC record
     };
     enum RRClass : uint16_t {
         INTERNET = 1,   //Internet
@@ -3119,6 +3226,20 @@ class MDNSResourceRecord : public ProtocolElement {
      */
     virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
 
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
     MDNSDomainName m_rrDomainName;
     RRType m_rrType;
@@ -3245,6 +3366,21 @@ class MDNSQuestion : public ProtocolElement {
      * occurred.
      */
     size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its children
+     * questinos and answers from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
     MDNSDomainName m_qName;
     uint16_t m_qType;
