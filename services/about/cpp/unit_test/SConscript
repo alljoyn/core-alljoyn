@@ -1,0 +1,113 @@
+# Copyright (c) 2011-2014, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+import os
+
+Import('about_env')
+
+if not about_env.has_key('GTEST_DIR'):
+    print('GTEST_DIR not specified skipping About Service unit test build')
+
+elif about_env['OS'] == 'darwin' and about_env['CPU'] in ['arm', 'armv7', 'armv7s']:
+    # do not even try Google test if darwin and arm
+    print 'GTEST_DIR ignored when building for OS=darwin CPU=arm, skipping alljoyn_core unit test build'
+
+else:
+    gtest_env = about_env.Clone();
+    gtest_dir = gtest_env['GTEST_DIR']
+    vars = Variables();
+    vars.AddVariables(('GTEST_HOME', '', gtest_dir))
+    vars.Update(gtest_env)
+
+    if gtest_dir == '/usr':
+        gtest_src_base = '%s/src/gtest' % gtest_dir
+    else:
+        gtest_src_base = gtest_dir
+
+    if gtest_env['OS_CONF'] == 'windows':
+        # gTest does not require the same CPPDEFINES as AllJoyn core.
+        gtest_env.Append(CPPDEFINES = ['WIN32', '_LIB'])
+        # don't use the _DEBUG define unless the /MDd compiler flag is specified
+        #gtest_env.Append(CPPDEFINES = ['WIN32', '_DEBUG', '_LIB'])
+        gtest_env.Append(CXXFLAGS = ['/EHsc'])
+
+    if gtest_env['OS_CONF'] == 'android':
+        # used by gtest to prevent use of wcscasecmp and set GTEST_HAS_STD_WSTRING=0
+        gtest_env.Append(CPPDEFINES = ['ANDROID'])
+
+    # tr1::tuple is not avalible for android or darwin
+    if gtest_env['OS_CONF'] == 'android' or gtest_env['OS_CONF'] == 'darwin':
+        gtest_env.Append(CPPDEFINES = ['GTEST_HAS_TR1_TUPLE=0'])
+
+    # clone() library function is NOT available on android-x86
+    if gtest_env['OS_CONF'] == 'android' and gtest_env['CPU'] == 'x86':
+        gtest_env.Append(CPPDEFINES = ['GTEST_HAS_CLONE=0'])
+
+    # Microsoft Visual Studio 2012 has a different _VARIADIC_MAX default value.
+    # See: http://blogs.msdn.com/b/vcblog/archive/2011/09/12/10209291.aspx
+    if gtest_env['OS_CONF'] == 'windows' and gtest_env['MSVC_VERSION'] == '11.0':
+        gtest_env.Append(CPPDEFINES = ['_VARIADIC_MAX=10'])
+
+    # we compile with no rtti and we are not using exceptions. 
+    gtest_env.Append(CPPDEFINES = ['GTEST_HAS_RTTI=0'])
+
+    # we replace AllJoyn's include CPPPATH options.  AllJoyn includes stlport that will cause the 
+    # gTest code to not compile as expected at this time
+    gtest_env.Append(CPPPATH = [ gtest_src_base ])
+    if gtest_dir != '/usr':
+        gtest_env.Append(CPPPATH = [ gtest_env.Dir('$GTEST_DIR/include') ])
+
+    gtest_obj = gtest_env.StaticObject(target = 'gtest-all', source = [ '%s/src/gtest-all.cc' % gtest_src_base ])
+    gtest_env.StaticLibrary(target = 'gtest', source = gtest_obj)
+
+    unittest_env = about_env.Clone()
+    
+    test_src = unittest_env.Glob('*.cc')
+
+    if unittest_env['BR'] == 'on':
+        # Build apps with bundled daemon support
+        unittest_env.Prepend(LIBS = [unittest_env['brobj'], unittest_env['ajrlib']])
+
+    unittest_env.Append(CPPPATH = unittest_env.Dir('..').srcnode())
+
+    gtest_dir = unittest_env['GTEST_DIR']
+    if gtest_dir != '/usr':
+        unittest_env.Append(CPPPATH = [gtest_dir + '/include'])
+    
+    if unittest_env['OS_GROUP'] == 'windows':
+        unittest_env.Append(CXXFLAGS = ['/EHsc'])
+
+
+    # we compile with no rtti and we are not using exceptions.
+    unittest_env.Append(CPPDEFINES = ['GTEST_HAS_RTTI=0'])
+
+    if unittest_env['OS_CONF'] == 'android':
+        # used by gtest to prevent use of wcscasecmp and set GTEST_HAS_STD_WSTRING=0
+        unittest_env.Append(CPPDEFINES = ['ANDROID'])
+
+    # tr1::tuple is not avalible for android or darwin
+    if unittest_env['OS_CONF'] == 'android' or unittest_env['OS_CONF'] == 'darwin':
+        unittest_env.Append(CPPDEFINES = ['GTEST_HAS_TR1_TUPLE=0'])
+    if unittest_env['OS_CONF'] == 'android' and unittest_env['CPU'] == 'x86':
+        unittest_env.Append(CPPDEFINES = ['GTEST_HAS_CLONE=0'])
+    if unittest_env['OS_CONF'] == 'windows' and unittest_env['MSVC_VERSION'] == '11.0':
+        unittest_env.Append(CPPDEFINES = ['_VARIADIC_MAX=10'])
+    # gtest library file is placed on folder above the the object files.
+    unittest_env.Append(LIBPATH = ['./', '$ABOUT_DISTDIR/lib'])
+    unittest_env.Prepend(LIBS = ['gtest', 'alljoyn_about'])
+        
+    obj = unittest_env.Object(test_src);
+        
+    unittest_prog = unittest_env.Program('abouttest', obj)
+    unittest_env.Install('$TESTDIR/cpp/bin', unittest_prog)
