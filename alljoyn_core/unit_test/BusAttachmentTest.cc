@@ -555,3 +555,7 @@ TEST_F(BusAttachmentTest, GetDBusProxyObj) {
     replyMsg->GetArg(0)->Get("u", &requestNameResponce);
     EXPECT_EQ(DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER, requestNameResponce);
 }
+
+TEST_F(BusAttachmentTest, Ping) {
+    ASSERT_EQ(ER_TIMEOUT, bus.Ping(bus.GetUniqueName().c_str(), 1000));
+}
