@@ -525,18 +525,22 @@ TEST(MsgArgTest, Comparison) {
     EXPECT_TRUE(a == b);
 
     //INT64
-    status = a.Set("x", -29875);
+    //Due to implicit casting on 32-bit systems we must explicitly cast
+    //these values to a int64
+    status = a.Set("x", static_cast<int64_t>(-29875));
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = b.Set("x", -29875);
+    status = b.Set("x", static_cast<int64_t>(-29875));
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_TRUE(a == b);
+    EXPECT_TRUE(a == b) << "INT64 ERROR:\n" << a.ToString().c_str() << "\n-----\n" << a.ToString().c_str();
 
     //UINT64
-    status = a.Set("t", 98746541);
+    //Due to implicit casting on 32-bit systems we must explicitly cast
+    //these values to a uint64
+    status = a.Set("t", static_cast<uint64_t>(98746541));
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = b.Set("t", 98746541);
+    status = b.Set("t", static_cast<uint64_t>(98746541));
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_TRUE(a == b);
+    EXPECT_TRUE(a == b) << "UINT64 ERROR:\n" << a.ToString().c_str() << "\n-----\n" << a.ToString().c_str();
 
     //DOUBLE
     status = a.Set("d", 3.14);
