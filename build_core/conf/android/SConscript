@@ -31,6 +31,10 @@ vars.Add(PathVariable('ANDROID_SRC', 'Base directory of Android source tree', os
 vars.Add(PathVariable('ANDROID_NDK', 'Base directory of Android NDK', os.environ.get('ANDROID_NDK')))
 vars.Add(PathVariable('ANDROID_SDK', 'Base directory of Android SDK', os.environ.get('ANDROID_SDK')))
 vars.Add('ANDROID_TARGET', 'Target to be used for the build', os.environ.get('ANDROID_TARGET'))
+
+# java 6 related
+vars.Add(PathVariable('JAVA6_BOOT', 'Base directory for Java 6 bootclass', os.environ.get('JAVA6_BOOT')))
+
 vars.Update(env)
 Help(vars.GenerateHelpText(env))
 
@@ -160,15 +164,36 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
 
    env.Append(LINKFLAGS = ['-Wl,--gc-sections', '-Wl,-z,nocopyreloc'])
 
+   # Java 6 compile options
+   java6Flags = '-source 1.6 -target 1.6 '
+
+   # bootclasspath for java 6
+   java6BootClassOption = '-bootclasspath '
+
+   java6BootPath = env.get('JAVA6_BOOT', '')
+
+   # Use default java6 bootclass path if JAVA6_BOOT not set
+   if java6BootPath == '':
+    java6BootPath = '/usr/lib/jvm/java-6-sun/jre/lib/'
+   elif not java6BootPath.endswith('/'):
+    java6BootPath = java6BootPath + '/'
+
+   java6BootClassJar = 'rt.jar'
+
+   # Add bootclasspath compile option if java6 rt.jar exist
+   if FindFile(java6BootClassJar, java6BootPath):
+    java6Boot = java6BootClassOption + java6BootPath + java6BootClassJar
+    java6Flags = java6Flags + java6Boot
+   
    # Debug/Release variants
    if env['VARIANT'] == 'debug':
       env.Append(CFLAGS = ['-O0', '-g'])
       env.Append(CXXFLAGS = ['-O0', '-g'])
-      env.Append(JAVACFLAGS='-g -Xlint -Xlint:-serial')
+      env.Append(JAVACFLAGS='-g -Xlint -Xlint:-serial ' + java6Flags)
    else:
       env.Append(CFLAGS = '-Os')
       env.Append(CXXFLAGS = '-Os')
       env.Append(LINKFLAGS='-s')
-      env.Append(JAVACFLAGS='-Xlint -Xlint:-serial')
+      env.Append(JAVACFLAGS='-Xlint -Xlint:-serial ' + java6Flags)
 
    env.SConscript('${CPU}/SConscript')
