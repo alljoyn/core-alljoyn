@@ -3250,6 +3250,8 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                     // Add an IPv4 address record
                                     addrRData = new MDNSARData();
                                     mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, addrRData));
+                                    mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
+                                    refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
                                     mdnspacket->GetAdditionalRecord(srvrdata->GetTarget(), MDNSResourceRecord::A, &resourceRecord);
                                 }
                                 if (addrRData) {
@@ -3264,6 +3266,8 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                     // Add an IPV6 address record
                                     aaaaRData = new MDNSAAAARData();
                                     mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::AAAA, MDNSResourceRecord::INTERNET, 120, aaaaRData));
+                                    mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
+                                    refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
                                     mdnspacket->GetAdditionalRecord(srvrdata->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord);
                                 }
                                 aaaaRData = static_cast<MDNSAAAARData*>(resourceRecord->GetRData());
@@ -3283,6 +3287,8 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                     // Add an IPv4 address record
                                     addrRData = new MDNSARData();
                                     mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, addrRData));
+                                    mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
+                                    refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
                                     mdnspacket->GetAdditionalRecord(srvrdata->GetTarget(), MDNSResourceRecord::A, &resourceRecord);
                                 }
                                 if (addrRData) {
@@ -3299,6 +3305,8 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                     // Add an IPV6 address record
                                     aaaaRData = new MDNSAAAARData();
                                     mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::AAAA, MDNSResourceRecord::INTERNET, 120, aaaaRData));
+                                    mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
+                                    refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
                                     mdnspacket->GetAdditionalRecord(srvrdata->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord);
                                 }
                                 aaaaRData = static_cast<MDNSAAAARData*>(resourceRecord->GetRData());
