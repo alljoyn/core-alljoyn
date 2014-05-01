@@ -305,7 +305,7 @@ int main(int argc, char**argv, char**envArg)
     }
 
     AboutClientAnnounceHandler* announceHandler = new AboutClientAnnounceHandler(announceHandlerCallback);
-    AnnouncementRegistrar::RegisterAnnounceHandler(*busAttachment, *announceHandler);
+    AnnouncementRegistrar::RegisterAnnounceHandler(*busAttachment, *announceHandler, NULL, 0);
 
     // Setup signals to wait for.
     sigfillset(&waitmask);

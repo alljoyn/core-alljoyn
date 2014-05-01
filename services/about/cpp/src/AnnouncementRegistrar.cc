@@ -16,15 +16,24 @@
 
 #include <alljoyn/about/AnnouncementRegistrar.h>
 #include <qcc/Debug.h>
+#include <qcc/String.h>
 
 #define QCC_MODULE "ALLJOYN_ABOUT_ANNOUNCEMENT_REGISTRAR"
 
 using namespace ajn;
 using namespace services;
 
-QStatus AnnouncementRegistrar::RegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler) {
+QStatus AnnouncementRegistrar::RegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler, char** implementsInterfaces, size_t numberInterfaces) {
     QCC_DbgTrace(("AnnouncementRegistrar::%s", __FUNCTION__));
     QStatus status = ER_OK;
+    // the only time number of interfaces should be zero is if implements
+    // interfaces is a NULL pointer
+    // If a valid pointer is passed in then the number of interfaces should not be
+    // zero.
+    if ((implementsInterfaces == NULL && numberInterfaces != 0) ||
+        (implementsInterfaces != NULL && numberInterfaces == 0)) {
+        return ER_BAD_ARG_4;
+    }
     const InterfaceDescription* getIface = NULL;
     getIface = bus.GetInterface("org.alljoyn.About");
     if (!getIface) {
@@ -68,10 +77,16 @@ QStatus AnnouncementRegistrar::RegisterAnnounceHandler(ajn::BusAttachment& bus, 
         return status;
     }
 
-    status = bus.AddMatch("type='signal',interface='org.alljoyn.About',member='Announce',sessionless='t'");
+    qcc::String matchRule = "type='signal',interface='org.alljoyn.About',member='Announce',sessionless='t'";
+    for (size_t i = 0; i < numberInterfaces; ++i) {
+        matchRule += qcc::String(",implements='") + implementsInterfaces[i] + qcc::String("'");
+    }
+
+    status = bus.AddMatch(matchRule.c_str());
     if (status != ER_OK) {
         return status;
     }
+
 
     QCC_DbgPrintf(("AnnouncementRegistrar::%s result %s", __FUNCTION__, QCC_StatusText(status)));
     return status;
