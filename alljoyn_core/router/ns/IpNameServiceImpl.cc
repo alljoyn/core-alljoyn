@@ -4894,6 +4894,38 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
             }
         }
 
+
+
+        if (quietly) {
+            for (list<qcc::String>::iterator i = m_advertised_quietly[transportIndex].begin(); i != m_advertised_quietly[transportIndex].end(); ++i) {
+                QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Accumulating (quiet) \"%s\"", (*i).c_str()));
+
+                size_t currentSize = mdnsPacket->GetSerializedSize();
+                currentSize += 100;
+
+                if (currentSize + 1 + (*i).size() > NS_MESSAGE_MAX) {
+                    QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Message is full"));
+                    QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Sending partial list"));
+
+                    mdnsPacket->SetDestination(destination);
+                    SendOutboundMessageQuietly(Packet::cast(mdnsPacket));
+
+                    qcc::Sleep(rand() % 128);
+
+                    ++nSent;
+
+                    QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Resetting current list"));
+                    advRData->Reset();
+                    advRData->AddName(*i);
+                    id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
+                    refRData->SetSearchID(id);
+                } else {
+                    QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Message has room.  Adding (quiet) \"%s\"", (*i).c_str()));
+                    advRData->AddName(*i);
+                }
+            }
+        }
+
         //
         // We most likely have a partially full message waiting to go out.  If we
         // haven't sent a message, then the one message holds all of the names that
