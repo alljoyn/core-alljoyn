@@ -1,0 +1,81 @@
+<project>
+  <property name="OS" value="linux" />
+  <property name="CPU" value="x86_64" />
+  <property name="VARIANT" value="debug" />
+  <property name="top" value="." />
+  <property name="alljoyn_java" value="alljoyn_java" />
+  <property name="src" value="${alljoyn_java}/src" />
+  <property name="build" value="build/${OS}/${CPU}/${VARIANT}" />
+  <property name="dist" value="${top}/${build}/dist/java" />
+  <property name="classes" value="${alljoyn_java}/test/${build}/obj/classes" />
+  <property name="test" value="${top}/${build}/test/java" />
+  
+  <!-- Unknown do we need android,android_donut,maemo, or darwin -->
+  <condition property="org.alljoyn.bus.address" value="unix:abstract=alljoyn">
+    <equals arg1="${OS}" arg2="linux" /> 
+  </condition>
+  <condition property="org.alljoyn.bus.address" value="tcp:addr=127.0.0.1,port=9956">
+    <equals arg1="${OS}" arg2="win7" /> 
+  </condition>
+  <condition property="org.alljoyn.bus.address" value="tcp:addr=127.0.0.1,port=9956">
+    <equals arg1="${OS}" arg2="winxp" /> 
+  </condition>
+  <!-- Default property value if none of the above conditions are met -->
+  <property name="org.alljoyn.bus.address" value="unix:abstract=alljoyn" />
+  
+  <!-- if we are running a x64 build then specify the StackShadowPages size. 
+       ALLJOYN-1510 when using JRE 1.6.0_34 onwards SIGSEGV are seen when running
+       unit tests.  Thie is directly related to a bug that was fixed in the 1.6.0_64  
+       release of the JRE.  The StackShadowPages were increased from 6 to 20 by 
+       default on Linux computers. 
+       see http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=7059899  
+       this "fix" cause us to see the errors that this fix was supposed to address
+       this is a run time issue not a compilation issue. -->
+  <condition property="setStackShadowPages" value="-XX:StackShadowPages=6" >
+  	<equals arg1="${CPU}" arg2="x86_64" />
+  </condition>
+  <!-- Default property value for setStackShadowPages -->
+  <property name="setStackShadowPages" value="-XX:StackShadowPages=3" />
+  
+  <path id="test.classpath">
+    <pathelement location="${classes}" />
+    <fileset dir="${dist}">
+      <include name="**/*.jar" />
+    </fileset>
+  </path>
+
+  <target name="test-init">
+    <delete dir="${test}/data"/>
+    <delete dir="${test}/reports"/>
+    <mkdir dir="${test}/data"/>
+    <mkdir dir="${test}/reports"/>
+  </target>
+
+  <target name="test" depends="test-init">
+    <junit fork="yes" printsummary="false" errorProperty="test.failed" failureProperty="test.failed">
+      <jvmarg value="-Xcheck:jni" />
+      <jvmarg value="-Xmx512m" />
+      <jvmarg value="-Dorg.alljoyn.bus.address=${org.alljoyn.bus.address}" />
+      <jvmarg value="${setStackShadowPages}" />
+      <sysproperty key="java.library.path" path="${dist}/lib"/>
+      <classpath refid="test.classpath" />
+      <formatter type="brief" usefile="false" />
+      <formatter type="xml" />
+      <batchtest todir="${test}/data" if="testcase">
+    <fileset dir="${classes}" includes="**/*${testcase}.class" />
+      </batchtest>
+      <batchtest todir="${test}/data" unless="testcase">
+    <fileset dir="${classes}" includes="**/*Test.class" />
+      </batchtest>
+    </junit>
+
+    <junitreport todir="${test}/data">
+      <fileset dir="${test}/data">
+    <include name="TEST-*.xml"/>
+      </fileset>
+      <report format="frames" todir="${test}/reports/junit"/>
+    </junitreport>
+
+    <fail message="Tests failed. Check log and/or reports." if="test.failed" />
+  </target>
+</project>
