@@ -4274,6 +4274,8 @@ void* IpNameServiceImpl::Run(void* arg)
                 // Find out the destination port and interface index for this message.
                 uint16_t recv_port;
                 int32_t if_index;
+                bool destIsIPv4Broadcast = false;
+
                 for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
                     if (m_liveInterfaces[i].m_multicastMDNSsockFd == sockFd) {
                         recv_port = m_liveInterfaces[i].m_multicastMDNSPort;
@@ -4289,13 +4291,40 @@ void* IpNameServiceImpl::Run(void* arg)
                         if_index = m_liveInterfaces[i].m_index;
                     }
 
+                    if (!destIsIPv4Broadcast && m_liveInterfaces[i].m_address.IsIPv4() && m_liveInterfaces[i].m_prefixlen != static_cast<uint32_t>(-1)) {
+                        uint32_t mask = 0;
+                        uint32_t len = m_liveInterfaces[i].m_prefixlen;
+                        for (uint32_t j = 0; j < len; ++j) {
+                            mask >>= 1;
+                            mask |= 0x80000000;
+                        }
+                        uint32_t addr = (m_liveInterfaces[i].m_address.GetIPv4AddressCPUOrder() & mask) | ~mask;
+                        qcc::IPAddress broadcast_addr(addr);
+                        if (localAddress == broadcast_addr) {
+                            destIsIPv4Broadcast = true;
+                        }
+                    }
                 }
 
                 QCC_DbgHLPrintf(("Processing packet on interface index %d that was received on index %d from %s:%u to %s:%u",
                                  if_index, localInterfaceIndex, remoteAddress.ToString().c_str(), remotePort, localAddress.ToString().c_str(), recv_port));
                 if (if_index != localInterfaceIndex) {
-                    QCC_DbgHLPrintf(("Ignoring packet that was received on a different interface"));
-                    continue;
+                    if (localAddress.ToString() == IPV4_MDNS_MULTICAST_GROUP ||
+                        localAddress.ToString() == IPV6_MDNS_MULTICAST_GROUP ||
+                        localAddress.ToString() == IPV4_ALLJOYN_MULTICAST_GROUP ||
+#if WORKAROUND_2_3_BUG
+                        localAddress.ToString() == IPV4_MULTICAST_GROUP ||
+                        localAddress.ToString() == IPV6_MULTICAST_GROUP ||
+#endif
+                        localAddress.ToString() == IPV4_ALLJOYN_MULTICAST_GROUP) {
+                        QCC_DbgHLPrintf(("Ignoring  multicast packet that was received on a different interface"));
+                        continue;
+                    }
+                    if (destIsIPv4Broadcast) {
+                        QCC_DbgHLPrintf(("Ignoring broadcast packet that was received on a different interface"));
+                        continue;
+                    }
+
                 }
 
                 //
