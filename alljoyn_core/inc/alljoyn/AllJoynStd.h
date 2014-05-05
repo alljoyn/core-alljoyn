@@ -418,6 +418,24 @@ QStatus CreateInterfaces(BusAttachment& bus);          /**< Create the org.alljo
 #define ALLJOYN_GETHOSTINFO_REPLY_NOT_SUPPORTED_ON_TRANSPORT 4   /**< GetHostInfo reply: Session was found, but this method call is not supported on the transport this session is on */
 #define ALLJOYN_GETHOSTINFO_REPLY_FAILED                     5   /**< GetHostInfo reply: Failed for unspecified reason */
 // @}
+
+/**
+ * @name org.alljoyn.Bus.Ping
+ *  Interface: org.alljoyn.Bus
+ *  Method: Ping(String busName)
+ *
+ *  busName = Unique or Well-known name of object you want to ping.
+ *
+ *  Can the busName provided be connected with
+ *
+ *  Returns a status code (see below) indicating success or failure.
+ */
+// @{
+/* org.alljoyn.Bus.Ping */
+#define ALLJOYN_PING_REPLY_SUCCESS          1   /**< Ping reply: Success */
+#define ALLJOYN_PING_REPLY_FAILED           2   /**< Ping reply: Failed */
+#define ALLJOYN_PING_REPLY_TIMEOUT          3   /**< Ping reply: Timed out */
+// @}
 }
 
 #undef QCC_MODULE
