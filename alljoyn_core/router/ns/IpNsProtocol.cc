@@ -1955,7 +1955,12 @@ size_t MDNSResourceRecord::DeserializeExt(uint8_t const* buffer, uint32_t bufsiz
     size += 8;
     headerOffset += size;
     uint8_t const* p = &buffer[size];
-    size += m_rdata->DeserializeExt(p, bufsize, compressedOffsets, headerOffset);
+    size_t processed = m_rdata->DeserializeExt(p, bufsize, compressedOffsets, headerOffset);
+    if (!processed) {
+        QCC_DbgPrintf(("MDNSResourceRecord::Deserialize() Error occured while deserializing resource data"));
+        return 0;
+    }
+    size += processed;
     return size;
 }
 
@@ -2032,6 +2037,13 @@ size_t MDNSDefaultRData::Serialize(uint8_t* buffer) const
 }
 size_t MDNSDefaultRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
 {
+    std::map<uint32_t, qcc::String> compressedOffsets;
+    uint32_t headerOffset = 0;
+    return DeserializeExt(buffer, bufsize, compressedOffsets, headerOffset);
+}
+
+size_t MDNSDefaultRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
+{
     //
     // If there's not enough data in the buffer to even get the string size out
     // then bail.
@@ -2042,12 +2054,11 @@ size_t MDNSDefaultRData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     }
     uint16_t rdlen = buffer[0] << 8 | buffer[1];
     bufsize -= 2;
+    if (bufsize < rdlen) {
+        QCC_DbgPrintf(("MDNSDefaultRData::Deserialize(): Insufficient bufsize %d", bufsize));
+        return 0;
+    }
     return rdlen + 2;
-}
-
-size_t MDNSDefaultRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
-{
-    return 0;
 }
 
 //MDNSTextRData

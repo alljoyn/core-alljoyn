@@ -5559,8 +5559,16 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket)
     }
 
     MDNSResourceRecord* refRecord;
-    mdnsPacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
+    bool senderInfoFound = mdnsPacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
+    if (!senderInfoFound) {
+        QCC_DbgPrintf(("Ignoring response without sender-info"));
+        return;
+    }
     MDNSSenderRData* refrdata = static_cast<MDNSSenderRData*>(refRecord->GetRData());
+    if (!refrdata) {
+        QCC_DbgPrintf(("Ignoring response with invalid sender-info"));
+        return;
+    }
     if (refrdata->GetGuid() == m_guid) {
         QCC_DbgPrintf(("Ignoring my own response"));
         return;
@@ -5596,8 +5604,16 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket)
     }
 
     MDNSResourceRecord* advRecord;
-    mdnsPacket->GetAdditionalRecord("advertise.", MDNSResourceRecord::TXT, &advRecord);
+    bool advertiseFound = mdnsPacket->GetAdditionalRecord("advertise.", MDNSResourceRecord::TXT, &advRecord);
+    if (!advertiseFound) {
+        QCC_DbgPrintf(("Ignoring response without advertisement info"));
+        return;
+    }
     MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
+    if (!advRData) {
+        QCC_DbgPrintf(("Ignoring response with invalid advertisement info"));
+        return;
+    }
     //
     // We have to determine where the transport mask is going to come
     // from.  For version zero messages, we infer it as TRANSPORT_TCP
@@ -5785,13 +5801,29 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket) {
         return;
     }
     MDNSResourceRecord* searchRecord;
-    mdnsPacket->GetAdditionalRecord("search.", MDNSResourceRecord::TXT, &searchRecord);
-    MDNSSearchRData* searchrdata = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
+    bool searchFound = mdnsPacket->GetAdditionalRecord("search.", MDNSResourceRecord::TXT, &searchRecord);
+    if (!searchFound) {
+        QCC_DbgPrintf(("Ignoring query without search info"));
+        return;
+    }
 
+    MDNSSearchRData* searchrdata = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
+    if (!searchrdata) {
+        QCC_DbgPrintf(("Ignoring query with invalid search info"));
+        return;
+    }
     MDNSResourceRecord* refRecord;
-    mdnsPacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
+    bool senderInfoFound = mdnsPacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
+    if (!senderInfoFound) {
+        QCC_DbgPrintf(("Ignoring query without sender info"));
+        return;
+    }
     MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
 
+    if (!refRData) {
+        QCC_DbgPrintf(("Ignoring query with invalid sender info"));
+        return;
+    }
     if (refRData->GetGuid() == m_guid) {
         QCC_DbgPrintf(("Ignoring my own query"));
         return;
