@@ -212,6 +212,8 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     QStatus RereceiveMessages(const qcc::String& epName, const Rule& rule);
 
   private:
+    friend class RemoteQueueSnapshot;
+
     /**
      * SessionlessObj worker.
      *
@@ -255,6 +257,9 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     BusController* busController;         /**< BusController that created this BusObject */
     DaemonRouter& router;                 /**< The router */
 
+    /* The version implemented. */
+    static const uint32_t version;
+
     const InterfaceDescription* sessionlessIface;  /**< org.alljoyn.sl interface */
 
     const InterfaceDescription::Member* requestSignalsSignal;   /**< org.alljoyn.sl.RequestSignal signal */
@@ -262,10 +267,10 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
 
     qcc::Timer timer;                     /**< Timer object for reaping expired names */
 
-    /* Class used as key for messageMap */
-    class MessageMapKey : public qcc::String {
+    /** A key into the local sessionless message queue */
+    class SessionlessMessageKey : public qcc::String {
       public:
-        MessageMapKey(const char* sender, const char* iface, const char* member, const char* objPath) :
+        SessionlessMessageKey(const char* sender, const char* iface, const char* member, const char* objPath) :
             qcc::String(sender, 0, ::strlen(sender) + ::strlen(iface) + ::strlen(member) + ::strlen(objPath) + 4)
         {
             append(':');
@@ -276,12 +281,11 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
             append(objPath);
         }
     };
+    typedef std::pair<uint32_t, Message> SessionlessMessage;
 
+    typedef std::map<SessionlessMessageKey, SessionlessMessage> LocalQueue;
     /** Storage for sessionless messages waiting to be delivered */
-    std::map<MessageMapKey, std::pair<uint32_t, Message> > messageMap;
-
-    /** Count the number of rules (per endpoint) that specify sesionless=TRUE */
-    std::map<qcc::String, uint32_t> ruleCountMap;
+    LocalQueue localQueue;
 
     /** CatchupState is used to track individual local clients that are behind the state of the server for a particular remote host */
     struct CatchupState {
@@ -302,50 +306,56 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
         bool operator==(const RoutedMessage& other) const { return (sender == other.sender) && (serial == other.serial); }
     };
 
-    /** Track the changeIds of the advertisments coming from other daemons */
-    struct ChangeIdEntry {
+    class RemoteQueueKey : public qcc::String {
       public:
-        ChangeIdEntry(const char* advName, TransportMask transport, uint32_t advChangeId) :
-            advName(advName), transport(transport), changeId(std::numeric_limits<uint32_t>::max()),
-            advChangeId(advChangeId), nextJoinTimestamp(0), retries(0), inProgressTimestamp(0), sid(0) { }
+        RemoteQueueKey(const qcc::String& guid, const qcc::String& iface) : qcc::String(guid + ":" + iface) { }
+    };
 
-        void Started() {
-            inProgress = advName;
+    class RemoteQueue {
+      public:
+        RemoteQueue(uint32_t version, const qcc::String& guid, const qcc::String& iface, uint32_t changeId, TransportMask transport) :
+            version(version), guid(guid), iface(iface), changeId(changeId), transport(transport),
+            lastReceivedChangeId(std::numeric_limits<uint32_t>::max()), inProgressChangeId(0), inProgressTimestamp(0),
+            nextJoinTimestamp(0), retries(0), sid(0) { }
+
+        void ReceiveStarted() {
+            inProgressChangeId = changeId;
             inProgressTimestamp = qcc::GetTimestamp64();
         }
-        bool InProgress() {
-            return !inProgress.empty();
+        bool IsReceiveInProgress() {
+            return inProgressTimestamp != 0;
         }
-        void Completed() {
-            inProgress.clear();
+        void ReceiveCompleted() {
             inProgressTimestamp = 0;
             sid = 0;
         }
 
-        qcc::String advName;
-        TransportMask transport;
+        /* The state from the most recent advertisement */
+        uint32_t version;
+        qcc::String guid;
+        qcc::String iface;
         uint32_t changeId;
-        uint32_t advChangeId;
+        TransportMask transport;
+
+        uint32_t lastReceivedChangeId;
+        uint32_t inProgressChangeId;
+        uint64_t inProgressTimestamp;
         uint64_t nextJoinTimestamp;
         uint32_t retries;
-        qcc::String inProgress;
-        uint64_t inProgressTimestamp;
         SessionId sid;
         std::queue<CatchupState> catchupList;
         std::list<RoutedMessage> routedMessages;
     };
-    /** Map remote guid to ChangeIdEntry */
-    std::map<qcc::String, ChangeIdEntry> changeIdMap;
 
-    /** Find the ChangeIdEntry with the matching session ID */
-    std::map<qcc::String, ChangeIdEntry>::iterator FindChangeIdEntry(SessionId sid);
+    typedef std::map<RemoteQueueKey, RemoteQueue> RemoteQueues;
+    /** The state of found remote queues */
+    RemoteQueues remoteQueues;
 
-    qcc::Mutex lock;            /**< Mutex that protects messageMap this obj's data structures */
+    /** Find the remote queue with the matching session ID */
+    RemoteQueues::iterator FindRemoteQueue(SessionId sid);
+
+    qcc::Mutex lock;            /**< Mutex that protects this object's data structures */
     uint32_t curChangeId;       /**< Change id assoc with current pushed signal(s) */
-    uint32_t lastAdvChangeId;   /**< Last advertised change id */
-    qcc::String lastAdvName;    /**< Last advertised name */
-    qcc::String findPrefix;     /**< FindAdvertiseName prefix */
-    qcc::String advPrefix;      /**< AdvertiseName prefix */
     bool isDiscoveryStarted;    /**< True when FindAdvetiseName is ongoing */
     SessionOpts sessionOpts;    /**< SessionOpts used by internal session */
     SessionPort sessionPort;    /**< SessionPort used by internal session */
@@ -354,38 +364,45 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /**
      * Try join with random backoff of 1 to 256ms.
      *
-     * @param[in,out] entry the host to schedule the retry for
+     * @param[in,out] queue the host to schedule the retry for
      */
-    void ScheduleTry(ChangeIdEntry& entry);
+    void ScheduleTry(RemoteQueue& queue);
 
     /**
      * Retry join with random backoff of 200ms to ~8.5s.
      *
-     * @param[in,out] entry the host to schedule the retry for
+     * @param[in,out] queue the host to schedule the retry for
      *
      * @return ER_OK if retry scheduled, failure if retries exhausted
      */
-    QStatus ScheduleRetry(ChangeIdEntry& entry);
+    QStatus ScheduleRetry(RemoteQueue& queue);
 
     /**
      * Internal helper for scheduling a join try or retry.
      *
-     * @param[in,out] entry the host to schedule the join for
+     * @param[in,out] queue the host to schedule the join for
      * @param[in] delay the delay in msecs
      */
-    void ScheduleJoin(ChangeIdEntry& entry, uint32_t delayMs);
+    void ScheduleJoin(RemoteQueue& queue, uint32_t delayMs);
 
     /**
-     * Internal helper for parsing an advertised name into its guid and change
-     * ID parts.
+     * Internal helper for parsing an advertised name into its guid, change
+     * ID, and version parts.
+     *
+     * An advertised name has the following form: "org.alljoyn.sl.xGUID.xCID".
+     * The 'x' of "xGUID" is abused to indicate a version.  'x' is version 0,
+     * 'y' is version 1, etc.  This is to enable backwards compatibility for
+     * version 0 implementations.
      *
      * @param[in] name
+     * @param[out] version
      * @param[out] guid
+     * @param[out] iface
      * @param[out] changeId
      *
      * @return ER_OK if parsed succesfully
      */
-    QStatus ParseAdvertisedName(const qcc::String& name, qcc::String* guid, uint32_t* changeId);
+    QStatus ParseAdvertisedName(const qcc::String& name, uint32_t* version, qcc::String* guid, qcc::String* iface, uint32_t* changeId);
 
     /**
      * Internal helper for sending the RequestSignals signal.
@@ -429,6 +446,58 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
 
     /** Rule iterator */
     typedef std::multimap<qcc::String, TimestampedRule>::iterator RuleIterator;
+
+    /*
+     * Advertise or cancel the SL advertisements.
+     *
+     * Walks through the local queue and determines if the advertisements need to
+     * be updated or cancelled.  Updates lastAdvertisements.  Called without any
+     * locks.
+     */
+    void UpdateAdvertisements();
+
+    /*
+     * Map from last advertised name to last advertised change ID.
+     */
+    std::map<qcc::String, uint32_t> lastAdvertisements;
+
+    /*
+     * Helper to create a segmented advertised name.
+     */
+    qcc::String AdvertisedName(const qcc::String& iface, uint32_t changeId);
+
+    /*
+     * Helper to request and advertise a name.
+     */
+    QStatus AdvertiseName(const qcc::String& name);
+
+    /*
+     * Helper to cancel advertisement and release a name.
+     */
+    void CancelAdvertisedName(const qcc::String& name);
+
+    /*
+     * List of advertised names currently being looked for.
+     */
+    std::set<qcc::String> findingNames;
+
+    /*
+     * Find advertised names based from the sessionless match rules.
+     */
+    void FindAdvertisedNames();
+
+    /*
+     * Stop finding advertised names from the sessionless match rules.
+     */
+    void CancelFindAdvertisedNames();
+
+    /*
+     * @param[in] queue
+     *
+     * @return true if the sessionless match rules include a match for the
+     * queue.
+     */
+    bool IsMatch(RemoteQueue& queue);
 };
 
 }
