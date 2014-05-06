@@ -3937,6 +3937,11 @@ class _MDNSPacket : public _Packet {
      */
     virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
 
+    /**
+     * @internal
+     * The minimum initial capacity reserved for each of the MDNS fields.
+     */
+    static const uint32_t MIN_RESERVE = 5;
   private:
     MDNSHeader m_header;
     std::vector<MDNSQuestion> m_questions;
