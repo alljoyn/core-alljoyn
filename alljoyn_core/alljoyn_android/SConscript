@@ -1,4 +1,4 @@
-# Copyright (c) 2011-2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2011-2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -50,11 +50,3 @@ if env['OS'] == 'android':
 #    env.Install(distDir, env.Dir('alljoyn_android_p2pservice/jni').srcnode())
 #    env.Install(distDir, env.Dir('alljoyn_android_p2pservice/src').srcnode())
 #    env.Install(distDir, env.Dir('alljoyn_android_p2pservice/res').srcnode())
-    
-    distDir = '$CPP_DISTDIR/alljoyn_android/ice_client_login_service'
-    env.Install(distDir, 'ice_client_login_service/AndroidManifest.xml')
-    env.Install(distDir, 'ice_client_login_service/.classpath')
-    env.Install(distDir, 'ice_client_login_service/.project')
-    env.Install(distDir, 'ice_client_login_service/default.properties')
-    env.Install(distDir, env.Dir('ice_client_login_service/src').srcnode())
-    env.Install(distDir, env.Dir('ice_client_login_service/res').srcnode())

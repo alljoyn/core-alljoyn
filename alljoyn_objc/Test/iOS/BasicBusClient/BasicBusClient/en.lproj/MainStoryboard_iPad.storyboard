@@ -37,8 +37,6 @@
                                 <rect key="frame" x="20" y="183" width="728" height="29"/>
                                 <segments>
                                     <segment title="Any"/>
-                                    <segment title="ICE"/>
-                                    <segment title="No ICE"/>
                                 </segments>
                             </segmentedControl>
                         </subviews>

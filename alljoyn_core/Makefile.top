@@ -1,4 +1,4 @@
-# Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2012, 2014 AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
 # 
 
 #
-# Example command: make OS=linux CPU=x86 VARIANT=debug ICE=on BT=on
+# Example command: make OS=linux CPU=x86 VARIANT=debug BT=on
 
 .PHONY: all dist clean distclean
 
@@ -51,7 +51,6 @@ else
 endif
 endif
 
-ICE?=on
 ifeq "$(OS)" "linux"
 BT?=on
 else

@@ -16,12 +16,6 @@
 import os
 Import('router_env', 'router_objs')
 
-# Add OS specific router_objs
-if router_env['ICE'] == 'on':
-    os_objs = router_env.Object(['ProximityScanner.cc', 'Socket.cc'])
-else:
-    os_objs = []
-
 proximity_objs = router_env.SConscript('proximity/SConscript', exports = ['router_env'])
 winmdswitch = '\"/WINMDFILE:%s\"' % os.path.abspath('AllJoyn.winmd')
 router_env.Append(LINKFLAGS=['/MANIFEST:NO', '/SUBSYSTEM:CONSOLE', '/TLBID:1', '/APPCONTAINER', '/WINMD', winmdswitch])
@@ -33,8 +27,8 @@ if router_env['CPU'] == 'arm':
 rsc = router_env.RES('DaemonResources.rc')
 
 # Build the Windows daemon.
-alljoyn_libs = router_env.SharedLibrary('AllJoyn', router_objs + proximity_objs + os_objs)
+alljoyn_libs = router_env.SharedLibrary('AllJoyn', router_objs + proximity_objs)
 router_env.Install('$WINRT_DISTDIR/bin', 'AllJoyn.winmd') #put the *.winmd file in the bin folder
 
 progs = [alljoyn_libs] # alljoyn.dll will be returned
-Return('progs', 'os_objs')
+Return('progs')

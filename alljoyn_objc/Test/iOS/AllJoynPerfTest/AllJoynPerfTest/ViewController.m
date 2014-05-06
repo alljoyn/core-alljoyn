@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2013, 2014 AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -251,10 +251,7 @@
     AJNTransportMask transportMask;
     
     if (self.transportTypeSegmentedControl.selectedSegmentIndex == 0) {
-        transportMask = kAJNTransportMaskAny ^ kAJNTransportMaskICE;
-    }
-    else if (self.transportTypeSegmentedControl.selectedSegmentIndex == 1) {
-        transportMask = kAJNTransportMaskICE;
+        transportMask = kAJNTransportMaskAny;
     }
     
     // reset the performance statistics for the operations (signal or method)

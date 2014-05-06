@@ -28,10 +28,6 @@ if router_env['OS'] in ['android', 'linux']:
 #if router_env['OS'] == 'win7':
 #   progs.append(router_env.Program('WinBtDiscovery.exe', ['WinBtDiscovery.cc']))
    
-if router_env['ICE'] == 'on':
-   if router_env['OS_GROUP'] == 'posix':
-      progs.append(router_env.Program('packettest', ['PacketTest.cc'] + router_objs))
-
 #
 # On Android, build a static library that can be linked into a JNI dynamic 
 # library to implement the daemon as a Service

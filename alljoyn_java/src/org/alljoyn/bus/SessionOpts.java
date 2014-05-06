@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -149,11 +149,6 @@ public class SessionOpts {
     public static final short TRANSPORT_LAN      = 0x0010;
     
     /**
-     * Use only ICE transport to communicate with a given session.
-     */
-    public static final short TRANSPORT_ICE      = 0x0020;
-
-    /**
      * Use only the Wi-Fi Direct transport to communicate with a given session.
      */
     public static final short TRANSPORT_WFD      = 0x0080;
@@ -206,7 +201,6 @@ public class SessionOpts {
         if ((transports & TRANSPORT_BLUETOOTH) != 0) result.append(" TRANSPORT_BLUETOOTH");
         if ((transports & TRANSPORT_WLAN) != 0) result.append(" TRANSPORT_WLAN");
         if ((transports & TRANSPORT_WWAN) != 0) result.append(" TRANSPORT_WWAN");
-        if ((transports & TRANSPORT_ICE) != 0) result.append(" TRANSPORT_ICE");
         if ((transports & TRANSPORT_WFD) != 0) result.append(" TRANSPORT_WFD");
         
         result.append("}");

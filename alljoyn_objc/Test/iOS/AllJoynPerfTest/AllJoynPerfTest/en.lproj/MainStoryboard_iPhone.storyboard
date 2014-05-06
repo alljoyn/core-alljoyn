@@ -104,7 +104,6 @@
                                                 <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="f8L-rY-PGM">
                                                     <segments>
                                                         <segment title="WiFi"/>
-                                                        <segment title="ICE"/>
                                                     </segments>
                                                 </segmentedControl>
                                             </subviews>

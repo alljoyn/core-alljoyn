@@ -768,18 +768,6 @@ static jmethodID MID_MsgArg_unmarshal_array = NULL;
 static jobject Unmarshal(const MsgArg* arg, jobject jtype);
 static MsgArg* Marshal(const char* signature, jobject jarg, MsgArg* arg);
 
-// This is used by the Proximity Scanner since it makes calls in the
-// Java framework for wifi scan results
-
-#if defined(QCC_OS_ANDROID) && defined(AJ_ENABLE_PROXIMITY_SCANNER)
-extern JavaVM*proxJVM;
-extern JNIEnv* psenv;
-extern jclass CLS_AllJoynAndroidExt;
-extern jmethodID MID_AllJoynAndroidExt_Scan;
-extern jclass CLS_ScanResultMessage;
-#endif
-
-
 /**
  * Get a valid JNIEnv pointer.
  *
@@ -836,10 +824,6 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
     if (jvm->GetEnv((void**)&env, JNI_VERSION_1_2)) {
         return JNI_ERR;
     } else {
-#if defined(QCC_OS_ANDROID) && defined(AJ_ENABLE_PROXIMITY_SCANNER)
-        proxJVM = jvm;
-        psenv = env;
-#endif
         jclass clazz;
         clazz = env->FindClass("java/lang/Integer");
         if (!clazz) {
@@ -955,28 +939,6 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
         }
         CLS_SessionOpts = (jclass)env->NewGlobalRef(clazz);
 
-#if defined (QCC_OS_ANDROID) && defined(AJ_ENABLE_PROXIMITY_SCANNER)
-
-        clazz = env->FindClass("org/alljoyn/bus/proximity/ScanResultMessage");
-        if (!clazz) {
-            return JNI_ERR;
-        }
-        CLS_ScanResultMessage = (jclass)env->NewGlobalRef(clazz);
-
-        clazz = env->FindClass("org/alljoyn/bus/proximity/AllJoynAndroidExt");
-        if (!clazz) {
-            return JNI_ERR;
-        }
-        CLS_AllJoynAndroidExt = (jclass)env->NewGlobalRef(clazz);
-        MID_AllJoynAndroidExt_Scan = env->GetStaticMethodID(CLS_AllJoynAndroidExt, "Scan", "(Z)[Lorg/alljoyn/bus/proximity/ScanResultMessage;");
-        if (!MID_AllJoynAndroidExt_Scan) {
-            return JNI_ERR;
-        }
-        clazz = env->FindClass("org/alljoyn/bus/p2p/service/P2pHelperService");
-        if (!clazz) {
-            return JNI_ERR;
-        }
-#endif
         return JNI_VERSION_1_2;
     }
 }

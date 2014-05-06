@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2012, 2014 AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -118,7 +118,7 @@ static PingService *s_sharedInstance;
         }
         [self.delegate receivedStatusMessage:@"Session to port binding successfully."];
         
-        NSString *message = [NSString stringWithFormat:@"Attempting to advertise service %@ using transport %@.", self.serviceName, self.delegate.transportType == kAJNTransportMaskAny ? @"Any" : @"ICE"];
+        NSString *message = [NSString stringWithFormat:@"Attempting to advertise service %@ using transport %@.", self.serviceName, @"Any"];
         NSLog(@"%@", message);
         [self.delegate receivedStatusMessage:message];
 

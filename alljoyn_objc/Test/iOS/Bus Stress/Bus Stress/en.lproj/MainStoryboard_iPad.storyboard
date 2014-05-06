@@ -237,7 +237,6 @@
                                                     <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                                     <segments>
                                                         <segment title="Any"/>
-                                                        <segment title="ICE"/>
                                                     </segments>
                                                 </segmentedControl>
                                             </subviews>

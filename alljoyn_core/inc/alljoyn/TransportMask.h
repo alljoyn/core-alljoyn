@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2010,2012 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2010, 2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -36,7 +36,6 @@ const TransportMask TRANSPORT_TCP       = 0x0004;   /**< Transport using TCP (sa
 const TransportMask TRANSPORT_WLAN      = 0x0004;   /**< Wireless local-area network transport */
 const TransportMask TRANSPORT_WWAN      = 0x0008;   /**< Wireless wide-area network transport */
 const TransportMask TRANSPORT_LAN       = 0x0010;   /**< Wired local-area network transport */
-const TransportMask TRANSPORT_ICE       = 0x0020;   /**< Transport using ICE protocol */
 const TransportMask TRANSPORT_WFD       = 0x0080;   /**< Transport using Wi-Fi Direct transport */
 
 /**

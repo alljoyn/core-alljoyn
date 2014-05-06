@@ -180,33 +180,6 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_PACKET_TOO_LARGE" value="0x90ad" comment="Message too large for use with packet based transport"/>
   <status name="ER_PACKET_BAD_PARAMETER" value="0x90ae" comment="Invalid PacketEngine control packet received"/>
   <status name="ER_PACKET_BAD_CRC" value="0x90af" comment="Packet has invalid CRC"/>
-  <status name="ER_STUN_ATTR_SIZE_MISMATCH" value="0x90b0" comment="STUN attribute size does not match size parsed" />
-  <status name="ER_STUN_AUTH_CHALLENGE" value="0x90b1" comment="STUN server has denied request, issued Challenge" />
-  <status name="ER_STUN_SOCKET_NOT_OPEN" value="0x90b2" comment="Underlying socket not open for operation" />
-  <status name="ER_STUN_SOCKET_OPEN" value="0x90b3" comment="Underlying socket alread open" />
-  <status name="ER_STUN_FAILED_TO_SEND_MSG" value="0x90b4" comment="Failed to send STUN message" />
-  <status name="ER_STUN_FRAMING_ERROR" value="0x90b5" comment="Application specified invalid TCP framing" />
-  <status name="ER_STUN_INVALID_ERROR_CODE" value="0x90b6" comment="Invalid STUN error code" />
-  <status name="ER_STUN_INVALID_FINGERPRINT" value="0x90b7" comment="Fingerprint CRC does not match" />
-  <status name="ER_STUN_INVALID_ADDR_FAMILY" value="0x90b8" comment="Invalid address family value in STUN 'address' attribute" />
-  <status name="ER_STUN_INVALID_MESSAGE_INTEGRITY" value="0x90b9" comment="SHA1-HMAC message integrity value does not match. When passed to upper layer, indicates unauthorized response, message must be ignored" />
-  <status name="ER_STUN_INVALID_MSG_TYPE" value="0x90ba" comment="Invalid STUN message type" />
-  <status name="ER_STUN_INVALID_ATTR_TYPE" value="0x90bb" comment="Invalid STUN message attribute type" />
-  <status name="ER_STUN_RESPONSE_WITH_USERNAME" value="0x90bc" comment="STUN response message included a USERNAME attribute" />
-  <status name="ER_STUN_ERR400_BAD_REQUEST" value="0x90bd" comment="Received bad STUN request, upper layer must send error code 400" />
-  <status name="ER_STUN_BAD_INDICATION" value="0x90be" comment="Received bad STUN indication, upper layer must ignore message" />
-  <status name="ER_STUN_ERR401_UNAUTHORIZED_REQUEST" value="0x90bf" comment="Received STUN request with invalid USERNAME or invalid MESSAGE-INTEGRITY, upper layer must send error code 401" />
-  <status name="ER_STUN_TOO_MANY_ATTRIBUTES" value="0x90c0" comment="Too many attributes in STUN message or unknown attributes list" />
-  <status name="ER_STUN_DUPLICATE_ATTRIBUTE" value="0x90c1" comment="STUN message attribute must only be added once" />
-  <status name="ER_STUN_UNAUTHORIZED_INDICATION" value="0x90c2" comment="Receive STUN indication with invalid USERNAME or invalid MESSAGE-INTEGRITY, upper layer must ignore message" />
-  <status name="ER_ICE_ALLOCATING_MEMORY" value="0x90c3" comment="Unable to allocate heap from ICE" />
-  <status name="ER_ICE_CHECKS_INCOMPLETE" value="0x90c4" comment="ICE Checks have not completed" />
-  <status name="ER_ICE_ALLOCATE_REJECTED_NO_RESOURCES" value="0x90c5" comment="TURN server rejected ALLOCATE request" />
-  <status name="ER_ICE_ALLOCATION_QUOTA_REACHED" value="0x90c6" comment="TURN server rejected with 486" />
-  <status name="ER_ICE_ALLOCATION_MISMATCH" value="0x90c7" comment="TURN server has expired the allocation" />
-  <status name="ER_ICE_STUN_ERROR" value="0x90c8" comment="Generic ICE error" />
-  <status name="ER_ICE_INVALID_STATE" value="0x90c9" comment="ICE Agent is not in proper state to perform request" />
-  <status name="ER_ICE_UNKNOWN_COMPONENT_ID" value="0x90ca" comment="ICE Component type is not recognized" />
   <status name="ER_RENDEZVOUS_SERVER_DEACTIVATED_USER" value="0x90cb" comment="Rendezvous Server has deactivated the current user. Register with the Rendezvous Server to continue." />
   <status name="ER_RENDEZVOUS_SERVER_UNKNOWN_USER" value="0x90cc" comment="Rendezvous Server does not recognize the current user. Register with the Rendezvous Server to continue." />
   <status name="ER_UNABLE_TO_CONNECT_TO_RENDEZVOUS_SERVER" value="0x90cd" comment="Unable to connect to the Rendezvous Server" />

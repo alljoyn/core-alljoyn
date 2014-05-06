@@ -276,7 +276,7 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
 
         if (!isDiscoveryStarted) {
             bus.EnableConcurrentCallbacks();
-            QStatus status = bus.FindAdvertisedNameByTransport(findPrefix.c_str(), TRANSPORT_ANY & ~TRANSPORT_ICE & ~TRANSPORT_LOCAL);
+            QStatus status = bus.FindAdvertisedNameByTransport(findPrefix.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
             if (status != ER_OK) {
                 QCC_LogError(status, ("FindAdvertisedNameByTransport failed"));
             } else {
@@ -307,7 +307,7 @@ void SessionlessObj::RemoveRule(const qcc::String& epName, Rule& rule)
 
         if (isDiscoveryStarted && rules.empty()) {
             bus.EnableConcurrentCallbacks();
-            QStatus status = bus.CancelFindAdvertisedNameByTransport(findPrefix.c_str(), TRANSPORT_ANY & ~TRANSPORT_ICE & ~TRANSPORT_LOCAL);
+            QStatus status = bus.CancelFindAdvertisedNameByTransport(findPrefix.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
             if (status != ER_OK) {
                 QCC_LogError(status, ("CancelFindAdvertisedNameByTransport failed"));
             }
@@ -583,7 +583,7 @@ void SessionlessObj::NameOwnerChanged(const String& name,
 
         /* Stop discovery if nobody is looking for sessionless signals */
         if (isDiscoveryStarted && rules.empty()) {
-            QStatus status = bus.CancelFindAdvertisedNameByTransport(findPrefix.c_str(), TRANSPORT_ANY & ~TRANSPORT_ICE & ~TRANSPORT_LOCAL);
+            QStatus status = bus.CancelFindAdvertisedNameByTransport(findPrefix.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
             if (status != ER_OK) {
                 QCC_LogError(status, ("CancelFindAdvertisedNameByTransport failed"));
             }
@@ -830,7 +830,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 
             /* Cancel previous advertisment */
             if (!lastAdvName.empty()) {
-                status = bus.CancelAdvertiseName(lastAdvName.c_str(), TRANSPORT_ANY & ~TRANSPORT_ICE & ~TRANSPORT_LOCAL);
+                status = bus.CancelAdvertiseName(lastAdvName.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
                 if (status != ER_OK) {
                     QCC_LogError(status, ("Failed to cancel advertisment for \"%s\"", lastAdvName.c_str()));
                 }
@@ -848,7 +848,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 
                 status = bus.RequestName(lastAdvName.c_str(), DBUS_NAME_FLAG_DO_NOT_QUEUE);
                 if (status == ER_OK) {
-                    status = bus.AdvertiseName(lastAdvName.c_str(), TRANSPORT_ANY & ~TRANSPORT_ICE & ~TRANSPORT_LOCAL);
+                    status = bus.AdvertiseName(lastAdvName.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
                 }
 
                 if (status != ER_OK) {

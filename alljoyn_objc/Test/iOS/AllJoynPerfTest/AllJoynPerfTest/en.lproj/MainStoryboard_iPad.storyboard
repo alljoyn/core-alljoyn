@@ -109,7 +109,6 @@
                                                     </constraints>
                                                     <segments>
                                                         <segment title="WiFi"/>
-                                                        <segment title="ICE"/>
                                                     </segments>
                                                 </segmentedControl>
                                             </subviews>

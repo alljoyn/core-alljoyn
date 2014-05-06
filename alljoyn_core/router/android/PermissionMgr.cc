@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -50,13 +50,6 @@ QStatus TransportPermission::FilterTransports(BusEndpoint& srcEp, const qcc::Str
             if (!allowed) {
                 transports ^= TRANSPORT_WLAN;
                 QCC_LogError(ER_ALLJOYN_ACCESS_PERMISSION_WARNING, ("AllJoynObj::%s() WARNING: No permission to use Wifi", ((callerName == NULL) ? "" : callerName)));
-            }
-        }
-        if (transports & TRANSPORT_ICE) {
-            bool allowed = PermissionDB::GetDB().IsWifiAllowed(srcEp->GetUserId());
-            if (!allowed) {
-                transports ^= TRANSPORT_ICE;
-                QCC_LogError(ER_ALLJOYN_ACCESS_PERMISSION_WARNING, ("AllJoynObj::%s() WARNING: No permission to use Wifi for ICE", ((callerName == NULL) ? "" : callerName)));
             }
         }
         if (transports == 0) {

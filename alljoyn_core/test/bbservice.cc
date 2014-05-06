@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2013, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -666,7 +666,7 @@ Mutex LocalTestObject::DelayedResponse::delayedResponseThreadLock;
 
 static void usage(void)
 {
-    printf("Usage: bbservice [-h <name>] [-m] [-e] [-x] [-i #] [-n <name>] [-b] [-t] [-r] [-l]\n\n");
+    printf("Usage: bbservice [-h <name>] [-m] [-e] [-x] [-i #] [-n <name>] [-b] [-t] [-l]\n\n");
     printf("Options:\n");
     printf("   -h                    = Print this help message\n");
     printf("   -?                    = Print this help message\n");
@@ -681,7 +681,6 @@ static void usage(void)
     printf("   -b                    = Advertise over Bluetooth (enables selective advertising)\n");
     printf("   -t                    = Advertise over TCP (enables selective advertising)\n");
     printf("   -l                    = Advertise locally (enables selective advertising)\n");
-    printf("   -r                    = Advertise using the Rendezvous Server (enables selective advertising)\n");
     printf("   -w                    = Advertise over Wi-Fi Direct (enables selective advertising)\n");
     printf("   -a                    = Cancel advertising while servicing a single client (causes rediscovery between iterations)\n");
     printf("   -p                    = Respond to an incoming signal by pinging back to the sender\n");
@@ -775,8 +774,6 @@ int main(int argc, char** argv)
             opts.transports |= TRANSPORT_WLAN;
         } else if (0 == strcmp("-l", argv[i])) {
             opts.transports |= TRANSPORT_LOCAL;
-        } else if (0 == strcmp("-r", argv[i])) {
-            opts.transports |= TRANSPORT_ICE;
         } else if (0 == strcmp("-w", argv[i])) {
             opts.transports |= TRANSPORT_WFD;
         } else if (0 == strcmp("-a", argv[i])) {

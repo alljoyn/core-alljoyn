@@ -41,15 +41,6 @@ else
     ROUTER_SRCS += $(OS_GROUP)/PermissionMgr.cc
 endif
 
-ifeq "$(ICE)" "on"
-    # Use ICE
-    INCLUDE += -I$(PWD)/packetengine
-    ROUTER_SRCS += $(wildcard ice/*.cc)
-    ROUTER_SRCS += $(wildcard JSON/*.cc)
-    ROUTER_SRCS += $(wildcard packetengine/*.cc)
-
-endif
-
 ROUTER_OBJS = $(patsubst %.cc,%.o,$(ROUTER_SRCS))
 $(ROUTER_OBJS) : $(ROUTER_SRCS)
 	$(CC) $(CXXFLAGS) $(CPPDEFINES) $(INCLUDE) -c -o $@ $(patsubst %.o,%.cc,$@)
