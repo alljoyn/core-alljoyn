@@ -377,6 +377,9 @@ bool _PolicyDB::AddRule(const String& cat, const String& catValue, const String&
             success = AddRule(ownRS.userRules[uid], connectRS.userRules[uid],
                               sendRS.userRules[uid], receiveRS.userRules[uid],
                               permission, ruleAttrs);
+        } else {
+            Log(LOG_WARNING, "Ignoring policy rules for invalid user: %s", catValue.c_str());
+            success = true;
         }
 
     } else if (cat == "group") {
@@ -386,6 +389,9 @@ bool _PolicyDB::AddRule(const String& cat, const String& catValue, const String&
             success = AddRule(ownRS.groupRules[gid], connectRS.groupRules[gid],
                               sendRS.groupRules[gid], receiveRS.groupRules[gid],
                               permission, ruleAttrs);
+        } else {
+            Log(LOG_WARNING, "Ignoring policy rules for invalid group: %s", catValue.c_str());
+            success = true;
         }
     }
     return success;
