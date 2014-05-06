@@ -1567,7 +1567,7 @@ public class BusAttachmentTest extends TestCase {
 
         assertEquals(Status.OK, bus.connect());
 
-        assertEquals(Status.TIMEOUT, bus.ping(bus.getUniqueName(), 1000));
+        assertEquals(Status.OK, bus.ping(bus.getUniqueName(), 1000));
     }
 
     /*

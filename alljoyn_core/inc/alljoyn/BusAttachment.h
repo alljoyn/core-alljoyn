@@ -1675,20 +1675,6 @@ class BusAttachment : public MessageReceiver {
     QStatus NameHasOwner(const char* name, bool& hasOwner);
 
     /**
-     * Determine if a name is present and responding by pinging it. The name can
-     * be the unique or well-known name.
-     *
-     * @param name The unique or well-known name to ping
-     * @param timeout Timeout specified in milliseconds to wait for reply
-     *
-     * @return
-     *   - #ER_OK on success
-     *   - #ER_TIMEOUT the Ping attempt timed out
-     *   - An error status otherwise
-     */
-    QStatus Ping(const char* name, uint32_t timeout);
-
-    /**
      * Get the peer GUID for this peer of the local peer or an authenticated remote peer. The bus
      * names of a remote peer can change over time, specifically the unique name is different each
      * time the peer connects to the bus and a peer may use different well-known-names at different
@@ -1757,6 +1743,18 @@ class BusAttachment : public MessageReceiver {
      * @return  The current timestamp in milliseconds.
      */
     static uint32_t GetTimestamp();
+
+    /**
+     * Determine if you are able to find a remote connection based on its BusName.
+     * The BusName can be the Unique or well-known name.
+     * @param name The unique or well-known name to ping
+     * @param timeout Timeout specified in milliseconds to wait for reply
+     * @return
+     *   - #ER_OK on success
+     *   - #ER_TIMEOUT the Ping attempt timed out
+     *   - An error status otherwise
+     */
+    QStatus Ping(const char* name, uint32_t timeout);
 
     /// @cond ALLJOYN_DEV
     /**
@@ -1887,6 +1885,7 @@ class BusAttachment : public MessageReceiver {
     };
 
     JoinObj joinObj;          /**< MUST BE LAST MEMBER. Ensure all threads are joined before BusAttachment destruction */
+
 };
 
 }

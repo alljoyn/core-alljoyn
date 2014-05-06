@@ -1346,24 +1346,6 @@ void AllJoynObj::GetHostInfo(const InterfaceDescription::Member* member, Message
     }
 }
 
-void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
-{
-    uint32_t replyCode;
-    replyCode = ALLJOYN_PING_REPLY_TIMEOUT;
-
-    /* TODO Put actuall ping code here.*/
-
-    /* Reply to ping request */
-    MsgArg replyArg[1];
-    replyArg[0].Set("u", replyCode);
-    QStatus status = MethodReply(msg, replyArg, 1);
-
-    /* Log error if reply could not be sent */
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to respond to org.alljoyn.Bus.Ping"));
-    }
-}
-
 qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
 {
     SessionId id = 0;
@@ -4109,7 +4091,6 @@ void AllJoynObj::CancelSessionlessMessage(const InterfaceDescription::Member* me
     }
 }
 
-
 void AllJoynObj::BusConnectionLost(const qcc::String& busAddr)
 {
     /* Clear the connection map of this busAddress */
@@ -4120,5 +4101,231 @@ void AllJoynObj::BusConnectionLost(const qcc::String& busAddr)
     }
     ReleaseLocks();
 }
+
+void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
+{
+    QCC_LogError(ER_OK, ("Inside AllJoynObj::Ping"));
+    uint32_t replyCode = ALLJOYN_PING_REPLY_SUCCESS;
+    TransportMask transports = TRANSPORT_ANY;
+    size_t numArgs;
+    const MsgArg* args;
+    String sender = msg->GetSender();
+    BusEndpoint senderEp = router.FindEndpoint(sender);
+
+    /* TODO Put actuall ping code here.*/
+    /* Parse the message args */
+    msg->GetArgs(numArgs, args);
+    const char* name = NULL;
+    QStatus status = MsgArg::Get(args, 1, "s", &name);
+
+    if (status == ER_OK && senderEp->IsValid()) {
+        status = TransportPermission::FilterTransports(senderEp, sender, transports, "AllJoynObj::Ping");
+    }
+    if (status == ER_OK) {
+        PermissionMgr::DaemonBusCallPolicy policy = PermissionMgr::GetDaemonBusCallPolicy(senderEp);
+        bool rejectCall = false;
+        if (policy == PermissionMgr::STDBUSCALL_SHOULD_REJECT) {
+            rejectCall = true;
+        } else if (policy == PermissionMgr::STDBUSCALL_ALLOW_ACCESS_SERVICE_LOCAL) {
+            transports &= TRANSPORT_LOCAL;
+            QCC_DbgPrintf(("The sender endpoint is only allowed to use local transport."));
+        }
+
+        if (rejectCall) {
+            QCC_DbgPrintf(("The sender endpoint is not allowed to call Ping()"));
+            replyCode = ALLJOYN_PING_REPLY_FAILED;
+            /* Reply to request */
+            MsgArg replyArg("u", replyCode);
+            status = MethodReply(msg, &replyArg, 1);
+            QCC_DbgPrintf(("AllJoynObj::Ping(%s) returned %d (status=%s)", name, replyCode, QCC_StatusText(status)));
+            return;
+        }
+    }
+
+    if (status != ER_OK) {
+        replyCode = ALLJOYN_PING_REPLY_FAILED;
+        QCC_DbgTrace(("Ping(<bad_args>"));
+    } else {
+        QCC_DbgTrace(("Ping(%s)", name));
+        /* Decide how to proceed based on the endpoint existence/type */
+
+        BusEndpoint ep = router.FindEndpoint(name);
+        if ((ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE) || (ep->GetEndpointType() == ENDPOINT_TYPE_NULL) || (ep->GetEndpointType() == ENDPOINT_TYPE_LOCAL)) {
+            /* Ping is to a locally connected attachment */
+            ProxyBusObject peerObj(bus, name, "/", 0);
+            const InterfaceDescription* intf = bus.GetInterface(org::freedesktop::DBus::Peer::InterfaceName);
+            assert(intf);
+            peerObj.AddInterface(*intf);
+            status = peerObj.MethodCallAsync(org::freedesktop::DBus::Peer::InterfaceName,
+                                             "Ping",
+                                             this, static_cast<MessageReceiver::ReplyHandler>(&AllJoynObj::PingReplyMethodHandler),
+                                             NULL, 0,
+                                             new Message(msg));
+            if (status != ER_OK) {
+                QCC_LogError(status, ("Send Ping failed"));
+                replyCode = ALLJOYN_PING_REPLY_FAILED;
+            }
+
+        } else {
+            /* Ping is to a connected or unconnected remote device */
+
+            /* We check if the name passed by the user is
+             * Advertised or part of a session
+             */
+
+            qcc::String pingName(name);
+            qcc::String guidStr;
+            bool isUniqueNameWellFormed = false;
+            //qcc::String guidStr = name.substr(1, GUID128::SIZE);
+
+            std::multimap<qcc::String, NameMapEntry>::iterator nmit = nameMap.lower_bound(pingName);
+            if (nmit != nameMap.end()) {
+                guidStr = nmit->second.guid;
+            } else {
+                /* Check if it is a unique name and part of a session */
+                isUniqueNameWellFormed = IsLegalUniqueName(name);
+                if (isUniqueNameWellFormed) {
+                    //std::
+                    QCC_LogError(ER_OK, ("Unique name passed in for ping"));
+                }
+            }
+
+            /* Ping name on all remote transports */ // TODO This is probably not what I want
+            status = ER_NOT_IMPLEMENTED;
+            std::multimap<String, void*>::iterator it = pingReplyContexts.insert(pair<String, void*>(name, new Message(msg)));
+            TransportList& transList = bus.GetInternal().GetTransportList();
+            for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
+                Transport* trans = transList.GetTransport(i);
+                if (trans && (trans->GetTransportMask() & transports)) {
+                    QCC_LogError(ER_OK, ("Before calling trans->Ping(name)"));
+                    status = trans->Ping(name, guidStr.c_str());
+                    if (status == ER_OK) {
+                        break;
+                    } else if (status == ER_NOT_IMPLEMENTED) {
+                        continue;
+                    } else {
+                        QCC_LogError(status, ("Ping failed for transport %s - mask=0x%x", trans->GetTransportName(), transports));
+                        replyCode = ALLJOYN_PING_REPLY_FAILED;
+                        break;
+                    }
+                } else if (!trans) {
+                    QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
+                }
+            }
+            if (status != ER_OK) {
+                // TODO Should also clean these up on exit
+                Message* msg = static_cast<Message*>(it->second);
+                delete msg;
+                pingReplyContexts.erase(it);
+            }
+        }
+    }
+
+    /* Reply to request if something went wrong.  The success case is handled asynchronously. */
+    if (replyCode != ALLJOYN_PING_REPLY_SUCCESS) {
+        MsgArg replyArg("u", replyCode);
+        status = MethodReply(msg, &replyArg, 1);
+        QCC_DbgPrintf(("AllJoynObj::Ping(%s) returned %d (status=%s)", name, replyCode, QCC_StatusText(status)));
+
+        /* Log error if reply could not be sent */
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to respond to org.alljoyn.Bus.Ping"));
+        }
+    }
+
+    return;
+}
+
+void AllJoynObj::PingReplyMethodHandler(Message& reply, void* context)
+{
+    QCC_LogError(ER_OK, ("AllJoynObj::PingReplyMethodHandler(Message, context)"));
+    Message* msg = static_cast<Message*>(context);
+    uint32_t replyCode = (ajn::MESSAGE_ERROR == reply->GetType()) ? ALLJOYN_PING_REPLY_FAILED : ALLJOYN_PING_REPLY_SUCCESS;
+    PingReplyMethodHandler(*msg, replyCode);
+    delete msg;
+}
+
+void AllJoynObj::PingReply(TransportMask transport, const qcc::String& name, uint32_t replyCode)
+{
+    QCC_LogError(ER_OK, ("AllJoynObj::PingReply(%s %d)", name.c_str(), replyCode));
+    std::multimap<String, void*>::iterator it = pingReplyContexts.lower_bound(name);
+    while (it != pingReplyContexts.end() && it->first == name) {
+        // TODO May need to filter on transport, TransportList allows multiple listeners
+        Message* msg = static_cast<Message*>(it->second);
+        PingReplyMethodHandler(*msg, replyCode);
+        delete msg;
+        pingReplyContexts.erase(it);
+        it = pingReplyContexts.lower_bound(name);
+    }
+}
+
+void AllJoynObj::PingReplyMethodHandler(Message& msg, uint32_t replyCode)
+{
+    QCC_LogError(ER_OK, ("AllJoynObj::PingReplyMethodHandler()"));
+    const char* name = NULL;
+    msg->GetArgs("s", &name);
+    QCC_DbgPrintf(("AllJoynObj::Ping(%s) returned %d", name, replyCode));
+
+    MsgArg replyArg("u", replyCode);
+    MethodReply(msg, &replyArg, 1);
+}
+
+struct PingReplyTransportContext {
+    TransportMask transport;
+    String name;
+    String guid;
+    PingReplyTransportContext(TransportMask transport, const qcc::String& name, const qcc::String& senderGuid) : transport(transport), name(name), guid(senderGuid) { }
+};
+
+//void AllJoynObj::Ping(TransportMask transport, const qcc::String& name( { }
+void AllJoynObj::Ping(TransportMask transport, const qcc::String& name, const qcc::String& senderGuid)
+{
+    QCC_DbgTrace(("AllJoynObj::Ping(name = \"%s\")", name.c_str()));
+    QCC_LogError(ER_OK, ("AllJoynObj::Ping(name = \"%s\") from remote side %s", name.c_str(), senderGuid.c_str()));
+    /* Ping is to a locally connected attachment */
+    ProxyBusObject peerObj(bus, name.c_str(), "/", 0);
+    const InterfaceDescription* intf = bus.GetInterface(org::freedesktop::DBus::Peer::InterfaceName);
+    assert(intf);
+    peerObj.AddInterface(*intf);
+
+    PingReplyTransportContext* ctx = new PingReplyTransportContext(transport, name, senderGuid);
+    QStatus status = peerObj.MethodCallAsync(org::freedesktop::DBus::Peer::InterfaceName,
+                                             "Ping",
+                                             this, static_cast<MessageReceiver::ReplyHandler>(&AllJoynObj::PingReplyTransportHandler),
+                                             NULL, 0,
+                                             ctx);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Send Ping failed"));
+        TransportList& transList = bus.GetInternal().GetTransportList();
+        for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
+            Transport* trans = transList.GetTransport(i);
+            if (trans && (trans->GetTransportMask() & transport)) {
+                trans->PingReply(name.c_str(), ALLJOYN_PING_REPLY_FAILED);
+                break;
+            }
+        }
+        delete ctx;
+    }
+}
+
+void AllJoynObj::PingReplyTransportHandler(Message& reply, void* context)
+{
+    PingReplyTransportContext* ctx = static_cast<PingReplyTransportContext*>(context);
+
+    uint32_t replyCode = (ajn::MESSAGE_ERROR == reply->GetType()) ? ALLJOYN_PING_REPLY_FAILED : ALLJOYN_PING_REPLY_SUCCESS;
+    QCC_DbgPrintf(("AllJoynObj::Ping(%s) returned %d", ctx->name.c_str(), replyCode));
+    QCC_LogError(ER_OK, ("AllJoynObj::Ping(%s) returned %d", ctx->name.c_str(), replyCode));
+    TransportList& transList = bus.GetInternal().GetTransportList();
+    for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
+        Transport* trans = transList.GetTransport(i);
+        if (trans && (trans->GetTransportMask() & ctx->transport)) {
+            trans->PingReply(ctx->name.c_str(), replyCode);
+            break;
+        }
+    }
+
+    delete ctx;
+}
+
 
 }

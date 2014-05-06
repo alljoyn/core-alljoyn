@@ -144,6 +144,21 @@ class TransportList : public TransportListener {
     void FoundNames(const qcc::String& busAddr, const qcc::String& guid, TransportMask transport, const std::vector<qcc::String>* names, uint8_t ttl);
 
     /**
+     * TransportListener helper.
+     * This method is for internal use only.
+     * @see TransportListener::Ping()
+     */
+    //    void Ping(TransportMask transport, const qcc::String& name);
+    void Ping(TransportMask transport, const qcc::String& name, const qcc::String& senderGuid);
+
+    /**
+     * TransportListener helper.
+     * This method is for internal use only.
+     * @see TransportListener::PingReply()
+     */
+    void PingReply(TransportMask transport, const qcc::String& name, uint32_t replyCode);
+
+    /**
      * Called when a transport gets a surprise disconnect from a remote bus.
      *
      * @param busAddr       The address of the bus formatted as a string.

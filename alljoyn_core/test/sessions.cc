@@ -665,6 +665,16 @@ static void DoSetLinkTimeoutAsync(SessionId id, uint32_t timeout)
 
 }
 
+static void DoPing(String name)
+{
+    QStatus status = s_bus->Ping(name.c_str(), 30000);
+    if (status != ER_OK) {
+        printf("DoPing(%s) failed with %s (%u)\n", name.c_str(), QCC_StatusText(status), status);
+    } else {
+        printf("Ping(%s) OK\n", name.c_str());
+    }
+}
+
 int main(int argc, char** argv)
 {
     QStatus status = ER_OK;
@@ -937,6 +947,9 @@ int main(int argc, char** argv)
                 continue;
             }
             sessionTestObj.SetTtl(ttl);
+        } else if (cmd == "ping") {
+            String name = NextTok(line);
+            DoPing(name);
         } else if (cmd == "exit") {
             break;
         } else if (cmd == "help") {
@@ -965,6 +978,7 @@ int main(int argc, char** argv)
             printf("addmatch <rule>                                               - Add a DBUS rule\n");
             printf("removematch <rule>                                            - Remove a DBUS rule\n");
             printf("sendttl <ttl>                                                 - Set ttl (in ms) for all chat messages (0 = infinite)\n");
+            printf("ping <name>                                                   - Ping a name\n");
             printf("exit                                                          - Exit this program\n");
             printf("\n");
             printf("SessionIds can be specified by value or by #<idx> where <idx> is the session index printed with \"list\" command\n");

@@ -371,14 +371,6 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     void GetHostInfo(const InterfaceDescription::Member* member, Message& msg);
 
     /**
-     * Method handler for org.alljoyn.Bus.Ping
-     *
-     * @param member Interface member
-     * @param msg    The incoming method call message
-     */
-    void Ping(const InterfaceDescription::Member* member, Message& msg);
-
-    /**
      * Add a new Bus-to-bus endpoint.
      *
      * @param endpoint  Bus-to-bus endpoint to add.
@@ -479,6 +471,28 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      *                    (0 means expire immediately, numeric_limits<uint8_t>::max() means never expire)
      */
     void FoundNames(const qcc::String& busAddr, const qcc::String& guid, TransportMask transport, const std::vector<qcc::String>* names, uint8_t ttl);
+
+    /**
+     * Called when a transport has received a ping call.
+     *
+     * @param transport Transport that received the ping call.
+     * @param name      The bus name to ping.
+     */
+    void Ping(TransportMask transport, const qcc::String& name, const qcc::String& senderGuid);
+
+    /**
+     * Called when ping is called by the user
+     */
+    void Ping(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * Called when a transport has received a ping reply.
+     *
+     * @param transport Transport that received the ping reply.
+     * @param name      The bus name that responded to the ping.
+     * @param replyCode The reply code (success, failed) // TODO
+     */
+    void PingReply(TransportMask transport, const qcc::String& name, uint32_t replyCode);
 
     /**
      * Called when a transport gets a surprise disconnect from a remote bus.
@@ -894,6 +908,13 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param mask    Set of transports whose advertisement for name will be removed from alias map.
      */
     void CleanAdvAliasMap(const qcc::String& name, TransportMask mask);
+
+    /* TODO document */
+    void PingReplyMethodHandler(Message& reply, void* context);
+    void PingReplyMethodHandler(Message& msg, uint32_t replyCode);
+    void PingReplyTransportHandler(Message& reply, void* context);
+
+    std::multimap<qcc::String, void*> pingReplyContexts;
 };
 
 }

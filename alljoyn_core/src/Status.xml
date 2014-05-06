@@ -252,4 +252,5 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_BUS_REMOVED_BY_BINDER" value="0x90f5" comment="The session member was removed by the binder"/>
   <status name="ER_BUS_MATCH_RULE_NOT_FOUND" value="0x90f6" comment="The match rule was not found"/>
   <status name="ER_ALLJOYN_PING_FAILED" value="0x90f7" comment="Ping failed"/>
+  <status name="ER_ALLJOYN_PING_REPLY_UNREACHABLE" value="0x90f8" comment="Ping failed"/>
 </status_block>
