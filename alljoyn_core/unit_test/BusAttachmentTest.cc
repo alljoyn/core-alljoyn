@@ -556,6 +556,21 @@ TEST_F(BusAttachmentTest, GetDBusProxyObj) {
     EXPECT_EQ(DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER, requestNameResponce);
 }
 
-TEST_F(BusAttachmentTest, Ping) {
-    ASSERT_EQ(ER_TIMEOUT, bus.Ping(bus.GetUniqueName().c_str(), 1000));
+TEST_F(BusAttachmentTest, Ping_self) {
+    ASSERT_EQ(ER_OK, bus.Ping(bus.GetUniqueName().c_str(), 1000));
+}
+
+TEST_F(BusAttachmentTest, Ping_other_on_same_bus) {
+	BusAttachment otherBus("BusAttachment OtherBus", false);
+
+	QStatus status = ER_OK;
+	status = otherBus.Start();
+	ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+	status = otherBus.Connect(getConnectArg().c_str());
+	ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    ASSERT_EQ(ER_OK, bus.Ping(otherBus.GetUniqueName().c_str(), 1000));
+
+    otherBus.Stop();
+    otherBus.Join();
 }

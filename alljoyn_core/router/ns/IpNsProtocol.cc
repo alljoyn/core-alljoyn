@@ -2590,6 +2590,49 @@ void MDNSSearchRData::SetWellKnownName(qcc::String wkn)
     MDNSTextRData::SetValue("wkn", wkn);
 }
 
+////MDNSPingRecord
+MDNSPingRData::MDNSPingRData(qcc::String wkn)
+{
+    MDNSTextRData::SetValue("wkn", wkn);
+}
+
+String MDNSPingRData::GetWellKnownName()
+{
+    return MDNSTextRData::GetValue("wkn");
+}
+
+void MDNSPingRData::SetWellKnownName(qcc::String wkn)
+{
+    MDNSTextRData::SetValue("wkn", wkn);
+}
+
+////MDNSPingReplyRecord
+MDNSPingReplyRData::MDNSPingReplyRData(qcc::String wkn)
+{
+    MDNSTextRData::SetValue("wkn", wkn);
+}
+
+String MDNSPingReplyRData::GetWellKnownName()
+{
+    return MDNSTextRData::GetValue("wkn");
+}
+
+void MDNSPingReplyRData::SetWellKnownName(qcc::String wkn)
+{
+    MDNSTextRData::SetValue("wkn", wkn);
+}
+
+String MDNSPingReplyRData::GetReplyCode()
+{
+    return MDNSTextRData::GetValue("replycode");
+}
+
+void MDNSPingReplyRData::SetReplyCode(qcc::String replyCode)
+{
+    MDNSTextRData::SetValue("replycode", replyCode);
+}
+
+
 //MDNSSenderRData
 MDNSSenderRData::MDNSSenderRData()
 {

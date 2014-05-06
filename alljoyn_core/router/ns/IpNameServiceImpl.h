@@ -35,6 +35,9 @@
 #include <qcc/Socket.h>
 #include <qcc/IfConfig.h>
 #include <qcc/Timer.h>
+#include <qcc/STLContainer.h>
+#include <qcc/platform.h>
+#include <qcc/StringMapKey.h>
 
 #include <alljoyn/TransportMask.h>
 
@@ -637,6 +640,12 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
     QStatus SetCallback(TransportMask transportMask,
                         Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint8_t>* cb);
 
+    QStatus SetPingCallback(TransportMask transportMask,
+                            Callback<void, const qcc::String&, const qcc::String&>* cb);
+
+    QStatus SetPingReplyCallback(TransportMask transportMask,
+                                 Callback<void, TransportMask, const qcc::String&, uint32_t>* cb);
+
     /**
      * @brief Clear the callbacks for all transports.
      *
@@ -731,6 +740,24 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      */
     size_t NumAdvertisements(TransportMask transportMask);
 
+    /**
+     * @brief Ping the name.
+     *
+     * If users of the name service are interested in being notified of the
+     * ping replies, they are expected to set the Ping callback function using
+     * SetPingCallback().
+     *
+     * @see SetPingCallback()
+     *
+     * @param[in] transportMask A bitmask containing the transport requesting the
+     *     ping operation.
+     * @param[in] name The AllJoyn name to ping
+     *
+     * @return Status of the operation.  Returns ER_OK on success.
+     */
+    QStatus Ping(TransportMask transportMask, const qcc::String& name, const qcc::String& guid);
+
+    QStatus PingReply(TransportMask transportMask, const qcc::String& name, uint32_t replyCode);
     /**
      * @brief Handle the suspending event of the process. Release exclusive held socket file descriptor and port.
      */
@@ -933,6 +960,9 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      */
     bool m_protect_callback;
 
+    bool m_protect_ping_callback;
+    bool m_protect_ping_reply_callback;
+
     /**
      * Send outbound name service messages out the current live interfaces.
      */
@@ -1083,13 +1113,36 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * @internal
      * @brief Do something with a received MDNS protocol query.
      */
-    void HandleProtocolQuery(MDNSPacket packet);
+    void HandleProtocolQuery(MDNSPacket packet, uint16_t recvPort);
 
     /**
      * @internal
      * @brief Do something with a received MDNS protocol response.
      */
-    void HandleProtocolResponse(MDNSPacket mdnsPacket);
+    void HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t recvPort);
+
+    /**
+     * @internal
+     * @brief Update the MDNSPacketTracker which is useful for keep track of burst and
+     *        not responding to each packet of a burst
+     */
+    bool UpdateMDNSPacketTracker(qcc::String guid, uint16_t burstId);
+
+    /**
+     * @internal
+     * @brief Update the AddToPeerInfoMap
+     *
+     */
+    bool AddToPeerInfoMap(const qcc::String& guid, const qcc::String& ipv4addr, const qcc::String& ipv6addr, uint16_t r4port, uint16_t r6port);
+    bool AddToPingRequestsMap(const qcc::String& name, const qcc::String& guid);
+
+    /**
+     * @internal
+     * @brief Remove an entry from the PeerInfoMap
+     *        This will be useful during a cache refresh expiry for a guid
+     *
+     */
+    bool RemoveFromPeerInfoMap(const qcc::String& guid);
 
     /**
      * One possible callback for each of the corresponding transport masks in a
@@ -1097,6 +1150,8 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      */
     Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint8_t>* m_callback[N_TRANSPORTS];
 
+    Callback<void, const qcc::String&, const qcc::String&>* m_pingcallback[N_TRANSPORTS];
+    Callback<void, TransportMask, const qcc::String&, uint32_t>* m_ping_reply_callback[N_TRANSPORTS];
     /**
      * @internal @brief A vector of list of all of the names that the various
      * transports have actively advertised.
@@ -1109,6 +1164,7 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      */
     std::list<qcc::String> m_advertised_quietly[N_TRANSPORTS];
 
+    std::list<qcc::String> m_pinged;
     /**
      * @internal
      * @brief The daemon GUID string of the daemon assoicated with this instance
@@ -1421,6 +1477,62 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * timer responsible for sending burst IS-AT responses
      */
     qcc::Timer m_burstResponseTimer;
+
+    typedef struct {
+        uint16_t burstId;
+        uint64_t timestamp;
+    }BurstEntry;
+
+
+    typedef struct {
+        std::list<BurstEntry> bursts;
+        qcc::Alarm alarm;
+    }Bursts;
+
+    /**
+     * Hash functor
+     */
+    struct Hash {
+        inline size_t operator()(const qcc::String& s) const {
+            return qcc::hash_string(s.c_str());
+        }
+    };
+
+    struct Equal {
+        inline bool operator()(const qcc::String& s1, const qcc::String& s2) const {
+            return s1 == s2;
+        }
+    };
+
+    //    std::unordered_map<qcc::String, std::list<BurstEntry>, Hash, Equal> MDNSPacketTracker;
+    std::unordered_map<qcc::String, uint16_t, Hash, Equal> MDNSPacketTracker;
+
+    /*
+     * PeerInfo holds the information about a peer for which we know the unicast address
+     * The timestamp field is used for cache refresh
+     */
+    struct PeerInfo {
+        qcc::IPEndpoint unicastIPV4Info;
+        qcc::IPEndpoint unicastIPV6Info;
+        uint64_t timestamp;
+
+        PeerInfo(const qcc::String& unicastipv4addr,
+                 const qcc::String& unicastipv6addr,
+                 const uint16_t unicastipv4port,
+                 const uint16_t unicastipv6port) :
+            unicastIPV4Info(unicastipv4addr, unicastipv4port),
+            unicastIPV6Info(unicastipv6addr, unicastipv6port),
+            timestamp(qcc::GetTimestamp64()) { }
+    };
+
+    std::unordered_map<qcc::String, PeerInfo, Hash, Equal> PeerInfoMap;
+    void PrintPeerInfoMap();
+
+    std::multimap<qcc::String, qcc::String> PingRequestsMap;
+    void PrintPingRequestsMap();
+
+    class BurstExpiryHandler;
+    BurstExpiryHandler*burstExpiryHandler;
 
 };
 
