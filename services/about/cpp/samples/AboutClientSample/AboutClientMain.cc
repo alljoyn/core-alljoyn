@@ -307,8 +307,6 @@ int main(int argc, char**argv, char**envArg)
     AboutClientAnnounceHandler* announceHandler = new AboutClientAnnounceHandler(announceHandlerCallback);
     AnnouncementRegistrar::RegisterAnnounceHandler(*busAttachment, *announceHandler);
 
-    busAttachment->AddMatch("sessionless='t',type='error'");
-
     // Setup signals to wait for.
     sigfillset(&waitmask);
     sigdelset(&waitmask, SIGINT);

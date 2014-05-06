@@ -51,7 +51,7 @@ QStatus AnnouncementRegistrar::RegisterAnnounceHandler(ajn::BusAttachment& bus, 
                                            handler.announceSignalMember,
                                            0))
 
-    CHECK_RETURN(bus.AddMatch("type='signal',interface='org.alljoyn.About',member='Announce'"))
+    CHECK_RETURN(bus.AddMatch("type='signal',interface='org.alljoyn.About',member='Announce',sessionless='t'"))
 
     QCC_DbgPrintf(("AnnouncementRegistrar::%s result %s", __FUNCTION__, QCC_StatusText(status)));
     return status;
