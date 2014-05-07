@@ -484,6 +484,8 @@ IpNameServiceImpl::IpNameServiceImpl()
 
     memset(&m_any[0], 0, sizeof(m_any));
     memset(&m_callback[0], 0, sizeof(m_callback));
+    memset(&m_pingcallback[0], 0, sizeof(m_pingcallback));
+    memset(&m_ping_reply_callback[0], 0, sizeof(m_ping_reply_callback));
 
     memset(&m_enabledReliableIPv4[0], 0, sizeof(m_enabledReliableIPv4));
     memset(&m_enabledUnreliableIPv4[0], 0, sizeof(m_enabledUnreliableIPv4));
@@ -1914,7 +1916,6 @@ QStatus IpNameServiceImpl::SetPingCallback(TransportMask transportMask,
 void IpNameServiceImpl::ClearCallbacks(void)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::ClearCallbacks()"));
-    // TODO Need to clear out any ping callbacks too here
 
     // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
@@ -1932,6 +1933,15 @@ void IpNameServiceImpl::ClearCallbacks(void)
         Callback<void, const qcc::String&, const qcc::String&, vector<qcc::String>&, uint8_t>*  goner = m_callback[i];
         m_callback[i] = NULL;
         delete goner;
+
+        Callback<void, const qcc::String&, const qcc::String&>*  ping_goner = m_pingcallback[i];
+        m_pingcallback[i] = NULL;
+        delete ping_goner;
+
+        Callback<void, TransportMask, const qcc::String&, uint32_t>* ping_reply_goner = m_ping_reply_callback[i];
+        m_ping_reply_callback[i] = NULL;
+        delete ping_reply_goner;
+
     }
 
     // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
