@@ -971,6 +971,14 @@ QStatus CreateUnicastSocket(AddressFamily m_family, qcc::String m_addr, SocketFd
         return status;
     }
 
+    status = qcc::SetRecvPktAncillaryData(sockFd, m_family, true);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("CreateUnicastSocket: enable recv ancillary data"
+                              " failed for sockFd %d", sockFd));
+        qcc::Close(sockFd);
+        return status;
+    }
+
     //
     // We must be able to reuse the address/port combination so other
     // AllJoyn daemon instances on the same host can listen in if desired.
@@ -1025,6 +1033,24 @@ QStatus CreateMulticastSocket(IfConfigEntry entry, const char* ipv4_multicast_gr
                               qcc::GetLastError(), qcc::GetLastErrorString().c_str()));
         qcc::Close(sockFd);
         return status;
+    }
+
+    status = qcc::SetRecvPktAncillaryData(sockFd, entry.m_family, true);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("CreateMulticastSocket: enable recv ancillary data"
+                              " failed for sockFd %d", sockFd));
+        qcc::Close(sockFd);
+        return status;
+    }
+
+    if (entry.m_family == qcc::QCC_AF_INET6) {
+        status = qcc::SetRecvIPv6Only(sockFd, true);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("CreateMulticastSocket: enable recv IPv6 only"
+                                  " failed for sockFd %d", sockFd));
+            qcc::Close(sockFd);
+            return status;
+        }
     }
 
     if (broadcast && entry.m_flags & qcc::IfConfigEntry::BROADCAST) {
@@ -4337,11 +4363,13 @@ void* IpNameServiceImpl::Run(void* arg)
 
                 QCC_DbgPrintf(("IpNameServiceImpl::Run(): Call qcc::RecvFrom()"));
 
-                qcc::IPAddress address;
-                uint16_t port;
+                qcc::IPAddress remoteAddress, localAddress;
+                uint16_t remotePort;
                 size_t nbytes;
+                int32_t localInterfaceIndex;
 
-                QStatus status = qcc::RecvFrom(sockFd, address, port, buffer, bufsize, nbytes);
+                QStatus status = qcc::RecvWithAncillaryData(sockFd, remoteAddress, remotePort, localAddress, buffer, bufsize, nbytes, localInterfaceIndex);
+
                 if (status != ER_OK) {
                     //
                     // We have a RecvFrom error.  We want to avoid states where
@@ -4367,27 +4395,39 @@ void* IpNameServiceImpl::Run(void* arg)
                     continue;
                 }
 
-                QCC_DbgHLPrintf(("IpNameServiceImpl::Run(): Got IPNS message from \"%s\"", address.ToString().c_str()));
+                QCC_DbgHLPrintf(("IpNameServiceImpl::Run(): Got IPNS message from \"%s\"", remoteAddress.ToString().c_str()));
 
-                // Find out the destination port for this message.
+                // Find out the destination port and interface index for this message.
                 uint16_t recv_port;
+                int32_t if_index;
                 for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
                     if (m_liveInterfaces[i].m_multicastMDNSsockFd == sockFd) {
                         recv_port = m_liveInterfaces[i].m_multicastMDNSPort;
+                        if_index = m_liveInterfaces[i].m_index;
                     }
                     if (m_liveInterfaces[i].m_multicastsockFd  == sockFd) {
                         recv_port = m_liveInterfaces[i].m_multicastPort;
+                        if_index = m_liveInterfaces[i].m_index;
                     }
 
                     if (m_liveInterfaces[i].m_unicastsockFd  == sockFd) {
                         recv_port = m_liveInterfaces[i].m_unicastPort;
+                        if_index = m_liveInterfaces[i].m_index;
                     }
 
                 }
+
+                QCC_DbgHLPrintf(("Processing packet on interface index %d that was received on index %d from %s:%u to %s:%u",
+                                 if_index, localInterfaceIndex, remoteAddress.ToString().c_str(), remotePort, localAddress.ToString().c_str(), recv_port));
+                if (if_index != localInterfaceIndex) {
+                    QCC_DbgHLPrintf(("Ignoring packet that was received on a different interface"));
+                    continue;
+                }
+
                 //
                 // We got a message over the multicast channel.  Deal with it.
                 //
-                qcc::IPEndpoint endpoint(address, port);
+                qcc::IPEndpoint endpoint(remoteAddress, remotePort);
                 HandleProtocolMessage(buffer, nbytes, endpoint, recv_port);
             }
         }
