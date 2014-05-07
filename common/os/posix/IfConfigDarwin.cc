@@ -54,6 +54,17 @@
 
 #include <qcc/IfConfig.h>
 
+#include <fcntl.h>
+#include <net/if.h>
+
+#ifndef RTM_NEWADDR
+#define RTM_NEWADDR 0xc
+#endif
+
+#ifndef RTM_DELADDR
+#define RTM_DELADDR 0xd
+#endif
+
 #define QCC_MODULE "IFCONFIG"
 
 namespace qcc {
@@ -416,6 +427,77 @@ QStatus IfConfigIPv4(std::vector<IfConfigEntry>& entries)
     return ER_OK;
 }
 
+/*
+ * This is the high-level function that processes data received on
+ * network events and checks if there are any events we are interested in.
+ * We limit processing of events to a batch of up to 100 events at a time.
+ */
+static NetworkEventType NetworkEventRecv(qcc::SocketFd sockFd, char* buffer, int buflen)
+{
+    uint32_t nBytes = 0;
+    struct ifa_msghdr* networkEvent =  reinterpret_cast<struct ifa_msghdr*>(buffer);
+    fd_set rdset;
+    struct timeval tval;
+    tval.tv_sec = 0;
+    tval.tv_usec = 0;
+    int32_t count = 0;
+
+    NetworkEventType eventSummary = QCC_RTM_IGNORED;
+
+    FD_ZERO(&rdset);
+    FD_SET(sockFd, &rdset);
+    do {
+        NetworkEventType newEventType = QCC_RTM_IGNORED;
+        nBytes = recv(sockFd, buffer, buflen, 0);
+        if (sizeof(struct ifa_msghdr) <= nBytes) {
+            if (networkEvent->ifam_type == RTM_DELADDR) {
+                newEventType = QCC_RTM_DELADDR;
+            } else if (networkEvent->ifam_type == RTM_NEWADDR) {
+                newEventType = QCC_RTM_NEWADDR;
+            } else {
+                newEventType = QCC_RTM_IGNORED;
+            }
+            if (eventSummary < newEventType) {
+                eventSummary = newEventType;
+            }
+        } else {
+            QCC_LogError(ER_OK, ("NetworkEventRecv(): Error processing network event data"));
+        }
+    } while (count++ < 100 && select(sockFd + 1, &rdset, NULL, NULL, &tval) > 0);
+    QCC_DbgPrintf(("NetworkEventRecv(): Processed %d event(s), %s", count, (eventSummary == QCC_RTM_IGNORED ? "none are relevant" : "some are relevant")));
+    return eventSummary;
+}
+
+/*
+ * This is the high-level function that creates a socket on which
+ * to receive network event notifications.
+ */
+static SocketFd NetworkChangeEventSocket()
+{
+    int sockFd;
+
+    if ((sockFd = socket(AF_ROUTE, SOCK_RAW, 0)) < 0) {
+        QCC_LogError(ER_FAIL, ("NetworkChangeEventSocket(): Error obtaining socket: %s", strerror(errno)));
+        return -1;
+    }
+
+    fcntl(sockFd, F_SETFL, O_NONBLOCK);
+
+    return sockFd;
+}
+
+SocketFd NetworkEventSocket()
+{
+    return NetworkChangeEventSocket();
+}
+
+NetworkEventType NetworkEventReceive(qcc::SocketFd sockFd)
+{
+    const uint32_t BUFSIZE = 65536;
+    char* buffer = new char[BUFSIZE];
+
+    return NetworkEventRecv(sockFd, buffer, BUFSIZE);
+}
 
 } // namespace ajn
 

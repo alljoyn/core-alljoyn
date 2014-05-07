@@ -1469,6 +1469,15 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
         //
         m_liveInterfaces.push_back(live);
     }
+#ifndef QCC_OS_GROUP_WINDOWS
+    if (m_refreshAdvertisements) {
+        QCC_DbgPrintf(("Now refreshing advertisements on interface event"));
+        for (uint32_t index = 0; index < N_TRANSPORTS; ++index) {
+            Retransmit(index, false, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V0_V1 | TRANSMIT_V2);
+        }
+        m_refreshAdvertisements = false;
+    }
+#endif
 }
 
 QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
@@ -4081,6 +4090,11 @@ void* IpNameServiceImpl::Run(void* arg)
     const uint32_t MS_PER_SEC = 1000;
     qcc::Event timerEvent(MS_PER_SEC, MS_PER_SEC);
 
+#ifndef QCC_OS_GROUP_WINDOWS
+    qcc::SocketFd networkEventFd = qcc::NetworkEventSocket();
+    qcc::Event networkEvent(networkEventFd, qcc::Event::IO_READ, false);
+#endif
+
     qcc::Timespec tNow, tLastLazyUpdate;
     GetTimeNow(&tLastLazyUpdate);
 
@@ -4163,10 +4177,14 @@ void* IpNameServiceImpl::Run(void* arg)
         //     3) If LAZY_UPDATE_MAX_INTERVAL has elapsed since the last lazy
         //        update, we need to update.
         //
+#ifndef QCC_OS_GROUP_WINDOWS
+        if (m_forceLazyUpdate) {
+#else
         if (m_forceLazyUpdate ||
             (m_outbound.size() && tLastLazyUpdate + qcc::Timespec(LAZY_UPDATE_MIN_INTERVAL * MS_PER_SEC) < tNow) ||
             (tLastLazyUpdate + qcc::Timespec(LAZY_UPDATE_MAX_INTERVAL * MS_PER_SEC) < tNow) ||
             LiveInterfacesNeedsUpdate()) {
+#endif
 
             QCC_DbgPrintf(("IpNameServiceImpl::Run(): LazyUpdateInterfaces()"));
             LazyUpdateInterfaces();
@@ -4185,6 +4203,9 @@ void* IpNameServiceImpl::Run(void* arg)
         checkEvents.push_back(&stopEvent);
         checkEvents.push_back(&timerEvent);
         checkEvents.push_back(&m_wakeEvent);
+#ifndef QCC_OS_GROUP_WINDOWS
+        checkEvents.push_back(&networkEvent);
+#endif
 
         //
         // We also need to wait on events from all of the sockets that
@@ -4295,6 +4316,18 @@ void* IpNameServiceImpl::Run(void* arg)
                 // it.
                 //
                 m_wakeEvent.ResetEvent();
+#ifndef QCC_OS_GROUP_WINDOWS
+            } else if (*i == &networkEvent) {
+                QCC_DbgPrintf(("IpNameServiceImpl::Run(): Network event fired"));
+                NetworkEventType eventType = qcc::NetworkEventReceive(networkEventFd);
+                if (eventType == QCC_RTM_DELADDR) {
+                    m_forceLazyUpdate = true;
+                }
+                if (eventType == QCC_RTM_NEWADDR) {
+                    m_forceLazyUpdate = true;
+                    m_refreshAdvertisements = true;
+                }
+#endif
             } else {
                 QCC_DbgPrintf(("IpNameServiceImpl::Run(): Socket event fired"));
                 //
@@ -4364,6 +4397,12 @@ void* IpNameServiceImpl::Run(void* arg)
     // advertisement(s) above, indicating that we are going away.
     // Clear live interfaces and exit.
     ClearLiveInterfaces();
+
+#ifndef QCC_OS_GROUP_WINDOWS
+    if (networkEventFd != -1) {
+        qcc::Close(networkEventFd);
+    }
+#endif
 
     delete [] buffer;
     return 0;
