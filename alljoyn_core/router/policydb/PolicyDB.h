@@ -485,6 +485,9 @@ class NormalizedMsgHdr {
      * @param policy    Pointer to the PolicyDB
      */
     NormalizedMsgHdr(const Message& msg, const PolicyDB& policy) :
+#ifndef NDEBUG
+        msg(msg),
+#endif
         ifcID(policy->LookupStringID(msg->GetInterface())),
         memberID(policy->LookupStringID(msg->GetMemberName())),
         errorID(policy->LookupStringID(msg->GetErrorName())),
@@ -493,13 +496,14 @@ class NormalizedMsgHdr {
         destIDSet(policy->LookupBusNameID(msg->GetDestination())),
         senderIDSet(policy->LookupBusNameID(msg->GetSender())),
         type(msg->GetType())
-    {
-        QCC_DEBUG_ONLY(qcc::Log(LOG_DEBUG, "Normalized message header for %s   %s --> %s\n", msg->Description().c_str(), msg->GetSender(), msg->GetDestination()));
-    }
+    { }
 
   private:
     friend class _PolicyDB;  /**< Give PolicyDB access to the internals */
 
+#ifndef NDEBUG
+    const Message msg;                      /**< Reference to original message for debug purposes */
+#endif
     StringID ifcID;                         /**< normalized interface name */
     StringID memberID;                      /**< normalized member name */
     StringID errorID;                       /**< normalized error name */
