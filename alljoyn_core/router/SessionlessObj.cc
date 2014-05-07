@@ -89,26 +89,15 @@ const uint32_t SessionlessObj::version = 1;
 
 /*
  * Internal context passed through JoinSessionAsync.  This holds a snapshot of
- * the remote queue state at the time we issue the JoinSessionAsync.
+ * the remote cache state at the time we issue the JoinSessionAsync.
  */
-struct RemoteQueueSnapshot {
+struct RemoteCacheSnapshot {
   public:
-    RemoteQueueSnapshot(SessionlessObj::RemoteQueue& queue) :
-        version(queue.version), guid(queue.guid), iface(queue.iface), changeId(queue.changeId), transport(queue.transport) {
-        name = iface.empty() ? String(WildcardInterfaceName) : iface;
-        name.append(".sl.");
-        name.append('x' + version);
-        name.append(guid);
-        name.append(".x");
-        name.append(U32ToString(changeId, 16));
-    }
+    RemoteCacheSnapshot(SessionlessObj::RemoteCache& cache) :
+        name(cache.name), guid(cache.guid) { }
 
-    uint32_t version;
-    qcc::String guid;
-    qcc::String iface;
-    uint32_t changeId;
-    TransportMask transport;
     qcc::String name;
+    qcc::String guid;
 };
 
 SessionlessObj::SessionlessObj(Bus& bus, BusController* busController) :
@@ -123,7 +112,8 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController) :
     curChangeId(0),
     sessionOpts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY, SessionOpts::DAEMON_NAMES),
     sessionPort(SESSIONLESS_SESSION_PORT),
-    advanceChangeId(false)
+    advanceChangeId(false),
+    nextRulesId(0)
 {
     /*
      * Configurable for testing purposes only.  1500 msecs is chosen to minimize
@@ -280,10 +270,10 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
 {
     if (rule.sessionless == Rule::SESSIONLESS_TRUE) {
         QCC_DbgPrintf(("AddRule(epName=%s,rule=%s)", epName.c_str(), rule.ToString().c_str()));
-
         router.LockNameTable();
         lock.Lock();
 
+        uint32_t fromRulesId = nextRulesId;
         bool isNewRule = true;
         for (std::pair<RuleIterator, RuleIterator> range = rules.equal_range(epName); range.first != range.second; ++range.first) {
             if (range.first->second == rule) {
@@ -291,25 +281,26 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
                 break;
             }
         }
-        rules.insert(std::pair<String, TimestampedRule>(epName, rule));
-
-        /*
-         * We need to re-receive previous signals for a new rule from any
-         * senders we've previously received from.
-         */
-        if (isNewRule && (!remoteQueues.empty() || !localQueue.empty())) {
-            lock.Unlock();
-            router.UnlockNameTable();
-            RereceiveMessages(epName, rule);
-            router.LockNameTable();
-            lock.Lock();
+        rules.insert(std::pair<String, TimestampedRule>(epName, TimestampedRule(rule, nextRulesId)));
+        if (isNewRule) {
+            ++nextRulesId;
         }
 
-        bus.EnableConcurrentCallbacks();
-        FindAdvertisedNames();
+        ScheduleWork();
+
+        /* For retrieving from our own cache after releasing the locks below */
+        uint32_t fromChangeId = curChangeId - (numeric_limits<uint32_t>::max() >> 1);
+        uint32_t toChangeId = curChangeId + 1;
+        uint32_t toRulesId = nextRulesId;
 
         lock.Unlock();
         router.UnlockNameTable();
+
+        /* Retrieve from our own cache */
+        HandleRangeRequest(epName.c_str(), 0, fromChangeId, toChangeId, fromRulesId, toRulesId);
+
+        bus.EnableConcurrentCallbacks();
+        FindAdvertisedNames();
     }
 }
 
@@ -349,14 +340,14 @@ QStatus SessionlessObj::PushMessage(Message& msg)
         return ER_FAIL;
     }
 
-    /* Put the message in the local queue and kick the worker */
+    /* Put the message in the local cache and kick the worker */
     SessionlessMessageKey key(msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath());
     lock.Lock();
     advanceChangeId = true;
     SessionlessMessage val(curChangeId, msg);
-    LocalQueue::iterator it = localQueue.find(key);
-    if (it == localQueue.end()) {
-        localQueue.insert(pair<SessionlessMessageKey, SessionlessMessage>(key, val));
+    LocalCache::iterator it = localCache.find(key);
+    if (it == localCache.end()) {
+        localCache.insert(pair<SessionlessMessageKey, SessionlessMessage>(key, val));
     } else {
         it->second = val;
     }
@@ -373,67 +364,45 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
     QCC_DbgPrintf(("RouteSessionlessMessage(sid=%u,msg={sender='%s',interface='%s',member='%s',path='%s'})",
                    sid, msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath()));
 
-    static const Rule legacyRule("type='error',sessionless='t'");
-
     router.LockNameTable();
     lock.Lock();
 
-    /*
-     * Check if we've already routed this message.  This may occur if we are
-     * retrying and only received a subset of the sessionless signals during our
-     * most recent attempt.
-     */
-    bool didRoute = false;
-    RemoteQueues::iterator cit = FindRemoteQueue(sid);
-    if (cit != remoteQueues.end()) {
-        if (!cit->second.iface.empty() && (cit->second.iface != msg->GetInterface())) {
-            didRoute = true;
-        } else if (find(cit->second.routedMessages.begin(), cit->second.routedMessages.end(), RoutedMessage(msg)) !=
-                   cit->second.routedMessages.end()) {
-            didRoute = true;
-        } else {
-            cit->second.routedMessages.push_back(RoutedMessage(msg));
-        }
-    }
-    if (didRoute) {
+    RemoteCaches::iterator cit = FindRemoteCache(sid);
+    if (cit == remoteCaches.end()) {
+        QCC_LogError(ER_WARNING, ("Received message on unknown sid %u, ignoring", sid));
         lock.Unlock();
         router.UnlockNameTable();
         return true;
     }
+    RemoteCache& cache = cit->second;
 
-    /*
-     * Check to see if this session ID is for a catchup. If it is, we'll route
-     * it below.
-     */
-    map<uint32_t, CatchupState>::iterator cuit = catchupMap.find(sid);
-    if (cuit != catchupMap.end()) {
-        bool isMatch = false;
-        BusEndpoint ep = router.FindEndpoint(cuit->second.epName);
-        if (ep->IsValid() && ep->AllowRemoteMessages() && cuit->second.rule.IsMatch(msg)) {
-            isMatch = true;
-        }
+    if (find(cache.routedMessages.begin(), cache.routedMessages.end(), RoutedMessage(msg)) != cache.routedMessages.end()) {
+        /* We are retrying and have already routed this message, ignore it */
         lock.Unlock();
         router.UnlockNameTable();
-        if (isMatch) {
-            SendThroughEndpoint(msg, ep, sid);
-        }
         return true;
+    } else {
+        cache.routedMessages.push_back(RoutedMessage(msg));
     }
 
-    /*
-     * Not a catchup so multiple receivers may be interested in this message.
-     */
+    SendMatchingThroughEndpoint(sid, msg, cache.fromRulesId, cache.toRulesId);
+
+    lock.Unlock();
+    router.UnlockNameTable();
+    return true;
+}
+
+void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId)
+{
+    static const Rule legacyRule("type='error',sessionless='t'");
+
+    uint32_t rulesRangeLen = toRulesId - fromRulesId;
     RuleIterator rit = rules.begin();
     while (rit != rules.end()) {
         bool isMatch = false;
-        /*
-         * Only apply the rule if it was added before we started the request,
-         * otherwise there is a possibilty of duplicate messages received.  A
-         * rule added while in progress will trigger a catchup request.
-         */
         String epName = rit->first;
         BusEndpoint ep = router.FindEndpoint(epName);
-        if (rit->second.timestamp < cit->second.inProgressTimestamp && ep->IsValid() && ep->AllowRemoteMessages()) {
+        if (IN_WINDOW(uint32_t, fromRulesId, rulesRangeLen, rit->second.id) && ep->IsValid() && ep->AllowRemoteMessages()) {
             if (rit->second.IsMatch(msg)) {
                 isMatch = true;
             } else if (rit->second == legacyRule) {
@@ -463,9 +432,6 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
             ++rit;
         }
     }
-    lock.Unlock();
-    router.UnlockNameTable();
-    return true;
 }
 
 QStatus SessionlessObj::CancelMessage(const qcc::String& sender, uint32_t serialNum)
@@ -477,13 +443,13 @@ QStatus SessionlessObj::CancelMessage(const qcc::String& sender, uint32_t serial
 
     lock.Lock();
     SessionlessMessageKey key(sender.c_str(), "", "", "");
-    LocalQueue::iterator it = localQueue.lower_bound(key);
-    while ((it != localQueue.end()) && (sender == it->second.second->GetSender())) {
+    LocalCache::iterator it = localCache.lower_bound(key);
+    while ((it != localCache.end()) && (sender == it->second.second->GetSender())) {
         if (it->second.second->GetCallSerial() == serialNum) {
             if (!it->second.second->IsExpired()) {
                 status = ER_OK;
             }
-            localQueue.erase(it);
+            localCache.erase(it);
             messageErased = true;
             break;
         }
@@ -497,76 +463,6 @@ QStatus SessionlessObj::CancelMessage(const qcc::String& sender, uint32_t serial
         SessionlessObj* slObj = this;
         status = timer.AddAlarm(Alarm(zero, slObj));
     }
-
-    return status;
-}
-
-QStatus SessionlessObj::RereceiveMessages(const qcc::String& epName, const Rule& rule)
-{
-    QStatus status = ER_OK;
-    QCC_DbgTrace(("RereceiveMessages(epName=%s,rule=%s)", epName.c_str(), rule.ToString().c_str()));
-    uint64_t now = GetTimestamp64();
-    const uint64_t timeoutValue = 18000;
-    String selfGuid = bus.GetGlobalGUIDShortString();
-    lock.Lock();
-
-    RemoteQueues::iterator cit = remoteQueues.begin();
-    while ((status == ER_OK) && (cit != remoteQueues.end())) {
-        RemoteQueueKey lastKey = cit->first;
-
-        /* Skip self */
-        if (cit->second.guid == selfGuid) {
-            ++cit;
-            continue;
-        }
-
-        /* Skip remote queues that don't match */
-        if ((cit->second.version != 0) && (rule.iface != cit->second.iface)) {
-            ++cit;
-            continue;
-        }
-
-        /* Wait for inProgress to be cleared */
-        while ((cit != remoteQueues.end()) && cit->second.IsReceiveInProgress() && (GetTimestamp64() < (now + timeoutValue))) {
-            lock.Unlock();
-            qcc::Sleep(5);
-            lock.Lock();
-            cit = remoteQueues.lower_bound(lastKey);
-            if (cit != remoteQueues.end()) {
-                lastKey = cit->first;
-            }
-        }
-
-        /* Process this guid */
-        if (GetTimestamp64() >= (now + timeoutValue)) {
-            status = ER_TIMEOUT;
-        } else if (cit != remoteQueues.end()) {
-            assert(!cit->second.IsReceiveInProgress());
-
-            /* Add new catchup state */
-            if (cit->second.lastReceivedChangeId != numeric_limits<uint32_t>::max()) {
-                uint32_t beginState = cit->second.lastReceivedChangeId - (numeric_limits<uint32_t>::max() >> 1);
-                cit->second.catchupList.push(CatchupState(epName, rule, beginState));
-            }
-
-            /* Get the sessions rolling */
-            ScheduleJoin(cit->second);
-
-            cit = remoteQueues.lower_bound(lastKey);
-        }
-
-        /* Continue with other guids if guid is empty. (empty means all) */
-        if ((cit != remoteQueues.end()) && (cit->first == lastKey)) {
-            ++cit;
-        }
-    }
-
-    uint32_t fromChangeId = curChangeId - (numeric_limits<uint32_t>::max() >> 1);
-    uint32_t toChangeId = curChangeId + 1;
-    lock.Unlock();
-
-    /* Retrieve from our own cache */
-    HandleRangeRequest(epName.c_str(), 0, fromChangeId, toChangeId);
 
     return status;
 }
@@ -588,12 +484,12 @@ void SessionlessObj::NameOwnerChanged(const String& name,
 
         /* Remove stored sessionless messages sent by the old owner */
         SessionlessMessageKey key(oldOwner->c_str(), "", "", "");
-        LocalQueue::iterator mit = localQueue.lower_bound(key);
-        while ((mit != localQueue.end()) && (::strcmp(oldOwner->c_str(), mit->second.second->GetSender()) == 0)) {
-            localQueue.erase(mit++);
+        LocalCache::iterator mit = localCache.lower_bound(key);
+        while ((mit != localCache.end()) && (::strcmp(oldOwner->c_str(), mit->second.second->GetSender()) == 0)) {
+            localCache.erase(mit++);
         }
-        /* Alert the advertiser worker if the local queue is empty */
-        if (localQueue.empty()) {
+        /* Alert the advertiser worker if the local cache is empty */
+        if (localCache.empty()) {
             uint32_t zero = 0;
             SessionlessObj* slObj = this;
             QStatus status = timer.AddAlarm(Alarm(zero, slObj));
@@ -650,22 +546,17 @@ void SessionlessObj::FoundAdvertisedNameSignalHandler(const InterfaceDescription
     busController->GetAllJoynObj().SetAdvNameAlias(guid, transport, name);
 
     /* Join session if we need signals from this advertiser and we aren't already getting them */
-    bool doJoin = false;
     lock.Lock();
-    RemoteQueueKey key(guid, iface);
-    RemoteQueues::iterator it = remoteQueues.find(key);
-    if (it == remoteQueues.end()) {
-        it = remoteQueues.insert(pair<RemoteQueueKey, RemoteQueue>(key, RemoteQueue(version, guid, iface, changeId, transport))).first;
-        doJoin = true;
-    } else if (IS_GREATER(uint32_t, changeId, it->second.lastReceivedChangeId)) {
-        it->second.changeId = changeId;
-        it->second.transport = transport;
-        it->second.retries = 0;
-        doJoin = true;
+    RemoteCaches::iterator cit = remoteCaches.find(guid);
+    if (cit == remoteCaches.end()) {
+        remoteCaches.insert(pair<String, RemoteCache>(guid, RemoteCache(name, version, guid, iface, changeId, transport)));
+    } else {
+        cit->second.name = name;
+        cit->second.ifaces.insert(iface);
+        cit->second.changeId = changeId;
+        cit->second.transport = transport;
     }
-    if (doJoin) {
-        ScheduleJoin(it->second);
-    }
+    ScheduleWork();
     lock.Unlock();
 }
 
@@ -701,40 +592,32 @@ void SessionlessObj::DoSessionLost(SessionId sid, SessionLostReason reason)
 
     lock.Lock();
 
-    bool isCatchup = false;
-    CatchupState catchup;
-    map<uint32_t, CatchupState>::iterator it = catchupMap.find(sid);
-    if (it != catchupMap.end()) {
-        isCatchup = true;
-        catchup = it->second;
-        catchupMap.erase(it);
-    }
-
-    RemoteQueues::iterator cit = FindRemoteQueue(sid);
-    if (cit != remoteQueues.end()) {
-        /* Reset inProgress */
-        uint32_t inProgressChangeId = cit->second.inProgressChangeId;
-        cit->second.ReceiveCompleted();
+    RemoteCaches::iterator cit = FindRemoteCache(sid);
+    if (cit != remoteCaches.end()) {
+        RemoteCache& cache = cit->second;
+        /* Reset in progress */
+        cache.state = RemoteCache::IDLE;
+        cache.sid = 0;
 
         if (reason == ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION) {
             /* We got all the signals */
-            if (!isCatchup) {
-                cit->second.lastReceivedChangeId = inProgressChangeId;
+            cache.retries = 0;
+            cache.routedMessages.clear();
+            if (IS_GREATER(uint32_t, cache.toRulesId - 1, cache.appliedRulesId)) {
+                cache.appliedRulesId = cache.toRulesId - 1;
             }
-            cit->second.routedMessages.clear();
+            if (IS_GREATER(uint32_t, cache.toChangeId - 1, cache.receivedChangeId)) {
+                cache.receivedChangeId = cache.toChangeId - 1;
+                cache.haveReceived = true;
+            }
 
             /* Get the sessions rolling if necessary */
-            if (cit->second.lastReceivedChangeId != cit->second.changeId) {
-                ScheduleJoin(cit->second);
-            }
+            ScheduleWork();
         } else {
             /* An error occurred while getting the signals, so retry */
-            if (isCatchup) {
-                cit->second.catchupList.push(catchup);
-            }
-            if (ScheduleJoin(cit->second) != ER_OK) {
+            if (ScheduleWork(cache) != ER_OK) {
                 /* Retries exhausted. Clear state and wait for new advertisment */
-                remoteQueues.erase(cit);
+                remoteCaches.erase(cit);
             }
         }
     }
@@ -771,7 +654,8 @@ void SessionlessObj::RequestRangeSignalHandler(const InterfaceDescription::Membe
     }
 }
 
-void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid, uint32_t fromChangeId, uint32_t toChangeId)
+void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid, uint32_t fromChangeId, uint32_t toChangeId,
+                                        uint32_t fromRulesId, uint32_t toRulesId)
 {
     QStatus status = ER_OK;
     bool messageErased = false;
@@ -781,42 +665,46 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid, uint3
     bus.EnableConcurrentCallbacks();
 
     /* Advance the curChangeId */
+    router.LockNameTable();
     lock.Lock();
     if (advanceChangeId) {
         ++curChangeId;
         advanceChangeId = false;
     }
 
-    /* Send all messages in local queue in range [fromChangeId, toChangeId) */
-    LocalQueue::iterator it = localQueue.begin();
+    /* Send all messages in local cache in range [fromChangeId, toChangeId) */
+    LocalCache::iterator it = localCache.begin();
     uint32_t rangeLen = toChangeId - fromChangeId;
-    while (it != localQueue.end()) {
+    while (it != localCache.end()) {
         if (IN_WINDOW(uint32_t, fromChangeId, rangeLen, it->second.first)) {
             SessionlessMessageKey key = it->first;
             if (it->second.second->IsExpired()) {
                 /* Remove expired message without sending */
-                localQueue.erase(it++);
+                localCache.erase(it++);
                 messageErased = true;
-            } else {
-                /* Send message */
-                lock.Unlock();
-                router.LockNameTable();
+            } else if (sid != 0) {
+                /* Send message to remote destination */
                 BusEndpoint ep = router.FindEndpoint(sender);
                 if (ep->IsValid()) {
+                    lock.Unlock();
                     router.UnlockNameTable();
                     QCC_DbgPrintf(("Send cid=%u,serialNum=%u to sid=%u", it->second.first, it->second.second->GetCallSerial(), sid));
                     SendThroughEndpoint(it->second.second, ep, sid);
-                } else {
-                    router.UnlockNameTable();
+                    router.LockNameTable();
+                    lock.Lock();
                 }
-                lock.Lock();
-                it = localQueue.upper_bound(key);
+                it = localCache.upper_bound(key);
+            } else {
+                /* Send message to local destination */
+                SendMatchingThroughEndpoint(sid, it->second.second, fromRulesId, toRulesId);
+                it = localCache.upper_bound(key);
             }
         } else {
             ++it;
         }
     }
     lock.Unlock();
+    router.UnlockNameTable();
 
     /* Alert the advertiser worker */
     if (messageErased) {
@@ -847,12 +735,12 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         Timespec tilExpire;
         uint32_t expire;
 
-        /* Purge the local queue of expired messages */
+        /* Purge the local cache of expired messages */
         lock.Lock();
-        LocalQueue::iterator it = localQueue.begin();
-        while (it != localQueue.end()) {
+        LocalCache::iterator it = localCache.begin();
+        while (it != localCache.end()) {
             if (it->second.second->IsExpired(&expire)) {
-                localQueue.erase(it++);
+                localCache.erase(it++);
             } else {
                 ++it;
             }
@@ -867,35 +755,49 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         lock.Lock();
         Timespec now;
         GetTimeNow(&now);
-        for (RemoteQueues::iterator cit = remoteQueues.begin(); cit != remoteQueues.end(); ++cit) {
-            RemoteQueue& queue = cit->second;
-            bool doJoin =
-                (queue.nextJoinTime <= now) &&
-                !queue.IsReceiveInProgress() &&
-                ((queue.lastReceivedChangeId != queue.changeId) || !queue.catchupList.empty()) &&
-                ((queue.version == 0) || IsMatch(queue));
-            if (doJoin) {
-                if (queue.retries++ < MAX_JOINSESSION_RETRIES) {
-                    RemoteQueueSnapshot* ctx = new RemoteQueueSnapshot(queue);
-                    queue.ReceiveStarted();
+        RemoteCaches::iterator cit = remoteCaches.begin();
+        while (cit != remoteCaches.end()) {
+            RemoteCache& cache = cit->second;
+            WorkType pendingWork = PendingWork(cache);
+            if ((cache.nextJoinTime <= now) && (cache.state == RemoteCache::IDLE) && pendingWork) {
+                if (cache.retries++ < MAX_JOINSESSION_RETRIES) {
+                    RemoteCacheSnapshot* ctx = new RemoteCacheSnapshot(cache);
+                    cache.state = RemoteCache::IN_PROGRESS;
+                    if (pendingWork == SessionlessObj::APPLY_NEW_RULES) {
+                        cache.fromChangeId = cache.receivedChangeId - (numeric_limits<uint32_t>::max() >> 1);
+                        cache.toChangeId = cache.receivedChangeId + 1;
+                        cache.fromRulesId = cache.appliedRulesId + 1;
+                        cache.toRulesId = nextRulesId;
+                    } else if (pendingWork == SessionlessObj::REQUEST_NEW_SIGNALS) {
+                        cache.fromChangeId = cache.receivedChangeId + 1;
+                        cache.toChangeId = cache.changeId + 1;
+                        cache.fromRulesId = cache.appliedRulesId - (numeric_limits<uint32_t>::max() >> 1);
+                        cache.toRulesId = nextRulesId;
+                    }
                     SessionOpts opts = sessionOpts;
-                    opts.transports = queue.transport;
-                    status = bus.JoinSessionAsync(ctx->name.c_str(), sessionPort, NULL, opts, this, reinterpret_cast<void*>(ctx));
+                    opts.transports = cache.transport;
+                    status = bus.JoinSessionAsync(cache.name.c_str(), sessionPort, NULL, opts, this, reinterpret_cast<void*>(ctx));
                     if (status == ER_OK) {
-                        QCC_DbgPrintf(("JoinSessionAsync(name=%s,...) pending", ctx->name.c_str()));
+                        QCC_DbgPrintf(("JoinSessionAsync(name=%s,...) pending", cache.name.c_str()));
                     } else {
-                        QCC_LogError(status, ("JoinSessionAsync to %s failed", ctx->name.c_str()));
-                        queue.ReceiveCompleted();
+                        QCC_LogError(status, ("JoinSessionAsync to %s failed", cache.name.c_str()));
+                        cache.state = RemoteCache::IDLE;
                         delete ctx;
-                        /* Retry the join session with random backoff */
-                        ScheduleJoin(queue, false);
-                        if ((tilExpire == Timespec::Zero) || (queue.nextJoinTime < tilExpire)) {
-                            tilExpire = queue.nextJoinTime;
+                        /* Retry with a random backoff */
+                        ScheduleWork(cache, false);
+                        if ((tilExpire == Timespec::Zero) || (cache.nextJoinTime < tilExpire)) {
+                            tilExpire = cache.nextJoinTime;
                         }
                     }
+                    ++cit;
                 } else {
-                    QCC_LogError(ER_FAIL, ("Exhausted JoinSession retries to %s", queue.guid.c_str()));
+                    QCC_LogError(ER_FAIL, ("Exhausted JoinSession retries to %s", cache.guid.c_str()));
+                    String guid = cache.guid;
+                    remoteCaches.erase(cit);
+                    cit = remoteCaches.upper_bound(guid);
                 }
+            } else {
+                ++cit;
             }
         }
 
@@ -912,24 +814,22 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 
 void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionOpts& opts, void* context)
 {
-    RemoteQueueSnapshot* ctx = reinterpret_cast<RemoteQueueSnapshot*>(context);
+    RemoteCacheSnapshot* ctx = reinterpret_cast<RemoteCacheSnapshot*>(context);
 
     QCC_DbgPrintf(("JoinSessionCB(status=%s,sid=%u) name=%s", QCC_StatusText(status), sid, ctx->name.c_str()));
 
-    /* Send out RequestSignals or RequestRange message if join was successful. Otherwise retry. */
+    /* Send out RequestRange message if join was successful. Otherwise retry. */
     router.LockNameTable();
     lock.Lock();
-    RemoteQueues::iterator cit = remoteQueues.find(RemoteQueueKey(ctx->guid, ctx->iface));
-    if (cit != remoteQueues.end()) {
+    RemoteCaches::iterator cit = remoteCaches.find(ctx->guid);
+    if (cit != remoteCaches.end()) {
+        RemoteCache& cache = cit->second;
+        uint32_t fromId = cache.fromChangeId;
+        uint32_t toId = cache.toChangeId;
         bool rangeCapable = false;
-        bool isCatchup = false;
-        CatchupState catchup;
-
-        /* Check to see if there are any pending catch ups */
-        uint32_t requestChangeId = cit->second.lastReceivedChangeId + 1;
         if (status == ER_OK) {
             /* Update session ID */
-            cit->second.sid = sid;
+            cache.sid = sid;
 
             /* Check to see if session host is capable of handling RequestRange */
             BusEndpoint ep = router.FindEndpoint(ctx->name);
@@ -939,38 +839,20 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
                     rangeCapable = (rep->GetRemoteProtocolVersion() >= 6);
                 }
             }
-
-            /*
-             * Check first if routedMessages is empty.  If not it means we're
-             * retrying a request in progress and want to continue retrying
-             * before beginning a new catchup request.
-             */
-            if (cit->second.routedMessages.empty() && !cit->second.catchupList.empty()) {
-                if (rangeCapable) {
-                    /* Handle head of catchup list */
-                    isCatchup = true;
-                    catchup = cit->second.catchupList.front();
-                    cit->second.catchupList.pop();
-                    /* Put catchup on catchupMap */
-                    catchupMap[sid] = catchup;
-                } else {
-                    /* This session cant be used for catchup because remote side doesn't support it */
-                    /* Just clear the catchupList and move on as if it was the non-catchup case */
-                    while (!cit->second.catchupList.empty()) {
-                        cit->second.catchupList.pop();
-                    }
-                    bus.LeaveSession(sid);
-                    DoSessionLost(sid, ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION);
-                    status = ER_NONE;
-                }
+            if (!rangeCapable && (toId != cache.changeId + 1)) {
+                /* This session can't be used because the remote side doesn't support RequestRange */
+                bus.LeaveSession(sid);
+                DoSessionLost(sid, ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION);
+                status = ER_NONE;
             }
         } else {
-            /* Clear inProgress */
-            cit->second.ReceiveCompleted();
+            /* Clear in progress */
+            cache.state = RemoteCache::IDLE;
+            cache.sid = 0;
 
-            if (ScheduleJoin(cit->second) != ER_OK) {
+            if (ScheduleWork(cache) != ER_OK) {
                 /* Retries exhausted. Clear state and wait for new advertisment */
-                remoteQueues.erase(cit);
+                remoteCaches.erase(cit);
             }
         }
         lock.Unlock();
@@ -982,28 +864,28 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
              * RequestRange since it may be possible to receive duplicates when
              * RequestSignals is used together with RequestRange.
              */
-            if (isCatchup) {
-                status = RequestRange(ctx->name.c_str(), sid, catchup.changeId, requestChangeId);
-            } else if (rangeCapable) {
-                status = RequestRange(ctx->name.c_str(), sid, requestChangeId, ctx->changeId + 1);
+            if (rangeCapable) {
+                status = RequestRange(ctx->name.c_str(), sid, fromId, toId);
             } else {
-                status = RequestSignals(ctx->name.c_str(), sid, requestChangeId);
+                status = RequestSignals(ctx->name.c_str(), sid, fromId);
             }
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to send Request to %s", ctx->name.c_str()));
                 bus.LeaveSession(sid);
+
                 lock.Lock();
-                if (isCatchup) {
-                    catchupMap.erase(sid);
-                    cit->second.catchupList.push(catchup);
-                }
+                cit = remoteCaches.find(ctx->guid);
+                if (cit != remoteCaches.end()) {
+                    cache = cit->second;
 
-                /* Clear inProgress */
-                cit->second.ReceiveCompleted();
+                    /* Clear in progress */
+                    cache.state = RemoteCache::IDLE;
+                    cache.sid = 0;
 
-                if (ScheduleJoin(cit->second) != ER_OK) {
-                    /* Retries exhausted. Clear state and wait for new advertisment */
-                    remoteQueues.erase(cit);
+                    if (ScheduleWork(cache) != ER_OK) {
+                        /* Retries exhausted. Clear state and wait for new advertisment */
+                        remoteCaches.erase(cit);
+                    }
                 }
                 lock.Unlock();
             }
@@ -1011,51 +893,10 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
     } else {
         lock.Unlock();
         router.UnlockNameTable();
-        QCC_LogError(ER_FAIL, ("Missing queue in remoteQueues for %s", ctx->guid.c_str()));
+        QCC_LogError(ER_FAIL, ("Missing cache in remoteCaches for %s", ctx->guid.c_str()));
     }
 
     delete ctx;
-}
-
-QStatus SessionlessObj::ScheduleJoin(RemoteQueue& queue, bool addAlarm)
-{
-    if (queue.IsReceiveInProgress()) {
-        return ER_OK;
-    }
-    if (queue.retries >= MAX_JOINSESSION_RETRIES) {
-        QCC_LogError(ER_FAIL, ("Exhausted JoinSession retries to %s", queue.guid.c_str()));
-        return ER_FAIL;
-    }
-
-    /*
-     * Shorten the schedule if we're doing a retry.  The model is that the first
-     * try should succeed with a high probability.  Therefore only a small
-     * percentage of the consumers will attempt to retry, thus the interval can
-     * be shorter.  Go exponentially shorter down to 250 msecs.
-     */
-    if (queue.retries == 0) {
-        GetTimeNow(&queue.firstJoinTime);
-    }
-    qcc::Timespec startTime;
-    uint32_t delayMs;
-    for (uint32_t i = 0; i <= queue.retries; ++i) {
-        if (i == 0) {
-            startTime = queue.firstJoinTime;
-            delayMs = backoffDelayMs;
-        } else {
-            startTime += delayMs;
-            delayMs = (delayMs > 500) ? (delayMs >> 1) : delayMs;
-        }
-    }
-    queue.nextJoinTime = startTime + qcc::Rand32() % delayMs;
-    if (addAlarm) {
-        SessionlessObj* slObj = this;
-        QStatus status = timer.AddAlarm(Alarm(queue.nextJoinTime, slObj));
-        if (status != ER_OK) {
-            QCC_LogError(status, ("Timer::AddAlarm failed"));
-        }
-    }
-    return ER_OK;
 }
 
 QStatus SessionlessObj::ParseAdvertisedName(const qcc::String& name, uint32_t* version, qcc::String* guid, qcc::String* iface, uint32_t* changeId)
@@ -1103,17 +944,6 @@ QStatus SessionlessObj::RequestRange(const char* name, SessionId sid, uint32_t f
     return Signal(name, sid, *requestRangeSignal, args, ArraySize(args));
 }
 
-SessionlessObj::RemoteQueues::iterator SessionlessObj::FindRemoteQueue(SessionId sid)
-{
-    RemoteQueues::iterator cit;
-    for (cit = remoteQueues.begin(); cit != remoteQueues.end(); ++cit) {
-        if (cit->second.sid == sid) {
-            break;
-        }
-    }
-    return cit;
-}
-
 QStatus SessionlessObj::SendThroughEndpoint(Message& msg, BusEndpoint& ep, SessionId sid)
 {
     QStatus status;
@@ -1136,7 +966,7 @@ void SessionlessObj::UpdateAdvertisements()
     /* Figure out what we need to advertise. */
     map<String, uint32_t> advertisements;
     lock.Lock();
-    for (LocalQueue::iterator it = localQueue.begin(); it != localQueue.end(); ++it) {
+    for (LocalCache::iterator it = localCache.begin(); it != localCache.end(); ++it) {
         Message msg = it->second.second;
         advertisements[msg->GetInterface()] = max(advertisements[msg->GetInterface()], it->second.first);
         advertisements[WildcardInterfaceName] = max(advertisements[WildcardInterfaceName], it->second.first); /* The v0 advertisement */
@@ -1254,18 +1084,101 @@ void SessionlessObj::CancelFindAdvertisedNames()
     }
 }
 
-bool SessionlessObj::IsMatch(RemoteQueue& queue)
+SessionlessObj::RemoteCaches::iterator SessionlessObj::FindRemoteCache(SessionId sid)
 {
-    bool matching = false;
-    lock.Lock();
-    for (RuleIterator rit = rules.begin(); rit != rules.end(); ++rit) {
-        if (rit->second.iface == queue.iface) {
-            matching = true;
+    RemoteCaches::iterator cit;
+    for (cit = remoteCaches.begin(); cit != remoteCaches.end(); ++cit) {
+        if (cit->second.sid == sid) {
             break;
         }
     }
-    lock.Unlock();
-    return matching;
+    return cit;
+}
+
+void SessionlessObj::ScheduleWork()
+{
+    RemoteCaches::iterator cit = remoteCaches.begin();
+    while (cit != remoteCaches.end()) {
+        RemoteCache& cache = cit->second;
+        String guid = cache.guid;
+        if (PendingWork(cache) && ScheduleWork(cache) != ER_OK) {
+            /* Retries exhausted. Clear state and wait for new advertisment */
+            remoteCaches.erase(cit);
+            cit = remoteCaches.upper_bound(guid);
+        } else {
+            ++cit;
+        }
+    }
+}
+
+QStatus SessionlessObj::ScheduleWork(RemoteCache& cache, bool addAlarm)
+{
+    if (cache.state != RemoteCache::IDLE) {
+        return ER_OK;
+    }
+    if (cache.retries >= MAX_JOINSESSION_RETRIES) {
+        QCC_LogError(ER_FAIL, ("Exhausted JoinSession retries to %s", cache.guid.c_str()));
+        return ER_FAIL;
+    }
+
+    /*
+     * Shorten the schedule if we're doing a retry.  The model is that the first
+     * try should succeed with a high probability.  Therefore only a small
+     * percentage of the consumers will attempt to retry, thus the interval can
+     * be shorter.  Go exponentially shorter down to 250 msecs.
+     */
+    if (cache.retries == 0) {
+        GetTimeNow(&cache.firstJoinTime);
+    }
+    qcc::Timespec startTime;
+    uint32_t delayMs;
+    for (uint32_t i = 0; i <= cache.retries; ++i) {
+        if (i == 0) {
+            startTime = cache.firstJoinTime;
+            delayMs = backoffDelayMs;
+        } else {
+            startTime += delayMs;
+            delayMs = (delayMs > 500) ? (delayMs >> 1) : delayMs;
+        }
+    }
+    cache.nextJoinTime = startTime + qcc::Rand32() % delayMs;
+    if (addAlarm) {
+        SessionlessObj* slObj = this;
+        QStatus status = timer.AddAlarm(Alarm(cache.nextJoinTime, slObj));
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Timer::AddAlarm failed"));
+        }
+    }
+    return ER_OK;
+}
+
+SessionlessObj::WorkType SessionlessObj::PendingWork(RemoteCache& cache)
+{
+    if (cache.haveReceived && IS_GREATER(uint32_t, nextRulesId - 1, cache.appliedRulesId)) {
+        if (IsMatch(cache, cache.appliedRulesId + 1, nextRulesId)) {
+            return APPLY_NEW_RULES;
+        }
+    } else if (IS_GREATER(uint32_t, cache.changeId, cache.receivedChangeId)) {
+        if (IsMatch(cache, cache.appliedRulesId - (numeric_limits<uint32_t>::max() >> 1), nextRulesId)) {
+            return REQUEST_NEW_SIGNALS;
+        }
+    }
+    return NONE;
+}
+
+bool SessionlessObj::IsMatch(RemoteCache& cache, uint32_t fromRulesId, uint32_t toRulesId)
+{
+    if (cache.version == 0) {
+        return true;
+    }
+    uint32_t rulesRangeLen = toRulesId - fromRulesId;
+    for (RuleIterator rit = rules.begin(); rit != rules.end(); ++rit) {
+        if (IN_WINDOW(uint32_t, fromRulesId, rulesRangeLen, rit->second.id) &&
+            (cache.ifaces.find(rit->second.iface) != cache.ifaces.end())) {
+            return true;
+        }
+    }
+    return false;
 }
 
 }

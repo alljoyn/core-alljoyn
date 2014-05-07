@@ -216,16 +216,8 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
                                    const char* sourcePath,
                                    Message& msg);
 
-    /**
-     * Trigger (re)reception of sessionless signals from all remote daemons.
-     *
-     * @param epName   The name of the endpoint that is requesting to re-receive sessionless messages.
-     * @param rule     The rule that triggered the re-receive.
-     */
-    QStatus RereceiveMessages(const qcc::String& epName, const Rule& rule);
-
   private:
-    friend class RemoteQueueSnapshot;
+    friend class RemoteCacheSnapshot;
 
     /**
      * SessionlessObj worker.
@@ -240,14 +232,20 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     void JoinSessionCB(QStatus status, SessionId sid, const SessionOpts& opts, void* context);
 
     /**
-     * Emit the range of cached sessionless signals [fromId, toId)
+     * Emit the range of cached sessionless signals [fromId, toId).
+     *
+     * When sid is 0, rules in the specified range are applied before emitting
+     * the signals.
      *
      * @param sender    Unique name of requestor/sender
      * @param sid       Session ID
      * @param fromId    Beginning of changeId range (inclusive)
      * @param toId      End of changeId range (exclusive)
+     * @param fromRulesId Beginning of rules ID range (inclusive)
+     * @param toRulesId   End of rules ID range (exclusive)
      */
-    void HandleRangeRequest(const char* sender, SessionId sid, uint32_t fromId, uint32_t toId);
+    void HandleRangeRequest(const char* sender, SessionId sid, uint32_t fromId, uint32_t toId,
+                            uint32_t fromRulesId = 0, uint32_t toRulesId = 0);
 
     /**
      * SessionLost helper handler.
@@ -256,15 +254,6 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param reason The reason for the session being lost.
      */
     void DoSessionLost(SessionId sid, SessionLostReason reason);
-
-    /**
-     * Returns the number of rules that specify sessionless=TRUE.
-     *
-     * This must be called with this lock.
-     *
-     * @return the number of rules that specify sessionless=TRUE.
-     */
-    uint32_t RuleCount();
 
     Bus& bus;                             /**< The bus */
     BusController* busController;         /**< BusController that created this BusObject */
@@ -296,21 +285,9 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     };
     typedef std::pair<uint32_t, Message> SessionlessMessage;
 
-    typedef std::map<SessionlessMessageKey, SessionlessMessage> LocalQueue;
+    typedef std::map<SessionlessMessageKey, SessionlessMessage> LocalCache;
     /** Storage for sessionless messages waiting to be delivered */
-    LocalQueue localQueue;
-
-    /** CatchupState is used to track individual local clients that are behind the state of the server for a particular remote host */
-    struct CatchupState {
-        CatchupState() : changeId(0) { }
-        CatchupState(const qcc::String& epName, const Rule& rule, uint32_t changeId) :
-            epName(epName), rule(rule), changeId(changeId) { }
-        qcc::String epName;
-        Rule rule;
-        uint32_t changeId;
-    };
-    /** Map session IDs to catchupStates */
-    std::map<uint32_t, CatchupState> catchupMap;
+    LocalCache localCache;
 
     struct RoutedMessage {
         RoutedMessage(const Message& msg) : sender(msg->GetSender()), serial(msg->GetCallSerial()) { }
@@ -319,54 +296,50 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
         bool operator==(const RoutedMessage& other) const { return (sender == other.sender) && (serial == other.serial); }
     };
 
-    class RemoteQueueKey : public qcc::String {
+    class RemoteCache {
       public:
-        RemoteQueueKey(const qcc::String& guid, const qcc::String& iface) : qcc::String(guid + ":" + iface) { }
-    };
-
-    class RemoteQueue {
-      public:
-        RemoteQueue(uint32_t version, const qcc::String& guid, const qcc::String& iface, uint32_t changeId, TransportMask transport) :
-            version(version), guid(guid), iface(iface), changeId(changeId), transport(transport),
-            lastReceivedChangeId(std::numeric_limits<uint32_t>::max()), inProgressChangeId(0), inProgressTimestamp(0),
-            retries(0), sid(0) { }
-
-        void ReceiveStarted() {
-            inProgressChangeId = changeId;
-            inProgressTimestamp = qcc::GetTimestamp64();
-        }
-        bool IsReceiveInProgress() {
-            return inProgressTimestamp != 0;
-        }
-        void ReceiveCompleted() {
-            inProgressTimestamp = 0;
-            sid = 0;
+        RemoteCache(const qcc::String& name, uint32_t version, const qcc::String& guid, const qcc::String& iface, uint32_t changeId, TransportMask transport) :
+            name(name), version(version), guid(guid), changeId(changeId), transport(transport), haveReceived(false),
+            receivedChangeId(std::numeric_limits<uint32_t>::max()), appliedRulesId(std::numeric_limits<uint32_t>::max()),
+            state(IDLE), retries(0), sid(0) {
+            ifaces.insert(iface);
         }
 
-        /* The state from the most recent advertisement */
+        /* The most recent advertisement */
+        qcc::String name;
+        /* The union of all the advertisements */
         uint32_t version;
         qcc::String guid;
-        qcc::String iface;
+        std::set<qcc::String> ifaces;
         uint32_t changeId;
         TransportMask transport;
 
-        uint32_t lastReceivedChangeId;
-        uint32_t inProgressChangeId;
-        uint64_t inProgressTimestamp;
+        /* State */
+        bool haveReceived; /* true once we have received something from the remote cache */
+        uint32_t receivedChangeId;
+        uint32_t appliedRulesId;
+
+        /* Work item */
+        uint32_t fromChangeId, toChangeId;
+        uint32_t fromRulesId, toRulesId;
+        /* Work item state */
+        enum {
+            IDLE = 0,
+            IN_PROGRESS
+        } state;
+        uint32_t retries;
         qcc::Timespec firstJoinTime;
         qcc::Timespec nextJoinTime;
-        uint32_t retries;
         SessionId sid;
-        std::queue<CatchupState> catchupList;
         std::list<RoutedMessage> routedMessages;
     };
 
-    typedef std::map<RemoteQueueKey, RemoteQueue> RemoteQueues;
-    /** The state of found remote queues */
-    RemoteQueues remoteQueues;
+    typedef std::map<qcc::String, RemoteCache> RemoteCaches;
+    /** The state of found remote caches */
+    RemoteCaches remoteCaches;
 
-    /** Find the remote queue with the matching session ID */
-    RemoteQueues::iterator FindRemoteQueue(SessionId sid);
+    /** Find the remote cache work item with the matching session ID */
+    RemoteCaches::iterator FindRemoteCache(SessionId sid);
 
     qcc::Mutex lock;            /**< Mutex that protects this object's data structures */
     uint32_t curChangeId;       /**< Change id assoc with current pushed signal(s) */
@@ -374,19 +347,8 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     SessionOpts sessionOpts;    /**< SessionOpts used by internal session */
     SessionPort sessionPort;    /**< SessionPort used by internal session */
     bool advanceChangeId;       /**< Set to true when changeId should be advanced on next SLS send request */
-
-    uint32_t backoffDelayMs; /**< The backoff delay is in the range [0,backoffDelayMs] */
-
-    /**
-     * Try a join with random backoff of 0 to backoffDelayMs msecs.
-     *
-     * @param[in,out] queue the host to schedule the join for
-     * @param[in] addAlarm true to add an alarm for the next try, false if the
-     *                     caller will take care of it
-     *
-     * @return ER_OK if the try is scheduled else failure if retries exhausted
-     */
-    QStatus ScheduleJoin(RemoteQueue& queue, bool addAlarm = true);
+    uint32_t backoffDelayMs;    /**< The backoff delay is in the range [0,backoffDelayMs] */
+    uint32_t nextRulesId;       /**< The next added rule change ID */
 
     /**
      * Internal helper for parsing an advertised name into its guid, change
@@ -435,13 +397,23 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      */
     QStatus SendThroughEndpoint(Message& msg, BusEndpoint& ep, SessionId sid);
 
+    /*
+     * Internal helper for sending sessionless signals filtered by our rule table.
+     *
+     * @param[in] sid Session ID
+     * @param[in] msg The sessionless signal
+     * @param[in] fromRulesId Beginning of rules ID range (inclusive)
+     * @param[in] toRulesId End of rules ID range (exclusive)
+     */
+    void SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId);
+
     /**
-     * A match rule that includes a timestamp for recording when it was entered
+     * A match rule that includes a change ID for recording when it was entered
      * into the rule table.
      */
     struct TimestampedRule : public Rule {
-        TimestampedRule(Rule& rule) : Rule(rule), timestamp(qcc::GetTimestamp64()) { }
-        uint64_t timestamp;
+        TimestampedRule(Rule& rule, uint32_t id) : Rule(rule), id(id) { }
+        uint32_t id;
     };
 
     /** Table of endpoint name, timestamped rule. */
@@ -495,12 +467,35 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     void CancelFindAdvertisedNames();
 
     /*
-     * @param[in] queue
+     * @param[in] cache
+     * @param[in] fromRulesId The beginning of rules ID range (inclusive)
+     * @param[in] toRulesId The end of rules ID range (exclusive)
      *
      * @return true if the sessionless match rules include a match for the
-     * queue.
+     * cache.
      */
-    bool IsMatch(RemoteQueue& queue);
+    bool IsMatch(RemoteCache& cache, uint32_t fromRulesId, uint32_t toRulesId);
+
+    typedef enum {
+        NONE = 0,               /**< No work, we have received all signals and applied all the rules. */
+        APPLY_NEW_RULES = 1,    /**< There are new rules that need to be applied the remote caches */
+        REQUEST_NEW_SIGNALS = 2 /**< There are new signals in the cache that need to be received */
+    } WorkType;
+
+    /*
+     * Return the pending work needing to be done for a remote cache.
+     */
+    WorkType PendingWork(RemoteCache& cache);
+
+    /*
+     * Schedule work to be done for any of the remote caches we know about.
+     */
+    void ScheduleWork();
+
+    /*
+     * Schedule work to be done for a remote cache.
+     */
+    QStatus ScheduleWork(RemoteCache& cache, bool addAlarm = true);
 };
 
 }
