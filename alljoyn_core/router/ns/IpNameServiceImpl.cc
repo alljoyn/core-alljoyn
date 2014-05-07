@@ -2287,6 +2287,11 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
         int32_t id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
 
         MDNSHeader mdnsHeader(id, MDNSHeader::MDNS_RESPONSE);
+
+        MDNSPtrRData* ptrRdataSd = new MDNSPtrRData();
+        ptrRdataSd->SetPtrDName("_alljoyn._tcp.local.");
+        MDNSResourceRecord ptrRecordSd("_services._dns-sd._udp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRdataSd);
+
         MDNSPtrRData* ptrRdata = new MDNSPtrRData();
         ptrRdata->SetPtrDName(m_guid + "._alljoyn._tcp.local.");
         MDNSResourceRecord ptrRecord("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRdata);
@@ -2332,6 +2337,7 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
 
         MDNSPacket mdnsPacket;
         mdnsPacket->SetHeader(mdnsHeader);
+        mdnsPacket->AddAnswer(ptrRecordSd);
         mdnsPacket->AddAnswer(ptrRecord);
         mdnsPacket->AddAnswer(srvRecord);
         mdnsPacket->AddAnswer(txtRecord);
@@ -2662,6 +2668,10 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
 
         MDNSHeader mdnsHeader(id, MDNSHeader::MDNS_RESPONSE);
 
+        MDNSPtrRData* ptrRdataSd = new MDNSPtrRData();
+        ptrRdataSd->SetPtrDName("_alljoyn._tcp.local.");
+        MDNSResourceRecord ptrRecordSd("_services._dns-sd._udp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRdataSd);
+
         MDNSPtrRData* ptrRdata = new MDNSPtrRData();
         ptrRdata->SetPtrDName(m_guid + "._alljoyn._tcp.local.");
         MDNSResourceRecord ptrRecord("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 0, ptrRdata);
@@ -2704,6 +2714,7 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
 
         MDNSPacket mdnsPacket;
         mdnsPacket->SetHeader(mdnsHeader);
+        mdnsPacket->AddAnswer(ptrRecordSd);
         mdnsPacket->AddAnswer(ptrRecord);
         mdnsPacket->AddAnswer(srvRecord);
         mdnsPacket->AddAnswer(txtRecord);
@@ -4863,6 +4874,10 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
         MDNSHeader mdnsHeader(id, MDNSHeader::MDNS_RESPONSE);
 
+        MDNSPtrRData* ptrRdataSd = new MDNSPtrRData();
+        ptrRdataSd->SetPtrDName("_alljoyn._tcp.local.");
+        MDNSResourceRecord ptrRecordSd("_services._dns-sd._udp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRdataSd);
+
         MDNSPtrRData* ptrRdata = new MDNSPtrRData();
         ptrRdata->SetPtrDName(m_guid + "._alljoyn._tcp.local.");
         MDNSResourceRecord ptrRecord("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRdata);
@@ -4903,6 +4918,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
         MDNSPacket mdnsPacket;
         mdnsPacket->SetHeader(mdnsHeader);
+        mdnsPacket->AddAnswer(ptrRecordSd);
         mdnsPacket->AddAnswer(ptrRecord);
         mdnsPacket->AddAnswer(srvRecord);
         mdnsPacket->AddAnswer(txtRecord);
