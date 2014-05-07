@@ -1896,6 +1896,9 @@ size_t MDNSResourceRecord::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         QCC_DbgPrintf(("Ignoring unrecognized rrtype %d", m_rrType));
         break;
     }
+    if (!m_rdata) {
+        return 0;
+    }
     //Next two octets are CLASS
     m_rrClass = (RRClass)((buffer[size + 2] << 8) | buffer[size + 3]);
 
