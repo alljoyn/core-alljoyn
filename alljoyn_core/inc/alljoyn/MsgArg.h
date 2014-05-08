@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -745,11 +745,77 @@ class MsgArg {
 
   private:
 
+    /**
+     * flags indicating owner ship
+     *
+     * @see OwnsData
+     * @see OwnsArg
+     */
     uint8_t flags;
 
+    /**
+     * Recursively sets the ownership flags on the entire MsgArg tree.
+     * @see SetOwnershipFlags
+     */
     void SetOwnershipDeep();
+
+    /**
+     * Clone one MsgArg into Another MsgArg
+     *
+     * @see operator=
+     * @see MsgArg(const MsgArg&)
+     *
+     * @param dest the MsgArg that will hold the clone
+     * @param src the MsgArg that will be cloned
+     *
+     */
     static void Clone(MsgArg& dest, const MsgArg& src);
+
+    /**
+     * Used to help build an alljoyn array
+     *
+     * AllJoyn arrays are any MsgArgs with the letter `a` in the signature
+     *
+     * Note that `arry` is not a typo - Some editors tag `array` as a reserved word.
+     *
+     * @param arry the  MsgArg that will hold the array
+     * @param elemSig   The signature for MsgArg array element
+     * @param argp      List of parameters to receive values constructed from var args
+     *
+     * @see Set
+     * @see VBuildArgs
+     *
+     *
+     * @return
+     *      - #ER_OK if the MsgArg was successfully created.
+     *      - #ER_BUS_BAD_SIGNATURE invalid value in the array signature
+     *      - #ER_BUS_BAD_VALUE array element does not have an expected value
+     *      - Other error status codes indicating a failure.
+     */
     static QStatus BuildArray(MsgArg* arry, const qcc::String& elemSig, va_list* argp);
+
+    /**
+     * Used to help parse an alljoyn array
+     *
+     * AllJoyn arrays are any MsgArgs with the letter `a` in the signature
+     *
+     * Note that `arry` is not a typo - Some editors tag `array` as a reserved word.
+     *
+     * @see Get
+     * @see VParseArgs
+     *
+     * @param arry the   MsgArg that will hold the array
+     * @param elemSig    The signature for MsgArg array element
+     * @param elemSigLen Length of the array element signature
+     * @param argp       List of parameters to receive values constructed from var args
+     *
+     * @return
+     *      - #ER_OK if the MsgArg was successfully created.
+     *      - #ER_BUS_BAD_SIGNATURE invalid value in the array signature
+     *      - #ER_BUS_BAD_VALUE array element does not have an expected value
+     *      - #ER_INVALID_ADDRESS the argp value is invalid
+     *      - Other error status codes indicating a failure
+     */
     static QStatus ParseArray(const MsgArg* arry, const char* elemSig, size_t elemSigLen, va_list* argp);
 };
 

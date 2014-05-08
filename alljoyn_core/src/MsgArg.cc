@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -421,7 +421,11 @@ bool MsgArg::operator==(const MsgArg& other)
     }
     switch (typeId) {
     case ALLJOYN_DICT_ENTRY:
-        return (v_dictEntry.key == other.v_dictEntry.key) &&  (v_dictEntry.val == other.v_dictEntry.val);
+        {
+            bool keysAreEqual = (*(v_dictEntry.key) == *(other.v_dictEntry.key));
+            bool valuesAreEqual = (*(v_dictEntry.val) == *(other.v_dictEntry.val));
+            return (keysAreEqual && valuesAreEqual);
+        }
 
     case ALLJOYN_STRUCT:
         if (v_struct.numMembers != other.v_struct.numMembers) {
@@ -446,7 +450,7 @@ bool MsgArg::operator==(const MsgArg& other)
         return true;
 
     case ALLJOYN_VARIANT:
-        return v_variant.val == other.v_variant.val;
+        return *(v_variant.val) == *(other.v_variant.val);
 
     case ALLJOYN_OBJECT_PATH:
     case ALLJOYN_STRING:

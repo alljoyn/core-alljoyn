@@ -214,6 +214,16 @@ class SessionOpts {
     }
 
   private:
+    /**
+     * Construct a SessionOpts with specific parameters.
+     *
+     * @param traffic       Type of traffic.
+     * @param isMultipoint  true iff session supports multipoint (greater than two endpoints).
+     * @param proximity     Proximity constraint bitmask.
+     * @param transports    Allowed transport types bitmask.
+     * @param nameType      The NameTransferType specifies what information is exchanged
+     *                      values #ALL_NAMES, #DAEMON_NAMES
+     */
     SessionOpts(SessionOpts::TrafficType traffic, bool isMultipoint, SessionOpts::Proximity proximity, TransportMask transports, NameTransferType nameType) :
         traffic(traffic),
         isMultipoint(isMultipoint),

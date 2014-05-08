@@ -1,13 +1,12 @@
 /**
- * @file NetworkNetworkInterface.h
- *
+ * @file
  * This file defines a class that are used to perform some network interface related operations
  * that are required by the ICE transport.
  *
  */
 
 /******************************************************************************
- * Copyright (c) 2012 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above

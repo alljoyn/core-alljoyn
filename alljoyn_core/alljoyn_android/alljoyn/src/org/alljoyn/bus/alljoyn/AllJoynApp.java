@@ -94,21 +94,16 @@ public class AllJoynApp extends Application {
          * If not --internal, use this configuration
          */
         mConfig = sharedPreferences.getString("config", 
-        	    "<busconfig>" +
-        	    "  <listen>unix:abstract=alljoyn</listen>" +
-        	    "  <listen>launchd:env=DBUS_LAUNCHD_SESSION_BUS_SOCKET</listen>" +
-        	    "  <listen>bluetooth:</listen>" +
-        	    "  <listen>tcp:addr=0.0.0.0,port=9955,family=ipv4</listen>" +
-        	    "  <limit auth_timeout=\"5000\"/>" +
-        	    "  <limit max_incomplete_connections=\"4\"/>" +
-        	    "  <limit max_completed_connections=\"16\"/>" +
-        	    "  <ip_name_service>" +
-        	    "    <property interfaces=\"*\"/>" +
-        	    "    <property disable_directed_broadcast=\"false\"/>" +
-        	    "    <property enable_ipv4=\"true\"/>" +
-        	    "    <property enable_ipv6=\"true\"/>" +
-        	    "  </ip_name_service>" +
-        	    "</busconfig>");
+                                              "<busconfig>" +
+                                              "  <listen>unix:abstract=alljoyn</listen>" +
+                                              "  <listen>launchd:env=DBUS_LAUNCHD_SESSION_BUS_SOCKET</listen>" +
+                                              "  <listen>bluetooth:</listen>" +
+                                              "  <listen>tcp:addr=0.0.0.0,port=9955,family=ipv4</listen>" +
+                                              "  <limit auth_timeout=\"5000\"/>" +
+                                              "  <limit max_incomplete_connections=\"4\"/>" +
+                                              "  <limit max_completed_connections=\"16\"/>" +
+                                              "  <property ns_interfaces=\"*\"/>" +
+                                              "</busconfig>");
         Log.i(TAG, "updatePrefs(): config = " + mConfig);
         
         /*

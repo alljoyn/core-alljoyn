@@ -64,7 +64,7 @@
 
 #include "Bus.h"
 #include "BusController.h"
-#include "DaemonConfig.h"
+#include "ConfigDB.h"
 
 #if !defined(ROUTER_LIB)
 
@@ -97,40 +97,27 @@ static volatile sig_atomic_t reload;
 static volatile sig_atomic_t quit;
 
 /*
- * Simple config to allow all messages with PolicyDB tied into DaemonRouter and
- * to provide some non-default limits for the daemon tcp transport.
+ * Simple config to provide some non-default limits for the daemon tcp transport.
  */
-
-/* Replace all stdout to stderr */
-
-static const char
-    internalConfig[] =
+static const char defaultConfig[] =
     "<busconfig>"
-    "  <listen>unix:abstract=alljoyn</listen>"
-    "  <listen>launchd:env=DBUS_LAUNCHD_SESSION_BUS_SOCKET</listen>"
-#if defined(QCC_OS_LINUX)
-//    "  <listen>slap:type=uart,dev=/dev/ttyUSB0,baud=115200</listen>"
-#endif
-    "  <listen>tcp:r4addr=0.0.0.0,r4port=9955</listen>"
-#if defined(QCC_OS_ANDROID)
-//    "  <listen>wfd:r4addr=0.0.0.0,r4port=9956</listen>"
-#endif
-    "  <limit auth_timeout=\"5000\"/>"
-    "  <limit max_incomplete_connections=\"16\"/>"
-    "  <limit max_completed_connections=\"32\"/>"
-    "  <limit max_untrusted_clients=\"0\"/>"
-    "  <property restrict_untrusted_clients=\"true\"/>"
-    "  <ip_name_service>"
-    "    <property interfaces=\"*\"/>"
-    "    <property disable_directed_broadcast=\"false\"/>"
-    "    <property enable_ipv4=\"true\"/>"
-    "    <property enable_ipv6=\"true\"/>"
-    "  </ip_name_service>"
-    "  <tcp>"
-//    "    <property router_advertisement_prefix=\"org.alljoyn.BusNode.\"/>"
-    "  </tcp>"
+    "  <limit name=\"auth_timeout\">5000</limit>"
+    "  <limit name=\"max_incomplete_connections\">16</limit>"
+    "  <limit name=\"max_completed_connections\">32</limit>"
+    "  <limit name=\"max_untrusted_clients\">16</limit>"
+    "  <flag name=\"restrict_untrusted_clients\">false</flag>"
     "</busconfig>";
 
+static const char internalConfig[] =
+    "<busconfig>"
+    "  <type>alljoyn</type>"
+    "  <listen>unix:abstract=alljoyn</listen>"
+#if defined(QCC_OS_DARWIN)
+    "  <listen>launchd:env=DBUS_LAUNCHD_SESSION_BUS_SOCKET</listen>"
+#endif
+    "  <listen>tcp:r4addr=0.0.0.0,r4port=9955</listen>"
+    "  <property name=\"ns_interfaces\">*</property>"
+    "</busconfig>";
 
 static const char versionPreamble[] =
     "AllJoyn Message Bus Daemon version: %s\n"
@@ -171,8 +158,12 @@ class OptParse {
 #endif
         noSLAP(false),
         noTCP(false),
+#if defined(QCC_OS_ANDROID)
         noWFD(false),
+#endif
+#if defined(QCC_OS_DARWIN)
         noLaunchd(false),
+#endif
         noSwitchUser(false),
         printAddressFd(-1), printPidFd(-1),
         session(false), system(false), internal(false),
@@ -182,7 +173,7 @@ class OptParse {
 
     ParseResultCode ParseResult();
 
-    qcc::String GetConfigFile() const {
+    String GetConfigFile() const {
         return configFile;
     }
     bool GetFork() const {
@@ -202,12 +193,16 @@ class OptParse {
     bool GetNoTCP() const {
         return noTCP;
     }
+#if defined(QCC_OS_ANDROID)
     bool GetNoWFD() const {
         return noWFD;
     }
+#endif
+#if defined(QCC_OS_DARWIN)
     bool GetNoLaunchd() const {
         return noLaunchd;
     }
+#endif
     bool GetNoSwitchUser() const {
         return noSwitchUser;
     }
@@ -231,7 +226,7 @@ class OptParse {
     int argc;
     char** argv;
 
-    qcc::String configFile;
+    String configFile;
     bool fork;
     bool noFork;
 #if defined(AJ_ENABLE_ICE)
@@ -239,8 +234,12 @@ class OptParse {
 #endif
     bool noSLAP;
     bool noTCP;
+#if defined(QCC_OS_ANDROID)
     bool noWFD;
+#endif
+#if defined(QCC_OS_DARWIN)
     bool noLaunchd;
+#endif
     bool noSwitchUser;
     int printAddressFd;
     int printPidFd;
@@ -254,7 +253,7 @@ class OptParse {
 };
 
 void OptParse::PrintUsage() {
-    qcc::String cmd = argv[0];
+    String cmd = argv[0];
     cmd = cmd.substr(cmd.find_last_of('/') + 1);
 
     fprintf(
@@ -269,8 +268,14 @@ void OptParse::PrintUsage() {
 #if defined(AJ_ENABLE_ICE)
         "[--no-ice] "
 #endif
-        "[--no-slap] [--no-tcp] [--no-wfd] [--no-launchd]\n"
-        "%*s  [--no-switch-user] [--verbosity=LEVEL] [--version]\n\n"
+        "[--no-slap] [--no-tcp] "
+#if defined(QCC_OS_ANDROID)
+        "[--no-wfd] "
+#endif
+#if defined(QCC_OS_DARWIN)
+        "[--no-launchd]"
+#endif
+        "\n%*s [--no-switch-user] [--verbosity=LEVEL] [--version]\n\n"
         "    --session\n"
         "        Use the standard configuration for the per-login-session message bus.\n\n"
         "    --system\n"
@@ -300,10 +305,14 @@ void OptParse::PrintUsage() {
         "        Disable the SLAP transport (override config file setting).\n\n"
         "    --no-tcp\n"
         "        Disable the TCP transport (override config file setting).\n\n"
+#if defined(QCC_OS_ANDROID)
         "    --no-wfd\n"
         "        Disable the Wifi-Direct transport (override config file setting).\n\n"
+#endif
+#if defined(QCC_OS_DARWIN)
         "    --no-launchd\n"
         "        Disable the Launchd transport (override config file setting).\n\n"
+#endif
         "    --no-switch-user\n"
         "        Don't switch from root to "
 #if defined(QCC_OS_ANDROID)
@@ -324,14 +333,14 @@ void OptParse::PrintUsage() {
 OptParse::ParseResultCode OptParse::ParseResult()
 {
     ParseResultCode result = PR_OK;
-    int i;
+    int i = 0;
 
     if (argc == 1) {
         goto exit;
     }
 
     for (i = 1; i < argc; ++i) {
-        qcc::String arg(argv[i]);
+        String arg(argv[i]);
 
         if (arg.compare("--version") == 0) {
             printf(versionPreamble, GetVersion(), GetBuildInfo());
@@ -366,8 +375,7 @@ OptParse::ParseResultCode OptParse::ParseResult()
                 goto exit;
             }
             configFile = argv[i];
-        } else if (arg.compare(0, sizeof("--config-file") - 1, "--config-file")
-                   == 0) {
+        } else if (arg.compare(0, sizeof("--config-file") - 1, "--config-file") == 0) {
             if (!configFile.empty() || internal) {
                 result = PR_OPTION_CONFLICT;
                 goto exit;
@@ -439,10 +447,14 @@ OptParse::ParseResultCode OptParse::ParseResult()
 #endif
         } else if (arg.compare("--no-tcp") == 0) {
             noTCP = true;
+#if defined(QCC_OS_ANDROID)
         } else if (arg.compare("--no-wfd") == 0) {
             noWFD = true;
+#endif
+#if defined(QCC_OS_DARWIN)
         } else if (arg.compare("--no-launchd") == 0) {
             noLaunchd = true;
+#endif
         } else if (arg.compare("--no-switch-user") == 0) {
             noSwitchUser = true;
         } else if (arg.substr(0, sizeof("--verbosity") - 1).compare(
@@ -488,7 +500,7 @@ int daemon(OptParse& opts) {
     struct sigaction act, oldact;
     sigset_t sigmask, waitmask;
     uint32_t pid(GetPid());
-    DaemonConfig* config = DaemonConfig::Access();
+    ConfigDB* config = ConfigDB::GetConfigDB();
 
     // block all signals by default for all threads
     sigfillset(&sigmask);
@@ -506,31 +518,29 @@ int daemon(OptParse& opts) {
     /*
      * Extract the listen specs
      */
-    std::vector<qcc::String> listenList = config->GetList("listen");
-    std::vector<qcc::String>::const_iterator it = listenList.begin();
+    const ConfigDB::ListenList listenList = config->GetListen();
     String listenSpecs;
 
-    while (it != listenList.end()) {
-        qcc::String addrStr(*it++);
+    for (ConfigDB::_ListenList::const_iterator it = listenList->begin(); it != listenList->end(); ++it) {
+        String addrStr = *it;
         bool skip = false;
         if (addrStr.compare(0, sizeof("unix:") - 1, "unix:") == 0) {
             if (addrStr.compare(sizeof("unix:") - 1, sizeof("tmpdir=") - 1, "tmpdir=") == 0) {
                 // Process tmpdir specially.
-                qcc::String randStr = addrStr.substr(sizeof("unix:tmpdir=") - 1) + "/alljoyn-";
+                String randStr = addrStr.substr(sizeof("unix:tmpdir=") - 1) + "/alljoyn-";
                 addrStr = ("unix:abstract=" + RandomString(randStr.c_str()));
             }
-            if (config->Get("type") == "system") {
-                // Add the system bus unix address to the app's environment
-                // for use by the BlueZ transport code since it needs it for
-                // communicating with BlueZ.
+            if (config->GetType() == "system") {
+                // Add the system bus unix address to the app's environment.
                 Environ* env = Environ::GetAppEnviron();
-                const qcc::String var("DBUS_SYSTEM_BUS_ADDRESS");
+                const String var("DBUS_SYSTEM_BUS_ADDRESS");
                 env->Add(var, addrStr);
             }
 
+#if defined(QCC_OS_DARWIN)
         } else if (addrStr.compare(0, sizeof("launchd:") - 1, "launchd:") == 0) {
             skip = opts.GetNoLaunchd();
-
+#endif
 #if defined(AJ_ENABLE_ICE)
         } else if (addrStr.compare(0, sizeof("ice:") - 1, "ice:") == 0) {
             skip = opts.GetNoICE();
@@ -539,9 +549,10 @@ int daemon(OptParse& opts) {
         } else if (addrStr.compare(0, sizeof("tcp:") - 1, "tcp:") == 0) {
             skip = opts.GetNoTCP();
 
+#if defined(QCC_OS_ANDROID)
         } else if (addrStr.compare(0, sizeof("wfd:") - 1, "wfd:") == 0) {
             skip = opts.GetNoWFD();
-
+#endif
         } else if (addrStr.compare(0, sizeof("slap:") - 1, "slap:") == 0) {
             skip = opts.GetNoSLAP();
 
@@ -551,11 +562,9 @@ int daemon(OptParse& opts) {
         }
 
         if (skip) {
-            Log(LOG_INFO, "Skipping transport for address: %s\n",
-                addrStr.c_str());
+            Log(LOG_INFO, "Skipping transport for address: %s\n", addrStr.c_str());
         } else {
-            Log(LOG_INFO, "Setting up transport for address: %s\n",
-                addrStr.c_str());
+            Log(LOG_INFO, "Setting up transport for address: %s\n", addrStr.c_str());
             if (!listenSpecs.empty()) {
                 listenSpecs.append(';');
             }
@@ -573,10 +582,10 @@ int daemon(OptParse& opts) {
 
     TransportFactoryContainer cntr;
     cntr.Add(new TransportFactory<DaemonTransport>(DaemonTransport::TransportName, false));
+    cntr.Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
 #if defined(QCC_OS_LINUX)
     cntr.Add(new TransportFactory<DaemonSLAPTransport>(DaemonSLAPTransport::TransportName, false));
 #endif
-    cntr.Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
 #if defined(AJ_ENABLE_ICE)
     cntr.Add(new TransportFactory<DaemonICETransport> ("ice", false));
 #endif
@@ -584,15 +593,13 @@ int daemon(OptParse& opts) {
 //    cntr.Add(new TransportFactory<WFDTransport>(WFDTransport::TransportName, false));
 #endif
 
-
-
     Bus ajBus("alljoyn-daemon", cntr, listenSpecs.c_str());
 
     /*
      * Check we have at least one authentication mechanism registered.
      */
-    if (config->Has("auth")) {
-        if (ajBus.GetInternal().FilterAuthMechanisms(config->Get("auth")) == 0) {
+    if (!config->GetAuth().empty()) {
+        if (ajBus.GetInternal().FilterAuthMechanisms(config->GetAuth()) == 0) {
             Log(LOG_ERR, "No supported authentication mechanisms.  Aborting...\n");
             return DAEMON_EXIT_STARTUP_ERROR;
         }
@@ -608,11 +615,11 @@ int daemon(OptParse& opts) {
     }
 
     int fd;
-    qcc::String pidfn = config->Get("pidfile");
+    String pidfn = config->GetPidfile();
 
     fd = opts.GetPrintAddressFd();
     if (fd >= 0) {
-        qcc::String localAddrs(ajBus.GetLocalAddresses());
+        String localAddrs(ajBus.GetLocalAddresses());
         localAddrs += "\n";
         int ret = write(fd, localAddrs.c_str(), localAddrs.size());
         if (ret == -1) {
@@ -622,7 +629,7 @@ int daemon(OptParse& opts) {
     }
     fd = opts.GetPrintPidFd();
     if ((fd >= 0) || !pidfn.empty()) {
-        qcc::String pidStr(U32ToString(pid));
+        String pidStr(U32ToString(pid));
         pidStr += "\n";
         if (fd > 0) {
             int ret = write(fd, pidStr.c_str(), pidStr.size());
@@ -645,15 +652,12 @@ int daemon(OptParse& opts) {
     sigdelset(&waitmask, SIGTERM);
 
     quit = 0;
-
     while (!quit) {
         reload = 0;
         sigsuspend(&waitmask);
         if (reload && !opts.GetInternalConfig()) {
-            Log(LOG_INFO, "Reloading config files.\n");
-            FileSource fs(opts.GetConfigFile());
-            if (fs.IsValid()) {
-                config = DaemonConfig::Load(fs);
+            if (!config->LoadConfig(&ajBus)) {
+                Log(LOG_ERR, "Failed to load the configuration - problem with %s.\n", opts.GetConfigFile().c_str());
             }
         }
     }
@@ -690,46 +694,53 @@ int main(int argc, char** argv, char** env)
     environ = env;
 #endif
 
-    LoggerSetting* loggerSettings(LoggerSetting::GetLoggerSetting(argv[0]));
+    LoggerSetting* loggerSettings = LoggerSetting::GetLoggerSetting(argv[0]);
 
     OptParse opts(argc, argv);
-    OptParse::ParseResultCode parseCode(opts.ParseResult());
-    DaemonConfig* config = NULL;
+    OptParse::ParseResultCode parseCode = opts.ParseResult();
 
     switch (parseCode) {
     case OptParse::PR_OK:
         break;
 
     case OptParse::PR_EXIT_NO_ERROR:
-        DaemonConfig::Release();
         return DAEMON_EXIT_OK;
 
     default:
-        DaemonConfig::Release();
         return DAEMON_EXIT_OPTION_ERROR;
     }
 
     loggerSettings->SetLevel(opts.GetVerbosity());
 
-    if (opts.GetInternalConfig()) {
-        StringSource src(internalConfig);
-        config = DaemonConfig::Load(internalConfig);
-#if defined(QCC_OS_ANDROID) && defined(ROUTER_LIB)
-    } else if (opts.GetServiceConfig()) {
-        config = DaemonConfig::Load(serviceConfig);
-#endif
-    } else {
-        FileSource fs(opts.GetConfigFile());
-        if (fs.IsValid()) {
-            config = DaemonConfig::Load(fs);
-        } else {
-            fprintf(stderr, "Invalid configuration file specified: \"%s\"\n", opts.GetConfigFile().c_str());
-            return DAEMON_EXIT_CONFIG_ERROR;
-        }
+    if (opts.GetNoFork()) {
+        // Presumably the user wants logging to go to stderr.
+        loggerSettings->SetSyslog(false);
+        loggerSettings->SetFile(stderr);
     }
 
-    loggerSettings->SetSyslog(config->Has("syslog"));
-    loggerSettings->SetFile((opts.GetFork() || (config->Has("fork") && !opts.GetNoFork())) ? NULL : stderr);
+    String configStr = defaultConfig;
+#if defined(QCC_OS_ANDROID) && defined(ROUTER_LIB)
+    configStr.append(opts.GetServiceConfig() ? serviceConfig : internalConfig);
+#else
+    if (opts.GetInternalConfig()) {
+        configStr.append(internalConfig);
+    }
+#endif
+
+    ConfigDB config(configStr, opts.GetConfigFile());
+    if (!config.LoadConfig()) {
+        const char* errsrc;
+        if (opts.GetInternalConfig()) {
+            errsrc = "internal default config";
+        } else {
+            errsrc = opts.GetConfigFile().c_str();
+        }
+        Log(LOG_ERR, "Failed to load the configuration - problem with %s.\n", errsrc);
+        return DAEMON_EXIT_CONFIG_ERROR;
+    }
+
+    loggerSettings->SetSyslog(config.GetSyslog());
+    loggerSettings->SetFile((opts.GetFork() || (config.GetFork() && !opts.GetNoFork())) ? NULL : stderr);
 
     Log(LOG_NOTICE, versionPreamble, GetVersion(), GetBuildInfo());
 
@@ -744,15 +755,14 @@ int main(int argc, char** argv, char** env)
         // Android uses hard coded UIDs.
         setuid(BLUETOOTH_UID);
 #else
-        if ((getuid() == 0) && config->Has("user")) {
+        String user = config.GetUser();
+        if ((getuid() == 0) && !user.empty()) {
             // drop root privileges if <user> is specified.
-            qcc::String user = config->Get("user");
             struct passwd* pwent;
             setpwent();
             while ((pwent = getpwent())) {
                 if (user.compare(pwent->pw_name) == 0) {
-                    Log(LOG_INFO, "Dropping root privileges (running as %s)\n",
-                        pwent->pw_name);
+                    Log(LOG_INFO, "Dropping root privileges (running as %s)\n", pwent->pw_name);
                     setuid(pwent->pw_uid);
                     break;
                 }
@@ -760,7 +770,6 @@ int main(int argc, char** argv, char** env)
             endpwent();
             if (!pwent) {
                 Log(LOG_ERR, "Failed to drop root privileges - userid does not exist: %s\n", user.c_str());
-                DaemonConfig::Release();
                 return DAEMON_EXIT_CONFIG_ERROR;
             }
         }
@@ -782,12 +791,11 @@ int main(int argc, char** argv, char** env)
 
     Log(LOG_INFO, "Running with effective userid %d\n", geteuid());
 
-    if (opts.GetFork() || (config->Has("fork") && !opts.GetNoFork())) {
+    if (opts.GetFork() || (config.GetFork() && !opts.GetNoFork())) {
         Log(LOG_DEBUG, "Forking into daemon mode...\n");
         pid_t pid = fork();
         if (pid == -1) {
             Log(LOG_ERR, "Failed to fork(): %s\n", strerror(errno));
-            DaemonConfig::Release();
             return DAEMON_EXIT_FORK_ERROR;
         } else if (pid > 0) {
             // Unneeded parent process, just exit.
@@ -797,15 +805,12 @@ int main(int argc, char** argv, char** env)
             pid_t sid = setsid();
             if (sid < 0) {
                 Log(LOG_ERR, "Failed to set session ID: %s\n", strerror(errno));
-                DaemonConfig::Release();
                 return DAEMON_EXIT_SESSION_ERROR;
             }
         }
     }
 
     int ret = daemon(opts);
-
-    DaemonConfig::Release();
 
     return ret;
 }

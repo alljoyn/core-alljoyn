@@ -869,9 +869,9 @@ class _Message {
     /**
      * Get a MsgArg that describes the header expansion of a given compression token.
      *
-     * @param token        The compression token.
-     * @param expansionArg [out] Returns a MsgArg that describes the expansion. The MsgArg has the
-     *                     signature "a(yv)".
+     * @param      token        The compression token.
+     * @param[out] expansionArg Returns a MsgArg that describes the expansion. The MsgArg has the
+     *                          signature "a(yv)".
      *
      * @return - #ER_OK if the expansion is available.
      *         - #ER_BUS_CANNOT_EXPAND_MESSAGE if there is not expansion for the specified token.
@@ -881,8 +881,9 @@ class _Message {
     /**
      * Compose the special hello method call required to establish a connection
      *
-     * @param      isBusToBus   true iff connection attempt is between two AllJoyn instances (bus joining).
-     * @param      allowRemote  true iff connection allows messages from remote devices.
+     * @param isBusToBus   true iff connection attempt is between two AllJoyn instances (bus joining).
+     * @param allowRemote  true iff connection allows messages from remote devices.
+     * @param nametype     specify what names are transfered
      *
      * @return
      *      - #ER_OK if hello method call was sent successfully.
@@ -901,6 +902,9 @@ class _Message {
      */
     QStatus HelloReply(bool isBusToBus, const qcc::String& uniqueName);
 
+    /**
+     * Struct representing the header for the AllJoyn Message
+     */
     typedef struct MessageHeader {
         char endian;           ///< The endianness of this message
         uint8_t msgType;       ///< Indicates if the message is method call, signal, etc.
@@ -964,14 +968,114 @@ class _Message {
      */
     HeaderFields hdrFields;
 
-    /* Internal methods unmarshal side */
+    /**
+     * @defgroup internal_methods_message_unmarshal Internal methods unmarshal side
+     *
+     * Methods used to unmarshal and AllJoyn header
+     *
+     * @see Unmarshal
+     * @see UnmarshalArgs
+     *
+     * @{
+     */
 
+    /**
+     * Clear the header fields
+     *
+     * This also frees any data allocated to the header fields.
+     */
     void ClearHeader();
+
+    /**
+     * Parse the MsgArg value from the AllJoyn Message
+     *
+     * @param[out] arg MsgArg that will hold the value from the AllJoyn Message
+     * @param[in]  sigPtr the signature of the MsgArg
+     * @param[in]  arrayElem true if the value being parsed is an array element
+     *
+     * @see Unmarshal
+     * @see UnmarshalArgs
+     *
+     * @return
+     *      - #ER_OK if successful
+     *      - #ER_BUS_BAD_LENGTH if the length of a sting object is too long
+     *      - #ER_BUS_NOT_NUL_TERMINATED if a string object is not nul terminated
+     *      - #ER_BUS_BAD_SIGNATURE signature does not match value type
+     *      - An error status otherwise
+     */
     QStatus ParseValue(MsgArg* arg, const char*& sigPtr, bool arrayElem = false);
+
+    /**
+     * Parse a Struct from the AllJoyn Message
+     *
+     * @param[out] arg MsgArg that will hold the value from the AllJoyn Message
+     * @param[in]  sigPtr the signature of the MsgArg
+     *
+     * @see Unmarshal
+     * @see UnmarshalArgs
+     *
+     * @return
+     *      - #ER_OK if successful
+     *      - #ER_BUS_BAD_SIGNATURE signature does not match value type
+     *      - An error status otherwise
+     */
     QStatus ParseStruct(MsgArg* arg, const char*& sigPtr);
+
+    /**
+     * Parse a single dictionary entry from the AllJoyn Message
+     *
+     * @param[out] arg MsgArg that will hold the value from the AllJoyn Message
+     * @param[in]  sigPtr the signature of the MsgArg
+     *
+     * @see Unmarshal
+     * @see UnmarshalArgs
+     *
+     * @return
+     *      - #ER_OK if successful
+     *      - #ER_BUS_BAD_SIGNATURE signature does not match value type
+     *      - An error status otherwise
+     */
     QStatus ParseDictEntry(MsgArg* arg, const char*& sigPtr);
+
+    /**
+     * Parse an array from the AllJoyn Message
+     *
+     * @param[out] arg MsgArg that will hold the value from the AllJoyn Message
+     * @param[in]  sigPtr the signature of the MsgArg
+     *
+     * @see Unmarshal
+     * @see UnmarshalArgs
+     *
+     * @return
+     *      - #ER_OK if successful
+     *      - #ER_BUS_BAD_SIGNATURE signature does not match value type
+     *      - An error status otherwise
+     */
     QStatus ParseArray(MsgArg* arg, const char*& sigPtr);
+
+    /**
+     * Parse the MsgArg signature from the AllJoyn Message
+     *
+     * @param[out] arg assign the message arg signature to this MsgArg
+     *
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
     QStatus ParseSignature(MsgArg* arg);
+
+    /**
+     * Parse a variant MsgArg from an AllJoyn Message
+     *
+     * @param[out] arg assign the variant to this MsgArg
+     *
+     * @see Unmarshal
+     * @see UnmarshalArgs
+     *
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
     QStatus ParseVariant(MsgArg* arg);
 
     /**
@@ -982,14 +1086,52 @@ class _Message {
      *
      * @return
      *      - #ER_OK if the header fields are valid
-     *      - an error indicating why it is not.
+     *      - An error status otherwise
      */
     QStatus HeaderChecks(bool pedantic);
+    /// @}
+    // end internal_methods_message_unmarshal defgroup
 
-    /* Internal methods marshal side */
+    /**
+     *  @defgroup internal_methods_message_marshal Internal methods marshal side
+     *
+     *  Methods used when marshaling the AllJoyn Message
+     *
+     *  @see Deliver
+     *  @see DeliverNonBlocking
+     *  @{
+     */
 
+    /**
+     * If the Message should be encrypted this will encrypt the message
+     *
+     * If authentication has not been done this will request authentications
+     *
+     * @return
+     *    - #ER_OK if the header fields are valid
+     *    - #ER_BUS_NOT_AUTHORIZED not authorized to send encrypted messages
+     *    - #ER_BUS_AUTHENTICATION_PENDING authentication is in progress must
+     *                                     retry once authentication is complete
+     *    - An error status otherwise
+     *
+     */
     QStatus EncryptMessage();
 
+    /**
+     * Marshal (serialize) the Message so it is in the wire format
+     *
+     * @param signature   message signature
+     * @param destination destination of the message
+     * @param msgType     what type of message this is
+     * @param args        pointer to an array of MsgArgs contained in the message
+     * @param numArgs     number of MsgArg
+     * @param flags       A logical OR of the AllJoyn flags
+     * @param sessionId   The session id that the Message will be sent to
+     *
+     *  @return
+     *    - #ER_OK if successful
+     *    - An error status otherwise
+     */
     QStatus MarshalMessage(const qcc::String& signature,
                            const qcc::String& destination,
                            AllJoynMessageType msgType,
@@ -998,19 +1140,89 @@ class _Message {
                            uint8_t flags,
                            SessionId sessionId);
 
+    /**
+     * Marshal the MsgArg arguments into the message
+     *
+     * This will Marshal an array of MsgArgs into the Message adding any padding
+     * and formating needed for the Message wire format.
+     *
+     * @param[in] arg pointer to an array of MsgArgs to be marshaled
+     * @param[in] numArgs the number of MsgArgs in arg
+     *
+     * @return
+     *    - #ER_OK if successful
+     *    - An error status otherwise
+     */
     QStatus MarshalArgs(const MsgArg* arg, size_t numArgs);
+    /**
+     * Marshal the header fields
+     *
+     * @note We relocate the string pointers in the fields to point to the
+     *       marshaled versions to so the lifetime of the message is not bound
+     *       to the lifetime of values passed in.
+     */
     void MarshalHeaderFields();
+    /**
+     * Calculate space required for the header fields
+     *
+     * @return the space required for the header fields
+     */
     size_t ComputeHeaderLen();
+    /// @}
+    // end internal_methods_message_marshal defgroup
 
     /**
      * Get string representation of the message
+     *
+     * In debug builds return a string representation of the message
+     * An empty string is returned otherwise.
+     *
+     * @see ToString()
+     *
+     * @param[in] args the MsgArgs contained in the message
+     * @param[in] numArgs the number of MsgArgs contained in the message
+     *
      * @return string representation of the message
      */
     qcc::String ToString(const MsgArg* args, size_t numArgs) const;
 
-    /* Internal methods for read */
+    /* @defgroup internal_methods_message_read "Internal methods for read"
+     * @{
+     */
+    /**
+     * Read a header and check it is a valid header
+     * check for things like endianness, header length, and body length
+     *
+     * If the endianness is incorrect this will perform an endian swap.
+     *
+     * @return
+     *    - #ER_OK if successful
+     *    - #ER_BUS_BAD_HEADER_FIELD if the Message header has invalid endian flag
+     *    - #ER_BUS_BAD_HEADER_LEN if the Message header length is invalid
+     *    - #ER_BUS_BAD_BODY_LEN if the Message body length is invalid
+     */
     inline QStatus InterpretHeader();
+
+    /**
+     * Read a Message from a RemoteEndpoint
+     *
+     * @param endpoint      The endpoint the message will be read from
+     * @param checkSender   True if message's sender field should be validated
+     *                      against the endpoint's unique name.
+     * @param pedantic      Perform detailed checks on the header fields.
+     * @param timeout       If non-zero, a timeout in milliseconds to wait for
+     *                      the bytes to be pulled.
+     *
+     * @see Read
+     * @see ReadNonBlocking
+     *
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
     QStatus PullBytes(RemoteEndpoint& endpoint, bool checkSender, bool pedantic = true, uint32_t timeout = 0);
+    /// @}
+    // end internal_methods_message_read
 };
 
 }

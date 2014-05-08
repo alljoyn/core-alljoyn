@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,7 +18,6 @@
 #include <qcc/Debug.h>
 
 #define QCC_MODULE "ALLJOYN_ABOUT_ANNOUNCEMENT_REGISTRAR"
-#define CHECK_RETURN(x) if ((status = x) != ER_OK) { return status; }
 
 using namespace ajn;
 using namespace services;
@@ -30,15 +29,30 @@ QStatus AnnouncementRegistrar::RegisterAnnounceHandler(ajn::BusAttachment& bus, 
     getIface = bus.GetInterface("org.alljoyn.About");
     if (!getIface) {
         InterfaceDescription* createIface = NULL;
-        CHECK_RETURN(bus.CreateInterface("org.alljoyn.About", createIface, false))
+        status = bus.CreateInterface("org.alljoyn.About", createIface, false);
+        if (status != ER_OK) {
+            return status;
+        }
         if (!createIface) {
             return ER_BUS_CANNOT_ADD_INTERFACE;
         }
 
-        CHECK_RETURN(createIface->AddMethod("GetAboutData", "s", "a{sv}", "languageTag,aboutData"))
-        CHECK_RETURN(createIface->AddMethod("GetObjectDescription", NULL, "a(oas)", "Control"))
-        CHECK_RETURN(createIface->AddProperty("Version", "q", PROP_ACCESS_READ))
-        CHECK_RETURN(createIface->AddSignal("Announce", "qqa(oas)a{sv}", "version,port,objectDescription,aboutData", 0))
+        status = createIface->AddMethod("GetAboutData", "s", "a{sv}", "languageTag,aboutData");
+        if (status != ER_OK) {
+            return status;
+        }
+        status = createIface->AddMethod("GetObjectDescription", NULL, "a(oas)", "Control");
+        if (status != ER_OK) {
+            return status;
+        }
+        status = createIface->AddProperty("Version", "q", PROP_ACCESS_READ);
+        if (status != ER_OK) {
+            return status;
+        }
+        status = createIface->AddSignal("Announce", "qqa(oas)a{sv}", "version,port,objectDescription,aboutData", 0);
+        if (status != ER_OK) {
+            return status;
+        }
 
         createIface->Activate();
         handler.announceSignalMember = createIface->GetMember("Announce");
@@ -46,12 +60,18 @@ QStatus AnnouncementRegistrar::RegisterAnnounceHandler(ajn::BusAttachment& bus, 
         handler.announceSignalMember = getIface->GetMember("Announce");
     }
 
-    CHECK_RETURN(bus.RegisterSignalHandler(&handler,
-                                           static_cast<MessageReceiver::SignalHandler>(&AnnounceHandler::AnnounceSignalHandler),
-                                           handler.announceSignalMember,
-                                           0))
+    status = bus.RegisterSignalHandler(&handler,
+                                       static_cast<MessageReceiver::SignalHandler>(&AnnounceHandler::AnnounceSignalHandler),
+                                       handler.announceSignalMember,
+                                       0);
+    if (status != ER_OK) {
+        return status;
+    }
 
-    CHECK_RETURN(bus.AddMatch("type='signal',interface='org.alljoyn.About',member='Announce',sessionless='t'"))
+    status = bus.AddMatch("type='signal',interface='org.alljoyn.About',member='Announce',sessionless='t'");
+    if (status != ER_OK) {
+        return status;
+    }
 
     QCC_DbgPrintf(("AnnouncementRegistrar::%s result %s", __FUNCTION__, QCC_StatusText(status)));
     return status;
@@ -61,8 +81,11 @@ QStatus AnnouncementRegistrar::UnRegisterAnnounceHandler(ajn::BusAttachment& bus
     QCC_DbgTrace(("AnnouncementRegistrar::%s", __FUNCTION__));
     QStatus status = ER_OK;
 
-    CHECK_RETURN(bus.UnregisterSignalHandler(&handler, static_cast<MessageReceiver::SignalHandler>(&AnnounceHandler::AnnounceSignalHandler),
-                                             handler.announceSignalMember, NULL))
+    status = bus.UnregisterSignalHandler(&handler, static_cast<MessageReceiver::SignalHandler>(&AnnounceHandler::AnnounceSignalHandler),
+                                         handler.announceSignalMember, NULL);
+    if (status != ER_OK) {
+        return status;
+    }
 
     QCC_DbgPrintf(("AnnouncementRegistrar::%s result %s", __FUNCTION__, QCC_StatusText(status)));
     return status;

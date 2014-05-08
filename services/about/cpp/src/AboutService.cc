@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -21,7 +21,6 @@
 
 #define QCC_MODULE "ALLJOYN_ABOUT_SERVICE"
 #define ABOUT_SERVICE_VERSION 1
-#define CHECK_RETURN(x) if ((status = x) != ER_OK) { return status; }
 
 using namespace ajn;
 using namespace services;
@@ -45,25 +44,46 @@ QStatus AboutService::Register(int port) {
     m_AnnouncePort = port;
     InterfaceDescription* p_InterfaceDescription = const_cast<InterfaceDescription*>(m_BusAttachment->GetInterface(ABOUT_INTERFACE_NAME));
     if (!p_InterfaceDescription) {
-        CHECK_RETURN(m_BusAttachment->CreateInterface(ABOUT_INTERFACE_NAME, p_InterfaceDescription, false))
+        status = m_BusAttachment->CreateInterface(ABOUT_INTERFACE_NAME, p_InterfaceDescription, false);
+        if (status != ER_OK) {
+            return status;
+        }
 
         if (!p_InterfaceDescription) {
             return ER_BUS_CANNOT_ADD_INTERFACE;
         }
 
-        CHECK_RETURN(p_InterfaceDescription->AddMethod("GetAboutData", "s", "a{sv}", "languageTag,aboutData"))
-        CHECK_RETURN(p_InterfaceDescription->AddMethod("GetObjectDescription", NULL, "a(oas)", "Control"))
-        CHECK_RETURN(p_InterfaceDescription->AddSignal("Announce", "qqa(oas)a{sv}", "version,port,objectDescription,aboutData"))
-        CHECK_RETURN(p_InterfaceDescription->AddProperty("Version", "q", (uint8_t) PROP_ACCESS_READ))
+        status = p_InterfaceDescription->AddMethod("GetAboutData", "s", "a{sv}", "languageTag,aboutData");
+        if (status != ER_OK) {
+            return status;
+        }
+        status = p_InterfaceDescription->AddMethod("GetObjectDescription", NULL, "a(oas)", "Control");
+        if (status != ER_OK) {
+            return status;
+        }
+        status = p_InterfaceDescription->AddSignal("Announce", "qqa(oas)a{sv}", "version,port,objectDescription,aboutData");
+        if (status != ER_OK) {
+            return status;
+        }
+        status = p_InterfaceDescription->AddProperty("Version", "q", (uint8_t) PROP_ACCESS_READ);
+        if (status != ER_OK) {
+            return status;
+        }
         p_InterfaceDescription->Activate();
     }
 
     status = AddInterface(*p_InterfaceDescription);
     if (status == ER_OK) {
-        CHECK_RETURN(AddMethodHandler(p_InterfaceDescription->GetMember("GetAboutData"),
-                                      static_cast<MessageReceiver::MethodHandler>(&AboutService::GetAboutData)))
-        CHECK_RETURN(AddMethodHandler(p_InterfaceDescription->GetMember("GetObjectDescription"),
-                                      static_cast<MessageReceiver::MethodHandler>(&AboutService::GetObjectDescription)))
+        status = AddMethodHandler(p_InterfaceDescription->GetMember("GetAboutData"),
+                                  static_cast<MessageReceiver::MethodHandler>(&AboutService::GetAboutData));
+        if (status != ER_OK) {
+            return status;
+        }
+        status = AddMethodHandler(p_InterfaceDescription->GetMember("GetObjectDescription"),
+                                  static_cast<MessageReceiver::MethodHandler>(&AboutService::GetObjectDescription));
+        if (status != ER_OK) {
+            return status;
+        }
 
         m_AnnounceSignalMember = p_InterfaceDescription->GetMember("Announce");
         assert(m_AnnounceSignalMember);
@@ -110,8 +130,14 @@ QStatus AboutService::Announce() {
         return ER_FAIL;
     }
     MsgArg announceArgs[4];
-    CHECK_RETURN(announceArgs[0].Set("q", ABOUT_SERVICE_VERSION))
-    CHECK_RETURN(announceArgs[1].Set("q", m_AnnouncePort))
+    status = announceArgs[0].Set("q", ABOUT_SERVICE_VERSION);
+    if (status != ER_OK) {
+        return status;
+    }
+    status = announceArgs[1].Set("q", m_AnnouncePort);
+    if (status != ER_OK) {
+        return status;
+    }
     std::vector<MsgArg> announceObjectsArg(m_AnnounceObjectsMap.size());
     int objIndex = 0;
     for (std::map<qcc::String, std::vector<qcc::String> >::const_iterator it = m_AnnounceObjectsMap.begin();
@@ -126,11 +152,20 @@ QStatus AboutService::Announce() {
             interfacesVector[interfaceIndex++] = interfaceIt->c_str();
         }
 
-        CHECK_RETURN(announceObjectsArg[objIndex].Set("(oas)", objectPath.c_str(), interfacesVector.size(), interfacesVector.data()))
+        status = announceObjectsArg[objIndex].Set("(oas)", objectPath.c_str(), interfacesVector.size(), (interfacesVector.empty()) ? NULL : &interfacesVector.front());
+        if (status != ER_OK) {
+            return status;
+        }
         objIndex++;
     }
-    CHECK_RETURN(announceArgs[2].Set("a(oas)", objIndex, announceObjectsArg.data()))
-    CHECK_RETURN(m_PropertyStore->ReadAll(NULL, PropertyStore::ANNOUNCE, announceArgs[3]))
+    status = announceArgs[2].Set("a(oas)", objIndex, (announceObjectsArg.empty()) ? NULL : &announceObjectsArg.front());
+    if (status != ER_OK) {
+        return status;
+    }
+    status = m_PropertyStore->ReadAll(NULL, PropertyStore::ANNOUNCE, announceArgs[3]);
+    if (status != ER_OK) {
+        return status;
+    }
     Message msg(*m_BusAttachment);
     uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
 #if !defined(NDEBUG)
@@ -190,10 +225,10 @@ void AboutService::GetObjectDescription(const ajn::InterfaceDescription::Member*
                 interfacesVec[interfaceIndex] = interfaceIt->c_str();
             }
 
-            objectArg[objIndex].Set("(oas)", key.c_str(), interfacesVec.size(), interfacesVec.data());
+            objectArg[objIndex].Set("(oas)", key.c_str(), interfacesVec.size(), (interfacesVec.empty()) ? NULL : &interfacesVec.front());
             objIndex++;
         }
-        retargs[0].Set("a(oas)", objectArg.size(), objectArg.data());
+        retargs[0].Set("a(oas)", objectArg.size(), (objectArg.empty()) ? NULL : &objectArg.front());
         MethodReply(msg, retargs, 1);
     } else {
         MethodReply(msg, ER_INVALID_DATA);

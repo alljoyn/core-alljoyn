@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -25,8 +25,6 @@ using namespace services;
 static const char* ABOUT_ICON_OBJECT_PATH = "/About/DeviceIcon";
 static const char* ABOUT_ICON_INTERFACE_NAME = "org.alljoyn.Icon";
 
-#define CHECK_BREAK(x) if ((status = x) != ER_OK) { break; }
-
 AboutIconClient::AboutIconClient(ajn::BusAttachment& bus)
     : m_BusAttachment(&bus)
 {
@@ -39,11 +37,26 @@ AboutIconClient::AboutIconClient(ajn::BusAttachment& bus)
         status = m_BusAttachment->CreateInterface(ABOUT_ICON_INTERFACE_NAME, p_InterfaceDescription, false);
         if (p_InterfaceDescription && status == ER_OK) {
             do {
-                CHECK_BREAK(p_InterfaceDescription->AddMethod("GetUrl", NULL, "s", "url"))
-                CHECK_BREAK(p_InterfaceDescription->AddMethod("GetContent", NULL, "ay", "content"))
-                CHECK_BREAK(p_InterfaceDescription->AddProperty("Version", "q", (uint8_t) PROP_ACCESS_READ))
-                CHECK_BREAK(p_InterfaceDescription->AddProperty("MimeType", "s", (uint8_t) PROP_ACCESS_READ))
-                CHECK_BREAK(p_InterfaceDescription->AddProperty("Size", "u", (uint8_t) PROP_ACCESS_READ))
+                status  = p_InterfaceDescription->AddMethod("GetUrl", NULL, "s", "url");
+                if (status != ER_OK) {
+                    break;
+                }
+                status = p_InterfaceDescription->AddMethod("GetContent", NULL, "ay", "content");
+                if (status != ER_OK) {
+                    break;
+                }
+                status = p_InterfaceDescription->AddProperty("Version", "q", (uint8_t) PROP_ACCESS_READ);
+                if (status != ER_OK) {
+                    break;
+                }
+                status = p_InterfaceDescription->AddProperty("MimeType", "s", (uint8_t) PROP_ACCESS_READ);
+                if (status != ER_OK) {
+                    break;
+                }
+                status = p_InterfaceDescription->AddProperty("Size", "u", (uint8_t) PROP_ACCESS_READ);
+                if (status != ER_OK) {
+                    break;
+                }
                 p_InterfaceDescription->Activate();
                 return;
             } while (0);

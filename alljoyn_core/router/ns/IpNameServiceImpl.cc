@@ -41,8 +41,8 @@
 #include <qcc/time.h>
 #include <qcc/StringUtil.h>
 #include <qcc/GUID.h>
-#include <DaemonConfig.h>
 
+#include "ConfigDB.h"
 #include "IpNameServiceImpl.h"
 
 #define QCC_MODULE "IPNS"
@@ -270,12 +270,10 @@ int32_t INCREMENTAL_PACKET_ID;
 // service will use for discovery.
 //
 //   <busconfig>
-//     <ip_name_service>
-//       <property interfaces="*"/>
-//       <property disable_directed_broadcast="false"/>
-//       <property enable_ipv4="true"/>
-//       <property enable_ipv6="true"/>
-//     </ip_name_service>
+//       <property name="ns_interfaces">*</property>
+//       <flag name="ns_disable_directed_broadcast">false</flag>
+//       <flag name="ns_disable_ipv4">false</flag>
+//       <flag name="ns_disable_ipv6">false</flag>
 //   </busconfig>
 //
 //
@@ -512,16 +510,16 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
 
     m_state = IMPL_INITIALIZING;
 
-    DaemonConfig* config = DaemonConfig::Access();
+    ConfigDB* config = ConfigDB::GetConfigDB();
 
     //
     // We enable outbound traffic on a per-interface basis.  Whether or not we
     // will consider using a network interface address to send name service
     // packets depends on the configuration.
     //
-    m_enableIPv4 = config->Get("ip_name_service/property@enable_ipv4", "true") == "true";
-    m_enableIPv6 = config->Get("ip_name_service/property@enable_ipv6", "true") == "true";
-    m_broadcast = config->Get("ip_name_service/property@disable_directed_broadcast", "false") == "false";
+    m_enableIPv4 = !config->GetFlag("ns_disable_ipv4");
+    m_enableIPv6 = !config->GetFlag("ns_disable_ipv6");
+    m_broadcast = config->GetFlag("ns_disable_directed_broadcast");
 
     //
     // Set the broadcast bit to true for WinRT. For all other platforms,

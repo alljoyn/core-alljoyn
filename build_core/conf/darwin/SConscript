@@ -42,7 +42,7 @@ if env['VARIANT'] == 'debug' or env['VARIANT'] == 'Debug':
 else:
    env.Append(CFLAGS='-O3')
    env.Append(CXXFLAGS='-O3')
-   env.Append(LINKFLAGS='-s')
+   env.Append(LINKFLAGS='')
    env.Append(JAVACFLAGS='-Xlint -Xlint:-serial')
    print 'Using release settings for darwin build...'
 

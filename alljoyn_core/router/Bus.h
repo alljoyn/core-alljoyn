@@ -1,10 +1,10 @@
 /**
- * @file Bus is the top-level object responsible for implementing the message
- * bus.
+ * @file
+ * Bus is the top-level object responsible for implementing the message bus.
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above

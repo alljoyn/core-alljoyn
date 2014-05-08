@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2013-2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -72,14 +72,14 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("BusHello",                 "su",                "ssu",               "GUIDC,protoVerC,GUIDS,uniqueName,protoVerS", 0);
         ifc->AddMethod("BindSessionPort",          "q" SESSIONOPTS_SIG,  "uq",                "portIn,opts,disposition,portOut",           0);
         ifc->AddMethod("UnbindSessionPort",        "q",                 "u",                 "port,disposition",                           0);
-        ifc->AddMethod("JoinSession",              "sq" SESSIONOPTS_SIG, "uu" SESSIONOPTS_SIG, "sessionHost,port,opts,disp,sessionId,opts",  0);
+        ifc->AddMethod("JoinSession",              "sq" SESSIONOPTS_SIG, "uu" SESSIONOPTS_SIG, "sessionHost,port,opts,disp,sessionId,opts", 0);
         ifc->AddMethod("LeaveSession",             "u",                 "u",                 "sessionId,disposition",                      0);
         ifc->AddMethod("AdvertiseName",            "sq",                "u",                 "name,transports,disposition",                0);
         ifc->AddMethod("CancelAdvertiseName",      "sq",                "u",                 "name,transports,disposition",                0);
         ifc->AddMethod("FindAdvertisedName",       "s",                 "u",                 "name,disposition",                           0);
-        ifc->AddMethod("FindAdvertisedNameByTransport",       "sq",                "u",                 "name,transports,disposition",                0);
+        ifc->AddMethod("FindAdvertisedNameByTransport",       "sq",                "u",                 "name,transports,disposition",     0);
         ifc->AddMethod("CancelFindAdvertisedName", "s",                 "u",                 "name,disposition",                           0);
-        ifc->AddMethod("CancelFindAdvertisedNameByTransport", "sq",                "u",                 "name,transports,disposition",                0);
+        ifc->AddMethod("CancelFindAdvertisedNameByTransport", "sq",                "u",                 "name,transports,disposition",     0);
         ifc->AddMethod("GetSessionFd",             "u",                 "h",                 "sessionId,handle",                           0);
         ifc->AddMethod("SetLinkTimeout",           "uu",                "uu",                "sessionId,inLinkTO,disposition,outLinkTO",   0);
         ifc->AddMethod("AliasUnixUser",            "u",                 "u",                 "aliasUID, disposition",                      0);
@@ -88,7 +88,8 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("CancelSessionlessMessage", "u",                 "u",                 "serialNum,disposition",                      0);
         ifc->AddMethod("RemoveSessionMember",      "us",                "u",                 "sessionId,name,disposition",                 0);
         ifc->AddMethod("GetHostInfo",              "u",                 "uss",               "sessionId,disposition,localipaddr,remoteipaddr", 0);
-        ifc->AddMethod("Ping",                     "su",                 "u",                 "name,timeout,disposition", 0);
+        ifc->AddMethod("ReloadConfig",             "",                  "b",                 "loaded",                                     0);
+        ifc->AddMethod("Ping",                     "su",                "u",                 "name,timeout,disposition",                   0);
 
         ifc->AddSignal("FoundAdvertisedName",      "sqs",              "name,transport,prefix",                        0);
         ifc->AddSignal("LostAdvertisedName",       "sqs",              "name,transport,prefix",                        0);

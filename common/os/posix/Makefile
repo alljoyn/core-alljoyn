@@ -34,6 +34,7 @@ oslib: \
 	$(IFCONFIG).o \
 	Mutex.o \
 	OSLogger.o \
+	RWLock.o \
 	osUtil.o \
 	Socket.o \
 	SslSocket.o \

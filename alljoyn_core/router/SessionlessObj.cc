@@ -26,7 +26,7 @@
 
 #include "SessionlessObj.h"
 #include "BusController.h"
-#include "DaemonConfig.h"
+#include "ConfigDB.h"
 
 #define QCC_MODULE "SESSIONLESS"
 
@@ -121,7 +121,7 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController) :
      * 750 msecs and provides an optimal trade-off against the maximum number of
      * connections allowed at the producer.
      */
-    backoffDelayMs = DaemonConfig::Access()->Get("limit@sls_backoff", 1500);
+    backoffDelayMs = ConfigDB::GetConfigDB()->GetLimit("sls_backoff", 1500);
 }
 
 SessionlessObj::~SessionlessObj()

@@ -33,9 +33,9 @@
 
 #include "BusInternal.h"
 #include "BusController.h"
+#include "ConfigDB.h"
 #include "RemoteEndpoint.h"
 #include "Router.h"
-#include "DaemonConfig.h"
 #include "DaemonRouter.h"
 #include "ns/IpNameService.h"
 #include "TCPTransport.h"
@@ -1223,7 +1223,7 @@ QStatus TCPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
      * If there is no configuration item, we default to something rational.
      */
     QCC_DbgPrintf(("TCPTransport::GetListenAddresses(): GetProperty()"));
-    qcc::String interfaces = DaemonConfig::Access()->Get("ip_name_service/property@interfaces");
+    qcc::String interfaces = ConfigDB::GetConfigDB()->GetProperty("ns_interfaces");
     if (interfaces.size() == 0) {
         interfaces = INTERFACES_DEFAULT;
     }
@@ -1561,35 +1561,35 @@ void* TCPTransport::Run(void* arg)
      * used for DBus.  If any of those are present, we use them, otherwise we
      * provide some hopefully reasonable defaults.
      */
-    DaemonConfig* config = DaemonConfig::Access();
+    ConfigDB* config = ConfigDB::GetConfigDB();
 
     /*
      * authTimeout is the maximum amount of time we allow incoming connections to
      * mess about while they should be authenticating.  If they take longer
      * than this time, we feel free to disconnect them as deniers of service.
      */
-    Timespec authTimeout = config->Get("limit@auth_timeout", ALLJOYN_AUTH_TIMEOUT_DEFAULT);
+    Timespec authTimeout = config->GetLimit("auth_timeout", ALLJOYN_AUTH_TIMEOUT_DEFAULT);
 
     /*
      * sessionSetupTimeout is the maximum amount of time we allow incoming connections to
      * mess about while they should be sending messages to set up the session routes.
      * If they take longer than this time, we feel free to disconnect them as deniers of service.
      */
-    Timespec sessionSetupTimeout = config->Get("limit@session_setup_timeout", ALLJOYN_SESSION_SETUP_TIMEOUT_DEFAULT);
+    Timespec sessionSetupTimeout = config->GetLimit("session_setup_timeout", ALLJOYN_SESSION_SETUP_TIMEOUT_DEFAULT);
 
     /*
      * maxAuth is the maximum number of incoming connections that can be in
      * the process of authenticating.  If starting to authenticate a new
      * connection would mean exceeding this number, we drop the new connection.
      */
-    uint32_t maxAuth = config->Get("limit@max_incomplete_connections", ALLJOYN_MAX_INCOMPLETE_CONNECTIONS_TCP_DEFAULT);
+    uint32_t maxAuth = config->GetLimit("max_incomplete_connections", ALLJOYN_MAX_INCOMPLETE_CONNECTIONS_TCP_DEFAULT);
 
     /*
      * maxConn is the maximum number of active connections possible over the
      * TCP transport.  If starting to process a new connection would mean
      * exceeding this number, we drop the new connection.
      */
-    uint32_t maxConn = config->Get("limit@max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_TCP_DEFAULT);
+    uint32_t maxConn = config->GetLimit("max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_TCP_DEFAULT);
 
     QStatus status = ER_OK;
 
@@ -2047,9 +2047,10 @@ void TCPTransport::StartListenInstance(ListenRequest& listenRequest)
      * just driving the start listen, and there is no quiet advertisement yet so
      * the corresponding <m_isAdvertising> must not yet be set.
      */
-    m_maxUntrustedClients = (DaemonConfig::Access())->Get("limit@max_untrusted_clients", ALLJOYN_MAX_UNTRUSTED_CLIENTS_DEFAULT);
+    ConfigDB* config = ConfigDB::GetConfigDB();
+    m_maxUntrustedClients = config->GetLimit("max_untrusted_clients", ALLJOYN_MAX_UNTRUSTED_CLIENTS_DEFAULT);
 
-    routerName = DaemonConfig::Access()->Get("tcp/property@router_advertisement_prefix", ALLJOYN_DEFAULT_ROUTER_ADVERTISEMENT_PREFIX);
+    routerName = config->GetProperty("router_advertisement_prefix", ALLJOYN_DEFAULT_ROUTER_ADVERTISEMENT_PREFIX);
 
     if (m_isAdvertising || m_isDiscovering || (!routerName.empty() && (m_numUntrustedClients < m_maxUntrustedClients))) {
         routerName.append(m_bus.GetInternal().GetGlobalGUID().ToShortString());
@@ -2762,21 +2763,21 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * used for DBus.  If any of those are present, we use them, otherwise we
      * provide some hopefully reasonable defaults.
      */
-    DaemonConfig* config = DaemonConfig::Access();
+    ConfigDB* config = ConfigDB::GetConfigDB();
 
     /*
      * maxAuth is the maximum number of incoming connections that can be in
      * the process of authenticating.  If starting to authenticate a new
      * connection would mean exceeding this number, we drop the new connection.
      */
-    uint32_t maxAuth = config->Get("limit@max_incomplete_connections", ALLJOYN_MAX_INCOMPLETE_CONNECTIONS_TCP_DEFAULT);
+    uint32_t maxAuth = config->GetLimit("max_incomplete_connections", ALLJOYN_MAX_INCOMPLETE_CONNECTIONS_TCP_DEFAULT);
 
     /*
      * maxConn is the maximum number of active connections possible over the
      * TCP transport.  If starting to process a new connection would mean
      * exceeding this number, we drop the new connection.
      */
-    uint32_t maxConn = config->Get("limit@max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_TCP_DEFAULT);
+    uint32_t maxConn = config->GetLimit("max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_TCP_DEFAULT);
 
     QStatus status;
     bool isConnected = false;
@@ -3374,7 +3375,7 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
      * configuration item is empty (not assigned in the configuration database)
      * it defaults to "*".
      */
-    qcc::String interfaces = DaemonConfig::Access()->Get("ip_name_service/property@interfaces", INTERFACES_DEFAULT);
+    qcc::String interfaces = ConfigDB::GetConfigDB()->GetProperty("ns_interfaces", INTERFACES_DEFAULT);
 
     while (interfaces.size()) {
         qcc::String currentInterface;

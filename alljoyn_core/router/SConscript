@@ -21,6 +21,7 @@ router_env = env.Clone()
 
 vars = Variables()
 vars.Add(EnumVariable('ICE', 'Enable ICE Transport', 'off', allowed_values=('on', 'off')))
+vars.Add(EnumVariable('POLICYDB', 'Enable policy support', 'off', allowed_values=('on', 'off')))
 vars.Update(router_env)
 Help(vars.GenerateHelpText(router_env))
 
@@ -30,7 +31,6 @@ if router_env['OS'] == 'android':
     # functionality.  Let the build for Android know whether ICE support is
     # available or not.
     env['ANDROID_PROXIMITY'] = router_env['ICE']
-
 
 if router_env['OS'] == "darwin":
     # Darwin has its own version of the daemon transport
@@ -44,6 +44,11 @@ if router_env['OS'] != "android":
 router_env.Append(CPPPATH = [ router_env.Dir('..').srcnode(),
                               router_env.Dir('.').srcnode(),
                               router_env.Dir('$OS_GROUP').srcnode() ])
+
+if router_env['POLICYDB'] == 'on':
+    router_env.Append(CPPDEFINES = [ 'ENABLE_POLICYDB' ])
+    router_env.Append(CPPPATH = [ router_env.Dir('policydb').srcnode() ])
+    srcs += [ 'policydb/PolicyDB.cc' ]
 
 router_objs = router_env.Object(srcs)
 

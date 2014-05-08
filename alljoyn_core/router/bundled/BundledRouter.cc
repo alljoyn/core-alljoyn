@@ -38,7 +38,7 @@
 
 #include "Bus.h"
 #include "BusController.h"
-#include "DaemonConfig.h"
+#include "ConfigDB.h"
 #include "Transport.h"
 #include "TCPTransport.h"
 #include "NullTransport.h"
@@ -66,28 +66,13 @@ static const char bundledConfig[] =
     "<busconfig>"
     "  <type>alljoyn_bundled</type>"
     "  <listen>tcp:r4addr=0.0.0.0,r4port=0</listen>"
-#if defined(QCC_OS_ANDROID)
-//    "  <listen>wfd:r4addr=0.0.0.0,r4port=9956</listen>"
-#endif
-    "  <limit auth_timeout=\"5000\"/>"
-    "  <limit max_incomplete_connections=\"4\"/>"
-    "  <limit max_completed_connections=\"16\"/>"
-    "  <limit max_untrusted_clients=\"0\"/>"
-    "  <property restrict_untrusted_clients=\"true\"/>"
-    "  <ip_name_service>"
-    "    <property interfaces=\"*\"/>"
-    "    <property disable_directed_broadcast=\"false\"/>"
-    "    <property enable_ipv4=\"true\"/>"
-    "    <property enable_ipv6=\"true\"/>"
-    "  </ip_name_service>"
-    "  <tcp>"
-//    "    <property router_advertisement_prefix=\"org.alljoyn.BusNode.\"/>"
-    "  </tcp>"
-#if defined(QCC_OS_WINRT)
-//    "  <listen>proximity:addr=0::0,port=0,family=ipv6</listen>"
-#endif
+    "  <limit name=\"auth_timeout\">5000</limit>"
+    "  <limit name=\"max_incomplete_connections\">4</limit>"
+    "  <limit name=\"max_completed_connections\">16</limit>"
+    "  <limit name=\"max_untrusted_clients\">0</limit>"
+    "  <flag name=\"restrict_untrusted_clients\">true</flag>"
+    "  <property name=\"ns_interfaces\">*</property>"
     "</busconfig>";
-
 
 class ClientAuthListener : public AuthListener {
   public:
@@ -152,6 +137,7 @@ class BundledRouter : public RouterLauncher, public TransportFactoryContainer {
     ClientAuthListener authListener;
     Mutex lock;
     std::set<NullTransport*> transports;
+    ConfigDB* config;
 };
 
 bool ExistFile(const char* fileName) {
@@ -219,6 +205,23 @@ static BundledRouter bundledRouter;
 BundledRouter::BundledRouter() : transportsInitialized(false), stopping(false), ajBus(NULL), ajBusController(NULL)
 {
     NullTransport::RegisterRouterLauncher(this);
+
+    /*
+     * Setup the config
+     */
+#ifndef NDEBUG
+#if defined(QCC_OS_ANDROID)
+    qcc::String configFile = "/mnt/sdcard/.alljoyn/config.xml";
+#else
+    qcc::String configFile = "./config.xml";
+#endif
+    if (!ExistFile(configFile.c_str())) {
+        configFile = "";
+    }
+    config = new ConfigDB(bundledConfig, configFile);
+#else
+    config = new ConfigDB(bundledConfig);
+#endif
 }
 
 BundledRouter::~BundledRouter()
@@ -235,6 +238,7 @@ BundledRouter::~BundledRouter()
     }
     lock.Unlock(MUTEX_CONTEXT);
     Join();
+    delete config;
 }
 
 QStatus BundledRouter::Start(NullTransport* nullTransport)
@@ -263,36 +267,7 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
         LoggerSetting::GetLoggerSetting("bundled-router", LOG_DEBUG, false, stdout);
 #endif
 
-        /*
-         * Load the configuration
-         */
-        DaemonConfig* config = NULL;
-#ifndef NDEBUG
-        qcc::String configFile = qcc::String::Empty;
-    #if defined(QCC_OS_ANDROID)
-        configFile = "/mnt/sdcard/.alljoyn/config.xml";
-    #endif
-
-    #if defined(QCC_OS_LINUX) || defined(QCC_OS_GROUP_WINDOWS) || defined(QCC_OS_GROUP_WINRT)
-        configFile = "./config.xml";
-    #endif
-
-        if (!configFile.empty() && ExistFile(configFile.c_str())) {
-            FileSource fs(configFile);
-            if (fs.IsValid()) {
-                config = DaemonConfig::Load(fs);
-                if (!config) {
-                    status = ER_BUS_BAD_XML;
-                    QCC_LogError(status, ("Error parsing configuration from %s", configFile.c_str()));
-                    goto ErrorExit;
-                }
-            }
-        }
-#endif
-        if (!config) {
-            config = DaemonConfig::Load(bundledConfig);
-        }
-        if (!config) {
+        if (!config->LoadConfig()) {
             status = ER_BUS_BAD_XML;
             QCC_LogError(status, ("Error parsing configuration"));
             goto ErrorExit;
@@ -300,8 +275,14 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
         /*
          * Extract the listen specs
          */
-        vector<String> listenList = config->GetList("listen");
-        String listenSpecs = StringVectorToString(&listenList, ";");
+        const ConfigDB::ListenList listenList = config->GetListen();
+        String listenSpecs;
+        for (ConfigDB::_ListenList::const_iterator it = listenList->begin(); it != listenList->end(); ++it) {
+            if (!listenSpecs.empty()) {
+                listenSpecs.append(";");
+            }
+            listenSpecs.append(*it);
+        }
         /*
          * Register the transport factories - this is a one time operation
          */

@@ -49,7 +49,7 @@ else:
         gtest_env.Append(CPPDEFINES = ['GTEST_HAS_CLONE=0'])
     # Microsoft Visual Studio 2012 has a different _VARIADIC_MAX default value.
     # See: http://blogs.msdn.com/b/vcblog/archive/2011/09/12/10209291.aspx
-    if gtest_env['OS_CONF'] == 'windows' and gtest_env['MSVC_VERSION'] == '11.0':
+    if gtest_env['OS_CONF'] == 'windows' and (gtest_env['MSVC_VERSION'] == '11.0' or gtest_env['MSVC_VERSION'] == '11.0Exp'):
         gtest_env.Append(CPPDEFINES = ['_VARIADIC_MAX=10'])
     #we compile with no rtti and we are not using exceptions. 
     gtest_env.Append(CPPDEFINES = ['GTEST_HAS_RTTI=0'])

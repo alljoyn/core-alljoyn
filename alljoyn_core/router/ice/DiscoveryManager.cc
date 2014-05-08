@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009,2012 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009,2012,2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -40,9 +40,9 @@
 #include <qcc/Util.h>
 #include <alljoyn/BusAttachment.h>
 
+#include "ConfigDB.h"
 #include "DiscoveryManager.h"
 #include "RendezvousServerInterface.h"
-#include "DaemonConfig.h"
 #include "ProximityScanEngine.h"
 #include "RendezvousServerConnection.h"
 
@@ -60,12 +60,10 @@ namespace ajn {
 // manager will use for discovery.
 //
 //   <busconfig>
-//     <ice_discovery_manager>
-//       <property interfaces="*"/>
-//       <property server="rdvs.example.org"/>
-//       <property protocol="HTTPS"/>
-//       <property enable_ipv6=\"false\"/>"
-//     </ice_discovery_manager>
+//       <property name="ice_interfaces">*</property>
+//       <property name="ice_server">rdvs.example.org</property>
+//       <property name="ice_protocol">HTTPS</property>
+//       <flag name="ice_disable_ipv6">true</flag>
 //   </busconfig>
 //
 
@@ -123,16 +121,16 @@ DiscoveryManager::DiscoveryManager(BusAttachment& bus) :
 {
     QCC_DbgPrintf(("DiscoveryManager::DiscoveryManager()\n"));
 
-    DaemonConfig* config = DaemonConfig::Access();
+    ConfigDB* config = ConfigDB::GetConfigDB();
 
     /* Retrieve the connection protocol to be used */
-    if (config->Get("ice_discovery_manager/property@protocol") == "HTTP") {
+    if (config->GetProperty("ice_protocol") == "HTTP") {
         QCC_DbgPrintf(("DiscoveryManager::DiscoveryManager(): Using HTTP"));
         UseHTTP = true;
     }
 
     /* See if IPv6 interfaces are allowed to be used */
-    if (config->Get("ice_discovery_manager/property@enable_ipv6") == "true") {
+    if (!config->GetFlag("ice_disable_ipv6")) {
         QCC_DbgPrintf(("DiscoveryManager::DiscoveryManager(): Enabling use of IPv6 interfaces"));
         EnableIPv6 = true;
     }
@@ -404,8 +402,8 @@ QStatus DiscoveryManager::Init(const String& guid)
     //
     // Retrieve the Rendezvous Server address from the config file
     //
-    DaemonConfig* config = DaemonConfig::Access();
-    RendezvousServer = config->Get("ice_discovery_manager/property@server");
+    ConfigDB* config = ConfigDB::GetConfigDB();
+    RendezvousServer = config->GetProperty("ice_server");
     if (RendezvousServer.empty()) {
         QCC_LogError(ER_FAIL, ("Server address not specified in config"));
         return ER_FAIL;
@@ -415,7 +413,7 @@ QStatus DiscoveryManager::Init(const String& guid)
         //
         // Retrieve the Rendezvous Server certificate
         //
-        FileSource pemFile(config->Get("ice_discovery_manager/property@server_certificate"));
+        FileSource pemFile(config->GetProperty("ice_server_certificate"));
         if (!pemFile.IsValid()) {
             status = ER_FAIL;
             QCC_LogError(status, ("Path of server_certificate invalid"));

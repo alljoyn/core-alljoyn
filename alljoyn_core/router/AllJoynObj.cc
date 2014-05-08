@@ -56,6 +56,7 @@
 #include "EndpointHelper.h"
 #include "ns/IpNameService.h"
 #include "AllJoynPeerObj.h"
+#include "ConfigDB.h"
 
 #define QCC_MODULE "ALLJOYN_OBJ"
 
@@ -140,6 +141,7 @@ QStatus AllJoynObj::Init()
         { alljoynIntf->GetMember("CancelSessionlessMessage"), static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::CancelSessionlessMessage) },
         { alljoynIntf->GetMember("RemoveSessionMember"),      static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::RemoveSessionMember) },
         { alljoynIntf->GetMember("GetHostInfo"),              static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::GetHostInfo) },
+        { alljoynIntf->GetMember("ReloadConfig"),             static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::ReloadConfig) },
         { alljoynIntf->GetMember("Ping"),                     static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::Ping) }
     };
 
@@ -1343,6 +1345,22 @@ void AllJoynObj::GetHostInfo(const InterfaceDescription::Member* member, Message
     /* Log error if reply could not be sent */
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to respond to org.alljoyn.Bus.GetHostInfo"));
+    }
+}
+
+void AllJoynObj::ReloadConfig(const InterfaceDescription::Member* member, Message& msg)
+{
+    ConfigDB* config = ConfigDB::GetConfigDB();
+    bool loaded = config->LoadConfig(&bus);
+    MsgArg replyArg;
+
+    replyArg.Set("b", loaded);
+
+    QStatus status = MethodReply(msg, &replyArg, 1);
+
+    /* Log error if reply could not be sent */
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to respond to org.alljoyn.Bus.ReloadConfig"));
     }
 }
 

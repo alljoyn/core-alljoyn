@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -22,25 +22,18 @@
 #define _POLICYDB_H
 
 #include <qcc/platform.h>
+#include <qcc/Logger.h>
 #include <qcc/ManagedObj.h>
+#include <qcc/RWLock.h>
 #include <qcc/String.h>
 #include <qcc/StringMapKey.h>
+#include <qcc/STLContainer.h>
 
 #include <alljoyn/Message.h>
 
+#include "Bus.h"
+#include "BusEndpoint.h"
 #include "NameTable.h"
-
-#include <qcc/STLContainer.h>
-
-#if !defined(ALLJOYN_BUILD_POLICY_DEBUG)
-#define ALLJOYN_BUILD_POLICY_DEBUG 0
-#endif
-
-#if (ALLJOYN_BUILD_POLICY_DEBUG == 0) || defined(NDEBUG)
-#define ALLJOYN_POLICY_DEBUG(x) do { } while (false)
-#else
-#define ALLJOYN_POLICY_DEBUG(x) x
-#endif
 
 
 namespace ajn {
@@ -50,8 +43,7 @@ namespace policydb {
 enum PolicyCategory {
     POLICY_CONTEXT,     /**< Policy group for either default or mandatory policies */
     POLICY_USER,        /**< Policy group that applies to specific users */
-    POLICY_GROUP,       /**< Policy group that applies to specific groups */
-    POLICY_AT_CONSOLE   /**< Policy group for when app is started from console or not */
+    POLICY_GROUP        /**< Policy group that applies to specific groups */
 };
 
 /** Enumeration of allow or deny policy rules */
@@ -70,12 +62,19 @@ class NormalizedMsgHdr;
  */
 typedef qcc::ManagedObj<_PolicyDB> PolicyDB;
 
+/**
+ * Normalized string ID type.
+ */
+typedef uint32_t StringID;
+
 
 /**
  * Real policy database class.
  */
 class _PolicyDB {
   public:
+    typedef qcc::ManagedObj<std::unordered_set<StringID> > IDSet;
+
     /**
      * Constructor.
      */
@@ -96,78 +95,61 @@ class _PolicyDB {
      * Determine if the remote application is allowed to own the specified bus
      * name.
      *
-     * @param busNameID     Normalized bus name
-     * @param uid           Numeric user id
-     * @param gid           Numeric group id
+     * @param busName       Bus name requested
+     * @param ep            BusEndpoint requesting to own the busName
      *
      * @return true = ownership allowed, false = ownership denied.
      */
-    bool OKToOwn(uint32_t busNameID,
-                 uint32_t uid,
-                 uint32_t gid) const;
+    bool OKToOwn(const char* busName, BusEndpoint& ep) const;
 
     /**
      * Determine if the destination is allowed to receive the specified
      * message.
      *
-     * @param nmh   Normalized message header
-     * @param uid   Numeric user id
-     * @param gid   Numeric group id
+     * @param nmh       Normalized message header
+     * @param dest      BusEndpoint where the router intends to send the message
      *
      * @return true = receive allowed, false = receive denied.
      */
-    bool OKToReceive(const ajn::NormalizedMsgHdr& nmh,
-                     uint32_t uid,
-                     uint32_t gid) const;
+    bool OKToReceive(const NormalizedMsgHdr& nmh, BusEndpoint& dest) const;
 
     /**
      * Determine if the sender is allowed to send the specified message.
      *
-     * @param nmh   Normalized message header
-     * @param uid   Numeric user id
-     * @param gid   Numeric group id
+     * @param nmh       Normalized message header
+     * @param sender    BusEndpoint that is sending the message
      *
      * @return true = send allowed, false = send denied.
      */
-    bool OKToSend(const ajn::NormalizedMsgHdr& nmh,
-                  uint32_t uid,
-                  uint32_t gid) const;
-
-    /**
-     * Determine if the destination is allowed to eavesdrop the specified
-     * message.
-     *
-     * @param nmh   Normalized message header
-     * @param suid  Numeric user id of the sender
-     * @param sgid  Numeric group id of the sender
-     * @param duid  Numeric user id of the destination
-     * @param dgid  Numeric group id of the destination
-     *
-     * @return true = receive allowed, false = receive denied.
-     */
-    bool OKToEavesdrop(const ajn::NormalizedMsgHdr& nmh,
-                       uint32_t suid,
-                       uint32_t sgid,
-                       uint32_t duid,
-                       uint32_t dgid) const;
+    bool OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& sender) const;
 
     /**
      * Convert a string to a normalized form.
      *
-     * @param str   The string to be converted to a normalized form.
+     * @param key   The string to be converted to a normalized form.
      *
-     * @return Normalized form of string.
+     * @return Normalized ID of string.
      */
-    uint32_t LookupStringID(const qcc::String& str) const;
+    StringID LookupStringID(const char* key) const;
 
     /**
-     * @overloaded Convert a string to a normalized form.
+     * Generate a set of normalized prefixes for the given string.
      *
-     * @param str   The string to be converted to a normalized form.
+     * @param idStr     The string to be converted to a set of normalized prefixes.
+     * @param sep       Separator character between prefix segments
      *
-     * @return Normalized form of string.
+     * @return Set of normalized prefix IDs of the string.
      */
-    uint32_t LookupStringID(const char* str) const;
+    const IDSet LookupStringIDPrefix(const char* idStr, char sep) const;
+
+    /**
+     * Convert a bus name to a normalized form.
+     *
+     * @param busName   The bus name to be converted to a normalized form.
+     *
+     * @return Set of equivalent bus name IDs
+     */
+    const IDSet LookupBusNameID(const char* busName) const;
 
     /**
      * Name owner changed listener implementation for tracking when well known
@@ -178,62 +160,69 @@ class _PolicyDB {
      * @param oldOwner  Unique name of previous owner or NULL if no previous owner
      * @param newOwner  Unique name of new owner or NULL of no new owner
      */
-    void NameOwnerChanged(const qcc::String& alias,
-                          const qcc::String* oldOwner,
-                          const qcc::String* newOwner);
+    void NameOwnerChanged(const qcc::String& alias, const qcc::String* oldOwner, const qcc::String* newOwner);
 
     /**
      * Adds a rule to the Policy database.
      *
      * @param cat           Policy category
      * @param catValue      Policy category differentiator (possible values depend on category)
-     * @param permission    Either allow or deny
+     * @param permstr       Either "allow" or "deny"
      * @param ruleAttrs     Set of Key-Value pairs defining rule match criteria
      *
      * @return  true = rule added successfully, false = failed to add rule
      */
-    bool AddRule(policydb::PolicyCategory cat,
-                 qcc::String& catValue,
-                 policydb::PolicyPermission permission,
+    bool AddRule(const qcc::String& cat,
+                 const qcc::String& catValue,
+                 const qcc::String& permStr,
                  const std::map<qcc::String, qcc::String>& ruleAttrs);
 
     /**
-     * Indicates if eavesdropping was enabled on any rule.
+     * Helper function to Finalize() for repopulating busNameIDMap.
      *
-     * @return  true = eavesdropping enable, false = eavesdropping disabled
+     * @param alias     Bus name alias
+     * @param name      Bus name
      */
-    bool EavesdropEnabled() const { return eavesdrop; }
+    void AddAlias(const qcc::String& alias, const qcc::String& name);
+
+    /**
+     * This performs final policy setup after all of the rules have been
+     * added.  It ensures that the Bus Name ID Map gets pre-populated based on
+     * the contents of the NameTable in the event that the configuration was
+     * reloaded some time after startup.
+     */
+    void Finalize(Bus* bus);
+
 
   private:
 
-    static const uint32_t ID_NOT_FOUND = 0xffffffff;    /**< constant for string not found */
-    static const uint32_t NIL_MATCH = 0xfffffffe;       /**< unmatchable string id */
-    static const uint32_t WILDCARD = 0x0;               /**< match everything string id */
-
-
-    typedef std::unordered_set<uint32_t> BusNameIDSet;
+    static const StringID ID_NOT_FOUND = 0xffffffff;    /**< constant for string not found */
+    static const StringID NIL_MATCH = 0xfffffffe;       /**< unmatchable string id */
+    static const StringID WILDCARD = 0x0;               /**< match everything string id */
 
     /**
      * Container for all the matching criteria for a rule.
      */
-    struct PolicyRule {
+    class PolicyRule {
+      public:
         policydb::PolicyPermission permission;    /**< allow or deny rule */
-        uint32_t interface;             /**< normalized interface name */
-        uint32_t member;                /**< normalized member name */
-        uint32_t error;                 /**< normalized error name */
-        uint32_t busName;               /**< normalized well known bus name */
-        ajn::AllJoynMessageType type;     /**< message type */
-        uint32_t path;                  /**< normalized object path */
 
-        bool requested_reply;           /**< requested_reply flag */
+        StringID interface;             /**< normalized interface name */
+        StringID member;                /**< normalized member name */
+        StringID error;                 /**< normalized error name */
+        StringID busName;               /**< normalized well known bus name */
+        AllJoynMessageType type;        /**< message type */
+        StringID path;                  /**< normalized object path */
+        StringID pathPrefix;            /**< normalized object path prefix */
 
-        bool eavesdrop;                 /**< eavesdrop enable flag */
-
-        uint32_t own;                   /**< normalized well known bus name for ownership purposes */
+        StringID own;                   /**< normalized well known bus name for ownership purposes */
+        StringID ownPrefix;             /**< normalized well known bus name prefix for ownership purposes */
 
         bool userSet;                   /**< indicates if user has been set */
+        bool userAny;                   /**< indicates if user has been set to "*" */
         uint32_t user;                  /**< numeric user id */
         bool groupSet;                  /**< indicates if group has been set */
+        bool groupAny;                  /**< indicates if group has been set to "*" */
         uint32_t group;                 /**< numeric group id */
 
 #ifndef NDEBUG
@@ -251,14 +240,16 @@ class _PolicyDB {
             member(WILDCARD),
             error(WILDCARD),
             busName(WILDCARD),
-            type(ajn::MESSAGE_INVALID),
+            type(MESSAGE_INVALID),
             path(WILDCARD),
-            requested_reply(permission == policydb::POLICY_ALLOW),
-            eavesdrop(false),
+            pathPrefix(WILDCARD),
             own(WILDCARD),
+            ownPrefix(WILDCARD),
             userSet(false),
+            userAny(false),
             user(-1),
             groupSet(false),
+            groupAny(false),
             group(-1)
         { }
 
@@ -269,7 +260,7 @@ class _PolicyDB {
          *
          * @return true = matches, false = does not match
          */
-        inline bool CheckInterface(uint32_t other) const
+        inline bool CheckInterface(StringID other) const
         {
             /* Interface names are optional in messages and the documentation
              * of dbus-daemon suggests that such messages always match where
@@ -286,7 +277,7 @@ class _PolicyDB {
          *
          * @return true = matches, false = does not match
          */
-        inline bool CheckMember(uint32_t other) const
+        inline bool CheckMember(StringID other) const
         {
             return ((member == WILDCARD) || (member == other));
         }
@@ -298,7 +289,7 @@ class _PolicyDB {
          *
          * @return true = matches, false = does not match
          */
-        inline bool CheckError(uint32_t other) const
+        inline bool CheckError(StringID other) const
         {
             return ((error == WILDCARD) || (error == other));
         }
@@ -310,9 +301,9 @@ class _PolicyDB {
          *
          * @return true = matches, false = does not match
          */
-        inline bool CheckBusName(const BusNameIDSet& bnIDSet) const
+        inline bool CheckBusName(const IDSet& bnIDSet) const
         {
-            return ((busName == WILDCARD) || (bnIDSet.find(busName) != bnIDSet.end()));
+            return ((busName == WILDCARD) || (bnIDSet->find(busName) != bnIDSet->end()));
         }
 
         /**
@@ -322,9 +313,9 @@ class _PolicyDB {
          *
          * @return true = matches, false = does not match
          */
-        inline bool CheckType(ajn::AllJoynMessageType other) const
+        inline bool CheckType(AllJoynMessageType other) const
         {
-            return ((type == ajn::MESSAGE_INVALID) || (type == other));
+            return ((type == MESSAGE_INVALID) || (type == other));
         }
 
         /**
@@ -334,21 +325,24 @@ class _PolicyDB {
          *
          * @return true = matches, false = does not match
          */
-        inline bool CheckPath(uint32_t other) const
+        inline bool CheckPath(StringID other, const _PolicyDB::IDSet& prefixes) const
         {
-            return ((path == WILDCARD) || (path == other));
+            return (((path == WILDCARD) && (pathPrefix == WILDCARD)) ||
+                    (path == other) || (prefixes->find(pathPrefix) != prefixes->end()));
         }
 
         /**
          * Check if bus name matches for ownership rule.
          *
          * @param other     Normalized bus name for comparision
+         * @param prefixes  Normalized bus name prefixes for comparision
          *
          * @return true = matches, false = does not match
          */
-        inline bool CheckOwn(uint32_t other) const
+        inline bool CheckOwn(StringID other, const _PolicyDB::IDSet& prefixes) const
         {
-            return ((own == WILDCARD) || (own == other));
+            return (((own == WILDCARD) && (ownPrefix == WILDCARD)) ||
+                    (own == other) || (prefixes->find(ownPrefix) != prefixes->end()));
         }
 
         /**
@@ -358,9 +352,9 @@ class _PolicyDB {
          *
          * @return true = matches, false = does not match
          */
-        inline bool CheckUser(uint32_t other) const
+        inline bool CheckUser(StringID other) const
         {
-            return (!userSet || (user == other));
+            return (!userSet || userAny || (user == other));
         }
 
         /**
@@ -370,52 +364,30 @@ class _PolicyDB {
          *
          * @return true = matches, false = does not match
          */
-        inline bool CheckGroup(uint32_t other) const
+        inline bool CheckGroup(StringID other) const
         {
-            return (!groupSet || (group == other));
-        }
-
-        /**
-         * Check if rule matches in eavesdrop context.
-         *
-         * @param edCtx     true indicates to check for match in eavesdrop context,
-         *                  false indicates to check for match in non-eavesdrop context
-         *
-         * @return true = matches, false = does not match
-         */
-        inline bool CheckEavesdrop(bool edCtx) const
-        {
-            /* The documentation about eavesdropping in dbus-daemon is a bit
-             * convoluted.  Basically, it boils down to that the rule always
-             * matches (where eavesdropping is concerned) except for allow
-             * rules where the rule's eavesdrop is set 'false' and we are
-             * checking to send the message to an eavesdropper, and for deny
-             * rules where the rule's eavesdrop is set to 'true' and we are
-             * checking to send the message to an ordinary recipient.
-             */
-            return permission ? (!edCtx || eavesdrop) : (edCtx || !eavesdrop);
+            return (!groupSet || groupAny || (group == other));
         }
     };
 
     typedef std::list<PolicyRule> PolicyRuleList;   /**< Policy rule list typedef */
+    typedef std::unordered_map<uint32_t, PolicyRuleList> IDRuleMap; /**< UID/GID Rule map typedef */
 
     /**
      * Collection of policy rules for each category.
      */
     struct PolicyRuleListSet {
         PolicyRuleList defaultRules;        /**< default rules */
-        std::unordered_map<uint32_t, PolicyRuleList> groupRules; /**< group rules on a per group id basis */
-        std::unordered_map<uint32_t, PolicyRuleList> userRules;  /**< user rules on a per user id basis */
-        PolicyRuleList atConsoleRules;      /**< at console rules */
-        PolicyRuleList notAtConsoleRules;   /**< not at console rules */
+        IDRuleMap groupRules;               /**< group rules on a per group id basis */
+        IDRuleMap userRules;                /**< user rules on a per user id basis */
         PolicyRuleList mandatoryRules;      /**< mandatory rules */
     };
 
     /** typedef for mapping a string to a numerical value for normalization */
-    typedef std::unordered_map<qcc::StringMapKey, uint32_t> StringIDMap;
+    typedef std::unordered_map<qcc::StringMapKey, StringID> StringIDMap;
 
-    /** typedef for mapping a unique bus name to a set of normalized well known bus names */
-    typedef std::unordered_map<qcc::StringMapKey, BusNameIDSet> UniqueNameIDMap;
+    /** typedef for mapping a string to a numerical value for normalization */
+    typedef std::unordered_map<qcc::StringMapKey, IDSet> BusNameIDMap;
 
     /**
      * Adds rules to specific rule sets.  Called by public AddRule to add
@@ -429,9 +401,9 @@ class _PolicyDB {
      * @param ruleAttrs     Set of Key-Value pairs defining rule match criteria
      */
     bool AddRule(PolicyRuleList& ownList,
+                 PolicyRuleList& connectList,
                  PolicyRuleList& sendList,
                  PolicyRuleList& receiveList,
-                 PolicyRuleList& connectList,
                  policydb::PolicyPermission permission,
                  const std::map<qcc::String, qcc::String>& ruleAttrs);
 
@@ -446,27 +418,7 @@ class _PolicyDB {
      *
      * @return  The strings normalization ID number.
      */
-    uint32_t GetStringIDMapUpdate(const qcc::String& key);
-
-    /**
-     * Convert a message type string the ajn::AllJoynMessageType enum value.
-     *
-     * @param str   string to be converted
-     * @param type  [OUT] the message type
-     *
-     * @return  true if conversion succeeded, false if conversion failed
-     */
-    static bool MsgTypeStrToEnum(const qcc::String& str, ajn::AllJoynMessageType& type);
-
-    /**
-     * Convert "true" or "false" string to a boolean.
-     *
-     * @param str   string to be converted
-     * @param b     [OUT] true or false depending on the string
-     *
-     * @return  true if conversion succeeded, false if conversion failed
-     */
-    static bool TrueFalseStrToBool(const qcc::String& str, bool& b);
+    StringID UpdateDictionary(const qcc::String& key);
 
     /**
      * Check rule list for rule about connecting.
@@ -478,19 +430,19 @@ class _PolicyDB {
      *
      * @return  true if match found, false if match not found
      */
-    bool CheckConnect(bool& allow, const PolicyRuleList& ruleList,
-                      uint32_t uid, uint32_t gid) const;
+    static bool CheckConnect(bool& allow, const PolicyRuleList& ruleList, uint32_t uid, uint32_t gid);
 
     /**
      * Check rule list for rule about owning a bus name.
      *
      * @param allow     [OUT] true for "allow" rule, false for "deny" rule
      * @param ruleList  rule list to search for match
-     * @param bnid      normalized bus name id
+     * @param bnid      normalized bus name ID
+     * @param prefixes  normalized set of bus name prefix IDs
      *
      * @return  true if match found, false if match not found
      */
-    bool CheckOwn(bool& allow, const PolicyRuleList& ruleList, uint32_t bnid) const;
+    static bool CheckOwn(bool& allow, const PolicyRuleList& ruleList, StringID bnid, const IDSet& prefixes);
 
     /**
      * Check rule list for rule about message.
@@ -499,28 +451,22 @@ class _PolicyDB {
      * @param ruleList  rule list to search for match
      * @param nmh       normalized message header
      * @param bnIDSet   set of normalized bus names
-     * @param eavesdrop flag indicating if the check is for eavesdropping or not.
      *
      * @return  true if match found, false if match not found
      */
-    bool CheckMessage(bool& allow, const PolicyRuleList& ruleList,
-                      const ajn::NormalizedMsgHdr& nmh,
-                      const BusNameIDSet& bnIDSet,
-                      bool eavesdrop) const;
-
-    bool eavesdrop;     /**< indicated if there is a rule specifying eavesdropping */
+    static bool CheckMessage(bool& allow, const PolicyRuleList& ruleList,
+                             const NormalizedMsgHdr& nmh, const IDSet& bnIDSet);
 
     PolicyRuleListSet ownRS;        /**< bus name ownership policy rule sets */
     PolicyRuleListSet sendRS;       /**< sender message policy rule sets */
     PolicyRuleListSet receiveRS;    /**< receiver message policy rule sets */
     PolicyRuleListSet connectRS;    /**< bus connect policy rule sets */
 
-    StringIDMap stringIDs;          /**< mapping of strings to normalization IDs */
-    UniqueNameIDMap uniqueNameMap;  /**< mapping of unique bus names to normalized well known bus names */
-    StringIDMap busNameMap;         /**< mapping of well known bus names to normalization IDs */
-    mutable qcc::Mutex bnLock;      /**< mutex protecting access to uniqueNameMap and busNameMap when normalizing unique names to list of normalized well known bus names. */
+    StringIDMap dictionary;         /**< mapping of strings to normalized IDs */
+    BusNameIDMap busNameIDMap;      /**< mapping of bus names to a set of equivalent IDs */
+    mutable qcc::RWLock lock;       /**< rwlock to protect R/W contention */
 
-    friend class ajn::NormalizedMsgHdr;
+    friend class NormalizedMsgHdr;
 };
 
 
@@ -538,54 +484,30 @@ class NormalizedMsgHdr {
      * @param msg       Reference to the message to be normalized
      * @param policy    Pointer to the PolicyDB
      */
-    NormalizedMsgHdr(const ajn::Message& msg, const PolicyDB& policy) :
+    NormalizedMsgHdr(const Message& msg, const PolicyDB& policy) :
         ifcID(policy->LookupStringID(msg->GetInterface())),
         memberID(policy->LookupStringID(msg->GetMemberName())),
         errorID(policy->LookupStringID(msg->GetErrorName())),
         pathID(policy->LookupStringID(msg->GetObjectPath())),
+        pathIDSet(policy->LookupStringIDPrefix(msg->GetObjectPath(), '/')),
+        destIDSet(policy->LookupBusNameID(msg->GetDestination())),
+        senderIDSet(policy->LookupBusNameID(msg->GetSender())),
         type(msg->GetType())
     {
-        policy->bnLock.Lock(MUTEX_CONTEXT);
-        InitBusNameID(policy, msg->GetSender(), senderIDList);
-        InitBusNameID(policy, msg->GetDestination(), destIDList);
-        policy->bnLock.Unlock(MUTEX_CONTEXT);
+        QCC_DEBUG_ONLY(qcc::Log(LOG_DEBUG, "Normalized message header for %s   %s --> %s\n", msg->Description().c_str(), msg->GetSender(), msg->GetDestination()));
     }
 
   private:
     friend class _PolicyDB;  /**< Give PolicyDB access to the internals */
 
-    /**
-     * Helper function generate a set of normalized well known bus names
-     * for given bus name string.  If the given bus name is already a well
-     * known name, then the set will just be one entry.  If the given bus
-     * name is a unique name, the the list will be for all well known
-     * names assocated with that unique bus name.
-     *
-     * @param policy    Pointer to the PolicyDB
-     * @param bnStr     String with either the well known or unique bus name
-     * @param bnIDSet   The normalized bus name set being filled.
-     */
-    static inline void InitBusNameID(const PolicyDB& policy,
-                                     const char* bnStr,
-                                     _PolicyDB::BusNameIDSet& bnIDSet)
-    {
-        if (bnStr && (bnStr[0] == ':')) {
-            _PolicyDB::UniqueNameIDMap::const_iterator unit(policy->uniqueNameMap.find(bnStr));
-            if (unit != policy->uniqueNameMap.end()) {
-                bnIDSet.insert(unit->second.begin(), unit->second.end());
-            }
-        } else {
-            bnIDSet.insert(policy->LookupStringID(bnStr));
-        }
-    }
-
-    uint32_t ifcID;             /**< normalized interface name */
-    uint32_t memberID;          /**< normalized member name */
-    uint32_t errorID;           /**< normalized error name */
-    uint32_t pathID;            /**< normalized object path */
-    ajn::AllJoynMessageType type; /**< message type */
-    _PolicyDB::BusNameIDSet destIDList;    /**< set of normalized well known bus name destinations */
-    _PolicyDB::BusNameIDSet senderIDList;  /**< set of normalized well known bus name senders */
+    StringID ifcID;                         /**< normalized interface name */
+    StringID memberID;                      /**< normalized member name */
+    StringID errorID;                       /**< normalized error name */
+    StringID pathID;                        /**< normalized object path */
+    const _PolicyDB::IDSet pathIDSet;       /**< set of normalized object path prefixes */
+    const _PolicyDB::IDSet destIDSet;       /**< set of normalized well known bus name destinations */
+    const _PolicyDB::IDSet senderIDSet;     /**< set of normalized well known bus name senders */
+    AllJoynMessageType type;                /**< message type */
 };
 
 
