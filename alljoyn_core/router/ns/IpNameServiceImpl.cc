@@ -6275,8 +6275,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
             m_mutex.Unlock();
             return;
         }
-    } else {
-        mdnsPacket->GetAdditionalRecord("ping.", MDNSResourceRecord::TXT, &pingRecord);
+    } else if (mdnsPacket->GetAdditionalRecord("ping.", MDNSResourceRecord::TXT, &pingRecord)) {
         pingRData = static_cast<MDNSPingRData*>(pingRecord->GetRData());
         QCC_LogError(ER_OK, ("Recieved a unicast request for name %s", pingRData->GetWellKnownName().c_str()));
 
