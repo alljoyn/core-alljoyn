@@ -240,6 +240,27 @@ void TransportList::FoundNames(const qcc::String& busAddr,
     }
 }
 
+void TransportList::Ping(TransportMask transport,
+                         const qcc::String& name, const qcc::String& senderGuid)
+{
+    if (isStarted) {
+        for (size_t i = 0; i < listeners.size(); ++i) {
+            listeners[i]->Ping(transport, name, senderGuid);
+        }
+    }
+}
+
+void TransportList::PingReply(TransportMask transport,
+                              const qcc::String& name,
+                              uint32_t replyCode)
+{
+    if (isStarted) {
+        for (size_t i = 0; i < listeners.size(); ++i) {
+            listeners[i]->PingReply(transport, name, replyCode);
+        }
+    }
+}
+
 void TransportList::BusConnectionLost(const qcc::String& busAddr)
 {
     if (isStarted) {

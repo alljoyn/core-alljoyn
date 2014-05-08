@@ -2904,6 +2904,115 @@ class MDNSSearchRData : public MDNSTextRData {
 
 };
 
+
+/**
+ * @internal
+ * @brief A class representing an MDNSPingRData.
+ *
+ * MDNSPingRData is a specialization of MDNSTextData and contains a well-known name.
+ */
+class MDNSPingRData : public MDNSTextRData {
+  public:
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS Ping RData.
+     */
+    MDNSPingRData() { }
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS Ping RData.
+     * @param wkn	The well known name to search for.
+     */
+    MDNSPingRData(qcc::String wkn);
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSPingRData.
+     */
+    ~MDNSPingRData() { }
+
+    /**
+     * @internal
+     * @brief returns a deep copy of this object.
+     * @return A deep copy of this MDNSPingRData
+     */
+    virtual MDNSRData* GetDeepCopy() { return new MDNSPingRData(*this); }
+
+    /**
+     * @internal
+     * @brief Set the well known name for this Search RData.
+     * @param wkn The well known name to set.
+     */
+    void SetWellKnownName(qcc::String wkn);
+
+    /**
+     * @internal
+     * @brief Get the wellknown name for this Ping RData.
+     * @return The well known name contained in this Ping Rdata.
+     */
+    qcc::String GetWellKnownName();
+
+};
+
+/**
+ * @internal
+ * @brief A class representing an MDNSPingRData.
+ *
+ * MDNSPingRData is a specialization of MDNSTextData and contains a well-known name.
+ */
+class MDNSPingReplyRData : public MDNSTextRData {
+  public:
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS Ping RData.
+     */
+    MDNSPingReplyRData() { }
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS Ping RData.
+     * @param wkn	The well known name to search for.
+     */
+    MDNSPingReplyRData(qcc::String wkn);
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSPingRData.
+     */
+    ~MDNSPingReplyRData() { }
+
+    /**
+     * @internal
+     * @brief returns a deep copy of this object.
+     * @return A deep copy of this MDNSPingRData
+     */
+    virtual MDNSRData* GetDeepCopy() { return new MDNSPingReplyRData(*this); }
+
+    /**
+     * @internal
+     * @brief Set the well known name for this Search RData.
+     * @param wkn The well known name to set.
+     */
+    void SetWellKnownName(qcc::String wkn);
+
+    /**
+     * @internal
+     * @brief Get the wellknown name for this Ping RData.
+     * @return The well known name contained in this Ping Rdata.
+     */
+    qcc::String GetWellKnownName();
+
+    qcc::String GetReplyCode();
+
+    void SetReplyCode(qcc::String replyCode);
+
+};
+
 /**
  * @internal
  * @brief A class representing an MDNSAdvertiseRData.

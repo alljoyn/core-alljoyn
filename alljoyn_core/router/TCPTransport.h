@@ -223,6 +223,15 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void DisableAdvertisement(const qcc::String& advertiseName);
 
     /**
+     * Ping a remote name to see if it is responding.
+     *
+     * @param name    The name.
+     *
+     * @return  ER_NOT_IMPLEMENTED unless overridden by a derived class.
+     */
+    virtual QStatus Ping(const char* name, const char* guid);
+    virtual QStatus PingReply(const char* name, uint32_t replyCode);
+    /**
      * Returns the name of this transport
      */
     const char* GetTransportName() const { return TransportName; }
@@ -317,6 +326,8 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         DISABLE_ADVERTISEMENT_INSTANCE,  /**< A DisableAdvertisement() has happened */
         ENABLE_DISCOVERY_INSTANCE,       /**< An EnableDiscovery() has happened */
         DISABLE_DISCOVERY_INSTANCE,      /**< A DisableDiscovery() has happened */
+        PING_INSTANCE,                   /**< A Ping() has happened */
+        PING_REPLY                       /**< A PingReply has happened */
     };
 
     /**
@@ -329,6 +340,8 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
       public:
         RequestOp m_requestOp;
         qcc::String m_requestParam;
+        qcc::String m_guid;
+        uint32_t m_replyCode;
         bool m_requestParamOpt;
     };
 
@@ -472,6 +485,18 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     };
 
     FoundCallback m_foundCallback;  /**< Called by IpNameService when new busses are discovered */
+
+    class PingCallback {
+      public:
+        PingCallback(TransportListener*& listener) : m_listener(listener) { }
+        // Add the askers guid here
+        void Ping(const qcc::String& name, const qcc::String& senderGuid);
+        void PingReply(TransportMask transport, const qcc::String& name, uint32_t replyCode);
+      private:
+        TransportListener*& m_listener;
+    };
+
+    PingCallback m_pingCallback;  /**< Called by IpNameService when pings are responded to */
 
     /**
      * @brief The default timeout for in-process authentications.
@@ -645,6 +670,8 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void QueueDisableDiscovery(const char* namePrefix);
     void QueueEnableAdvertisement(const qcc::String& advertiseName, bool quietly);
     void QueueDisableAdvertisement(const qcc::String& advertiseName);
+    void QueuePing(const char* name, const char* guid);
+    void QueuePingReply(const char* name, uint32_t replyCode);
 
     void RunListenMachine(ListenRequest& listenRequest);
 
@@ -654,6 +681,8 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void DisableAdvertisementInstance(ListenRequest& listenRequest);
     void EnableDiscoveryInstance(ListenRequest& listenRequest);
     void DisableDiscoveryInstance(ListenRequest& listenRequest);
+    void PingInstance(ListenRequest& listenRequest);
+    void PingReply(ListenRequest& listenRequest);
     void UntrustedClientExit();
     QStatus UntrustedClientStart();
     bool m_isAdvertising;

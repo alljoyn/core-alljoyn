@@ -146,6 +146,23 @@ class IpNameService {
                      Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint8_t>* cb);
 
     /**
+     * @brief Set the callback function that is called to notify a transport about
+     *     ping responses.
+     * // TO DO change comment since this is for ping queries on the receiing side
+     * @param transportMask A bitmask containing the transport handling the specified
+     *     endpoints.  This allows the ping responses to be demultiplexed into
+     *     the interested transports.
+     * @param cb The callback method on the transport that will be called to notify
+     *     a transport about ping responses.
+     */
+    void SetPingCallback(TransportMask transportMask,
+                         Callback<void, const qcc::String&, const qcc::String&>* cb);
+
+    void SetPingReplyCallback(TransportMask transportMask,
+                              Callback<void, TransportMask, const qcc::String&, uint32_t>* cb);
+
+
+    /**
      * @brief Creat a virtual network interface. In normal cases WiFi-Direct
      * creates a soft-AP for a temporary network. In some OSs like WinRT, there is
      * no API to detect the presence of the soft-AP. Thus we need to manually create
@@ -384,6 +401,18 @@ class IpNameService {
      */
     QStatus CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn);
 
+    /**
+     * @brief Ping a name over the network interfaces opened by the specified
+     * transport.
+     *
+     * @param transportMask A bitmask containing the transport requesting the
+     *     ping on.
+     * @param name The name to ping.
+     * @param name The guid for this name
+     */
+    QStatus Ping(TransportMask transportMask, const qcc::String& name, const qcc::String& guid);
+
+    QStatus PingReply(TransportMask transportMask, const qcc::String& name, uint32_t replyCode);
     /**
      * @brief Handle the suspending event of the process. Release exclusive socket file descriptor and port.
      */

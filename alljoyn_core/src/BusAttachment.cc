@@ -1305,51 +1305,6 @@ QStatus BusAttachment::NameHasOwner(const char* name, bool& hasOwner)
     return status;
 }
 
-QStatus BusAttachment::Ping(const char* name, uint32_t timeout)
-{
-    if (!IsConnected()) {
-        return ER_BUS_NOT_CONNECTED;
-    }
-
-    if (!name) {
-        return ER_BAD_ARG_1;
-    }
-
-    Message reply(*this);
-    MsgArg args[2];
-    size_t numArgs = ArraySize(args);
-
-    MsgArg::Set(args, numArgs, "su", name, timeout);
-
-    const ProxyBusObject& alljoynObj = this->GetAllJoynProxyObj();
-    QStatus status = alljoynObj.MethodCall(org::alljoyn::Bus::InterfaceName, "Ping", args, numArgs, reply);
-    if (ER_OK == status) {
-        uint32_t disposition;
-        status = reply->GetArgs("u", &disposition);
-        if (ER_OK == status) {
-            switch (disposition) {
-            case ALLJOYN_PING_REPLY_SUCCESS:
-                break;
-
-            case ALLJOYN_PING_REPLY_FAILED:
-                status = ER_ALLJOYN_PING_FAILED;
-                break;
-
-            case ALLJOYN_PING_REPLY_TIMEOUT:
-                status = ER_TIMEOUT;
-                break;
-
-            default:
-                status = ER_BUS_UNEXPECTED_DISPOSITION;
-                break;
-            }
-        }
-    } else {
-        QCC_LogError(status, ("%s.Ping returned ERROR_MESSAGE (error=%s)", org::alljoyn::Bus::InterfaceName, reply->GetErrorDescription().c_str()));
-    }
-    return status;
-}
-
 QStatus BusAttachment::SetDaemonDebug(const char* module, uint32_t level)
 {
     if (!IsConnected()) {
@@ -2289,6 +2244,52 @@ QStatus BusAttachment::OnAppResume()
         }
     } else {
         QCC_LogError(status, ("%s.OnAppResume returned ERROR_MESSAGE (error=%s)", org::alljoyn::Bus::InterfaceName, reply->GetErrorDescription().c_str()));
+    }
+    return status;
+}
+
+QStatus BusAttachment::Ping(const char* name, uint32_t timeout)
+{
+    QCC_LogError(ER_OK, ("Inside BusAttachment::Ping() for name : %s", name));
+    if (!IsConnected()) {
+        return ER_BUS_NOT_CONNECTED;
+    }
+
+    if (!name) {
+        return ER_BAD_ARG_1;
+    }
+
+    Message reply(*this);
+    MsgArg args[2];
+    size_t numArgs = ArraySize(args);
+
+    MsgArg::Set(args, numArgs, "su", name, timeout);
+
+    const ProxyBusObject& alljoynObj = this->GetAllJoynProxyObj();
+    QStatus status = alljoynObj.MethodCall(org::alljoyn::Bus::InterfaceName, "Ping", args, numArgs, reply);
+    if (ER_OK == status) {
+        uint32_t disposition;
+        status = reply->GetArgs("u", &disposition);
+        if (ER_OK == status) {
+            switch (disposition) {
+            case ALLJOYN_PING_REPLY_SUCCESS:
+                break;
+
+            case ALLJOYN_PING_REPLY_FAILED:
+                status = ER_ALLJOYN_PING_FAILED;
+                break;
+
+            case ALLJOYN_PING_REPLY_TIMEOUT:
+                status = ER_TIMEOUT;
+                break;
+
+            default:
+                status = ER_BUS_UNEXPECTED_DISPOSITION;
+                break;
+            }
+        }
+    } else {
+        QCC_LogError(status, ("%s.Ping returned ERROR_MESSAGE (error=%s)", org::alljoyn::Bus::InterfaceName, reply->GetErrorDescription().c_str()));
     }
     return status;
 }

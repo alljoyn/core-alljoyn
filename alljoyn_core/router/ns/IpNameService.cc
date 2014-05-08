@@ -292,6 +292,57 @@ void IpNameService::SetCallback(TransportMask transportMask,
     m_pimpl->SetCallback(transportMask, cb);
 }
 
+void IpNameService::SetPingCallback(TransportMask transportMask,
+                                    Callback<void, const qcc::String&, const qcc::String&>* cb)
+{
+    //
+    // If the entry gate has been closed, we do not allow a SetCallback to actually
+    // set anything.  The singleton is going away and so we assume we are
+    // running __run_exit_handlers() so main() has returned.  We are definitely
+    // shutting down, and the process is going to exit, so tricking callers who
+    // may be temporarily running is okay.
+    //
+    // The gotcha is that if there is a valid callback set, and the caller is
+    // now setting the callback to NULL to prevent any new callbacks, the caller
+    // will expect that no callbacks will follow this call.  This is taken care
+    // of by calling SetCallback(NULL) on the private implemtation BEFORE
+    // setting m_destroyed in our destructor.  In other words, the possible set
+    // to NULL has already been done.
+    //
+    if (m_destroyed) {
+        return;
+    }
+
+    ASSERT_STATE("SetPingCallback");
+    m_pimpl->SetPingCallback(transportMask, cb);
+}
+
+void IpNameService::SetPingReplyCallback(TransportMask transportMask,
+                                         Callback<void, TransportMask, const qcc::String&, uint32_t>* cb)
+{
+    //
+    // If the entry gate has been closed, we do not allow a SetCallback to actually
+    // set anything.  The singleton is going away and so we assume we are
+    // running __run_exit_handlers() so main() has returned.  We are definitely
+    // shutting down, and the process is going to exit, so tricking callers who
+    // may be temporarily running is okay.
+    //
+    // The gotcha is that if there is a valid callback set, and the caller is
+    // now setting the callback to NULL to prevent any new callbacks, the caller
+    // will expect that no callbacks will follow this call.  This is taken care
+    // of by calling SetCallback(NULL) on the private implemtation BEFORE
+    // setting m_destroyed in our destructor.  In other words, the possible set
+    // to NULL has already been done.
+    //
+    if (m_destroyed) {
+        return;
+    }
+
+    ASSERT_STATE("SetPingCallback");
+    m_pimpl->SetPingReplyCallback(transportMask, cb);
+}
+
+
 QStatus IpNameService::CreateVirtualInterface(const qcc::IfConfigEntry& entry)
 {
     //
@@ -490,6 +541,40 @@ QStatus IpNameService::CancelAdvertiseName(TransportMask transportMask, const qc
 
     ASSERT_STATE("CancelAdvertiseName");
     return m_pimpl->CancelAdvertiseName(transportMask, wkn);
+}
+
+QStatus IpNameService::Ping(TransportMask transportMask, const qcc::String& name, const qcc::String& guid)
+{
+    //
+    // If the entry gate has been closed, we do not allow a Ping
+    // to actually ping anything.  The singleton is going away and so we assume
+    // we are running __run_exit_handlers() so main() has returned.  We are
+    // definitely shutting down, and the process is going to exit, so tricking
+    // callers who may be temporarily running is okay.
+    //
+    if (m_destroyed) {
+        return ER_OK;
+    }
+
+    ASSERT_STATE("Ping");
+    return m_pimpl->Ping(transportMask, name, guid);
+}
+
+QStatus IpNameService::PingReply(TransportMask transportMask, const qcc::String& name, uint32_t replyCode)
+{
+    //
+    // If the entry gate has been closed, we do not allow a Ping
+    // to actually ping anything.  The singleton is going away and so we assume
+    // we are running __run_exit_handlers() so main() has returned.  We are
+    // definitely shutting down, and the process is going to exit, so tricking
+    // callers who may be temporarily running is okay.
+    //
+    if (m_destroyed) {
+        return ER_OK;
+    }
+
+    ASSERT_STATE("Ping");
+    return m_pimpl->PingReply(transportMask, name, replyCode);
 }
 
 QStatus IpNameService::OnProcSuspend()

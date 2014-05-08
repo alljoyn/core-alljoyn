@@ -40,7 +40,7 @@
 #include <qcc/IfConfig.h>
 #include <qcc/time.h>
 #include <qcc/StringUtil.h>
-
+#include <qcc/GUID.h>
 #include <DaemonConfig.h>
 
 #include "IpNameServiceImpl.h"
@@ -457,16 +457,28 @@ bool IpNameServiceImplWildcardMatch(qcc::String str, qcc::String pat)
 const uint32_t IpNameServiceImpl::RETRY_INTERVALS[] = { 1, 2, 6, 18 };
 
 
+class IpNameServiceImpl::BurstExpiryHandler : public qcc::AlarmListener {
+  public:
+    BurstExpiryHandler() { }
+    void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
+
+};
+
+void IpNameServiceImpl::BurstExpiryHandler::AlarmTriggered(const Alarm& alarm, QStatus reason) {
+
+}
+
 IpNameServiceImpl::IpNameServiceImpl()
     : Thread("IpNameServiceImpl"), m_state(IMPL_SHUTDOWN), m_isProcSuspending(false),
-    m_terminal(false), m_protect_callback(false), m_timer(0), m_tDuration(DEFAULT_DURATION),
+    m_terminal(false), m_protect_callback(false), m_protect_ping_callback(false), m_protect_ping_reply_callback(false), m_timer(0), m_tDuration(DEFAULT_DURATION),
     m_tRetransmit(RETRANSMIT_TIME), m_tQuestion(QUESTION_TIME),
     m_modulus(QUESTION_MODULUS), m_retries(sizeof(RETRY_INTERVALS) / sizeof(RETRY_INTERVALS[0])),
     m_loopback(false), m_enableIPv4(false), m_enableIPv6(false),
     m_wakeEvent(), m_forceLazyUpdate(false),
     m_enabled(false), m_doEnable(false), m_doDisable(false),
     m_ipv4QuietSockFd(-1), m_ipv6QuietSockFd(-1),
-    m_burstResponseTimer("BurstResponseTimer", false, 1, false, 50)
+    m_burstResponseTimer("BurstResponseTimer", false, 1, false, 50),
+    burstExpiryHandler(new BurstExpiryHandler())
 {
     QCC_DbgHLPrintf(("IpNameServiceImpl::IpNameServiceImpl()"));
 
@@ -772,7 +784,7 @@ QStatus IpNameServiceImpl::CloseInterface(TransportMask transportMask, const qcc
     QCC_DbgHLPrintf(("IpNameServiceImpl::CloseInterface(%s)", name.c_str()));
 
     //
-    // Exactly one bit must be set in a transport mask in order to identify the
+    // Exactly one bit must be in set a transport mask in order to identify the
     // one transport (in the AllJoyn sense) that is making the request.
     //
     if (CountOnes(transportMask) != 1) {
@@ -1183,6 +1195,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces()"));
 
+    //qcc::SocketFd unicastsockFd;
     //
     // However desirable it may be, the decision to simply use an existing
     // open socket exposes us to system-dependent behavior.  For example,
@@ -1440,7 +1453,6 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
             assert(!"IpNameServiceImpl::LazyUpdateInterfaces(): Unexpected value in m_family (not AF_INET or AF_INET6");
             continue;
         }
-
         QStatus status = CreateUnicastSocket(entries[i].m_family, entries[i].m_addr, unicastsockFd);
         if (status != ER_OK) {
             QCC_DbgPrintf(("Failed to create unicast socket for MDNS responses."));
@@ -1828,10 +1840,81 @@ QStatus IpNameServiceImpl::SetCallback(TransportMask transportMask,
 
     return ER_OK;
 }
+QStatus IpNameServiceImpl::SetPingReplyCallback(TransportMask transportMask,
+                                                Callback<void, TransportMask, const qcc::String&, uint32_t>* cb) {
+    QCC_DbgPrintf(("IpNameServiceImpl::SetPingCallback()"));
+    //
+    // Exactly one bit must be set in a transport mask in order to identify the
+    // one transport (in the AllJoyn sense) that is making the request.
+    //
+    if (CountOnes(transportMask) != 1) {
+        QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::SetPingCallback(): Bad transport mask"));
+        return ER_BAD_TRANSPORT_MASK;
+    }
+
+    uint32_t i = IndexFromBit(transportMask);
+    assert(i < 16 && "IpNameServiceImpl::SetPingCallback(): Bad callback index");
+
+    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
+    m_mutex.Lock();
+    // Wait till the callback is in use.
+    while (m_protect_ping_callback) {
+        m_mutex.Unlock();
+        qcc::Sleep(2);
+        m_mutex.Lock();
+    }
+
+    Callback<void, TransportMask, const qcc::String&, uint32_t>* goner = m_ping_reply_callback[i];
+    m_ping_reply_callback[i] = NULL;
+    delete goner;
+    m_ping_reply_callback[i] = cb;
+
+    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
+    m_mutex.Unlock();
+
+    return ER_OK;               // TODO
+}
+
+QStatus IpNameServiceImpl::SetPingCallback(TransportMask transportMask,
+                                           Callback<void, const qcc::String&, const qcc::String&>* cb)
+{
+    QCC_DbgPrintf(("IpNameServiceImpl::SetPingCallback()"));
+    //
+    // Exactly one bit must be set in a transport mask in order to identify the
+    // one transport (in the AllJoyn sense) that is making the request.
+    //
+    if (CountOnes(transportMask) != 1) {
+        QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::SetPingCallback(): Bad transport mask"));
+        return ER_BAD_TRANSPORT_MASK;
+    }
+
+    uint32_t i = IndexFromBit(transportMask);
+    assert(i < 16 && "IpNameServiceImpl::SetPingCallback(): Bad callback index");
+
+    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
+    m_mutex.Lock();
+    // Wait till the callback is in use.
+    while (m_protect_ping_callback) {
+        m_mutex.Unlock();
+        qcc::Sleep(2);
+        m_mutex.Lock();
+    }
+
+    Callback<void, const qcc::String&, const qcc::String&>*  goner = m_pingcallback[i];
+    m_pingcallback[i] = NULL;
+    delete goner;
+    m_pingcallback[i] = cb;
+
+    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
+    m_mutex.Unlock();
+
+    return ER_OK;               // TODO
+}
 
 void IpNameServiceImpl::ClearCallbacks(void)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::ClearCallbacks()"));
+    // TODO Need to clear out any ping callbacks too here
 
     // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
@@ -2668,6 +2751,183 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
     return ER_OK;
 }
 
+QStatus IpNameServiceImpl::Ping(TransportMask transportMask, const qcc::String& name, const qcc::String& guid)
+{
+    QCC_DbgHLPrintf(("IpNameServiceImpl::Ping(0x%x, \"%s %s\")", transportMask, name.c_str(), guid.c_str()));
+    QCC_LogError(ER_OK, ("IpNameServiceImpl::Ping(0x%x, \"%s %s\")", transportMask, name.c_str(), guid.c_str()));
+    //
+    // Exactly one bit must be set in a transport mask in order to identify the
+    // one transport (in the AllJoyn sense) that is making the request.
+    //
+    if (CountOnes(transportMask) != 1) {
+        QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::Ping() : Bad transport mask"));
+        return ER_BAD_TRANSPORT_MASK;
+    }
+
+    //
+    // Send a request over unicast channel to the destination whose name matches a GUID we have seen
+    //
+    {
+        int32_t id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
+        MDNSHeader mdnsHeader(id, MDNSHeader::MDNS_QUERY);
+        MDNSQuestion mdnsQuestion("_alljoyn._tcp._local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET);
+        // MDNSSearchRData* searchRData = new MDNSSearchRData(name);
+        //TODO: Will this be 120 ttl?
+        // MDNSResourceRecord searchRecord("search.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
+
+        MDNSSearchRData* searchRData = new MDNSSearchRData(name);
+        MDNSResourceRecord searchRecord("search.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
+
+        MDNSPingRData* pingRData = new MDNSPingRData(name);
+        //TODO: Will this be 120 ttl?
+        MDNSResourceRecord pingRecord("ping.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingRData);
+
+
+        MDNSSenderRData* refRData =  new MDNSSenderRData();
+        refRData->SetSearchID(id);
+        refRData->SetTransportMask(transportMask);
+        refRData->SetGuid(m_guid);
+        MDNSResourceRecord refRecord("sender-info.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
+
+        MDNSPacket mdnsPacket;
+        mdnsPacket->SetHeader(mdnsHeader);
+        mdnsPacket->AddQuestion(mdnsQuestion);
+        mdnsPacket->AddAdditionalRecord(searchRecord);
+        mdnsPacket->AddAdditionalRecord(pingRecord);
+        mdnsPacket->AddAdditionalRecord(refRecord);
+        mdnsPacket->SetVersion(2, 2);
+
+        /* First we check if the name passed is a unique name or well known name */
+        // This was already done in AllJoynObj. Here we have a name and guid that are valid
+
+        /* If it is a unique name extract the GUID */
+        //qcc::String guidStr = name.substr(1, GUID128::SIZE);
+
+        /*Set the destination for the presence query here */
+        std::unordered_map<qcc::String, PeerInfo, Hash, Equal>::iterator it = PeerInfoMap.find(guid);
+        if (it != PeerInfoMap.end()) {
+            QCC_LogError(ER_OK, ("Found GUID %s in PeerInfoMap", guid.c_str()));
+            mdnsPacket->SetDestination(it->second.unicastIPV4Info);
+            QCC_LogError(ER_OK, ("Sending PING to %s ", it->second.unicastIPV4Info.ToString().c_str()));
+        } else {
+            return ER_ALLJOYN_PING_REPLY_UNREACHABLE;
+        }
+
+        // TO DO use queueprotocol message directly since we don't need tp burst this
+        QueueProtocolMessage(Packet::cast(mdnsPacket));
+        //TriggerTransmission(Packet::cast(mdnsPacket));
+
+    }
+    return ER_OK;
+}
+
+
+QStatus IpNameServiceImpl::PingReply(TransportMask transportMask, const qcc::String& name, uint32_t replyCode)
+{
+    QCC_DbgHLPrintf(("IpNameServiceImpl::Ping(0x%x, \"%s %d\")", transportMask, name.c_str(), replyCode));
+    QCC_LogError(ER_OK, ("IpNameServiceImpl::PingReply(0x%x, \"%s %d\")", transportMask, name.c_str(), replyCode));
+
+
+    //
+    // Exactly one bit must be set in a transport mask in order to identify the
+    // one transport (in the AllJoyn sense) that is making the request.
+    //
+    if (CountOnes(transportMask) != 1) {
+        QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::PingReply() : Bad transport mask"));
+        return ER_BAD_TRANSPORT_MASK;
+    }
+
+    uint32_t transportIndex = IndexFromBit(transportMask);
+    assert(transportIndex < 16 && "IpNameServiceImpl::AdvertiseName(): Bad transport index");
+
+    if (m_state != IMPL_RUNNING) {
+        QCC_DbgPrintf(("IpNameServiceImpl::PingReply(): Not IMPL_RUNNING"));
+        return ER_FAIL;
+    }
+    //
+    // Send a request over unicast channel to the destination whose name matches a GUID we have seen
+    //
+    {
+        int32_t id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
+        MDNSHeader mdnsHeader(id, MDNSHeader::MDNS_RESPONSE);
+
+        MDNSPtrRData* ptrRdataSd = new MDNSPtrRData();
+        ptrRdataSd->SetPtrDName("_alljoyn._tcp.local.");
+        MDNSResourceRecord ptrRecordSd("_services._dns-sd._udp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRdataSd);
+
+        MDNSPtrRData* ptrRdata = new MDNSPtrRData();
+        ptrRdata->SetPtrDName(m_guid + "._alljoyn._tcp.local.");
+        MDNSResourceRecord ptrRecord("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRdata);
+
+        MDNSSrvRData* srvRdata = new MDNSSrvRData(1 /*priority */, 1 /* weight */,
+                                                  m_reliableIPv4Port[transportIndex] /* port */, m_guid + ".local." /* target */);
+        MDNSResourceRecord srvRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, 120, srvRdata);
+
+        MDNSTextRData* txtRdata = new MDNSTextRData();
+        // TODO: Check these values.
+        if (m_reliableIPv6Port[transportIndex]) {
+            txtRdata->SetValue("r6port", m_reliableIPv6Port[transportIndex]);
+        }
+        MDNSResourceRecord txtRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRdata);
+
+
+        /* // TO DO Add rest of the names that are being advertised. W
+           // We are going to add an advertise record
+         */
+        //Similar to advertise record with only one name
+        MDNSPingReplyRData* pingReplyRData = new MDNSPingReplyRData();
+        pingReplyRData->SetWellKnownName(name);
+        pingReplyRData->SetReplyCode(replyCode == 1 ? "ALLJOYN_PING_REPLY_SUCCESS" : "ALLJOYN_PING_REPLY_FAILED");
+
+        MDNSResourceRecord pingReplyRecord("ping-reply.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingReplyRData);
+
+        MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
+        MDNSResourceRecord advertiseRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
+        advRData->AddName(name);
+
+        MDNSSenderRData* refRData =  new MDNSSenderRData();
+        refRData->SetSearchID(id);
+        refRData->SetGuid(m_guid);
+        refRData->SetTransportMask(transportMask);
+
+        MDNSResourceRecord refRecord("sender-info.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
+
+        MDNSARData* aRData = new MDNSARData();
+        MDNSResourceRecord aRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, aRData);
+
+        MDNSAAAARData* aaaaRData = new MDNSAAAARData();
+        MDNSResourceRecord aaaaRecord(m_guid + ".local.", MDNSResourceRecord::AAAA, MDNSResourceRecord::INTERNET, 120, aaaaRData);
+
+        m_mutex.Lock();
+        for (std::multimap<qcc::String, qcc::String>::iterator prit = PingRequestsMap.begin();
+             prit != PingRequestsMap.end();
+             ++prit) {
+            if (prit->first == name) {
+                std::unordered_map<qcc::String, PeerInfo, Hash, Equal>::iterator it = PeerInfoMap.find(prit->second);
+                if (it != PeerInfoMap.end()) {
+                    QCC_LogError(ER_OK, ("Found GUID %s in PeerInfoMap with address %s", it->first.c_str(), it->second.unicastIPV4Info.ToString().c_str()));
+                    MDNSPacket mdnsPacket;
+                    mdnsPacket->SetHeader(mdnsHeader);
+                    mdnsPacket->AddAnswer(ptrRecordSd);
+                    mdnsPacket->AddAnswer(ptrRecord);
+                    mdnsPacket->AddAnswer(srvRecord);
+                    mdnsPacket->AddAnswer(txtRecord);
+                    mdnsPacket->AddAdditionalRecord(pingReplyRecord);
+                    mdnsPacket->AddAdditionalRecord(advertiseRecord);
+                    mdnsPacket->AddAdditionalRecord(refRecord);
+                    mdnsPacket->AddAdditionalRecord(aRecord);
+                    mdnsPacket->AddAdditionalRecord(aaaaRecord);
+                    mdnsPacket->SetVersion(2, 2);
+                    mdnsPacket->SetDestination(it->second.unicastIPV4Info);
+                    QueueProtocolMessage(Packet::cast(mdnsPacket));
+                    QCC_LogError(ER_OK, ("Done sending to Peer address %s", it->second.unicastIPV4Info.ToString().c_str()));
+                }
+            }
+        }
+        m_mutex.Unlock();
+    }
+    return ER_OK;
+}
 QStatus IpNameServiceImpl::OnProcSuspend()
 {
     if (!m_isProcSuspending) {
@@ -2804,7 +3064,6 @@ void IpNameServiceImpl::SendProtocolMessage(
     uint32_t interfaceIndex)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::SendProtocolMessage()"));
-
 
 #if HAPPY_WANDERER
     if (Wander() == false) {
@@ -3456,7 +3715,6 @@ bool IpNameServiceImpl::SameNetwork(uint32_t interfaceAddressPrefixLen, qcc::IPA
 void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly()"));
-
     //
     // Sending messages quietly is a "new thing" so we don't bother to send
     // down-version messages quietly since nobody will have a need for them.
@@ -4277,6 +4535,7 @@ void* IpNameServiceImpl::Run(void* arg)
                 bool destIsIPv4Broadcast = false;
 
                 for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
+
                     if (m_liveInterfaces[i].m_multicastMDNSsockFd == sockFd) {
                         recv_port = m_liveInterfaces[i].m_multicastMDNSPort;
                         if_index = m_liveInterfaces[i].m_index;
@@ -4289,6 +4548,8 @@ void* IpNameServiceImpl::Run(void* arg)
                     if (m_liveInterfaces[i].m_unicastsockFd  == sockFd) {
                         recv_port = m_liveInterfaces[i].m_unicastPort;
                         if_index = m_liveInterfaces[i].m_index;
+                        //printf("\n Message received over interface : %s", m_liveInterfaces[i].m_interfaceName.c_str());
+
                     }
 
                     if (!destIsIPv4Broadcast && m_liveInterfaces[i].m_address.IsIPv4() && m_liveInterfaces[i].m_prefixlen != static_cast<uint32_t>(-1)) {
@@ -4305,17 +4566,17 @@ void* IpNameServiceImpl::Run(void* arg)
                         }
                     }
                 }
-
                 QCC_DbgHLPrintf(("Processing packet on interface index %d that was received on index %d from %s:%u to %s:%u",
                                  if_index, localInterfaceIndex, remoteAddress.ToString().c_str(), remotePort, localAddress.ToString().c_str(), recv_port));
-                if (if_index != localInterfaceIndex) {
+                /*
+                   if (if_index != localInterfaceIndex) {
                     if (localAddress.ToString() == IPV4_MDNS_MULTICAST_GROUP ||
                         localAddress.ToString() == IPV6_MDNS_MULTICAST_GROUP ||
                         localAddress.ToString() == IPV4_ALLJOYN_MULTICAST_GROUP ||
-#if WORKAROUND_2_3_BUG
+                   #if WORKAROUND_2_3_BUG
                         localAddress.ToString() == IPV4_MULTICAST_GROUP ||
                         localAddress.ToString() == IPV6_MULTICAST_GROUP ||
-#endif
+                   #endif
                         localAddress.ToString() == IPV4_ALLJOYN_MULTICAST_GROUP) {
                         QCC_DbgHLPrintf(("Ignoring  multicast packet that was received on a different interface"));
                         continue;
@@ -4325,8 +4586,8 @@ void* IpNameServiceImpl::Run(void* arg)
                         continue;
                     }
 
-                }
-
+                   }
+                 */
                 //
                 // We got a message over the multicast channel.  Deal with it.
                 //
@@ -5570,16 +5831,94 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
         mdnsPacket->GetVersion(nsVersion, msgVersion);
 
         if (mdnsPacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
-            HandleProtocolQuery(mdnsPacket);
+            HandleProtocolQuery(mdnsPacket, recv_port);
         } else {
-            HandleProtocolResponse(mdnsPacket);
+            HandleProtocolResponse(mdnsPacket, recv_port);
         }
     }
 }
 
-
-void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket)
+bool IpNameServiceImpl::AddToPingRequestsMap(const qcc::String& name, const qcc::String& guid)
 {
+    for (std::multimap<qcc::String, qcc::String>::iterator it = PingRequestsMap.begin(); it != PingRequestsMap.end(); ++it) {
+        if (it->first == name && it->second == guid) {
+            QCC_LogError(ER_OK, ("Ping already requested for %s from %s", name.c_str(), guid.c_str()));
+            return false;
+        }
+    }
+    PingRequestsMap.insert(std::pair<qcc::String, qcc::String>(name, guid));
+    return true;
+}
+void IpNameServiceImpl::PrintPeerInfoMap()
+{
+    std::unordered_map<qcc::String, PeerInfo, Hash, Equal>::iterator it = PeerInfoMap.begin();
+    while (it != PeerInfoMap.end()) {
+        //QCC_LogError(ER_OK,("Guid: %s , IPv4: %s , IPV6 :%s ",it->first.c_str(), it->second.unicastIPV4Info.ToString().c_str(), it->second.unicastIPV6Info.ToString().c_str()));
+        printf("\nGuid :%s , IPv4: %s , IPV6 :%s \n", it->first.c_str(), it->second.unicastIPV4Info.ToString().c_str(), it->second.unicastIPV6Info.ToString().c_str());
+        ++it;
+    }
+}
+
+bool IpNameServiceImpl::AddToPeerInfoMap(const qcc::String& guid, const qcc::String& ipv4addr, const qcc::String& ipv6addr, uint16_t r4port, uint16_t r6port)
+{
+    std::unordered_map<qcc::String, PeerInfo, Hash, Equal>::iterator it = PeerInfoMap.find(guid);
+    if (it != PeerInfoMap.end()) {
+        PeerInfo peerInfo(ipv4addr, ipv6addr, r4port, r6port);
+        it->second = peerInfo;
+    } else {
+        PeerInfoMap.insert(std::pair<qcc::String, PeerInfo>(guid, PeerInfo(ipv4addr, ipv6addr, r4port, r6port)));
+    }
+    return true;
+}
+
+bool IpNameServiceImpl::RemoveFromPeerInfoMap(const qcc::String& guid) {
+    std::unordered_map<qcc::String, PeerInfo, Hash, Equal>::iterator it = PeerInfoMap.find(guid);
+    if (it != PeerInfoMap.end()) {
+        PeerInfoMap.erase(guid);
+        return true;
+    }
+    return false;
+
+}
+
+bool IpNameServiceImpl::UpdateMDNSPacketTracker(qcc::String guid, uint16_t burstId)
+{
+    //QCC_LogError(ER_OK, ("IpNameServiceImpl::UpdateMDNSPacketTracker(%s,%d)", guid.c_str(), burstId));
+
+    //
+    // We check for the entry in MDNSPacketTracker
+    // If we find it we return false since that implies that we have seen a packet from this burst
+    // If we do not find it we return true that implies that we have not seen a packet from this burst.
+    //     We add/update the guid with this burst id
+    //
+    unordered_map<qcc::String, uint16_t, Hash, Equal>::iterator it = MDNSPacketTracker.find(guid);
+    // Check if the GUID is present in the Map
+    // If Yes check if the incoming burst id is same or lower
+    if (it != MDNSPacketTracker.end()) {
+        // Drop the packet if burst id is lower or same
+        if (it->second >= burstId) {
+            //QCC_LogError(ER_OK,("Dropping packet from GUID : %s with BURST ID : %d",guid.c_str(),burstId));
+            //printf("\nDropping packet from GUID : %s with BURST ID : %d",guid.c_str(),burstId);
+            return false;
+        }
+        // Update the last seen burst id from this guid
+        else {
+            it->second = burstId;
+            return true;
+        }
+    }
+    // GUID is not present in the Map so we add the entry
+    else {
+        MDNSPacketTracker[guid] = burstId;
+        return true;
+    }
+    return true;
+}
+
+
+void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t recvPort)
+{
+    bool shouldProcessPacket = true;
     //Check if someone is providing info. about an alljoyn service.
     MDNSResourceRecord* ptrRecord;
     if (!mdnsPacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &ptrRecord)) { //TODO also need to use .udp.local. Transport mask related
@@ -5602,6 +5941,64 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket)
         QCC_DbgPrintf(("Ignoring my own response"));
         return;
     }
+
+    //
+    // We first check if this packet was received over MDNS multicast port 5353
+    // If Yes, only then are we interested in keeping track of the burst ID.
+    //     We check if we have seen this packet with burst id from this GUID
+    //     If Yes, we do not process this packet
+    //     If No, we process this packet
+    // If No, This is a unicast response in which case we need not keep track of Burst IDs
+    //
+    if (recvPort == MULTICAST_MDNS_PORT) {
+        uint16_t searchID = refrdata->GetSearchID();
+        // We need to check if this packet is from a burst which we have seen before in which case we will ignore it
+        m_mutex.Lock();
+        shouldProcessPacket = UpdateMDNSPacketTracker(refrdata->GetGuid(), searchID);
+        if (!shouldProcessPacket) {
+            m_mutex.Unlock();
+            return;
+        }
+        m_mutex.Unlock();
+    } else {
+        MDNSResourceRecord* pingReplyRecord;
+        MDNSPingReplyRData* pingrdata;
+        if (mdnsPacket->GetAdditionalRecord("ping-reply.", MDNSResourceRecord::TXT, &pingReplyRecord)) {
+            QCC_LogError(ER_OK, ("Recevied PING-REPLY over unicast for name"));
+            pingrdata = static_cast<MDNSPingReplyRData*>(pingReplyRecord->GetRData());
+            QCC_LogError(ER_OK, ("Recieved a unicast ping responce for name %s", pingrdata->GetWellKnownName().c_str()));
+
+            /* We have got a unicast ping request which we need to send up to AllJoyn Object*/
+            TransportMask transportMask = refrdata->GetTransportMask();
+            uint32_t transportIndex;
+
+            if (CountOnes(transportMask) != 1) {
+                QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::HandleProtocolResponse(): Bad transport mask"));
+                return;
+            }
+            transportIndex = IndexFromBit(transportMask);
+            assert(transportIndex < 16 && "IpNameServiceImpl::SetCallback(): Bad callback index");
+
+            m_mutex.Lock();
+            if (m_ping_reply_callback[transportIndex] == NULL) {
+                QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery(): No callback for transport, so nothing to do"));
+                // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
+                m_mutex.Unlock();
+                return;
+            }
+            if (m_ping_reply_callback[transportIndex]) {
+                m_protect_ping_reply_callback = true;
+                m_mutex.Unlock();
+                QCC_LogError(ER_OK, ("Calling PING-REPLY TCPTransport"));
+                (*m_ping_reply_callback[transportIndex])(transportMask, pingrdata->GetWellKnownName(), pingrdata->GetReplyCode() == "ALLJOYN_PING_REPLY_SUCCESS" ? 1 : 2);
+                m_mutex.Lock();
+                m_protect_ping_reply_callback = false;
+            }
+            m_mutex.Unlock();
+            return;
+        }
+    }
+
 
     MDNSPtrRData* ptrrdata = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
     assert(ptrrdata);
@@ -5632,10 +6029,27 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket)
         r6addr = aaaaRData->GetAddr();
     }
 
+    m_mutex.Lock();
+
+    //
+    // Check if the packet was received over MDNS unicast port or multicast MDNS port
+    // After we have updated the Packet tracker with the burst ids we need to populate
+    // our structure that keeps track of unicast ports of services so that they can
+    // be polled for presence
+    //
+    //PrintPeerInfoMap();
+    AddToPeerInfoMap(refrdata->GetGuid(),
+                     r4addr,
+                     r6addr,
+                     refrdata->GetIPV4ResponsePort(),
+                     refrdata->GetIPV6ResponsePort());
+    //PrintPeerInfoMap();
+    m_mutex.Unlock();
+
     MDNSResourceRecord* advRecord;
-    bool advertiseFound = mdnsPacket->GetAdditionalRecord("advertise.", MDNSResourceRecord::TXT, &advRecord);
-    if (!advertiseFound) {
+    if (!mdnsPacket->GetAdditionalRecord("advertise.", MDNSResourceRecord::TXT, &advRecord)) {
         QCC_DbgPrintf(("Ignoring response without advertisement info"));
+        QCC_LogError(ER_OK, ("No advertise record "));
         return;
     }
     MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
@@ -5738,7 +6152,6 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket)
     char addrbuf[192];
     addrbuf[0] = '\0';
 
-    char addr4buf[36];
     char addr6buf[60];
 
     bool needComma = false;
@@ -5813,9 +6226,10 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket)
 
 }
 
-void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket) {
+void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recvPort) {
     //Query
     bool isAllJoynQuery = true;
+    bool shouldProcessPacket;
     //Check if someone is asking about an alljoyn service.
     MDNSQuestion* question;
     for (int i = 0; i < mdnsPacket->GetNumQuestions(); i++) {
@@ -5829,6 +6243,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket) {
         QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery Ignoring Non-AllJoyn related query"));
         return;
     }
+
     MDNSResourceRecord* searchRecord;
     bool searchFound = mdnsPacket->GetAdditionalRecord("search.", MDNSResourceRecord::TXT, &searchRecord);
     if (!searchFound) {
@@ -5849,16 +6264,110 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket) {
     }
     MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
 
+
     if (!refRData) {
         QCC_DbgPrintf(("Ignoring query with invalid sender info"));
         return;
     }
+
+    MDNSResourceRecord* pingRecord;
+    MDNSPingRData* pingrdata;
+
+    m_mutex.Lock();
+    if (recvPort == MULTICAST_MDNS_PORT) {
+        mdnsPacket->GetAdditionalRecord("search.", MDNSResourceRecord::TXT, &searchRecord);
+        searchrdata = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
+        uint16_t searchID = refRData->GetSearchID();
+        shouldProcessPacket = UpdateMDNSPacketTracker(refRData->GetGuid(), searchID);
+        if (!shouldProcessPacket) {
+            m_mutex.Unlock();
+            return;
+        }
+    } else {
+        mdnsPacket->GetAdditionalRecord("ping.", MDNSResourceRecord::TXT, &pingRecord);
+        pingrdata = static_cast<MDNSPingRData*>(pingRecord->GetRData());
+        QCC_LogError(ER_OK, ("Recieved a unicast request for name %s", pingrdata->GetWellKnownName().c_str()));
+
+        AddToPeerInfoMap(refRData->GetGuid(),
+                         refRData->GetIPV4ResponseAddr(),
+                         refRData->GetIPV6ResponseAddr(),
+                         refRData->GetIPV4ResponsePort(),
+                         refRData->GetIPV6ResponsePort());
+
+        AddToPingRequestsMap(pingrdata->GetWellKnownName(), refRData->GetGuid());
+
+        m_mutex.Unlock();
+
+        /* We have got a unicast ping request which we need to send up to AllJoyn Object*/
+        TransportMask transportMask = refRData->GetTransportMask();
+        uint32_t transportIndex;
+
+        if (CountOnes(transportMask) != 1) {
+            QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::HandleProtocolQuery(): Bad transport mask"));
+            return;
+        }
+
+        transportIndex = IndexFromBit(transportMask);
+        assert(transportIndex < 16 && "IpNameServiceImpl::SetCallback(): Bad callback index");
+
+        //
+        // If there is no callback for the provided transport, we can't tell the
+        // user anything about what is going on the net, so it's pointless to go any
+        // further.
+        //
+        m_mutex.Lock();
+        if (m_pingcallback[transportIndex] == NULL) {
+            QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery(): No callback for transport, so nothing to do"));
+            // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
+            m_mutex.Unlock();
+            return;
+        }
+        if (m_pingcallback[transportIndex]) {
+            m_protect_ping_callback = true;
+            m_mutex.Unlock();
+            (*m_pingcallback[transportIndex])(pingrdata->GetWellKnownName(), refRData->GetGuid());
+            m_mutex.Lock();
+            m_protect_ping_callback = false;
+        }
+        m_mutex.Unlock();
+        return;
+    }
+    m_mutex.Unlock();
+
+
     if (refRData->GetGuid() == m_guid) {
         QCC_DbgPrintf(("Ignoring my own query"));
         return;
     }
+    //QCC_LogError(ER_OK, ("IPv4 port in the query : %d",refRData->GetIPV4ResponsePort()));
+    //QCC_LogError(ER_OK, ("IPv6  port in the query : %d",refRData->GetIPV6ResponsePort()));
+    /*
+       m_mutex.Lock();
+       //
+       // We first check if this packet was received over MDNS multicast port 5353
+       // If Yes, only then are we interested in keeping track of the burst ID.
+       //     We check if we have seen this packet with burst id from this GUID
+       //     If Yes, we do not process this packet
+       //     If No, we process this packet
+       // If No, This is a unicast response in which case we need not keep track of Burst IDs
+       //
+       if (recvPort == MULTICAST_MDNS_PORT) {
+        uint16_t searchID = refRData->GetSearchID();
+        // We need to check if this packet is from a burst which we have seen before in which case we will ignore it
+        shouldProcessPacket = UpdateMDNSPacketTracker(refRData->GetGuid(), searchID);
+        if (!shouldProcessPacket) {
+             m_mutex.Unlock();
+             return;
+        }
+       } else {
+       QCC_LogError(ER_OK,("Recieved a unicast request for name %s",searchrdata->GetWellKnownName().c_str()));
+       }
+
+       m_mutex.Unlock();
+     */
+
     String wkn = searchrdata->GetWellKnownName().c_str();
-//
+    //
     // There are at least two threads wandering through the advertised list.
     //
     // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
@@ -6179,11 +6688,16 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
         if (mdnspacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
             m_mutex.Lock();
             QueueProtocolMessage(brh_ptr->packet);
+            //	    if (mdnspacket->DestinationSet()){
+            // QCC_LogError(ER_OK,("Outgoing unicast packet to %s",mdnspacket->GetDestination().ToString().c_str()));
+            //brh_ptr->burstResponseCount = 3;
+            //} else {
             brh_ptr->burstResponseCount++;
             uint32_t count = BURST_RESPONSE_INTERVAL;
             AlarmListener* burstResponceTimerListener = this;
             qcc::Alarm startBurstAlarm(count, burstResponceTimerListener, context);
             m_burstResponseTimer.AddAlarm(startBurstAlarm);
+            //}
             m_mutex.Unlock();
         } else {
             MDNSResourceRecord* advRecord;

@@ -344,6 +344,14 @@ class IPEndpoint {
     bool operator==(const qcc::IPEndpoint& other) const { return ((addr == other.addr) && (port == other.port)); }
 
     /**
+     * Assignment operator
+     * @param The IPEndpoint being copied to this one
+     * @return true iff other equals this IPAddress.
+     */
+    //IPEndpoint& operator=(const qcc::IPEndpoint& other);
+
+
+    /**
      * Human readable version of IPEndpoint.
      */
     qcc::String ToString() const;
