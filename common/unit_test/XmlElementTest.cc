@@ -107,7 +107,7 @@ TEST(XmlElement, GetChildren_of_root_node)
 
     const std::vector<XmlElement*>& children = root.GetChildren();
 
-    EXPECT_EQ(1, children.size());
+    EXPECT_EQ(1U, children.size());
     EXPECT_STREQ("foo", children[0]->GetName().c_str());
 
     const std::vector<XmlElement*>& children2 = foo.GetChildren();

@@ -596,12 +596,12 @@ TEST(UARTFuzzTest, DISABLED_uart_fuzz_test_recoverable)
     for (int iter = 0; iter < 2000; iter++) {
         printf("Iteration %d\n", iter);
         h1.PushBytes(txBuffer, sizeof(txBuffer), x);
-        EXPECT_EQ(x, 1600);
+        EXPECT_EQ(x, 1600U);
         h0.PullBytes(rxBuffer, sizeof(rxBuffer), x);
-        ASSERT_EQ(x, 1600);
+        ASSERT_EQ(x, 1600U);
         if (memcmp(txBuffer, rxBuffer, sizeof(txBuffer)) != 0) {
             printf("Failed Iteration %d\n", iter);
-            for (int ii = 0; ii < sizeof(rxBuffer); ii++) {
+            for (size_t ii = 0; ii < sizeof(rxBuffer); ii++) {
                 if (txBuffer[ii] != rxBuffer[ii]) {
                     printf("%d %X %X\n", ii, txBuffer[ii], rxBuffer[ii]);
                 }
