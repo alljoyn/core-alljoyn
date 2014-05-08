@@ -28,9 +28,9 @@
 using namespace ajn;
 using namespace qcc;
 
-const char* interface1 = "org.alljoyn.alljoyn_test.interface1";
-const char* interface2 = "org.alljoyn.alljoyn_test.interface2";
-const char* object_path = "/org/alljoyn/alljoyn_test";
+static const char* interface1 = "org.alljoyn.alljoyn_test.interface1";
+static const char* interface2 = "org.alljoyn.alljoyn_test.interface2";
+static const char* object_path = "/org/alljoyn/alljoyn_test";
 
 class SvcTestObject : public BusObject {
 
@@ -1777,11 +1777,11 @@ class SignalSecurityTestObject : public BusObject {
     InterfaceDescription& intf;
 };
 
-class SignalReceiver : public MessageReceiver {
+class ObjectSecurityTestSignalReceiver : public MessageReceiver {
 
   public:
 
-    SignalReceiver() {
+    ObjectSecurityTestSignalReceiver() {
         signalReceived = false;
         msgEncrypted = false;
     }
@@ -1835,9 +1835,9 @@ TEST_F(ObjectSecurityTest, Test20) {
     clienttestIntf->Activate();
     const InterfaceDescription::Member*  signal_member = clienttestIntf->GetMember("my_signal");
 
-    SignalReceiver signalReceiver;
+    ObjectSecurityTestSignalReceiver signalReceiver;
     status = clientbus.RegisterSignalHandler(&signalReceiver,
-                                             static_cast<MessageReceiver::SignalHandler>(&SignalReceiver::SignalHandler),
+                                             static_cast<MessageReceiver::SignalHandler>(&ObjectSecurityTestSignalReceiver::SignalHandler),
                                              signal_member,
                                              NULL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -1906,9 +1906,9 @@ TEST_F(ObjectSecurityTest, Test21) {
     clienttestIntf->Activate();
     const InterfaceDescription::Member*  signal_member = clienttestIntf->GetMember("my_signal");
 
-    SignalReceiver signalReceiver;
+    ObjectSecurityTestSignalReceiver signalReceiver;
     status = clientbus.RegisterSignalHandler(&signalReceiver,
-                                             static_cast<MessageReceiver::SignalHandler>(&SignalReceiver::SignalHandler),
+                                             static_cast<MessageReceiver::SignalHandler>(&ObjectSecurityTestSignalReceiver::SignalHandler),
                                              signal_member,
                                              NULL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -1978,9 +1978,9 @@ TEST_F(ObjectSecurityTest, Test22) {
     clienttestIntf->Activate();
     const InterfaceDescription::Member*  signal_member = clienttestIntf->GetMember("my_signal");
 
-    SignalReceiver signalReceiver;
+    ObjectSecurityTestSignalReceiver signalReceiver;
     status = clientbus.RegisterSignalHandler(&signalReceiver,
-                                             static_cast<MessageReceiver::SignalHandler>(&SignalReceiver::SignalHandler),
+                                             static_cast<MessageReceiver::SignalHandler>(&ObjectSecurityTestSignalReceiver::SignalHandler),
                                              signal_member,
                                              NULL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -2049,9 +2049,9 @@ TEST_F(ObjectSecurityTest, Test23) {
     clienttestIntf->Activate();
     const InterfaceDescription::Member*  signal_member = clienttestIntf->GetMember("my_signal");
 
-    SignalReceiver signalReceiver;
+    ObjectSecurityTestSignalReceiver signalReceiver;
     status = clientbus.RegisterSignalHandler(&signalReceiver,
-                                             static_cast<MessageReceiver::SignalHandler>(&SignalReceiver::SignalHandler),
+                                             static_cast<MessageReceiver::SignalHandler>(&ObjectSecurityTestSignalReceiver::SignalHandler),
                                              signal_member,
                                              NULL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -2120,9 +2120,9 @@ TEST_F(ObjectSecurityTest, Test24) {
     clienttestIntf->Activate();
     const InterfaceDescription::Member*  signal_member = clienttestIntf->GetMember("my_signal");
 
-    SignalReceiver signalReceiver;
+    ObjectSecurityTestSignalReceiver signalReceiver;
     status = clientbus.RegisterSignalHandler(&signalReceiver,
-                                             static_cast<MessageReceiver::SignalHandler>(&SignalReceiver::SignalHandler),
+                                             static_cast<MessageReceiver::SignalHandler>(&ObjectSecurityTestSignalReceiver::SignalHandler),
                                              signal_member,
                                              NULL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -2192,9 +2192,9 @@ TEST_F(ObjectSecurityTest, Test25) {
     clienttestIntf->Activate();
     const InterfaceDescription::Member*  signal_member = clienttestIntf->GetMember("my_signal");
 
-    SignalReceiver signalReceiver;
+    ObjectSecurityTestSignalReceiver signalReceiver;
     status = clientbus.RegisterSignalHandler(&signalReceiver,
-                                             static_cast<MessageReceiver::SignalHandler>(&SignalReceiver::SignalHandler),
+                                             static_cast<MessageReceiver::SignalHandler>(&ObjectSecurityTestSignalReceiver::SignalHandler),
                                              signal_member,
                                              NULL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
