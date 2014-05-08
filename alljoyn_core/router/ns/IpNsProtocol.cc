@@ -2095,6 +2095,11 @@ uint16_t MDNSTextRData::GetNumFields() const
     return m_fields.size();
 }
 
+const std::map<qcc::String, qcc::String>& MDNSTextRData::GetFields() const
+{
+    return m_fields;
+}
+
 void MDNSTextRData::SetValue(String key, String value)
 {
     m_fields[key] = value;

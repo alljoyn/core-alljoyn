@@ -40,6 +40,7 @@
 #include "NameTable.h"
 #include "RuleTable.h"
 #include "Transport.h"
+#include "ns/IpNameService.h"
 
 namespace ajn {
 
@@ -50,7 +51,7 @@ class BusController;
  * BusObject responsible for implementing the standard AllJoyn interface org.alljoyn.sl.
  */
 class SessionlessObj : public BusObject, public NameListener, public SessionListener, public SessionPortListener,
-    public BusAttachment::JoinSessionAsyncCB, public qcc::AlarmListener {
+    public BusAttachment::JoinSessionAsyncCB, public qcc::AlarmListener, public IpNameServiceListener {
 
   public:
     /**
@@ -496,6 +497,10 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * Schedule work to be done for a remote cache.
      */
     QStatus ScheduleWork(RemoteCache& cache, bool addAlarm = true);
+
+    bool QueryHandler(TransportMask transport, MDNSPacket mdnsPacket, uint16_t recvPort,
+                      const qcc::String& guid, const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6);
+    bool ResponseHandler(TransportMask transport, MDNSPacket mdnsPacket, uint16_t recvPort);
 };
 
 }

@@ -67,27 +67,6 @@ class TransportListener {
                             uint8_t timer) = 0;
 
     /**
-     * Called when a transport has received a ping call.
-     *
-     * @param transport Transport that received the ping call.
-     * @param name      The bus name to ping.
-     */
-    virtual void Ping(TransportMask transport,
-                      const qcc::String& name,
-                      const qcc::String& senderGuid) = 0;
-
-    /**
-     * Called when a transport has received a ping reply.
-     *
-     * @param transport Transport that received the ping reply.
-     * @param name      The bus name that responded to the ping.
-     * @param replyCode The reply code (success, failed) // TODO
-     */
-    virtual void PingReply(TransportMask transport,
-                           const qcc::String& name,
-                           uint32_t replyCode) = 0;
-
-    /**
      * Called when a transport gets a surprise disconnect from a remote bus.
      *
      * @param busAddr       The address of the bus formatted as a string.
@@ -278,25 +257,6 @@ class Transport {
      * @param advertiseName   Well-known name to remove from list of advertised names.
      */
     virtual void DisableAdvertisement(const qcc::String& advertiseName) { }
-
-    /**
-     * Call ping on a remote name.
-     *
-     * @param name    The name.
-     *
-     * @return  ER_NOT_IMPLEMENTED unless overridden by a derived class.
-     */
-    virtual QStatus Ping(const char* name, const char* guid) { return ER_NOT_IMPLEMENTED; }
-
-    /**
-     * Reply to a ping call.
-     *
-     * @param name      The name.
-     * @param replyCode The reply code (success, failed) // TODO
-     *
-     * @return  ER_NOT_IMPLEMENTED unless overridden by a derived class.
-     */
-    virtual QStatus PingReply(const char* name, uint32_t replyCode) { return ER_NOT_IMPLEMENTED; }
 
     /**
      * Returns the name of the transport

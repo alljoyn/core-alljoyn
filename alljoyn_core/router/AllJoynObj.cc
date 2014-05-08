@@ -102,6 +102,7 @@ AllJoynObj::AllJoynObj(Bus& bus, BusController* busController) :
 
 AllJoynObj::~AllJoynObj()
 {
+    IpNameService::Instance().UnregisterListener(*this);
     bus.UnregisterBusObject(*this);
     router.RemoveBusNameListener(this);
 
@@ -241,6 +242,8 @@ QStatus AllJoynObj::Init()
     if (ER_OK == status) {
         status = bus.RegisterBusObject(*this);
     }
+
+    IpNameService::Instance().RegisterListener(*this);
 
     return status;
 }
@@ -4130,7 +4133,6 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
     String sender = msg->GetSender();
     BusEndpoint senderEp = router.FindEndpoint(sender);
 
-    /* TODO Put actuall ping code here.*/
     /* Parse the message args */
     msg->GetArgs(numArgs, args);
     const char* name = NULL;
@@ -4187,50 +4189,43 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
         } else {
             /* Ping is to a connected or unconnected remote device */
 
-            /* We check if the name passed by the user is
-             * Advertised or part of a session
+            /*
+             * First order of business is to locate a guid corresponding to the name.
+             * The logic below follows the same logic as joining a session.
              */
-
-            qcc::String pingName(name);
-            qcc::String guidStr;
-            bool isUniqueNameWellFormed = false;
-            //qcc::String guidStr = name.substr(1, GUID128::SIZE);
-
-            std::multimap<qcc::String, NameMapEntry>::iterator nmit = nameMap.lower_bound(pingName);
-            if (nmit != nameMap.end()) {
-                guidStr = nmit->second.guid;
-            } else {
-                /* Check if it is a unique name and part of a session */
-                isUniqueNameWellFormed = IsLegalUniqueName(name);
-                if (isUniqueNameWellFormed) {
-                    //std::
-                    QCC_LogError(ER_OK, ("Unique name passed in for ping"));
+            TransportMask transport = TRANSPORT_TCP; // TODO transport hard-coded
+            String guid;
+            multimap<String, NameMapEntry>::iterator nmit = nameMap.lower_bound(name);
+            while (nmit != nameMap.end() && (nmit->first == name)) {
+                if (nmit->second.transport & transport) {
+                    guid = nmit->second.guid;
+                    goto have_guid;
                 }
             }
-
-            /* Ping name on all remote transports */ // TODO This is probably not what I want
-            status = ER_NOT_IMPLEMENTED;
-            std::multimap<String, void*>::iterator it = pingReplyContexts.insert(pair<String, void*>(name, new Message(msg)));
-            TransportList& transList = bus.GetInternal().GetTransportList();
-            for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
-                Transport* trans = transList.GetTransport(i);
-                if (trans && (trans->GetTransportMask() & transports)) {
-                    QCC_LogError(ER_OK, ("Before calling trans->Ping(name)"));
-                    status = trans->Ping(name, guidStr.c_str());
-                    if (status == ER_OK) {
-                        break;
-                    } else if (status == ER_NOT_IMPLEMENTED) {
-                        continue;
-                    } else {
-                        QCC_LogError(status, ("Ping failed for transport %s - mask=0x%x", trans->GetTransportName(), transports));
-                        replyCode = ALLJOYN_PING_REPLY_FAILED;
-                        break;
+            if (guid.empty() && (name[0] == ':')) {
+                String rguid = String(name).substr(1, GUID128::SHORT_SIZE);
+                multimap<String, pair<String, TransportMask> >::iterator ait = advAliasMap.lower_bound(rguid);
+                while ((ait != advAliasMap.end()) && (ait->first == rguid)) {
+                    if ((ait->second.second & transport) != 0) {
+                        multimap<String, NameMapEntry>::iterator nmit2 = nameMap.lower_bound(ait->second.first);
+                        while (nmit2 != nameMap.end() && (nmit2->first == ait->second.first)) {
+                            if ((nmit2->second.transport & ait->second.second & transport) != 0) {
+                                guid = nmit2->second.guid;
+                                goto have_guid;
+                            }
+                            ++nmit2;
+                        }
                     }
-                } else if (!trans) {
-                    QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
+                    ++ait;
                 }
             }
+        have_guid:
+
+            multimap<String, void*>::iterator it = pingReplyContexts.insert(pair<String, void*>(name, new Message(msg)));
+            status = IpNameService::Instance().Ping(transport, guid, name);
             if (status != ER_OK) {
+                QCC_LogError(status, ("Query failed"));
+                replyCode = ALLJOYN_PING_REPLY_FAILED;
                 // TODO Should also clean these up on exit
                 Message* msg = static_cast<Message*>(it->second);
                 delete msg;
@@ -4263,18 +4258,41 @@ void AllJoynObj::PingReplyMethodHandler(Message& reply, void* context)
     delete msg;
 }
 
-void AllJoynObj::PingReply(TransportMask transport, const qcc::String& name, uint32_t replyCode)
+/* From IpNameServiceListener */
+bool AllJoynObj::ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort)
 {
-    QCC_LogError(ER_OK, ("AllJoynObj::PingReply(%s %d)", name.c_str(), replyCode));
+    /*
+     * Note that we always return false here so that other name service
+     * listeners can process other records in the response.
+     */
+
+    MDNSResourceRecord* pingReplyRecord;
+    if ((recvPort == IpNameService::MULTICAST_MDNS_PORT) ||
+        !response->GetAdditionalRecord("ping-reply.", MDNSResourceRecord::TXT, &pingReplyRecord)) {
+        return false;
+    }
+
+    MDNSPingReplyRData* pingRData = static_cast<MDNSPingReplyRData*>(pingReplyRecord->GetRData());
+    if (!pingRData) {
+        QCC_DbgPrintf(("Ignoring response with invalid ping info"));
+        return false;
+    }
+    QCC_LogError(ER_OK, ("Recieved a ping response for name %s", pingRData->GetWellKnownName().c_str()));
+
+    const String& name = pingRData->GetWellKnownName();
+    uint32_t replyCode = pingRData->GetReplyCode() == "ALLJOYN_PING_REPLY_SUCCESS" ? 1 : 2;
+
     std::multimap<String, void*>::iterator it = pingReplyContexts.lower_bound(name);
     while (it != pingReplyContexts.end() && it->first == name) {
-        // TODO May need to filter on transport, TransportList allows multiple listeners
+        // TODO May need to filter on transport
         Message* msg = static_cast<Message*>(it->second);
         PingReplyMethodHandler(*msg, replyCode);
         delete msg;
         pingReplyContexts.erase(it);
         it = pingReplyContexts.lower_bound(name);
     }
+
+    return false;
 }
 
 void AllJoynObj::PingReplyMethodHandler(Message& msg, uint32_t replyCode)
@@ -4291,22 +4309,35 @@ void AllJoynObj::PingReplyMethodHandler(Message& msg, uint32_t replyCode)
 struct PingReplyTransportContext {
     TransportMask transport;
     String name;
-    String guid;
-    PingReplyTransportContext(TransportMask transport, const qcc::String& name, const qcc::String& senderGuid) : transport(transport), name(name), guid(senderGuid) { }
+    IPEndpoint ns4;
+    PingReplyTransportContext(TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& ns4)
+        : transport(transport), name(name), ns4(ns4) { }
 };
 
-//void AllJoynObj::Ping(TransportMask transport, const qcc::String& name( { }
-void AllJoynObj::Ping(TransportMask transport, const qcc::String& name, const qcc::String& senderGuid)
+/* From IpNameServiceListener */
+bool AllJoynObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
+                              const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6)
 {
-    QCC_DbgTrace(("AllJoynObj::Ping(name = \"%s\")", name.c_str()));
-    QCC_LogError(ER_OK, ("AllJoynObj::Ping(name = \"%s\") from remote side %s", name.c_str(), senderGuid.c_str()));
-    /* Ping is to a locally connected attachment */
+    MDNSResourceRecord* pingRecord;
+    if ((recvPort == IpNameService::MULTICAST_MDNS_PORT) ||
+        !query->GetAdditionalRecord("ping.", MDNSResourceRecord::TXT, &pingRecord)) {
+        return false;
+    }
+
+    MDNSPingRData* pingRData = static_cast<MDNSPingRData*>(pingRecord->GetRData());
+    if (!pingRData) {
+        QCC_DbgPrintf(("Ignoring query with invalid ping info"));
+        return true;
+    }
+    const String& name = pingRData->GetWellKnownName();
+    QCC_LogError(ER_OK, ("Received a ping request for name %s", name.c_str()));
+
     ProxyBusObject peerObj(bus, name.c_str(), "/", 0);
     const InterfaceDescription* intf = bus.GetInterface(org::freedesktop::DBus::Peer::InterfaceName);
     assert(intf);
     peerObj.AddInterface(*intf);
 
-    PingReplyTransportContext* ctx = new PingReplyTransportContext(transport, name, senderGuid);
+    PingReplyTransportContext* ctx = new PingReplyTransportContext(transport, name, ns4);
     QStatus status = peerObj.MethodCallAsync(org::freedesktop::DBus::Peer::InterfaceName,
                                              "Ping",
                                              this, static_cast<MessageReceiver::ReplyHandler>(&AllJoynObj::PingReplyTransportHandler),
@@ -4314,36 +4345,47 @@ void AllJoynObj::Ping(TransportMask transport, const qcc::String& name, const qc
                                              ctx);
     if (status != ER_OK) {
         QCC_LogError(status, ("Send Ping failed"));
-        TransportList& transList = bus.GetInternal().GetTransportList();
-        for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
-            Transport* trans = transList.GetTransport(i);
-            if (trans && (trans->GetTransportMask() & transport)) {
-                trans->PingReply(name.c_str(), ALLJOYN_PING_REPLY_FAILED);
-                break;
-            }
-        }
+        PingResponse(transport, ns4, name, ALLJOYN_PING_REPLY_FAILED);
         delete ctx;
     }
+
+    return true;
 }
 
 void AllJoynObj::PingReplyTransportHandler(Message& reply, void* context)
 {
     PingReplyTransportContext* ctx = static_cast<PingReplyTransportContext*>(context);
-
+    TransportMask transport = ctx->transport;
+    const qcc::String& name = ctx->name;
+    const qcc::IPEndpoint& ns4 = ctx->ns4;
     uint32_t replyCode = (ajn::MESSAGE_ERROR == reply->GetType()) ? ALLJOYN_PING_REPLY_FAILED : ALLJOYN_PING_REPLY_SUCCESS;
-    QCC_DbgPrintf(("AllJoynObj::Ping(%s) returned %d", ctx->name.c_str(), replyCode));
-    QCC_LogError(ER_OK, ("AllJoynObj::Ping(%s) returned %d", ctx->name.c_str(), replyCode));
-    TransportList& transList = bus.GetInternal().GetTransportList();
-    for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
-        Transport* trans = transList.GetTransport(i);
-        if (trans && (trans->GetTransportMask() & ctx->transport)) {
-            trans->PingReply(ctx->name.c_str(), replyCode);
-            break;
-        }
-    }
+
+    PingResponse(transport, ns4, name, replyCode);
 
     delete ctx;
 }
 
+void AllJoynObj::PingResponse(TransportMask transport, const qcc::IPEndpoint& ns4, const qcc::String& name, uint32_t replyCode)
+{
+    MDNSPacket response;
+    response->SetDestination(ns4);
+
+    // Similar to advertise record with only one name
+    MDNSPingReplyRData* pingReplyRData = new MDNSPingReplyRData();
+    pingReplyRData->SetWellKnownName(name);
+    pingReplyRData->SetReplyCode(replyCode == 1 ? "ALLJOYN_PING_REPLY_SUCCESS" : "ALLJOYN_PING_REPLY_FAILED");
+    MDNSResourceRecord pingReplyRecord("ping-reply.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingReplyRData);
+    response->AddAdditionalRecord(pingReplyRecord);
+
+    MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
+    advRData->AddName(name);
+    MDNSResourceRecord advertiseRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
+    response->AddAdditionalRecord(advertiseRecord);
+
+    QStatus status = IpNameService::Instance().Response(transport, response);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Response failed"));
+    }
+}
 
 }

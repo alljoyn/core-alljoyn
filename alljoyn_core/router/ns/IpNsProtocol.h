@@ -2250,6 +2250,13 @@ class MDNSTextRData : public MDNSRData {
 
     /**
      * @internal
+     * @brief Get the key value pairs map.
+     * @return The key value pairs map.
+     */
+    const std::map<qcc::String, qcc::String>& GetFields() const;
+
+    /**
+     * @internal
      * @brief Get the size of a buffer that will allow the Resource Record object
      * and all of its children fields and data objects to be successfully
      * serialized.
@@ -2299,6 +2306,7 @@ class MDNSTextRData : public MDNSRData {
      * occurred.
      */
     virtual size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+
   private:
     qcc::String GetText() const;
     std::map<qcc::String, qcc::String> m_fields;

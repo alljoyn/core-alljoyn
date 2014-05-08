@@ -34,9 +34,19 @@
 #include <alljoyn/Status.h>
 #include <Callback.h>
 
+#include "IpNsProtocol.h"
+
 namespace ajn {
 
 class IpNameServiceImpl;
+
+class IpNameServiceListener {
+  public:
+    virtual ~IpNameServiceListener() { }
+    virtual bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
+                              const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6) { return false; }
+    virtual bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort) { return false; }
+};
 
 /**
  * @brief API to provide an implementation dependent IP (Layer 3) Name Service
@@ -76,6 +86,13 @@ class IpNameServiceImpl;
  */
 class IpNameService {
   public:
+
+    /**
+     * @brief The port number for the MDNS name service.
+     *
+     * @see IPv4 Multicast Address space Registry IANA
+     */
+    static const uint16_t MULTICAST_MDNS_PORT;
 
     /**
      * @brief Return a reference to the IpNameService singleton.
@@ -145,22 +162,24 @@ class IpNameService {
     void SetCallback(TransportMask transportMask,
                      Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint8_t>* cb);
 
+    void RegisterListener(IpNameServiceListener& listener);
+
+    void UnregisterListener(IpNameServiceListener& listener);
+
     /**
-     * @brief Set the callback function that is called to notify a transport about
-     *     ping responses.
-     * // TO DO change comment since this is for ping queries on the receiing side
-     * @param transportMask A bitmask containing the transport handling the specified
-     *     endpoints.  This allows the ping responses to be demultiplexed into
-     *     the interested transports.
-     * @param cb The callback method on the transport that will be called to notify
-     *     a transport about ping responses.
+     * @brief Ping a name over the network interfaces opened by the specified
+     * transport.
+     *
+     * @param transportMask A bitmask containing the transport requesting the
+     *     ping on.
+     * @param guid The guid for this name
+     * @param name The name to ping.
      */
-    void SetPingCallback(TransportMask transportMask,
-                         Callback<void, const qcc::String&, const qcc::String&>* cb);
+    QStatus Ping(TransportMask transportMask, const qcc::String& guid, const qcc::String& name);
 
-    void SetPingReplyCallback(TransportMask transportMask,
-                              Callback<void, TransportMask, const qcc::String&, uint32_t>* cb);
+    QStatus Query(TransportMask transportMask, MDNSPacket mdnsPacket);
 
+    QStatus Response(TransportMask transportMask, MDNSPacket mdnsPacket);
 
     /**
      * @brief Creat a virtual network interface. In normal cases WiFi-Direct
@@ -401,18 +420,6 @@ class IpNameService {
      */
     QStatus CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn);
 
-    /**
-     * @brief Ping a name over the network interfaces opened by the specified
-     * transport.
-     *
-     * @param transportMask A bitmask containing the transport requesting the
-     *     ping on.
-     * @param name The name to ping.
-     * @param name The guid for this name
-     */
-    QStatus Ping(TransportMask transportMask, const qcc::String& name, const qcc::String& guid);
-
-    QStatus PingReply(TransportMask transportMask, const qcc::String& name, uint32_t replyCode);
     /**
      * @brief Handle the suspending event of the process. Release exclusive socket file descriptor and port.
      */
