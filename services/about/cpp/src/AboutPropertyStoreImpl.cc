@@ -285,9 +285,9 @@ QStatus AboutPropertyStoreImpl::setDeviceId(const qcc::String& deviceId, bool is
     return setProperty(DEVICE_ID, deviceId, isPublic, isWritable, isAnnouncable);
 }
 
-QStatus AboutPropertyStoreImpl::setDeviceName(const qcc::String& deviceName, bool isPublic, bool isWritable, bool isAnnouncable)
+QStatus AboutPropertyStoreImpl::setDeviceName(const qcc::String& deviceName, qcc::String const& language, bool isPublic, bool isWritable, bool isAnnouncable)
 {
-    return setProperty(DEVICE_NAME, deviceName, isPublic, isWritable, isAnnouncable);
+    return setProperty(DEVICE_NAME, deviceName, language, isPublic, isWritable, isAnnouncable);
 }
 
 QStatus AboutPropertyStoreImpl::setAppName(const qcc::String& appName, bool isPublic, bool isWritable, bool isAnnouncable)
