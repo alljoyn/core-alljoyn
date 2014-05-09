@@ -2987,6 +2987,10 @@ size_t MDNSHeader::GetSerializedSize(void) const
 
 //MDNSPacket
 _MDNSPacket::~_MDNSPacket() {
+    m_questions.reserve(MIN_RESERVE);
+    m_answers.reserve(MIN_RESERVE);
+    m_authority.reserve(MIN_RESERVE);
+    m_additional.reserve(MIN_RESERVE);
 }
 void _MDNSPacket::Clear()
 {
@@ -3009,6 +3013,7 @@ MDNSHeader _MDNSPacket::GetHeader()
 void _MDNSPacket::AddQuestion(MDNSQuestion question)
 {
     m_questions.push_back(question);
+    assert(m_questions.size() <= MIN_RESERVE);
     m_header.SetQDCount(m_questions.size());
 }
 
@@ -3030,6 +3035,7 @@ void _MDNSPacket::AddAdditionalRecord(MDNSResourceRecord record)
 {
 
     m_additional.push_back(record);
+    assert(m_additional.size() <= MIN_RESERVE);
     m_header.SetARCount(m_additional.size());
 }
 
@@ -3088,6 +3094,7 @@ bool _MDNSPacket::GetAnswer(qcc::String str, MDNSResourceRecord::RRType type, MD
 void _MDNSPacket::AddAnswer(MDNSResourceRecord record)
 {
     m_answers.push_back(record);
+    assert(m_answers.size() <= MIN_RESERVE);
     m_header.SetANCount(m_answers.size());
 }
 
