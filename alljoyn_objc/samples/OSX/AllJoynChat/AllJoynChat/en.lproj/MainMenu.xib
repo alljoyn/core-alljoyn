@@ -1787,11 +1787,6 @@ wGw</bytes>
 														<bool key="NSSegmentItemSelected">YES</bool>
 														<int key="NSSegmentItemImageScaling">0</int>
 													</object>
-													<object class="NSSegmentItem">
-														<string key="NSSegmentItemLabel">ICE</string>
-														<int key="NSSegmentItemTag">1</int>
-														<int key="NSSegmentItemImageScaling">0</int>
-													</object>
 												</array>
 												<int key="NSSegmentStyle">1</int>
 											</object>

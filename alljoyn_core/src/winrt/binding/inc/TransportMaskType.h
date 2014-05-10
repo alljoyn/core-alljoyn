@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright (c) 2011-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011-2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -39,8 +39,6 @@ public enum class TransportMaskType : uint32_t {
     TRANSPORT_WWAN      = ajn::TRANSPORT_WWAN,
     /// <summary>Wired local-area network transport</summary>
     TRANSPORT_LAN       = ajn::TRANSPORT_LAN,
-    /// <summary>Transport using ICE protocol</summary>
-    TRANSPORT_ICE       = ajn::TRANSPORT_ICE,
     /// <summary>Transport using Wi-Fi Direct transport</summary>
     TRANSPORT_WFD       = ajn::TRANSPORT_WFD
 };

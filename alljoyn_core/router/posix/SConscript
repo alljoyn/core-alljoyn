@@ -15,15 +15,9 @@
 
 Import('router_env', 'router_objs')
 
-# Add OS specific router_objs
-if router_env['ICE'] == 'on':
-    os_objs = router_env.Object(['ProximityScanner.cc','Socket.cc'])
-else:
-    os_objs = []
-
 # Build the posix daemon and service launcher helper.
 if router_env['OS'] != 'darwin':
-    daemon = router_env.Program('alljoyn-daemon', ['daemon-main.cc'] + router_objs + os_objs)
+    daemon = router_env.Program('alljoyn-daemon', ['daemon-main.cc'] + router_objs)
 else:
     daemon = []
 	
@@ -34,9 +28,9 @@ else:
 if router_env['OS'] == 'android':
    libenv = router_env.Clone(CCFLAGS = '-DROUTER_LIB')
    libenv.Object(target = 'alljoyn-daemon', source = 'daemon-main.cc')
-   libdaemon = libenv.StaticLibrary(['alljoyn-daemon'] + router_objs + os_objs)
+   libdaemon = libenv.StaticLibrary(['alljoyn-daemon'] + router_objs)
    dlibs = libenv.Install('$CPP_DISTDIR/lib', libdaemon)
 
 #progs = daemon + servicehelper
-progs = daemon, os_objs
+progs = daemon
 Return('progs')

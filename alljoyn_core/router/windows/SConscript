@@ -15,12 +15,6 @@
 
 Import('router_env', 'router_objs')
 
-# OS specific objects for daemon
-if router_env['ICE'] == 'on':
-    os_objs = router_env.Object(['Socket.cc', 'ProximityScanner.cc'])
-else:
-    os_objs = []
-
 # Build the resources for the dll
 rsc = router_env.RES('DaemonResources.rc')
 
@@ -28,7 +22,7 @@ daemon_static_lib = [];
 daemon_shared_lib = [];
 
 # Build the Windows daemon.
-router_libs = router_env.SharedLibrary('daemonlib', ['daemon-service.cc', 'daemon-main.cc'] + router_objs + rsc + os_objs)
+router_libs = router_env.SharedLibrary('daemonlib', ['daemon-service.cc', 'daemon-main.cc'] + router_objs + rsc)
 
 # the variable router_libs contains the file nodes for the  static library and the 
 # shared library however it may contain more files such as .pdb files on windows.  
@@ -46,4 +40,4 @@ env2.Append(LIBS = ['daemonlib'])
 daemon = []
 
 progs = [daemon, daemon_shared_lib] # daemonlibs.dll will be returned
-Return('progs', 'os_objs')
+Return('progs')

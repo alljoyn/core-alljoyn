@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2012, 2014 AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -187,20 +187,7 @@
 
 - (AJNTransportMask)transportMask
 {
-    AJNTransportMask transportMask;
-    switch (self.transportTypeSegmentedControl.selectedSegmentIndex) {
-        case 0:
-            transportMask = kAJNTransportMaskAny;
-            break;
-            
-        case 1:
-            transportMask = kAJNTransportMaskICE;
-            break;
-            
-        default:
-            break;
-    }
-    return transportMask;    
+    return kAJNTransportMaskAny;
 }
 
 - (void)didCompleteIteration:(NSInteger)iterationNumber totalIterations:(NSInteger)totalInterations

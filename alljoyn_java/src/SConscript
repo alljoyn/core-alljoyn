@@ -35,10 +35,7 @@ if env['OS'] == 'android':
                 Exit(1)
 
         env.Append(JAVACLASSPATH = os.pathsep + env.subst('$ANDROID_SDK/platforms/android-$ANDROID_API_LEVEL/android.jar'))
-        if env['ANDROID_PROXIMITY'] == 'on':
-            main_classes += env.Java('$CLASSDIR', source = ['../helper'], JAVACLASSPATH = env.subst('$JAVACLASSPATH'))
-        else:
-            main_classes += env.Java('$CLASSDIR', source = ['../helper/org/alljoyn/bus/alljoyn/DaemonInit.java'], JAVACLASSPATH = env.subst('$JAVACLASSPATH'))
+        main_classes += env.Java('$CLASSDIR', source = ['../helper/org/alljoyn/bus/alljoyn/DaemonInit.java'], JAVACLASSPATH = env.subst('$JAVACLASSPATH'))
 
     alljoyn_jar = env.Jar('$JARDIR/alljoyn.jar', source = [main_classes])
 

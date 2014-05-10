@@ -27,6 +27,8 @@
 
 #include "PolicyDB.h"
 
+#define QCC_MODULE "POLICYDB"
+
 using namespace ajn;
 using namespace qcc;
 using namespace std;
@@ -543,7 +545,7 @@ void _PolicyDB::NameOwnerChanged(const String& alias, const String* oldOwner, co
 }
 
 #ifndef NDEBUG
-#define LOG_RULE_CHECK(rs, p, m) Log(LOG_DEBUG, "        checking rule: %s - %s - %s\n", p == policydb::POLICY_ALLOW ? "ALLOW" : "DENY ", rs, m ? "MATCH" : "no match")
+#define LOG_RULE_CHECK(rs, p, m) QCC_DbgPrintf(("        checking rule: %s - %s - %s", p == policydb::POLICY_ALLOW ? "ALLOW" : "DENY ", rs, m ? "MATCH" : "no match"))
 #else
 #define LOG_RULE_CHECK(rs, p, m) do { } while (false)
 #endif
@@ -617,15 +619,18 @@ bool _PolicyDB::OKToConnect(uint32_t uid, uint32_t gid) const
     bool allow = true;
     bool ruleMatch = false;
 
+    QCC_DbgPrintf(("Check if OK for endpoint with UserID %u and GroupID %u to connect",
+                   uid, gid));
+
     if (!connectRS.mandatoryRules.empty()) {
-        QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking mandatory connect rules\n"));
+        QCC_DbgPrintf(("    checking mandatory connect rules"));
         ruleMatch = CheckConnect(allow, connectRS.mandatoryRules, uid, gid);
     }
 
     if (!ruleMatch) {
         IDRuleMap::const_iterator it = connectRS.userRules.find(uid);
         if (it != connectRS.userRules.end()) {
-            QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking user=%u connect rules\n", uid));
+            QCC_DbgPrintf(("    checking user=%u connect rules", uid));
             ruleMatch = CheckConnect(allow, it->second, uid, gid);
         }
     }
@@ -633,13 +638,13 @@ bool _PolicyDB::OKToConnect(uint32_t uid, uint32_t gid) const
     if (!ruleMatch) {
         IDRuleMap::const_iterator it = connectRS.groupRules.find(gid);
         if (it != connectRS.groupRules.end()) {
-            QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking group=%u connect rules\n", gid));
+            QCC_DbgPrintf(("    checking group=%u connect rules", gid));
             ruleMatch = CheckConnect(allow, it->second, uid, gid);
         }
     }
 
     if (!ruleMatch) {
-        QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking default connect rules\n"));
+        QCC_DbgPrintf(("    checking default connect rules"));
         ruleMatch = CheckConnect(allow, connectRS.defaultRules, uid, gid);
     }
 
@@ -654,6 +659,9 @@ bool _PolicyDB::OKToOwn(const char* busName, BusEndpoint& ep) const
         return false;
     }
 
+    QCC_DbgPrintf(("Check if OK for endpoint %s to own %s",
+                   ep->GetUniqueName().c_str(), busName));
+
     /* Implicitly default to allow any endpoint to own any name. */
     bool allow = true;
     bool ruleMatch = false;
@@ -661,7 +669,7 @@ bool _PolicyDB::OKToOwn(const char* busName, BusEndpoint& ep) const
     IDSet prefixes = LookupStringIDPrefix(busName, '.');
 
     if (!ownRS.mandatoryRules.empty()) {
-        QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking mandatory own rules\n"));
+        QCC_DbgPrintf(("    checking mandatory own rules"));
         ruleMatch = CheckOwn(allow, ownRS.mandatoryRules, busNameID, prefixes);
     }
 
@@ -669,7 +677,7 @@ bool _PolicyDB::OKToOwn(const char* busName, BusEndpoint& ep) const
         uint32_t uid = ep->GetUserId();
         IDRuleMap::const_iterator it = ownRS.userRules.find(uid);
         if (it != ownRS.userRules.end()) {
-            QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking user=%u own rules\n", uid));
+            QCC_DbgPrintf(("    checking user=%u own rules", uid));
             ruleMatch = CheckOwn(allow, it->second, busNameID, prefixes);
         }
     }
@@ -678,13 +686,13 @@ bool _PolicyDB::OKToOwn(const char* busName, BusEndpoint& ep) const
         uint32_t gid = ep->GetGroupId();
         IDRuleMap::const_iterator it = ownRS.groupRules.find(gid);
         if (it != ownRS.groupRules.end()) {
-            QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking group=%u own rules\n", gid));
+            QCC_DbgPrintf(("    checking group=%u own rules", gid));
             ruleMatch = CheckOwn(allow, it->second, busNameID, prefixes);
         }
     }
 
     if (!ruleMatch) {
-        QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking default own rules\n"));
+        QCC_DbgPrintf(("    checking default own rules"));
         ruleMatch = CheckOwn(allow, ownRS.defaultRules, busNameID, prefixes);
     }
 
@@ -698,8 +706,12 @@ bool _PolicyDB::OKToReceive(const NormalizedMsgHdr& nmh, BusEndpoint& dest) cons
     bool allow = true;
     bool ruleMatch = false;
 
+    QCC_DbgPrintf(("Check if OK for endpoint %s to receive %s (%s --> %s)",
+                   dest->GetUniqueName().c_str(), nmh.msg->Description().c_str(),
+                   nmh.msg->GetSender(), nmh.msg->GetDestination()));
+
     if (!receiveRS.mandatoryRules.empty()) {
-        QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking mandatory receive rules\n"));
+        QCC_DbgPrintf(("    checking mandatory receive rules"));
         ruleMatch = CheckMessage(allow, receiveRS.mandatoryRules, nmh, nmh.senderIDSet);
     }
 
@@ -707,7 +719,7 @@ bool _PolicyDB::OKToReceive(const NormalizedMsgHdr& nmh, BusEndpoint& dest) cons
     if (!ruleMatch && !receiveRS.userRules.empty()) {
         IDRuleMap::const_iterator it = receiveRS.userRules.find(uid);
         if (it != receiveRS.userRules.end()) {
-            QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking user=%u receive rules\n", uid));
+            QCC_DbgPrintf(("    checking user=%u receive rules", uid));
             ruleMatch = CheckMessage(allow, it->second, nmh, nmh.senderIDSet);
         }
     }
@@ -716,13 +728,13 @@ bool _PolicyDB::OKToReceive(const NormalizedMsgHdr& nmh, BusEndpoint& dest) cons
     if (!ruleMatch && !receiveRS.groupRules.empty()) {
         IDRuleMap::const_iterator it = receiveRS.groupRules.find(gid);
         if (it != receiveRS.groupRules.end()) {
-            QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking group=%u receive rules\n", gid));
+            QCC_DbgPrintf(("    checking group=%u receive rules", gid));
             ruleMatch = CheckMessage(allow, it->second, nmh, nmh.senderIDSet);
         }
     }
 
     if (!ruleMatch) {
-        QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking default receive rules\n"));
+        QCC_DbgPrintf(("    checking default receive rules"));
         ruleMatch = CheckMessage(allow, receiveRS.defaultRules, nmh, nmh.senderIDSet);
     }
 
@@ -736,8 +748,12 @@ bool _PolicyDB::OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& sender) const
     bool allow = true;
     bool ruleMatch = false;
 
+    QCC_DbgPrintf(("Check if OK for endpoint %s to send %s (%s --> %s)",
+                   sender->GetUniqueName().c_str(), nmh.msg->Description().c_str(),
+                   nmh.msg->GetSender(), nmh.msg->GetDestination()));
+
     if (!sendRS.mandatoryRules.empty()) {
-        QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking mandatory send rules\n"));
+        QCC_DbgPrintf(("    checking mandatory send rules"));
         ruleMatch = CheckMessage(allow, sendRS.mandatoryRules, nmh, nmh.destIDSet);
     }
 
@@ -745,7 +761,7 @@ bool _PolicyDB::OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& sender) const
         uint32_t uid = sender->GetUserId();
         IDRuleMap::const_iterator it = sendRS.userRules.find(uid);
         if (it != sendRS.userRules.end()) {
-            QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking user=%u send rules\n", uid));
+            QCC_DbgPrintf(("    checking user=%u send rules", uid));
             ruleMatch = CheckMessage(allow, it->second, nmh, nmh.destIDSet);
         }
     }
@@ -754,13 +770,13 @@ bool _PolicyDB::OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& sender) const
         uint32_t gid = sender->GetGroupId();
         IDRuleMap::const_iterator it = sendRS.groupRules.find(gid);
         if (it != sendRS.groupRules.end()) {
-            QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking group=%u send rules\n", gid));
+            QCC_DbgPrintf(("    checking group=%u send rules", gid));
             ruleMatch = CheckMessage(allow, it->second, nmh, nmh.destIDSet);
         }
     }
 
     if (!ruleMatch) {
-        QCC_DEBUG_ONLY(Log(LOG_DEBUG, "    checking default send rules\n"));
+        QCC_DbgPrintf(("    checking default send rules"));
         ruleMatch = CheckMessage(allow, sendRS.defaultRules, nmh, nmh.destIDSet);
     }
 

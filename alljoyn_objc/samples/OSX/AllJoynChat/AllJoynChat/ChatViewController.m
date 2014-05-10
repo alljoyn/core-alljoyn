@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2012, 2014 AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -256,7 +256,7 @@
 
 - (IBAction)didTouchStartButton:(id)sender
 {
-    [self.chatController startSession:self.advertisedNameTextField.stringValue sessionType:self.sessionTypeSegmentedControl.selectedSegment usingTransportMask:self.transportTypeSegmentedControl.selectedSegment == 0 ? kAJNTransportMaskAny : kAJNTransportMaskICE];
+    [self.chatController startSession:self.advertisedNameTextField.stringValue sessionType:self.sessionTypeSegmentedControl.selectedSegment usingTransportMask:kAJNTransportMaskAny ];
     [self.startButton setHidden:YES];
     [self.stopButton setHidden:NO];
 }

@@ -1,4 +1,4 @@
-# Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -438,7 +438,12 @@ def _doxygen_emitter(target, source, env):
             html_output_from_config = _doxygen_replace_start_hash_if_found(html_output_from_config, env)
             if html_output_from_config:
                 html_output = html_output_from_config
-            target.append(env.Dir(os.path.abspath(os.path.join(output_directory, html_output))))
+            # SCons considers directory nodes upto date if they exist.  Past the
+            # fist run of the script the directory exist preventing it from
+            # generating a dependency graph on subsiquent runs. By adding a file
+            # to the targets we are able to workaround this issue. Since index.html
+            # is always updated with the build date it was chosen.
+            target.append(env.File(os.path.abspath(os.path.join(output_directory, html_output + '/index.html'))))
             env.Clean(source, env.Dir(os.path.abspath(os.path.join(output_directory, html_output))))
 
     ############################################################################
@@ -455,7 +460,12 @@ def _doxygen_emitter(target, source, env):
             latex_output_from_config = _doxygen_replace_start_hash_if_found(latex_output_from_config, env)
             if latex_output_from_config:
                 latex_output = latex_output_from_config
-            target.append(env.Dir(os.path.abspath(os.path.join(output_directory, latex_output))))
+            # SCons considers directory nodes upto date if they exist.  Past the
+            # fist run of the script the directory exist preventing it from
+            # generating a dependency graph on subsiquent runs. By adding a file
+            # to the targets we are able to workaround this issue. Since refman.tex
+            # is always updated with the build date it was chosen.
+            target.append(env.File(os.path.abspath(os.path.join(output_directory, latex_output + '/refman.tex'))))
             env.Clean(source, env.Dir(os.path.abspath(os.path.join(output_directory, latex_output))))
 
     # Debug print statments used while developing

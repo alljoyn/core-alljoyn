@@ -20,17 +20,10 @@ Import('env')
 router_env = env.Clone()
 
 vars = Variables()
-vars.Add(EnumVariable('ICE', 'Enable ICE Transport', 'off', allowed_values=('on', 'off')))
 vars.Add(EnumVariable('POLICYDB', 'Enable policy support', 'off', allowed_values=('on', 'off')))
 vars.Update(router_env)
 Help(vars.GenerateHelpText(router_env))
 
-
-if router_env['OS'] == 'android':
-    # Android Dalvik code is tied to the hip of daemon for proximity scanner
-    # functionality.  Let the build for Android know whether ICE support is
-    # available or not.
-    env['ANDROID_PROXIMITY'] = router_env['ICE']
 
 if router_env['OS'] == "darwin":
     # Darwin has its own version of the daemon transport
@@ -59,15 +52,6 @@ if router_env['OS'] == "android":
     router_objs.extend(router_env.SConscript('android/SConscript', exports = ['router_env']))
 
 
-if router_env['ICE'] == 'on':
-    router_env.Append(CPPDEFINES=['AJ_ENABLE_ICE'])
-    router_env.Append(CPPPATH = [ router_env.Dir('./packetengine').srcnode(),
-                                  router_env.Dir('./ice').srcnode() ])
-    pe_objs = router_env.SConscript('packetengine/SConscript', exports = ['router_env'])
-    ice_objs = router_env.SConscript('ice/SConscript', exports = ['router_env'])
-    json_objs = router_env.SConscript('JSON/SConscript', exports = ['router_env'])
-    router_objs.extend(pe_objs + ice_objs + json_objs)
-
 # Bundled daemon object file
 brobj = router_env.SConscript('bundled/SConscript', exports = ['router_env'])
 
@@ -76,9 +60,7 @@ if router_env['OS_GROUP']=='winrt':
     Import('winrt_objs')
     router_objs.extend(winrt_objs + [brobj])
 
-progs, os_objs = router_env.SConscript('${OS_GROUP}/SConscript', exports=['router_env', 'router_objs'])
-
-router_objs.extend(os_objs)
+progs = router_env.SConscript('${OS_GROUP}/SConscript', exports=['router_env', 'router_objs'])
 
 # Daemon library
 if router_env['OS_GROUP'] != 'winrt':

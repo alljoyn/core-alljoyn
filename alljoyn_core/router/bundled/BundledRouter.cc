@@ -44,10 +44,6 @@
 #include "NullTransport.h"
 #include "PasswordManager.h"
 
-#if defined(AJ_ENABLE_ICE)
-#include "DaemonICETransport.h"
-#endif
-
 #if defined(QCC_OS_WINRT)
 #include "ProximityTransport.h"
 #endif
@@ -288,9 +284,6 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
          */
         if (!transportsInitialized) {
             Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
-#if defined(AJ_ENABLE_ICE)
-            Add(new TransportFactory<DaemonICETransport>(DaemonICETransport::TransportName, false));
-#endif
 #if defined(QCC_OS_WINRT)
 //            Add(new TransportFactory<ProximityTransport>(ProximityTransport::TransportName, false));
 #endif

@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -65,10 +65,6 @@ Config::Config(void)
     if (!iniSource.IsValid()) {
         QCC_LogError(ER_NONE, ("Unable to open config file %s", iniFileResolved.c_str()));
         // use defaults...
-        nameValuePairs["STUNTURN_GATHER_PACING_INTERVAL_MSEC"] = "500";
-        nameValuePairs["STUNTURN_SERVER_IP_ADDRESS"] = "10.4.108.55";
-        nameValuePairs["STUNTURN_SERVER_UDP_PORT"] = "3478";
-        nameValuePairs["STUNTURN_SERVER_TCP_PORT"] = "3478";
         // ...
     } else {
         String line;

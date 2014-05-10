@@ -15,9 +15,6 @@
 
 Import('env')
 
-if env['OS'] == 'android' and env['ANDROID_PROXIMITY'] == 'on':
-    env.Append(CPPDEFINES = 'AJ_ENABLE_PROXIMITY_SCANNER')
-
 # JNI library sources
 srcs = ['alljoyn_java.cc']
 

@@ -65,17 +65,6 @@ public class DaemonInit {
 	    // sP2pHelper = new P2pHelperService(sContext, "null:");
 	    // sP2pHelper.startup();
         }
-
-	if (receiver == null) {
-	    try {
-		Class<?> cls = Class.forName("org.alljoyn.bus.proximity.ScanResultsReceiver");
-		receiver = (BroadcastReceiver) cls.getConstructor(Context.class).newInstance(sContext);
-		sContext.registerReceiver(receiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
-		Log.v(TAG, "Registered scan results receiver");
-	    } catch (Exception ex) {
-		Log.d(TAG, "Scan results receiver not found, proximity support disabled");
-	    }
-	}
         return true;
     }
     

@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2012, 2014 AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -167,7 +167,7 @@ static PingClient *s_sharedInstance;
         //
         AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:NO proximity:kAJNProximityAny transportMask:self.delegate.transportType];
         
-        NSString *message = [NSString stringWithFormat:@"Attempting to join session with service %@ using transport %@...", name, self.delegate.transportType == kAJNTransportMaskAny ? @"Any" : self.delegate.transportType == kAJNTransportMaskICE ? @"ICE" : @"Any Transport but ICE"];
+        NSString *message = [NSString stringWithFormat:@"Attempting to join session with service %@ using transport %@...", name, @"Any"];
         
         NSLog(@"%@", message);
         [self.delegate receivedStatusMessage:message];

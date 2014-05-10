@@ -1016,7 +1016,7 @@ QStatus SessionlessObj::AdvertiseName(const qcc::String& name)
 {
     QStatus status = bus.RequestName(name.c_str(), DBUS_NAME_FLAG_DO_NOT_QUEUE);
     if (status == ER_OK) {
-        status = bus.AdvertiseName(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_ICE & ~TRANSPORT_LOCAL);
+        status = bus.AdvertiseName(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
     }
     if (status == ER_OK) {
         QCC_DbgPrintf(("AdvertiseName(name=%s)", name.c_str()));
@@ -1028,7 +1028,7 @@ QStatus SessionlessObj::AdvertiseName(const qcc::String& name)
 
 void SessionlessObj::CancelAdvertisedName(const qcc::String& name)
 {
-    QStatus status = bus.CancelAdvertiseName(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_ICE & ~TRANSPORT_LOCAL);
+    QStatus status = bus.CancelAdvertiseName(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to cancel advertisment for \"%s\"", name.c_str()));
     }
@@ -1047,7 +1047,7 @@ void SessionlessObj::FindAdvertisedNames()
         pair<set<String>::iterator, bool> finding = findingNames.insert(name);
         if (finding.second) {
             QCC_DbgPrintf(("FindAdvertisedName(name=%s)", name.c_str()));
-            QStatus status = bus.FindAdvertisedNameByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_ICE & ~TRANSPORT_LOCAL);
+            QStatus status = bus.FindAdvertisedNameByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
             if (status != ER_OK) {
                 QCC_LogError(status, ("FindAdvertisedNameByTransport failed"));
             }
@@ -1061,7 +1061,7 @@ void SessionlessObj::FindAdvertisedNames()
         pair<set<String>::iterator, bool> finding = findingNames.insert(WildcardAdvertisementPrefix);
         if (finding.second) {
             QCC_DbgPrintf(("FindAdvertisedName(name=%s)", WildcardAdvertisementPrefix));
-            QStatus status = bus.FindAdvertisedNameByTransport(WildcardAdvertisementPrefix, TRANSPORT_ANY & ~TRANSPORT_ICE & ~TRANSPORT_LOCAL);
+            QStatus status = bus.FindAdvertisedNameByTransport(WildcardAdvertisementPrefix, TRANSPORT_ANY & ~TRANSPORT_LOCAL);
             if (status != ER_OK) {
                 QCC_LogError(status, ("FindAdvertisedNameByTransport failed"));
             }
@@ -1074,7 +1074,7 @@ void SessionlessObj::CancelFindAdvertisedNames()
     set<String>::iterator it = findingNames.begin();
     while (it != findingNames.end()) {
         String name = *it;
-        QStatus status = bus.CancelFindAdvertisedNameByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_ICE & ~TRANSPORT_LOCAL);
+        QStatus status = bus.CancelFindAdvertisedNameByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
         if (status == ER_OK) {
             QCC_DbgPrintf(("CancelFindAdvertisedName(%s)", name.c_str()));
         } else {

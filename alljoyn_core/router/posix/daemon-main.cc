@@ -54,10 +54,6 @@
 #include "DaemonSLAPTransport.h"
 #endif
 
-#if defined(AJ_ENABLE_ICE)
-#include "DaemonICETransport.h"
-#endif
-
 #if defined(QCC_OS_ANDROID)
 //#include "android/WFDTransport.h"
 #endif
@@ -153,9 +149,6 @@ class OptParse {
     OptParse(int argc, char** argv) :
         argc(argc), argv(argv),
         fork(false), noFork(false),
-#if defined(AJ_ENABLE_ICE)
-        noICE(false),
-#endif
         noSLAP(false),
         noTCP(false),
 #if defined(QCC_OS_ANDROID)
@@ -185,11 +178,6 @@ class OptParse {
     bool GetNoSLAP() const {
         return noSLAP;
     }
-#if defined(AJ_ENABLE_ICE)
-    bool GetNoICE() const {
-        return noICE;
-    }
-#endif
     bool GetNoTCP() const {
         return noTCP;
     }
@@ -229,9 +217,6 @@ class OptParse {
     String configFile;
     bool fork;
     bool noFork;
-#if defined(AJ_ENABLE_ICE)
-    bool noICE;
-#endif
     bool noSLAP;
     bool noTCP;
 #if defined(QCC_OS_ANDROID)
@@ -265,9 +250,6 @@ void OptParse::PrintUsage() {
         "]\n"
         "%*s [--print-address[=DESCRIPTOR]] [--print-pid[=DESCRIPTOR]]\n"
         "%*s [--fork | --nofork] "
-#if defined(AJ_ENABLE_ICE)
-        "[--no-ice] "
-#endif
         "[--no-slap] [--no-tcp] "
 #if defined(QCC_OS_ANDROID)
         "[--no-wfd] "
@@ -297,10 +279,6 @@ void OptParse::PrintUsage() {
         "    --nofork\n"
         "        Force the daemon to only run in the foreground (override config file\n"
         "        setting).\n\n"
-#if defined(AJ_ENABLE_ICE)
-        "    --no-ice\n"
-        "        Disable the ICE transport (override config file setting).\n\n"
-#endif
         "    --no-slap\n"
         "        Disable the SLAP transport (override config file setting).\n\n"
         "    --no-tcp\n"
@@ -441,10 +419,6 @@ OptParse::ParseResultCode OptParse::ParseResult()
             // Obsolete - kept for backwards compatibility
         } else if (arg.compare("--no-slap") == 0) {
             noSLAP = true;
-        } else if (arg.compare("--no-ice") == 0) {
-#if defined(AJ_ENABLE_ICE)
-            noICE = true;
-#endif
         } else if (arg.compare("--no-tcp") == 0) {
             noTCP = true;
 #if defined(QCC_OS_ANDROID)
@@ -541,10 +515,6 @@ int daemon(OptParse& opts) {
         } else if (addrStr.compare(0, sizeof("launchd:") - 1, "launchd:") == 0) {
             skip = opts.GetNoLaunchd();
 #endif
-#if defined(AJ_ENABLE_ICE)
-        } else if (addrStr.compare(0, sizeof("ice:") - 1, "ice:") == 0) {
-            skip = opts.GetNoICE();
-#endif
 
         } else if (addrStr.compare(0, sizeof("tcp:") - 1, "tcp:") == 0) {
             skip = opts.GetNoTCP();
@@ -585,9 +555,6 @@ int daemon(OptParse& opts) {
     cntr.Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
 #if defined(QCC_OS_LINUX)
     cntr.Add(new TransportFactory<DaemonSLAPTransport>(DaemonSLAPTransport::TransportName, false));
-#endif
-#if defined(AJ_ENABLE_ICE)
-    cntr.Add(new TransportFactory<DaemonICETransport> ("ice", false));
 #endif
 #if defined(QCC_OS_ANDROID)
 //    cntr.Add(new TransportFactory<WFDTransport>(WFDTransport::TransportName, false));

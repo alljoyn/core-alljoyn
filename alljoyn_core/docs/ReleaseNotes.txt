@@ -1,4 +1,4 @@
-AllJoyn Version 14.02.00 Release Notes
+AllJoyn Version 14.06.00 Release Notes
 --------------------------------------
 
 Platform Support
@@ -160,15 +160,13 @@ shared library called liballjoyn.so on Linux and OpenWrt. In order to run these
 programs, you will need to set the LD_LIBRARY_PATH environment variable to
 include the directory where liballjoyn.so is located.
 
-Version 3.4 of the AllJoyn ICE transport changed the hostname for the Rendezvous
-server from rdvz.alljoyn.org to connect.alljoyn.org. As a result, pre-3.4 versions
-of AllJoyn cannot discover or connect using the ICE transport.
-
 Version 14.02.00 renamed libajdaemon.a and BundledDaemon.o to libajrouter.a and
 BundledRouter.o to match the AllJoyn terminology of leaf and router nodes.
 
 Change history
 --------------
+
+14.06.00 - Bug fixes.  Removed support for ICE.
 
 14.02.00 - Bug fixes.  Removed support for Windows RT.
 
