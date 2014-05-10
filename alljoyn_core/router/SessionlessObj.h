@@ -498,9 +498,14 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      */
     QStatus ScheduleWork(RemoteCache& cache, bool addAlarm = true);
 
-    bool QueryHandler(TransportMask transport, MDNSPacket mdnsPacket, uint16_t recvPort,
-                      const qcc::String& guid, const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6);
-    bool ResponseHandler(TransportMask transport, MDNSPacket mdnsPacket, uint16_t recvPort);
+    bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
+                      const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6);
+    bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort);
+
+    void FoundAdvertisedNameHandler(const char* name, TransportMask transport, const char* prefix);
+
+    QStatus FindAdvertisementByTransport(const char* matching, TransportMask transports);
+    QStatus CancelFindAdvertisementByTransport(const char* matching, TransportMask transports);
 };
 
 }

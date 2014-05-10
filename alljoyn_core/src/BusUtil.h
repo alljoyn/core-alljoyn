@@ -29,6 +29,7 @@
 
 #include <qcc/platform.h>
 #include <qcc/String.h>
+#include <map>
 
 #include <alljoyn/Status.h>
 
@@ -129,6 +130,16 @@ bool IsLegalMemberName(const char* str);
  * @return A bus name
  */
 qcc::String BusNameFromObjPath(const char* str);
+
+/**
+ * Parse match rule arg strings
+ *
+ * @param match            Match rule string of form &lt;key0&gt;=&lt;val0&gt;,&lt;key1&gt;=&lt;val1&gt;
+ * @param[out] matchMap    A map of the key, value pairs.
+ * @return ER_OK if successful.
+ */
+QStatus ParseMatch(const qcc::String& match,
+                   std::map<qcc::String, qcc::String>& matchMap);
 
 }
 

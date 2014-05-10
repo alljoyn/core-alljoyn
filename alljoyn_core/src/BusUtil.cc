@@ -184,4 +184,37 @@ qcc::String BusNameFromObjPath(const char* str)
     return path;
 }
 
+QStatus ParseMatch(const qcc::String& match,
+                   std::map<qcc::String, qcc::String>& matchMap)
+{
+    QStatus status = ER_OK;
+    size_t pos = 0;
+    while (pos < match.length()) {
+        size_t endPos = match.find_first_of(',', pos);
+        if (endPos == String::npos) {
+            endPos = match.length();
+        }
+        size_t eqPos = match.find_first_of('=', pos);
+        if ((eqPos == String::npos) || (eqPos >= endPos)) {
+            status = ER_FAIL;
+            break;
+        }
+        ++eqPos;
+        size_t begQuotePos = match.find_first_of('\'', eqPos);
+        size_t endQuotePos = String::npos;
+        if ((begQuotePos != String::npos) && (++begQuotePos < match.length())) {
+            endQuotePos = match.find_first_of('\'', begQuotePos);
+        }
+        if (endQuotePos == String::npos) {
+            status = ER_FAIL;
+            break;
+        }
+        String key = match.substr(pos, eqPos - 1 - pos);
+        String value = match.substr(begQuotePos, endQuotePos - begQuotePos);
+        matchMap[key] = value;
+        pos = endPos + 1;
+    }
+    return status;
+}
+
 }

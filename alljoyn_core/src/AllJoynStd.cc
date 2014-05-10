@@ -90,6 +90,8 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("GetHostInfo",              "u",                 "uss",               "sessionId,disposition,localipaddr,remoteipaddr", 0);
         ifc->AddMethod("ReloadConfig",             "",                  "b",                 "loaded",                                     0);
         ifc->AddMethod("Ping",                     "su",                "u",                 "name,timeout,disposition",                   0);
+        ifc->AddMethod("FindAdvertisementByTransport",       "sq",                "u",                 "matching,transports,disposition",     0);
+        ifc->AddMethod("CancelFindAdvertisementByTransport", "sq",                "u",                 "matching,transports,disposition",     0);
 
         ifc->AddSignal("FoundAdvertisedName",      "sqs",              "name,transport,prefix",                        0);
         ifc->AddSignal("LostAdvertisedName",       "sqs",              "name,transport,prefix",                        0);

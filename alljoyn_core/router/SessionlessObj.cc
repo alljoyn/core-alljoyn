@@ -68,7 +68,6 @@ static const char* WellKnownName = "org.alljoyn.sl";      /**< Well known bus na
 
 /** The advertised name when the match rule does not specify an interface */
 static const char* WildcardInterfaceName = "org.alljoyn";
-static const char* WildcardAdvertisementPrefix = "org.alljoyn.sl.";
 
 /*
  * Do not update the version without reviewing where it is used below.  It is
@@ -535,10 +534,15 @@ void SessionlessObj::FoundAdvertisedNameSignalHandler(const InterfaceDescription
         return;
     }
 
+    FoundAdvertisedNameHandler(name, transport, prefix);
+}
+
+void SessionlessObj::FoundAdvertisedNameHandler(const char* name, TransportMask transport, const char* prefix)
+{
     /* Examine found name to see if we need to connect to it */
     String guid, iface;
     uint32_t version, changeId;
-    status = ParseAdvertisedName(name, &version, &guid, &iface, &changeId);
+    QStatus status = ParseAdvertisedName(name, &version, &guid, &iface, &changeId);
     if (status != ER_OK) {
         QCC_LogError(status, ("Found invalid name \"%s\"", name));
         return;
@@ -965,8 +969,6 @@ QStatus SessionlessObj::SendThroughEndpoint(Message& msg, BusEndpoint& ep, Sessi
 
 void SessionlessObj::UpdateAdvertisements()
 {
-    QStatus status;
-
     /* Figure out what we need to advertise. */
     map<String, uint32_t> advertisements;
     lock.Lock();
@@ -975,13 +977,13 @@ void SessionlessObj::UpdateAdvertisements()
         advertisements[msg->GetInterface()] = max(advertisements[msg->GetInterface()], it->second.first);
         advertisements[WildcardInterfaceName] = max(advertisements[WildcardInterfaceName], it->second.first); /* The v0 advertisement */
     }
-    lock.Unlock();
 
     /* First pass: cancel any names that don't need to be advertised anymore. */
+    vector<String> cancelNames;
     for (map<String, uint32_t>::iterator last = lastAdvertisements.begin(); last != lastAdvertisements.end();) {
         String name = last->first;
         if (advertisements.find(name) == advertisements.end()) {
-            CancelAdvertisedName(AdvertisedName(name, last->second));
+            cancelNames.push_back(AdvertisedName(name, last->second));
             lastAdvertisements.erase(last);
             last = lastAdvertisements.upper_bound(name);
         } else {
@@ -990,18 +992,25 @@ void SessionlessObj::UpdateAdvertisements()
     }
 
     /* Second pass: update/add any new advertisements. */
+    vector<String> advertiseNames;
     for (map<String, uint32_t>::iterator it = advertisements.begin(); it != advertisements.end(); ++it) {
         map<String, uint32_t>::iterator last = lastAdvertisements.find(it->first);
         if (last == lastAdvertisements.end() || IS_GREATER(uint32_t, it->second, last->second)) {
             if (last != lastAdvertisements.end()) {
-                CancelAdvertisedName(AdvertisedName(last->first, last->second));
+                cancelNames.push_back(AdvertisedName(last->first, last->second));
                 lastAdvertisements.erase(last);
             }
-            status = AdvertiseName(AdvertisedName(it->first, it->second));
-            if (status == ER_OK) {
-                lastAdvertisements[it->first] = it->second;
-            }
+            advertiseNames.push_back(AdvertisedName(it->first, it->second));
+            lastAdvertisements[it->first] = it->second;
         }
+    }
+    lock.Unlock();
+
+    for (vector<String>::iterator it = cancelNames.begin(); it != cancelNames.end(); ++it) {
+        CancelAdvertisedName(*it);
+    }
+    for (vector<String>::iterator it = advertiseNames.begin(); it != advertiseNames.end(); ++it) {
+        AdvertiseName(*it);
     }
 }
 
@@ -1047,13 +1056,15 @@ void SessionlessObj::CancelAdvertisedName(const qcc::String& name)
 void SessionlessObj::FindAdvertisedNames()
 {
     for (RuleIterator rit = rules.begin(); rit != rules.end(); ++rit) {
-        String name = (rit->second.iface.empty() ? WildcardInterfaceName : rit->second.iface) + ".sl.";
-        pair<set<String>::iterator, bool> finding = findingNames.insert(name);
-        if (finding.second) {
-            QCC_DbgPrintf(("FindAdvertisedName(name=%s)", name.c_str()));
-            QStatus status = bus.FindAdvertisedNameByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
+        String name = "wkn='" + (rit->second.iface.empty() ? WildcardInterfaceName : rit->second.iface) + ".sl.'";
+        for (vector<String>::const_iterator iit = rit->second.implements.begin(); iit != rit->second.implements.end(); ++iit) {
+            name += ",implements='" + *iit + "'";
+        }
+        if (findingNames.insert(name).second) {
+            QCC_DbgPrintf(("FindAdvertisement(%s)", name.c_str()));
+            QStatus status = FindAdvertisementByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
             if (status != ER_OK) {
-                QCC_LogError(status, ("FindAdvertisedNameByTransport failed"));
+                QCC_LogError(status, ("FindAdvertisementByTransport failed"));
             }
         }
     }
@@ -1062,12 +1073,12 @@ void SessionlessObj::FindAdvertisedNames()
          * If we're finding anything, we always need to find the v0
          * advertisement for backwards compatibility.
          */
-        pair<set<String>::iterator, bool> finding = findingNames.insert(WildcardAdvertisementPrefix);
-        if (finding.second) {
-            QCC_DbgPrintf(("FindAdvertisedName(name=%s)", WildcardAdvertisementPrefix));
-            QStatus status = bus.FindAdvertisedNameByTransport(WildcardAdvertisementPrefix, TRANSPORT_ANY & ~TRANSPORT_LOCAL);
+        String name = String("wkn='") + WildcardInterfaceName + ".sl.'";
+        if (findingNames.insert(name).second) {
+            QCC_DbgPrintf(("FindAdvertisement(%s)", name.c_str()));
+            QStatus status = FindAdvertisementByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
             if (status != ER_OK) {
-                QCC_LogError(status, ("FindAdvertisedNameByTransport failed"));
+                QCC_LogError(status, ("FindAdvertisementByTransport failed"));
             }
         }
     }
@@ -1078,11 +1089,11 @@ void SessionlessObj::CancelFindAdvertisedNames()
     set<String>::iterator it = findingNames.begin();
     while (it != findingNames.end()) {
         String name = *it;
-        QStatus status = bus.CancelFindAdvertisedNameByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
+        QStatus status = CancelFindAdvertisementByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
         if (status == ER_OK) {
-            QCC_DbgPrintf(("CancelFindAdvertisedName(%s)", name.c_str()));
+            QCC_DbgPrintf(("CancelFindAdvertisement(%s)", name.c_str()));
         } else {
-            QCC_LogError(status, ("CancelFindAdvertisedNameByTransport failed"));
+            QCC_LogError(status, ("CancelFindAdvertisementByTransport failed"));
         }
         findingNames.erase(it++);
     }
@@ -1185,17 +1196,172 @@ bool SessionlessObj::IsMatch(RemoteCache& cache, uint32_t fromRulesId, uint32_t 
     return false;
 }
 
-bool SessionlessObj::QueryHandler(TransportMask transport, MDNSPacket mdnsPacket, uint16_t recvPort,
-                                  const qcc::String& guid, const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6)
+bool SessionlessObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
+                                  const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6)
 {
-    QCC_LogError(ER_NONE, ("QueryHandler"));
+    MDNSResourceRecord* searchRecord;
+    if (!query->GetAdditionalRecord("search.", MDNSResourceRecord::TXT, &searchRecord)) {
+        return false;
+    }
+    MDNSTextRData* searchRData = static_cast<MDNSTextRData*>(searchRecord->GetRData());
+    if (!searchRData) {
+        QCC_DbgPrintf(("Ignoring query with invalid search info"));
+        return false;
+    }
+
+    const map<String, String>& fields = searchRData->GetFields();
+    for (map<String, String>::const_iterator sit = fields.begin(); sit != fields.end(); ++sit) {
+        if (sit->first == "implements") {
+            String ruleStr = "implements='" + sit->second + "'";
+            Rule rule(ruleStr.c_str());
+            lock.Lock();
+            for (LocalCache::iterator mit = localCache.begin(); mit != localCache.end(); ++mit) {
+                Message& msg = mit->second.second;
+                if (rule.IsMatch(msg)) {
+                    MDNSPacket response;
+                    response->SetDestination(ns4);
+                    MDNSTextRData* advRData = new MDNSTextRData();
+                    String name = AdvertisedName(msg->GetInterface(), lastAdvertisements[msg->GetInterface()]);
+                    advRData->SetValue("wkn", name);
+                    advRData->SetValue("implements", sit->second);
+                    MDNSResourceRecord advertiseRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
+                    response->AddAdditionalRecord(advertiseRecord);
+                    QStatus status = IpNameService::Instance().Response(transport, response);
+                    if (ER_OK == status) {
+                        QCC_DbgPrintf(("Sent implements response for %s (name=%s)", sit->second.c_str(), name.c_str()));
+                        lock.Unlock();
+                        return true;
+                    } else {
+                        QCC_LogError(status, ("Response failed"));
+                    }
+                }
+            }
+            lock.Unlock();
+        }
+    }
+
     return false;
 }
 
-bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket mdnsPacket, uint16_t recvPort)
+bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort)
 {
-    QCC_LogError(ER_NONE, ("ResponseHandler"));
+    MDNSResourceRecord* advRecord;
+    if (!response->GetAdditionalRecord("advertise.", MDNSResourceRecord::TXT, &advRecord)) {
+        return false;
+    }
+    MDNSTextRData* advRData = static_cast<MDNSTextRData*>(advRecord->GetRData());
+    if (!advRData) {
+        QCC_DbgPrintf(("Ignoring response with invalid advertisement info"));
+        return false;
+    }
+
+    /*
+     * Next step is to see if the response matches any of our rules.  If it
+     * does, then report the name as found.
+     */
+    for (RuleIterator rit = rules.begin(); rit != rules.end(); ++rit) {
+        Rule& rule = rit->second;
+        if (rule.iface != "org.alljoyn.About") {
+            continue;
+        }
+
+        String name;
+        size_t implements = 0;
+        // TODO Need to handle multiple matches in a response, this code behaves as if only one match in response
+        const map<String, String>& fields = advRData->GetFields();
+        for (map<String, String>::const_iterator it = fields.begin(); it != fields.end(); ++it) {
+            if (it->first.find("wkn") == 0) {
+                name = it->second;
+            } else if ((it->first.find("implements") == 0) &&
+                       (std::find(rule.implements.begin(), rule.implements.end(), it->second) != rule.implements.end())) {
+                ++implements;
+            }
+        }
+
+        if (name.find(rule.iface) == 0) {
+            if (recvPort == IpNameService::MULTICAST_MDNS_PORT) {
+                QCC_DbgPrintf(("Received unsolicited response (name=%s)", name.c_str()));
+            } else if (implements == rule.implements.size()) {
+                QCC_DbgPrintf(("Received implements response (name=%s)", name.c_str()));
+            } else {
+                continue;
+            }
+            FoundAdvertisedNameHandler(name.c_str(), transport, name.c_str());
+        }
+    }
+
+    /* Always return false since we're just sniffing for org.alljoyn.About.sl. advertisements */
     return false;
+}
+
+QStatus SessionlessObj::FindAdvertisementByTransport(const char* matching, TransportMask transports)
+{
+    Message reply(bus);
+    MsgArg args[2];
+    size_t numArgs = ArraySize(args);
+
+    MsgArg::Set(args, numArgs, "sq", matching, transports);
+
+    const ProxyBusObject& alljoynObj = bus.GetAllJoynProxyObj();
+    QStatus status = alljoynObj.MethodCall(org::alljoyn::Bus::InterfaceName, "FindAdvertisementByTransport", args, numArgs, reply);
+    if (ER_OK == status) {
+        uint32_t disposition;
+        status = reply->GetArgs("u", &disposition);
+        if (ER_OK == status) {
+            switch (disposition) {
+            case ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS:
+                break;
+
+            case ALLJOYN_FINDADVERTISEDNAME_REPLY_ALREADY_DISCOVERING:
+                status = ER_ALLJOYN_FINDADVERTISEDNAME_REPLY_ALREADY_DISCOVERING;
+                break;
+
+            case ALLJOYN_FINDADVERTISEDNAME_REPLY_FAILED:
+                status = ER_ALLJOYN_FINDADVERTISEDNAME_REPLY_FAILED;
+                break;
+
+            default:
+                status = ER_BUS_UNEXPECTED_DISPOSITION;
+                break;
+            }
+        }
+    } else {
+        QCC_LogError(status, ("%s.FindAdvertisement returned ERROR_MESSAGE (error=%s)", org::alljoyn::Bus::InterfaceName, reply->GetErrorDescription().c_str()));
+    }
+    return status;
+}
+
+QStatus SessionlessObj::CancelFindAdvertisementByTransport(const char* matching, TransportMask transports)
+{
+    Message reply(bus);
+    MsgArg args[2];
+    size_t numArgs = ArraySize(args);
+
+    MsgArg::Set(args, numArgs, "sq", matching, transports);
+
+    const ProxyBusObject& alljoynObj = bus.GetAllJoynProxyObj();
+    QStatus status = alljoynObj.MethodCall(org::alljoyn::Bus::InterfaceName, "CancelFindAdvertisementByTransport", args, numArgs, reply);
+    if (ER_OK == status) {
+        uint32_t disposition;
+        status = reply->GetArgs("u", &disposition);
+        if (ER_OK == status) {
+            switch (disposition) {
+            case ALLJOYN_CANCELFINDADVERTISEDNAME_REPLY_SUCCESS:
+                break;
+
+            case ALLJOYN_CANCELFINDADVERTISEDNAME_REPLY_FAILED:
+                status = ER_ALLJOYN_CANCELFINDADVERTISEDNAME_REPLY_FAILED;
+                break;
+
+            default:
+                status = ER_BUS_UNEXPECTED_DISPOSITION;
+                break;
+            }
+        }
+    } else {
+        QCC_LogError(status, ("%s.CancelFindAdvertisement returned ERROR_MESSAGE (error=%s)", org::alljoyn::Bus::InterfaceName, reply->GetErrorDescription().c_str()));
+    }
+    return status;
 }
 
 }
