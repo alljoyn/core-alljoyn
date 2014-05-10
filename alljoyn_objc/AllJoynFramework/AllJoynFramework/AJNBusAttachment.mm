@@ -404,6 +404,20 @@ public:
     return interfaceDescription;
 }
 
+- (AJNInterfaceDescription *)createInterfaceWithName:(NSString *)interfaceName withInterfaceSecPolicy:(enum AJNInterfaceSecurityPolicy)interfaceSecurityPolicy
+{
+    AJNInterfaceDescription *interfaceDescription;
+    ajn::InterfaceDescription *handle;
+    QStatus status = self.busAttachment->CreateInterface([interfaceName UTF8String], handle, (ajn::InterfaceSecurityPolicy)interfaceSecurityPolicy);
+    if (status != ER_OK && status != ER_BUS_IFACE_ALREADY_EXISTS) {
+        NSLog(@"ERROR: BusAttachment failed to create interface named %@. %s", interfaceName, QCC_StatusText(status));
+    }
+    else {
+        interfaceDescription = [[AJNInterfaceDescription alloc] initWithHandle:handle];
+    }
+    return interfaceDescription;
+}
+
 - (AJNInterfaceDescription*)interfaceWithName:(NSString*)interfaceName
 {
     const ajn::InterfaceDescription *pInterfaceDescription = self.busAttachment->GetInterface([interfaceName UTF8String]);
