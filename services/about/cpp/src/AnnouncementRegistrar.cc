@@ -68,7 +68,7 @@ QStatus AnnouncementRegistrar::RegisterAnnounceHandler(ajn::BusAttachment& bus, 
         return status;
     }
 
-    status = bus.AddMatch("type='signal',interface='org.alljoyn.About',member='Announce'");
+    status = bus.AddMatch("type='signal',sessionless='t',interface='org.alljoyn.About',member='Announce'");
     if (status != ER_OK) {
         return status;
     }
