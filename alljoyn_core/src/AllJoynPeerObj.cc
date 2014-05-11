@@ -342,7 +342,9 @@ void AllJoynPeerObj::ExpandHeader(Message& msg, const qcc::String& receivedFrom)
         }
         if (status == ER_OK) {
             remotePeerObj.AddInterface(*ifc);
-            status = remotePeerObj.MethodCall(*(ifc->GetMember("GetExpansion")), &arg, 1, replyMsg, EXPANSION_TIMEOUT);
+            const InterfaceDescription::Member* getExpansionMember = ifc->GetMember("GetExpansion");
+            assert(getExpansionMember);
+            status = remotePeerObj.MethodCall(*getExpansionMember, &arg, 1, replyMsg, EXPANSION_TIMEOUT);
         }
         if (status == ER_OK) {
             status = replyMsg->AddExpansionRule(token, replyMsg->GetArg(0));
@@ -976,7 +978,9 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
     args[0].Set("s", localGuidStr.c_str());
     args[1].Set("u", PREFERRED_AUTH_VERSION);
     Message replyMsg(*bus);
-    status = remotePeerObj.MethodCall(*(ifc->GetMember("ExchangeGuids")), args, ArraySize(args), replyMsg, DEFAULT_TIMEOUT);
+    const InterfaceDescription::Member* exchangeGuidsMember = ifc->GetMember("ExchangeGuids");
+    assert(exchangeGuidsMember);
+    status = remotePeerObj.MethodCall(*exchangeGuidsMember, args, ArraySize(args), replyMsg, DEFAULT_TIMEOUT);
     if (status != ER_OK) {
         /*
          * ER_BUS_REPLY_IS_ERROR_MESSAGE has a specific meaning in the public API and should not be
@@ -1116,7 +1120,9 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
             args[0].Set("s", localGuidStr.c_str());
             args[1].Set("s", remoteGuidStr.c_str());
             args[2].Set("s", nonce.c_str());
-            status = remotePeerObj.MethodCall(*(ifc->GetMember("GenSessionKey")), args, ArraySize(args), replyMsg, DEFAULT_TIMEOUT);
+            const InterfaceDescription::Member* genSessionKeyMember = ifc->GetMember("GenSessionKey");
+            assert(genSessionKeyMember);
+            status = remotePeerObj.MethodCall(*genSessionKeyMember, args, ArraySize(args), replyMsg, DEFAULT_TIMEOUT);
             if (status == ER_OK) {
                 qcc::String verifier;
                 /*
@@ -1170,7 +1176,9 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
         } else {
             arg.Set("ay", key.GetSize(), key.GetData());
         }
-        status = remotePeerObj.MethodCall(*(ifc->GetMember("ExchangeGroupKeys")), &arg, 1, replyMsg, DEFAULT_TIMEOUT, ALLJOYN_FLAG_ENCRYPTED);
+        const InterfaceDescription::Member* exchangeGroupKeysMember = ifc->GetMember("ExchangeGroupKeys");
+        assert(exchangeGroupKeysMember);
+        status = remotePeerObj.MethodCall(*exchangeGroupKeysMember, &arg, 1, replyMsg, DEFAULT_TIMEOUT, ALLJOYN_FLAG_ENCRYPTED);
         if (status == ER_OK) {
             if (sendKeyBlob) {
                 StringSource src(replyMsg->GetArg(0)->v_scalarArray.v_byte, replyMsg->GetArg(0)->v_scalarArray.numElements);
@@ -1235,7 +1243,9 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingSASL(const qcc::String& busName, Pe
     while (status == ER_OK) {
         Message replyMsg(*bus);
         MsgArg arg("s", outStr.c_str());
-        status = remotePeerObj.MethodCall(*(ifc->GetMember("AuthChallenge")), &arg, 1, replyMsg, AUTH_TIMEOUT);
+        const InterfaceDescription::Member* authChallengeMember = ifc->GetMember("AuthChallenge");
+        assert(authChallengeMember);
+        status = remotePeerObj.MethodCall(*authChallengeMember, &arg, 1, replyMsg, AUTH_TIMEOUT);
         if (status == ER_OK) {
             /*
              * This will let us know if we need to make an AuthenticationComplete callback below.
@@ -1269,7 +1279,9 @@ QStatus AllJoynPeerObj::AskForAuthSuites(ProxyBusObject& remotePeerObj, const In
     MsgArg arg;
     arg.Set("au", supportedAuthSuitesCount, supportedAuthSuites);
     Message replyMsg(*bus);
-    QStatus status = remotePeerObj.MethodCall(*(ifc->GetMember("ExchangeSuites")), &arg, 1, replyMsg, DEFAULT_TIMEOUT);
+    const InterfaceDescription::Member* exchangeSuites = ifc->GetMember("ExchangeSuites");
+    assert(exchangeSuites);
+    QStatus status = remotePeerObj.MethodCall(*exchangeSuites, &arg, 1, replyMsg, DEFAULT_TIMEOUT);
     if (status != ER_OK) {
         return status;
     }
@@ -1611,14 +1623,18 @@ QStatus AllJoynPeerObj::HandleMethodReply(Message& msg, const MsgArg* args, size
 
 QStatus KeyExchangerCB::SendKeyExchange(MsgArg* args, size_t numArgs, Message* replyMsg)
 {
-    return remoteObj.MethodCall(*(ifc->GetMember("KeyExchange")), args, numArgs, *replyMsg, timeout);
+    const InterfaceDescription::Member* keyExchange = ifc->GetMember("KeyExchange");
+    assert(keyExchange);
+    return remoteObj.MethodCall(*keyExchange, args, numArgs, *replyMsg, timeout);
 }
 
 QStatus KeyExchangerCB::SendKeyAuthentication(MsgArg* variant, Message* replyMsg)
 {
     MsgArg arg;
     arg.Set("v", variant);
-    return remoteObj.MethodCall(*(ifc->GetMember("KeyAuthentication")), &arg, 1, *replyMsg, timeout);
+    const InterfaceDescription::Member* keyAuth = ifc->GetMember("KeyAuthentication");
+    assert(keyAuth);
+    return remoteObj.MethodCall(*keyAuth, &arg, 1, *replyMsg, timeout);
 }
 
 /**

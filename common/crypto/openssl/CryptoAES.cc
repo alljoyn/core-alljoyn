@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -201,7 +201,7 @@ static void Compute_CCM_AuthField(AES_KEY* key, Crypto_AES::Block& T, uint8_t M,
     Crypto_AES::Block B_0(0);
     B_0.data[0] = flags;
     memset(&B_0.data[1], 0, 15 - L);
-    memcpy(&B_0.data[1], nonce.GetData(), nonce.GetSize());
+    memcpy(&B_0.data[1], nonce.GetData(), min((size_t)15, nonce.GetSize()));
     for (size_t i = 15, l = mLen; l != 0; i--) {
         B_0.data[i] = (uint8_t)(l & 0xFF);
         l >>= 8;

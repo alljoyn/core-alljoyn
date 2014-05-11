@@ -2845,7 +2845,7 @@ bool IpNameServiceImpl::SameNetwork(uint32_t interfaceAddressPrefixLen, qcc::IPA
             return false;
         }
 
-        if (interfaceAddressPrefixLen > 128) {
+        if (interfaceAddressPrefixLen >= 128) {
             QCC_LogError(ER_FAIL, ("IpNameServiceImpl::SameNetwork(): Bad IPv6 network prefix"));
             return false;
         }

@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -244,7 +244,9 @@ QStatus XmlHelper::ParseNode(const XmlElement* root, ProxyBusObject* obj)
     assert(root->GetName() == "node");
 
     if (GetSecureAnnotation(root) == "true") {
-        obj->isSecure = true;
+        if (obj) {
+            obj->isSecure = true;
+        }
     }
     /* Iterate over <interface> and <node> elements */
     const vector<XmlElement*>& rootChildren = root->GetChildren();

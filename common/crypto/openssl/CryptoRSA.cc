@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -148,6 +148,11 @@ QStatus Crypto_RSA::MakeSelfCertificate(const qcc::String& commonName, const qcc
     X509_gmtime_adj(X509_get_notAfter(x509), EXPIRE_DAYS(365));
 
     EVP_PKEY* evpk = EVP_PKEY_new();
+    if (!evpk) {
+        status = ER_OUT_OF_MEMORY;
+        QCC_LogError(status, ("Failed to allocate memory for EVP PKEY"));
+        return status;
+    }
     Generate(512);
     EVP_PKEY_set1_RSA(evpk, (RSA*)key);
     X509_set_pubkey(x509, evpk);
@@ -313,6 +318,11 @@ QStatus Crypto_RSA::ExportPrivateKey(qcc::KeyBlob& keyBlob, PassphraseListener* 
     QStatus status = ER_CRYPTO_ERROR;
     BIO* bio = BIO_new(BIO_s_mem());
     EVP_PKEY* evpk = EVP_PKEY_new();
+    if (!evpk) {
+        status = ER_OUT_OF_MEMORY;
+        QCC_LogError(status, ("Failed to allocate memory for EVP PKEY"));
+        return status;
+    }
 
     EVP_PKEY_set1_RSA(evpk, (RSA*)key);
     /* Load all ciphers and digests */

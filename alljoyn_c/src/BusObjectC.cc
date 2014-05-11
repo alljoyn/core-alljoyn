@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -333,11 +333,16 @@ QStatus alljoyn_busobject_signal(alljoyn_busobject bus,
                                  alljoyn_message msg)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
+    const ajn::InterfaceDescription::Member* member = ((ajn::InterfaceDescription*)signal.iface)->GetMember(signal.name);
+    if (!member) {
+        return ER_BUS_INTERFACE_NO_SUCH_MEMBER;
+    }
+
     /* must call the Signal Method through BusObjectC since Signal is a protected Method */
     return ((ajn::BusObjectC*)bus)->SignalC(
                destination,
                sessionId,
-               *((ajn::InterfaceDescription*)signal.iface)->GetMember(signal.name),
+               *member,
                args,
                numArgs,
                timeToLive,
