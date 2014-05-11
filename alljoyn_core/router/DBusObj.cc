@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -506,6 +506,7 @@ void DBusObj::NameOwnerChanged(const qcc::String& alias, const qcc::String* oldO
                                                                                shortGuidStr.c_str(),
                                                                                shortGuidStr.size()))) {
         const InterfaceDescription::Member* nameLost = dbusIntf->GetMember("NameLost");
+        assert(nameLost);
         status = Signal(oldOwner->c_str(), 0, *nameLost, &aliasArg, 1);
         if (ER_OK != status) {
             QCC_DbgPrintf(("Failed to send NameLost signal for %s to %s (%s)", alias.c_str(), oldOwner->c_str(), QCC_StatusText(status)));
@@ -516,6 +517,7 @@ void DBusObj::NameOwnerChanged(const qcc::String& alias, const qcc::String* oldO
     if (newOwner && !newOwner->empty() && (0 == ::strncmp(newOwner->c_str() + 1, shortGuidStr.c_str(),
                                                           shortGuidStr.size()))) {
         const InterfaceDescription::Member* nameAcquired = dbusIntf->GetMember("NameAcquired");
+        assert(nameAcquired);
         status = Signal(newOwner->c_str(), 0, *nameAcquired, &aliasArg, 1);
         if (ER_OK != status) {
             QCC_DbgPrintf(("Failed to send NameAcquired signal for %s to %s (%s)", alias.c_str(), newOwner->c_str(), QCC_StatusText(status)));
@@ -528,6 +530,7 @@ void DBusObj::NameOwnerChanged(const qcc::String& alias, const qcc::String* oldO
     MsgArg::Set(ownerChangedArgs, numArgs, "sss", alias.c_str(), oldOwner ? oldOwner->c_str() : "", newOwner ? newOwner->c_str() : "");
 
     const InterfaceDescription::Member* nameOwnerChanged = dbusIntf->GetMember("NameOwnerChanged");
+    assert(nameOwnerChanged);
     status = Signal(NULL, 0, *nameOwnerChanged, ownerChangedArgs, numArgs);
     if (status != ER_OK) {
         QCC_DbgPrintf(("Failed to send NameOwnerChanged signal for %s to %s (%s)", alias.c_str(), newOwner ? newOwner->c_str() : "", QCC_StatusText(status)));

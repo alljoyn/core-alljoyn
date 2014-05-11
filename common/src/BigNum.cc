@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -88,6 +88,7 @@ class BigNum::Storage {
     {
         size_t mallocSz = sizeof(Storage) + (sz + extra) * sizeof(uint32_t);
         uint8_t* p = (uint8_t*)malloc(mallocSz);
+        assert(p);
         Storage* s = new (p)Storage();
         s->buffer = reinterpret_cast<uint32_t*>(p + sizeof(Storage));
         s->size = sz + extra;

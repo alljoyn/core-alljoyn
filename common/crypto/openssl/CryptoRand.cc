@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -38,6 +38,11 @@ QStatus qcc::Crypto_GetRandomBytes(uint8_t* data, size_t len)
 
     QStatus status = ER_OK;
     BIGNUM* rand = BN_new();
+    if (!rand) {
+        status = ER_OUT_OF_MEMORY;
+        QCC_LogError(status, ("Failed to allocate memory for EVP PKEY"));
+        return status;
+    }
     if (BN_rand(rand, len * 8, -1, 0)) {
         BN_bn2bin(rand, data);
     } else {

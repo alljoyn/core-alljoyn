@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -107,15 +107,16 @@ qcc::String qcc::UTCTime()
     char buf[32];
     time_t t;
     time(&t);
-    struct tm* utc = gmtime(&t);
+    struct tm utc;
+    gmtime_r(&t, &utc);
     snprintf(buf, 32, "%s, %02d %s %04d %02d:%02d:%02d GMT",
-             Day[utc->tm_wday],
-             utc->tm_mday,
-             Month[utc->tm_mon],
-             1900 + utc->tm_year,
-             utc->tm_hour,
-             utc->tm_min,
-             utc->tm_sec);
+             Day[utc.tm_wday],
+             utc.tm_mday,
+             Month[utc.tm_mon],
+             1900 + utc.tm_year,
+             utc.tm_hour,
+             utc.tm_min,
+             utc.tm_sec);
 
     return buf;
 }
