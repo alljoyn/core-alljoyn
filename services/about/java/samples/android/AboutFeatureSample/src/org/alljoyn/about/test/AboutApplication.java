@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -63,507 +63,507 @@ import android.widget.Toast;
 public class AboutApplication extends Application
 {
 
-	public static final String TAG = "AboutClient";
+    public static final String TAG = "AboutClient";
 	private static final String SESSIONLESS_MATCH_RULE = "sessionless='t',type='error'";
 
-	private BusAttachment m_Bus;
-	private HashMap<String, SoftAPDetails> m_devicesMap;
-	private AboutService m_aboutService;
-	private AboutClient m_aboutClient;
-	private AboutIconClient m_aboutIconClient;
-	private String m_realmName;
-	private BroadcastReceiver m_receiver;
-	private WifiManager m_wifiManager;
+    private BusAttachment m_Bus;
+    private HashMap<String, SoftAPDetails> m_devicesMap;
+    private AboutService m_aboutService;
+    private AboutClient m_aboutClient;
+    private AboutIconClient m_aboutIconClient;
+    private String m_realmName;
+    private BroadcastReceiver m_receiver;
+    private WifiManager m_wifiManager;
 
-	/**
-	 * The daemon should advertise itself "quietly" (directly to the calling port)
-	 * This is to reply directly to a TC looking for a daemon 
-	 */
-	private static final String DAEMON_QUIET_PREFIX= "quiet@";
+    /**
+     * The daemon should advertise itself "quietly" (directly to the calling port)
+     * This is to reply directly to a TC looking for a daemon
+     */
+    private static final String DAEMON_QUIET_PREFIX= "quiet@";
 
-	private final GenericLogger m_logger = new GenericLogger() {
-		@Override
-		public void debug(String TAG, String msg) {
-			Log.d(TAG, msg);
-		}
+    private final GenericLogger m_logger = new GenericLogger() {
+        @Override
+        public void debug(String TAG, String msg) {
+            Log.d(TAG, msg);
+        }
 
-		@Override
-		public void info(String TAG, String msg) {
-			//To change body of implemented methods use File | Settings | File Templates.
-			Log.i(TAG, msg);
-		}
+        @Override
+        public void info(String TAG, String msg) {
+            //To change body of implemented methods use File | Settings | File Templates.
+            Log.i(TAG, msg);
+        }
 
-		@Override
-		public void warn(String TAG, String msg) {
-			//To change body of implemented methods use File | Settings | File Templates.
-			Log.w(TAG, msg);
-		}
+        @Override
+        public void warn(String TAG, String msg) {
+            //To change body of implemented methods use File | Settings | File Templates.
+            Log.w(TAG, msg);
+        }
 
-		@Override
-		public void error(String TAG, String msg) {
-			//To change body of implemented methods use File | Settings | File Templates.
-			Log.e(TAG, msg);
-		}
+        @Override
+        public void error(String TAG, String msg) {
+            //To change body of implemented methods use File | Settings | File Templates.
+            Log.e(TAG, msg);
+        }
 
-		@Override
-		public void fatal(String TAG, String msg) {
-			//To change body of implemented methods use File | Settings | File Templates.
-			Log.wtf(TAG, msg);
-		}
-	};
+        @Override
+        public void fatal(String TAG, String msg) {
+            //To change body of implemented methods use File | Settings | File Templates.
+            Log.wtf(TAG, msg);
+        }
+    };
 
-	static {
-		try {
-			System.loadLibrary("alljoyn_java");
-		} catch (Exception e) {
-			System.out.println("can't load library alljoyn_java");
-		}
-	}
+    static {
+        try {
+            System.loadLibrary("alljoyn_java");
+        } catch (Exception e) {
+            System.out.println("can't load library alljoyn_java");
+        }
+    }
 
-	//======================================================================
-	/* (non-Javadoc)
-	 * @see android.app.Application#onCreate()
-	 */
-	@Override
-	public void onCreate() {
+    //======================================================================
+    /* (non-Javadoc)
+     * @see android.app.Application#onCreate()
+     */
+    @Override
+    public void onCreate() {
 
-		super.onCreate();
-		HandlerThread busThread = new HandlerThread("BusHandler");
-		busThread.start();
-		m_wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-		m_devicesMap = new HashMap<String, SoftAPDetails>();
+        super.onCreate();
+        HandlerThread busThread = new HandlerThread("BusHandler");
+        busThread.start();
+        m_wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+        m_devicesMap = new HashMap<String, SoftAPDetails>();
 
-		//Receiver
-		m_receiver = new BroadcastReceiver() {
+        //Receiver
+        m_receiver = new BroadcastReceiver() {
 
-			@Override
-			public void onReceive(Context context, Intent intent) {
+            @Override
+            public void onReceive(Context context, Intent intent) {
 
-				if(WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(intent.getAction())){
+                if(WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(intent.getAction())){
 
-					NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
+                    NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
 
-					String str = "";
-					if(networkInfo.getState().equals(State.CONNECTED)){					
-						WifiInfo wifiInfo = intent.getParcelableExtra(WifiManager.EXTRA_WIFI_INFO);
-						str = wifiInfo.getSSID();
-					}
-					else{
-						str = networkInfo.getState().toString().toLowerCase(Locale.getDefault());
-					}
-					Intent networkIntent = new Intent(Keys.Actions.ACTION_CONNECTED_TO_NETWORK);
-					networkIntent.putExtra(Keys.Extras.EXTRA_NETWORK_SSID, str);
-					sendBroadcast(networkIntent);
-				}
-			}			
-		};
-		IntentFilter filter = new IntentFilter();
-		filter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
-		registerReceiver(m_receiver, filter);
+                    String str = "";
+                    if(networkInfo.getState().equals(State.CONNECTED)){
+                        WifiInfo wifiInfo = intent.getParcelableExtra(WifiManager.EXTRA_WIFI_INFO);
+                        str = wifiInfo.getSSID();
+                    }
+                    else{
+                        str = networkInfo.getState().toString().toLowerCase(Locale.getDefault());
+                    }
+                    Intent networkIntent = new Intent(Keys.Actions.ACTION_CONNECTED_TO_NETWORK);
+                    networkIntent.putExtra(Keys.Extras.EXTRA_NETWORK_SSID, str);
+                    sendBroadcast(networkIntent);
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+        registerReceiver(m_receiver, filter);
 
-	}
-	//======================================================================
-	public String getCurrentSSID(){
-		return m_wifiManager.getConnectionInfo().getSSID();
-	}
-	//======================================================================
-	/**
-	 * @param msg Given a msg, create and display a toast on the screen.
-	 */
-	public void makeToast(String msg){
-		Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
-	}
-	//======================================================================
-	/**
-	 * Sets the daemon realm name.
-	 * @param realmName The daemon realm name.
-	 */
-	public void setRealmName(String realmName){
-		m_realmName = realmName;
-	}
-	//======================================================================
-	/* (non-Javadoc)
-	 * @see android.app.Application#onTerminate()
-	 */
-	@Override
-	public void onTerminate() {		
-		super.onTerminate();
-		unregisterReceiver(m_receiver);
-	}
-	//======================================================================
+    }
+    //======================================================================
+    public String getCurrentSSID(){
+        return m_wifiManager.getConnectionInfo().getSSID();
+    }
+    //======================================================================
+    /**
+     * @param msg Given a msg, create and display a toast on the screen.
+     */
+    public void makeToast(String msg){
+        Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+    }
+    //======================================================================
+    /**
+     * Sets the daemon realm name.
+     * @param realmName The daemon realm name.
+     */
+    public void setRealmName(String realmName){
+        m_realmName = realmName;
+    }
+    //======================================================================
+    /* (non-Javadoc)
+     * @see android.app.Application#onTerminate()
+     */
+    @Override
+    public void onTerminate() {
+        super.onTerminate();
+        unregisterReceiver(m_receiver);
+    }
+    //======================================================================
 
-	/**
-	 * Connect to the Alljoyn bus and register bus objects.
-	 */
-	public void doConnect(){
+    /**
+     * Connect to the Alljoyn bus and register bus objects.
+     */
+    public void doConnect(){
 
-		/*All communication through AllJoyn begins with a BusAttachment. */
-		boolean b = DaemonInit.PrepareDaemon(getApplicationContext());
-		System.out.println(b);
-		String ss = getPackageName();
-		m_Bus = new BusAttachment(ss , BusAttachment.RemoteMessage.Receive);
+        /*All communication through AllJoyn begins with a BusAttachment. */
+        boolean b = DaemonInit.PrepareDaemon(getApplicationContext());
+        System.out.println(b);
+        String ss = getPackageName();
+        m_Bus = new BusAttachment(ss , BusAttachment.RemoteMessage.Receive);
 
-		//setting the password for the daemon to allow thin clients to connect
-		Log.d(TAG, "Setting daemon password");
-		Status pasStatus = PasswordManager.setCredentials("ALLJOYN_PIN_KEYX", "000000");
+        //setting the password for the daemon to allow thin clients to connect
+        Log.d(TAG, "Setting daemon password");
+        Status pasStatus = PasswordManager.setCredentials("ALLJOYN_PIN_KEYX", "000000");
 
-		if ( pasStatus != Status.OK ) {
-			Log.e(TAG, "Failed to set password for daemon, Error: " + pasStatus);
-		}
+        if ( pasStatus != Status.OK ) {
+            Log.e(TAG, "Failed to set password for daemon, Error: " + pasStatus);
+        }
 
-		Status status = m_Bus.connect();
-		Log.d(TAG, "bus.connect status: "+status);
+        Status status = m_Bus.connect();
+        Log.d(TAG, "bus.connect status: "+status);
 
-		// Pump up the daemon debug level
-		m_Bus.setDaemonDebug("ALL", 7);
-		m_Bus.setLogLevels("ALL=7");
-		m_Bus.useOSLogging(true);
+        // Pump up the daemon debug level
+        m_Bus.setDaemonDebug("ALL", 7);
+        m_Bus.setLogLevels("ALL=7");
+        m_Bus.useOSLogging(true);
 
-		try
-		{
-			AnnouncementHandler receiver = new AnnouncementHandler(){
+        try
+        {
+            AnnouncementHandler receiver = new AnnouncementHandler(){
 
-				@Override
-				public void onAnnouncement(String busName, short port, BusObjectDescription[] interfaces, Map<String, Variant> aboutMap) {
+                @Override
+                public void onAnnouncement(String busName, short port, BusObjectDescription[] interfaces, Map<String, Variant> aboutMap) {
 
-					Map<String, Object> newMap = new HashMap<String, Object>();
-					try {
-						newMap = TransportUtil.fromVariantMap(aboutMap);
-						String deviceId = (String) (newMap.get(AboutKeys.ABOUT_APP_ID).toString()); 
-						String deviceFriendlyName = (String) newMap.get(AboutKeys.ABOUT_DEVICE_NAME);
-						Log.d(TAG, "onAnnouncement received: with parameters: busName:"+busName+", port:"+port+", deviceid"+deviceId+", deviceName:"+deviceFriendlyName);
-						addDevice(deviceId, busName, port, deviceFriendlyName, interfaces, newMap);
+                    Map<String, Object> newMap = new HashMap<String, Object>();
+                    try {
+                        newMap = TransportUtil.fromVariantMap(aboutMap);
+                        String deviceId = (String) (newMap.get(AboutKeys.ABOUT_APP_ID).toString());
+                        String deviceFriendlyName = (String) newMap.get(AboutKeys.ABOUT_DEVICE_NAME);
+                        Log.d(TAG, "onAnnouncement received: with parameters: busName:"+busName+", port:"+port+", deviceid"+deviceId+", deviceName:"+deviceFriendlyName);
+                        addDevice(deviceId, busName, port, deviceFriendlyName, interfaces, newMap);
 
-					} catch (BusException e) {
-						e.printStackTrace();
-					}
-				}
+                    } catch (BusException e) {
+                        e.printStackTrace();
+                    }
+                }
 
-				@Override
-				public void onDeviceLost(String serviceName)
-				{						
-					//remove the device from the spinner
-					Log.d(TAG, "onDeviceLost received: device with busName: "+serviceName+" was lost");
-					removeDevice(serviceName);
-				}
-			};
+                @Override
+                public void onDeviceLost(String serviceName)
+                {
+                    //remove the device from the spinner
+                    Log.d(TAG, "onDeviceLost received: device with busName: "+serviceName+" was lost");
+                    removeDevice(serviceName);
+                }
+            };
 
-			m_aboutService = AboutServiceImpl.getInstance();
-			m_aboutService.setLogger(m_logger);
-			m_aboutService.startAboutClient(m_Bus);
-			m_aboutService.addAnnouncementHandler(receiver);
+            m_aboutService = AboutServiceImpl.getInstance();
+            m_aboutService.setLogger(m_logger);
+            m_aboutService.startAboutClient(m_Bus);
+            m_aboutService.addAnnouncementHandler(receiver);
 
-		} catch (Exception e){
-			e.printStackTrace();
-		}
+        } catch (Exception e){
+            e.printStackTrace();
+        }
 
-		//request the name	
-		int flag = BusAttachment.ALLJOYN_REQUESTNAME_FLAG_DO_NOT_QUEUE;
-		String DAEMON_NAME = m_realmName;//"org.alljoyn.BusNode.Dashboard2";
-		Status reqStatus = m_Bus.requestName(DAEMON_NAME, flag);
-		if (reqStatus == Status.OK) {
-			//advertise the name
-			//advertise the name with a quite prefix for TC to find it
-			Status adStatus = m_Bus.advertiseName(DAEMON_QUIET_PREFIX + DAEMON_NAME, SessionOpts.TRANSPORT_ANY);
-			if (adStatus != Status.OK){
-				m_Bus.releaseName(DAEMON_NAME);
-				Log.w(TAG, "failed to advertise daemon name " + DAEMON_NAME);
-			}
-			else{
-				Log.d(TAG, "Succefully advertised daemon name " + DAEMON_NAME);
-			}
-		}
+        //request the name
+        int flag = BusAttachment.ALLJOYN_REQUESTNAME_FLAG_DO_NOT_QUEUE;
+        String DAEMON_NAME = m_realmName;//"org.alljoyn.BusNode.Dashboard2";
+        Status reqStatus = m_Bus.requestName(DAEMON_NAME, flag);
+        if (reqStatus == Status.OK) {
+            //advertise the name
+            //advertise the name with a quite prefix for TC to find it
+            Status adStatus = m_Bus.advertiseName(DAEMON_QUIET_PREFIX + DAEMON_NAME, SessionOpts.TRANSPORT_ANY);
+            if (adStatus != Status.OK){
+                m_Bus.releaseName(DAEMON_NAME);
+                Log.w(TAG, "failed to advertise daemon name " + DAEMON_NAME);
+            }
+            else{
+                Log.d(TAG, "Succefully advertised daemon name " + DAEMON_NAME);
+            }
+        }
 
-		// DO the AJ addMatch.
-		Status s = m_Bus.addMatch(SESSIONLESS_MATCH_RULE);
-		Log.i(TAG, "BusAttachment.addMatch() status = " + s);
-	}
+        // DO the AJ addMatch.
+        Status s = m_Bus.addMatch(SESSIONLESS_MATCH_RULE);
+        Log.i(TAG, "BusAttachment.addMatch() status = " + s);
+    }
 
-	//======================================================================
-	/**
-	 * Disconnect from Alljoyn bus and unregister bus objects.
-	 */
-	public void doDisconnect(){
-		/* It is important to unregister the BusObject before disconnecting from the bus.
-		 * Failing to do so could result in a resource leak.
-		 */
-		try {
-			if(m_aboutService != null)
-				m_aboutService.stopAboutClient();
-			if(m_Bus != null){
-				m_Bus.cancelAdvertiseName(DAEMON_QUIET_PREFIX + m_realmName, SessionOpts.TRANSPORT_ANY);
-				m_Bus.releaseName(m_realmName);
-				m_Bus.disconnect();
-				m_Bus = null;
-			}
+    //======================================================================
+    /**
+     * Disconnect from Alljoyn bus and unregister bus objects.
+     */
+    public void doDisconnect(){
+        /* It is important to unregister the BusObject before disconnecting from the bus.
+         * Failing to do so could result in a resource leak.
+         */
+        try {
+            if(m_aboutService != null)
+                m_aboutService.stopAboutClient();
+            if(m_Bus != null){
+                m_Bus.cancelAdvertiseName(DAEMON_QUIET_PREFIX + m_realmName, SessionOpts.TRANSPORT_ANY);
+                m_Bus.releaseName(m_realmName);
+                m_Bus.disconnect();
+                m_Bus = null;
+            }
 
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-	//======================================================================
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    //======================================================================
 
-	// Add an AllJoym device to the application. 
-	private void addDevice(String deviceId, String busName, short port, String deviceFriendlyName, BusObjectDescription[] interfaces, Map<String, Object> aboutMap)
-	{
-		SoftAPDetails oldDevice = m_devicesMap.get(deviceId);
+    // Add an AllJoym device to the application.
+    private void addDevice(String deviceId, String busName, short port, String deviceFriendlyName, BusObjectDescription[] interfaces, Map<String, Object> aboutMap)
+    {
+        SoftAPDetails oldDevice = m_devicesMap.get(deviceId);
 
-		if(oldDevice != null){//device already exist. update the fields that might have changed.
-			oldDevice.busName = busName;
-			oldDevice.aboutMap = aboutMap;
-			oldDevice.deviceFriendlyName = deviceFriendlyName;
-			oldDevice.port = port;
-			oldDevice.interfaces = interfaces;
-			oldDevice.updateSupportedServices();
+        if(oldDevice != null){//device already exist. update the fields that might have changed.
+            oldDevice.busName = busName;
+            oldDevice.aboutMap = aboutMap;
+            oldDevice.deviceFriendlyName = deviceFriendlyName;
+            oldDevice.port = port;
+            oldDevice.interfaces = interfaces;
+            oldDevice.updateSupportedServices();
 
-		}
-		else{
-			//add the device to the map
-			SoftAPDetails sad = new SoftAPDetails(deviceId, busName, deviceFriendlyName, port, interfaces, aboutMap);
-			m_devicesMap.put(deviceId, sad);
-		}
-		//notify the activity to come and get it
-		Intent intent = new Intent(Keys.Actions.ACTION_DEVICE_FOUND);
-		Bundle extras = new Bundle();
-		extras.putString(Keys.Extras.EXTRA_DEVICE_ID, deviceId);
-		intent.putExtras(extras);
-		sendBroadcast(intent);
-	}
-	//======================================================================
+        }
+        else{
+            //add the device to the map
+            SoftAPDetails sad = new SoftAPDetails(deviceId, busName, deviceFriendlyName, port, interfaces, aboutMap);
+            m_devicesMap.put(deviceId, sad);
+        }
+        //notify the activity to come and get it
+        Intent intent = new Intent(Keys.Actions.ACTION_DEVICE_FOUND);
+        Bundle extras = new Bundle();
+        extras.putString(Keys.Extras.EXTRA_DEVICE_ID, deviceId);
+        intent.putExtras(extras);
+        sendBroadcast(intent);
+    }
+    //======================================================================
 
-	// Remove an AllJoyn device from the application.
-	private void removeDevice(String busName){
+    // Remove an AllJoyn device from the application.
+    private void removeDevice(String busName){
 
-		Collection<SoftAPDetails> devices = m_devicesMap.values();
-		Object[] array = devices.toArray();
-		for(int i = 0; i < array.length; i++){
-			SoftAPDetails d = (SoftAPDetails) array[i];
-			if(d.busName.equals(busName)){
-				m_devicesMap.remove(d.appId);
-			}
-		}
-		Intent intent = new Intent(Keys.Actions.ACTION_DEVICE_LOST);
-		Bundle extras = new Bundle();
-		extras.putString(Keys.Extras.EXTRA_BUS_NAME, busName);
-		intent.putExtras(extras);
-		sendBroadcast(intent);
-	}
-	//======================================================================
+        Collection<SoftAPDetails> devices = m_devicesMap.values();
+        Object[] array = devices.toArray();
+        for(int i = 0; i < array.length; i++){
+            SoftAPDetails d = (SoftAPDetails) array[i];
+            if(d.busName.equals(busName)){
+                m_devicesMap.remove(d.appId);
+            }
+        }
+        Intent intent = new Intent(Keys.Actions.ACTION_DEVICE_LOST);
+        Bundle extras = new Bundle();
+        extras.putString(Keys.Extras.EXTRA_BUS_NAME, busName);
+        intent.putExtras(extras);
+        sendBroadcast(intent);
+    }
+    //======================================================================
 
-	// Send an intent indicating an error has occurred. 
-	private void updateTheUiAboutError(String error){
+    // Send an intent indicating an error has occurred.
+    private void updateTheUiAboutError(String error){
 
-		Intent intent = new Intent(Keys.Actions.ACTION_ERROR);
-		intent.putExtra(Keys.Extras.EXTRA_ERROR, error);
-		sendBroadcast(intent);
-	}
-	//======================================================================
+        Intent intent = new Intent(Keys.Actions.ACTION_ERROR);
+        intent.putExtra(Keys.Extras.EXTRA_ERROR, error);
+        sendBroadcast(intent);
+    }
+    //======================================================================
 
-	// Retrieve a device by its device is.
-	public SoftAPDetails getDevice(String deviceId){
-		return m_devicesMap.get(deviceId);
-	}
-	//======================================================================
+    // Retrieve a device by its device is.
+    public SoftAPDetails getDevice(String deviceId){
+        return m_devicesMap.get(deviceId);
+    }
+    //======================================================================
 
-	// Display a dialog with the given errorMsg and displays it.
-	public void showAlert(Context context, String errorMsg) {
+    // Display a dialog with the given errorMsg and displays it.
+    public void showAlert(Context context, String errorMsg) {
 
-		AlertDialog.Builder alert = new AlertDialog.Builder(context);
-		alert.setTitle("Error");
-		alert.setMessage(errorMsg);
+        AlertDialog.Builder alert = new AlertDialog.Builder(context);
+        alert.setTitle("Error");
+        alert.setMessage(errorMsg);
 
-		alert.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-			public void onClick(DialogInterface dialog, int whichButton) {
-				dialog.dismiss();
-			}
-		});
-		alert.show();
-	}
+        alert.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                dialog.dismiss();
+            }
+        });
+        alert.show();
+    }
 
-	//======================================================================
-	public void startAboutSession(SoftAPDetails device){
-		try {
-			m_aboutClient =  m_aboutService.createAboutClient(device.busName, null, device.port);
-		}
-		catch (Exception e) {
-			String m = e.getMessage();
-			Log.d(TAG, "startSession: Exception: "+m);
-			e.printStackTrace();
-			updateTheUiAboutError("startSession: Exception: "+m);
-		}
-		if (m_aboutClient != null)
-			m_aboutClient.connect();
-	}
+    //======================================================================
+    public void startAboutSession(SoftAPDetails device){
+        try {
+            m_aboutClient =  m_aboutService.createAboutClient(device.busName, null, device.port);
+        }
+        catch (Exception e) {
+            String m = e.getMessage();
+            Log.d(TAG, "startSession: Exception: "+m);
+            e.printStackTrace();
+            updateTheUiAboutError("startSession: Exception: "+m);
+        }
+        if (m_aboutClient != null)
+            m_aboutClient.connect();
+    }
 
-	//======================================================================
-	public void stopAboutSession(){
-		if (m_aboutClient != null){
-			m_aboutClient.disconnect();
-		}
-	}
-	//======================================================================
-	public void startIconSession(SoftAPDetails device){
-		try {
-			m_aboutIconClient =  m_aboutService.createAboutIconClient(device.busName, null, device.port);
-		}
-		catch (Exception e) {
-			String m = e.getMessage();
-			Log.d(TAG, "startSession: Exception: "+m);
-			e.printStackTrace();
-			updateTheUiAboutError("startSession: Exception: "+m);
-		}
-		if (m_aboutIconClient != null)
-			m_aboutIconClient.connect();
-	}
+    //======================================================================
+    public void stopAboutSession(){
+        if (m_aboutClient != null){
+            m_aboutClient.disconnect();
+        }
+    }
+    //======================================================================
+    public void startIconSession(SoftAPDetails device){
+        try {
+            m_aboutIconClient =  m_aboutService.createAboutIconClient(device.busName, null, device.port);
+        }
+        catch (Exception e) {
+            String m = e.getMessage();
+            Log.d(TAG, "startSession: Exception: "+m);
+            e.printStackTrace();
+            updateTheUiAboutError("startSession: Exception: "+m);
+        }
+        if (m_aboutIconClient != null)
+            m_aboutIconClient.connect();
+    }
 
-	//======================================================================
-	public void stopIconSession(){
-		if (m_aboutIconClient != null){
-			m_aboutIconClient.disconnect();
-		}
-	}
-	//======================================================================
-	/**
-	 * Returns the about service version.
-	 * @return the about service version.
-	 */
-	public Short getAboutVersion() {
+    //======================================================================
+    public void stopIconSession(){
+        if (m_aboutIconClient != null){
+            m_aboutIconClient.disconnect();
+        }
+    }
+    //======================================================================
+    /**
+     * Returns the about service version.
+     * @return the about service version.
+     */
+    public Short getAboutVersion() {
 
-		short aboutVersion = -1;
-		try {
-			if (m_aboutClient != null){
-				if(!m_aboutClient.isConnected()){
-					m_aboutClient.connect();
-				}	
-				aboutVersion = m_aboutClient.getVersion();
-			}
-		}catch (Exception e) {
-			e.printStackTrace();
-			updateTheUiAboutError("GET ABOUT VERSION: "+e.getMessage());
-		}
-		return Short.valueOf(aboutVersion);
-	}
-	//======================================================================
-	/**
-	 * Returns the about service fields.
-	 * @return the about service fields.
-	 */
-	public Map<String, Object> getAbout(String lang) {
+        short aboutVersion = -1;
+        try {
+            if (m_aboutClient != null){
+                if(!m_aboutClient.isConnected()){
+                    m_aboutClient.connect();
+                }
+                aboutVersion = m_aboutClient.getVersion();
+            }
+        }catch (Exception e) {
+            e.printStackTrace();
+            updateTheUiAboutError("GET ABOUT VERSION: "+e.getMessage());
+        }
+        return Short.valueOf(aboutVersion);
+    }
+    //======================================================================
+    /**
+     * Returns the about service fields.
+     * @return the about service fields.
+     */
+    public Map<String, Object> getAbout(String lang) {
 
-		Map<String, Object> aboutMap = null;
-		try {
-			if (m_aboutClient != null){
-				if(!m_aboutClient.isConnected()){
-					m_aboutClient.connect();
-				}	
-				aboutMap = m_aboutClient.getAbout(lang);
-			}
-			Log.d(TAG, "GET_ABOUT: 'About' information has returned");
+        Map<String, Object> aboutMap = null;
+        try {
+            if (m_aboutClient != null){
+                if(!m_aboutClient.isConnected()){
+                    m_aboutClient.connect();
+                }
+                aboutMap = m_aboutClient.getAbout(lang);
+            }
+            Log.d(TAG, "GET_ABOUT: 'About' information has returned");
 
-		} catch (Exception e){
-			String m = e.getMessage();
-			Log.d(TAG, "GET_ABOUT: Exception: "+m);
-			e.printStackTrace();
-			updateTheUiAboutError("GET_ABOUT: Exception: "+m);
-		}
-		return aboutMap;
-	}
-	//======================================================================
-	/**
-	 * Return the about service bus object description, meaning the supported interfaces.
-	 * @return the about service bus object description, meaning the supported interfaces.
-	 */
-	public BusObjectDescription[] getBusObjectDescription(){
+        } catch (Exception e){
+            String m = e.getMessage();
+            Log.d(TAG, "GET_ABOUT: Exception: "+m);
+            e.printStackTrace();
+            updateTheUiAboutError("GET_ABOUT: Exception: "+m);
+        }
+        return aboutMap;
+    }
+    //======================================================================
+    /**
+     * Return the about service bus object description, meaning the supported interfaces.
+     * @return the about service bus object description, meaning the supported interfaces.
+     */
+    public BusObjectDescription[] getBusObjectDescription(){
 
-		BusObjectDescription[] busObjectDescription = null;
-		try {
+        BusObjectDescription[] busObjectDescription = null;
+        try {
 
-			busObjectDescription = m_aboutClient.getBusObjectDescriptions();
-		} catch (Exception e){
-			e.printStackTrace();
-			updateTheUiAboutError("GET BUS OBJECT DESCRIPTION: "+e.getMessage());
-		}
-		return busObjectDescription;
-	}
+            busObjectDescription = m_aboutClient.getBusObjectDescriptions();
+        } catch (Exception e){
+            e.printStackTrace();
+            updateTheUiAboutError("GET BUS OBJECT DESCRIPTION: "+e.getMessage());
+        }
+        return busObjectDescription;
+    }
 
-	//***************************** ICON ***********************************
-	//======================================================================
-	/**
-	 * Return the icon service fields. 
-	 * @return the icon service fields.
-	 */
-	public Short getIconVersion() {
+    //***************************** ICON ***********************************
+    //======================================================================
+    /**
+     * Return the icon service fields.
+     * @return the icon service fields.
+     */
+    public Short getIconVersion() {
 
-		short iconVersion = -1;
-		try {
-			if (m_aboutIconClient != null){
-				if(!m_aboutIconClient.isConnected()){
-					m_aboutIconClient.connect();
-				}	
-				iconVersion = m_aboutIconClient.getVersion();
-			}
-		}catch (Exception e) {
-			e.printStackTrace();
-			updateTheUiAboutError("GET ICON VERSION: Exception: "+e.toString());
-		}
-		return Short.valueOf(iconVersion);
-	}
-	//======================================================================
-	/**
-	 * Return the icon details: size, url, mime type and the byte array of the icon content.
-	 * @return the icon details: size, url, mime type and the byte array of the icon content.
-	 */
-	public IconDetails getIconDetails(){
+        short iconVersion = -1;
+        try {
+            if (m_aboutIconClient != null){
+                if(!m_aboutIconClient.isConnected()){
+                    m_aboutIconClient.connect();
+                }
+                iconVersion = m_aboutIconClient.getVersion();
+            }
+        }catch (Exception e) {
+            e.printStackTrace();
+            updateTheUiAboutError("GET ICON VERSION: Exception: "+e.toString());
+        }
+        return Short.valueOf(iconVersion);
+    }
+    //======================================================================
+    /**
+     * Return the icon details: size, url, mime type and the byte array of the icon content.
+     * @return the icon details: size, url, mime type and the byte array of the icon content.
+     */
+    public IconDetails getIconDetails(){
 
-		String url = "";
-		int size = 0;
-		byte[] content = new byte[]{};
-		String mimeType = "";
+        String url = "";
+        int size = 0;
+        byte[] content = new byte[]{};
+        String mimeType = "";
 
-		try {
-			if (m_aboutIconClient != null){
-				if(!m_aboutIconClient.isConnected()){
-					m_aboutIconClient.connect();
-				}	
-				url = m_aboutIconClient.GetUrl();
-				size = m_aboutIconClient.getSize();
-				content = m_aboutIconClient.GetContent();
-				mimeType = m_aboutIconClient.getMimeType();
-				Log.d(TAG, "GET_ABOUT_ICON: 'Icon' information has returned");
-			}
-		} catch (Exception e)
-		{
-			Log.d(TAG, "GET_ABOUT_ICON: Exception: "+e.toString());
-			updateTheUiAboutError("GET ICON DETAILS: Exception: "+e.getMessage());
-			e.printStackTrace();
-		}
-		return new IconDetails(url, size, content, mimeType);
-	}
-	//======================================================================
-	class AboutProperty 
-	{
-		String key;
-		Object value;
-		public AboutProperty(String key, Object value)
-		{
-			this.key = key;
-			this.value = value;
-		}
-	}
-	//======================================================================
-	class IconDetails 
-	{
-		String url;
-		int size;
-		byte[] content;
-		String mimeType;
-		public IconDetails(String url, int size, byte[] content, String mimeType)
-		{
-			this.url = url;
-			this.size = size;
-			this.content = content;
-			this.mimeType = mimeType;
-		}
-	}
+        try {
+            if (m_aboutIconClient != null){
+                if(!m_aboutIconClient.isConnected()){
+                    m_aboutIconClient.connect();
+                }
+                url = m_aboutIconClient.GetUrl();
+                size = m_aboutIconClient.getSize();
+                content = m_aboutIconClient.GetContent();
+                mimeType = m_aboutIconClient.getMimeType();
+                Log.d(TAG, "GET_ABOUT_ICON: 'Icon' information has returned");
+            }
+        } catch (Exception e)
+        {
+            Log.d(TAG, "GET_ABOUT_ICON: Exception: "+e.toString());
+            updateTheUiAboutError("GET ICON DETAILS: Exception: "+e.getMessage());
+            e.printStackTrace();
+        }
+        return new IconDetails(url, size, content, mimeType);
+    }
+    //======================================================================
+    class AboutProperty
+    {
+        String key;
+        Object value;
+        public AboutProperty(String key, Object value)
+        {
+            this.key = key;
+            this.value = value;
+        }
+    }
+    //======================================================================
+    class IconDetails
+    {
+        String url;
+        int size;
+        byte[] content;
+        String mimeType;
+        public IconDetails(String url, int size, byte[] content, String mimeType)
+        {
+            this.url = url;
+            this.size = size;
+            this.content = content;
+            this.mimeType = mimeType;
+        }
+    }
 }
 

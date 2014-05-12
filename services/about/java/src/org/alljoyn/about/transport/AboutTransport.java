@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 /**
- * 
+ *
  */
 package org.alljoyn.about.transport;
 
@@ -31,45 +31,54 @@ import org.alljoyn.bus.annotation.BusSignal;
 import org.alljoyn.services.common.BusObjectDescription;
 
 /**
- * Definition of the About BusInterface 
+ * Definition of the About BusInterface
  */
 @BusInterface (name = AboutTransport.INTERFACE_NAME)
 public interface AboutTransport extends BusObject
 {
-	public static final String INTERFACE_NAME = "org.alljoyn.About";
-	public final static String OBJ_PATH       = "/About";
+    public static final String INTERFACE_NAME = "org.alljoyn.About";
+    public final static String OBJ_PATH       = "/About";
 
-	/**
-	 * @return the version of the protocol
-	 * @throws BusException
-	 */
+    /**
+     * @return the version of the protocol
+     * @throws BusException
+     */
     @BusProperty(signature="q")
     public short getVersion() throws BusException;
 
-	
+
     /**
-	 * 
-	 * @param languageTag IETF language tags specified by  RFC 5646
-	 * @return all the configuration fields based on the language tag.  See The list of known configuration fields in About interface for more details.
-	 * @throws BusException
-	 */
+     *
+     * @param languageTag IETF language tags specified by  RFC 5646
+     * @return all the configuration fields based on the language tag.
+     *         See The list of known configuration fields in About interface for
+     *         more details.
+     * @throws BusException
+     */
     @BusMethod(signature = "s", replySignature="a{sv}")
     public Map<String, Variant> GetAboutData(String languageTag) throws BusException;
 
     /**
-     * Return the array of object paths and the list of all interfaces available at the given object path.
-     * @return the array of object paths and the list of all interfaces available at the given object path.
+     * Return the array of object paths and the list of all interfaces available
+     * at the given object path.
+     * @return the array of object paths and the list of all interfaces available
+     *         at the given object path.
      * @throws BusException
      */
     @BusMethod(replySignature="a(oas)")
     public BusObjectDescription[] GetObjectDescription() throws BusException;
 
-	/**
-     * This signal is used to announce the list of all interfaces available at the given object path.
-     * @param version The interface version is added since it might help with the decision to connect back.
+    /**
+     * This signal is used to announce the list of all interfaces available at
+     * the given object path.
+     * @param version The interface version is added since it might help with the
+     * decision to connect back.
      * @param port The global gateway port for the services for this application
      * @param objectDescriptions Descriptions of the BusObjects that make up the service. "a(sas)"
-     * @param serviceMetadata Service specific key/value pairs. (Service implementers are free to populate this dictionary with any key/value pairs that are meaningful to the service and its potential consumers) "a{sv}" 
+     * @param serviceMetadata Service specific key/value pairs. (Service implementers
+     *                        are free to populate this dictionary with any key/value
+     *                        pairs that are meaningful to the service and its
+     *                        potential consumers) "a{sv}"
      */
     @BusSignal (signature="qqa(oas)a{sv}")
     public void Announce(short version, short port, BusObjectDescription[] objectDescriptions, Map<String,Variant> serviceMetadata);

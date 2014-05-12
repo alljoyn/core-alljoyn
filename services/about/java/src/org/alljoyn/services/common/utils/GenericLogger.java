@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -17,42 +17,42 @@
 package org.alljoyn.services.common.utils;
 
 /**
- * A generic Java logger utility, that needs to be implemented per platform  
+ * A generic Java logger utility, that needs to be implemented per platform
  */
 public interface GenericLogger {
-	
-	/**
-	 * Debug level message
-	 * @param TAG Tag to be added to the message, i.e. class that writes the message 
-	 * @param msg 
-	 */
-	public void debug(String TAG, String msg);
-	
-	/**
-	 * Info level message
-	 * @param TAG Tag to be added to the message, i.e. class that writes the message 
-	 * @param msg 
-	 */
-	public void info(String TAG, String msg);
 
-	/**
-	 * Warn level message
-	 * @param TAG Tag to be added to the message, i.e. class that writes the message 
-	 * @param msg 
-	 */
-	public void warn(String TAG, String msg);
+    /**
+     * Debug level message
+     * @param TAG Tag to be added to the message, i.e. class that writes the message
+     * @param msg
+     */
+    public void debug(String TAG, String msg);
 
-	/**
-	 * Error level message
-	 * @param TAG Tag to be added to the message, i.e. class that writes the message 
-	 * @param msg 
-	 */
-	public void error(String TAG, String msg);
-	
-	/**
-	 * Fatal level message
-	 * @param TAG Tag to be added to the message, i.e. class that writes the message 
-	 * @param msg 
-	 */
-	public void fatal(String TAG, String msg);
+    /**
+     * Info level message
+     * @param TAG Tag to be added to the message, i.e. class that writes the message
+     * @param msg
+     */
+    public void info(String TAG, String msg);
+
+    /**
+     * Warn level message
+     * @param TAG Tag to be added to the message, i.e. class that writes the message
+     * @param msg
+     */
+    public void warn(String TAG, String msg);
+
+    /**
+     * Error level message
+     * @param TAG Tag to be added to the message, i.e. class that writes the message
+     * @param msg
+     */
+    public void error(String TAG, String msg);
+
+    /**
+     * Fatal level message
+     * @param TAG Tag to be added to the message, i.e. class that writes the message
+     * @param msg
+     */
+    public void fatal(String TAG, String msg);
 }

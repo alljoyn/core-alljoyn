@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -26,7 +26,7 @@ import org.alljoyn.services.common.ServiceAvailabilityListener;
  */
 public interface AboutIconClient extends ClientBase
 {
-	public String getMimeType() throws BusException;
+    public String getMimeType() throws BusException;
     public int getSize() throws BusException;
     public String GetUrl() throws BusException;
     public byte[] GetContent() throws BusException;

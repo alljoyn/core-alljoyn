@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -19,37 +19,37 @@ package org.alljoyn.services.common;
 import org.alljoyn.services.common.utils.GenericLogger;
 
 /**
- * An Android implementation of the {@link GenericLogger} class  
+ * An Android implementation of the {@link GenericLogger} class
  */
 public class DefaultGenericLogger implements GenericLogger {
 
-	@Override
-	public void warn(String TAG, String msg)
-	{
-		System.out.println(new StringBuilder(TAG).append("Warning: ").append(msg).toString());
-	}
-	
-	@Override
-	public void info(String TAG, String msg)
-	{
-		System.out.println(new StringBuilder(TAG).append("Info: ").append(msg).toString());
-	}
-	
-	@Override
-	public void fatal(String TAG, String msg)
-	{
-		System.out.println(new StringBuilder(TAG).append("WTF: ").append(msg).toString());
-	}
-	
-	@Override
-	public void error(String TAG, String msg)
-	{
-		System.out.println(new StringBuilder(TAG).append("Error: ").append(msg).toString());
-	}
-	
-	@Override
-	public void debug(String TAG, String msg)
-	{
-		System.out.println(new StringBuilder(TAG).append("Debug: ").append(msg).toString());
-	}
+    @Override
+    public void warn(String TAG, String msg)
+    {
+        System.out.println(new StringBuilder(TAG).append("Warning: ").append(msg).toString());
+    }
+
+    @Override
+    public void info(String TAG, String msg)
+    {
+        System.out.println(new StringBuilder(TAG).append("Info: ").append(msg).toString());
+    }
+
+    @Override
+    public void fatal(String TAG, String msg)
+    {
+        System.out.println(new StringBuilder(TAG).append("WTF: ").append(msg).toString());
+    }
+
+    @Override
+    public void error(String TAG, String msg)
+    {
+        System.out.println(new StringBuilder(TAG).append("Error: ").append(msg).toString());
+    }
+
+    @Override
+    public void debug(String TAG, String msg)
+    {
+        System.out.println(new StringBuilder(TAG).append("Debug: ").append(msg).toString());
+    }
 }

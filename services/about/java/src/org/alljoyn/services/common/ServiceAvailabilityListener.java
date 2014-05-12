@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -17,12 +17,12 @@
 package org.alljoyn.services.common;
 
 /**
- * Listens to connection losses with a peer device 
+ * Listens to connection losses with a peer device
  */
-public interface ServiceAvailabilityListener 
+public interface ServiceAvailabilityListener
 {
-	/**
-	 * Fired when a connection to the peer device was lost.
-	 */
-	public void connectionLost();
+    /**
+     * Fired when a connection to the peer device was lost.
+     */
+    public void connectionLost();
 }

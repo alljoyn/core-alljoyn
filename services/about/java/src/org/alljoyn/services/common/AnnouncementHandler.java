@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -28,20 +28,20 @@ import org.alljoyn.bus.Variant;
  */
 public interface AnnouncementHandler
 {
-	/**
-	 * Handle a received About Announcement 
-	 * @param serviceName the peer's AllJoyn bus name
-	 * @param port the peer's bound port for accepting About session connections
-	 * @param objectDescriptions the peer's BusInterfaces and BusObjects
-	 * @param aboutData a map of peer's properties.
-	 * @see AboutKeys
-	 * @see AboutTransport#Announce(short, short, BusObjectDescription[], java.util.Map)
-	 */
-	public void onAnnouncement(String serviceName, short port, BusObjectDescription[] objectDescriptions, Map<String, Variant> aboutData);
-	
-	/**
-	 * Handle a loss of connectivity with this bus name
-	 * @param serviceName
-	 */
-	public void onDeviceLost(String serviceName);
+    /**
+     * Handle a received About Announcement
+     * @param serviceName the peer's AllJoyn bus name
+     * @param port the peer's bound port for accepting About session connections
+     * @param objectDescriptions the peer's BusInterfaces and BusObjects
+     * @param aboutData a map of peer's properties.
+     * @see AboutKeys
+     * @see AboutTransport#Announce(short, short, BusObjectDescription[], java.util.Map)
+     */
+    public void onAnnouncement(String serviceName, short port, BusObjectDescription[] objectDescriptions, Map<String, Variant> aboutData);
+
+    /**
+     * Handle a loss of connectivity with this bus name
+     * @param serviceName
+     */
+    public void onDeviceLost(String serviceName);
 }

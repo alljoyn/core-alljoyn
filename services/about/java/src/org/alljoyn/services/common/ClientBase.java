@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -21,51 +21,51 @@ import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.Status;
 
 /**
- * A base class for service clients.   
+ * A base class for service clients.
  */
 public interface ClientBase
 {
-	/**
-	 * Stop the AllJoyn session with the device.
-	 */
-	public void disconnect();
-	
-	/**
-	 * Start an AllJoyn session with the device.
-	 * @return AllJoyn Bus Status
-	 */
-	public Status connect();
-	
-	/**
-	 * Is there an open session with the device.
-	 * @return true if there is a session with the device.
-	 */
-	public boolean isConnected();
-	
-	/**
-	 * Interface version
-	 * @return Interface version
-	 * @throws BusException
-	 */
+    /**
+     * Stop the AllJoyn session with the device.
+     */
+    public void disconnect();
+
+    /**
+     * Start an AllJoyn session with the device.
+     * @return AllJoyn Bus Status
+     */
+    public Status connect();
+
+    /**
+     * Is there an open session with the device.
+     * @return true if there is a session with the device.
+     */
+    public boolean isConnected();
+
+    /**
+     * Interface version
+     * @return Interface version
+     * @throws BusException
+     */
     public short getVersion() throws BusException;
-    
+
     /**
      * The peer device's bus name, as advertised by Announcements
      * @return Unique bus name
      */
-	public String getPeerName();
-	
-	/**
-	 * The id of the open session with the peer device.
-	 * @return AllJoyn session id
-	 */
-	public int getSessionId();
-	
-	/**
-	 * Initialize client by passing the BusAttachment
-	 * @param busAttachment
-	 * @throws Exception
-	 */
-	void initBus(BusAttachment busAttachment) throws Exception;
-	
+    public String getPeerName();
+
+    /**
+     * The id of the open session with the peer device.
+     * @return AllJoyn session id
+     */
+    public int getSessionId();
+
+    /**
+     * Initialize client by passing the BusAttachment
+     * @param busAttachment
+     * @throws Exception
+     */
+    void initBus(BusAttachment busAttachment) throws Exception;
+
 }

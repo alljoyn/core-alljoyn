@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -23,38 +23,39 @@ import org.alljoyn.services.common.BusObjectDescription;
 
 /**
  * An interface that publishes Announcements
- * @see AboutTransport#Announce(short, short, BusObjectDescription[], java.util.Map)  
+ * @see AboutTransport#Announce(short, short, BusObjectDescription[], java.util.Map)
  */
 public interface Announcer
 {
-	/**
-	 * cause an Announcement to be emitted.
-	 */
-	public void announce();
+    /**
+     * cause an Announcement to be emitted.
+     */
+    public void announce();
 
-	/**
-	 * whether Announcements are emitted.
-	 * @return true if Announcements are emitted.
-	 */
-	public boolean isAnnouncing();
+    /**
+     * whether Announcements are emitted.
+     * @return true if Announcements are emitted.
+     */
+    public boolean isAnnouncing();
 
-	/**
-	 * set whether Announcements are emitted.
-	 * @param enable enable Announcement emitting.
-	 */
-	public void setAnnouncing(boolean enable);
-	
-	/**
-	 * Any service who registered a BusObject in the common BusAttachment, should save it here so that we can announce it 
-	 * and include it in the About contents.
-	 * @param descriptions
-	 */
-	public void addBusObjectAnnouncements(List<BusObjectDescription> descriptions);
-	
-	/**
-	 * Remove the passed BusObjectDescriptions from the Announcement
-	 * @param descriptions
-	 */
-	public void removeBusObjectAnnouncements(List<BusObjectDescription> descriptions);
+    /**
+     * set whether Announcements are emitted.
+     * @param enable enable Announcement emitting.
+     */
+    public void setAnnouncing(boolean enable);
+
+    /**
+     * Any service who registered a BusObject in the common BusAttachment, 
+     * should save it here so that we can announce it
+     * and include it in the About contents.
+     * @param descriptions
+     */
+    public void addBusObjectAnnouncements(List<BusObjectDescription> descriptions);
+
+    /**
+     * Remove the passed BusObjectDescriptions from the Announcement
+     * @param descriptions
+     */
+    public void removeBusObjectAnnouncements(List<BusObjectDescription> descriptions);
 
 }

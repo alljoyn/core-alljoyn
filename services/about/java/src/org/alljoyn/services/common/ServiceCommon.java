@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -24,31 +24,34 @@ import org.alljoyn.services.common.utils.GenericLogger;
 /**
  * A base class for Services
  */
-public interface ServiceCommon 
+public interface ServiceCommon
 {
-	/**
-	 * The list of BusObjects that are registered for this service, and the BusInterfaces that they implement.
-	 * @return the list of BusObjectDescription
-	 * @see AboutTransport#Announce(short, short, BusObjectDescription[], java.util.Map)
-	 */
-	public List<BusObjectDescription> getBusObjectDescriptions();
-	
-	/**
-	 * Set the platform specific logger
-	 * @param logger
-	 */
-	void setLogger(GenericLogger logger);
-	
-	/**
-	 * Is the service running in a client mode. Note: a service can run in both modes simultaneously
-	 * @return true if the service is running in a client mode
-	 */
-	boolean isClientRunning();
+    /**
+     * The list of BusObjects that are registered for this service, and the
+     * BusInterfaces that they implement.
+     * @return the list of BusObjectDescription
+     * @see AboutTransport#Announce(short, short, BusObjectDescription[], java.util.Map)
+     */
+    public List<BusObjectDescription> getBusObjectDescriptions();
 
-	/**
-	 * Is the service running in a server mode. Note: a service can run in both modes simultaneously
-	 * @return true if the service is running in a server mode
-	 */
-	boolean isServerRunning();
+    /**
+     * Set the platform specific logger
+     * @param logger
+     */
+    void setLogger(GenericLogger logger);
+
+    /**
+     * Is the service running in a client mode. Note: a service can run in both
+     * modes simultaneously
+     * @return true if the service is running in a client mode
+     */
+    boolean isClientRunning();
+
+    /**
+     * Is the service running in a server mode. Note: a service can run in both
+     * modes simultaneously
+     * @return true if the service is running in a server mode
+     */
+    boolean isServerRunning();
 
 }
