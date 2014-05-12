@@ -337,61 +337,62 @@ int main(int argc, char** argv, char** envArg)
     /* Create message bus */
     s_msgBus = new BusAttachment("SRPSecurityServiceA", true);
 
+    /* if we are unable to allocate a BusAttachment exit */
     if (!s_msgBus) {
         status = ER_OUT_OF_MEMORY;
-    }
+    } else {
+        if (ER_OK == status) {
+            status = CreateInterface();
+        }
 
-    if (ER_OK == status) {
-        status = CreateInterface();
-    }
+        if (ER_OK == status) {
+            s_msgBus->RegisterBusListener(s_busListener);
+        }
 
-    if (ER_OK == status) {
-        s_msgBus->RegisterBusListener(s_busListener);
-    }
+        if (ER_OK == status) {
+            status = StartMessageBus();
+        }
 
-    if (ER_OK == status) {
-        status = StartMessageBus();
-    }
+        BasicSampleObject testObj(*s_msgBus, SERVICE_PATH);
 
-    BasicSampleObject testObj(*s_msgBus, SERVICE_PATH);
+        if (ER_OK == status) {
+            status = RegisterBusObject(&testObj);
+        }
 
-    if (ER_OK == status) {
-        status = RegisterBusObject(&testObj);
-    }
+        if (ER_OK == status) {
+            status = EnableSecurity();
+        }
 
-    if (ER_OK == status) {
-        status = EnableSecurity();
-    }
+        if (ER_OK == status) {
+            status = Connect();
+        }
 
-    if (ER_OK == status) {
-        status = Connect();
-    }
+        /*
+         * Advertise this service on the bus.
+         * There are three steps to advertising this service on the bus.
+         * 1) Request a well-known name that will be used by the client to discover
+         *    this service.
+         * 2) Create a session.
+         * 3) Advertise the well-known name.
+         */
+        if (ER_OK == status) {
+            status = RequestName();
+        }
 
-    /*
-     * Advertise this service on the bus.
-     * There are three steps to advertising this service on the bus.
-     * 1) Request a well-known name that will be used by the client to discover
-     *    this service.
-     * 2) Create a session.
-     * 3) Advertise the well-known name.
-     */
-    if (ER_OK == status) {
-        status = RequestName();
-    }
+        const TransportMask SERVICE_TRANSPORT_TYPE = TRANSPORT_ANY;
 
-    const TransportMask SERVICE_TRANSPORT_TYPE = TRANSPORT_ANY;
+        if (ER_OK == status) {
+            status = CreateSession(SERVICE_TRANSPORT_TYPE);
+        }
 
-    if (ER_OK == status) {
-        status = CreateSession(SERVICE_TRANSPORT_TYPE);
-    }
+        if (ER_OK == status) {
+            status = AdvertiseName(SERVICE_TRANSPORT_TYPE);
+        }
 
-    if (ER_OK == status) {
-        status = AdvertiseName(SERVICE_TRANSPORT_TYPE);
-    }
-
-    /* Perform the service asynchronously until the user signals for an exit. */
-    if (ER_OK == status) {
-        WaitForSigInt();
+        /* Perform the service asynchronously until the user signals for an exit. */
+        if (ER_OK == status) {
+            WaitForSigInt();
+        }
     }
 
     /* Clean up msg bus */
