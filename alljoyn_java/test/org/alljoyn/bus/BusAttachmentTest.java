@@ -572,6 +572,16 @@ public class BusAttachmentTest extends TestCase {
                         "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n" +
                         "    </method>\n" +
                         "  </interface>\n" +
+						"  <interface name=\"org.allseen.Introspectable\">\n" +
+						"    <method name=\"GetDescriptionLanguages\">\n" +
+						"      <arg name=\"languageTags\" type=\"as\" direction=\"out\"/>\n" +
+						"    </method>\n" +
+					    "    <method name=\"IntrospectWithDescription\">\n" +
+					    "      <arg name=\"languageTag\" type=\"s\" direction=\"in\"/>\n" +
+					    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n" +
+					    "    </method>\n" +
+					    "    <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n" +
+					    "  </interface>\n" +
                         "</node>\n";
         assertEquals(expected, actual);
     }

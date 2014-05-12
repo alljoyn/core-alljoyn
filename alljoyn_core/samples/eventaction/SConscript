@@ -1,0 +1,49 @@
+# Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# 
+import os
+
+Import('env')
+
+clientDistDir = '$CPP_DISTDIR/samples/eventaction'
+
+enaEnv = env.Clone()
+
+# Install sample source
+if enaEnv['OS'] == 'android':
+    enaEnv.Install(clientDistDir + '/Android', 'Android/AndroidManifest.xml')
+    enaEnv.Install(clientDistDir + '/Android', 'Android/.classpath')
+    enaEnv.Install(clientDistDir + '/Android', 'Android/.project')
+    enaEnv.Install(clientDistDir + '/Android', 'Android/project.properties')
+    enaEnv.Install(clientDistDir + '/Android/jni', enaEnv.Dir('SimpleRulesEngine').srcnode())
+    enaEnv.Install(clientDistDir + '/Android/jni', enaEnv.Glob('Android/jni/*'))
+    enaEnv.Install(clientDistDir + '/Android', enaEnv.Dir('Android/src').srcnode())
+    enaEnv.Install(clientDistDir + '/Android', enaEnv.Dir('Android/res').srcnode())
+
+if enaEnv['OS'] in ['linux', 'darwin'] and not enaEnv.has_key('_ALLJOYN_ABOUT_') and os.path.exists('../../services/about/SConscript'):
+    enaEnv.Program('eventaction_introspect', ['eventaction_introspect.cc'])
+    enaEnv.Install('$CPP_DISTDIR/bin/samples', ['eventaction_introspect'] )
+    enaEnv.Install(clientDistDir, enaEnv.Glob('*.cc'))
+
+    enaEnv.SConscript('../../services/about/SConscript')
+
+    enaEnv.Append(CPPPATH = [ enaEnv.Dir('$CPP_DISTDIR/../about/inc') ])
+    enaEnv.Append(LIBPATH = [ enaEnv.Dir('$CPP_DISTDIR/../about/lib') ])
+
+    print 'libpath: %s' % enaEnv.get('LIBPATH')
+    enaEnv.Prepend(LIBS = ['alljoyn_about'])
+    ruleSrcFiles = enaEnv.Glob('SimpleRulesEngine/*.cc')
+    ruleSrcFiles += enaEnv.Glob('SimpleRulesEngine/posix/*.cc')
+    enaEnv.Program('sample_rule_app', ruleSrcFiles)
+    enaEnv.Install('$CPP_DISTDIR/bin/samples', ['sample_rule_app'] )

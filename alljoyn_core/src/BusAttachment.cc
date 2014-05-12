@@ -190,6 +190,7 @@ BusAttachment::BusAttachment(const char* applicationName, bool allowRemoteMessag
     isStopping(false),
     concurrency(concurrency),
     busInternal(new Internal(applicationName, *this, clientTransportsContainer, NULL, allowRemoteMessages, NULL, concurrency)),
+    translator(NULL),
     joinObj(this)
 {
     clientTransportsContainer.Init();
@@ -201,6 +202,7 @@ BusAttachment::BusAttachment(Internal* busInternal, uint32_t concurrency) :
     isStopping(false),
     concurrency(concurrency),
     busInternal(busInternal),
+    translator(NULL),
     joinObj(this)
 {
     clientTransportsContainer.Init();
@@ -2320,6 +2322,16 @@ bool KeyStoreKeyEventListener::NotifyAutoDelete(KeyStore* holder, const qcc::GUI
     }
     delete [] list;
     return true;
+}
+
+void BusAttachment::SetDescriptionTranslator(Translator* translator)
+{
+    this->translator = translator;
+}
+
+Translator* BusAttachment::GetDescriptionTranslator()
+{
+    return translator;
 }
 
 }

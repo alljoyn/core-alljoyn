@@ -26,6 +26,7 @@
 
 #include <map>
 #include <vector>
+#include <set>
 
 #include <qcc/Debug.h>
 #include <qcc/Util.h>
@@ -123,18 +124,33 @@ qcc::String BusObject::GetName()
     }
 }
 
-qcc::String BusObject::GenerateIntrospection(bool deep, size_t indent) const
+qcc::String BusObject::GenerateIntrospection(bool deep, size_t indent, const char* languageTag) const
 {
     qcc::String in(indent, ' ');
     qcc::String xml;
+    qcc::String buffer;
 
     /* Iterate over child nodes */
     vector<BusObject*>::const_iterator iter = components->children.begin();
     while (iter != components->children.end()) {
         BusObject* child = *iter++;
         xml += in + "<node name=\"" + child->GetName() + "\"";
-        if (deep) {
-            xml += "\n" + child->GenerateIntrospection(deep, indent + 2) + in + "</node>\n";
+
+        const char* nodeDesc = NULL;
+        if (languageTag) {
+            nodeDesc = child->GetDescription(languageTag, buffer);
+        }
+
+        if (deep || nodeDesc) {
+            xml += ">\n";
+            if (nodeDesc) {
+                xml += in + "  <description>" + nodeDesc + "</description>";
+            }
+            if (deep) {
+                xml += child->GenerateIntrospection(deep, indent + 2, languageTag);
+            }
+
+            xml += "\n" + in + "</node>\n";
         } else {
             xml += "/>\n";
         }
@@ -143,7 +159,7 @@ qcc::String BusObject::GenerateIntrospection(bool deep, size_t indent) const
         /* Iterate over interfaces */
         vector<const InterfaceDescription*>::const_iterator itIf = components->ifaces.begin();
         while (itIf != components->ifaces.end()) {
-            xml += (*itIf++)->Introspect(indent);
+            xml += (*itIf++)->Introspect(indent, languageTag, bus->GetDescriptionTranslator());
         }
     }
     return xml;
@@ -426,7 +442,6 @@ QStatus BusObject::AddInterface(const InterfaceDescription& iface)
     /* Add the new interface */
     components->ifaces.push_back(&iface);
 
-
 ExitAddInterface:
 
     return status;
@@ -445,9 +460,17 @@ QStatus BusObject::DoRegistration(BusAttachment& busAttachment)
     assert(introspectable);
     components->ifaces.push_back(introspectable);
 
+    const InterfaceDescription* allseenIntrospectable = bus->GetInterface(org::allseen::Introspectable::InterfaceName);
+    assert(allseenIntrospectable);
+    components->ifaces.push_back(allseenIntrospectable);
+
     /* Add the standard method handlers */
     const MethodEntry methodEntries[] = {
-        { introspectable->GetMember("Introspect"),    static_cast<MessageReceiver::MethodHandler>(&BusObject::Introspect) }
+        { introspectable->GetMember("Introspect"), static_cast<MessageReceiver::MethodHandler>(&BusObject::Introspect) },
+        { allseenIntrospectable->GetMember("GetDescriptionLanguages"),
+          static_cast<MessageReceiver::MethodHandler>(&BusObject::GetDescriptionLanguages) },
+        { allseenIntrospectable->GetMember("IntrospectWithDescription"),
+          static_cast<MessageReceiver::MethodHandler>(&BusObject::IntrospectWithDescription) }
     };
 
     /* If any of the interfaces has properties make sure the Properties interface and its method handlers are registered. */
@@ -704,7 +727,10 @@ BusObject::BusObject(BusAttachment& bus, const char* path, bool isPlaceholder) :
     parent(NULL),
     isRegistered(false),
     isPlaceholder(isPlaceholder),
-    isSecure(false)
+    isSecure(false),
+    languageTag(),
+    description(),
+    translator(NULL)
 {
     components->inUseCounter = 0;
 }
@@ -716,7 +742,10 @@ BusObject::BusObject(const char* path, bool isPlaceholder) :
     parent(NULL),
     isRegistered(false),
     isPlaceholder(isPlaceholder),
-    isSecure(false)
+    isSecure(false),
+    languageTag(),
+    description(),
+    translator(NULL)
 {
     components->inUseCounter = 0;
 }
@@ -739,6 +768,135 @@ BusObject::~BusObject()
         bus->GetInternal().GetLocalEndpoint()->UnregisterBusObject(*this);
     }
     delete components;
+}
+
+
+void BusObject::SetDescription(const char* language, const char* text)
+{
+    languageTag.assign(language);
+    description.assign(text);
+}
+
+const char* BusObject::GetDescription(const char* toLanguage, qcc::String& buffer) const
+{
+    Translator* myTranslator = translator ? translator : bus->GetDescriptionTranslator();
+    if (myTranslator) {
+        const char* ret = myTranslator->Translate(languageTag.c_str(), toLanguage, description.c_str(), buffer);
+        if (ret) {
+            return ret;
+        }
+    }
+    if (!languageTag.empty() && 0 == strcmp(toLanguage, languageTag.c_str())) {
+        return description.c_str();
+    }
+    return NULL;
+}
+
+void BusObject::IntrospectWithDescription(const InterfaceDescription::Member* member, Message& msg)
+{
+    qcc::String buffer;
+    char* langTag;
+    msg->GetArgs("s", &langTag);
+
+    qcc::String xml = org::allseen::Introspectable::IntrospectDocType;
+
+    xml += "<node>\n";
+    const char* desc = GetDescription(langTag, buffer);
+    if (desc) {
+        xml += qcc::String("  <description>") + desc + "</description>\n";
+    }
+    if (isSecure) {
+        xml += "  <annotation name=\"org.alljoyn.Bus.Secure\" value=\"true\"/>\n";
+    }
+
+    xml += GenerateIntrospection(false, 2, langTag);
+    xml += "</node>\n";
+    MsgArg arg("s", xml.c_str());
+    QStatus status = MethodReply(msg, &arg, 1);
+    if (status != ER_OK) {
+        QCC_DbgPrintf(("IntrospectWithDescription %s", QCC_StatusText(status)));
+    }
+}
+
+void mergeTranslationLanguages(Translator* t, std::set<qcc::String>& langs)
+{
+    size_t numLangs = t->NumTargetLanguages();
+    for (size_t i = 0; i < numLangs; i++) {
+        qcc::String s;
+        t->GetTargetLanguage(i, s);
+        langs.insert(s);
+    }
+}
+
+void BusObject::GetDescriptionLanguages(const InterfaceDescription::Member* member, Message& msg)
+{
+    std::set<qcc::String> langs;
+    bool hasDescription = false;
+    bool someoneHasNoTranslator = false;
+
+    //First merge this objects languages...
+    if (!languageTag.empty()) {
+        langs.insert(languageTag);
+        hasDescription = true;
+
+        if (translator) {
+            mergeTranslationLanguages(translator, langs);
+        } else {
+            someoneHasNoTranslator = true;
+        }
+    }
+
+    //...then add the languages of all this object's interfaces...
+    vector<const InterfaceDescription*>::const_iterator itIf = components->ifaces.begin();
+    for (; itIf != components->ifaces.end(); itIf++) {
+        if (!(*itIf)->HasDescription()) {
+            continue;
+        }
+
+        hasDescription = true;
+
+        const char* lang = (*itIf)->GetDescriptionLanguage();
+        if (lang && lang[0]) {
+            langs.insert(qcc::String(lang));
+        }
+
+        Translator* ifTranslator = (*itIf)->GetDescriptionTranslator();
+        if (ifTranslator) {
+            mergeTranslationLanguages(ifTranslator, langs);
+        } else if (!someoneHasNoTranslator) {
+            someoneHasNoTranslator = true;
+        }
+    }
+
+    //...finally, if this object or one of its interfaces does not have a Translator,
+    //add the global Translator's languages
+    if (hasDescription && someoneHasNoTranslator) {
+        Translator* globalTranslator = bus->GetDescriptionTranslator();
+        if (globalTranslator) {
+            mergeTranslationLanguages(globalTranslator, langs);
+        }
+    }
+
+    vector<const char*> tags;
+    std::set<qcc::String>::const_iterator it = langs.begin();
+    for (; it != langs.end(); it++) {
+        char* str = new char[it->size() + 1];
+        strcpy(str, it->c_str());
+        tags.push_back(str);
+    }
+
+    MsgArg replyArg[1];
+    replyArg[0].Set("as", tags.size(), tags.data());
+    replyArg[0].SetOwnershipFlags(MsgArg::OwnsData | MsgArg::OwnsArgs, true);
+    QStatus status = MethodReply(msg, replyArg, 1);
+    if (status != ER_OK) {
+        QCC_DbgPrintf(("GetDescriptionLanguages %s", QCC_StatusText(status)));
+    }
+}
+
+void BusObject::SetDescriptionTranslator(Translator* translator)
+{
+    this->translator = translator;
 }
 
 }

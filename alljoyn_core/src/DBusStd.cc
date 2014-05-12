@@ -106,7 +106,7 @@ QStatus org::freedesktop::DBus::CreateInterfaces(BusAttachment& bus) {
         return status;
     }
 
-    introspectIntf->AddMethod("Introspect", NULL, "s", "data", 0);
+    introspectIntf->AddMethod("Introspect",                  NULL, "s",  "data", 0);
     introspectIntf->Activate();
 
     /* Create the org.freedesktop.DBus.Peer interface */

@@ -38,6 +38,7 @@
 #include <alljoyn/SessionListener.h>
 #include <alljoyn/SessionPortListener.h>
 #include <alljoyn/Status.h>
+#include <alljoyn/Translator.h>
 
 namespace ajn {
 
@@ -1746,6 +1747,7 @@ class BusAttachment : public MessageReceiver {
     static uint32_t GetTimestamp();
 
     /**
+
      * Determine if you are able to find a remote connection based on its BusName.
      * The BusName can be the Unique or well-known name.
      * @param name The unique or well-known name to ping
@@ -1756,6 +1758,23 @@ class BusAttachment : public MessageReceiver {
      *   - An error status otherwise
      */
     QStatus Ping(const char* name, uint32_t timeout);
+
+    /**
+     * Set a Translator for all BusObjects and InterfaceDescriptions. This Translator is used for
+     * descriptions appearing in introspection. Note that any Translators set on a specific
+     * InterfaceDescription or BusObject will be used for those specific elements - this Translator
+     * is used only for BusObjects and InterfaceDescriptions that do not have Translators set for them.
+     *
+     * @param[in]  translator       The Translator instance
+     */
+    void SetDescriptionTranslator(Translator* translator);
+
+    /**
+     * Get this BusAttachment's Translator
+     *
+     * @return This BusAttachment's Translator
+     */
+    Translator* GetDescriptionTranslator();
 
     /// @cond ALLJOYN_DEV
     /**
@@ -1907,6 +1926,8 @@ class BusAttachment : public MessageReceiver {
          */
         BusAttachment* bus;
     };
+
+    Translator* translator;       /**< Global translator for descriptions */
 
     JoinObj joinObj;          /**< MUST BE LAST MEMBER. Ensure all threads are joined before BusAttachment destruction */
 

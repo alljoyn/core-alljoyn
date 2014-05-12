@@ -26,6 +26,8 @@
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/Message.h>
 #include <alljoyn/Status.h>
+#include <alljoyn/Translator.h>
+
 /// @cond ALLJOYN_DEV
 /*!
    \def QCC_MODULE
@@ -89,6 +91,9 @@ class InterfaceDescription {
     friend class BusAttachment;
     friend class XmlHelper;
 
+    /** map containing description tables per argument name */
+    class ArgumentDescriptions;
+
   public:
 
     class AnnotationsMap; /**< A map to store string annotations */
@@ -105,6 +110,9 @@ class InterfaceDescription {
         qcc::String argNames;                /**< Comma separated list of argument names - can be NULL */
         AnnotationsMap* annotations;           /**< Map of annotations */
         qcc::String accessPerms;              /**< Required permissions to invoke this call */
+        qcc::String description;                    /**< Introspection description for this member */
+        ArgumentDescriptions* argumentDescriptions; /** Introspection descriptions for arguments to this member */
+        bool isSessionlessSignal;                     /**< True if this is a sessionless signal */
 
         /** %Member constructor.
          *
@@ -207,6 +215,7 @@ class InterfaceDescription {
         qcc::String signature;         /**< %Property type */
         uint8_t access;                /**< Access is #PROP_ACCESS_READ, #PROP_ACCESS_WRITE, or #PROP_ACCESS_RW */
         AnnotationsMap* annotations;    /**< Map of annotations */
+        qcc::String description;             /**< Introspection description for this property */
 
         /** %Property constructor.
          * @param name      The name of the property.
@@ -606,9 +615,11 @@ class InterfaceDescription {
      * @return The interface description in introspection XML format.
      *
      * @param indent   Number of space chars to use in XML indentation.
+     * @param languageTag Specifies the description language or NULL to omit descriptions
+     * @param translator Translator instance to use for introspection descriptions
      * @return The XML introspection data.
      */
-    qcc::String Introspect(size_t indent = 0) const;
+    qcc::String Introspect(size_t indent = 0, const char* languageTag = NULL, Translator* translator = NULL) const;
 
     /**
      * Activate this interface. An interface must be activated before it can be used. Activating an
@@ -703,6 +714,94 @@ class InterfaceDescription {
      */
     InterfaceDescription(const InterfaceDescription& other);
 
+    /**
+     * Set the language tag for the introspection descriptions of this InterfaceDescription
+     *
+     * @param language The language tag
+     */
+    void SetDescriptionLanguage(const char* language);
+
+    /**
+     * Get the language tag for the instrospection descriptions of this InterfaceDescription
+     *
+     * @return The langauge tag
+     */
+    const char* GetDescriptionLanguage() const;
+
+    /**
+     * Set the introspection description for this InterfaceDescription
+     *
+     * Note that when SetDescriptionTranslator is used the text in this method may
+     * actually be a "lookup key". When generating the introspection the "text" is first
+     * passed to the Translator where the key should be used to lookup the actual
+     * description. In such a case, the language tag should be set to "".
+     *
+     * @param description The introspection description
+     */
+    void SetDescription(const char* description);
+
+    /**
+     * Set the introspection description for "member" of this InterfaceDescription
+     *
+     * @param member The name of the member
+     * @param description The introspection description
+     * @param isSessionlessSignal True to document this member as a sessionless signal
+     * @return
+     *      - #ER_OK if successful.
+     *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
+     *      - #ER_BUS_NO_SUCH_MEMBER If the member was not found
+     */
+    QStatus SetMemberDescription(const char* member,
+                                 const char* description, bool isSessionlessSignal = false);
+
+    /**
+     * Set the introspection description for the argument "arg of "member" of this InterfaceDescription
+     *
+     * @param member The name of the member
+     * @param arg The name of the argument
+     * @param description The introspection description
+     * @return
+     *      - #ER_OK if successful.
+     *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
+     *      - #ER_BUS_NO_SUCH_MEMBER If the member was not found
+     */
+    QStatus SetArgDescription(const char* member, const char* arg, const char* description);
+
+    /**
+     * Set the introspection description for "property" of this InterfaceDescription
+     *
+     * @param name The name of the property
+     * @param description The introspection description
+     * @return
+     *      - #ER_OK if successful.
+     *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
+     *      - #ER_BUS_NO_SUCH_PROPERTY If the property was not found
+     */
+    QStatus SetPropertyDescription(const char* name, const char* description);
+
+    /**
+     * Set the Translator that provides this InterfaceDescription's
+     * introspection description in multiple languages.
+     *
+     * @param dt The Translator instance.
+     */
+    void SetDescriptionTranslator(Translator* translator);
+
+    /**
+     * Get the Translator that provides this InterfaceDescription's
+     * introspection description in multiple languages.
+     *
+     * @return The Translator instance.
+     */
+    Translator* GetDescriptionTranslator() const;
+
+    /**
+     * Does this interface have at least one description on an element
+     *
+     * @return True if this InterfaceDescription has at least one description
+     */
+    bool HasDescription() const;
+
   private:
 
     /**
@@ -727,6 +826,16 @@ class InterfaceDescription {
      * @return  The assigned InterfaceDescription
      */
     InterfaceDescription& operator=(const InterfaceDescription& other);
+
+    void AppendDescriptionXml(qcc::String& xml, const char* language,
+                              const char* localDescription, Translator* translator, qcc::String const& indent) const;
+
+    qcc::String NextArg(const char*& signature, qcc::String& argNames, bool inOut,
+                        size_t indent, Member const& member, bool withDescriptions,
+                        const char* langTag, Translator* translator) const;
+
+    const char* Translate(const char* toLanguage, const char* text, qcc::String& buffer, Translator* translator) const;
+
 
     struct Definitions;
     Definitions* defs;   /**< The definitions for this interface */
