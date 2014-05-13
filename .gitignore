@@ -1,3 +1,6 @@
+#ignore files created by kdiff3 mergetool
+*.orig
+
 whitespace.db
 .sconsign.dblite
 build/

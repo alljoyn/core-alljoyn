@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -23,32 +23,32 @@ import org.alljoyn.bus.annotation.BusMethod;
 import org.alljoyn.bus.annotation.BusProperty;
 
 /**
- * Definition of the Icon BusInterface 
+ * Definition of the Icon BusInterface
  */
 @BusInterface (name = IconTransport.INTERFACE_NAME)
 public interface IconTransport extends BusObject
 {
-	public static final String INTERFACE_NAME = "org.alljoyn.Icon";
-	public final static String OBJ_PATH = "/About/DeviceIcon";
+    public static final String INTERFACE_NAME = "org.alljoyn.Icon";
+    public final static String OBJ_PATH = "/About/DeviceIcon";
 
-	/**
-	 * @return Interface version
-	 * @throws BusException
-	 */
+    /**
+     * @return Interface version
+     * @throws BusException
+     */
     @BusProperty(signature="q")
     public short getVersion() throws BusException;
 
-	/**
-	 * @return Mime type for the icon
-	 * @throws BusException
-	 */
+    /**
+     * @return Mime type for the icon
+     * @throws BusException
+     */
     @BusProperty(signature="s")
     public String getMimeType() throws BusException;
 
-	/**
-	 * @return Size of the icon
-	 * @throws BusException
-	 */
+    /**
+     * @return Size of the icon
+     * @throws BusException
+     */
     @BusProperty(signature="u")
     public int getSize() throws BusException;
 
@@ -67,6 +67,4 @@ public interface IconTransport extends BusObject
      */
     @BusMethod(replySignature="ay")
     public byte[] GetContent() throws BusException;
-
-
 }

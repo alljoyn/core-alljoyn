@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -25,52 +25,52 @@ import org.alljoyn.services.common.ServiceAvailabilityListener;
 
 public class AboutIconClientImpl extends ClientBaseImpl implements AboutIconClient
 {
-	public final static String TAG = AboutIconClientImpl.class.getName();
-	
-	public AboutIconClientImpl(String peerName, BusAttachment bus, ServiceAvailabilityListener serviceAvailabilityListener, short port)
-	{
-		super(peerName, bus, serviceAvailabilityListener, IconTransport.OBJ_PATH, IconTransport.class, port);
-	}
-	
-	@Override
-	public short getVersion() throws BusException {
-		ProxyBusObject proxyObj = getProxyObject();
-		/* We make calls to the methods of the AllJoyn object through one of its interfaces. */
-		IconTransport aboutIconTransport =  proxyObj.getInterface(IconTransport.class);
-		return aboutIconTransport.getVersion();
-	}
+    public final static String TAG = AboutIconClientImpl.class.getName();
 
-	@Override
-	public String getMimeType() throws BusException {
-		ProxyBusObject proxyObj = getProxyObject();
-		/* We make calls to the methods of the AllJoyn object through one of its interfaces. */
-		IconTransport aboutIconTransport =  proxyObj.getInterface(IconTransport.class);		
-		return aboutIconTransport.getMimeType();
-	}
+    public AboutIconClientImpl(String peerName, BusAttachment bus, ServiceAvailabilityListener serviceAvailabilityListener, short port)
+    {
+        super(peerName, bus, serviceAvailabilityListener, IconTransport.OBJ_PATH, IconTransport.class, port);
+    }
 
-	@Override
-	public int getSize() throws BusException {
-		ProxyBusObject proxyObj = getProxyObject();
-		/* We make calls to the methods of the AllJoyn object through one of its interfaces. */
-		IconTransport aboutIconTransport =  proxyObj.getInterface(IconTransport.class);
-		return aboutIconTransport.getSize();
-	}
+    @Override
+    public short getVersion() throws BusException {
+        ProxyBusObject proxyObj = getProxyObject();
+        /* We make calls to the methods of the AllJoyn object through one of its interfaces. */
+        IconTransport aboutIconTransport =  proxyObj.getInterface(IconTransport.class);
+        return aboutIconTransport.getVersion();
+    }
 
-	@Override
-	public String GetUrl() throws BusException {
-		ProxyBusObject proxyObj = getProxyObject();
-		/* We make calls to the methods of the AllJoyn object through one of its interfaces. */
-		IconTransport aboutIconTransport =  proxyObj.getInterface(IconTransport.class);
-		return aboutIconTransport.GetUrl();
-	}
+    @Override
+    public String getMimeType() throws BusException {
+        ProxyBusObject proxyObj = getProxyObject();
+        /* We make calls to the methods of the AllJoyn object through one of its interfaces. */
+        IconTransport aboutIconTransport =  proxyObj.getInterface(IconTransport.class);
+        return aboutIconTransport.getMimeType();
+    }
 
-	@Override
-	public byte[] GetContent() throws BusException {
-		ProxyBusObject proxyObj = getProxyObject();
-		/* We make calls to the methods of the AllJoyn object through one of its interfaces. */
-		IconTransport aboutIconTransport =  proxyObj.getInterface(IconTransport.class);
-		return aboutIconTransport.GetContent();
-	}
+    @Override
+    public int getSize() throws BusException {
+        ProxyBusObject proxyObj = getProxyObject();
+        /* We make calls to the methods of the AllJoyn object through one of its interfaces. */
+        IconTransport aboutIconTransport =  proxyObj.getInterface(IconTransport.class);
+        return aboutIconTransport.getSize();
+    }
 
-	
+    @Override
+    public String GetUrl() throws BusException {
+        ProxyBusObject proxyObj = getProxyObject();
+        /* We make calls to the methods of the AllJoyn object through one of its interfaces. */
+        IconTransport aboutIconTransport =  proxyObj.getInterface(IconTransport.class);
+        return aboutIconTransport.GetUrl();
+    }
+
+    @Override
+    public byte[] GetContent() throws BusException {
+        ProxyBusObject proxyObj = getProxyObject();
+        /* We make calls to the methods of the AllJoyn object through one of its interfaces. */
+        IconTransport aboutIconTransport =  proxyObj.getInterface(IconTransport.class);
+        return aboutIconTransport.GetContent();
+    }
+
+
 }

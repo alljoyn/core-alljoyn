@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -57,407 +57,404 @@ import android.widget.TextView;
  */
 public class AboutActivity extends Activity {
 
-	//General
-	protected static final String TAG = AboutApplication.TAG;
-	private AboutApplication m_application;
-	private BroadcastReceiver m_receiver;
-	private Timer m_timer;
-	private int m_tasksToPerform = 0;
-	private SoftAPDetails m_device;
-	private ProgressDialog m_loadingPopup;
+    //General
+    protected static final String TAG = AboutApplication.TAG;
+    private AboutApplication m_application;
+    private BroadcastReceiver m_receiver;
+    private Timer m_timer;
+    private int m_tasksToPerform = 0;
+    private SoftAPDetails m_device;
+    private ProgressDialog m_loadingPopup;
 
-	//Current network
-	private TextView m_currentNetwork;
+    //Current network
+    private TextView m_currentNetwork;
 
-	//Version
-	private TextView m_aboutVersion;
+    //Version
+    private TextView m_aboutVersion;
 
-	//Bus Object Description
-	private ListView m_busDescriptionList;
-	private BusDescriptionAdapter m_busDescriptionAdapter;
+    //Bus Object Description
+    private ListView m_busDescriptionList;
+    private BusDescriptionAdapter m_busDescriptionAdapter;
 
-	//About data
-	private AboutAdapter m_aboutAdapter;
-	private TextView m_aboutLanguage;
-	private ListView m_aboutList;
-	private Map<String, Object> m_aboutMap;
+    //About data
+    private AboutAdapter m_aboutAdapter;
+    private TextView m_aboutLanguage;
+    private ListView m_aboutList;
+    private Map<String, Object> m_aboutMap;
 
-	//====================================================================
+    //====================================================================
 
-	/* (non-Javadoc)
-	 * @see android.app.Activity#onCreate(android.os.Bundle)
-	 */
-	@Override
-	protected void onCreate(Bundle savedInstanceState) {
+    /* (non-Javadoc)
+     * @see android.app.Activity#onCreate(android.os.Bundle)
+     */
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
 
-		super.onCreate(savedInstanceState);
+        super.onCreate(savedInstanceState);
 
-		//General
-		setContentView(R.layout.about_layout);
-		String deviceId = getIntent().getStringExtra(Keys.Extras.EXTRA_DEVICE_ID);
-		m_application = (AboutApplication)getApplication();
-		m_device = m_application.getDevice(deviceId);
-		if(m_device == null){
-			closeScreen();
-			return;
-		}
-		startAboutSession();
+        //General
+        setContentView(R.layout.about_layout);
+        String deviceId = getIntent().getStringExtra(Keys.Extras.EXTRA_DEVICE_ID);
+        m_application = (AboutApplication)getApplication();
+        m_device = m_application.getDevice(deviceId);
+        if(m_device == null){
+            closeScreen();
+            return;
+        }
+        startAboutSession();
 
-		m_loadingPopup = new ProgressDialog(this);		
+        m_loadingPopup = new ProgressDialog(this);
 
-		//Current Network 
-		m_currentNetwork = (TextView) findViewById(R.id.current_network_name);
-		String ssid = m_application.getCurrentSSID();
-		m_currentNetwork.setText(getString(R.string.current_network, ssid));
+        //Current Network
+        m_currentNetwork = (TextView) findViewById(R.id.current_network_name);
+        String ssid = m_application.getCurrentSSID();
+        m_currentNetwork.setText(getString(R.string.current_network, ssid));
 
-		//Version
-		m_aboutVersion = (TextView)findViewById(R.id.about_version_value);
+        //Version
+        m_aboutVersion = (TextView)findViewById(R.id.about_version_value);
 
-		//Bus Object Description
-		m_busDescriptionList = (ListView)findViewById(R.id.bus_description_list);
-		m_busDescriptionAdapter = new BusDescriptionAdapter(this, R.layout.bus_description_property);
-		m_busDescriptionAdapter.setLayoutInflator(getLayoutInflater());
-		m_busDescriptionList.setAdapter(m_busDescriptionAdapter);
+        //Bus Object Description
+        m_busDescriptionList = (ListView)findViewById(R.id.bus_description_list);
+        m_busDescriptionAdapter = new BusDescriptionAdapter(this, R.layout.bus_description_property);
+        m_busDescriptionAdapter.setLayoutInflator(getLayoutInflater());
+        m_busDescriptionList.setAdapter(m_busDescriptionAdapter);
 
-		//About data
-		m_aboutLanguage = (TextView)findViewById(R.id.about_language_value);
-		m_aboutLanguage.setText(m_device.aboutLanguage);
-		m_aboutList = (ListView)findViewById(R.id.about_map_list);
-		m_aboutAdapter = new AboutAdapter(this, R.layout.about_property);
-		m_aboutAdapter.setLayoutInflator(getLayoutInflater());
+        //About data
+        m_aboutLanguage = (TextView)findViewById(R.id.about_language_value);
+        m_aboutLanguage.setText(m_device.aboutLanguage);
+        m_aboutList = (ListView)findViewById(R.id.about_map_list);
+        m_aboutAdapter = new AboutAdapter(this, R.layout.about_property);
+        m_aboutAdapter.setLayoutInflator(getLayoutInflater());
 
-		//Receiver
-		m_receiver = new BroadcastReceiver() {
+        //Receiver
+        m_receiver = new BroadcastReceiver() {
 
-			@Override
-			public void onReceive(Context context, Intent intent) {
+            @Override
+            public void onReceive(Context context, Intent intent) {
 
-				if(Keys.Actions.ACTION_ERROR.equals(intent.getAction())){
-					String error = intent.getStringExtra(Keys.Extras.EXTRA_ERROR);
-					m_application.showAlert(AboutActivity.this, error);
-				}
-				else if(Keys.Actions.ACTION_CONNECTED_TO_NETWORK.equals(intent.getAction())){
+                if(Keys.Actions.ACTION_ERROR.equals(intent.getAction())){
+                    String error = intent.getStringExtra(Keys.Extras.EXTRA_ERROR);
+                    m_application.showAlert(AboutActivity.this, error);
+                }
+                else if(Keys.Actions.ACTION_CONNECTED_TO_NETWORK.equals(intent.getAction())){
 
-					String ssid = intent.getStringExtra(Keys.Extras.EXTRA_NETWORK_SSID);
-					m_currentNetwork.setText(getString(R.string.current_network, ssid));
-				}
-			}			
-		};
-		IntentFilter filter = new IntentFilter();
-		filter.addAction(Keys.Actions.ACTION_ERROR);
-		filter.addAction(Keys.Actions.ACTION_CONNECTED_TO_NETWORK);
-		registerReceiver(m_receiver, filter);
+                    String ssid = intent.getStringExtra(Keys.Extras.EXTRA_NETWORK_SSID);
+                    m_currentNetwork.setText(getString(R.string.current_network, ssid));
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Keys.Actions.ACTION_ERROR);
+        filter.addAction(Keys.Actions.ACTION_CONNECTED_TO_NETWORK);
+        registerReceiver(m_receiver, filter);
 
-		m_tasksToPerform = 3;
-		getVersion();
-		getBusObjectDescription();
-		getAboutData();
-	}
-	//====================================================================
+        m_tasksToPerform = 3;
+        getVersion();
+        getBusObjectDescription();
+        getAboutData();
+    }
+    //====================================================================
 
-	private void startAboutSession() {
+    private void startAboutSession() {
 
-		final AsyncTask<Void, Void, Void> task = new AsyncTask<Void, Void, Void>(){
+        final AsyncTask<Void, Void, Void> task = new AsyncTask<Void, Void, Void>(){
 
-			@Override
-			protected void onPreExecute() {
-				Log.d(TAG, "startSession: onPreExecute");
-			}
+            @Override
+            protected void onPreExecute() {
+                Log.d(TAG, "startSession: onPreExecute");
+            }
 
-			@Override
-			protected Void doInBackground(Void... params) {
-				m_application.startAboutSession(m_device);
-				return null;
-			}
+            @Override
+            protected Void doInBackground(Void... params) {
+                m_application.startAboutSession(m_device);
+                return null;
+            }
 
-			@Override
-			protected void onPostExecute(Void result) {
-				Log.d(TAG, "startSession: onPostExecute");
-			}
-		};
-		task.execute(); 
-	}
-	//====================================================================
-	// Gets the device about version and put it on the screen	
-	private void getVersion() {
+            @Override
+            protected void onPostExecute(Void result) {
+                Log.d(TAG, "startSession: onPostExecute");
+            }
+        };
+        task.execute();
+    }
+    //====================================================================
+    // Gets the device about version and put it on the screen
+    private void getVersion() {
 
-		final AsyncTask<Void, Void, Short> task = new AsyncTask<Void, Void, Short>(){
+        final AsyncTask<Void, Void, Short> task = new AsyncTask<Void, Void, Short>(){
 
-			@Override
-			protected void onPreExecute() {
-				Log.d(TAG, "getAboutVersion: onPreExecute");
-				showLoadingPopup("getting about version");				
-			}
+            @Override
+            protected void onPreExecute() {
+                Log.d(TAG, "getAboutVersion: onPreExecute");
+                showLoadingPopup("getting about version");
+            }
 
-			@Override
-			protected Short doInBackground(Void... params){				
-				return m_application.getAboutVersion();
-			}
+            @Override
+            protected Short doInBackground(Void... params){
+                return m_application.getAboutVersion();
+            }
 
-			@Override
-			protected void onPostExecute(Short result){				
-				short version = result.shortValue();
-				m_aboutVersion.setText(String.valueOf(version));
-				Log.d(TAG, "getAboutVersion: onPostExecute");
-				m_tasksToPerform--;
-				dismissLoadingPopup();
-			}
-		};
-		task.execute();	
-	}
-	//====================================================================	
+            @Override
+            protected void onPostExecute(Short result){
+                short version = result.shortValue();
+                m_aboutVersion.setText(String.valueOf(version));
+                Log.d(TAG, "getAboutVersion: onPostExecute");
+                m_tasksToPerform--;
+                dismissLoadingPopup();
+            }
+        };
+        task.execute();
+    }
+    //====================================================================
 
-	// Gets the device about bus object description and put it on the screen
+    // Gets the device about bus object description and put it on the screen
 
-	private void getBusObjectDescription() {
+    private void getBusObjectDescription() {
 
-		final AsyncTask<Void, Void, BusObjectDescription[]> task = new AsyncTask<Void, Void, BusObjectDescription[]>(){
+        final AsyncTask<Void, Void, BusObjectDescription[]> task = new AsyncTask<Void, Void, BusObjectDescription[]>(){
 
-			@Override
-			protected void onPreExecute() {
-				Log.d(TAG, "setBusObjectDescription: onPreExecute");
-				showLoadingPopup("getting bus object description");
-			}
+            @Override
+            protected void onPreExecute() {
+                Log.d(TAG, "setBusObjectDescription: onPreExecute");
+                showLoadingPopup("getting bus object description");
+            }
 
-			@Override
-			protected BusObjectDescription[] doInBackground(Void... params){				
-				return m_application.getBusObjectDescription();
-			}
+            @Override
+            protected BusObjectDescription[] doInBackground(Void... params){
+                return m_application.getBusObjectDescription();
+            }
 
-			@Override
-			protected void onPostExecute(BusObjectDescription[] result){				
+            @Override
+            protected void onPostExecute(BusObjectDescription[] result){
 
-				if(result != null){
-					BusObjectDescription[] busObjectDescription = result;
-					if(busObjectDescription != null && busObjectDescription.length > 0){
-						List<BusObjectDescription> list = Arrays.asList(busObjectDescription);
-						m_busDescriptionAdapter.clear();
-						m_busDescriptionAdapter.addAll(list);
-					}
-				}
-				Log.d(TAG, "setBusObjectDescription: onPostExecute");
-				m_tasksToPerform--;
-				dismissLoadingPopup();
-			}
-		};
-		task.execute();
-	}
-	//====================================================================	
+                if(result != null){
+                    BusObjectDescription[] busObjectDescription = result;
+                    if(busObjectDescription != null && busObjectDescription.length > 0){
+                        List<BusObjectDescription> list = Arrays.asList(busObjectDescription);
+                        m_busDescriptionAdapter.clear();
+                        m_busDescriptionAdapter.addAll(list);
+                    }
+                }
+                Log.d(TAG, "setBusObjectDescription: onPostExecute");
+                m_tasksToPerform--;
+                dismissLoadingPopup();
+            }
+        };
+        task.execute();
+    }
+    //====================================================================
 
-	// Gets the device about data and put it on the screen
-	private void getAboutData() {
+    // Gets the device about data and put it on the screen
+    private void getAboutData() {
 
-		final AsyncTask<Void, Void, Map<String, Object>> task = new AsyncTask<Void, Void, Map<String, Object>>(){
+        final AsyncTask<Void, Void, Map<String, Object>> task = new AsyncTask<Void, Void, Map<String, Object>>(){
 
-			@Override
-			protected void onPreExecute() {
-				Log.d(TAG, "setAboutData: onPreExecute");
-				showLoadingPopup("getting about data");
-			}
+            @Override
+            protected void onPreExecute() {
+                Log.d(TAG, "setAboutData: onPreExecute");
+                showLoadingPopup("getting about data");
+            }
 
-			@Override
-			protected Map<String, Object> doInBackground(Void... params){				
-				return m_application.getAbout(m_device.aboutLanguage);
-			}
+            @Override
+            protected Map<String, Object> doInBackground(Void... params){
+                return m_application.getAbout(m_device.aboutLanguage);
+            }
 
-			@Override
-			protected void onPostExecute(Map<String, Object> result){
+            @Override
+            protected void onPostExecute(Map<String, Object> result){
 
-				if(result != null){
-					m_aboutMap = result;
-					List<AboutProperty> results = new ArrayList<AboutProperty>();
-					for (Entry<String, Object> entry: m_aboutMap.entrySet()){
+                if(result != null){
+                    m_aboutMap = result;
+                    List<AboutProperty> results = new ArrayList<AboutProperty>();
+                    for (Entry<String, Object> entry: m_aboutMap.entrySet()){
 
-						AboutProperty property = m_application.new AboutProperty(entry.getKey(), entry.getValue());
-						results.add(property);
-					}
-					m_aboutAdapter.setData(results);
-					m_aboutList.setAdapter(m_aboutAdapter);
-				}
-				Log.d(TAG, "setAboutData: onPostExecute");
-				m_tasksToPerform--;
-				dismissLoadingPopup();
-			}
-		};
-		task.execute();		
+                        AboutProperty property = m_application.new AboutProperty(entry.getKey(), entry.getValue());
+                        results.add(property);
+                    }
+                    m_aboutAdapter.setData(results);
+                    m_aboutList.setAdapter(m_aboutAdapter);
+                }
+                Log.d(TAG, "setAboutData: onPostExecute");
+                m_tasksToPerform--;
+                dismissLoadingPopup();
+            }
+        };
+        task.execute();
 
-	}
-	//====================================================================
-	/* (non-Javadoc)
-	 * @see android.app.Activity#onStop()
-	 */
-	@Override
-	protected void onStop() {
-		super.onStop();
-		if(m_timer != null){
-			m_timer.cancel();
-		}
-	}
-	//====================================================================
-	/* (non-Javadoc)
-	 * @see android.app.Activity#onDestroy()
-	 */
-	@Override
-	protected void onDestroy() {
-		super.onDestroy();
-		m_application.stopAboutSession();
-		if(m_receiver != null){
-			try{
-				unregisterReceiver(m_receiver);
-			} catch (IllegalArgumentException e) {}
-		}
-	}
-	//====================================================================
-	/* (non-Javadoc)
-	 * @see android.app.Activity#onCreateOptionsMenu(android.view.Menu)
-	 */
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
+    }
+    //====================================================================
+    /* (non-Javadoc)
+     * @see android.app.Activity#onStop()
+     */
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if(m_timer != null){
+            m_timer.cancel();
+        }
+    }
+    //====================================================================
+    /* (non-Javadoc)
+     * @see android.app.Activity#onDestroy()
+     */
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        m_application.stopAboutSession();
+        if(m_receiver != null){
+            try{
+                unregisterReceiver(m_receiver);
+            } catch (IllegalArgumentException e) {}
+        }
+    }
+    //====================================================================
+    /* (non-Javadoc)
+     * @see android.app.Activity#onCreateOptionsMenu(android.view.Menu)
+     */
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
 
-		getMenuInflater().inflate(R.menu.about_menu, menu);
-		return true;
-	}
-	//====================================================================
-	/* (non-Javadoc)
-	 * @see android.app.Activity#onOptionsItemSelected(android.view.MenuItem)
-	 */
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
+        getMenuInflater().inflate(R.menu.about_menu, menu);
+        return true;
+    }
+    //====================================================================
+    /* (non-Javadoc)
+     * @see android.app.Activity#onOptionsItemSelected(android.view.MenuItem)
+     */
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
 
-		switch (item.getItemId()) {
-		case R.id.menu_about_refresh:
-			m_tasksToPerform = 3;
-			getVersion();
-			getBusObjectDescription();
-			getAboutData();
-			break;
+        switch (item.getItemId()) {
+        case R.id.menu_about_refresh:
+            m_tasksToPerform = 3;
+            getVersion();
+            getBusObjectDescription();
+            getAboutData();
+            break;
 
-		case R.id.menu_about_set_language:			
-			setAboutLanguage();
-			break;
+        case R.id.menu_about_set_language:
+            setAboutLanguage();
+            break;
 
-		}
-		return true;
-	}
-	//====================================================================
+        }
+        return true;
+    }
+    //====================================================================
 
-	// Display a dialog where you can enter the about language.
-	// Pressing OK will request the about data again in the selected language	
-	private void setAboutLanguage() {
+    // Display a dialog where you can enter the about language.
+    // Pressing OK will request the about data again in the selected language
+    private void setAboutLanguage() {
 
-		AlertDialog.Builder alert = new AlertDialog.Builder(this);
-		alert.setTitle("Set about language");
-		alert.setCancelable(false);
+        AlertDialog.Builder alert = new AlertDialog.Builder(this);
+        alert.setTitle("Set about language");
+        alert.setCancelable(false);
 
-		View view = getLayoutInflater().inflate(R.layout.set_language_popup, null);
-		alert.setView(view);
-		final EditText newLanguage = (EditText)view.findViewById(R.id.language_edit_text);
-		TextView supportedLangs = (TextView)view.findViewById(R.id.supportedLanguages);
-		TextView supportedLangsValue = (TextView)view.findViewById(R.id.supported_languages_value);
+        View view = getLayoutInflater().inflate(R.layout.set_language_popup, null);
+        alert.setView(view);
+        final EditText newLanguage = (EditText)view.findViewById(R.id.language_edit_text);
+        TextView supportedLangs = (TextView)view.findViewById(R.id.supportedLanguages);
+        TextView supportedLangsValue = (TextView)view.findViewById(R.id.supported_languages_value);
 
+        if(m_aboutMap != null){
+            String[] ss = (String[])m_aboutMap.get(AboutKeys.ABOUT_SUPPORTED_LANGUAGES);
+            String res = "";
+            for (int i = 0; i < ss.length; i++) {
+                if(!ss[i].equals(""))
+                    res += ","+ss[i];
+            }
+            if(res.length() > 0)
+                res = res.substring(1);
+            supportedLangsValue.setText(res);
+        }
+        else{
+            supportedLangs.setVisibility(View.GONE);
+        }
 
-		if(m_aboutMap != null){
-			String[] ss = (String[])m_aboutMap.get(AboutKeys.ABOUT_SUPPORTED_LANGUAGES);
-			String res = "";
-			for (int i = 0; i < ss.length; i++) {
-				if(!ss[i].equals(""))
-					res += ","+ss[i];
-			}
-			if(res.length() > 0)
-				res = res.substring(1);
-			supportedLangsValue.setText(res);
-		}
-		else{
-			supportedLangs.setVisibility(View.GONE);
-		}
+        alert.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 
-		alert.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                m_device.aboutLanguage = newLanguage.getEditableText().toString();
+                m_aboutLanguage.setText(newLanguage.getEditableText().toString());
+                m_tasksToPerform = 1;
+                getAboutData();
+            }
+        });
 
-			public void onClick(DialogInterface dialog, int whichButton) {
-				m_device.aboutLanguage = newLanguage.getEditableText().toString();
-				m_aboutLanguage.setText(newLanguage.getEditableText().toString());
-				m_tasksToPerform = 1;
-				getAboutData();
-			}
-		});
+        alert.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+            }
+        });
+        alert.show();
+    }
+    //====================================================================
+    /* (non-Javadoc)
+     * @see android.app.Activity#onConfigurationChanged(android.content.res.Configuration)
+     */
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+    }
+    //====================================================================
 
-		alert.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
-			public void onClick(DialogInterface dialog, int whichButton) {
-			}
-		});
-		alert.show();
-	}
-	//====================================================================
-	/* (non-Javadoc)
-	 * @see android.app.Activity#onConfigurationChanged(android.content.res.Configuration)
-	 */
-	@Override
-	public void onConfigurationChanged(Configuration newConfig) {
-		super.onConfigurationChanged(newConfig);
-		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-	}
-	//====================================================================
+    //Let the user know the device not found and we cannot move to the About screen
+    private void closeScreen() {
 
-	//Let the user know the device not found and we cannot move to the About screen
-	private void closeScreen() {
+        AlertDialog.Builder alert = new AlertDialog.Builder(this);
+        alert.setTitle("Error");
+        alert.setMessage("Device was not found");
 
-		AlertDialog.Builder alert = new AlertDialog.Builder(this);
-		alert.setTitle("Error");
-		alert.setMessage("Device was not found");
+        alert.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                dialog.dismiss();
+                finish();
+            }
+        });
+        alert.show();
+    }
+    //====================================================================
 
-		alert.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-			public void onClick(DialogInterface dialog, int whichButton) {
-				dialog.dismiss();
-				finish();
-			}
-		});
-		alert.show();
-	}
-	//====================================================================	
+    // Display a progress dialog with the given msg.
+    // If the dialog is already showing - it will update its message to the given msg.
+    // The dialog will dismiss after 30 seconds if no response has returned.
+    private void showLoadingPopup(String msg)
+    {
+        if (m_loadingPopup !=null){
+            if(!m_loadingPopup.isShowing()){
+                m_loadingPopup = ProgressDialog.show(this, "", msg, true);
+                Log.d(TAG, "showLoadingPopup with msg = "+msg);
+            }
+            else{
+                m_loadingPopup.setMessage(msg);
+                Log.d(TAG, "setMessage with msg = "+msg);
+            }
+        }
+        m_timer = new Timer();
+        m_timer.schedule(new TimerTask() {
+            public void run() {
+                if (m_loadingPopup !=null && m_loadingPopup.isShowing()){
+                    Log.d(TAG, "showLoadingPopup dismissed the popup");
+                    m_loadingPopup.dismiss();
+                };
+            }
 
-	// Display a progress dialog with the given msg.
-	// If the dialog is already showing - it will update its message to the given msg.
-	// The dialog will dismiss after 30 seconds if no response has returned. 
-	private void showLoadingPopup(String msg)
-	{
-		if (m_loadingPopup !=null){
-			if(!m_loadingPopup.isShowing()){
-				m_loadingPopup = ProgressDialog.show(this, "", msg, true);
-				Log.d(TAG, "showLoadingPopup with msg = "+msg);
-			}
-			else{
-				m_loadingPopup.setMessage(msg);
-				Log.d(TAG, "setMessage with msg = "+msg);
-			}
-		}
-		m_timer = new Timer();
-		m_timer.schedule(new TimerTask() {                
-			public void run() {
-				if (m_loadingPopup !=null && m_loadingPopup.isShowing()){
-					Log.d(TAG, "showLoadingPopup dismissed the popup");
-					m_loadingPopup.dismiss();
-				};
-			}                                
+        },30*1000);
+    }
+    //====================================================================
 
-		},30*1000);
-	}
-	//====================================================================
-
-	// Dismiss the progress dialog (only if it is showing).
-	private void dismissLoadingPopup()
-	{
-		if(m_tasksToPerform == 0){
-			if (m_loadingPopup != null){
-				Log.d(TAG, "dismissLoadingPopup dismissed the popup");
-				m_loadingPopup.dismiss();
-				if(m_timer != null){
-					m_timer.cancel();
-				}
-			}
-		}
-	}
-	//====================================================================
+    // Dismiss the progress dialog (only if it is showing).
+    private void dismissLoadingPopup()
+    {
+        if(m_tasksToPerform == 0){
+            if (m_loadingPopup != null){
+                Log.d(TAG, "dismissLoadingPopup dismissed the popup");
+                m_loadingPopup.dismiss();
+                if(m_timer != null){
+                    m_timer.cancel();
+                }
+            }
+        }
+    }
+    //====================================================================
 }
-
-
 

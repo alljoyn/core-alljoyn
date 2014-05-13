@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -31,183 +31,182 @@ import org.alljoyn.bus.Variant;
 public class TransportUtil
 {
 
-	/**
-	 * A utility method for converting from a String->Object map to a String-Variant map
-	 * @param sToObjectMap input String->Object map.
-	 * @return String->Variant map
-	 */
-	public static Map<String, Variant> toVariantMap(Map<String, Object> sToObjectMap)
-	{
-		
-		Map<String,Variant> variantMap = new HashMap<String, Variant>(sToObjectMap.size());
-		
-		for (String key: sToObjectMap.keySet()) {
-			
-			if (AboutKeys.ABOUT_SUPPORTED_LANGUAGES.equalsIgnoreCase(key))
-			{
-				
-				Object supportLangs = sToObjectMap.get(key);
-				
-				if ( supportLangs == null ) {
-					throw new IllegalArgumentException("Failed in creating toVariantMap, the key: 'SupportedLanguages' was found but the value is NULL");
-				}
-				
-				if ( supportLangs instanceof Set<?> ) {
-					@SuppressWarnings("unchecked")
-					Set<String> value = (Set<String>) supportLangs;
-					String[] toArray  = value.toArray(new String[]{});
-					variantMap.put(key, new Variant(toArray));
-				}
-				else {
-					variantMap.put(key, new Variant(supportLangs));
-				}
-				
-			}//if :: ABOUT_SUPPORTED_LANGUAGES
-			else
-			{
-				Object value = sToObjectMap.get(key);
-				
-				if ( value == null ) {
-					throw new IllegalArgumentException("Failed in creating toVariantMap, the key: '" + key + "' was found but the value is NULL");
-				}
-				
-				if (value instanceof UUID)
-				{
-					byte [] byteArr = uuidToByteArray((UUID)value);
-					variantMap.put(key, new Variant(byteArr, "ay"));
-				}
-				else {
-					variantMap.put(key, new Variant(value));
-				}
-			}
-		}//for :: sToObjectMap
-			
-		return variantMap;
-	}
+    /**
+     * A utility method for converting from a String->Object map to a String-Variant map
+     * @param sToObjectMap input String->Object map.
+     * @return String->Variant map
+     */
+    public static Map<String, Variant> toVariantMap(Map<String, Object> sToObjectMap)
+    {
+        Map<String,Variant> variantMap = new HashMap<String, Variant>(sToObjectMap.size());
 
-	/**
-	 * A utility method for converting from a String-Variant map to a String->Object map
-	 * @param sToVariantMap input String->Variant map.
-	 * @return String->Object map
-	 * @throws BusException 
-	 */
-	public static Map<String, Object> fromVariantMap(Map<String, Variant> sToVariantMap) throws BusException
-	{
-		Map<String,Object> objectMap = new HashMap<String, Object>(sToVariantMap.size());
-		for (String key: sToVariantMap.keySet()) {
-			
-			Variant variant = sToVariantMap.get(key);
-			Object object;
-			if (AboutKeys.ABOUT_SUPPORTED_LANGUAGES.equalsIgnoreCase(key))
-			{
-				String[] languages = variant.getObject(String[].class);
-				object = languages;
-			}
-			else if(AboutKeys.ABOUT_APP_ID.equalsIgnoreCase(key)) {
-				byte[] b   = variant.getObject(byte[].class);
-				UUID appId = byteArrayToUUID(b);
-				object = appId;
-			}
-			else
-			{
-				object = variant.getObject(Object.class);
-			}
-			objectMap.put(key, object);
-		}
-	
-		return objectMap;
-	}
+        for (String key: sToObjectMap.keySet()) {
 
-	/**
-	 * A utility method to convert from chars to bytes
-	 * @param charArray char[]
-	 * @return byte[]
-	 */
-	public static byte[] toByteArray(char[] charArray)
-	{
-		if ( charArray == null ) {
-			return null;
-		}
-		
-		byte[] result = new byte[charArray.length];
-		for (int i=0; i < charArray.length; i++)
-		{
-			result[i] = (byte) charArray[i];
-		}
-		
-		return result;
-	}
+            if (AboutKeys.ABOUT_SUPPORTED_LANGUAGES.equalsIgnoreCase(key))
+            {
 
-	/**
-	 * A utility method to convert from bytes to chars
-	 * @param byteArray byte[]
-	 * @return char[]
-	 */
-	public static char[] toCharArray(byte[] byteArray)
-	{
-		if ( byteArray == null ) {
-			return null;
-		}
-		
-		char[] result = new char[byteArray.length];
-		for (int i=0; i < byteArray.length; i++)
-		{
-			result[i] = (char) byteArray[i];
-		}
-		
-		return result;
-	}
-	
-	/**
-	 * A utility method to convert from UUID to byte array
-	 * @param uuid
-	 * @return byte[]
-	 */
-	public static byte[] uuidToByteArray(UUID uuid) 
-	{
-		
-		if ( uuid == null ) {
-			return null;
-		}
-		
-    	long msUuid = uuid.getMostSignificantBits();
-    	long lsUuid = uuid.getLeastSignificantBits();
-    	byte[] byteArrayUuid = new byte[16];
+                Object supportLangs = sToObjectMap.get(key);
 
-    	for (int i = 0; i < 8; i++) {
-    		byteArrayUuid[i] = (byte) (msUuid >>> 8 * (7 - i));
-    	}
-    	for (int i = 8; i < 16; i++) {
-    		byteArrayUuid[i] = (byte) (lsUuid >>> 8 * (7 - i));
-    	}
+                if ( supportLangs == null ) {
+                    throw new IllegalArgumentException("Failed in creating toVariantMap, the key: 'SupportedLanguages' was found but the value is NULL");
+                }
 
-    	return byteArrayUuid;
+                if ( supportLangs instanceof Set<?> ) {
+                    @SuppressWarnings("unchecked")
+                    Set<String> value = (Set<String>) supportLangs;
+                    String[] toArray  = value.toArray(new String[]{});
+                    variantMap.put(key, new Variant(toArray));
+                }
+                else {
+                    variantMap.put(key, new Variant(supportLangs));
+                }
+
+            }//if :: ABOUT_SUPPORTED_LANGUAGES
+            else
+            {
+                Object value = sToObjectMap.get(key);
+
+                if ( value == null ) {
+                    throw new IllegalArgumentException("Failed in creating toVariantMap, the key: '" + key + "' was found but the value is NULL");
+                }
+
+                if (value instanceof UUID)
+                {
+                    byte [] byteArr = uuidToByteArray((UUID)value);
+                    variantMap.put(key, new Variant(byteArr, "ay"));
+                }
+                else {
+                    variantMap.put(key, new Variant(value));
+                }
+            }
+        }//for :: sToObjectMap
+
+        return variantMap;
     }
-	
-	/**
-	 * A utility method to convert from byte array to UUID
-	 * @param bAppId
-	 * @return UUID Returns the created {@link UUID} object or NULL on fail
-	 */
-	public static UUID byteArrayToUUID(byte[] bAppId) {
-    	long msUuid = 0;
-    	long lsUuid = 0;
-    	
-    	if ( bAppId == null || bAppId.length != 16 ) {
-    		return null;
-    	}
-    	
-    	for (int i = 0; i < 8; i++) {
-    		msUuid = (msUuid << 8) | (bAppId[i] & 0xff);
-    	}
-    	
-    	for (int i = 8; i < 16; i++) {
-    		lsUuid = (lsUuid << 8) | (bAppId[i] & 0xff);
-    	}
-    	
-    	UUID result = new UUID(msUuid, lsUuid);
 
-    	return result;
+    /**
+     * A utility method for converting from a String-Variant map to a String->Object map
+     * @param sToVariantMap input String->Variant map.
+     * @return String->Object map
+     * @throws BusException
+     */
+    public static Map<String, Object> fromVariantMap(Map<String, Variant> sToVariantMap) throws BusException
+    {
+        Map<String,Object> objectMap = new HashMap<String, Object>(sToVariantMap.size());
+        for (String key: sToVariantMap.keySet()) {
+
+            Variant variant = sToVariantMap.get(key);
+            Object object;
+            if (AboutKeys.ABOUT_SUPPORTED_LANGUAGES.equalsIgnoreCase(key))
+            {
+                String[] languages = variant.getObject(String[].class);
+                object = languages;
+            }
+            else if(AboutKeys.ABOUT_APP_ID.equalsIgnoreCase(key)) {
+                byte[] b   = variant.getObject(byte[].class);
+                UUID appId = byteArrayToUUID(b);
+                object = appId;
+            }
+            else
+            {
+                object = variant.getObject(Object.class);
+            }
+            objectMap.put(key, object);
+        }
+
+        return objectMap;
     }
-	
+
+    /**
+     * A utility method to convert from chars to bytes
+     * @param charArray char[]
+     * @return byte[]
+     */
+    public static byte[] toByteArray(char[] charArray)
+    {
+        if ( charArray == null ) {
+            return null;
+        }
+
+        byte[] result = new byte[charArray.length];
+        for (int i=0; i < charArray.length; i++)
+        {
+            result[i] = (byte) charArray[i];
+        }
+
+        return result;
+    }
+
+    /**
+     * A utility method to convert from bytes to chars
+     * @param byteArray byte[]
+     * @return char[]
+     */
+    public static char[] toCharArray(byte[] byteArray)
+    {
+        if ( byteArray == null ) {
+            return null;
+        }
+
+        char[] result = new char[byteArray.length];
+        for (int i=0; i < byteArray.length; i++)
+        {
+            result[i] = (char) byteArray[i];
+        }
+
+        return result;
+    }
+
+    /**
+     * A utility method to convert from UUID to byte array
+     * @param uuid
+     * @return byte[]
+     */
+    public static byte[] uuidToByteArray(UUID uuid)
+    {
+
+        if ( uuid == null ) {
+            return null;
+        }
+
+        long msUuid = uuid.getMostSignificantBits();
+        long lsUuid = uuid.getLeastSignificantBits();
+        byte[] byteArrayUuid = new byte[16];
+
+        for (int i = 0; i < 8; i++) {
+            byteArrayUuid[i] = (byte) (msUuid >>> 8 * (7 - i));
+        }
+        for (int i = 8; i < 16; i++) {
+            byteArrayUuid[i] = (byte) (lsUuid >>> 8 * (7 - i));
+        }
+
+        return byteArrayUuid;
+    }
+
+    /**
+     * A utility method to convert from byte array to UUID
+     * @param bAppId
+     * @return UUID Returns the created {@link UUID} object or NULL on fail
+     */
+    public static UUID byteArrayToUUID(byte[] bAppId) {
+        long msUuid = 0;
+        long lsUuid = 0;
+
+        if ( bAppId == null || bAppId.length != 16 ) {
+            return null;
+        }
+
+        for (int i = 0; i < 8; i++) {
+            msUuid = (msUuid << 8) | (bAppId[i] & 0xff);
+        }
+
+        for (int i = 8; i < 16; i++) {
+            lsUuid = (lsUuid << 8) | (bAppId[i] & 0xff);
+        }
+
+        UUID result = new UUID(msUuid, lsUuid);
+
+        return result;
+    }
+
 }

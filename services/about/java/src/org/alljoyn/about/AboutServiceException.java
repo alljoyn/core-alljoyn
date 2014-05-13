@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -20,31 +20,31 @@ package org.alljoyn.about;
  * The exception is thrown when an internal error has occurred in the {@link AboutService}
  */
 public class AboutServiceException extends RuntimeException {
-	private static final long serialVersionUID = -6407441278632848769L;
+    private static final long serialVersionUID = -6407441278632848769L;
 
-	public AboutServiceException() {
-	}
+    public AboutServiceException() {
+    }
 
-	/**
-	 * @param message
-	 */
-	public AboutServiceException(String message) {
-		super(message);
-	}
+    /**
+     * @param message
+     */
+    public AboutServiceException(String message) {
+        super(message);
+    }
 
-	/**
-	 * @param cause
-	 */
-	public AboutServiceException(Throwable cause) {
-		super(cause);
-	}
+    /**
+     * @param cause
+     */
+    public AboutServiceException(Throwable cause) {
+        super(cause);
+    }
 
-	/**
-	 * @param message
-	 * @param cause
-	 */
-	public AboutServiceException(String message, Throwable cause) {
-		super(message, cause);
-	}
+    /**
+     * @param message
+     * @param cause
+     */
+    public AboutServiceException(String message, Throwable cause) {
+        super(message, cause);
+    }
 
 }

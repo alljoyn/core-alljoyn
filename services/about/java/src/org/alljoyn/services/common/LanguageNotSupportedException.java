@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -19,16 +19,16 @@ package org.alljoyn.services.common;
 import org.alljoyn.bus.ErrorReplyBusException;
 
 /**
- * A BusException that is thrown when a remote client uses an unsupported language to get/set data.  
+ * A BusException that is thrown when a remote client uses an unsupported
+ * language to get/set data.
  */
 public class LanguageNotSupportedException extends ErrorReplyBusException {
-	private static final long serialVersionUID = -8150015063069797494L;
+    private static final long serialVersionUID = -8150015063069797494L;
 
-	/**
-	 * Constructor
-	 */
-	public LanguageNotSupportedException() {
-		super("org.alljoyn.Error.LanguageNotSupported", "The language specified is not supported");
-	}
-
+    /**
+     * Constructor
+     */
+    public LanguageNotSupportedException() {
+        super("org.alljoyn.Error.LanguageNotSupported", "The language specified is not supported");
+    }
 }

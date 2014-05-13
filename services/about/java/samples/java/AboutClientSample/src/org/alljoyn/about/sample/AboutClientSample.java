@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -16,9 +16,6 @@
 
 package org.alljoyn.about.sample;
 
-
-
-
 import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusListener;
 import org.alljoyn.bus.BusObject;
@@ -31,25 +28,19 @@ import org.alljoyn.about.AboutKeys;
 
 public class AboutClientSample {
 
-	
     static BusAttachment mBus;
     static boolean sessionEstablished = false;
     static int sessionId;
 
-	
-    
-	
-  
-    
     public static void main(String[] args) {
-    	
-    	System.out.println("Hello world");
-    	System.out.println(AboutKeys.ABOUT_APP_NAME);
-    	/*
+
+        System.out.println("Hello world");
+        System.out.println(AboutKeys.ABOUT_APP_NAME);
+        /*
         Runtime.getRuntime().addShutdownHook(new Thread() {
-			public void run() {
-				mBus.release();
-			}
-		})*/
-    }   
+            public void run() {
+                mBus.release();
+            }
+        })*/
+    }
 }

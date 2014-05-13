@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -31,62 +31,62 @@ import android.widget.TextView;
  */
 public class BusDescriptionAdapter extends ArrayAdapter<BusObjectDescription> {
 
-	private LayoutInflater m_layoutInflater;
-	
-	//=================================================================
-	/**
-	 * Creates the adapter given a context and a text view resource id.
-	 * @param context
-	 * @param resource
-	 */
-	public BusDescriptionAdapter(Context context, int resource) {
-		super(context, resource);		
-	}
-	//=================================================================
-	/**
-	 * @param layoutInflater Set a layout inflater.
-	 * Will be used to inflate the views to display. 
-	 */
-	public void setLayoutInflator(LayoutInflater layoutInflater) {
-		m_layoutInflater = layoutInflater;		
-	}
-	//=================================================================
-	/* (non-Javadoc)
-	 * @see android.widget.ArrayAdapter#getView(int, android.view.View, android.view.ViewGroup)
-	 */
-	@Override
-	public View getView(int position, View convertView, ViewGroup parent) {
-		
-		View row;
+    private LayoutInflater m_layoutInflater;
 
-		if (convertView == null)
-			row = m_layoutInflater.inflate(R.layout.bus_description_property, parent, false);
-		else
-			row = convertView;
+    //=================================================================
+    /**
+     * Creates the adapter given a context and a text view resource id.
+     * @param context
+     * @param resource
+     */
+    public BusDescriptionAdapter(Context context, int resource) {
+        super(context, resource);
+    }
+    //=================================================================
+    /**
+     * @param layoutInflater Set a layout inflater.
+     * Will be used to inflate the views to display.
+     */
+    public void setLayoutInflator(LayoutInflater layoutInflater) {
+        m_layoutInflater = layoutInflater;
+    }
+    //=================================================================
+    /* (non-Javadoc)
+     * @see android.widget.ArrayAdapter#getView(int, android.view.View, android.view.ViewGroup)
+     */
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
 
-		BusObjectDescription busObject = getItem(position);
-		
-		//Bus path
-		TextView propertyName = (TextView) row.findViewById(R.id.busPath);
-		propertyName.setText(busObject.getPath());
+        View row;
 
-		//Bus Interfaces
-		TextView propertyValue = (TextView) row.findViewById(R.id.busInterfaces);
-		String[] interfaces = busObject.getInterfaces();
-		
-		String res = "";
-		for(int i = 0; i < interfaces.length; i++){
-			res += interfaces[i];
-			res += ",";
-		}
-		if(res.length() > 0){
-			res = res.substring(0, res.length()-1);
-		}
-		
-		propertyValue.setText(res);
-		
-		return row;
-	}
-	//=================================================================
+        if (convertView == null)
+            row = m_layoutInflater.inflate(R.layout.bus_description_property, parent, false);
+        else
+            row = convertView;
+
+        BusObjectDescription busObject = getItem(position);
+
+        //Bus path
+        TextView propertyName = (TextView) row.findViewById(R.id.busPath);
+        propertyName.setText(busObject.getPath());
+
+        //Bus Interfaces
+        TextView propertyValue = (TextView) row.findViewById(R.id.busInterfaces);
+        String[] interfaces = busObject.getInterfaces();
+
+        String res = "";
+        for(int i = 0; i < interfaces.length; i++){
+            res += interfaces[i];
+            res += ",";
+        }
+        if(res.length() > 0){
+            res = res.substring(0, res.length()-1);
+        }
+
+        propertyValue.setText(res);
+
+        return row;
+    }
+    //=================================================================
 
 }
