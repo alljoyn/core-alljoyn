@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -19,6 +19,7 @@
 #import "AJNStatus.h"
 #import "AJNSessionOptions.h"
 #import "AJNMessage.h"
+#import "AJNTranslator.h"
 
 @class AJNBusAttachment;
 @class AJNInterfaceDescription;
@@ -109,10 +110,16 @@
 
 @property (nonatomic, readonly) BOOL isSecure;
 
+@property (nonatomic) void *translator;
+
 - (id)initWithPath:(NSString *)path;
 
 - (id)initWithBusAttachment:(AJNBusAttachment *)busAttachment onPath:(NSString *)path;
 
 - (void)objectWasRegistered;
+
+- (void)setDescription:(NSString*)description inLanguage:(NSString*)language;
+
+- (void)setDescriptionTranslator:(id<AJNTranslator>)translator;
 
 @end

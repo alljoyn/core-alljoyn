@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -15,24 +15,39 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import <Foundation/Foundation.h>
-#import "AJNBusInterface.h"
-#import "AJNBusAttachment.h"
-#import "BasicService.h"
+#import "AJNObject.h"
 
-const AJNSessionPort kBasicObjectServicePort = 25;
-NSString * const kBasicObjectServicePath = @ "/sample";
-NSString * const kBasicObjectServiceName = @ "org.alljoyn.bus.sample";
-NSString * const kBasicObjectInterfaceName = @ "org.alljoyn.bus.sample";
-NSString * const kBasicObjectMethodName = @ "cat";
+/**
+ * Protocol implemented by AllJoyn apps and called by AllJoyn to provide
+ * translation of human readable strings
+ */
+@protocol AJNTranslator <NSObject>
 
-@protocol MyMethodSample <AJNBusInterface>
+/**
+ * Get the size of the list of target translation languages
+ *
+ * @return the size of the list of target translation languages
+ */
+- (size_t)numTargetLanguages;
 
-- (NSString*)concatenateString:(NSString *)string1 withString:(NSString *)string2;
+/**
+ * Retrieve one of the list of target translation languages
+ * 
+ * @param index which translation target 
+ * 
+ * @return the translation target requested or nil if the index was out of bounds
+ */
+- (NSString*)getTargetLanguage:(size_t)index;
 
-@end
-
-@interface MyBasicSampleObject : AJNBusObject
-
-@property (nonatomic, strong) id<BasicServiceDelegate> delegate;
+/**
+ * Translate a string
+ *
+ * @param text the string to be translated
+ * @param fromLang the language "text" is in
+ * @param toLang the language to translate "text" to
+ *
+ * @return the translation of "text" or nil
+ */
+- (NSString*)translateText:(NSString*)text from:(NSString*)fromLang to:(NSString*)toLang;
 
 @end

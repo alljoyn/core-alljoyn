@@ -35,6 +35,7 @@
 #import "AJNSessionPortListenerImpl.h"
 #import "AJNSignalHandler.h"
 #import "AJNSignalHandlerImpl.h"
+#import "AJNTranslatorImpl.h"
 
 using namespace ajn;
 
@@ -376,6 +377,12 @@ public:
 
     @synchronized(self.signalHandlers) {
         [self.signalHandlers removeAllObjects];
+    }
+    
+    if(self.translator)
+    {
+        delete (AJNTranslatorImpl*)self.translator;
+        self.translator = nil;
     }
 
     ajn::BusAttachment* ptr = [self busAttachment];
@@ -928,5 +935,17 @@ public:
 {
     return BusAttachment::GetTimestamp();
 }
+
+
+- (void)setDescriptionTranslator:(id<AJNTranslator>)translator
+{
+    if(self.translator)
+    {
+        delete (AJNTranslatorImpl*)self.translator;
+    }
+    self.translator = new AJNTranslatorImpl(translator);
+    [self busAttachment]->SetDescriptionTranslator((ajn::Translator*)self.translator);
+}
+
 
 @end

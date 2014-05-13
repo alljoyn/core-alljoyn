@@ -23,6 +23,41 @@
 
 static BasicService *s_basicService;
 
+@interface MyTranslator : NSObject<AJNTranslator>
+
+- (size_t)numTargetLanguages;
+- (NSString*)getTargetLanguage:(size_t)index;
+- (NSString*)translateText:(NSString*)text from:(NSString*)fromLang to:(NSString*)toLang;
+
+@end
+
+@implementation MyTranslator
+- (size_t)numTargetLanguages
+{
+    return 1;
+}
+
+- (NSString*)getTargetLanguage:(size_t)index
+{
+    return @"en";
+}
+
+- (NSString*)translateText:(NSString*)text from:(NSString*)fromLang to:(NSString*)toLang
+{
+    if(![toLang isEqualToString:(@"en")])
+    {
+        return nil;
+    }
+    if([text isEqualToString:@"Isthay siay naay jectobay"])
+    {
+        return @"This is an object";
+    }
+    
+    return nil;
+}
+
+@end
+
 @interface BasicService() <AJNBusListener,AJNSessionPortListener>
 
 @property (nonatomic, strong) AJNBusAttachment *bus;
@@ -88,6 +123,13 @@ static BasicService *s_basicService;
         // and return the result of the concatenation
         //
         self.basicSampleObject = [[MyBasicSampleObject alloc] initWithBusAttachment:self.bus onPath:kBasicObjectServicePath];
+        
+        
+        
+        [self.basicSampleObject setDescription:@"Isthay siay naay jectobay" inLanguage:@"pig"];
+        [self.basicSampleObject setDescriptionTranslator:[MyTranslator alloc]];
+        
+
         
         // this is the delegate used for displaying status messages in the UI
         //

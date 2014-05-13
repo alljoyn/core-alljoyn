@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -16,6 +16,7 @@
 
 #import <alljoyn/InterfaceDescription.h>
 #import "AJNInterfaceDescription.h"
+#import "AJNTranslatorImpl.h"
 
 @interface AJNInterfaceDescription()
 
@@ -244,10 +245,65 @@
     return status;
 }
 
+- (void)setDescriptionLanguage:(NSString *)language
+{
+    if(self.interfaceDescription){
+        self.interfaceDescription->SetDescriptionLanguage([language UTF8String]);
+    }
+}
+- (void)setDescription:(NSString *)description
+{
+    if(self.interfaceDescription){
+        self.interfaceDescription->SetDescription([description UTF8String]);
+    }
+}
+
+- (QStatus)setMemberDescription:(NSString *)description forMemberWithName:(NSString *)member sessionlessSignal:(BOOL)sessionless
+{
+    return self.interfaceDescription->SetMemberDescription([member UTF8String], [description UTF8String], sessionless);
+}
+
+- (QStatus)setPropertyDescription:(NSString *)description forPropertyWithName:(NSString *)propName
+{
+    return self.interfaceDescription->SetPropertyDescription([propName UTF8String], [description UTF8String]);
+}
+
+- (QStatus)setArgDescription:(NSString *)description forArgument:(NSString *)argName ofMember:(NSString *)member
+{
+    return self.interfaceDescription->SetArgDescription([member  UTF8String], [argName UTF8String], [description UTF8String]);
+}
+
+- (void)setDescriptionTranslator:(id<AJNTranslator>)translator
+{
+    AJNTranslatorImpl* i = new AJNTranslatorImpl(translator);
+    self.interfaceDescription->SetDescriptionTranslator(i);
+    self.translator = (AJNTranslatorImpl*)i;
+}
+
 - (void)activate
 {
     if (self.interfaceDescription) {
         self.interfaceDescription->Activate();
+    }
+}
+
+- (id)initWithHandle:(AJNHandle)handle
+{
+    self.translator = 0;
+    return [super initWithHandle:handle];
+}
+
+- (id)initWithHandle:(AJNHandle)handle shouldDeleteHandleOnDealloc:(BOOL)deletionFlag;
+{
+    self.translator = 0;
+    return [super initWithHandle:handle shouldDeleteHandleOnDealloc:deletionFlag];
+}
+
+-(void)dealloc
+{
+    if(self.translator)
+    {
+        delete (AJNTranslatorImpl*)self.translator;
     }
 }
 
