@@ -37,7 +37,7 @@
 			buildConfigurationList = A441CDFA161F6479008A4779 /* Build configuration list for PBXLegacyTarget "alljoyn_unity_osx" */;
 			buildPhases = (
 			);
-			buildToolPath = /usr/local/bin/scons;
+			buildToolPath = scons;
 			buildWorkingDirectory = ../alljoyn_unity;
 			dependencies = (
 			);
@@ -51,7 +51,7 @@
 			buildConfigurationList = AC0DC84D151A46F0000E302F /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios" */;
 			buildPhases = (
 			);
-			buildToolPath = /usr/local/bin/scons;
+			buildToolPath = scons;
 			buildWorkingDirectory = ../.;
 			dependencies = (
 			);
@@ -65,7 +65,7 @@
 			buildConfigurationList = AC8D8CFF161376FE00361742 /* Build configuration list for PBXLegacyTarget "alljoyn_c_ios" */;
 			buildPhases = (
 			);
-			buildToolPath = /usr/local/bin/scons;
+			buildToolPath = scons;
 			buildWorkingDirectory = ../alljoyn_c;
 			dependencies = (
 			);
@@ -79,7 +79,7 @@
 			buildConfigurationList = AC9C2C7115FA9B4C00C60607 /* Build configuration list for PBXLegacyTarget "alljoyn_c_osx" */;
 			buildPhases = (
 			);
-			buildToolPath = /usr/local/bin/scons;
+			buildToolPath = scons;
 			buildWorkingDirectory = ../alljoyn_c;
 			dependencies = (
 			);
@@ -93,7 +93,7 @@
 			buildConfigurationList = ACA3BC371587FC5E0010F1C5 /* Build configuration list for PBXLegacyTarget "alljoyn_streaming_osx" */;
 			buildPhases = (
 			);
-			buildToolPath = /usr/local/bin/scons;
+			buildToolPath = scons;
 			buildWorkingDirectory = ../alljoyn_streaming;
 			dependencies = (
 			);
@@ -107,7 +107,7 @@
 			buildConfigurationList = ACA3BC3A1587FDBC0010F1C5 /* Build configuration list for PBXLegacyTarget "alljoyn_streaming_ios" */;
 			buildPhases = (
 			);
-			buildToolPath = /usr/local/bin/scons;
+			buildToolPath = scons;
 			buildWorkingDirectory = ../alljoyn_streaming;
 			dependencies = (
 			);
@@ -121,7 +121,7 @@
 			buildConfigurationList = ACB2C747160B8D9900D7E3A6 /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios_armv7s" */;
 			buildPhases = (
 			);
-			buildToolPath = /usr/local/bin/scons;
+			buildToolPath = scons;
 			buildWorkingDirectory = ../.;
 			dependencies = (
 			);
@@ -135,7 +135,7 @@
 			buildConfigurationList = ACB2C74C160B8EFF00D7E3A6 /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios_armv7" */;
 			buildPhases = (
 			);
-			buildToolPath = /usr/local/bin/scons;
+			buildToolPath = scons;
 			buildWorkingDirectory = ../.;
 			dependencies = (
 			);
@@ -149,7 +149,7 @@
 			buildConfigurationList = ACB4AFB9150E631F0054D964 /* Build configuration list for PBXLegacyTarget "alljoyn_core_osx" */;
 			buildPhases = (
 			);
-			buildToolPath = /usr/local/bin/scons;
+			buildToolPath = scons;
 			buildWorkingDirectory = ../.;
 			dependencies = (
 			);
@@ -163,7 +163,7 @@
 			buildConfigurationList = ACFED7B31624CE2900697423 /* Build configuration list for PBXLegacyTarget "alljoyn_unity_ios" */;
 			buildPhases = (
 			);
-			buildToolPath = /usr/local/bin/scons;
+			buildToolPath = scons;
 			buildWorkingDirectory = ../alljoyn_unity;
 			dependencies = (
 			);
