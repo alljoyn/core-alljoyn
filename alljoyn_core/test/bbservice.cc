@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -19,10 +19,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include <qcc/platform.h>
-
-#ifdef _WIN32
-#include <Crtdbg.h>
-#endif
 
 #include <assert.h>
 #include <signal.h>
@@ -79,6 +75,8 @@ static bool g_compress = false;
 static uint32_t g_keyExpiration = 0xFFFFFFFF;
 static bool g_cancelAdvertise = false;
 static bool g_ping_back = false;
+static bool g_disableConcurrency = false;
+static bool g_use_delayed_ping_with_sleep = false;
 
 static volatile sig_atomic_t g_interrupt = false;
 
@@ -440,7 +438,7 @@ class LocalTestObject : public BusObject {
         prop_int_val(100),
         opts(opts)
     {
-        QStatus status;
+        QStatus status = ER_OK;
 
         /* Add the test interface to this object */
         const InterfaceDescription* regTestIntf = bus.GetInterface(::org::alljoyn::alljoyn_test::InterfaceName);
@@ -465,12 +463,17 @@ class LocalTestObject : public BusObject {
         /* Register the method handlers with the object */
         const MethodEntry methodEntries[] = {
             { regTestIntf->GetMember("my_ping"), static_cast<MessageReceiver::MethodHandler>(&LocalTestObject::Ping) },
-            { regTestIntf->GetMember("delayed_ping"), static_cast<MessageReceiver::MethodHandler>(&LocalTestObject::DelayedPing) },
             { regTestIntf->GetMember("time_ping"), static_cast<MessageReceiver::MethodHandler>(&LocalTestObject::TimePing) }
         };
         status = AddMethodHandlers(methodEntries, ArraySize(methodEntries));
         if (ER_OK != status) {
             QCC_LogError(status, ("Failed to register method handlers for LocalTestObject"));
+        }
+
+        if (!g_use_delayed_ping_with_sleep) {
+            status = AddMethodHandler(regTestIntf->GetMember("delayed_ping"), static_cast<MessageReceiver::MethodHandler>(&LocalTestObject::DelayedPing));
+        } else {
+            status = AddMethodHandler(regTestIntf->GetMember("delayed_ping"), static_cast<MessageReceiver::MethodHandler>(&LocalTestObject::DelayedPingWithSleep));
         }
     }
 
@@ -516,7 +519,9 @@ class LocalTestObject : public BusObject {
                        Message& msg)
     {
         /* Enable concurrent signal handling */
-        g_msgBus->EnableConcurrentCallbacks();
+        if (!g_disableConcurrency) {
+            g_msgBus->EnableConcurrentCallbacks();
+        }
 
         if ((IncrementAndFetch(&rxCounts[sourcePath]) % reportInterval) == 0) {
             QCC_SyncPrintf("RxSignal: %s - %u\n", sourcePath, rxCounts[sourcePath]);
@@ -568,6 +573,26 @@ class LocalTestObject : public BusObject {
         QStatus status = MethodReply(msg, arg, 1);
         if (ER_OK != status) {
             QCC_LogError(status, ("Ping: Error sending reply"));
+        }
+    }
+
+    void DelayedPingWithSleep(const InterfaceDescription::Member* member, Message& msg)
+    {
+        /* Enable concurrent callbacks since some of the calls take a long time to execute */
+        g_msgBus->EnableConcurrentCallbacks();
+
+        uint32_t delay(msg->GetArg(1)->v_uint32);
+        const char* value(msg->GetArg(0)->v_string.str);
+        MsgArg* args = new MsgArg[1];
+        args[0].Set("s", value);
+        printf("Pinged (response delayed %ums) with: \"%s\"\n", delay, value);
+        if (msg->IsEncrypted()) {
+            printf("Authenticated using %s\n", msg->GetAuthMechanism().c_str());
+        }
+        qcc::Sleep(delay);
+        QStatus status = MethodReply(msg, args, 1);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("DelayedPing: Error sending reply"));
         }
     }
 
@@ -674,7 +699,6 @@ static void usage(void)
     printf("   -kx #                 = Authentication key expiration (seconds)\n");
     printf("   -m                    = Session is a multi-point session\n");
     printf("   -e                    = Echo received signals back to sender\n");
-    printf("   -s                    = Require the test interface to be secure\n");
     printf("   -x                    = Compress signals echoed back to sender\n");
     printf("   -i #                  = Signal report interval (number of signals rx per update; default = 1000)\n");
     printf("   -n <well-known name>  = Well-known name to advertise\n");
@@ -688,20 +712,21 @@ static void usage(void)
     printf("   -sn                   = Interface security is not applicable\n");
     printf("   -sr                   = Interface security is required\n");
     printf("   -so                   = Enable object security\n");
+    printf("   -con #                = Specify concurrent threads\n");
+    printf("   -dcon                 = Disable concurrency\n");
+    printf("   -dpws                 = Use DelayedPingWithSleep as methodhandler instead of DelayedPing\n");
 }
 
 /** Main entry point */
 int main(int argc, char** argv)
 {
-#ifdef _WIN32
-    _CrtMemDumpAllObjectsSince(NULL);
-#endif
     QStatus status = ER_OK;
     InterfaceSecurityPolicy secPolicy = AJ_IFC_SECURITY_INHERIT;
     bool objSecure = false;
     unsigned long reportInterval = 1000;
     const char* keyStore = NULL;
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_NONE);
+    unsigned long concurrencyLevel = 4;
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
@@ -728,7 +753,6 @@ int main(int argc, char** argv)
                 exit(1);
             }
             g_echo_signal = true;
-        } else if (0 == strcmp("-s", argv[i])) {
         } else if (0 == strcmp("-x", argv[i])) {
             g_compress = true;
         } else if (0 == strcmp("-i", argv[i])) {
@@ -787,6 +811,19 @@ int main(int argc, char** argv)
             secPolicy = AJ_IFC_SECURITY_REQUIRED;
         } else if (0 == strcmp("-so", argv[i])) {
             objSecure = true;
+        } else if (0 == strcmp("-con", argv[i])) {
+            ++i;
+            if (i == argc) {
+                printf("option %s requires a parameter\n", argv[i - 1]);
+                usage();
+                exit(1);
+            } else {
+                concurrencyLevel = strtoul(argv[i], NULL, 10);
+            }
+        } else if (0 == strcmp("-dcon", argv[i])) {
+            g_disableConcurrency = true;
+        } else if (0 == strcmp("-dpws", argv[i])) {
+            g_use_delayed_ping_with_sleep = true;
         } else {
             status = ER_FAIL;
             printf("Unknown option %s\n", argv[i]);
@@ -794,6 +831,7 @@ int main(int argc, char** argv)
             exit(1);
         }
     }
+
 
     /* If no transport option was specifie, then make session options very open */
     if (opts.transports == 0) {
@@ -804,14 +842,10 @@ int main(int argc, char** argv)
 
     /* Get env vars */
     Environ* env = Environ::GetAppEnviron();
-    qcc::String clientArgs = env->Find("DBUS_STARTER_ADDRESS");
-
-    if (clientArgs.empty()) {
-        clientArgs = env->Find("BUS_ADDRESS");
-    }
+    qcc::String clientArgs = env->Find("BUS_ADDRESS");
 
     /* Create message bus */
-    g_msgBus = new BusAttachment("bbservice", true);
+    g_msgBus = new BusAttachment("bbservice", true, concurrencyLevel);
 
     /* Add org.alljoyn.alljoyn_test interface */
     InterfaceDescription* testIntf = NULL;
