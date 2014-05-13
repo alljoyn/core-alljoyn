@@ -29,21 +29,28 @@
 namespace ajn {
 namespace services {
 /**
- *  AnnouncementRegistrar is a helper class enable the Application to register AnnounceHandlers to receive org.alljoyn.about Announce signals.
+ *  AnnouncementRegistrar is a helper class enable the Application to register
+ *  AnnounceHandlers to receive org.alljoyn.about Announce signals.
  */
 class AnnouncementRegistrar {
 
   public:
     /**
-     * RegisterAnnounceHandler Registers the AnnounceHandler to receive  org.alljoyn.about Announce signals
+     * Registers the AnnounceHandler to receive org.alljoyn.about Announce signals
+     *
      * @param[in] bus reference to BusAttachment
      * @param[in] handler reference to AnnounceHandler
+     * @param[in] implementsInterfaces a list of interfaces that the Announce signal
+     *               reports as implmented. NULL to recieve all Announce signals
+     *               regardless of interfaces
+     * @param[in] numberInterfaces the number of interfaces in the
+     *               implementsInterfaces list
      * @return status
      */
-    static QStatus RegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler);
+    static QStatus RegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler, char** implementsInterfaces, size_t numberInterfaces);
 
     /**
-     * UnRegisterAnnounceHandler  UnRegisters the AnnounceHandler from  receiving   org.alljoyn.about Announce signal
+     * UnRegisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal
      * @param[in] bus reference to BusAttachment
      * @param[in] handler reference to AnnounceHandler
      * @return status
