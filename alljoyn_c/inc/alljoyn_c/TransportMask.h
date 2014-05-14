@@ -37,5 +37,6 @@ const alljoyn_transportmask ALLJOYN_TRANSPORT_WWAN      = 0x0008;   /**< Wireles
 const alljoyn_transportmask ALLJOYN_TRANSPORT_LAN       = 0x0010;   /**< Wired local-area network transport */
 const alljoyn_transportmask ALLJOYN_TRANSPORT_PROXIMITY = 0x0040;   /**< Transport using WinRT Proximity Framework */
 const alljoyn_transportmask ALLJOYN_TRANSPORT_WFD       = 0x0080;   /**< Transport using Wi-Fi Direct transport */
+const alljoyn_transportmask ALLJOYN_TRANSPORT_UDP       = 0x0100;   /**< Transport using the AllJoyn Reliable Datagram Protocol (flavor of reliable UDP) */
 
 #endif

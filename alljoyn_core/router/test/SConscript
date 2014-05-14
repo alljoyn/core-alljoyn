@@ -24,6 +24,8 @@ progs = [
 
 if router_env['OS'] in ['android', 'linux']:
    progs.append(router_env.Program('bbdaemon', ['bbdaemon.cc'] + router_objs))
+   progs.append(router_env.Program('ardp', ['ardp.cc'] + router_objs))
+   progs.append(router_env.Program('ardptest', ['ardptest.cc'] + router_objs))
    
 #if router_env['OS'] == 'win7':
 #   progs.append(router_env.Program('WinBtDiscovery.exe', ['WinBtDiscovery.cc']))

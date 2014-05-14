@@ -770,6 +770,7 @@ static void usage(void)
     printf("   -t                    = Advertise over TCP (enables selective advertising)\n");
     printf("   -l                    = Advertise locally (enables selective advertising)\n");
     printf("   -w                    = Advertise over Wi-Fi Direct (enables selective advertising)\n");
+    printf("   -u                    = Advertise over UDP-based ARDP (enables selective advertising)\n");
     printf("   -a                    = Cancel advertising while servicing a single client (causes rediscovery between iterations)\n");
     printf("   -p                    = Respond to an incoming signal by pinging back to the sender\n");
     printf("   -sn                   = Interface security is not applicable\n");
@@ -864,6 +865,8 @@ int main(int argc, char** argv)
             opts.transports |= TRANSPORT_LOCAL;
         } else if (0 == strcmp("-w", argv[i])) {
             opts.transports |= TRANSPORT_WFD;
+        } else if (0 == strcmp("-u", argv[i])) {
+            opts.transports |= TRANSPORT_UDP;
         } else if (0 == strcmp("-a", argv[i])) {
             g_cancelAdvertise = true;
         } else if (0 == strcmp("-sn", argv[i])) {

@@ -41,7 +41,7 @@
 #include "BusInternal.h"
 
 
-#define QCC_MODULE "ALLJOYN"
+#define QCC_MODULE "ENDPOINT_AUTH"
 
 using namespace qcc;
 using namespace std;
@@ -57,6 +57,8 @@ static const char* UntrustedError = "org.alljoyn.error.untrusted";
 
 QStatus EndpointAuth::Hello(qcc::String& redirection)
 {
+    QCC_DbgTrace(("EndpointAuth::Hello(redirection=\"%s\")", redirection.c_str()));
+
     QStatus status;
     Message hello(bus);
     Message response(bus);
@@ -151,6 +153,8 @@ static const uint32_t REDIRECT_TIMEOUT = 30 * 1000;
 
 QStatus EndpointAuth::WaitHello(qcc::String& authUsed)
 {
+    QCC_DbgTrace(("EndpointAuth::WaitHello(authUsed=\"%s\")", authUsed.c_str()));
+
     qcc::String redirection;
     QStatus status;
     Message hello(bus);
@@ -298,6 +302,8 @@ static const char InformProtocolVersion[] = "INFORM_PROTO_VERSION";
 
 qcc::String EndpointAuth::SASLCallout(SASLEngine& sasl, const qcc::String& extCmd)
 {
+    QCC_DbgTrace(("EndpointAuth::SASLCallout(sasl=0x%p, extCmd=\"%s\")", &sasl, extCmd.c_str()));
+
     qcc::String rsp;
 
     if (sasl.GetRole() == AuthMechanism::RESPONDER) {
@@ -363,19 +369,25 @@ QStatus EndpointAuth::Establish(const qcc::String& authMechanisms,
                                 qcc::String& redirection,
                                 AuthListener* listener)
 {
+    QCC_DbgTrace(("EndpointAuth::Establish(authMechanism=\"%s\", authUsed=\"%s\", redirection=\"%s\", listener=0x%p)",
+                  authMechanisms.c_str(), authUsed.c_str(), redirection.c_str(), listener));
+
+    endpoint->SetFlowType(_BusEndpoint::ENDPOINT_FLOW_CHARS);
+
     QStatus status = ER_OK;
     size_t numPushed;
     SASLEngine::AuthState state;
     qcc::String inStr;
     qcc::String outStr;
 
-    QCC_DbgPrintf(("EndpointAuth::Establish authMechanisms=\"%s\"", authMechanisms.c_str()));
+    QCC_DbgPrintf(("EndpointAuth::Establish(): authMechanisms=\"%s\"", authMechanisms.c_str()));
 
     if (listener) {
         authListener.Set(listener);
     }
 
     if (isAccepting) {
+        QCC_DbgPrintf(("EndpointAuth::Establish(): Accepting"));
         SASLEngine sasl(bus, AuthMechanism::CHALLENGER, authMechanisms, NULL, authListener, this);
         /*
          * The server's GUID is sent to the client when the authentication succeeds
@@ -392,6 +404,7 @@ QStatus EndpointAuth::Establish(const qcc::String& authMechanisms,
                 QCC_LogError(status, ("Failed to read from stream"));
                 goto ExitEstablish;
             }
+            QCC_DbgPrintf(("EndpointAuth::Establish(): Got \"%s\" from stream", inStr.c_str()));
             status = sasl.Advance(inStr, outStr, state);
             if (status != ER_OK) {
                 QCC_DbgPrintf(("Server authentication failed %s", QCC_StatusText(status)));
@@ -407,6 +420,7 @@ QStatus EndpointAuth::Establish(const qcc::String& authMechanisms,
             /*
              * Send the response
              */
+            QCC_DbgPrintf(("EndpointAuth::Establish(): Responding with \"%s\" to stream", outStr.c_str()));
             status = endpoint->GetSink().PushBytes((void*)(outStr.data()), outStr.length(), numPushed);
             if (status == ER_OK) {
                 QCC_DbgPrintf(("Sent %s", outStr.c_str()));
@@ -418,10 +432,15 @@ QStatus EndpointAuth::Establish(const qcc::String& authMechanisms,
         /*
          * Wait for the hello message
          */
+        QCC_DbgPrintf(("EndpointAuth::Establish(): WaitHello()"));
+        endpoint->SetFlowType(_BusEndpoint::ENDPOINT_FLOW_HELLO);
         status = WaitHello(authUsed);
+        endpoint->SetFlowType(_BusEndpoint::ENDPOINT_FLOW_MSGS);
     } else {
+        QCC_DbgPrintf(("EndpointAuth::Establish(): Not accepting"));
         SASLEngine sasl(bus, AuthMechanism::RESPONDER, authMechanisms, NULL, authListener, endpoint->GetFeatures().isBusToBus ? NULL : this);
         while (true) {
+            QCC_DbgPrintf(("EndpointAuth::Establish(): Advance()"));
             status = sasl.Advance(inStr, outStr, state);
             if (status != ER_OK) {
                 QCC_DbgPrintf(("Client authentication failed %s", QCC_StatusText(status)));
@@ -430,6 +449,7 @@ QStatus EndpointAuth::Establish(const qcc::String& authMechanisms,
             /*
              * Send the response
              */
+            QCC_DbgPrintf(("EndpointAuth::Establish(): Responding with \"%s\" to stream", outStr.c_str()));
             status = endpoint->GetSink().PushBytes((void*)(outStr.data()), outStr.length(), numPushed);
             if (status == ER_OK) {
                 QCC_DbgPrintf(("Sent %s", outStr.c_str()));
@@ -463,11 +483,15 @@ QStatus EndpointAuth::Establish(const qcc::String& authMechanisms,
                 QCC_LogError(status, ("Failed to read from stream"));
                 goto ExitEstablish;
             }
+            QCC_DbgPrintf(("EndpointAuth::Establish(): Got \"%s\" from stream", inStr.c_str()));
         }
         /*
          * Send the hello message and wait for a response
          */
+        QCC_DbgPrintf(("EndpointAuth::Establish(): Hello()"));
+        endpoint->SetFlowType(_BusEndpoint::ENDPOINT_FLOW_HELLO);
         status = Hello(redirection);
+        endpoint->SetFlowType(_BusEndpoint::ENDPOINT_FLOW_MSGS);
     }
 
 ExitEstablish:

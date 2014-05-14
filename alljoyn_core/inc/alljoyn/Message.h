@@ -185,6 +185,7 @@ class _Message {
     friend class _RemoteEndpoint;
     friend class _LocalEndpoint;
     friend class _NullEndpoint;
+    friend class _UDPEndpoint;
     friend class DaemonRouter;
     friend class AllJoynObj;
     friend class DeferredMsg;

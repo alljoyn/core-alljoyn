@@ -140,6 +140,20 @@ void _RemoteEndpoint::SetStream(qcc::Stream* s)
 }
 
 
+void _RemoteEndpoint::SetStarted(bool value)
+{
+    if (internal) {
+        internal->started = value;
+    }
+}
+
+void _RemoteEndpoint::SetStopping(bool value)
+{
+    if (internal) {
+        internal->stopping = value;
+    }
+}
+
 const qcc::String& _RemoteEndpoint::GetUniqueName() const
 {
     if (internal) {
@@ -461,6 +475,20 @@ static inline bool IsControlMessage(Message& msg)
         offset -= 2;
     }
     return (::strcmp(sender + offset, ".1") == 0) ? true : false;
+}
+
+void _RemoteEndpoint::Exit()
+{
+    QCC_DbgTrace(("_RemoteEndpoint::Exit()"));
+
+    /* Ensure the endpoint is valid */
+    if (!internal) {
+        QCC_DbgPrintf(("_RemoteEndpoint::Exit(): invalid endpoint"));
+        return;
+    }
+
+    QCC_DbgPrintf(("_RemoteEndpoint::Exit(): exitCount = 1"));
+    internal->exitCount = 1;
 }
 
 void _RemoteEndpoint::ExitCallback() {

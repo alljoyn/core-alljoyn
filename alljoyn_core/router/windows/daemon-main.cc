@@ -43,6 +43,7 @@
 
 #include "Transport.h"
 #include "TCPTransport.h"
+#include "UDPTransport.h"
 #include "DaemonTransport.h"
 //disable bluetooth on windows.
 #if !defined(QCC_OS_GROUP_WINDOWS)
@@ -83,6 +84,7 @@ static const char internalConfig[] =
     "<busconfig>"
     "  <type>alljoyn</type>"
     "  <listen>tcp:r4addr=0.0.0.0,r4port=9956</listen>"
+    "  <listen>udp:u4addr=0.0.0.0,u4port=9955</listen>"
     "  <listen>localhost:port=9955</listen>"
     "  <listen>localhost:port=9956</listen>"
     "  <property name=\"ns_interfaces\">*</property>"
@@ -253,6 +255,8 @@ int daemon(OptParse& opts)
         bool skip = false;
         if (addrStr.compare(0, sizeof("tcp:") - 1, "tcp:") == 0) {
             // No special processing needed for TCP.
+        } else if (addrStr.compare(0, sizeof("udp:") - 1, "udp:") == 0) {
+            // No special processing needed for UDP.
         } else if (addrStr.compare(0, sizeof("localhost:") - 1, "localhost:") == 0) {
             // No special processing needed for localhost.
         } else if (addrStr.compare("bluetooth:") == 0) {
@@ -288,6 +292,7 @@ int daemon(OptParse& opts)
     TransportFactoryContainer cntr;
     cntr.Add(new TransportFactory<DaemonTransport>(DaemonTransport::TransportName, false));
     cntr.Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
+    cntr.Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
 #if !defined(QCC_OS_GROUP_WINDOWS)
     if (!opts.GetNoBT()) {
         cntr.Add(new TransportFactory<BTTransport>("bluetooth", false));

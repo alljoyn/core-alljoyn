@@ -476,6 +476,8 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::Run(void* arg)
 
 ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
 {
+    QCC_DbgTrace(("JoinSessionThread::RunJoin()"));
+
     uint32_t replyCode = ALLJOYN_JOINSESSION_REPLY_SUCCESS;
     SessionId id = 0;
     SessionOpts optsOut(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, 0);
@@ -485,6 +487,8 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
     String sender = msg->GetSender();
     RemoteEndpoint b2bEp;
     BusEndpoint joinerEp = ajObj.router.FindEndpoint(sender);
+
+    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): joinerEp=\"%s\"", joinerEp->GetUniqueName().c_str()));
 
     /* Parse the message args */
     msg->GetArgs(numArgs, args);
@@ -496,10 +500,12 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
 
     if (status == ER_OK) {
         status = GetSessionOpts(args[2], optsIn);
+        QCC_DbgPrintf(("JoinSessionThread::RunJoin(): optsIn=\"%s\"", optsIn.ToString().c_str()));
     }
 
     if (status == ER_OK) {
         BusEndpoint srcEp = ajObj.router.FindEndpoint(sender);
+        QCC_DbgPrintf(("JoinSessionThread::RunJoin(): srcEp=\"%s\"", srcEp->GetUniqueName().c_str()));
         if (srcEp->IsValid()) {
             status = TransportPermission::FilterTransports(srcEp, sender, optsIn.transports, "JoinSessionThread.Run");
         }
@@ -512,11 +518,11 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
             rejectCall = true;
         } else if (policy == PermissionMgr::STDBUSCALL_ALLOW_ACCESS_SERVICE_LOCAL) {
             optsIn.transports &= TRANSPORT_LOCAL;
-            QCC_DbgPrintf(("The sender endpoint is only allowed to use local transport."));
+            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): The sender endpoint is only allowed to use local transport."));
         }
 
         if (rejectCall) {
-            QCC_DbgPrintf(("The sender endpoint is not allowed to call JoinSession()"));
+            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): The sender endpoint is not allowed to call JoinSession()"));
             replyCode = ALLJOYN_JOINSESSION_REPLY_REJECTED;
             /* Reply to request */
             MsgArg replyArgs[3];
@@ -524,7 +530,8 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
             replyArgs[1].Set("u", id);
             SetSessionOpts(optsOut, replyArgs[2]);
             status = ajObj.MethodReply(msg, replyArgs, ArraySize(replyArgs));
-            QCC_DbgPrintf(("AllJoynObj::JoinSession(%d) returned (%d,%u) (status=%s)", sessionPort, replyCode, id, QCC_StatusText(status)));
+            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): JoinSession(%d) returned (%d,%u) (status=%s)",
+                           sessionPort, replyCode, id, QCC_StatusText(status)));
             return 0;
         }
     }
@@ -537,7 +544,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
     if (hostEp->IsValid()) {
         while ((it != ajObj.sessionMap.end()) && (it->first.first == sender) && (it->first.second == 0)) {
             if (ajObj.router.FindEndpoint(it->second.sessionHost) == hostEp) {
-                QCC_DbgTrace(("JoinSession(): cannot join your own session"));
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): cannot join your own session"));
                 replyCode = ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED;
                 break;
             }
@@ -549,32 +556,39 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
     if (status != ER_OK) {
         if (replyCode != ALLJOYN_JOINSESSION_REPLY_SUCCESS) {
             replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
-            QCC_DbgTrace(("JoinSession(<bad_args>"));
+            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): bad args"));
         }
     } else if (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) {
-        QCC_DbgTrace(("JoinSession(%d, <%u, 0x%x, 0x%x>)", sessionPort, optsIn.traffic, optsIn.proximity, optsIn.transports));
+        QCC_DbgPrintf(("JoinSessionThread::RunJoin() sessionPort=%d, opts=<%u, 0x%x, 0x%x>)",
+                       sessionPort, optsIn.traffic, optsIn.proximity, optsIn.transports));
 
         /* Decide how to proceed based on the session endpoint existence/type */
         VirtualEndpoint vSessionEp;
 
         if (sessionHost) {
+            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): sessionHost=\"%s\"", sessionHost));
             BusEndpoint ep = ajObj.router.FindEndpoint(sessionHost);
             if (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
                 vSessionEp = VirtualEndpoint::cast(ep);
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): vSessionEp=\"%s\"", sessionHost));
             } else if ((ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE) || (ep->GetEndpointType() == ENDPOINT_TYPE_NULL) || (ep->GetEndpointType() == ENDPOINT_TYPE_LOCAL)) {
                 rSessionEp = ep;
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): rSessionEp=\"%s\"", rSessionEp->GetUniqueName().c_str()));
             }
         }
 
         if (rSessionEp->IsValid()) {
-            /* Session is with another locally connected attachment */
+            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): session is with another locally connected attachment"));
 
             /* Find creator in session map */
             String creatorName = rSessionEp->GetUniqueName();
+            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): creatorName=\"%s\"", creatorName.c_str()));
             bool foundSessionMapEntry = false;
             SessionMapType::iterator sit = ajObj.SessionMapLowerBound(creatorName, 0);
             while ((sit != ajObj.sessionMap.end()) && (creatorName == sit->first.first)) {
                 if ((sit->second.sessionHost == creatorName) && (sit->second.sessionPort == sessionPort)) {
+                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): found \"%s\" in sessionMap with expected port %d.",
+                                   creatorName.c_str(), sessionPort));
                     if (sit->first.second == 0) {
                         sme = sit->second;
                         foundSessionMapEntry = true;
@@ -586,6 +600,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                         vector<String>::iterator mit = sit->second.memberNames.begin();
                         while (mit != sit->second.memberNames.end()) {
                             if (*mit == sender) {
+                                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): joiner already joined"));
                                 foundSessionMapEntry = false;
                                 replyCode = ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED;
                                 break;
@@ -609,6 +624,8 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                         newSessionId = qcc::Rand32();
                     }
 
+                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): newsessinoId=%d.", newSessionId));
+
                     /* Add an entry to sessionMap here (before sending accept session) since accept session
                      * may trigger a call to GetSessionFd or LeaveSession which must be aware of the new session's
                      * existence in order to complete successfully.
@@ -627,6 +644,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
 
                     /* Ask creator to accept session */
                     ajObj.ReleaseLocks();
+                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): SendAcceptSession()"));
                     status = ajObj.SendAcceptSession(sme.sessionPort, newSessionId, sessionHost, sender.c_str(), optsIn, isAccepted);
                     if (status != ER_OK) {
                         QCC_LogError(status, ("SendAcceptSession failed"));
@@ -647,8 +665,10 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 }
                 if (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) {
                     if (!isAccepted) {
+                        QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Join session request rejected"));
                         replyCode = ALLJOYN_JOINSESSION_REPLY_REJECTED;
                     } else if (sme.opts.traffic == SessionOpts::TRAFFIC_MESSAGES) {
+                        QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Join session request accepted"));
                         /* setup the forward and reverse routes through the local daemon */
                         RemoteEndpoint tEp;
                         status = ajObj.router.AddSessionRoute(newSessionId, joinerEp, NULL, rSessionEp, tEp);
@@ -657,6 +677,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                             QCC_LogError(status, ("AddSessionRoute(%u, %s, NULL, %s, tEp) failed", newSessionId, sender.c_str(), rSessionEp->GetUniqueName().c_str()));
                         }
                         if (status == ER_OK) {
+                            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Add local joiner to member list"));
                             /* Add (local) joiner to list of session members since no AttachSession will be sent */
                             SessionMapEntry* smEntry = ajObj.SessionMapFind(sme.endpointName, newSessionId);
                             if (smEntry) {
@@ -679,6 +700,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                             sme.id = newSessionId;
                         }
                     } else if ((sme.opts.traffic != SessionOpts::TRAFFIC_MESSAGES) && !sme.opts.isMultipoint) {
+                        QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Raw socket"));
                         /* Create a raw socket pair for the two local session participants */
                         SocketFd fds[2];
                         status = SocketPair(fds);
@@ -720,21 +742,25 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 }
             }
         } else {
+            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): session is with a remote attachment"));
             /* Session is with a connected or unconnected remote device */
             MsgArg membersArg;
 
             /* Check for existing multipoint session */
             if (vSessionEp->IsValid() && optsIn.isMultipoint) {
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Existing virtual endpoint IsValid() and isMultipoint"));
                 SessionMapType::iterator it = ajObj.sessionMap.begin();
                 while (it != ajObj.sessionMap.end()) {
                     if ((it->second.sessionHost == vSessionEp->GetUniqueName()) && (it->second.sessionPort == sessionPort)) {
                         if (it->second.opts.IsCompatible(optsIn)) {
                             b2bEp = vSessionEp->GetBusToBusEndpoint(it->second.id);
                             if (b2bEp->IsValid()) {
+                                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): IncrementRef() on existing mp session"));
                                 b2bEp->IncrementRef();
                                 replyCode = ALLJOYN_JOINSESSION_REPLY_SUCCESS;
                             }
                         } else {
+                            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Blocked multiple connections to same dest with same session ID"));
                             /* Cannot support more than one connection to the same destination with the same sessionId */
                             replyCode = ALLJOYN_JOINSESSION_REPLY_BAD_SESSION_OPTS;
                         }
@@ -747,16 +773,20 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
             String busAddr;
             if (!b2bEp->IsValid()) {
                 /* Step 1a: If there is a busAddr from advertisement use it to (possibly) create a physical connection */
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Look for busaddr corresponding to sessionHost"));
                 vector<String> busAddrs;
                 multimap<String, NameMapEntry>::iterator nmit = ajObj.nameMap.lower_bound(sessionHost);
                 while (nmit != ajObj.nameMap.end() && (nmit->first == sessionHost)) {
                     if (nmit->second.transport & optsIn.transports) {
+                        QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Found busaddr in name map: \"%s\"", nmit->second.busAddr.c_str()));
                         busAddrs.push_back(nmit->second.busAddr);
                     }
                     ++nmit;
                 }
+
                 /* Step 1b: If no busAddr, see if one exists in the adv alias map */
                 if (busAddrs.empty() && (sessionHost[0] == ':')) {
+                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): look for busaddr in adv alias map"));
                     String rguidStr = String(sessionHost).substr(1, GUID128::SHORT_SIZE);
                     multimap<String, pair<String, TransportMask> >::iterator ait = ajObj.advAliasMap.lower_bound(rguidStr);
                     while ((ait != ajObj.advAliasMap.end()) && (ait->first == rguidStr)) {
@@ -764,6 +794,8 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                             multimap<String, NameMapEntry>::iterator nmit2 = ajObj.nameMap.lower_bound(ait->second.first);
                             while (nmit2 != ajObj.nameMap.end() && (nmit2->first == ait->second.first)) {
                                 if ((nmit2->second.transport & ait->second.second & optsIn.transports) != 0) {
+                                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Found busaddr in adv alias map: \"%s\"",
+                                                   nmit2->second.busAddr.c_str()));
                                     busAddrs.push_back(nmit2->second.busAddr);
                                 }
                                 ++nmit2;
@@ -778,6 +810,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                  * for the busAddr
                  */
                 if (vSessionEp->IsValid() && busAddrs.empty()) {
+                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): no busaddr.  SendGetSessionInfo() directly."));
                     status = ajObj.SendGetSessionInfo(sessionHost, sessionPort, optsIn, busAddrs);
                     if (status != ER_OK) {
                         busAddrs.clear();
@@ -786,16 +819,21 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 }
 
                 if (!busAddrs.empty()) {
+                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Have busaddrs to try."));
                     /* Try busAddrs in priority order until connect succeeds */
                     for (size_t i = 0; i < busAddrs.size(); ++i) {
+                        QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Trying busaddr=\"%s\"", busAddrs[i].c_str()));
                         /* Ask the transport that provided the advertisement for an endpoint */
                         TransportList& transList = ajObj.bus.GetInternal().GetTransportList();
                         Transport* trans = transList.GetTransport(busAddrs[i]);
                         if (trans != NULL) {
                             if ((optsIn.transports & trans->GetTransportMask()) == 0) {
-                                QCC_DbgPrintf(("AllJoynObj:JoinSessionThread() skip unpermitted transport(%s)", trans->GetTransportName()));
+                                QCC_DbgPrintf(("AllJoynObj:JoinSessionThread(): skip unpermitted transport(%s)", trans->GetTransportName()));
                                 continue;
                             }
+
+                            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Connect(\"%s\")", busAddrs[i].c_str()));
+
                             BusEndpoint newEp;
                             status = trans->Connect(busAddrs[i].c_str(), optsIn, newEp);
                             if (status == ER_OK) {
@@ -814,17 +852,20 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                         }
                     }
                 } else {
+                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): No advertisement. No existing route.  Nothing we can do."));
                     /* No advertisment or existing route to session creator */
                     replyCode = ALLJOYN_JOINSESSION_REPLY_NO_SESSION;
                 }
 
                 if (busAddr.empty()) {
+                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Tried to Connect() but failed.  Nothing we can do."));
                     replyCode = ALLJOYN_JOINSESSION_REPLY_UNREACHABLE;
                 }
                 ajObj.AcquireLocks();
             }
 
             /* Step 2: Wait for the new b2b endpoint to have a virtual ep for nextController */
+            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Wait for virtual endpoint."));
             uint64_t startTime = GetTimestamp64();
             while (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) {
                 /* Do we route through b2bEp? If so, we're done */
@@ -833,8 +874,11 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                     replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
                     break;
                 }
+
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Remote name of new b2b endpoint is \"%s\"", b2bEp->GetRemoteName().c_str()));
                 VirtualEndpoint vep;
                 if (ajObj.router.FindEndpoint(b2bEp->GetRemoteName(), vep) && vep->CanUseRoute(b2bEp)) {
+                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Found virtual endpoint for route"));
                     /* Got a virtual endpoint we can route through */
                     break;
                 }
@@ -847,13 +891,18 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 }
                 /* Give up the locks while waiting */
                 ajObj.ReleaseLocks();
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Sleep"));
                 qcc::Sleep(10);
                 ajObj.AcquireLocks();
             }
 
+            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Done waiting for virtual endpoint."));
+
             /* Step 3: Send a session attach */
             if (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) {
                 const String nextControllerName = b2bEp->GetRemoteName();
+
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): SendAttachSession()"));
                 ajObj.ReleaseLocks();
                 status = ajObj.SendAttachSession(sessionPort, sender.c_str(), sessionHost, sessionHost, b2bEp,
                                                  nextControllerName.c_str(), 0, busAddr.c_str(), optsIn, replyCode,
@@ -864,6 +913,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 }
                 /* Re-acquire locks */
                 ajObj.AcquireLocks();
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): FindEndpoint(\"%s\")", sessionHost));
                 ajObj.router.FindEndpoint(sessionHost, vSessionEp);
                 if (!vSessionEp->IsValid()) {
                     replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
@@ -873,8 +923,10 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
 
             /* If session was successful, Add two-way session routes to the table */
             if (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) {
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Attach session success(\"%s\")", sessionHost));
                 if (joinerEp->IsValid()) {
                     BusEndpoint busEndpoint = BusEndpoint::cast(vSessionEp);
+                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): AddSessionRoute() for session ID %d.", id));
                     status = ajObj.router.AddSessionRoute(id, joinerEp, NULL, busEndpoint, b2bEp, b2bEp->IsValid() ? NULL : &optsOut);
                     if (status != ER_OK) {
                         replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
@@ -889,6 +941,8 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
             /* Create session map entry */
             bool sessionMapEntryCreated = false;
             if (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) {
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Add session map entry for sender=\"%s\", id=%d., sessionHost=\"%s\", sessionPort=%d.",
+                               sender.c_str(), id, vSessionEp->GetUniqueName().c_str(), sessionPort));
                 const MsgArg* sessionMembers;
                 size_t numSessionMembers = 0;
                 membersArg.Get("as", &numSessionMembers, &sessionMembers);
@@ -906,6 +960,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
 
             /* If a raw sesssion was requested, then teardown the new b2bEp to use it for a raw stream */
             if ((replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) && (optsOut.traffic != SessionOpts::TRAFFIC_MESSAGES)) {
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Raw session.  Tear down new endpoint"));
                 SessionMapEntry* smEntry = ajObj.SessionMapFind(sender, id);
                 if (smEntry) {
                     ajObj.ReleaseLocks();
@@ -942,15 +997,20 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
 
     /* Send AttachSession to all other members of the multicast session */
     if ((replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) && sme.opts.isMultipoint) {
+        QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Multicast session joined."));
         for (size_t i = 0; i < sme.memberNames.size(); ++i) {
             const String& member = sme.memberNames[i];
             /* Skip this joiner since it is attached already */
             if (member == sender) {
                 continue;
             }
+
+            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Member \"%s\"", sme.memberNames[i].c_str()));
+
             BusEndpoint memberEp = ajObj.router.FindEndpoint(member);
             RemoteEndpoint memberB2BEp;
             if (memberEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Member \"%s\" is virtual", sme.memberNames[i].c_str()));
                 /* Endpoint is not served directly by this daemon so forward the attach using existing b2bEp connection with session creator */
                 if (!b2bEp->IsValid()) {
                     VirtualEndpoint vMemberEp = VirtualEndpoint::cast(memberEp);
@@ -967,6 +1027,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                     const String nextControllerName = memberB2BEp->GetRemoteName();
                     uint32_t tReplyCode;
                     ajObj.ReleaseLocks();
+                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): SendAttachSession()"));
                     status = ajObj.SendAttachSession(sessionPort,
                                                      sender.c_str(),
                                                      sessionHost,
@@ -998,6 +1059,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                     QCC_LogError(status, ("Unable to add existing member %s to session %u", memberEp->GetUniqueName().c_str(), id));
                 }
             } else if (memberEp->IsValid()) {
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Local (non-virtual) endpoint"));
                 /* Add joiner to any local member's sessionMap entry  since no AttachSession is sent */
                 SessionMapEntry* smEntry = ajObj.SessionMapFind(member, id);
                 if (smEntry) {
@@ -1005,6 +1067,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 }
                 /* Multipoint session member is local to this daemon. Send MPSessionChanged */
                 if (optsOut.isMultipoint) {
+                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Local (non-virtual) MPSessionChanged"));
                     ajObj.ReleaseLocks();
                     ajObj.SendMPSessionChanged(id, sender.c_str(), true, member.c_str());
                     ajObj.AcquireLocks();
@@ -1012,6 +1075,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
             }
             /* Add session routing */
             if (memberEp->IsValid() && joinerEp->IsValid() && (status == ER_OK)) {
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): AddSessionRoute()"));
                 status = ajObj.router.AddSessionRoute(id, joinerEp, NULL, memberEp, memberB2BEp);
                 if (status != ER_OK) {
                     QCC_LogError(status, ("AddSessionRoute(%u, %s, NULL, %s, %s) failed", id, sender.c_str(), memberEp->GetUniqueName().c_str(), memberB2BEp->GetUniqueName().c_str()));
@@ -1020,6 +1084,8 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
         }
     }
     ajObj.ReleaseLocks();
+
+    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Reply to request"));
 
     /* Reply to request */
     MsgArg replyArgs[3];
@@ -1036,6 +1102,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
 
     /* Send SessionJoined to creator if creator is local since RunAttach does not run in this case */
     if ((status == ER_OK) && (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) && rSessionEp->IsValid()) {
+        QCC_DbgPrintf(("JoinSessionThread::RunJoin(): SendSessionJoined() to local endpoint"));
         ajObj.SendSessionJoined(sme.sessionPort, sme.id, sender.c_str(), sme.endpointName.c_str());
         /* If session is multipoint, send MPSessionChanged to sessionHost */
         if (sme.opts.isMultipoint) {
@@ -1045,6 +1112,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
 
     /* Send a series of MPSessionChanged to "catch up" the new joiner */
     if ((replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) && optsOut.isMultipoint) {
+        QCC_DbgPrintf(("JoinSessionThread::RunJoin(): SendMPSessionChanged() series to local endpoint"));
         ajObj.AcquireLocks();
         SessionMapEntry* smEntry = ajObj.SessionMapFind(sender, id);
         if (smEntry) {
@@ -1365,6 +1433,8 @@ void AllJoynObj::ReloadConfig(const InterfaceDescription::Member* member, Messag
 
 qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
 {
+    QCC_DbgTrace(("JoinSessionThread::RunAttach()"));
+
     SessionId id = 0;
     String creatorName;
     MsgArg replyArgs[4];
@@ -1398,21 +1468,25 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
     QStatus status = MsgArg::Get(args, 6, "qsssss", &sessionPort, &src, &sessionHost, &dest, &srcB2B, &busAddr);
     const String srcB2BStr = srcB2B;
 
+    QCC_DbgPrintf(("JoinSessionThread::RunAttach(): sessionPort=%d, src=\"%s\", sessionHost=\"%s\", dest=\"%s\", srcB2B=\"%s\", busAddr=\"%s\"",
+                   sessionPort, src, sessionHost, dest, srcB2B, busAddr));
+
     bool sendSessionJoined = false;
     if (status == ER_OK) {
         status = GetSessionOpts(args[6], optsIn);
+
+        QCC_DbgPrintf(("AllJoynObj::RunAttach(): optsIn.traffic=0x%x, optisIn.proximity=0x%x, optsIn.transports=0x%x",
+                       optsIn.traffic, optsIn.proximity, optsIn.transports));
     }
 
     if (status != ER_OK) {
-        QCC_DbgTrace(("AllJoynObj::AttachSession(<bad args>)"));
+        QCC_DbgPrintf(("AllJoynObj::RunAttach(): Bad args"));
         replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
         ajObj.AcquireLocks();
     } else {
+        QCC_DbgPrintf(("AllJoynObj::RunAttach(): Good request.  Starting."));
         srcStr = src;
         destStr = dest;
-
-        QCC_DbgTrace(("AllJoynObj::AttachSession(%d, %s, %s, %s, %s, %s, <%x, %x, %x>)", sessionPort, src, sessionHost,
-                      dest, srcB2B, busAddr, optsIn.traffic, optsIn.proximity, optsIn.transports));
 
         ajObj.AcquireLocks();
         /*
@@ -1423,6 +1497,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
         if ((destEp->GetEndpointType() != ENDPOINT_TYPE_REMOTE) && (destEp->GetEndpointType() != ENDPOINT_TYPE_NULL) && (destEp->GetEndpointType() != ENDPOINT_TYPE_LOCAL)) {
             /* Release locks while waiting */
             ajObj.ReleaseLocks();
+            QCC_DbgPrintf(("AllJoynObj::RunAttach(): Endpoint for destStr=\"%s\" exists but is invalid.  Sleeping.", destStr.c_str()));
             qcc::Sleep(500);
             ajObj.AcquireLocks();
             destEp = ajObj.router.FindEndpoint(destStr);
@@ -1430,6 +1505,9 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
 
         /* Determine if the dest is local to this daemon */
         if ((destEp->GetEndpointType() == ENDPOINT_TYPE_REMOTE) || (destEp->GetEndpointType() == ENDPOINT_TYPE_NULL) || (destEp->GetEndpointType() == ENDPOINT_TYPE_LOCAL)) {
+
+            QCC_DbgPrintf(("AllJoynObj::RunAttach(): destStr=\"%s\" served directly.", destStr.c_str()));
+
             /* This daemon serves dest directly */
             /* Check for a session in the session map */
             bool foundSessionMapEntry = false;
@@ -1438,22 +1516,30 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
             SessionMapType::iterator sit = ajObj.SessionMapLowerBound(destUniqueName, 0);
             replyCode = ALLJOYN_JOINSESSION_REPLY_SUCCESS;
             while ((sit != ajObj.sessionMap.end()) && (sit->first.first == destUniqueName)) {
+                QCC_DbgPrintf(("AllJoynObj::RunAttach(): Found destUniqueName=\"%s\" in session map.", destUniqueName.c_str()));
                 BusEndpoint creatorEp = ajObj.router.FindEndpoint(sit->second.sessionHost);
                 sme = sit->second;
                 if ((sme.sessionPort == sessionPort) && sessionHostEp->IsValid() && (creatorEp == sessionHostEp)) {
+
+                    QCC_DbgPrintf(("AllJoynObj::RunAttach(): Valid session map entry for sessionPort=%d", sessionPort));
+
                     if (sit->second.opts.isMultipoint && (sit->first.second == 0)) {
+                        QCC_DbgPrintf(("AllJoynObj::RunAttach(): Session is multipoint"));
+
                         /* Session is multipoint. Look for an existing (already joined) session */
                         while ((sit != ajObj.sessionMap.end()) && (sit->first.first == destUniqueName)) {
                             creatorEp = ajObj.router.FindEndpoint(sit->second.sessionHost);
                             if ((sit->first.second != 0) && (sit->second.sessionPort == sessionPort) && (creatorEp == sessionHostEp)) {
                                 sme = sit->second;
                                 foundSessionMapEntry = true;
+                                QCC_DbgPrintf(("AllJoynObj::RunAttach(): Found session map entry"));
                                 /* make sure session is not already joined by this joiner */
                                 vector<String>::const_iterator mit = sit->second.memberNames.begin();
                                 while (mit != sit->second.memberNames.end()) {
                                     if (*mit++ == srcStr) {
                                         replyCode = ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED;
                                         foundSessionMapEntry = false;
+                                        QCC_DbgPrintf(("AllJoynObj::RunAttach(): Already joined"));
                                         break;
                                     }
                                 }
@@ -1463,9 +1549,11 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                         }
                     } else if (sme.opts.isMultipoint && (sit->first.second == msg->GetSessionId())) {
                         /* joiner to joiner multipoint attach message */
+                        QCC_DbgPrintf(("AllJoynObj::RunAttach(): Joiner to Joiner multipoint attach message"));
                         foundSessionMapEntry = true;
                     } else if (!sme.opts.isMultipoint && (sit->first.second != 0)) {
                         /* Cannot join a non-multipoint session more than once */
+                        QCC_DbgPrintf(("AllJoynObj::RunAttach(): Multiple joins to non-multipoint session detected"));
                         replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
                     }
                     if ((replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) && !foundSessionMapEntry) {
@@ -1477,24 +1565,30 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                         foundSessionMapEntry = true;
                         ajObj.SessionMapInsert(sme);
                         newSME = true;
+                        QCC_DbgPrintf(("AllJoynObj::RunAttach(): Allocate new session id: %d", sme.id));
                     }
                     break;
                 }
                 ++sit;
             }
             if (!foundSessionMapEntry) {
+                QCC_DbgPrintf(("AllJoynObj::RunAttach(): Unable to find a session map entry"));
                 if (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) {
                     replyCode = ALLJOYN_JOINSESSION_REPLY_NO_SESSION;
                 }
             } else if (!sme.opts.IsCompatible(optsIn)) {
+                QCC_DbgPrintf(("AllJoynObj::RunAttach(): Incompatible options"));
                 replyCode = ALLJOYN_JOINSESSION_REPLY_BAD_SESSION_OPTS;
                 optsOut = sme.opts;
             } else {
+                QCC_DbgPrintf(("AllJoynObj::RunAttach(): Valid session map entry"));
+
                 optsOut = sme.opts;
                 optsOut.transports &= optsIn.transports;
 
                 /* Add virtual endpoint (AddVirtualEndpoint cannot be called with locks) */
                 ajObj.ReleaseLocks();
+                QCC_DbgPrintf(("AllJoynObj::RunAttach(): AddVirtualEndpoint(srcStr=\"%s\", srcB2BStr=\"%s\")", srcStr.c_str(), srcB2BStr.c_str()));
                 ajObj.AddVirtualEndpoint(srcStr, srcB2BStr);
                 ajObj.AcquireLocks();
                 BusEndpoint tempEp = ajObj.router.FindEndpoint(srcStr);
@@ -1502,13 +1596,16 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                 tempEp = ajObj.router.FindEndpoint(srcB2BStr);
                 srcB2BEp = RemoteEndpoint::cast(tempEp);
                 if (srcB2BEp->IsValid() && srcEp->IsValid()) {
+                    QCC_DbgPrintf(("AllJoynObj::RunAttach(): srcB2BEp IsValid(), srcEp IsValid()"));
                     uint32_t protoVer = srcB2BEp->GetFeatures().protocolVersion;
+                    QCC_DbgPrintf(("AllJoynObj::RunAttach(): protoVer=%d.", protoVer));
                     if (protoVer < 9) {
                         srcB2BEp->GetFeatures().nameTransfer = sme.opts.nameTransfer;
                     }
 
                     /* Store ep for raw sessions (for future close and fd extract) */
                     if (optsOut.traffic != SessionOpts::TRAFFIC_MESSAGES) {
+                        QCC_DbgPrintf(("AllJoynObj::RunAttach(): traffic != TRAFFIC_MESSAGES"));
                         SessionMapEntry* smEntry = ajObj.SessionMapFind(sme.endpointName, sme.id);
                         if (smEntry) {
                             smEntry->streamingEp = srcB2BEp;
@@ -1520,6 +1617,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                     BusEndpoint creatorEp = ajObj.router.FindEndpoint(sme.sessionHost);
 
                     if (creatorEp->IsValid() && (destEp == creatorEp)) {
+                        QCC_DbgPrintf(("AllJoynObj::RunAttach(): SendAcceptSession()"));
                         ajObj.ReleaseLocks();
                         status = ajObj.SendAcceptSession(sme.sessionPort, sme.id, dest, src, optsIn, isAccepted);
 
@@ -1528,6 +1626,8 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                             QCC_LogError(status, ("SendAcceptSession failed"));
                         }
                         /* Add the virtual endpoint */
+                        QCC_DbgPrintf(("AllJoynObj::RunAttach(): AddVirtualEndpoint(srcStr=\"%s\", srcB2BStr=\"%s\")",
+                                       srcStr.c_str(), srcB2BStr.c_str()));
                         ajObj.AddVirtualEndpoint(srcStr, srcB2BStr);
 
                         /* Re-lock and re-acquire */
@@ -1540,9 +1640,13 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
 
                     /* Add new joiner to members */
                     if (isAccepted && creatorEp->IsValid() && (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS)) {
+
+                        QCC_DbgPrintf(("AllJoynObj::RunAttach(): Joinee accepted.  Adding joiner"));
+
                         SessionMapEntry* smEntry = ajObj.SessionMapFind(sme.endpointName, sme.id);
                         /* Update sessionMap */
                         if (smEntry) {
+                            QCC_DbgPrintf(("AllJoynObj::RunAttach(): Adding srcStr=\"%s\" to session map entry", srcStr.c_str()));
                             smEntry->memberNames.push_back(srcStr);
                             id = smEntry->id;
                             destIsLocal = true;
@@ -1556,6 +1660,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                         if (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) {
                             if (optsOut.traffic == SessionOpts::TRAFFIC_MESSAGES) {
                                 BusEndpoint busEndpoint = BusEndpoint::cast(srcEp);
+                                QCC_DbgPrintf(("AllJoynObj::RunAttach(): AddSessionRoute() for id=%d.", id));
                                 status = ajObj.router.AddSessionRoute(id, destEp, NULL, busEndpoint, srcB2BEp);
                                 if (ER_OK != status) {
                                     QCC_LogError(status, ("AddSessionRoute(%u, %s, NULL, %s, %s) failed", id, dest, srcEp->GetUniqueName().c_str(), srcB2BEp->GetUniqueName().c_str()));
@@ -1582,8 +1687,10 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                 }
             }
         } else {
+            QCC_DbgPrintf(("AllJoynObj::RunAttach(): destStr=\"%s\" routes indirectly", destStr.c_str()));
             /* This daemon will attempt to route indirectly to dest */
             if ((busAddr[0] == '\0') && (msg->GetSessionId() != 0) && (destEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL)) {
+                QCC_DbgPrintf(("AllJoynObj::RunAttach(): Secondary (multipoint) attach.  Increment reference"));
                 /* This is a secondary (multipoint) attach.
                  * Forward the attach to the dest over the existing session id's B2BEp */
                 VirtualEndpoint vep = VirtualEndpoint::cast(destEp);
@@ -1592,6 +1699,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                     b2bEp->IncrementRef();
                 }
             } else if (busAddr[0] != '\0') {
+                QCC_DbgPrintf(("AllJoynObj::RunAttach(): Indirect route.  Find transport for busAddr=\"%s\"", busAddr));
                 /* Ask the transport for an endpoint */
                 TransportList& transList = ajObj.bus.GetInternal().GetTransportList();
                 Transport* trans = transList.GetTransport(busAddr);
@@ -1600,6 +1708,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                 } else {
                     ajObj.ReleaseLocks();
                     BusEndpoint ep;
+                    QCC_DbgPrintf(("AllJoynObj::RunAttach(): Indirect route. Connect() to  busAddr=\"%s\"", busAddr));
                     status = trans->Connect(busAddr, optsIn, ep);
                     ajObj.AcquireLocks();
                     if (status == ER_OK) {
@@ -1622,6 +1731,9 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                 SessionOpts tempOpts;
                 const String nextControllerName = b2bEp->GetRemoteName();
 
+                QCC_DbgPrintf(("AllJoynObj::RunAttach(): Forward AttachSession to  busAddr=\"%s\" at nextControllerName=\"%s\"",
+                               busAddr, nextControllerName.c_str()));
+
                 /* Send AttachSession */
                 ajObj.ReleaseLocks();
                 status = ajObj.SendAttachSession(sessionPort, src, sessionHost, dest, b2bEp, nextControllerName.c_str(),
@@ -1630,6 +1742,8 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
 
                 /* If successful, add bi-directional session routes */
                 if ((status == ER_OK) && (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS)) {
+
+                    QCC_DbgPrintf(("AllJoynObj::RunAttach(): SendAttachSession() success"));
 
                     /* Wait for dest to appear with a route through b2bEp */
                     uint64_t startTime = GetTimestamp64();
@@ -1642,6 +1756,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                             break;
                         }
                         if (ajObj.router.FindEndpoint(destStr, vDestEp) && vDestEp->CanUseRoute(b2bEp)) {
+                            QCC_DbgPrintf(("AllJoynObj::RunAttach(): Indirect route appeared"));
                             break;
                         }
                         /* Otherwise wait */
@@ -1660,6 +1775,8 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
 
                     /* Add virtual endpoint */
                     ajObj.ReleaseLocks();
+                    QCC_DbgPrintf(("AllJoynObj::RunAttach(): Indirect route. AddVirtualEndpoint(srcStr=\"%s\", srcB2BStr=\"%s\")",
+                                   srcStr.c_str(), srcB2BStr.c_str()));
                     ajObj.AddVirtualEndpoint(srcStr, srcB2BStr);
 
                     /* Relock and reacquire */
@@ -1676,7 +1793,8 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                         BusEndpoint busEndpointSrc = BusEndpoint::cast(srcEp);
                         status = ajObj.router.AddSessionRoute(id, busEndpointDest, &b2bEp, busEndpointSrc, srcB2BEp);
                         if (status != ER_OK) {
-                            QCC_LogError(status, ("AddSessionRoute(%u, %s, %s, %s) failed", id, dest, b2bEp->GetUniqueName().c_str(), srcEp->GetUniqueName().c_str(), srcB2BEp->GetUniqueName().c_str()));
+                            QCC_LogError(status, ("AddSessionRoute(%u, %s, %s, %s) failed",
+                                                  id, dest, b2bEp->GetUniqueName().c_str(), srcEp->GetUniqueName().c_str(), srcB2BEp->GetUniqueName().c_str()));
                         }
                     } else {
                         replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
@@ -1698,6 +1816,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
     }
 
     /* Reply to request */
+    QCC_DbgPrintf(("AllJoynObj::RunAttach(): Reply to request"));
     replyArgs[0].Set("u", replyCode);
     replyArgs[1].Set("u", id);
     SetSessionOpts(optsOut, replyArgs[2]);
@@ -1719,8 +1838,11 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
         ajObj.ReleaseLocks();
         status = ajObj.MethodReply(msg, replyArgs, ArraySize(replyArgs));
     }
+
     /* Send SessionJoined to creator */
     if (sendSessionJoined) {
+        QCC_DbgPrintf(("AllJoynObj::RunAttach(): SendSessionJoined(port=%d., id=%d, source=\"%s\", endpoint=\"%s\")",
+                       sme.sessionPort, sme.id, srcStr.c_str(), sme.endpointName.c_str()));
         ajObj.SendSessionJoined(sme.sessionPort, sme.id, srcStr.c_str(), sme.endpointName.c_str());
     }
     ajObj.AcquireLocks();
@@ -1732,6 +1854,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
 
     /* Special handling for successful raw session creation. (Must occur after reply is sent) */
     if (srcB2BEp->IsValid() && (optsOut.traffic != SessionOpts::TRAFFIC_MESSAGES)) {
+        QCC_DbgPrintf(("AllJoynObj::RunAttach(): Direct raw session handling"));
         if (!b2bEp->IsValid()) {
             if (!creatorName.empty()) {
                 /* Destination for raw session. Shutdown endpoint and preserve the fd for future call to GetSessionFd */
@@ -1739,6 +1862,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                 if (smEntry) {
                     if (smEntry->streamingEp->IsValid()) {
                         ajObj.ReleaseLocks();
+                        QCC_DbgPrintf(("AllJoynObj::RunAttach(): Direct raw session handling.  ShutdownEndpoint()"));
                         status = ajObj.ShutdownEndpoint(smEntry->streamingEp, smEntry->fd);
 
                         ajObj.AcquireLocks();
@@ -1757,6 +1881,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                 }
             }
         } else {
+            QCC_DbgPrintf(("AllJoynObj::RunAttach(): indirect raw session handling"));
             /* Indirect raw route (middle-man). Create a pump to copy raw data between endpoints */
             QStatus tStatus;
             SocketFd srcB2bFd, b2bFd;
@@ -1767,6 +1892,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
             ajObj.AcquireLocks();
             status = (status == ER_OK) ? tStatus : status;
             if (status == ER_OK) {
+                QCC_DbgPrintf(("AllJoynObj::RunAttach(): indirect raw session handling. Create message pump."));
                 SocketStream* ss1 = new SocketStream(srcB2bFd);
                 SocketStream* ss2 = new SocketStream(b2bFd);
                 size_t chunkSize = 4096;
@@ -1785,6 +1911,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
 
     /* Clear the initializing state (or cleanup) any initializing sessionMap entry */
     if (newSME) {
+        QCC_DbgPrintf(("AllJoynObj::RunAttach(): Cleanup"));
         SessionMapEntry* smEntry = ajObj.SessionMapFind(sme.endpointName, sme.id);
         if (smEntry) {
             if (replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) {
@@ -1801,10 +1928,11 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
 
     /* Send SessionChanged if multipoint */
     if ((replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) && optsOut.isMultipoint && (id != 0) && destIsLocal) {
+        QCC_DbgPrintf(("AllJoynObj::RunAttach(): SendMPSessionChanged(id=%d, source=\"%s, true, dest)", id, srcStr.c_str(), destStr.c_str()));
         ajObj.SendMPSessionChanged(id, srcStr.c_str(), true, destStr.c_str());
     }
 
-    QCC_DbgPrintf(("AllJoynObj::AttachSession(%d) returned (%d,%u) (status=%s)", sessionPort, replyCode, id, QCC_StatusText(status)));
+    QCC_DbgPrintf(("AllJoynObj::RunAttach(%d) returned (%d,%u) (status=%s)", sessionPort, replyCode, id, QCC_StatusText(status)));
 
     return 0;
 }

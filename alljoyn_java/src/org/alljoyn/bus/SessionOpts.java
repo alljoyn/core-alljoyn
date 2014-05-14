@@ -154,6 +154,12 @@ public class SessionOpts {
     public static final short TRANSPORT_WFD      = 0x0080;
 
     /**
+     * Use only the AllJoyn Reliable Datagram Protocol (flavor of reliable UDP)
+     * to communicate with a given session.
+     */
+    public static final short TRANSPORT_UDP      = 0x0100;
+
+    /**
      * Use any available transport to communicate with a given session.
      *
      * It is the case that (1) certain topologies of AllJoyn distributed
@@ -172,6 +178,13 @@ public class SessionOpts {
      */
     public static final short TRANSPORT_ANY       = (short)0xffff & ~TRANSPORT_WFD;
 
+    /**
+     * Use any available IP-based transport to communicate with a given session.
+     *
+     * Selecting the IP transport really implies letting the system decice which
+     * transport is best.
+     */
+    public static final short TRANSPORT_IP       = TRANSPORT_TCP | TRANSPORT_UDP;
 
     public String toString( ) {
         StringBuilder result = new StringBuilder();

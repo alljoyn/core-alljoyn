@@ -180,6 +180,7 @@ static void usage(void)
     printf("   -t                        = Call delayed_ping with <delay> and repeat at <interval> if -c given\n");
     printf("   -ta                       = Like -t except calls asynchronously\n");
     printf("   -rt [run time]            = Round trip timer (optional run time in ms)\n");
+    printf("   -u                        = Set allowed transports to TRANSPORT_UDP\n");
     printf("   -w                        = Don't wait for service\n");
     printf("   -s                        = Wait for SIGINT (Control-C) at the end of the tests\n");
     printf("   -be                       = Send messages as big endian\n");
@@ -567,6 +568,8 @@ int main(int argc, char** argv)
         } else if (0 == strcmp("-ds", argv[i])) {
             discoverRemote = true;
             stopDiscover = true;
+        } else if (0 == strcmp("-u", argv[i])) {
+            allowedTransports = TRANSPORT_UDP;
         } else if (0 == strcmp("-w", argv[i])) {
             waitForService = false;
         } else if ((0 == strcmp("-t", argv[i])) || (0 == strcmp("-ta", argv[i]))) {

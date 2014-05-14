@@ -332,6 +332,24 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     virtual QStatus SetLinkTimeout(uint32_t& idleTimeout);
 
     /**
+     * Set the endpoint started state variable.  Provided for endpoints that do
+     * not use the standard sockets and IODispatch mechanism and therefore
+     * override Start() and Stop().
+     *
+     * @param value [IN] Logical value of endpoint started (or not).
+     */
+    void SetStarted(bool value);
+
+    /**
+     * Set the endpoint stopping state variable.  Provided for endpoints that do
+     * not use the standard sockets and IODispatch mechanism and therefore
+     * override Start() and Stop().
+     *
+     * @param value [IN] Logical value of whether or not the endpoint is stopping.
+     */
+    void SetStopping(bool value);
+
+    /**
      * Return the features for this BusEndpoint
      *
      * @return   Returns the features for this BusEndpoint.
@@ -415,6 +433,12 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * @param thread   Thread that exited.
      */
     virtual void ThreadExit(qcc::Thread* thread);
+
+    /**
+     * Internal method used to indicate that non-stream-based endpoints have shut down.
+     * Like ExitCallback but without the IODispatch bells and whistles.
+     */
+    void Exit();
 
   private:
 

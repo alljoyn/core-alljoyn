@@ -62,6 +62,53 @@ bool SessionOpts::IsCompatible(const SessionOpts& other) const
     return true;
 }
 
+qcc::String SessionOpts::ToString() const
+{
+    QCC_DbgTrace(("UDPTransport::Join()"));
+    qcc::String str = "traffic=";
+    switch (traffic) {
+    case TRAFFIC_MESSAGES:
+        str.append("TRAFFIC_MESSAGES");
+        break;
+
+    case TRAFFIC_RAW_UNRELIABLE:
+        str.append("TRAFFIC_RAW_UNRELIABLE");
+        break;
+
+    case TRAFFIC_RAW_RELIABLE:
+        str.append("TRAFFIC_RAW_RELIABLE");
+        break;
+
+    default:
+        str.append("unknown");
+        break;
+    }
+
+    str.append(", isMultipoint=");
+    str.append(isMultipoint ? "true" : "false");
+
+    str.append(", proximity=");
+    switch (proximity) {
+    case PROXIMITY_ANY:
+        str.append("PROXIMITY_ANY");
+        break;
+
+    case PROXIMITY_PHYSICAL:
+        str.append("PROXIMITY_PHYSICAL");
+        break;
+
+    case PROXIMITY_NETWORK:
+        str.append("PROXIMITY_NETWORK");
+        break;
+
+    default:
+        str.append("unknown");
+        break;
+    }
+
+    return str;
+}
+
 QStatus GetSessionOpts(const MsgArg& msgArg, SessionOpts& opts)
 {
     const MsgArg* dictArray;
