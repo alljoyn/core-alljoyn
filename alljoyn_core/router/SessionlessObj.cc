@@ -1056,7 +1056,7 @@ void SessionlessObj::CancelAdvertisedName(const qcc::String& name)
 void SessionlessObj::FindAdvertisedNames()
 {
     for (RuleIterator rit = rules.begin(); rit != rules.end(); ++rit) {
-        String name = "wkn='" + (rit->second.iface.empty() ? WildcardInterfaceName : rit->second.iface) + ".sl.'";
+        String name = "name='" + (rit->second.iface.empty() ? WildcardInterfaceName : rit->second.iface) + ".sl.'";
         for (vector<String>::const_iterator iit = rit->second.implements.begin(); iit != rit->second.implements.end(); ++iit) {
             name += ",implements='" + *iit + "'";
         }
@@ -1073,7 +1073,7 @@ void SessionlessObj::FindAdvertisedNames()
          * If we're finding anything, we always need to find the v0
          * advertisement for backwards compatibility.
          */
-        String name = String("wkn='") + WildcardInterfaceName + ".sl.'";
+        String name = String("name='") + WildcardInterfaceName + ".sl.'";
         if (findingNames.insert(name).second) {
             QCC_DbgPrintf(("FindAdvertisement(%s)", name.c_str()));
             QStatus status = FindAdvertisementByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
@@ -1209,8 +1209,8 @@ bool SessionlessObj::QueryHandler(TransportMask transport, MDNSPacket query, uin
         return false;
     }
 
-    const map<String, String>& fields = searchRData->GetFields();
-    for (map<String, String>::const_iterator sit = fields.begin(); sit != fields.end(); ++sit) {
+    const MDNSTextRData::Fields& fields = searchRData->GetFields();
+    for (MDNSTextRData::Fields::const_iterator sit = fields.begin(); sit != fields.end(); ++sit) {
         if (sit->first == "implements") {
             String ruleStr = "implements='" + sit->second + "'";
             Rule rule(ruleStr.c_str());
@@ -1222,7 +1222,7 @@ bool SessionlessObj::QueryHandler(TransportMask transport, MDNSPacket query, uin
                     response->SetDestination(ns4);
                     MDNSTextRData* advRData = new MDNSTextRData();
                     String name = AdvertisedName(msg->GetInterface(), lastAdvertisements[msg->GetInterface()]);
-                    advRData->SetValue("wkn", name);
+                    advRData->SetValue("name", name);
                     advRData->SetValue("implements", sit->second);
                     MDNSResourceRecord advertiseRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
                     response->AddAdditionalRecord(advertiseRecord);
@@ -1268,9 +1268,9 @@ bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket respons
         String name;
         size_t implements = 0;
         // TODO Need to handle multiple matches in a response, this code behaves as if only one match in response
-        const map<String, String>& fields = advRData->GetFields();
-        for (map<String, String>::const_iterator it = fields.begin(); it != fields.end(); ++it) {
-            if (it->first.find("wkn") == 0) {
+        const MDNSTextRData::Fields& fields = advRData->GetFields();
+        for (MDNSTextRData::Fields::const_iterator it = fields.begin(); it != fields.end(); ++it) {
+            if (it->first.find("name") == 0) {
                 name = it->second;
             } else if ((it->first.find("implements") == 0) &&
                        (std::find(rule.implements.begin(), rule.implements.end(), it->second) != rule.implements.end())) {

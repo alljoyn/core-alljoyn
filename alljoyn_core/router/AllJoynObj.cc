@@ -2853,7 +2853,7 @@ void AllJoynObj::FindAdvertisedName(const InterfaceDescription::Member* member, 
     QStatus status = MsgArg::Get(args, numArgs, "s", &str);
     if (status == ER_OK) {
         namePrefix = str;
-        matching = String("wkn='") + namePrefix + "'";
+        matching = String("name='") + namePrefix + "'";
     }
 
     ProcFindAdvertisement(status, msg, matching, TRANSPORT_ANY, namePrefix);
@@ -2871,7 +2871,7 @@ void AllJoynObj::FindAdvertisedNameByTransport(const InterfaceDescription::Membe
     QStatus status = MsgArg::Get(args, numArgs, "sq", &str, &transports);
     if (status == ER_OK) {
         namePrefix = str;
-        matching = String("wkn='") + namePrefix + "'";
+        matching = String("name='") + namePrefix + "'";
     }
 
     ProcFindAdvertisement(status, msg, matching, transports, namePrefix);
@@ -2890,8 +2890,8 @@ void AllJoynObj::FindAdvertisementByTransport(const InterfaceDescription::Member
     if (status == ER_OK) {
         matching = str;
         std::map<qcc::String, qcc::String> matchingMap;
-        if ((ParseMatch(matching, matchingMap) == ER_OK) && (matchingMap.find("wkn") != matchingMap.end())) {
-            namePrefix = matchingMap["wkn"];
+        if ((ParseMatch(matching, matchingMap) == ER_OK) && (matchingMap.find("name") != matchingMap.end())) {
+            namePrefix = matchingMap["name"];
         } else {
             status = ER_FAIL;
         }
@@ -3023,7 +3023,7 @@ void AllJoynObj::CancelFindAdvertisedName(const InterfaceDescription::Member* me
     const char* str;
     QStatus status = MsgArg::Get(args, numArgs, "s", &str);
     if (status == ER_OK) {
-        matching = String("wkn='") + str + "'";
+        matching = String("name='") + str + "'";
     }
 
     HandleCancelFindAdvertisement(status, msg, matching, TRANSPORT_ANY);
@@ -3040,7 +3040,7 @@ void AllJoynObj::CancelFindAdvertisedNameByTransport(const InterfaceDescription:
     TransportMask transports;
     QStatus status = MsgArg::Get(args, numArgs, "sq", &str, &transports);
     if (status == ER_OK) {
-        matching = String("wkn='") + str + "'";
+        matching = String("name='") + str + "'";
     }
 
     HandleCancelFindAdvertisement(status, msg, matching, transports);

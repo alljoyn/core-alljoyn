@@ -1673,7 +1673,6 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         return ER_BAD_TRANSPORT_MASK;
     }
 
-
     //
     // When a bus name is advertised, the source may append a string that
     // identifies a specific instance of advertised name.  For example, one
@@ -1696,11 +1695,11 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
     // to the name service which forwards the request out over the net.
     //
     map<String, String> matchingMap;
-    if ((ParseMatch(matching, matchingMap) != ER_OK) || (matchingMap.find("wkn") == matchingMap.end())) {
+    if ((ParseMatch(matching, matchingMap) != ER_OK) || (matchingMap.find("name") == matchingMap.end())) {
         QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::FindAdvertisedName(): Bad request"));
         return ER_BAD_ARG_2;
     }
-    matchingMap["wkn"].append('*');
+    matchingMap["name"].append('*');
 
     //
     // Send a request to the network over our multicast channel, asking for
@@ -1742,7 +1741,7 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         whoHas.SetUdpFlag(true);
 
         whoHas.SetIPv4Flag(true);
-        whoHas.AddName(matchingMap["wkn"]);
+        whoHas.AddName(matchingMap["name"]);
 
         NSPacket nspacket;
         nspacket->SetVersion(0, 0);
@@ -1751,7 +1750,6 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
 
         TriggerTransmission(Packet::cast(nspacket));
     }
-
     //
     // Do it again for version one.
     //
@@ -1764,7 +1762,7 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         //
         whoHas.SetVersion(1, 1);
         whoHas.SetTransportMask(transportMask);
-        whoHas.AddName(matchingMap["wkn"]);
+        whoHas.AddName(matchingMap["name"]);
 
         NSPacket nspacket;
         nspacket->SetVersion(1, 1);
@@ -1772,7 +1770,6 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         nspacket->AddQuestion(whoHas);
 
         TriggerTransmission(Packet::cast(nspacket));
-
     }
     //
     // Do it again for version two.
@@ -1780,7 +1777,7 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
     {
         MDNSPacket query;
 
-        MDNSTextRData* searchRData = new MDNSTextRData();
+        MDNSSearchRData* searchRData = new MDNSSearchRData();
         for (map<String, String>::iterator it = matchingMap.begin(); it != matchingMap.end(); ++it) {
             searchRData->SetValue(it->first, it->second);
         }
@@ -1788,7 +1785,6 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         query->AddAdditionalRecord(searchRecord);
 
         Query(transportMask, query);
-
     }
 
     return ER_OK;
@@ -2226,7 +2222,6 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
         if (m_reliableIPv6Port[transportIndex]) {
             txtRData->SetValue("r6port", m_reliableIPv6Port[transportIndex]);
         }
-
         /*
            These need to go into _alljoyn._udp.local
            if (m_unreliableIPv4Port[transportIndex]) {
@@ -2235,22 +2230,18 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
            if (m_unreliableIPv6Port[transportIndex]) {
             txtRData->SetValue("u6port", m_unreliableIPv6Port[transportIndex]);
            }*/
-
         MDNSResourceRecord txtRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRData);
-
 
         MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
         for (uint32_t i = 0; i < wkn.size(); ++i) {
             advRData->AddName(wkn[i]);
         }
-
         MDNSResourceRecord advRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
 
         MDNSSenderRData* refRData =  new MDNSSenderRData();
         refRData->SetSearchID(id);
         refRData->SetGuid(m_guid);
         refRData->SetTransportMask(transportMask);
-
         MDNSResourceRecord refRecord("sender-info.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
 
         MDNSARData* aRData = new MDNSARData();
@@ -2596,7 +2587,6 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
         if (m_reliableIPv6Port[transportIndex]) {
             txtRData->SetValue("r6port", m_reliableIPv6Port[transportIndex]);
         }
-
         /*
            These need to go into _alljoyn._udp.local
            if (m_unreliableIPv4Port[transportIndex]) {
@@ -2605,15 +2595,12 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
            if (m_unreliableIPv6Port[transportIndex]) {
             txtRData->SetValue("u6port", m_unreliableIPv6Port[transportIndex]);
            }*/
-
         MDNSResourceRecord txtRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 0, txtRData);
-
 
         MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
         for (uint32_t i = 0; i < wkn.size(); ++i) {
             advRData->AddName(wkn[i]);
         }
-
         MDNSResourceRecord advRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 0, advRData);
 
         MDNSSenderRData* refRData =  new MDNSSenderRData();
@@ -4973,12 +4960,9 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
            if (m_unreliableIPv6Port[transportIndex]) {
             txtRData->SetValue("u6port", m_unreliableIPv6Port[transportIndex]);
            }*/
-
         MDNSResourceRecord txtRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRData);
 
-
         MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
-
         MDNSResourceRecord advertiseRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
 
         MDNSSenderRData* refRData =  new MDNSSenderRData();
@@ -6122,8 +6106,6 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask transport, MDNSPacket md
         return true;
     }
 
-    String wkn = searchRData->GetWellKnownName().c_str();
-
     //
     // The who-has message doesn't specify which transport is doing the asking.
     // This is an oversight and should be fixed in a subsequent version.  The
@@ -6158,55 +6140,55 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask transport, MDNSPacket md
         // one.
         //
         bool respond = false;
-        //        for (uint32_t i = 0; i < whoHas.GetNumberNames(); ++i) {
-        //           String wkn = whoHas.GetName(i);
-
-        //
-        // Zero length strings are unmatchable.  If you want to do a wildcard
-        // match, you've got to send a wildcard character.
-        //
-        if (wkn.size() == 0) {
-            continue;
-        }
-
-        //
-        // Check to see if this name on the list of names we actively advertise.
-        //
-        for (list<String>::iterator j = m_advertised[index].begin(); j != m_advertised[index].end(); ++j) {
+        for (int i = 0; i < searchRData->GetNumNames(); ++i) {
+            String wkn = searchRData->GetNameAt(i);
 
             //
-            // The requested name comes in from the WhoHas message and we
-            // allow wildcards there.
+            // Zero length strings are unmatchable.  If you want to do a wildcard
+            // match, you've got to send a wildcard character.
             //
-            if (IpNameServiceImplWildcardMatch((*j), wkn)) {
-                QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery(): request for %s does not match my %s",
-                               wkn.c_str(), (*j).c_str()));
+            if (wkn.size() == 0) {
                 continue;
-            } else {
-                respond = true;
-                break;
+            }
+
+            //
+            // Check to see if this name on the list of names we actively advertise.
+            //
+            for (list<String>::iterator j = m_advertised[index].begin(); j != m_advertised[index].end(); ++j) {
+
+                //
+                // The requested name comes in from the WhoHas message and we
+                // allow wildcards there.
+                //
+                if (IpNameServiceImplWildcardMatch((*j), wkn)) {
+                    QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery(): request for %s does not match my %s",
+                                   wkn.c_str(), (*j).c_str()));
+                    continue;
+                } else {
+                    respond = true;
+                    break;
+                }
+            }
+
+            //
+            // Check to see if this name on the list of names we quietly advertise.
+            //
+            for (list<String>::iterator j = m_advertised_quietly[index].begin(); j != m_advertised_quietly[index].end(); ++j) {
+
+                //
+                // The requested name comes in from the WhoHas message and we
+                // allow wildcards there.
+                //
+                if (IpNameServiceImplWildcardMatch((*j), wkn)) {
+                    QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery(): request for %s does not match my %s",
+                                   wkn.c_str(), (*j).c_str()));
+                    continue;
+                } else {
+                    respond = true;
+                    break;
+                }
             }
         }
-
-        //
-        // Check to see if this name on the list of names we quietly advertise.
-        //
-        for (list<String>::iterator j = m_advertised_quietly[index].begin(); j != m_advertised_quietly[index].end(); ++j) {
-
-            //
-            // The requested name comes in from the WhoHas message and we
-            // allow wildcards there.
-            //
-            if (IpNameServiceImplWildcardMatch((*j), wkn)) {
-                QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery(): request for %s does not match my %s",
-                               wkn.c_str(), (*j).c_str()));
-                continue;
-            } else {
-                respond = true;
-                break;
-            }
-        }
-        //}
 
         //
         // Since any response we send must include all of the advertisements we
