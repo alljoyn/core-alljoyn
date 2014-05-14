@@ -6716,18 +6716,39 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
             mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
             MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
             TransportMask transportMask = refRData->GetTransportMask();
+            MDNSResourceRecord* answer;
+            mdnspacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &answer);
 
             uint32_t numNames = advRData->GetNumNames();
+
             for (uint32_t k = 0; k < numNames; k++) {
                 m_mutex.Lock();
                 uint32_t transportIndex = IndexFromBit(transportMask);
-                if (std::find(m_advertised[transportIndex].begin(), m_advertised[transportIndex].end(), advRData->GetNameAt(k)) == m_advertised[transportIndex].end()) {
-                    advRData->RemoveName(k);
-                    // a name has been removed from the IsAt response header make
-                    // sure the numNames used in the for loop is updated to reflect
-                    // the removal of that name.
-                    k = k - 1;
-                    numNames = advRData->GetNumNames();
+                if (answer->GetRRttl() == 0) {
+                    //If this is a packet with ttl == 0, ensure that we are NOT advertising the names mentioned in the packet.
+
+                    if (std::find(m_advertised[transportIndex].begin(), m_advertised[transportIndex].end(), advRData->GetNameAt(k)) != m_advertised[transportIndex].end()) {
+                        advRData->RemoveName(k);
+                        // a name has been removed from the IsAt response header make
+                        // sure the numNames used in the for loop is updated to reflect
+                        // the removal of that name.
+                        k = k - 1;
+                        numNames = advRData->GetNumNames();
+
+                    }
+                } else {
+                    //If this is a packet with ttl >0, ensure that we are still advertising all the names mentioned in the packet.
+
+                    if (std::find(m_advertised[transportIndex].begin(), m_advertised[transportIndex].end(), advRData->GetNameAt(k)) == m_advertised[transportIndex].end()) {
+                        advRData->RemoveName(k);
+                        // a name has been removed from the IsAt response header make
+                        // sure the numNames used in the for loop is updated to reflect
+                        // the removal of that name.
+                        k = k - 1;
+                        numNames = advRData->GetNumNames();
+
+                    }
+
                 }
                 m_mutex.Unlock();
             }
