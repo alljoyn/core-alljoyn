@@ -2203,7 +2203,7 @@ class MDNSTextRData : public MDNSRData {
      * @internal
      * @brief Destructor for MDNSTextRData.
      */
-    ~MDNSTextRData() { }
+    virtual ~MDNSTextRData() { }
 
     /**
      * @internal

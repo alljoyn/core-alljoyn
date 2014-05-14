@@ -3575,6 +3575,7 @@ void IpNameServiceImpl::RewriteVersionSpecific(
         assert(false && "IpNameServiceImpl::RewriteVersionSpecific(): Bad message version");
         break;
     }
+
 }
 
 bool IpNameServiceImpl::SameNetwork(uint32_t interfaceAddressPrefixLen, qcc::IPAddress addressA, qcc::IPAddress addressB)
@@ -6586,8 +6587,9 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
     if (msgVersion <= 1) {
 
         if (brh_ptr->scheduleCount < m_retries) {
-            m_mutex.Lock();
             QueueProtocolMessage(brh_ptr->packet);
+
+            m_mutex.Lock();
             uint32_t count = RETRY_INTERVALS[brh_ptr->scheduleCount] * 1000;
             brh_ptr->scheduleCount++;
             AlarmListener* burstResponceTimerListener = this;
@@ -6608,8 +6610,8 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
 
         //version two
         if (mdnspacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
-            m_mutex.Lock();
             QueueProtocolMessage(brh_ptr->packet);
+            m_mutex.Lock();
             //	    if (mdnspacket->DestinationSet()){
             // QCC_LogError(ER_OK,("Outgoing unicast packet to %s",mdnspacket->GetDestination().ToString().c_str()));
             //brh_ptr->burstResponseCount = 3;
@@ -6622,6 +6624,7 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
             //}
             m_mutex.Unlock();
         } else {
+            m_mutex.Lock();
             MDNSResourceRecord* advRecord;
             mdnspacket->GetAdditionalRecord("advertise.", MDNSResourceRecord::TXT, &advRecord);
             MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
@@ -6630,13 +6633,14 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
             mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
             MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
             TransportMask transportMask = refRData->GetTransportMask();
+
             MDNSResourceRecord* answer;
             mdnspacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &answer);
 
             uint32_t numNames = advRData->GetNumNames();
 
             for (uint32_t k = 0; k < numNames; k++) {
-                m_mutex.Lock();
+
                 uint32_t transportIndex = IndexFromBit(transportMask);
                 if (answer->GetRRttl() == 0) {
                     //If this is a packet with ttl == 0, ensure that we are NOT advertising the names mentioned in the packet.
@@ -6664,15 +6668,16 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
                     }
 
                 }
-                m_mutex.Unlock();
-            }
 
+            }
+            m_mutex.Unlock();
             // As long as the BurstResponse Header still contains at least one IsAt
             // header (answers) we will Queue The header.  If there are no IsAt headers
             // then delete the BurstRespnse Header.
             if (numNames > 0) {
-                m_mutex.Lock();
                 QueueProtocolMessage(brh_ptr->packet);
+
+                m_mutex.Lock();
                 brh_ptr->burstResponseCount++;
                 uint32_t count = BURST_RESPONSE_INTERVAL;
                 AlarmListener* burstResponceTimerListener = this;
