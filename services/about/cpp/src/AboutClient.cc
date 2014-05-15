@@ -181,6 +181,7 @@ QStatus AboutClient::GetAboutData(const char* busName, const char* languageTag, 
             if (status != ER_OK) {
                 break;
             }
+            data.clear();
             for (unsigned int i = 0; i < languageTagNumElements; i++) {
                 char* tempKey;
                 MsgArg* tempValue;

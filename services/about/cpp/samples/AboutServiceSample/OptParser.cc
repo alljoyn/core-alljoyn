@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013 - 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -29,7 +29,6 @@ OptParser::OptParser(int argc, char** argv) :
     port = 900;
     appGUID.assign("000102030405060708090A0B0C0D0E0C");
     deviceId.assign("1231232145667745675477");
-    deviceName.assign("MyDeviceName");
     defaultLanguage.assign("en");
 }
 
@@ -39,10 +38,6 @@ qcc::String OptParser::GetAppId() const {
 
 qcc::String OptParser::GetDeviceId() const {
     return deviceId;
-}
-
-qcc::String OptParser::GetDeviceName() const {
-    return deviceName;
 }
 
 qcc::String OptParser::GetDefaultLanguage() const {
@@ -57,14 +52,12 @@ void OptParser::PrintUsage() {
     qcc::String cmd = argv[0];
     cmd = cmd.substr(cmd.find_last_of('/') + 1);
 
-    std::cerr << cmd.c_str() << " [--port=PORT  | --language=LANG |  --deviceId=DEVICEID | --appId=APPID | --deviceName=DEVICENAME"
+    std::cerr << cmd.c_str() << " [--port=PORT  | --language=LANG |  --deviceId=DEVICEID | --appId=APPID"
     "]\n"
     "    --port=\n"
     "        used to bind the service.\n\n"
     "    --deviceId\n"
     "        Use the specified DeviceID.\n\n"
-    "    --deviceName\n"
-    "        Use the specified DeviceName.\n\n"
     "    --appId=\n"
     "        Use the specified it is HexString of 16 bytes (32 chars) \n\n"
     "    --language=\n"
@@ -101,8 +94,6 @@ OptParser::ParseResultCode OptParser::ParseResult() {
             port = atoi(arg.substr(sizeof("--port")).c_str());
         } else if (arg.compare(0, sizeof("--deviceId") - 1, "--deviceId") == 0) {
             deviceId = arg.substr(sizeof("--deviceId"));
-        } else if (arg.compare(0, sizeof("--deviceName") - 1, "--deviceName") == 0) {
-            deviceName = arg.substr(sizeof("--deviceName"));
         } else if (arg.compare(0, sizeof("--appId") - 1, "--appId") == 0) {
             appGUID = arg.substr(sizeof("--appId"));
             if ((appGUID.length() != 32) || (!IsAllHex(appGUID.c_str()))) {

@@ -116,10 +116,6 @@ static QStatus FillAboutPropertyStoreImplData(AboutPropertyStoreImpl* propStore,
     if (status != ER_OK) {
         return status;
     }
-    status = propStore->setDeviceName(opts.GetDeviceName());
-    if (status != ER_OK) {
-        return status;
-    }
     status = propStore->setAppId(opts.GetAppId());
     if (status != ER_OK) {
         return status;
@@ -165,6 +161,21 @@ static QStatus FillAboutPropertyStoreImplData(AboutPropertyStoreImpl* propStore,
     }
 
     status = propStore->setHardwareVersion("355.499. b");
+    if (status != ER_OK) {
+        return status;
+    }
+
+    status = propStore->setDeviceName("My device name", "en");
+    if (status != ER_OK) {
+        return status;
+    }
+
+    status = propStore->setDeviceName("Mi nombre de dispositivo", "sp");
+    if (status != ER_OK) {
+        return status;
+    }
+
+    status = propStore->setDeviceName("Mon nom de l'appareil", "fr");
     if (status != ER_OK) {
         return status;
     }
