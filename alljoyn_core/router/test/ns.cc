@@ -348,8 +348,8 @@ int main(int argc, char** argv)
         //
         // Enable discovery on all of the test names in one go.
         //
-        printf("FindAdvertisedName org.randomteststring.*\n");
-        status = ns.FindAdvertisedName(TRANSPORT_TCP, "org.randomteststring.*");
+        printf("FindAdvertisement org.randomteststring.*\n");
+        status = ns.FindAdvertisement(TRANSPORT_TCP, "name='org.randomteststring.*'");
         if (status != ER_OK) {
             QCC_LogError(status, ("FindAdvertisedName failed"));
             ERROR_EXIT;
@@ -359,9 +359,10 @@ int main(int argc, char** argv)
         // Enable discovery on all of the test names individually
         //
         for (uint32_t i = 0; !wildcard && i < g_numberNames; ++i) {
-            printf("FindAdvertisedName %s\n", g_names[i]);
+            printf("FindAdvertisement %s\n", g_names[i]);
 
-            status = ns.FindAdvertisedName(TRANSPORT_TCP, g_names[i]);
+            qcc::String matching = qcc::String("name='") + g_names[i] + "'";
+            status = ns.FindAdvertisement(TRANSPORT_TCP, matching);
             if (status != ER_OK) {
                 QCC_LogError(status, ("FindAdvertisedName failed"));
                 ERROR_EXIT;

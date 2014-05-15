@@ -500,6 +500,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
 
     bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
                       const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6);
+    bool SendResponseIfMatch(TransportMask transport, const qcc::IPEndpoint& ns4, const qcc::String& ruleStr);
     bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort);
 
     void FoundAdvertisedNameHandler(const char* name, TransportMask transport, const char* prefix);

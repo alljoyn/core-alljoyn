@@ -382,9 +382,10 @@ class IpNameService {
      *
      * @param transportMask A bitmask containing the transport requesting the
      *     discovery operation.
-     * @param prefix The well-known name prefix to find.
+     * @param matching The Key, value match criteria that the caller wants to be notified of (via signal)
+     *                 when a remote Bus instance is found with an advertisement that matches the criteria.
      */
-    QStatus FindAdvertisedName(TransportMask transportMask, const qcc::String& prefix);
+    QStatus FindAdvertisement(TransportMask transportMask, const qcc::String& matching);
 
     /**
      * @brief Stop discovering well-known names starting with the specified
@@ -392,9 +393,10 @@ class IpNameService {
      *
      * @param transportMask A bitmask containing the transport requesting the
      *     discovery operation.
-     * @param prefix The well-known name prefix to stop finding.
+     * @param matching The Key, value match criteria that the caller wants to be notified of (via signal)
+     *                 when a remote Bus instance is found with an advertisement that matches the criteria.
      */
-    QStatus CancelFindAdvertisedName(TransportMask transportMask, const qcc::String& prefix);
+    QStatus CancelFindAdvertisement(TransportMask transportMask, const qcc::String& matching);
 
     /**
      * @brief Advertise a well-known name over the network interfaces opened by the

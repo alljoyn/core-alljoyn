@@ -436,7 +436,7 @@ QStatus IpNameService::Enabled(TransportMask transportMask,
     return m_pimpl->Enabled(transportMask, reliableIPv4Port, reliableIPv6Port, unreliableIPv4Port, unreliableIPv6Port);
 }
 
-QStatus IpNameService::FindAdvertisedName(TransportMask transportMask, const qcc::String& prefix)
+QStatus IpNameService::FindAdvertisement(TransportMask transportMask, const qcc::String& matching)
 {
     //
     // If the entry gate has been closed, we do not allow a FindAdvertisedName
@@ -449,11 +449,11 @@ QStatus IpNameService::FindAdvertisedName(TransportMask transportMask, const qcc
         return ER_OK;
     }
 
-    ASSERT_STATE("FindAdvertisedName");
-    return m_pimpl->FindAdvertisedName(transportMask, prefix);
+    ASSERT_STATE("FindAdvertisement");
+    return m_pimpl->FindAdvertisement(transportMask, matching);
 }
 
-QStatus IpNameService::CancelFindAdvertisedName(TransportMask transportMask, const qcc::String& prefix)
+QStatus IpNameService::CancelFindAdvertisement(TransportMask transportMask, const qcc::String& matching)
 {
     return ER_OK;
 }

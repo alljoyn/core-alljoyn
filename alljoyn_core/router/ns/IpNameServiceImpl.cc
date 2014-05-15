@@ -348,112 +348,6 @@ const char* IpNameServiceImpl::IPV6_ALLJOYN_MULTICAST_GROUP = "ff02::13a";
 
 const char* IpNameServiceImpl::IPV6_MDNS_MULTICAST_GROUP = "ff02::fb";
 
-//
-// Simple pattern matching function that supports '*' and '?' only.  Returns a
-// bool in the sense of "a difference between the string and pattern exists."
-// This is so it works like fnmatch or strcmp, which return a 0 if a match is
-// found.
-//
-// We require an actual character match and do not consider an empty string
-// something that can match or be matched.
-//
-bool IpNameServiceImplWildcardMatch(qcc::String str, qcc::String pat)
-{
-    size_t patsize = pat.size();
-    size_t strsize = str.size();
-    const char* p = pat.c_str();
-    const char* s = str.c_str();
-    uint32_t pi, si;
-
-    //
-    // Zero length strings are unmatchable.
-    //
-    if (patsize == 0 || strsize == 0) {
-        return true;
-    }
-
-    for (pi = 0, si = 0; pi < patsize && si < strsize; ++pi, ++si) {
-        switch (p[pi]) {
-        case '*':
-            //
-            // Point to the character after the wildcard.
-            //
-            ++pi;
-
-            //
-            // If the wildcard is at the end of the pattern, we match
-            //
-            if (pi == patsize) {
-                return false;
-            }
-
-            //
-            // If the next character is another wildcard, we could go through
-            // a bunch of special case work to figure it all out, but in the
-            // spirit of simplicity we don't deal with it and return "different".
-            //
-            if (p[pi] == '*' || p[pi] == '?') {
-                return true;
-            }
-
-            //
-            // Scan forward in the string looking for the character after the
-            // wildcard.
-            //
-            for (; si < strsize; ++si) {
-                if (s[si] == p[pi]) {
-                    break;
-                }
-            }
-            break;
-
-        case '?':
-            //
-            // A question mark matches any character in the string.
-            //
-            break;
-
-        default:
-            //
-            // If no wildcard, we just compare character for character.
-            //
-            if (p[pi] != s[si]) {
-                return true;
-            }
-            break;
-        }
-    }
-
-    //
-    // If we fall through to here, we have matched all the way through one or
-    // both of the strings.  If pi == patsize and si == strsize then we matched
-    // all the way to the end of both strings and we have a match.
-    //
-    if (pi == patsize && si == strsize) {
-        return false;
-    }
-
-    //
-    // If pi < patsize and si == strsize there are characters in the pattern
-    // that haven't been matched.  The only way this can be a match is if
-    // that last character is a '*' meaning zero or more characters match.
-    //
-    if (pi < patsize && si == strsize) {
-        if (p[pi] == '*') {
-            return false;
-        } else {
-            return true;
-        }
-    }
-
-    //
-    // The remaining chase is pi == patsize and si < strsize which means
-    // that we've got characters in the string that haven't been matched
-    // by the pattern.  There's no way this can be a match.
-    //
-    return true;
-}
-
 const uint32_t IpNameServiceImpl::RETRY_INTERVALS[] = { 1, 2, 6, 18 };
 
 
@@ -1660,46 +1554,29 @@ void IpNameServiceImpl::TriggerTransmission(Packet packet)
     m_mutex.Unlock();
 }
 
-QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const qcc::String& matching, LocatePolicy policy)
+QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const qcc::String& matchingStr, LocatePolicy policy)
 {
-    QCC_DbgHLPrintf(("IpNameServiceImpl::FindAdvertisedName(0x%x, \"%s\", %d)", transportMask, matching.c_str(), policy));
+    QCC_DbgHLPrintf(("IpNameServiceImpl::FindAdvertisement(0x%x, \"%s\", %d)", transportMask, matchingStr.c_str(), policy));
 
     //
     // Exactly one bit must be set in a transport mask in order to identify the
     // one transport (in the AllJoyn sense) that is making the request.
     //
     if (CountOnes(transportMask) != 1) {
-        QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::FindAdvertisedName(): Bad transport mask"));
+        QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::FindAdvertisement(): Bad transport mask"));
         return ER_BAD_TRANSPORT_MASK;
     }
 
+    MatchMap matching;
+    ParseMatchRule(matchingStr, matching);
     //
-    // When a bus name is advertised, the source may append a string that
-    // identifies a specific instance of advertised name.  For example, one
-    // might advertise something like
+    // Only version 2 supports more than just the name key.
     //
-    //   com.mycompany.myproduct.0123456789ABCDEF
-    //
-    // as a specific instance of the bus name,
-    //
-    //   com.mycompany.myproduct
-    //
-    // Clients of the system will want to be able to discover all specific
-    // instances, so they need to do a wildcard search for bus name strings
-    // that match the non-specific name, for example,
-    //
-    //   com.mycompany.myproduct*
-    //
-    // We automatically append the name service wildcard character to the end
-    // of the provided string (which we call the namePrefix) before sending it
-    // to the name service which forwards the request out over the net.
-    //
-    map<String, String> matchingMap;
-    if ((ParseMatch(matching, matchingMap) != ER_OK) || (matchingMap.find("name") == matchingMap.end())) {
-        QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::FindAdvertisedName(): Bad request"));
-        return ER_BAD_ARG_2;
+    uint8_t type = TRANSMIT_V2;
+    MatchMap::iterator name = matching.find("name");
+    if ((matching.size() == 1) && (name != matching.end())) {
+        type |= TRANSMIT_V0_V1;
     }
-    matchingMap["name"].append('*');
 
     //
     // Send a request to the network over our multicast channel, asking for
@@ -1715,7 +1592,7 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
     //
     // Do it once for version zero.
     //
-    {
+    if (type & TRANSMIT_V0_V1) {
         WhoHas whoHas;
 
         //
@@ -1741,7 +1618,7 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         whoHas.SetUdpFlag(true);
 
         whoHas.SetIPv4Flag(true);
-        whoHas.AddName(matchingMap["name"]);
+        whoHas.AddName(name->second);
 
         NSPacket nspacket;
         nspacket->SetVersion(0, 0);
@@ -1753,7 +1630,7 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
     //
     // Do it again for version one.
     //
-    {
+    if (type & TRANSMIT_V0_V1) {
         WhoHas whoHas;
 
         //
@@ -1762,7 +1639,7 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         //
         whoHas.SetVersion(1, 1);
         whoHas.SetTransportMask(transportMask);
-        whoHas.AddName(matchingMap["name"]);
+        whoHas.AddName(name->second);
 
         NSPacket nspacket;
         nspacket->SetVersion(1, 1);
@@ -1774,11 +1651,11 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
     //
     // Do it again for version two.
     //
-    {
+    if (type & TRANSMIT_V2) {
         MDNSPacket query;
 
         MDNSSearchRData* searchRData = new MDNSSearchRData();
-        for (map<String, String>::iterator it = matchingMap.begin(); it != matchingMap.end(); ++it) {
+        for (MatchMap::iterator it = matching.begin(); it != matching.end(); ++it) {
             searchRData->SetValue(it->first, it->second);
         }
         MDNSResourceRecord searchRecord("search.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
@@ -4202,7 +4079,7 @@ void* IpNameServiceImpl::Run(void* arg)
         // range.
         //
         // What drives the middle ground between MAX and MIN timing?  The
-        // presence or absence of FindAdvertisedName() and AdvertiseName()
+        // presence or absence of FindAdvertisement() and AdvertiseName()
         // calls.  If the application is poked by an impatient user who "knows"
         // she should be able to connect, she may arrange to send out a
         // FindAdvertiseName() or AdvertiseName().  This is indicated to us by a
@@ -5227,7 +5104,7 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
                 // The requested name comes in from the WhoHas message and we
                 // allow wildcards there.
                 //
-                if (IpNameServiceImplWildcardMatch((*j), wkn)) {
+                if (WildcardMatch((*j), wkn)) {
                     QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuestion(): request for %s does not match my %s",
                                    wkn.c_str(), (*j).c_str()));
                     continue;
@@ -5246,7 +5123,7 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
                 // The requested name comes in from the WhoHas message and we
                 // allow wildcards there.
                 //
-                if (IpNameServiceImplWildcardMatch((*j), wkn)) {
+                if (WildcardMatch((*j), wkn)) {
                     QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuestion(): request for %s does not match my %s",
                                    wkn.c_str(), (*j).c_str()));
                     continue;
@@ -6160,7 +6037,7 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask transport, MDNSPacket md
                 // The requested name comes in from the WhoHas message and we
                 // allow wildcards there.
                 //
-                if (IpNameServiceImplWildcardMatch((*j), wkn)) {
+                if (WildcardMatch((*j), wkn)) {
                     QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery(): request for %s does not match my %s",
                                    wkn.c_str(), (*j).c_str()));
                     continue;
@@ -6179,7 +6056,7 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask transport, MDNSPacket md
                 // The requested name comes in from the WhoHas message and we
                 // allow wildcards there.
                 //
-                if (IpNameServiceImplWildcardMatch((*j), wkn)) {
+                if (WildcardMatch((*j), wkn)) {
                     QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery(): request for %s does not match my %s",
                                    wkn.c_str(), (*j).c_str()));
                     continue;
