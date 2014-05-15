@@ -2293,34 +2293,34 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
 
         MDNSHeader mdnsHeader(id, MDNSHeader::MDNS_RESPONSE);
 
-        MDNSPtrRData* ptrRdataSd = new MDNSPtrRData();
-        ptrRdataSd->SetPtrDName("_alljoyn._tcp.local.");
-        MDNSResourceRecord ptrRecordSd("_services._dns-sd._udp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRdataSd);
+        MDNSPtrRData* ptrRDataSd = new MDNSPtrRData();
+        ptrRDataSd->SetPtrDName("_alljoyn._tcp.local.");
+        MDNSResourceRecord ptrRecordSd("_services._dns-sd._udp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRDataSd);
 
-        MDNSPtrRData* ptrRdata = new MDNSPtrRData();
-        ptrRdata->SetPtrDName(m_guid + "._alljoyn._tcp.local.");
-        MDNSResourceRecord ptrRecord("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRdata);
+        MDNSPtrRData* ptrRData = new MDNSPtrRData();
+        ptrRData->SetPtrDName(m_guid + "._alljoyn._tcp.local.");
+        MDNSResourceRecord ptrRecord("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRData);
 
-        MDNSSrvRData* srvRdata = new MDNSSrvRData(1 /*priority */, 1 /* weight */,
+        MDNSSrvRData* srvRData = new MDNSSrvRData(1 /*priority */, 1 /* weight */,
                                                   m_reliableIPv4Port[transportIndex] /* port */, m_guid + ".local." /* target */);
-        MDNSResourceRecord srvRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, 120, srvRdata);
+        MDNSResourceRecord srvRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, 120, srvRData);
 
-        MDNSTextRData* txtRdata = new MDNSTextRData();
+        MDNSTextRData* txtRData = new MDNSTextRData();
         // TODO: Check these values.
         if (m_reliableIPv6Port[transportIndex]) {
-            txtRdata->SetValue("r6port", m_reliableIPv6Port[transportIndex]);
+            txtRData->SetValue("r6port", m_reliableIPv6Port[transportIndex]);
         }
 
         /*
            These need to go into _alljoyn._udp.local
            if (m_unreliableIPv4Port[transportIndex]) {
-            txtRdata->SetValue("u4port",  m_unreliableIPv4Port[transportIndex]);
+            txtRData->SetValue("u4port",  m_unreliableIPv4Port[transportIndex]);
            }
            if (m_unreliableIPv6Port[transportIndex]) {
-            txtRdata->SetValue("u6port", m_unreliableIPv6Port[transportIndex]);
+            txtRData->SetValue("u6port", m_unreliableIPv6Port[transportIndex]);
            }*/
 
-        MDNSResourceRecord txtRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRdata);
+        MDNSResourceRecord txtRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRData);
 
 
         MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
@@ -2667,32 +2667,32 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
 
         MDNSHeader mdnsHeader(id, MDNSHeader::MDNS_RESPONSE);
 
-        MDNSPtrRData* ptrRdataSd = new MDNSPtrRData();
-        ptrRdataSd->SetPtrDName("_alljoyn._tcp.local.");
-        MDNSResourceRecord ptrRecordSd("_services._dns-sd._udp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRdataSd);
+        MDNSPtrRData* ptrRDataSd = new MDNSPtrRData();
+        ptrRDataSd->SetPtrDName("_alljoyn._tcp.local.");
+        MDNSResourceRecord ptrRecordSd("_services._dns-sd._udp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRDataSd);
 
-        MDNSPtrRData* ptrRdata = new MDNSPtrRData();
-        ptrRdata->SetPtrDName(m_guid + "._alljoyn._tcp.local.");
-        MDNSResourceRecord ptrRecord("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 0, ptrRdata);
+        MDNSPtrRData* ptrRData = new MDNSPtrRData();
+        ptrRData->SetPtrDName(m_guid + "._alljoyn._tcp.local.");
+        MDNSResourceRecord ptrRecord("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 0, ptrRData);
 
-        MDNSSrvRData* srvRdata = new MDNSSrvRData(1, 1, m_reliableIPv4Port[transportIndex], m_guid + ".local.");
-        MDNSResourceRecord srvRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, 0, srvRdata);
+        MDNSSrvRData* srvRData = new MDNSSrvRData(1, 1, m_reliableIPv4Port[transportIndex], m_guid + ".local.");
+        MDNSResourceRecord srvRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, 0, srvRData);
 
-        MDNSTextRData* txtRdata = new MDNSTextRData();
+        MDNSTextRData* txtRData = new MDNSTextRData();
         if (m_reliableIPv6Port[transportIndex]) {
-            txtRdata->SetValue("r6port", m_reliableIPv6Port[transportIndex]);
+            txtRData->SetValue("r6port", m_reliableIPv6Port[transportIndex]);
         }
 
         /*
            These need to go into _alljoyn._udp.local
            if (m_unreliableIPv4Port[transportIndex]) {
-            txtRdata->SetValue("u4port",  m_unreliableIPv4Port[transportIndex]);
+            txtRData->SetValue("u4port",  m_unreliableIPv4Port[transportIndex]);
            }
            if (m_unreliableIPv6Port[transportIndex]) {
-            txtRdata->SetValue("u6port", m_unreliableIPv6Port[transportIndex]);
+            txtRData->SetValue("u6port", m_unreliableIPv6Port[transportIndex]);
            }*/
 
-        MDNSResourceRecord txtRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 0, txtRdata);
+        MDNSResourceRecord txtRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 0, txtRData);
 
 
         MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
@@ -2859,24 +2859,24 @@ QStatus IpNameServiceImpl::PingReply(TransportMask transportMask, const qcc::Str
         int32_t id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
         MDNSHeader mdnsHeader(id, MDNSHeader::MDNS_RESPONSE);
 
-        MDNSPtrRData* ptrRdataSd = new MDNSPtrRData();
-        ptrRdataSd->SetPtrDName("_alljoyn._tcp.local.");
-        MDNSResourceRecord ptrRecordSd("_services._dns-sd._udp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRdataSd);
+        MDNSPtrRData* ptrRDataSd = new MDNSPtrRData();
+        ptrRDataSd->SetPtrDName("_alljoyn._tcp.local.");
+        MDNSResourceRecord ptrRecordSd("_services._dns-sd._udp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRDataSd);
 
-        MDNSPtrRData* ptrRdata = new MDNSPtrRData();
-        ptrRdata->SetPtrDName(m_guid + "._alljoyn._tcp.local.");
-        MDNSResourceRecord ptrRecord("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRdata);
+        MDNSPtrRData* ptrRData = new MDNSPtrRData();
+        ptrRData->SetPtrDName(m_guid + "._alljoyn._tcp.local.");
+        MDNSResourceRecord ptrRecord("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRData);
 
-        MDNSSrvRData* srvRdata = new MDNSSrvRData(1 /*priority */, 1 /* weight */,
+        MDNSSrvRData* srvRData = new MDNSSrvRData(1 /*priority */, 1 /* weight */,
                                                   m_reliableIPv4Port[transportIndex] /* port */, m_guid + ".local." /* target */);
-        MDNSResourceRecord srvRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, 120, srvRdata);
+        MDNSResourceRecord srvRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, 120, srvRData);
 
-        MDNSTextRData* txtRdata = new MDNSTextRData();
+        MDNSTextRData* txtRData = new MDNSTextRData();
         // TODO: Check these values.
         if (m_reliableIPv6Port[transportIndex]) {
-            txtRdata->SetValue("r6port", m_reliableIPv6Port[transportIndex]);
+            txtRData->SetValue("r6port", m_reliableIPv6Port[transportIndex]);
         }
-        MDNSResourceRecord txtRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRdata);
+        MDNSResourceRecord txtRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRData);
 
 
         /* // TO DO Add rest of the names that are being advertised. W
@@ -3501,17 +3501,17 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                     MDNSARData* addrRData;
                     MDNSTextRData* txtRData;
                     MDNSAAAARData* aaaaRData;
-                    MDNSSrvRData* srvrdata;
+                    MDNSSrvRData* srvRData;
 
                     switch (answerRecord->GetRRType()) {
                     case MDNSResourceRecord::SRV:
 
                         if (answerRecord->GetDomainName().find("._tcp.") != String::npos) {
 
-                            srvrdata = static_cast<MDNSSrvRData*>(answerRecord->GetRData());
+                            srvRData = static_cast<MDNSSrvRData*>(answerRecord->GetRData());
 
                             if (haveIPv4address) {
-                                if (mdnspacket->GetAdditionalRecord(srvrdata->GetTarget(), MDNSResourceRecord::A, &resourceRecord)) {
+                                if (mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord)) {
                                     addrRData = static_cast<MDNSARData*>(resourceRecord->GetRData());
                                 } else {
                                     // Add an IPv4 address record
@@ -3519,23 +3519,23 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                     mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, addrRData));
                                     mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
                                     refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
-                                    mdnspacket->GetAdditionalRecord(srvrdata->GetTarget(), MDNSResourceRecord::A, &resourceRecord);
+                                    mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord);
                                 }
                                 if (addrRData) {
                                     addrRData->SetAddr(ipv4address.ToString());
                                     refRData->SetIPV4ResponsePort(unicastIpv4Port);
-                                    srvrdata->SetPort(m_reliableIPv4Port[transportIndex]);
+                                    srvRData->SetPort(m_reliableIPv4Port[transportIndex]);
                                 }
                             }
 
                             if (haveIPv6address) {
-                                if (!mdnspacket->GetAdditionalRecord(srvrdata->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord)) {
+                                if (!mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord)) {
                                     // Add an IPV6 address record
                                     aaaaRData = new MDNSAAAARData();
                                     mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::AAAA, MDNSResourceRecord::INTERNET, 120, aaaaRData));
                                     mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
                                     refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
-                                    mdnspacket->GetAdditionalRecord(srvrdata->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord);
+                                    mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord);
                                 }
                                 aaaaRData = static_cast<MDNSAAAARData*>(resourceRecord->GetRData());
                                 if (aaaaRData) {
@@ -3546,9 +3546,9 @@ void IpNameServiceImpl::RewriteVersionSpecific(
 
 
                         } else if (answerRecord->GetDomainName().find("._udp.") != String::npos) {
-                            srvrdata = static_cast<MDNSSrvRData*>(answerRecord->GetRData());
+                            srvRData = static_cast<MDNSSrvRData*>(answerRecord->GetRData());
                             if (haveIPv4address) {
-                                if (mdnspacket->GetAdditionalRecord(srvrdata->GetTarget(), MDNSResourceRecord::A, &resourceRecord)) {
+                                if (mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord)) {
                                     addrRData = static_cast<MDNSARData*>(resourceRecord->GetRData());
                                 } else {
                                     // Add an IPv4 address record
@@ -3556,25 +3556,25 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                     mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, addrRData));
                                     mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
                                     refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
-                                    mdnspacket->GetAdditionalRecord(srvrdata->GetTarget(), MDNSResourceRecord::A, &resourceRecord);
+                                    mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord);
                                 }
                                 if (addrRData) {
                                     addrRData->SetAddr(ipv4address.ToString());
                                     if (unicastIpv4Port != 0) {
                                         refRData->SetIPV4ResponsePort(unicastIpv4Port);
                                     }
-                                    srvrdata->SetPort(m_unreliableIPv4Port[transportIndex]);
+                                    srvRData->SetPort(m_unreliableIPv4Port[transportIndex]);
                                 }
                             }
 
                             if (haveIPv6address) {
-                                if (!mdnspacket->GetAdditionalRecord(srvrdata->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord)) {
+                                if (!mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord)) {
                                     // Add an IPV6 address record
                                     aaaaRData = new MDNSAAAARData();
                                     mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::AAAA, MDNSResourceRecord::INTERNET, 120, aaaaRData));
                                     mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
                                     refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
-                                    mdnspacket->GetAdditionalRecord(srvrdata->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord);
+                                    mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord);
                                 }
                                 aaaaRData = static_cast<MDNSAAAARData*>(resourceRecord->GetRData());
                                 if (aaaaRData) {
@@ -5061,33 +5061,33 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
         MDNSHeader mdnsHeader(id, MDNSHeader::MDNS_RESPONSE);
 
-        MDNSPtrRData* ptrRdataSd = new MDNSPtrRData();
-        ptrRdataSd->SetPtrDName("_alljoyn._tcp.local.");
-        MDNSResourceRecord ptrRecordSd("_services._dns-sd._udp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRdataSd);
+        MDNSPtrRData* ptrRDataSd = new MDNSPtrRData();
+        ptrRDataSd->SetPtrDName("_alljoyn._tcp.local.");
+        MDNSResourceRecord ptrRecordSd("_services._dns-sd._udp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRDataSd);
 
-        MDNSPtrRData* ptrRdata = new MDNSPtrRData();
-        ptrRdata->SetPtrDName(m_guid + "._alljoyn._tcp.local.");
-        MDNSResourceRecord ptrRecord("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRdata);
+        MDNSPtrRData* ptrRData = new MDNSPtrRData();
+        ptrRData->SetPtrDName(m_guid + "._alljoyn._tcp.local.");
+        MDNSResourceRecord ptrRecord("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRData);
 
-        MDNSSrvRData* srvRdata = new MDNSSrvRData(1, 1, m_reliableIPv4Port[transportIndex], m_guid + ".local.");
-        MDNSResourceRecord srvRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, 120, srvRdata);
+        MDNSSrvRData* srvRData = new MDNSSrvRData(1, 1, m_reliableIPv4Port[transportIndex], m_guid + ".local.");
+        MDNSResourceRecord srvRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, 120, srvRData);
 
-        MDNSTextRData* txtRdata = new MDNSTextRData();
+        MDNSTextRData* txtRData = new MDNSTextRData();
         /*UDP not supported,ipv6 not supported
            if (m_reliableIPv4Port[transportIndex]) {
-            txtRdata->SetValue("r4port", );
+            txtRData->SetValue("r4port", );
            }
            if (m_unreliableIPv4Port[transportIndex]) {
-            txtRdata->SetValue("u4port",  m_unreliableIPv4Port[transportIndex]);
+            txtRData->SetValue("u4port",  m_unreliableIPv4Port[transportIndex]);
            }
            if (m_reliableIPv6Port[transportIndex]) {
-            txtRdata->SetValue("r6port", m_reliableIPv6Port[transportIndex]);
+            txtRData->SetValue("r6port", m_reliableIPv6Port[transportIndex]);
            }
            if (m_unreliableIPv6Port[transportIndex]) {
-            txtRdata->SetValue("u6port", m_unreliableIPv6Port[transportIndex]);
+            txtRData->SetValue("u6port", m_unreliableIPv6Port[transportIndex]);
            }*/
 
-        MDNSResourceRecord txtRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRdata);
+        MDNSResourceRecord txtRecord(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRData);
 
 
         MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
@@ -5940,12 +5940,12 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
         QCC_DbgPrintf(("Ignoring response without sender-info"));
         return;
     }
-    MDNSSenderRData* refrdata = static_cast<MDNSSenderRData*>(refRecord->GetRData());
-    if (!refrdata) {
+    MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
+    if (!refRData) {
         QCC_DbgPrintf(("Ignoring response with invalid sender-info"));
         return;
     }
-    if (refrdata->GetGuid() == m_guid) {
+    if (refRData->GetGuid() == m_guid) {
         QCC_DbgPrintf(("Ignoring my own response"));
         return;
     }
@@ -5959,10 +5959,10 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
     // If No, This is a unicast response in which case we need not keep track of Burst IDs
     //
     if (recvPort == MULTICAST_MDNS_PORT) {
-        uint16_t searchID = refrdata->GetSearchID();
+        uint16_t searchID = refRData->GetSearchID();
         // We need to check if this packet is from a burst which we have seen before in which case we will ignore it
         m_mutex.Lock();
-        shouldProcessPacket = UpdateMDNSPacketTracker(refrdata->GetGuid(), searchID);
+        shouldProcessPacket = UpdateMDNSPacketTracker(refRData->GetGuid(), searchID);
         if (!shouldProcessPacket) {
             m_mutex.Unlock();
             return;
@@ -5970,14 +5970,14 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
         m_mutex.Unlock();
     } else {
         MDNSResourceRecord* pingReplyRecord;
-        MDNSPingReplyRData* pingrdata;
+        MDNSPingReplyRData* pingRData;
         if (mdnsPacket->GetAdditionalRecord("ping-reply.", MDNSResourceRecord::TXT, &pingReplyRecord)) {
             QCC_LogError(ER_OK, ("Recevied PING-REPLY over unicast for name"));
-            pingrdata = static_cast<MDNSPingReplyRData*>(pingReplyRecord->GetRData());
-            QCC_LogError(ER_OK, ("Recieved a unicast ping responce for name %s", pingrdata->GetWellKnownName().c_str()));
+            pingRData = static_cast<MDNSPingReplyRData*>(pingReplyRecord->GetRData());
+            QCC_LogError(ER_OK, ("Recieved a unicast ping responce for name %s", pingRData->GetWellKnownName().c_str()));
 
             /* We have got a unicast ping request which we need to send up to AllJoyn Object*/
-            TransportMask transportMask = refrdata->GetTransportMask();
+            TransportMask transportMask = refRData->GetTransportMask();
             uint32_t transportIndex;
 
             if (CountOnes(transportMask) != 1) {
@@ -5998,7 +5998,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
                 m_protect_ping_reply_callback = true;
                 m_mutex.Unlock();
                 QCC_LogError(ER_OK, ("Calling PING-REPLY TCPTransport"));
-                (*m_ping_reply_callback[transportIndex])(transportMask, pingrdata->GetWellKnownName(), pingrdata->GetReplyCode() == "ALLJOYN_PING_REPLY_SUCCESS" ? 1 : 2);
+                (*m_ping_reply_callback[transportIndex])(transportMask, pingRData->GetWellKnownName(), pingRData->GetReplyCode() == "ALLJOYN_PING_REPLY_SUCCESS" ? 1 : 2);
                 m_mutex.Lock();
                 m_protect_ping_reply_callback = false;
             }
@@ -6008,31 +6008,31 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
     }
 
 
-    MDNSPtrRData* ptrrdata = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
-    assert(ptrrdata);
+    MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
+    assert(ptrRData);
     uint32_t timer = ptrRecord->GetRRttl(); //TODO: Need to make callbacks take uint32 instead of uint8
 
     MDNSResourceRecord* srvAnswer;
-    mdnsPacket->GetAnswer(ptrrdata->GetPtrDName(), MDNSResourceRecord::SRV, &srvAnswer);
-    MDNSSrvRData* srvrdata = static_cast<MDNSSrvRData*>(srvAnswer->GetRData());
-    assert(srvrdata);
+    mdnsPacket->GetAnswer(ptrRData->GetPtrDName(), MDNSResourceRecord::SRV, &srvAnswer);
+    MDNSSrvRData* srvRData = static_cast<MDNSSrvRData*>(srvAnswer->GetRData());
+    assert(srvRData);
     MDNSResourceRecord* aRecord;
-    uint32_t r4port = srvrdata->GetPort();
+    uint32_t r4port = srvRData->GetPort();
     String r4addr;
-    if (mdnsPacket->GetAdditionalRecord(srvrdata->GetTarget(), MDNSResourceRecord::A, &aRecord)) {
+    if (mdnsPacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &aRecord)) {
         MDNSARData* aRData = static_cast<MDNSARData*>(aRecord->GetRData());
         r4addr = aRData->GetAddr();
     }
     MDNSResourceRecord* txtAnswer;
-    mdnsPacket->GetAnswer(ptrrdata->GetPtrDName(), MDNSResourceRecord::TXT, &txtAnswer);
-    MDNSTextRData* txtrdata = static_cast<MDNSTextRData*>(txtAnswer->GetRData());
-    assert(txtrdata);
-    uint32_t r6port = StringToU32(txtrdata->GetValue("r6port"));
+    mdnsPacket->GetAnswer(ptrRData->GetPtrDName(), MDNSResourceRecord::TXT, &txtAnswer);
+    MDNSTextRData* txtRData = static_cast<MDNSTextRData*>(txtAnswer->GetRData());
+    assert(txtRData);
+    uint32_t r6port = StringToU32(txtRData->GetValue("r6port"));
 
     String r6addr;
 
     MDNSResourceRecord* aaaaRecord;
-    if (mdnsPacket->GetAdditionalRecord(srvrdata->GetTarget(), MDNSResourceRecord::AAAA, &aaaaRecord)) {
+    if (mdnsPacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &aaaaRecord)) {
         MDNSAAAARData* aaaaRData = static_cast<MDNSAAAARData*>(aaaaRecord->GetRData());
         r6addr = aaaaRData->GetAddr();
     }
@@ -6046,11 +6046,11 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
     // be polled for presence
     //
     //PrintPeerInfoMap();
-    AddToPeerInfoMap(refrdata->GetGuid(),
+    AddToPeerInfoMap(refRData->GetGuid(),
                      r4addr,
                      r6addr,
-                     refrdata->GetIPV4ResponsePort(),
-                     refrdata->GetIPV6ResponsePort());
+                     refRData->GetIPV4ResponsePort(),
+                     refRData->GetIPV6ResponsePort());
     //PrintPeerInfoMap();
     m_mutex.Unlock();
 
@@ -6082,7 +6082,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
         transportMask = TRANSPORT_TCP;
         transportIndex = IndexFromBit(TRANSPORT_TCP);
     } else {
-        transportMask = refrdata->GetTransportMask();
+        transportMask = refRData->GetTransportMask();
 
         if (CountOnes(transportMask) != 1) {
             QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::HandleProtocolResponse(): Bad transport mask"));
@@ -6134,7 +6134,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
     //
     sort(wkn.begin(), wkn.end());
 
-    qcc::String guid = refrdata->GetGuid();
+    qcc::String guid = refRData->GetGuid();
 
     //
     // In the version two protocol, the maximum size static buffer for the
@@ -6259,8 +6259,8 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
         return;
     }
 
-    MDNSSearchRData* searchrdata = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
-    if (!searchrdata) {
+    MDNSSearchRData* searchRData = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
+    if (!searchRData) {
         QCC_DbgPrintf(("Ignoring query with invalid search info"));
         return;
     }
@@ -6279,12 +6279,12 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
     }
 
     MDNSResourceRecord* pingRecord;
-    MDNSPingRData* pingrdata;
+    MDNSPingRData* pingRData;
 
     m_mutex.Lock();
     if (recvPort == MULTICAST_MDNS_PORT) {
         mdnsPacket->GetAdditionalRecord("search.", MDNSResourceRecord::TXT, &searchRecord);
-        searchrdata = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
+        searchRData = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
         uint16_t searchID = refRData->GetSearchID();
         shouldProcessPacket = UpdateMDNSPacketTracker(refRData->GetGuid(), searchID);
         if (!shouldProcessPacket) {
@@ -6293,8 +6293,8 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
         }
     } else {
         mdnsPacket->GetAdditionalRecord("ping.", MDNSResourceRecord::TXT, &pingRecord);
-        pingrdata = static_cast<MDNSPingRData*>(pingRecord->GetRData());
-        QCC_LogError(ER_OK, ("Recieved a unicast request for name %s", pingrdata->GetWellKnownName().c_str()));
+        pingRData = static_cast<MDNSPingRData*>(pingRecord->GetRData());
+        QCC_LogError(ER_OK, ("Recieved a unicast request for name %s", pingRData->GetWellKnownName().c_str()));
 
         AddToPeerInfoMap(refRData->GetGuid(),
                          refRData->GetIPV4ResponseAddr(),
@@ -6302,7 +6302,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
                          refRData->GetIPV4ResponsePort(),
                          refRData->GetIPV6ResponsePort());
 
-        AddToPingRequestsMap(pingrdata->GetWellKnownName(), refRData->GetGuid());
+        AddToPingRequestsMap(pingRData->GetWellKnownName(), refRData->GetGuid());
 
         m_mutex.Unlock();
 
@@ -6333,7 +6333,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
         if (m_pingcallback[transportIndex]) {
             m_protect_ping_callback = true;
             m_mutex.Unlock();
-            (*m_pingcallback[transportIndex])(pingrdata->GetWellKnownName(), refRData->GetGuid());
+            (*m_pingcallback[transportIndex])(pingRData->GetWellKnownName(), refRData->GetGuid());
             m_mutex.Lock();
             m_protect_ping_callback = false;
         }
@@ -6368,13 +6368,13 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
              return;
         }
        } else {
-       QCC_LogError(ER_OK,("Recieved a unicast request for name %s",searchrdata->GetWellKnownName().c_str()));
+       QCC_LogError(ER_OK,("Recieved a unicast request for name %s",searchRData->GetWellKnownName().c_str()));
        }
 
        m_mutex.Unlock();
      */
 
-    String wkn = searchrdata->GetWellKnownName().c_str();
+    String wkn = searchRData->GetWellKnownName().c_str();
     //
     // There are at least two threads wandering through the advertised list.
     //

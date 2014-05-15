@@ -2344,7 +2344,7 @@ class MDNSARData : public MDNSRData {
     /**
      * @internal
      * @brief Get the IPV4 address.
-     * @return The IPV4 address contained in this A Rdata.
+     * @return The IPV4 address contained in this A RData.
      */
     qcc::String GetAddr();
 
@@ -2443,7 +2443,7 @@ class MDNSAAAARData : public MDNSRData {
     /**
      * @internal
      * @brief Get the IPV6 address.
-     * @return The IPV6 address contained in this AAAA Rdata.
+     * @return The IPV6 address contained in this AAAA RData.
      */
     qcc::String GetAddr()  const;
 
@@ -2542,7 +2542,7 @@ class MDNSPtrRData : public MDNSRData {
     /**
      * @internal
      * @brief Get the PTR DName.
-     * @return The PTR DName contained in this PTR Rdata.
+     * @return The PTR DName contained in this PTR RData.
      */
     qcc::String GetPtrDName()  const;
 
@@ -2598,7 +2598,7 @@ class MDNSPtrRData : public MDNSRData {
      */
     size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
-    qcc::String m_rDataStr;
+    qcc::String m_rdataStr;
 };
 
 /**
@@ -2749,7 +2749,7 @@ class MDNSSrvRData : public MDNSRData {
     /**
      * @internal
      * @brief Get the priority for this SRV RData.
-     * @return The priority contained in this SRV Rdata.
+     * @return The priority contained in this SRV RData.
      */
     uint16_t GetPriority()  const;
 
@@ -2763,7 +2763,7 @@ class MDNSSrvRData : public MDNSRData {
     /**
      * @internal
      * @brief Get the weight for this SRV RData.
-     * @return The weight contained in this SRV Rdata.
+     * @return The weight contained in this SRV RData.
      */
     uint16_t GetWeight()  const;
 
@@ -2777,7 +2777,7 @@ class MDNSSrvRData : public MDNSRData {
     /**
      * @internal
      * @brief Get the port for this SRV RData.
-     * @return The port contained in this SRV Rdata.
+     * @return The port contained in this SRV RData.
      */
     uint16_t GetPort()  const;
 
@@ -2791,7 +2791,7 @@ class MDNSSrvRData : public MDNSRData {
     /**
      * @internal
      * @brief Get the target for this SRV RData.
-     * @return The target contained in this SRV Rdata.
+     * @return The target contained in this SRV RData.
      */
     qcc::String GetTarget()  const;
     /**
@@ -2898,7 +2898,7 @@ class MDNSSearchRData : public MDNSTextRData {
     /**
      * @internal
      * @brief Get the wellknown name for this Search RData.
-     * @return The well known name contained in this Search Rdata.
+     * @return The well known name contained in this Search RData.
      */
     qcc::String GetWellKnownName();
 
@@ -2951,7 +2951,7 @@ class MDNSPingRData : public MDNSTextRData {
     /**
      * @internal
      * @brief Get the wellknown name for this Ping RData.
-     * @return The well known name contained in this Ping Rdata.
+     * @return The well known name contained in this Ping RData.
      */
     qcc::String GetWellKnownName();
 
@@ -3003,7 +3003,7 @@ class MDNSPingReplyRData : public MDNSTextRData {
     /**
      * @internal
      * @brief Get the wellknown name for this Ping RData.
-     * @return The well known name contained in this Ping Rdata.
+     * @return The well known name contained in this Ping RData.
      */
     qcc::String GetWellKnownName();
 
@@ -3136,7 +3136,7 @@ class MDNSSenderRData : public MDNSTextRData {
     /**
      * @internal
      * @brief Get the GUID for this Sender RData.
-     * @return The GUID contained in this Sender Rdata.
+     * @return The GUID contained in this Sender RData.
      */
     qcc::String GetGuid();
 
@@ -3150,7 +3150,7 @@ class MDNSSenderRData : public MDNSTextRData {
     /**
      * @internal
      * @brief Get the search ID for this Sender RData.
-     * @return The search ID contained in this Sender Rdata.
+     * @return The search ID contained in this Sender RData.
      */
     uint16_t GetSearchID();
 
@@ -3164,7 +3164,7 @@ class MDNSSenderRData : public MDNSTextRData {
     /**
      * @internal
      * @brief Get the transportMask for this Sender RData.
-     * @return The transportMask contained in this Sender Rdata.
+     * @return The transportMask contained in this Sender RData.
      */
     uint16_t GetTransportMask();
 
@@ -3178,7 +3178,7 @@ class MDNSSenderRData : public MDNSTextRData {
     /**
      * @internal
      * @brief Get the ipv4Port for this Sender RData.
-     * @return The ipv4Port contained in this Sender Rdata.
+     * @return The ipv4Port contained in this Sender RData.
      */
     uint16_t GetIPV4ResponsePort();
 
@@ -3192,7 +3192,7 @@ class MDNSSenderRData : public MDNSTextRData {
     /**
      * @internal
      * @brief Get the ipv4Addr for this Sender RData.
-     * @return The ipv4Addr contained in this Sender Rdata.
+     * @return The ipv4Addr contained in this Sender RData.
      */
     qcc::String GetIPV4ResponseAddr();
 
@@ -3206,7 +3206,7 @@ class MDNSSenderRData : public MDNSTextRData {
     /**
      * @internal
      * @brief Get the ipv6Port for this Sender RData.
-     * @return The ipv6Port contained in this Sender Rdata.
+     * @return The ipv6Port contained in this Sender RData.
      */
     uint16_t GetIPV6ResponsePort();
 
@@ -3220,7 +3220,7 @@ class MDNSSenderRData : public MDNSTextRData {
     /**
      * @internal
      * @brief Get the ipv6Addr for this Sender RData.
-     * @return The ipv6Addr contained in this Sender Rdata.
+     * @return The ipv6Addr contained in this Sender RData.
      */
     qcc::String GetIPV6ResponseAddr();
 

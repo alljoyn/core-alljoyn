@@ -2307,33 +2307,33 @@ size_t MDNSAAAARData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
 }
 
 //MDNSPtrRData
-void MDNSPtrRData::SetPtrDName(qcc::String rdatastr)
+void MDNSPtrRData::SetPtrDName(qcc::String rdataStr)
 {
-    m_rDataStr = rdatastr;
+    m_rdataStr = rdataStr;
 }
 
 qcc::String MDNSPtrRData::GetPtrDName() const
 {
-    return m_rDataStr;
+    return m_rdataStr;
 }
 
 size_t MDNSPtrRData::GetSerializedSize(void) const
 {
     // 2 bytes length + 1 null byte
-    return 3 + m_rDataStr.length();
+    return 3 + m_rdataStr.length();
 }
 
 size_t MDNSPtrRData::Serialize(uint8_t* buffer) const
 {
 
-    buffer[0] = ((m_rDataStr.length() + 1) & 0xFF00) >> 8;
-    buffer[1] = ((m_rDataStr.length() + 1) & 0xFF);
+    buffer[0] = ((m_rdataStr.length() + 1) & 0xFF00) >> 8;
+    buffer[1] = ((m_rdataStr.length() + 1) & 0xFF);
     size_t pos = 0;
     size_t newPos;
     size_t size = 2;
     while (pos != String::npos) {
-        newPos = m_rDataStr.find_first_of('.', pos);
-        String temp = m_rDataStr.substr(pos, newPos - pos);
+        newPos = m_rdataStr.find_first_of('.', pos);
+        String temp = m_rdataStr.substr(pos, newPos - pos);
         buffer[size++] = temp.length();
         memcpy(reinterpret_cast<void*>(&buffer[size]), const_cast<void*>(reinterpret_cast<const void*>(temp.c_str())), temp.size());
         size += temp.length();
@@ -2345,7 +2345,7 @@ size_t MDNSPtrRData::Serialize(uint8_t* buffer) const
 size_t MDNSPtrRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
 {
 
-    m_rDataStr.clear();
+    m_rdataStr.clear();
     //
     // If there's not enough data in the buffer to even get the string size out
     // then bail.
@@ -2373,10 +2373,10 @@ size_t MDNSPtrRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std
         if (((buffer[size] & 0xc0) >> 6) == 3 && bufsize > 1) {
             uint32_t pointer = ((buffer[size] << 8 | buffer[size + 1]) & 0x3FFF);
             if (compressedOffsets.find(pointer) != compressedOffsets.end()) {
-                if (m_rDataStr.length() > 0) {
-                    m_rDataStr.append('.');
+                if (m_rdataStr.length() > 0) {
+                    m_rdataStr.append('.');
                 }
-                m_rDataStr.append(compressedOffsets[pointer]);
+                m_rdataStr.append(compressedOffsets[pointer]);
                 size += 2;
                 break;
             } else {
@@ -2392,13 +2392,13 @@ size_t MDNSPtrRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std
             QCC_DbgPrintf(("MDNSPtrRecord::Deserialize(): Insufficient bufsize %d", bufsize));
             return 0;
         }
-        if (m_rDataStr.length() > 0) {
-            m_rDataStr.append('.');
+        if (m_rdataStr.length() > 0) {
+            m_rdataStr.append('.');
         }
         if (temp_size > 0) {
 
             offsets.push_back(headerOffset + size - 1);
-            m_rDataStr.append(reinterpret_cast<const char*>(buffer + size), temp_size);
+            m_rdataStr.append(reinterpret_cast<const char*>(buffer + size), temp_size);
             bufsize -= temp_size;
             size += temp_size;
         } else {
@@ -2409,7 +2409,7 @@ size_t MDNSPtrRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std
 
 
     for (uint32_t i = 0; i < offsets.size(); ++i) {
-        compressedOffsets[offsets[i]] = m_rDataStr.substr(offsets[i] - headerOffset);
+        compressedOffsets[offsets[i]] = m_rdataStr.substr(offsets[i] - headerOffset);
     }
 
     return size;
