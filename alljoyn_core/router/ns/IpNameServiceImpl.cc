@@ -680,13 +680,11 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
     // There are at least two threads that can wander through the vector below
     // so we need to protect access to the list with a convenient mutex.
     //
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
 
     for (uint32_t i = 0; i < m_requestedInterfaces[transportIndex].size(); ++i) {
         if (m_requestedInterfaces[transportIndex][i].m_interfaceName == name) {
             QCC_DbgPrintf(("IpNameServiceImpl::OpenInterface(): Already opened."));
-            // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
             m_mutex.Unlock();
             return ER_OK;
         }
@@ -700,7 +698,6 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
     m_requestedInterfaces[transportIndex].push_back(specifier);
     m_forceLazyUpdate = true;
     m_wakeEvent.SetEvent();
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
     return ER_OK;
 }
@@ -733,7 +730,6 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
     // There are at least two threads that can wander through the vector below
     // so we need to protect access to the list with a convenient mutex.
     //
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
 
     //
@@ -752,7 +748,6 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
         addr == qcc::IPAddress("::")) {
         QCC_DbgPrintf(("IpNameServiceImpl::OpenInterface(): Wildcard address"));
         m_any[transportIndex] = true;
-        // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
         m_mutex.Unlock();
         return ER_OK;
     }
@@ -760,7 +755,6 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
     for (uint32_t i = 0; i < m_requestedInterfaces[transportIndex].size(); ++i) {
         if (m_requestedInterfaces[transportIndex][i].m_interfaceAddr == addr) {
             QCC_DbgPrintf(("IpNameServiceImpl::OpenInterface(): Already opened."));
-            // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
             m_mutex.Unlock();
             return ER_OK;
         }
@@ -774,7 +768,6 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
     m_requestedInterfaces[transportIndex].push_back(specifier);
     m_forceLazyUpdate = true;
     m_wakeEvent.SetEvent();
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
     return ER_OK;
 }
@@ -807,7 +800,6 @@ QStatus IpNameServiceImpl::CloseInterface(TransportMask transportMask, const qcc
     // There are at least two threads that can wander through the vector below
     // so we need to protect access to the list with a convenient mutex.
     //
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
 
     //
@@ -825,7 +817,6 @@ QStatus IpNameServiceImpl::CloseInterface(TransportMask transportMask, const qcc
 
     m_forceLazyUpdate = true;
     m_wakeEvent.SetEvent();
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
     return ER_OK;
 }
@@ -858,7 +849,6 @@ QStatus IpNameServiceImpl::CloseInterface(TransportMask transportMask, const qcc
     // There are at least two threads that can wander through the vector below
     // so we need to protect access to the list with a convenient mutex.
     //
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
 
     //
@@ -873,7 +863,6 @@ QStatus IpNameServiceImpl::CloseInterface(TransportMask transportMask, const qcc
         addr == qcc::IPAddress("::")) {
         QCC_DbgPrintf(("IpNameServiceImpl::CloseInterface(): Wildcard address"));
         m_any[transportIndex] = false;
-        // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
         m_mutex.Unlock();
         return ER_OK;
     }
@@ -893,7 +882,6 @@ QStatus IpNameServiceImpl::CloseInterface(TransportMask transportMask, const qcc
 
     m_forceLazyUpdate = true;
     m_wakeEvent.SetEvent();
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
     return ER_OK;
 }
@@ -906,7 +894,6 @@ void IpNameServiceImpl::ClearLiveInterfaces(void)
     // ClearLiveInterfaces is not called with the mutex taken so we need to
     // grab it.
     //
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
 
     for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
@@ -969,7 +956,6 @@ void IpNameServiceImpl::ClearLiveInterfaces(void)
     QCC_DbgPrintf(("IpNameServiceImpl::ClearLiveInterfaces(): Clear interfaces"));
     m_liveInterfaces.clear();
 
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
 
     QCC_DbgPrintf(("IpNameServiceImpl::ClearLiveInterfaces(): Done"));
@@ -1351,7 +1337,6 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
                 useEntry = true;
 #endif
             } else {
-                // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
                 m_mutex.Lock();
 
                 QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): m_any not set, look for explicitly requested interfaces for transport %d (%d currently requested)", j, m_requestedInterfaces[j].size()));
@@ -1384,7 +1369,6 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
                     }
                 }
 
-                // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
                 m_mutex.Unlock();
             }
         }
@@ -1821,7 +1805,6 @@ QStatus IpNameServiceImpl::SetCallback(TransportMask transportMask,
     uint32_t i = IndexFromBit(transportMask);
     assert(i < 16 && "IpNameServiceImpl::SetCallback(): Bad callback index");
 
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
     // Wait till the callback is in use.
     while (m_protect_callback) {
@@ -1835,7 +1818,6 @@ QStatus IpNameServiceImpl::SetCallback(TransportMask transportMask,
     delete goner;
     m_callback[i] = cb;
 
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
 
     return ER_OK;
@@ -1855,7 +1837,6 @@ QStatus IpNameServiceImpl::SetPingReplyCallback(TransportMask transportMask,
     uint32_t i = IndexFromBit(transportMask);
     assert(i < 16 && "IpNameServiceImpl::SetPingCallback(): Bad callback index");
 
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
     // Wait till the callback is in use.
     while (m_protect_ping_callback) {
@@ -1869,7 +1850,6 @@ QStatus IpNameServiceImpl::SetPingReplyCallback(TransportMask transportMask,
     delete goner;
     m_ping_reply_callback[i] = cb;
 
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
 
     return ER_OK;               // TODO
@@ -1891,7 +1871,6 @@ QStatus IpNameServiceImpl::SetPingCallback(TransportMask transportMask,
     uint32_t i = IndexFromBit(transportMask);
     assert(i < 16 && "IpNameServiceImpl::SetPingCallback(): Bad callback index");
 
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
     // Wait till the callback is in use.
     while (m_protect_ping_callback) {
@@ -1905,7 +1884,6 @@ QStatus IpNameServiceImpl::SetPingCallback(TransportMask transportMask,
     delete goner;
     m_pingcallback[i] = cb;
 
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
 
     return ER_OK;               // TODO
@@ -1915,7 +1893,6 @@ void IpNameServiceImpl::ClearCallbacks(void)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::ClearCallbacks()"));
 
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
     // Wait till the callback is in use.
     while (m_protect_callback) {
@@ -1942,7 +1919,6 @@ void IpNameServiceImpl::ClearCallbacks(void)
 
     }
 
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
 }
 
@@ -2001,7 +1977,6 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
     // We are running short on toes, so don't shoot any more off by not being
     // thread-unaware.
     //
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
 
     //
@@ -2021,7 +1996,6 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
                 // Nothing has changed, so don't bother.
                 //
                 QCC_DbgPrintf(("IpNameServiceImpl::AdvertiseName(): Duplicate advertisement"));
-                // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
                 m_mutex.Unlock();
                 return ER_OK;
             }
@@ -2039,7 +2013,6 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
         // advertising the name, which would happen if we just fell out of the
         // if-else.
         //
-        // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
         m_mutex.Unlock();
         return ER_OK;
     } else {
@@ -2053,7 +2026,6 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
                 //
                 QCC_DbgPrintf(("IpNameServiceImpl::AdvertiseName(): Duplicate advertisement"));
 
-                // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
                 m_mutex.Unlock();
                 return ER_OK;
             }
@@ -2076,7 +2048,6 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
         }
     }
 
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
 
     //
@@ -2421,7 +2392,6 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
     // We are running short on toes, so don't shoot any more off by not being
     // thread-unaware.
     //
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
 
     //
@@ -2466,7 +2436,6 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
         m_timer = 0;
     }
 
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
 
     //
@@ -2962,7 +2931,6 @@ void IpNameServiceImpl::QueueProtocolMessage(Packet packet)
     static const size_t MAX_IPNS_MESSAGES = 50;
     QCC_DbgPrintf(("IpNameServiceImpl::QueueProtocolMessage()"));
 
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
     while (m_outbound.size() >= MAX_IPNS_MESSAGES) {
         m_mutex.Unlock();
@@ -2971,7 +2939,6 @@ void IpNameServiceImpl::QueueProtocolMessage(Packet packet)
     }
     m_outbound.push_back(packet);
     m_wakeEvent.SetEvent();
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
 }
 
@@ -4275,7 +4242,6 @@ void* IpNameServiceImpl::Run(void* arg)
 
         GetTimeNow(&tNow);
 
-        // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
         m_mutex.Lock();
 
         //
@@ -4386,7 +4352,6 @@ void* IpNameServiceImpl::Run(void* arg)
         // we definitely need to release other (user) threads that might
         // be waiting to talk to us.
         //
-        // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
         m_mutex.Unlock();
 
         //
@@ -4527,24 +4492,24 @@ void* IpNameServiceImpl::Run(void* arg)
                 QCC_DbgHLPrintf(("IpNameServiceImpl::Run(): Got IPNS message from \"%s\"", remoteAddress.ToString().c_str()));
 
                 // Find out the destination port and interface index for this message.
-                uint16_t recv_port;
-                int32_t if_index;
+                uint16_t recvPort;
+                int32_t ifIndex;
                 bool destIsIPv4Broadcast = false;
 
                 for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
 
                     if (m_liveInterfaces[i].m_multicastMDNSsockFd == sockFd) {
-                        recv_port = m_liveInterfaces[i].m_multicastMDNSPort;
-                        if_index = m_liveInterfaces[i].m_index;
+                        recvPort = m_liveInterfaces[i].m_multicastMDNSPort;
+                        ifIndex = m_liveInterfaces[i].m_index;
                     }
                     if (m_liveInterfaces[i].m_multicastsockFd  == sockFd) {
-                        recv_port = m_liveInterfaces[i].m_multicastPort;
-                        if_index = m_liveInterfaces[i].m_index;
+                        recvPort = m_liveInterfaces[i].m_multicastPort;
+                        ifIndex = m_liveInterfaces[i].m_index;
                     }
 
                     if (m_liveInterfaces[i].m_unicastsockFd  == sockFd) {
-                        recv_port = m_liveInterfaces[i].m_unicastPort;
-                        if_index = m_liveInterfaces[i].m_index;
+                        recvPort = m_liveInterfaces[i].m_unicastPort;
+                        ifIndex = m_liveInterfaces[i].m_index;
                         //printf("\n Message received over interface : %s", m_liveInterfaces[i].m_interfaceName.c_str());
 
                     }
@@ -4564,9 +4529,9 @@ void* IpNameServiceImpl::Run(void* arg)
                     }
                 }
                 QCC_DbgHLPrintf(("Processing packet on interface index %d that was received on index %d from %s:%u to %s:%u",
-                                 if_index, localInterfaceIndex, remoteAddress.ToString().c_str(), remotePort, localAddress.ToString().c_str(), recv_port));
+                                 ifIndex, localInterfaceIndex, remoteAddress.ToString().c_str(), remotePort, localAddress.ToString().c_str(), recvPort));
                 /*
-                   if (if_index != localInterfaceIndex) {
+                   if (ifIndex != localInterfaceIndex) {
                     if (localAddress.ToString() == IPV4_MDNS_MULTICAST_GROUP ||
                         localAddress.ToString() == IPV6_MDNS_MULTICAST_GROUP ||
                         localAddress.ToString() == IPV4_ALLJOYN_MULTICAST_GROUP ||
@@ -4589,7 +4554,7 @@ void* IpNameServiceImpl::Run(void* arg)
                 // We got a message over the multicast channel.  Deal with it.
                 //
                 qcc::IPEndpoint endpoint(remoteAddress, remotePort);
-                HandleProtocolMessage(buffer, nbytes, endpoint, recv_port);
+                HandleProtocolMessage(buffer, nbytes, endpoint, recvPort);
             }
         }
     }
@@ -4623,7 +4588,6 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
     // We are running short on toes, so don't shoot any more off by not being
     // thread-unaware.
     //
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
 
     //
@@ -4647,7 +4611,6 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
     bool doRetransmit = (quietly && !m_advertised_quietly[transportIndex].empty()) || !m_advertised[transportIndex].empty();
     if (doRetransmit == false) {
         QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Nothing to do for transportIndex %d", transportIndex));
-        // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
         m_mutex.Unlock();
         return;
     }
@@ -5236,7 +5199,6 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         qcc::Sleep(rand() % 128);
 
     }
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
 }
 
@@ -5245,7 +5207,6 @@ void IpNameServiceImpl::DoPeriodicMaintenance(void)
 #if HAPPY_WANDERER
     Wander();
 #endif
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
 
     //
@@ -5263,7 +5224,6 @@ void IpNameServiceImpl::DoPeriodicMaintenance(void)
         }
     }
 
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
 }
 
@@ -5274,7 +5234,6 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
     //
     // There are at least two threads wandering through the advertised list.
     //
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
 
     //
@@ -5288,7 +5247,6 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
     if (nsVersion == 0 && msgVersion == 0) {
         if (whoHas.GetUdpFlag()) {
             QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuestion(): Ignoring version zero message from version one peer"));
-            // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
             m_mutex.Unlock();
             return;
         }
@@ -5386,17 +5344,14 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
         // are exporting; this just means to retransmit all of our advertisements.
         //
         if (respond) {
-            // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
             m_mutex.Unlock();
 
             Retransmit(index, false, respondQuietly, endpoint, TRANSMIT_V0_V1);
 
-            // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
             m_mutex.Lock();
         }
     }
 
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
 }
 
@@ -5441,7 +5396,6 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
     // something silly like call back and cancel callbacks or make some other
     // call back into this class from another direction.
     //
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
 
     //
@@ -5453,7 +5407,6 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
     if (m_callback[transportIndex] == NULL) {
         QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): No callback for transport, so nothing to do"));
 
-        // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
         m_mutex.Unlock();
 
         return;
@@ -5472,7 +5425,6 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
         if (isAt.GetUdpFlag()) {
             QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): Ignoring version zero message from version one/version two peer"));
 
-            // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
             m_mutex.Unlock();
 
             return;
@@ -5491,7 +5443,6 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
     if (nsVersion == 1 && msgVersion == 1) {
         if (isAt.GetReliableIPv6Flag()) {
             QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): Ignoring version one message from version two peer"));
-            // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
             m_mutex.Unlock();
 
             return;
@@ -5743,12 +5694,11 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
         }
     }
 
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
 }
 
 
-void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint, const uint16_t recv_port)
+void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint, const uint16_t recvPort)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolMessage(0x%x, %d, %s)", buffer, nbytes, endpoint.ToString().c_str()));
 
@@ -5762,7 +5712,7 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
 #endif
 
     // Any messages received on port 9956 are version zero or version one messages.
-    if (recv_port == 9956) {
+    if (recvPort == 9956) {
 
         NSPacket nsPacket;
         size_t bytesRead = nsPacket->Deserialize(buffer, nbytes);
@@ -5821,16 +5771,10 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
             return;
         }
 
-        //
-        // We only understand version zero and one messages.
-        //
-        uint32_t nsVersion, msgVersion;
-        mdnsPacket->GetVersion(nsVersion, msgVersion);
-
         if (mdnsPacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
-            HandleProtocolQuery(mdnsPacket, recv_port);
+            HandleProtocolQuery(mdnsPacket, recvPort);
         } else {
-            HandleProtocolResponse(mdnsPacket, recv_port);
+            HandleProtocolResponse(mdnsPacket, recvPort);
         }
     }
 }
@@ -5978,7 +5922,6 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
             m_mutex.Lock();
             if (m_ping_reply_callback[transportIndex] == NULL) {
                 QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery(): No callback for transport, so nothing to do"));
-                // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
                 m_mutex.Unlock();
                 return;
             }
@@ -6092,7 +6035,6 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
     // something silly like call back and cancel callbacks or make some other
     // call back into this class from another direction.
     //
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
 
     //
@@ -6104,7 +6046,6 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
     if (m_callback[transportIndex] == NULL) {
         QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): No callback for transport, so nothing to do"));
 
-        // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
         m_mutex.Unlock();
 
         return;
@@ -6217,7 +6158,6 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
         m_protect_callback = false;
 
     }
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
 
 }
@@ -6275,8 +6215,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
             m_mutex.Unlock();
             return;
         }
-    } else {
-        mdnsPacket->GetAdditionalRecord("ping.", MDNSResourceRecord::TXT, &pingRecord);
+    } else if (mdnsPacket->GetAdditionalRecord("ping.", MDNSResourceRecord::TXT, &pingRecord)) {
         pingRData = static_cast<MDNSPingRData*>(pingRecord->GetRData());
         QCC_LogError(ER_OK, ("Recieved a unicast request for name %s", pingRData->GetWellKnownName().c_str()));
 
@@ -6310,7 +6249,6 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
         m_mutex.Lock();
         if (m_pingcallback[transportIndex] == NULL) {
             QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuery(): No callback for transport, so nothing to do"));
-            // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
             m_mutex.Unlock();
             return;
         }
@@ -6361,7 +6299,6 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
     //
     // There are at least two threads wandering through the advertised list.
     //
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
 
     //
@@ -6453,7 +6390,6 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
         // are exporting; this just means to retransmit all of our advertisements.
         //
         if (respond) {
-            // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
             m_mutex.Unlock();
 
             //Need to form endpoint
@@ -6462,7 +6398,6 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
             qcc::IPEndpoint endpoint1(refRData->GetIPV6ResponseAddr(), refRData->GetIPV6ResponsePort());
             Retransmit(index, false, true, endpoint1, TRANSMIT_V2); //always respond quietly
 
-            // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
             m_mutex.Lock();
         }
     }
@@ -6472,14 +6407,12 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
 QStatus IpNameServiceImpl::Start()
 {
     QCC_DbgPrintf(("IpNameServiceImpl::Start()"));
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
     assert(IsRunning() == false);
     m_state = IMPL_RUNNING;
     QCC_DbgPrintf(("IpNameServiceImpl::Start(): Starting thread"));
     QStatus status = Thread::Start(this);
     QCC_DbgPrintf(("IpNameServiceImpl::Start(): Started"));
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
     m_burstResponseTimer.Start();
     return status;
@@ -6493,7 +6426,6 @@ bool IpNameServiceImpl::Started()
 QStatus IpNameServiceImpl::Stop()
 {
     QCC_DbgPrintf(("IpNameServiceImpl::Stop()"));
-    // printf("%s: m_mutex.Lock()\n", __FUNCTION__);
     m_mutex.Lock();
     if (m_state != IMPL_SHUTDOWN) {
         m_state = IMPL_STOPPING;
@@ -6501,7 +6433,6 @@ QStatus IpNameServiceImpl::Stop()
     QCC_DbgPrintf(("IpNameServiceImpl::Stop(): Stopping thread"));
     QStatus status = Thread::Stop();
     QCC_DbgPrintf(("IpNameServiceImpl::Stop(): Stopped"));
-    // printf("%s: m_mutex.Unlock()\n", __FUNCTION__);
     m_mutex.Unlock();
     m_burstResponseTimer.RemoveAlarmsWithListener(*this);
     m_burstResponseTimer.Stop();
