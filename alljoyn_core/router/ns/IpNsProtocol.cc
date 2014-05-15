@@ -1924,6 +1924,9 @@ size_t MDNSResourceRecord::DeserializeExt(uint8_t const* buffer, uint32_t bufsiz
         break;
 
     case RNULL:
+        m_rdata = new MDNSDefaultRData();
+        break;
+
     case HINFO:
     case TXT:
         m_rdata = new MDNSTextRData();
