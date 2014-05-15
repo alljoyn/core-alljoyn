@@ -3471,10 +3471,10 @@ void IpNameServiceImpl::RewriteVersionSpecific(
             //Need to rewrite ipv4Address into A record,ipv6address, unicast NS response ports into reference record.
             mdnspacket  = MDNSPacket::cast(packet);
             MDNSHeader mdnsheader = mdnspacket->GetHeader();
+            MDNSResourceRecord* refRecord;
+            mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
+            MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
             if (mdnsheader.GetQRType() == MDNSHeader::MDNS_QUERY) {
-                MDNSResourceRecord* refRecord;
-                mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
-                MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
                 if (haveIPv4address && (unicastIpv4Port != 0)) {
                     refRData->SetIPV4ResponsePort(unicastIpv4Port);
                     refRData->SetIPV4ResponseAddr(ipv4address.ToString());
@@ -3484,9 +3484,6 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                     refRData->SetIPV6ResponsePort(unicastIpv6Port);
                 }
             } else {
-                MDNSResourceRecord* refRecord;
-                mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
-                MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
                 TransportMask transportMask = refRData->GetTransportMask();
 
                 uint32_t transportIndex = IndexFromBit(transportMask);
@@ -5927,8 +5924,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
     }
 
     MDNSResourceRecord* refRecord;
-    bool senderInfoFound = mdnsPacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
-    if (!senderInfoFound) {
+    if (!mdnsPacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord)) {
         QCC_DbgPrintf(("Ignoring response without sender-info"));
         return;
     }
@@ -6245,8 +6241,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
     }
 
     MDNSResourceRecord* searchRecord;
-    bool searchFound = mdnsPacket->GetAdditionalRecord("search.", MDNSResourceRecord::TXT, &searchRecord);
-    if (!searchFound) {
+    if (!mdnsPacket->GetAdditionalRecord("search.", MDNSResourceRecord::TXT, &searchRecord)) {
         QCC_DbgPrintf(("Ignoring query without search info"));
         return;
     }
@@ -6257,8 +6252,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
         return;
     }
     MDNSResourceRecord* refRecord;
-    bool senderInfoFound = mdnsPacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
-    if (!senderInfoFound) {
+    if (!mdnsPacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord)) {
         QCC_DbgPrintf(("Ignoring query without sender info"));
         return;
     }
@@ -6275,8 +6269,6 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
 
     m_mutex.Lock();
     if (recvPort == MULTICAST_MDNS_PORT) {
-        mdnsPacket->GetAdditionalRecord("search.", MDNSResourceRecord::TXT, &searchRecord);
-        searchRData = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
         uint16_t searchID = refRData->GetSearchID();
         shouldProcessPacket = UpdateMDNSPacketTracker(refRData->GetGuid(), searchID);
         if (!shouldProcessPacket) {
@@ -6333,7 +6325,6 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
         return;
     }
     m_mutex.Unlock();
-
 
     if (refRData->GetGuid() == m_guid) {
         QCC_DbgPrintf(("Ignoring my own query"));
@@ -6703,8 +6694,8 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
             MDNSResourceRecord* advRecord;
             mdnspacket->GetAdditionalRecord("advertise.", MDNSResourceRecord::TXT, &advRecord);
             MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
-            MDNSResourceRecord* refRecord;
 
+            MDNSResourceRecord* refRecord;
             mdnspacket->GetAdditionalRecord("sender-info.", MDNSResourceRecord::TXT, &refRecord);
             MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
             TransportMask transportMask = refRData->GetTransportMask();
