@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013 - 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -119,13 +119,13 @@ class AboutPropertyStoreImpl : public PropertyStore {
     /**
      * setDeviceName
      * @param[out] deviceName
+     * @param[out] language
      * @param[out] isPublic
      * @param[out] isWritable
      * @param[out] isAnnouncable
-     * @return QStatus
+     * @return QStatus.
      */
-    QStatus setDeviceName(qcc::String const& deviceName, bool isPublic = true, bool isWritable = true, bool isAnnouncable = true);
-
+    QStatus setDeviceName(qcc::String const& deviceName, qcc::String const& language, bool isPublic = true, bool isWritable = true, bool isAnnouncable = true);
     /**
      * setAppId
      * @param[out] appId

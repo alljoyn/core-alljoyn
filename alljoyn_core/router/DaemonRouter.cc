@@ -97,7 +97,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
     PolicyDB policyDB = ConfigDB::GetConfigDB()->GetPolicyDB();
     NormalizedMsgHdr nmh(msg, policyDB);
 
-    if (!policyDB->OKToSend(nmh, sender)) {
+    if ((sender != localEndpoint) && !policyDB->OKToSend(nmh, sender)) {
         /* The sender is not allowed to send this message. */
         return ER_BUS_POLICY_VIOLATION;
     }
@@ -151,7 +151,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                     BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
                     PushMessage(msg, busEndpoint);
 #ifdef ENABLE_POLICYDB
-                } else if (!policyDB->OKToReceive(nmh, destEndpoint)) {
+                } else if ((destEndpoint != localEndpoint) && !policyDB->OKToReceive(nmh, destEndpoint)) {
                     /*
                      * The destination is not allowed to recieve the message.
                      * If a reply is expected, return an error to the sender.
@@ -244,7 +244,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                  */
 #ifdef ENABLE_POLICYDB
                 if (!((sender->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) && !dest->AllowRemoteMessages()) &&
-                    policyDB->OKToReceive(nmh, dest)) {
+                    ((dest == localEndpoint) || policyDB->OKToReceive(nmh, dest))) {
 #else
                 if (!((sender->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) && !dest->AllowRemoteMessages())) {
 #endif
@@ -306,7 +306,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                 if ((ep != origSender) && ((sessionId == 0) || ep->GetSessionId() == sessionId)) {
                     BusEndpoint busEndpoint = BusEndpoint::cast(ep);
 #ifdef ENABLE_POLICYDB
-                    if (policyDB->OKToReceive(nmh, busEndpoint)) {
+                    if ((busEndpoint == localEndpoint) || policyDB->OKToReceive(nmh, busEndpoint)) {
 #else
                     {
 #endif
@@ -354,7 +354,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                 BusEndpoint ep = sit->destEp;
 
 #ifdef ENABLE_POLICYDB
-                okToReceive = policyDB->OKToReceive(nmh, ep);
+                okToReceive = (ep == localEndpoint) || policyDB->OKToReceive(nmh, ep);
 #endif
                 if (okToReceive) {
                     foundDest = true;

@@ -483,6 +483,13 @@ void _PolicyDB::Finalize(Bus* bus)
         lock.Unlock();
         router.UnlockNameTable();
     }
+
+#ifndef NDEBUG
+    QCC_DbgPrintf(("Dictionary:"));
+    for (StringIDMap::const_iterator it = dictionary.begin(); it != dictionary.end(); ++it) {
+        QCC_DbgPrintf(("    \"%s\" = %u", it->first.c_str(), it->second));
+    }
+#endif
 }
 
 
@@ -619,8 +626,7 @@ bool _PolicyDB::OKToConnect(uint32_t uid, uint32_t gid) const
     bool allow = true;
     bool ruleMatch = false;
 
-    QCC_DbgPrintf(("Check if OK for endpoint with UserID %u and GroupID %u to connect",
-                   uid, gid));
+    QCC_DbgPrintf(("Check if OK for endpoint with UserID %u and GroupID %u to connect", uid, gid));
 
     if (!connectRS.mandatoryRules.empty()) {
         QCC_DbgPrintf(("    checking mandatory connect rules"));
@@ -659,8 +665,8 @@ bool _PolicyDB::OKToOwn(const char* busName, BusEndpoint& ep) const
         return false;
     }
 
-    QCC_DbgPrintf(("Check if OK for endpoint %s to own %s",
-                   ep->GetUniqueName().c_str(), busName));
+    QCC_DbgPrintf(("Check if OK for endpoint %s to own %s (%d)",
+                   ep->GetUniqueName().c_str(), busName, LookupStringID(busName)));
 
     /* Implicitly default to allow any endpoint to own any name. */
     bool allow = true;
@@ -706,9 +712,10 @@ bool _PolicyDB::OKToReceive(const NormalizedMsgHdr& nmh, BusEndpoint& dest) cons
     bool allow = true;
     bool ruleMatch = false;
 
-    QCC_DbgPrintf(("Check if OK for endpoint %s to receive %s (%s --> %s)",
+    QCC_DbgPrintf(("Check if OK for endpoint %s to receive %s (%s (%d) --> %s (%d))",
                    dest->GetUniqueName().c_str(), nmh.msg->Description().c_str(),
-                   nmh.msg->GetSender(), nmh.msg->GetDestination()));
+                   nmh.msg->GetSender(), LookupStringID(nmh.msg->GetSender()),
+                   nmh.msg->GetDestination(), LookupStringID(nmh.msg->GetDestination())));
 
     if (!receiveRS.mandatoryRules.empty()) {
         QCC_DbgPrintf(("    checking mandatory receive rules"));
@@ -748,9 +755,10 @@ bool _PolicyDB::OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& sender) const
     bool allow = true;
     bool ruleMatch = false;
 
-    QCC_DbgPrintf(("Check if OK for endpoint %s to send %s (%s --> %s)",
+    QCC_DbgPrintf(("Check if OK for endpoint %s to send %s (%s (%d) --> %s (%d))",
                    sender->GetUniqueName().c_str(), nmh.msg->Description().c_str(),
-                   nmh.msg->GetSender(), nmh.msg->GetDestination()));
+                   nmh.msg->GetSender(), LookupStringID(nmh.msg->GetSender()),
+                   nmh.msg->GetDestination(), LookupStringID(nmh.msg->GetDestination())));
 
     if (!sendRS.mandatoryRules.empty()) {
         QCC_DbgPrintf(("    checking mandatory send rules"));
