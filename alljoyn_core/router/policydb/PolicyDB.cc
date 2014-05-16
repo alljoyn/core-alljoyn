@@ -76,6 +76,8 @@ using namespace std;
 #define RULE_CONNECT    (0x1 << 3)
 
 
+static const _PolicyDB::IDSet nullIDSet;
+
 static bool MsgTypeStrToEnum(const String& str, AllJoynMessageType& type)
 {
     bool success = true;
@@ -186,8 +188,7 @@ const _PolicyDB::IDSet _PolicyDB::LookupStringIDPrefix(const char* idStr, char s
 
 const _PolicyDB::IDSet _PolicyDB::LookupBusNameID(const char* busName) const
 {
-    static const IDSet emptySet;
-    IDSet ret = emptySet;
+    IDSet ret = nullIDSet;
 
     if (busName && (busName[0] != '\0')) {
         lock.RDLock();
@@ -744,6 +745,20 @@ bool _PolicyDB::OKToReceive(const NormalizedMsgHdr& nmh, BusEndpoint& dest) cons
     bool allow = true;
     bool ruleMatch = false;
 
+    if (nmh.destIDSet.iden(nullIDSet)) {
+        /*
+         * Broadcast/multicast signal - need to re-check send rules for each
+         * destination.
+         */
+        const IDSet destIDSet = LookupBusNameID(dest->GetUniqueName().c_str());
+        if (!destIDSet->empty()) {
+            allow = OKToSend(nmh, &destIDSet);
+            if (!allow) {
+                return false;
+            }
+        }
+    }
+
     QCC_DbgPrintf(("Check if OK for endpoint %s to receive %s (%s{%s} --> %s{%s})",
                    dest->GetUniqueName().c_str(), nmh.msg->Description().c_str(),
                    nmh.msg->GetSender(), IDSet2String(nmh.senderIDSet).c_str(),
@@ -781,43 +796,47 @@ bool _PolicyDB::OKToReceive(const NormalizedMsgHdr& nmh, BusEndpoint& dest) cons
 }
 
 
-bool _PolicyDB::OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& sender) const
+bool _PolicyDB::OKToSend(const NormalizedMsgHdr& nmh, const IDSet* destIDSet) const
 {
     /* Implicitly default to allow messages to be sent. */
     bool allow = true;
     bool ruleMatch = false;
 
+    if (!destIDSet) {
+        destIDSet = &nmh.destIDSet;
+    }
+
     QCC_DbgPrintf(("Check if OK for endpoint %s to send %s (%s{%s} --> %s{%s})",
-                   sender->GetUniqueName().c_str(), nmh.msg->Description().c_str(),
+                   nmh.sender->GetUniqueName().c_str(), nmh.msg->Description().c_str(),
                    nmh.msg->GetSender(), IDSet2String(nmh.senderIDSet).c_str(),
-                   nmh.msg->GetDestination(), IDSet2String(nmh.destIDSet).c_str()));
+                   nmh.msg->GetDestination(), IDSet2String(*destIDSet).c_str()));
 
     if (!sendRS.mandatoryRules.empty()) {
         QCC_DbgPrintf(("    checking mandatory send rules"));
-        ruleMatch = CheckMessage(allow, sendRS.mandatoryRules, nmh, nmh.destIDSet);
+        ruleMatch = CheckMessage(allow, sendRS.mandatoryRules, nmh, *destIDSet);
     }
 
     if (!ruleMatch && !sendRS.userRules.empty()) {
-        uint32_t uid = sender->GetUserId();
+        uint32_t uid = nmh.sender->GetUserId();
         IDRuleMap::const_iterator it = sendRS.userRules.find(uid);
         if (it != sendRS.userRules.end()) {
             QCC_DbgPrintf(("    checking user=%u send rules", uid));
-            ruleMatch = CheckMessage(allow, it->second, nmh, nmh.destIDSet);
+            ruleMatch = CheckMessage(allow, it->second, nmh, *destIDSet);
         }
     }
 
     if (!ruleMatch && !sendRS.groupRules.empty()) {
-        uint32_t gid = sender->GetGroupId();
+        uint32_t gid = nmh.sender->GetGroupId();
         IDRuleMap::const_iterator it = sendRS.groupRules.find(gid);
         if (it != sendRS.groupRules.end()) {
             QCC_DbgPrintf(("    checking group=%u send rules", gid));
-            ruleMatch = CheckMessage(allow, it->second, nmh, nmh.destIDSet);
+            ruleMatch = CheckMessage(allow, it->second, nmh, *destIDSet);
         }
     }
 
     if (!ruleMatch) {
         QCC_DbgPrintf(("    checking default send rules"));
-        ruleMatch = CheckMessage(allow, sendRS.defaultRules, nmh, nmh.destIDSet);
+        ruleMatch = CheckMessage(allow, sendRS.defaultRules, nmh, *destIDSet);
     }
 
     return allow;
