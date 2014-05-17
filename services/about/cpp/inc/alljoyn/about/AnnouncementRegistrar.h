@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -47,15 +47,27 @@ class AnnouncementRegistrar {
      *               implementsInterfaces list
      * @return status
      */
-    static QStatus RegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler, char** implementsInterfaces, size_t numberInterfaces);
+    static QStatus RegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler, const char** implementsInterfaces, size_t numberInterfaces);
 
     /**
      * UnRegisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal
      * @param[in] bus reference to BusAttachment
      * @param[in] handler reference to AnnounceHandler
+     * @param[in] implementsInterfaces a list of interfaces that the Announce signal
+     *               reports as implmented. NULL to recieve all Announce signals
+     *               regardless of interfaces
+     * @param[in] numberInterfaces the number of interfaces in the
+     *               implementsInterfaces list
      * @return status
      */
-    static QStatus UnRegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler);
+    static QStatus UnRegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler, const char** implementsInterfaces, size_t numberInterfaces);
+
+    /**
+     * UnRegisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal
+     * @param[in] bus reference to BusAttachment
+     * @return status
+     */
+    static QStatus UnRegisterAllAnnounceHandlers(ajn::BusAttachment& bus);
 };
 
 }
