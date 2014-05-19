@@ -145,7 +145,7 @@ static QStatus FillAboutPropertyStoreImplData(AboutPropertyStoreImpl* propStore,
         return status;
     }
 
-    status = propStore->setDateOfManufacture("10/1/2199");
+    status = propStore->setDateOfManufacture("2199-10-01");
     if (status != ER_OK) {
         return status;
     }

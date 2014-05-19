@@ -146,11 +146,20 @@ class AboutPropertyStoreImpl : public PropertyStore {
     QStatus setAppName(qcc::String const& appName, bool isPublic = true, bool isWritable = false, bool isAnnouncable = true);
     /**
      * setDefaultLang
+     *
+     * The default language must already be in the list of supported languages or
+     * it will return status ER_LANGUAGE_NOT_SUPPORTED
+     *
      * @param[out] defaultLang
      * @param[out] isPublic
      * @param[out] isWritable
      * @param[out] isAnnouncable
-     * @return QStatus.
+     * @return QStatus
+     *
+     *   - ER_OK on success
+     *   - ER_LANGUAGE_NOT_SUPPORTED if language is not in supporte languages
+     *   - status indicating failure
+     *
      */
     QStatus setDefaultLang(qcc::String const& defaultLang, bool isPublic = true, bool isWritable = true, bool isAnnouncable = true);
     /**
@@ -184,6 +193,8 @@ class AboutPropertyStoreImpl : public PropertyStore {
     QStatus setManufacturer(qcc::String const& manufacturer, qcc::String const& language = "", bool isPublic = true, bool isWritable = false, bool isAnnouncable = true);
     /**
      * setDateOfManufacture
+     *
+     * Using format YYYY-MM-DD (Known as XML DateTime Format)
      * @param[out] dateOfManufacture
      * @param[out] isPublic
      * @param[out] isWritable
