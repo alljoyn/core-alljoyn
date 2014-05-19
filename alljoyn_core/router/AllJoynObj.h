@@ -39,6 +39,7 @@
 #include <alljoyn/Message.h>
 
 #include "Bus.h"
+#include "BusUtil.h"
 #include "NameTable.h"
 #include "RemoteEndpoint.h"
 #include "Transport.h"
@@ -559,12 +560,12 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     struct DiscoverMapEntry {
         TransportMask transportMask;
         qcc::String sender;
-        qcc::String namePrefix;
+        MatchMap matching;
 
-        DiscoverMapEntry(TransportMask transportMask, const qcc::String& sender, const qcc::String& namePrefix) :
+        DiscoverMapEntry(TransportMask transportMask, const qcc::String& sender, const MatchMap& matching) :
             transportMask(transportMask),
             sender(sender),
-            namePrefix(namePrefix) { }
+            matching(matching) { }
     };
     typedef std::multimap<qcc::String, DiscoverMapEntry> DiscoverMapType;
     DiscoverMapType discoverMap;
@@ -873,7 +874,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     QStatus ProcCancelFindAdvertisement(const qcc::String& endpointName, const qcc::String& matching, TransportMask transports);
 
     /**
-     * Process a request to discover a name prefix by a set of transports
+     * Process a request to discover a matching advertisement by a set of transports
      *
      * @param status               The result of parsing one of FindAdvertisedName, FindAdvertisedNameByTransport, or
      *                             FindAdvertisementByTransport.
@@ -881,10 +882,8 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param matching             Key, value match criteria that the caller wants to be notified of (via signal)
      *                             when a remote Bus instance is found with an advertisement that matches the criteria.
      * @param transports           Transport bit mask
-     * @param namePrefix           A well-known name prefix that the caller wants to be notified of (via signal)
-     *                             when a remote Bus instance is found that advertises a name that matches the prefix.
      */
-    void ProcFindAdvertisement(QStatus status, Message& msg, const qcc::String& matching, TransportMask transports, const qcc::String& namePrefix);
+    void ProcFindAdvertisement(QStatus status, Message& msg, const qcc::String& matching, TransportMask transports);
 
     /**
      * Handle a request to cancel the discovery a name prefix by a set of transports

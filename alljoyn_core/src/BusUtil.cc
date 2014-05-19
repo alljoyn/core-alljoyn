@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -184,8 +184,8 @@ qcc::String BusNameFromObjPath(const char* str)
     return path;
 }
 
-QStatus ParseMatch(const qcc::String& match,
-                   std::map<qcc::String, qcc::String>& matchMap)
+QStatus ParseMatchRule(const qcc::String& match,
+                       MatchMap& matchMap)
 {
     QStatus status = ER_OK;
     size_t pos = 0;
@@ -211,10 +211,107 @@ QStatus ParseMatch(const qcc::String& match,
         }
         String key = match.substr(pos, eqPos - 1 - pos);
         String value = match.substr(begQuotePos, endQuotePos - begQuotePos);
-        matchMap[key] = value;
+        matchMap.insert(pair<String, String>(key, value));
         pos = endPos + 1;
     }
     return status;
+}
+
+bool WildcardMatch(qcc::String str, qcc::String pat)
+{
+    size_t patsize = pat.size();
+    size_t strsize = str.size();
+    const char* p = pat.c_str();
+    const char* s = str.c_str();
+    uint32_t pi, si;
+
+    //
+    // Zero length strings are unmatchable.
+    //
+    if (patsize == 0 || strsize == 0) {
+        return true;
+    }
+
+    for (pi = 0, si = 0; pi < patsize && si < strsize; ++pi, ++si) {
+        switch (p[pi]) {
+        case '*':
+            //
+            // Point to the character after the wildcard.
+            //
+            ++pi;
+
+            //
+            // If the wildcard is at the end of the pattern, we match
+            //
+            if (pi == patsize) {
+                return false;
+            }
+
+            //
+            // If the next character is another wildcard, we could go through
+            // a bunch of special case work to figure it all out, but in the
+            // spirit of simplicity we don't deal with it and return "different".
+            //
+            if (p[pi] == '*' || p[pi] == '?') {
+                return true;
+            }
+
+            //
+            // Scan forward in the string looking for the character after the
+            // wildcard.
+            //
+            for (; si < strsize; ++si) {
+                if (s[si] == p[pi]) {
+                    break;
+                }
+            }
+            break;
+
+        case '?':
+            //
+            // A question mark matches any character in the string.
+            //
+            break;
+
+        default:
+            //
+            // If no wildcard, we just compare character for character.
+            //
+            if (p[pi] != s[si]) {
+                return true;
+            }
+            break;
+        }
+    }
+
+    //
+    // If we fall through to here, we have matched all the way through one or
+    // both of the strings.  If pi == patsize and si == strsize then we matched
+    // all the way to the end of both strings and we have a match.
+    //
+    if (pi == patsize && si == strsize) {
+        return false;
+    }
+
+    //
+    // If pi < patsize and si == strsize there are characters in the pattern
+    // that haven't been matched.  The only way this can be a match is if
+    // that last character is a '*' meaning zero or more characters match.
+    //
+    if (pi < patsize && si == strsize) {
+        if (p[pi] == '*') {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    //
+    // The remaining chase is pi == patsize and si < strsize which means
+    // that we've got characters in the string that haven't been matched
+    // by the pattern.  There's no way this can be a match.
+    //
+    return true;
 }
 
 }

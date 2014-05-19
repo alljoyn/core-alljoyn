@@ -30,6 +30,7 @@
 #include <vector>
 #include <map>
 #include <qcc/String.h>
+#include <qcc/StringUtil.h>
 #include <qcc/ManagedObj.h>
 #include <qcc/IPAddress.h>
 #include <alljoyn/TransportMask.h>
@@ -2191,6 +2192,20 @@ class MDNSDefaultRData : public MDNSRData {
  */
 class MDNSTextRData : public MDNSRData {
   public:
+    struct Compare {
+        inline bool operator()(const qcc::String& s1, const qcc::String& s2) const {
+            size_t u1Pos = s1.find_last_of('_');
+            size_t u2Pos = s2.find_last_of('_');
+            if (u1Pos == qcc::String::npos || u2Pos == qcc::String::npos) {
+                return s1 < s2;
+            } else {
+                uint32_t n1 = (u1Pos == qcc::String::npos) ? 0 : qcc::StringToU32(s1.substr(u1Pos + 1));
+                uint32_t n2 = (u2Pos == qcc::String::npos) ? 0 : qcc::StringToU32(s2.substr(u2Pos + 1));
+                return n1 < n2;
+            }
+        }
+    };
+    typedef std::map<qcc::String, qcc::String, Compare> Fields;
 
     /**
      * @brief The TXT record version supported by the MDNS name service.
@@ -2202,7 +2217,7 @@ class MDNSTextRData : public MDNSRData {
      * @brief Construct an in-memory object representation of an on-the-wire
      * MDNS Text RData.
      */
-    MDNSTextRData(uint16_t version = TXTVERS);
+    MDNSTextRData(uint16_t version = TXTVERS, bool uniquifyKeys = false);
 
     /**
      * @internal
@@ -2241,6 +2256,13 @@ class MDNSTextRData : public MDNSRData {
 
     /**
      * @internal
+     * @brief Add/Set a key pair.
+     * @param key	The key to set.
+     */
+    void SetValue(qcc::String key);
+
+    /**
+     * @internal
      * @brief Get the value corresponding to a particular key in the map.
      * @param key	The key to get the value for.
      * @return The value in the map corresponding to the key.
@@ -2261,20 +2283,6 @@ class MDNSTextRData : public MDNSRData {
      * @param key	The key to remove
      */
     void RemoveEntry(qcc::String key);
-
-    /**
-     * @internal
-     * @brief Get the number of key value pairs in the map.
-     * @return The number of key value pairs in the map.
-     */
-    uint16_t GetNumFields() const;
-
-    /**
-     * @internal
-     * @brief Get the key value pairs map.
-     * @return The key value pairs map.
-     */
-    const std::map<qcc::String, qcc::String>& GetFields() const;
 
     /**
      * @internal
@@ -2329,10 +2337,11 @@ class MDNSTextRData : public MDNSRData {
     virtual size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
 
   private:
-    qcc::String GetText() const;
-
     uint16_t version;
-    std::map<qcc::String, qcc::String> m_fields;
+    uint16_t uniquifier;
+
+  protected:
+    Fields m_fields;
 };
 
 /**
@@ -2896,15 +2905,15 @@ class MDNSSearchRData : public MDNSTextRData {
      * @brief Construct an in-memory object representation of an on-the-wire
      * MDNS Search RData.
      */
-    MDNSSearchRData(uint16_t version = MDNSTextRData::TXTVERS) : MDNSTextRData(version) { }
+    MDNSSearchRData(uint16_t version = MDNSTextRData::TXTVERS) : MDNSTextRData(version, true) { }
 
     /**
      * @internal
      * @brief Construct an in-memory object representation of an on-the-wire
      * MDNS Search RData.
-     * @param wkn	The well known name to search for.
+     * @param name	The name to search for.
      */
-    MDNSSearchRData(qcc::String wkn, uint16_t version = MDNSTextRData::TXTVERS);
+    MDNSSearchRData(qcc::String name, uint16_t version = MDNSTextRData::TXTVERS);
 
     /**
      * @internal
@@ -2921,20 +2930,48 @@ class MDNSSearchRData : public MDNSTextRData {
 
     /**
      * @internal
-     * @brief Set the well known name for this Search RData.
-     * @param wkn The well known name to set.
+     * @brief Get the number of names in this Search RData.
+     * @return The number of names in this Search RData.
      */
-    void SetWellKnownName(qcc::String wkn);
+    uint16_t GetNumNames();
 
     /**
      * @internal
-     * @brief Get the wellknown name for this Search RData.
-     * @return The well known name contained in this Search RData.
+     * @brief Get the name at the particular index.
+     * @param index The index to get the name at
+     * @return The name at the desired index in this Search RData.
      */
-    qcc::String GetWellKnownName();
+    qcc::String GetNameAt(int index);
 
+    /**
+     * @internal
+     * @brief Add/Set a key value pair.
+     * @param key	The key to set.
+     * @param value	The value to set.
+     */
+    void SetValue(qcc::String key, qcc::String value);
+
+    /**
+     * @internal
+     * @brief Add/Set a key pair.
+     * @param key	The key to set.
+     */
+    void SetValue(qcc::String key);
+
+    /**
+     * @internal
+     * @brief Get the number of fields in this Search RData.
+     * @return The number of fields in this Search RData.
+     */
+    uint16_t GetNumFields();
+
+    /**
+     * @internal
+     * @brief Get the number of fields in this Search RData.
+     * @return The number of fields in this Search RData.
+     */
+    std::pair<qcc::String, qcc::String> GetFieldAt(int index);
 };
-
 
 /**
  * @internal
@@ -2955,9 +2992,9 @@ class MDNSPingRData : public MDNSTextRData {
      * @internal
      * @brief Construct an in-memory object representation of an on-the-wire
      * MDNS Ping RData.
-     * @param wkn	The well known name to search for.
+     * @param name	The name to search for.
      */
-    MDNSPingRData(qcc::String wkn, uint16_t version = MDNSTextRData::TXTVERS);
+    MDNSPingRData(qcc::String name, uint16_t version = MDNSTextRData::TXTVERS);
 
     /**
      * @internal
@@ -2975,9 +3012,9 @@ class MDNSPingRData : public MDNSTextRData {
     /**
      * @internal
      * @brief Set the well known name for this Search RData.
-     * @param wkn The well known name to set.
+     * @param name The well known name to set.
      */
-    void SetWellKnownName(qcc::String wkn);
+    void SetWellKnownName(qcc::String name);
 
     /**
      * @internal
@@ -3007,9 +3044,9 @@ class MDNSPingReplyRData : public MDNSTextRData {
      * @internal
      * @brief Construct an in-memory object representation of an on-the-wire
      * MDNS Ping RData.
-     * @param wkn	The well known name to search for.
+     * @param name	The name to search for.
      */
-    MDNSPingReplyRData(qcc::String wkn, uint16_t version = MDNSTextRData::TXTVERS);
+    MDNSPingReplyRData(qcc::String name, uint16_t version = MDNSTextRData::TXTVERS);
 
     /**
      * @internal
@@ -3027,9 +3064,9 @@ class MDNSPingReplyRData : public MDNSTextRData {
     /**
      * @internal
      * @brief Set the well known name for this Search RData.
-     * @param wkn The well known name to set.
+     * @param name The well known name to set.
      */
-    void SetWellKnownName(qcc::String wkn);
+    void SetWellKnownName(qcc::String name);
 
     /**
      * @internal
@@ -3049,7 +3086,7 @@ class MDNSPingReplyRData : public MDNSTextRData {
  * @brief A class representing an MDNSAdvertiseRData.
  *
  * MDNSAdvertiseRData is a specialization of MDNSTextData and contains a list of
- * well known names being advertised by the service.
+ * names being advertised by the service.
  */
 class MDNSAdvertiseRData : public MDNSTextRData {
   public:
@@ -3058,7 +3095,7 @@ class MDNSAdvertiseRData : public MDNSTextRData {
      * @brief Construct an in-memory object representation of an on-the-wire
      * MDNS Advertise RData.
      */
-    MDNSAdvertiseRData(uint16_t version = MDNSTextRData::TXTVERS) : MDNSTextRData(version) { }
+    MDNSAdvertiseRData(uint16_t version = MDNSTextRData::TXTVERS) : MDNSTextRData(version, true) { }
 
     /**
      * @internal
@@ -3081,27 +3118,49 @@ class MDNSAdvertiseRData : public MDNSTextRData {
 
     /**
      * @internal
-     * @brief Get the well known name at the particular index.
-     * @param index The index to get the well known name at
-     * @return The well known name at the desired index in this Advertise RData.
+     * @brief Get the name at the particular index.
+     * @param index The index to get the name at
+     * @return The name at the desired index in this Advertise RData.
      */
     qcc::String GetNameAt(int index);
 
     /**
      * @internal
-     * @brief Add a well known name for this Advertise RData.
-     * @param wkn The well known name to add.
+     * @brief Add a name for this Advertise RData.
+     * @param name The name to add.
      */
-    void AddName(qcc::String wkn);
+    void AddName(qcc::String name);
 
     void RemoveName(int index);
+
     /**
      * @internal
-     * @brief Get the number of well known names in this Advertise RData.
-     * @return The number of well known names in this Advertise RData.
+     * @brief Get the number of names in this Advertise RData.
+     * @return The number of names in this Advertise RData.
      */
     uint16_t GetNumNames();
 
+    /**
+     * @internal
+     * @brief Add/Set a key value pair.
+     * @param key	The key to set.
+     * @param value	The value to set.
+     */
+    void SetValue(qcc::String key, qcc::String value);
+
+    /**
+     * @internal
+     * @brief Get the number of fields in this Advertise RData.
+     * @return The number of fields in this Advertise RData.
+     */
+    uint16_t GetNumFields();
+
+    /**
+     * @internal
+     * @brief Get the number of fields in this Advertise RData.
+     * @return The number of fields in this Advertise RData.
+     */
+    std::pair<qcc::String, qcc::String> GetFieldAt(int index);
 };
 
 /**

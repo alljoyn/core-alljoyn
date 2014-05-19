@@ -2067,16 +2067,16 @@ size_t MDNSDefaultRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize,
 //MDNSTextRData
 const uint16_t MDNSTextRData::TXTVERS = 0;
 
-MDNSTextRData::MDNSTextRData(uint16_t version)
-    : version(version)
+MDNSTextRData::MDNSTextRData(uint16_t version, bool uniquifyKeys)
+    : version(version), uniquifier(uniquifyKeys ? 1 : 0)
 {
-    SetValue("txtvers", version);
+    m_fields["txtvers"] = U32ToString(version);
 }
 
 void MDNSTextRData::Reset()
 {
     m_fields.clear();
-    SetValue("txtvers", version);
+    m_fields["txtvers"] = U32ToString(version);
 }
 
 void MDNSTextRData::RemoveEntry(qcc::String key)
@@ -2084,40 +2084,28 @@ void MDNSTextRData::RemoveEntry(qcc::String key)
     m_fields.erase(key);
 }
 
-qcc::String MDNSTextRData::GetText() const
-{
-    String str = "";
-
-    map<String, String>::const_iterator it = m_fields.begin();
-
-    while (it != m_fields.end()) {
-        if (str != "") {
-            str += ",";
-        }
-        str += it->first + "=" + it->second;
-        it++;
-    }
-    return str;
-}
-
-uint16_t MDNSTextRData::GetNumFields() const
-{
-    return m_fields.size();
-}
-
-const std::map<qcc::String, qcc::String>& MDNSTextRData::GetFields() const
-{
-    return m_fields;
-}
-
 void MDNSTextRData::SetValue(String key, String value)
 {
+    if (uniquifier) {
+        key += "_" + U32ToString(uniquifier++);
+    }
     m_fields[key] = value;
 }
 
 void MDNSTextRData::SetValue(String key, uint16_t value)
 {
+    if (uniquifier) {
+        key += "_" + U32ToString(uniquifier++);
+    }
     m_fields[key] = U32ToString(value);
+}
+
+void MDNSTextRData::SetValue(String key)
+{
+    if (uniquifier) {
+        key += "_" + U32ToString(uniquifier++);
+    }
+    m_fields[key] = String();
 }
 
 String MDNSTextRData::GetValue(String key)
@@ -2140,7 +2128,7 @@ uint16_t MDNSTextRData::GetU16Value(String key) {
 size_t MDNSTextRData::GetSerializedSize(void) const
 {
     size_t rdlen = 0;
-    map<String, String>::const_iterator it = m_fields.begin();
+    Fields::const_iterator it = m_fields.begin();
 
     while (it != m_fields.end()) {
         String str = it->first + "=" + it->second;
@@ -2153,32 +2141,41 @@ size_t MDNSTextRData::GetSerializedSize(void) const
 size_t MDNSTextRData::Serialize(uint8_t* buffer) const
 {
     size_t rdlen = 0;
-    map<String, String>::const_iterator txtvers;
-    map<String, String>::const_iterator it;
     uint8_t* p = &buffer[2];
 
     //
     // txtvers must appear first in the record
     //
-    txtvers = m_fields.find("txtvers");
+    Fields::const_iterator txtvers = m_fields.find("txtvers");
     assert(txtvers != m_fields.end());
-    it = txtvers;
-    do {
-        String str = it->first + "=" + it->second;
+    String str = txtvers->first + "=" + txtvers->second;
+    *p++ = str.length();
+    memcpy(reinterpret_cast<void*>(p), const_cast<void*>(reinterpret_cast<const void*>(str.c_str())), str.length());
+    p += str.length();
+    rdlen += str.length() + 1;
+
+    //
+    // Then we rely on the Fields comparison object so make sure things are
+    // serialized in the proper order
+    //
+    for (Fields::const_iterator it = m_fields.begin(); it != m_fields.end(); ++it) {
+        if (it == txtvers) {
+            continue;
+        }
+        String str = it->first;
+        if (!it->second.empty()) {
+            str += "=" + it->second;
+        }
         *p++ = str.length();
         memcpy(reinterpret_cast<void*>(p), const_cast<void*>(reinterpret_cast<const void*>(str.c_str())), str.length());
         p += str.length();
         rdlen += str.length() + 1;
-        if (++it == m_fields.end()) {
-            it = m_fields.begin();
-        }
-    } while (it != txtvers);
+    }
 
     buffer[0] = (rdlen & 0xFF00) >> 8;
     buffer[1] = (rdlen & 0xFF);
 
     return rdlen + 2;
-
 }
 
 size_t MDNSTextRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
@@ -2211,15 +2208,17 @@ size_t MDNSTextRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, st
         if (bufsize < sz) {
             QCC_DbgPrintf(("MDNSTextRecord::Deserialize(): Insufficient bufsize %d", bufsize));
             return 0;
-
         }
         str.assign(reinterpret_cast<const char*>(p), sz);
         size_t eqPos = str.find_first_of('=', 0);
-        m_fields[str.substr(0, eqPos)] = str.substr(eqPos + 1);
+        if (eqPos != String::npos) {
+            m_fields[str.substr(0, eqPos)] = str.substr(eqPos + 1);
+        } else {
+            m_fields[str.substr(0, eqPos)] = String();
+        }
         p += sz;
         rdlen -= sz + 1;
         bufsize -= sz;
-
     }
 
     if (rdlen != 0) {
@@ -2590,81 +2589,168 @@ void MDNSAdvertiseRData::Reset()
 
 qcc::String MDNSAdvertiseRData::GetNameAt(int i)
 {
-    return MDNSTextRData::GetValue("wkn" + U32ToString(i));
-}
-
-void MDNSAdvertiseRData::AddName(qcc::String wkn)
-{
-    int index = MDNSTextRData::GetNumFields();
-    MDNSTextRData::SetValue("wkn" + U32ToString(index), wkn);
-}
-
-void MDNSAdvertiseRData::RemoveName(int index)
-{
-    int total = MDNSTextRData::GetNumFields();
-
-    MDNSTextRData::RemoveEntry("wkn" + U32ToString(index));
-    for (int i = index + 1; i < total; i++) {
-        String temp = MDNSTextRData::GetValue("wkn" + U32ToString(i));
-        MDNSTextRData::RemoveEntry("wkn" + U32ToString(i));
-        MDNSTextRData::SetValue("wkn" + U32ToString(i - 1), temp);
+    Fields::const_iterator it = m_fields.lower_bound("n_");
+    while (i--) {
+        ++it;
     }
+    return it->second;
+}
+
+void MDNSAdvertiseRData::AddName(qcc::String name)
+{
+    MDNSTextRData::SetValue("n", name);
+}
+
+void MDNSAdvertiseRData::RemoveName(int i)
+{
+    Fields::const_iterator it = m_fields.lower_bound("n_");
+    while (i--) {
+        ++it;
+    }
+    MDNSTextRData::RemoveEntry(it->first);
 }
 
 uint16_t MDNSAdvertiseRData::GetNumNames()
 {
-    return MDNSTextRData::GetNumFields() - 1 /* txtvers */;
+    uint16_t numNames = 0;
+    for (Fields::const_iterator it = m_fields.lower_bound("n_"); it != m_fields.end() && it->first.find("n_") == 0; ++it) {
+        ++numNames;
+    }
+    return numNames;
+}
+
+void MDNSAdvertiseRData::SetValue(String key, String value)
+{
+    //
+    // Commonly used keys name and implements get abbreviated over the air.
+    //
+    if (key == "name") {
+        MDNSTextRData::SetValue("n", value);
+    } else if (key == "implements") {
+        MDNSTextRData::SetValue("i", value);
+    } else {
+        MDNSTextRData::SetValue(key, value);
+    }
+}
+
+uint16_t MDNSAdvertiseRData::GetNumFields()
+{
+    return m_fields.size();
+}
+
+std::pair<qcc::String, qcc::String> MDNSAdvertiseRData::GetFieldAt(int i)
+{
+    Fields::const_iterator it = m_fields.begin();
+    while (i--) {
+        ++it;
+    }
+    String key = it->first;
+    key = key.substr(0, key.find_last_of('_'));
+    if (key == "n") {
+        key = "name";
+    } else if (key == "i") {
+        key = "implements";
+    }
+    return pair<String, String>(key, it->second);
 }
 
 //MDNSSearchRecord
-MDNSSearchRData::MDNSSearchRData(qcc::String wkn, uint16_t version)
+MDNSSearchRData::MDNSSearchRData(qcc::String name, uint16_t version)
+    : MDNSTextRData(version, true)
+{
+    MDNSTextRData::SetValue("n", name);
+}
+
+uint16_t MDNSSearchRData::GetNumNames()
+{
+    uint16_t numNames = 0;
+    for (Fields::const_iterator it = m_fields.lower_bound("n_"); it != m_fields.end() && it->first.find("n_") == 0; ++it) {
+        ++numNames;
+    }
+    return numNames;
+}
+
+qcc::String MDNSSearchRData::GetNameAt(int i)
+{
+    Fields::const_iterator it = m_fields.lower_bound("n_");
+    while (i--) {
+        ++it;
+    }
+    return it->second;
+}
+
+void MDNSSearchRData::SetValue(String key, String value)
+{
+    //
+    // Commonly used keys name and implements get abbreviated over the air.
+    //
+    if (key == "name") {
+        MDNSTextRData::SetValue("n", value);
+    } else if (key == "implements") {
+        MDNSTextRData::SetValue("i", value);
+    } else {
+        MDNSTextRData::SetValue(key, value);
+    }
+}
+
+void MDNSSearchRData::SetValue(String key)
+{
+    MDNSTextRData::SetValue(key);
+}
+
+uint16_t MDNSSearchRData::GetNumFields()
+{
+    return m_fields.size();
+}
+
+std::pair<qcc::String, qcc::String> MDNSSearchRData::GetFieldAt(int i)
+{
+    Fields::const_iterator it = m_fields.begin();
+    while (i--) {
+        ++it;
+    }
+    String key = it->first;
+    key = key.substr(0, key.find_last_of('_'));
+    if (key == "n") {
+        key = "name";
+    } else if (key == "i") {
+        key = "implements";
+    }
+    return pair<String, String>(key, it->second);
+}
+
+//MDNSPingRecord
+MDNSPingRData::MDNSPingRData(qcc::String name, uint16_t version)
     : MDNSTextRData(version)
 {
-    MDNSTextRData::SetValue("wkn", wkn);
-}
-
-String MDNSSearchRData::GetWellKnownName()
-{
-    return MDNSTextRData::GetValue("wkn");
-}
-
-void MDNSSearchRData::SetWellKnownName(qcc::String wkn)
-{
-    MDNSTextRData::SetValue("wkn", wkn);
-}
-
-////MDNSPingRecord
-MDNSPingRData::MDNSPingRData(qcc::String wkn, uint16_t version)
-    : MDNSTextRData(version)
-{
-    MDNSTextRData::SetValue("wkn", wkn);
+    MDNSTextRData::SetValue("n", name);
 }
 
 String MDNSPingRData::GetWellKnownName()
 {
-    return MDNSTextRData::GetValue("wkn");
+    return MDNSTextRData::GetValue("n");
 }
 
-void MDNSPingRData::SetWellKnownName(qcc::String wkn)
+void MDNSPingRData::SetWellKnownName(qcc::String name)
 {
-    MDNSTextRData::SetValue("wkn", wkn);
+    MDNSTextRData::SetValue("n", name);
 }
 
-////MDNSPingReplyRecord
-MDNSPingReplyRData::MDNSPingReplyRData(qcc::String wkn, uint16_t version)
+//MDNSPingReplyRecord
+MDNSPingReplyRData::MDNSPingReplyRData(qcc::String name, uint16_t version)
     : MDNSTextRData(version)
 {
-    MDNSTextRData::SetValue("wkn", wkn);
+    MDNSTextRData::SetValue("n", name);
 }
 
 String MDNSPingReplyRData::GetWellKnownName()
 {
-    return MDNSTextRData::GetValue("wkn");
+    return MDNSTextRData::GetValue("n");
 }
 
-void MDNSPingReplyRData::SetWellKnownName(qcc::String wkn)
+void MDNSPingReplyRData::SetWellKnownName(qcc::String name)
 {
-    MDNSTextRData::SetValue("wkn", wkn);
+    MDNSTextRData::SetValue("n", name);
 }
 
 String MDNSPingReplyRData::GetReplyCode()
@@ -2683,7 +2769,6 @@ MDNSSenderRData::MDNSSenderRData(uint16_t searchId, qcc::String ipv4Addr, uint16
                                  qcc::String ipv6Addr, uint16_t ipv6Port, TransportMask transportMask, String guid, uint16_t version)
     : MDNSTextRData(version)
 {
-
     MDNSTextRData::SetValue("sid", searchId);
     MDNSTextRData::SetValue("pv", NS_VERSION);
     MDNSTextRData::SetValue("upcv4", ipv4Port);

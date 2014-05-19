@@ -557,14 +557,14 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      *
      * @param[in] transportMask A bitmask containing the transport requesting the
      *     discovery operation.
-     * @param[in] wkn The AllJoyn well-known name to find (e.g.,
-     *     "org.freedesktop.Sensor").  Wildcards are supported in the
-     *     sense of Linux shell wildcards.  See fnmatch(3C) for details.
+     * @param[in] matching The Key, value match criteria that the caller wants
+     *     to be notified of (via signal) when a remote Bus instance is found
+     *     with an advertisement that matches the criteria.
      * @param[in] policy The retransmission policy for this Locate event.
      *
      * @return Status of the operation.  Returns ER_OK on success.
      */
-    QStatus FindAdvertisedName(TransportMask transportMask, const qcc::String& wkn, LocatePolicy policy = ALWAYS_RETRY);
+    QStatus FindAdvertisement(TransportMask transportMask, const qcc::String& matching, LocatePolicy policy = ALWAYS_RETRY);
 
     /**
      * @brief Set the Callback for notification of discovery events.

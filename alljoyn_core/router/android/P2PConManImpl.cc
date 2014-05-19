@@ -402,22 +402,22 @@ QStatus P2PConManImpl::CreateTemporaryNetwork(const qcc::String& device, int32_t
         // service running in service B to do the discovery of service A.
         //
         // In the scenario above, we are service B and so we need to do a
-        // FindAdvertisedName() in order to locate any services on the other
+        // FindAdvertisement() in order to locate any services on the other
         // side which would correspond to service A.
         //
-        // If we can't do the FindAdvertisedName(), it's not the end of the
+        // If we can't do the FindAdvertisement(), it's not the end of the
         // world since the name service on the other side will do its periodic
         // retransmission within about 40 seconds, so we just log an error but
         // otherwise do nothing.
         //
         // The take away from this is taht it's not at all accidental that a
-        // service is doing a FindAdvertisedName() here.
+        // service is doing a FindAdvertisement() here.
         //
         qcc::String star("*");
-        QCC_DbgPrintf(("P2PConManImpl::CreateTemporaryNetwork(): FindAdvertisedName() for GO"));
-        QStatus status = IpNameService::Instance().FindAdvertisedName(TRANSPORT_WFD, star);
+        QCC_DbgPrintf(("P2PConManImpl::CreateTemporaryNetwork(): FindAdvertisement() for GO"));
+        QStatus status = IpNameService::Instance().FindAdvertisement(TRANSPORT_WFD, star);
         if (status != ER_OK) {
-            QCC_LogError(status, ("P2PConManImpl::CreateConnectSpec(): FindAdvertisedName(): Failure"));
+            QCC_LogError(status, ("P2PConManImpl::CreateConnectSpec(): FindAdvertisement(): Failure"));
         }
 
         m_connState = CONN_READY;
@@ -688,7 +688,7 @@ QStatus P2PConManImpl::DestroyTemporaryNetwork(void)
     // conceptually free the resources associated with the link.
     //
     qcc::String star("*");
-    IpNameService::Instance().CancelFindAdvertisedName(TRANSPORT_WFD, star);
+    IpNameService::Instance().CancelFindAdvertisement(TRANSPORT_WFD, star);
 
     //
     // Tell the IP name service to forget about calling us back since we no
@@ -858,7 +858,7 @@ QStatus P2PConManImpl::CreateConnectSpec(const qcc::String& device, const qcc::S
     // some serious implementation-related limitations that prevent it from
     // behaving like the generic name service we expect.
     //
-    // As a result of the FindAdvertisedName("*"), all daemons will respond
+    // As a result of the FindAdvertisement("*"), all daemons will respond
     // with all of their services.  Some of these advertisements may be new
     // advertisements from other devices already associated with the daemon
     // hosting the group, but one of those advertisements will be the list of
@@ -883,11 +883,11 @@ QStatus P2PConManImpl::CreateConnectSpec(const qcc::String& device, const qcc::S
     // possible after the initial connection is made.
     //
     qcc::String star("*");
-    QCC_DbgPrintf(("P2PConManImpl::CreateConnectSpec(): FindAdvertisedName()"));
-    QStatus status = IpNameService::Instance().FindAdvertisedName(TRANSPORT_WFD, star);
+    QCC_DbgPrintf(("P2PConManImpl::CreateConnectSpec(): FindAdvertisement()"));
+    QStatus status = IpNameService::Instance().FindAdvertisement(TRANSPORT_WFD, star);
     if (status != ER_OK) {
         m_discoverLock.Unlock(MUTEX_CONTEXT);
-        QCC_LogError(status, ("P2PConManImpl::CreateConnectSpec(): FindAdvertisedName(): Failure"));
+        QCC_LogError(status, ("P2PConManImpl::CreateConnectSpec(): FindAdvertisement(): Failure"));
         return status;
     }
 

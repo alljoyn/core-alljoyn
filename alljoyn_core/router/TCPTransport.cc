@@ -2244,14 +2244,14 @@ void TCPTransport::EnableDiscoveryInstance(ListenRequest& listenRequest)
     }
 
     /*
-     * We think we're ready to send the FindAdvertisedName.  Are we really?
+     * We think we're ready to send the FindAdvertisement.  Are we really?
      */
     assert(m_isListening);
     assert(m_listenPort);
     assert(m_isNsEnabled);
     assert(IpNameService::Instance().Started() && "TCPTransport::EnableDiscoveryInstance(): IpNameService not started");
 
-    QStatus status = IpNameService::Instance().FindAdvertisedName(TRANSPORT_TCP, listenRequest.m_requestParam);
+    QStatus status = IpNameService::Instance().FindAdvertisement(TRANSPORT_TCP, listenRequest.m_requestParam);
     if (status != ER_OK) {
         QCC_LogError(status, ("TCPTransport::EnableDiscoveryInstance(): Failed to begin discovery with multicast NS \"%s\"", listenRequest.m_requestParam.c_str()));
     }

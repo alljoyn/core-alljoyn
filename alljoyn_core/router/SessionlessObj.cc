@@ -1056,9 +1056,19 @@ void SessionlessObj::CancelAdvertisedName(const qcc::String& name)
 void SessionlessObj::FindAdvertisedNames()
 {
     for (RuleIterator rit = rules.begin(); rit != rules.end(); ++rit) {
-        String name = "wkn='" + (rit->second.iface.empty() ? WildcardInterfaceName : rit->second.iface) + ".sl.'";
-        for (vector<String>::const_iterator iit = rit->second.implements.begin(); iit != rit->second.implements.end(); ++iit) {
-            name += ",implements='" + *iit + "'";
+        String name;
+        if (rit->second.implements.empty()) {
+            name = "name='" + (rit->second.iface.empty() ? WildcardInterfaceName : rit->second.iface) + ".sl.*'";
+        } else {
+            for (vector<String>::const_iterator iit = rit->second.implements.begin(); iit != rit->second.implements.end(); ++iit) {
+                if (!name.empty()) {
+                    name += ",";
+                }
+                name += "implements='" + *iit + "'";
+            }
+        }
+        if (name.empty()) {
+            continue;
         }
         if (findingNames.insert(name).second) {
             QCC_DbgPrintf(("FindAdvertisement(%s)", name.c_str()));
@@ -1073,7 +1083,7 @@ void SessionlessObj::FindAdvertisedNames()
          * If we're finding anything, we always need to find the v0
          * advertisement for backwards compatibility.
          */
-        String name = String("wkn='") + WildcardInterfaceName + ".sl.'";
+        String name = String("name='") + WildcardInterfaceName + ".sl.*'";
         if (findingNames.insert(name).second) {
             QCC_DbgPrintf(("FindAdvertisement(%s)", name.c_str()));
             QStatus status = FindAdvertisementByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
@@ -1203,44 +1213,68 @@ bool SessionlessObj::QueryHandler(TransportMask transport, MDNSPacket query, uin
     if (!query->GetAdditionalRecord("search.", MDNSResourceRecord::TXT, &searchRecord)) {
         return false;
     }
-    MDNSTextRData* searchRData = static_cast<MDNSTextRData*>(searchRecord->GetRData());
+    MDNSSearchRData* searchRData = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
     if (!searchRData) {
         QCC_DbgPrintf(("Ignoring query with invalid search info"));
         return false;
     }
 
-    const map<String, String>& fields = searchRData->GetFields();
-    for (map<String, String>::const_iterator sit = fields.begin(); sit != fields.end(); ++sit) {
-        if (sit->first == "implements") {
-            String ruleStr = "implements='" + sit->second + "'";
-            Rule rule(ruleStr.c_str());
-            lock.Lock();
-            for (LocalCache::iterator mit = localCache.begin(); mit != localCache.end(); ++mit) {
-                Message& msg = mit->second.second;
-                if (rule.IsMatch(msg)) {
-                    MDNSPacket response;
-                    response->SetDestination(ns4);
-                    MDNSTextRData* advRData = new MDNSTextRData();
-                    String name = AdvertisedName(msg->GetInterface(), lastAdvertisements[msg->GetInterface()]);
-                    advRData->SetValue("wkn", name);
-                    advRData->SetValue("implements", sit->second);
-                    MDNSResourceRecord advertiseRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
-                    response->AddAdditionalRecord(advertiseRecord);
-                    QStatus status = IpNameService::Instance().Response(transport, response);
-                    if (ER_OK == status) {
-                        QCC_DbgPrintf(("Sent implements response for %s (name=%s)", sit->second.c_str(), name.c_str()));
-                        lock.Unlock();
-                        return true;
-                    } else {
-                        QCC_LogError(status, ("Response failed"));
-                    }
-                }
+    bool sentResponse = false;
+    String ruleStr;
+    for (int i = 0; !sentResponse && i < searchRData->GetNumFields(); ++i) {
+        pair<String, String> field = searchRData->GetFieldAt(i);
+        if (field.first == "implements") {
+            if (!ruleStr.empty()) {
+                ruleStr += ",";
             }
-            lock.Unlock();
+            ruleStr += "implements='" + field.second + "'";
+        } else if (field.first == ";") {
+            sentResponse = SendResponseIfMatch(transport, ns4, ruleStr);
+            ruleStr.clear();
+        }
+    }
+    if (!sentResponse) {
+        sentResponse = SendResponseIfMatch(transport, ns4, ruleStr);
+    }
+    return sentResponse;
+}
+
+bool SessionlessObj::SendResponseIfMatch(TransportMask transport, const qcc::IPEndpoint& ns4, const qcc::String& ruleStr)
+{
+    if (ruleStr.empty()) {
+        return false;
+    }
+
+    bool sendResponse = false;
+    Rule rule(ruleStr.c_str());
+    String name;
+    lock.Lock();
+    for (LocalCache::iterator mit = localCache.begin(); mit != localCache.end(); ++mit) {
+        Message& msg = mit->second.second;
+        if (rule.IsMatch(msg)) {
+            name = AdvertisedName(msg->GetInterface(), lastAdvertisements[msg->GetInterface()]);
+            sendResponse = true;
+            break;
+        }
+    }
+    lock.Unlock();
+
+    if (sendResponse) {
+        MDNSPacket response;
+        response->SetDestination(ns4);
+        MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
+        advRData->SetValue("name", name);
+        MDNSResourceRecord advertiseRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
+        response->AddAdditionalRecord(advertiseRecord);
+        QStatus status = IpNameService::Instance().Response(transport, response);
+        if (ER_OK == status) {
+            QCC_DbgPrintf(("Sent implements response for name=%s", name.c_str()));
+        } else {
+            QCC_LogError(status, ("Response failed"));
         }
     }
 
-    return false;
+    return sendResponse;
 }
 
 bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort)
@@ -1249,7 +1283,7 @@ bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket respons
     if (!response->GetAdditionalRecord("advertise.", MDNSResourceRecord::TXT, &advRecord)) {
         return false;
     }
-    MDNSTextRData* advRData = static_cast<MDNSTextRData*>(advRecord->GetRData());
+    MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
     if (!advRData) {
         QCC_DbgPrintf(("Ignoring response with invalid advertisement info"));
         return false;
@@ -1266,26 +1300,41 @@ bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket respons
         }
 
         String name;
-        size_t implements = 0;
-        // TODO Need to handle multiple matches in a response, this code behaves as if only one match in response
-        const map<String, String>& fields = advRData->GetFields();
-        for (map<String, String>::const_iterator it = fields.begin(); it != fields.end(); ++it) {
-            if (it->first.find("wkn") == 0) {
-                name = it->second;
-            } else if ((it->first.find("implements") == 0) &&
-                       (std::find(rule.implements.begin(), rule.implements.end(), it->second) != rule.implements.end())) {
-                ++implements;
+        for (int i = 0; i < advRData->GetNumFields(); ++i) {
+            pair<String, String> field = advRData->GetFieldAt(i);
+            if ((field.first == "name") && (field.second.find(rule.iface) == 0)) {
+                name = field.second;
+            } else if (field.first == ";") {
+                /*
+                 * We always want to fetch advertisements received on the
+                 * multicast port (the unsolicited case).  We only want to fetch
+                 * advertisements received on the unicast port when they are a
+                 * response to our implements query.
+                 *
+                 * The check for only 1 name in the response is what determines
+                 * that the response is to our implements query.  The situation
+                 * is that a unicast response may include all the names
+                 * advertised by the responder, even ones we didn't ask for.  So
+                 * since we never explicitly ask for org.alljoyn.About.sl names
+                 * then if there's more than 1 name in the response the response
+                 * must have been for a different query.
+                 */
+                if (!name.empty() && (recvPort == IpNameService::MULTICAST_MDNS_PORT ||
+                                      advRData->GetNumNames() == 1)) {
+                    QCC_DbgPrintf(("Received %s implements response (name=%s)",
+                                   (recvPort == IpNameService::MULTICAST_MDNS_PORT ? "unsolicited" : "solicited"),
+                                   name.c_str()));
+                    FoundAdvertisedNameHandler(name.c_str(), transport, name.c_str());
+                }
+                name.clear();
             }
         }
 
-        if (name.find(rule.iface) == 0) {
-            if (recvPort == IpNameService::MULTICAST_MDNS_PORT) {
-                QCC_DbgPrintf(("Received unsolicited response (name=%s)", name.c_str()));
-            } else if (implements == rule.implements.size()) {
-                QCC_DbgPrintf(("Received implements response (name=%s)", name.c_str()));
-            } else {
-                continue;
-            }
+        if (!name.empty() && (recvPort == IpNameService::MULTICAST_MDNS_PORT ||
+                              advRData->GetNumNames() == 1)) {
+            QCC_DbgPrintf(("Received %s implements response (name=%s)",
+                           (recvPort == IpNameService::MULTICAST_MDNS_PORT ? "unsolicited" : "solicited"),
+                           name.c_str()));
             FoundAdvertisedNameHandler(name.c_str(), transport, name.c_str());
         }
     }
