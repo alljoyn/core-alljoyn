@@ -31,7 +31,7 @@
 #define USE_SG_LIST 1
 
 #if USE_SG_LIST
-#include "posix/ScatterGatherList.h"
+#include "ScatterGatherList.h"
 #else
 #include <errno.h>
 #endif /* USE_SG_LIST */
