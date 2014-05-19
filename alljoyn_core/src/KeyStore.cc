@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -164,7 +164,8 @@ KeyStore::KeyStore(const qcc::String& application) :
     keyStoreKey(NULL),
     shared(false),
     stored(NULL),
-    loaded(NULL)
+    loaded(NULL),
+    keyEventListener(NULL)
 {
 }
 
@@ -204,6 +205,16 @@ QStatus KeyStore::SetListener(KeyStoreListener& listener)
         this->listener = new ProtectedKeyStoreListener(&listener);
         return ER_OK;
     }
+}
+
+/**
+ * Setup the key event listener.
+ *
+ * @param listener  The listener that will listen to key event.
+ */
+QStatus KeyStore::SetKeyEventListener(KeyStoreKeyEventListener* listener) {
+    keyEventListener = listener;
+    return ER_OK;
 }
 
 QStatus KeyStore::SetDefaultListener()
@@ -302,21 +313,35 @@ QStatus KeyStore::Load()
 size_t KeyStore::EraseExpiredKeys()
 {
     size_t count = 0;
-    KeyMap::iterator it = keys->begin();
-    while (it != keys->end()) {
-        KeyMap::iterator current = it++;
-        if (current->second.key.HasExpired()) {
-            QCC_DbgPrintf(("Deleting expired key for GUID %s", current->first.ToString().c_str()));
-            keys->erase(current);
-            ++count;
+    bool dirty = true;
+    while (dirty) {
+        dirty = false;
+        KeyMap::iterator it = keys->begin();
+        while (it != keys->end()) {
+            KeyMap::iterator current = it++;
+            if (current->second.key.HasExpired()) {
+                QCC_DbgPrintf(("Deleting expired key for GUID %s", current->first.ToString().c_str()));
+                bool affected = false;
+                if (keyEventListener) {
+                    affected = keyEventListener->NotifyAutoDelete(this, current->first);
+                }
+                keys->erase(current);
+                ++count;
+                dirty = true;
+                if (affected) {
+                    break;  /* need to refresh the iterator because the list members may have changed by the NotifyAutoDelete call */
+                }
+            }
         }
-    }
+    } /* clean sweep */
+
     return count;
 }
 
 QStatus KeyStore::Pull(Source& source, const qcc::String& password)
 {
     QCC_DbgPrintf(("KeyStore::Pull"));
+
 
     /* Don't load if already loaded */
     if (storeState != UNAVAILABLE) {
@@ -734,4 +759,42 @@ QStatus KeyStore::GetKeyExpiration(const qcc::GUID128& guid, Timespec& expiratio
     return status;
 }
 
+QStatus KeyStore::SearchAssociatedKeys(const qcc::GUID128& guid, qcc::GUID128** list, size_t* numItems) {
+    size_t count = 0;
+    lock.Lock(MUTEX_CONTEXT);
+    for (KeyMap::iterator it = keys->begin(); it != keys->end(); ++it) {
+        if ((it->second.key.GetAssociationMode() != KeyBlob::ASSOCIATE_MEMBER)
+            && (it->second.key.GetAssociationMode() != KeyBlob::ASSOCIATE_BOTH)) {
+            continue;
+        }
+        if (it->second.key.GetAssociation() == guid) {
+            count++;
+        }
+    }
+    if (count == 0) {
+        *numItems = count;
+        lock.Unlock(MUTEX_CONTEXT);
+        return ER_OK;
+    }
+
+    qcc::GUID128*guids = new qcc::GUID128[count];
+    size_t idx = 0;
+    for (KeyMap::iterator it = keys->begin(); it != keys->end(); ++it) {
+        if ((it->second.key.GetAssociationMode() != KeyBlob::ASSOCIATE_MEMBER)
+            && (it->second.key.GetAssociationMode() != KeyBlob::ASSOCIATE_BOTH)) {
+            continue;
+        }
+        if (it->second.key.GetAssociation() == guid) {
+            if (idx >= count) { /* bound check */
+                delete [] guids;
+                return ER_FAIL;
+            }
+            guids[idx++] = it->first;
+        }
+    }
+    *numItems = count;
+    *list = guids;
+    lock.Unlock(MUTEX_CONTEXT);
+    return ER_OK;
+}
 }

@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2013, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -820,6 +820,7 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
 
     /* If there are no auth mechanisms peer security is being disabled. */
     if (authMechanisms) {
+        busInternal->keyStore.SetKeyEventListener(&busInternal->ksKeyEventListener);
         status = busInternal->keyStore.Init(keyStoreFileName, isShared);
         if (status == ER_OK) {
             /* Register peer-to-peer authentication mechanisms */
@@ -2246,6 +2247,33 @@ QStatus BusAttachment::OnAppResume()
         QCC_LogError(status, ("%s.OnAppResume returned ERROR_MESSAGE (error=%s)", org::alljoyn::Bus::InterfaceName, reply->GetErrorDescription().c_str()));
     }
     return status;
+}
+
+bool KeyStoreKeyEventListener::NotifyAutoDelete(KeyStore* holder, const qcc::GUID128& guid)
+{
+    KeyBlob kb;
+    QStatus status = holder->GetKey(guid, kb);
+    if (status != ER_OK) {
+        return false;
+    }
+    if ((kb.GetAssociationMode() != KeyBlob::ASSOCIATE_HEAD) &&
+        (kb.GetAssociationMode() != KeyBlob::ASSOCIATE_BOTH)) {
+        return false;
+    }
+    qcc::GUID128* list;
+    size_t numItems;
+    status = holder->SearchAssociatedKeys(guid, &list, &numItems);
+    if (status != ER_OK) {
+        return false;
+    }
+    if (numItems == 0) {
+        return false;
+    }
+    for (size_t cnt = 0; cnt < numItems; cnt++) {
+        status = holder->DelKey(list[cnt]);
+    }
+    delete [] list;
+    return true;
 }
 
 }

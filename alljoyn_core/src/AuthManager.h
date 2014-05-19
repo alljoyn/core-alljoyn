@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -113,7 +113,10 @@ class AuthManager {
         while (!list.empty()) {
             size_t pos = list.find_first_of(' ');
             qcc::String name = list.substr(0, pos);
-            if (!authMechanisms.count(name)) {
+            if (name == "ALLJOYN_ECDHE_NULL") {
+            } else if (name == "ALLJOYN_ECDHE_PSK") {
+            } else if (name == "ALLJOYN_ECDHE_ECDSA") {
+            } else if (!authMechanisms.count(name)) {
                 status = ER_BUS_INVALID_AUTH_MECHANISM;
                 QCC_LogError(status, ("Unknown authentication mechanism %s", name.c_str()));
                 break;

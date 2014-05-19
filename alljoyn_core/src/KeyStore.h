@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -45,6 +45,9 @@
 
 
 namespace ajn {
+
+/* forward decl */
+class KeyStoreKeyEventListener;
 
 /**
  * The %KeyStore class manages the storing and loading of key blobs from
@@ -207,6 +210,13 @@ class KeyStore {
     QStatus SetListener(KeyStoreListener& listener);
 
     /**
+     * Setup the key event listener.
+     *
+     * @param listener  The listener that will listen to key event.
+     */
+    QStatus SetKeyEventListener(KeyStoreKeyEventListener* listener);
+
+    /**
      * Restores the default listener
      *
      */
@@ -262,6 +272,17 @@ class KeyStore {
      * @return  Returns true if the key store is shared between multiple applications.
      */
     bool IsShared() { return shared; }
+
+    /**
+     * Search for associated keys with the given guid
+     * @param guid  The header guid
+     * @param list  The output list of associated guids.  This list must be deallocated after used.
+     * @param numItems The output size of the list
+     * @return
+     *      - ER_OK if successful
+     *      - An error status otherwise
+     */
+    QStatus SearchAssociatedKeys(const qcc::GUID128& guid, qcc::GUID128** list, size_t* numItems);
 
   private:
 
@@ -375,6 +396,25 @@ class KeyStore {
      * Event for synchronizing load requests
      */
     qcc::Event* loaded;
+
+    /* the key event listener */
+    KeyStoreKeyEventListener* keyEventListener;
+
+};
+
+class KeyStoreKeyEventListener {
+  public:
+    KeyStoreKeyEventListener() { }
+    virtual ~KeyStoreKeyEventListener() { }
+
+    /**
+     * When the keystore auto delete a key because of expiration, this listener will be notified.
+     * @param holder the keystore
+     * @param guid the effected guid
+     * @return true if there are other guids affected; false, if only this guid is effected.
+     */
+
+    virtual bool NotifyAutoDelete(KeyStore* holder, const qcc::GUID128& guid);
 };
 
 }
