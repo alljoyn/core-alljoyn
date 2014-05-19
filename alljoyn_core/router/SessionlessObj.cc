@@ -126,6 +126,8 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController) :
 
 SessionlessObj::~SessionlessObj()
 {
+    IpNameService::Instance().UnregisterListener(*this);
+
     /* Unbind session port */
     bus.UnbindSessionPort(sessionPort);
 
@@ -226,6 +228,8 @@ QStatus SessionlessObj::Init()
     if (ER_OK == status) {
         status = bus.RegisterBusObject(*this);
     }
+
+    IpNameService::Instance().RegisterListener(*this);
 
     return status;
 }
@@ -1178,6 +1182,19 @@ bool SessionlessObj::IsMatch(RemoteCache& cache, uint32_t fromRulesId, uint32_t 
             return true;
         }
     }
+    return false;
+}
+
+bool SessionlessObj::QueryHandler(TransportMask transport, MDNSPacket mdnsPacket, uint16_t recvPort,
+                                  const qcc::String& guid, const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6)
+{
+    QCC_LogError(ER_NONE, ("QueryHandler"));
+    return false;
+}
+
+bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket mdnsPacket, uint16_t recvPort)
+{
+    QCC_LogError(ER_NONE, ("ResponseHandler"));
     return false;
 }
 

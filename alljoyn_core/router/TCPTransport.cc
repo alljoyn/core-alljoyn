@@ -819,7 +819,6 @@ void* _TCPEndpoint::AuthThread::Run(void* arg)
 TCPTransport::TCPTransport(BusAttachment& bus)
     : Thread("TCPTransport"), m_bus(bus), m_stopping(false), m_listener(0),
     m_foundCallback(m_listener),
-    m_pingCallback(m_listener),
     m_isAdvertising(false), m_isDiscovering(false), m_isListening(false),
     m_isNsEnabled(false), m_reload(STATE_RELOADING),
     m_listenPort(0), m_nsReleaseCount(0),
@@ -966,18 +965,6 @@ QStatus TCPTransport::Start()
                                               (&m_foundCallback, &FoundCallback::Found));
 
     /*
-     * Tell the name service to call us back on our PingCallback method when
-     * we hear a ping response.
-     */
-    IpNameService::Instance().SetPingCallback(TRANSPORT_TCP,
-                                              new CallbackImpl<PingCallback, void, const qcc::String&, const qcc::String&>
-                                                  (&m_pingCallback, &PingCallback::Ping));
-
-    IpNameService::Instance().SetPingReplyCallback(TRANSPORT_TCP,
-                                                   new CallbackImpl<PingCallback, void, TransportMask, const qcc::String&, uint32_t>
-                                                       (&m_pingCallback, &PingCallback::PingReply));
-
-    /*
      * Start the server accept loop through the thread base class.  This will
      * close or open the IsRunning() gate we use to control access to our
      * public API.
@@ -994,13 +981,6 @@ QStatus TCPTransport::Stop(void)
      * call Stop() on a stopped transport.
      */
     m_stopping = true;
-
-    /*
-     * Tell the name service to stop calling us back if it's there (we may get
-     * called more than once in the chain of destruction) so the pointer is not
-     * required to be non-NULL.
-     */
-    IpNameService::Instance().SetPingCallback(TRANSPORT_TCP, NULL);
 
     /*
      * Tell the name service to stop calling us back if it's there (we may get
@@ -2002,14 +1982,6 @@ void TCPTransport::RunListenMachine(ListenRequest& listenRequest)
     case DISABLE_DISCOVERY_INSTANCE:
         DisableDiscoveryInstance(listenRequest);
         break;
-
-    case PING_INSTANCE:
-        PingInstance(listenRequest);
-        break;
-
-    case PING_REPLY:
-        PingReply(listenRequest);
-        break;
     }
 }
 
@@ -2356,125 +2328,6 @@ void TCPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
         m_isDiscovering = false;
     }
 }
-
-void TCPTransport::PingInstance(ListenRequest& listenRequest)
-{
-    QCC_DbgPrintf(("TCPTransport::PingInstance()"));
-    QCC_LogError(ER_OK, ("TCPTransport::PingInstance()"));
-    // TODO Review all of the below
-    // I removed the NewXXXOp code, not sure if I actually need that yet
-    // I need the NS enabled, and the NS enable needs a listen port, so must be listening too (I think)
-
-    /*
-     * If we don't have any listeners up and running, we need to get them
-     * up.  If this is a Windows box, the listeners will start running
-     * immediately and will never go down, so they may already be running.
-     */
-    if (!m_isListening) {
-        for (list<qcc::String>::iterator i = m_listening.begin(); i != m_listening.end(); ++i) {
-            QStatus status = DoStartListen(*i);
-            if (ER_OK != status) {
-                continue;
-            }
-            assert(m_listenPort);
-        }
-    }
-
-    // TODO is this comment still accurate?
-    /*
-     * We can only send the ping if there is something
-     * listening inbound connections on.  Therefore, we should only enable
-     * the name service if there is a listener.  This catches the case where
-     * there was no StartListen() done before the first discover.
-     */
-    if (m_isListening) {
-        if (!m_isNsEnabled) {
-            IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPort, 0, 0, 0, true, false, false, false);
-            m_isNsEnabled = true;
-        }
-    }
-
-    if (!m_isListening) {
-        QCC_LogError(ER_FAIL, ("TCPTransport::PingInstance(): Ping with no TCP listeners"));
-        return;
-    }
-
-    /*
-     * We think we're ready to send the Ping.  Are we really?
-     */
-    assert(m_isListening);
-    assert(m_listenPort);
-    assert(m_isNsEnabled);
-    assert(IpNameService::Instance().Started() && "TCPTransport::PingInstance(): IpNameService not started");
-
-    QStatus status = IpNameService::Instance().Ping(TRANSPORT_TCP, listenRequest.m_requestParam, listenRequest.m_guid);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("TCPTransport::PingInstance(): Failed to ping \"%s\"", listenRequest.m_requestParam.c_str()));
-        // TODO report this back, or let caller timeout?
-    }
-
-    m_isDiscovering = true;
-}
-
-void TCPTransport::PingReply(ListenRequest& listenRequest)
-{
-    QCC_DbgPrintf(("TCPTransport::PingReply()"));
-    QCC_LogError(ER_OK, ("TCPTransport::PingReply()"));
-    // TODO Review all of the below
-    // I removed the NewXXXOp code, not sure if I actually need that yet
-    // I need the NS enabled, and the NS enable needs a listen port, so must be listening too (I think)
-
-    /*
-     * If we don't have any listeners up and running, we need to get them
-     * up.  If this is a Windows box, the listeners will start running
-     * immediately and will never go down, so they may already be running.
-     */
-    if (!m_isListening) {
-        for (list<qcc::String>::iterator i = m_listening.begin(); i != m_listening.end(); ++i) {
-            QStatus status = DoStartListen(*i);
-            if (ER_OK != status) {
-                continue;
-            }
-            assert(m_listenPort);
-        }
-    }
-
-    // TODO is this comment still accurate?
-    /*
-     * We can only send the ping if there is something
-     * listening inbound connections on.  Therefore, we should only enable
-     * the name service if there is a listener.  This catches the case where
-     * there was no StartListen() done before the first discover.
-     */
-    if (m_isListening) {
-        if (!m_isNsEnabled) {
-            IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPort, 0, 0, 0, true, false, false, false);
-            m_isNsEnabled = true;
-        }
-    }
-
-    if (!m_isListening) {
-        QCC_LogError(ER_FAIL, ("TCPTransport::PingInstance(): Ping with no TCP listeners"));
-        return;
-    }
-
-    /*
-     * We think we're ready to send the Ping.  Are we really?
-     */
-    assert(m_isListening);
-    assert(m_listenPort);
-    assert(m_isNsEnabled);
-    assert(IpNameService::Instance().Started() && "TCPTransport::PingInstance(): IpNameService not started");
-
-    QStatus status = IpNameService::Instance().PingReply(TRANSPORT_TCP, listenRequest.m_requestParam, listenRequest.m_replyCode);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("TCPTransport::PingInstance(): Failed to ping \"%s\"", listenRequest.m_requestParam.c_str()));
-        // TODO report this back, or let caller timeout?
-    }
-
-    m_isDiscovering = false;
-}
-
 
 /*
  * The default address for use in listen specs.  INADDR_ANY means to listen
@@ -4058,127 +3911,6 @@ void TCPTransport::FoundCallback::Found(const qcc::String& busAddr, const qcc::S
     if (m_listener) {
         QCC_DbgPrintf(("TCPTransport::FoundCallback::Found(): FoundNames(): %s", newBusAddr.c_str()));
         m_listener->FoundNames(newBusAddr, guid, TRANSPORT_TCP, &nameList, timer);
-    }
-}
-
-// Add PING_REPLY as an enum here
-QStatus TCPTransport::PingReply(const char* name, uint32_t replyCode)
-{
-    QCC_DbgPrintf(("TCPTransport::PingReply()"));
-    QCC_LogError(ER_OK, ("TCPTransport::PingReply() for %s", name));
-    //return ER_NOT_IMPLEMENTED; // TODO
-
-    /*
-     * We only want to allow this call to proceed if we have a running server
-     * accept thread that isn't in the process of shutting down.  We use the
-     * thread response from IsRunning to give us an idea of what our server
-     * accept (Run) thread is doing.  See the comment in Start() for details
-     * about what IsRunning actually means, which might be subtly different from
-     * your intuitition.
-     *
-     * If we see IsRunning(), the thread might actually have gotten a Stop(),
-     * but has not yet exited its Run routine and become STOPPING.  To plug this
-     * hole, we need to check IsRunning() and also m_stopping, which is set in
-     * our Stop() method.
-     */
-    if (IsRunning() == false || m_stopping == true) {
-        QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("TCPTransport::DisableAdvertisement(): Not running or stopping; exiting"));
-        return ER_BUS_TRANSPORT_NOT_STARTED;
-    }
-
-    QueuePingReply(name, replyCode);
-    return ER_OK;
-}
-
-void TCPTransport::QueuePingReply(const char* name, uint32_t replyCode)
-{
-    QCC_DbgPrintf(("TCPTransport::QueuePingReply()"));
-    QCC_LogError(ER_OK, ("TCPTransport::QueuePingReply()"));
-    ListenRequest listenRequest;
-    // Check if it is a ping reply or ping instance
-    listenRequest.m_requestOp = PING_REPLY;
-    listenRequest.m_requestParam = name;
-    //listenRequest.m_guid = senderGuid;
-    listenRequest.m_replyCode = replyCode;
-
-    m_listenRequestsLock.Lock(MUTEX_CONTEXT);
-    /* Process the request */
-    RunListenMachine(listenRequest);
-    m_listenRequestsLock.Unlock(MUTEX_CONTEXT);
-
-}
-
-
-// Add PING_REPLY as an enum here
-QStatus TCPTransport::Ping(const char* name, const char* guid)
-{
-    QCC_DbgPrintf(("TCPTransport::Ping()"));
-    QCC_LogError(ER_OK, ("TCPTransport::Ping()"));
-    //return ER_NOT_IMPLEMENTED; // TODO
-
-    /*
-     * We only want to allow this call to proceed if we have a running server
-     * accept thread that isn't in the process of shutting down.  We use the
-     * thread response from IsRunning to give us an idea of what our server
-     * accept (Run) thread is doing.  See the comment in Start() for details
-     * about what IsRunning actually means, which might be subtly different from
-     * your intuitition.
-     *
-     * If we see IsRunning(), the thread might actually have gotten a Stop(),
-     * but has not yet exited its Run routine and become STOPPING.  To plug this
-     * hole, we need to check IsRunning() and also m_stopping, which is set in
-     * our Stop() method.
-     */
-    if (IsRunning() == false || m_stopping == true) {
-        QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("TCPTransport::DisableAdvertisement(): Not running or stopping; exiting"));
-        return ER_BUS_TRANSPORT_NOT_STARTED;
-    }
-
-    QueuePing(name, guid);
-    return ER_OK;
-}
-
-// Add ping reply
-void TCPTransport::QueuePing(const char* name, const char* guid)
-{
-    QCC_DbgPrintf(("TCPTransport::QueuePing()"));
-    QCC_LogError(ER_OK, ("TCPTransport::QueuePing()"));
-    ListenRequest listenRequest;
-    // Check if it is a ping reply or ping instance
-    listenRequest.m_requestOp = PING_INSTANCE;
-    listenRequest.m_requestParam = name;
-    listenRequest.m_guid = guid;
-
-    m_listenRequestsLock.Lock(MUTEX_CONTEXT);
-    /* Process the request */
-    RunListenMachine(listenRequest);
-    m_listenRequestsLock.Unlock(MUTEX_CONTEXT);
-
-}
-
-void TCPTransport::PingCallback::Ping(const qcc::String& name, const qcc::String& senderGuid)
-{
-    QCC_DbgPrintf(("TCPTransport::PingCallback::Ping(): name = \"%s\"", name.c_str()));
-    QCC_LogError(ER_OK, ("TCPTransport::PingCallback::Ping(): Ping Query for name = \"%s\"", name.c_str()));
-    /*
-     * Let AllJoyn know that we've pinged a name.
-     */
-    if (m_listener) {
-        QCC_DbgPrintf(("TCPTransport::PingCallback::Ping(): %s", name.c_str()));
-        m_listener->Ping(TRANSPORT_TCP, name, senderGuid);
-    }
-}
-
-void TCPTransport::PingCallback::PingReply(TransportMask transport, const qcc::String& name, uint32_t replyCode)
-{
-    QCC_DbgPrintf(("TCPTransport::PingCallback::Ping(): name = \"%s\"", name.c_str()));
-    QCC_LogError(ER_OK, ("TCPTransport::PingCallback::PingReply(): Ping Query for name = \"%s\"", name.c_str()));
-    /*
-     * Let AllJoyn know that we've pinged a name.
-     */
-    if (m_listener) {
-        QCC_DbgPrintf(("TCPTransport::PingCallback::Ping(): %s", name.c_str()));
-        m_listener->PingReply(TRANSPORT_TCP, name, replyCode);
     }
 }
 
