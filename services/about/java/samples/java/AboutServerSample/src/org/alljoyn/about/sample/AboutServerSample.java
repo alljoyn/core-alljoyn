@@ -327,7 +327,7 @@ public class AboutServerSample {
         PropertyStore impl=new PropertyStoreImpl(data);
 
         try{
-            AboutServiceImpl.getInstance().startAboutServer((short)CONTACT_PORT, impl, mBus);
+            AboutServiceImpl.getInstance().startAboutServer(CONTACT_PORT, impl, mBus);
         }catch (Exception e){
             e.printStackTrace();
         }

@@ -79,7 +79,6 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
     }
 
     LPCWSTR algId;
-    size_t digestSz;
 
     switch (alg) {
     case qcc::Crypto_Hash::SHA1:

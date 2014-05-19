@@ -211,8 +211,14 @@ class ECDHEKeyXListener : public AuthListener {
                     creds.SetPrivateKey(pk);
                 }
                 if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
-                    String cert(certChainType1PEM, strlen(certChainType1PEM));
-                    creds.SetCertChain(cert);
+                    bool useType1 = true;  /* use to toggle which cert to send */
+                    if (useType1) {
+                        String cert(certChainType1PEM, strlen(certChainType1PEM));
+                        creds.SetCertChain(cert);
+                    } else {
+                        String cert(certChainType2PEM, strlen(certChainType2PEM));
+                        creds.SetCertChain(cert);
+                    }
                 }
             }
 

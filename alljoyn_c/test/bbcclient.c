@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -13,7 +13,9 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-
+#ifndef _WIN32
+#define _BSD_SOURCE /* usleep */
+#endif
 #include <qcc/platform.h>
 
 #include <assert.h>
@@ -111,7 +113,7 @@ void name_owner_changed(const void* context, const char* name, const char* previ
 }
 
 void session_lost(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason) {
-    printf("SessionLost(%lu) was called\n", sessionId);
+    printf("SessionLost(%u) was called\n", sessionId);
     _exit(1);
 }
 
@@ -195,7 +197,7 @@ QCC_BOOL request_credentials(const void* context, const char* authMechanism, con
     printf("RequestCredentials for authenticating %s using mechanism %s\n", authPeer, authMechanism);
 
     alljoyn_busattachment_getpeerguid(g_msgBus, authPeer, guid, &size_of_guid);
-    printf("Peer guid %s   %u\n", guid, size_of_guid);
+    printf("Peer guid %s   %zu\n", guid, size_of_guid);
 
     if (g_keyExpiration != 0xFFFFFFFF) {
         alljoyn_busattachment_setkeyexpiration(g_msgBus, guid, g_keyExpiration);
@@ -309,10 +311,8 @@ int main(int argc, char** argv)
     const char* keyStore = NULL;
     unsigned long pingCount = 1;
     unsigned long repCount = 1;
-    unsigned long authCount = 1000;
     uint64_t runTime = 0;
     QCC_BOOL discoverRemote = QCC_FALSE;
-    QCC_BOOL stopDiscover = QCC_FALSE;
     QCC_BOOL asyncPing = QCC_FALSE;
     uint32_t pingDelay = 0;
     uint32_t pingInterval = 0;
@@ -439,7 +439,7 @@ int main(int argc, char** argv)
                 usage();
                 exit(1);
             } else {
-                authCount = strtoul(argv[i], NULL, 10);
+                g_maxAuth = strtoul(argv[i], NULL, 10);
             }
         } else if (0 == strcmp("-c", argv[i])) {
             ++i;
@@ -475,7 +475,7 @@ int main(int argc, char** argv)
             discoverRemote = QCC_TRUE;
         } else if (0 == strcmp("-ds", argv[i])) {
             discoverRemote = QCC_TRUE;
-            stopDiscover = QCC_TRUE;
+            g_stopDiscover = QCC_TRUE;
         } else if ((0 == strcmp("-t", argv[i])) || (0 == strcmp("-ta", argv[i]))) {
             if (argv[i][2] == 'a') {
                 asyncPing = QCC_TRUE;
@@ -671,7 +671,7 @@ int main(int argc, char** argv)
             valintf = alljoyn_busattachment_getinterface(g_msgBus, INTERFACE_VALUE_NAME);
 
             alljoyn_proxybusobject_addinterface(remoteObj, intf);
-            alljoyn_proxybusobject_addinterface(remoteObj, valIntf);
+            alljoyn_proxybusobject_addinterface(remoteObj, valintf);
         }
 
         /* Call the remote method */

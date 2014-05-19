@@ -90,6 +90,7 @@ public abstract class ClientBaseImpl implements ClientBase
      * @param port port number to connect
      * @deprecated
      */
+    @Deprecated
     public ClientBaseImpl( String peerName,
             BusAttachment bus,
             ServiceAvailabilityListener serviceAvailabilityListener,
@@ -256,6 +257,7 @@ public abstract class ClientBaseImpl implements ClientBase
      * The Class object is retrieved from an internal interface class array. <br>
      * To receive the whole array is better to use the getObjClassArr() method
      */
+    @Deprecated
     public Class<?> getObjectClass()
     {
         if ( m_interfaceClassArr == null || m_interfaceClassArr.length == 0 ) {

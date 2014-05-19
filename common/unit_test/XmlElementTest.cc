@@ -107,12 +107,12 @@ TEST(XmlElement, GetChildren_of_root_node)
 
     const std::vector<XmlElement*>& children = root.GetChildren();
 
-    EXPECT_EQ(1, children.size());
+    EXPECT_EQ(1U, children.size());
     EXPECT_STREQ("foo", children[0]->GetName().c_str());
 
     const std::vector<XmlElement*>& children2 = foo.GetChildren();
 
-    EXPECT_EQ(2, children2.size());
+    EXPECT_EQ(2U, children2.size());
     EXPECT_STREQ("value", children2[0]->GetName().c_str());
     EXPECT_STREQ("value", children2[1]->GetName().c_str());
 }
@@ -126,12 +126,12 @@ TEST(XmlElement, GetChildren_by_name)
 
     std::vector<const XmlElement*> children = root.GetChildren("foo");
 
-    EXPECT_EQ(1, children.size());
+    EXPECT_EQ(1U, children.size());
     EXPECT_STREQ("foo", children[0]->GetName().c_str());
 
     std::vector<const XmlElement*> children2 = foo.GetChildren("value");
 
-    EXPECT_EQ(2, children2.size());
+    EXPECT_EQ(2U, children2.size());
     EXPECT_STREQ("value", children2[0]->GetName().c_str());
     EXPECT_STREQ("value", children2[1]->GetName().c_str());
 

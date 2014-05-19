@@ -95,28 +95,7 @@ void qcc::Log(int priority, const char* format, ...)
     loggerSettings->lock.Unlock();
 }
 
-
-
-static void Output(DbgMsgType type,
-                   const char* module,
-                   const char* msg,
-                   void* context)
-{
-    const static int priorityMap[] = {
-        LOG_ERR,        // Local error messages
-        LOG_WARNING,    // Remote error messages
-        LOG_NOTICE,     // High level debug messages
-        LOG_INFO,       // Normal debug messages
-        LOG_DEBUG,      // API trace messages
-        LOG_DEBUG,      // Remote data messages
-        LOG_DEBUG       // Local data messages
-    };
-
-    Log(priorityMap[type], "%s", msg);
-}
-
 LoggerSetting* LoggerSetting::singleton = NULL;
-
 
 void LoggerSetting::SetSyslog(bool enable)
 {

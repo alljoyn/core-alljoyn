@@ -1504,8 +1504,7 @@ size_t Header::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     // and is-at messages and they will assert that the versions we set actually
     // make sense.
     //
-    uint8_t nsVersion, msgVersion;
-    nsVersion = buffer[0] >> 4;
+    uint8_t msgVersion;
     msgVersion = buffer[0] & 0xf;
 
     if (msgVersion != 0 && msgVersion != 1) {

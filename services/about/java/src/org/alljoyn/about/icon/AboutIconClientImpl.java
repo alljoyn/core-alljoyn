@@ -29,7 +29,7 @@ public class AboutIconClientImpl extends ClientBaseImpl implements AboutIconClie
 
     public AboutIconClientImpl(String peerName, BusAttachment bus, ServiceAvailabilityListener serviceAvailabilityListener, short port)
     {
-        super(peerName, bus, serviceAvailabilityListener, IconTransport.OBJ_PATH, IconTransport.class, port);
+        super(peerName, bus, serviceAvailabilityListener, IconTransport.OBJ_PATH, new Class<?>[] { IconTransport.class }, port);
     }
 
     @Override
