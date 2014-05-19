@@ -95,9 +95,9 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
 
 #ifdef ENABLE_POLICYDB
     PolicyDB policyDB = ConfigDB::GetConfigDB()->GetPolicyDB();
-    NormalizedMsgHdr nmh(msg, policyDB);
+    NormalizedMsgHdr nmh(msg, policyDB, origSender);
 
-    if ((sender != localEndpoint) && !policyDB->OKToSend(nmh, sender)) {
+    if ((sender != localEndpoint) && !policyDB->OKToSend(nmh)) {
         /* The sender is not allowed to send this message. */
         return ER_BUS_POLICY_VIOLATION;
     }

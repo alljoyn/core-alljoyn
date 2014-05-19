@@ -117,11 +117,11 @@ class _PolicyDB {
      * Determine if the sender is allowed to send the specified message.
      *
      * @param nmh       Normalized message header
-     * @param sender    BusEndpoint that is sending the message
+     * @param destIDSet Alternate destination ID set (internal use only)
      *
      * @return true = send allowed, false = send denied.
      */
-    bool OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& sender) const;
+    bool OKToSend(const NormalizedMsgHdr& nmh, const IDSet* destIDSet = NULL) const;
 
     /**
      * Convert a string to a normalized form.
@@ -484,7 +484,7 @@ class NormalizedMsgHdr {
      * @param msg       Reference to the message to be normalized
      * @param policy    Pointer to the PolicyDB
      */
-    NormalizedMsgHdr(const Message& msg, const PolicyDB& policy) :
+    NormalizedMsgHdr(const Message& msg, const PolicyDB& policy, BusEndpoint& sender) :
 #ifndef NDEBUG
         msg(msg),
 #endif
@@ -495,7 +495,8 @@ class NormalizedMsgHdr {
         pathIDSet(policy->LookupStringIDPrefix(msg->GetObjectPath(), '/')),
         destIDSet(policy->LookupBusNameID(msg->GetDestination())),
         senderIDSet(policy->LookupBusNameID(msg->GetSender())),
-        type(msg->GetType())
+        type(msg->GetType()),
+        sender(sender)
     { }
 
   private:
@@ -512,6 +513,7 @@ class NormalizedMsgHdr {
     const _PolicyDB::IDSet destIDSet;       /**< set of normalized well known bus name destinations */
     const _PolicyDB::IDSet senderIDSet;     /**< set of normalized well known bus name senders */
     AllJoynMessageType type;                /**< message type */
+    BusEndpoint& sender;                    /**< sender bus endpoint */
 };
 
 
