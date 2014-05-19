@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <iostream>
 
+#include <qcc/platform.h>
 #include <alljoyn/about/AboutServiceApi.h>
 #include <alljoyn/about/PropertyStore.h>
 #include <alljoyn/about/PropertyStoreProperty.h>
@@ -116,6 +117,19 @@ class AboutPropertyStoreImpl : public PropertyStore {
      */
     QStatus setDeviceId(qcc::String const& deviceId, bool isPublic = true, bool isWritable = false, bool isAnnouncable = true);
 
+    /**
+     * @deprecated
+     *
+     * setDeviceName
+     * @param[out] deviceName
+     * @param[out] isPublic
+     * @param[out] isWritable
+     * @param[out] isAnnouncable
+     * @return QStatus.
+     */
+    QCC_DEPRECATED(QStatus setDeviceName(qcc::String const & deviceName, bool isPublic = true, bool isWritable = true, bool isAnnouncable = true)) {
+        return setDeviceName(deviceName, "", isPublic, isWritable, isAnnouncable);
+    }
     /**
      * setDeviceName
      * @param[out] deviceName

@@ -135,7 +135,7 @@ TEST(PropertyStoreImplTest, setAppId)
     status = arg.Get("ay", &num, &appIdBuffer);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    ASSERT_EQ(16, num);
+    ASSERT_EQ(16U, num);
     for (size_t i = 0; i < num - 1; ++i) {
         EXPECT_EQ(i, appIdBuffer[i]);
     }
@@ -235,7 +235,7 @@ TEST(PropertyStoreImplTest, setSupportedLangs)
     size_t num;
     status = arg.Get("as", &num, &out);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    ASSERT_EQ(3, num);
+    ASSERT_EQ(3U, num);
     const char* lang;
     status = out[0].Get("s", &lang);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -532,7 +532,7 @@ TEST(PropertyStoreImplTest, ReadAll_announce)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     ASSERT_EQ(16u, appIdNum);
     for (size_t i = 0; i < appIdNum - 1; ++i) {
-        EXPECT_EQ(i, appIdOut[i]);
+        EXPECT_EQ((int8_t)i, appIdOut[i]);
     }
     EXPECT_EQ(12, appIdOut[appIdNum - 1]);
 
@@ -679,7 +679,7 @@ TEST(PropertyStoreImplTest, ReadAll_read)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     ASSERT_EQ(16u, appIdNum);
     for (size_t i = 0; i < appIdNum - 1; ++i) {
-        EXPECT_EQ(i, appIdOut[i]);
+        EXPECT_EQ((int8_t)i, appIdOut[i]);
     }
     EXPECT_EQ(12, appIdOut[appIdNum - 1]);
 
@@ -731,7 +731,7 @@ TEST(PropertyStoreImplTest, ReadAll_read)
     size_t num;
     status = args->Get("as", &num, &languageArg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    ASSERT_EQ(3, num);
+    ASSERT_EQ(3U, num);
     const char* lang;
     status = languageArg[0].Get("s", &lang);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
