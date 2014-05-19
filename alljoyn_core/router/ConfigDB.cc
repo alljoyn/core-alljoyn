@@ -288,8 +288,8 @@ bool ConfigDB::DB::ProcessBusconfig(const String& fileName, const XmlElement& bu
         } else if (tag == "user") {
             success = ProcessUser(fileName, *(*it));
         } else {
-            Log(LOG_NOTICE, "Error processing \"%s\": Unknown tag found in <%s> busconfig: %s - ignoring\n",
-                fileName.c_str(), (*it)->GetName().c_str());
+            Log(LOG_NOTICE, "Error processing \"%s\": Unknown tag found in <busconfig>: %s - ignoring\n",
+                fileName.c_str(), tag.c_str());
         }
     }
 
