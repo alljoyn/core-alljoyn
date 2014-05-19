@@ -26,6 +26,7 @@
 
 #include <vector>
 
+#include <qcc/platform.h>
 #include <qcc/Debug.h>
 #include <qcc/Event.h>
 #include <qcc/Socket.h>
@@ -71,8 +72,9 @@ bool AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpCo
     QCC_DbgTrace(("AcceptCb(handle=%p, ipAddr=\"%s\", foreign=%d, conn=%p, buf=%p(\"%s\"), len=%d, status=%s)",
                   handle, ipAddr.ToString().c_str(), ipPort, conn, buf, (char*) buf, len, QCC_StatusText(status)));
 
-    /* Does not need to happen right away, but within very short time period */
-    status = ARDP_Accept(handle, conn, ARDP_SEGMAX, ARDP_SEGBMAX, (uint8_t*)g_ajnAcceptString, strlen(g_ajnAcceptString) + 1);
+    uint16_t length = random() % ARDP_USRBMAX;
+    uint8_t* buffer = new uint8_t[length];
+    status = ARDP_Accept(handle, conn, ARDP_SEGMAX, ARDP_SEGBMAX, buffer, length);
     if (status != ER_OK) {
         QCC_DbgPrintf(("AcceptCb(): ARDP_Accept failed with %s", QCC_StatusText(status)));
     }
@@ -84,12 +86,16 @@ void ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* 
     QCC_DbgTrace(("ConnectCb(handle=%p, conn=%p, passive=%s, buf=%p, len=%d, status=%s)",
                   handle, conn, (passive) ? "true" : "false", buf, len, QCC_StatusText(status)));
     if (status == ER_OK) {
-        uint16_t length = random() % ARDP_USRBMAX;
-        uint8_t* buffer = new uint8_t[length];
-
         if (!passive) {
             QCC_DbgPrintf(("ConnectCb: response string \"%s\"", (char*)buf));
+        } else {
+            uint16_t length = random() % ARDP_USRBMAX;
+            uint8_t* buffer = new uint8_t[length];
+            ARDP_Acknowledge(handle, conn, buffer, length);
         }
+
+        uint16_t length = random() % ARDP_USRBMAX;
+        uint8_t* buffer = new uint8_t[length];
         QCC_DbgPrintf(("ConnectCb(): ARDP_Send(handle=%p, conn=%p, buffer=%p, length=%d)", handle, conn, buffer, length));
 
         status = ARDP_Send(handle, conn, buffer, length, ARDP_TTL_PLACEHOLDER);
@@ -106,7 +112,7 @@ void DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status)
     QCC_DbgTrace(("DisconnectCb(handle=%p, conn=%p, status=%s)", handle, conn, QCC_StatusText(status)));
 }
 
-bool RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status)
+void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status)
 {
     ArdpRcvBuf* buf = rcv;
     uint32_t len = 0;
@@ -121,7 +127,6 @@ bool RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus s
     }
     QCC_DbgPrintf(("RecvCb(): got TOTAL %d bytes of data", len));
     ARDP_RecvReady(handle, conn, rcv);
-    return true;
 }
 
 void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)

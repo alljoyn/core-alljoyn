@@ -3962,8 +3962,8 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
                             const vector<qcc::String>* names,
                             uint8_t ttl)
 {
-    QCC_DbgTrace(("AllJoynObj::FoundNames(busAddr = \"%s\", guid = \"%s\", names = %s, ttl = %d)",
-                  busAddr.c_str(), guid.c_str(), StringVectorToString(names, ",").c_str(), ttl));
+//    QCC_DbgTrace(("AllJoynObj::FoundNames(busAddr = \"%s\", guid = \"%s\", names = %s, ttl = %d)",
+//                  busAddr.c_str(), guid.c_str(), StringVectorToString(names, ",").c_str(), ttl));
 
     if (NULL == foundNameSignal) {
         return;

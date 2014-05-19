@@ -37,9 +37,6 @@ const uint16_t ARDP_SEGMAX = 16;              /**< Max number of segments in fli
 const uint16_t ARDP_WKP = 0;                  /**< Well-known (ARDP) contact port for an ARDP passive listener. */
 const uint16_t ARDP_MCAST = 65535;            /**< Well-known (ARDP) port for sending multicast messages. */
 
-const uint8_t ARDP_MAX_EACK_MASK = 16;        /**< Max size of  EACK mask (in 32-bit units) */
-const uint32_t ARDP_MAX_EACK = ARDP_MAX_EACK_MASK * 32; /**< Max number (times 32) of outstanding unacked segments the protocol allows per connection. */
-
 const uint32_t ARDP_TTL_PLACEHOLDER = 0xfffffffe; // TODO: remove when switching to actual TTL values
 
 /**
@@ -58,7 +55,6 @@ typedef struct {
     uint32_t timewait;        /**< udp_timewait configuration variable */
 } ArdpGlobalConfig;
 
-
 /**
  * @brief This is the format of an RDP datagram header on the wire.
  *
@@ -73,24 +69,35 @@ typedef struct {
     uint16_t dlen;      /**< The length of the data in the current segment.  Does not include the header size. */
     uint32_t seq;       /**< The sequence number of the current segment. */
     uint32_t ack;       /**< The number of the segment that the sender of this segment last received correctly and in sequence. */
-    uint32_t window;    /**< The current receive window */
     uint32_t ttl;       /**< Time-to-live.  Zero means forever. */
+    uint32_t acknxt;    /**< First unexpired segment, TTL accounting */
     uint32_t som;       /**< Start sequence number for fragmented message */
     uint16_t fcnt;      /**< Number of segments comprising fragmented message */
-    uint32_t ackMsk[ARDP_MAX_EACK_MASK]; /**< EACK bitmask */
+    uint16_t window;    /**< The current receive window */
 } ArdpHeader;
+
+/* Maximum header length, implied by the fact that hlen filed is 8 bits */
+static const uint16_t ARDP_MAX_HEADER_LEN = 255;
+
+/* Length of fixed part of the header (sans EACKs), see below ArdpHeader structure */
+static const uint16_t ARDP_FIXED_HEADER_LEN = sizeof(ArdpHeader);
+
+/* Max size of  EACK mask (in 32-bit units) */
+const uint8_t ARDP_MAX_EACK_MASK_SZ = (ARDP_MAX_HEADER_LEN - ARDP_FIXED_HEADER_LEN) >> 2;
+
+/* Max number (times 32) of outstanding unacked segments the protocol allows per connection. */
+const uint32_t ARDP_MAX_EACK = ARDP_MAX_EACK_MASK_SZ * 32;
 
 const uint16_t ARDP_USRBMAX = (uint16_t)(ARDP_SEGBMAX - sizeof(ArdpHeader)); /**< Maximum size of an ARDP user datagram */
 
 typedef struct ARDP_CONN_RECORD ArdpConnRecord;
 
-#define ARDP_FLAG_SYN  0x01    /**< Control flag.  Request to open a connection.  Must be separate segment. */
-#define ARDP_FLAG_ACK  0x02    /**< Control flag.  Acknowledge a segment. May accompany message */
-#define ARDP_FLAG_EACK 0x04    /**< Control flag.  Non-cumulative (extended) acknowledgement */
-#define ARDP_FLAG_RST  0x08    /**< Control flag.  Reset this connection. Must be separate segment. */
-#define ARDP_FLAG_NUL  0x10    /**< Control flag.  Null (zero-length) segment.  Must have zero data length but may share ACK and EACK info. */
-#define ARDP_FLAG_FRAG 0x20    /**< Control flag.  Bit 5 of flags byte.  The segment contains fragmented message. SEQ_FIRST and COUNT are present. */
-#define ARDP_FLAG_VER  0x40    /**< Control flag.  Bits 6-7 of flags byte.  Current version is (1) */
+#define ARDP_FLAG_SYN  0x01    /**< Control flag. Request to open a connection.  Must be separate segment. */
+#define ARDP_FLAG_ACK  0x02    /**< Control flag. Acknowledge a segment. May accompany message */
+#define ARDP_FLAG_EACK 0x04    /**< Control flag. Non-cumulative (extended) acknowledgement */
+#define ARDP_FLAG_RST  0x08    /**< Control flag. Reset this connection. Must be separate segment. */
+#define ARDP_FLAG_NUL  0x10    /**< Control flag. Null (zero-length) segment.  Must have zero data length but may share ACK and EACK info. */
+#define ARDP_FLAG_VER  0x40    /**< Control flag. Bits 6-7 of flags byte.  Current version is (1) */
 #define ARDP_FLAG_SDM  0x0001  /*<< Sequenced delivery mode option. Indicates in-order sequence delivery is in force. */
 
 typedef struct ARDP_HANDLE ArdpHandle;
@@ -100,20 +107,18 @@ typedef struct ARDP_RCV_BUFFER {
     uint32_t datalen;      /**< Data payload size */
     uint8_t* data;         /**< Pointer to data payload */
     ARDP_RCV_BUFFER* next; /**< Pointer to the next buffer */
-    void* timer;           /**< Handle to timer associated with this buffer */
-    /* Flag indicating that the buffer is not released, will go away once we get rid of ARDP_RecvReady().
-     * For now, have to do double accounting with isDelivered and inUse.
-     */
-    bool inUse;
+    bool inUse;            /**< Flag indicating that the buffer is occupied, but not delivered to the upper layer (fragment) */
     bool isDelivered;      /**< Flag indicating that the buffer is not delivered to the upper layer */
     uint32_t som;
     uint16_t fcnt;
+    uint32_t ttl;          /**< Remaining time to live of the AllJoyn message */
+    uint32_t tRecv;        /**< Local time at which the segment was received (used for TTL calcs) */
 } ArdpRcvBuf;
 
 typedef void (*ARDP_CONNECT_CB)(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status);
 typedef void (*ARDP_DISCONNECT_CB)(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status);
 typedef bool (*ARDP_ACCEPT_CB)(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status);
-typedef bool (*ARDP_RECV_CB)(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcvbufs, QStatus status);
+typedef void (*ARDP_RECV_CB)(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcvbufs, QStatus status);
 typedef void (*ARDP_SEND_CB)(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status);
 typedef void (*ARDP_SEND_WINDOW_CB)(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t window, QStatus status);
 
@@ -177,6 +182,7 @@ uint16_t ARDP_GetIpPortFromConn(ArdpConnRecord* conn);
 QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool socketReady, uint32_t* ms);
 QStatus ARDP_StartPassive(ArdpHandle* handle);
 QStatus ARDP_Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t segmax, uint16_t segbmax, uint8_t* buf, uint16_t len);
+QStatus ARDP_Acknowledge(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint16_t len);
 void ARDP_SetAcceptCb(ArdpHandle* handle, ARDP_ACCEPT_CB AcceptCb);
 QStatus ARDP_Connect(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ipAddr, uint16_t ipPort, uint16_t segmax, uint16_t segbmax, ArdpConnRecord** conn, uint8_t* buf, uint16_t len, void* context);
 void ARDP_SetConnectCb(ArdpHandle* handle, ARDP_CONNECT_CB ConnectCb);

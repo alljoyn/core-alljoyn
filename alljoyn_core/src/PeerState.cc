@@ -40,7 +40,37 @@ using namespace qcc;
 
 namespace ajn {
 
-
+/*
+ * At the beginning of time, find the difference between the timestamp of the
+ * remote system when it marshaled the message and the timestamp of the local
+ * system when it unmarshaled the message.  This number is the difference
+ * between the offsets of the clocks on the two systems and the time it took for
+ * the message to get from one to the other.
+ *
+ * Each time a message with a timestamp is unmarshaled, we look at a new
+ * calculation of the same time.  Presumably the times will be different because
+ * of clock drift and the change in the time it took to get the message through
+ * the network.
+ *
+ * If the old number is bigger than the new number, it means that the latest
+ * offset between the systems is smaller which, in turn, means the network is
+ * faster this time around or the remote clock is running faster than the local
+ * clock.  In this case, we set the clamp the new offset to the difference.
+ *
+ * If the old number is less than the new number, it means that the latest
+ * offset between the systems is larger which, in turn, means that the network
+ * is getting slower or the remote clock is running slower (earlier time that
+ * expected) than the local clock.  In this case, we increment the offset one
+ * millisecond every ten seconds to increase the offset slowly in order to seek
+ * the increased difference.
+ *
+ * We expect these numbers to be dominated by network delays since clocks on a
+ * host should be running within about 10 PPM for a decent quartz oscillator.
+ *
+ * The upshot is that this method is really seeking the offset between the
+ * machines' clocks and the fastest message delivery time.  This is not a
+ * problem if TTL >> fastest network delay over which the message is sent.
+ */
 uint32_t _PeerState::EstimateTimestamp(uint32_t remote)
 {
     uint32_t local = qcc::GetTimestamp();

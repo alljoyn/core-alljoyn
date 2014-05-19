@@ -163,12 +163,26 @@ const qcc::String& _RemoteEndpoint::GetUniqueName() const
     }
 }
 
+void _RemoteEndpoint::SetUniqueName(const qcc::String& uniqueName)
+{
+    if (internal) {
+        internal->uniqueName = uniqueName;
+    }
+}
+
 const qcc::String& _RemoteEndpoint::GetRemoteName() const
 {
     if (internal) {
         return internal->remoteName;
     } else {
         return String::Empty;
+    }
+}
+
+void _RemoteEndpoint::SetRemoteName(const qcc::String& remoteName)
+{
+    if (internal) {
+        internal->remoteName = remoteName;
     }
 }
 
@@ -181,6 +195,14 @@ const qcc::GUID128& _RemoteEndpoint::GetRemoteGUID() const
         return g;
     }
 }
+
+void _RemoteEndpoint::SetRemoteGUID(const qcc::GUID128& remoteGUID)
+{
+    if (internal) {
+        internal->remoteGUID = remoteGUID;
+    }
+}
+
 
 qcc::Stream& _RemoteEndpoint::GetStream()
 {
@@ -198,6 +220,13 @@ const qcc::String&  _RemoteEndpoint::GetConnectSpec() const
         return internal->connSpec;
     } else {
         return String::Empty;
+    }
+}
+
+void _RemoteEndpoint::SetConnectSpec(const qcc::String& connSpec)
+{
+    if (internal) {
+        internal->connSpec = connSpec;
     }
 }
 

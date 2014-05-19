@@ -237,4 +237,10 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_UDP_BACKPRESSURE" value="0x9103" comment="UDP is applying backpressure to ARDP -- queue is full"/>
   <status name="ER_ARDP_INVALID_STATE" value="0x9104" comment="Current ARDP state does not allow attempted operation"/>
   <status name="ER_ARDP_TTL_EXPIRED" value="0x9105" comment="Time-To-Live of ARDP segment has expired"/>
+  <status name="ER_ARDP_PERSIST_TIMEOUT" value="0x9106" comment="Remote endpoint stopped consuming data -- send window is full"/>
+  <status name="ER_ARDP_PROBE_TIMEOUT" value="0x9107" comment="ARDP link timeout"/>
+  <status name="ER_ARDP_REMOTE_CONNECTION_RESET" value="0x9108" comment="Remote endpoint disconected: sent RST"/>
+  <status name="ER_UDP_BUSHELLO" value="0x9109" comment="UDP Transport is unable to complete an operation relating to a BusHello Message"/>
+  <status name="ER_UDP_MESSAGE" value="0x910a" comment="UDP Transport is unable to complete an operation on an AllJoyn Message"/>
+
 </status_block>

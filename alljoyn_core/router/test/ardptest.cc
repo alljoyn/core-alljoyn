@@ -27,6 +27,7 @@
 #include <vector>
 #include <queue>
 
+#include <qcc/platform.h>
 #include <qcc/Debug.h>
 #include <qcc/Event.h>
 #include <qcc/Socket.h>
@@ -61,6 +62,7 @@ char const* g_foreign_address = "127.0.0.1";
 
 char const* g_ajnConnString = "AUTH ANONYMOUS; BEGIN THE CONNECTION; Bus Hello; Bellevue";
 char const* g_ajnAcceptString = "OK 123455678; Hello; Redmond";
+char const* g_ajnAcknowledgeString = "Acking: WE ARE ON!";
 
 std::map<ArdpConnRecord*, std::queue<ArdpRcvBuf*> > RecvMapQueue;
 std::map<uint32_t, ArdpConnRecord*> connList;
@@ -122,9 +124,23 @@ static bool FindConn(uint32_t number) {
     } else { return false; }
 }
 
+void GetData(ArdpRcvBuf* rcv) {
+
+    ArdpRcvBuf* buf = rcv;
+    uint32_t len = 0;
+    uint16_t count = rcv->fcnt;
+    /* Consume data buffers */
+    for (uint16_t i = 0; i < count; i++) {
+        printf("RecvCb(): got %d bytes of data \n", buf->datalen);
+        len += buf->datalen;
+        buf = buf->next;
+    }
+
+}
+
 bool AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status)
 {
-    printf("Inside Accept callback, we received a SYN from %s:%d, the message is  %s, status %s \n", ipAddr.ToString().c_str(), ipPort, (char*)buf, QCC_StatusText(status));
+    printf("Inside Accept callback, we received a SYN from %s:%d, the message is \"%s\", status %s \n", ipAddr.ToString().c_str(), ipPort, (char*)buf, QCC_StatusText(status));
     printf("Connection no is  %d, conn pointer is   %p \n", g_conn, conn);
     connList[g_conn] = conn;
     g_conn++;
@@ -143,27 +159,27 @@ bool AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpCo
 
 void ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status)
 {
-    printf("Looks like I have connected... conn=%p is passive=%s , the message is  %s, status is %s \n", conn, (passive) ? "true" : "false", (char*)buf, QCC_StatusText(status));
+    printf("Looks like I have connected... conn=%p is passive=%s , the message(len = %d) is \"%s\", status is %s \n", conn, (passive) ? "true" : "false", len, (char*)buf, QCC_StatusText(status));
     if (!passive) {
         printf("Connection no is  %d, conn pointer is   %p \n", g_conn, conn);
         connList[g_conn] = conn;
         g_conn++;
+        ARDP_Acknowledge(handle, conn, (uint8_t*)g_ajnAcknowledgeString, strlen(g_ajnAcknowledgeString) + 1);
     }
 }
 
 void DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status)
 {
-    printf("Looks like I have disconnected conn = %p..\n", conn);
+    printf("Looks like I have disconnected conn = %p, reason = %s\n", conn, QCC_StatusText(status));
     RecvMapQueue.erase(conn);
     RemoveConn(conn);
 }
 
-bool RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status)
+void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status)
 {
     printf("RECV- %u conn = %p \n", rcv->seq, conn);
 
     RecvMapQueue[conn].push(rcv);
-    return true;
 }
 
 void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
@@ -278,8 +294,8 @@ int main(int argc, char** argv)
 
     //Populate default values for timers, couters, etc.
     ArdpGlobalConfig config;
-    config.connectTimeout = 10000; //UDP_CONNECT_TIMEOUT;
-    config.connectRetries = 0; //UDP_CONNECT_RETRIES;
+    config.connectTimeout = UDP_CONNECT_TIMEOUT;
+    config.connectRetries = UDP_CONNECT_RETRIES;
     config.dataTimeout = UDP_DATA_TIMEOUT;
     config.dataRetries = UDP_DATA_RETRIES;
     config.persistTimeout = UDP_PERSIST_TIMEOUT;
@@ -324,7 +340,7 @@ int main(int argc, char** argv)
             scanf("%s", foreign_port);
             printf("Enter the foreign address.. \n");
             scanf("%s", foreign_address);
-            status = ARDP_Connect(handle, sock, qcc::IPAddress(foreign_address), atoi(foreign_port), ARDP_SEGMAX, ARDP_SEGBMAX, &conn, (uint8_t* )g_ajnConnString, strlen(g_ajnConnString) + 1, NULL);
+            status = ARDP_Connect(handle, sock, qcc::IPAddress(foreign_address), atoi(foreign_port), ARDP_SEGMAX, ARDP_SEGBMAX, &conn, (uint8_t*)g_ajnConnString, strlen(g_ajnConnString) + 1, NULL);
             if (status != ER_OK) {
                 printf("Error while calling ARDP_Connect..  %s \n", QCC_StatusText(status));
             }
@@ -337,13 +353,14 @@ int main(int argc, char** argv)
             } else {
                 uint32_t t_connno = StringToU32(connno, 0, 0);
                 if (FindConn(t_connno)) {
-                    uint32_t length = random() % (ARDP_USRBMAX);
+                    uint32_t length = StringToU32(NextTok(line), 0, random() % 135000);
+                    uint32_t ttl = StringToU32(NextTok(line), 0, 0);
                     uint8_t* buffer = new uint8_t[length];
-                    status = ARDP_Send(handle, connList[t_connno], buffer, length, ARDP_TTL_PLACEHOLDER);
+                    status = ARDP_Send(handle, connList[t_connno], buffer, length, ttl);
                     if (status != ER_OK) {
                         printf("Error while ARDP_Send.. %s \n", QCC_StatusText(status));
                     } else {
-                        printf("ARDP_Send successful on %p  \n", connList[t_connno]);
+                        printf("ARDP_Send successful on %p data[%u] = %u \n", connList[t_connno], length - 1, buffer[length - 1]);
                     }
                     delete [] buffer;
                 } else {
@@ -364,13 +381,10 @@ int main(int argc, char** argv)
                     } else {
                         ArdpRcvBuf*rcv = NULL;
                         rcv = RecvMapQueue[connList[t_connno]].front();
+                        GetData(rcv);
                         RecvMapQueue[connList[t_connno]].pop();
                         printf("ARDP_RecvReady about to be called on %p  \n", connList[t_connno]);
-<<<<<<< HEAD
-                        status = ARDP_RecvReady(handle, connList[t_connno], rcv, 1);
-=======
                         status = ARDP_RecvReady(handle, connList[t_connno], rcv);
->>>>>>> qce/utero
                         if (status != ER_OK) {
                             printf("Error while ARDP_Recv.. %s \n", QCC_StatusText(status));
                         } else {
@@ -418,13 +432,10 @@ int main(int argc, char** argv)
                     while (!RecvMapQueue[connList[t_connno]].empty()) {
                         ArdpRcvBuf*rcv = NULL;
                         rcv = RecvMapQueue[connList[t_connno]].front();
+                        GetData(rcv);
                         RecvMapQueue[connList[t_connno]].pop();
                         printf("ARDP_RecvReady about to be called on %p  \n", connList[t_connno]);
-<<<<<<< HEAD
-                        status = ARDP_RecvReady(handle, connList[t_connno], rcv, 1);
-=======
                         status = ARDP_RecvReady(handle, connList[t_connno], rcv);
->>>>>>> qce/utero
                         if (status != ER_OK) {
                             printf("Error while ARDP_Recv.. %s \n", QCC_StatusText(status));
                             break;
@@ -450,14 +461,14 @@ int main(int argc, char** argv)
                 if (FindConn(t_connno)) {
 
                     while (true) {
-                        uint32_t length = random() % (ARDP_USRBMAX);
+                        uint32_t length = random() % (135000);
                         uint8_t* buffer = new uint8_t[length];
                         status = ARDP_Send(handle, connList[t_connno], buffer, length, ARDP_TTL_PLACEHOLDER);
                         if (status != ER_OK) {
                             printf("Error while ARDP_Send.. %s \n", QCC_StatusText(status));
                             break;
                         } else {
-                            printf("ARDP_Send successful on %p  \n", connList[t_connno]);
+                            printf("ARDP_Send successful on %p data[%u] = %u \n", connList[t_connno], length - 1, buffer[length - 1]);
                         }
                         delete [] buffer;
                     }
