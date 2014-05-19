@@ -4434,6 +4434,7 @@ void AllJoynObj::PingResponse(TransportMask transport, const qcc::IPEndpoint& ns
     MDNSResourceRecord pingReplyRecord("ping-reply.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingReplyRData);
     response->AddAdditionalRecord(pingReplyRecord);
 
+    // TODO this is the piggy back, doesn't belong here
     MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
     advRData->AddName(name);
     MDNSResourceRecord advertiseRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);

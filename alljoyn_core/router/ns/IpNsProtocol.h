@@ -2193,11 +2193,16 @@ class MDNSTextRData : public MDNSRData {
   public:
 
     /**
+     * @brief The TXT record version supported by the MDNS name service.
+     */
+    static const uint16_t TXTVERS;
+
+    /**
      * @internal
      * @brief Construct an in-memory object representation of an on-the-wire
      * MDNS Text RData.
      */
-    MDNSTextRData() { }
+    MDNSTextRData(uint16_t version = TXTVERS);
 
     /**
      * @internal
@@ -2228,11 +2233,27 @@ class MDNSTextRData : public MDNSRData {
 
     /**
      * @internal
+     * @brief Add/Set a key value pair.
+     * @param key	The key to set.
+     * @param value	The value to set.
+     */
+    void SetValue(qcc::String key, uint16_t value);
+
+    /**
+     * @internal
      * @brief Get the value corresponding to a particular key in the map.
      * @param key	The key to get the value for.
      * @return The value in the map corresponding to the key.
      */
     qcc::String GetValue(qcc::String key);
+
+    /**
+     * @internal
+     * @brief Get the value corresponding to a particular key in the map.
+     * @param key	The key to get the value for.
+     * @return The value in the map corresponding to the key.
+     */
+    uint16_t GetU16Value(qcc::String key);
 
     /**
      * @internal
@@ -2309,6 +2330,8 @@ class MDNSTextRData : public MDNSRData {
 
   private:
     qcc::String GetText() const;
+
+    uint16_t version;
     std::map<qcc::String, qcc::String> m_fields;
 };
 
@@ -2873,7 +2896,7 @@ class MDNSSearchRData : public MDNSTextRData {
      * @brief Construct an in-memory object representation of an on-the-wire
      * MDNS Search RData.
      */
-    MDNSSearchRData() { }
+    MDNSSearchRData(uint16_t version = MDNSTextRData::TXTVERS) : MDNSTextRData(version) { }
 
     /**
      * @internal
@@ -2881,7 +2904,7 @@ class MDNSSearchRData : public MDNSTextRData {
      * MDNS Search RData.
      * @param wkn	The well known name to search for.
      */
-    MDNSSearchRData(qcc::String wkn);
+    MDNSSearchRData(qcc::String wkn, uint16_t version = MDNSTextRData::TXTVERS);
 
     /**
      * @internal
@@ -2926,7 +2949,7 @@ class MDNSPingRData : public MDNSTextRData {
      * @brief Construct an in-memory object representation of an on-the-wire
      * MDNS Ping RData.
      */
-    MDNSPingRData() { }
+    MDNSPingRData(uint16_t version = MDNSTextRData::TXTVERS) : MDNSTextRData(version) { }
 
     /**
      * @internal
@@ -2934,7 +2957,7 @@ class MDNSPingRData : public MDNSTextRData {
      * MDNS Ping RData.
      * @param wkn	The well known name to search for.
      */
-    MDNSPingRData(qcc::String wkn);
+    MDNSPingRData(qcc::String wkn, uint16_t version = MDNSTextRData::TXTVERS);
 
     /**
      * @internal
@@ -2978,7 +3001,7 @@ class MDNSPingReplyRData : public MDNSTextRData {
      * @brief Construct an in-memory object representation of an on-the-wire
      * MDNS Ping RData.
      */
-    MDNSPingReplyRData() { }
+    MDNSPingReplyRData(uint16_t version = MDNSTextRData::TXTVERS) : MDNSTextRData(version) { }
 
     /**
      * @internal
@@ -2986,7 +3009,7 @@ class MDNSPingReplyRData : public MDNSTextRData {
      * MDNS Ping RData.
      * @param wkn	The well known name to search for.
      */
-    MDNSPingReplyRData(qcc::String wkn);
+    MDNSPingReplyRData(qcc::String wkn, uint16_t version = MDNSTextRData::TXTVERS);
 
     /**
      * @internal
@@ -3035,7 +3058,7 @@ class MDNSAdvertiseRData : public MDNSTextRData {
      * @brief Construct an in-memory object representation of an on-the-wire
      * MDNS Advertise RData.
      */
-    MDNSAdvertiseRData() { }
+    MDNSAdvertiseRData(uint16_t version = MDNSTextRData::TXTVERS) : MDNSTextRData(version) { }
 
     /**
      * @internal
@@ -3104,7 +3127,7 @@ class MDNSSenderRData : public MDNSTextRData {
      * @brief Construct an in-memory object representation of an on-the-wire
      * MDNS Reference RData.
      */
-    MDNSSenderRData();
+    MDNSSenderRData(uint16_t version = MDNSTextRData::TXTVERS) : MDNSTextRData(version) { }
 
     /**
      * @internal
@@ -3119,7 +3142,7 @@ class MDNSSenderRData : public MDNSTextRData {
      * @param transportMask	The transport mask.
      * @param guid		The GUID of the NS Router.
      */
-    MDNSSenderRData(uint16_t searchId, qcc::String ipv4Addr, uint16_t ipv4Port, qcc::String ipv6Addr, uint16_t ipv6Port, TransportMask transportMask, qcc::String guid);
+    MDNSSenderRData(uint16_t searchId, qcc::String ipv4Addr, uint16_t ipv4Port, qcc::String ipv6Addr, uint16_t ipv6Port, TransportMask transportMask, qcc::String guid, uint16_t version = MDNSTextRData::TXTVERS);
 
     /**
      * @internal
@@ -3167,7 +3190,7 @@ class MDNSSenderRData : public MDNSTextRData {
      * @brief Set the transportMask for this Sender RData.
      * @param transportMask The transportMask to set.
      */
-    void SetTransportMask(uint16_t transportMask);
+    void SetTransportMask(TransportMask transportMask);
 
     /**
      * @internal
@@ -3863,6 +3886,19 @@ class _MDNSPacket : public _Packet {
 
     /**
      * @internal
+     * @brief Get the answer with a particular name, type, and rdata version.
+     *
+     * @param str The desired name.
+     * @param type The desired RRtype.
+     * @param version The desired version.
+     * @param answer[out] The MDNSResourceRecord into which the answer record will be filled.
+     *
+     * @return true if the name and type were found, false otherwise.
+     */
+    bool GetAnswer(qcc::String str, MDNSResourceRecord::RRType type, uint16_t version, MDNSResourceRecord** answer);
+
+    /**
+     * @internal
      * @brief Add an additional record to this packet
      *
      * @param record The additional record to add to this packet.
@@ -3898,6 +3934,19 @@ class _MDNSPacket : public _Packet {
      * @return true if the name and type were found, false otherwise.
      */
     bool GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRType type, MDNSResourceRecord** additional);
+
+    /**
+     * @internal
+     * @brief Get the additional record with a particular name, type, and rdata version.
+     *
+     * @param str The desired name.
+     * @param type The desired RRtype.
+     * @param version The desired version
+     * @param additional[out] The MDNSResourceRecord into which the additional record will be filled.
+     *
+     * @return true if the name and type were found, false otherwise.
+     */
+    bool GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRType type, uint16_t version, MDNSResourceRecord** additional);
 
     /**
      * @internal

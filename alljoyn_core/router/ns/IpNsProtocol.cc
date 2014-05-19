@@ -2065,10 +2065,20 @@ size_t MDNSDefaultRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize,
 }
 
 //MDNSTextRData
+const uint16_t MDNSTextRData::TXTVERS = 0;
+
+MDNSTextRData::MDNSTextRData(uint16_t version)
+    : version(version)
+{
+    SetValue("txtvers", version);
+}
+
 void MDNSTextRData::Reset()
 {
     m_fields.clear();
+    SetValue("txtvers", version);
 }
+
 void MDNSTextRData::RemoveEntry(qcc::String key)
 {
     m_fields.erase(key);
@@ -2105,12 +2115,25 @@ void MDNSTextRData::SetValue(String key, String value)
     m_fields[key] = value;
 }
 
+void MDNSTextRData::SetValue(String key, uint16_t value)
+{
+    m_fields[key] = U32ToString(value);
+}
+
 String MDNSTextRData::GetValue(String key)
 {
     if (m_fields.find(key) != m_fields.end()) {
         return m_fields[key];
     } else {
         return "";
+    }
+}
+
+uint16_t MDNSTextRData::GetU16Value(String key) {
+    if (m_fields.find(key) != m_fields.end()) {
+        return StringToU32(m_fields[key]);
+    } else {
+        return 0;
     }
 }
 
@@ -2130,17 +2153,26 @@ size_t MDNSTextRData::GetSerializedSize(void) const
 size_t MDNSTextRData::Serialize(uint8_t* buffer) const
 {
     size_t rdlen = 0;
-    map<String, String>::const_iterator it = m_fields.begin();
+    map<String, String>::const_iterator txtvers;
+    map<String, String>::const_iterator it;
     uint8_t* p = &buffer[2];
 
-    while (it != m_fields.end()) {
+    //
+    // txtvers must appear first in the record
+    //
+    txtvers = m_fields.find("txtvers");
+    assert(txtvers != m_fields.end());
+    it = txtvers;
+    do {
         String str = it->first + "=" + it->second;
         *p++ = str.length();
         memcpy(reinterpret_cast<void*>(p), const_cast<void*>(reinterpret_cast<const void*>(str.c_str())), str.length());
         p += str.length();
         rdlen += str.length() + 1;
-        it++;
-    }
+        if (++it == m_fields.end()) {
+            it = m_fields.begin();
+        }
+    } while (it != txtvers);
 
     buffer[0] = (rdlen & 0xFF00) >> 8;
     buffer[1] = (rdlen & 0xFF);
@@ -2151,7 +2183,7 @@ size_t MDNSTextRData::Serialize(uint8_t* buffer) const
 
 size_t MDNSTextRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
 {
-//
+    //
     // If there's not enough data in the buffer to even get the string size out
     // then bail.
     //
@@ -2296,7 +2328,6 @@ size_t MDNSAAAARData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, st
     if (buffer[0] != 0 || buffer[1] != 16) {
         QCC_DbgPrintf(("MDNSTextRecord::Deserialize(): Invalid RDLength"));
         return 0;
-
     }
     uint8_t const* p = &buffer[2];
     m_ipv6Addr = qcc::IPAddress::IPv6ToString(p);
@@ -2556,6 +2587,7 @@ void MDNSAdvertiseRData::Reset()
 {
     MDNSTextRData::Reset();
 }
+
 qcc::String MDNSAdvertiseRData::GetNameAt(int i)
 {
     return MDNSTextRData::GetValue("wkn" + U32ToString(i));
@@ -2566,6 +2598,7 @@ void MDNSAdvertiseRData::AddName(qcc::String wkn)
     int index = MDNSTextRData::GetNumFields();
     MDNSTextRData::SetValue("wkn" + U32ToString(index), wkn);
 }
+
 void MDNSAdvertiseRData::RemoveName(int index)
 {
     int total = MDNSTextRData::GetNumFields();
@@ -2577,13 +2610,15 @@ void MDNSAdvertiseRData::RemoveName(int index)
         MDNSTextRData::SetValue("wkn" + U32ToString(i - 1), temp);
     }
 }
+
 uint16_t MDNSAdvertiseRData::GetNumNames()
 {
-    return MDNSTextRData::GetNumFields();
+    return MDNSTextRData::GetNumFields() - 1 /* txtvers */;
 }
 
 //MDNSSearchRecord
-MDNSSearchRData::MDNSSearchRData(qcc::String wkn)
+MDNSSearchRData::MDNSSearchRData(qcc::String wkn, uint16_t version)
+    : MDNSTextRData(version)
 {
     MDNSTextRData::SetValue("wkn", wkn);
 }
@@ -2599,7 +2634,8 @@ void MDNSSearchRData::SetWellKnownName(qcc::String wkn)
 }
 
 ////MDNSPingRecord
-MDNSPingRData::MDNSPingRData(qcc::String wkn)
+MDNSPingRData::MDNSPingRData(qcc::String wkn, uint16_t version)
+    : MDNSTextRData(version)
 {
     MDNSTextRData::SetValue("wkn", wkn);
 }
@@ -2615,7 +2651,8 @@ void MDNSPingRData::SetWellKnownName(qcc::String wkn)
 }
 
 ////MDNSPingReplyRecord
-MDNSPingReplyRData::MDNSPingReplyRData(qcc::String wkn)
+MDNSPingReplyRData::MDNSPingReplyRData(qcc::String wkn, uint16_t version)
+    : MDNSTextRData(version)
 {
     MDNSTextRData::SetValue("wkn", wkn);
 }
@@ -2642,24 +2679,19 @@ void MDNSPingReplyRData::SetReplyCode(qcc::String replyCode)
 
 
 //MDNSSenderRData
-MDNSSenderRData::MDNSSenderRData()
-{
-
-}
-
 MDNSSenderRData::MDNSSenderRData(uint16_t searchId, qcc::String ipv4Addr, uint16_t ipv4Port,
-                                 qcc::String ipv6Addr, uint16_t ipv6Port, TransportMask transportMask, String guid)
+                                 qcc::String ipv6Addr, uint16_t ipv6Port, TransportMask transportMask, String guid, uint16_t version)
+    : MDNSTextRData(version)
 {
 
-    MDNSTextRData::SetValue("sid", U32ToString(searchId));
-    MDNSTextRData::SetValue("pv", U32ToString(NS_VERSION));
-    MDNSTextRData::SetValue("upcv4", U32ToString(ipv4Port));
+    MDNSTextRData::SetValue("sid", searchId);
+    MDNSTextRData::SetValue("pv", NS_VERSION);
+    MDNSTextRData::SetValue("upcv4", ipv4Port);
     MDNSTextRData::SetValue("ipv4", ipv4Addr);
-    MDNSTextRData::SetValue("upcv6", U32ToString(ipv6Port));
+    MDNSTextRData::SetValue("upcv6", ipv6Port);
     MDNSTextRData::SetValue("ipv6", ipv6Addr);
-    MDNSTextRData::SetValue("trans", U32ToString(transportMask));
+    MDNSTextRData::SetValue("trans", transportMask);
     MDNSTextRData::SetValue("guid", guid);
-
 }
 
 qcc::String MDNSSenderRData::GetGuid()
@@ -2674,32 +2706,32 @@ void MDNSSenderRData::SetGuid(qcc::String guid)
 
 uint16_t MDNSSenderRData::GetTransportMask()
 {
-    return StringToU32(MDNSTextRData::GetValue("trans"));
+    return MDNSTextRData::GetU16Value("trans");
 }
 
-void MDNSSenderRData::SetTransportMask(uint16_t transportMask)
+void MDNSSenderRData::SetTransportMask(TransportMask transportMask)
 {
-    MDNSTextRData::SetValue("trans", U32ToString(transportMask));
+    MDNSTextRData::SetValue("trans", transportMask);
 }
 
 uint16_t MDNSSenderRData::GetSearchID()
 {
-    return StringToU32(MDNSTextRData::GetValue("sid"));
+    return MDNSTextRData::GetU16Value("sid");
 }
 
 void MDNSSenderRData::SetSearchID(uint16_t searchId)
 {
-    MDNSTextRData::SetValue("sid", U32ToString(searchId));
+    MDNSTextRData::SetValue("sid", searchId);
 }
 
 uint16_t MDNSSenderRData::GetIPV4ResponsePort()
 {
-    return StringToU32(MDNSTextRData::GetValue("upcv4"));
+    return MDNSTextRData::GetU16Value("upcv4");
 }
 
 void MDNSSenderRData::SetIPV4ResponsePort(uint16_t ipv4Port)
 {
-    MDNSTextRData::SetValue("upcv4", U32ToString(ipv4Port));
+    MDNSTextRData::SetValue("upcv4", ipv4Port);
 }
 
 qcc::String MDNSSenderRData::GetIPV4ResponseAddr()
@@ -2714,12 +2746,12 @@ void MDNSSenderRData::SetIPV4ResponseAddr(qcc::String ipv4Addr)
 
 uint16_t MDNSSenderRData::GetIPV6ResponsePort()
 {
-    return StringToU32(MDNSTextRData::GetValue("upcv6"));
+    return MDNSTextRData::GetU16Value("upcv6");
 }
 
 void MDNSSenderRData::SetIPV6ResponsePort(uint16_t ipv6Port)
 {
-    MDNSTextRData::SetValue("upcv6", U32ToString(ipv6Port));
+    MDNSTextRData::SetValue("upcv6", ipv6Port);
 }
 
 qcc::String MDNSSenderRData::GetIPV6ResponseAddr()
@@ -3086,11 +3118,45 @@ bool _MDNSPacket::GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRTyp
     return false;
 }
 
+bool _MDNSPacket::GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRType type, uint16_t version, MDNSResourceRecord** additional)
+{
+    if (type != MDNSResourceRecord::TXT) {
+        return false;
+    }
+    std::vector<MDNSResourceRecord>::iterator it1 = m_additional.begin();
+    while (it1 != m_additional.end()) {
+        if (((*it1).GetDomainName() == str) && ((*it1).GetRRType() == type) &&
+            (static_cast<MDNSTextRData*>((*it1).GetRData())->GetU16Value("txtvers") == version)) {
+            *additional = &(*it1);
+            return true;
+        }
+        it1++;
+    }
+    return false;
+}
+
 bool _MDNSPacket::GetAnswer(qcc::String str, MDNSResourceRecord::RRType type, MDNSResourceRecord** answer)
 {
     std::vector<MDNSResourceRecord>::iterator it1 = m_answers.begin();
     while (it1 != m_answers.end()) {
         if (((*it1).GetDomainName() == str) && ((*it1).GetRRType() == type)) {
+            *answer = &(*it1);
+            return true;
+        }
+        it1++;
+    }
+    return false;
+}
+
+bool _MDNSPacket::GetAnswer(qcc::String str, MDNSResourceRecord::RRType type, uint16_t version, MDNSResourceRecord** answer)
+{
+    if (type != MDNSResourceRecord::TXT) {
+        return false;
+    }
+    std::vector<MDNSResourceRecord>::iterator it1 = m_answers.begin();
+    while (it1 != m_answers.end()) {
+        if (((*it1).GetDomainName() == str) && ((*it1).GetRRType() == type) &&
+            (static_cast<MDNSTextRData*>((*it1).GetRData())->GetU16Value("txtvers") == version)) {
             *answer = &(*it1);
             return true;
         }
