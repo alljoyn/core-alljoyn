@@ -42,6 +42,7 @@
 #include <qcc/StringUtil.h>
 #include <qcc/GUID.h>
 
+#include "BusUtil.h"
 #include "ConfigDB.h"
 #include "IpNameServiceImpl.h"
 
@@ -1657,9 +1658,10 @@ void IpNameServiceImpl::TriggerTransmission(Packet packet)
     }
     m_mutex.Unlock();
 }
-QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const qcc::String& wkn, LocatePolicy policy)
+
+QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const qcc::String& matching, LocatePolicy policy)
 {
-    QCC_DbgHLPrintf(("IpNameServiceImpl::FindAdvertisedName(0x%x, \"%s\", %d)", transportMask, wkn.c_str(), policy));
+    QCC_DbgHLPrintf(("IpNameServiceImpl::FindAdvertisedName(0x%x, \"%s\", %d)", transportMask, matching.c_str(), policy));
 
     //
     // Exactly one bit must be set in a transport mask in order to identify the
@@ -1669,6 +1671,35 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::FindAdvertisedName(): Bad transport mask"));
         return ER_BAD_TRANSPORT_MASK;
     }
+
+
+    //
+    // When a bus name is advertised, the source may append a string that
+    // identifies a specific instance of advertised name.  For example, one
+    // might advertise something like
+    //
+    //   com.mycompany.myproduct.0123456789ABCDEF
+    //
+    // as a specific instance of the bus name,
+    //
+    //   com.mycompany.myproduct
+    //
+    // Clients of the system will want to be able to discover all specific
+    // instances, so they need to do a wildcard search for bus name strings
+    // that match the non-specific name, for example,
+    //
+    //   com.mycompany.myproduct*
+    //
+    // We automatically append the name service wildcard character to the end
+    // of the provided string (which we call the namePrefix) before sending it
+    // to the name service which forwards the request out over the net.
+    //
+    map<String, String> matchingMap;
+    if ((ParseMatch(matching, matchingMap) != ER_OK) || (matchingMap.find("wkn") == matchingMap.end())) {
+        QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::FindAdvertisedName(): Bad request"));
+        return ER_BAD_ARG_2;
+    }
+    matchingMap["wkn"].append('*');
 
     //
     // Send a request to the network over our multicast channel, asking for
@@ -1710,7 +1741,7 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         whoHas.SetUdpFlag(true);
 
         whoHas.SetIPv4Flag(true);
-        whoHas.AddName(wkn);
+        whoHas.AddName(matchingMap["wkn"]);
 
         NSPacket nspacket;
         nspacket->SetVersion(0, 0);
@@ -1732,7 +1763,7 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
         //
         whoHas.SetVersion(1, 1);
         whoHas.SetTransportMask(transportMask);
-        whoHas.AddName(wkn);
+        whoHas.AddName(matchingMap["wkn"]);
 
         NSPacket nspacket;
         nspacket->SetVersion(1, 1);
@@ -1746,27 +1777,16 @@ QStatus IpNameServiceImpl::FindAdvertisedName(TransportMask transportMask, const
     // Do it again for version two.
     //
     {
-        int32_t id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
-        MDNSHeader mdnsHeader(id, MDNSHeader::MDNS_QUERY);
-        MDNSQuestion mdnsQuestion("_alljoyn._tcp._local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET);
-        MDNSSearchRData* searchRData = new MDNSSearchRData(wkn);
-        //TODO: Will this be 120 ttl?
+        MDNSPacket query;
+
+        MDNSTextRData* searchRData = new MDNSTextRData();
+        for (map<String, String>::iterator it = matchingMap.begin(); it != matchingMap.end(); ++it) {
+            searchRData->SetValue(it->first, it->second);
+        }
         MDNSResourceRecord searchRecord("search.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
+        query->AddAdditionalRecord(searchRecord);
 
-        MDNSSenderRData* refRData =  new MDNSSenderRData();
-        refRData->SetSearchID(id);
-        refRData->SetTransportMask(transportMask);
-        refRData->SetGuid(m_guid);
-        MDNSResourceRecord refRecord("sender-info.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
-
-        MDNSPacket mdnsPacket;
-        mdnsPacket->SetHeader(mdnsHeader);
-        mdnsPacket->AddQuestion(mdnsQuestion);
-        mdnsPacket->AddAdditionalRecord(searchRecord);
-        mdnsPacket->AddAdditionalRecord(refRecord);
-        mdnsPacket->SetVersion(2, 2);
-
-        TriggerTransmission(Packet::cast(mdnsPacket));
+        Query(transportMask, query);
 
     }
 

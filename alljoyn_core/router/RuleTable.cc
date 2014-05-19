@@ -21,6 +21,7 @@
  ******************************************************************************/
 #include <qcc/platform.h>
 
+#include <algorithm>
 #include <cstring>
 
 #include "RuleTable.h"
@@ -103,6 +104,8 @@ Rule::Rule(const char* ruleSpec, QStatus* outStatus) : type(MESSAGE_INVALID), se
         }
         pos = endPos + 1;
     }
+    /* Sort the implements vector for equality comparison later */
+    std::sort(implements.begin(), implements.end());
     if (outStatus) {
         *outStatus = status;
     }

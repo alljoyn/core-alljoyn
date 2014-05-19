@@ -222,6 +222,22 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     void FindAdvertisedNameByTransport(const InterfaceDescription::Member* member, Message& msg);
 
     /**
+     * Respond to a bus request to look for advertisements from remote AllJoyn instances over a set of specified transports.
+     *
+     * The input Message (METHOD_CALL) is expected to contain the following parameters:
+     *   matching      string   Key, value match criteria that the caller wants to be notified of (via signal)
+     *                          when a remote Bus instance is found with an advertisement that matches the criteria.
+     *   transports    uint16   Transport bit mask
+     *
+     * The output Message (METHOD_REPLY) contains the following parameters:
+     *   resultCode   uint32   A ALLJOYN_FINDNAME_* reply code (see AllJoynStd.h)
+     *
+     * @param member  Member.
+     * @param msg     The incoming message.
+     */
+    void FindAdvertisementByTransport(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
      * Respond to a bus request to cancel a previous (successful) FindName request.
      *
      * The input Message (METHOD_CALL) is expected to contain the following parameters:
@@ -249,6 +265,21 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param msg     The incoming message.
      */
     void CancelFindAdvertisedNameByTransport(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * Respond to a bus request to cancel a previous (successful) FindAdvertisement request over a set of specified transports.
+     *
+     * The input Message (METHOD_CALL) is expected to contain the following parameters:
+     *   matching      string   The key, value match criteria that was used in a successful call to FindAdvertisement.
+     *   transports    uint16   Transport bit mask
+     *
+     * The output Message (METHOD_REPLY) contains the following parameters:
+     *   resultCode   uint32   A ALLJOYN_CANCELFINDNAME_* reply code (see AllJoynStd.h)
+     *
+     * @param member  Member.
+     * @param msg     The incoming message.
+     */
+    void CancelFindAdvertisementByTransport(const InterfaceDescription::Member* member, Message& msg);
 
     /**
      * Respond to a bus request to get a (streaming) file descritor for an existing session.
@@ -525,7 +556,18 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     std::multimap<qcc::String, std::pair<TransportMask, qcc::String> > advertiseMap;
 
     /** Map of active discovery names to requesting local endpoint's permitted transport mask(s) and name(s) */
-    std::multimap<qcc::String, std::pair<TransportMask, qcc::String> > discoverMap;
+    struct DiscoverMapEntry {
+        TransportMask transportMask;
+        qcc::String sender;
+        qcc::String namePrefix;
+
+        DiscoverMapEntry(TransportMask transportMask, const qcc::String& sender, const qcc::String& namePrefix) :
+            transportMask(transportMask),
+            sender(sender),
+            namePrefix(namePrefix) { }
+    };
+    typedef std::multimap<qcc::String, DiscoverMapEntry> DiscoverMapType;
+    DiscoverMapType discoverMap;
 
     /** Map of discovered bus names (protected by discoverMapLock) */
     struct NameMapEntry {
@@ -824,27 +866,36 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * Process a request to cancel discovery of a name prefix from a given (locally-connected) endpoint.
      *
      * @param endpointName         Name of endpoint requesting end of discovery
-     * @param namePrefix           Well-known name prefix to be removed from discovery list
+     * @param matching             Key, value match criteria to be removed from discovery list
      * @param transports           Set of transports that should cancel the discovery.
      * @return ER_OK if successful.
      */
-    QStatus ProcCancelFindName(const qcc::String& endpointName, const qcc::String& namePrefix, TransportMask transports);
+    QStatus ProcCancelFindAdvertisement(const qcc::String& endpointName, const qcc::String& matching, TransportMask transports);
 
     /**
      * Process a request to discover a name prefix by a set of transports
      *
+     * @param status               The result of parsing one of FindAdvertisedName, FindAdvertisedNameByTransport, or
+     *                             FindAdvertisementByTransport.
      * @param msg                  The incoming message
-     * @param isAnyTrans           True if to use transports included in TRANSPORT_ANY; if false the information of transport bits are part of the message
+     * @param matching             Key, value match criteria that the caller wants to be notified of (via signal)
+     *                             when a remote Bus instance is found with an advertisement that matches the criteria.
+     * @param transports           Transport bit mask
+     * @param namePrefix           A well-known name prefix that the caller wants to be notified of (via signal)
+     *                             when a remote Bus instance is found that advertises a name that matches the prefix.
      */
-    void ProcFindAdvertisedName(Message& msg, bool isAnyTrans);
+    void ProcFindAdvertisement(QStatus status, Message& msg, const qcc::String& matching, TransportMask transports, const qcc::String& namePrefix);
 
     /**
      * Handle a request to cancel the discovery a name prefix by a set of transports
      *
+     * @param status               The result of parsing one of CancelFindAdvertisedName, CancelFindAdvertisedNameByTransport, or
+     *                             CancelFindAdvertisementByTransport.
      * @param msg                  The incoming message
-     * @param isAnyTrans           True if to use transports included in TRANSPORT_ANY; if false the information of transport bits are part of the message
+     * @param matching             Key, value match criteria to be removed from discovery list
+     * @param transports           Transport bit mask
      */
-    void HandleCancelFindAdvertisedName(Message& msg, bool isAnyTrans);
+    void HandleCancelFindAdvertisement(QStatus status, Message& msg, const qcc::String& matching, TransportMask transports);
 
     /**
      * Validate and normalize a transport specification string.  Given a
