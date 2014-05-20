@@ -205,9 +205,23 @@ PropertyStoreProperty* AboutPropertyStoreImpl::getProperty(PropertyStoreKey prop
 
 PropertyStoreProperty* AboutPropertyStoreImpl::getProperty(PropertyStoreKey propertyKey, qcc::String const& language)
 {
+    PropertyMap::iterator defaultLang = m_Properties.find(DEFAULT_LANG);
+    qcc::String defaultLanguage = "";
+    if (defaultLang != m_Properties.end()) {
+        char* tempdefLang;
+        defaultLang->second.getPropertyValue().Get("s", &tempdefLang);
+        defaultLanguage.assign(tempdefLang);
+    }
+
     std::pair<PropertyMap::iterator, PropertyMap::iterator> iter = m_Properties.equal_range(propertyKey);
     for (PropertyMap::iterator it = iter.first; it != iter.second; it++) {
-        if (it->second.getLanguage().compare(language) == 0) {
+        /*
+         * The first check is solely for backwards compatibility with the
+         * deprecated setDeviceName.  An empty language string implies the
+         * default language for that case.
+         */
+        if ((it->second.getLanguage().empty() && (language == defaultLanguage)) ||
+            (it->second.getLanguage().compare(language) == 0)) {
             return &it->second;
         }
     }

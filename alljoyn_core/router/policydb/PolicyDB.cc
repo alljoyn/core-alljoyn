@@ -25,6 +25,10 @@
 #include <qcc/Logger.h>
 #include <qcc/Util.h>
 
+#ifndef NDEBUG
+#include <qcc/StringUtil.h>
+#endif
+
 #include "PolicyDB.h"
 
 #define QCC_MODULE "POLICYDB"
@@ -71,6 +75,8 @@ using namespace std;
 #define RULE_RECEIVE    (0x1 << 2)
 #define RULE_CONNECT    (0x1 << 3)
 
+
+static const _PolicyDB::IDSet nullIDSet;
 
 static bool MsgTypeStrToEnum(const String& str, AllJoynMessageType& type)
 {
@@ -143,14 +149,14 @@ const _PolicyDB::IDSet _PolicyDB::LookupStringIDPrefix(const char* idStr, char s
     char* prefix = strdup(idStr); // duplicate idStr since we are modifying it
 
     /*
-     * If prefix is NULL, then the program is out of memory.  While it would
-     * may be considered reasonable to rework the design of this function to
-     * return an error condition, in this case an out-of-memory condition, we
-     * do not for the following reasions.  One, it should never happen in
-     * real-life, and two, is more likely just a small symptom of a much
-     * bigger problem that will quickly manifest itself in other ways.  To
-     * keep this function simple and its usage simple, an empty IDSet will be
-     * returned in such an unlikely condition.
+     * If prefix is NULL, then the program is out of memory.  While it may be
+     * considered reasonable to rework the design of this function to return
+     * an error, in this case an out-of-memory condition, we do not for the
+     * following reasons.  One, it should never happen in real-life, and two,
+     * it is more likely just a small symptom of a much bigger problem that
+     * will quickly manifest itself in other ways.  To keep this function
+     * simple and its usage simple, an empty IDSet will be returned in such an
+     * unlikely condition.
      */
     if (prefix) {
         while (*prefix) {
@@ -161,7 +167,7 @@ const _PolicyDB::IDSet _PolicyDB::LookupStringIDPrefix(const char* idStr, char s
                  * not keeping prefixes that are known to not be specifed by
                  * the policy rules, we keep the size of the possible matches
                  * to a minimum and save time by not adding useless
-                 * information to a unordered_set<>.
+                 * information to an unordered_set<>.
                  */
                 ret->insert(id);
             }
@@ -182,8 +188,7 @@ const _PolicyDB::IDSet _PolicyDB::LookupStringIDPrefix(const char* idStr, char s
 
 const _PolicyDB::IDSet _PolicyDB::LookupBusNameID(const char* busName) const
 {
-    static const IDSet emptySet;
-    IDSet ret = emptySet;
+    IDSet ret = nullIDSet;
 
     if (busName && (busName[0] != '\0')) {
         lock.RDLock();
@@ -231,11 +236,11 @@ bool _PolicyDB::AddRule(PolicyRuleList& ownList,
 
     QCC_DEBUG_ONLY(rule.ruleString = (permission == policydb::POLICY_ALLOW) ? "<allow" : "<deny");
 
-    for (attr = ruleAttrs.begin(); success && (attr != ruleAttrs.end()); ++attr) {
+    for (attr = ruleAttrs.begin(); attr != ruleAttrs.end(); ++attr) {
         String attrStr = attr->first;
         const String& attrVal = attr->second;
 
-        QCC_DEBUG_ONLY(rule.ruleString += " " + attrStr + "=\"" + attrVal + "\"");
+        QCC_DEBUG_ONLY(rule.ruleString += " " + attrStr + "=\"" + attrVal);
 
         if (attrStr.compare(0, sizeof("send_") - 1, "send_") == 0) {
             policyGroup = RULE_SEND;
@@ -252,6 +257,8 @@ bool _PolicyDB::AddRule(PolicyRuleList& ownList,
             } else {
                 StringID strID = UpdateDictionary(attrVal);
                 skip |= (strID == NIL_MATCH);
+
+                QCC_DEBUG_ONLY(rule.ruleString += "{" + I32ToString(strID) + "}");
 
                 if (attrStr == "interface") {
                     rule.interface = strID;
@@ -305,11 +312,17 @@ bool _PolicyDB::AddRule(PolicyRuleList& ownList,
             }
         }
 
+        QCC_DEBUG_ONLY(rule.ruleString += "\"");
+
         if ((prevPolicyGroup != RULE_UNKNOWN) && (policyGroup != prevPolicyGroup)) {
             // Invalid rule spec mixed different policy group attributes.
             success = false;
         }
         prevPolicyGroup = policyGroup;
+
+        if (!success) {
+            break;
+        }
     }
 
     QCC_DEBUG_ONLY(rule.ruleString += "/>");
@@ -336,7 +349,7 @@ bool _PolicyDB::AddRule(PolicyRuleList& ownList,
 
 #ifndef NDEBUG
     if (!success && (policyGroup != RULE_UNKNOWN)) {
-        Log(LOG_ERR, "Invalid attribute \"%s\" in \"%s\".", attr->first.c_str(), rule.ruleString.c_str());
+        Log(LOG_ERR, "Invalid attribute \"%s\" in \"%s\".\n", attr->first.c_str(), rule.ruleString.c_str());
     }
 #endif
 
@@ -423,6 +436,7 @@ void _PolicyDB::AddAlias(const String& alias, const String& name)
         bnids = it->second;
     }
     if (nameID != ID_NOT_FOUND) {
+        QCC_DbgPrintf(("Add %s{%d} to table for %s", alias.c_str(), nameID, name.c_str()));
         bnids->insert(nameID);
     }
     pair<StringMapKey, IDSet> p(alias, bnids);
@@ -531,6 +545,7 @@ void _PolicyDB::NameOwnerChanged(const String& alias, const String* oldOwner, co
         BusNameIDMap::iterator it = busNameIDMap.find(alias);
         assert(it != busNameIDMap.end());
         if (it != busNameIDMap.end()) {
+            QCC_DbgPrintf(("Remove %s{%d} from table for %s", alias.c_str(), aliasID, oldOwner->c_str()));
             it->second->erase(aliasID);
             busNameIDMap.erase(it);
         }
@@ -543,7 +558,10 @@ void _PolicyDB::NameOwnerChanged(const String& alias, const String* oldOwner, co
             assert(alias != *newOwner);
             bnids = it->second;
         }
-        bnids->insert(aliasID);
+        if (aliasID != ID_NOT_FOUND) {
+            QCC_DbgPrintf(("Add %s{%d} to table for %s", alias.c_str(), aliasID, newOwner->c_str()));
+            bnids->insert(aliasID);
+        }
         pair<StringMapKey, IDSet> p(alias, bnids);
         busNameIDMap.insert(p);
     }
@@ -551,45 +569,66 @@ void _PolicyDB::NameOwnerChanged(const String& alias, const String* oldOwner, co
     lock.Unlock();
 }
 
+
+/**
+ * Rule check macros.  The rule check functions all operate in the same way
+ * with the only difference being the arguments they take and what they check.
+ * This macro is the simplest way to put all the boilerplate code into one
+ * place.  This is a case where macros work better than C++ templates and
+ * varargs while avoiding a cumbersome callback mechanism.  This is truely a
+ * macro and not a macro that has function-like semantics.
+ *
+ * @param[out] _allow   Whether the rule is an ALLOW or DENY rule
+ * @param _rl           The ruleList to iterate over
+ * @param _it           The name of the iterator variable to use (e.g. "it")
+ * @param _checks       The checks to perform
+ *                      (e.g. "(it->CheckUser(uid) && it->CheckGroup(gid))")
+ */
 #ifndef NDEBUG
-#define LOG_RULE_CHECK(rs, p, m) QCC_DbgPrintf(("        checking rule: %s - %s - %s", p == policydb::POLICY_ALLOW ? "ALLOW" : "DENY ", rs, m ? "MATCH" : "no match"))
+#define RULE_CHECKS(_allow, _rl, _it, _checks)                          \
+    PolicyRuleList::const_reverse_iterator _it;                         \
+    bool ruleMatch = false;                                             \
+    policydb::PolicyPermission permission;                              \
+    size_t rc = 0;                                                      \
+    for (_it = _rl.rbegin(); !ruleMatch && (_it != _rl.rend()); ++_it) { \
+        ruleMatch = _checks;                                            \
+        permission = _it->permission;                                   \
+        QCC_DbgPrintf(("        checking rule (%u/%u): %s - %s",        \
+                       _rl.size() - rc++,                               \
+                       _rl.size(),                                      \
+                       _it->ruleString.c_str(),                         \
+                       ruleMatch ? "MATCH" : "no match"));              \
+    }                                                                   \
+    if (ruleMatch) {                                                    \
+        _allow = (permission == policydb::POLICY_ALLOW);                \
+    }                                                                   \
+    return ruleMatch
 #else
-#define LOG_RULE_CHECK(rs, p, m) do { } while (false)
+#define RULE_CHECKS(_allow, _rl, _it, _checks)                          \
+    PolicyRuleList::const_reverse_iterator _it;                         \
+    bool ruleMatch = false;                                             \
+    policydb::PolicyPermission permission;                              \
+    for (_it = _rl.rbegin(); !ruleMatch && (_it != _rl.rend()); ++_it) { \
+        ruleMatch = _checks;                                            \
+        permission = _it->permission;                                   \
+    }                                                                   \
+    if (ruleMatch) {                                                    \
+        _allow = (permission == policydb::POLICY_ALLOW);                \
+    }                                                                   \
+    return ruleMatch
 #endif
 
 bool _PolicyDB::CheckConnect(bool& allow, const PolicyRuleList& ruleList, uint32_t uid, uint32_t gid)
 {
-    PolicyRuleList::const_reverse_iterator it;
-    bool ruleMatch = false;
-    policydb::PolicyPermission permission;
-
-    for (it = ruleList.rbegin(); !ruleMatch && (it != ruleList.rend()); ++it) {
-        ruleMatch = (it->CheckUser(uid) && it->CheckGroup(gid));
-        permission = it->permission;
-        LOG_RULE_CHECK(it->ruleString.c_str(), permission, ruleMatch);
-    }
-    if (ruleMatch) {
-        allow = (permission == policydb::POLICY_ALLOW);
-    }
-    return ruleMatch;
+    RULE_CHECKS(allow, ruleList, it,
+                (it->CheckUser(uid) && it->CheckGroup(gid)));
 }
 
 
 bool _PolicyDB::CheckOwn(bool& allow, const PolicyRuleList& ruleList, StringID bnid, const IDSet& prefixes)
 {
-    PolicyRuleList::const_reverse_iterator it;
-    bool ruleMatch = false;
-    policydb::PolicyPermission permission;
-
-    for (it = ruleList.rbegin(); !ruleMatch && (it != ruleList.rend()); ++it) {
-        ruleMatch = it->CheckOwn(bnid, prefixes);
-        permission = it->permission;
-        LOG_RULE_CHECK(it->ruleString.c_str(), permission, ruleMatch);
-    }
-    if (ruleMatch) {
-        allow = (permission == policydb::POLICY_ALLOW);
-    }
-    return ruleMatch;
+    RULE_CHECKS(allow, ruleList, it,
+                it->CheckOwn(bnid, prefixes));
 }
 
 
@@ -597,27 +636,15 @@ bool _PolicyDB::CheckMessage(bool& allow, const PolicyRuleList& ruleList,
                              const NormalizedMsgHdr& nmh,
                              const IDSet& bnIDSet)
 {
-    PolicyRuleList::const_reverse_iterator it;
-    bool ruleMatch = false;
-    policydb::PolicyPermission permission;
-
-    for (it = ruleList.rbegin(); !ruleMatch && (it != ruleList.rend()); ++it) {
-        ruleMatch = (it->CheckType(nmh.type) &&
-                     it->CheckInterface(nmh.ifcID) &&
-                     it->CheckMember(nmh.memberID) &&
-                     it->CheckPath(nmh.pathID, nmh.pathIDSet) &&
-                     it->CheckError(nmh.errorID) &&
-                     it->CheckBusName(bnIDSet));
-        permission = it->permission;
-        LOG_RULE_CHECK(it->ruleString.c_str(), permission, ruleMatch);
-    }
-
-    if (ruleMatch) {
-        allow = (permission == policydb::POLICY_ALLOW);
-    }
-
-    return ruleMatch;
+    RULE_CHECKS(allow, ruleList, it,
+                (it->CheckType(nmh.type) &&
+                 it->CheckInterface(nmh.ifcID) &&
+                 it->CheckMember(nmh.memberID) &&
+                 it->CheckPath(nmh.pathID, nmh.pathIDSet) &&
+                 it->CheckError(nmh.errorID) &&
+                 it->CheckBusName(bnIDSet)));
 }
+
 
 
 bool _PolicyDB::OKToConnect(uint32_t uid, uint32_t gid) const
@@ -665,7 +692,7 @@ bool _PolicyDB::OKToOwn(const char* busName, BusEndpoint& ep) const
         return false;
     }
 
-    QCC_DbgPrintf(("Check if OK for endpoint %s to own %s (%d)",
+    QCC_DbgPrintf(("Check if OK for endpoint %s to own %s{%d}",
                    ep->GetUniqueName().c_str(), busName, LookupStringID(busName)));
 
     /* Implicitly default to allow any endpoint to own any name. */
@@ -705,6 +732,21 @@ bool _PolicyDB::OKToOwn(const char* busName, BusEndpoint& ep) const
     return allow;
 }
 
+#ifndef NDEBUG
+static String IDSet2String(const _PolicyDB::IDSet& idset)
+{
+    String ids;
+    std::unordered_set<StringID>::const_iterator it = idset->begin();
+    while (it != idset->end()) {
+        ids += I32ToString(*it);
+        ++it;
+        if (it != idset->end()) {
+            ids += ", ";
+        }
+    }
+    return ids;
+}
+#endif
 
 bool _PolicyDB::OKToReceive(const NormalizedMsgHdr& nmh, BusEndpoint& dest) const
 {
@@ -712,10 +754,24 @@ bool _PolicyDB::OKToReceive(const NormalizedMsgHdr& nmh, BusEndpoint& dest) cons
     bool allow = true;
     bool ruleMatch = false;
 
-    QCC_DbgPrintf(("Check if OK for endpoint %s to receive %s (%s (%d) --> %s (%d))",
+    if (nmh.destIDSet.iden(nullIDSet)) {
+        /*
+         * Broadcast/multicast signal - need to re-check send rules for each
+         * destination.
+         */
+        const IDSet destIDSet = LookupBusNameID(dest->GetUniqueName().c_str());
+        if (!destIDSet->empty()) {
+            allow = OKToSend(nmh, &destIDSet);
+            if (!allow) {
+                return false;
+            }
+        }
+    }
+
+    QCC_DbgPrintf(("Check if OK for endpoint %s to receive %s (%s{%s} --> %s{%s})",
                    dest->GetUniqueName().c_str(), nmh.msg->Description().c_str(),
-                   nmh.msg->GetSender(), LookupStringID(nmh.msg->GetSender()),
-                   nmh.msg->GetDestination(), LookupStringID(nmh.msg->GetDestination())));
+                   nmh.msg->GetSender(), IDSet2String(nmh.senderIDSet).c_str(),
+                   nmh.msg->GetDestination(), IDSet2String(nmh.destIDSet).c_str()));
 
     if (!receiveRS.mandatoryRules.empty()) {
         QCC_DbgPrintf(("    checking mandatory receive rules"));
@@ -749,43 +805,47 @@ bool _PolicyDB::OKToReceive(const NormalizedMsgHdr& nmh, BusEndpoint& dest) cons
 }
 
 
-bool _PolicyDB::OKToSend(const NormalizedMsgHdr& nmh, BusEndpoint& sender) const
+bool _PolicyDB::OKToSend(const NormalizedMsgHdr& nmh, const IDSet* destIDSet) const
 {
     /* Implicitly default to allow messages to be sent. */
     bool allow = true;
     bool ruleMatch = false;
 
-    QCC_DbgPrintf(("Check if OK for endpoint %s to send %s (%s (%d) --> %s (%d))",
-                   sender->GetUniqueName().c_str(), nmh.msg->Description().c_str(),
-                   nmh.msg->GetSender(), LookupStringID(nmh.msg->GetSender()),
-                   nmh.msg->GetDestination(), LookupStringID(nmh.msg->GetDestination())));
+    if (!destIDSet) {
+        destIDSet = &nmh.destIDSet;
+    }
+
+    QCC_DbgPrintf(("Check if OK for endpoint %s to send %s (%s{%s} --> %s{%s})",
+                   nmh.sender->GetUniqueName().c_str(), nmh.msg->Description().c_str(),
+                   nmh.msg->GetSender(), IDSet2String(nmh.senderIDSet).c_str(),
+                   nmh.msg->GetDestination(), IDSet2String(*destIDSet).c_str()));
 
     if (!sendRS.mandatoryRules.empty()) {
         QCC_DbgPrintf(("    checking mandatory send rules"));
-        ruleMatch = CheckMessage(allow, sendRS.mandatoryRules, nmh, nmh.destIDSet);
+        ruleMatch = CheckMessage(allow, sendRS.mandatoryRules, nmh, *destIDSet);
     }
 
     if (!ruleMatch && !sendRS.userRules.empty()) {
-        uint32_t uid = sender->GetUserId();
+        uint32_t uid = nmh.sender->GetUserId();
         IDRuleMap::const_iterator it = sendRS.userRules.find(uid);
         if (it != sendRS.userRules.end()) {
             QCC_DbgPrintf(("    checking user=%u send rules", uid));
-            ruleMatch = CheckMessage(allow, it->second, nmh, nmh.destIDSet);
+            ruleMatch = CheckMessage(allow, it->second, nmh, *destIDSet);
         }
     }
 
     if (!ruleMatch && !sendRS.groupRules.empty()) {
-        uint32_t gid = sender->GetGroupId();
+        uint32_t gid = nmh.sender->GetGroupId();
         IDRuleMap::const_iterator it = sendRS.groupRules.find(gid);
         if (it != sendRS.groupRules.end()) {
             QCC_DbgPrintf(("    checking group=%u send rules", gid));
-            ruleMatch = CheckMessage(allow, it->second, nmh, nmh.destIDSet);
+            ruleMatch = CheckMessage(allow, it->second, nmh, *destIDSet);
         }
     }
 
     if (!ruleMatch) {
         QCC_DbgPrintf(("    checking default send rules"));
-        ruleMatch = CheckMessage(allow, sendRS.defaultRules, nmh, nmh.destIDSet);
+        ruleMatch = CheckMessage(allow, sendRS.defaultRules, nmh, *destIDSet);
     }
 
     return allow;

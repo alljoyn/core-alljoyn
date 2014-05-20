@@ -23,7 +23,6 @@ ROUTER_SRCS = $(wildcard *.cc)
 ROUTER_SRCS += $(wildcard *.c)
 ROUTER_SRCS += $(wildcard ns/*.cc)
 ROUTER_SRCS += \
-	$(OS_GROUP)/ProximityScanner.cc \
 	$(OS_GROUP)/Socket.cc 
 
 INCLUDE += -I$(PWD)/ice -I$(PWD)/$(OS_GROUP) -I$(PWD)/JSON -I$(PWD)/ns
