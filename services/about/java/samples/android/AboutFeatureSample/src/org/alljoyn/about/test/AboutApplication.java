@@ -250,7 +250,7 @@ public class AboutApplication extends Application
             m_aboutService = AboutServiceImpl.getInstance();
             m_aboutService.setLogger(m_logger);
             m_aboutService.startAboutClient(m_Bus);
-            m_aboutService.addAnnouncementHandler(receiver);
+            m_aboutService.addAnnouncementHandler(receiver, null);
 
         } catch (Exception e){
             e.printStackTrace();

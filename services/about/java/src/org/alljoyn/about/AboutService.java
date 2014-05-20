@@ -25,9 +25,9 @@ import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusException;
 import org.alljoyn.services.common.AnnouncementHandler;
 import org.alljoyn.services.common.BusObjectDescription;
+import org.alljoyn.services.common.PropertyStore;
 import org.alljoyn.services.common.ServiceAvailabilityListener;
 import org.alljoyn.services.common.ServiceCommon;
-import org.alljoyn.services.common.PropertyStore;
 
 /**
  * An interface for both About client (consumer) and server (producer).
@@ -87,16 +87,21 @@ public interface AboutService extends ServiceCommon
 
     /**
      * Register a handler for Announcements.
-     * @param handler
+     * @param handler The AnnouncementHandler that will be receiving the Announce signal
+     * @param interfaces an array of interfaces the remote service must implement to receive
+     *                   the Announce signal.  if interfaces == null the handler will receive
+     *                   all Announce signal.
      * @see AboutTransport#Announce(short, short, BusObjectDescription[], java.util.Map)
      */
-    public void addAnnouncementHandler(AnnouncementHandler handler);
+    public void addAnnouncementHandler(AnnouncementHandler handler, String[] interfaces);
 
     /**
      * Unregister a handler for Announcements.
-     * @param handler
+     * @param handler the AnnouncementHandler to remove. The Set of interfaces must be the
+     *                same as the set used when calling addAnnouncementHandler.
+     * @param interfaces an array of interfaces that were used when calling addAnnouncementHandler
      */
-    public void removeAnnouncementHandler(AnnouncementHandler handler);
+    public void removeAnnouncementHandler(AnnouncementHandler handler, String[] interfaces);
 
     /**
      * Start server mode.  The application creates the BusAttachment
@@ -129,7 +134,7 @@ public interface AboutService extends ServiceCommon
      * Remove the BusInterfaces that the given BusObject implements, from the
      * server's Announcement
      * @param objPath the path of the BusObject
-     * @param interfaces the interfaces to remove. 
+     * @param interfaces the interfaces to remove.
      *                   Note: only the passed interfaces will be removed.
      */
     public void removeObjectDescription(String objPath, String [] interfaces);
