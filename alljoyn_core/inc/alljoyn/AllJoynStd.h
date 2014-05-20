@@ -32,7 +32,7 @@
 #define QCC_MODULE  "ALLJOYN"
 
 /** Router-to-router protocol version number */
-#define ALLJOYN_PROTOCOL_VERSION  9
+#define ALLJOYN_PROTOCOL_VERSION  10
 
 namespace ajn {
 

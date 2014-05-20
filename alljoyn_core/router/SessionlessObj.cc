@@ -86,6 +86,8 @@ static const char* WildcardInterfaceName = "org.alljoyn";
  */
 const uint32_t SessionlessObj::version = 1;
 
+const Rule SessionlessObj::legacyRule = Rule("type='error',sessionless='t'");
+
 /*
  * Internal context passed through JoinSessionAsync.  This holds a snapshot of
  * the remote cache state at the time we issue the JoinSessionAsync.
@@ -107,6 +109,7 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController) :
     sessionlessIface(NULL),
     requestSignalsSignal(NULL),
     requestRangeSignal(NULL),
+    requestRangeMatchSignal(NULL),
     timer("sessionless"),
     curChangeId(0),
     sessionOpts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY, SessionOpts::DAEMON_NAMES),
@@ -152,6 +155,7 @@ QStatus SessionlessObj::Init()
     }
     intf->AddSignal("RequestSignals", "u", NULL, 0);
     intf->AddSignal("RequestRange", "uu", NULL, 0);
+    intf->AddSignal("RequestRangeMatch", "uuas", NULL, 0);
     intf->Activate();
 
     /* Make this object implement org.alljoyn.sl */
@@ -162,11 +166,13 @@ QStatus SessionlessObj::Init()
         return status;
     }
 
-    /* Cache requestSignals and requestRange interface members */
+    /* Cache requestSignals, requestRange, and requestRangeMatch interface members */
     requestSignalsSignal = sessionlessIntf->GetMember("RequestSignals");
     assert(requestSignalsSignal);
     requestRangeSignal = sessionlessIntf->GetMember("RequestRange");
     assert(requestRangeSignal);
+    requestRangeMatchSignal = sessionlessIntf->GetMember("RequestRangeMatch");
+    assert(requestRangeMatchSignal);
 
     /* Register a signal handler for requestSignals */
     status = bus.RegisterSignalHandler(this,
@@ -184,6 +190,15 @@ QStatus SessionlessObj::Init()
                                        NULL);
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to register RequestRange signal handler"));
+    }
+
+    /* Register a signal handler for requestRangeMatch */
+    status = bus.RegisterSignalHandler(this,
+                                       static_cast<MessageReceiver::SignalHandler>(&SessionlessObj::RequestRangeMatchSignalHandler),
+                                       requestRangeMatchSignal,
+                                       NULL);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to register RequestRangeMatch signal handler"));
     }
 
     /* Register signal handler for FoundAdvertisedName */
@@ -397,8 +412,6 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
 
 void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId)
 {
-    static const Rule legacyRule("type='error',sessionless='t'");
-
     uint32_t rulesRangeLen = toRulesId - fromRulesId;
     RuleIterator rit = rules.begin();
     while (rit != rules.end()) {
@@ -662,8 +675,34 @@ void SessionlessObj::RequestRangeSignalHandler(const InterfaceDescription::Membe
     }
 }
 
-void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid, uint32_t fromChangeId, uint32_t toChangeId,
-                                        uint32_t fromRulesId, uint32_t toRulesId)
+void SessionlessObj::RequestRangeMatchSignalHandler(const InterfaceDescription::Member* member,
+                                                    const char* sourcePath,
+                                                    Message& msg)
+{
+    uint32_t fromId, toId;
+    size_t numMatchRuleArgs;
+    const MsgArg* matchRuleArgs;
+    QStatus status = msg->GetArgs("uuas", &fromId, &toId, &numMatchRuleArgs, &matchRuleArgs);
+    if (status == ER_OK) {
+        QCC_DbgPrintf(("RequestRangeMatch(sender=%s,sid=%u,fromId=%u,toId=%u,numMatchRules=%d)",
+                       msg->GetSender(), msg->GetSessionId(), fromId, toId, numMatchRuleArgs));
+        vector<String> matchRules;
+        for (size_t i = 0; i < numMatchRuleArgs; ++i) {
+            char* matchRule;
+            matchRuleArgs[i].Get("s", &matchRule);
+            QCC_DbgPrintf(("  [%d] %s", i, matchRule));
+            matchRules.push_back(matchRule);
+        }
+        HandleRangeRequest(msg->GetSender(), msg->GetSessionId(), fromId, toId, 0, 0, matchRules);
+    } else {
+        QCC_LogError(status, ("Message::GetArgs failed"));
+    }
+}
+
+void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid,
+                                        uint32_t fromChangeId, uint32_t toChangeId,
+                                        uint32_t fromLocalRulesId, uint32_t toLocalRulesId,
+                                        std::vector<qcc::String> remoteRules)
 {
     QStatus status = ER_OK;
     bool messageErased = false;
@@ -692,19 +731,26 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid, uint3
                 messageErased = true;
             } else if (sid != 0) {
                 /* Send message to remote destination */
-                BusEndpoint ep = router.FindEndpoint(sender);
-                if (ep->IsValid()) {
-                    lock.Unlock();
-                    router.UnlockNameTable();
-                    QCC_DbgPrintf(("Send cid=%u,serialNum=%u to sid=%u", it->second.first, it->second.second->GetCallSerial(), sid));
-                    SendThroughEndpoint(it->second.second, ep, sid);
-                    router.LockNameTable();
-                    lock.Lock();
+                bool isMatch = remoteRules.empty();
+                for (vector<String>::iterator rit = remoteRules.begin(); !isMatch && (rit != remoteRules.end()); ++rit) {
+                    Rule rule(rit->c_str());
+                    isMatch = rule.IsMatch(it->second.second) || (rule == legacyRule);
+                }
+                if (isMatch) {
+                    BusEndpoint ep = router.FindEndpoint(sender);
+                    if (ep->IsValid()) {
+                        lock.Unlock();
+                        router.UnlockNameTable();
+                        QCC_DbgPrintf(("Send cid=%u,serialNum=%u to sid=%u", it->second.first, it->second.second->GetCallSerial(), sid));
+                        SendThroughEndpoint(it->second.second, ep, sid);
+                        router.LockNameTable();
+                        lock.Lock();
+                    }
                 }
                 it = localCache.upper_bound(key);
             } else {
                 /* Send message to local destination */
-                SendMatchingThroughEndpoint(sid, it->second.second, fromRulesId, toRulesId);
+                SendMatchingThroughEndpoint(sid, it->second.second, fromLocalRulesId, toLocalRulesId);
                 it = localCache.upper_bound(key);
             }
         } else {
@@ -731,7 +777,6 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid, uint3
         }
     }
 }
-
 
 void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 {
@@ -835,6 +880,8 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
         uint32_t fromId = cache.fromChangeId;
         uint32_t toId = cache.toChangeId;
         bool rangeCapable = false;
+        bool matchCapable = false;
+        vector<String> matchRules;
         if (status == ER_OK) {
             /* Update session ID */
             cache.sid = sid;
@@ -845,6 +892,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
                 RemoteEndpoint rep = VirtualEndpoint::cast(ep)->GetBusToBusEndpoint(sid);
                 if (rep->IsValid()) {
                     rangeCapable = (rep->GetRemoteProtocolVersion() >= 6);
+                    matchCapable = (rep->GetRemoteProtocolVersion() >= 10);
                 }
             }
             if (!rangeCapable && (toId != cache.changeId + 1)) {
@@ -852,6 +900,14 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
                 bus.LeaveSession(sid);
                 DoSessionLost(sid, ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION);
                 status = ER_NONE;
+            }
+            if (matchCapable) {
+                uint32_t rulesRangeLen = cache.toRulesId - cache.fromRulesId;
+                for (RuleIterator rit = rules.begin(); rit != rules.end(); ++rit) {
+                    if (IN_WINDOW(uint32_t, cache.fromRulesId, rulesRangeLen, rit->second.id)) {
+                        matchRules.push_back(rit->second.ToString());
+                    }
+                }
             }
         } else {
             /* Clear in progress */
@@ -872,7 +928,9 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
              * RequestRange since it may be possible to receive duplicates when
              * RequestSignals is used together with RequestRange.
              */
-            if (rangeCapable) {
+            if (matchCapable) {
+                status = RequestRangeMatch(ctx->name.c_str(), sid, fromId, toId, matchRules);
+            } else if (rangeCapable) {
                 status = RequestRange(ctx->name.c_str(), sid, fromId, toId);
             } else {
                 status = RequestSignals(ctx->name.c_str(), sid, fromId);
@@ -952,6 +1010,17 @@ QStatus SessionlessObj::RequestRange(const char* name, SessionId sid, uint32_t f
     return Signal(name, sid, *requestRangeSignal, args, ArraySize(args));
 }
 
+QStatus SessionlessObj::RequestRangeMatch(const char* name, SessionId sid, uint32_t fromId, uint32_t toId,
+                                          std::vector<qcc::String>& matchRules)
+{
+    MsgArg args[3];
+    args[0].Set("u", fromId);
+    args[1].Set("u", toId);
+    args[2].Set("a$", matchRules.size(), matchRules.empty() ? NULL : &matchRules[0]);
+    QCC_DbgPrintf(("RequestRangeMatch(name=%s,sid=%u,fromId=%d,toId=%d,numRules=%d)", name, sid, fromId, toId, matchRules.size()));
+    return Signal(name, sid, *requestRangeMatchSignal, args, ArraySize(args));
+}
+
 QStatus SessionlessObj::SendThroughEndpoint(Message& msg, BusEndpoint& ep, SessionId sid)
 {
     QStatus status;
@@ -1004,6 +1073,7 @@ void SessionlessObj::UpdateAdvertisements()
             lastAdvertisements[it->first] = it->second;
         }
     }
+
     lock.Unlock();
 
     for (vector<String>::iterator it = cancelNames.begin(); it != cancelNames.end(); ++it) {
