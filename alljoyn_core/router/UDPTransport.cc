@@ -2793,7 +2793,7 @@ void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* 
                   handle, conn, rcv, QCC_StatusText(status)));
     assert(rcv->fcnt == 1 && "_UDPEndpoint::RecvCb(): message partitioning not supported yet");
     QCC_DbgPrintf(("UDPTransport::RecvCb(): got %d. bytes of data", rcv->datalen));
-    std::map<ArdpConnRecord*, UDPEndpoint>::iterator i = m_demux.find(conn);
+    std::map<ArdpConnRecord* const, UDPEndpoint>::iterator i = m_demux.find(conn);
     if (i != m_demux.end()) {
         QCC_DbgPrintf(("UDPTransport::RecvCb(): demux callback to endpoint"));
         i->second->RecvCb(handle, conn, rcv, status);
@@ -2805,7 +2805,7 @@ void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* 
 void UDPTransport::SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::SendCb(handle=0x%p, conn=0x%p, buf=0x%p, len=%d.)", handle, conn, buf, len));
-    std::map<ArdpConnRecord*, UDPEndpoint>::iterator i = m_demux.find(conn);
+    std::map<ArdpConnRecord* const, UDPEndpoint>::iterator i = m_demux.find(conn);
     if (i != m_demux.end()) {
         QCC_DbgPrintf(("UDPTransport::SendCb(): demux callback to endpoint"));
         i->second->SendCb(handle, conn, buf, len, status);
