@@ -923,6 +923,7 @@ class BusAttachment : public MessageReceiver {
      */
     bool IsPeerSecurityEnabled();
 
+
     /**
      * Register an object that will receive bus event notifications.
      *

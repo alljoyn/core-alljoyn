@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010-2013, 2014 AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -26,7 +26,9 @@ obj = env2.Object('DeskTopSharedKSClient2',  ['DeskTopSharedKSClient.cc'])
 progs = [
     env1.Program('DeskTopSharedKSClient1',  ['DeskTopSharedKSClient.cc']),
     env2.Program('DeskTopSharedKSClient2',  [obj]),
-    env.Program('DeskTopSharedKSService', ['DeskTopSharedKSService.cc'])
+    env.Program('DeskTopSharedKSService', ['DeskTopSharedKSService.cc']),
+    env.Program('SampleServiceECDHE', ['SampleServiceECDHE.cc']),
+    env.Program('SampleClientECDHE', ['SampleClientECDHE.cc'])
     ]
 
 #if 'linux' == env['OS'] or 'darwin' == env['OS']:

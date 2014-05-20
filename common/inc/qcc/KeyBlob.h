@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -28,6 +28,7 @@
 
 #include <assert.h>
 #include <qcc/String.h>
+#include <qcc/GUID.h>
 #include <string.h>
 
 #include <qcc/time.h>
@@ -42,16 +43,22 @@ class KeyBlob {
 
   public:
 
+    static const uint16_t MAX_TAG_LEN = 255;
+
     /**
      * Type of key blob.
      */
     typedef enum {
-        EMPTY,    ///< Key blob is empty.
-        GENERIC,  ///< Generic key blob - unknown type.
-        AES,      ///< An AES key (length is obtained from the blob size)
-        PRIVATE,  ///< An encrypted private key.
-        PEM,      ///< PEM encoded public key cert.
-        INVALID   ///< Invalid key bloby - This must be the last type
+        EMPTY,          ///< Key blob is empty.
+        GENERIC,        ///< Generic key blob - unknown type.
+        AES,            ///< An AES key (length is obtained from the blob size)
+        PRIVATE,        ///< An encrypted private key.
+        PEM,            ///< PEM encoded public key cert.
+        PUBLIC,         ///< public key.
+        SPKI_CERT,      ///< SPKI cert
+        DSA_PRIVATE,    ///< DSA private key
+        DSA_PUBLIC,     ///< DSA public key
+        INVALID         ///< Invalid key blob - This must be the last type.
     } Type;
 
     typedef enum {
@@ -60,10 +67,17 @@ class KeyBlob {
         RESPONDER   ///< Key blob creator was a reponder
     } Role;
 
+    typedef enum {
+        ASSOCIATE_NONE,     ///< not associated with any node
+        ASSOCIATE_HEAD,     ///< the header node
+        ASSOCIATE_MEMBER,   ///< the member node
+        ASSOCIATE_BOTH      ///< both header and member node
+    } AssociationMode;
+
     /**
      * Default constructor.
      */
-    KeyBlob() : blobType(EMPTY), role(NO_ROLE) { }
+    KeyBlob() : blobType(EMPTY), role(NO_ROLE), associationMode(ASSOCIATE_NONE) { }
 
     /**
      * Constructor that initializes the key blob from a byte array.
@@ -72,7 +86,7 @@ class KeyBlob {
      * @param len       The length of the key in bytes.
      * @param initType  The type for the key blob.
      */
-    KeyBlob(const uint8_t* key, size_t len, const Type initType) : blobType(EMPTY) { Set(key, len, initType); }
+    KeyBlob(const uint8_t* key, size_t len, const Type initType) : blobType(EMPTY), associationMode(ASSOCIATE_NONE) { Set(key, len, initType); }
 
     /**
      * Constructor that initializes the key blob from a string.
@@ -80,7 +94,7 @@ class KeyBlob {
      * @param str       String containing data to initialize the key blob.
      * @param blobType  The type for the key blob.
      */
-    KeyBlob(const qcc::String& str, const Type blobType) : blobType(EMPTY) { Set((const uint8_t*)str.data(), str.size(), blobType); }
+    KeyBlob(const qcc::String& str, const Type blobType) : blobType(EMPTY), associationMode(ASSOCIATE_NONE) { Set((const uint8_t*)str.data(), str.size(), blobType); }
 
     /**
      * Copy constructor.
@@ -171,6 +185,11 @@ class KeyBlob {
     QStatus Set(const uint8_t* key, size_t len, Type blobType);
 
     /**
+     * Accessor function to set the new blob type
+     */
+    void SetType(Type newType) { blobType = newType; }
+
+    /**
      * Store a key blob in a sink.
      *
      * @param sink      The data sink to write the blob to.
@@ -230,13 +249,13 @@ class KeyBlob {
     }
 
     /**
-     * Set a tag on the keyblob. A tag in an arbitrary string of 63 characters or less. The
+     * Set a tag on the keyblob. A tag in an arbitrary string of 255 characters or less. The
      * role indicates if the creator of the key blob was an initiator or a responder.
      *
      * @param tag   The tag value to set.
      * @param role  The role of the key blob creator
      */
-    void SetTag(const qcc::String& tag, Role role = NO_ROLE) { this->tag = tag.substr(0, 63); this->role = role; }
+    void SetTag(const qcc::String& tag, Role role = NO_ROLE) { this->tag = tag.substr(0, MAX_TAG_LEN); this->role = role; }
 
     /**
      * Gets the creator's role from a key blob
@@ -268,6 +287,35 @@ class KeyBlob {
      */
     bool HasExpired();
 
+    /**
+     * Set the association guid.
+     * @param  associatedGuid
+     */
+    void SetAssociation(qcc::GUID128 associatedGuid) {
+        if (associationMode == ASSOCIATE_HEAD) {
+            associationMode = ASSOCIATE_BOTH;
+        } else {
+            associationMode = ASSOCIATE_MEMBER;
+        }
+        association = associatedGuid;
+    }
+    /**
+     * Get the association guid.
+     * @return  associatedGuid
+     */
+    qcc::GUID128 GetAssociation() { return association; }
+    /**
+     * Set the association guid.
+     * @param  associatedGuid
+     */
+    void SetAssociationMode(AssociationMode mode) {
+        associationMode = mode;
+    }
+    /**
+     * Set the association guid.
+     * @param  associatedGuid
+     */
+    AssociationMode GetAssociationMode() { return associationMode; }
   private:
 
     Type blobType;
@@ -276,6 +324,8 @@ class KeyBlob {
     uint16_t size;
     qcc::String tag;
     Role role;
+    AssociationMode associationMode;
+    qcc::GUID128 association;
 
 };
 
