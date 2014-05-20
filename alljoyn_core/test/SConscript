@@ -52,7 +52,6 @@ if test_env['OS'] != 'win8':
     if test_env['OS'] == 'linux' or test_env['OS'] == 'android':
         progs.extend(test_env.Program('mc-rcv',     ['mc-rcv.cc']))
         progs.extend(test_env.Program('mc-snd',     ['mc-snd.cc']))
-        progs.extend(test_env.Program('udp',     ['udp.cc']))
 
     if test_env['OS'] == 'win7':
         progs.extend(test_env.Program('mouseclient', ['mouseclient.cc']))
