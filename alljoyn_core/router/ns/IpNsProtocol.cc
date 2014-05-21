@@ -2125,13 +2125,58 @@ uint16_t MDNSTextRData::GetU16Value(String key) {
     }
 }
 
+uint16_t MDNSTextRData::GetNumFields(String key)
+{
+    key += "_";
+    uint16_t numNames = 0;
+    for (Fields::const_iterator it = m_fields.begin(); it != m_fields.end(); ++it) {
+        if (it->first.find(key) == 0) {
+            ++numNames;
+        }
+    }
+    return numNames;
+}
+
+qcc::String MDNSTextRData::GetFieldAt(String key, int i)
+{
+    key += "_";
+    Fields::const_iterator it;
+    for (it = m_fields.begin(); it != m_fields.end(); ++it) {
+        if (it->first.find(key) == 0 && (i-- == 0)) {
+            break;
+        }
+    }
+    if (it != m_fields.end()) {
+        return it->second;
+    } else {
+        return String();
+    }
+}
+
+void MDNSTextRData::RemoveFieldAt(String key, int i)
+{
+    key += "_";
+    Fields::const_iterator it;
+    for (it = m_fields.begin(); it != m_fields.end(); ++it) {
+        if (it->first.find(key) == 0 && (i-- == 0)) {
+            break;
+        }
+    }
+    if (it != m_fields.end()) {
+        MDNSTextRData::RemoveEntry(it->first);
+    }
+}
+
 size_t MDNSTextRData::GetSerializedSize(void) const
 {
     size_t rdlen = 0;
     Fields::const_iterator it = m_fields.begin();
 
     while (it != m_fields.end()) {
-        String str = it->first + "=" + it->second;
+        String str = it->first;
+        if (!it->second.empty()) {
+            str += "=" + it->second;
+        }
         rdlen += str.length() + 1;
         it++;
     }
@@ -2587,36 +2632,9 @@ void MDNSAdvertiseRData::Reset()
     MDNSTextRData::Reset();
 }
 
-qcc::String MDNSAdvertiseRData::GetNameAt(int i)
-{
-    Fields::const_iterator it = m_fields.lower_bound("n_");
-    while (i--) {
-        ++it;
-    }
-    return it->second;
-}
-
 void MDNSAdvertiseRData::AddName(qcc::String name)
 {
     MDNSTextRData::SetValue("n", name);
-}
-
-void MDNSAdvertiseRData::RemoveName(int i)
-{
-    Fields::const_iterator it = m_fields.lower_bound("n_");
-    while (i--) {
-        ++it;
-    }
-    MDNSTextRData::RemoveEntry(it->first);
-}
-
-uint16_t MDNSAdvertiseRData::GetNumNames()
-{
-    uint16_t numNames = 0;
-    for (Fields::const_iterator it = m_fields.lower_bound("n_"); it != m_fields.end() && it->first.find("n_") == 0; ++it) {
-        ++numNames;
-    }
-    return numNames;
 }
 
 void MDNSAdvertiseRData::SetValue(String key, String value)
@@ -2631,6 +2649,11 @@ void MDNSAdvertiseRData::SetValue(String key, String value)
     } else {
         MDNSTextRData::SetValue(key, value);
     }
+}
+
+void MDNSAdvertiseRData::SetValue(String key)
+{
+    MDNSTextRData::SetValue(key);
 }
 
 uint16_t MDNSAdvertiseRData::GetNumFields()
@@ -2659,24 +2682,6 @@ MDNSSearchRData::MDNSSearchRData(qcc::String name, uint16_t version)
     : MDNSTextRData(version, true)
 {
     MDNSTextRData::SetValue("n", name);
-}
-
-uint16_t MDNSSearchRData::GetNumNames()
-{
-    uint16_t numNames = 0;
-    for (Fields::const_iterator it = m_fields.lower_bound("n_"); it != m_fields.end() && it->first.find("n_") == 0; ++it) {
-        ++numNames;
-    }
-    return numNames;
-}
-
-qcc::String MDNSSearchRData::GetNameAt(int i)
-{
-    Fields::const_iterator it = m_fields.lower_bound("n_");
-    while (i--) {
-        ++it;
-    }
-    return it->second;
 }
 
 void MDNSSearchRData::SetValue(String key, String value)

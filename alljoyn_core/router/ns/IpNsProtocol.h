@@ -2342,6 +2342,37 @@ class MDNSTextRData : public MDNSRData {
 
   protected:
     Fields m_fields;
+
+    /**
+     * @internal
+     * @brief Get the number of fields beginning with key in this Text RData.
+     * This is only useful when uniquifyKeys is true.
+     *
+     * @param key The key to get the count for.
+     * @return The number of fields in this Text RData.
+     */
+    uint16_t GetNumFields(qcc::String key);
+
+    /**
+     * @internal
+     * @brief Get the value of the field beginning with the key at the particular index.
+     * This is only useful when uniquifyKeys is true.
+     *
+     * @param key The key to get the value for.
+     * @param index The index to get the field at
+     * @return The value at the desired index in this Text RData.
+     */
+    qcc::String GetFieldAt(qcc::String key, int index);
+
+    /**
+     * @internal
+     * @brief Remove a field from this Text RData.
+     * This is only useful when uniquifyKeys is true.
+     *
+     * @param key The key to get the value for.
+     * @param index The index to remove the field at
+     */
+    void RemoveFieldAt(qcc::String key, int index);
 };
 
 /**
@@ -2933,7 +2964,7 @@ class MDNSSearchRData : public MDNSTextRData {
      * @brief Get the number of names in this Search RData.
      * @return The number of names in this Search RData.
      */
-    uint16_t GetNumNames();
+    uint16_t GetNumNames() { return MDNSTextRData::GetNumFields("n"); }
 
     /**
      * @internal
@@ -2941,7 +2972,7 @@ class MDNSSearchRData : public MDNSTextRData {
      * @param index The index to get the name at
      * @return The name at the desired index in this Search RData.
      */
-    qcc::String GetNameAt(int index);
+    qcc::String GetNameAt(int index) { return MDNSTextRData::GetFieldAt("n", index); }
 
     /**
      * @internal
@@ -3122,7 +3153,7 @@ class MDNSAdvertiseRData : public MDNSTextRData {
      * @param index The index to get the name at
      * @return The name at the desired index in this Advertise RData.
      */
-    qcc::String GetNameAt(int index);
+    qcc::String GetNameAt(int index) { return MDNSTextRData::GetFieldAt("n", index); }
 
     /**
      * @internal
@@ -3131,14 +3162,19 @@ class MDNSAdvertiseRData : public MDNSTextRData {
      */
     void AddName(qcc::String name);
 
-    void RemoveName(int index);
+    /**
+     * @internal
+     * @brief Remove a name from this Advertise RData.
+     * @param name The name to remove.
+     */
+    void RemoveNameAt(int index) { return MDNSTextRData::RemoveFieldAt("n", index); }
 
     /**
      * @internal
      * @brief Get the number of names in this Advertise RData.
      * @return The number of names in this Advertise RData.
      */
-    uint16_t GetNumNames();
+    uint16_t GetNumNames() { return MDNSTextRData::GetNumFields("n"); }
 
     /**
      * @internal
@@ -3147,6 +3183,13 @@ class MDNSAdvertiseRData : public MDNSTextRData {
      * @param value	The value to set.
      */
     void SetValue(qcc::String key, qcc::String value);
+
+    /**
+     * @internal
+     * @brief Add/Set a key pair.
+     * @param key	The key to set.
+     */
+    void SetValue(qcc::String key);
 
     /**
      * @internal

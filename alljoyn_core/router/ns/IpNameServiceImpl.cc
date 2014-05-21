@@ -6322,7 +6322,7 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
                     //If this is a packet with ttl == 0, ensure that we are NOT advertising the names mentioned in the packet.
 
                     if (std::find(m_advertised[transportIndex].begin(), m_advertised[transportIndex].end(), advRData->GetNameAt(k)) != m_advertised[transportIndex].end()) {
-                        advRData->RemoveName(k);
+                        advRData->RemoveNameAt(k);
                         // a name has been removed from the IsAt response header make
                         // sure the numNames used in the for loop is updated to reflect
                         // the removal of that name.
@@ -6334,7 +6334,7 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
                     //If this is a packet with ttl >0, ensure that we are still advertising all the names mentioned in the packet.
 
                     if (std::find(m_advertised[transportIndex].begin(), m_advertised[transportIndex].end(), advRData->GetNameAt(k)) == m_advertised[transportIndex].end()) {
-                        advRData->RemoveName(k);
+                        advRData->RemoveNameAt(k);
                         // a name has been removed from the IsAt response header make
                         // sure the numNames used in the for loop is updated to reflect
                         // the removal of that name.
