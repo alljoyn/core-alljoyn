@@ -41,6 +41,8 @@
 #include "ConfigDB.h"
 #include "Transport.h"
 #include "TCPTransport.h"
+#include "UDPTransport.h"
+
 #include "NullTransport.h"
 #include "PasswordManager.h"
 
@@ -62,6 +64,7 @@ static const char bundledConfig[] =
     "<busconfig>"
     "  <type>alljoyn_bundled</type>"
     "  <listen>tcp:r4addr=0.0.0.0,r4port=0</listen>"
+    "  <listen>udp:u4addr=0.0.0.0,u4port=0</listen>"
     "  <limit name=\"auth_timeout\">5000</limit>"
     "  <limit name=\"max_incomplete_connections\">4</limit>"
     "  <limit name=\"max_completed_connections\">16</limit>"
@@ -284,6 +287,8 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
          */
         if (!transportsInitialized) {
             Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
+            Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
+
 #if defined(QCC_OS_WINRT)
 //            Add(new TransportFactory<ProximityTransport>(ProximityTransport::TransportName, false));
 #endif
