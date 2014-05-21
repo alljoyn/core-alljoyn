@@ -140,12 +140,33 @@ void _RemoteEndpoint::SetStream(qcc::Stream* s)
 }
 
 
+void _RemoteEndpoint::SetStarted(bool value)
+{
+    if (internal) {
+        internal->started = value;
+    }
+}
+
+void _RemoteEndpoint::SetStopping(bool value)
+{
+    if (internal) {
+        internal->stopping = value;
+    }
+}
+
 const qcc::String& _RemoteEndpoint::GetUniqueName() const
 {
     if (internal) {
         return internal->uniqueName;
     } else {
         return String::Empty;
+    }
+}
+
+void _RemoteEndpoint::SetUniqueName(const qcc::String& uniqueName)
+{
+    if (internal) {
+        internal->uniqueName = uniqueName;
     }
 }
 
@@ -158,6 +179,13 @@ const qcc::String& _RemoteEndpoint::GetRemoteName() const
     }
 }
 
+void _RemoteEndpoint::SetRemoteName(const qcc::String& remoteName)
+{
+    if (internal) {
+        internal->remoteName = remoteName;
+    }
+}
+
 const qcc::GUID128& _RemoteEndpoint::GetRemoteGUID() const
 {
     if (internal) {
@@ -167,6 +195,14 @@ const qcc::GUID128& _RemoteEndpoint::GetRemoteGUID() const
         return g;
     }
 }
+
+void _RemoteEndpoint::SetRemoteGUID(const qcc::GUID128& remoteGUID)
+{
+    if (internal) {
+        internal->remoteGUID = remoteGUID;
+    }
+}
+
 
 qcc::Stream& _RemoteEndpoint::GetStream()
 {
@@ -184,6 +220,13 @@ const qcc::String&  _RemoteEndpoint::GetConnectSpec() const
         return internal->connSpec;
     } else {
         return String::Empty;
+    }
+}
+
+void _RemoteEndpoint::SetConnectSpec(const qcc::String& connSpec)
+{
+    if (internal) {
+        internal->connSpec = connSpec;
     }
 }
 
@@ -461,6 +504,20 @@ static inline bool IsControlMessage(Message& msg)
         offset -= 2;
     }
     return (::strcmp(sender + offset, ".1") == 0) ? true : false;
+}
+
+void _RemoteEndpoint::Exit()
+{
+    QCC_DbgTrace(("_RemoteEndpoint::Exit()"));
+
+    /* Ensure the endpoint is valid */
+    if (!internal) {
+        QCC_DbgPrintf(("_RemoteEndpoint::Exit(): invalid endpoint"));
+        return;
+    }
+
+    QCC_DbgPrintf(("_RemoteEndpoint::Exit(): exitCount = 1"));
+    internal->exitCount = 1;
 }
 
 void _RemoteEndpoint::ExitCallback() {

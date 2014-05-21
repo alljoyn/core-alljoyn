@@ -991,8 +991,42 @@ QStatus _Message::PullBytes(RemoteEndpoint& endpoint, bool checkSender, bool ped
         break;
     }
     return status;
-
 }
+
+QStatus _Message::LoadBytes(uint8_t* buf, size_t buflen)
+{
+    QStatus status;
+
+    /*
+     * Copy in the message header.
+     */
+    bufPos = (uint8_t*)&msgHeader;
+    memcpy(bufPos, buf, sizeof(msgHeader));
+    bufPos += sizeof(msgHeader);
+
+    /*
+     * Interpret the header which most importantly to us means allocate a buffer
+     * large enough to hold the rest of the bits.
+     */
+    status = InterpretHeader();
+    if (status != ER_OK) {
+        QCC_LogError(status, ("_Message::Loadbytes(): InterpretHeader() failed"));
+        return status;
+    }
+
+    /*
+     * Copy the bits into the newly allocated buffer
+     */
+    memcpy(bufPos, buf + sizeof(msgHeader), buflen - sizeof(msgHeader));
+
+    /*
+     * Mark the message as completely read in and point the buffer back to the start
+     */
+    readState = MESSAGE_COMPLETE;
+    bufPos = (uint8_t*)msgBuf + sizeof(msgHeader);
+    return ER_OK;
+}
+
 QStatus _Message::ReadNonBlocking(RemoteEndpoint& endpoint, bool checkSender, bool pedantic)
 {
 
@@ -1035,7 +1069,15 @@ QStatus _Message::Read(RemoteEndpoint& endpoint, bool checkSender, bool pedantic
     return status;
 }
 
+
 QStatus _Message::Unmarshal(RemoteEndpoint& endpoint, bool checkSender, bool pedantic, uint32_t timeout)
+{
+    qcc::String endpointName = endpoint->GetUniqueName();
+    bool handlePassing = endpoint->GetFeatures().handlePassing;
+    return Unmarshal(endpointName, handlePassing, checkSender, pedantic, timeout);
+}
+
+QStatus _Message::Unmarshal(qcc::String& endpointName, bool handlePassing, bool checkSender, bool pedantic, uint32_t timeout)
 {
     QStatus status;
 
@@ -1046,7 +1088,7 @@ QStatus _Message::Unmarshal(RemoteEndpoint& endpoint, bool checkSender, bool ped
     }
     bufPos = (uint8_t*)msgBuf + sizeof(msgHeader);
     endOfHdr = bufPos + msgHeader.headerLen;
-    rcvEndpointName = endpoint->GetUniqueName();
+    rcvEndpointName = endpointName;
 
     /*
      * Parse the received header fields - each header starts on an 8 byte boundary
@@ -1140,7 +1182,7 @@ QStatus _Message::Unmarshal(RemoteEndpoint& endpoint, bool checkSender, bool ped
      */
     if (status == ER_OK) {
         const uint32_t expectFds = (hdrFields.field[ALLJOYN_HDR_FIELD_HANDLES].typeId == ALLJOYN_INVALID) ? 0 : hdrFields.field[ALLJOYN_HDR_FIELD_HANDLES].v_uint32;
-        if (!endpoint->GetFeatures().handlePassing) {
+        if (!handlePassing) {
             /*
              * Handles are not allowed if handle passing is not enabled.
              */
@@ -1264,7 +1306,7 @@ ExitUnmarshal:
         /*
          * The rx thread was alerted before any data was read - just return this status code.
          */
-        QCC_LogError(status, ("Message::Unmarshal rx thread was alerted for endpoint %s", endpoint->GetUniqueName().c_str()));
+        QCC_LogError(status, ("Message::Unmarshal rx thread was alerted for endpoint %s", endpointName.c_str()));
         break;
 
     default:
@@ -1276,7 +1318,7 @@ ExitUnmarshal:
         _msgBuf = NULL;
         ClearHeader();
         if ((status != ER_SOCK_OTHER_END_CLOSED) && (status != ER_STOPPING_THREAD)) {
-            QCC_LogError(status, ("Failed to unmarshal message received on %s", endpoint->GetUniqueName().c_str()));
+            QCC_LogError(status, ("Failed to unmarshal message received on %s", endpointName.c_str()));
         }
     }
     return status;

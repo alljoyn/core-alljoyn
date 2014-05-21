@@ -226,4 +226,23 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_BUS_MATCH_RULE_NOT_FOUND" value="0x90f6" comment="The match rule was not found"/>
   <status name="ER_ALLJOYN_PING_FAILED" value="0x90f7" comment="Ping failed"/>
   <status name="ER_ALLJOYN_PING_REPLY_UNREACHABLE" value="0x90f8" comment="Ping failed"/>
+  <status name="ER_UDP_MSG_TOO_LONG" value="0x90f9" comment="The message is too long to transmit over the UDP transport"/>
+  <status name="ER_UDP_DEMUX_NO_ENDPOINT" value="0x90fa" comment="Tried to demux the callback but found no endpoint for the connection"/>
+  <status name="ER_UDP_NO_NETWORK" value="0x90fb" comment="Not listening on network implied by IP address"/>
+  <status name="ER_UDP_UNEXPECTED_LENGTH" value="0x90fc" comment="Request for more bytes than are in the underlying datagram"/>
+  <status name="ER_UDP_UNEXPECTED_FLOW" value="0x90fd" comment="The data flow type of the endpoint has an unexpected value"/>
+  <status name="ER_UDP_DISCONNECT" value="0x90fe" comment="Authentication aborted due to unexpected disconnect"/>
+  <status name="ER_UDP_NOT_IMPLEMENTED" value="0x90ff" comment="Feature not implemented for the UDP transport"/>
+  <status name="ER_UDP_NO_LISTENER" value="0x9100" comment="Discovery started with no listener to receive callbacks"/>
+  <status name="ER_UDP_STOPPING" value="0x9101" comment="Attempt to use UDP when transport stopping"/>
+  <status name="ER_ARDP_BACKPRESSURE" value="0x9102" comment="ARDP is applying backpressure -- send window is full"/>
+  <status name="ER_UDP_BACKPRESSURE" value="0x9103" comment="UDP is applying backpressure to ARDP -- queue is full"/>
+  <status name="ER_ARDP_INVALID_STATE" value="0x9104" comment="Current ARDP state does not allow attempted operation"/>
+  <status name="ER_ARDP_TTL_EXPIRED" value="0x9105" comment="Time-To-Live of ARDP segment has expired"/>
+  <status name="ER_ARDP_PERSIST_TIMEOUT" value="0x9106" comment="Remote endpoint stopped consuming data -- send window is full"/>
+  <status name="ER_ARDP_PROBE_TIMEOUT" value="0x9107" comment="ARDP link timeout"/>
+  <status name="ER_ARDP_REMOTE_CONNECTION_RESET" value="0x9108" comment="Remote endpoint disconected: sent RST"/>
+  <status name="ER_UDP_BUSHELLO" value="0x9109" comment="UDP Transport is unable to complete an operation relating to a BusHello Message"/>
+  <status name="ER_UDP_MESSAGE" value="0x910a" comment="UDP Transport is unable to complete an operation on an AllJoyn Message"/>
+
 </status_block>

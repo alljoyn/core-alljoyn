@@ -155,6 +155,9 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("GenSessionKey",     "sss", "ss", "localGuid,remoteGuid,localNonce,remoteNonce,verifier");
         ifc->AddMethod("ExchangeGroupKeys", "ay",  "ay", "localKeyMatter,remoteKeyMatter");
         ifc->AddMethod("AuthChallenge",     "s",   "s",  "challenge,response");
+        ifc->AddMethod("ExchangeSuites",     "au",   "au",  "localAuthList,remoteAuthList");
+        ifc->AddMethod("KeyExchange",     "uv",   "uv",  "localAuthMask,localPublicKey, remoteAuthMask, remotePublicKey");
+        ifc->AddMethod("KeyAuthentication",     "v",   "v",  "localVerifier,remoteVerifier");
         ifc->AddProperty("Mechanisms",  "s", PROP_ACCESS_READ);
         ifc->AddProperty("Version",     "u", PROP_ACCESS_READ);
         ifc->Activate();

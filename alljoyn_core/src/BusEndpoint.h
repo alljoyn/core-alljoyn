@@ -144,6 +144,37 @@ class _BusEndpoint : public MessageSink {
     EndpointType GetEndpointType() const { return endpointType; }
 
     /**
+     * Set endpoint type.
+     *
+     * @param type EndpointType to set
+     */
+    void SetEndpointType(EndpointType type) { endpointType = type; }
+
+    /**
+     * BusEndpoint type.
+     */
+    typedef enum {
+        ENDPOINT_FLOW_INVALID, /**< An unknown type of flow */
+        ENDPOINT_FLOW_CHARS,   /**< Characters are flowing over the underlying connection */
+        ENDPOINT_FLOW_HELLO,   /**< Characters are done flowing, but Hello exchange in progress */
+        ENDPOINT_FLOW_MSGS     /**< Startup phase comlete, messages are flowing over the underlying connection */
+    } EndpointFlowType;
+
+    /**
+     * Set the kind of data this endpoing is flowing.
+     *
+     * @param type    EndpointFlowType of the endpoint.
+     */
+    virtual void SetFlowType(EndpointFlowType type) { endpointFlowType = type; }
+
+    /**
+     * Return the kind of data this endpoing is flowing.
+     *
+     * @return  Type of data flowing over the endpoint and associated connection.
+     */
+    virtual EndpointFlowType GetFlowType() { return endpointFlowType; }
+
+    /**
      * Return true if this endpoint is allowed to receive messages from remote (bus-to-bus) endpoints.
      *
      * @return  true iff endpoint is allowed to receive messages from remote (bus-to-bus) endpoints.
@@ -177,9 +208,10 @@ class _BusEndpoint : public MessageSink {
 
   protected:
 
-    EndpointType endpointType;   /**< Type of endpoint */
-    bool isValid;                /**< Is endpoint currently valid */
-    QStatus disconnectStatus;    /**< Reason for the disconnect */
+    EndpointType endpointType;          /**< Type of endpoint */
+    EndpointFlowType endpointFlowType;  /**< Type of flow over the endpoint */
+    bool isValid;                       /**< Is endpoint currently valid */
+    QStatus disconnectStatus;           /**< Reason for the disconnect */
 };
 
 

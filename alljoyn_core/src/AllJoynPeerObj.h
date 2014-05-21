@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012,2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -39,6 +39,7 @@
 #include "RemoteEndpoint.h"
 #include "PeerState.h"
 #include "AuthMechanism.h"
+#include "KeyExchanger.h"
 
 namespace ajn {
 
@@ -111,10 +112,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      * @param listener         Required for authentication mechanisms that require interation with the user
      *                         or application. Can be NULL if not required.
      */
-    void SetupPeerAuthentication(const qcc::String& authMechanisms, AuthListener* listener) {
-        peerAuthMechanisms = authMechanisms;
-        peerAuthListener.Set(listener);
-    }
+    void SetupPeerAuthentication(const qcc::String& authMechanisms, AuthListener* listener);
 
     /**
      * Check if authentication has been enabled.
@@ -169,6 +167,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      */
     void HandleSecurityViolation(Message& msg, QStatus status);
 
+
     /**
      * Start AllJoynPeerObj.
      *
@@ -203,6 +202,25 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
 
     /**
+     * Factory method to insantiate a KeyExchanger class.
+     * @param initiator initiator or responder
+     * @param requestingAuthList the list of requesting auth masks
+     * @param requestingAuthCount the length of the auth mask list
+     * @return an instance of the KeyExchanger; NULL if none of the masks in the list is satisfied.
+     */
+
+    KeyExchanger* GetKeyExchangerInstance(bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount);
+
+    /**
+     * All a KeyExchanger to send a reply message.
+     * @param msg the reference message
+     * @param args the message arguments
+     * @param len the number of message arguments
+     * @return status ER_OK for success; error otherwise.
+     */
+    QStatus HandleMethodReply(Message& msg, const MsgArg* args = NULL, size_t numArgs = 0);
+
+    /**
      * Destructor
      */
     ~AllJoynPeerObj();
@@ -216,7 +234,9 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
         AUTHENTICATE_PEER,
         AUTH_CHALLENGE,
         EXPAND_HEADER,
-        SECURE_CONNECTION
+        SECURE_CONNECTION,
+        KEY_EXCHANGE,
+        KEY_AUTHENTICATION
     } RequestType;
 
     /* Dispatcher context */
@@ -268,11 +288,56 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     void AuthChallenge(const InterfaceDescription::Member* member, Message& msg);
 
     /**
+     * KeyExchange method call handler
+     *
+     * @param member  The member that was called
+     * @param msg     The method call message
+     */
+    void KeyExchange(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * KeyAuthentication method call handler
+     *
+     * @param member  The member that was called
+     * @param msg     The method call message
+     */
+    void KeyAuthentication(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * ExchangeSuites method call handler
+     *
+     * @param member  The member that was called
+     * @param msg     The method call message
+     */
+    void ExchangeSuites(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
      * Process a message to advance an authentication conversation.
      *
      * @param msg  The auth challenge message
      */
     void AuthAdvance(Message& msg);
+
+    /**
+     * Process a message to exchange the key authentication suites
+     *
+     * @param msg  The auth challenge message
+     */
+    void DoExchangeSuites(Message& msg);
+
+    /**
+     * Process a message to start the key exchange negotiation
+     *
+     * @param msg  The auth challenge message
+     */
+    void DoKeyExchange(Message& msg);
+
+    /**
+     * Process a message to perform the key exchange authentication/verification
+     *
+     * @param msg  The auth challenge message
+     */
+    void DoKeyAuthentication(Message& msg);
 
     /**
      * Process a message to advance an authentication conversation.
@@ -347,6 +412,36 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     bool RemoveCompressedMessage(Message& msg, uint32_t token);
 
     /**
+     * Record the master secret.
+     * @param sender the peer name
+     * @param keyExchanger the key exchanger module
+     * @param peerState the peer state
+     */
+
+    QStatus RecordMasterSecret(const qcc::String& sender, KeyExchanger*keyExchanger, PeerState peerState);
+
+    /**
+     * Ask for remote authentication suites.
+     * @param remotePeerObj the remote peer object
+     * @param ifc the interface object
+     * @param localAuthMask the local auth mask
+     * @param remoteAuthMask the buffer to store the remote auth mask
+     */
+
+    QStatus AskForAuthSuites(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, uint32_t**remoteAuthSuites, size_t*remoteAuthCount);
+
+    /**
+     * Authenticate Peer using SASL protocol
+     */
+    QStatus AuthenticatePeerUsingSASL(const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, qcc::GUID128& remotePeerGuid, qcc::String& mech);
+
+    /**
+     * Authenticate Peer using new Key Exchanger protocol for ECDHE auths
+     */
+    QStatus AuthenticatePeerUsingKeyExchange(const uint32_t* requestingAuthList, size_t requestingAuthCount, const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, qcc::GUID128& remotePeerGuid, qcc::String& mech);
+
+
+    /**
      * The peer-to-peer authentication mechanisms available to this object
      */
     qcc::String peerAuthMechanisms;
@@ -361,6 +456,11 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      */
     std::map<qcc::String, SASLEngine*> conversations;
 
+    /**
+     * Peer endpoints currently in an key exchange conversation
+     */
+    std::map<qcc::String, KeyExchanger*> keyExConversations;
+
     /** Short term lock to protect the peer object. */
     qcc::Mutex lock;
 
@@ -372,7 +472,11 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
 
     /** Queue of compressed messages waiting for an expansion rule to be supplied */
     std::deque<Message> msgsPendingExpansion;
+
+    uint16_t supportedAuthSuitesCount;
+    uint32_t* supportedAuthSuites;
 };
+
 
 }
 

@@ -22,6 +22,7 @@
  ******************************************************************************/
 
 #include <qcc/platform.h>
+#include <qcc/String.h>
 #include <alljoyn/TransportMask.h>
 
 namespace ajn {
@@ -49,9 +50,9 @@ class SessionOpts {
   public:
     /** Traffic type */
     typedef enum {
-        TRAFFIC_MESSAGES       = 0x01,   /**< Session carries message traffic */
-        TRAFFIC_RAW_UNRELIABLE = 0x02,   /**< Session carries an unreliable (lossy) byte stream */
-        TRAFFIC_RAW_RELIABLE   = 0x04    /**< Session carries a reliable byte stream */
+        TRAFFIC_MESSAGES          = 0x01,   /**< Session carries message traffic */
+        TRAFFIC_RAW_UNRELIABLE    = 0x02,   /**< Session carries an unreliable (lossy) byte stream */
+        TRAFFIC_RAW_RELIABLE      = 0x04,   /**< Session carries a reliable byte stream */
     } TrafficType;
     TrafficType traffic; /**< holds the Traffic type for this SessionOpt*/
 
@@ -169,6 +170,13 @@ class SessionOpts {
      * @return true iff this SessionOpts can use the option set offered by other.
      */
     bool IsCompatible(const SessionOpts& other) const;
+
+    /**
+     * Create a human readable representation of a SessionOpts
+     *
+     * @return string with human readable SessionOpts
+     */
+    qcc::String ToString() const;
 
     /**
      * Compare SessionOpts

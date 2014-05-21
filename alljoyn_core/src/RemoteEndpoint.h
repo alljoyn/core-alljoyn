@@ -232,12 +232,26 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     const qcc::String& GetUniqueName() const;
 
     /**
+     * Set the unique bus name assigned by the bus for this endpoint.
+     *
+     * @param uniqueName The unique bus name for this endpoint
+     */
+    void SetUniqueName(const qcc::String& uniqueName);
+
+    /**
      * Get the bus name for the peer at the remote end of this endpoint.
      *
      * @return  - The bus name of the remote side.
      *          - An empty string if called before the endpoint has been established.
      */
     const qcc::String& GetRemoteName() const;
+
+    /**
+     * Set the bus name for the peer at the remote end of this endpoint.
+     *
+     * @param remoteName The bus name of the remote side.
+     */
+    void SetRemoteName(const qcc::String& remoteName);
 
     /**
      * Get the protocol version used by the remote end of this endpoint.
@@ -280,11 +294,25 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     const qcc::GUID128& GetRemoteGUID() const;
 
     /**
+     * Set the GUID of the remote side of a bus-to-bus endpoint.
+     *
+     * @param remoteGUID GUID of the remote side of a bus-to-bus endpoint.
+     */
+    void SetRemoteGUID(const qcc::GUID128& remoteGUID);
+
+    /**
      * Get the connect spec for this endpoint.
      *
      * @return The connect spec string (may be empty).
      */
     const qcc::String& GetConnectSpec() const;
+
+    /**
+     * Set the connect spec for this endpoint.
+     *
+     * @param connSpec The connect spec string.
+     */
+    void SetConnectSpec(const qcc::String& connSpec);
 
     /**
      * Indicate whether this endpoint can receive messages from other devices.
@@ -330,6 +358,24 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * @return ER_OK if successful.
      */
     virtual QStatus SetLinkTimeout(uint32_t& idleTimeout);
+
+    /**
+     * Set the endpoint started state variable.  Provided for endpoints that do
+     * not use the standard sockets and IODispatch mechanism and therefore
+     * override Start() and Stop().
+     *
+     * @param value [IN] Logical value of endpoint started (or not).
+     */
+    void SetStarted(bool value);
+
+    /**
+     * Set the endpoint stopping state variable.  Provided for endpoints that do
+     * not use the standard sockets and IODispatch mechanism and therefore
+     * override Start() and Stop().
+     *
+     * @param value [IN] Logical value of whether or not the endpoint is stopping.
+     */
+    void SetStopping(bool value);
 
     /**
      * Return the features for this BusEndpoint
@@ -415,6 +461,12 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * @param thread   Thread that exited.
      */
     virtual void ThreadExit(qcc::Thread* thread);
+
+    /**
+     * Internal method used to indicate that non-stream-based endpoints have shut down.
+     * Like ExitCallback but without the IODispatch bells and whistles.
+     */
+    void Exit();
 
   private:
 

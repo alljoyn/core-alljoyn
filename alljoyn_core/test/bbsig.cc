@@ -71,7 +71,7 @@ static String g_wellKnownName = ::org::alljoyn::alljoyn_test::DefaultWellKnownNa
 static String g_advertiseName = ::org::alljoyn::alljoyn_test::DefaultAdvertiseName;
 static Event g_discoverEvent;
 
-static TransportMask g_doWFD = 0;
+static TransportMask g_preferredTransport = 0;
 
 static bool compress = false;
 static bool encryption = false;
@@ -84,6 +84,11 @@ class MyBusListener : public BusListener, public SessionListener {
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
         QCC_SyncPrintf("FoundAdvertisedName(name=%s, transport=0x%x, prefix=%s)\n", name, transport, namePrefix);
+
+        if ((transport & g_preferredTransport) == 0) {
+            QCC_SyncPrintf("FoundAdvertisedName(): not interested in transport=0x%x\n", transport);
+            return;
+        }
 
         /* We must enable concurrent callbacks since some of the calls below are blocking */
         g_msgBus->EnableConcurrentCallbacks();
@@ -272,7 +277,7 @@ class LocalTestObject : public BusObject {
             const ProxyBusObject& alljoynObj = bus->GetAllJoynProxyObj();
             MsgArg args[2];
             size_t numArgs = ArraySize(args);
-            MsgArg::Set(args, numArgs, "sq", g_advertiseName.c_str(), TRANSPORT_ANY + g_doWFD);
+            MsgArg::Set(args, numArgs, "sq", g_advertiseName.c_str(), g_preferredTransport);
             QStatus status = alljoynObj.MethodCallAsync(ajn::org::alljoyn::Bus::InterfaceName,
                                                         "AdvertiseName",
                                                         this,
@@ -437,7 +442,7 @@ class MyAuthListener : public AuthListener {
 
 static void usage(void)
 {
-    printf("Usage: bbsig [-n <name> ] [-a <name> ] [-h] [-l] [-s] [-r #] [-i #] [-c #] [-t #] [-x] [-e[k] <mech>]\n\n");
+    printf("Usage: bbsig [-n <name> ] [-a <name> ] [-h] [-l] [-s] [-r #] [-i #] [-c #] [-t #] [-x] [--tcp] [--udp] [--wfd] [-e[k] <mech>]\n\n");
     printf("Options:\n");
     printf("   -h                          = Print this help message\n");
     printf("   -?                          = Print this help message\n");
@@ -450,7 +455,9 @@ static void usage(void)
     printf("   -i #                        = Signal report interval (number of signals tx/rx per update; default = 1000)\n");
     printf("   -c #                        = Max number of signals to send, default = 1000000)\n");
     printf("   -t #                        = TTL for the signals\n");
-    printf("   -w                          = Advertise over Wi-Fi Direct\n");
+    printf("   --tcp                       = Advertise and discover using the TCP transport\n");
+    printf("   --udp                       = Advertise and discover using the UDP transport\n");
+    printf("   --wfd                       = Advertise and discover using the Wi-Fi Direct transport\n");
     printf("   -x                          = Compress headers\n");
     printf("   -e[k] [RSA|SRP|LOGON|PINX]   = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
     printf("   -d                          = discover remote bus with test service\n");
@@ -471,6 +478,8 @@ int main(int argc, char** argv)
     bool doStress = false;
     bool useSignalHandler = false;
     bool discoverRemote = false;
+    bool transportSpecific = false;
+
     unsigned long signalDelay = 0;
     unsigned long disconnectDelay = 0;
     unsigned long reportInterval = 1000;
@@ -489,8 +498,15 @@ int main(int argc, char** argv)
             exit(0);
         } else if (0 == strcmp("-s", argv[i])) {
             doStress = true;
-        } else if (0 == strcmp("-w", argv[i])) {
-            g_doWFD = TRANSPORT_WFD;
+        } else if (0 == strcmp("--tcp", argv[i])) {
+            g_preferredTransport = TRANSPORT_UDP;
+            transportSpecific = true;
+        } else if (0 == strcmp("--udp", argv[i])) {
+            g_preferredTransport = TRANSPORT_UDP;
+            transportSpecific = true;
+        } else if (0 == strcmp("--wfd", argv[i])) {
+            g_preferredTransport = TRANSPORT_WFD;
+            transportSpecific = true;
         } else if (0 == strcmp("-n", argv[i])) {
             ++i;
             if (i == argc) {
@@ -604,6 +620,11 @@ int main(int argc, char** argv)
             usage();
             exit(1);
         }
+    }
+
+    if (transportSpecific == false) {
+        printf("default to TRANSPORT_ANY\n");
+        g_preferredTransport = TRANSPORT_ANY;
     }
 
     do {

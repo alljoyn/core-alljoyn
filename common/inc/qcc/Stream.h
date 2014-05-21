@@ -96,7 +96,7 @@ class Source {
      * @param outStr   Line output.
      * @return  ER_OK if successful. ER_NONE if source is exhausted. Otherwise an error.
      */
-    QStatus GetLine(qcc::String& outStr, uint32_t timeout = Event::WAIT_FOREVER);
+    virtual QStatus GetLine(qcc::String& outStr, uint32_t timeout = Event::WAIT_FOREVER);
 };
 
 /**

@@ -185,6 +185,8 @@ class _Message {
     friend class _RemoteEndpoint;
     friend class _LocalEndpoint;
     friend class _NullEndpoint;
+    friend class _UDPEndpoint;
+    friend class UDPTransport;
     friend class DaemonRouter;
     friend class AllJoynObj;
     friend class DeferredMsg;
@@ -808,6 +810,22 @@ class _Message {
 
     /**
      * @internal
+     * Unmarshals a message. Only the message header is unmarshaled at this
+     * time.
+     *
+     * @param endpointName   The uinique name of the endpoint that this message came from.
+     * @param handlePassing  True if handle passing is allowed.
+     * @param checkSender    True if message's sender field should be validated against the endpoint's unique name.
+     * @param pedantic       Perform detailed checks on the header fields.
+     * @param timeout        If non-zero, a timeout in milliseconds to wait for a message to unmarshal.
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
+    QStatus Unmarshal(qcc::String& endpointName, bool handlePassing, bool checkSender, bool pedantic = true, uint32_t timeout = 0);
+
+    /**
+     * @internal
      * Deliver a marshaled message to a remote endpoint.
      *
      * @param endpoint   Endpoint to receive marshaled message.
@@ -901,6 +919,20 @@ class _Message {
      *      - An error status otherwise
      */
     QStatus HelloReply(bool isBusToBus, const qcc::String& uniqueName);
+
+    /**
+     * Get a pointer to the current backing buffer for the message.
+     *
+     * @return pointer to the message backing buffer
+     */
+    uint8_t const* const GetBuffer() const { return const_cast<uint8_t const* const>(reinterpret_cast<uint8_t*>(msgBuf));  }
+
+    /**
+     * Get the number of bytes of data currently in the message backing buffer.
+     *
+     * @return pointer to the message backing buffer
+     */
+    size_t GetBufferSize() const { return bufEOD - reinterpret_cast<uint8_t*>(msgBuf); }
 
     /**
      * Struct representing the header for the AllJoyn Message
@@ -1221,6 +1253,19 @@ class _Message {
      *      - An error status otherwise
      */
     QStatus PullBytes(RemoteEndpoint& endpoint, bool checkSender, bool pedantic = true, uint32_t timeout = 0);
+
+    /**
+     * Load a Message from a Buffer
+     *
+     * @param buf     The buffer to read the message from
+     * @param buflen  The length of the message data in the buffer.
+     *
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
+    QStatus LoadBytes(uint8_t* buf, size_t buflen);
+
     /// @}
     // end internal_methods_message_read
 };

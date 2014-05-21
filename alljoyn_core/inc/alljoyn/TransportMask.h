@@ -33,10 +33,11 @@ const TransportMask TRANSPORT_NONE      = 0x0000;   /**< no transports */
 const TransportMask TRANSPORT_LOCAL     = 0x0001;   /**< Local (same device) transport */
 const TransportMask TRANSPORT_BLUETOOTH = 0x0002;   /**< Bluetooth transport */
 const TransportMask TRANSPORT_TCP       = 0x0004;   /**< Transport using TCP (same as TRANSPORT_WLAN) */
-const TransportMask TRANSPORT_WLAN      = 0x0004;   /**< Wireless local-area network transport */
+const TransportMask TRANSPORT_WLAN      = 0x0004;   /**< Wireless local-area network transport (same as TRANSPORT_TCP) */
 const TransportMask TRANSPORT_WWAN      = 0x0008;   /**< Wireless wide-area network transport */
 const TransportMask TRANSPORT_LAN       = 0x0010;   /**< Wired local-area network transport */
 const TransportMask TRANSPORT_WFD       = 0x0080;   /**< Transport using Wi-Fi Direct transport */
+const TransportMask TRANSPORT_UDP       = 0x0100;   /**< Transport using the AllJoyn Reliable Datagram Protocol (flavor of reliable UDP) */
 
 /**
  * A constant indicating that any transport is acceptable.
@@ -56,6 +57,15 @@ const TransportMask TRANSPORT_WFD       = 0x0080;   /**< Transport using Wi-Fi D
  * TRANSPORT_WFD bit.
  */
 const TransportMask TRANSPORT_ANY       = (0xFFFF & ~TRANSPORT_WFD);
+
+/**
+ * A constant indicating that any IP-based transport is acceptable.  It is left
+ * up to the system to decide which of the available transports is best suited
+ * to the implied situation
+ */
+const TransportMask TRANSPORT_IP        = TRANSPORT_TCP | TRANSPORT_UDP;
+
 }
+
 
 #endif

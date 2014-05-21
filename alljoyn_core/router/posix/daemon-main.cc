@@ -49,6 +49,7 @@
 
 #include "Transport.h"
 #include "TCPTransport.h"
+#include "UDPTransport.h"
 #include "DaemonTransport.h"
 #if defined(QCC_OS_LINUX)
 #include "DaemonSLAPTransport.h"
@@ -93,7 +94,7 @@ static volatile sig_atomic_t reload;
 static volatile sig_atomic_t quit;
 
 /*
- * Simple config to provide some non-default limits for the daemon tcp transport.
+ * Simple config to provide some non-default limits for the daemon tcp/udp transport.
  */
 static const char defaultConfig[] =
     "<busconfig>"
@@ -112,6 +113,7 @@ static const char internalConfig[] =
     "  <listen>launchd:env=DBUS_LAUNCHD_SESSION_BUS_SOCKET</listen>"
 #endif
     "  <listen>tcp:r4addr=0.0.0.0,r4port=9955</listen>"
+    "  <listen>udp:u4addr=0.0.0.0,u4port=9955</listen>"
     "  <property name=\"ns_interfaces\">*</property>"
     "</busconfig>";
 
@@ -151,6 +153,7 @@ class OptParse {
         fork(false), noFork(false),
         noSLAP(false),
         noTCP(false),
+        noUDP(false),
 #if defined(QCC_OS_ANDROID)
         noWFD(false),
 #endif
@@ -180,6 +183,9 @@ class OptParse {
     }
     bool GetNoTCP() const {
         return noTCP;
+    }
+    bool GetNoUDP() const {
+        return noUDP;
     }
 #if defined(QCC_OS_ANDROID)
     bool GetNoWFD() const {
@@ -219,6 +225,7 @@ class OptParse {
     bool noFork;
     bool noSLAP;
     bool noTCP;
+    bool noUDP;
 #if defined(QCC_OS_ANDROID)
     bool noWFD;
 #endif
@@ -250,7 +257,7 @@ void OptParse::PrintUsage() {
         "]\n"
         "%*s [--print-address[=DESCRIPTOR]] [--print-pid[=DESCRIPTOR]]\n"
         "%*s [--fork | --nofork] "
-        "[--no-slap] [--no-tcp] "
+        "[--no-slap] [--no-tcp] [--no-udp] "
 #if defined(QCC_OS_ANDROID)
         "[--no-wfd] "
 #endif
@@ -283,6 +290,8 @@ void OptParse::PrintUsage() {
         "        Disable the SLAP transport (override config file setting).\n\n"
         "    --no-tcp\n"
         "        Disable the TCP transport (override config file setting).\n\n"
+        "    --no-udp\n"
+        "        Disable the UDP transport (override config file setting).\n\n"
 #if defined(QCC_OS_ANDROID)
         "    --no-wfd\n"
         "        Disable the Wifi-Direct transport (override config file setting).\n\n"
@@ -421,6 +430,8 @@ OptParse::ParseResultCode OptParse::ParseResult()
             noSLAP = true;
         } else if (arg.compare("--no-tcp") == 0) {
             noTCP = true;
+        } else if (arg.compare("--no-udp") == 0) {
+            noUDP = true;
 #if defined(QCC_OS_ANDROID)
         } else if (arg.compare("--no-wfd") == 0) {
             noWFD = true;
@@ -518,6 +529,8 @@ int daemon(OptParse& opts) {
 
         } else if (addrStr.compare(0, sizeof("tcp:") - 1, "tcp:") == 0) {
             skip = opts.GetNoTCP();
+        } else if (addrStr.compare(0, sizeof("udp:") - 1, "udp:") == 0) {
+            skip = opts.GetNoUDP();
 
 #if defined(QCC_OS_ANDROID)
         } else if (addrStr.compare(0, sizeof("wfd:") - 1, "wfd:") == 0) {
@@ -553,6 +566,7 @@ int daemon(OptParse& opts) {
     TransportFactoryContainer cntr;
     cntr.Add(new TransportFactory<DaemonTransport>(DaemonTransport::TransportName, false));
     cntr.Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
+    cntr.Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
 #if defined(QCC_OS_LINUX)
     cntr.Add(new TransportFactory<DaemonSLAPTransport>(DaemonSLAPTransport::TransportName, false));
 #endif

@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -52,6 +52,7 @@ void KeyBlob::Erase()
         expiration.seconds = 0;
         role = NO_ROLE;
     }
+    associationMode = ASSOCIATE_NONE;
 }
 
 void KeyBlob::Derive(const qcc::String& secret, size_t len, const Type initType)
@@ -61,6 +62,7 @@ void KeyBlob::Derive(const qcc::String& secret, size_t len, const Type initType)
         size = (uint16_t)len;
         data = new uint8_t[len];
         role = NO_ROLE;
+        associationMode = ASSOCIATE_NONE;
         blobType = initType;
         uint8_t* p = data;
 
@@ -87,6 +89,7 @@ void KeyBlob::Derive(const qcc::String& secret, size_t len, const Type initType)
         data = NULL;
         role = NO_ROLE;
         blobType = EMPTY;
+        associationMode = ASSOCIATE_NONE;
     }
 }
 
@@ -122,21 +125,29 @@ QStatus KeyBlob::Set(const uint8_t* key, size_t len, Type initType)
     return ER_OK;
 }
 
-#define EXPIRES_FLAG  0x80
-#define UNuSED_FLAG   0x40
-#define MAx_TAG_LEN   0x3F
+#define EXPIRES_FLAG        0x80
+#define VERSION_FLAG     0x40
+
+#define HEADER_NODE      0x20
+#define UNUSED_FLAG1     0x10
+#define V0_MAX_TAG_LEN   0x3F
+#define CURRENT_VERSION     1
 
 QStatus KeyBlob::Store(qcc::Sink& sink) const
 {
     QStatus status;
     size_t pushed;
-    uint16_t flags = (uint16_t)(blobType << 8) | tag.size();
+    /* flags format 8MSB: blob type, 8 bit: options */
+    uint16_t flags = (uint16_t)(blobType << 8) | VERSION_FLAG | CURRENT_VERSION;
     /* Temporaries for endian-ness conversion */
     uint16_t u16;
     uint64_t u64;
 
     if (expiration.seconds) {
         flags |= EXPIRES_FLAG;
+    }
+    if ((associationMode == ASSOCIATE_HEAD) || (associationMode == ASSOCIATE_BOTH)) {
+        flags |= HEADER_NODE;
     }
     u16 = htole16(flags);
     status = sink.PushBytes(&u16, sizeof(u16), pushed);
@@ -150,6 +161,10 @@ QStatus KeyBlob::Store(qcc::Sink& sink) const
             }
         }
         if (status == ER_OK) {
+            uint8_t tagLen = tag.size();
+            status = sink.PushBytes(&tagLen, sizeof(tagLen), pushed);
+        }
+        if (status == ER_OK) {
             status = sink.PushBytes(tag.data(), tag.size(), pushed);
         }
         if (status == ER_OK) {
@@ -159,6 +174,15 @@ QStatus KeyBlob::Store(qcc::Sink& sink) const
         if (status == ER_OK) {
             status = sink.PushBytes(data, size, pushed);
         }
+        uint8_t associationLen = 0;
+        if ((associationMode == ASSOCIATE_MEMBER) || (associationMode == ASSOCIATE_BOTH)) {
+            associationLen = GUID128::SIZE;
+        }
+        status = sink.PushBytes(&associationLen, sizeof(associationLen), pushed);
+        if ((status == ER_OK) && (associationLen > 0)) {
+            status = sink.PushBytes(association.GetBytes(), associationLen, pushed);
+
+        }
     }
     return status;
 }
@@ -167,7 +191,7 @@ QStatus KeyBlob::Load(qcc::Source& source)
 {
     QStatus status;
     size_t pulled;
-    uint16_t flags;
+    uint32_t flags;
     /* Temporaries for endian-ness conversion */
     uint16_t u16;
     uint64_t u64;
@@ -178,10 +202,14 @@ QStatus KeyBlob::Load(qcc::Source& source)
     Erase();
     status = source.PullBytes(&u16, sizeof(u16), pulled);
     flags = letoh16(u16);
-    blobType = (Type)(flags >> 8);
+    /* flags format 8MSB: blob type, 8 bit: options */
+    blobType = (Type) (flags >> 8);
     if (status == ER_OK) {
         if (blobType >= INVALID) {
             status = ER_CORRUPT_KEYBLOB;
+        }
+        if ((status == ER_OK) && (flags & HEADER_NODE)) {
+            associationMode = ASSOCIATE_HEAD;
         }
         if ((status == ER_OK) && (flags & EXPIRES_FLAG)) {
             status = source.PullBytes(&u64, sizeof(u64), pulled);
@@ -191,12 +219,28 @@ QStatus KeyBlob::Load(qcc::Source& source)
                 expiration.mseconds = letoh16(u16);
             }
         }
-        if (status == ER_OK) {
-            char tagBytes[MAx_TAG_LEN + 1];
-            status = source.PullBytes(tagBytes, flags & 0x3F, pulled);
+        uint8_t kbVersion = 0;
+        if ((status == ER_OK) && (flags & VERSION_FLAG)) {
+            kbVersion = (uint8_t) flags & 0xF;
+        }
+        if (kbVersion == 0) {
+            char tagBytes[V0_MAX_TAG_LEN + 1];
+            status = source.PullBytes(tagBytes, flags & V0_MAX_TAG_LEN, pulled);
             if (status == ER_OK) {
                 tagBytes[pulled] = 0;
                 tag.insert(0, tagBytes, pulled);
+            }
+        } else if (kbVersion == 1) {
+            uint8_t tagLen = 0;
+            status = source.PullBytes(&tagLen, sizeof(tagLen), pulled);
+            if (status == ER_OK) {
+                char*tagBytes = new char[tagLen + 1];
+                status = source.PullBytes(tagBytes, tagLen, pulled);
+                if (status == ER_OK) {
+                    tagBytes[pulled] = 0;
+                    tag.insert(0, tagBytes, pulled);
+                }
+                delete tagBytes;
             }
         }
         if (status == ER_OK) {
@@ -205,7 +249,7 @@ QStatus KeyBlob::Load(qcc::Source& source)
              */
             status = source.PullBytes(&u16, sizeof(u16), pulled);
             size = letoh16(u16);
-            if (size > 4096) {
+            if ((kbVersion == 0) && (size > 4096)) {
                 status = ER_CORRUPT_KEYBLOB;
             }
             if (status == ER_OK) {
@@ -214,6 +258,31 @@ QStatus KeyBlob::Load(qcc::Source& source)
                 if (status != ER_OK) {
                     delete [] data;
                     data = NULL;
+                }
+            }
+        }
+        if ((status == ER_OK) && (kbVersion > 0)) {
+            /*
+             * load the association len field. This is an optional field.
+             */
+            uint8_t len = 0;
+            status = source.PullBytes(&len, sizeof(len), pulled);
+            if ((status == ER_OK) && (len > 0)) {
+                if (len != GUID128::SIZE) {
+                    status = ER_CORRUPT_KEYBLOB;
+                }
+                if (status == ER_OK) {
+                    uint8_t*buf = new uint8_t[len];
+                    status = source.PullBytes(buf, len, pulled);
+                    if (status == ER_OK) {
+                        association.SetBytes(buf);
+                    }
+                    delete buf;
+                    if (associationMode == ASSOCIATE_HEAD) {
+                        associationMode = ASSOCIATE_BOTH;
+                    } else {
+                        associationMode = ASSOCIATE_MEMBER;
+                    }
                 }
             }
         }
@@ -233,10 +302,13 @@ KeyBlob::KeyBlob(const KeyBlob& other)
         expiration = other.expiration;
         tag = other.tag;
         role = other.role;
+        associationMode = other.associationMode;
+        association = other.association;
     } else {
         data = NULL;
         size = 0;
         role = NO_ROLE;
+        associationMode = ASSOCIATE_NONE;
     }
     blobType = other.blobType;
 }
@@ -254,6 +326,8 @@ KeyBlob& KeyBlob::operator=(const KeyBlob& other)
             expiration = other.expiration;
             tag = other.tag;
             role = other.role;
+            associationMode = other.associationMode;
+            association = other.association;
         }
     }
     return *this;
