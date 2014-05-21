@@ -8499,7 +8499,7 @@ JTranslator::~JTranslator()
 size_t JTranslator::NumTargetLanguages()
 {
     QCC_DbgPrintf(("JTranslator::NumTargetLanguages()"));
-    JNIEnv* env = GetEnv();
+    JScopedEnv env;
     jobject jo = env->NewLocalRef(jdescriptionTranslator);
     if (!jo) {
         QCC_LogError(ER_FAIL, ("JTranslator::NumTargetLanguages(): Can't get new local reference to Translator"));
@@ -8518,7 +8518,7 @@ size_t JTranslator::NumTargetLanguages()
 void JTranslator::GetTargetLanguage(size_t index, qcc::String& ret)
 {
     QCC_DbgPrintf(("JTranslator::GetTargetLanguage()"));
-    JNIEnv* env = GetEnv();
+    JScopedEnv env;
 
     jobject jo = env->NewLocalRef(jdescriptionTranslator);
     if (!jo) {
@@ -8536,15 +8536,16 @@ void JTranslator::GetTargetLanguage(size_t index, qcc::String& ret)
         return;
     }
 
-    JString jtarget(jres);
-    ret.assign(jtarget.c_str());
+    const char* chars = env->GetStringUTFChars(jres, NULL);
+    ret.assign(chars);
+    env->ReleaseStringUTFChars(jres, chars);
 }
 
 const char* JTranslator::Translate(const char* sourceLanguage,
                                    const char* targetLanguage, const char* source, qcc::String& buffer)
 {
     QCC_DbgPrintf(("JTranslator::Translate()"));
-    JNIEnv* env = GetEnv();
+    JScopedEnv env;
 
     JLocalRef<jstring> jsourceLang = env->NewStringUTF(sourceLanguage);
     JLocalRef<jstring> jtargLang = env->NewStringUTF(targetLanguage);
@@ -8569,8 +8570,10 @@ const char* JTranslator::Translate(const char* sourceLanguage,
         return NULL;
     }
 
-    JString jtarget(jres);
-    buffer.assign(jtarget.c_str());
+    const char* chars = env->GetStringUTFChars(jres, NULL);
+    buffer.assign(chars);
+    env->ReleaseStringUTFChars(jres, chars);
+
     return buffer.c_str();
 }
 
