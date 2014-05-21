@@ -62,6 +62,19 @@ const qcc::String& GetSecureAnnotation(const XmlElement* elem)
     return qcc::String::Empty;
 }
 
+bool GetDescription(const XmlElement* elem, qcc::String& description)
+{
+    vector<XmlElement*>::const_iterator it = elem->GetChildren().begin();
+    for (; it != elem->GetChildren().end(); it++) {
+        if ((*it)->GetName().compare("description")) {
+            description = (*it)->GetContent();
+            return true;
+        }
+    }
+
+    return false;
+}
+
 QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
 {
     QStatus status = ER_OK;
@@ -111,10 +124,13 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                 qcc::String argNames;
                 bool isArgNamesEmpty = true;
                 std::map<String, String> annotations;
+                bool isSessionlessSignal = false;
 
                 /* Iterate over member children */
                 const vector<XmlElement*>& argChildren = ifChildElem->GetChildren();
                 vector<XmlElement*>::const_iterator argIt = argChildren.begin();
+                map<qcc::String, qcc::String> argDescriptions;
+                qcc::String memberDescription;
                 while ((ER_OK == status) && (argIt != argChildren.end())) {
                     const XmlElement* argElem = *argIt++;
                     if (argElem->GetName() == "arg") {
@@ -134,6 +150,11 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                         if (!nameAtt.empty()) {
                             isArgNamesEmpty = false;
                             argNames += nameAtt;
+
+                            qcc::String description;
+                            if (GetDescription(argElem, description)) {
+                                argDescriptions.insert(pair<qcc::String, qcc::String>(nameAtt, description));
+                            }
                         }
 
                         if (isSignal || (argElem->GetAttribute("direction") == "in")) {
@@ -145,7 +166,14 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                         const qcc::String& nameAtt = argElem->GetAttribute("name");
                         const qcc::String& valueAtt = argElem->GetAttribute("value");
                         annotations[nameAtt] = valueAtt;
+                    } else if (argElem->GetName() == "description") {
+                        memberDescription = argElem->GetContent();
                     }
+
+                }
+                if (isSignal) {
+                    const qcc::String& sessionlessStr = ifChildElem->GetAttribute("sessionless");
+                    isSessionlessSignal = (sessionlessStr == "true");
                 }
 
                 /* Add the member */
@@ -158,6 +186,14 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
 
                     for (std::map<String, String>::const_iterator it = annotations.begin(); it != annotations.end(); ++it) {
                         intf.AddMemberAnnotation(memberName.c_str(), it->first, it->second);
+                    }
+
+                    if (!memberDescription.empty()) {
+                        intf.SetMemberDescription(memberName.c_str(), memberDescription.c_str(), isSessionlessSignal);
+                    }
+
+                    for (std::map<String, String>::const_iterator it = argDescriptions.begin(); it != argDescriptions.end(); it++) {
+                        intf.SetArgDescription(memberName.c_str(), it->first.c_str(), it->second.c_str());
                     }
                 }
             } else {
@@ -193,11 +229,19 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                     const XmlElement* argElem = *argIt++;
                     status = intf.AddPropertyAnnotation(memberName, argElem->GetAttribute("name"), argElem->GetAttribute("value"));
                 }
+
+                qcc::String description;
+                if (GetDescription(ifChildElem, description)) {
+                    intf.SetPropertyDescription(memberName.c_str(), description.c_str());
+                }
             }
         } else if (ifChildName == "annotation") {
             status = intf.AddAnnotation(ifChildElem->GetAttribute("name"), ifChildElem->GetAttribute("value"));
         } else if (ifChildName == "description") {
-            //pass, this is completely legal but irrelevant here
+            qcc::String const& description = ifChildElem->GetContent();
+            qcc::String const& language = ifChildElem->GetAttribute("language");
+            intf.SetDescriptionLanguage(language.c_str());
+            intf.SetDescription(description.c_str());
         } else {
             status = ER_FAIL;
             QCC_LogError(status, ("Unknown element \"%s\" found in introspection data from %s", ifChildName.c_str(), ident));
