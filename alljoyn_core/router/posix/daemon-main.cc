@@ -639,6 +639,14 @@ int daemon(OptParse& opts) {
         }
     }
 
+    close(STDIN_FILENO);
+    if (LoggerSetting::GetLoggerSetting()->GetFile() != stdout) {
+        close(STDOUT_FILENO);
+    }
+    if (LoggerSetting::GetLoggerSetting()->GetFile() != stderr) {
+        close(STDERR_FILENO);
+    }
+
     sigfillset(&waitmask);
     sigdelset(&waitmask, SIGHUP);
     sigdelset(&waitmask, SIGINT);
@@ -800,6 +808,7 @@ int main(int argc, char** argv, char** env)
                 DaemonConfig::Release();
                 return DAEMON_EXIT_SESSION_ERROR;
             }
+            chdir("/tmp");
         }
     }
 
