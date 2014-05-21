@@ -537,7 +537,7 @@ void SessionlessObj::FoundAdvertisedNameSignalHandler(const InterfaceDescription
     FoundAdvertisedNameHandler(name, transport, prefix);
 }
 
-void SessionlessObj::FoundAdvertisedNameHandler(const char* name, TransportMask transport, const char* prefix)
+void SessionlessObj::FoundAdvertisedNameHandler(const char* name, TransportMask transport, const char* prefix, bool doInitialBackoff)
 {
     /* Examine found name to see if we need to connect to it */
     String guid, iface;
@@ -564,7 +564,7 @@ void SessionlessObj::FoundAdvertisedNameHandler(const char* name, TransportMask 
         cit->second.changeId = changeId;
         cit->second.transport = transport;
     }
-    ScheduleWork();
+    ScheduleWork(doInitialBackoff);
     lock.Unlock();
 }
 
@@ -1120,13 +1120,13 @@ SessionlessObj::RemoteCaches::iterator SessionlessObj::FindRemoteCache(SessionId
     return cit;
 }
 
-void SessionlessObj::ScheduleWork()
+void SessionlessObj::ScheduleWork(bool doInitialBackoff)
 {
     RemoteCaches::iterator cit = remoteCaches.begin();
     while (cit != remoteCaches.end()) {
         RemoteCache& cache = cit->second;
         String guid = cache.guid;
-        if (PendingWork(cache) && ScheduleWork(cache) != ER_OK) {
+        if (PendingWork(cache) && ScheduleWork(cache, true, doInitialBackoff) != ER_OK) {
             /* Retries exhausted. Clear state and wait for new advertisment */
             remoteCaches.erase(cit);
             cit = remoteCaches.upper_bound(guid);
@@ -1136,7 +1136,7 @@ void SessionlessObj::ScheduleWork()
     }
 }
 
-QStatus SessionlessObj::ScheduleWork(RemoteCache& cache, bool addAlarm)
+QStatus SessionlessObj::ScheduleWork(RemoteCache& cache, bool addAlarm, bool doInitialBackoff)
 {
     if (cache.state != RemoteCache::IDLE) {
         return ER_OK;
@@ -1160,7 +1160,7 @@ QStatus SessionlessObj::ScheduleWork(RemoteCache& cache, bool addAlarm)
     for (uint32_t i = 0; i <= cache.retries; ++i) {
         if (i == 0) {
             startTime = cache.firstJoinTime;
-            delayMs = backoffDelayMs;
+            delayMs = doInitialBackoff ? backoffDelayMs : 1;
         } else {
             startTime += delayMs;
             delayMs = (delayMs > 500) ? (delayMs >> 1) : delayMs;
@@ -1288,6 +1288,25 @@ bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket respons
         QCC_DbgPrintf(("Ignoring response with invalid advertisement info"));
         return false;
     }
+    /*
+     * We always want to fetch advertisements received on the
+     * multicast port (the unsolicited case).  We only want to fetch
+     * advertisements received on the unicast port when they are a
+     * response to our implements query.
+     *
+     * The check for only 1 name in the response is what determines
+     * that the response is to our implements query.  The situation
+     * is that a unicast response may include all the names
+     * advertised by the responder, even ones we didn't ask for.  So
+     * since we never explicitly ask for org.alljoyn.About.sl names
+     * then if there's more than 1 name in the response the response
+     * must have been for a different query.
+     */
+    bool unsolicited = (recvPort == IpNameService::MULTICAST_MDNS_PORT);
+    bool solicited = (advRData->GetNumNames() == 1);
+    if (!unsolicited && !solicited) {
+        return false;
+    }
 
     /*
      * Next step is to see if the response matches any of our rules.  If it
@@ -1305,37 +1324,21 @@ bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket respons
             if ((field.first == "name") && (field.second.find(rule.iface) == 0)) {
                 name = field.second;
             } else if (field.first == ";") {
-                /*
-                 * We always want to fetch advertisements received on the
-                 * multicast port (the unsolicited case).  We only want to fetch
-                 * advertisements received on the unicast port when they are a
-                 * response to our implements query.
-                 *
-                 * The check for only 1 name in the response is what determines
-                 * that the response is to our implements query.  The situation
-                 * is that a unicast response may include all the names
-                 * advertised by the responder, even ones we didn't ask for.  So
-                 * since we never explicitly ask for org.alljoyn.About.sl names
-                 * then if there's more than 1 name in the response the response
-                 * must have been for a different query.
-                 */
-                if (!name.empty() && (recvPort == IpNameService::MULTICAST_MDNS_PORT ||
-                                      advRData->GetNumNames() == 1)) {
+                if (!name.empty()) {
                     QCC_DbgPrintf(("Received %s implements response (name=%s)",
-                                   (recvPort == IpNameService::MULTICAST_MDNS_PORT ? "unsolicited" : "solicited"),
+                                   (unsolicited ? "unsolicited" : "solicited"),
                                    name.c_str()));
-                    FoundAdvertisedNameHandler(name.c_str(), transport, name.c_str());
+                    FoundAdvertisedNameHandler(name.c_str(), transport, name.c_str(), unsolicited);
                 }
                 name.clear();
             }
         }
 
-        if (!name.empty() && (recvPort == IpNameService::MULTICAST_MDNS_PORT ||
-                              advRData->GetNumNames() == 1)) {
+        if (!name.empty()) {
             QCC_DbgPrintf(("Received %s implements response (name=%s)",
-                           (recvPort == IpNameService::MULTICAST_MDNS_PORT ? "unsolicited" : "solicited"),
+                           (unsolicited ? "unsolicited" : "solicited"),
                            name.c_str()));
-            FoundAdvertisedNameHandler(name.c_str(), transport, name.c_str());
+            FoundAdvertisedNameHandler(name.c_str(), transport, name.c_str(), unsolicited);
         }
     }
 

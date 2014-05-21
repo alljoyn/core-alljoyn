@@ -491,19 +491,19 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /*
      * Schedule work to be done for any of the remote caches we know about.
      */
-    void ScheduleWork();
+    void ScheduleWork(bool doInitialBackoff = true);
 
     /*
      * Schedule work to be done for a remote cache.
      */
-    QStatus ScheduleWork(RemoteCache& cache, bool addAlarm = true);
+    QStatus ScheduleWork(RemoteCache& cache, bool addAlarm = true, bool doInitialBackoff = true);
 
     bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
                       const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6);
     bool SendResponseIfMatch(TransportMask transport, const qcc::IPEndpoint& ns4, const qcc::String& ruleStr);
     bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort);
 
-    void FoundAdvertisedNameHandler(const char* name, TransportMask transport, const char* prefix);
+    void FoundAdvertisedNameHandler(const char* name, TransportMask transport, const char* prefix, bool doInitialBackoff = true);
 
     QStatus FindAdvertisementByTransport(const char* matching, TransportMask transports);
     QStatus CancelFindAdvertisementByTransport(const char* matching, TransportMask transports);
