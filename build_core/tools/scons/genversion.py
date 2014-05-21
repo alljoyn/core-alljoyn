@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -17,23 +17,27 @@ import getpass
 import platform
 import os
 import re
+import sys
 from subprocess import *
 
 ver_re = re.compile('int\s+(?P<REL>architecture|apiLevel|release)\s*=\s*(?P<VAL>\d+)\s*;\s*$')
 prod_re = re.compile('char(\s+const)?\s*(\sproduct\[\]|\*\s*product)\s*=\s*"(?P<STR>.*)"\s*;\s*$')
 
-def GetBuildInfo(env, source):
+def GetBuildInfo(env, source, stderr=PIPE ):
     branches = []
     tags = []
+    remotes = []
     if env.has_key('GIT'):
         try:
-            branches = Popen([env['GIT'], 'branch'], stdout = PIPE, stderr = PIPE, cwd = source).communicate()[0].splitlines()
-            tags = Popen([env['GIT'], 'describe', '--always', '--long', '--abbrev=40'], stdout = PIPE, stderr = PIPE, cwd = source).communicate()[0].splitlines()
+            remotes = Popen([env['GIT'], 'remote', '-v'], stdout = PIPE, stderr = stderr, cwd = source).communicate()[0].splitlines()
+            branches = Popen([env['GIT'], 'branch'], stdout = PIPE, stderr = stderr, cwd = source).communicate()[0].splitlines()
+            tags = Popen([env['GIT'], 'describe', '--always', '--long', '--abbrev=40'], stdout = PIPE, stderr = stderr, cwd = source).communicate()[0].splitlines()
         except WindowsError as e:
             if e[0] == 2:
                 try:
-                    branches = Popen([env['GIT'] + '.cmd', 'branch'], stdout = PIPE, stderr = PIPE, cwd = source).communicate()[0].splitlines()
-                    tags = Popen([env['GIT'] + '.cmd', 'describe', '--always', '--long', '--abbrev=40'], stdout = PIPE, stderr = PIPE, cwd = source).communicate()[0].splitlines()
+                    project = Popen([env['GIT'], 'remote', '-v'], stdout = PIPE, stderr = stderr, cwd = source).communicate()[0].splitlines()
+                    branches = Popen([env['GIT'] + '.cmd', 'branch'], stdout = PIPE, stderr = stderr, cwd = source).communicate()[0].splitlines()
+                    tags = Popen([env['GIT'] + '.cmd', 'describe', '--always', '--long', '--abbrev=40'], stdout = PIPE, stderr = stderr, cwd = source).communicate()[0].splitlines()
                 except:
                     pass
         except:
@@ -48,6 +52,17 @@ def GetBuildInfo(env, source):
     tag = None
     commit_delta = None
     commit_hash = None
+    gitname = 'Git'
+
+    if remotes:
+        for l in remotes:
+            m = re.search( r'^origin\s(?P<url>.*)\s\(fetch\)$', l )
+            if m:
+                n = re.search( r'^.*/(?P<gitname>.+)$', m.group('url').strip() )
+                if n:
+                    gitname = 'Git: %s' % ( n.group('gitname').strip() )
+                    break
+
     if tags:
         if tags[0].find('-') >= 0:
             tag, commit_delta, commit_hash = tuple(tags[0].rsplit('-',2))
@@ -58,7 +73,7 @@ def GetBuildInfo(env, source):
             commit_hash = tags[0]
 
     if branch or commit_hash:
-        bld_string = 'Git'
+        bld_string = gitname
     else:
         bld_string = ''
     if branch:
@@ -141,3 +156,33 @@ def generate(env):
 
 def exists(env):
     return true
+
+
+# "main" calls GetBuildInfo() and prints bld_string on stdout
+# "main" takes one argument: path to git workspace (optional)
+# "git" executable is expected to be found in PATH
+
+def main( argv=None ):
+    env = dict()
+    env['GIT'] = 'git'
+    source = ''
+    if argv and argv[0]:
+        source = argv[0].strip()
+    if source == '':
+        source = '.'
+
+    bld_string = GetBuildInfo( env, source, stderr=None )
+
+    if bld_string and bld_string != '':
+        print '%s' % ( bld_string )
+        return 0
+    else:
+        sys.stderr.write( 'error, unable to get Git version info\n' )
+        sys.stderr.flush()
+        return 1
+
+if __name__ == '__main__':
+    if len(sys.argv) > 1:
+        sys.exit(main(sys.argv[1:]))
+    else:
+        sys.exit(main())
