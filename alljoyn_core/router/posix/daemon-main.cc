@@ -484,7 +484,7 @@ exit:
     return result;
 }
 
-int daemon(OptParse& opts) {
+int daemon(OptParse& opts, bool forked) {
     struct sigaction act, oldact;
     sigset_t sigmask, waitmask;
     uint32_t pid(GetPid());
@@ -639,6 +639,20 @@ int daemon(OptParse& opts) {
         }
     }
 
+    if (forked) {
+        /*
+         * We forked and are running as a daemon, so close STDIN, STDOUT, and
+         * STDERR as appropriate.
+         */
+        close(STDIN_FILENO);
+        if (LoggerSetting::GetLoggerSetting()->GetFile() != stdout) {
+            close(STDOUT_FILENO);
+        }
+        if (LoggerSetting::GetLoggerSetting()->GetFile() != stderr) {
+            close(STDERR_FILENO);
+        }
+    }
+
     sigfillset(&waitmask);
     sigdelset(&waitmask, SIGHUP);
     sigdelset(&waitmask, SIGINT);
@@ -782,6 +796,7 @@ int main(int argc, char** argv, char** env)
 
     Log(LOG_INFO, "Running with effective userid %d\n", geteuid());
 
+    bool forked = false;
     if (opts.GetFork() || (config->Has("fork") && !opts.GetNoFork())) {
         Log(LOG_DEBUG, "Forking into daemon mode...\n");
         pid_t pid = fork();
@@ -800,10 +815,12 @@ int main(int argc, char** argv, char** env)
                 DaemonConfig::Release();
                 return DAEMON_EXIT_SESSION_ERROR;
             }
+            chdir("/tmp");
+            forked = true;
         }
     }
 
-    int ret = daemon(opts);
+    int ret = daemon(opts, forked);
 
     DaemonConfig::Release();
 
