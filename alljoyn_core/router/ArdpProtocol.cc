@@ -535,7 +535,7 @@ static uint32_t CheckConnTimers(ArdpHandle* handle, ArdpConnRecord* conn, uint32
         }
 
         if (timer->retry <= 0) {
-            QCC_DbgPrintf(("CheckConnTimers: conn %x delete timer %x", conn, timer));
+            QCC_DbgPrintf(("CheckConnTimers: conn %p delete timer %p", conn, timer));
             ln = ln->bwd;
             DeleteTimer(timer);
 
@@ -911,7 +911,7 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
 
 static QStatus Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t flags, uint32_t seq, uint32_t ack, uint16_t window)
 {
-    QCC_DbgTrace(("Send(handle=%p, conn=%p, flags=0x%02x, seq=%d, ack=%d, window=%d)", handle, conn, flags, seq, ack, window));
+    QCC_DbgTrace(("Send(handle=%p, conn=%p, flags=0x%02x, seq=%u, ack=%u, window=%u)", handle, conn, flags, seq, ack, window));
     ArdpHeader h;
     h.flags = flags;
     h.hlen = conn->sndHdrLen / 2;
@@ -955,48 +955,40 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         uint32_t len;
         uint8_t*buf;
         uint16_t fcnt = ntohs(h->fcnt);
-
-        timer->retry = 0;
-        snd->timer = NULL;
+        uint32_t som = ntohl(h->som);
+        uint16_t index = som % conn->SND.MAX;
 
         /* Invalidate send buffer.
          * If this is a fragment, invalidate the whole message. */
-        if (fcnt > 1) {
-            uint32_t som = ntohl(h->som);
-            uint16_t index = som % conn->RBUF.MAX;
 
-            QCC_DbgPrintf(("RetransmitTimerHandler:  cancel message of %d fragments with  SOM=%u", fcnt, som));
+        QCC_DbgPrintf(("RetransmitTimerHandler:  cancel message of %d fragments with  SOM=%u", fcnt, som));
 
-            /* Pointer to the original message buffer */
-            buf = conn->SBUF.snd[index].data;
+        /* Pointer to the original message buffer */
+        buf = conn->SBUF.snd[index].data;
 
-            for (uint16_t i = 0; i < fcnt; i++) {
-                h = (ArdpHeader*) conn->SBUF.snd[index].hdr;
-                assert(((ntohs(h->fcnt) == fcnt) && (ntohl(h->som) == som)) && "RetransmitTimerHandler: Not a valid fragment!");
+        for (uint16_t i = 0; i < fcnt; i++) {
+            h = (ArdpHeader*) conn->SBUF.snd[index].hdr;
+            assert(((ntohs(h->fcnt) == fcnt) && (ntohl(h->som) == som)) && "RetransmitTimerHandler: Not a valid fragment!");
 
-                conn->SBUF.snd[index].inUse = false;
-                conn->SBUF.pending--;
-                index = (index + 1) % conn->SND.MAX;
-                assert((conn->SBUF.pending <= conn->SND.MAX) && "RetransmitTimerHandler: Number of pending segments exceeds max!");
-                /* Cancel retransmit timers if any. Notice that the reference to the timer that fired up this handler
-                 * was set to NULL prior to entering the for loop. Therefore it will not be canceled from underneath
-                 * the execution flow. This timer will be taken care of by CheckConnTimers() based on retry==0
-                 * once we get out of RetransmitTimerHandler() call. */
-                if (conn->SBUF.snd[index].timer != NULL) {
-                    /* Caution: Do not delete actual timers here. Timer cleann up will happen
-                     * in CheckConnTimers() based on (retry <= 0) */
-                    timer->retry = 0;
-                    conn->SBUF.snd[index].timer = NULL;
-                }
+            conn->SBUF.snd[index].inUse = false;
+            conn->SBUF.pending--;
+            assert((conn->SBUF.pending <= conn->SND.MAX) && "RetransmitTimerHandler: Number of pending segments exceeds max!");
+            /* Cancel retransmit timers if any. Notice that the reference to the timer that fired up this handler
+             * was set to NULL prior to entering the for loop. Therefore it will not be canceled from underneath
+             * the execution flow. This timer will be taken care of by CheckConnTimers() based on retry==0
+             * once we get out of RetransmitTimerHandler() call. */
+
+            if (conn->SBUF.snd[index].timer != NULL) {
+                /* Caution: Do not delete actual timers here. Timer cleann up will happen
+                 * in CheckConnTimers() based on (retry <= 0) */
+                conn->SBUF.snd[index].timer->retry = 0;
+                conn->SBUF.snd[index].timer = NULL;
             }
-
-            /* Original message length */
-            len =  conn->SBUF.maxDlen * (fcnt - 1) + ntohs(h->dlen);
-
-        } else {
-            len = snd->datalen;
-            buf = snd->data;
+            index = (index + 1) % conn->SND.MAX;
         }
+
+        /* Original message length */
+        len =  conn->SBUF.maxDlen * (fcnt - 1) + ntohs(h->dlen);
 
         QCC_DbgPrintf(("RetransmitTimerHandler(): SendCb(handle=%p, conn=%p, buf=%p, len=%d, status=%d",
                        handle, conn, buf, len, ER_FAIL));
@@ -1356,6 +1348,8 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
                 break;
             }
 
+            segData += segLen;
+
             DumpSndInfo(conn);
         }
     } else {
@@ -1501,54 +1495,46 @@ static void FlushAckedSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
 
         if (SEQ32_LET(seq, ack) && (conn->SBUF.snd[index].inUse)) {
 
+            /* If fragmented, wait for the last segment. Issue sendCB on the first fragment in message.*/
+            QCC_DbgPrintf(("FlushAckedSegments(): fragment=%u, som=%u, fcnt=%d",
+                           ntohl(h->seq), ntohl(h->som), fcnt));
+
             if (conn->SBUF.snd[index].timer != NULL) {
+                QCC_DbgPrintf(("FlushAckedSegments(): stop timer %p", conn->SBUF.snd[index].timer));
                 conn->SBUF.snd[index].timer->retry = 0;
                 conn->SBUF.snd[index].timer = NULL;
             }
 
-            /* If fragmented, wait for the last segment. Issue sendCB on the first fragment in message.*/
-            if (fcnt > 1) {
-                QCC_DbgPrintf(("FlushAckedSegments(): fragment=%u, som=%u, fcnt=%d",
-                               ntohl(h->seq), ntohl(h->som), fcnt));
-
-                /* Check if this is the last one in chain and send cb only for that one */
-                if (ntohl(h->seq) != ntohl(h->som) + (fcnt - 1)) {
-                    index = (index + 1) % conn->SND.MAX;
-                    continue;
-                } else {
-                    QCC_DbgPrintf(("FlushAckedSegments(): last fragment=%u, som=%u, fcnt=%d",
-                                   ntohl(h->seq), ntohl(h->som), fcnt));
-
-                    /* First segment in message, keeps original pointer to message buffer */
-                    uint16_t fragIndex = ntohl(h->som) % conn->SND.MAX;
-                    /* Original message length */
-                    uint32_t len =  conn->SBUF.maxDlen * (fcnt - 1) + ntohs(h->dlen);
-                    QCC_DbgPrintf(("FlushAckedSegments(): First Fragment SendCb(handle=%p, conn=%p, buf=%p, len=%d, status=%d",
-                                   handle, conn, conn->SBUF.snd[fragIndex].data, len, ER_OK));
-
-                    /* Mark all fragment SND buffers as available */
-                    do {
-                        conn->SBUF.snd[fragIndex].inUse = false;
-                        fragIndex = (fragIndex + 1) % conn->SND.MAX;
-                        conn->SBUF.pending--;
-                        QCC_DbgPrintf(("FlushAckedSegments(fcnt = %d): pending = %d", fcnt, conn->SBUF.pending));
-                        assert((conn->SBUF.pending < conn->SND.MAX) && "Invalid number of pending segments in send queue!");
-                        fcnt--;
-                    } while (fcnt > 0);
-
-                    handle->cb.SendCb(handle, conn, conn->SBUF.snd[fragIndex].data, len, ER_OK);
-                }
+            /* Check if this is the last one in chain and send cb only for that one */
+            if (seq != (ntohl(h->som) + (fcnt - 1))) {
+                index = (index + 1) % conn->SND.MAX;
+                continue;
             } else {
-                QCC_DbgPrintf(("FlushAckedSegments(): SendCb(handle=%p, conn=%p, buf=%p, len=%d, status=%d",
-                               handle, conn, conn->SBUF.snd[index].data, conn->SBUF.snd[index].datalen, ER_OK));
-                conn->SBUF.snd[index].inUse = false;
-                conn->SBUF.pending--;
-                QCC_DbgPrintf(("FlushAckedSegments(unfragmented): pending = %d", conn->SBUF.pending));
-                assert((conn->SBUF.pending < conn->SND.MAX) && "Invalid number of pending segments in send queue!");
+                QCC_DbgPrintf(("FlushAckedSegments(): last fragment=%u, som=%u, fcnt=%d",
+                               seq, ntohl(h->som), fcnt));
 
-                handle->cb.SendCb(handle, conn, conn->SBUF.snd[index].data, conn->SBUF.snd[index].datalen, ER_OK);
+                /* First segment in message, keeps original pointer to message buffer */
+                uint16_t fragIndex = ntohl(h->som) % conn->SND.MAX;
+                /* Original message length */
+                uint32_t len =  conn->SBUF.maxDlen * (fcnt - 1) + ntohs(h->dlen);
+                /* Original sent data buffer */
+                uint8_t*buf = conn->SBUF.snd[fragIndex].data;
+                QCC_DbgPrintf(("FlushAckedSegments(): First Fragment SendCb(handle=%p, conn=%p, buf=%p, len=%d, status=%d",
+                               handle, conn, conn->SBUF.snd[fragIndex].data, len, ER_OK));
+
+                /* Mark all fragment SND buffers as available */
+                do {
+                    conn->SBUF.snd[fragIndex].inUse = false;
+                    fragIndex = (fragIndex + 1) % conn->SND.MAX;
+                    conn->SBUF.pending--;
+                    QCC_DbgPrintf(("FlushAckedSegments(fcnt = %d): pending = %d", fcnt, conn->SBUF.pending));
+                    assert((conn->SBUF.pending < conn->SND.MAX) && "Invalid number of pending segments in send queue!");
+                    fcnt--;
+                } while (fcnt > 0);
+
+                handle->cb.SendCb(handle, conn, buf, len, ER_OK);
+
             }
-
         }
 
         index = (index + 1) % conn->SND.MAX;
@@ -1736,8 +1722,12 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
         QCC_DbgPrintf(("AddRcvBuffer: data len %d exceeds SEGBMAX %d", seg->DLEN, conn->RBUF.MAX));
         return ER_FAIL;
     }
-    assert(!(current->inUse) && "AddRcvBuffer: attempt to overwrite buffer that has not been released");
 
+    assert(!(current->inUse) || (current->inUse && current->seq == seg->SEQ) && "AddRcvBuffer: attempt to overwrite buffer that has not been released");
+    if (current->seq == seg->SEQ) {
+        QCC_DbgPrintf(("AddRcvBuffer: duplicate segment %u, acknowledge", seg->SEQ));
+        return ER_OK;
+    }
 
     current->data = (uint8_t*) malloc(seg->DLEN * sizeof(uint8_t));
     if (current->data == NULL) {
@@ -1772,8 +1762,9 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
     if (ordered) {
         uint32_t delta = 0;
 
-        /* Same execution flow for both fragmented and whole messages */
+        /* Same execution flow for both fragmented and non-fagmented messages */
         do {
+
             conn->RCV.CUR = current->seq;
 
             /*
@@ -1784,20 +1775,20 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
              * - RecvCb(SOM's rcvBuf, fcnt)
              */
             if (current->seq == current->som + (current->fcnt - 1)) {
-                index = seg->SOM % conn->RCV.MAX;
-                ArdpRcvBuf* startFrag = &conn->RBUF.rcv[index];
-                ArdpRcvBuf* fragment = startFrag;
                 uint32_t tNow = TimeNow(handle->tbase);
                 bool expired = false;
+                ArdpRcvBuf* startFrag = &conn->RBUF.rcv[current->som % conn->RCV.MAX];
+                ArdpRcvBuf* fragment = startFrag;
 
                 /* Remove this check before release */
                 for (uint32_t i = 0; i < current->fcnt; i++) {
-                    if (!fragment->inUse || fragment->isDelivered || fragment->som != seg->SOM || fragment->fcnt != seg->FCNT) {
-                        QCC_LogError(ER_FAIL, ("Gap in fragmented (%i) message: start %u, this(%d) %u",
-                                               seg->FCNT, seg->SOM, i, fragment->seq));
+                    if (!fragment->inUse || fragment->isDelivered || fragment->som != startFrag->som || fragment->fcnt != startFrag->fcnt) {
+                        QCC_LogError(ER_FAIL, ("Gap in fragmented (%d) message: start %u, this(%i): seq=%u inUse=%s, delivered = %s, som=%u, fcnt=%u",
+                                               startFrag->fcnt, startFrag->som, i, fragment->seq, fragment->inUse ? "true" : "false",
+                                               fragment->isDelivered ? "true" : "false", fragment->som, fragment->fcnt));
                     }
                     assert(fragment->inUse && "Gap in fragmented message");
-                    assert((fragment->som == seg->SOM && fragment->fcnt == seg->FCNT) && "Lost track of received fragment");
+                    assert((fragment->som == startFrag->som && fragment->fcnt == startFrag->fcnt) && "Lost track of received fragment");
                     fragment = fragment->next;
                 }
 
@@ -1834,18 +1825,24 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
                         UpdateRcvBuffers(handle, conn, startFrag);
                     }
                 } else {
+                    QCC_DbgPrintf(("ArdpRcvBuffer(): RecvCb(conn=0x%p, buf=%p, seq=%u)", conn, startFrag, startFrag->seq));
                     handle->cb.RecvCb(handle, conn, startFrag, ER_OK);
                 }
             }
 
             current = current->next;
+            /* TODO: remove this check before release. Detect where the message starts */
+            if (current->seq == current->som) {
+                QCC_DbgPrintf(("ArdpRcvBuffer(): next message starts @ %u", current->som));
+            }
+
             delta++;
             QCC_DbgPrintf(("ArdpRcvBuffer(): current->seq = %u, (seg->SEQ + delta) = %u", current->seq, (seg->SEQ + delta)));
+
         } while (current->seq == (seg->SEQ + delta));
 
-        if (delta > 1) {
-            UpdateRcvMsk(conn, delta + 1);
-        }
+        UpdateRcvMsk(conn, delta + 1);
+
     } else {
         AddRcvMsk(conn, (seg->SEQ - (conn->RCV.CUR + 1)));
     }
