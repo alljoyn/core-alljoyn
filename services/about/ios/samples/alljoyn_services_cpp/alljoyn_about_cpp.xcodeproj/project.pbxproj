@@ -7,6 +7,17 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7D43EA5B192C284F001C75BB /* liballjoyn_about_cpp.a in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CDD218547B37004660C5 /* liballjoyn_about_cpp.a */; };
+		7D43EA7B192C31C0001C75BB /* AboutClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFDD18547EFA004660C5 /* AboutClient.h */; };
+		7D43EA7C192C31C0001C75BB /* AboutIconClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFDE18547EFA004660C5 /* AboutIconClient.h */; };
+		7D43EA7D192C31C0001C75BB /* AboutIconService.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFDF18547EFA004660C5 /* AboutIconService.h */; };
+		7D43EA7E192C31C0001C75BB /* AboutPropertyStoreImpl.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFE018547EFA004660C5 /* AboutPropertyStoreImpl.h */; };
+		7D43EA7F192C31C0001C75BB /* AboutService.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFE118547EFA004660C5 /* AboutService.h */; };
+		7D43EA80192C31C0001C75BB /* AboutServiceApi.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFE218547EFA004660C5 /* AboutServiceApi.h */; };
+		7D43EA81192C31C0001C75BB /* AnnounceHandler.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFE318547EFA004660C5 /* AnnounceHandler.h */; };
+		7D43EA82192C31C0001C75BB /* AnnouncementRegistrar.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFE418547EFA004660C5 /* AnnouncementRegistrar.h */; };
+		7D43EA83192C31C0001C75BB /* PropertyStore.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFE518547EFA004660C5 /* PropertyStore.h */; };
+		7D43EA84192C31C0001C75BB /* PropertyStoreProperty.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFE618547EFA004660C5 /* PropertyStoreProperty.h */; };
 		9AA93A721855C17900378361 /* AboutClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFDD18547EFA004660C5 /* AboutClient.h */; };
 		9AA93A731855C17900378361 /* AboutIconClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFDE18547EFA004660C5 /* AboutIconClient.h */; };
 		9AA93A741855C17900378361 /* AboutIconService.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFDF18547EFA004660C5 /* AboutIconService.h */; };
@@ -30,6 +41,35 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		7D43EA5A192C27F1001C75BB /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = "$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/about/lib";
+			dstSubfolderSpec = 0;
+			files = (
+				7D43EA5B192C284F001C75BB /* liballjoyn_about_cpp.a in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D43EA7A192C3194001C75BB /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/about/inc/alljoyn/about";
+			dstSubfolderSpec = 0;
+			files = (
+				7D43EA7B192C31C0001C75BB /* AboutClient.h in CopyFiles */,
+				7D43EA7C192C31C0001C75BB /* AboutIconClient.h in CopyFiles */,
+				7D43EA7D192C31C0001C75BB /* AboutIconService.h in CopyFiles */,
+				7D43EA7E192C31C0001C75BB /* AboutPropertyStoreImpl.h in CopyFiles */,
+				7D43EA7F192C31C0001C75BB /* AboutService.h in CopyFiles */,
+				7D43EA80192C31C0001C75BB /* AboutServiceApi.h in CopyFiles */,
+				7D43EA81192C31C0001C75BB /* AnnounceHandler.h in CopyFiles */,
+				7D43EA82192C31C0001C75BB /* AnnouncementRegistrar.h in CopyFiles */,
+				7D43EA83192C31C0001C75BB /* PropertyStore.h in CopyFiles */,
+				7D43EA84192C31C0001C75BB /* PropertyStoreProperty.h in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9AA93A7C1855C1B200378361 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -231,6 +271,8 @@
 				9AB9CDD018547B37004660C5 /* CopyFiles */,
 				9AA93A7C1855C1B200378361 /* CopyFiles */,
 				9AA93A7F1855C1F600378361 /* CopyFiles */,
+				7D43EA5A192C27F1001C75BB /* CopyFiles */,
+				7D43EA7A192C3194001C75BB /* CopyFiles */,
 			);
 			buildRules = (
 			);

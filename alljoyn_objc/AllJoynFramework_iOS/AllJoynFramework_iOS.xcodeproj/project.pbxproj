@@ -21,6 +21,7 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		7D43EA59192C274F001C75BB /* libAllJoynFramework_iOS.a in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC1030A8156EC82300D2853A /* libAllJoynFramework_iOS.a */; };
 		7D682D661899BC54009424AA /* AJNPasswordManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 7D682D651899BC54009424AA /* AJNPasswordManager.h */; };
 		7D682D681899BC96009424AA /* AJNPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7D682D671899BC96009424AA /* AJNPasswordManager.mm */; };
 		AC1030AC156EC82300D2853A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC1030AB156EC82300D2853A /* Foundation.framework */; };
@@ -106,6 +107,19 @@
 			remoteInfo = AllJoynFramework_iOS;
 		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		7D43EA58192C26DB001C75BB /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = "$(SRCROOT)/../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/about/lib";
+			dstSubfolderSpec = 0;
+			files = (
+				7D43EA59192C274F001C75BB /* libAllJoynFramework_iOS.a in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		7D682D651899BC54009424AA /* AJNPasswordManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPasswordManager.h; path = ../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.h; sourceTree = "<group>"; };
@@ -411,6 +425,7 @@
 				AC1030A4156EC82300D2853A /* Sources */,
 				AC1030A5156EC82300D2853A /* Frameworks */,
 				AC1030A6156EC82300D2853A /* Headers */,
+				7D43EA58192C26DB001C75BB /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -580,10 +595,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = (
-					"$(ARCHS_STANDARD_32_BIT)",
-					armv7,
-				);
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -602,8 +614,8 @@
 					"\"$(SRCROOT)/../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
 					"\"$(SRCROOT)/../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 5.1;
-				ONLY_ACTIVE_ARCH = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				ONLY_ACTIVE_ARCH = NO;
 				SDKROOT = iphoneos;
 			};
 			name = Debug;
@@ -612,10 +624,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = (
-					"$(ARCHS_STANDARD_32_BIT)",
-					armv7,
-				);
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				COPY_PHASE_STRIP = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -627,8 +636,8 @@
 					"\"$(SRCROOT)/../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
 					"\"$(SRCROOT)/../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 5.1;
-				ONLY_ACTIVE_ARCH = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				ONLY_ACTIVE_ARCH = NO;
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -637,11 +646,8 @@
 		AC1030CD156EC82300D2853A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					"$(ARCHS_STANDARD_32_BIT)",
-					armv7,
-				);
-				DSTROOT = /tmp/AllJoynFramework_iOS.dst;
+				ARCHS = "$(ARCHS_STANDARD)";
+				DSTROOT = "";
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -650,6 +656,7 @@
 					"\"$(SRCROOT)/../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
 					"\"$(SRCROOT)/../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
 				);
+				INSTALL_PATH = "";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
@@ -661,18 +668,15 @@
 				);
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
+				SKIP_INSTALL = NO;
 			};
 			name = Debug;
 		};
 		AC1030CE156EC82300D2853A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					"$(ARCHS_STANDARD_32_BIT)",
-					armv7,
-				);
-				DSTROOT = /tmp/AllJoynFramework_iOS.dst;
+				ARCHS = "$(ARCHS_STANDARD)";
+				DSTROOT = "";
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -681,6 +685,7 @@
 					"\"$(SRCROOT)/../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
 					"\"$(SRCROOT)/../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
 				);
+				INSTALL_PATH = "";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
@@ -692,7 +697,7 @@
 				);
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
+				SKIP_INSTALL = NO;
 			};
 			name = Release;
 		};
