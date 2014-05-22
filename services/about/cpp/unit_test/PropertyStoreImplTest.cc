@@ -100,7 +100,7 @@ TEST(PropertyStoreImplTest, setDeviceName)
     QStatus status;
     AboutPropertyStoreImpl ps;
 
-    status = ps.setDeviceName("MyDeviceName");
+    status = ps.setDeviceName("MyDeviceName", "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     PropertyStoreProperty* psp = ps.getProperty(DEVICE_NAME);
@@ -454,7 +454,7 @@ TEST(PropertyStoreImplTest, ReadAll_announce)
 
     status = ps.setDeviceId("1231232145667745675477");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = ps.setDeviceName("MyDeviceName");
+    status = ps.setDeviceName("MyDeviceName", "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = ps.setAppId("000102030405060708090A0B0C0D0E0C");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -587,7 +587,7 @@ TEST(PropertyStoreImplTest, ReadAll_read)
 
     status = ps.setDeviceId("1231232145667745675477");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = ps.setDeviceName("MyDeviceName");
+    status = ps.setDeviceName("MyDeviceName", "en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = ps.setAppId("000102030405060708090A0B0C0D0E0C");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
