@@ -31,7 +31,7 @@ bindings = set([ b.strip()
                  if b.strip() == 'cpp' or os.path.exists('alljoyn_%s/SConscript' % b.strip()) ])
 services = set([ s.strip()
                  for s in env['SERVICES'].split(',')
-                 if s.strip() == 'about' or os.path.exists('../../services/%s/SConscript' % s.strip())])
+                 if s.strip() == 'about' or os.path.exists('../../services/base/%s/SConscript' % s.strip())])
 
 print 'Building bindings: %s' % ', '.join(bindings)
 print 'Building services: %s' % ', '.join(services)
@@ -60,21 +60,21 @@ if len(services) > 0:
     env.SConscript(['services/about/SConscript'])
 
 if services.intersection(['config', 'controlpanel', 'notification', 'onboarding', 'audio']):
-    env['APP_COMMON_DIR'] = env.Dir('../../services/sample_apps')
+    env['APP_COMMON_DIR'] = env.Dir('../../services/base/sample_apps')
 
     if services.intersection(['config', 'onboarding']):
         # onboarding also depends on config
-        env.SConscript(['../../services/config/SConscript'])
+        env.SConscript(['../../services/base/config/SConscript'])
 
         if 'onboarding' in services:
-            env.SConscript(['../../services/onboarding/SConscript'])
+            env.SConscript(['../../services/base/onboarding/SConscript'])
 
     if services.intersection(['controlpanel', 'notification']):
         # controlpanel also depends on notification
-        env.SConscript(['../../services/notification/SConscript'])
+        env.SConscript(['../../services/base/notification/SConscript'])
 
         if 'controlpanel' in services:
-            env.SConscript(['../../services/controlpanel/SConscript'])
+            env.SConscript(['../../services/base/controlpanel/SConscript'])
 
     if 'audio' in services:
         env.SConscript(['../../services/audio/SConscript'])
