@@ -367,7 +367,7 @@ IpNameServiceImpl::IpNameServiceImpl()
     m_terminal(false), m_protect_callback(false), m_timer(0), m_tDuration(DEFAULT_DURATION),
     m_tRetransmit(RETRANSMIT_TIME), m_tQuestion(QUESTION_TIME),
     m_modulus(QUESTION_MODULUS), m_retries(sizeof(RETRY_INTERVALS) / sizeof(RETRY_INTERVALS[0])),
-    m_loopback(false), m_enableIPv4(false), m_enableIPv6(false),
+    m_loopback(false), m_enableIPv4(false), m_enableIPv6(false), m_enableV1(false),
     m_wakeEvent(), m_forceLazyUpdate(false),
     m_enabled(false), m_doEnable(false), m_doDisable(false),
     m_ipv4QuietSockFd(-1), m_ipv6QuietSockFd(-1),
@@ -415,6 +415,11 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
     m_enableIPv4 = !config->GetFlag("ns_disable_ipv4");
     m_enableIPv6 = !config->GetFlag("ns_disable_ipv6");
     m_broadcast = config->GetFlag("ns_disable_directed_broadcast");
+
+    //
+    // We don't enable v0 and v1 traffic unless explicitly configured to do so.
+    //
+    m_enableV1 = config->GetFlag("ns_enable_v1");
 
     //
     // Set the broadcast bit to true for WinRT. For all other platforms,
@@ -813,12 +818,24 @@ void IpNameServiceImpl::ClearLiveInterfaces(void)
                 m_liveInterfaces[i].m_flags & qcc::IfConfigEntry::LOOPBACK) {
                 if (m_liveInterfaces[i].m_address.IsIPv4()) {
 #if 1
-                    qcc::LeaveMulticastGroup(m_liveInterfaces[i].m_multicastMDNSsockFd, qcc::QCC_AF_INET, IPV4_MDNS_MULTICAST_GROUP, m_liveInterfaces[i].m_interfaceName);
-                    qcc::LeaveMulticastGroup(m_liveInterfaces[i].m_multicastsockFd, qcc::QCC_AF_INET, IPV4_ALLJOYN_MULTICAST_GROUP, m_liveInterfaces[i].m_interfaceName);
+                    if (m_liveInterfaces[i].m_multicastMDNSsockFd != -1) {
+                        qcc::LeaveMulticastGroup(m_liveInterfaces[i].m_multicastMDNSsockFd, qcc::QCC_AF_INET, IPV4_MDNS_MULTICAST_GROUP,
+                                                 m_liveInterfaces[i].m_interfaceName);
+                    }
+                    if (m_liveInterfaces[i].m_multicastsockFd != -1) {
+                        qcc::LeaveMulticastGroup(m_liveInterfaces[i].m_multicastsockFd, qcc::QCC_AF_INET, IPV4_ALLJOYN_MULTICAST_GROUP,
+                                                 m_liveInterfaces[i].m_interfaceName);
+                    }
 #endif
                 } else if (m_liveInterfaces[i].m_address.IsIPv6()) {
-                    qcc::LeaveMulticastGroup(m_liveInterfaces[i].m_multicastMDNSsockFd, qcc::QCC_AF_INET6, IPV6_MDNS_MULTICAST_GROUP, m_liveInterfaces[i].m_interfaceName);
-                    qcc::LeaveMulticastGroup(m_liveInterfaces[i].m_multicastsockFd, qcc::QCC_AF_INET6, IPV6_ALLJOYN_MULTICAST_GROUP, m_liveInterfaces[i].m_interfaceName);
+                    if (m_liveInterfaces[i].m_multicastMDNSsockFd != -1) {
+                        qcc::LeaveMulticastGroup(m_liveInterfaces[i].m_multicastMDNSsockFd, qcc::QCC_AF_INET6, IPV6_MDNS_MULTICAST_GROUP,
+                                                 m_liveInterfaces[i].m_interfaceName);
+                    }
+                    if (m_liveInterfaces[i].m_multicastsockFd != -1) {
+                        qcc::LeaveMulticastGroup(m_liveInterfaces[i].m_multicastsockFd, qcc::QCC_AF_INET6, IPV6_ALLJOYN_MULTICAST_GROUP,
+                                                 m_liveInterfaces[i].m_interfaceName);
+                    }
 
                 }
             }
@@ -830,21 +847,26 @@ void IpNameServiceImpl::ClearLiveInterfaces(void)
             // can end up monitoring the wrong socket and interfere with the correct
             // operation of other unrelated event/socket pairs.
             //
-            delete m_liveInterfaces[i].m_multicastMDNSevent;
-            m_liveInterfaces[i].m_multicastMDNSevent = NULL;
-            qcc::Close(m_liveInterfaces[i].m_multicastMDNSsockFd);
-            m_liveInterfaces[i].m_multicastMDNSsockFd = -1;
+            if (m_liveInterfaces[i].m_multicastMDNSsockFd != -1) {
+                delete m_liveInterfaces[i].m_multicastMDNSevent;
+                m_liveInterfaces[i].m_multicastMDNSevent = NULL;
+                qcc::Close(m_liveInterfaces[i].m_multicastMDNSsockFd);
+                m_liveInterfaces[i].m_multicastMDNSsockFd = -1;
+            }
 
-            delete m_liveInterfaces[i].m_multicastevent;
-            m_liveInterfaces[i].m_multicastevent = NULL;
-            qcc::Close(m_liveInterfaces[i].m_multicastsockFd);
-            m_liveInterfaces[i].m_multicastsockFd = -1;
+            if (m_liveInterfaces[i].m_multicastsockFd != -1) {
+                delete m_liveInterfaces[i].m_multicastevent;
+                m_liveInterfaces[i].m_multicastevent = NULL;
+                qcc::Close(m_liveInterfaces[i].m_multicastsockFd);
+                m_liveInterfaces[i].m_multicastsockFd = -1;
+            }
 
-            delete m_liveInterfaces[i].m_unicastevent;
-            m_liveInterfaces[i].m_unicastevent = NULL;
-            qcc::Close(m_liveInterfaces[i].m_unicastsockFd);
-            m_liveInterfaces[i].m_unicastsockFd = -1;
-
+            if (m_liveInterfaces[i].m_unicastsockFd != -1) {
+                delete m_liveInterfaces[i].m_unicastevent;
+                m_liveInterfaces[i].m_unicastevent = NULL;
+                qcc::Close(m_liveInterfaces[i].m_unicastsockFd);
+                m_liveInterfaces[i].m_unicastsockFd = -1;
+            }
         }
     }
 
@@ -1324,9 +1346,9 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
         // We set up 3 sockets - one to listen for Multicast NS packets, one for MDNS packets
         // and 1 for unicast MDNS packets.
         //
-        qcc::SocketFd multicastMDNSsockFd;
-        qcc::SocketFd multicastsockFd;
-        qcc::SocketFd unicastsockFd;
+        qcc::SocketFd multicastMDNSsockFd = -1;
+        qcc::SocketFd multicastsockFd = -1;
+        qcc::SocketFd unicastsockFd = -1;
 
         if (entries[i].m_family != qcc::QCC_AF_INET && entries[i].m_family != qcc::QCC_AF_INET6) {
             assert(!"IpNameServiceImpl::LazyUpdateInterfaces(): Unexpected value in m_family (not AF_INET or AF_INET6");
@@ -1338,19 +1360,22 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
             continue;
         }
 
-        status = CreateMulticastSocket(entries[i], IPV4_ALLJOYN_MULTICAST_GROUP, IPV6_ALLJOYN_MULTICAST_GROUP, MULTICAST_PORT, m_broadcast, multicastsockFd);
+        status = CreateMulticastSocket(entries[i], IPV4_MDNS_MULTICAST_GROUP, IPV6_MDNS_MULTICAST_GROUP, MULTICAST_MDNS_PORT,
+                                       m_broadcast, multicastMDNSsockFd);
         if (status != ER_OK) {
-            QCC_DbgPrintf(("Failed to create multicast socket for NS packets."));
+            QCC_DbgPrintf(("Failed to create multicast socket for MDNS packets."));
             qcc::Close(unicastsockFd);
             continue;
         }
 
-        status = CreateMulticastSocket(entries[i], IPV4_MDNS_MULTICAST_GROUP, IPV6_MDNS_MULTICAST_GROUP, MULTICAST_MDNS_PORT, m_broadcast, multicastMDNSsockFd);
-        if (status != ER_OK) {
-            QCC_DbgPrintf(("Failed to create multicast socket for MDNS packets."));
-            qcc::Close(unicastsockFd);
-            qcc::Close(multicastsockFd);
-            continue;
+        if (m_enableV1) {
+            status = CreateMulticastSocket(entries[i], IPV4_ALLJOYN_MULTICAST_GROUP, IPV6_ALLJOYN_MULTICAST_GROUP, MULTICAST_PORT,
+                                           m_broadcast, multicastsockFd);
+            if (status != ER_OK) {
+                QCC_DbgPrintf(("Failed to create multicast socket for NS packets."));
+                qcc::Close(unicastsockFd);
+                continue;
+            }
         }
 
         //
@@ -1376,9 +1401,15 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
         live.m_multicastPort = MULTICAST_PORT;
         live.m_multicastMDNSPort = MULTICAST_MDNS_PORT;
 
-        live.m_unicastevent = new qcc::Event(unicastsockFd, qcc::Event::IO_READ, false);
-        live.m_multicastevent = new qcc::Event(multicastsockFd, qcc::Event::IO_READ, false);
-        live.m_multicastMDNSevent = new qcc::Event(multicastMDNSsockFd, qcc::Event::IO_READ, false);
+        if (unicastsockFd != -1) {
+            live.m_unicastevent = new qcc::Event(unicastsockFd, qcc::Event::IO_READ, false);
+        }
+        if (multicastsockFd != -1) {
+            live.m_multicastevent = new qcc::Event(multicastsockFd, qcc::Event::IO_READ, false);
+        }
+        if (multicastMDNSsockFd != -1) {
+            live.m_multicastMDNSevent = new qcc::Event(multicastMDNSsockFd, qcc::Event::IO_READ, false);
+        }
 
         QCC_DbgPrintf(("Pushing back interface %s addr %s", live.m_interfaceName.c_str(), entries[i].m_addr.c_str()));
         //
@@ -1574,7 +1605,7 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
     //
     uint8_t type = TRANSMIT_V2;
     MatchMap::iterator name = matching.find("name");
-    if ((matching.size() == 1) && (name != matching.end())) {
+    if (m_enableV1 && (matching.size() == 1) && (name != matching.end())) {
         type |= TRANSMIT_V0_V1;
     }
 
@@ -1879,7 +1910,7 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
     //
     // Do it once for version zero.
     //
-    {
+    if (m_enableV1) {
         //
         // The underlying protocol is capable of identifying both TCP and UDP
         // services.  Right now, the only possibility is TCP, so this is not
@@ -1983,7 +2014,7 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
     //
     // Do it once for version one.
     //
-    {
+    if (m_enableV1) {
         IsAt isAt;
 
         //
@@ -2270,7 +2301,7 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
     //
     // Do it once for version zero.
     //
-    {
+    if (m_enableV1) {
         //
         // Send a protocol answer message describing the list of names we have just
         // been asked to withdraw.
@@ -2359,7 +2390,7 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
     //
     // Do it once for version one.
     //
-    {
+    if (m_enableV1) {
         //
         // Send a protocol answer message describing the list of names we have just
         // been asked to withdraw.
@@ -2729,6 +2760,10 @@ void IpNameServiceImpl::QueueProtocolMessage(Packet packet)
     static const size_t MAX_IPNS_MESSAGES = 50;
     QCC_DbgPrintf(("IpNameServiceImpl::QueueProtocolMessage()"));
 
+    uint32_t nsVersion, msgVersion;
+    packet->GetVersion(nsVersion, msgVersion);
+    assert(m_enableV1 || (msgVersion != 0 && msgVersion != 1));
+
     m_mutex.Lock();
     while (m_outbound.size() >= MAX_IPNS_MESSAGES) {
         m_mutex.Unlock();
@@ -2849,8 +2884,9 @@ void IpNameServiceImpl::SendProtocolMessage(
 
     uint32_t nsVersion, msgVersion;
     packet->GetVersion(nsVersion, msgVersion);
-    size_t size = packet->GetSerializedSize();
+    assert(m_enableV1 || (msgVersion != 0 && msgVersion != 1));
 
+    size_t size = packet->GetSerializedSize();
     if (size > NS_MESSAGE_MAX) {
         QCC_LogError(ER_FAIL, ("SendProtocolMessage: Message (%d bytes) is longer than NS_MESSAGE_MAX (%d bytes)",
                                size, NS_MESSAGE_MAX));
@@ -2944,7 +2980,7 @@ void IpNameServiceImpl::SendProtocolMessage(
 
 #if WORKAROUND_2_3_BUG
 
-            if (msgVersion == 0) {
+            if ((msgVersion == 0) && m_enableV1) {
                 qcc::IPAddress ipv4SiteAdminMulticast(IPV4_MULTICAST_GROUP);
                 QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
                                  ipv4SiteAdminMulticast.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
@@ -2962,7 +2998,7 @@ void IpNameServiceImpl::SendProtocolMessage(
                 if (status != ER_OK) {
                     QCC_LogError(status, ("IpNameServiceImpl::SendProtocolMessage():  Error sending to IPv4 Local Network Control Block multicast group"));
                 }
-            } else {
+            } else if (m_enableV1) {
                 qcc::IPAddress ipv4LocalMulticast(IPV4_ALLJOYN_MULTICAST_GROUP);
                 QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
                                  ipv4LocalMulticast.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
@@ -3018,9 +3054,10 @@ void IpNameServiceImpl::SendProtocolMessage(
                 QStatus status;
                 if (msgVersion == 2) {
                     status = qcc::SendTo(sockFd, ipv4Broadcast, BROADCAST_MDNS_PORT, buffer, size, sent);
-                } else {
+                } else if (m_enableV1) {
                     status = qcc::SendTo(sockFd, ipv4Broadcast, BROADCAST_PORT, buffer, size, sent);
-
+                } else {
+                    status = ER_OK;
                 }
                 if (status != ER_OK) {
                     QCC_LogError(ER_FAIL, ("IpNameServiceImpl::SendProtocolMessage():  Error sending to IPv4 (broadcast)"));
@@ -3037,7 +3074,7 @@ void IpNameServiceImpl::SendProtocolMessage(
 
 #if WORKAROUND_2_3_BUG
 
-            if (msgVersion == 0) {
+            if ((msgVersion == 0) && m_enableV1) {
                 qcc::IPAddress ipv6SiteAdmin(IPV6_MULTICAST_GROUP);
                 QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
                                  ipv6SiteAdmin.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
@@ -3054,7 +3091,7 @@ void IpNameServiceImpl::SendProtocolMessage(
                 QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
                                  ipv6AllJoyn.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
                 status = qcc::SendTo(sockFd, ipv6AllJoyn, MULTICAST_MDNS_PORT, buffer, size, sent);
-            } else {
+            } else if (m_enableV1) {
                 qcc::IPAddress ipv6AllJoyn(IPV6_ALLJOYN_MULTICAST_GROUP);
                 QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
                                  ipv6AllJoyn.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
@@ -3541,7 +3578,7 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
         // socket (unless we're in a transient state) and so we shouldn't send
         // it out that interface.
         //
-        if (m_liveInterfaces[i].m_multicastMDNSsockFd == -1 || m_liveInterfaces[i].m_multicastsockFd == -1 || m_liveInterfaces[i].m_unicastsockFd == -1) {
+        if (m_liveInterfaces[i].m_multicastMDNSsockFd == -1 || m_liveInterfaces[i].m_unicastsockFd == -1) {
             QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): Interface %d. is not live", i));
             continue;
         }
@@ -3625,7 +3662,6 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
             //
             for (uint32_t j = 0; j < m_liveInterfaces.size(); ++j) {
                 if (m_liveInterfaces[i].m_multicastMDNSsockFd == -1 ||
-                    m_liveInterfaces[i].m_multicastsockFd == -1 ||
                     m_liveInterfaces[i].m_unicastsockFd == -1 ||
                     m_liveInterfaces[j].m_interfaceName != m_liveInterfaces[i].m_interfaceName) {
                     continue;
@@ -3651,7 +3687,8 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
             // Do the version-specific rewriting of the addresses in this NS/MDNS message.
             //
             QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): Rewrite NS/MDNS packet"));
-            RewriteVersionSpecific(msgVersion, packet, haveIPv4address, ipv4address, haveIPv6address, ipv6address, unicastPortv4, unicastPortv6);
+            RewriteVersionSpecific(msgVersion, packet, haveIPv4address, ipv4address, haveIPv6address, ipv6address,
+                                   unicastPortv4, unicastPortv6);
 
             //
             // Send the protocol message described by the header, with its contained
@@ -3660,10 +3697,11 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
             //
             QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): SendProtocolMessage()"));
             if (msgVersion == 2) {
-                SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen, flags, interfaceIsIPv4, packet, i);
-            } else {
-                SendProtocolMessage(m_liveInterfaces[i].m_multicastsockFd, ipv4address, interfaceAddressPrefixLen, flags, interfaceIsIPv4, packet, i);
-
+                SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
+                                    flags, interfaceIsIPv4, packet, i);
+            } else if (m_liveInterfaces[i].m_multicastsockFd != -1) {
+                SendProtocolMessage(m_liveInterfaces[i].m_multicastsockFd, ipv4address, interfaceAddressPrefixLen,
+                                    flags, interfaceIsIPv4, packet, i);
             }
 // TODO Check why are we not sending over IPv6 address ?
         }
@@ -3698,8 +3736,8 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet)
         // we wouldn't be able to send anyway.
         //
 
-        if (m_liveInterfaces[i].m_multicastMDNSsockFd == -1 || m_liveInterfaces[i].m_multicastsockFd == -1
-            || m_liveInterfaces[i].m_unicastsockFd == -1) {
+        if (m_liveInterfaces[i].m_multicastMDNSsockFd == -1 ||
+            m_liveInterfaces[i].m_unicastsockFd == -1) {
             QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively(): Interface %d. is not live", i));
             continue;
         }
@@ -3875,7 +3913,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet)
         // we for an IPv4 address.
         //
         for (uint32_t j = 0; j < m_liveInterfaces.size(); ++j) {
-            if (m_liveInterfaces[i].m_multicastMDNSsockFd == -1 || m_liveInterfaces[i].m_multicastsockFd == -1 ||
+            if (m_liveInterfaces[i].m_multicastMDNSsockFd == -1 ||
                 m_liveInterfaces[i].m_unicastsockFd == -1 ||
                 m_liveInterfaces[j].m_interfaceName != m_liveInterfaces[i].m_interfaceName) {
                 continue;
@@ -3919,9 +3957,11 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet)
         //
 // TODO Why are we not sending on IPv6 address ??
         if (msgVersion == 2) {
-            SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen, flags, interfaceIsIPv4, packet, i);
-        } else {
-            SendProtocolMessage(m_liveInterfaces[i].m_multicastsockFd, ipv4address, interfaceAddressPrefixLen, flags, interfaceIsIPv4, packet, i);
+            SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
+                                flags, interfaceIsIPv4, packet, i);
+        } else if (m_liveInterfaces[i].m_multicastsockFd != -1) {
+            SendProtocolMessage(m_liveInterfaces[i].m_multicastsockFd, ipv4address, interfaceAddressPrefixLen,
+                                flags, interfaceIsIPv4, packet, i);
         }
     }
 }
@@ -4139,11 +4179,9 @@ void* IpNameServiceImpl::Run(void* arg)
             if (m_liveInterfaces[i].m_multicastsockFd != -1) {
                 checkEvents.push_back(m_liveInterfaces[i].m_multicastevent);
             }
-
             if (m_liveInterfaces[i].m_unicastsockFd != -1) {
                 checkEvents.push_back(m_liveInterfaces[i].m_unicastevent);
             }
-
         }
 
         //
@@ -4309,8 +4347,6 @@ void* IpNameServiceImpl::Run(void* arg)
                     if (m_liveInterfaces[i].m_unicastsockFd  == sockFd) {
                         recvPort = m_liveInterfaces[i].m_unicastPort;
                         ifIndex = m_liveInterfaces[i].m_index;
-                        //printf("\n Message received over interface : %s", m_liveInterfaces[i].m_interfaceName.c_str());
-
                     }
 
                     if (!destIsIPv4Broadcast && m_liveInterfaces[i].m_address.IsIPv4() && m_liveInterfaces[i].m_prefixlen != static_cast<uint32_t>(-1)) {
@@ -4379,6 +4415,9 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
     // TRANSMIT_V0_V1: transmit version zero and version one messages.
     // TRANSMIT_V2: transmit version two messages.
     // TRANSMIT_V0_V1 | TRANSMIT_V2: transmit version zero, version one and version two messages.
+    if (!m_enableV1) {
+        type &= ~TRANSMIT_V0_V1;
+    }
 
     QCC_DbgPrintf(("IpNameServiceImpl::Retransmit()"));
 
@@ -4802,7 +4841,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
     }
 
     if (type & TRANSMIT_V2) {
-//
+        //
         // Keep track of how many messages we actually send in order to get all of
         // the advertisements out.
         //
@@ -5141,9 +5180,7 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
         //
         if (respond) {
             m_mutex.Unlock();
-
             Retransmit(index, false, respondQuietly, endpoint, TRANSMIT_V0_V1);
-
             m_mutex.Lock();
         }
     }
@@ -5527,6 +5564,9 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
             QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolMessage(): Unknown version: Error"));
             return;
         }
+        if (!m_enableV1) {
+            return;
+        }
 
         //
         // If the received packet contains questions, see if we can answer them.
@@ -5624,7 +5664,6 @@ bool IpNameServiceImpl::UpdateMDNSPacketTracker(qcc::String guid, uint16_t burst
         // Drop the packet if burst id is lower or same
         if (it->second >= burstId) {
             //QCC_LogError(ER_OK,("Dropping packet from GUID : %s with BURST ID : %d",guid.c_str(),burstId));
-            //printf("\nDropping packet from GUID : %s with BURST ID : %d",guid.c_str(),burstId);
             return false;
         }
         // Update the last seen burst id from this guid
