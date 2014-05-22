@@ -2993,6 +2993,14 @@ QStatus TCPTransport::Disconnect(const char* connectSpec)
     QCC_DbgHLPrintf(("TCPTransport::Disconnect(): %s", connectSpec));
 
     /*
+     * Disconnect is actually not used in the transports architecture.  It is
+     * misleading and confusing to have it implemented.
+     */
+    assert(0 && "TCPTransport::Disconnect(): Unexpected call");
+    QCC_LogError(ER_FAIL, ("TCPTransport::Disconnect(): Unexpected call"));
+    return ER_FAIL;
+#if UNUSED_CODE
+    /*
      * We only want to allow this call to proceed if we have a running server
      * accept thread that isn't in the process of shutting down.  We use the
      * thread response from IsRunning to give us an idea of what our server
@@ -3057,6 +3065,7 @@ QStatus TCPTransport::Disconnect(const char* connectSpec)
     }
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
     return status;
+#endif
 }
 
 QStatus TCPTransport::StartListen(const char* listenSpec)

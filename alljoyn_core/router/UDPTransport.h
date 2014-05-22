@@ -49,6 +49,9 @@
 
 namespace ajn {
 
+class ConnectEntry;
+bool operator<(const ConnectEntry& lhs, const ConnectEntry& rhs);
+
 class _UDPEndpoint;
 
 typedef qcc::ManagedObj<_UDPEndpoint> UDPEndpoint;
@@ -285,6 +288,15 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      */
     static const char* TransportName;
 
+    class ConnectEntry;
+    class ConnectEntry {
+      public:
+        ConnectEntry(qcc::Thread* thread, ArdpConnRecord* conn) : m_thread(thread), m_conn(conn) { }
+        friend bool operator<(const ConnectEntry& lhs, const ConnectEntry& rhs);
+        qcc::Thread* m_thread;
+        ArdpConnRecord* m_conn;
+    };
+
   private:
     UDPTransport(const UDPTransport& other);
     UDPTransport& operator =(const UDPTransport& other);
@@ -294,7 +306,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     TransportListener* m_listener;                                 /**< Registered TransportListener */
     std::set<UDPEndpoint> m_authList;                              /**< List of authenticating endpoints */
     std::set<UDPEndpoint> m_endpointList;                          /**< List of active endpoints */
-    std::set<Thread*> m_activeEndpointsThreadList;                 /**< List of threads starting up active endpoints */
+    std::set<ConnectEntry> m_connectThreads;                       /**< List of threads starting up active endpoints */
     qcc::Mutex m_endpointListLock;                                 /**< Mutex that protects the endpoint and auth lists */
 
     std::list<std::pair<qcc::String, qcc::SocketFd> > m_listenFds; /**< File descriptors the transport is listening on */
@@ -710,6 +722,12 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      * exceeding this number, we drop the new connection.
      */
     uint32_t m_maxConn;
+
+    /**
+     * arcpConfig are the limits from the daemon configuration database relating
+     * to the various configurable settings for the ARDP protocol.
+     */
+    ArdpGlobalConfig m_ardpConfig;
 
     qcc::Mutex m_ardpLock;  /**< Since written for embedded as well as daemon environments, ARDP is not thread-safe */
     qcc::Mutex m_cbLock;    /**< Lock to synchronize interactions between callback contexts and other threads */
