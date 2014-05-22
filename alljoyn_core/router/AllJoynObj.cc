@@ -4485,7 +4485,7 @@ bool AllJoynObj::ResponseHandler(TransportMask transport, MDNSPacket response, u
 
     MDNSResourceRecord* pingReplyRecord;
     if ((recvPort == IpNameService::MULTICAST_MDNS_PORT) ||
-        !response->GetAdditionalRecord("ping-reply.", MDNSResourceRecord::TXT, &pingReplyRecord)) {
+        !response->GetAdditionalRecord("ping-reply.*", MDNSResourceRecord::TXT, &pingReplyRecord)) {
         return false;
     }
 
@@ -4537,7 +4537,7 @@ bool AllJoynObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_
 {
     MDNSResourceRecord* pingRecord;
     if ((recvPort == IpNameService::MULTICAST_MDNS_PORT) ||
-        !query->GetAdditionalRecord("ping.", MDNSResourceRecord::TXT, &pingRecord)) {
+        !query->GetAdditionalRecord("ping.*", MDNSResourceRecord::TXT, &pingRecord)) {
         return false;
     }
 
@@ -4591,13 +4591,13 @@ void AllJoynObj::PingResponse(TransportMask transport, const qcc::IPEndpoint& ns
     MDNSPingReplyRData* pingReplyRData = new MDNSPingReplyRData();
     pingReplyRData->SetWellKnownName(name);
     pingReplyRData->SetReplyCode(replyCode == 1 ? "ALLJOYN_PING_REPLY_SUCCESS" : "ALLJOYN_PING_REPLY_FAILED");
-    MDNSResourceRecord pingReplyRecord("ping-reply.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingReplyRData);
+    MDNSResourceRecord pingReplyRecord("ping-reply." + guid.ToString() + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingReplyRData);
     response->AddAdditionalRecord(pingReplyRecord);
 
     // TODO this is the piggy back, doesn't belong here
     MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
     advRData->AddName(name);
-    MDNSResourceRecord advertiseRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
+    MDNSResourceRecord advertiseRecord("advertise." + guid.ToString() + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
     response->AddAdditionalRecord(advertiseRecord);
 
     QStatus status = IpNameService::Instance().Response(transport, response);

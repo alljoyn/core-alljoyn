@@ -3192,9 +3192,13 @@ void _MDNSPacket::RemoveAdditionalRecord(qcc::String str, MDNSResourceRecord::RR
 
 bool _MDNSPacket::GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRType type, MDNSResourceRecord** additional)
 {
+    size_t starPos = str.find_last_of('*');
+    String name = str.substr(0, starPos);
     std::vector<MDNSResourceRecord>::iterator it1 = m_additional.begin();
     while (it1 != m_additional.end()) {
-        if (((*it1).GetDomainName() == str) && ((*it1).GetRRType() == type)) {
+        String dname = (*it1).GetDomainName();
+        bool nameMatches = (starPos == String::npos) ? (dname == name) : (dname.find(name) == 0);
+        if (nameMatches && ((*it1).GetRRType() == type)) {
             *additional = &(*it1);
             return true;
         }
@@ -3208,9 +3212,13 @@ bool _MDNSPacket::GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRTyp
     if (type != MDNSResourceRecord::TXT) {
         return false;
     }
+    size_t starPos = str.find_last_of('*');
+    String name = str.substr(0, starPos);
     std::vector<MDNSResourceRecord>::iterator it1 = m_additional.begin();
     while (it1 != m_additional.end()) {
-        if (((*it1).GetDomainName() == str) && ((*it1).GetRRType() == type) &&
+        String dname = (*it1).GetDomainName();
+        bool nameMatches = (starPos == String::npos) ? (dname == name) : (dname.find(name) == 0);
+        if (nameMatches && ((*it1).GetRRType() == type) &&
             (static_cast<MDNSTextRData*>((*it1).GetRData())->GetU16Value("txtvers") == version)) {
             *additional = &(*it1);
             return true;
