@@ -57,7 +57,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
     /********* Client *********/
     // the AnnouncmentReceiver will specify the interface and signal names.
-    private static final String ANNOUNCE_MATCH_RULE = "interface='" + ANNOUNCE_IFNAME + "',sessionless='t'";
+    private static final String ANNOUNCE_MATCH_RULE = "type='signal',sessionless='t',interface='" + ANNOUNCE_IFNAME + "'";
 
     private static AboutServiceImpl m_instance      = new AboutServiceImpl();
     private Vector<AnnouncementHandler> m_announcementHandlers;
