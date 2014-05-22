@@ -217,6 +217,17 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
                                    const char* sourcePath,
                                    Message& msg);
 
+    /**
+     * Process incoming RequestRangeMatch signals from remote daemons.
+     *
+     * @param member        Interface member for signal
+     * @param sourcePath    object path sending the signal.
+     * @param msg           The signal message.
+     */
+    void RequestRangeMatchSignalHandler(const InterfaceDescription::Member* member,
+                                        const char* sourcePath,
+                                        Message& msg);
+
   private:
     friend class RemoteCacheSnapshot;
 
@@ -235,18 +246,24 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /**
      * Emit the range of cached sessionless signals [fromId, toId).
      *
-     * When sid is 0, rules in the specified range are applied before emitting
+     * When sid is 0, rules in the specified local range are applied before
+     * emitting the signals.
+     *
+     * When sid is non-0, rules in the remote rules are applied before emitting
      * the signals.
      *
-     * @param sender    Unique name of requestor/sender
-     * @param sid       Session ID
-     * @param fromId    Beginning of changeId range (inclusive)
-     * @param toId      End of changeId range (exclusive)
-     * @param fromRulesId Beginning of rules ID range (inclusive)
-     * @param toRulesId   End of rules ID range (exclusive)
+     * @param sender           Unique name of requestor/sender
+     * @param sid              Session ID
+     * @param fromId           Beginning of changeId range (inclusive)
+     * @param toId             End of changeId range (exclusive)
+     * @param fromLocalRulesId Beginning of rules ID range (inclusive)
+     * @param toLocalRulesId   End of rules ID range (exclusive)
+     * @param remoteRules      Remotely-supplied rules to apply
      */
-    void HandleRangeRequest(const char* sender, SessionId sid, uint32_t fromId, uint32_t toId,
-                            uint32_t fromRulesId = 0, uint32_t toRulesId = 0);
+    void HandleRangeRequest(const char* sender, SessionId sid,
+                            uint32_t fromId, uint32_t toId,
+                            uint32_t fromLocalRulesId = 0, uint32_t toLocalRulesId = 0,
+                            std::vector<qcc::String> remoteRules = std::vector<qcc::String>());
 
     /**
      * SessionLost helper handler.
@@ -263,10 +280,13 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /* The version implemented. */
     static const uint32_t version;
 
+    static const Rule legacyRule;
+
     const InterfaceDescription* sessionlessIface;  /**< org.alljoyn.sl interface */
 
-    const InterfaceDescription::Member* requestSignalsSignal;   /**< org.alljoyn.sl.RequestSignal signal */
-    const InterfaceDescription::Member* requestRangeSignal;     /**< org.alljoyn.sl.RequestRange signal */
+    const InterfaceDescription::Member* requestSignalsSignal;    /**< org.alljoyn.sl.RequestSignal signal */
+    const InterfaceDescription::Member* requestRangeSignal;      /**< org.alljoyn.sl.RequestRange signal */
+    const InterfaceDescription::Member* requestRangeMatchSignal; /**< org.alljoyn.sl.RequestRangeMatch signal */
 
     qcc::Timer timer;                     /**< Timer object for reaping expired names */
 
@@ -390,6 +410,17 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     QStatus RequestRange(const char* name, SessionId sid, uint32_t fromId, uint32_t toId);
 
     /**
+     * Internal helper for sending the RequestRangeMatch signal.
+     *
+     * @param[in] name        Advertised name of sender
+     * @param[in] sid         Session ID
+     * @param[in] fromId      Beginning of changeId range (inclusive)
+     * @param[in] toId        End of changeId range (exclusive)
+     * @param[in] matchRules  Match rules to apply to changeId range
+     */
+    QStatus RequestRangeMatch(const char* name, SessionId sid, uint32_t fromId, uint32_t toId, std::vector<qcc::String>& matchRules);
+
+    /**
      * Internal helper for sending sessionless signals.
      *
      * @param[in] msg The sessionless signal
@@ -507,6 +538,9 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
 
     QStatus FindAdvertisementByTransport(const char* matching, TransportMask transports);
     QStatus CancelFindAdvertisementByTransport(const char* matching, TransportMask transports);
+
+    void HandleRangeMatchRequest(const char* sender, SessionId sid, uint32_t fromChangeId, uint32_t toChangeId,
+                                 std::vector<qcc::String>& matchRules);
 };
 
 }
