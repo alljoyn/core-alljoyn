@@ -259,7 +259,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
             for(BusObjectDescription bod :objectDescriptions) {
                 interfacesFromObjectDescription.addAll(Arrays.asList(bod.interfaces));
             }
-            List<AnnouncementHandler> announcementsToCall = new ArrayList();
+            List<AnnouncementHandler> announcementsToCall = new ArrayList<AnnouncementHandler>();
             synchronized(this) {
                 for(Map.Entry<AnnouncementHandler, List< Set<String> > > entry : m_announcementHandlers.entrySet()) {
                     AnnouncementHandler current = entry.getKey();
