@@ -70,10 +70,10 @@ typedef struct {
     uint32_t seq;       /**< The sequence number of the current segment. */
     uint32_t ack;       /**< The number of the segment that the sender of this segment last received correctly and in sequence. */
     uint32_t ttl;       /**< Time-to-live.  Zero means forever. */
+    uint32_t lcs;       /**< Last "in-order" consumed segment. */
     uint32_t acknxt;    /**< First unexpired segment, TTL accounting */
     uint32_t som;       /**< Start sequence number for fragmented message */
     uint16_t fcnt;      /**< Number of segments comprising fragmented message */
-    uint16_t window;    /**< The current receive window */
 } ArdpHeader;
 
 /* Maximum header length, implied by the fact that hlen filed is 8 bits */
