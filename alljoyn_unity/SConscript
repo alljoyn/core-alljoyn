@@ -64,12 +64,18 @@ if unityenv['OS_GROUP'] == 'windows':
     #place liballjoyn_unity_native.dll into the samples
     unityenv.Install('package_support/UnityPackage/Assets/Plugins', libaj_unity_native)
 
+    # README to top
+    unityenv.Install('$UNITY_DISTDIR', 'README-AllJoynUnityPackage.txt')
+
 if unityenv['OS'] == 'android':
     #place alljoyn_unity.dll into the samples
     unityenv.Install('package_support/UnityPackage/Assets/Plugins', unityenv['ALLJOYN_UNITY_LIB'])
 
     #place liballjoyn_unity_native.so into the samples
     unityenv.Install('package_support/UnityPackage/Assets/Plugins/Android', libaj_unity_native)
+
+    # README to top
+    unityenv.Install('$UNITY_DISTDIR', 'README-AllJoynUnityPackage.txt')
 
 #Build unit tests
 unityenv.SConscript('unit_test/SConscript', exports = {'env':unityenv, 'clib': libaj_unity_native})
