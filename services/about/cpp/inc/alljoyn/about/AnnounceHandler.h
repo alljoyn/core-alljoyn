@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -64,21 +64,6 @@ class AnnounceHandler : public ajn::MessageReceiver {
      */
     virtual void Announce(uint16_t version, uint16_t port, const char* busName, const ObjectDescriptions& objectDescs,
                           const AboutData& aboutData) = 0;
-
-  private:
-
-    /**
-     * AnnounceHandler is a callback registered to receive AllJoyn Signal.
-     * @param[in] member
-     * @param[in] srcPath
-     * @param[in] message
-     */
-    void AnnounceSignalHandler(const ajn::InterfaceDescription::Member* member, const char* srcPath, ajn::Message& message);
-
-    /**
-     *	pointer to InterfaceDescription::Member
-     */
-    const ajn::InterfaceDescription::Member* announceSignalMember;
 
 };
 inline AnnounceHandler::~AnnounceHandler() {
