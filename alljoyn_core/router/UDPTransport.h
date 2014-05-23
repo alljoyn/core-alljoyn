@@ -318,7 +318,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         ENABLE_ADVERTISEMENT_INSTANCE,   /**< An EnableAdvertisement() has happened */
         DISABLE_ADVERTISEMENT_INSTANCE,  /**< A DisableAdvertisement() has happened */
         ENABLE_DISCOVERY_INSTANCE,       /**< An EnableDiscovery() has happened */
-        DISABLE_DISCOVERY_INSTANCE,      /**< A DisableDiscovery() has happened */
+        DISABLE_DISCOVERY_INSTANCE       /**< A DisableDiscovery() has happened */
     };
 
     /**

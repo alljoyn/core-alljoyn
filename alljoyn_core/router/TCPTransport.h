@@ -329,8 +329,6 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
       public:
         RequestOp m_requestOp;
         qcc::String m_requestParam;
-        qcc::String m_guid;
-        uint32_t m_replyCode;
         bool m_requestParamOpt;
     };
 
