@@ -2484,12 +2484,10 @@ size_t MDNSPtrRData::DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std
         } else {
             break;
         }
-
     }
 
-
     for (uint32_t i = 0; i < offsets.size(); ++i) {
-        compressedOffsets[offsets[i]] = m_rdataStr.substr(offsets[i] - headerOffset);
+        compressedOffsets[offsets[i]] = m_rdataStr.substr(offsets[i] - 2 - headerOffset);
     }
 
     return size;
