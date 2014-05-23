@@ -2770,18 +2770,10 @@ void MDNSPingReplyRData::SetReplyCode(qcc::String replyCode)
 
 
 //MDNSSenderRData
-MDNSSenderRData::MDNSSenderRData(uint16_t searchId, qcc::String ipv4Addr, uint16_t ipv4Port,
-                                 qcc::String ipv6Addr, uint16_t ipv6Port, TransportMask transportMask, String guid, uint16_t version)
+MDNSSenderRData::MDNSSenderRData(uint16_t version)
     : MDNSTextRData(version)
 {
-    MDNSTextRData::SetValue("sid", searchId);
     MDNSTextRData::SetValue("pv", NS_VERSION);
-    MDNSTextRData::SetValue("upcv4", ipv4Port);
-    MDNSTextRData::SetValue("ipv4", ipv4Addr);
-    MDNSTextRData::SetValue("upcv6", ipv6Port);
-    MDNSTextRData::SetValue("ipv6", ipv6Addr);
-    MDNSTextRData::SetValue("trans", transportMask);
-    MDNSTextRData::SetValue("guid", guid);
 }
 
 qcc::String MDNSSenderRData::GetGuid()
