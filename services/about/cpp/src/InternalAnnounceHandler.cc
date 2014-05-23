@@ -43,8 +43,8 @@ InternalAnnounceHandler::~InternalAnnounceHandler() {
     announceHandlerLock.Lock(MUTEX_CONTEXT);
     /* clear the contents of the announceHandlerList and wait for any outstanding callbacks. */
     /* since the announceHandlerList is a vector it more efficient to erase from the last element to the first element */
-    std::vector<ProtectedAnnounceHandler>::reverse_iterator pahit = announceHandlerList.rbegin();
-    while (pahit != announceHandlerList.rend()) {
+    std::vector<ProtectedAnnounceHandler>::iterator pahit = announceHandlerList.begin();
+    while (pahit != announceHandlerList.end()) {
         ProtectedAnnounceHandler l = *pahit;
 
         /* Remove listener and wait for any outstanding listener callback(s) to complete */
@@ -55,7 +55,7 @@ InternalAnnounceHandler::~InternalAnnounceHandler() {
         }
 
         announceHandlerLock.Lock(MUTEX_CONTEXT);
-        pahit = announceHandlerList.rbegin();
+        pahit = announceHandlerList.begin();
     }
     announceHandlerLock.Unlock(MUTEX_CONTEXT);
 }
