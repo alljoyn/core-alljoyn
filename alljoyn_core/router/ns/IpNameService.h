@@ -179,7 +179,7 @@ class IpNameService {
 
     QStatus Query(TransportMask transportMask, MDNSPacket mdnsPacket);
 
-    QStatus Response(TransportMask transportMask, MDNSPacket mdnsPacket);
+    QStatus Response(TransportMask transportMask, uint32_t ttl, MDNSPacket mdnsPacket);
 
     /**
      * @brief Creat a virtual network interface. In normal cases WiFi-Direct
@@ -385,7 +385,9 @@ class IpNameService {
      * @param matching The Key, value match criteria that the caller wants to be notified of (via signal)
      *                 when a remote Bus instance is found with an advertisement that matches the criteria.
      */
-    QStatus FindAdvertisement(TransportMask transportMask, const qcc::String& matching);
+    QStatus FindAdvertisement(TransportMask transportMask, const qcc::String& matching, TransportMask completeTransportMask);
+
+    QStatus RefreshCache(TransportMask transportMask, const qcc::String& guid, const qcc::String& matching);
 
     /**
      * @brief Stop discovering well-known names starting with the specified
@@ -396,7 +398,7 @@ class IpNameService {
      * @param matching The Key, value match criteria that the caller wants to be notified of (via signal)
      *                 when a remote Bus instance is found with an advertisement that matches the criteria.
      */
-    QStatus CancelFindAdvertisement(TransportMask transportMask, const qcc::String& matching);
+    QStatus CancelFindAdvertisement(TransportMask transportMask, const qcc::String& matching, TransportMask completeTransportMask);
 
     /**
      * @brief Advertise a well-known name over the network interfaces opened by the
@@ -410,7 +412,7 @@ class IpNameService {
      *     have the provided name avialable) but do respond to who-has requests
      *     for the name.
      */
-    QStatus AdvertiseName(TransportMask transportMask, const qcc::String& wkn, bool quietly = false);
+    QStatus AdvertiseName(TransportMask transportMask, const qcc::String& wkn, bool quietly, TransportMask completeTransportMask);
 
     /**
      * @brief Stop advertising a well-known name over the network interfaces
@@ -420,7 +422,7 @@ class IpNameService {
      *     advertisement be canceled.
      * @param wkn The well-known name to stop advertising.
      */
-    QStatus CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn);
+    QStatus CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn, TransportMask completeTransportMask);
 
     /**
      * @brief Handle the suspending event of the process. Release exclusive socket file descriptor and port.
@@ -431,6 +433,12 @@ class IpNameService {
      * @brief Handle the resuming event of the process. Re-acquire exclusive socket file descriptor and port.
      */
     QStatus OnProcResume();
+
+    /**
+     * @brief Remove the entry correspongding to guid from the PeerInfoMap
+     * @param guid The entry corresponding to this guid needs to be removed from the PeerInfoMap
+     */
+    bool RemoveFromPeerInfoMap(const qcc::String& guid);
 
   private:
     /**

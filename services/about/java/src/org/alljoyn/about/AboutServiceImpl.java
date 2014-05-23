@@ -169,24 +169,10 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
         m_busListeners = new BusListener()
         {
             @Override
-            public void foundAdvertisedName(final String name, short transport, String namePrefix)
-            {
-                getLogger().debug(TAG, "MyBusListener.foundAdvertisedName: '" + name + "'");
-                // Do nothing. devices are discovered by Announcements
-            }
-
-            @Override
-            public void nameOwnerChanged(String busName, String previousOwner, String newOwner)
-            {
-                getLogger().debug(TAG,String.format("MyBusListener.nameOwnerChanged(%s, %s, %s)", busName, previousOwner, newOwner));
-            }
-
-            @Override
             public void lostAdvertisedName(String name, short transport, String namePrefix)
             {
                 getBus().enableConcurrentCallbacks();
 
-                getLogger().debug(TAG, String.format("MyBusListener.lostAdvertisedName(%s, 0x%04x, %s)", name, transport, namePrefix));
                 for (int i = 0; i < m_announcementHandlers.size(); i++)
                 {
                     for(Map.Entry<AnnouncementHandler, List< Set<String> > > entry : m_announcementHandlers.entrySet()) {
@@ -227,19 +213,16 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
         // for announce
         m_announcmentReceiver = new AnnouncmentReceiver();
         Status status = bus.registerBusObject(m_announcmentReceiver,  AboutTransport.OBJ_PATH);
-        getLogger().info(TAG, "BusAttachment.registerBusObject(AnnouncmentReceiver) status = '" + status + "', ObjPath: '" + AboutTransport.OBJ_PATH + "'");
         if ( status != Status.OK ) {
             throw new AboutServiceException("Register BusObject of Announcement receiver has failed, Status: '" + status + "'");
         }
 
         status = bus.registerSignalHandlers(m_announcmentReceiver);
-        getLogger().info(TAG, "BusAttachment.registerSignalHandlers(AnnouncmentReceiver) status = '" + status + "'");
         if ( status != Status.OK ) {
             throw new AboutServiceException("Register Announcement signal handler has failed, Status: '" + status + "'");
         }
 
         status = bus.addMatch(ANNOUNCE_MATCH_RULE);
-        getLogger().info(TAG, "BusAttachment.addMatch() status = " + status);
         if ( status != Status.OK ) {
             throw new AboutServiceException("Failed to call AddMatch for the rule: '" + ANNOUNCE_MATCH_RULE + "', Status: '" + status + "'");
         }
@@ -531,7 +514,6 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
         m_aboutInterface = new AboutInterface();
 
         Status status = getBus().registerBusObject(m_aboutInterface, AboutTransport.OBJ_PATH);
-        getLogger().debug(TAG, String.format("BusAttachment.registerBusObject(m_aboutConfigInterface): %s", status));
         if (status != Status.OK) {
             throw new AboutServiceException("Failed to register the AboutInterface on the bus, Status: '" + status + "'");
         }
@@ -542,7 +524,6 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
         m_iconInterface = new IconInterface();
 
         Status status = getBus().registerBusObject(m_iconInterface, IconTransport.OBJ_PATH);
-        getLogger().debug(TAG, String.format("BusAttachment.registerBusObject(m_IconInterface): %s", status));
         if (status != Status.OK) {
             return;
         }

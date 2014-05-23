@@ -1,6 +1,6 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BusAttachmentTest.cs" company="AllSeen Alliance.">
-// Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -360,6 +360,38 @@ namespace AllJoynUnityTest
 			Assert.Null(signalOneMsg);
 			Assert.Equal(true, handledSignalsTwo);
 			Assert.Equal("test msg", signalTwoMsg);
+		}
+
+		[Fact]
+		public void PingSelf()
+		{
+			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Start());
+			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Connect());
+			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Ping(busAttachment.UniqueName, 1000));
+
+			busAttachment.Stop();
+			busAttachment.Join();
+		}
+
+		[Fact]
+		public void PingOtherOnSameBus()
+		{
+			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Start());
+			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Connect());
+
+			AllJoyn.BusAttachment otherBusAttachment = null;
+			otherBusAttachment = new AllJoyn.BusAttachment("OtherBusAttachmentTest", false);
+
+			Assert.Equal(AllJoyn.QStatus.OK, otherBusAttachment.Start());
+			Assert.Equal(AllJoyn.QStatus.OK, otherBusAttachment.Connect());
+
+			Assert.Equal(AllJoyn.QStatus.OK, busAttachment.Ping(otherBusAttachment.UniqueName, 1000));
+
+			otherBusAttachment.Stop();
+			otherBusAttachment.Join();
+
+			busAttachment.Stop();
+			busAttachment.Join();
 		}
 
 		private void WaitEventOne(TimeSpan timeout)

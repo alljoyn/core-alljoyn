@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -283,6 +283,56 @@ TEST(BusAttachmentTest, getdbusobject) {
 
     alljoyn_msgarg_destroy(msgArgs);
     alljoyn_message_destroy(replyMsg);
+
+    alljoyn_busattachment_destroy(bus);
+}
+
+TEST(BusAttachmentTest, ping_self) {
+    QStatus status;
+    alljoyn_busattachment bus = NULL;
+    bus = alljoyn_busattachment_create("BusAttachmentTest", QCC_TRUE);
+
+    status = alljoyn_busattachment_start(bus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_busattachment_connect(bus, ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_ping(bus, alljoyn_busattachment_getuniquename(bus), 1000));
+
+    alljoyn_busattachment_destroy(bus);
+}
+
+TEST(BusAttachmentTest, ping_other_on_same_bus) {
+    QStatus status;
+    alljoyn_busattachment bus = NULL;
+    bus = alljoyn_busattachment_create("BusAttachmentTest", QCC_TRUE);
+
+    status = alljoyn_busattachment_start(bus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_busattachment_connect(bus, ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_busattachment otherbus = NULL;
+    otherbus = alljoyn_busattachment_create("BusAttachment OtherBus", QCC_TRUE);
+
+    status = alljoyn_busattachment_start(otherbus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_busattachment_connect(otherbus, ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_ping(bus, alljoyn_busattachment_getuniquename(otherbus), 1000));
+
+    status = alljoyn_busattachment_stop(otherbus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_busattachment_join(otherbus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_busattachment_destroy(otherbus);
+
+    status = alljoyn_busattachment_stop(bus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_busattachment_join(bus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     alljoyn_busattachment_destroy(bus);
 }

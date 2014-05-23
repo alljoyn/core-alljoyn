@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -1317,6 +1317,21 @@ namespace AllJoynUnity
 				return alljoyn_busattachment_setdaemondebug(_busAttachment, module, level);
 			}
 
+			/**
+			 * Determine if you are able to find a remote connection based on its BusName.
+			 * The BusName can be the Unique or well-known name.
+			 * @param name The unique or well-known name to ping
+			 * @param timeout Timeout specified in milliseconds to wait for reply
+			 * @return
+			 *   - QStatus.OK on success
+			 *   - QStatus.TIMEOUT the Ping attempt timed out
+			 *   - An error status otherwise
+			 */
+			public QStatus Ping(string name, uint timeout)
+			{
+				return alljoyn_busattachment_ping(_busAttachment, name, timeout);
+			}
+
 			#region Delegates
 			[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 			/**
@@ -1809,6 +1824,9 @@ namespace AllJoynUnity
 
 			[DllImport(DLL_IMPORT_TARGET)]
 			private extern static int alljoyn_busattachment_unregisterallhandlers(IntPtr bus);
+
+			[DllImport(DLL_IMPORT_TARGET)]
+			private extern static int alljoyn_busattachment_ping(IntPtr bus, [MarshalAs(UnmanagedType.LPStr)] string name, uint timeout);
 
 			#endregion
 

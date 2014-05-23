@@ -93,7 +93,6 @@ const Rule SessionlessObj::legacyRule = Rule("type='error',sessionless='t'");
  * the remote cache state at the time we issue the JoinSessionAsync.
  */
 struct RemoteCacheSnapshot {
-  public:
     RemoteCacheSnapshot(SessionlessObj::RemoteCache& cache) :
         name(cache.name), guid(cache.guid) { }
 
@@ -1337,7 +1336,7 @@ bool SessionlessObj::SendResponseIfMatch(TransportMask transport, const qcc::IPE
         String guid = bus.GetInternal().GetGlobalGUID().ToString();
         MDNSResourceRecord advertiseRecord("advertise." + guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
         response->AddAdditionalRecord(advertiseRecord);
-        QStatus status = IpNameService::Instance().Response(transport, response);
+        QStatus status = IpNameService::Instance().Response(transport, 120, response);
         if (ER_OK == status) {
             QCC_DbgPrintf(("Sent implements response for name=%s", name.c_str()));
         } else {

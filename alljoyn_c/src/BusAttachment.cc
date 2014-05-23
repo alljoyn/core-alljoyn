@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -503,4 +503,10 @@ uint32_t alljoyn_busattachment_gettimestamp()
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ajn::BusAttachmentC::GetTimestamp();
+}
+
+QStatus alljoyn_busattachment_ping(alljoyn_busattachment bus, const char* name, uint32_t timeout)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusAttachmentC*)bus)->Ping(name, timeout);
 }

@@ -2025,7 +2025,7 @@ class _NSPacket : public _Packet {
  * @brief A class representing an MDNSRData.
  * This is an abstract class.
  */
-class MDNSRData : public ProtocolElement {
+class MDNSRData {
   public:
     /**
      * @internal
@@ -2048,7 +2048,7 @@ class MDNSRData : public ProtocolElement {
      *
      * @return The size of the buffer required to serialize the object
      */
-    virtual size_t GetSerializedSize(void) const = 0;
+    virtual size_t GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const = 0;
 
     /**
      * @internal
@@ -2060,12 +2060,12 @@ class MDNSRData : public ProtocolElement {
      *
      * @return The number of octets written to the buffer.
      */
-    virtual size_t Serialize(uint8_t* buffer) const = 0;
+    virtual size_t Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const = 0;
 
     /**
      * @internal
      * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer.
+     * from the provided buffer with support for compression.
      *
      * @see ProtocolElement::Deserialize()
      *
@@ -2075,22 +2075,7 @@ class MDNSRData : public ProtocolElement {
      * @return The number of octets read from the buffer, or zero if an error
      * occurred.
      */
-    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize) = 0;
-
-    /**
-     * @internal
-     * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer with support for compression.
-     *
-     * @see ProtocolElement::DeserializeExt()
-     *
-     * @param buffer The buffer to read the bytes from.
-     * @param bufsize The number of bytes available in the buffer.
-     *
-     * @return The number of octets read from the buffer, or zero if an error
-     * occurred.
-     */
-    virtual size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset) = 0;
+    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset) = 0;
 
     /**
      * @internal
@@ -2118,7 +2103,7 @@ class MDNSDefaultRData : public MDNSRData {
      * @internal
      * @brief Destructor for MDNSDefaultRData.
      */
-    ~MDNSDefaultRData() { }
+    virtual ~MDNSDefaultRData() { }
 
     /**
      * @internal
@@ -2135,7 +2120,7 @@ class MDNSDefaultRData : public MDNSRData {
      *
      * @return The size of the buffer required to serialize the object
      */
-    virtual size_t GetSerializedSize(void) const;
+    virtual size_t GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const;
 
     /**
      * @internal
@@ -2147,12 +2132,12 @@ class MDNSDefaultRData : public MDNSRData {
      *
      * @return The number of octets written to the buffer.
      */
-    virtual size_t Serialize(uint8_t* buffer) const;
+    virtual size_t Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const;
 
     /**
      * @internal
      * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer.
+     * from the provided buffer with support for compression.
      *
      * @see ProtocolElement::Deserialize()
      *
@@ -2162,22 +2147,7 @@ class MDNSDefaultRData : public MDNSRData {
      * @return The number of octets read from the buffer, or zero if an error
      * occurred.
      */
-    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
-
-    /**
-     * @internal
-     * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer with support for compression.
-     *
-     * @see ProtocolElement::DeserializeExt()
-     *
-     * @param buffer The buffer to read the bytes from.
-     * @param bufsize The number of bytes available in the buffer.
-     *
-     * @return The number of octets read from the buffer, or zero if an error
-     * occurred.
-     */
-    virtual size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
 };
 /**
  * @internal
@@ -2231,6 +2201,18 @@ class MDNSTextRData : public MDNSRData {
      * @return A deep copy of this MDNSTextRData
      */
     virtual MDNSRData* GetDeepCopy() { return new MDNSTextRData(*this); }
+
+    /**
+     * @internal
+     * @brief returns the uniquifier value.
+     */
+    uint16_t GetUniqueCount();
+
+    /**
+     * @internal
+     * @brief sets the uniquifier value.
+     */
+    void SetUniqueCount(uint16_t count);
 
     /**
      * @internal
@@ -2292,7 +2274,20 @@ class MDNSTextRData : public MDNSRData {
      *
      * @return The size of the buffer required to serialize the object
      */
-    virtual size_t GetSerializedSize(void) const;
+    virtual size_t GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const;
+
+
+    /**
+     * @internal
+     * @brief This will overestimate the size of the buffer required
+     * since name compression is applied during serialization.
+     *
+     * @return The size of the buffer required to serialize the object
+     */
+    virtual size_t GetSerializedSize() const {
+        std::map<qcc::String, uint32_t> offsets;
+        return GetSerializedSize(offsets);
+    }
 
     /**
      * @internal
@@ -2304,12 +2299,12 @@ class MDNSTextRData : public MDNSRData {
      *
      * @return The number of octets written to the buffer.
      */
-    virtual size_t Serialize(uint8_t* buffer) const;
+    virtual size_t Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const;
 
     /**
      * @internal
      * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer.
+     * from the provided buffer with support for compression.
      *
      * @see ProtocolElement::Deserialize()
      *
@@ -2319,22 +2314,7 @@ class MDNSTextRData : public MDNSRData {
      * @return The number of octets read from the buffer, or zero if an error
      * occurred.
      */
-    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
-
-    /**
-     * @internal
-     * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer with support for compression.
-     *
-     * @see ProtocolElement::DeserializeExt()
-     *
-     * @param buffer The buffer to read the bytes from.
-     * @param bufsize The number of bytes available in the buffer.
-     *
-     * @return The number of octets read from the buffer, or zero if an error
-     * occurred.
-     */
-    virtual size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
 
   private:
     uint16_t version;
@@ -2396,7 +2376,7 @@ class MDNSARData : public MDNSRData {
      * @internal
      * @brief Destructor for MDNSARData.
      */
-    ~MDNSARData() { }
+    virtual ~MDNSARData() { }
 
     /**
      * @internal
@@ -2427,7 +2407,7 @@ class MDNSARData : public MDNSRData {
      *
      * @return The size of the buffer required to serialize the object
      */
-    size_t GetSerializedSize(void) const;
+    virtual size_t GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const;
 
     /**
      * @internal
@@ -2439,12 +2419,12 @@ class MDNSARData : public MDNSRData {
      *
      * @return The number of octets written to the buffer.
      */
-    size_t Serialize(uint8_t* buffer) const;
+    virtual size_t Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const;
 
     /**
      * @internal
      * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer.
+     * from the provided buffer with support for compression.
      *
      * @see ProtocolElement::Deserialize()
      *
@@ -2454,22 +2434,7 @@ class MDNSARData : public MDNSRData {
      * @return The number of octets read from the buffer, or zero if an error
      * occurred.
      */
-    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
-
-    /**
-     * @internal
-     * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer with support for compression.
-     *
-     * @see ProtocolElement::DeserializeExt()
-     *
-     * @param buffer The buffer to read the bytes from.
-     * @param bufsize The number of bytes available in the buffer.
-     *
-     * @return The number of octets read from the buffer, or zero if an error
-     * occurred.
-     */
-    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
     qcc::String m_ipv4Addr;
 };
@@ -2495,7 +2460,7 @@ class MDNSAAAARData : public MDNSRData {
      * @internal
      * @brief Destructor for MDNSAAAARData.
      */
-    ~MDNSAAAARData() { }
+    virtual ~MDNSAAAARData() { }
 
     /**
      * @internal
@@ -2526,7 +2491,7 @@ class MDNSAAAARData : public MDNSRData {
      *
      * @return The size of the buffer required to serialize the object
      */
-    size_t GetSerializedSize(void) const;
+    virtual size_t GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const;
 
     /**
      * @internal
@@ -2538,12 +2503,12 @@ class MDNSAAAARData : public MDNSRData {
      *
      * @return The number of octets written to the buffer.
      */
-    size_t Serialize(uint8_t* buffer) const;
+    virtual size_t Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const;
 
     /**
      * @internal
      * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer.
+     * from the provided buffer with support for compression.
      *
      * @see ProtocolElement::Deserialize()
      *
@@ -2553,22 +2518,7 @@ class MDNSAAAARData : public MDNSRData {
      * @return The number of octets read from the buffer, or zero if an error
      * occurred.
      */
-    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
-
-    /**
-     * @internal
-     * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer with support for compression.
-     *
-     * @see ProtocolElement::DeserializeExt()
-     *
-     * @param buffer The buffer to read the bytes from.
-     * @param bufsize The number of bytes available in the buffer.
-     *
-     * @return The number of octets read from the buffer, or zero if an error
-     * occurred.
-     */
-    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
     qcc::String m_ipv6Addr;
 };
@@ -2594,7 +2544,7 @@ class MDNSPtrRData : public MDNSRData {
      * @internal
      * @brief Destructor for MDNSPtrRData.
      */
-    ~MDNSPtrRData() { }
+    virtual ~MDNSPtrRData() { }
 
     /**
      * @internal
@@ -2625,7 +2575,7 @@ class MDNSPtrRData : public MDNSRData {
      *
      * @return The size of the buffer required to serialize the object
      */
-    size_t GetSerializedSize(void) const;
+    virtual size_t GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const;
 
     /**
      * @internal
@@ -2637,12 +2587,12 @@ class MDNSPtrRData : public MDNSRData {
      *
      * @return The number of octets written to the buffer.
      */
-    size_t Serialize(uint8_t* buffer) const;
+    virtual size_t Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const;
 
     /**
      * @internal
      * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer.
+     * from the provided buffer with support for compression.
      *
      * @see ProtocolElement::Deserialize()
      *
@@ -2652,22 +2602,7 @@ class MDNSPtrRData : public MDNSRData {
      * @return The number of octets read from the buffer, or zero if an error
      * occurred.
      */
-    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
-
-    /**
-     * @internal
-     * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer with support for compression.
-     *
-     * @see ProtocolElement::DeserializeExt()
-     *
-     * @param buffer The buffer to read the bytes from.
-     * @param bufsize The number of bytes available in the buffer.
-     *
-     * @return The number of octets read from the buffer, or zero if an error
-     * occurred.
-     */
-    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
     qcc::String m_rdataStr;
 };
@@ -2682,7 +2617,7 @@ class MDNSPtrRData : public MDNSRData {
  *     |8 _ a l l j o y n 4 _ t c p 5 l o c a l 0|
  *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-class MDNSDomainName : public ProtocolElement {
+class MDNSDomainName {
   public:
 
     /**
@@ -2722,7 +2657,7 @@ class MDNSDomainName : public ProtocolElement {
      *
      * @return The size of the buffer required to serialize the object
      */
-    size_t GetSerializedSize(void) const;
+    size_t GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const;
 
     /**
      * @internal
@@ -2734,12 +2669,12 @@ class MDNSDomainName : public ProtocolElement {
      *
      * @return The number of octets written to the buffer.
      */
-    size_t Serialize(uint8_t* buffer) const;
+    size_t Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const;
 
     /**
      * @internal
      * @brief Deserialize a header wire-representation and all of its children
-     * questinos and answers from the provided buffer.
+     * questinos and answers from the provided buffer with support for compression.
      *
      * @see ProtocolElement::Deserialize()
      *
@@ -2749,22 +2684,7 @@ class MDNSDomainName : public ProtocolElement {
      * @return The number of octets read from the buffer, or zero if an error
      * occurred.
      */
-    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
-
-    /**
-     * @internal
-     * @brief Deserialize a header wire-representation and all of its children
-     * questinos and answers from the provided buffer with support for compression.
-     *
-     * @see ProtocolElement::DeserializeExt()
-     *
-     * @param buffer The buffer to read the bytes from.
-     * @param bufsize The number of bytes available in the buffer.
-     *
-     * @return The number of octets read from the buffer, or zero if an error
-     * occurred.
-     */
-    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
     qcc::String m_name;
 };
@@ -2801,7 +2721,7 @@ class MDNSSrvRData : public MDNSRData {
      * @internal
      * @brief Destructor for MDNSSrvRData.
      */
-    ~MDNSSrvRData() { }
+    virtual ~MDNSSrvRData() { }
 
     /**
      * @internal
@@ -2873,7 +2793,7 @@ class MDNSSrvRData : public MDNSRData {
      *
      * @return The size of the buffer required to serialize the object
      */
-    size_t GetSerializedSize(void) const;
+    virtual size_t GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const;
 
     /**
      * @internal
@@ -2885,12 +2805,12 @@ class MDNSSrvRData : public MDNSRData {
      *
      * @return The number of octets written to the buffer.
      */
-    size_t Serialize(uint8_t* buffer) const;
+    virtual size_t Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const;
 
     /**
      * @internal
      * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer.
+     * from the provided buffer with support for compression.
      *
      * @see ProtocolElement::Deserialize()
      *
@@ -2900,22 +2820,7 @@ class MDNSSrvRData : public MDNSRData {
      * @return The number of octets read from the buffer, or zero if an error
      * occurred.
      */
-    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
-
-    /**
-     * @internal
-     * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer with support for compression.
-     *
-     * @see ProtocolElement::DeserializeExt()
-     *
-     * @param buffer The buffer to read the bytes from.
-     * @param bufsize The number of bytes available in the buffer.
-     *
-     * @return The number of octets read from the buffer, or zero if an error
-     * occurred.
-     */
-    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
     uint16_t m_priority;
     uint16_t m_weight;
@@ -2950,7 +2855,7 @@ class MDNSSearchRData : public MDNSTextRData {
      * @internal
      * @brief Destructor for MDNSSearchRData.
      */
-    ~MDNSSearchRData() { }
+    virtual ~MDNSSearchRData() { }
 
     /**
      * @internal
@@ -3031,7 +2936,7 @@ class MDNSPingRData : public MDNSTextRData {
      * @internal
      * @brief Destructor for MDNSPingRData.
      */
-    ~MDNSPingRData() { }
+    virtual ~MDNSPingRData() { }
 
     /**
      * @internal
@@ -3083,7 +2988,7 @@ class MDNSPingReplyRData : public MDNSTextRData {
      * @internal
      * @brief Destructor for MDNSPingRData.
      */
-    ~MDNSPingReplyRData() { }
+    virtual ~MDNSPingReplyRData() { }
 
     /**
      * @internal
@@ -3132,7 +3037,7 @@ class MDNSAdvertiseRData : public MDNSTextRData {
      * @internal
      * @brief Destructor for MDNSAdvertiseRData.
      */
-    ~MDNSAdvertiseRData() { }
+    virtual ~MDNSAdvertiseRData() { }
 
     /**
      * @internal
@@ -3147,6 +3052,24 @@ class MDNSAdvertiseRData : public MDNSTextRData {
      */
     void Reset();
 
+    /**
+     * @internal
+     * @brief Get the number of names in this Advertise RData.
+     * @return The number of names in this Advertise RData.
+     */
+    uint16_t GetNumTransports() { return MDNSTextRData::GetNumFields("t"); }
+
+    /**
+     * @internal
+     * @brief Get the name at the particular index.
+     * @param index The index to get the name at
+     * @return The name at the desired index in this Advertise RData.
+     */
+    qcc::String GetNameAt(TransportMask transportMask, int index);
+
+    void SetTransport(TransportMask tm);
+
+    void RemoveNameAt(TransportMask transportMask, int index);
     /**
      * @internal
      * @brief Get the name at the particular index.
@@ -3168,6 +3091,13 @@ class MDNSAdvertiseRData : public MDNSTextRData {
      * @param name The name to remove.
      */
     void RemoveNameAt(int index) { return MDNSTextRData::RemoveFieldAt("n", index); }
+
+    /**
+     * @internal
+     * @brief Get the number of names in this Advertise RData.
+     * @return The number of names in this Advertise RData.
+     */
+    uint16_t GetNumNames(TransportMask transportMask);
 
     /**
      * @internal
@@ -3235,7 +3165,7 @@ class MDNSSenderRData : public MDNSTextRData {
      * @internal
      * @brief Destructor for MDNSSenderRData.
      */
-    ~MDNSSenderRData() { }
+    virtual ~MDNSSenderRData() { }
 
     /**
      * @internal
@@ -3243,20 +3173,6 @@ class MDNSSenderRData : public MDNSTextRData {
      * @return A deep copy of this MDNSSenderRData
      */
     virtual MDNSRData* GetDeepCopy() { return new MDNSSenderRData(*this); }
-
-    /**
-     * @internal
-     * @brief Set the GUID for this Sender RData.
-     * @param guid The GUID to set.
-     */
-    void SetGuid(qcc::String guid);
-
-    /**
-     * @internal
-     * @brief Get the GUID for this Sender RData.
-     * @return The GUID contained in this Sender RData.
-     */
-    qcc::String GetGuid();
 
     /**
      * @internal
@@ -3271,20 +3187,6 @@ class MDNSSenderRData : public MDNSTextRData {
      * @return The search ID contained in this Sender RData.
      */
     uint16_t GetSearchID();
-
-    /**
-     * @internal
-     * @brief Set the transportMask for this Sender RData.
-     * @param transportMask The transportMask to set.
-     */
-    void SetTransportMask(TransportMask transportMask);
-
-    /**
-     * @internal
-     * @brief Get the transportMask for this Sender RData.
-     * @return The transportMask contained in this Sender RData.
-     */
-    uint16_t GetTransportMask();
 
     /**
      * @internal
@@ -3355,7 +3257,7 @@ class MDNSSenderRData : public MDNSTextRData {
  * followed by a 2 byte RDLength
  * followed by RDLength number of bytes in a format defined by the RRType and RRClass.
  */
-class MDNSResourceRecord : public ProtocolElement {
+class MDNSResourceRecord {
   public:
     enum RRType : uint16_t {
         A = 1,          //Host IPv4 Address
@@ -3503,7 +3405,19 @@ class MDNSResourceRecord : public ProtocolElement {
      *
      * @return The size of the buffer required to serialize the object
      */
-    virtual size_t GetSerializedSize(void) const;
+    size_t GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const;
+
+    /**
+     * @internal
+     * @brief This will overestimate the size of the buffer required
+     * since name compression is applied during serialization.
+     *
+     * @return The size of the buffer required to serialize the object
+     */
+    size_t GetSerializedSize() const {
+        std::map<qcc::String, uint32_t> offsets;
+        return GetSerializedSize(offsets);
+    }
 
     /**
      * @internal
@@ -3515,12 +3429,12 @@ class MDNSResourceRecord : public ProtocolElement {
      *
      * @return The number of octets written to the buffer.
      */
-    virtual size_t Serialize(uint8_t* buffer) const;
+    size_t Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const;
 
     /**
      * @internal
      * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer.
+     * from the provided buffer with support for compression.
      *
      * @see ProtocolElement::Deserialize()
      *
@@ -3530,22 +3444,7 @@ class MDNSResourceRecord : public ProtocolElement {
      * @return The number of octets read from the buffer, or zero if an error
      * occurred.
      */
-    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
-
-    /**
-     * @internal
-     * @brief Deserialize a header wire-representation and all of its fields
-     * from the provided buffer with support for compression.
-     *
-     * @see ProtocolElement::DeserializeExt()
-     *
-     * @param buffer The buffer to read the bytes from.
-     * @param bufsize The number of bytes available in the buffer.
-     *
-     * @return The number of octets read from the buffer, or zero if an error
-     * occurred.
-     */
-    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
     MDNSDomainName m_rrDomainName;
     RRType m_rrType;
@@ -3562,7 +3461,7 @@ class MDNSResourceRecord : public ProtocolElement {
  * followed by a 2 byte QType(MDNSResourceRecord::RRType),
  * followed by a 2 byte QClass(MDNSResourceRecord::RRClass).
  */
-class MDNSQuestion : public ProtocolElement {
+class MDNSQuestion {
   public:
     static const uint16_t QU_BIT = 0x8000;
 
@@ -3645,7 +3544,7 @@ class MDNSQuestion : public ProtocolElement {
      *
      * @return The size of the buffer required to serialize the object
      */
-    size_t GetSerializedSize(void) const;
+    size_t GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const;
 
     /**
      * @internal
@@ -3657,12 +3556,12 @@ class MDNSQuestion : public ProtocolElement {
      *
      * @return The number of octets written to the buffer.
      */
-    size_t Serialize(uint8_t* buffer) const;
+    size_t Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const;
 
     /**
      * @internal
      * @brief Deserialize a header wire-representation and all of its children
-     * questinos and answers from the provided buffer.
+     * questinos and answers from the provided buffer with support for compression.
      *
      * @see ProtocolElement::Deserialize()
      *
@@ -3672,22 +3571,7 @@ class MDNSQuestion : public ProtocolElement {
      * @return The number of octets read from the buffer, or zero if an error
      * occurred.
      */
-    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
-
-    /**
-     * @internal
-     * @brief Deserialize a header wire-representation and all of its children
-     * questinos and answers from the provided buffer with support for compression.
-     *
-     * @see ProtocolElement::DeserializeExt()
-     *
-     * @param buffer The buffer to read the bytes from.
-     * @param bufsize The number of bytes available in the buffer.
-     *
-     * @return The number of octets read from the buffer, or zero if an error
-     * occurred.
-     */
-    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
   private:
     MDNSDomainName m_qName;
     uint16_t m_qType;
@@ -3703,7 +3587,7 @@ class MDNSQuestion : public ProtocolElement {
  * ANCount(number of answers to follow), NSCount(number of authoritative records to follow) and
  * ARCount(number of additional records to follow).
  */
-class MDNSHeader : public ProtocolElement {
+class MDNSHeader {
   public:
     static const uint16_t MDNS_QUERY = 0;
 
@@ -3894,6 +3778,8 @@ class _MDNSPacket : public _Packet {
   public:
     _MDNSPacket();
 
+    ~_MDNSPacket();
+
     /**
      * @internal
      * @brief Clear the internal state of this MDNSPacket.
@@ -3932,6 +3818,8 @@ class _MDNSPacket : public _Packet {
      * @return The MDNSQuestion at the desired index in this MDNS packet.
      */
     bool GetQuestionAt(uint32_t i, MDNSQuestion** question);
+
+    bool GetQuestion(qcc::String str, MDNSQuestion** question);
 
     /**
      * @internal
@@ -4036,6 +3924,7 @@ class _MDNSPacket : public _Packet {
      */
     bool GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRType type, uint16_t version, MDNSResourceRecord** additional);
 
+    TransportMask GetTransportMask();
     /**
      * @internal
      * @brief Remove an additional record from this MDNS packet.
@@ -4044,6 +3933,8 @@ class _MDNSPacket : public _Packet {
      * @param type The type of the additional record to remove.
      */
     void RemoveAdditionalRecord(qcc::String str, MDNSResourceRecord::RRType type);
+
+    void RemoveAnswer(qcc::String str, MDNSResourceRecord::RRType type);
 
     /**
      * @internal
@@ -4086,7 +3977,7 @@ class _MDNSPacket : public _Packet {
      * @internal
      * The minimum initial capacity reserved for each of the MDNS fields.
      */
-    static const uint32_t MIN_RESERVE = 5;
+    static const uint32_t MIN_RESERVE = 8;
   private:
     MDNSHeader m_header;
     std::vector<MDNSQuestion> m_questions;

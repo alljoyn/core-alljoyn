@@ -328,12 +328,12 @@ QStatus AdvTunnel::RelayAdv()
         ns = nsRelay[guid];
     }
     if (timer) {
-        status = ns->AdvertiseName(TRANSPORT_TCP, nameList, false);
+        status = ns->AdvertiseName(TRANSPORT_TCP, nameList, false, TRANSPORT_TCP);
         if (status != ER_OK) {
             QCC_LogError(status, ("Failed to advertise relayed names"));
         }
     } else {
-        status = ns->CancelAdvertiseName(TRANSPORT_TCP, nameList);
+        status = ns->CancelAdvertiseName(TRANSPORT_TCP, nameList, TRANSPORT_TCP);
         if (status != ER_OK) {
             QCC_LogError(status, ("Failed to cancel relayed names"));
         }
@@ -475,7 +475,7 @@ int main(int argc, char** argv)
         ns.Init(guid);
         ns.Start();
         ns.OpenInterface(TRANSPORT_TCP, "*");
-        ns.FindAdvertisement(TRANSPORT_TCP, "name='*'");
+        ns.FindAdvertisement(TRANSPORT_TCP, "name='*'", IpNameServiceImpl::ALWAYS_RETRY, TRANSPORT_TCP);
         printf("Started sniffing for advertised names\n");
         qcc::Sleep(10000000);
         ns.Stop();
@@ -496,7 +496,7 @@ int main(int argc, char** argv)
             ns.Start();
 
             ns.OpenInterface(TRANSPORT_TCP, "*");
-            ns.FindAdvertisement(TRANSPORT_TCP, "name='*'");
+            ns.FindAdvertisement(TRANSPORT_TCP, "name='*'", IpNameServiceImpl::ALWAYS_RETRY, TRANSPORT_TCP);
 
             printf("Start relay\n");
 

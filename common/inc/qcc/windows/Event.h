@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -75,6 +75,13 @@ class Event {
      * General purpose events are manually set and and reset.
      */
     Event();
+
+    /**
+     * Create a general purpose Event optionally as
+     * a network interface event.
+     * Network interface events are manually reset.
+     */
+    Event(bool networkIfaceEvent);
 
     /**
      * Create a timed event.
@@ -222,6 +229,8 @@ class Event {
     uint32_t period;        /**< Number of milliseconds between periodic timed events */
     qcc::SocketFd ioFd;     /**< Socket descriptor or -1 if not socket based IO */
     int32_t numThreads;     /**< Number of threads currently waiting on this event */
+    bool networkIfaceEvent;
+    OVERLAPPED overlap;
 
     /**
      * Protected copy constructor.

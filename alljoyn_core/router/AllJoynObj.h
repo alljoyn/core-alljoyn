@@ -957,6 +957,13 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      */
     void CleanAdvAliasMap(const qcc::String& name, TransportMask mask);
 
+    /**
+     * Check if this guid has no names or we are not in a session with this guid
+     * @param guid    Guid which needs to be checked
+     * @return true if there are no names in namemap from this guid and there are no active sessions to it
+     */
+    bool CanRemoveFromPeerInfoMap(qcc::String& guid);
+
     /* TODO document */
     void PingReplyMethodHandler(Message& reply, void* context);
     void PingReplyMethodHandler(Message& msg, uint32_t replyCode);

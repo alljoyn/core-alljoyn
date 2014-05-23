@@ -3368,7 +3368,7 @@ void UDPTransport::StopListenInstance(ListenRequest& listenRequest)
     if (empty && m_isAdvertising) {
         QCC_LogError(ER_UDP_NO_LISTENER, ("UDPTransport::StopListenInstance(): No listeners with outstanding advertisements."));
         for (list<qcc::String>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
-            IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, *i);
+            IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, *i, TRANSPORT_UDP);
         }
     }
 
@@ -3421,7 +3421,7 @@ void UDPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
          */
         if (m_isListening) {
             if (!m_isNsEnabled) {
-                IpNameService::Instance().Enable(TRANSPORT_UDP, m_listenPort, 0, 0, 0, true, false, false, false);
+                IpNameService::Instance().Enable(TRANSPORT_UDP, 0, 0, m_listenPort, 0, true, false, false, false);
                 m_isNsEnabled = true;
             }
         }
@@ -3440,7 +3440,7 @@ void UDPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
     assert(m_isNsEnabled);
     assert(IpNameService::Instance().Started() && "UDPTransport::EnableAdvertisementInstance(): IpNameService not started");
 
-    QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_UDP, listenRequest.m_requestParam, listenRequest.m_requestParamOpt);
+    QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_UDP, listenRequest.m_requestParam, listenRequest.m_requestParamOpt, listenRequest.m_requestTransportMask);
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::EnableAdvertisementInstance(): Failed to advertise \"%s\"", listenRequest.m_requestParam.c_str()));
     }
@@ -3464,7 +3464,7 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
      * We always cancel any advertisement to allow the name service to
      * send out its lost advertisement message.
      */
-    QStatus status = IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, listenRequest.m_requestParam);
+    QStatus status = IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, listenRequest.m_requestParam, listenRequest.m_requestTransportMask);
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::DisableAdvertisementInstance(): Failed to Cancel \"%s\"", listenRequest.m_requestParam.c_str()));
     }
@@ -3481,7 +3481,7 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
          * name service.  We do this by telling it we don't want it to be
          * enabled on any of the possible ports.
          */
-        IpNameService::Instance().Enable(TRANSPORT_UDP, m_listenPort, 0, 0, 0, false, false, false, false);
+        IpNameService::Instance().Enable(TRANSPORT_UDP, 0, 0, m_listenPort, 0, false, false, false, false);
         m_isNsEnabled = false;
 
         /*
@@ -3545,7 +3545,7 @@ void UDPTransport::EnableDiscoveryInstance(ListenRequest& listenRequest)
          */
         if (m_isListening) {
             if (!m_isNsEnabled) {
-                IpNameService::Instance().Enable(TRANSPORT_UDP, m_listenPort, 0, 0, 0, true, false, false, false);
+                IpNameService::Instance().Enable(TRANSPORT_UDP,  0, 0, m_listenPort, 0, true, false, false, false);
                 m_isNsEnabled = true;
             }
         }
@@ -3564,7 +3564,7 @@ void UDPTransport::EnableDiscoveryInstance(ListenRequest& listenRequest)
     assert(m_isNsEnabled);
     assert(IpNameService::Instance().Started() && "UDPTransport::EnableDiscoveryInstance(): IpNameService not started");
 
-    QStatus status = IpNameService::Instance().FindAdvertisement(TRANSPORT_UDP, listenRequest.m_requestParam);
+    QStatus status = IpNameService::Instance().FindAdvertisement(TRANSPORT_UDP, listenRequest.m_requestParam, listenRequest.m_requestTransportMask);
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::EnableDiscoveryInstance(): Failed to begin discovery with multicast NS \"%s\"", listenRequest.m_requestParam.c_str()));
     }
@@ -3583,19 +3583,21 @@ void UDPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
     bool isFirst;
     bool isEmpty = NewDiscoveryOp(DISABLE_DISCOVERY, listenRequest.m_requestParam, isFirst);
 
+    if (m_isListening && m_listenPort && m_isNsEnabled && IpNameService::Instance().Started()) {
+        QStatus status = IpNameService::Instance().CancelFindAdvertisement(TRANSPORT_UDP, listenRequest.m_requestParam, listenRequest.m_requestTransportMask);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("TCPTransport::DisableDiscoveryInstance(): Failed to cancel discovery with \"%s\"", listenRequest.m_requestParam.c_str()));
+        }
+    }
     /*
-     * There is no state in the name service with respect to ongoing discovery.
-     * A discovery request just causes it to send a WHO-HAS message, so thre
-     * is nothing to cancel down there.
-     *
-     * However, if it turns out that this was the last discovery operation on
+     * If it turns out that this was the last discovery operation on
      * our list, we need to think about disabling our listeners and turning off
      * the name service.  We only to this if there are no advertisements in
      * progress.
      */
     if (isEmpty && !m_isAdvertising) {
 
-        IpNameService::Instance().Enable(TRANSPORT_UDP, m_listenPort, 0, 0, 0, false, false, false, false);
+        IpNameService::Instance().Enable(TRANSPORT_UDP,  0, 0, m_listenPort, 0, false, false, false, false);
         m_isNsEnabled = false;
 
         /*
@@ -4346,7 +4348,7 @@ void UDPTransport::QueueStartListen(qcc::String& normSpec)
 
 QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
 {
-    QCC_DbgTrace(("UDPTransport::DoStartListen()"));
+    QCC_DbgPrintf(("UDPTransport::DoStartListen()"));
 
     /*
      * Since the name service is created before the server accept thread is spun
@@ -4569,7 +4571,7 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
         QCC_DbgPrintf(("UDPTransport::DoStartListen(): Advertise m_routerName=\"%s\"", m_routerName.c_str()));
         bool isFirst;
         NewAdvertiseOp(ENABLE_ADVERTISEMENT, m_routerName, isFirst);
-        QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_UDP, m_routerName, true);
+        QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_UDP, m_routerName, true, TRANSPORT_UDP);
         if (status != ER_OK) {
             QCC_LogError(status, ("UDPTransport::DoStartListen(): Failed to AdvertiseNameQuietly \"%s\"", m_routerName.c_str()));
         }
@@ -4601,7 +4603,7 @@ void UDPTransport::UntrustedClientExit()
     m_numUntrustedClients--;
     QCC_DbgPrintf(("UDPTransport::UntrustedClientExit() m_numUntrustedClients=%d m_maxUntrustedClients=%d", m_numUntrustedClients, m_maxUntrustedClients));
     if (!m_routerName.empty() && (m_numUntrustedClients == (m_maxUntrustedClients - 1))) {
-        EnableAdvertisement(m_routerName, true);
+        EnableAdvertisement(m_routerName, true, TRANSPORT_UDP);
     }
     m_listenRequestsLock.Unlock();
 }
@@ -4631,7 +4633,7 @@ QStatus UDPTransport::UntrustedClientStart()
         m_numUntrustedClients--;
     }
     if (m_numUntrustedClients >= m_maxUntrustedClients) {
-        DisableAdvertisement(m_routerName);
+        DisableAdvertisement(m_routerName, TRANSPORT_UDP);
     }
     m_listenRequestsLock.Unlock();
     return status;
@@ -4864,7 +4866,7 @@ bool UDPTransport::NewListenOp(ListenOp op, qcc::String normSpec)
     return m_listening.empty();
 }
 
-void UDPTransport::EnableDiscovery(const char* namePrefix)
+void UDPTransport::EnableDiscovery(const char* namePrefix, TransportMask transports)
 {
     QCC_DbgTrace(("UDPTransport::EnableDiscovery()"));
 
@@ -4886,16 +4888,17 @@ void UDPTransport::EnableDiscovery(const char* namePrefix)
         return;
     }
 
-    QueueEnableDiscovery(namePrefix);
+    QueueEnableDiscovery(namePrefix, transports);
 }
 
-void UDPTransport::QueueEnableDiscovery(const char* namePrefix)
+void UDPTransport::QueueEnableDiscovery(const char* namePrefix, TransportMask transports)
 {
     QCC_DbgTrace(("UDPTransport::QueueEnableDiscovery()"));
 
     ListenRequest listenRequest;
     listenRequest.m_requestOp = ENABLE_DISCOVERY_INSTANCE;
     listenRequest.m_requestParam = namePrefix;
+    listenRequest.m_requestTransportMask = transports;
 
     m_listenRequestsLock.Lock(MUTEX_CONTEXT);
     /* Process the request */
@@ -4905,7 +4908,7 @@ void UDPTransport::QueueEnableDiscovery(const char* namePrefix)
 
 }
 
-void UDPTransport::DisableDiscovery(const char* namePrefix)
+void UDPTransport::DisableDiscovery(const char* namePrefix, TransportMask transports)
 {
     QCC_DbgTrace(("UDPTransport::DisableDiscovery()"));
 
@@ -4927,16 +4930,17 @@ void UDPTransport::DisableDiscovery(const char* namePrefix)
         return;
     }
 
-    QueueDisableDiscovery(namePrefix);
+    QueueDisableDiscovery(namePrefix, transports);
 }
 
-void UDPTransport::QueueDisableDiscovery(const char* namePrefix)
+void UDPTransport::QueueDisableDiscovery(const char* namePrefix, TransportMask transports)
 {
     QCC_DbgTrace(("UDPTransport::QueueDisableDiscovery()"));
 
     ListenRequest listenRequest;
     listenRequest.m_requestOp = DISABLE_DISCOVERY_INSTANCE;
     listenRequest.m_requestParam = namePrefix;
+    listenRequest.m_requestTransportMask = transports;
 
     m_listenRequestsLock.Lock(MUTEX_CONTEXT);
     /* Process the request */
@@ -4945,7 +4949,7 @@ void UDPTransport::QueueDisableDiscovery(const char* namePrefix)
 
 }
 
-QStatus UDPTransport::EnableAdvertisement(const qcc::String& advertiseName, bool quietly)
+QStatus UDPTransport::EnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports)
 {
     QCC_DbgTrace(("UDPTransport::EnableAdvertisement()"));
 
@@ -4967,12 +4971,12 @@ QStatus UDPTransport::EnableAdvertisement(const qcc::String& advertiseName, bool
         return ER_BUS_TRANSPORT_NOT_STARTED;
     }
 
-    QueueEnableAdvertisement(advertiseName, quietly);
+    QueueEnableAdvertisement(advertiseName, quietly, transports);
     return ER_OK;
 }
 
 
-void UDPTransport::QueueEnableAdvertisement(const qcc::String& advertiseName, bool quietly)
+void UDPTransport::QueueEnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports)
 {
     QCC_DbgTrace(("UDPTransport::QueueEnableAdvertisement()"));
 
@@ -4980,14 +4984,14 @@ void UDPTransport::QueueEnableAdvertisement(const qcc::String& advertiseName, bo
     listenRequest.m_requestOp = ENABLE_ADVERTISEMENT_INSTANCE;
     listenRequest.m_requestParam = advertiseName;
     listenRequest.m_requestParamOpt = quietly;
-
+    listenRequest.m_requestTransportMask = transports;
     m_listenRequestsLock.Lock(MUTEX_CONTEXT);
     /* Process the request */
     RunListenMachine(listenRequest);
     m_listenRequestsLock.Unlock(MUTEX_CONTEXT);
 }
 
-void UDPTransport::DisableAdvertisement(const qcc::String& advertiseName)
+void UDPTransport::DisableAdvertisement(const qcc::String& advertiseName, TransportMask transports)
 {
     QCC_DbgTrace(("UDPTransport::DisableAdvertisement()"));
 
@@ -5009,17 +5013,17 @@ void UDPTransport::DisableAdvertisement(const qcc::String& advertiseName)
         return;
     }
 
-    QueueDisableAdvertisement(advertiseName);
+    QueueDisableAdvertisement(advertiseName, transports);
 }
 
-void UDPTransport::QueueDisableAdvertisement(const qcc::String& advertiseName)
+void UDPTransport::QueueDisableAdvertisement(const qcc::String& advertiseName, TransportMask transports)
 {
     QCC_DbgTrace(("UDPTransport::QueueDisableAdvertisement()"));
 
     ListenRequest listenRequest;
     listenRequest.m_requestOp = DISABLE_ADVERTISEMENT_INSTANCE;
     listenRequest.m_requestParam = advertiseName;
-
+    listenRequest.m_requestTransportMask = transports;
     m_listenRequestsLock.Lock(MUTEX_CONTEXT);
     /* Process the request */
     RunListenMachine(listenRequest);
@@ -5031,7 +5035,7 @@ void UDPTransport::FoundCallback::Found(const qcc::String& busAddr, const qcc::S
                                         std::vector<qcc::String>& nameList, uint8_t timer)
 {
 //  Makes lots of noise!
-//  QCC_DbgTrace(("UDPTransport::FoundCallback::Found(): busAddr = \"%s\"", busAddr.c_str()));
+    //QCC_DbgTrace(("UDPTransport::FoundCallback::Found(): busAddr = \"%s\" nameList %d", busAddr.c_str(), nameList.size()));
 
     qcc::String u4addr("u4addr=");
     qcc::String u4port("u4port=");

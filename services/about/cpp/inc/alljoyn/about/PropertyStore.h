@@ -1,5 +1,10 @@
+/**
+ * @file
+ * User implemented property store responsible for holding the AboutService properties
+ * @see AboutPropertyStoreImpl.h
+ */
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -21,14 +26,26 @@
 
 namespace ajn {
 namespace services {
-
+/**
+ * The language tag specified is not supported
+ */
 #define ER_LANGUAGE_NOT_SUPPORTED       ((QStatus)0xb001)
+/**
+ * The request feature is not available or has not be implemented
+ */
 #define ER_FEATURE_NOT_AVAILABLE        ((QStatus)0xb002)
+/**
+ * The value requested is invalid
+ */
 #define ER_INVALID_VALUE                ((QStatus)0xb003)
+/**
+ * The maximum allowed size for an element has been exceeded.
+ */
 #define ER_MAX_SIZE_EXCEEDED            ((QStatus)0xb004)
 
 /**
- * PropertyStore is implemented by the application , it is responsible to store the properties of the AboutServie and ConfigService.
+ * PropertyStore is implemented by the application , it is responsible to store
+ * the properties of the AboutServie and ConfigService.
  */
 class PropertyStore {
   public:

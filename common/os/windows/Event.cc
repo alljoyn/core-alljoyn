@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -24,6 +24,7 @@
 #include <map>
 #include <list>
 #include <winsock2.h>
+#include <iphlpapi.h>
 #include <windows.h>
 #include <errno.h>
 #include <time.h>
@@ -423,8 +424,28 @@ Event::Event() :
     timestamp(0),
     period(0),
     ioFd(-1),
-    numThreads(0)
+    numThreads(0),
+    networkIfaceEvent(false),
+    overlap(OVERLAPPED())
 {
+}
+
+Event::Event(bool networkIfaceEvent) :
+    handle(CreateEvent(NULL, TRUE, FALSE, NULL)),
+    ioHandle(INVALID_HANDLE_VALUE),
+    eventType(GEN_PURPOSE),
+    timestamp(0),
+    period(0),
+    ioFd(-1),
+    numThreads(0),
+    networkIfaceEvent(networkIfaceEvent),
+    overlap(OVERLAPPED())
+{
+    if (networkIfaceEvent) {
+        HANDLE h = NULL;
+        overlap.hEvent = handle;
+        NotifyAddrChange(&h, &overlap);
+    }
 }
 
 Event::Event(Event& event, EventType eventType, bool genPurpose) :
@@ -434,7 +455,9 @@ Event::Event(Event& event, EventType eventType, bool genPurpose) :
     timestamp(0),
     period(0),
     ioFd(event.ioFd),
-    numThreads(0)
+    numThreads(0),
+    networkIfaceEvent(false),
+    overlap(OVERLAPPED())
 {
     /* Create an auto reset event for the socket fd */
     if (ioFd > 0) {
@@ -454,7 +477,9 @@ Event::Event(int ioFd, EventType eventType, bool genPurpose) :
     timestamp(0),
     period(0),
     ioFd(ioFd),
-    numThreads(0)
+    numThreads(0),
+    networkIfaceEvent(false),
+    overlap(OVERLAPPED())
 {
     /* Create an auto reset event for the socket fd */
     if (ioFd > 0) {
@@ -474,7 +499,9 @@ Event::Event(uint32_t timestamp, uint32_t period) :
     timestamp(WAIT_FOREVER == timestamp ? WAIT_FOREVER : GetTimestamp() + timestamp),
     period(period),
     ioFd(-1),
-    numThreads(0)
+    numThreads(0),
+    networkIfaceEvent(false),
+    overlap(OVERLAPPED())
 {
 }
 
@@ -535,6 +562,10 @@ QStatus Event::ResetEvent()
         if (!::ResetEvent(handle)) {
             status = ER_FAIL;
             QCC_LogError(status, ("ResetEvent failed with %d", GetLastError()));
+        }
+        if (networkIfaceEvent) {
+            HANDLE h = NULL;
+            NotifyAddrChange(&h, &overlap);
         }
     } else if (TIMED == eventType) {
         if (0 < period) {

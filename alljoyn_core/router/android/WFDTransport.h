@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -218,14 +218,14 @@ class WFDTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      *      - ER_OK if successful.
      *      - an error status otherwise.
      */
-    QStatus EnableAdvertisement(const qcc::String& advertiseName, bool quietly);
+    QStatus EnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports);
 
     /**
      * Stop advertising a well-known name with a given quality of service.
      *
      * @param advertiseName   Well-known name to remove from list of advertised names.
      */
-    void DisableAdvertisement(const qcc::String& advertiseName);
+    void DisableAdvertisement(const qcc::String& advertiseName, TransportMask transports);
 
     /**
      * Returns the name of this transport

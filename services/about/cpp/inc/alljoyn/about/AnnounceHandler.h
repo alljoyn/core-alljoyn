@@ -1,3 +1,7 @@
+/**
+ * @file
+ * MessageReceiver responsible for receiving the Announce signal from the org.alljoyn.About interface
+ */
 /******************************************************************************
  * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
@@ -58,7 +62,7 @@ class AnnounceHandler : public ajn::MessageReceiver {
      *
      * @param[in] version of the AboutService.
      * @param[in] port used by the AboutService
-     * @param[in] busName	well known name of the service
+     * @param[in] busName unique bus name of the service
      * @param[in] objectDescs map of ObjectDescriptions using qcc::String as key std::vector<qcc::String>   as value, describing interfaces
      * @param[in] aboutData map of AboutData using qcc::String as key and ajn::MsgArg as value
      */

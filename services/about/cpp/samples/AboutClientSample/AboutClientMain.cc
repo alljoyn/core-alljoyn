@@ -305,7 +305,9 @@ int main(int argc, char**argv, char**envArg)
     }
 
     AboutClientAnnounceHandler* announceHandler = new AboutClientAnnounceHandler(announceHandlerCallback);
-    AnnouncementRegistrar::RegisterAnnounceHandler(*busAttachment, *announceHandler, NULL, 0);
+    const char* interfaces[] = { "org.alljoyn.About", "org.alljoyn.Icon" };
+    AnnouncementRegistrar::RegisterAnnounceHandler(*busAttachment, *announceHandler,
+                                                   interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
 
     // Setup signals to wait for.
     sigfillset(&waitmask);

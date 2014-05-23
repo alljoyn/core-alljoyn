@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -196,13 +196,13 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      * @internal
      * @brief Start discovering busses.
      */
-    void EnableDiscovery(const char* namePrefix);
+    void EnableDiscovery(const char* namePrefix, TransportMask transports);
 
     /**
      * @internal
      * @brief Stop discovering busses.
      */
-    void DisableDiscovery(const char* namePrefix);
+    void DisableDiscovery(const char* namePrefix, TransportMask transports);
 
     /**
      * Start advertising a well-known name with a given quality of service.
@@ -213,14 +213,14 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      *      - ER_OK if successful.
      *      - an error status otherwise.
      */
-    QStatus EnableAdvertisement(const qcc::String& advertiseName, bool quietly);
+    QStatus EnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask completetransports);
 
     /**
      * Stop advertising a well-known name with a given quality of service.
      *
      * @param advertiseName   Well-known name to remove from list of advertised names.
      */
-    void DisableAdvertisement(const qcc::String& advertiseName);
+    void DisableAdvertisement(const qcc::String& advertiseName, TransportMask completetransports);
 
     /**
      * Returns the name of this transport
@@ -330,6 +330,7 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         RequestOp m_requestOp;
         qcc::String m_requestParam;
         bool m_requestParamOpt;
+        TransportMask m_requestTransportMask;
     };
 
     qcc::Mutex m_listenRequestsLock;                               /**< Mutex that protects m_listenRequests */
@@ -641,10 +642,10 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      */
     bool NewListenOp(ListenOp op, qcc::String name);
 
-    void QueueEnableDiscovery(const char* namePrefix);
-    void QueueDisableDiscovery(const char* namePrefix);
-    void QueueEnableAdvertisement(const qcc::String& advertiseName, bool quietly);
-    void QueueDisableAdvertisement(const qcc::String& advertiseName);
+    void QueueEnableDiscovery(const char* namePrefix, TransportMask transports);
+    void QueueDisableDiscovery(const char* namePrefix, TransportMask transports);
+    void QueueEnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask completetransports);
+    void QueueDisableAdvertisement(const qcc::String& advertiseName, TransportMask completetransports);
 
     void RunListenMachine(ListenRequest& listenRequest);
 

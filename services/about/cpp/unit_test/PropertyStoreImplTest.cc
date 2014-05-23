@@ -162,24 +162,20 @@ TEST(PropertyStoreImplTest, setAppName)
     arg.Get("s", &out);
     EXPECT_STREQ("MyAppName", out);
 
-    //TODO the AppName is not localizable the high level design document states
-    //     it should be localizable this should be fixed.
-    /*
-       status = ps.setAppName("Another MyAppName", "en");
-       EXPECT_EQ(ER_OK, status)  << "  Actual Status: " << QCC_StatusText(status);
+    status = ps.setAppName("Another MyAppName", "en");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-       psp = ps.getProperty(APP_NAME, "en");
+    psp = ps.getProperty(APP_NAME, "en");
 
-       EXPECT_TRUE(psp->getIsPublic());
-       EXPECT_FALSE(psp->getIsWritable());
-       EXPECT_FALSE(psp->getIsAnnouncable());
-       EXPECT_STREQ("en", psp->getLanguage().c_str());
+    EXPECT_TRUE(psp->getIsPublic());
+    EXPECT_FALSE(psp->getIsWritable());
+    EXPECT_TRUE(psp->getIsAnnouncable());
+    EXPECT_STREQ("en", psp->getLanguage().c_str());
 
-       arg = psp->getPropertyValue();
-       status = arg.Get("s", &out);
-       EXPECT_EQ(ER_OK, status)  << "  Actual Status: " << QCC_StatusText(status);
-       EXPECT_STREQ("Another MyAppName", out);
-     */
+    arg = psp->getPropertyValue();
+    status = arg.Get("s", &out);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("Another MyAppName", out);
 }
 
 TEST(PropertyStoreImplTest, setDefaultLang)
@@ -468,7 +464,13 @@ TEST(PropertyStoreImplTest, ReadAll_announce)
     status = ps.setDefaultLang("en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = ps.setAppName("MyAppName");
+    status = ps.setAppName("My App Name", "en");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = ps.setAppName("Mi Nombre App", "es");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = ps.setAppName("Mon Nom App", "fr");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = ps.setModelNumber("Wxfy388i");
@@ -562,7 +564,7 @@ TEST(PropertyStoreImplTest, ReadAll_announce)
     char* appName;
     status = args->Get("s", &appName);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("MyAppName", appName);
+    EXPECT_STREQ("My App Name", appName);
 
     status = announceArg.GetElement("{sv}", AboutPropertyStoreImpl::getPropertyStoreName(MANUFACTURER).c_str(), &args);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -601,7 +603,13 @@ TEST(PropertyStoreImplTest, ReadAll_read)
     status = ps.setDefaultLang("en");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = ps.setAppName("MyAppName");
+    status = ps.setAppName("My App Name", "en");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = ps.setAppName("Mi Nombre App", "es");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = ps.setAppName("Mon Nom App", "fr");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = ps.setModelNumber("Wxfy388i");
@@ -709,7 +717,7 @@ TEST(PropertyStoreImplTest, ReadAll_read)
     char* appName;
     status = args->Get("s", &appName);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("MyAppName", appName);
+    EXPECT_STREQ("My App Name", appName);
 
     status = readArg.GetElement("{sv}", AboutPropertyStoreImpl::getPropertyStoreName(MANUFACTURER).c_str(), &args);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);

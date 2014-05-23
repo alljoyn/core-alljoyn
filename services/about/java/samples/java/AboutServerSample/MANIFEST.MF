@@ -1,5 +1,5 @@
 Manifest-Version: 1.0
-Class-Path: alljoyn.jar alljoyn_about.jar alljoyn_services_common.jar
+Class-Path: alljoyn.jar alljoyn_about.jar
 Main-Class: org.alljoyn.about.sample.AboutServerSample
 
 

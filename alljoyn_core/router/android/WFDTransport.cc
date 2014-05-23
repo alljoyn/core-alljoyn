@@ -1636,7 +1636,7 @@ void WFDTransport::StopListenInstance(ListenRequest& listenRequest)
                 P2PNameService::Instance().CancelAdvertiseName(TRANSPORT_WFD, *i);
             }
             if (m_ipNsAcquired) {
-                IpNameService::Instance().CancelAdvertiseName(TRANSPORT_WFD, *i);
+                IpNameService::Instance().CancelAdvertiseName(TRANSPORT_WFD, *i, TRANSPORT_WFD);
             }
         }
     }
@@ -1773,7 +1773,7 @@ void WFDTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
      * responses to FindAdvertiseName (who-has) requests will be answered and
      * our advertisements will begin percolating out to the other (client) side.
      */
-    status = IpNameService::Instance().AdvertiseName(TRANSPORT_WFD, listenRequest.m_requestParam);
+    status = IpNameService::Instance().AdvertiseName(TRANSPORT_WFD, listenRequest.m_requestParam, false, TRANSPORT_WFD);
     if (status != ER_OK) {
         QCC_LogError(status, ("WFDTransport::EnableAdvertisementInstance(): Failed to advertise \"%s\"", listenRequest.m_requestParam.c_str()));
         return;
@@ -1805,7 +1805,7 @@ void WFDTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
     bool isFirst;
     bool isEmpty = NewAdvertiseOp(DISABLE_ADVERTISEMENT, listenRequest.m_requestParam, isFirst);
 
-    QStatus status = IpNameService::Instance().CancelAdvertiseName(TRANSPORT_WFD, listenRequest.m_requestParam);
+    QStatus status = IpNameService::Instance().CancelAdvertiseName(TRANSPORT_WFD, listenRequest.m_requestParam, TRANSPORT_WFD);
     if (status != ER_OK) {
         QCC_LogError(status, ("WFDTransport::DisableAdvertisementInstance(): Failed to IP Cancel \"%s\"", listenRequest.m_requestParam.c_str()));
     }
@@ -3661,7 +3661,7 @@ void WFDTransport::QueueDisableDiscovery(const char* namePrefix)
     Alert();
 }
 
-QStatus WFDTransport::EnableAdvertisement(const qcc::String& advertiseName, bool quietly)
+QStatus WFDTransport::EnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports)
 {
     QCC_DbgTrace(("WFDTransport::EnableAdvertisement()"));
 
@@ -3706,7 +3706,7 @@ void WFDTransport::QueueEnableAdvertisement(const qcc::String& advertiseName)
     Alert();
 }
 
-void WFDTransport::DisableAdvertisement(const qcc::String& advertiseName)
+void WFDTransport::DisableAdvertisement(const qcc::String& advertiseName, TransportMask transports)
 {
     QCC_DbgTrace(("WFDTransport::DisableAdvertisement()"));
 

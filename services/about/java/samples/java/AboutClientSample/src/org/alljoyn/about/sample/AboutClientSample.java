@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -16,31 +16,95 @@
 
 package org.alljoyn.about.sample;
 
+import org.alljoyn.about.AboutService;
+import org.alljoyn.about.AboutServiceImpl;
 import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusListener;
-import org.alljoyn.bus.BusObject;
-import org.alljoyn.bus.Mutable;
+import org.alljoyn.bus.PasswordManager;
 import org.alljoyn.bus.SessionOpts;
-import org.alljoyn.bus.SessionPortListener;
 import org.alljoyn.bus.Status;
+import org.alljoyn.services.common.utils.GenericLogger;
 
-import org.alljoyn.about.AboutKeys;
-
-public class AboutClientSample {
+public class AboutClientSample
+{
+    static
+    {
+        System.loadLibrary("alljoyn_java");
+    }
 
     static BusAttachment mBus;
-    static boolean sessionEstablished = false;
-    static int sessionId;
+    private static AboutService aboutService;
+    private static DeviceAnnouncementHandler announcementHandler;
 
-    public static void main(String[] args) {
-
-        System.out.println("Hello world");
-        System.out.println(AboutKeys.ABOUT_APP_NAME);
-        /*
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
+    public static void main(String[] args)
+    {
+        Status status;
+        System.out.println("starting.....");
+        Runtime.getRuntime().addShutdownHook(new Thread()
+        {
+            public void run()
+            {
                 mBus.release();
             }
-        })*/
+        });
+
+        mBus = new BusAttachment("AppName", BusAttachment.RemoteMessage.Receive);
+        System.out.println("created bus attachment");
+
+        status = mBus.connect();
+        if (status != Status.OK)
+        {
+            System.out.println(status.name());
+            System.exit(0);
+            return;
+        }
+        // uncomment these lines to see additional debug output
+        //mBus.setDaemonDebug("ALL", 7);
+        //mBus.setLogLevels("ALL=7");
+        //mBus.useOSLogging(true);
+
+        try
+        {
+            aboutService = AboutServiceImpl.getInstance();
+            System.out.println("starting about service in client mode");
+            aboutService.setLogger(new SampleLogger());
+            aboutService.startAboutClient(mBus);
+            System.out.println("started about service in client mode");
+            announcementHandler = new DeviceAnnouncementHandler();
+            String[] interfaces = new String[] { "org.alljoyn.Icon", "org.alljoyn.About" };
+            aboutService.addAnnouncementHandler(announcementHandler, interfaces);
+            System.out.println("added announcement handler");
+
+            System.out.println("waiting for announcement");
+            Thread.sleep(120000);
+
+            shutdownAboutService();
+            System.out.println("Disconnecting busAttachment");
+            mBus.disconnect();
+            mBus.release();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    private static void shutdownAboutService()
+    {
+        if (aboutService != null)
+        {
+            try
+            {
+                System.out.format("aboutClient running: %s\n", aboutService.isClientRunning());
+                System.out.println("Stopping aboutClient");
+                String[] interfaces = new String[] { "org.alljoyn.Icon", "org.alljoyn.About" };
+                aboutService.removeAnnouncementHandler(announcementHandler, interfaces);
+                aboutService.stopAboutClient();
+            }
+            catch (Exception e)
+            {
+                System.out.format("Exception calling stopAboutClient() %s\n", e.getMessage());
+            }
+        }
     }
 }

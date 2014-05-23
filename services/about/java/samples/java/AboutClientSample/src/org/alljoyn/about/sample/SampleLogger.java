@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -14,42 +14,29 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-package org.alljoyn.services.common;
+package org.alljoyn.about.sample;
 
 import org.alljoyn.services.common.utils.GenericLogger;
 
-/**
- * An Android implementation of the {@link GenericLogger} class
+/*
+ * empty logger added to override the generic logger
+ * This is empty because we don't want to see all the logs from the About
+ * that would normally be logged by default.
  */
-public class DefaultGenericLogger implements GenericLogger {
+public class SampleLogger implements GenericLogger {
 
     @Override
-    public void warn(String TAG, String msg)
-    {
-        System.out.println(new StringBuilder(TAG).append(" Warning: ").append(msg).toString());
-    }
+    public void debug(String TAG, String msg) { }
 
     @Override
-    public void info(String TAG, String msg)
-    {
-        System.out.println(new StringBuilder(TAG).append(" Info: ").append(msg).toString());
-    }
+    public void info(String TAG, String msg) { }
 
     @Override
-    public void fatal(String TAG, String msg)
-    {
-        System.out.println(new StringBuilder(TAG).append(" WTF: ").append(msg).toString());
-    }
+    public void warn(String TAG, String msg) { }
 
     @Override
-    public void error(String TAG, String msg)
-    {
-        System.out.println(new StringBuilder(TAG).append(" Error: ").append(msg).toString());
-    }
+    public void error(String TAG, String msg) { }
 
     @Override
-    public void debug(String TAG, String msg)
-    {
-        System.out.println(new StringBuilder(TAG).append(" Debug: ").append(msg).toString());
-    }
+    public void fatal(String TAG, String msg) { }
 }

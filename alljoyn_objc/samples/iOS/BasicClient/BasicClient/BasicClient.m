@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2012,2014 AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -73,6 +73,14 @@ static const AJNSessionPort kBasicClientServicePort = 25;
     dispatch_queue_t clientQueue = dispatch_queue_create("org.alljoyn.basic-service.clientQueue",NULL);
     dispatch_async( clientQueue, ^{
         [self run];
+    });
+}
+
+- (void)sendPing
+{
+    dispatch_queue_t pingQueue = dispatch_queue_create("org.alljoyn.basic-service.pingQueue",NULL);
+    dispatch_async( pingQueue, ^{
+        [self ping];
     });
 }
 
@@ -186,6 +194,20 @@ static const AJNSessionPort kBasicClientServicePort = 25;
     self.bus = nil;
     
     [self.delegate didReceiveStatusUpdateMessage:@"Bus deallocated\n"];
+}
+
+
+- (void)ping
+{
+    if (self.bus == NULL) {
+        return;
+    }
+    QStatus status = [self.bus pingPeer:kBasicClientServiceName withTimeout:5];
+    if (status == ER_OK) {
+        [self.delegate didReceiveStatusUpdateMessage:@"Ping returned Successfully"];
+    } else {
+        [self.delegate didReceiveStatusUpdateMessage:@"Ping Failed"];
+    }
 }
 
 #pragma mark - AJNBusListener delegate methods

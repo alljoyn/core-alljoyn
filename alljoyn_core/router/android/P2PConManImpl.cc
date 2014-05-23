@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -415,7 +415,7 @@ QStatus P2PConManImpl::CreateTemporaryNetwork(const qcc::String& device, int32_t
         //
         qcc::String star("*");
         QCC_DbgPrintf(("P2PConManImpl::CreateTemporaryNetwork(): FindAdvertisement() for GO"));
-        QStatus status = IpNameService::Instance().FindAdvertisement(TRANSPORT_WFD, star);
+        QStatus status = IpNameService::Instance().FindAdvertisement(TRANSPORT_WFD, star, TRANSPORT_WFD);
         if (status != ER_OK) {
             QCC_LogError(status, ("P2PConManImpl::CreateConnectSpec(): FindAdvertisement(): Failure"));
         }
@@ -688,7 +688,7 @@ QStatus P2PConManImpl::DestroyTemporaryNetwork(void)
     // conceptually free the resources associated with the link.
     //
     qcc::String star("*");
-    IpNameService::Instance().CancelFindAdvertisement(TRANSPORT_WFD, star);
+    IpNameService::Instance().CancelFindAdvertisement(TRANSPORT_WFD, star, TRANSPORT_WFD);
 
     //
     // Tell the IP name service to forget about calling us back since we no
@@ -884,7 +884,7 @@ QStatus P2PConManImpl::CreateConnectSpec(const qcc::String& device, const qcc::S
     //
     qcc::String star("*");
     QCC_DbgPrintf(("P2PConManImpl::CreateConnectSpec(): FindAdvertisement()"));
-    QStatus status = IpNameService::Instance().FindAdvertisement(TRANSPORT_WFD, star);
+    QStatus status = IpNameService::Instance().FindAdvertisement(TRANSPORT_WFD, star, TRANSPORT_WFD);
     if (status != ER_OK) {
         m_discoverLock.Unlock(MUTEX_CONTEXT);
         QCC_LogError(status, ("P2PConManImpl::CreateConnectSpec(): FindAdvertisement(): Failure"));

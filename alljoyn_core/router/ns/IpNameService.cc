@@ -436,7 +436,7 @@ QStatus IpNameService::Enabled(TransportMask transportMask,
     return m_pimpl->Enabled(transportMask, reliableIPv4Port, reliableIPv6Port, unreliableIPv4Port, unreliableIPv6Port);
 }
 
-QStatus IpNameService::FindAdvertisement(TransportMask transportMask, const qcc::String& matching)
+QStatus IpNameService::FindAdvertisement(TransportMask transportMask, const qcc::String& matching, TransportMask completeTransportMask)
 {
     //
     // If the entry gate has been closed, we do not allow a FindAdvertisedName
@@ -450,15 +450,28 @@ QStatus IpNameService::FindAdvertisement(TransportMask transportMask, const qcc:
     }
 
     ASSERT_STATE("FindAdvertisement");
-    return m_pimpl->FindAdvertisement(transportMask, matching);
+    return m_pimpl->FindAdvertisement(transportMask, matching, IpNameServiceImpl::ALWAYS_RETRY, completeTransportMask);
 }
 
-QStatus IpNameService::CancelFindAdvertisement(TransportMask transportMask, const qcc::String& matching)
+QStatus IpNameService::CancelFindAdvertisement(TransportMask transportMask, const qcc::String& matching, TransportMask completeTransportMask)
 {
-    return ER_OK;
+    if (m_destroyed) {
+        return ER_OK;
+    }
+    ASSERT_STATE("CancelFindAdvertisement");
+    return m_pimpl->CancelFindAdvertisement(transportMask, matching, IpNameServiceImpl::ALWAYS_RETRY, completeTransportMask);
 }
 
-QStatus IpNameService::AdvertiseName(TransportMask transportMask, const qcc::String& wkn, bool quietly)
+QStatus IpNameService::RefreshCache(TransportMask transportMask, const qcc::String& guid, const qcc::String& matching)
+{
+    if (m_destroyed) {
+        return ER_OK;
+    }
+    ASSERT_STATE("RefreshCache");
+    return m_pimpl->RefreshCache(transportMask, guid, matching);
+}
+
+QStatus IpNameService::AdvertiseName(TransportMask transportMask, const qcc::String& wkn, bool quietly, TransportMask completeTransportMask)
 {
     //
     // If the entry gate has been closed, we do not allow an AdvertiseName to
@@ -472,10 +485,10 @@ QStatus IpNameService::AdvertiseName(TransportMask transportMask, const qcc::Str
     }
 
     ASSERT_STATE("AdvertiseName");
-    return m_pimpl->AdvertiseName(transportMask, wkn, quietly);
+    return m_pimpl->AdvertiseName(transportMask, wkn, quietly, completeTransportMask);
 }
 
-QStatus IpNameService::CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn)
+QStatus IpNameService::CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn, TransportMask completeTransportMask)
 {
     //
     // If the entry gate has been closed, we do not allow a CancelAdvertiseName
@@ -489,7 +502,7 @@ QStatus IpNameService::CancelAdvertiseName(TransportMask transportMask, const qc
     }
 
     ASSERT_STATE("CancelAdvertiseName");
-    return m_pimpl->CancelAdvertiseName(transportMask, wkn);
+    return m_pimpl->CancelAdvertiseName(transportMask, wkn, completeTransportMask);
 }
 
 QStatus IpNameService::OnProcSuspend()
@@ -546,13 +559,22 @@ QStatus IpNameService::Query(TransportMask transportMask, MDNSPacket mdnsPacket)
     return m_pimpl->Query(transportMask, mdnsPacket);
 }
 
-QStatus IpNameService::Response(TransportMask transportMask, MDNSPacket mdnsPacket)
+QStatus IpNameService::Response(TransportMask transportMask, uint32_t ttl, MDNSPacket mdnsPacket)
 {
     if (m_destroyed) {
         return ER_OK;
     }
     ASSERT_STATE("Response");
-    return m_pimpl->Response(transportMask, mdnsPacket);
+    return m_pimpl->Response(transportMask, ttl, mdnsPacket);
+}
+
+bool IpNameService::RemoveFromPeerInfoMap(const qcc::String& guid)
+{
+    if (m_destroyed) {
+        return false;
+    }
+    ASSERT_STATE("RemoveFromPeerInfoMap");
+    return m_pimpl->RemoveFromPeerInfoMap(guid);
 }
 
 } // namespace ajn

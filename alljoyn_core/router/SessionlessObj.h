@@ -229,7 +229,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
                                         Message& msg);
 
   private:
-    friend class RemoteCacheSnapshot;
+    friend struct RemoteCacheSnapshot;
 
     /**
      * SessionlessObj worker.

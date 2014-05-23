@@ -135,7 +135,17 @@ static QStatus FillAboutPropertyStoreImplData(AboutPropertyStoreImpl* propStore,
         return status;
     }
 
-    status = propStore->setAppName("AboutConfig");
+    status = propStore->setAppName("About Config", "en");
+    if (status != ER_OK) {
+        return status;
+    }
+
+    status = propStore->setAppName("Acerca Config", "sp");
+    if (status != ER_OK) {
+        return status;
+    }
+
+    status = propStore->setAppName("À propos de la configuration", "fr");
     if (status != ER_OK) {
         return status;
     }

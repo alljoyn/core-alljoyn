@@ -1193,6 +1193,20 @@ extern AJ_API QStatus alljoyn_busattachment_setdaemondebug(alljoyn_busattachment
  */
 extern AJ_API uint32_t alljoyn_busattachment_gettimestamp();
 
+/**
+ * Determine if you are able to find a remote connection based on its BusName.
+ * The BusName can be the Unique or well-known name.
+ *
+ * @param bus     alljoyn_busattachment
+ * @param name    The unique or well-known name to ping
+ * @param timeout Timeout specified in milliseconds to wait for reply
+ * @return
+ *   - #ER_OK on success
+ *   - #ER_TIMEOUT the Ping attempt timed out
+ *   - An error status otherwise
+ */
+extern AJ_API QStatus alljoyn_busattachment_ping(alljoyn_busattachment bus, const char* name, uint32_t timeout);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

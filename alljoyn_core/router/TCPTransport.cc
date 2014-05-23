@@ -2055,7 +2055,7 @@ void TCPTransport::StopListenInstance(ListenRequest& listenRequest)
     if (empty && m_isAdvertising) {
         QCC_LogError(ER_FAIL, ("TCPTransport::StopListenInstance(): No listeners with outstanding advertisements."));
         for (list<qcc::String>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
-            IpNameService::Instance().CancelAdvertiseName(TRANSPORT_TCP, *i);
+            IpNameService::Instance().CancelAdvertiseName(TRANSPORT_TCP, *i, TRANSPORT_TCP);
         }
     }
 
@@ -2127,7 +2127,7 @@ void TCPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
     assert(m_isNsEnabled);
     assert(IpNameService::Instance().Started() && "TCPTransport::EnableAdvertisementInstance(): IpNameService not started");
 
-    QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_TCP, listenRequest.m_requestParam, listenRequest.m_requestParamOpt);
+    QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_TCP, listenRequest.m_requestParam, listenRequest.m_requestParamOpt, listenRequest.m_requestTransportMask);
     if (status != ER_OK) {
         QCC_LogError(status, ("TCPTransport::EnableAdvertisementInstance(): Failed to advertise \"%s\"", listenRequest.m_requestParam.c_str()));
     }
@@ -2151,7 +2151,7 @@ void TCPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
      * We always cancel any advertisement to allow the name service to
      * send out its lost advertisement message.
      */
-    QStatus status = IpNameService::Instance().CancelAdvertiseName(TRANSPORT_TCP, listenRequest.m_requestParam);
+    QStatus status = IpNameService::Instance().CancelAdvertiseName(TRANSPORT_TCP, listenRequest.m_requestParam, listenRequest.m_requestTransportMask);
     if (status != ER_OK) {
         QCC_LogError(status, ("TCPTransport::DisableAdvertisementInstance(): Failed to Cancel \"%s\"", listenRequest.m_requestParam.c_str()));
     }
@@ -2251,7 +2251,7 @@ void TCPTransport::EnableDiscoveryInstance(ListenRequest& listenRequest)
     assert(m_isNsEnabled);
     assert(IpNameService::Instance().Started() && "TCPTransport::EnableDiscoveryInstance(): IpNameService not started");
 
-    QStatus status = IpNameService::Instance().FindAdvertisement(TRANSPORT_TCP, listenRequest.m_requestParam);
+    QStatus status = IpNameService::Instance().FindAdvertisement(TRANSPORT_TCP, listenRequest.m_requestParam, listenRequest.m_requestTransportMask);
     if (status != ER_OK) {
         QCC_LogError(status, ("TCPTransport::EnableDiscoveryInstance(): Failed to begin discovery with multicast NS \"%s\"", listenRequest.m_requestParam.c_str()));
     }
@@ -2270,12 +2270,15 @@ void TCPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
     bool isFirst;
     bool isEmpty = NewDiscoveryOp(DISABLE_DISCOVERY, listenRequest.m_requestParam, isFirst);
 
+    if (m_isListening && m_listenPort && m_isNsEnabled && IpNameService::Instance().Started()) {
+        QStatus status = IpNameService::Instance().CancelFindAdvertisement(TRANSPORT_TCP, listenRequest.m_requestParam, listenRequest.m_requestTransportMask);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("TCPTransport::DisableDiscoveryInstance(): Failed to cancel discovery with \"%s\"", listenRequest.m_requestParam.c_str()));
+        }
+    }
+
     /*
-     * There is no state in the name service with respect to ongoing discovery.
-     * A discovery request just causes it to send a WHO-HAS message, so thre
-     * is nothing to cancel down there.
-     *
-     * However, if it turns out that this was the last discovery operation on
+     * If it turns out that this was the last discovery operation on
      * our list, we need to think about disabling our listeners and turning off
      * the name service.  We only to this if there are no advertisements in
      * progress.
@@ -3366,7 +3369,7 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
     if (!routerName.empty() && (m_numUntrustedClients < m_maxUntrustedClients)) {
         bool isFirst;
         NewAdvertiseOp(ENABLE_ADVERTISEMENT, routerName, isFirst);
-        QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_TCP, routerName, true);
+        QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_TCP, routerName, true, TRANSPORT_TCP);
         if (status != ER_OK) {
             QCC_LogError(status, ("TCPTransport::DoStartListen(): Failed to AdvertiseNameQuietly \"%s\"", routerName.c_str()));
         }
@@ -3393,7 +3396,7 @@ void TCPTransport::UntrustedClientExit() {
     m_numUntrustedClients--;
     QCC_DbgPrintf((" TCPTransport::UntrustedClientExit() m_numUntrustedClients=%d m_maxUntrustedClients=%d", m_numUntrustedClients, m_maxUntrustedClients));
     if (!routerName.empty() && (m_numUntrustedClients == (m_maxUntrustedClients - 1))) {
-        EnableAdvertisement(routerName, true);
+        EnableAdvertisement(routerName, true, TRANSPORT_TCP);
     }
     m_listenRequestsLock.Unlock();
 
@@ -3419,7 +3422,7 @@ QStatus TCPTransport::UntrustedClientStart() {
         m_numUntrustedClients--;
     }
     if (m_numUntrustedClients >= m_maxUntrustedClients) {
-        DisableAdvertisement(routerName);
+        DisableAdvertisement(routerName, TRANSPORT_TCP);
     }
     m_listenRequestsLock.Unlock();
     return status;
@@ -3644,7 +3647,7 @@ bool TCPTransport::NewListenOp(ListenOp op, qcc::String normSpec)
     return m_listening.empty();
 }
 
-void TCPTransport::EnableDiscovery(const char* namePrefix)
+void TCPTransport::EnableDiscovery(const char* namePrefix, TransportMask transports)
 {
     QCC_DbgPrintf(("TCPTransport::EnableDiscovery()"));
 
@@ -3666,29 +3669,27 @@ void TCPTransport::EnableDiscovery(const char* namePrefix)
         return;
     }
 
-    QueueEnableDiscovery(namePrefix);
+    QueueEnableDiscovery(namePrefix, transports);
 }
 
-void TCPTransport::QueueEnableDiscovery(const char* namePrefix)
+void TCPTransport::QueueEnableDiscovery(const char* namePrefix, TransportMask transports)
 {
     QCC_DbgPrintf(("TCPTransport::QueueEnableDiscovery()"));
 
     ListenRequest listenRequest;
     listenRequest.m_requestOp = ENABLE_DISCOVERY_INSTANCE;
     listenRequest.m_requestParam = namePrefix;
+    listenRequest.m_requestTransportMask = transports;
 
     m_listenRequestsLock.Lock(MUTEX_CONTEXT);
     /* Process the request */
     RunListenMachine(listenRequest);
     m_listenRequestsLock.Unlock(MUTEX_CONTEXT);
-
-
 }
 
-void TCPTransport::DisableDiscovery(const char* namePrefix)
+void TCPTransport::DisableDiscovery(const char* namePrefix, TransportMask transports)
 {
     QCC_DbgPrintf(("TCPTransport::DisableDiscovery()"));
-
     /*
      * We only want to allow this call to proceed if we have a running server
      * accept thread that isn't in the process of shutting down.  We use the
@@ -3707,16 +3708,16 @@ void TCPTransport::DisableDiscovery(const char* namePrefix)
         return;
     }
 
-    QueueDisableDiscovery(namePrefix);
+    QueueDisableDiscovery(namePrefix, transports);
 }
 
-void TCPTransport::QueueDisableDiscovery(const char* namePrefix)
+void TCPTransport::QueueDisableDiscovery(const char* namePrefix,  TransportMask transports)
 {
     QCC_DbgPrintf(("TCPTransport::QueueDisableDiscovery()"));
-
     ListenRequest listenRequest;
     listenRequest.m_requestOp = DISABLE_DISCOVERY_INSTANCE;
     listenRequest.m_requestParam = namePrefix;
+    listenRequest.m_requestTransportMask = transports;
 
     m_listenRequestsLock.Lock(MUTEX_CONTEXT);
     /* Process the request */
@@ -3725,7 +3726,7 @@ void TCPTransport::QueueDisableDiscovery(const char* namePrefix)
 
 }
 
-QStatus TCPTransport::EnableAdvertisement(const qcc::String& advertiseName, bool quietly)
+QStatus TCPTransport::EnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports)
 {
     QCC_DbgPrintf(("TCPTransport::EnableAdvertisement()"));
 
@@ -3747,12 +3748,12 @@ QStatus TCPTransport::EnableAdvertisement(const qcc::String& advertiseName, bool
         return ER_BUS_TRANSPORT_NOT_STARTED;
     }
 
-    QueueEnableAdvertisement(advertiseName, quietly);
+    QueueEnableAdvertisement(advertiseName, quietly, transports);
     return ER_OK;
 }
 
 
-void TCPTransport::QueueEnableAdvertisement(const qcc::String& advertiseName, bool quietly)
+void TCPTransport::QueueEnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports)
 {
     QCC_DbgPrintf(("TCPTransport::QueueEnableAdvertisement()"));
 
@@ -3760,6 +3761,7 @@ void TCPTransport::QueueEnableAdvertisement(const qcc::String& advertiseName, bo
     listenRequest.m_requestOp = ENABLE_ADVERTISEMENT_INSTANCE;
     listenRequest.m_requestParam = advertiseName;
     listenRequest.m_requestParamOpt = quietly;
+    listenRequest.m_requestTransportMask = transports;
 
     m_listenRequestsLock.Lock(MUTEX_CONTEXT);
     /* Process the request */
@@ -3767,7 +3769,7 @@ void TCPTransport::QueueEnableAdvertisement(const qcc::String& advertiseName, bo
     m_listenRequestsLock.Unlock(MUTEX_CONTEXT);
 }
 
-void TCPTransport::DisableAdvertisement(const qcc::String& advertiseName)
+void TCPTransport::DisableAdvertisement(const qcc::String& advertiseName, TransportMask transports)
 {
     QCC_DbgPrintf(("TCPTransport::DisableAdvertisement()"));
 
@@ -3789,16 +3791,17 @@ void TCPTransport::DisableAdvertisement(const qcc::String& advertiseName)
         return;
     }
 
-    QueueDisableAdvertisement(advertiseName);
+    QueueDisableAdvertisement(advertiseName, transports);
 }
 
-void TCPTransport::QueueDisableAdvertisement(const qcc::String& advertiseName)
+void TCPTransport::QueueDisableAdvertisement(const qcc::String& advertiseName, TransportMask transports)
 {
     QCC_DbgPrintf(("TCPTransport::QueueDisableAdvertisement()"));
 
     ListenRequest listenRequest;
     listenRequest.m_requestOp = DISABLE_ADVERTISEMENT_INSTANCE;
     listenRequest.m_requestParam = advertiseName;
+    listenRequest.m_requestTransportMask = transports;
 
     m_listenRequestsLock.Lock(MUTEX_CONTEXT);
     /* Process the request */

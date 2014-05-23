@@ -1,3 +1,7 @@
+/**
+ * @file
+ * Used to register an AnnounceHandler for the org.alljoyn.About Announce signal
+ */
 /******************************************************************************
  * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *

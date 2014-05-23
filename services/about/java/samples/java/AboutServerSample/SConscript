@@ -14,7 +14,7 @@
 
 Import('sample_env')
 
-classes = sample_env.Java(sample_env.Dir('./classes').srcnode(), 'src')
+classes = sample_env.Java(sample_env.Dir('./classes').srcnode(), 'src', JAVAVERSION='1.6')
 sample_env.Depends(classes, sample_env['dep_jars'])
 classes.append('MANIFEST.MF') 
 

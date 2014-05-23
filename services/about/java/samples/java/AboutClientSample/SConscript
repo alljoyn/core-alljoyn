@@ -1,4 +1,4 @@
-# Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -16,8 +16,12 @@ Import('sample_env')
 
 classes = sample_env.Java(sample_env.Dir('./classes').srcnode(), 'src')
 sample_env.Depends(classes, sample_env['dep_jars'])
-classes.append('MANIFEST.MF') 
+# scons does not have support for Java 7 yet.  When building with Java 7 an
+# additional class is generated that scons is unaware of. So we apply a work around
+# to clean the class and to make sure the class is included in the resulting jar
+# file
+sample_env.Clean(classes, sample_env.Dir('./classes').srcnode())
 
-jar = sample_env.Jar(target = 'about_client_sample', source = classes)
+jar = sample_env.Jar(target = 'about_client_sample', source = [sample_env.Dir('./classes').srcnode(), 'MANIFEST.MF'], JARCHDIR='$SOURCE')
 
 Return('jar')

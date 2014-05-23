@@ -38,6 +38,7 @@
 #include <qcc/STLContainer.h>
 #include <qcc/platform.h>
 #include <qcc/StringMapKey.h>
+#include <qcc/Thread.h>
 
 #include <alljoyn/TransportMask.h>
 
@@ -69,6 +70,18 @@ namespace ajn {
  */
 class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
   public:
+    class PacketScheduler : public qcc::Thread {
+      public:
+        PacketScheduler(IpNameServiceImpl& impl, uint32_t retries) : m_impl(impl), m_retries(retries) { };
+        virtual qcc::ThreadReturn STDCALL Run(void* arg);
+      private:
+        IpNameServiceImpl& m_impl;
+        uint32_t m_retries;
+    };
+    static const TransportMask TRANSPORT_FIRST_OF_PAIR = TRANSPORT_TCP;
+    static const TransportMask TRANSPORT_SECOND_OF_PAIR = TRANSPORT_UDP;
+    uint32_t TRANSPORT_INDEX_TCP;
+    uint32_t TRANSPORT_INDEX_UDP;
 
     /**
      * @brief The property value used to specify the wildcard interface name.
@@ -564,7 +577,36 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      *
      * @return Status of the operation.  Returns ER_OK on success.
      */
-    QStatus FindAdvertisement(TransportMask transportMask, const qcc::String& matching, LocatePolicy policy = ALWAYS_RETRY);
+    QStatus FindAdvertisement(TransportMask transportMask, const qcc::String& matching, LocatePolicy policy, TransportMask completeTransportMask);
+
+    /**
+     * @brief Cancel an interest in locating instances of AllJoyn daemons
+     * which support the provided well-known name.
+     *
+     * If an AllJoyn daemon wants to cancel an interest in locating instances
+     * of AllJoyn daemons which support the provided well-known name
+     * it calls this function.
+     *
+     * @param[in] transportMask A bitmask containing the transport
+     * @param[in] matching The Key, value match criteria that the caller wants
+     *     no longer be notified of (via signal) when a remote Bus instance is
+     *     found with an advertisement that matches the criteria.
+     * @param[in] policy The retransmission policy for the Locate event
+     *     to be cancelled.
+     *
+     * @return Status of the operation.  Returns ER_OK on success.
+     */
+    QStatus CancelFindAdvertisement(TransportMask transportMask, const qcc::String& matching, LocatePolicy policy, TransportMask completeTransportMask);
+
+    /**
+     * @brief Refresh the cache of names that we have seen and maintain the
+     * updated state of PeerInfoMap
+     * @param[in] guid Guid for which Cache refresh has been initiated
+     * @param[in] matchingStr The name for which we are sending the cache refresh
+     * @param[in] policy Policy for refresh
+     */
+
+    QStatus RefreshCache(TransportMask transportMask, const qcc::String& guid, const qcc::String& matchingStr, LocatePolicy policy = ALWAYS_RETRY);
 
     /**
      * @brief Set the Callback for notification of discovery events.
@@ -674,7 +716,7 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      *
      * @return Status of the operation.  Returns ER_OK on success.
      */
-    QStatus AdvertiseName(TransportMask transportMask, const qcc::String& wkn, bool quietly);
+    QStatus AdvertiseName(TransportMask transportMask, const qcc::String& wkn, bool quietly, TransportMask completeTransportMask);
 
     /**
      * @brief Cancel an AllJoyn daemon service advertisement.
@@ -686,7 +728,7 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      *
      * @return Status of the operation.  Returns ER_OK on success.
      */
-    QStatus CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn);
+    QStatus CancelAdvertiseName(TransportMask transportMask, const qcc::String& wkn, TransportMask completeTransportMask);
 
     /**
      * @internal
@@ -709,7 +751,7 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      *
      * @return Status of the operation.  Returns ER_OK on success.
      */
-    QStatus AdvertiseName(TransportMask transportMask, std::vector<qcc::String>& wkn, bool quietly);
+    QStatus AdvertiseName(TransportMask transportMask, std::vector<qcc::String>& wkn, bool quietly, TransportMask completeTransportMask);
 
     /**
      * @brief Cancel an AllJoyn daemon service advertisement.
@@ -723,7 +765,7 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      *
      * @return Status of the operation.  Returns ER_OK on success.
      */
-    QStatus CancelAdvertiseName(TransportMask transportMask, std::vector<qcc::String>& wkn);
+    QStatus CancelAdvertiseName(TransportMask transportMask, std::vector<qcc::String>& wkn, TransportMask completeTransportMask);
 
     /**
      * @brief Returns a count of the number of names currently being advertised
@@ -753,7 +795,23 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
 
     QStatus Query(TransportMask transportMask, MDNSPacket mdnsPacket);
 
-    QStatus Response(TransportMask transportMask, MDNSPacket mdnsPacket);
+    QStatus Response(TransportMask transportMask, uint32_t ttl, MDNSPacket mdnsPacket);
+
+    /**
+     * @internal
+     * @brief Update the AddToPeerInfoMap
+     *
+     */
+    bool AddToPeerInfoMap(const qcc::String& guid, const qcc::IPEndpoint& ipv4, const qcc::IPEndpoint& ipv6, uint32_t ttl);
+
+    /**
+     * @internal
+     * @brief Remove an entry from the PeerInfoMap
+     *        This will be useful during a cache refresh expiry for a guid
+     *
+     */
+    bool RemoveFromPeerInfoMap(const qcc::String& guid);
+
 
   private:
     /**
@@ -1113,21 +1171,6 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
     bool UpdateMDNSPacketTracker(qcc::String guid, uint16_t burstId);
 
     /**
-     * @internal
-     * @brief Update the AddToPeerInfoMap
-     *
-     */
-    bool AddToPeerInfoMap(const qcc::String& guid, const qcc::IPEndpoint& ipv4, const qcc::IPEndpoint& ipv6);
-
-    /**
-     * @internal
-     * @brief Remove an entry from the PeerInfoMap
-     *        This will be useful during a cache refresh expiry for a guid
-     *
-     */
-    bool RemoveFromPeerInfoMap(const qcc::String& guid);
-
-    /**
      * One possible callback for each of the corresponding transport masks in a
      * sixteen-bit word.
      */
@@ -1137,13 +1180,25 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * @internal @brief A vector of list of all of the names that the various
      * transports have actively advertised.
      */
-    std::list<qcc::String> m_advertised[N_TRANSPORTS];
+    std::set<qcc::String> m_advertised[N_TRANSPORTS];
+
+    /**
+     * @internal @brief A vector of set of all of the v2 match strings that the various
+     * transports have active queries for.
+     */
+    std::set<qcc::String> m_v2_queries[N_TRANSPORTS];
+
+    /**
+     * @internal @brief A vector of set of all of the v1 names that the various
+     * transports have active queries for.
+     */
+    std::set<qcc::String> m_v0_v1_queries[N_TRANSPORTS];
 
     /**
      * @internal @brief A vector of list of all of the names that the various
      * transports have quietly advertised.
      */
-    std::list<qcc::String> m_advertised_quietly[N_TRANSPORTS];
+    std::set<qcc::String> m_advertised_quietly[N_TRANSPORTS];
 
     /**
      * @internal
@@ -1257,8 +1312,11 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * @internal
      * @brief Retransmit exported advertisements.
      */
-    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type);
+    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask transportMask);
 
+    void GetResponsePackets(std::list<Packet>& packets, bool quietly = false, const qcc::IPEndpoint destination = qcc::IPEndpoint("0.0.0.0", 0), uint8_t type = TRANSMIT_V2, TransportMask transportMask = (TRANSPORT_TCP | TRANSPORT_UDP));
+
+    void GetQueryPackets(std::list<Packet>& packets);
     /**
      * @internal
      * @brief Retry locate requests.
@@ -1384,7 +1442,6 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
     /**
      * @internal
      * @brief Count the number of bits that are sent in the provided integer.
-     *
      * Methods to count the number of set bits in a data word are used to in the
      * process of calculating the Hamming Distance between two binary strings.
      * We use this "population count" function to count the numbr of set bits in
@@ -1500,11 +1557,15 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
         qcc::IPEndpoint unicastIPV4Info;
         qcc::IPEndpoint unicastIPV6Info;
         uint64_t timestamp;
-        PeerInfo(const qcc::IPEndpoint& ipv4, const qcc::IPEndpoint& ipv6) :
-            unicastIPV4Info(ipv4), unicastIPV6Info(ipv6), timestamp(qcc::GetTimestamp64()) { }
+        qcc::Alarm alarm;
+        PeerInfo(const qcc::IPEndpoint& ipv4, const qcc::IPEndpoint& ipv6, uint64_t ttl, qcc::AlarmListener* listener) :
+            unicastIPV4Info(ipv4),
+            unicastIPV6Info(ipv6),
+            timestamp(qcc::GetTimestamp64()),
+            alarm(ttl, listener) { }
     };
 
-    std::unordered_map<qcc::String, PeerInfo, Hash, Equal> m_peerInfoMap;
+    std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal> m_peerInfoMap;
     void PrintPeerInfoMap();
 
     class BurstExpiryHandler;
@@ -1513,12 +1574,14 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
     bool HandleSearchQuery(TransportMask transport, MDNSPacket mdnsPacket, uint16_t recvPort,
                            const qcc::String& guid, const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6);
 
-    bool HandleAdvertiseResponse(TransportMask transport, MDNSPacket mdnsPacket, uint16_t recvPort, uint32_t ttl,
+    bool HandleAdvertiseResponse(MDNSPacket mdnsPacket, uint16_t recvPort,
                                  const qcc::String& guid, const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6,
-                                 const qcc::IPEndpoint& r4, const qcc::IPEndpoint& r6);
-
+                                 const qcc::IPEndpoint& r4, const qcc::IPEndpoint& r6, const qcc::IPEndpoint& u4, const qcc::IPEndpoint& u6);
+    std::set<qcc::String> GetAdvertising(TransportMask transport);
+    std::set<qcc::String> GetAdvertisingQuietly(TransportMask transport);
     std::list<IpNameServiceListener*> m_listeners;
     bool m_protectListeners;
+    PacketScheduler m_packetScheduler;
 };
 
 } // namespace ajn

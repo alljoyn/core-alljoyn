@@ -107,7 +107,6 @@ public class AboutClientImpl extends ClientBaseImpl implements AboutClient
     @Override
     public Status connect() {
         AboutServiceImpl service = (AboutServiceImpl)AboutServiceImpl.getInstance();
-        service.getLogger().debug(TAG, "JoiningSession with peer: '" + getPeerName() + "'");
         return super.connect();
     }//connect
 }

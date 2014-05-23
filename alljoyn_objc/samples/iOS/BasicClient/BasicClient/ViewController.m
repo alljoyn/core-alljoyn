@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2012,2014 AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -43,6 +43,12 @@
     self.basicClient.delegate = self;
     [self.basicClient sendHelloMessage];
 }
+
+- (IBAction)didTouchCheckPresenceButton:(id)sender {
+    [self.basicClient sendPing];
+}
+
+
 
 - (void)didReceiveStatusUpdateMessage:(NSString *)message
 {

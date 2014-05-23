@@ -232,7 +232,7 @@ class Transport {
      *
      * @param namePrefix    Well-known name prefix.
      */
-    virtual void EnableDiscovery(const char* namePrefix) { }
+    virtual void EnableDiscovery(const char* namePrefix, TransportMask transportmask) { }
 
     /**
      * Stop discovering remotely advertised names that match prefix.
@@ -240,7 +240,7 @@ class Transport {
      * @param namePrefix    Well-known name prefix.
      *
      */
-    virtual void DisableDiscovery(const char* namePrefix) { }
+    virtual void DisableDiscovery(const char* namePrefix, TransportMask transportmask) { }
 
     /**
      * Start advertising a well-known name
@@ -249,14 +249,14 @@ class Transport {
      * @param quietly         Advertise the name quietly
      * @return  ER_NOT_IMPLEMENTED unless overridden by a derived class.
      */
-    virtual QStatus EnableAdvertisement(const qcc::String& advertiseName, bool quietly) { return ER_NOT_IMPLEMENTED; }
+    virtual QStatus EnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports) { return ER_NOT_IMPLEMENTED; }
 
     /**
      * Stop advertising a well-known name with a given quality of service.
      *
      * @param advertiseName   Well-known name to remove from list of advertised names.
      */
-    virtual void DisableAdvertisement(const qcc::String& advertiseName) { }
+    virtual void DisableAdvertisement(const qcc::String& advertiseName, TransportMask transports) { }
 
     /**
      * Returns the name of the transport

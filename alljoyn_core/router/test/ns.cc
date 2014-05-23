@@ -349,7 +349,7 @@ int main(int argc, char** argv)
         // Enable discovery on all of the test names in one go.
         //
         printf("FindAdvertisement org.randomteststring.*\n");
-        status = ns.FindAdvertisement(TRANSPORT_TCP, "name='org.randomteststring.*'");
+        status = ns.FindAdvertisement(TRANSPORT_TCP, "name='org.randomteststring.*'", IpNameServiceImpl::ALWAYS_RETRY, TRANSPORT_TCP);
         if (status != ER_OK) {
             QCC_LogError(status, ("FindAdvertisedName failed"));
             ERROR_EXIT;
@@ -362,7 +362,7 @@ int main(int argc, char** argv)
             printf("FindAdvertisement %s\n", g_names[i]);
 
             qcc::String matching = qcc::String("name='") + g_names[i] + "'";
-            status = ns.FindAdvertisement(TRANSPORT_TCP, matching);
+            status = ns.FindAdvertisement(TRANSPORT_TCP, matching, IpNameServiceImpl::ALWAYS_RETRY, TRANSPORT_TCP);
             if (status != ER_OK) {
                 QCC_LogError(status, ("FindAdvertisedName failed"));
                 ERROR_EXIT;
@@ -373,7 +373,7 @@ int main(int argc, char** argv)
     if (longnames) {
         for (uint32_t i = 0; i < g_numberLongnames; ++i) {
             char const* wkn = g_longnames[i];
-            status = ns.AdvertiseName(TRANSPORT_TCP, wkn, false);
+            status = ns.AdvertiseName(TRANSPORT_TCP, wkn, false, TRANSPORT_TCP);
             printf("Advertised %s\n", wkn);
         }
     }
@@ -395,7 +395,7 @@ int main(int argc, char** argv)
             uint32_t nameIndex = rand() % g_numberNames;
             char const* wkn = g_names[nameIndex];
 
-            status = ns.AdvertiseName(TRANSPORT_TCP, wkn, false);
+            status = ns.AdvertiseName(TRANSPORT_TCP, wkn, false, TRANSPORT_TCP);
             printf("Advertised %s\n", wkn);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Advertise failed"));
@@ -405,7 +405,7 @@ int main(int argc, char** argv)
             nameIndex = rand() % g_numberNames;
             wkn = g_names[nameIndex];
 
-            status = ns.CancelAdvertiseName(TRANSPORT_TCP, wkn);
+            status = ns.CancelAdvertiseName(TRANSPORT_TCP, wkn, TRANSPORT_TCP);
             printf("Cancelled %s\n", wkn);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Cancel failed"));
