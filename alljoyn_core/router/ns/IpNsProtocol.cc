@@ -3116,12 +3116,13 @@ size_t MDNSHeader::GetSerializedSize(void) const
 }
 
 //MDNSPacket
-_MDNSPacket::~_MDNSPacket() {
+_MDNSPacket::_MDNSPacket() {
     m_questions.reserve(MIN_RESERVE);
     m_answers.reserve(MIN_RESERVE);
     m_authority.reserve(MIN_RESERVE);
     m_additional.reserve(MIN_RESERVE);
 }
+
 void _MDNSPacket::Clear()
 {
     m_questions.clear();

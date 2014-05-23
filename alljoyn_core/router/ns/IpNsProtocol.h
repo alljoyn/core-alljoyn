@@ -3907,13 +3907,13 @@ class MDNSHeader : public ProtocolElement {
  */
 class _MDNSPacket : public _Packet {
   public:
-    ~_MDNSPacket();
+    _MDNSPacket();
+
     /**
      * @internal
      * @brief Clear the internal state of this MDNSPacket.
      */
     void Clear();
-
 
     /**
      * @internal
