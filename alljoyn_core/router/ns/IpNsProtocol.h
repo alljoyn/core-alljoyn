@@ -3229,22 +3229,7 @@ class MDNSSenderRData : public MDNSTextRData {
      * @brief Construct an in-memory object representation of an on-the-wire
      * MDNS Reference RData.
      */
-    MDNSSenderRData(uint16_t version = MDNSTextRData::TXTVERS) : MDNSTextRData(version) { }
-
-    /**
-     * @internal
-     * @brief Construct an in-memory object representation of an on-the-wire
-     * MDNS Reference RData.
-     * @param searchId		The search instance ID.
-     * @param protocolVersion	The protocol version of this NS.
-     * @param ipv4Addr		The IPv4Address filled in case MDNS queries.
-     * @param ipv4Port		The unicast IPV4 port that the NS is listening on.
-     * @param ipv6Addr		The IPv6Address filled in case MDNS queries.
-     * @param ipv6Port		The unicast IPV6 port that the NS is listening on.
-     * @param transportMask	The transport mask.
-     * @param guid		The GUID of the NS Router.
-     */
-    MDNSSenderRData(uint16_t searchId, qcc::String ipv4Addr, uint16_t ipv4Port, qcc::String ipv6Addr, uint16_t ipv6Port, TransportMask transportMask, qcc::String guid, uint16_t version = MDNSTextRData::TXTVERS);
+    MDNSSenderRData(uint16_t version = MDNSTextRData::TXTVERS);
 
     /**
      * @internal
