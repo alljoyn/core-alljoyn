@@ -23,7 +23,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Vector;
 
 import org.alljoyn.about.client.AboutClient;
 import org.alljoyn.about.client.AboutClientImpl;
@@ -60,7 +59,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     private static final String ANNOUNCE_MATCH_RULE = "type='signal',sessionless='t',interface='" + ANNOUNCE_IFNAME + "'";
 
     private static AboutServiceImpl m_instance      = new AboutServiceImpl();
-    private Vector<AnnouncementHandler> m_announcementHandlers;
+    private final Map<AnnouncementHandler, List <Set<String> > > m_announcementHandlers;
     private BusListener m_busListeners;
 
     private AnnouncmentReceiver m_announcmentReceiver;
@@ -73,7 +72,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     private Announcer m_announcer;
 
     private AboutTransport m_announcementEmitter;
-    private Set<BusObjectDescription> m_ObjectDescriptions = new HashSet<BusObjectDescription>();
+    private final Set<BusObjectDescription> m_ObjectDescriptions = new HashSet<BusObjectDescription>();
 
     private short m_servicesPort;
 
@@ -100,10 +99,10 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     {
         super();
         TAG = "ioe" + AboutServiceImpl.class.getSimpleName();
-        m_announcementHandlers = new Vector<AnnouncementHandler>();
+        m_announcementHandlers = new HashMap<AnnouncementHandler, List <Set<String> > >(); //Vector<AnnouncementHandler>();
     }
 
-    //	======================
+    // ======================
     /********* Client *********/
 
     /**
@@ -122,26 +121,44 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
      * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler)
      */
     @Override
-    public void addAnnouncementHandler(AnnouncementHandler handler)
+    public synchronized void addAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)
     {
         if ( handler == null ) {
             throw new IllegalArgumentException("The AnnouncementHandler can't be null");
         }
 
-        m_announcementHandlers.add(handler);
+        List<Set<String>> interfacelist = m_announcementHandlers.get(handler);
+        if (interfacelist == null)
+            m_announcementHandlers.put(handler, interfacelist= new ArrayList<Set<String>>());
+        if (interfaces == null) {
+            interfacelist.add(new HashSet<String>());
+        } else {
+            interfacelist.add(new HashSet<String>(Arrays.asList(interfaces)));
+        }
     }
 
     /**
      * @see org.alljoyn.about.AboutService#removeAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler)
      */
     @Override
-    public void removeAnnouncementHandler(AnnouncementHandler handler)
+    public synchronized void removeAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)
     {
         if ( handler == null ) {
             throw new IllegalArgumentException("The AnnouncementHandler can't be null");
         }
 
-        m_announcementHandlers.remove(handler);
+        List< Set<String> > interfacelist = m_announcementHandlers.get(handler);
+        Set<String> toRemoveIntfs;
+        if(interfaces == null) {
+            toRemoveIntfs = new HashSet<String>();
+        } else {
+            toRemoveIntfs = new HashSet<String>(Arrays.asList(interfaces));
+        }
+        interfacelist.remove(toRemoveIntfs);
+
+        if (interfacelist.isEmpty() ) {
+            m_announcementHandlers.remove(handler);
+        }
     }
 
     /**
@@ -158,11 +175,13 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
                 // Do nothing. devices are discovered by Announcements
             }
 
+            @Override
             public void nameOwnerChanged(String busName, String previousOwner, String newOwner)
             {
                 getLogger().debug(TAG,String.format("MyBusListener.nameOwnerChanged(%s, %s, %s)", busName, previousOwner, newOwner));
             }
 
+            @Override
             public void lostAdvertisedName(String name, short transport, String namePrefix)
             {
                 getBus().enableConcurrentCallbacks();
@@ -170,8 +189,10 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
                 getLogger().debug(TAG, String.format("MyBusListener.lostAdvertisedName(%s, 0x%04x, %s)", name, transport, namePrefix));
                 for (int i = 0; i < m_announcementHandlers.size(); i++)
                 {
-                    AnnouncementHandler current = m_announcementHandlers.elementAt(i);
-                    current.onDeviceLost(name);
+                    for(Map.Entry<AnnouncementHandler, List< Set<String> > > entry : m_announcementHandlers.entrySet()) {
+                        AnnouncementHandler current = entry.getKey();
+                        current.onDeviceLost(name);
+                    }
                 }
             }
         };
@@ -234,12 +255,31 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
             String sender = bus.getMessageContext().sender;
 
-            for (int i = 0; i < m_announcementHandlers.size(); i++)
-            {
-                AnnouncementHandler current = m_announcementHandlers.elementAt(i);
-                current.onAnnouncement(sender, port, objectDescriptions, aboutData);
+            Set<String> interfacesFromObjectDescription = new HashSet<String>();
+            for(BusObjectDescription bod :objectDescriptions) {
+                interfacesFromObjectDescription.addAll(Arrays.asList(bod.interfaces));
             }
+            List<AnnouncementHandler> announcementsToCall = new ArrayList();
+            synchronized(this) {
+                for(Map.Entry<AnnouncementHandler, List< Set<String> > > entry : m_announcementHandlers.entrySet()) {
+                    AnnouncementHandler current = entry.getKey();
+                    List< Set<String> > interfaceList = entry.getValue();
 
+                    for(Set<String> interfaceEntry: interfaceList) {
+                        if (interfaceEntry.isEmpty()) {
+                            announcementsToCall.add(current);
+                        } else {
+                            //check to see if interface entry is found in the ObjectDescriptions
+                            if (interfacesFromObjectDescription.containsAll(interfaceEntry)) {
+                                announcementsToCall.add(current);
+                            }
+                        }
+                    }
+                }
+            }
+            for (AnnouncementHandler caller : announcementsToCall) {
+                caller.onAnnouncement(sender, port, objectDescriptions, aboutData);
+            }
         }//Announce
 
         /**
@@ -285,7 +325,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
                 bus.unregisterBusListener(m_busListeners);
             }
 
-            m_announcementHandlers.removeAllElements();
+            m_announcementHandlers.clear();
             m_announcmentReceiver = null;
             m_busListeners        = null;
         }
@@ -714,10 +754,11 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
         @Override
         public int getSize() throws BusException {
-            if(m_iconContent != null)
+            if(m_iconContent != null) {
                 return m_iconContent.length;
-            else
+            } else {
                 return 0;
+            }
         }
 
         @Override
