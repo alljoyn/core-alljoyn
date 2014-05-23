@@ -1459,7 +1459,7 @@ public class BusAttachmentTest extends TestCase {
         public void sessionJoined(short sessionPort, int id, String joiner) {
                 sessionJoinedFlag = true;
                 bus.setSessionListener(id,  new SessionListener() {
-                    public void sessionLost(final int sessionId) {
+                    public void sessionLost(final int sessionId, int reason) {
                         sessionLostFlagA = true;
                     }
                     public void sessionMemberAdded(int sessionId, String uniqueName) {
@@ -1474,7 +1474,7 @@ public class BusAttachmentTest extends TestCase {
     }
 
     public class RemoveSessionMemberSessionListener extends SessionListener {
-            public void sessionLost(final int sessionId) {
+            public void sessionLost(final int sessionId, int reason) {
                 sessionLostFlagB = true;
             }
             public void sessionMemberAdded(int sessionId, String uniqueName) {

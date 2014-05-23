@@ -46,13 +46,12 @@ static QStatus GenerateCertificateType1(bool selfSign, bool regenKeys, uint32_t 
                                         ECCPrivateKey* dsaPrivateKey, ECCPublicKey* dsaPublicKey, ECCPrivateKey* subjectPrivateKey, ECCPublicKey* subjectPublicKey)
 {
     Crypto_ECC ecc;
-    QStatus status;
 
     if (regenKeys) {
-        status = ecc.GenerateDSAKeyPair();
+        ecc.GenerateDSAKeyPair();
         memcpy(dsaPrivateKey, ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey));
         memcpy(dsaPublicKey, ecc.GetDSAPublicKey(), sizeof(ECCPublicKey));
-        status = ecc.GenerateDSAKeyPair();
+        ecc.GenerateDSAKeyPair();
         memcpy(subjectPrivateKey, ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey));
         memcpy(subjectPublicKey, ecc.GetDSAPublicKey(), sizeof(ECCPublicKey));
     }
@@ -100,13 +99,12 @@ static QStatus GenerateCertificateType2(bool selfSign, bool regenKeys, uint32_t 
                                         ECCPrivateKey* dsaPrivateKey, ECCPublicKey* dsaPublicKey, ECCPrivateKey* subjectPrivateKey, ECCPublicKey* subjectPublicKey)
 {
     Crypto_ECC ecc;
-    QStatus status;
 
     if (regenKeys) {
-        status = ecc.GenerateDSAKeyPair();
+        ecc.GenerateDSAKeyPair();
         memcpy(dsaPrivateKey, ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey));
         memcpy(dsaPublicKey, ecc.GetDSAPublicKey(), sizeof(ECCPublicKey));
-        status = ecc.GenerateDSAKeyPair();
+        ecc.GenerateDSAKeyPair();
         memcpy(subjectPrivateKey, ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey));
         memcpy(subjectPublicKey, ecc.GetDSAPublicKey(), sizeof(ECCPublicKey));
     }
@@ -618,7 +616,7 @@ TEST_F(CertificateECCTest, GenerateCertChain)
     size_t count = 0;
     status = CertECCUtil_GetCertCount(encoded, &count);
     ASSERT_EQ(ER_OK, status) << " CertECCUtil_GetCertCount failed with actual status: " << QCC_StatusText(status);
-    ASSERT_EQ(count, 2) << " CertECCUtil_GetCertCount failed to count certs: ";
+    ASSERT_EQ(2U, count) << " CertECCUtil_GetCertCount failed to count certs: ";
 
     cout << "Calling CertECCUtil_GetCertChain" << endl;
     CertificateECC** certChain = new CertificateECC * [count];

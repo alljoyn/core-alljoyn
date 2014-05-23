@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -23,6 +23,7 @@
 #include <qcc/platform.h>
 
 #include <dirent.h>
+#include <grp.h>
 #include <pwd.h>
 #include <string.h>
 #include <sys/types.h>
@@ -74,9 +75,9 @@ uint32_t qcc::GetUsersGid(const char* name)
 {
     uint32_t gid = -1;
     if (name) {
-        struct passwd* pwent = getpwnam(name);
-        if (pwent) {
-            gid = pwent->pw_gid;
+        struct group* grent = getgrnam(name);
+        if (grent) {
+            gid = grent->gr_gid;
         }
     }
     return gid;

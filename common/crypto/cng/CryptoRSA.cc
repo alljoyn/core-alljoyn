@@ -464,7 +464,6 @@ ExitDecryptPriv:
 
 QStatus Crypto_RSA::ImportPKCS8(const qcc::String& pkcs8, const qcc::String& passphrase)
 {
-    NTSTATUS ntStatus;
     QStatus status = ER_CRYPTO_ERROR;
     qcc::String ivec;
     qcc::String str = pkcs8;

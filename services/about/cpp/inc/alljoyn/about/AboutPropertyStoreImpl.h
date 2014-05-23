@@ -127,9 +127,8 @@ class AboutPropertyStoreImpl : public PropertyStore {
      * @param[out] isAnnouncable
      * @return QStatus.
      */
-    QCC_DEPRECATED(QStatus setDeviceName(qcc::String const & deviceName, bool isPublic = true, bool isWritable = true, bool isAnnouncable = true)) {
-        return setDeviceName(deviceName, "", isPublic, isWritable, isAnnouncable);
-    }
+    QCC_DEPRECATED(QStatus setDeviceName(qcc::String const & deviceName, bool isPublic = true, bool isWritable = true, bool isAnnouncable = true));
+
     /**
      * setDeviceName
      * @param[out] deviceName
@@ -140,6 +139,18 @@ class AboutPropertyStoreImpl : public PropertyStore {
      * @return QStatus.
      */
     QStatus setDeviceName(qcc::String const& deviceName, qcc::String const& language, bool isPublic = true, bool isWritable = true, bool isAnnouncable = true);
+
+    /**
+     * setDeviceName
+     * @param[out] deviceName
+     * @param[out] language
+     * @param[out] isPublic
+     * @param[out] isWritable
+     * @param[out] isAnnouncable
+     * @return QStatus.
+     */
+    QStatus setDeviceName(qcc::String const& deviceName, const char* language, bool isPublic = true, bool isWritable = true, bool isAnnouncable = true);
+
     /**
      * setAppId
      * @param[out] appId

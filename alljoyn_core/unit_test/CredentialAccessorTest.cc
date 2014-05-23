@@ -143,7 +143,7 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
     status = ca.GetKeys(peerGuid, &customGuidList, &numGuids);
     ASSERT_EQ(ER_OK, status) << " ca.GetKeys failed with actual status: " << QCC_StatusText(status);
 
-    ASSERT_EQ(2, numGuids) << " ca.GetKeys expected to return 2 guids";
+    ASSERT_EQ(2U, numGuids) << " ca.GetKeys expected to return 2 guids";
 
     for (size_t cnt = 0; cnt < numGuids; cnt++) {
         cout << "Custom GUID: " << customGuidList[cnt].ToString().c_str()  << endl;
@@ -170,7 +170,7 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
     status = ca.GetKeys(peerGuid, &customGuidList, &numGuids);
     ASSERT_EQ(ER_OK, status) << " ca.GetKeys failed with actual status: " << QCC_StatusText(status);
 
-    ASSERT_EQ(1, numGuids) << " ca.GetKeys expected to return 1 guid";
+    ASSERT_EQ(1U, numGuids) << " ca.GetKeys expected to return 1 guid";
 
     for (size_t cnt = 0; cnt < numGuids; cnt++) {
         cout << "Custom GUID: " << customGuidList[cnt].ToString().c_str()  << endl;
@@ -405,7 +405,7 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
     status = ca.GetKeys(peerGuid, &customGuidList, &numGuids);
     ASSERT_EQ(ER_OK, status) << " ca.GetKeys failed with actual status: " << QCC_StatusText(status);
 
-    ASSERT_EQ(2, numGuids) << " ca.GetKeys expected to return 2 guids";
+    ASSERT_EQ(2U, numGuids) << " ca.GetKeys expected to return 2 guids";
 
     for (size_t cnt = 0; cnt < numGuids; cnt++) {
         cout << "Custom GUID: " << customGuidList[cnt].ToString().c_str()  << endl;
@@ -425,7 +425,7 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
     status = ca.GetKeys(customGuid2, &customGuidList, &numGuids);
     ASSERT_EQ(ER_OK, status) << " ca.GetKeys for customGuid2 failed with actual status: " << QCC_StatusText(status);
 
-    ASSERT_EQ(1, numGuids) << " ca.GetKeys expected to return 1 guids";
+    ASSERT_EQ(1U, numGuids) << " ca.GetKeys expected to return 1 guids";
 
     for (size_t cnt = 0; cnt < numGuids; cnt++) {
         cout << "Custom GUID: " << customGuidList[cnt].ToString().c_str()  << endl;
@@ -452,7 +452,7 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
     status = ca.GetKeys(peerGuid, &customGuidList, &numGuids);
     ASSERT_EQ(ER_OK, status) << " ca.GetKeys failed with actual status: " << QCC_StatusText(status);
 
-    ASSERT_EQ(1, numGuids) << " ca.GetKeys expected to return 1 guid";
+    ASSERT_EQ(1U, numGuids) << " ca.GetKeys expected to return 1 guid";
 
     for (size_t cnt = 0; cnt < numGuids; cnt++) {
         cout << "Custom GUID: " << customGuidList[cnt].ToString().c_str()  << endl;

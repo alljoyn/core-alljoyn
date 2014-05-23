@@ -481,7 +481,7 @@ exit:
     return result;
 }
 
-int daemon(OptParse& opts) {
+int daemon(OptParse& opts, bool forked) {
     struct sigaction act, oldact;
     sigset_t sigmask, waitmask;
     uint32_t pid(GetPid());
@@ -624,6 +624,20 @@ int daemon(OptParse& opts) {
                 size_t sent;
                 pidfile.PushBytes(pidStr.c_str(), pidStr.size(), sent);
             }
+        }
+    }
+
+    if (forked) {
+        /*
+         * We forked and are running as a daemon, so close STDIN, STDOUT, and
+         * STDERR as appropriate.
+         */
+        close(STDIN_FILENO);
+        if (LoggerSetting::GetLoggerSetting()->GetFile() != stdout) {
+            close(STDOUT_FILENO);
+        }
+        if (LoggerSetting::GetLoggerSetting()->GetFile() != stderr) {
+            close(STDERR_FILENO);
         }
     }
 
@@ -772,6 +786,7 @@ int main(int argc, char** argv, char** env)
 
     Log(LOG_INFO, "Running with effective userid %d\n", geteuid());
 
+    bool forked = false;
     if (opts.GetFork() || (config.GetFork() && !opts.GetNoFork())) {
         Log(LOG_DEBUG, "Forking into daemon mode...\n");
         pid_t pid = fork();
@@ -788,10 +803,12 @@ int main(int argc, char** argv, char** env)
                 Log(LOG_ERR, "Failed to set session ID: %s\n", strerror(errno));
                 return DAEMON_EXIT_SESSION_ERROR;
             }
+            chdir("/tmp");
+            forked = true;
         }
     }
 
-    int ret = daemon(opts);
+    int ret = daemon(opts, forked);
 
     return ret;
 }

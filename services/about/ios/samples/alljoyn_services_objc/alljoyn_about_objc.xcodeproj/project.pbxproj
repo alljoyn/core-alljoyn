@@ -7,6 +7,21 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7D3DCAE8192BFBAC0015A009 /* liballjoyn_about_objc.a in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AA935E91854BC2B00378361 /* liballjoyn_about_objc.a */; };
+		7D43EA6C192C30E6001C75BB /* AJNAnnounceHandlerAdapter.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9ADE4C2818A776C900742C05 /* AJNAnnounceHandlerAdapter.h */; };
+		7D43EA6D192C30E6001C75BB /* AJNAboutClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004318A38FB70007C679 /* AJNAboutClient.h */; };
+		7D43EA6E192C30E6001C75BB /* AJNAboutDataConverter.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004418A38FB70007C679 /* AJNAboutDataConverter.h */; };
+		7D43EA6F192C30E6001C75BB /* AJNAboutIconClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004518A38FB70007C679 /* AJNAboutIconClient.h */; };
+		7D43EA70192C30E6001C75BB /* AJNAboutIconService.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004618A38FB70007C679 /* AJNAboutIconService.h */; };
+		7D43EA71192C30E6001C75BB /* AJNAboutPropertyStoreImpl.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004718A38FB70007C679 /* AJNAboutPropertyStoreImpl.h */; };
+		7D43EA72192C30E6001C75BB /* AJNAboutService.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004818A38FB70007C679 /* AJNAboutService.h */; };
+		7D43EA73192C30E6001C75BB /* AJNAboutServiceApi.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004918A38FB70007C679 /* AJNAboutServiceApi.h */; };
+		7D43EA74192C30E6001C75BB /* AJNAnnouncement.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004A18A38FB70007C679 /* AJNAnnouncement.h */; };
+		7D43EA75192C30E6001C75BB /* AJNAnnouncementListener.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004B18A38FB70007C679 /* AJNAnnouncementListener.h */; };
+		7D43EA76192C30E6001C75BB /* AJNAnnouncementReceiver.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004C18A38FB70007C679 /* AJNAnnouncementReceiver.h */; };
+		7D43EA77192C30E6001C75BB /* AJNConvertUtil.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004D18A38FB70007C679 /* AJNConvertUtil.h */; };
+		7D43EA78192C30E6001C75BB /* AJNPropertyStore.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3004F18A38FB70007C679 /* AJNPropertyStore.h */; };
+		7D43EA79192C30E6001C75BB /* AJNPropertyStoreProperty.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AC3005018A38FB70007C679 /* AJNPropertyStoreProperty.h */; };
 		9AA935ED1854BC2B00378361 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA935EC1854BC2B00378361 /* Foundation.framework */; };
 		9AA935FB1854BC2B00378361 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA935FA1854BC2B00378361 /* XCTest.framework */; };
 		9AA935FC1854BC2B00378361 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AA935EC1854BC2B00378361 /* Foundation.framework */; };
@@ -52,6 +67,39 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		7D3DCAE7192BFB9A0015A009 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = "$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/about/lib";
+			dstSubfolderSpec = 0;
+			files = (
+				7D3DCAE8192BFBAC0015A009 /* liballjoyn_about_objc.a in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D43EA6B192C2DC7001C75BB /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/about/inc/alljoyn/about";
+			dstSubfolderSpec = 0;
+			files = (
+				7D43EA6C192C30E6001C75BB /* AJNAnnounceHandlerAdapter.h in CopyFiles */,
+				7D43EA6D192C30E6001C75BB /* AJNAboutClient.h in CopyFiles */,
+				7D43EA6E192C30E6001C75BB /* AJNAboutDataConverter.h in CopyFiles */,
+				7D43EA6F192C30E6001C75BB /* AJNAboutIconClient.h in CopyFiles */,
+				7D43EA70192C30E6001C75BB /* AJNAboutIconService.h in CopyFiles */,
+				7D43EA71192C30E6001C75BB /* AJNAboutPropertyStoreImpl.h in CopyFiles */,
+				7D43EA72192C30E6001C75BB /* AJNAboutService.h in CopyFiles */,
+				7D43EA73192C30E6001C75BB /* AJNAboutServiceApi.h in CopyFiles */,
+				7D43EA74192C30E6001C75BB /* AJNAnnouncement.h in CopyFiles */,
+				7D43EA75192C30E6001C75BB /* AJNAnnouncementListener.h in CopyFiles */,
+				7D43EA76192C30E6001C75BB /* AJNAnnouncementReceiver.h in CopyFiles */,
+				7D43EA77192C30E6001C75BB /* AJNConvertUtil.h in CopyFiles */,
+				7D43EA78192C30E6001C75BB /* AJNPropertyStore.h in CopyFiles */,
+				7D43EA79192C30E6001C75BB /* AJNPropertyStoreProperty.h in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9AA935E71854BC2B00378361 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -285,6 +333,8 @@
 				9AA935E51854BC2B00378361 /* Sources */,
 				9AA935E61854BC2B00378361 /* Frameworks */,
 				9AA935E71854BC2B00378361 /* CopyFiles */,
+				7D3DCAE7192BFB9A0015A009 /* CopyFiles */,
+				7D43EA6B192C2DC7001C75BB /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -504,6 +554,7 @@
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = alljoyn_about_objc;
 				SKIP_INSTALL = YES;
+				VALID_ARCHS = "arm64 armv7 armv7s";
 			};
 			name = Debug;
 		};
@@ -542,6 +593,7 @@
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = alljoyn_about_objc;
 				SKIP_INSTALL = YES;
+				VALID_ARCHS = "arm64 armv7 armv7s";
 			};
 			name = Release;
 		};
