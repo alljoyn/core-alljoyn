@@ -4029,7 +4029,8 @@ class _MDNSPacket : public _Packet {
      * @internal
      * @brief Get the additional record with a particular name and type.
      *
-     * @param str The desired name.
+     * @param str The desired name.  This may be appended with a '*' to get the first
+     *            additional record with the matching prefix.
      * @param type The desired RRtype.
      * @param additional[out] The MDNSResourceRecord into which the additional record will be filled.
      *

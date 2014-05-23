@@ -1280,7 +1280,7 @@ bool SessionlessObj::QueryHandler(TransportMask transport, MDNSPacket query, uin
                                   const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6)
 {
     MDNSResourceRecord* searchRecord;
-    if (!query->GetAdditionalRecord("search.", MDNSResourceRecord::TXT, &searchRecord)) {
+    if (!query->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, &searchRecord)) {
         return false;
     }
     MDNSSearchRData* searchRData = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
@@ -1334,7 +1334,8 @@ bool SessionlessObj::SendResponseIfMatch(TransportMask transport, const qcc::IPE
         response->SetDestination(ns4);
         MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
         advRData->SetValue("name", name);
-        MDNSResourceRecord advertiseRecord("advertise.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
+        String guid = bus.GetInternal().GetGlobalGUID().ToString();
+        MDNSResourceRecord advertiseRecord("advertise." + guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
         response->AddAdditionalRecord(advertiseRecord);
         QStatus status = IpNameService::Instance().Response(transport, response);
         if (ER_OK == status) {
@@ -1350,7 +1351,7 @@ bool SessionlessObj::SendResponseIfMatch(TransportMask transport, const qcc::IPE
 bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort)
 {
     MDNSResourceRecord* advRecord;
-    if (!response->GetAdditionalRecord("advertise.", MDNSResourceRecord::TXT, &advRecord)) {
+    if (!response->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, &advRecord)) {
         return false;
     }
     MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
