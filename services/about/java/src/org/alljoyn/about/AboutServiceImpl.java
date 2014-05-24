@@ -278,7 +278,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
                 }
             }
             for (AnnouncementHandler caller : announcementsToCall) {
-                caller.onAnnouncement(sender, port, objectDescriptions, aboutData);
+                caller.onAnnouncement(sender, version, port, objectDescriptions, aboutData);
             }
         }//Announce
 
