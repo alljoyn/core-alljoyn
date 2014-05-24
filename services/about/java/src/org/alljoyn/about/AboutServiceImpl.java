@@ -208,6 +208,16 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     }//registerDeviceListener
 
     /**
+     * Unregister the {@link BusListener} and CancelFindAdvertisedName
+     */
+    private void unregisterDeviceListener() {
+        if ( m_busListeners != null ) {
+            getBus().unregisterBusListener(m_busListeners);
+        }
+        getBus().cancelFindAdvertisedName(":");
+    }
+
+    /**
      * Register AnnouncementReceiver to receive Announcement signals
      */
     private void registerAnnouncementReceiver()
@@ -321,9 +331,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
                 bus.unregisterBusObject(m_announcmentReceiver);
             }
 
-            if ( m_busListeners != null ) {
-                bus.unregisterBusListener(m_busListeners);
-            }
+            unregisterDeviceListener();
 
             m_announcementHandlers.clear();
             m_announcmentReceiver = null;
