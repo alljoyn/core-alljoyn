@@ -1298,6 +1298,12 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
 
     /**
      * @internal
+     * @brief True if v0 and v1 versions of the protocol are enabled.
+     */
+    bool m_enableV1;
+
+    /**
+     * @internal
      * @brief Advertise IPv4 address assigned to this interface when multicasting
      * over IPv6 sockets in m_overrideIpv6 mode.  Used  to compensate for broken
      * Android phones that don't support IPv4 multicast.
