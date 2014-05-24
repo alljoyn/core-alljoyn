@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -27,6 +27,7 @@
 #include <qcc/platform.h>
 
 #include <map>
+#include <vector>
 
 #include <qcc/String.h>
 #include <qcc/Mutex.h>
@@ -65,13 +66,17 @@ struct Rule {
     /** true iff Rule specifies a filter for sessionless signals */
     enum {SESSIONLESS_NOT_SPECIFIED, SESSIONLESS_FALSE, SESSIONLESS_TRUE} sessionless;
 
+    /** Interfaces implemented in org.alljoyn.About.Announce sessionless signal */
+    std::vector<qcc::String> implements;
+
     /** Map of argument matches */
     // @@ TODO
 
     /** Equality comparison */
     bool operator==(const Rule& o) const {
         return (type == o.type) && (sender == o.sender) && (iface == o.iface) &&
-               (member == o.member) && (path == o.path) && (destination == o.destination);
+               (member == o.member) && (path == o.path) && (destination == o.destination) &&
+               (implements == o.implements);
     }
 
     /** Constructor */
@@ -95,7 +100,7 @@ struct Rule {
      * @param msg   Message to compare with rule.
      * @return  true if this rule matches the message.
      */
-    bool IsMatch(const Message& msg);
+    bool IsMatch(Message& msg) const;
 
     /**
      * String representation of a rule

@@ -8,7 +8,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -29,6 +29,7 @@
 
 #include <qcc/platform.h>
 #include <qcc/String.h>
+#include <map>
 
 #include <alljoyn/Status.h>
 
@@ -129,6 +130,34 @@ bool IsLegalMemberName(const char* str);
  * @return A bus name
  */
 qcc::String BusNameFromObjPath(const char* str);
+
+typedef std::multimap<qcc::String, qcc::String> MatchMap;
+
+/**
+ * Parse match rule arg strings
+ *
+ * @param match            Match rule string of form &lt;key0&gt;=&lt;val0&gt;,&lt;key1&gt;=&lt;val1&gt;
+ * @param[out] matchMap    A map of the key, value pairs.
+ * @return ER_OK if successful.
+ */
+QStatus ParseMatchRule(const qcc::String& match,
+                       MatchMap& matchMap);
+
+/**
+ * Simple pattern matching function that supports '*' and '?' only.  Returns a
+ * bool in the sense of "a difference between the string and pattern exists."
+ * This is so it works like fnmatch or strcmp, which return a 0 if a match is
+ * found.
+ *
+ * We require an actual character match and do not consider an empty string
+ * something that can match or be matched.
+ *
+ * @param[in] str The string
+ * @param[in] pat The pattern
+ *
+ * @return true if does not match, false if it does
+ */
+bool WildcardMatch(qcc::String str, qcc::String pat);
 
 }
 

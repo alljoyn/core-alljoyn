@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012,2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -34,6 +34,10 @@
 #include <qcc/Mutex.h>
 #include <qcc/Socket.h>
 #include <qcc/IfConfig.h>
+#include <qcc/Timer.h>
+#include <qcc/STLContainer.h>
+#include <qcc/platform.h>
+#include <qcc/StringMapKey.h>
 
 #include <alljoyn/TransportMask.h>
 
@@ -41,6 +45,7 @@
 #include <Callback.h>
 
 #include "IpNsProtocol.h"
+#include "IpNameService.h"
 
 namespace ajn {
 
@@ -62,7 +67,7 @@ namespace ajn {
  * 9955 and another is at IP address 10.0.0.2, listening on port 9955".  The
  * client can then do a TCP connect to one of those addresses and ports.
  */
-class IpNameServiceImpl : public qcc::Thread {
+class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
   public:
 
     /**
@@ -110,7 +115,8 @@ class IpNameServiceImpl : public qcc::Thread {
     static const uint32_t QUESTION_MODULUS = 10;
 
     /**
-     * @brief The number of times we resend WhoHas requests.
+     * @brief The number of times we resend WhoHas requests with the time
+     * between each request.
      *
      * Legacy 802.11 MACs do not do backoff and retransmission of packets
      * destined for multicast addresses.  Therefore if there is a collision
@@ -118,16 +124,18 @@ class IpNameServiceImpl : public qcc::Thread {
      * no indication of this at all up at the Socket level.  To avoid this
      * unfortunately common occurrence, which would force a user to wait
      * for the next successful retransmission of exported names, we resend
-     * each Locate request this many times.
+     * each Locate request multiple times.
+     *
+     * The number of retries is based on the size of the RETRY_INTERVALS array.
+     * The time between each Locate retries is the number of seconds indicated.
+     *
+     * If the array is { 1, 2, 6, 18 }
+     * the first retry will occure in 1 second, second retry 3 seconds later, and
+     * so on up till all intervals have been tried.
+     *
+     * RETRY_INTERVALS is set to { 1, 2, 6, 18 } by default
      */
-    static const uint32_t NUMBER_RETRIES = 2;
-
-    /**
-     * The time value indicating the time between Locate retries.  Units are
-     * seconds.
-     */
-    static const uint32_t RETRY_INTERVAL = 5;
-
+    static const uint32_t RETRY_INTERVALS[];
     /**
      * The modulus indicating the minimum time between interface lazy updates.
      * Units are seconds.
@@ -146,6 +154,18 @@ class IpNameServiceImpl : public qcc::Thread {
     static const uint32_t DURATION_INFINITE = 255;
 
     /**
+     * The modulus indicating minimum time interval between the initial burst of
+     * unsolicited IS-AT packets. Units are in mill-seconds.
+     */
+    static const uint32_t BURST_RESPONSE_INTERVAL = 100;
+
+    /**
+     * The number burst responses sent each time the burst response is sent.
+     * The BURST_RESPONSE_RETRIES must be greater than or equal 1
+     */
+    static const uint32_t BURST_RESPONSE_RETRIES = 3;
+
+    /**
      * @brief The maximum size of the payload of a name service message.
      *
      * An easy choice for this number would be 64K - 8 bytes (the max size of
@@ -160,7 +180,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * different times based on different configurations.
      *
      * It seems better to have a hard limit that can be easily worked around
-     * than a possibly confusing limit that imlplies flakiness.  We can always
+     * than a possibly confusing limit that implies flakiness.  We can always
      * support 1500 bytes through UDP fragmentation, and we will be using
      * IP and multicast-capable devices, so we expect an MTU of 1500 in the
      * typical case.  So we just work with that as a compromise.  We then take
@@ -183,6 +203,9 @@ class IpNameServiceImpl : public qcc::Thread {
         IPV4 = 1,   /**< Return the address in IPv4 suitable form */
         IPV6 = 2    /**< Return the address in IPv6 suitable form */
     };
+
+    const static uint8_t TRANSMIT_V0_V1 = 1;
+    const static uint8_t TRANSMIT_V2 = 2;
 
     /**
      * @internal
@@ -263,7 +286,7 @@ class IpNameServiceImpl : public qcc::Thread {
     /**
      * @brief Delete a virtual network interface. In normal cases WiFi-Direct
      * creates a soft-AP for a temporary network. Once the P2P keep-alive connection is
-     * terminated, we delete the virual network interface that represents the
+     * terminated, we delete the virtual network interface that represents the
      * soft-AP.
      *
      * @param ifceName The virtual network interface name
@@ -279,7 +302,7 @@ class IpNameServiceImpl : public qcc::Thread {
      *
      * There may be a choice of network interfaces available to run the name
      * service protocol over.  A user of the name service can find these
-     * interfaces and explore their charactersistics using qcc::IfConfig().
+     * interfaces and explore their characteristics using qcc::IfConfig().
      * When it is decided to actually use one of the interfaces, one can pass
      * the m_name (interface name) variable provided in the selected
      * qcc::IfConfigEntry into this method to enable the name service for that
@@ -307,7 +330,7 @@ class IpNameServiceImpl : public qcc::Thread {
      *
      * There may be a choice of network interfaces available to run the name
      * service protocol over.  A user of the name service can find these
-     * interfaces and explore their charactersistics using qcc::IfConfig().
+     * interfaces and explore their characteristics using qcc::IfConfig().
      * When it is decided to actually use one of the interfaces, pass an
      * IPAddress constructed using the m_addr (interface address) variable
      * provided in the selected qcc::IfConfigEntry into this method to enable
@@ -534,14 +557,14 @@ class IpNameServiceImpl : public qcc::Thread {
      *
      * @param[in] transportMask A bitmask containing the transport requesting the
      *     discovery operation.
-     * @param[in] wkn The AllJoyn well-known name to find (e.g.,
-     *     "org.freedesktop.Sensor").  Wildcards are supported in the
-     *     sense of Linux shell wildcards.  See fnmatch(3C) for details.
+     * @param[in] matching The Key, value match criteria that the caller wants
+     *     to be notified of (via signal) when a remote Bus instance is found
+     *     with an advertisement that matches the criteria.
      * @param[in] policy The retransmission policy for this Locate event.
      *
      * @return Status of the operation.  Returns ER_OK on success.
      */
-    QStatus FindAdvertisedName(TransportMask transportMask, const qcc::String& wkn, LocatePolicy policy = ALWAYS_RETRY);
+    QStatus FindAdvertisement(TransportMask transportMask, const qcc::String& matching, LocatePolicy policy = ALWAYS_RETRY);
 
     /**
      * @brief Set the Callback for notification of discovery events.
@@ -551,7 +574,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * or reaffirms its existence on the network.  This method provides the
      * mechanism for specifying the callback.
      *
-     * The method singature for the Callback method must be:
+     * The method signature for the Callback method must be:
      *
      * @code
      *     void Found(const qcc::String &, const qcc::String &, std::vector<qcc::String> &, uint8_t);
@@ -605,7 +628,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * your thread, so your Found callback code must be multithread safe (or aware
      * at least).
      *
-     * @warning Services may come and go constanly during real network operation.
+     * @warning Services may come and go constantly during real network operation.
      * Just because a service was found on the network it does not mean that there
      * will be a service waiting on the provided IP address and port.  This
      * service may be gone by the time you connect; and this is a perfectly
@@ -646,7 +669,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @param[in] wkn The AllJoyn interface (e.g., "org.freedesktop.Sensor").
      * @param[in] quietly The quietly parameter, if true, specifies to not do
      *     gratuitous advertisements (send periodic is-at messages indicating we
-     *     have the provided name avialable) but do respond to who-has requests
+     *     have the provided name available) but do respond to who-has requests
      *     for the name.
      *
      * @return Status of the operation.  Returns ER_OK on success.
@@ -722,6 +745,16 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     QStatus OnProcResume();
 
+    void RegisterListener(IpNameServiceListener& listener);
+
+    void UnregisterListener(IpNameServiceListener& listener);
+
+    QStatus Ping(TransportMask transportMask, const qcc::String& guid, const qcc::String& name);
+
+    QStatus Query(TransportMask transportMask, MDNSPacket mdnsPacket);
+
+    QStatus Response(TransportMask transportMask, MDNSPacket mdnsPacket);
+
   private:
     /**
      * @brief Copying an IpNameServiceImpl object is forbidden.
@@ -749,7 +782,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @brief The IANA assigned IPv4 multicast address for the multicast name
      * service.
      *
-     * @see http://www.iana.org/assignments/multicast-addresses/
+     * @see IPv4 Multicast Address space Registry IANA
      */
     static const char* IPV4_ALLJOYN_MULTICAST_GROUP;
 
@@ -757,7 +790,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @brief The temporary IPv6 multicast address for the multicast name
      * service.
      *
-     * @see http://www.iana.org/assignments/multicast-addresses/
+     * @see IPv4 Multicast Address space Registry IANA
      */
     static const char* IPV6_MULTICAST_GROUP;
 
@@ -765,24 +798,54 @@ class IpNameServiceImpl : public qcc::Thread {
      * @brief The IANA assigned IPv6 multicast address for the multicast name
      * service.
      *
-     * @see http://www.iana.org/assignments/multicast-addresses/
+     * @see IPv4 Multicast Address space Registry IANA
      */
     static const char* IPV6_ALLJOYN_MULTICAST_GROUP;
+
+    /**
+     * @brief The IANA assigned IPv4 multicast address for the MDNS
+     * service.
+     *
+     * @see IPv4 Multicast Address space Registry IANA
+     */
+    static const char* IPV4_MDNS_MULTICAST_GROUP;
+
+    /**
+     * @brief The IANA assigned IPv6 multicast address for the MDNS
+     * service.
+     *
+     * @see IPv4 Multicast Address space Registry IANA
+     */
+    static const char* IPV6_MDNS_MULTICAST_GROUP;
 
     /**
      * @brief The port number for the  multicast name service.
      * Should eventually be registered with IANA.
      *
-     * @see http://www.iana.org/assignments/multicast-addresses/
+     * @see IPv4 Multicast Address space Registry IANA
      */
     static const uint16_t MULTICAST_PORT;
 
     /**
      * @brief The port number for the broadcast name service packets.
      * Typically the same port as the multicast case, but can be made
-     * different (with a litle work).
+     * different (with a little work).
      */
     static const uint16_t BROADCAST_PORT;
+
+    /**
+     * @brief The port number for the  MDNS name service.
+     *
+     * @see IPv4 Multicast Address space Registry IANA
+     */
+    static const uint16_t MULTICAST_MDNS_PORT;
+
+    /**
+     * @brief The port number for the broadcast MDNS name service packets.
+     * Typically the same port as the multicast case, but can be made
+     * different (with a litle work).
+     */
+    static const uint16_t BROADCAST_MDNS_PORT;
 
     /**
      * @brief
@@ -826,9 +889,19 @@ class IpNameServiceImpl : public qcc::Thread {
     class LiveInterface : public InterfaceSpecifier {
       public:
         qcc::IPAddress m_address;   /**< The address of the interface we are talking to */
+        uint16_t m_multicastPort;       /**< The multicast port we are using to talk */
+        uint16_t m_unicastPort;         /**< The unicast port we are using to talk */
+        uint16_t m_multicastMDNSPort;   /**< The multicast MDNS port we are using to talk */
         uint32_t m_prefixlen;       /**< The address prefix (cf netmask) of the interface we are talking to */
-        qcc::SocketFd m_sockFd;     /**< The socket we are using to talk over */
-        qcc::Event* m_event;        /**< The event we use to get read notifications over */
+
+        qcc::SocketFd m_multicastsockFd;     /**< The multicast socket we are using to talk over */
+        qcc::SocketFd m_unicastsockFd;       /**< The unicast socket we are using to talk over */
+        qcc::SocketFd m_multicastMDNSsockFd; /**< The multicast MDNS socket we are using to talk over */
+
+        qcc::Event* m_multicastevent;      /**< The event for the multicast socket we use to get read notifications over */
+        qcc::Event* m_unicastevent;        /**< The event for the unicast socket we use to get read notifications over */
+        qcc::Event* m_multicastMDNSevent;  /**< The event for the multicast MDNS socket we use to get read notifications over */
+
         uint32_t m_mtu;             /**< The MTU of the protocol/device we are using */
         uint32_t m_index;           /**< The interface index of the protocol/device we are using if IPv6 */
         uint32_t m_flags;           /**< The flags we found during the qcc::IfConfig() that originally discovered this iface */
@@ -836,7 +909,7 @@ class IpNameServiceImpl : public qcc::Thread {
 
     /**
      * @internal
-     * @brief A vector of information specifying any interfaces we have mannual created
+     * @brief A vector of information specifying any interfaces we have manual created
      */
     std::vector<qcc::IfConfigEntry> m_virtualInterfaces;
 
@@ -883,13 +956,13 @@ class IpNameServiceImpl : public qcc::Thread {
      * Send outbound name service messages over unicast, out the network
      * interfaces implied by the destination address in the header.
      */
-    void SendOutboundMessageQuietly(Header& header);
+    void SendOutboundMessageQuietly(Packet packet);
 
     /**
      * Send outbound name service messages over multicast, out the list of live
      * interfaces implied by the transport masks in the message.
      */
-    void SendOutboundMessageActively(Header& header);
+    void SendOutboundMessageActively(Packet packet);
 
     /**
      * Main thread entry point.
@@ -903,7 +976,14 @@ class IpNameServiceImpl : public qcc::Thread {
      * @brief Queue a protocol message for transmission out on the multicast
      * group.
      */
-    void QueueProtocolMessage(Header& header);
+    void QueueProtocolMessage(Packet packet);
+
+    /**
+     * @internal
+     * @brief Trigger transmission of a particular packet at a defined schedule.
+     * group.
+     */
+    void TriggerTransmission(Packet packet);
 
     /**
      * @internal
@@ -922,7 +1002,7 @@ class IpNameServiceImpl : public qcc::Thread {
      *     to decide if the network is broadcast- or multicast-capable.
      * @param sockFdIsIPv4 Used to tell what address family sockFd has been
      *     initialized to and therefore what kind of multicast needs to be done
-     *     or whether or not broadcast is meaninful.
+     *     or whether or not broadcast is meaningful.
      * @param interfaceIndex The index into the live interfaces array
      *     corresponding to the interface we're going to send to.  Really just
      *     used for debugging.
@@ -933,7 +1013,7 @@ class IpNameServiceImpl : public qcc::Thread {
         uint32_t interfaceAddressPrefixLen,
         uint32_t flags,
         bool sockFdIsIPv4,
-        Header& header,
+        Packet packet,
         uint32_t interfaceIndex);
 
     /**
@@ -951,7 +1031,7 @@ class IpNameServiceImpl : public qcc::Thread {
     /**
      * @internal
      * @brief Rewrite (set) the IPv4 and IPv6 addresses of the provided is-at message
-     * respecting the version of the messagd as specified by msgVersion.
+     * respecting the version of the message as specified by msgVersion.
      *
      * @param msgVersion The version of the message that is being constructed.
      * @param isAt A pointer to the is-at message that is to be rewritten.
@@ -963,10 +1043,15 @@ class IpNameServiceImpl : public qcc::Thread {
      *      should be used.
      * @param iPv6address The qcc::IPAddress of the IPv6 interface for which
      *     the is-at message is eventually destined.
+     * @param iPv4port The port that the daemon is listening to of the IPv4
+     *     interface for which the is-at message is eventually destined.
+     * @param iPv6port The port that the daemon is listening to of the IPv6
+     *     interface for which the is-at message is eventually destined.
      */
-    void RewriteVersionSpecific(uint32_t msgVersion, IsAt* isAt,
+    void RewriteVersionSpecific(uint32_t msgVersion, Packet packet,
                                 bool haveIPv4address, qcc::IPAddress ipv4address,
-                                bool haveIPv6Address, qcc::IPAddress ipv6address);
+                                bool haveIPv6Address, qcc::IPAddress ipv6address,
+                                uint16_t unicastIpv4Port = 0, uint16_t unicastIpv6Port = 0);
 
     /**
      * @internal
@@ -977,7 +1062,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * both appear to be on the same network, then return true.
      *
      * @warning This method does not take the interface index of an IP address
-     * into account, so two netwok interfaces, both connected to a private
+     * into account, so two network interfaces, both connected to a private
      * network address (192.168.x.x) may be erroneously identified as belonging
      * to the same network.  In this case, it might result in a name service
      * packet being unintentionally sent to the "duplicate" network as well as
@@ -994,7 +1079,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @internal
      * @brief Do something with a received protocol message.
      */
-    void HandleProtocolMessage(uint8_t const* const buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint);
+    void HandleProtocolMessage(uint8_t const* const buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint, const uint16_t recv_port);
 
     /**
      * @internal
@@ -1007,6 +1092,40 @@ class IpNameServiceImpl : public qcc::Thread {
      * @brief Do something with a received protocol answer.
      */
     void HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qcc::IPEndpoint& address);
+
+    /**
+     * @internal
+     * @brief Do something with a received MDNS protocol query.
+     */
+    void HandleProtocolQuery(MDNSPacket packet, uint16_t recvPort);
+
+    /**
+     * @internal
+     * @brief Do something with a received MDNS protocol response.
+     */
+    void HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t recvPort);
+
+    /**
+     * @internal
+     * @brief Update the MDNSPacketTracker which is useful for keep track of burst and
+     *        not responding to each packet of a burst
+     */
+    bool UpdateMDNSPacketTracker(qcc::String guid, uint16_t burstId);
+
+    /**
+     * @internal
+     * @brief Update the AddToPeerInfoMap
+     *
+     */
+    bool AddToPeerInfoMap(const qcc::String& guid, const qcc::IPEndpoint& ipv4, const qcc::IPEndpoint& ipv6);
+
+    /**
+     * @internal
+     * @brief Remove an entry from the PeerInfoMap
+     *        This will be useful during a cache refresh expiry for a guid
+     *
+     */
+    bool RemoveFromPeerInfoMap(const qcc::String& guid);
 
     /**
      * One possible callback for each of the corresponding transport masks in a
@@ -1138,16 +1257,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @internal
      * @brief Retransmit exported advertisements.
      */
-    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination);
-
-    /**
-     * @internal
-     * @brief Vector of name service messages reflecting recent locate
-     * requests.  Since wifi MACs don't retry multicast after collision
-     * we need to support some form of retry, even though we never get
-     * an indication that our send failed.
-     */
-    std::list<Header> m_retry;
+    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type);
 
     /**
      * @internal
@@ -1188,6 +1298,12 @@ class IpNameServiceImpl : public qcc::Thread {
 
     /**
      * @internal
+     * @brief True if v0 and v1 versions of the protocol are enabled.
+     */
+    bool m_enableV1;
+
+    /**
+     * @internal
      * @brief Advertise IPv4 address assigned to this interface when multicasting
      * over IPv6 sockets in m_overrideIpv6 mode.  Used  to compensate for broken
      * Android phones that don't support IPv4 multicast.
@@ -1216,12 +1332,21 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     bool m_forceLazyUpdate;
 
+#ifndef QCC_OS_GROUP_WINDOWS
+    /**
+     * @internal
+     * @brief Set to true to force a refresh of advertisements/queries if one or
+     * more new interfaces are detected.
+     */
+    bool m_refreshAdvertisements;
+#endif
+
     /**
      * @internal
      * @brief A list of name service messages queued for transmission out on
      * the multicast group.
      */
-    std::list<Header> m_outbound;
+    std::list<Packet> m_outbound;
 
 #if defined(QCC_OS_GROUP_WINDOWS)
     /**
@@ -1310,8 +1435,90 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     bool m_doDisable;
 
+    /**
+     * AlarmTriggered listener that is triggered when a burst response is sent.
+     * this trigger is responsible for responding when new names have been added
+     * to the advertised names list.
+     */
+    void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
+
+    /**
+     * The BurstResponceHeader struct holds a copy of the header that will be
+     * sent using the burst response.  The struct also tracks how many times the
+     * header had been added to the outbound queue.
+     */
+    struct BurstResponseHeader {
+        BurstResponseHeader(Packet packet) : packet(packet), burstResponseCount(0), scheduleCount(0) { }
+        ~BurstResponseHeader() { }
+        Packet packet;
+        uint32_t burstResponseCount;
+        uint32_t scheduleCount;
+    };
+
     qcc::SocketFd m_ipv4QuietSockFd;
     qcc::SocketFd m_ipv6QuietSockFd;
+
+    /**
+     * @internal
+     * timer responsible for sending burst IS-AT responses
+     */
+    qcc::Timer m_burstResponseTimer;
+
+    typedef struct {
+        uint16_t burstId;
+        uint64_t timestamp;
+    } BurstEntry;
+
+
+    typedef struct {
+        std::list<BurstEntry> bursts;
+        qcc::Alarm alarm;
+    } Bursts;
+
+    /**
+     * Hash functor
+     */
+    struct Hash {
+        inline size_t operator()(const qcc::String& s) const {
+            return qcc::hash_string(s.c_str());
+        }
+    };
+
+    struct Equal {
+        inline bool operator()(const qcc::String& s1, const qcc::String& s2) const {
+            return s1 == s2;
+        }
+    };
+
+    std::unordered_map<qcc::String, uint16_t, Hash, Equal> m_mdnsPacketTracker;
+
+    /*
+     * PeerInfo holds the information about a peer for which we know the unicast address
+     * The timestamp field is used for cache refresh
+     */
+    struct PeerInfo {
+        qcc::IPEndpoint unicastIPV4Info;
+        qcc::IPEndpoint unicastIPV6Info;
+        uint64_t timestamp;
+        PeerInfo(const qcc::IPEndpoint& ipv4, const qcc::IPEndpoint& ipv6) :
+            unicastIPV4Info(ipv4), unicastIPV6Info(ipv6), timestamp(qcc::GetTimestamp64()) { }
+    };
+
+    std::unordered_map<qcc::String, PeerInfo, Hash, Equal> m_peerInfoMap;
+    void PrintPeerInfoMap();
+
+    class BurstExpiryHandler;
+    BurstExpiryHandler* burstExpiryHandler;
+
+    bool HandleSearchQuery(TransportMask transport, MDNSPacket mdnsPacket, uint16_t recvPort,
+                           const qcc::String& guid, const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6);
+
+    bool HandleAdvertiseResponse(TransportMask transport, MDNSPacket mdnsPacket, uint16_t recvPort, uint32_t ttl,
+                                 const qcc::String& guid, const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6,
+                                 const qcc::IPEndpoint& r4, const qcc::IPEndpoint& r6);
+
+    std::list<IpNameServiceListener*> m_listeners;
+    bool m_protectListeners;
 };
 
 } // namespace ajn

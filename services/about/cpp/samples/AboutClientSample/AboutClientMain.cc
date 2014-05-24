@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -305,7 +305,7 @@ int main(int argc, char**argv, char**envArg)
     }
 
     AboutClientAnnounceHandler* announceHandler = new AboutClientAnnounceHandler(announceHandlerCallback);
-    AnnouncementRegistrar::RegisterAnnounceHandler(*busAttachment, *announceHandler);
+    AnnouncementRegistrar::RegisterAnnounceHandler(*busAttachment, *announceHandler, NULL, 0);
 
     // Setup signals to wait for.
     sigfillset(&waitmask);
@@ -319,7 +319,7 @@ int main(int argc, char**argv, char**envArg)
         sigsuspend(&waitmask);
     }
 
-    AnnouncementRegistrar::UnRegisterAnnounceHandler(*busAttachment, *announceHandler);
+    AnnouncementRegistrar::UnRegisterAnnounceHandler(*busAttachment, *announceHandler, NULL, 0);
     delete announceHandler;
 
     busAttachment->Stop();

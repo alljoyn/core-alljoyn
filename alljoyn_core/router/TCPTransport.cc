@@ -2244,40 +2244,16 @@ void TCPTransport::EnableDiscoveryInstance(ListenRequest& listenRequest)
     }
 
     /*
-     * We think we're ready to send the FindAdvertisedName.  Are we really?
+     * We think we're ready to send the FindAdvertisement.  Are we really?
      */
     assert(m_isListening);
     assert(m_listenPort);
     assert(m_isNsEnabled);
     assert(IpNameService::Instance().Started() && "TCPTransport::EnableDiscoveryInstance(): IpNameService not started");
 
-    /*
-     * When a bus name is advertised, the source may append a string that
-     * identifies a specific instance of advertised name.  For example, one
-     * might advertise something like
-     *
-     *   com.mycompany.myproduct.0123456789ABCDEF
-     *
-     * as a specific instance of the bus name,
-     *
-     *   com.mycompany.myproduct
-     *
-     * Clients of the system will want to be able to discover all specific
-     * instances, so they need to do a wildcard search for bus name strings
-     * that match the non-specific name, for example,
-     *
-     *   com.mycompany.myproduct*
-     *
-     * We automatically append the name service wildcard character to the end
-     * of the provided string (which we call the namePrefix) before sending it
-     * to the name service which forwards the request out over the net.
-     */
-    qcc::String starred = listenRequest.m_requestParam;
-    starred.append('*');
-
-    QStatus status = IpNameService::Instance().FindAdvertisedName(TRANSPORT_TCP, starred);
+    QStatus status = IpNameService::Instance().FindAdvertisement(TRANSPORT_TCP, listenRequest.m_requestParam);
     if (status != ER_OK) {
-        QCC_LogError(status, ("TCPTransport::EnableDiscoveryInstance(): Failed to begin discovery with multicast NS \"%s\"", starred.c_str()));
+        QCC_LogError(status, ("TCPTransport::EnableDiscoveryInstance(): Failed to begin discovery with multicast NS \"%s\"", listenRequest.m_requestParam.c_str()));
     }
 
     m_isDiscovering = true;

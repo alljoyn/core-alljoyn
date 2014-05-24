@@ -64,7 +64,6 @@ public class AboutApplication extends Application
 {
 
     public static final String TAG = "AboutClient";
-	private static final String SESSIONLESS_MATCH_RULE = "sessionless='t',type='error'";
 
     private BusAttachment m_Bus;
     private HashMap<String, SoftAPDetails> m_devicesMap;
@@ -251,7 +250,7 @@ public class AboutApplication extends Application
             m_aboutService = AboutServiceImpl.getInstance();
             m_aboutService.setLogger(m_logger);
             m_aboutService.startAboutClient(m_Bus);
-            m_aboutService.addAnnouncementHandler(receiver);
+            m_aboutService.addAnnouncementHandler(receiver, null);
 
         } catch (Exception e){
             e.printStackTrace();
@@ -273,10 +272,6 @@ public class AboutApplication extends Application
                 Log.d(TAG, "Succefully advertised daemon name " + DAEMON_NAME);
             }
         }
-
-        // DO the AJ addMatch.
-        Status s = m_Bus.addMatch(SESSIONLESS_MATCH_RULE);
-        Log.i(TAG, "BusAttachment.addMatch() status = " + s);
     }
 
     //======================================================================

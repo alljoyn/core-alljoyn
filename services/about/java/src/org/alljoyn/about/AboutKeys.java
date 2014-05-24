@@ -93,7 +93,7 @@ public interface AboutKeys {
     /**
      * Optional. The support URL to be populated by device OEM
      */
-    public final static String ABOUT_SUPPORT_URL = "SupportURL";
+    public final static String ABOUT_SUPPORT_URL = "SupportUrl"; 
 
     /**
      * Required. This field returns the list of supported languages by the

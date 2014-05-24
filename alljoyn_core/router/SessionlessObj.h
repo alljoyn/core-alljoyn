@@ -40,6 +40,7 @@
 #include "NameTable.h"
 #include "RuleTable.h"
 #include "Transport.h"
+#include "ns/IpNameService.h"
 
 namespace ajn {
 
@@ -50,7 +51,7 @@ class BusController;
  * BusObject responsible for implementing the standard AllJoyn interface org.alljoyn.sl.
  */
 class SessionlessObj : public BusObject, public NameListener, public SessionListener, public SessionPortListener,
-    public BusAttachment::JoinSessionAsyncCB, public qcc::AlarmListener {
+    public BusAttachment::JoinSessionAsyncCB, public qcc::AlarmListener, public IpNameServiceListener {
 
   public:
     /**
@@ -159,16 +160,29 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
 
     /**
      * Accept/reject join attempt on sessionlesss port.
-     * Implements SessionPortListener::AceptSessionJoiner.
+     * Implements SessionPortListener::AcceptSessionJoiner.
      *
      * @param port    Session port of join attempt.
      * @param joiner  Unique name of joiner.
      * @param opts    SesionOpts specified by joiner.
-     * @return   true if session is accepted. false otherwise.
+     *
+     * @return true if session is accepted. false otherwise.
      */
     bool AcceptSessionJoiner(SessionPort port,
                              const char* joiner,
                              const SessionOpts& opts);
+
+    /**
+     * Called by the bus when a session has been successfully joined.
+     * Implements SessionPortListener::SessionJoined.
+     *
+     * @param port    Session port of join attempt.
+     * @param sid     Id of session.
+     * @param joiner  Unique name of joiner.
+     */
+    void SessionJoined(SessionPort port,
+                       SessionId sid,
+                       const char* joiner);
 
     /**
      * Receive SessionLost signals.
@@ -204,14 +218,19 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
                                    Message& msg);
 
     /**
-     * Trigger (re)reception of sessionless signals from all remote daemons.
+     * Process incoming RequestRangeMatch signals from remote daemons.
      *
-     * @param epName   The name of the endpoint that is requesting to re-receive sessionless messages.
-     * @param rule     The rule that triggered the re-receive.
+     * @param member        Interface member for signal
+     * @param sourcePath    object path sending the signal.
+     * @param msg           The signal message.
      */
-    QStatus RereceiveMessages(const qcc::String& epName, const Rule& rule);
+    void RequestRangeMatchSignalHandler(const InterfaceDescription::Member* member,
+                                        const char* sourcePath,
+                                        Message& msg);
 
   private:
+    friend class RemoteCacheSnapshot;
+
     /**
      * SessionlessObj worker.
      *
@@ -225,14 +244,26 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     void JoinSessionCB(QStatus status, SessionId sid, const SessionOpts& opts, void* context);
 
     /**
-     * Emit the range of cached sessionless signals [fromId, toId)
+     * Emit the range of cached sessionless signals [fromId, toId).
      *
-     * @param sender    Unique name of requestor/sender
-     * @param sid       Session ID
-     * @param fromId    Beginning of changeId range (inclusive)
-     * @param toId      End of changeId range (exclusive)
+     * When sid is 0, rules in the specified local range are applied before
+     * emitting the signals.
+     *
+     * When sid is non-0, rules in the remote rules are applied before emitting
+     * the signals.
+     *
+     * @param sender           Unique name of requestor/sender
+     * @param sid              Session ID
+     * @param fromId           Beginning of changeId range (inclusive)
+     * @param toId             End of changeId range (exclusive)
+     * @param fromLocalRulesId Beginning of rules ID range (inclusive)
+     * @param toLocalRulesId   End of rules ID range (exclusive)
+     * @param remoteRules      Remotely-supplied rules to apply
      */
-    void HandleRangeRequest(const char* sender, SessionId sid, uint32_t fromId, uint32_t toId);
+    void HandleRangeRequest(const char* sender, SessionId sid,
+                            uint32_t fromId, uint32_t toId,
+                            uint32_t fromLocalRulesId = 0, uint32_t toLocalRulesId = 0,
+                            std::vector<qcc::String> remoteRules = std::vector<qcc::String>());
 
     /**
      * SessionLost helper handler.
@@ -242,30 +273,27 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      */
     void DoSessionLost(SessionId sid, SessionLostReason reason);
 
-    /**
-     * Returns the number of rules that specify sessionless=TRUE.
-     *
-     * This must be called with this lock.
-     *
-     * @return the number of rules that specify sessionless=TRUE.
-     */
-    uint32_t RuleCount();
-
     Bus& bus;                             /**< The bus */
     BusController* busController;         /**< BusController that created this BusObject */
     DaemonRouter& router;                 /**< The router */
 
+    /* The version implemented. */
+    static const uint32_t version;
+
+    static const Rule legacyRule;
+
     const InterfaceDescription* sessionlessIface;  /**< org.alljoyn.sl interface */
 
-    const InterfaceDescription::Member* requestSignalsSignal;   /**< org.alljoyn.sl.RequestSignal signal */
-    const InterfaceDescription::Member* requestRangeSignal;     /**< org.alljoyn.sl.RequestRange signal */
+    const InterfaceDescription::Member* requestSignalsSignal;    /**< org.alljoyn.sl.RequestSignal signal */
+    const InterfaceDescription::Member* requestRangeSignal;      /**< org.alljoyn.sl.RequestRange signal */
+    const InterfaceDescription::Member* requestRangeMatchSignal; /**< org.alljoyn.sl.RequestRangeMatch signal */
 
     qcc::Timer timer;                     /**< Timer object for reaping expired names */
 
-    /* Class used as key for messageMap */
-    class MessageMapKey : public qcc::String {
+    /** A key into the local sessionless message queue */
+    class SessionlessMessageKey : public qcc::String {
       public:
-        MessageMapKey(const char* sender, const char* iface, const char* member, const char* objPath) :
+        SessionlessMessageKey(const char* sender, const char* iface, const char* member, const char* objPath) :
             qcc::String(sender, 0, ::strlen(sender) + ::strlen(iface) + ::strlen(member) + ::strlen(objPath) + 4)
         {
             append(':');
@@ -276,24 +304,11 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
             append(objPath);
         }
     };
+    typedef std::pair<uint32_t, Message> SessionlessMessage;
 
+    typedef std::map<SessionlessMessageKey, SessionlessMessage> LocalCache;
     /** Storage for sessionless messages waiting to be delivered */
-    std::map<MessageMapKey, std::pair<uint32_t, Message> > messageMap;
-
-    /** Count the number of rules (per endpoint) that specify sesionless=TRUE */
-    std::map<qcc::String, uint32_t> ruleCountMap;
-
-    /** CatchupState is used to track individual local clients that are behind the state of the server for a particular remote host */
-    struct CatchupState {
-        CatchupState() : changeId(0) { }
-        CatchupState(const qcc::String& epName, const Rule& rule, uint32_t changeId) :
-            epName(epName), rule(rule), changeId(changeId) { }
-        qcc::String epName;
-        Rule rule;
-        uint32_t changeId;
-    };
-    /** Map session IDs to catchupStates */
-    std::map<uint32_t, CatchupState> catchupMap;
+    LocalCache localCache;
 
     struct RoutedMessage {
         RoutedMessage(const Message& msg) : sender(msg->GetSender()), serial(msg->GetCallSerial()) { }
@@ -302,90 +317,78 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
         bool operator==(const RoutedMessage& other) const { return (sender == other.sender) && (serial == other.serial); }
     };
 
-    /** Track the changeIds of the advertisments coming from other daemons */
-    struct ChangeIdEntry {
+    class RemoteCache {
       public:
-        ChangeIdEntry(const char* advName, TransportMask transport, uint32_t advChangeId) :
-            advName(advName), transport(transport), changeId(std::numeric_limits<uint32_t>::max()),
-            advChangeId(advChangeId), nextJoinTimestamp(0), retries(0), inProgressTimestamp(0), sid(0) { }
-
-        void Started() {
-            inProgress = advName;
-            inProgressTimestamp = qcc::GetTimestamp64();
-        }
-        bool InProgress() {
-            return !inProgress.empty();
-        }
-        void Completed() {
-            inProgress.clear();
-            inProgressTimestamp = 0;
-            sid = 0;
+        RemoteCache(const qcc::String& name, uint32_t version, const qcc::String& guid, const qcc::String& iface, uint32_t changeId, TransportMask transport) :
+            name(name), version(version), guid(guid), changeId(changeId), transport(transport), haveReceived(false),
+            receivedChangeId(std::numeric_limits<uint32_t>::max()), appliedRulesId(std::numeric_limits<uint32_t>::max()),
+            state(IDLE), retries(0), sid(0) {
+            ifaces.insert(iface);
         }
 
-        qcc::String advName;
-        TransportMask transport;
+        /* The most recent advertisement */
+        qcc::String name;
+        /* The union of all the advertisements */
+        uint32_t version;
+        qcc::String guid;
+        std::set<qcc::String> ifaces;
         uint32_t changeId;
-        uint32_t advChangeId;
-        uint64_t nextJoinTimestamp;
+        TransportMask transport;
+
+        /* State */
+        bool haveReceived; /* true once we have received something from the remote cache */
+        uint32_t receivedChangeId;
+        uint32_t appliedRulesId;
+
+        /* Work item */
+        uint32_t fromChangeId, toChangeId;
+        uint32_t fromRulesId, toRulesId;
+        /* Work item state */
+        enum {
+            IDLE = 0,
+            IN_PROGRESS
+        } state;
         uint32_t retries;
-        qcc::String inProgress;
-        uint64_t inProgressTimestamp;
+        qcc::Timespec firstJoinTime;
+        qcc::Timespec nextJoinTime;
         SessionId sid;
-        std::queue<CatchupState> catchupList;
         std::list<RoutedMessage> routedMessages;
     };
-    /** Map remote guid to ChangeIdEntry */
-    std::map<qcc::String, ChangeIdEntry> changeIdMap;
 
-    /** Find the ChangeIdEntry with the matching session ID */
-    std::map<qcc::String, ChangeIdEntry>::iterator FindChangeIdEntry(SessionId sid);
+    typedef std::map<qcc::String, RemoteCache> RemoteCaches;
+    /** The state of found remote caches */
+    RemoteCaches remoteCaches;
 
-    qcc::Mutex lock;            /**< Mutex that protects messageMap this obj's data structures */
+    /** Find the remote cache work item with the matching session ID */
+    RemoteCaches::iterator FindRemoteCache(SessionId sid);
+
+    qcc::Mutex lock;            /**< Mutex that protects this object's data structures */
     uint32_t curChangeId;       /**< Change id assoc with current pushed signal(s) */
-    uint32_t lastAdvChangeId;   /**< Last advertised change id */
-    qcc::String lastAdvName;    /**< Last advertised name */
-    qcc::String findPrefix;     /**< FindAdvertiseName prefix */
-    qcc::String advPrefix;      /**< AdvertiseName prefix */
     bool isDiscoveryStarted;    /**< True when FindAdvetiseName is ongoing */
     SessionOpts sessionOpts;    /**< SessionOpts used by internal session */
     SessionPort sessionPort;    /**< SessionPort used by internal session */
     bool advanceChangeId;       /**< Set to true when changeId should be advanced on next SLS send request */
+    uint32_t backoffDelayMs;    /**< The backoff delay is in the range [0,backoffDelayMs] */
+    uint32_t nextRulesId;       /**< The next added rule change ID */
 
     /**
-     * Try join with random backoff of 1 to 256ms.
+     * Internal helper for parsing an advertised name into its guid, change
+     * ID, and version parts.
      *
-     * @param[in,out] entry the host to schedule the retry for
-     */
-    void ScheduleTry(ChangeIdEntry& entry);
-
-    /**
-     * Retry join with random backoff of 200ms to ~8.5s.
-     *
-     * @param[in,out] entry the host to schedule the retry for
-     *
-     * @return ER_OK if retry scheduled, failure if retries exhausted
-     */
-    QStatus ScheduleRetry(ChangeIdEntry& entry);
-
-    /**
-     * Internal helper for scheduling a join try or retry.
-     *
-     * @param[in,out] entry the host to schedule the join for
-     * @param[in] delay the delay in msecs
-     */
-    void ScheduleJoin(ChangeIdEntry& entry, uint32_t delayMs);
-
-    /**
-     * Internal helper for parsing an advertised name into its guid and change
-     * ID parts.
+     * An advertised name has the following form: "org.alljoyn.sl.xGUID.xCID".
+     * The 'x' of "xGUID" is abused to indicate a version.  'x' is version 0,
+     * 'y' is version 1, etc.  This is to enable backwards compatibility for
+     * version 0 implementations.
      *
      * @param[in] name
+     * @param[out] version
      * @param[out] guid
+     * @param[out] iface
      * @param[out] changeId
      *
      * @return ER_OK if parsed succesfully
      */
-    QStatus ParseAdvertisedName(const qcc::String& name, qcc::String* guid, uint32_t* changeId);
+    QStatus ParseAdvertisedName(const qcc::String& name, uint32_t* version, qcc::String* guid, qcc::String* iface, uint32_t* changeId);
 
     /**
      * Internal helper for sending the RequestSignals signal.
@@ -407,6 +410,17 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     QStatus RequestRange(const char* name, SessionId sid, uint32_t fromId, uint32_t toId);
 
     /**
+     * Internal helper for sending the RequestRangeMatch signal.
+     *
+     * @param[in] name        Advertised name of sender
+     * @param[in] sid         Session ID
+     * @param[in] fromId      Beginning of changeId range (inclusive)
+     * @param[in] toId        End of changeId range (exclusive)
+     * @param[in] matchRules  Match rules to apply to changeId range
+     */
+    QStatus RequestRangeMatch(const char* name, SessionId sid, uint32_t fromId, uint32_t toId, std::vector<qcc::String>& matchRules);
+
+    /**
      * Internal helper for sending sessionless signals.
      *
      * @param[in] msg The sessionless signal
@@ -415,13 +429,23 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      */
     QStatus SendThroughEndpoint(Message& msg, BusEndpoint& ep, SessionId sid);
 
+    /*
+     * Internal helper for sending sessionless signals filtered by our rule table.
+     *
+     * @param[in] sid Session ID
+     * @param[in] msg The sessionless signal
+     * @param[in] fromRulesId Beginning of rules ID range (inclusive)
+     * @param[in] toRulesId End of rules ID range (exclusive)
+     */
+    void SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId);
+
     /**
-     * A match rule that includes a timestamp for recording when it was entered
+     * A match rule that includes a change ID for recording when it was entered
      * into the rule table.
      */
     struct TimestampedRule : public Rule {
-        TimestampedRule(Rule& rule) : Rule(rule), timestamp(qcc::GetTimestamp64()) { }
-        uint64_t timestamp;
+        TimestampedRule(Rule& rule, uint32_t id) : Rule(rule), id(id) { }
+        uint32_t id;
     };
 
     /** Table of endpoint name, timestamped rule. */
@@ -429,6 +453,94 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
 
     /** Rule iterator */
     typedef std::multimap<qcc::String, TimestampedRule>::iterator RuleIterator;
+
+    /*
+     * Advertise or cancel the SL advertisements.
+     *
+     * Walks through the local queue and determines if the advertisements need to
+     * be updated or cancelled.  Updates lastAdvertisements.  Called without any
+     * locks.
+     */
+    void UpdateAdvertisements();
+
+    /*
+     * Map from last advertised name to last advertised change ID.
+     */
+    std::map<qcc::String, uint32_t> lastAdvertisements;
+
+    /*
+     * Helper to create a segmented advertised name.
+     */
+    qcc::String AdvertisedName(const qcc::String& iface, uint32_t changeId);
+
+    /*
+     * Helper to request and advertise a name.
+     */
+    QStatus AdvertiseName(const qcc::String& name);
+
+    /*
+     * Helper to cancel advertisement and release a name.
+     */
+    void CancelAdvertisedName(const qcc::String& name);
+
+    /*
+     * List of advertised names currently being looked for.
+     */
+    std::set<qcc::String> findingNames;
+
+    /*
+     * Find advertised names based from the sessionless match rules.
+     */
+    void FindAdvertisedNames();
+
+    /*
+     * Stop finding advertised names from the sessionless match rules.
+     */
+    void CancelFindAdvertisedNames();
+
+    /*
+     * @param[in] cache
+     * @param[in] fromRulesId The beginning of rules ID range (inclusive)
+     * @param[in] toRulesId The end of rules ID range (exclusive)
+     *
+     * @return true if the sessionless match rules include a match for the
+     * cache.
+     */
+    bool IsMatch(RemoteCache& cache, uint32_t fromRulesId, uint32_t toRulesId);
+
+    typedef enum {
+        NONE = 0,               /**< No work, we have received all signals and applied all the rules. */
+        APPLY_NEW_RULES = 1,    /**< There are new rules that need to be applied the remote caches */
+        REQUEST_NEW_SIGNALS = 2 /**< There are new signals in the cache that need to be received */
+    } WorkType;
+
+    /*
+     * Return the pending work needing to be done for a remote cache.
+     */
+    WorkType PendingWork(RemoteCache& cache);
+
+    /*
+     * Schedule work to be done for any of the remote caches we know about.
+     */
+    void ScheduleWork(bool doInitialBackoff = true);
+
+    /*
+     * Schedule work to be done for a remote cache.
+     */
+    QStatus ScheduleWork(RemoteCache& cache, bool addAlarm = true, bool doInitialBackoff = true);
+
+    bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
+                      const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6);
+    bool SendResponseIfMatch(TransportMask transport, const qcc::IPEndpoint& ns4, const qcc::String& ruleStr);
+    bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort);
+
+    void FoundAdvertisedNameHandler(const char* name, TransportMask transport, const char* prefix, bool doInitialBackoff = true);
+
+    QStatus FindAdvertisementByTransport(const char* matching, TransportMask transports);
+    QStatus CancelFindAdvertisementByTransport(const char* matching, TransportMask transports);
+
+    void HandleRangeMatchRequest(const char* sender, SessionId sid, uint32_t fromChangeId, uint32_t toChangeId,
+                                 std::vector<qcc::String>& matchRules);
 };
 
 }

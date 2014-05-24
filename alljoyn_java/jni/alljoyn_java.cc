@@ -7076,6 +7076,55 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getPeerGUID(JNIEnv*
     return JStatus(status);
 }
 
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_ping(JNIEnv* env,
+                                                                  jobject thiz,
+                                                                  jstring jname,
+                                                                  jint jtimeout)
+{
+    QCC_DbgPrintf(("BusAttachment_ping()"));
+
+    /*
+     * Load the C++ well-known name Java well-known name.
+     */
+    JString name(jname);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_ping(): Exception"));
+        return NULL;
+    }
+
+    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_ping(): Exception"));
+        return NULL;
+    }
+
+    /*
+     * We don't want to force the user to constantly check for NULL return
+     * codes, so if we have a problem, we throw an exception.
+     */
+    if (busPtr == NULL) {
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
+
+    /*
+     * Make the AllJoyn call.
+     */
+    QCC_DbgPrintf(("BusAttachment_ping(): Call Ping(%s)", name.c_str()));
+
+    QStatus status = busPtr->Ping(name.c_str(), jtimeout);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_ping(): Exception"));
+        return NULL;
+    }
+
+    if (status != ER_OK) {
+        QCC_LogError(status, ("BusAttachment_ping(): Ping() fails"));
+    }
+
+    return JStatus(status);
+}
+
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setDaemonDebug(JNIEnv*env, jobject thiz,
                                                                             jstring jmodule, jint jlevel)
 {

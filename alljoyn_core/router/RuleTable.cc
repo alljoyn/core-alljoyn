@@ -21,6 +21,7 @@
  ******************************************************************************/
 #include <qcc/platform.h>
 
+#include <algorithm>
 #include <cstring>
 
 #include "RuleTable.h"
@@ -94,6 +95,8 @@ Rule::Rule(const char* ruleSpec, QStatus* outStatus) : type(MESSAGE_INVALID), se
             status = ER_NOT_IMPLEMENTED;
             QCC_LogError(status, ("arg keys are not supported in ruleSpec \"%s\"", ruleSpec));
             break;
+        } else if (0 == strncmp("implements", pos, 10)) {
+            implements.push_back(qcc::String(begQuotePos, endQuotePos - begQuotePos));
         } else {
             status = ER_FAIL;
             QCC_LogError(status, ("Invalid key in ruleSpec \"%s\"", ruleSpec));
@@ -101,12 +104,14 @@ Rule::Rule(const char* ruleSpec, QStatus* outStatus) : type(MESSAGE_INVALID), se
         }
         pos = endPos + 1;
     }
+    /* Sort the implements vector for equality comparison later */
+    std::sort(implements.begin(), implements.end());
     if (outStatus) {
         *outStatus = status;
     }
 }
 
-bool Rule::IsMatch(const Message& msg)
+bool Rule::IsMatch(Message& msg) const
 {
     /* The fields of a rule (if specified) are logically anded together */
     if ((type != MESSAGE_INVALID) && (type != msg->GetType())) {
@@ -127,6 +132,55 @@ bool Rule::IsMatch(const Message& msg)
     if (!destination.empty() && (0 != strcmp(destination.c_str(), msg->GetDestination()))) {
         return false;
     }
+    if (!implements.empty()) {
+        /*
+         * Clone the message since this message is unmarshalled by the
+         * LocalEndpoint too and the process of unmarshalling is not
+         * thread-safe.
+         */
+        Message clone = Message(msg, true);
+        QStatus status = clone->UnmarshalArgs("qqa(oas)a{sv}");
+        if (status != ER_OK) {
+            return false;
+        }
+
+        const MsgArg* arg = clone->GetArg(2);
+        if (!arg) {
+            return false;
+        }
+        size_t numObjectDescriptions;
+        MsgArg* objectDescriptions;
+        status = arg->Get("a(oas)", &numObjectDescriptions, &objectDescriptions);
+        if (status != ER_OK) {
+            return false;
+        }
+        size_t numMatches = 0;
+        for (size_t im = 0; im < implements.size(); ++im) {
+            for (size_t ob = 0; ob < numObjectDescriptions; ++ob) {
+                char* path;
+                size_t numInterfaces;
+                MsgArg* interfaces;
+                status = objectDescriptions[ob].Get("(oas)", &path, &numInterfaces, &interfaces);
+                if (status != ER_OK) {
+                    return false;
+                }
+                for (size_t in = 0; in < numInterfaces; ++in) {
+                    char* interface;
+                    status = interfaces[in].Get("s", &interface);
+                    if (status != ER_OK) {
+                        return false;
+                    }
+                    if (implements[im] == interface) {
+                        ++numMatches;
+                        continue;
+                    }
+                }
+            }
+        }
+        if (numMatches != implements.size()) {
+            return false;
+        }
+    }
     if (((sessionless == SESSIONLESS_TRUE) && !msg->IsSessionless()) ||
         ((sessionless == SESSIONLESS_FALSE) && msg->IsSessionless())) {
         return false;
@@ -138,7 +192,55 @@ bool Rule::IsMatch(const Message& msg)
 
 qcc::String Rule::ToString() const
 {
-    return "s:" + sender + " i:" + iface + " m:" + member + " p:" + path + " d:" + destination;
+    const char* typeStr[] = { NULL, "method_call", "method_return", "error", "signal" };
+
+    String rule;
+    if (type != MESSAGE_INVALID) {
+        rule += String("type='") + typeStr[type] + "'";
+    }
+    if (!sender.empty()) {
+        if (!rule.empty()) {
+            rule += ",";
+        }
+        rule += "sender='" + sender + "'";
+    }
+    if (!iface.empty()) {
+        if (!rule.empty()) {
+            rule += ",";
+        }
+        rule += "interface='" + iface + "'";
+    }
+    if (!member.empty()) {
+        if (!rule.empty()) {
+            rule += ",";
+        }
+        rule += "member='" + member + "'";
+    }
+    if (!path.empty()) {
+        if (!rule.empty()) {
+            rule += ",";
+        }
+        rule += "path='" + path + "'";
+    }
+    if (!destination.empty()) {
+        if (!rule.empty()) {
+            rule += ",";
+        }
+        rule += "destination='" + destination + "'";
+    }
+    for (vector<String>::const_iterator it = implements.begin(); it != implements.end(); ++it) {
+        if (!rule.empty()) {
+            rule += ",";
+        }
+        rule += "implements='" + *it + "'";
+    }
+    if (sessionless != SESSIONLESS_NOT_SPECIFIED) {
+        if (!rule.empty()) {
+            rule += ",";
+        }
+        rule += String("sessionless='") + (sessionless ? "t" : "f") + "'";
+    }
+    return rule;
 }
 
 QStatus RuleTable::AddRule(BusEndpoint& endpoint, const Rule& rule)

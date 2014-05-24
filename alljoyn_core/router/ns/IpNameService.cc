@@ -33,6 +33,8 @@
 
 namespace ajn {
 
+const uint16_t IpNameService::MULTICAST_MDNS_PORT = 5353;
+
 IpNameService::IpNameService()
     : m_constructed(false), m_destroyed(false), m_refCount(0), m_pimpl(NULL)
 {
@@ -434,7 +436,7 @@ QStatus IpNameService::Enabled(TransportMask transportMask,
     return m_pimpl->Enabled(transportMask, reliableIPv4Port, reliableIPv6Port, unreliableIPv4Port, unreliableIPv6Port);
 }
 
-QStatus IpNameService::FindAdvertisedName(TransportMask transportMask, const qcc::String& prefix)
+QStatus IpNameService::FindAdvertisement(TransportMask transportMask, const qcc::String& matching)
 {
     //
     // If the entry gate has been closed, we do not allow a FindAdvertisedName
@@ -447,11 +449,11 @@ QStatus IpNameService::FindAdvertisedName(TransportMask transportMask, const qcc
         return ER_OK;
     }
 
-    ASSERT_STATE("FindAdvertisedName");
-    return m_pimpl->FindAdvertisedName(transportMask, prefix);
+    ASSERT_STATE("FindAdvertisement");
+    return m_pimpl->FindAdvertisement(transportMask, matching);
 }
 
-QStatus IpNameService::CancelFindAdvertisedName(TransportMask transportMask, const qcc::String& prefix)
+QStatus IpNameService::CancelFindAdvertisement(TransportMask transportMask, const qcc::String& matching)
 {
     return ER_OK;
 }
@@ -506,6 +508,51 @@ QStatus IpNameService::OnProcResume()
     }
     ASSERT_STATE("OnProcResume");
     return m_pimpl->OnProcResume();
+}
+
+void IpNameService::RegisterListener(IpNameServiceListener& listener)
+{
+    if (m_destroyed) {
+        return;
+    }
+    ASSERT_STATE("RegisterListener");
+    m_pimpl->RegisterListener(listener);
+}
+
+void IpNameService::UnregisterListener(IpNameServiceListener& listener)
+{
+    if (m_destroyed) {
+        return;
+    }
+    ASSERT_STATE("UnregisterListener");
+    m_pimpl->UnregisterListener(listener);
+}
+
+QStatus IpNameService::Ping(TransportMask transportMask, const qcc::String& guid, const qcc::String& name)
+{
+    if (m_destroyed) {
+        return ER_OK;
+    }
+    ASSERT_STATE("Ping");
+    return m_pimpl->Ping(transportMask, guid, name);
+}
+
+QStatus IpNameService::Query(TransportMask transportMask, MDNSPacket mdnsPacket)
+{
+    if (m_destroyed) {
+        return ER_OK;
+    }
+    ASSERT_STATE("Query");
+    return m_pimpl->Query(transportMask, mdnsPacket);
+}
+
+QStatus IpNameService::Response(TransportMask transportMask, MDNSPacket mdnsPacket)
+{
+    if (m_destroyed) {
+        return ER_OK;
+    }
+    ASSERT_STATE("Response");
+    return m_pimpl->Response(transportMask, mdnsPacket);
 }
 
 } // namespace ajn

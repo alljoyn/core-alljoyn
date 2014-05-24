@@ -62,6 +62,12 @@ class IfConfigEntry {
     uint32_t m_index;   /**< The operating system generated interface index for this interface. */
 };
 
+typedef enum {
+    QCC_RTM_IGNORED = -1,
+    QCC_RTM_DELADDR = 0,
+    QCC_RTM_NEWADDR = 1
+} NetworkEventType;
+
 /**
  * @brief Get information regarding the network interfaces on the
  * host.
@@ -105,6 +111,18 @@ QStatus IfConfig(std::vector<IfConfigEntry>& entries);
  *     information will only include m_name, m_addr, and m_family.
  */
 QStatus IfConfigIPv4(std::vector<IfConfigEntry>& entries);
+
+/**
+ * @brief Watch for network event notifications.
+ *
+ */
+SocketFd NetworkEventSocket();
+
+/**
+ * @brief Process network event notifications.
+ *
+ */
+NetworkEventType NetworkEventReceive(SocketFd sockFd);
 
 } // namespace ajn
 

@@ -39,11 +39,13 @@
 #include <alljoyn/Message.h>
 
 #include "Bus.h"
+#include "BusUtil.h"
 #include "NameTable.h"
 #include "RemoteEndpoint.h"
 #include "Transport.h"
 #include "VirtualEndpoint.h"
 #include "PermissionMgr.h"
+#include "ns/IpNameService.h"
 
 namespace ajn {
 
@@ -54,7 +56,8 @@ class BusController;
  * BusObject responsible for implementing the standard AllJoyn methods at org.alljoyn.Bus
  * for messages directed to the bus.
  */
-class AllJoynObj : public BusObject, public NameListener, public TransportListener, public qcc::AlarmListener {
+class AllJoynObj : public BusObject, public NameListener, public TransportListener, public qcc::AlarmListener,
+    public IpNameServiceListener {
     friend class _RemoteEndpoint;
 
   public:
@@ -220,6 +223,22 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     void FindAdvertisedNameByTransport(const InterfaceDescription::Member* member, Message& msg);
 
     /**
+     * Respond to a bus request to look for advertisements from remote AllJoyn instances over a set of specified transports.
+     *
+     * The input Message (METHOD_CALL) is expected to contain the following parameters:
+     *   matching      string   Key, value match criteria that the caller wants to be notified of (via signal)
+     *                          when a remote Bus instance is found with an advertisement that matches the criteria.
+     *   transports    uint16   Transport bit mask
+     *
+     * The output Message (METHOD_REPLY) contains the following parameters:
+     *   resultCode   uint32   A ALLJOYN_FINDNAME_* reply code (see AllJoynStd.h)
+     *
+     * @param member  Member.
+     * @param msg     The incoming message.
+     */
+    void FindAdvertisementByTransport(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
      * Respond to a bus request to cancel a previous (successful) FindName request.
      *
      * The input Message (METHOD_CALL) is expected to contain the following parameters:
@@ -247,6 +266,21 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param msg     The incoming message.
      */
     void CancelFindAdvertisedNameByTransport(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * Respond to a bus request to cancel a previous (successful) FindAdvertisement request over a set of specified transports.
+     *
+     * The input Message (METHOD_CALL) is expected to contain the following parameters:
+     *   matching      string   The key, value match criteria that was used in a successful call to FindAdvertisement.
+     *   transports    uint16   Transport bit mask
+     *
+     * The output Message (METHOD_REPLY) contains the following parameters:
+     *   resultCode   uint32   A ALLJOYN_CANCELFINDNAME_* reply code (see AllJoynStd.h)
+     *
+     * @param member  Member.
+     * @param msg     The incoming message.
+     */
+    void CancelFindAdvertisementByTransport(const InterfaceDescription::Member* member, Message& msg);
 
     /**
      * Respond to a bus request to get a (streaming) file descritor for an existing session.
@@ -378,6 +412,15 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      *
      */
     void ReloadConfig(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * Method handler for org.alljoyn.Bus.Ping
+     *
+     * @param member    Interface member.
+     * @param msg       The incoming method call message.
+     *
+     */
+    void Ping(const InterfaceDescription::Member* member, Message& msg);
 
     /**
      * Add a new Bus-to-bus endpoint.
@@ -514,7 +557,18 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     std::multimap<qcc::String, std::pair<TransportMask, qcc::String> > advertiseMap;
 
     /** Map of active discovery names to requesting local endpoint's permitted transport mask(s) and name(s) */
-    std::multimap<qcc::String, std::pair<TransportMask, qcc::String> > discoverMap;
+    struct DiscoverMapEntry {
+        TransportMask transportMask;
+        qcc::String sender;
+        MatchMap matching;
+
+        DiscoverMapEntry(TransportMask transportMask, const qcc::String& sender, const MatchMap& matching) :
+            transportMask(transportMask),
+            sender(sender),
+            matching(matching) { }
+    };
+    typedef std::multimap<qcc::String, DiscoverMapEntry> DiscoverMapType;
+    DiscoverMapType discoverMap;
 
     /** Map of discovered bus names (protected by discoverMapLock) */
     struct NameMapEntry {
@@ -813,27 +867,34 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * Process a request to cancel discovery of a name prefix from a given (locally-connected) endpoint.
      *
      * @param endpointName         Name of endpoint requesting end of discovery
-     * @param namePrefix           Well-known name prefix to be removed from discovery list
+     * @param matching             Key, value match criteria to be removed from discovery list
      * @param transports           Set of transports that should cancel the discovery.
      * @return ER_OK if successful.
      */
-    QStatus ProcCancelFindName(const qcc::String& endpointName, const qcc::String& namePrefix, TransportMask transports);
+    QStatus ProcCancelFindAdvertisement(const qcc::String& endpointName, const qcc::String& matching, TransportMask transports);
 
     /**
-     * Process a request to discover a name prefix by a set of transports
+     * Process a request to discover a matching advertisement by a set of transports
      *
+     * @param status               The result of parsing one of FindAdvertisedName, FindAdvertisedNameByTransport, or
+     *                             FindAdvertisementByTransport.
      * @param msg                  The incoming message
-     * @param isAnyTrans           True if to use transports included in TRANSPORT_ANY; if false the information of transport bits are part of the message
+     * @param matching             Key, value match criteria that the caller wants to be notified of (via signal)
+     *                             when a remote Bus instance is found with an advertisement that matches the criteria.
+     * @param transports           Transport bit mask
      */
-    void ProcFindAdvertisedName(Message& msg, bool isAnyTrans);
+    void ProcFindAdvertisement(QStatus status, Message& msg, const qcc::String& matching, TransportMask transports);
 
     /**
      * Handle a request to cancel the discovery a name prefix by a set of transports
      *
+     * @param status               The result of parsing one of CancelFindAdvertisedName, CancelFindAdvertisedNameByTransport, or
+     *                             CancelFindAdvertisementByTransport.
      * @param msg                  The incoming message
-     * @param isAnyTrans           True if to use transports included in TRANSPORT_ANY; if false the information of transport bits are part of the message
+     * @param matching             Key, value match criteria to be removed from discovery list
+     * @param transports           Transport bit mask
      */
-    void HandleCancelFindAdvertisedName(Message& msg, bool isAnyTrans);
+    void HandleCancelFindAdvertisement(QStatus status, Message& msg, const qcc::String& matching, TransportMask transports);
 
     /**
      * Validate and normalize a transport specification string.  Given a
@@ -895,6 +956,18 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param mask    Set of transports whose advertisement for name will be removed from alias map.
      */
     void CleanAdvAliasMap(const qcc::String& name, TransportMask mask);
+
+    /* TODO document */
+    void PingReplyMethodHandler(Message& reply, void* context);
+    void PingReplyMethodHandler(Message& msg, uint32_t replyCode);
+    void PingReplyTransportHandler(Message& reply, void* context);
+
+    bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
+                      const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6);
+    bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort);
+    void PingResponse(TransportMask transport, const qcc::IPEndpoint& ns4, const qcc::String& name, uint32_t replyCode);
+
+    std::multimap<qcc::String, void*> pingReplyContexts;
 };
 
 }

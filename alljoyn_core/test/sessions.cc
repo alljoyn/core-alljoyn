@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -192,7 +192,7 @@ class SessionTestObject : public BusObject {
 class MyBusListener : public BusListener, public SessionPortListener, public SessionListener {
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
-        printf("Discovered name : \"%s\"\n", name);
+        printf("FoundAdvertisedName name=%s namePrefix=%s\n", name, namePrefix);
         s_lock.Lock(MUTEX_CONTEXT);
         s_discoverSet.insert(DiscoverInfo(name, transport));
         s_lock.Unlock(MUTEX_CONTEXT);
@@ -665,6 +665,16 @@ static void DoSetLinkTimeoutAsync(SessionId id, uint32_t timeout)
 
 }
 
+static void DoPing(String name)
+{
+    QStatus status = s_bus->Ping(name.c_str(), 30000);
+    if (status != ER_OK) {
+        printf("DoPing(%s) failed with %s (%u)\n", name.c_str(), QCC_StatusText(status), status);
+    } else {
+        printf("Ping(%s) OK\n", name.c_str());
+    }
+}
+
 int main(int argc, char** argv)
 {
     QStatus status = ER_OK;
@@ -937,6 +947,9 @@ int main(int argc, char** argv)
                 continue;
             }
             sessionTestObj.SetTtl(ttl);
+        } else if (cmd == "ping") {
+            String name = NextTok(line);
+            DoPing(name);
         } else if (cmd == "exit") {
             break;
         } else if (cmd == "help") {
@@ -965,6 +978,7 @@ int main(int argc, char** argv)
             printf("addmatch <rule>                                               - Add a DBUS rule\n");
             printf("removematch <rule>                                            - Remove a DBUS rule\n");
             printf("sendttl <ttl>                                                 - Set ttl (in ms) for all chat messages (0 = infinite)\n");
+            printf("ping <name>                                                   - Ping a name\n");
             printf("exit                                                          - Exit this program\n");
             printf("\n");
             printf("SessionIds can be specified by value or by #<idx> where <idx> is the session index printed with \"list\" command\n");

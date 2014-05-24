@@ -34,9 +34,19 @@
 #include <alljoyn/Status.h>
 #include <Callback.h>
 
+#include "IpNsProtocol.h"
+
 namespace ajn {
 
 class IpNameServiceImpl;
+
+class IpNameServiceListener {
+  public:
+    virtual ~IpNameServiceListener() { }
+    virtual bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
+                              const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6) { return false; }
+    virtual bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort) { return false; }
+};
 
 /**
  * @brief API to provide an implementation dependent IP (Layer 3) Name Service
@@ -76,6 +86,13 @@ class IpNameServiceImpl;
  */
 class IpNameService {
   public:
+
+    /**
+     * @brief The port number for the MDNS name service.
+     *
+     * @see IPv4 Multicast Address space Registry IANA
+     */
+    static const uint16_t MULTICAST_MDNS_PORT;
 
     /**
      * @brief Return a reference to the IpNameService singleton.
@@ -144,6 +161,25 @@ class IpNameService {
      */
     void SetCallback(TransportMask transportMask,
                      Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint8_t>* cb);
+
+    void RegisterListener(IpNameServiceListener& listener);
+
+    void UnregisterListener(IpNameServiceListener& listener);
+
+    /**
+     * @brief Ping a name over the network interfaces opened by the specified
+     * transport.
+     *
+     * @param transportMask A bitmask containing the transport requesting the
+     *     ping on.
+     * @param guid The guid for this name
+     * @param name The name to ping.
+     */
+    QStatus Ping(TransportMask transportMask, const qcc::String& guid, const qcc::String& name);
+
+    QStatus Query(TransportMask transportMask, MDNSPacket mdnsPacket);
+
+    QStatus Response(TransportMask transportMask, MDNSPacket mdnsPacket);
 
     /**
      * @brief Creat a virtual network interface. In normal cases WiFi-Direct
@@ -346,9 +382,10 @@ class IpNameService {
      *
      * @param transportMask A bitmask containing the transport requesting the
      *     discovery operation.
-     * @param prefix The well-known name prefix to find.
+     * @param matching The Key, value match criteria that the caller wants to be notified of (via signal)
+     *                 when a remote Bus instance is found with an advertisement that matches the criteria.
      */
-    QStatus FindAdvertisedName(TransportMask transportMask, const qcc::String& prefix);
+    QStatus FindAdvertisement(TransportMask transportMask, const qcc::String& matching);
 
     /**
      * @brief Stop discovering well-known names starting with the specified
@@ -356,9 +393,10 @@ class IpNameService {
      *
      * @param transportMask A bitmask containing the transport requesting the
      *     discovery operation.
-     * @param prefix The well-known name prefix to stop finding.
+     * @param matching The Key, value match criteria that the caller wants to be notified of (via signal)
+     *                 when a remote Bus instance is found with an advertisement that matches the criteria.
      */
-    QStatus CancelFindAdvertisedName(TransportMask transportMask, const qcc::String& prefix);
+    QStatus CancelFindAdvertisement(TransportMask transportMask, const qcc::String& matching);
 
     /**
      * @brief Advertise a well-known name over the network interfaces opened by the

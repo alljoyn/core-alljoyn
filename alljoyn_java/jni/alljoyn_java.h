@@ -314,6 +314,14 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getPeerGUID
 
 /*
  * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    ping
+ * Signature: (Ljava/lang/String;I)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_ping
+  (JNIEnv *, jobject, jstring, jint);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
  * Method:    setDaemonDebug
  * Signature: (Ljava/lang/String;I)Lorg/alljoyn/bus/Status;
  */

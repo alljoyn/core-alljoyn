@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -475,7 +475,7 @@ int main(int argc, char** argv)
         ns.Init(guid);
         ns.Start();
         ns.OpenInterface(TRANSPORT_TCP, "*");
-        ns.FindAdvertisedName(TRANSPORT_TCP, "");
+        ns.FindAdvertisement(TRANSPORT_TCP, "name='*'");
         printf("Started sniffing for advertised names\n");
         qcc::Sleep(10000000);
         ns.Stop();
@@ -496,7 +496,7 @@ int main(int argc, char** argv)
             ns.Start();
 
             ns.OpenInterface(TRANSPORT_TCP, "*");
-            ns.FindAdvertisedName(TRANSPORT_TCP, "");
+            ns.FindAdvertisement(TRANSPORT_TCP, "name='*'");
 
             printf("Start relay\n");
 

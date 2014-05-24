@@ -1745,6 +1745,18 @@ class BusAttachment : public MessageReceiver {
      */
     static uint32_t GetTimestamp();
 
+    /**
+     * Determine if you are able to find a remote connection based on its BusName.
+     * The BusName can be the Unique or well-known name.
+     * @param name The unique or well-known name to ping
+     * @param timeout Timeout specified in milliseconds to wait for reply
+     * @return
+     *   - #ER_OK on success
+     *   - #ER_TIMEOUT the Ping attempt timed out
+     *   - An error status otherwise
+     */
+    QStatus Ping(const char* name, uint32_t timeout);
+
     /// @cond ALLJOYN_DEV
     /**
      * @internal
@@ -1897,6 +1909,7 @@ class BusAttachment : public MessageReceiver {
     };
 
     JoinObj joinObj;          /**< MUST BE LAST MEMBER. Ensure all threads are joined before BusAttachment destruction */
+
 };
 
 }

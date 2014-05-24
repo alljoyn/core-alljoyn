@@ -501,6 +501,22 @@ public class BusAttachment {
     public native Status getPeerGUID(String name, Mutable.StringValue guid);
 
     /**
+     * Determine if a name is present and responding by pinging it. The name can
+     * be the unique or well-known name.
+     *
+     * @param name     The unique or well-known name to ping
+     * @param timeout  Timeout specified in milliseconds to wait for reply
+     *
+     * @return
+     * <ul>
+     * <li>OK on success</li>
+     * <li>TIMEOUT the Ping attempt timed out</li>
+     * <li>An error status otherwise</li>
+     * </ul>
+     */
+    public native Status ping(String name, int timeout);
+
+    /**
      * This sets the debug level of the local AllJoyn router if that router
      * was built in debug mode.
      *

@@ -16,77 +16,132 @@
 
 #include <alljoyn/about/AnnouncementRegistrar.h>
 #include <qcc/Debug.h>
+#include <qcc/String.h>
+
+#include "InternalAnnounceHandler.h"
 
 #define QCC_MODULE "ALLJOYN_ABOUT_ANNOUNCEMENT_REGISTRAR"
 
 using namespace ajn;
 using namespace services;
 
-QStatus AnnouncementRegistrar::RegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler) {
+static InternalAnnounceHandler* internalAnnounceHandler = NULL;
+
+QStatus AnnouncementRegistrar::RegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler, const char** implementsInterfaces, size_t numberInterfaces) {
     QCC_DbgTrace(("AnnouncementRegistrar::%s", __FUNCTION__));
     QStatus status = ER_OK;
-    const InterfaceDescription* getIface = NULL;
-    getIface = bus.GetInterface("org.alljoyn.About");
-    if (!getIface) {
-        InterfaceDescription* createIface = NULL;
-        status = bus.CreateInterface("org.alljoyn.About", createIface, false);
-        if (status != ER_OK) {
-            return status;
-        }
-        if (!createIface) {
-            return ER_BUS_CANNOT_ADD_INTERFACE;
-        }
-
-        status = createIface->AddMethod("GetAboutData", "s", "a{sv}", "languageTag,aboutData");
-        if (status != ER_OK) {
-            return status;
-        }
-        status = createIface->AddMethod("GetObjectDescription", NULL, "a(oas)", "Control");
-        if (status != ER_OK) {
-            return status;
-        }
-        status = createIface->AddProperty("Version", "q", PROP_ACCESS_READ);
-        if (status != ER_OK) {
-            return status;
-        }
-        status = createIface->AddSignal("Announce", "qqa(oas)a{sv}", "version,port,objectDescription,aboutData", 0);
-        if (status != ER_OK) {
-            return status;
-        }
-
-        createIface->Activate();
-        handler.announceSignalMember = createIface->GetMember("Announce");
-    } else {
-        handler.announceSignalMember = getIface->GetMember("Announce");
+    // the only time number of interfaces should be zero is if implements
+    // interfaces is a NULL pointer
+    // If a valid pointer is passed in then the number of interfaces should not be
+    // zero.
+    if ((implementsInterfaces == NULL && numberInterfaces != 0) ||
+        (implementsInterfaces != NULL && numberInterfaces == 0)) {
+        return ER_BAD_ARG_4;
     }
 
-    status = bus.RegisterSignalHandler(&handler,
-                                       static_cast<MessageReceiver::SignalHandler>(&AnnounceHandler::AnnounceSignalHandler),
-                                       handler.announceSignalMember,
-                                       0);
+    // we only need to register the internalAnnounceHandler once that it is
+    // responsible for forwarding each Announce signal to the users AnnounceHandeler
+    if (internalAnnounceHandler == NULL) {
+        internalAnnounceHandler = new InternalAnnounceHandler();
+
+        const InterfaceDescription* getIface = NULL;
+        // check to see if the org.alljoyn.About interface is already registered with
+        // the bus.  If the call to GetInterface returns NULL we know the interface
+        // is not found on the bus and it is created.
+        getIface = bus.GetInterface("org.alljoyn.About");
+        if (!getIface) {
+            InterfaceDescription* createIface = NULL;
+            status = bus.CreateInterface("org.alljoyn.About", createIface, false);
+            if (status != ER_OK) {
+                return status;
+            }
+            if (!createIface) {
+                return ER_BUS_CANNOT_ADD_INTERFACE;
+            }
+
+            status = createIface->AddMethod("GetAboutData", "s", "a{sv}", "languageTag,aboutData");
+            if (status != ER_OK) {
+                return status;
+            }
+            status = createIface->AddMethod("GetObjectDescription", NULL, "a(oas)", "Control");
+            if (status != ER_OK) {
+                return status;
+            }
+            status = createIface->AddProperty("Version", "q", PROP_ACCESS_READ);
+            if (status != ER_OK) {
+                return status;
+            }
+            status = createIface->AddSignal("Announce", "qqa(oas)a{sv}", "version,port,objectDescription,aboutData", 0);
+            if (status != ER_OK) {
+                return status;
+            }
+
+            createIface->Activate();
+            // Now that the interface has been activated get the Announce signal member
+            internalAnnounceHandler->announceSignalMember = createIface->GetMember("Announce");
+        } else {
+            // Get the Announce signal member
+            internalAnnounceHandler->announceSignalMember = getIface->GetMember("Announce");
+        }
+
+        status = bus.RegisterSignalHandler(internalAnnounceHandler,
+                                           static_cast<MessageReceiver::SignalHandler>(&InternalAnnounceHandler::AnnounceSignalHandler),
+                                           internalAnnounceHandler->announceSignalMember,
+                                           0);
+        if (status != ER_OK) {
+            return status;
+        }
+        QCC_DbgPrintf(("AnnouncementRegistrar::%s Registered Signal Handler", __FUNCTION__));
+    }
+
+    // Add the user handler to the internal AnnounceHandler.
+    internalAnnounceHandler->AddHandler(handler, implementsInterfaces, numberInterfaces);
+
+    qcc::String matchRule = "type='signal',interface='org.alljoyn.About',member='Announce',sessionless='t'";
+    for (size_t i = 0; i < numberInterfaces; ++i) {
+        matchRule += qcc::String(",implements='") + implementsInterfaces[i] + qcc::String("'");
+    }
+
+    status = bus.AddMatch(matchRule.c_str());
     if (status != ER_OK) {
         return status;
     }
 
-    status = bus.AddMatch("type='signal',sessionless='t',interface='org.alljoyn.About',member='Announce'");
-    if (status != ER_OK) {
-        return status;
+
+    QCC_DbgPrintf(("AnnouncementRegistrar::%s result %s", __FUNCTION__, QCC_StatusText(status)));
+    return status;
+}
+
+QStatus AnnouncementRegistrar::UnRegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler, const char** implementsInterfaces, size_t numberInterfaces) {
+    QCC_DbgTrace(("AnnouncementRegistrar::%s", __FUNCTION__));
+    QStatus status = ER_OK;
+    if (internalAnnounceHandler != NULL) {
+        status = internalAnnounceHandler->RemoveHandler(handler, implementsInterfaces, numberInterfaces);
+        if (status != ER_OK) {
+            return status;
+        }
+        if (internalAnnounceHandler->announceMap.empty()) {
+            status = bus.UnregisterSignalHandler(internalAnnounceHandler, static_cast<MessageReceiver::SignalHandler>(&InternalAnnounceHandler::AnnounceSignalHandler),
+                                                 internalAnnounceHandler->announceSignalMember, NULL);
+            if (status != ER_OK) {
+                return status;
+            }
+            QCC_DbgPrintf(("AnnouncementRegistrar::%s Unregistered Signal Handler", __FUNCTION__));
+            delete internalAnnounceHandler;
+        }
     }
 
     QCC_DbgPrintf(("AnnouncementRegistrar::%s result %s", __FUNCTION__, QCC_StatusText(status)));
     return status;
 }
 
-QStatus AnnouncementRegistrar::UnRegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler) {
-    QCC_DbgTrace(("AnnouncementRegistrar::%s", __FUNCTION__));
-    QStatus status = ER_OK;
-
-    status = bus.UnregisterSignalHandler(&handler, static_cast<MessageReceiver::SignalHandler>(&AnnounceHandler::AnnounceSignalHandler),
-                                         handler.announceSignalMember, NULL);
+QStatus AnnouncementRegistrar::UnRegisterAllAnnounceHandlers(ajn::BusAttachment& bus) {
+    QStatus status = bus.UnregisterSignalHandler(internalAnnounceHandler, static_cast<MessageReceiver::SignalHandler>(&InternalAnnounceHandler::AnnounceSignalHandler),
+                                                 internalAnnounceHandler->announceSignalMember, NULL);
     if (status != ER_OK) {
         return status;
     }
-
-    QCC_DbgPrintf(("AnnouncementRegistrar::%s result %s", __FUNCTION__, QCC_StatusText(status)));
+    QCC_DbgPrintf(("AnnouncementRegistrar::%s Unregistered All Announce Handlers", __FUNCTION__));
+    delete internalAnnounceHandler;
     return status;
 }

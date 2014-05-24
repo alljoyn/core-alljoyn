@@ -57,7 +57,7 @@ class IPAddress {
      * Default constructor initializes an invalid IP address.  Generally, this
      * should not be used but is still made available if needed.
      */
-    IPAddress(void) : addrSize(0) { ::memset(addr, 0, sizeof(addr)); }
+    IPAddress() : addrSize(0) { ::memset(addr, 0, sizeof(addr)); }
 
     /**
      * Consruct IPAddress based on a string containing an IPv4 or IPv6 address.
@@ -298,7 +298,7 @@ class IPEndpoint {
     /**
      * Empty Constructor
      */
-    IPEndpoint() { }
+    IPEndpoint() : port(0) { }
 
     /**
      * Construct and IPEndpoint from a string and port
@@ -316,6 +316,20 @@ class IPEndpoint {
      */
     IPEndpoint(qcc::IPAddress& addr, uint16_t port) : addr(addr), port(port) { }
 
+    /**
+     * Get the port for the IPEndpoint.
+     *
+     * @return  The port for this endpoint.
+     */
+    uint16_t GetPort() const { return port; }
+
+    /**
+     * Get the IP Address for the IPEndpoint.
+     *
+     * @return  The IP Address for this endpoint.
+     */
+    qcc::IPAddress GetAddress() const { return addr; }
+
     /** Address */
     qcc::IPAddress addr;
 
@@ -328,6 +342,13 @@ class IPEndpoint {
      * @return true iff other equals this IPAddress.
      */
     bool operator==(const qcc::IPEndpoint& other) const { return ((addr == other.addr) && (port == other.port)); }
+
+    /**
+     * Inequality test
+     * @param other  Endpoint to compare with.
+     * @return true iff other does not equal this IPAddress.
+     */
+    bool operator!=(const qcc::IPEndpoint& other) const { return !(*this == other); }
 
     /**
      * Human readable version of IPEndpoint.

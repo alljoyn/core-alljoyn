@@ -398,16 +398,6 @@ static NSString * const ABOUT_ICON_INTERFACE_NAME = @"org.alljoyn.Icon";   //Abo
 	// Create a dictionary to contain announcements using a key in the format of: "announcementUniqueName + announcementObj"
 	self.clientInformationDict = [[NSMutableDictionary alloc] init];
     
-	// AddMatchRule
-	status = [self.clientBusAttachment addMatchRule:@"sessionless='t',type='error'"]; // This is added because we want to listen to the about announcements which are sessionless
-	if (status != ER_OK) {
-        NSLog(@"[%@] [%@] Failed at addMatchRule - exiting application", @"FATAL", [[self class] description]);
-
-		exit(1);
-	}
-    
-
-    
 	// Advertise Daemon for tcl
 	status = [self.clientBusAttachment requestWellKnownName:self.realmBusName withFlags:kAJNBusNameFlagDoNotQueue];
 	if (status == ER_OK) {
@@ -496,10 +486,6 @@ static NSString * const ABOUT_ICON_INTERFACE_NAME = @"org.alljoyn.Icon";   //Abo
 	status = [self.clientBusAttachment releaseWellKnownName:self.realmBusName];
 	if (status == ER_OK) {
          NSLog(@"[%@] [%@] Successfully release WellKnownName", @"DEBUG", [[self class] description]);
-	}
-	status = [self.clientBusAttachment removeMatchRule:@"sessionless='t',type='error'"];
-	if (status == ER_OK) {
-         NSLog(@"[%@] [%@] Successfully remove MatchRule", @"DEBUG", [[self class] description]);
 	}
     
 	// Cancel advertise name for each announcement bus

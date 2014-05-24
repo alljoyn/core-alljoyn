@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -28,7 +28,10 @@
 #endif
 
 #include <vector>
+#include <map>
 #include <qcc/String.h>
+#include <qcc/StringUtil.h>
+#include <qcc/ManagedObj.h>
 #include <qcc/IPAddress.h>
 #include <alljoyn/TransportMask.h>
 #include <alljoyn/Status.h>
@@ -1163,6 +1166,20 @@ class IsAt : public ProtocolElement {
 
     /**
      * @internal
+     * Remove the well-known or bus name from the answer.
+     *
+     * This method removed a well-known name or bus name from the list of answers
+     * regarding the names supported by the calling daemon.
+     *
+     * @note complexity constant time plus the number of element after the last
+     * element deleted
+     *
+     * @param index the index value for the name to be removed
+     */
+    void RemoveName(uint32_t index);
+
+    /**
+     * @internal
      * @brief Get the number of well-known or bus names represented by this
      * object.
      *
@@ -1560,31 +1577,15 @@ class WhoHas : public ProtocolElement {
 
 /**
  * @internal
- * @brief A class representing a message in the name service protocol.
+ * @brief A class representing name service packets.
  *
- * A name service message consists of a header, followed by a variable
- * number of question (Q) messages (for example, WHO-HAS) followed by a variable
- * number of answer(A) messages (for example, IS-AT).  All messages are packed
- * to octet boundaries.
+ * This is an abstract class, derived by NSPacket(version 0 and 1) and MDNSPacket(version 2)
  *
- * @ingroup name_service_protocol
  */
-class Header : public ProtocolElement {
+class _Packet : public ProtocolElement {
   public:
-
-    /**
-     * @internal
-     * @brief Construct an in-memory object representation of an on-the-wire
-     * name service protocol header.
-     */
-    Header();
-
-    /**
-     * @internal
-     * @brief Destroy a name service protocol header object.
-     */
-    ~Header();
-
+    _Packet();
+    virtual ~_Packet();
     /**
      * @internal
      * @brief Set the optional destination address for the message corresponding
@@ -1672,6 +1673,40 @@ class Header : public ProtocolElement {
 
     /**
      * @internal
+     * @brief Set the timer value for all answers present in the protocol
+     * message.
+     *
+     * The timer value is typcally used to encode whether or not included
+     * answer (IS-AT) messages indicate the establishment or withdrawal
+     * of service advertisements.  A timer value of zero indicates that
+     * the included answers are valid for zero seconds.  This implies
+     * that the advertisements are no longer valid and should be withdrawn.
+     *
+     * A timer value of 255 indicates that the advertisements included in
+     * the following IS-AT messages should be considered valid until they
+     * are explicitly withdrawn.
+     *
+     * Other timer values indicate that the advertisements included are
+     * are ephemeral and should not be considered valid for longer than
+     * the number of seconds after which the message datagram containing
+     * the header is received.
+     *
+     * @param timer The timer value (0 .. 255) for included answers.
+     */
+    void SetTimer(uint8_t timer);
+
+    /**
+     * @internal
+     * @brief Get the timer value for all answers present in the protocol
+     * message.
+     *
+     * @see SetTimer()
+     *
+     * @return  The timer value (0 .. 255) for included answers.
+     */
+    uint8_t GetTimer(void) const;
+    /**
+     * @internal
      * @brief Set the wire protocol version that the object will use.
      *
      * The name service protocol is versioned.  For backward compatibility, we
@@ -1711,7 +1746,6 @@ class Header : public ProtocolElement {
      * @param msgVersion The version  (0 .. 16) of the actual message.
      */
     void SetVersion(uint32_t nsVersion, uint32_t msgVersion) { m_version = nsVersion << 4 | msgVersion; }
-
     /**
      * @internal
      * @brief Get the wire protocol version that the object will use.
@@ -1725,38 +1759,79 @@ class Header : public ProtocolElement {
 
     /**
      * @internal
-     * @brief Set the timer value for all answers present in the protocol
-     * message.
+     * @brief Get the size of a buffer that will allow the header object and
+     * all of its children questions and answer objects to be successfully
+     * serialized.
      *
-     * The timer value is typcally used to encode whether or not included
-     * answer (IS-AT) messages indicate the establishment or withdrawal
-     * of service advertisements.  A timer value of zero indicates that
-     * the included answers are valid for zero seconds.  This implies
-     * that the advertisements are no longer valid and should be withdrawn.
-     *
-     * A timer value of 255 indicates that the advertisements included in
-     * the following IS-AT messages should be considered valid until they
-     * are explicitly withdrawn.
-     *
-     * Other timer values indicate that the advertisements included are
-     * are ephemeral and should not be considered valid for longer than
-     * the number of seconds after which the message datagram containing
-     * the header is received.
-     *
-     * @param timer The timer value (0 .. 255) for included answers.
+     * @return The size of the buffer required to serialize the object
      */
-    void SetTimer(uint8_t timer);
+    virtual size_t GetSerializedSize(void) const = 0;
 
     /**
      * @internal
-     * @brief Get the timer value for all answers present in the protocol
-     * message.
+     * @brief Serialize this header and all of its children question and
+     * answer objects to the provided buffer.
      *
-     * @see SetTimer()
+     * @warning The buffer should be at least as large as the size returned
+     * by GetSerializedSize().
      *
-     * @return  The timer value (0 .. 255) for included answers.
+     * @return The number of octets written to the buffer.
      */
-    uint8_t GetTimer(void) const;
+    virtual size_t Serialize(uint8_t* buffer) const = 0;
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its children
+     * questinos and answers from the provided buffer.
+     *
+     * @see ProtocolElement::Deserialize()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize) = 0;
+
+  private:
+    uint8_t m_timer;
+    qcc::IPEndpoint m_destination;
+    bool m_destinationSet;
+    uint32_t m_retries;
+    uint32_t m_tick;
+  protected:
+    uint8_t m_version;
+
+};
+
+/**
+ * @internal
+ * @brief A class representing a message in the name service protocol.
+ *
+ * A name service message consists of a header, followed by a variable
+ * number of question (Q) messages (for example, WHO-HAS) followed by a variable
+ * number of answer(A) messages (for example, IS-AT).  All messages are packed
+ * to octet boundaries.
+ *
+ * @ingroup name_service_protocol
+ */
+class _NSPacket : public _Packet {
+  public:
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * name service protocol header.
+     */
+    _NSPacket();
+
+    /**
+     * @internal
+     * @brief Destroy a name service protocol header object.
+     */
+    ~_NSPacket();
+
 
     /**
      * @internal
@@ -1846,6 +1921,20 @@ class Header : public ProtocolElement {
 
     /**
      * @internal
+     * Remove an answer object from the list of answers represented by this header.
+     *
+     * This method removed an answer (IsAt) object from an internal list of answers
+     * the calling daemon is providing.
+     *
+     * @note complexity is constant time plus the number of elements after the
+     * deleted element.
+     *
+     * @param index the index value of the answer to be removed
+     */
+    void RemoveAnswer(uint32_t index);
+
+    /**
+     * @internal
      * @brief Get the number of answer objects represented by this object.
      *
      * @see GetAnswer()
@@ -1928,15 +2017,2089 @@ class Header : public ProtocolElement {
     size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
 
   private:
-    uint8_t m_version;
-    uint8_t m_timer;
-    qcc::IPEndpoint m_destination;
-    bool m_destinationSet;
-    uint32_t m_retries;
-    uint32_t m_tick;
     std::vector<WhoHas> m_questions;
     std::vector<IsAt> m_answers;
 };
+/**
+ * @internal
+ * @brief A class representing an MDNSRData.
+ * This is an abstract class.
+ */
+class MDNSRData : public ProtocolElement {
+  public:
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS RData.
+     */
+    MDNSRData() { }
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSRData.
+     */
+    virtual ~MDNSRData();
+
+    /**
+     * @internal
+     * @brief Get the size of a buffer that will allow the Resource Record object
+     * and all of its children fields and data objects to be successfully
+     * serialized.
+     *
+     * @return The size of the buffer required to serialize the object
+     */
+    virtual size_t GetSerializedSize(void) const = 0;
+
+    /**
+     * @internal
+     * @brief Serialize this resource record all of its children fields and
+     * data objects to the provided buffer.
+     *
+     * @warning The buffer should be at least as large as the size returned
+     * by GetSerializedSize().
+     *
+     * @return The number of octets written to the buffer.
+     */
+    virtual size_t Serialize(uint8_t* buffer) const = 0;
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer.
+     *
+     * @see ProtocolElement::Deserialize()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize) = 0;
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    virtual size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset) = 0;
+
+    /**
+     * @internal
+     * @brief returns a deep copy of this object.
+     * @return A deep copy of the MDNSRData
+     */
+    virtual MDNSRData* GetDeepCopy() = 0;
+};
+/**
+ * @internal
+ * @brief A class representing an unknown RData type to this version of NS.
+ * It just calculates the RDLength and skips the specified number of bytes during deserialization.
+ * Serialization of this RData does not add any bytes.
+ */
+class MDNSDefaultRData : public MDNSRData {
+  public:
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS Default RData.
+     */
+    MDNSDefaultRData() { }
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSDefaultRData.
+     */
+    ~MDNSDefaultRData() { }
+
+    /**
+     * @internal
+     * @brief returns a deep copy of this object.
+     * @return A deep copy of this MDNSDefaultRData
+     */
+    virtual MDNSRData* GetDeepCopy() { return new MDNSDefaultRData(*this); }
+
+    /**
+     * @internal
+     * @brief Get the size of a buffer that will allow the Resource Record object
+     * and all of its children fields and data objects to be successfully
+     * serialized.
+     *
+     * @return The size of the buffer required to serialize the object
+     */
+    virtual size_t GetSerializedSize(void) const;
+
+    /**
+     * @internal
+     * @brief Serialize this resource record all of its children fields and
+     * data objects to the provided buffer.
+     *
+     * @warning The buffer should be at least as large as the size returned
+     * by GetSerializedSize().
+     *
+     * @return The number of octets written to the buffer.
+     */
+    virtual size_t Serialize(uint8_t* buffer) const;
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer.
+     *
+     * @see ProtocolElement::Deserialize()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    virtual size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+};
+/**
+ * @internal
+ * @brief A class representing an MDNSTextRData.
+ * An MDNSTextRData a set of key value pairs.
+ * For e.g. guid=guid1,upcv4=9000 will be in the following format:
+ *      0                   1                   2
+ *      0  1  2 3 4 5 6 7 8 9 0 1  2 3 4 5 6 7 8 9 0 1 2
+ *     +--+--+-+-+-+-+-+-+-+-+-+-+--+-+-+-+-+-+-+-+-+-+-+
+ *     |22|10|g u i d = g u i d 1|10|u p c v 4 = 9 0 0 0|
+ *     +--+--+-+-+-+-+-+-+-+-+-+-+--+-+-+-+-+-+-+-+-+-+-+
+ */
+class MDNSTextRData : public MDNSRData {
+  public:
+    struct Compare {
+        inline bool operator()(const qcc::String& s1, const qcc::String& s2) const {
+            size_t u1Pos = s1.find_last_of('_');
+            size_t u2Pos = s2.find_last_of('_');
+            if (u1Pos == qcc::String::npos || u2Pos == qcc::String::npos) {
+                return s1 < s2;
+            } else {
+                uint32_t n1 = (u1Pos == qcc::String::npos) ? 0 : qcc::StringToU32(s1.substr(u1Pos + 1));
+                uint32_t n2 = (u2Pos == qcc::String::npos) ? 0 : qcc::StringToU32(s2.substr(u2Pos + 1));
+                return n1 < n2;
+            }
+        }
+    };
+    typedef std::map<qcc::String, qcc::String, Compare> Fields;
+
+    /**
+     * @brief The TXT record version supported by the MDNS name service.
+     */
+    static const uint16_t TXTVERS;
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS Text RData.
+     */
+    MDNSTextRData(uint16_t version = TXTVERS, bool uniquifyKeys = false);
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSTextRData.
+     */
+    virtual ~MDNSTextRData() { }
+
+    /**
+     * @internal
+     * @brief returns a deep copy of this object.
+     * @return A deep copy of this MDNSTextRData
+     */
+    virtual MDNSRData* GetDeepCopy() { return new MDNSTextRData(*this); }
+
+    /**
+     * @internal
+     * @brief reset the m_fields map
+     */
+    void Reset();
+
+    /**
+     * @internal
+     * @brief Add/Set a key value pair.
+     * @param key	The key to set.
+     * @param value	The value to set.
+     */
+    void SetValue(qcc::String key, qcc::String value);
+
+    /**
+     * @internal
+     * @brief Add/Set a key value pair.
+     * @param key	The key to set.
+     * @param value	The value to set.
+     */
+    void SetValue(qcc::String key, uint16_t value);
+
+    /**
+     * @internal
+     * @brief Add/Set a key pair.
+     * @param key	The key to set.
+     */
+    void SetValue(qcc::String key);
+
+    /**
+     * @internal
+     * @brief Get the value corresponding to a particular key in the map.
+     * @param key	The key to get the value for.
+     * @return The value in the map corresponding to the key.
+     */
+    qcc::String GetValue(qcc::String key);
+
+    /**
+     * @internal
+     * @brief Get the value corresponding to a particular key in the map.
+     * @param key	The key to get the value for.
+     * @return The value in the map corresponding to the key.
+     */
+    uint16_t GetU16Value(qcc::String key);
+
+    /**
+     * @internal
+     * @brief Remove a key value pair from the map.
+     * @param key	The key to remove
+     */
+    void RemoveEntry(qcc::String key);
+
+    /**
+     * @internal
+     * @brief Get the size of a buffer that will allow the Resource Record object
+     * and all of its children fields and data objects to be successfully
+     * serialized.
+     *
+     * @return The size of the buffer required to serialize the object
+     */
+    virtual size_t GetSerializedSize(void) const;
+
+    /**
+     * @internal
+     * @brief Serialize this resource record all of its children fields and
+     * data objects to the provided buffer.
+     *
+     * @warning The buffer should be at least as large as the size returned
+     * by GetSerializedSize().
+     *
+     * @return The number of octets written to the buffer.
+     */
+    virtual size_t Serialize(uint8_t* buffer) const;
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer.
+     *
+     * @see ProtocolElement::Deserialize()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    virtual size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+
+  private:
+    uint16_t version;
+    uint16_t uniquifier;
+
+  protected:
+    Fields m_fields;
+
+    /**
+     * @internal
+     * @brief Get the number of fields beginning with key in this Text RData.
+     * This is only useful when uniquifyKeys is true.
+     *
+     * @param key The key to get the count for.
+     * @return The number of fields in this Text RData.
+     */
+    uint16_t GetNumFields(qcc::String key);
+
+    /**
+     * @internal
+     * @brief Get the value of the field beginning with the key at the particular index.
+     * This is only useful when uniquifyKeys is true.
+     *
+     * @param key The key to get the value for.
+     * @param index The index to get the field at
+     * @return The value at the desired index in this Text RData.
+     */
+    qcc::String GetFieldAt(qcc::String key, int index);
+
+    /**
+     * @internal
+     * @brief Remove a field from this Text RData.
+     * This is only useful when uniquifyKeys is true.
+     *
+     * @param key The key to get the value for.
+     * @param index The index to remove the field at
+     */
+    void RemoveFieldAt(qcc::String key, int index);
+};
+
+/**
+ * @internal
+ * @brief A class representing an MDNSARData.
+ *
+ * An MDNSARData in wire format contains the length(value 4) in 2 bytes
+ * followed by a 4 byte IPv4 address.
+ */
+class MDNSARData : public MDNSRData {
+  public:
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS A RData representing an IPV4 address.
+     */
+    MDNSARData() { }
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSARData.
+     */
+    ~MDNSARData() { }
+
+    /**
+     * @internal
+     * @brief returns a deep copy of this object.
+     * @return A deep copy of this MDNSARData
+     */
+    virtual MDNSRData* GetDeepCopy() { return new MDNSARData(*this); }
+
+    /**
+     * @internal
+     * @brief Set the IPV4 address.
+     * @param ipAddr the IPV4 address to set.
+     */
+    void SetAddr(qcc::String ipAddr);
+
+    /**
+     * @internal
+     * @brief Get the IPV4 address.
+     * @return The IPV4 address contained in this A RData.
+     */
+    qcc::String GetAddr();
+
+    /**
+     * @internal
+     * @brief Get the size of a buffer that will allow the Resource Record object
+     * and all of its children fields and data objects to be successfully
+     * serialized.
+     *
+     * @return The size of the buffer required to serialize the object
+     */
+    size_t GetSerializedSize(void) const;
+
+    /**
+     * @internal
+     * @brief Serialize this resource record all of its children fields and
+     * data objects to the provided buffer.
+     *
+     * @warning The buffer should be at least as large as the size returned
+     * by GetSerializedSize().
+     *
+     * @return The number of octets written to the buffer.
+     */
+    size_t Serialize(uint8_t* buffer) const;
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer.
+     *
+     * @see ProtocolElement::Deserialize()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+  private:
+    qcc::String m_ipv4Addr;
+};
+
+/**
+ * @internal
+ * @brief A class representing an MDNSAAAARData.
+ *
+ * An MDNSAAAARData in wire format contains the length(value 16) in 2 bytes
+ * followed by a 16 byte IPv6 address.
+ */
+class MDNSAAAARData : public MDNSRData {
+  public:
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS AAAA RData representing an IPV6 address.
+     */
+    MDNSAAAARData() { }
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSAAAARData.
+     */
+    ~MDNSAAAARData() { }
+
+    /**
+     * @internal
+     * @brief returns a deep copy of this object.
+     * @return A deep copy of this MDNSAAAARData
+     */
+    virtual MDNSRData* GetDeepCopy() { return new MDNSAAAARData(*this); }
+
+    /**
+     * @internal
+     * @brief Set the IPV6 address.
+     * @param ipAddr the IPV6 address to set.
+     */
+    void SetAddr(qcc::String ipAddr);
+
+    /**
+     * @internal
+     * @brief Get the IPV6 address.
+     * @return The IPV6 address contained in this AAAA RData.
+     */
+    qcc::String GetAddr()  const;
+
+    /**
+     * @internal
+     * @brief Get the size of a buffer that will allow the Resource Record object
+     * and all of its children fields and data objects to be successfully
+     * serialized.
+     *
+     * @return The size of the buffer required to serialize the object
+     */
+    size_t GetSerializedSize(void) const;
+
+    /**
+     * @internal
+     * @brief Serialize this resource record all of its children fields and
+     * data objects to the provided buffer.
+     *
+     * @warning The buffer should be at least as large as the size returned
+     * by GetSerializedSize().
+     *
+     * @return The number of octets written to the buffer.
+     */
+    size_t Serialize(uint8_t* buffer) const;
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer.
+     *
+     * @see ProtocolElement::Deserialize()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+  private:
+    qcc::String m_ipv6Addr;
+};
+
+/**
+ * @internal
+ * @brief A class representing an MDNSPtrRData.
+ *
+ * An MDNSPtrRData in wire format contains the length in 2 bytes
+ * followed by the 'length' number of bytes containing the Ptr domain name.
+ */
+class MDNSPtrRData : public MDNSRData {
+  public:
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS PTR RData.
+     */
+    MDNSPtrRData() { }
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSPtrRData.
+     */
+    ~MDNSPtrRData() { }
+
+    /**
+     * @internal
+     * @brief returns a deep copy of this object.
+     * @return A deep copy of this MDNSPtrRData
+     */
+    virtual MDNSRData* GetDeepCopy() { return new MDNSPtrRData(*this); }
+
+    /**
+     * @internal
+     * @brief Set the Ptr DName for this PTR RData.
+     * @param dName The name to set.
+     */
+    void SetPtrDName(qcc::String dName);
+
+    /**
+     * @internal
+     * @brief Get the PTR DName.
+     * @return The PTR DName contained in this PTR RData.
+     */
+    qcc::String GetPtrDName()  const;
+
+    /**
+     * @internal
+     * @brief Get the size of a buffer that will allow the Resource Record object
+     * and all of its children fields and data objects to be successfully
+     * serialized.
+     *
+     * @return The size of the buffer required to serialize the object
+     */
+    size_t GetSerializedSize(void) const;
+
+    /**
+     * @internal
+     * @brief Serialize this resource record all of its children fields and
+     * data objects to the provided buffer.
+     *
+     * @warning The buffer should be at least as large as the size returned
+     * by GetSerializedSize().
+     *
+     * @return The number of octets written to the buffer.
+     */
+    size_t Serialize(uint8_t* buffer) const;
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer.
+     *
+     * @see ProtocolElement::Deserialize()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+  private:
+    qcc::String m_rdataStr;
+};
+
+/**
+ * @internal
+ * @brief A class representing an MDNSDomainName.
+ * for e.g. _alljoyn._tcp.local will be represented as follows in the MDNSDomainName format:
+ *      0                   1                   2
+ *      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0
+ *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *     |8 _ a l l j o y n 4 _ t c p 5 l o c a l 0|
+ *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ */
+class MDNSDomainName : public ProtocolElement {
+  public:
+
+    /**
+     * @internal
+     * @brief Set the name for this DomainName element.
+     *
+     * @param name The name to set.
+     */
+    void SetName(qcc::String name);
+
+    /**
+     * @internal
+     * @brief Get the String name this object is representing.
+     *
+     * @return name in qcc::String format.
+     */
+    qcc::String GetName() const;
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS domain name.
+     */
+    MDNSDomainName();
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSDomainName
+     */
+    ~MDNSDomainName();
+
+    /**
+     * @internal
+     * @brief Get the size of a buffer that will allow the header object and
+     * all of its children questions and answer objects to be successfully
+     * serialized.
+     *
+     * @return The size of the buffer required to serialize the object
+     */
+    size_t GetSerializedSize(void) const;
+
+    /**
+     * @internal
+     * @brief Serialize this header and all of its children question and
+     * answer objects to the provided buffer.
+     *
+     * @warning The buffer should be at least as large as the size returned
+     * by GetSerializedSize().
+     *
+     * @return The number of octets written to the buffer.
+     */
+    size_t Serialize(uint8_t* buffer) const;
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its children
+     * questinos and answers from the provided buffer.
+     *
+     * @see ProtocolElement::Deserialize()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its children
+     * questinos and answers from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+  private:
+    qcc::String m_name;
+};
+
+/**
+ * @internal
+ * @brief A class representing an MDNSSrvRData.
+ *
+ * An MDNSSrvRData in wire format contains the total length in 2 bytes
+ * followed by a 2 byte priority, 2 byte weight, 2 byte port
+ * and a variable length target field.
+ */
+class MDNSSrvRData : public MDNSRData {
+  public:
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS SRV RData.
+     */
+    MDNSSrvRData() { }
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS SRV RData.
+     * @param priority  the priority of the target host.
+     * @param weight    Weight for records with the same priority.
+     * @param port      TCP or UDP port that the service is listening on.
+     * @param target    The host name in MDNS domain name format.
+     */
+    MDNSSrvRData(uint16_t priority, uint16_t weight, uint16_t port, qcc::String target);
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSSrvRData.
+     */
+    ~MDNSSrvRData() { }
+
+    /**
+     * @internal
+     * @brief returns a deep copy of this object.
+     * @return A deep copy of this MDNSSrvRData
+     */
+    virtual MDNSRData* GetDeepCopy() { return new MDNSSrvRData(*this); }
+
+    /**
+     * @internal
+     * @brief Set the priority for this SRV RData.
+     * @param priority The priority to set.
+     */
+    void SetPriority(uint16_t priority);
+
+    /**
+     * @internal
+     * @brief Get the priority for this SRV RData.
+     * @return The priority contained in this SRV RData.
+     */
+    uint16_t GetPriority()  const;
+
+    /**
+     * @internal
+     * @brief Set the weight for this SRV RData.
+     * @param weight The weight to set.
+     */
+    void SetWeight(uint16_t weight);
+
+    /**
+     * @internal
+     * @brief Get the weight for this SRV RData.
+     * @return The weight contained in this SRV RData.
+     */
+    uint16_t GetWeight()  const;
+
+    /**
+     * @internal
+     * @brief Set the port for this SRV RData.
+     * @param port The port to set.
+     */
+    void SetPort(uint16_t port);
+
+    /**
+     * @internal
+     * @brief Get the port for this SRV RData.
+     * @return The port contained in this SRV RData.
+     */
+    uint16_t GetPort()  const;
+
+    /**
+     * @internal
+     * @brief Set the target for this SRV RData.
+     * @param target The target to set.
+     */
+    void SetTarget(qcc::String target);
+
+    /**
+     * @internal
+     * @brief Get the target for this SRV RData.
+     * @return The target contained in this SRV RData.
+     */
+    qcc::String GetTarget()  const;
+    /**
+     * @internal
+     * @brief Get the size of a buffer that will allow the Resource Record object
+     * and all of its children fields and data objects to be successfully
+     * serialized.
+     *
+     * @return The size of the buffer required to serialize the object
+     */
+    size_t GetSerializedSize(void) const;
+
+    /**
+     * @internal
+     * @brief Serialize this resource record all of its children fields and
+     * data objects to the provided buffer.
+     *
+     * @warning The buffer should be at least as large as the size returned
+     * by GetSerializedSize().
+     *
+     * @return The number of octets written to the buffer.
+     */
+    size_t Serialize(uint8_t* buffer) const;
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer.
+     *
+     * @see ProtocolElement::Deserialize()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+  private:
+    uint16_t m_priority;
+    uint16_t m_weight;
+    uint16_t m_port;
+    MDNSDomainName m_target;
+};
+
+/**
+ * @internal
+ * @brief A class representing an MDNSSearchRData.
+ *
+ * MDNSSearchRData is a specialization of MDNSTextData and contains a well-known name.
+ */
+class MDNSSearchRData : public MDNSTextRData {
+  public:
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS Search RData.
+     */
+    MDNSSearchRData(uint16_t version = MDNSTextRData::TXTVERS) : MDNSTextRData(version, true) { }
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS Search RData.
+     * @param name	The name to search for.
+     */
+    MDNSSearchRData(qcc::String name, uint16_t version = MDNSTextRData::TXTVERS);
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSSearchRData.
+     */
+    ~MDNSSearchRData() { }
+
+    /**
+     * @internal
+     * @brief returns a deep copy of this object.
+     * @return A deep copy of this MDNSSearchRData
+     */
+    virtual MDNSRData* GetDeepCopy() { return new MDNSSearchRData(*this); }
+
+    /**
+     * @internal
+     * @brief Get the number of names in this Search RData.
+     * @return The number of names in this Search RData.
+     */
+    uint16_t GetNumNames() { return MDNSTextRData::GetNumFields("n"); }
+
+    /**
+     * @internal
+     * @brief Get the name at the particular index.
+     * @param index The index to get the name at
+     * @return The name at the desired index in this Search RData.
+     */
+    qcc::String GetNameAt(int index) { return MDNSTextRData::GetFieldAt("n", index); }
+
+    /**
+     * @internal
+     * @brief Add/Set a key value pair.
+     * @param key	The key to set.
+     * @param value	The value to set.
+     */
+    void SetValue(qcc::String key, qcc::String value);
+
+    /**
+     * @internal
+     * @brief Add/Set a key pair.
+     * @param key	The key to set.
+     */
+    void SetValue(qcc::String key);
+
+    /**
+     * @internal
+     * @brief Get the number of fields in this Search RData.
+     * @return The number of fields in this Search RData.
+     */
+    uint16_t GetNumFields();
+
+    /**
+     * @internal
+     * @brief Get the number of fields in this Search RData.
+     * @return The number of fields in this Search RData.
+     */
+    std::pair<qcc::String, qcc::String> GetFieldAt(int index);
+};
+
+/**
+ * @internal
+ * @brief A class representing an MDNSPingRData.
+ *
+ * MDNSPingRData is a specialization of MDNSTextData and contains a well-known name.
+ */
+class MDNSPingRData : public MDNSTextRData {
+  public:
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS Ping RData.
+     */
+    MDNSPingRData(uint16_t version = MDNSTextRData::TXTVERS) : MDNSTextRData(version) { }
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS Ping RData.
+     * @param name	The name to search for.
+     */
+    MDNSPingRData(qcc::String name, uint16_t version = MDNSTextRData::TXTVERS);
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSPingRData.
+     */
+    ~MDNSPingRData() { }
+
+    /**
+     * @internal
+     * @brief returns a deep copy of this object.
+     * @return A deep copy of this MDNSPingRData
+     */
+    virtual MDNSRData* GetDeepCopy() { return new MDNSPingRData(*this); }
+
+    /**
+     * @internal
+     * @brief Set the well known name for this Search RData.
+     * @param name The well known name to set.
+     */
+    void SetWellKnownName(qcc::String name);
+
+    /**
+     * @internal
+     * @brief Get the wellknown name for this Ping RData.
+     * @return The well known name contained in this Ping RData.
+     */
+    qcc::String GetWellKnownName();
+
+};
+
+/**
+ * @internal
+ * @brief A class representing an MDNSPingRData.
+ *
+ * MDNSPingRData is a specialization of MDNSTextData and contains a well-known name.
+ */
+class MDNSPingReplyRData : public MDNSTextRData {
+  public:
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS Ping RData.
+     */
+    MDNSPingReplyRData(uint16_t version = MDNSTextRData::TXTVERS) : MDNSTextRData(version) { }
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS Ping RData.
+     * @param name	The name to search for.
+     */
+    MDNSPingReplyRData(qcc::String name, uint16_t version = MDNSTextRData::TXTVERS);
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSPingRData.
+     */
+    ~MDNSPingReplyRData() { }
+
+    /**
+     * @internal
+     * @brief returns a deep copy of this object.
+     * @return A deep copy of this MDNSPingRData
+     */
+    virtual MDNSRData* GetDeepCopy() { return new MDNSPingReplyRData(*this); }
+
+    /**
+     * @internal
+     * @brief Set the well known name for this Search RData.
+     * @param name The well known name to set.
+     */
+    void SetWellKnownName(qcc::String name);
+
+    /**
+     * @internal
+     * @brief Get the wellknown name for this Ping RData.
+     * @return The well known name contained in this Ping RData.
+     */
+    qcc::String GetWellKnownName();
+
+    qcc::String GetReplyCode();
+
+    void SetReplyCode(qcc::String replyCode);
+
+};
+
+/**
+ * @internal
+ * @brief A class representing an MDNSAdvertiseRData.
+ *
+ * MDNSAdvertiseRData is a specialization of MDNSTextData and contains a list of
+ * names being advertised by the service.
+ */
+class MDNSAdvertiseRData : public MDNSTextRData {
+  public:
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS Advertise RData.
+     */
+    MDNSAdvertiseRData(uint16_t version = MDNSTextRData::TXTVERS) : MDNSTextRData(version, true) { }
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSAdvertiseRData.
+     */
+    ~MDNSAdvertiseRData() { }
+
+    /**
+     * @internal
+     * @brief returns a deep copy of this object.
+     * @return A deep copy of this MDNSAdvertiseRData
+     */
+    virtual MDNSRData* GetDeepCopy() { return new MDNSAdvertiseRData(*this); }
+
+    /**
+     * @internal
+     * @brief Remove all the accumulated names
+     */
+    void Reset();
+
+    /**
+     * @internal
+     * @brief Get the name at the particular index.
+     * @param index The index to get the name at
+     * @return The name at the desired index in this Advertise RData.
+     */
+    qcc::String GetNameAt(int index) { return MDNSTextRData::GetFieldAt("n", index); }
+
+    /**
+     * @internal
+     * @brief Add a name for this Advertise RData.
+     * @param name The name to add.
+     */
+    void AddName(qcc::String name);
+
+    /**
+     * @internal
+     * @brief Remove a name from this Advertise RData.
+     * @param name The name to remove.
+     */
+    void RemoveNameAt(int index) { return MDNSTextRData::RemoveFieldAt("n", index); }
+
+    /**
+     * @internal
+     * @brief Get the number of names in this Advertise RData.
+     * @return The number of names in this Advertise RData.
+     */
+    uint16_t GetNumNames() { return MDNSTextRData::GetNumFields("n"); }
+
+    /**
+     * @internal
+     * @brief Add/Set a key value pair.
+     * @param key	The key to set.
+     * @param value	The value to set.
+     */
+    void SetValue(qcc::String key, qcc::String value);
+
+    /**
+     * @internal
+     * @brief Add/Set a key pair.
+     * @param key	The key to set.
+     */
+    void SetValue(qcc::String key);
+
+    /**
+     * @internal
+     * @brief Get the number of fields in this Advertise RData.
+     * @return The number of fields in this Advertise RData.
+     */
+    uint16_t GetNumFields();
+
+    /**
+     * @internal
+     * @brief Get the number of fields in this Advertise RData.
+     * @return The number of fields in this Advertise RData.
+     */
+    std::pair<qcc::String, qcc::String> GetFieldAt(int index);
+};
+
+/**
+ * @internal
+ * @brief A class representing an MDNSSenderRData.
+ *
+ * MDNSSenderRData is a specialization of MDNSTextData and contains the search ID,
+ * protocol version, ipv4 unicast port that the NS is listening on,
+ * ipv6 NS unicast port that the NS is listening on, transport mask for the query/response,
+ * guid of the NS router and ipv4 and ipv6 addresses in case of a query.
+ * Note: In case of a response the ipv4 and ipv6 addresses are included as
+ * A and AAAA additionalrecords.
+ */
+class MDNSSenderRData : public MDNSTextRData {
+  public:
+    /*
+     * The current version of the MDNS nameservice
+     */
+    static const uint32_t NS_VERSION = 2;
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS Reference RData.
+     */
+    MDNSSenderRData(uint16_t version = MDNSTextRData::TXTVERS);
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSSenderRData.
+     */
+    ~MDNSSenderRData() { }
+
+    /**
+     * @internal
+     * @brief returns a deep copy of this object.
+     * @return A deep copy of this MDNSSenderRData
+     */
+    virtual MDNSRData* GetDeepCopy() { return new MDNSSenderRData(*this); }
+
+    /**
+     * @internal
+     * @brief Set the GUID for this Sender RData.
+     * @param guid The GUID to set.
+     */
+    void SetGuid(qcc::String guid);
+
+    /**
+     * @internal
+     * @brief Get the GUID for this Sender RData.
+     * @return The GUID contained in this Sender RData.
+     */
+    qcc::String GetGuid();
+
+    /**
+     * @internal
+     * @brief Set the search ID for this Sender RData.
+     * @param searchId The search ID to set.
+     */
+    void SetSearchID(uint16_t searchId);
+
+    /**
+     * @internal
+     * @brief Get the search ID for this Sender RData.
+     * @return The search ID contained in this Sender RData.
+     */
+    uint16_t GetSearchID();
+
+    /**
+     * @internal
+     * @brief Set the transportMask for this Sender RData.
+     * @param transportMask The transportMask to set.
+     */
+    void SetTransportMask(TransportMask transportMask);
+
+    /**
+     * @internal
+     * @brief Get the transportMask for this Sender RData.
+     * @return The transportMask contained in this Sender RData.
+     */
+    uint16_t GetTransportMask();
+
+    /**
+     * @internal
+     * @brief Set the ipv4Port for this Sender RData.
+     * @param ipv4Port The ipv4Port to set.
+     */
+    void SetIPV4ResponsePort(uint16_t ipv4Port);
+
+    /**
+     * @internal
+     * @brief Get the ipv4Port for this Sender RData.
+     * @return The ipv4Port contained in this Sender RData.
+     */
+    uint16_t GetIPV4ResponsePort();
+
+    /**
+     * @internal
+     * @brief Set the ipv4Addr for this Sender RData.
+     * @param ipv4Addr The ipv4Addr to set.
+     */
+    void SetIPV4ResponseAddr(qcc::String ipv4Addr);
+
+    /**
+     * @internal
+     * @brief Get the ipv4Addr for this Sender RData.
+     * @return The ipv4Addr contained in this Sender RData.
+     */
+    qcc::String GetIPV4ResponseAddr();
+
+    /**
+     * @internal
+     * @brief Set the ipv6Port for this Sender RData.
+     * @param ipv6Port The ipv6Port to set.
+     */
+    void SetIPV6ResponsePort(uint16_t ipv6Port);
+
+    /**
+     * @internal
+     * @brief Get the ipv6Port for this Sender RData.
+     * @return The ipv6Port contained in this Sender RData.
+     */
+    uint16_t GetIPV6ResponsePort();
+
+    /**
+     * @internal
+     * @brief Set the ipv6Addr for this Sender RData.
+     * @param ipv6Addr The ipv6Addr to set.
+     */
+    void SetIPV6ResponseAddr(qcc::String ipv6Addr);
+
+    /**
+     * @internal
+     * @brief Get the ipv6Addr for this Sender RData.
+     * @return The ipv6Addr contained in this Sender RData.
+     */
+    qcc::String GetIPV6ResponseAddr();
+
+};
+
+/**
+ * @internal
+ * @brief A class representing an MDNSResourceRecord.
+ *
+ * An MDNSResourceRecord in wire format contains a name(MDNSDomainName format),
+ * followed by an MDNSResourceRecord::RRType(2 byte),
+ * followed by an MDNSResourceRecord::RRClass(2 byte),
+ * followed by a 4 byte unsigned integer - ttl
+ * followed by a 2 byte RDLength
+ * followed by RDLength number of bytes in a format defined by the RRType and RRClass.
+ */
+class MDNSResourceRecord : public ProtocolElement {
+  public:
+    enum RRType : uint16_t {
+        A = 1,          //Host IPv4 Address
+        NS = 2,         //Authoritative name server
+        MD = 3,         //Mail destination
+        MF = 4,         //Mail forwarder
+        CNAME = 5,      //Canonical name for an alias
+        SOA = 6,        //Marks the start zone of an authority
+        MB = 7,         //Mailbox domain name
+        MG = 8,         //Mail group member
+        MR = 9,         //Mail rename domain
+        RNULL = 10,     //Null RR
+        WKS = 11,       //Well known service description
+        PTR = 12,       //Domain name pointer
+        HINFO = 13,     //Host information
+        MINFO = 14,     //Mailbox info
+        MX = 15,        //Mail Exchange
+        TXT = 16,       //Text strings
+        AAAA = 28,      //Host IPv6 Address
+        SRV = 33,       //SRV record
+        OPT = 41,       //OPT record
+        NSEC = 47       //NSEC record
+    };
+    enum RRClass : uint16_t {
+        INTERNET = 1,   //Internet
+        CS = 2,         //CSNET class
+        CH = 3,         //CHAOS class
+        HS = 4          //Hesoid
+    };
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representatin of an on-the-wire
+     * mDNS resource record
+     */
+    MDNSResourceRecord();
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representatin of an on-the-wire
+     * mDNS resource record
+     * @param domainName        Name for this Resource record.
+     * @param rrtype            Type of Resource record.
+     * @param rrclass           Class of Resource record.
+     * @param ttl               Time to live for this resource record.
+     * @param rdata		Pointer to an MDNSRData.
+     */
+    MDNSResourceRecord(qcc::String domainName, RRType rrtype, RRClass rrclass, uint16_t ttl, MDNSRData* rdata);
+
+    /**
+     * @internal
+     * @brief Copy constructor for the MDNSResourceRecord
+     * @param mdnsResourceRecord	The MDNSResourceRecord to copy from.
+     */
+    MDNSResourceRecord(const MDNSResourceRecord& mdnsResourceRecord);
+
+    /**
+     * @internal
+     * @brief Assignment operator
+     * @param other	The MDNSResourceRecord to copy from.
+     */
+    MDNSResourceRecord& operator=(const MDNSResourceRecord& other);
+
+    /**
+     * @internal
+     * @brief Destroy a mDNS resource record
+     */
+    ~MDNSResourceRecord();
+
+    /**
+     * @internal
+     * @brief Set the domain name for the resource record.
+     * @param domainName	The domain name to set.
+     */
+    void SetDomainName(qcc::String domainName);
+
+    /**
+     * @internal
+     * @brief Get the domain name for the resource record.
+     * @return  The domain name of this resource record.
+     */
+    qcc::String GetDomainName() const;
+
+    /**
+     * @internal
+     * @brief Set the type for the resource record.
+     * @param rrtype	The type to set.
+     */
+    void SetRRType(RRType rrtype);
+
+    /**
+     * @internal
+     * @brief Get the type for the resource record.
+     * @return The type of this resource record.
+     */
+    RRType GetRRType() const;
+
+    /**
+     * @internal
+     * @brief Set the class for the resource record.
+     * @param rrclass	The class to set.
+     */
+    void SetRRClass(RRClass rrclass);
+
+    /**
+     * @internal
+     * @brief Get the class for the resource record.
+     * @return The class of this resource record.
+     */
+    RRClass GetRRClass() const;
+
+    /**
+     * @internal
+     * @brief Set the ttl for the resource record.
+     * @param ttl	The TTL to set.
+     */
+    void SetRRttl(uint16_t ttl);
+
+    /**
+     * @internal
+     * @brief Get the ttl for the resource record.
+     * @return The TTL of this resource record.
+     */
+    uint16_t GetRRttl() const;
+
+    /**
+     * @internal
+     * @brief Set the rdata for the resource record.
+     * @param rdata	The RData to set.
+     */
+    void SetRData(MDNSRData* rdata);
+
+    /**
+     * @internal
+     * @brief Get the rdata for the resource record.
+     * @return A pointer to the RData of this resource record.
+     */
+    MDNSRData* GetRData();
+
+    /**
+     * @internal
+     * @brief Get the size of a buffer that will allow the Resource Record object
+     * and all of its children fields and data objects to be successfully
+     * serialized.
+     *
+     * @return The size of the buffer required to serialize the object
+     */
+    virtual size_t GetSerializedSize(void) const;
+
+    /**
+     * @internal
+     * @brief Serialize this resource record all of its children fields and
+     * data objects to the provided buffer.
+     *
+     * @warning The buffer should be at least as large as the size returned
+     * by GetSerializedSize().
+     *
+     * @return The number of octets written to the buffer.
+     */
+    virtual size_t Serialize(uint8_t* buffer) const;
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer.
+     *
+     * @see ProtocolElement::Deserialize()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its fields
+     * from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+  private:
+    MDNSDomainName m_rrDomainName;
+    RRType m_rrType;
+    RRClass m_rrClass;
+    uint32_t m_rrTTL;
+    MDNSRData*m_rdata;
+};
+
+/**
+ * @internal
+ * @brief A class representing an MDNSQuestion.
+ *
+ * MDNSQuestion wire format contains a QName in MDNSDomainName format,
+ * followed by a 2 byte QType(MDNSResourceRecord::RRType),
+ * followed by a 2 byte QClass(MDNSResourceRecord::RRClass).
+ */
+class MDNSQuestion : public ProtocolElement {
+  public:
+    static const uint16_t QU_BIT = 0x8000;
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS question.
+     */
+    MDNSQuestion() { }
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS question.
+     * @param qName The QName to set.
+     * @param qType The QType to set.
+     * @param qClass The QClass to set.
+     */
+    MDNSQuestion(qcc::String qName, uint16_t qtype, uint16_t qClass);
+
+    /**
+     * @internal
+     * @brief Destructor for MDNSQuestion
+     */
+    ~MDNSQuestion() { }
+
+    /**
+     * @internal
+     * @brief Set the value for the QName field in the question.
+     *
+     * @param name The QName to set.
+     */
+    void SetQName(qcc::String qName);
+
+    /**
+     * @internal
+     * @brief Get the QName field value in the question.
+     *
+     * @return The QName field value.
+     */
+    qcc::String GetQName();
+
+    /**
+     * @internal
+     * @brief Set the value for the QType field in the question.
+     *
+     * @param name The QType to set.
+     */
+    void SetQType(uint16_t qType);
+
+    /**
+     * @internal
+     * @brief Get the QType field value in the question.
+     *
+     * @return The QType field value.
+     */
+    uint16_t GetQType();
+
+    /**
+     * @internal
+     * @brief Set the value for the QClass field in the question.
+     *
+     * @param name The QClass to set.
+     */
+    void SetQClass(uint16_t qClass);
+
+    /**
+     * @internal
+     * @brief Get the QClass field value in the question.
+     *
+     * @return The QClass field value.
+     */
+    uint16_t GetQClass();
+
+    /**
+     * @internal
+     * @brief Get the size of a buffer that will allow the header object and
+     * all of its children questions and answer objects to be successfully
+     * serialized.
+     *
+     * @return The size of the buffer required to serialize the object
+     */
+    size_t GetSerializedSize(void) const;
+
+    /**
+     * @internal
+     * @brief Serialize this header and all of its children question and
+     * answer objects to the provided buffer.
+     *
+     * @warning The buffer should be at least as large as the size returned
+     * by GetSerializedSize().
+     *
+     * @return The number of octets written to the buffer.
+     */
+    size_t Serialize(uint8_t* buffer) const;
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its children
+     * questinos and answers from the provided buffer.
+     *
+     * @see ProtocolElement::Deserialize()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its children
+     * questinos and answers from the provided buffer with support for compression.
+     *
+     * @see ProtocolElement::DeserializeExt()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t DeserializeExt(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset);
+  private:
+    MDNSDomainName m_qName;
+    uint16_t m_qType;
+    uint16_t m_qClass;
+
+};
+
+/**
+ * @internal
+ * @brief A class representing an MDNSHeader.
+ *
+ * MDNSHeader contains the Id, QRType(Query/Response), QDCount(number of questions to follow),
+ * ANCount(number of answers to follow), NSCount(number of authoritative records to follow) and
+ * ARCount(number of additional records to follow).
+ */
+class MDNSHeader : public ProtocolElement {
+  public:
+    static const uint16_t MDNS_QUERY = 0;
+
+    static const uint16_t MDNS_RESPONSE = 1;
+
+    /**
+     * @internal
+     * @brief Construct an in-memory object representation of an on-the-wire
+     * MDNS protocol header.
+     */
+    MDNSHeader();
+
+    /**
+     * @internal
+     * @brief Destroy a MDNS protocol header object.
+     */
+    ~MDNSHeader();
+
+    MDNSHeader(uint16_t id, bool qrType, uint16_t qdCount, uint16_t anCount, uint16_t nsCount, uint16_t arCount);
+
+    MDNSHeader(uint16_t id, bool qrType);
+    /**
+     * @internal
+     * @brief Set the value for the Id field in the header.
+     *
+     * @param name The Id to set.
+     */
+    void SetId(uint16_t id);
+
+    /**
+     * @internal
+     * @brief Get the Id field value in the header.
+     *
+     * @return The Id field value.
+     */
+    uint16_t GetId();
+
+    /**
+     * @internal
+     * @brief Set the value for the QRType field in the header.
+     *
+     * @param name The QRType to set.
+     */
+    void SetQRType(bool qrType);
+
+    /**
+     * @internal
+     * @brief Get the Type field value in the header.
+     *
+     * @return The Type field value.
+     */
+    bool GetQRType();
+
+    /**
+     * @internal
+     * @brief Set the value for the QDCount field in the header.
+     *
+     * @param name The QDCount to set.
+     */
+    void SetQDCount(uint16_t qdCount);
+
+    /**
+     * @internal
+     * @brief Get the QDCount field value in the header.
+     *
+     * @return The QDCount field value.
+     */
+    uint16_t GetQDCount();
+
+    /**
+     * @internal
+     * @brief Set the value for the ANCount field in the header.
+     *
+     * @param name The ANCount to set.
+     */
+    void SetANCount(uint16_t anCount);
+
+    /**
+     * @internal
+     * @brief Get the ANCount field value in the header.
+     *
+     * @return The ANCount field value.
+     */
+    uint16_t GetANCount();
+
+    /**
+     * @internal
+     * @brief Set the value for the NSCount field in the header.
+     *
+     * @param name The NSCount to set.
+     */
+    void SetNSCount(uint16_t nsCount);
+
+    /**
+     * @internal
+     * @brief Get the NSCount field value in the header.
+     *
+     * @return The NSCount field value.
+     */
+    uint16_t GetNSCount();
+
+    /**
+     * @internal
+     * @brief Set the value for the ARCount field in the header.
+     *
+     * @param name The ARCount to set.
+     */
+    void SetARCount(uint16_t arCount);
+
+    /**
+     * @internal
+     * @brief Get the ARCount field value in the header.
+     *
+     * @return The ARCount field value.
+     */
+    uint16_t GetARCount();
+
+    /**
+     * @internal
+     * @brief Get the size of a buffer that will allow the header object and
+     * all of its children questions and answer objects to be successfully
+     * serialized.
+     *
+     * @return The size of the buffer required to serialize the object
+     */
+    size_t GetSerializedSize(void) const;
+
+    /**
+     * @internal
+     * @brief Serialize this header and all of its children question and
+     * answer objects to the provided buffer.
+     *
+     * @warning The buffer should be at least as large as the size returned
+     * by GetSerializedSize().
+     *
+     * @return The number of octets written to the buffer.
+     */
+    size_t Serialize(uint8_t* buffer) const;
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its children
+     * questinos and answers from the provided buffer.
+     *
+     * @see ProtocolElement::Deserialize()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+  private:
+    uint16_t m_queryId;
+    bool m_qrType;
+    bool m_authAnswer;
+
+    enum RCodeType : uint16_t {
+        NOT_ERROR = 0,
+        FORMAT_ERROR = 1,
+        SERVER_FAILURE = 2,
+        NAME_ERROR = 3,
+        NOT_IMPLEMENTED = 4,
+        REFUSED = 5
+    };
+    RCodeType m_rCode;
+
+    uint16_t m_qdCount;
+    uint16_t m_anCount;
+    uint16_t m_nsCount;
+    uint16_t m_arCount;
+};
+
+
+/**
+ * @internal
+ * @brief A class representing an MDNSPacket.
+ *
+ * MDNSPacket contains an MDNSHeader,
+ * followed by a variable number of questions(as indicated in the header)
+ * followed by a variable number of answers(as indicated in the header)
+ * followed by a variable number of authoritative records(as indicated in the header).
+ * followed by a variable number of additional records(as indicated in the header).
+ */
+class _MDNSPacket : public _Packet {
+  public:
+    _MDNSPacket();
+
+    /**
+     * @internal
+     * @brief Clear the internal state of this MDNSPacket.
+     */
+    void Clear();
+
+    /**
+     * @internal
+     * @brief Set the Header for this packet.
+     *
+     * @param header The header to set for this packet.
+     */
+    void SetHeader(MDNSHeader header);
+    MDNSHeader GetHeader();
+
+    /**
+     * @internal
+     * @brief Add a question to this packet.
+     *
+     * @param question The question to add to this packet.
+     */
+    void AddQuestion(MDNSQuestion question);
+
+    /**
+     * @internal
+     * @brief Get the number of questions contained in this packet.
+     *
+     * @return Number of questions in this packet.
+     */
+    uint16_t GetNumQuestions();
+
+    /**
+     * @internal
+     * @brief Get the question at the particular index.
+     * @param index The index to get the question at.
+     * @return The MDNSQuestion at the desired index in this MDNS packet.
+     */
+    bool GetQuestionAt(uint32_t i, MDNSQuestion** question);
+
+    /**
+     * @internal
+     * @brief Add an answer record to this packet
+     *
+     * @param record The answer record to add to this packet.
+     */
+    void AddAnswer(MDNSResourceRecord record);
+
+    /**
+     * @internal
+     * @brief Get the number of answer records contained in this packet.
+     *
+     * @return Number of answer records in this packet.
+     */
+    uint16_t GetNumAnswers();
+
+    /**
+     * @internal
+     * @brief Get the answer at the particular index.
+     * @param index The index to get the answer at.
+     * @param answer[out] The MDNSResourceRecord into which the answer record will be filled.
+     *
+     * @return true if the name and type were found, false otherwise.
+     */
+    bool GetAnswerAt(uint32_t i, MDNSResourceRecord** answer);
+
+    /**
+     * @internal
+     * @brief Get the answer with a particular name and type.
+     *
+     * @param str The desired name.
+     * @param type The desired RRtype.
+     * @param answer[out] The MDNSResourceRecord into which the answer record will be filled.
+     *
+     * @return true if the name and type were found, false otherwise.
+     */
+    bool GetAnswer(qcc::String str, MDNSResourceRecord::RRType type, MDNSResourceRecord** answer);
+
+    /**
+     * @internal
+     * @brief Get the answer with a particular name, type, and rdata version.
+     *
+     * @param str The desired name.
+     * @param type The desired RRtype.
+     * @param version The desired version.
+     * @param answer[out] The MDNSResourceRecord into which the answer record will be filled.
+     *
+     * @return true if the name and type were found, false otherwise.
+     */
+    bool GetAnswer(qcc::String str, MDNSResourceRecord::RRType type, uint16_t version, MDNSResourceRecord** answer);
+
+    /**
+     * @internal
+     * @brief Add an additional record to this packet
+     *
+     * @param record The additional record to add to this packet.
+     */
+    void AddAdditionalRecord(MDNSResourceRecord record);
+
+    /**
+     * @internal
+     * @brief Get the number of additional records contained in this packet.
+     *
+     * @return Number of additional records in this packet.
+     */
+    uint16_t GetNumAdditionalRecords();
+
+    /**
+     * @internal
+     * @brief Get the additional record at the particular index.
+     * @param index The index to get the additional record at.
+     * @param additional[out] The MDNSResourceRecord into which the additional record will be filled.
+     *
+     * @return true if the name and type were found, false otherwise.
+     */
+    bool GetAdditionalRecordAt(uint32_t i, MDNSResourceRecord** additional);
+
+    /**
+     * @internal
+     * @brief Get the additional record with a particular name and type.
+     *
+     * @param str The desired name.  This may be appended with a '*' to get the first
+     *            additional record with the matching prefix.
+     * @param type The desired RRtype.
+     * @param additional[out] The MDNSResourceRecord into which the additional record will be filled.
+     *
+     * @return true if the name and type were found, false otherwise.
+     */
+    bool GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRType type, MDNSResourceRecord** additional);
+
+    /**
+     * @internal
+     * @brief Get the additional record with a particular name, type, and rdata version.
+     *
+     * @param str The desired name.
+     * @param type The desired RRtype.
+     * @param version The desired version
+     * @param additional[out] The MDNSResourceRecord into which the additional record will be filled.
+     *
+     * @return true if the name and type were found, false otherwise.
+     */
+    bool GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRType type, uint16_t version, MDNSResourceRecord** additional);
+
+    /**
+     * @internal
+     * @brief Remove an additional record from this MDNS packet.
+     *
+     * @param str The name of the additional record to remove.
+     * @param type The type of the additional record to remove.
+     */
+    void RemoveAdditionalRecord(qcc::String str, MDNSResourceRecord::RRType type);
+
+    /**
+     * @internal
+     * @brief Get the size of a buffer that will allow the header object and
+     * all of its children questions and answer objects to be successfully
+     * serialized.
+     *
+     * @return The size of the buffer required to serialize the object
+     */
+    virtual size_t GetSerializedSize(void) const;
+
+    /**
+     * @internal
+     * @brief Serialize this header and all of its children question and
+     * answer objects to the provided buffer.
+     *
+     * @warning The buffer should be at least as large as the size returned
+     * by GetSerializedSize().
+     *
+     * @return The number of octets written to the buffer.
+     */
+    virtual size_t Serialize(uint8_t* buffer) const;
+
+    /**
+     * @internal
+     * @brief Deserialize a header wire-representation and all of its children
+     * questinos and answers from the provided buffer.
+     *
+     * @see ProtocolElement::Deserialize()
+     *
+     * @param buffer The buffer to read the bytes from.
+     * @param bufsize The number of bytes available in the buffer.
+     *
+     * @return The number of octets read from the buffer, or zero if an error
+     * occurred.
+     */
+    virtual size_t Deserialize(uint8_t const* buffer, uint32_t bufsize);
+
+    /**
+     * @internal
+     * The minimum initial capacity reserved for each of the MDNS fields.
+     */
+    static const uint32_t MIN_RESERVE = 5;
+  private:
+    MDNSHeader m_header;
+    std::vector<MDNSQuestion> m_questions;
+    std::vector<MDNSResourceRecord> m_answers;
+    std::vector<MDNSResourceRecord> m_authority;
+    std::vector<MDNSResourceRecord> m_additional;
+};
+/**
+ * Managed object type that wrap packets
+ */
+typedef qcc::ManagedObj<_Packet> Packet;
+typedef qcc::ManagedObj<_NSPacket> NSPacket;
+typedef qcc::ManagedObj<_MDNSPacket> MDNSPacket;
 
 } // namespace ajn
 
