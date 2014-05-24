@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -1166,6 +1166,19 @@ typedef void (^ AJNLinkTimeoutBlock)(QStatus status, uint32_t timeout, void *con
  *          - ER_BUS_NO_SUCH_OBJECT if daemon was not built in debug mode.
  */
 - (QStatus)setDaemonDebugLevel:(uint32_t)level forModule:(NSString *)module;
+
+
+/**
+ * Determine if you are able to find a remote connection based on its BusName.
+ * The BusName can be the Unique or well-known name.
+ * @param name The unique or well-known name to ping
+ * @param timeout Timeout specified in milliseconds to wait for reply
+ * @return
+ *   - #ER_OK on success
+ *   - #ER_TIMEOUT the Ping attempt timed out
+ *   - An error status otherwise
+ */
+- (QStatus)pingPeer:(NSString *)name withTimeout:(uint32_t)timeout;
 
 /**
  * Returns the current non-absolute real-time clock used internally by AllJoyn. This value can be
