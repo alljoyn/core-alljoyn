@@ -18,7 +18,6 @@ package org.alljoyn.about.icon;
 
 import org.alljoyn.bus.BusException;
 import org.alljoyn.services.common.ClientBase;
-import org.alljoyn.services.common.ServiceAvailabilityListener;
 
 /**
  * An interface for retrieval of remote IoE device's Icon.
