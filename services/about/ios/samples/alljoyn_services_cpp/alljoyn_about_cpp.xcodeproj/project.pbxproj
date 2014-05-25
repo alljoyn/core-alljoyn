@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		19C4C8D919320C40001E1D12 /* InternalAnnounceHandler.cc in Sources */ = {isa = PBXBuildFile; fileRef = 19C4C8D719320C40001E1D12 /* InternalAnnounceHandler.cc */; };
 		7D43EA5B192C284F001C75BB /* liballjoyn_about_cpp.a in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CDD218547B37004660C5 /* liballjoyn_about_cpp.a */; };
 		7D43EA7B192C31C0001C75BB /* AboutClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFDD18547EFA004660C5 /* AboutClient.h */; };
 		7D43EA7C192C31C0001C75BB /* AboutIconClient.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 9AB9CFDE18547EFA004660C5 /* AboutIconClient.h */; };
@@ -110,6 +111,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		19C4C8D719320C40001E1D12 /* InternalAnnounceHandler.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InternalAnnounceHandler.cc; sourceTree = "<group>"; };
+		19C4C8D819320C40001E1D12 /* InternalAnnounceHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InternalAnnounceHandler.h; sourceTree = "<group>"; };
 		9AB9CDD218547B37004660C5 /* liballjoyn_about_cpp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = liballjoyn_about_cpp.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		9AB9CDD518547B37004660C5 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		9AB9CDD918547B37004660C5 /* alljoyn_about_cpp-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "alljoyn_about_cpp-Prefix.pch"; sourceTree = "<group>"; };
@@ -246,6 +249,8 @@
 		9AB9CFFB18547EFA004660C5 /* src */ = {
 			isa = PBXGroup;
 			children = (
+				19C4C8D719320C40001E1D12 /* InternalAnnounceHandler.cc */,
+				19C4C8D819320C40001E1D12 /* InternalAnnounceHandler.h */,
 				9AB9CFFC18547EFA004660C5 /* AboutClient.cc */,
 				9AB9CFFD18547EFA004660C5 /* AboutIconClient.cc */,
 				9AB9CFFE18547EFA004660C5 /* AboutIconService.cc */,
@@ -316,6 +321,7 @@
 			files = (
 				9AB9D0CD18547EFB004660C5 /* AboutClient.cc in Sources */,
 				9AB9D0D418547EFB004660C5 /* AnnouncementRegistrar.cc in Sources */,
+				19C4C8D919320C40001E1D12 /* InternalAnnounceHandler.cc in Sources */,
 				9AB9D0CF18547EFB004660C5 /* AboutIconService.cc in Sources */,
 				9AB9D0CE18547EFB004660C5 /* AboutIconClient.cc in Sources */,
 				9AB9D0D118547EFB004660C5 /* AboutService.cc in Sources */,
@@ -417,9 +423,10 @@
 				HEADER_SEARCH_PATHS = (
 					"\"$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/\"",
 					"$(inherited)",
-					"\"$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
 					"\"$(SRCROOT)/../../../../../services\"/**",
 					"\"$(SRCROOT)/../../../../../applications\"/**",
+					"\"$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
+					"\"$(SRCROOT)/../../../../../common/inc\"",
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"";
@@ -431,6 +438,7 @@
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = alljoyn_about_cpp;
 				SKIP_INSTALL = YES;
+				VALID_ARCHS = "armv7 armv7s";
 			};
 			name = Debug;
 		};
@@ -452,9 +460,10 @@
 				HEADER_SEARCH_PATHS = (
 					"\"$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/\"",
 					"$(inherited)",
-					"/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include;\"$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
 					"\"$(SRCROOT)/../../../../../services\"/**",
 					"\"$(SRCROOT)/../../../../../applications\"/**",
+					"\"$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
+					"\"$(SRCROOT)/../../../../../common/inc\"",
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"";
@@ -466,6 +475,7 @@
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = alljoyn_about_cpp;
 				SKIP_INSTALL = YES;
+				VALID_ARCHS = "armv7 armv7s";
 			};
 			name = Release;
 		};
