@@ -691,20 +691,59 @@ static QStatus SendMsg(ArdpHandle* handle, ArdpConnRecord* conn, struct iovec*io
 }
 #endif /* USE_SG_LIST */
 
+static void FlushMessage(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t index, QStatus status)
+{
+    ArdpHeader* h = (ArdpHeader*) conn->SBUF.snd[index].hdr;
+    uint16_t fcnt = ntohs(h->fcnt);
+
+    /* Original message length */
+    uint32_t len =  conn->SBUF.maxDlen * (fcnt - 1) + ntohs(h->dlen);
+    /* Original sent data buffer */
+    uint8_t*buf = conn->SBUF.snd[index].data;
+
+    /* Mark all fragment SND buffers as available */
+    do {
+        conn->SBUF.snd[index].inUse = false;
+        conn->SBUF.snd[index].fastRT = 0;
+        index = (index + 1) % conn->SND.MAX;
+        conn->SBUF.pending--;
+        QCC_DbgPrintf(("FlushMessage(fcnt = %d): pending = %d", fcnt, conn->SBUF.pending));
+        assert((conn->SBUF.pending < conn->SND.MAX) && "Invalid number of pending segments in send queue!");
+        fcnt--;
+    } while (fcnt > 0);
+
+    QCC_DbgPrintf(("FlushMessage(): SendCb(handle=%p, conn=%p, buf=%p, len=%d, status=%d",
+                   handle, conn, conn->SBUF.snd[index].data, len, status));
+
+    /* Mark all fragment SND buffers as available */
+    handle->cb.SendCb(handle, conn, buf, len, status);
+}
+
 static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
 {
     QCC_DbgTrace(("DisconnectTimerHandler: handle=%p conn=%p", handle, conn));
 
+
     /* Tricking the compiler */
     QStatus reason = *reinterpret_cast<QStatus*>(&context);
 
+    QCC_LogError(reason, ("DisconnectTimerHandler: handle=%p conn=%p", handle, conn));
     assert((handle != NULL && conn != NULL) && "Handle and connection cannot be NULL");
     SetState(conn, CLOSED);
+
+    /* SendCb() for all pending messages so that the upper layer knows
+     * to release the corresponding buffers */
+    for (uint32_t i = 0; i < conn->SND.MAX; i++) {
+        ArdpHeader* h = (ArdpHeader* ) conn->SBUF.snd[i].hdr;
+        if (conn->SBUF.snd[i].inUse && (h->seq == h->som)) {
+            FlushMessage(handle, conn, i, reason);
+        }
+    }
+
     if (handle->cb.DisconnectCb != NULL) {
         handle->cb.DisconnectCb(handle, conn, reason);
     }
     DelConnRecord(handle, conn);
-
 }
 
 static void ConnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
@@ -942,6 +981,26 @@ static QStatus Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t flags, uin
     return SendMsgHeader(handle, conn, &h);
 }
 
+static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reason)
+{
+    QCC_DbgTrace(("Disconnect(handle=%p, conn=%p, reason=%s)", handle, conn, QCC_StatusText(reason)));
+    if (!IsConnValid(handle, conn) || conn->STATE == CLOSED || conn->STATE == CLOSE_WAIT) {
+        return ER_ARDP_INVALID_STATE;
+    }
+
+    /* Is there a nice macro that would nicely wrap integer into pointer? Just to avoid nasty surprises... */
+    assert(sizeof(QStatus) <=  sizeof(void*));
+    if (conn->STATE == OPEN) {
+        AddTimer(handle, conn, DISCONNECT_TIMER, DisconnectTimerHandler, (void*) reason, handle->config.timewait, ARDP_DISCONNECT_RETRY);
+        SetState(conn, CLOSE_WAIT);
+        return Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
+    } else {
+        SetState(conn, CLOSED);
+        AddTimer(handle, conn, DISCONNECT_TIMER, DisconnectTimerHandler, (void*) reason, 0, ARDP_DISCONNECT_RETRY);
+    }
+    return ER_OK;
+}
+
 /*
  *    error = measuredRTT - meanRTT
  *    new meanRTT = meanRTT + 1/8 * error
@@ -996,72 +1055,10 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         }
 
     } else {
-        QCC_DbgPrintf(("RetransmitTimerHandler: context=snd=%p retries=%d", snd, timer->retry));
-        ArdpHeader* h = (ArdpHeader*) snd->hdr;
-        uint32_t len;
-        uint8_t*buf;
-        uint16_t fcnt = ntohs(h->fcnt);
-        uint32_t som = ntohl(h->som);
-        uint16_t index = som % conn->SND.MAX;
-
-        /* Invalidate send buffer.
-         * If this is a fragment, invalidate the whole message. */
-
-        QCC_DbgPrintf(("RetransmitTimerHandler:  cancel message of %d fragments with  SOM=%u", fcnt, som));
-
-        /* Pointer to the original message buffer */
-        buf = conn->SBUF.snd[index].data;
-
-        for (uint16_t i = 0; i < fcnt; i++) {
-            h = (ArdpHeader*) conn->SBUF.snd[index].hdr;
-            assert(((ntohs(h->fcnt) == fcnt) && (ntohl(h->som) == som)) && "RetransmitTimerHandler: Not a valid fragment!");
-
-            conn->SBUF.snd[index].inUse = false;
-            conn->SBUF.snd[index].fastRT = 0;
-            conn->SBUF.pending--;
-            assert((conn->SBUF.pending <= conn->SND.MAX) && "RetransmitTimerHandler: Number of pending segments exceeds max!");
-            /* Cancel retransmit timers if any. Notice that the reference to the timer that fired up this handler
-             * was set to NULL prior to entering the for loop. Therefore it will not be canceled from underneath
-             * the execution flow. This timer will be taken care of by CheckConnTimers() based on retry==0
-             * once we get out of RetransmitTimerHandler() call. */
-
-            if (conn->SBUF.snd[index].timer != NULL) {
-                /* Caution: Do not delete actual timers here. Timer cleann up will happen
-                 * in CheckConnTimers() based on (retry <= 0) */
-                conn->SBUF.snd[index].timer->retry = 0;
-                conn->SBUF.snd[index].timer = NULL;
-            }
-            index = (index + 1) % conn->SND.MAX;
-        }
-
-        /* Original message length */
-        len =  conn->SBUF.maxDlen * (fcnt - 1) + ntohs(h->dlen);
-
-        QCC_DbgPrintf(("RetransmitTimerHandler(): SendCb(handle=%p, conn=%p, buf=%p, len=%d, status=%d",
-                       handle, conn, buf, len, ER_FAIL));
-        handle->cb.SendCb(handle, timer->conn, buf, len, ER_FAIL);
+        QCC_DbgPrintf(("RetransmitTimerHandler retries hit the limit: %d", handle->config.dataRetries));
+        timer->retry = 0;
+        Disconnect(handle, conn, ER_TIMEOUT);
     }
-
-}
-
-static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reason)
-{
-    QCC_DbgTrace(("Disconnect(handle=%p, conn=%p, reason=%s)", handle, conn, QCC_StatusText(reason)));
-    if (!IsConnValid(handle, conn) || conn->STATE == CLOSED || conn->STATE == CLOSE_WAIT) {
-        return ER_ARDP_INVALID_STATE;
-    }
-
-    /* Is there a nice macro that would nicely wrap integer into pointer? Just to avoid nasty surprises... */
-    assert(sizeof(QStatus) <=  sizeof(void*));
-    if (conn->STATE == OPEN) {
-        AddTimer(handle, conn, DISCONNECT_TIMER, DisconnectTimerHandler, (void*) reason, handle->config.timewait, ARDP_DISCONNECT_RETRY);
-        SetState(conn, CLOSE_WAIT);
-        return Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
-    } else {
-        SetState(conn, CLOSED);
-        AddTimer(handle, conn, DISCONNECT_TIMER, DisconnectTimerHandler, (void*) reason, 0, ARDP_DISCONNECT_RETRY);
-    }
-    return ER_OK;
 }
 
 static void WindowCheckTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
@@ -1540,8 +1537,8 @@ static QStatus SendRst(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ip
     return qcc::SendTo(sock, ipAddr, ipPort, &h, ARDP_FIXED_HEADER_LEN, sent);
 }
 
-static void FlushAckedSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t ack, uint32_t lcs) {
-    QCC_DbgTrace(("FlushAckedSegments(): handle=%p, conn=%p, ack=%u, lcs=%u", handle, conn, ack, lcs));
+static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t ack, uint32_t lcs) {
+    QCC_DbgTrace(("UpdateSndSegments(): handle=%p, conn=%p, ack=%u, lcs=%u", handle, conn, ack, lcs));
     uint16_t index = ack % conn->SND.MAX;
 
     /* Nothing to clean up */
@@ -1565,17 +1562,16 @@ static void FlushAckedSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
         uint32_t seq = ntohl(h->seq);
         uint16_t fcnt = ntohs(h->fcnt);
 
-
         assert(conn->SBUF.snd[index].inUse);
         assert(SEQ32_LET(seq, ack));
         if (conn->SBUF.snd[index].inUse) {
 
             /* If fragmented, wait for the last segment. Issue sendCB on the first fragment in message.*/
-            QCC_DbgPrintf(("FlushAckedSegments(): fragment=%u, som=%u, fcnt=%d",
+            QCC_DbgPrintf(("UpdateSndSegments(): fragment=%u, som=%u, fcnt=%d",
                            ntohl(h->seq), ntohl(h->som), fcnt));
 
             if (conn->SBUF.snd[index].timer != NULL) {
-                QCC_DbgPrintf(("FlushAckedSegments(): stop timer %p", conn->SBUF.snd[index].timer));
+                QCC_DbgPrintf(("UpdateSndSegments(): stop timer %p", conn->SBUF.snd[index].timer));
                 conn->SBUF.snd[index].timer->retry = 0;
                 conn->SBUF.snd[index].timer = NULL;
             }
@@ -1585,31 +1581,13 @@ static void FlushAckedSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
                 index = (index + 1) % conn->SND.MAX;
                 continue;
             } else if (SEQ32_LET(seq, lcs)) {
-                QCC_DbgPrintf(("FlushAckedSegments(): last fragment=%u, som=%u, fcnt=%d",
+                QCC_DbgPrintf(("UpdateSndSegments(): last fragment=%u, som=%u, fcnt=%d",
                                seq, ntohl(h->som), fcnt));
 
                 /* First segment in message, keeps original pointer to message buffer */
-                uint16_t fragIndex = ntohl(h->som) % conn->SND.MAX;
-                /* Original message length */
-                uint32_t len =  conn->SBUF.maxDlen * (fcnt - 1) + ntohs(h->dlen);
-                /* Original sent data buffer */
-                uint8_t*buf = conn->SBUF.snd[fragIndex].data;
-                QCC_DbgPrintf(("FlushAckedSegments(): First Fragment SendCb(handle=%p, conn=%p, buf=%p, len=%d, status=%d",
-                               handle, conn, conn->SBUF.snd[fragIndex].data, len, ER_OK));
+                uint32_t fragIndex = ntohl(h->som) % conn->SND.MAX;
 
-                /* Mark all fragment SND buffers as available */
-                do {
-                    conn->SBUF.snd[fragIndex].inUse = false;
-                    conn->SBUF.snd[fragIndex].fastRT = 0;
-                    fragIndex = (fragIndex + 1) % conn->SND.MAX;
-                    conn->SBUF.pending--;
-                    QCC_DbgPrintf(("FlushAckedSegments(fcnt = %d): pending = %d", fcnt, conn->SBUF.pending));
-                    assert((conn->SBUF.pending < conn->SND.MAX) && "Invalid number of pending segments in send queue!");
-                    fcnt--;
-                } while (fcnt > 0);
-
-                handle->cb.SendCb(handle, conn, buf, len, ER_OK);
-
+                FlushMessage(handle, conn, fragIndex, ER_OK);
             }
         }
 
@@ -2243,7 +2221,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 QCC_DbgPrintf(("ArdpMachine(): OPEN: Got ACK %u LCS %u Window %u", seg->ACK, seg->LCS, seg->WINDOW));
                 if ((IN_RANGE(uint32_t, conn->SND.UNA, ((conn->SND.NXT - conn->SND.UNA) + 1), seg->ACK) == true) ||
                     (conn->SND.LCS != seg->LCS)) {
-                    FlushAckedSegments(handle, conn, seg->ACK, seg->LCS);
+                    UpdateSndSegments(handle, conn, seg->ACK, seg->LCS);
                     conn->SND.UNA = seg->ACK + 1;
                 }
             }
