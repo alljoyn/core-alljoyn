@@ -286,8 +286,18 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 	}
     
 	// DeviceName
-	status = [self.aboutPropertyStoreImpl setDeviceName:@"Screen"];
+	status = [self.aboutPropertyStoreImpl setDeviceName:@"Screen" language:@"en"];
 	if (status != ER_OK) {
+		return status;
+	}
+    
+    status = [self.aboutPropertyStoreImpl setDeviceName:@"écran" language:@"fr"];
+    if (status != ER_OK) {
+		return status;
+	}
+    
+    status = [self.aboutPropertyStoreImpl setDeviceName:@"pantalla" language:@"sp"];
+    if (status != ER_OK) {
 		return status;
 	}
     
@@ -303,7 +313,6 @@ uint8_t aboutIconContent[] = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0
 	if (status != ER_OK) {
 		return status;
 	}
-    
     
 	//  ModelNumbe
 	status = [self.aboutPropertyStoreImpl setModelNumber:@"Wxfy388i"];

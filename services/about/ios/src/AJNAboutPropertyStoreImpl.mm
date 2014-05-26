@@ -105,6 +105,11 @@
 	return self.handle->setDeviceName([deviceName UTF8String]);
 }
 
+- (QStatus)setDeviceName:(NSString *)deviceName language:(NSString *)language
+{
+	return self.handle->setDeviceName([deviceName UTF8String], [language UTF8String]);
+}
+
 - (QStatus)setAppId:(NSString *)appId
 {
 	return self.handle->setAppId([appId UTF8String]);
