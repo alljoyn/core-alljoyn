@@ -410,8 +410,7 @@ QStatus Shutdown(SocketFd sockfd)
 
 void Close(SocketFd sockfd)
 {
-
-    assert(sockfd);
+    assert(sockfd >= 0);
     close(static_cast<int>(sockfd));
 }
 
