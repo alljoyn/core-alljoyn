@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -18,7 +18,7 @@
 #import "AJNInterfaceMember.h"
 #import "AJNInterfaceProperty.h"
 #import "AJNObject.h"
-
+#import "AJNTranslator.h"
 /**
  * Class for describing message bus interfaces. AJNInterfaceDescription objects describe the methods,
  * signals and properties of a AJNBusObject or AJNProxyBusObject.
@@ -67,6 +67,8 @@
  */
 @property (readonly, nonatomic) BOOL hasProperties;
 
+@property (nonatomic) void* translator;
+
 /**
  * The interface security policy can be inherit, required, or off. If security is
  * required on an interface, methods on that interface can only be called by an authenticated peer
@@ -88,6 +90,10 @@ typedef enum AJNInterfaceSecurityPolicy{
  * @return Returns the security policy for this interface.
  */
 @property (readonly, nonatomic) AJNInterfaceSecurityPolicy securityPolicy;
+
+- (id)initWithHandle:(AJNHandle)handle;
+- (id)initWithHandle:(AJNHandle)handle shouldDeleteHandleOnDealloc:(BOOL)deletionFlag;
+
 
 
 /**
@@ -292,6 +298,65 @@ typedef enum AJNInterfaceSecurityPolicy{
  *          - ER_BUS_MEMBER_ALREADY_EXISTS if annotation already exists
  */
 - (QStatus)addAnnotationWithName:(NSString *)annotationName value:(NSString *)annotationValue forPropertyWithName:(NSString *)propertyName;
+
+/**
+ * Set the description language for this Interface
+ *
+ * @param language the language of this Interface's descriptions
+ */
+- (void)setDescriptionLanguage:(NSString *)language;
+
+/**
+ * Set this Interface's description
+ * 
+ * @param description This Interface's description
+ */
+- (void)setDescription:(NSString *)description;
+
+/**
+ * Set a description for a method or signal of this Interface
+ *
+ * @param description The description of the method or signal
+ * @param member The name of the method or signal
+ * @param sessionless Set this to TRUE if this is a signal you intend on sending sessionless
+ *
+ * @return  - ER_OK if successful
+ *          - ER_BUS_INTERFACE_NO_SUCH_MEMBER if the method or signal does not exist
+ *          - ER_BUS_INTERFACE_ACTIVATED if this interface has already activated
+ */
+- (QStatus)setMemberDescription:(NSString *)description forMemberWithName:(NSString *)member sessionlessSignal:(BOOL)sessionless;
+
+/**
+ * Set a description for a property of this Interface
+ *
+ * @param description The description of the property
+ * @param propName The name of the property
+ *
+ * @return  - ER_OK if successful
+ *          - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+ *          - ER_BUS_INTERFACE_ACTIVATED if this interface has already activated
+ */
+- (QStatus)setPropertyDescription:(NSString *)description forPropertyWithName:(NSString *)propName;
+
+/**
+ * Set a description for an argument of a method or signal of this Interface
+ *
+ * @param description The description of the argument
+ * @param argName The name of the argument
+ * @param member The name of the method or signal
+ *
+ * @return  - ER_OK if successful
+ *          - ER_BUS_INTERFACE_NO_SUCH_MEMBER if the method or signal does not exist
+ *          - ER_BUS_INTERFACE_ACTIVATED if this interface has already activated
+ */
+- (QStatus)setArgDescription:(NSString *)description forArgument:(NSString *)argName ofMember:(NSString *)member;
+
+/**
+ * Set this Interface's AJNTransalator
+ * 
+ * @param translator The AJNTranslator
+ */
+- (void)setDescriptionTranslator:(id<AJNTranslator>)translator;
 
 /**
  * Check for existence of a member. Optionally check the signature also.

@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -14,25 +14,46 @@
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifndef AJN_DESCRIPTION_TRANSLATOR_IMPL_H
+#define AJN_DESCRIPTION_TRANSLATOR_IMPL_H
+
 #import <Foundation/Foundation.h>
-#import "AJNBusInterface.h"
-#import "AJNBusAttachment.h"
-#import "BasicService.h"
+#import "alljoyn/Translator.h"
+#import "AJNTranslator.h"
 
-const AJNSessionPort kBasicObjectServicePort = 25;
-NSString * const kBasicObjectServicePath = @ "/sample";
-NSString * const kBasicObjectServiceName = @ "org.alljoyn.bus.sample";
-NSString * const kBasicObjectInterfaceName = @ "org.alljoyn.bus.sample";
-NSString * const kBasicObjectMethodName = @ "cat";
+class AJNTranslatorImpl : public ajn::Translator {
+  protected:
 
-@protocol MyMethodSample <AJNBusInterface>
+    id<AJNTranslator> m_delegate;
 
-- (NSString*)concatenateString:(NSString *)string1 withString:(NSString *)string2;
+  public:
 
-@end
+    AJNTranslatorImpl(id<AJNTranslator> aDelegate);
+    
+    virtual ~AJNTranslatorImpl();
+ 
+    virtual size_t NumTargetLanguages();
 
-@interface MyBasicSampleObject : AJNBusObject
+    virtual void GetTargetLanguage(size_t index, qcc::String& ret);
 
-@property (nonatomic, strong) id<BasicServiceDelegate> delegate;
+    virtual const char* Translate(const char* sourceLanguage, const char* targetLanguage, const char* source, qcc::String& buffer);
+    
+    id<AJNTranslator> getDelegate();
 
-@end
+    void setDelegate(id<AJNTranslator> delegate);
+};
+
+// inline methods
+//
+
+inline id<AJNTranslator> AJNTranslatorImpl::getDelegate()
+{
+    return m_delegate;
+}
+
+inline void AJNTranslatorImpl::setDelegate(id<AJNTranslator> delegate)
+{
+    m_delegate = delegate;
+}
+
+#endif

@@ -1,6 +1,6 @@
 <!--
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -87,6 +87,18 @@ using namespace ajn;
 
 </xsl:template>
 
+<!--
+Define empty templates for the text under description so that it doesn't get caught by the
+default template 
+-->
+<xsl:template match="description[text()]" mode="cpp-method-definition"/>
+<xsl:template match="description[text()]" mode="cpp-member-definition"/>
+<xsl:template match="description[text()]" mode="cpp-signal-member"/>
+<xsl:template match="description[text()]" mode="cpp-signal-definition"/>
+<xsl:template match="description[text()]" mode="cpp-signal-handler-impl-declaration"/>
+<xsl:template match="description[text()]" mode="cpp-signal-handler-impl-definition"/>
+<xsl:template match="description[text()]"/>
+
 
 <xsl:template match="node" mode="cpp">
 ////////////////////////////////////////////////////////////////////////////////
@@ -165,7 +177,6 @@ QStatus <xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/
 </xsl:if>
 
 <xsl:apply-templates select="./interface" mode="cpp-member-definitions"/>
-
 ////////////////////////////////////////////////////////////////////////////////
 </xsl:template>
 
@@ -204,6 +215,10 @@ QStatus <xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/
         <xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/>Impl *busObject = new <xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/>Impl(*((ajn::BusAttachment*)busAttachment.handle), [path UTF8String], (id&lt;<xsl:apply-templates select="./interface" mode="objc-interface-list"/>&gt;)self);
         
         self.handle = busObject;
+        
+      <xsl:if test="./description">
+        [self setDescription:@"<xsl:value-of select="./description"/>" inLanguage:@"<xsl:value-of select="./description/@language"/>"];
+      </xsl:if>
     }
     return self;
 }
@@ -837,7 +852,12 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
         // create an interface description, or if that fails, get the interface as it was already created
         //
         interfaceDescription = [busAttachment createInterfaceWithName:@"<xsl:value-of select="@name"/>"];
-        
+
+    <xsl:if test="./description">
+        [interfaceDescription setDescriptionLanguage:@"<xsl:value-of select="./description/@language"/>"];
+        [interfaceDescription setDescription:@"<xsl:value-of select="./description"/>"];
+    </xsl:if>
+
     <xsl:if test="count(property)>0">
         // add the properties to the interface description
         //
@@ -856,6 +876,8 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
     <xsl:apply-templates select="./signal" mode="objc-interface-signal-descriptions"/>
     </xsl:if>
     
+
+    
         [interfaceDescription activate];
 </xsl:template>
 
@@ -865,6 +887,9 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
         if (status != ER_OK &#38;&#38; status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  <xsl:value-of select="@name"/>" userInfo:nil];
         }
+    <xsl:if test="./description">
+        [interfaceDescription setPropertyDescription:@"<xsl:value-of select="./description"/>" forPropertyWithName:@"<xsl:value-of select="@name"/>"];
+    </xsl:if>
 </xsl:template>
 
 <xsl:template match="method" mode="objc-interface-method-descriptions">
@@ -873,6 +898,12 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
         if (status != ER_OK &#38;&#38; status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: <xsl:value-of select="@name"/>" userInfo:nil];
         }
+    <xsl:if test="./description">
+        [interfaceDescription setMemberDescription:@"<xsl:value-of select="./description"/>" forMemberWithName:@"<xsl:value-of select="@name"/>" sessionlessSignal:FALSE];
+    </xsl:if>
+    <xsl:for-each select="./arg/description">
+        [interfaceDescription setArgDescription:@"<xsl:value-of select="."/>" forArgument:@"<xsl:value-of select="../@name"/>" ofMember:@"<xsl:value-of select="../../@name"/>"];
+    </xsl:for-each>
 </xsl:template>
 
 <xsl:template match="signal" mode="objc-interface-signal-descriptions">
@@ -881,6 +912,13 @@ void <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/
         if (status != ER_OK &#38;&#38; status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add signal to interface:  <xsl:value-of select="@name"/>" userInfo:nil];
         }
+    <xsl:if test="./description">
+        [interfaceDescription setMemberDescription:@"<xsl:value-of select="./description"/>" forMemberWithName:@"<xsl:value-of select="@name"/>" sessionlessSignal:<xsl:if test="./description[@sessionless = 'true']">TRUE</xsl:if><xsl:if test="not(./description[@sessionless = 'true'])">FALSE</xsl:if>];
+
+    </xsl:if>
+    <xsl:for-each select="./arg/description">
+        [interfaceDescription setArgDescription:@"<xsl:value-of select="."/>" forArgument:@"<xsl:value-of select="../@name"/>" ofMember:@"<xsl:value-of select="../../@name"/>"];
+    </xsl:for-each>
 </xsl:template>
 
 <xsl:template match="interface" mode="cpp-property-get">
@@ -1073,7 +1111,6 @@ void <xsl:value-of select="../../annotation[@name='org.alljoyn.lang.objc']/@valu
     
     }
 }
-
 </xsl:template>
 
 <xsl:template match="arg" mode="objc-messageCall">

@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -23,6 +23,7 @@
 #import "AJNBusObjectImpl.h"
 #import "AJNInterfaceDescription.h"
 #import "AJNMessageArgument.h"
+#import "AJNTranslatorImpl.h"
 
 using namespace ajn;
 
@@ -104,6 +105,29 @@ using namespace ajn;
 - (QStatus)cancelSessionlessMessageWithMessage:(const AJNMessage *)message
 {
     return self.busObject->CancelSessionlessMessage(*(Message *)message.handle);
+}
+
+- (void)setDescription:(NSString *)description inLanguage:(NSString *)language
+{
+    [self busObject]->SetDescription([language UTF8String], [description UTF8String]);
+}
+
+- (void)setDescriptionTranslator:(id<AJNTranslator>)translator
+{
+    if(self.translator)
+    {
+        delete (ajn::Translator*)self.translator;
+    }
+    self.translator = new AJNTranslatorImpl(translator);
+    [self busObject]->SetDescriptionTranslator((ajn::Translator*)self.translator);
+}
+
+-(void)dealloc
+{
+    if(self.translator)
+    {
+        delete (AJNTranslatorImpl*)self.translator;
+    }
 }
 
 @end

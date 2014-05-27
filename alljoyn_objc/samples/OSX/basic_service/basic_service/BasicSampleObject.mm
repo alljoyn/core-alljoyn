@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -38,8 +38,8 @@
         // create an interface description and add the concatenate method to it
         //
         interfaceDescription = [busAttachment createInterfaceWithName:kBasicObjectInterfaceName];
-        
-        result = [interfaceDescription addMethodWithName:kBasicObjectMethodName inputSignature:@"ss" outputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"str1", @"str2", @"outStr", nil]];
+
+       result = [interfaceDescription addMethodWithName:kBasicObjectMethodName inputSignature:@"ss" outputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"str1", @"str2", @"outStr", nil]];
         
         if (result != ER_OK) {
             [self.delegate didReceiveStatusUpdateMessage:@"Failed to create interface 'org.alljoyn.Bus.method_sample'\n"];
@@ -47,6 +47,11 @@
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface" userInfo:nil];
         }
         [self.delegate didReceiveStatusUpdateMessage:@"Interface Created.\n"];        
+ 
+        [interfaceDescription setDescriptionLanguage:@"pig"];
+        [interfaceDescription setDescription:@"Isthay siay naay nterfacenay"];
+        [interfaceDescription setMemberDescription:@"IsThay siay ethay atcay" forMemberWithName:@"cat" sessionlessSignal:FALSE];
+        [interfaceDescription setArgDescription:@"IsThay siay ethay esponsray" forArgument:@"outStr" ofMember:@"cat"];
         
         [interfaceDescription activate];
         
