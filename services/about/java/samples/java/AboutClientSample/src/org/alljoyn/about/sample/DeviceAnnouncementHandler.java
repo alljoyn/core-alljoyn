@@ -30,7 +30,7 @@ import org.alljoyn.services.common.utils.TransportUtil;
 
 public class DeviceAnnouncementHandler implements AnnouncementHandler
 {
-    public void onAnnouncement(String serviceName, short version, short port, BusObjectDescription[] objectDescriptions, Map<String, Variant> aboutData)
+    public void onAnnouncement(String serviceName, short port, BusObjectDescription[] objectDescriptions, Map<String, Variant> aboutData)
     {
         System.out.format("Received About announcement signal from serviceName: %s\n", serviceName);
         System.out.println("*******************Contents of Announce Signal*******************");
