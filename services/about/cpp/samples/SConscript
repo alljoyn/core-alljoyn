@@ -14,7 +14,7 @@
 
 Import('about_env')
 
-if about_env['OS_CONF'] in ['linux', 'openwrt']:
+if about_env['OS_CONF'] in ['linux', 'openwrt', 'windows']:
     local_env = about_env.Clone()
 
     local_env.Prepend(LIBS = ['alljoyn_about'])
