@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -886,7 +886,11 @@ void BusObject::GetDescriptionLanguages(const InterfaceDescription::Member* memb
     }
 
     MsgArg replyArg[1];
-    replyArg[0].Set("as", tags.size(), tags.data());
+    if (tags.empty()) {
+        replyArg[0].Set("as", 0, NULL);
+    } else {
+        replyArg[0].Set("as", tags.size(), &tags[0]);
+    }
     replyArg[0].SetOwnershipFlags(MsgArg::OwnsData | MsgArg::OwnsArgs, true);
     QStatus status = MethodReply(msg, replyArg, 1);
     if (status != ER_OK) {
