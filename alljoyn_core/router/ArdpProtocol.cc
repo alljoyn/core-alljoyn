@@ -347,7 +347,7 @@ static void DumpSndInfo(ArdpConnRecord* conn)
     QCC_DbgPrintf(("\tmaxDlen=%d, size=%d, pending=%d, free=%d", conn->SBUF.maxDlen, conn->SND.MAX, conn->SBUF.pending, (conn->SND.MAX - conn->SBUF.pending)));
     for (uint32_t i = 0; i < conn->SND.MAX; i++) {
         ArdpHeader* h = (ArdpHeader*) conn->SBUF.snd[i].hdr;
-        uint32_t seq = (h != NULL) ? ntohl(h->seq) : 0;
+        uint32_t seq = ntohl(h->seq);
         QCC_DbgPrintf(("\t inUse=%d, seq=%u, hdr=%p, hdrlen=%d, data=%p, datalen=%d., ttl=%d., tStart=%d, onTheWire=%d, fcnt=%d, som %u.",
                        conn->SBUF.snd[i].inUse, seq, conn->SBUF.snd[i].hdr, conn->SBUF.snd[i].hdrlen,
                        conn->SBUF.snd[i].data, conn->SBUF.snd[i].datalen,
