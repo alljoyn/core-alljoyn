@@ -34,69 +34,57 @@ namespace qcc {
  */
 class CertificateECC : public Certificate {
   public:
-    CertificateECC(uint32_t version, bool generic) : Certificate(version), generic(generic), buf(NULL), bufLen(0)
+    CertificateECC(uint32_t version) : Certificate(version)
     {
     }
 
-    CertificateECC(uint32_t version) : Certificate(version), generic(true), buf(NULL), bufLen(0)
-    {
-    }
-    CertificateECC() : Certificate(0xFFFFFFFF), generic(true), buf(NULL), bufLen(0)
+    CertificateECC() : Certificate(0xFFFFFFFF)
     {
     }
 
-    /**
-     * Is the cert generic
-     */
-    bool IsGeneric()
+    virtual const ECCPublicKey* GetIssuer()
     {
-        return generic;
+        return NULL;
+    }
+    virtual const ECCPublicKey* GetSubject()
+    {
+        return NULL;
+    }
+    virtual const ValidPeriod* GetValidity()
+    {
+        return NULL;
+    }
+    virtual const bool IsDelegate()
+    {
+        return false;
+    }
+    virtual const uint8_t* GetExternalDataDigest()
+    {
+        return NULL;
+    }
+    virtual const ECCSignature* GetSig()
+    {
+        return NULL;
     }
 
-    /**
-     * Set the generic flag.
-     * @param yesNo the generic flag
-     */
-    void SetGeneric(bool yesNo)
+    virtual String GetEncoded()
     {
-        generic = yesNo;
+        return "";
+    }
+    virtual QStatus LoadEncoded(const String& encoded)
+    {
+        return ER_NOT_IMPLEMENTED;
     }
 
-    /**
-     * get the generic certificate buffer
-     * @return buffer
-     */
-    const uint8_t* GetBuf()
+    virtual String ToString()
     {
-        return buf;
+        return "";
     }
-
-    /**
-     * get the length of the generic buffer
-     */
-    size_t GetBufLength()
+    virtual ~CertificateECC()
     {
-        return bufLen;
     }
-
-    virtual const ECCPublicKey* GetIssuer();
-    virtual const ECCPublicKey* GetSubject();
-    virtual const ValidPeriod* GetValidity();
-    virtual const bool IsDelegate();
-    virtual const uint8_t* GetExternalDataDigest();
-    virtual const ECCSignature* GetSig();
-
-    virtual String GetEncoded();
-    virtual QStatus LoadEncoded(const String& encoded);
-
-    String ToString();
-    virtual ~CertificateECC();
 
     static const size_t GUILD_ID_LEN = 16;   /* the Guild ID length */
-  private:
-    bool generic;
-    uint8_t* buf;
-    size_t bufLen;
 };
 
 /**
@@ -105,7 +93,7 @@ class CertificateECC : public Certificate {
 class CertificateType0 : public CertificateECC {
 
   public:
-    CertificateType0() : CertificateECC(0, false)
+    CertificateType0() : CertificateECC(0)
     {
     }
     CertificateType0(const ECCPublicKey* issuer, const uint8_t* externalDigest);
@@ -161,7 +149,7 @@ class CertificateType0 : public CertificateECC {
 class CertificateType1 : public CertificateECC {
 
   public:
-    CertificateType1() : CertificateECC(1, false)
+    CertificateType1() : CertificateECC(1)
     {
         signable.delegate = false;
     }
@@ -246,7 +234,7 @@ class CertificateType1 : public CertificateECC {
 class CertificateType2 : public CertificateECC {
 
   public:
-    CertificateType2() : CertificateECC(2, false)
+    CertificateType2() : CertificateECC(2)
     {
         signable.delegate = false;
     }
@@ -364,13 +352,6 @@ QStatus CertECCUtil_EncodePublicKey(const uint32_t* publicKey, size_t len, Strin
  */
 QStatus CertECCUtil_DecodePublicKey(const String& encoded, uint32_t* publicKey, size_t len);
 
-/**
- * Retrieve the leaf cert from a PEM string representing a cert chain.
- * @param encoded the input string holding the PEM string
- * @param[out] cert the output leaf cert
- * @return ER_OK for sucess; otherwise, error code.
- */
-QStatus CertECCUtil_GetLeafCert(const String& encoded, CertificateECC& cert);
 
 /**
  * Count the number of certificates in a PEM string representing a cert chain.

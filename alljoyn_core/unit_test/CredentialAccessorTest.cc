@@ -138,10 +138,14 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
     ASSERT_EQ(ER_OK, status) << " ca.AddAssociatedKey failed with actual status: " << QCC_StatusText(status);
 
     /* now retrieve the list back */
-    GUID128*customGuidList;
+    GUID128* customGuidList = NULL;
     size_t numGuids = 0;
     status = ca.GetKeys(peerGuid, &customGuidList, &numGuids);
-    ASSERT_EQ(ER_OK, status) << " ca.GetKeys failed with actual status: " << QCC_StatusText(status);
+    if (status != ER_OK) {
+        delete [] customGuidList;
+        FAIL() << " ca.GetKeys failed with actual status: " << QCC_StatusText(status);
+        return;
+    }
 
     ASSERT_EQ(2U, numGuids) << " ca.GetKeys expected to return 2 guids";
 
@@ -167,8 +171,13 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
     /* retrieve the custom list back */
     /* now retrieve the list back */
     numGuids = 0;
+    customGuidList = NULL;
     status = ca.GetKeys(peerGuid, &customGuidList, &numGuids);
-    ASSERT_EQ(ER_OK, status) << " ca.GetKeys failed with actual status: " << QCC_StatusText(status);
+    if (status != ER_OK) {
+        delete [] customGuidList;
+        FAIL() << " ca.GetKeys failed with actual status: " << QCC_StatusText(status);
+        return;
+    }
 
     ASSERT_EQ(1U, numGuids) << " ca.GetKeys expected to return 1 guid";
 
@@ -313,10 +322,10 @@ TEST_F(CredentialAccessorTest, KeysExpired)
 
     Timespec now;
     GetTimeNow(&now);
-    printf("*** now %ld -- sleep 35 secs since the minimum key expiration time is 30 seconds\n", now.seconds);
+    printf("*** now %lu -- sleep 35 secs since the minimum key expiration time is 30 seconds\n", now.seconds);
     qcc::Sleep(35000);
     GetTimeNow(&now);
-    printf("*** now %ld -- wake up\n", now.seconds);
+    printf("*** now %lu -- wake up\n", now.seconds);
 
     KeyBlob kb2("This is the peer secret 2", KeyBlob::GENERIC);
     kb2.SetExpiration(60);
@@ -400,10 +409,14 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
     ASSERT_EQ(ER_OK, status) << " ca.AddAssociatedKey failed with actual status: " << QCC_StatusText(status);
 
     /* now retrieve the list back */
-    GUID128*customGuidList;
+    GUID128* customGuidList = NULL;
     size_t numGuids = 0;
     status = ca.GetKeys(peerGuid, &customGuidList, &numGuids);
-    ASSERT_EQ(ER_OK, status) << " ca.GetKeys failed with actual status: " << QCC_StatusText(status);
+    if (status != ER_OK) {
+        delete [] customGuidList;
+        FAIL() << " ca.GetKeys failed with actual status: " << QCC_StatusText(status);
+        return;
+    }
 
     ASSERT_EQ(2U, numGuids) << " ca.GetKeys expected to return 2 guids";
 
@@ -419,11 +432,16 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
     }
     if (numGuids > 0) {
         delete [] customGuidList;
-        customGuidList = NULL;
     }
     /* get the custom keys for customGUID2 */
+    numGuids = 0;
+    customGuidList = NULL;
     status = ca.GetKeys(customGuid2, &customGuidList, &numGuids);
-    ASSERT_EQ(ER_OK, status) << " ca.GetKeys for customGuid2 failed with actual status: " << QCC_StatusText(status);
+    if (status != ER_OK) {
+        delete [] customGuidList;
+        FAIL() << " ca.GetKeys for customGuid2 failed with actual status: " << QCC_StatusText(status);
+        return;
+    }
 
     ASSERT_EQ(1U, numGuids) << " ca.GetKeys expected to return 1 guids";
 
@@ -449,8 +467,13 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
     /* retrieve the custom list back */
     /* now retrieve the list back */
     numGuids = 0;
+    customGuidList = NULL;
     status = ca.GetKeys(peerGuid, &customGuidList, &numGuids);
-    ASSERT_EQ(ER_OK, status) << " ca.GetKeys failed with actual status: " << QCC_StatusText(status);
+    if (status != ER_OK) {
+        delete [] customGuidList;
+        FAIL() << " ca.GetKeys for customGuid2 failed with actual status: " << QCC_StatusText(status);
+        return;
+    }
 
     ASSERT_EQ(1U, numGuids) << " ca.GetKeys expected to return 1 guid";
 
