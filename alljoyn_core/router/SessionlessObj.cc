@@ -1331,10 +1331,10 @@ bool SessionlessObj::SendResponseIfMatch(TransportMask transport, const qcc::IPE
     if (sendResponse) {
         MDNSPacket response;
         response->SetDestination(ns4);
-        MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
-        advRData->SetValue("name", name);
+        MDNSAdvertiseRData advRData;
+        advRData.SetValue("name", name);
         String guid = bus.GetInternal().GetGlobalGUID().ToString();
-        MDNSResourceRecord advertiseRecord("advertise." + guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
+        MDNSResourceRecord advertiseRecord("advertise." + guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &advRData);
         response->AddAdditionalRecord(advertiseRecord);
         QStatus status = IpNameService::Instance().Response(transport, 120, response);
         if (ER_OK == status) {
