@@ -1,4 +1,4 @@
-# Copyright (c) 2013, 2014, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -13,7 +13,7 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 Import('about_env')
- 
+
 if not about_env.has_key('_ALLJOYNCORE_'):
     about_env.Append(LIBS = ['alljoyn'])
     if about_env['BR'] == 'on' :
@@ -39,7 +39,3 @@ if about_env['BUILD_SERVICES_SAMPLES'] == 'on':
 if not (about_env['OS'] == 'darwin' and about_env['CPU'] in ['arm', 'armv7', 'armv7s']):
     # Build unit Tests
     about_env.SConscript('unit_test/SConscript', exports = ['about_env'], variant_dir='$OBJDIR/unittest', duplicate = 0)
-
-# Build docs
-installDocs = about_env.SConscript('docs/SConscript', exports = ['about_env'])
-about_env.Depends(installDocs, about_env.Glob('$ABOUT_DISTDIR/inc/alljoyn/about/*.h'));
