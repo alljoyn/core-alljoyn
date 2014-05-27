@@ -36,6 +36,7 @@
 #include <SignatureUtils.h>
 #include "alljoyn_java.h"
 #include <alljoyn/Translator.h>
+#include <alljoyn/AllJoynStd.h>
 
 #define QCC_MODULE "ALLJOYN_JAVA"
 
@@ -9031,7 +9032,8 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_create(JNIEn
          */
         bool isDBusStandardIfac = (strcmp(org::freedesktop::DBus::Introspectable::InterfaceName, name.c_str()) == 0) ||
                                   (strcmp(org::freedesktop::DBus::Peer::InterfaceName, name.c_str()) == 0) ||
-                                  (strcmp(org::freedesktop::DBus::Properties::InterfaceName, name.c_str()) == 0);
+                                  (strcmp(org::freedesktop::DBus::Properties::InterfaceName, name.c_str()) == 0) ||
+                                  (strcmp(org::allseen::Introspectable::InterfaceName, name.c_str()) == 0);
         if ((status != ER_OK) &&
             isDBusStandardIfac &&
             (intf->GetSecurityPolicy() == static_cast<InterfaceSecurityPolicy>(org_alljoyn_bus_InterfaceDescription_AJ_IFC_SECURITY_OFF))) {

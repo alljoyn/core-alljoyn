@@ -185,9 +185,6 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         InterfaceDescription* introspectIntf = NULL;
         status = bus.CreateInterface(org::allseen::Introspectable::InterfaceName, introspectIntf, AJ_IFC_SECURITY_OFF);
         if (ER_OK != status) {
-            if (ER_OK == status) {
-                status = ER_FAIL;
-            }
             QCC_LogError(status, ("Failed to create interface \"%s\"", org::allseen::Introspectable::InterfaceName));
             return status;
         }
