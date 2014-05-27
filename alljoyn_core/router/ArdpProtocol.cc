@@ -44,9 +44,6 @@ namespace ajn {
 
 #define ARDP_MIN_LEN 120
 
-#define ARDP_RETRANSMIT_TIMEOUT 500
-#define ARDP_URGENT_RETRANSMIT_TIMEOUT (ARDP_RETRANSMIT_TIMEOUT >> 2)
-#define ARDP_RETRANSMIT_RETRY 4
 #define ARDP_DISCONNECT_RETRY 1  /* Not configurable, no retries */
 
 #define ARDP_TTL_EXPIRED    0xffffffff
@@ -136,8 +133,8 @@ typedef struct {
  */
 typedef struct {
     uint32_t MAX;       /* The largest possible segment that THEY can receive (our send buffer, specified by the other side during connection) */
-    ArdpSndBuf* snd;     /* Array holding unacknowledged sent buffers */
-    uint16_t maxDlen;     /* Maximum data payload size that can be sent without partitioning */
+    ArdpSndBuf* snd;    /* Array holding unacknowledged sent buffers */
+    uint16_t maxDlen;   /* Maximum data payload size that can be sent without partitioning */
     uint16_t pending;     /* Number of unacknowledged sent buffers */
 } ArdpSbuf;
 
@@ -146,10 +143,10 @@ typedef struct {
  */
 typedef struct {
     uint32_t MAX;       /* The largest possible segment that WE can receive (our receive buffer, specified by our user on an open) */
-    ArdpRcvBuf* rcv;     /* Array holding received buffers not consumed by the app */
+    ArdpRcvBuf* rcv;    /* Array holding received buffers not consumed by the app */
     uint32_t first;     /* Sequence number of the first pending segment */
     uint32_t last;      /* Sequence number of the last pending segment */
-    uint16_t window;     /* Receive Window */
+    uint16_t window;    /* Receive Window */
 } ArdpRbuf;
 
 /**
@@ -161,17 +158,17 @@ typedef struct {
     uint32_t SEQ;     /* The sequence number in the segment currently being processed. */
     uint32_t ACK;     /* The acknowledgement number in the segment currently being processed. */
     uint32_t MAX;     /* The maximum number of outstanding segments the receiver is willing to hold (from SYN segment). */
-    uint32_t BMAX;     /* The maximum segment size accepted by the foreign host on a connection (specified in SYN). */
-    uint32_t RVALID;     /* The first valid RCV segment, TTL accounting */
-    uint32_t SVALID;     /* The first valid SND segment, TTL accounting */
+    uint32_t BMAX;    /* The maximum segment size accepted by the foreign host on a connection (specified in SYN). */
+    uint32_t RVALID;  /* The first valid RCV segment, TTL accounting */
+    uint32_t SVALID;  /* The first valid SND segment, TTL accounting */
     uint32_t SOM;     /* Start sequence number for fragmented message */
-    uint16_t FCNT;     /* Number of fragments comprising a message */
-    uint16_t DLEN;     /* The length of the data that came in with the current segment. */
+    uint16_t FCNT;    /* Number of fragments comprising a message */
+    uint16_t DLEN;    /* The length of the data that came in with the current segment. */
     uint16_t DST;     /* The destination port in the header of the segment currently being processed. */
     uint16_t SRC;     /* The source port in the header of the segment currently being processed. */
-    uint16_t WINDOW;     /* The current number of segments that the other side is currently able to hold. Range 0 - MAX. */
+    uint16_t WINDOW;  /* The current number of segments that the other side is currently able to hold. Range 0 - MAX. */
     uint32_t TTL;     /* Time-to-live */
-    uint8_t FLG;     /* The flags in the header of the segment currently being processed. */
+    uint8_t FLG;      /* The flags in the header of the segment currently being processed. */
     uint8_t HLEN;     /* The header length */
 } ArdpSeg;
 
@@ -179,7 +176,7 @@ typedef struct {
  * The states through which our main state machine transitions.
  */
 enum ArdpState {
-    CLOSED = 1,     /* No connection exists and no connection record available */
+    CLOSED = 1,    /* No connection exists and no connection record available */
     LISTEN,        /* Entered upon a passive open request.  Connection record is allocated and ARDP waits for a connection from remote */
     SYN_SENT,      /* Entered after rocessing an active open request.  SYN is sent and ARDP waits here for ACK of open request. */
     SYN_RCVD,      /* Reached from either LISTEN or SYN_SENT.  Generate ISN and ACK. */
@@ -199,16 +196,16 @@ typedef struct {
     uint32_t seq;       /* The sequence number of the current segment. */
     uint32_t ack;       /* The number of the segment that the sender of this segment last received correctly and in sequence. */
     uint32_t ttl;       /* Time-to-live */
-    uint16_t window;     /* The current receive window */
-    uint16_t segmax;     /* The maximum number of outstanding segments the other side can send without acknowledgement. */
-    uint16_t segbmax;     /* The maximum segment size we are willing to receive.  (the RBUF.MAX specified by the user calling open). */
-    uint16_t options;     /* Options for the connection.  Always Sequenced Delivery Mode (SDM). */
+    uint16_t window;    /* The current receive window */
+    uint16_t segmax;    /* The maximum number of outstanding segments the other side can send without acknowledgement. */
+    uint16_t segbmax;   /* The maximum segment size we are willing to receive.  (the RBUF.MAX specified by the user calling open). */
+    uint16_t options;   /* Options for the connection.  Always Sequenced Delivery Mode (SDM). */
 } ArdpSynSegment;
 
 typedef struct {
     ArdpSynSegment ss;
     uint8_t* data;       /* Place to hold connection handshake data (SASL, HELLO, etc) */
-    uint32_t dataLen;     /* Length of connection handshake data */
+    uint32_t dataLen;    /* Length of connection handshake data */
 } ArdpSynSnd;
 
 /**
@@ -227,14 +224,14 @@ struct ARDP_CONN_RECORD {
     uint16_t local;         /* ARDP local port for this connection */
     uint16_t foreign;       /* ARDP foreign port for this connection */
     qcc::SocketFd sock;     /* A convenient copy of socket we use to communicate. */
-    qcc::IPAddress ipAddr;     /* A convenient copy of the IP address of the foreign side of the connection. */
+    qcc::IPAddress ipAddr;  /* A convenient copy of the IP address of the foreign side of the connection. */
     uint16_t ipPort;        /* A convenient copy of the IP port of the foreign side of the connection. */
     uint16_t window;        /* Current send window, dynamic setting */
-    uint16_t minSendWindow;     /* Minimum send window needed to accomodate max message */
+    uint16_t minSendWindow; /* Minimum send window needed to accomodate max message */
     uint16_t sndHdrLen;     /* Length of send ARDP header on this connection */
     uint16_t rcvHdrLen;     /* Length of receive ARDP header on this connection */
     ArdpRcvMsk rcvMsk;      /* Tracking of received out-of-order segments */
-    uint16_t remoteMskSz;     /* Size of of EACK bitmask present in received segment */
+    uint16_t remoteMskSz;   /* Size of of EACK bitmask present in received segment */
     uint32_t lastSeen;      /* Last time we received communication on this connection. */
     ListNode timers;        /* List of currently scheduled timeout callbacks */
     ArdpSynSnd synSnd;      /* Connection establishment data */
@@ -242,12 +239,12 @@ struct ARDP_CONN_RECORD {
 };
 
 struct ARDP_HANDLE {
-    ArdpGlobalConfig config;     /* The configurable items that affect this instance of ARDP as a whole */
-    ArdpCallbacks cb;            /* The callbacks to allow the protocol to talk back to the client */
-    bool accepting;              /* If true the ArdpProtocol is accepting inbound connections */
-    ListNode conns;              /* List of currently active connections */
-    qcc::Timespec tbase;         /* Baseline time */
-    void* context;               /* A client-defined context pointer */
+    ArdpGlobalConfig config; /* The configurable items that affect this instance of ARDP as a whole */
+    ArdpCallbacks cb;        /* The callbacks to allow the protocol to talk back to the client */
+    bool accepting;          /* If true the ArdpProtocol is accepting inbound connections */
+    ListNode conns;          /* List of currently active connections */
+    qcc::Timespec tbase;     /* Baseline time */
+    void* context;           /* A client-defined context pointer */
 };
 
 /*
@@ -941,9 +938,9 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         QStatus status = SendMsgData(handle, conn, snd);
 
         if (status == ER_WOULDBLOCK) {
-            timer->delta = ARDP_URGENT_RETRANSMIT_TIMEOUT;
+            timer->delta = handle->config.dataTimeout >> 1; /* Faster retransmit */
         } else if (status == ER_OK) {
-            timer->delta = ARDP_RETRANSMIT_TIMEOUT;
+            timer->delta = handle->config.dataTimeout;
         } else {
             QCC_LogError(status, ("Write to Socket went bad. Disconnect?"));
         }
@@ -1259,7 +1256,7 @@ static ArdpConnRecord* FindConn(ArdpHandle* handle, uint16_t local, uint16_t for
 static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, uint32_t ttl)
 {
     QStatus status = ER_OK;
-    uint32_t timeout = ARDP_RETRANSMIT_TIMEOUT;
+    uint32_t timeout = handle->config.dataTimeout;
     uint16_t fcnt;
     uint32_t lastLen;
     uint8_t* segData = buf;
@@ -1331,13 +1328,13 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
             status = SendMsgData(handle, conn, &conn->SBUF.snd[index]);
 
             if (status == ER_WOULDBLOCK) {
-                timeout = ARDP_URGENT_RETRANSMIT_TIMEOUT;
+                timeout = handle->config.dataTimeout >> 1; /* Faster retransmit */
                 status = ER_OK;
             }
 
             /* We change update our accounting only if the message has been sent successfully. */
             if (status == ER_OK) {
-                conn->SBUF.snd[index].timer = AddTimer(handle, conn, RETRANSMIT_TIMER, RetransmitTimerHandler, (void*) &conn->SBUF.snd[index], timeout, ARDP_RETRANSMIT_RETRY + 1);
+                conn->SBUF.snd[index].timer = AddTimer(handle, conn, RETRANSMIT_TIMER, RetransmitTimerHandler, (void*) &conn->SBUF.snd[index], timeout,  handle->config.dataRetries + 1);
 
                 conn->SBUF.pending++;
                 conn->SND.NXT++;
@@ -2148,7 +2145,6 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
             if (seg->FLG & ARDP_FLAG_ACK) {
                 QCC_DbgPrintf(("ArdpMachine(): OPEN: Got ACK %u", seg->ACK));
                 if (IN_RANGE(uint32_t, conn->SND.UNA, ((conn->SND.NXT - conn->SND.UNA) + 1), seg->ACK) == true) {
-                    //if (conn->SND.UNA <= seg->ACK && seg->ACK < conn->SND.NXT) {
                     FlushAckedSegments(handle, conn, seg->ACK);
                     conn->SND.UNA = seg->ACK + 1;
                 }
@@ -2258,7 +2254,7 @@ QStatus ARDP_Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t segmax, u
 
 QStatus ARDP_Acknowledge(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint16_t len)
 {
-    QCC_DbgTrace(("ARDP_Acnowledge(handle=%p, conn=%p, buf=%p (%s), len=%d)", handle, conn, buf, buf, len));
+    QCC_DbgTrace(("ARDP_Acknowledge(handle=%p, conn=%p, buf=%p (%s), len=%d)", handle, conn, buf, buf, len));
 
     if (!IsConnValid(handle, conn)) {
         return ER_ARDP_INVALID_STATE;
