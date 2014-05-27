@@ -1599,40 +1599,49 @@ static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t
     //DumpSndInfo(conn);
 }
 
+static void FastRetransmit(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t index)
+{
+    /* Fast retransmit to fill the gap.*/
+    if (conn->SBUF.snd[index].fastRT == handle->config.dupackCounter) {
+        QCC_DbgPrintf(("CancelEackedSegments(): priority re-send %u", conn->SND.UNA));
+        assert(conn->SBUF.snd[index].timer != NULL);
+        if (conn->SBUF.snd[index].timer != NULL) {
+            conn->SBUF.snd[index].timer->when = TimeNow(handle->tbase);
+        }
+    }
+    conn->SBUF.snd[index].fastRT++;
+}
+
 static void CancelEackedSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t* bitMask) {
     QCC_DbgTrace(("CancelEackedSegments(): handle=%p, conn=%p, bitMask=%p", handle, conn, bitMask));
     uint32_t start = conn->SND.UNA;
-    uint16_t index =  start % conn->SND.MAX;
-    ArdpTimer* timer = conn->SBUF.snd[index].timer;
+    uint32_t index =  start % conn->SND.MAX;
 
     DumpBitMask(conn, bitMask, conn->remoteMskSz, true);
+    FastRetransmit(handle, conn, index);
 
-    /* Fast retransmit to fill the gap.
-     * TODO: schedule fast retransmit based on configurable value for DupACK */
-    QCC_DbgPrintf(("CancelEackedSegments(): priority re-send %u", conn->SND.UNA));
-    if (conn->SBUF.snd[index].fastRT == 0) {
-        SendMsgData(handle, conn, &conn->SBUF.snd[index]);
-    }
-
-    conn->SBUF.snd[index].fastRT++;
-
-    /* Bitmask starts at SND.UNA + 2. Cycle through the mask and cancel retransmit timers
+    /* Bitmask starts at SND.UNA + 1. Cycle through the mask and cancel retransmit timers
      * on EACKed segments. */
     start = start + 1;
-    for (uint16_t i = 0; i < conn->remoteMskSz; i++) {
+    for (uint32_t i = 0; i < conn->remoteMskSz; i++) {
         uint32_t mask32 = ntohl(bitMask[i]);
         uint32_t bitCheck = 1 << 31;
 
         index = (start + (i * 32)) % conn->SND.MAX;
         while (mask32 != 0) {
-            timer = conn->SBUF.snd[index].timer;
             if (mask32 & bitCheck) {
-                if (timer != NULL) {
-                    QCC_DbgPrintf(("CancelEackedSegments(): set retries to zero for timer %p for index %u", timer, index));
+                if (conn->SBUF.snd[index].timer != NULL) {
+                    QCC_DbgPrintf(("CancelEackedSegments(): set retries to zero for timer %p for index %u",
+                                   conn->SBUF.snd[index].timer, index));
                     conn->SBUF.snd[index].timer->retry = 0;
                     conn->SBUF.snd[index].timer = NULL;
                 }
+            } else if (i < 1) {
+                /* Schedule fast retransmits for gaps in the first 32-segment window.
+                 * Catch the others next time the EACK window moves */
+                FastRetransmit(handle, conn, index);
             }
+
             mask32 = mask32 << 1;
             index = (index + 1) % conn->SND.MAX;
         }
