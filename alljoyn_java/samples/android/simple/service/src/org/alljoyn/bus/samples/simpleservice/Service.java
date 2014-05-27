@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011,2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -24,6 +24,7 @@ import org.alljoyn.bus.SessionOpts;
 import org.alljoyn.bus.SessionPortListener;
 import org.alljoyn.bus.Status;
 //import org.alljoyn.bus.p2p.WifiDirectAutoAccept;
+
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -227,7 +228,7 @@ public class Service extends Activity {
                  * communication between devices.
                  */ 
                 mBus = new BusAttachment(getPackageName(), BusAttachment.RemoteMessage.Receive);
-                
+
                 /*
                  * Create a bus listener class  
                  */
@@ -239,14 +240,12 @@ public class Service extends Activity {
                  *
                  * Our service is the SimpleService BusObject at the "/SimpleService" path.
                  */
-                Status status = mBus.registerBusObject(mSimpleService, "/SimpleService");
+                Status status = mBus.registerBusObject(mSimpleService, "/SimpleService", false, "en", "My service object", new MyTranslator());
                 logStatus("BusAttachment.registerBusObject()", status);
                 if (status != Status.OK) {
                     finish();
                     return;
                 }
-                
-                
                 
                 /*
                  * The next step in making a service available to other AllJoyn peers is to connect the

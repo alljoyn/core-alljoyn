@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -34,6 +34,8 @@ import org.alljoyn.bus.annotation.BusProperty;
 import org.alljoyn.bus.annotation.BusSignal;
 import org.alljoyn.bus.annotation.Secure;
 
+import org.alljoyn.bus.Translator;
+
 /**
  * InterfaceDescription represents a message bus interface.
  * This class is used internally by registered bus objects.
@@ -51,6 +53,8 @@ class InterfaceDescription {
     private static final int AJ_IFC_SECURITY_INHERIT   = 0; /**< Inherit the security of the object that implements the interface */
     private static final int AJ_IFC_SECURITY_REQUIRED  = 1; /**< Security is required for an interface */
     private static final int AJ_IFC_SECURITY_OFF       = 2; /**< Security does not apply to this interface */
+
+	private static Map<String, Translator> translatorCache = new HashMap<String, Translator>();
 
     private class Property {
 
@@ -113,6 +117,12 @@ class InterfaceDescription {
 
     /** Add an annotation to the interface */
     private native Status addAnnotation(String annotation, String value);
+
+	private native void setDescriptionLanguage(String language);
+	private native void setDescription(String Description);
+	private native void setDescriptionTranslator(Translator dt);
+	private native Status setMemberDescription(String member, String description, boolean isSessionlessSignal);
+	private native Status setPropertyDescription(String propName, String description);
 
     /** Activate the interface on the bus. */
     private native void activate();
@@ -202,9 +212,66 @@ class InterfaceDescription {
             }
         }
 
+		configureDescriptions(busInterface);
+
         activate();
         return Status.OK;
     }
+
+	private void configureDescriptions(Class<?> busInterface) throws AnnotationBusException {
+		BusInterface ifcNote = busInterface.getAnnotation(BusInterface.class);
+		if(null == ifcNote) return;
+
+		boolean hasDescriptions = false;
+		
+		if(!ifcNote.description().equals("")){
+			setDescription(ifcNote.description());
+			hasDescriptions = true;
+		}
+
+		for(Method method : busInterface.getMethods()) {
+			String name = getName(method);
+
+			BusMethod methodNote = method.getAnnotation(BusMethod.class);
+			if(null != methodNote && (methodNote.description().length() > 0)){
+				setMemberDescription(name, methodNote.description(), false);
+				hasDescriptions = true;
+			}
+
+			BusSignal signalNote = method.getAnnotation(BusSignal.class);
+			if(null != signalNote && (signalNote.description().length() > 0)){
+				setMemberDescription(name, signalNote.description(), signalNote.sessionless());
+				hasDescriptions = true;
+			}
+
+			BusProperty propNote = method.getAnnotation(BusProperty.class);
+			if(null != propNote && (propNote.description().length() > 0)){
+				setPropertyDescription(name, propNote.description());
+				hasDescriptions = true;
+			}
+		}
+
+		if(hasDescriptions) {
+			setDescriptionLanguage(ifcNote.descriptionLanguage());
+		}
+
+		try{
+			if(ifcNote.descriptionTranslator().length() > 0){
+				//We store these so as not to create a separate instance each time it is used.
+				//Although this means we'll be holding on to each instance forever this is probably
+				//not a problem since most Translators will need to live forever anyway
+				Translator dt = translatorCache.get(ifcNote.descriptionTranslator());
+				if(null == dt) {
+					Class c = Class.forName(ifcNote.descriptionTranslator());
+					dt = (Translator)c.newInstance();
+					translatorCache.put(ifcNote.descriptionTranslator(), dt);
+				}
+				setDescriptionTranslator(dt);
+			}
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
 
     private Status getProperties(Class<?> busInterface) throws AnnotationBusException {
         for (Method method : busInterface.getMethods()) {

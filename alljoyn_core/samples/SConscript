@@ -40,6 +40,9 @@ if env['OS'] != 'win8':
     # Sample Daemon program
     samples_env.SConscript('SampleDaemon/SConscript', exports = {'env': samples_env})
 
+    # Event and Action Sample program
+    samples_env.SConscript('eventaction/SConscript', exports = {'env': samples_env})
+
 # Install readme
 if env['OS_CONF'] == 'windows':
     env.InstallAs('$CPP_DISTDIR/samples/README.txt', 'README.windows.txt')

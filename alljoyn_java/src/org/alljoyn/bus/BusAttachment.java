@@ -830,7 +830,8 @@ public class BusAttachment {
             AuthListenerInternal busAuthListener, String keyStoreFileName, Boolean isShared);
 
     private native Status registerBusObject(String objPath, BusObject busObj,
-            InterfaceDescription[] busInterfaces, boolean secure);
+            InterfaceDescription[] busInterfaces, boolean secure, 
+			String languageTag, String description, Translator dt);
 
     private native boolean isSecureBusObject(BusObject busObj);
 
@@ -1003,7 +1004,7 @@ public class BusAttachment {
      * @see org.alljoyn.bus.annotation.BusInterface
      */
     public Status registerBusObject(BusObject busObj, String objPath) {
-        return registerBusObject(busObj, objPath, false);
+        return registerBusObject(busObj, objPath, false, null, null, null);
     }
 
     /**
@@ -1020,6 +1021,45 @@ public class BusAttachment {
      * @see org.alljoyn.bus.annotation.BusInterface
      */
     public Status registerBusObject(BusObject busObj, String objPath, boolean secure) {
+        return registerBusObject(busObj, objPath, secure, null, null, null);
+	}	
+
+    /**
+     * Registers a bus object.
+     * Once registered, the bus object may communicate to and from other
+     * objects via its implemented bus interfaces.
+     * <p>
+     * The same object may not be registered on multiple bus connections.
+     *
+     * @param busObj the BusObject to register
+     * @param objPath the object path of the BusObject
+     * @param secure true if authentication is required to access this object
+	 * @param languageTag a language tag describing the language of the description of this BusObject
+	 * @param description a textual description of this BusObject
+     * @return OK if successful
+     * @see org.alljoyn.bus.annotation.BusInterface
+     */
+    public Status registerBusObject(BusObject busObj, String objPath, boolean secure, String languageTag, String description) {
+        return registerBusObject(busObj, objPath, secure, languageTag, description, null);
+	}	
+    /**
+     * Registers a bus object.
+     * Once registered, the bus object may communicate to and from other
+     * objects via its implemented bus interfaces.
+     * <p>
+     * The same object may not be registered on multiple bus connections.
+     *
+     * @param busObj the BusObject to register
+     * @param objPath the object path of the BusObject
+     * @param secure true if authentication is required to access this object
+	 * @param languageTag a language tag describing the language of the description of this BusObject
+	 * @param description a textual description of this BusObject
+	 * @param dt a Translator instance to translate descriptions of this object
+     * @return OK if successful
+     * @see org.alljoyn.bus.annotation.BusInterface
+     */
+    public Status registerBusObject(BusObject busObj, String objPath, boolean secure, 
+											String languageTag, String description, Translator dt) {
         try {
             List<InterfaceDescription> descs = new ArrayList<InterfaceDescription>();
             Status status = InterfaceDescription.create(this, busObj.getClass().getInterfaces(),
@@ -1027,7 +1067,8 @@ public class BusAttachment {
             if (status != Status.OK) {
                 return status;
             }
-            return registerBusObject(objPath, busObj, descs.toArray(new InterfaceDescription[0]), secure);
+            return registerBusObject(objPath, busObj, descs.toArray(new InterfaceDescription[0]), secure, 
+																				languageTag, description, dt);
         } catch (AnnotationBusException ex) {
             BusException.log(ex);
             return Status.BAD_ANNOTATION;

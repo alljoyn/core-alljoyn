@@ -64,6 +64,63 @@ static void SigIntHandler(int sig)
     s_interrupt = true;
 }
 
+static const char* tags[] = { "en", "de" };
+static const char* objId = "obj";
+static const char* objDescription[] =  { "This is the object", "DE: This is the object" };
+static const char* ifcId = "ifc";
+static const char* ifcDescription[] =  { "This is the interface", "DE: This is the interface" };
+static const char* nameChangedId = "nameChanged";
+static const char* nameChangedDescription[] =  { "Emitted when the name changes", "DE: Emitted whent he name changes" };
+static const char* argId = "arg";
+static const char* nameChangedArgDescription[] =  { "This is the new name", "DE: This is the new name" };
+static const char* propId = "prop";
+static const char* namePropDescription[] =  { "This is the actual name", "DE: This is the actual name" };
+
+class MyTranslator : public Translator {
+  public:
+
+    virtual ~MyTranslator() { }
+
+    virtual size_t NumTargetLanguages() {
+        return 2;
+    }
+
+    virtual void GetTargetLanguage(size_t index, qcc::String& ret) {
+        ret.assign(tags[index]);
+    }
+
+    virtual const char* Translate(const char* sourceLanguage, const char* targetLanguage, const char* source) {
+        const char* tag = (*targetLanguage == '\0') ? "en" : targetLanguage;
+        size_t i = 0;
+
+        if (0 == strcmp(tag, "en")) {
+            i = 0;
+        } else if (0 == strcmp(tag, "de")) {
+            i = 1;
+        } else {
+            return NULL;
+        }
+
+        if (0 == strcmp(source, objId)) {
+            return objDescription[i];
+        }
+        if (0 == strcmp(source, ifcId)) {
+            return ifcDescription[i];
+        }
+        if (0 == strcmp(source, nameChangedId)) {
+            return nameChangedDescription[i];
+        }
+        if (0 == strcmp(source, argId)) {
+            return nameChangedArgDescription[i];
+        }
+        if (0 == strcmp(source, propId)) {
+            return namePropDescription[i];
+        }
+        return NULL;
+    }
+
+};
+
 class BasicSampleObject : public BusObject {
   public:
     BasicSampleObject(BusAttachment& bus, const char* path) :
@@ -77,6 +134,15 @@ class BasicSampleObject : public BusObject {
         if (status == ER_OK) {
             intf->AddSignal("nameChanged", "s", "newName", 0);
             intf->AddProperty("name", "s", PROP_ACCESS_RW);
+
+            intf->SetDescriptionLanguage("");
+            intf->SetDescription(ifcId);
+            intf->SetMemberDescription("nameChanged", nameChangedId);
+            intf->SetArgDescription("nameChanged", "newName", argId);
+            intf->SetPropertyDescription("name", propId);
+
+            intf->SetDescriptionTranslator(&translator);
+
             intf->Activate();
         } else {
             printf("Failed to create interface %s\n", INTERFACE_NAME);
@@ -91,6 +157,9 @@ class BasicSampleObject : public BusObject {
         } else {
             printf("Failed to Add interface: %s", INTERFACE_NAME);
         }
+
+        SetDescription("", objId);
+        SetDescriptionTranslator(&translator);
     }
 
     QStatus EmitNameChangedSignal(qcc::String newName)
@@ -136,6 +205,7 @@ class BasicSampleObject : public BusObject {
   private:
     const InterfaceDescription::Member* nameChangedMember;
     qcc::String prop_name;
+    MyTranslator translator;
 };
 
 class MyBusListener : public BusListener, public SessionPortListener {

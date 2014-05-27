@@ -35,6 +35,7 @@
 #include <MsgArgUtils.h>
 #include <SignatureUtils.h>
 #include "alljoyn_java.h"
+#include <alljoyn/Translator.h>
 
 #define QCC_MODULE "ALLJOYN_JAVA"
 
@@ -1196,7 +1197,8 @@ class JBusAttachment : public BusAttachment {
                     jobject jauthListener, const char* keyStoreFileName, jboolean isShared);
     void Disconnect(const char* connectArgs);
     QStatus EnablePeerSecurity(const char* authMechanisms, jobject jauthListener, const char* keyStoreFileName, jboolean isShared);
-    QStatus RegisterBusObject(const char* objPath, jobject jbusObject, jobjectArray jbusInterfaces, jboolean jsecure);
+    QStatus RegisterBusObject(const char* objPath, jobject jbusObject, jobjectArray jbusInterfaces,
+                              jboolean jsecure, jstring jlangTag, jstring jdesc, jobject jdescTrans);
     void UnregisterBusObject(jobject jbusObject);
     QStatus RegisterSignalHandler(const char* ifaceName, const char* signalName,
                                   jobject jsignalHandler, jobject jmethod, const char* srcPath);
@@ -1777,9 +1779,10 @@ class JBusObject : public BusObject {
                    const MsgArg* args, size_t numArgs, uint32_t timeToLive, uint8_t flags, Message& msg);
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
     QStatus Set(const char* ifcName, const char* propName, MsgArg& val);
-    String GenerateIntrospection(bool deep = false, size_t indent = 0) const;
+    String GenerateIntrospection(bool deep = false, size_t indent = 0, const char* languageTag = NULL) const;
     void ObjectRegistered();
     void ObjectUnregistered();
+    void SetDescriptions(jstring jlangTag, jstring jdescription, jobject jdescTrans);
   private:
     JBusObject(const JBusObject& other);
     JBusObject& operator =(const JBusObject& other);
@@ -2064,6 +2067,26 @@ class JSignalHandler : public MessageReceiver {
     jobject jmethod;
     const InterfaceDescription::Member* member;
     String source;
+};
+
+class JTranslator : public Translator {
+  public:
+    JTranslator(jobject jsessionListener);
+    ~JTranslator();
+
+    virtual size_t NumTargetLanguages();
+    virtual void GetTargetLanguage(size_t index, qcc::String& ret);
+    virtual const char* Translate(const char* sourceLanguage,
+                                  const char* targetLanguage, const char* source, qcc::String& buffer);
+
+  private:
+    JTranslator(const JTranslator& other);
+    JTranslator& operator =(const JTranslator& other);
+
+    jweak jdescriptionTranslator;
+    jmethodID MID_numTargetLanguages;
+    jmethodID MID_getTargetLanguage;
+    jmethodID MID_translate;
 };
 
 /**
@@ -4319,7 +4342,8 @@ void JBusAttachment::ForgetLocalBusObject(jobject jbusObject)
 }
 
 QStatus JBusAttachment::RegisterBusObject(const char* objPath, jobject jbusObject,
-                                          jobjectArray jbusInterfaces, jboolean jsecure)
+                                          jobjectArray jbusInterfaces, jboolean jsecure,
+                                          jstring jlangTag, jstring jdesc, jobject jdescTrans)
 {
     QCC_DbgPrintf(("JBusAttachment::RegisterBusObject(%p)", jbusObject));
 
@@ -4402,6 +4426,7 @@ QStatus JBusAttachment::RegisterBusObject(const char* objPath, jobject jbusObjec
     } else {
         busObject = new JBusObject(this, objPath, jglobalref);
         busObject->AddInterfaces(jbusInterfaces);
+        busObject->SetDescriptions(jlangTag, jdesc, jdescTrans);
         if (env->ExceptionCheck()) {
             delete busObject;
             QCC_DbgPrintf(("JBusAttachment::RegisterBusObject(): Releasing Bus Attachment common lock"));
@@ -7416,7 +7441,7 @@ JBusObject::JBusObject(JBusAttachment* jbap, const char* path, jobject jobj)
     if (env->IsInstanceOf(jobj, CLS_IntrospectionListener)) {
         JLocalRef<jclass> clazz = env->GetObjectClass(jobj);
 
-        MID_generateIntrospection = env->GetMethodID(clazz, "generateIntrospection", "(ZI)Ljava/lang/String;");
+        MID_generateIntrospection = env->GetMethodID(clazz, "generateIntrospection", "(ZILjava/lang/String;)Ljava/lang/String;");
         if (!MID_generateIntrospection) {
             return;
         }
@@ -8118,7 +8143,7 @@ QStatus JBusObject::Set(const char* ifcName, const char* propName, MsgArg& val)
     return ER_OK;
 }
 
-String JBusObject::GenerateIntrospection(bool deep, size_t indent) const
+String JBusObject::GenerateIntrospection(bool deep, size_t indent, const char* languageTag) const
 {
     QCC_DbgPrintf(("JBusObject::GenerateIntrospection()"));
 
@@ -8140,7 +8165,8 @@ String JBusObject::GenerateIntrospection(bool deep, size_t indent) const
             return "";
         }
 
-        JLocalRef<jstring> jintrospection = (jstring)env->CallObjectMethod(jo, MID_generateIntrospection, deep, indent);
+        JLocalRef<jstring> jlang = env->NewStringUTF(languageTag);
+        JLocalRef<jstring> jintrospection = (jstring)env->CallObjectMethod(jo, MID_generateIntrospection, deep, indent, (jstring)jlang);
         if (env->ExceptionCheck()) {
             return BusObject::GenerateIntrospection(deep, indent);
         }
@@ -8152,7 +8178,7 @@ String JBusObject::GenerateIntrospection(bool deep, size_t indent) const
 
         return String(introspection.c_str());
     }
-    return BusObject::GenerateIntrospection(deep, indent);
+    return BusObject::GenerateIntrospection(deep, indent, languageTag);
 }
 
 void JBusObject::ObjectRegistered()
@@ -8209,9 +8235,33 @@ void JBusObject::ObjectUnregistered()
     }
 }
 
+void JBusObject::SetDescriptions(jstring jlangTag, jstring jdescription, jobject jdescTrans)
+{
+    QCC_DbgPrintf(("JBusObject::SetDescriptions()"));
+
+    JString langTag(jlangTag);
+    JString description(jdescription);
+
+    if (langTag.c_str() && description.c_str()) {
+        SetDescription(langTag.c_str(), description.c_str());
+    }
+
+    if (jdescTrans) {
+        Translator* dt = GetHandle<Translator*>(jdescTrans);
+        JNIEnv* env = GetEnv();
+        if (env->ExceptionCheck()) {
+            QCC_LogError(ER_FAIL, ("JBusObject::SetDescriptions(): Exception"));
+            return;
+        }
+        SetDescriptionTranslator(dt);
+    }
+
+}
+
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerBusObject(JNIEnv* env, jobject thiz, jstring jobjPath,
                                                                                jobject jbusObject, jobjectArray jbusInterfaces,
-                                                                               jboolean jsecure)
+                                                                               jboolean jsecure, jstring jlangTag, jstring jdesc,
+                                                                               jobject jdescTrans)
 {
     QCC_DbgPrintf(("BusAttachment_registerBusObject()"));
 
@@ -8238,7 +8288,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerBusObject(J
 
     QCC_DbgPrintf(("BusAttachment_registerBusObject(): Refcount on busPtr is %d", busPtr->GetRef()));
 
-    QStatus status = busPtr->RegisterBusObject(objPath.c_str(), jbusObject, jbusInterfaces, jsecure);
+    QStatus status = busPtr->RegisterBusObject(objPath.c_str(), jbusObject, jbusInterfaces, jsecure, jlangTag, jdesc, jdescTrans);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("BusAttachment_registerBusObject(): Exception"));
         return NULL;
@@ -8395,6 +8445,132 @@ void JSignalHandler::SignalHandler(const InterfaceDescription::Member* member,
         return;
     }
     env->CallObjectMethod(jmethod, mid, jo, (jobjectArray)jargs);
+}
+
+JTranslator::JTranslator(jobject jdescTrans)
+{
+    QCC_DbgPrintf(("JTranslator::JTranslator()"));
+
+    JNIEnv* env = GetEnv();
+
+    QCC_DbgPrintf(("JTranslator::JTranslator(): Taking weak global reference to DescriptionListener %p", jdescTrans));
+    jdescriptionTranslator = env->NewWeakGlobalRef(jdescTrans);
+    if (!jdescriptionTranslator) {
+        QCC_LogError(ER_FAIL, ("JTranslator::JTranslator(): Can't create new weak global reference to Translator"));
+        return;
+    }
+
+    JLocalRef<jclass> clazz = env->GetObjectClass(jdescTrans);
+    if (!clazz) {
+        QCC_LogError(ER_FAIL, ("JTranslator::JTranslator(): Can't GetObjectClass() for Translator"));
+        return;
+    }
+
+    MID_numTargetLanguages = env->GetMethodID(clazz, "numTargetLanguages", "()I");
+    if (!MID_numTargetLanguages) {
+        QCC_LogError(ER_FAIL, ("JTranslator::JTranslator(): Can't find numTargetLanguages() in Translator"));
+    }
+
+    MID_getTargetLanguage = env->GetMethodID(clazz, "getTargetLanguage", "(I)Ljava/lang/String;");
+    if (!MID_getTargetLanguage) {
+        QCC_LogError(ER_FAIL, ("JTranslator::JTranslator(): Can't find getTargetLanguage() in Translator"));
+    }
+
+    MID_translate = env->GetMethodID(clazz, "translate", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;");
+    if (!MID_translate) {
+        QCC_LogError(ER_FAIL, ("JTranslator::JTranslator(): Can't find translate() in Translator"));
+    }
+
+}
+
+JTranslator::~JTranslator()
+{
+    QCC_DbgPrintf(("JTranslator::~JTranslator()"));
+
+    if (jdescriptionTranslator) {
+        QCC_DbgPrintf(("JTranslator::~JTranslator(): Releasing weak global reference to Translator %p",
+                       jdescriptionTranslator));
+        GetEnv()->DeleteWeakGlobalRef(jdescriptionTranslator);
+        jdescriptionTranslator = NULL;
+    }
+}
+
+size_t JTranslator::NumTargetLanguages()
+{
+    QCC_DbgPrintf(("JTranslator::NumTargetLanguages()"));
+    JNIEnv* env = GetEnv();
+    jobject jo = env->NewLocalRef(jdescriptionTranslator);
+    if (!jo) {
+        QCC_LogError(ER_FAIL, ("JTranslator::NumTargetLanguages(): Can't get new local reference to Translator"));
+        return 0;
+    }
+
+    size_t ret = (size_t)env->CallIntMethod(jo, MID_numTargetLanguages);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("JTranslator::NumTargetLanguages(): Exception"));
+        return 0;
+    }
+
+    return ret;
+}
+
+void JTranslator::GetTargetLanguage(size_t index, qcc::String& ret)
+{
+    QCC_DbgPrintf(("JTranslator::GetTargetLanguage()"));
+    JNIEnv* env = GetEnv();
+
+    jobject jo = env->NewLocalRef(jdescriptionTranslator);
+    if (!jo) {
+        QCC_LogError(ER_FAIL, ("JTranslator::GetTargetLanguage(): Can't get new local reference to Translator"));
+        return;
+    }
+
+    JLocalRef<jstring> jres = (jstring)env->CallObjectMethod(jo, MID_getTargetLanguage, (jint)index);
+    if (!jo) {
+        QCC_LogError(ER_FAIL, ("JTranslator::GetTargetLanguage(): Can't get new local reference to Translator"));
+        return;
+    }
+
+    if (NULL == jres) {
+        return;
+    }
+
+    JString jtarget(jres);
+    ret.assign(jtarget.c_str());
+}
+
+const char* JTranslator::Translate(const char* sourceLanguage,
+                                   const char* targetLanguage, const char* source, qcc::String& buffer)
+{
+    QCC_DbgPrintf(("JTranslator::Translate()"));
+    JNIEnv* env = GetEnv();
+
+    JLocalRef<jstring> jsourceLang = env->NewStringUTF(sourceLanguage);
+    JLocalRef<jstring> jtargLang = env->NewStringUTF(targetLanguage);
+    JLocalRef<jstring> jsource = env->NewStringUTF(source);
+
+    jobject jo = env->NewLocalRef(jdescriptionTranslator);
+    if (!jo) {
+        QCC_LogError(ER_FAIL, ("JTranslator::Translate(): Can't get new local reference to Translator"));
+        return NULL;
+    }
+
+    QCC_DbgPrintf(("JTranslator::Translate(): Call out"));
+    JLocalRef<jstring> jres = (jstring)env->CallObjectMethod(jo, MID_translate, (jstring)jsourceLang, (jstring)jtargLang, (jstring)jsource);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("JTranslator::Translate(): Exception"));
+        return NULL;
+    }
+
+    QCC_DbgPrintf(("JTranslator::Translate(): Return"));
+
+    if (NULL == jres) {
+        return NULL;
+    }
+
+    JString jtarget(jres);
+    buffer.assign(jtarget.c_str());
+    return buffer.c_str();
 }
 
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerNativeSignalHandler(JNIEnv* env, jobject thiz, jstring jifaceName,
@@ -9082,6 +9258,125 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addPropertyA
     }
 
     QStatus status = intf->AddPropertyAnnotation(jName.c_str(), jAnnotation.c_str(), jValue.c_str());
+    return JStatus(status);
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionLanguage(
+    JNIEnv*env, jobject thiz, jstring language)
+{
+    QCC_DbgPrintf(("InterfaceDescription_setDescriptionLanguage()"));
+
+    InterfaceDescription* intf = GetHandle<InterfaceDescription*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescriptionLanguage(): Exception"));
+        return;
+    }
+    assert(intf);
+
+    JString jlanguage(language);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescriptionLanguage(): Exception"));
+        return;
+    }
+
+    intf->SetDescriptionLanguage(jlanguage.c_str());
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescription(
+    JNIEnv*env, jobject thiz, jstring description)
+{
+    QCC_DbgPrintf(("InterfaceDescription_setDescsription()"));
+
+    InterfaceDescription* intf = GetHandle<InterfaceDescription*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescription(): Exception"));
+        return;
+    }
+    assert(intf);
+
+    JString jdescription(description);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescription(): Exception"));
+        return;
+    }
+
+    intf->SetDescription(jdescription.c_str());
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionTranslator(
+    JNIEnv*env, jobject thiz, jobject jdescriptionTranslator)
+{
+    QCC_DbgPrintf(("InterfaceDescription_setDescsriptionTranslator()"));
+
+    InterfaceDescription* intf = GetHandle<InterfaceDescription*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescriptionTranslator(): Exception"));
+        return;
+    }
+    assert(intf);
+
+    Translator* dt = GetHandle<Translator*>(jdescriptionTranslator);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescriptionTranslator(): Exception"));
+        return;
+    }
+
+    intf->SetDescriptionTranslator(dt);
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDescription(JNIEnv*env, jobject thiz,
+                                                                                         jstring jmember, jstring jdesc, jboolean isSessionless)
+{
+    QCC_DbgPrintf(("InterfaceDescription_setMemberDescription()"));
+
+    InterfaceDescription* intf = GetHandle<InterfaceDescription*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setMemberDescription(): Exception"));
+        return NULL;
+    }
+    assert(intf);
+
+    JString member(jmember);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setMemberDescription(): Exception"));
+        return NULL;
+    }
+
+    JString desc(jdesc);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setMemberDescription(): Exception"));
+        return NULL;
+    }
+
+    QStatus status = intf->SetMemberDescription(member.c_str(), desc.c_str(), isSessionless);
+    return JStatus(status);
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setPropertyDescription(
+    JNIEnv*env, jobject thiz, jstring jpropName, jstring jdesc)
+{
+    QCC_DbgPrintf(("InterfaceDescription_setPropertyDescription()"));
+
+    InterfaceDescription* intf = GetHandle<InterfaceDescription*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setPropertyDescription(): Exception"));
+        return NULL;
+    }
+    assert(intf);
+
+    JString propName(jpropName);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setPropertyDescription(): Exception"));
+        return NULL;
+    }
+
+    JString desc(jdesc);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setPropertyDescription(): Exception"));
+        return NULL;
+    }
+
+    QStatus status = intf->SetPropertyDescription(propName.c_str(), desc.c_str());
     return JStatus(status);
 }
 
@@ -10718,4 +11013,43 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PasswordManager_setCredentials(JN
     }
 
     return JStatus(status);
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_Translator_create(JNIEnv* env, jobject thiz)
+{
+    QCC_DbgPrintf(("Translator_create()"));
+
+    assert(GetHandle<JTranslator*>(thiz) == NULL);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("Translator_create(): Exception"));
+        return;
+    }
+
+    JTranslator* jdt = new JTranslator(thiz);
+    if (jdt == NULL) {
+        Throw("java/lang/OutOfMemoryError", NULL);
+        return;
+    }
+
+    SetHandle(thiz, jdt);
+    if (env->ExceptionCheck()) {
+        delete jdt;
+    }
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_Translator_destroy(JNIEnv* env, jobject thiz)
+{
+    QCC_DbgPrintf(("Translator_destroy()"));
+
+    JTranslator* jdt = GetHandle<JTranslator*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("Translator_destroy(): Exception"));
+        return;
+    }
+
+    assert(jdt);
+    delete jdt;
+
+    SetHandle(thiz, NULL);
+    return;
 }

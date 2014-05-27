@@ -34,6 +34,7 @@
 #include <alljoyn/MessageReceiver.h>
 #include <alljoyn/Session.h>
 #include <alljoyn/Status.h>
+#include <alljoyn/Translator.h>
 
 namespace ajn {
 
@@ -271,6 +272,27 @@ class BusObject : public MessageReceiver {
      * @return Return true if authentication is required to emit signals or call methods on this object.
      */
     bool IsSecure() const { return isSecure; }
+
+    /**
+     * Set the introspection description for this BusObject.
+     *
+     * Note that when SetDescriptoinTranslator is used the text in this method may
+     * actually be a "lookup key". When generating the introspection the "text" is first
+     * passed to the Translator where the key should be used to lookup the actual
+     * description. In such a case, language should be set to "".
+     *
+     * @param language A language tag describing the language of the description
+     * @param description The description
+     */
+    void SetDescription(const char* language, const char* text);
+
+    /**
+     * Set the Translator that provides this BusObject's introspection description
+     * in multiple languages.
+     *
+     * @param translator The Translator instance.
+     */
+    void SetDescriptionTranslator(Translator* translator);
 
   protected:
 
@@ -524,9 +546,10 @@ class BusObject : public MessageReceiver {
      *
      * @param deep     Include XML for all descendants rather than stopping at direct children.
      * @param indent   Number of characters to indent the XML
-     * @return Description of the object in D-Bus introspection XML format
+     * @param languageTag   language reguested for <description>'s. NULL for no descriptions.
+     * @return Description of the object in AllJoyn introspection XML format
      */
-    virtual qcc::String GenerateIntrospection(bool deep = false, size_t indent = 0) const;
+    virtual qcc::String GenerateIntrospection(bool deep = false, size_t indent = 0, const char* languageTag = NULL) const;
 
     /**
      * Called by the message bus when the object has been successfully registered. The object can
@@ -586,13 +609,35 @@ class BusObject : public MessageReceiver {
     /**
      * Default handler for a bus attempt to read the object's introspection data.
      * @remark
-     * A derived class can override this function to provide a custom handler for the GetProp method
+     * A derived class can override this function to provide a custom handler for the Introspect method
      * call. If overridden the custom handler must compose an appropriate reply message.
      *
      * @param member   Identifies the @c org.freedesktop.DBus.Introspectable.Introspect method.
      * @param msg      The Introspectable.Introspect request.
      */
     virtual void Introspect(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * Default handler for a bus attempt to read the object's introspection data with descriptions.
+     * @remark
+     * A derived class can override this function to provide a custom handler for the IntrospectWithDescription method
+     * call. If overridden the custom handler must compose an appropriate reply message.
+     *
+     * @param member   Identifies the @c org.allseen.Introspectable.IntrospectWithDescription method.
+     * @param msg      The Introspectable.IntrospectWithDescription request.
+     */
+    virtual void IntrospectWithDescription(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * Default handler for a bus attempt to read the languages available for IntrospectWithDescription
+     * @remark
+     * A derived class can override this function to provide a custom handler for the GetDescriptionLanguages method
+     * call. If overridden the custom handler must compose an appropriate reply message.
+     *
+     * @param member   Identifies the @c org.allseen.Introspectable.GetDescriptionLanguages method.
+     * @param msg      The Introspectable.GetDescriptionLanguages request.
+     */
+    virtual void GetDescriptionLanguages(const InterfaceDescription::Member* member, Message& msg);
 
     /**
      * This method can be overridden to provide access to the context registered in the AddMethodHandler() call.
@@ -691,6 +736,16 @@ class BusObject : public MessageReceiver {
      */
     void InUseDecrement();
 
+    /**
+     * Get the introspection description for the provided language or NULL if not
+     * defined.
+     *
+     * @param toLanguage The language tag for which the description is being requested.
+     * @param buffer used by the Translator so that we can free its memory
+     * @return The description or NULL if not found
+     */
+    const char* GetDescription(const char* toLanguage, qcc::String& buffer) const;
+
     struct Components;
     Components* components; /**< Internal components of this object */
 
@@ -708,6 +763,15 @@ class BusObject : public MessageReceiver {
 
     /** true if this object is secure */
     bool isSecure;
+
+    /** Language tag of the default description for this BusObject */
+    qcc::String languageTag;
+
+    /** Default Description */
+    qcc::String description;
+
+    /** Provides descriptions in other languages */
+    Translator* translator;
 };
 
 }

@@ -79,6 +79,18 @@ extern const char* InterfaceName;                 /**< Interface name */
 
 QStatus CreateInterfaces(BusAttachment& bus);          /**< Create the org.alljoyn.* interfaces and sub-interfaces */
 }
+
+namespace allseen {
+
+/** Interface definitions for org.allseen.Introspectable */
+namespace Introspectable {
+
+extern const char* IntrospectDocType;                 /**< Type of extended (with descriptions) introspection document */
+extern const char* InterfaceName;                 /**< Interface name */
+
+}
+}
+
 }
 
 /**

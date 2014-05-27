@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -117,6 +117,16 @@ public class AnnotatedInterfaceTest extends TestCase {
                         "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n" +
                         "    </method>\n" +
                         "  </interface>\n" +
+						"  <interface name=\"org.allseen.Introspectable\">\n" +
+						"    <method name=\"GetDescriptionLanguages\">\n" +
+						"      <arg name=\"languageTags\" type=\"as\" direction=\"out\"/>\n" +
+						"    </method>\n" +
+					    "    <method name=\"IntrospectWithDescription\">\n" +
+					    "      <arg name=\"languageTag\" type=\"s\" direction=\"in\"/>\n" +
+					    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n" +
+					    "    </method>\n" +
+					    "    <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n" +
+					    "  </interface>\n" +
                         "</node>\n";
         assertEquals(expected, actual);
         bus.unregisterBusObject(service);

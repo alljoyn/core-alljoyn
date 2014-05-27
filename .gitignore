@@ -4,3 +4,7 @@
 whitespace.db
 .sconsign.dblite
 build/
+alljoyn_core/tags
+alljoyn_java/cscope.out
+alljoyn_java/sconsoutput
+alljoyn_java/tags

@@ -56,6 +56,13 @@ const char* org::alljoyn::Bus::Peer::HeaderCompression::InterfaceName = "org.all
 const char* org::alljoyn::Bus::Peer::Authentication::InterfaceName = "org.alljoyn.Bus.Peer.Authentication";
 const char* org::alljoyn::Bus::Peer::Session::InterfaceName = "org.alljoyn.Bus.Peer.Session";
 
+/** org.allseen.Introsoectable interface definitions */
+const char* org::allseen::Introspectable::InterfaceName = "org.allseen.Introspectable";
+const char* org::allseen::Introspectable::IntrospectDocType =
+    "<!DOCTYPE"
+    " node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\""
+    ">\n";
 
 QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
 {
@@ -173,6 +180,21 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("AcceptSession", "qus" SESSIONOPTS_SIG, "b", "port,id,src,opts,accepted");
         ifc->AddSignal("SessionJoined", "qus", "port,id,src");
         ifc->Activate();
+    }
+    {
+        InterfaceDescription* introspectIntf = NULL;
+        status = bus.CreateInterface(org::allseen::Introspectable::InterfaceName, introspectIntf, AJ_IFC_SECURITY_OFF);
+        if (ER_OK != status) {
+            if (ER_OK == status) {
+                status = ER_FAIL;
+            }
+            QCC_LogError(status, ("Failed to create interface \"%s\"", org::allseen::Introspectable::InterfaceName));
+            return status;
+        }
+
+        introspectIntf->AddMethod("GetDescriptionLanguages",     "",   "as", "languageTags");
+        introspectIntf->AddMethod("IntrospectWithDescription",   "s",  "s",  "languageTag,data");
+        introspectIntf->Activate();
     }
     return status;
 }

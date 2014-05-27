@@ -400,10 +400,10 @@ Java_org_alljoyn_bus_BusAttachment_enablePeerSecurity
 /*
  * Class:     org_alljoyn_bus_BusAttachment
  * Method:    registerBusObject
- * Signature: (Ljava/lang/String;Lorg/alljoyn/bus/BusObject;[Lorg/alljoyn/bus/InterfaceDescription;Z)Lorg/alljoyn/bus/Status;
+ * Signature: (Ljava/lang/String;Lorg/alljoyn/bus/BusObject;[Lorg/alljoyn/bus/InterfaceDescription;Z)Lorg/alljoyn/bus/Status;Ljava/lang/String;Ljava/lang/String;Lorg/alljoyn/bus/Translator;
  */
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerBusObject
-  (JNIEnv *, jobject, jstring, jobject, jobjectArray, jboolean);
+  (JNIEnv *, jobject, jstring, jobject, jobjectArray, jboolean, jstring, jstring, jobject);
 
 /*
  * Class:     org_alljoyn_bus_BusAttachment
@@ -629,6 +629,46 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addPropertyA
  * Signature: (Ljava/lang/String;Ljava/lang/String;)Lorg/alljoyn/bus/Status;
  */
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addAnnotation
+  (JNIEnv *, jobject, jstring, jstring);
+
+/*
+ * Class:     org_alljoyn_bus_InterfaceDescription
+ * Method:    setDescriptionLanguage
+ * Signature: (Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionLanguage
+  (JNIEnv *, jobject, jstring);
+
+/*
+ * Class:     org_alljoyn_bus_InterfaceDescription
+ * Method:    setDescription
+ * Signature: (Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescription
+  (JNIEnv *, jobject, jstring);
+
+/*
+ * Class:     org_alljoyn_bus_InterfaceDescription
+ * Method:    setDescriptionTranslator
+ * Signature: (Lorg/alljoyn/bus/Translator;)V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionTranslator
+  (JNIEnv *, jobject, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_InterfaceDescription
+ * Method:    setMemberDescription
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Z)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDescription
+  (JNIEnv *, jobject, jstring, jstring, jboolean);
+
+/*
+ * Class:     org_alljoyn_bus_InterfaceDescription
+ * Method:    setPropertyDescription
+ * Signature: (Ljava/lang/String;Ljava/lang/String;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setPropertyDescription
   (JNIEnv *, jobject, jstring, jstring);
 
 /*
@@ -1500,6 +1540,22 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_setVariant__J
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PasswordManager_setCredentials
   (JNIEnv *, jobject,
    jstring, jstring);
+
+/*
+ * Class:     org_alljoyn_bus_Translator
+ * Method:    create
+ * Signature: (Lorg/alljoyn/bus/Translator;)V;
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_Translator_create
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_Translator
+ * Method:    destroy
+ * Signature: (Lorg/alljoyn/bus/Translator;)V;
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_Translator_destroy
+  (JNIEnv *, jobject);
 
 #ifdef __cplusplus
 }

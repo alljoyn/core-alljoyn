@@ -1,11 +1,11 @@
-/**
+/*
  * @file
  *
  * This file implements the InterfaceDescription class
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011,2013 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2013,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -58,8 +58,15 @@ static size_t GetAnnotationsWithValues(
     return count;
 }
 
-static qcc::String NextArg(const char*& signature, qcc::String& argNames, bool inOut, size_t indent)
+class InterfaceDescription::AnnotationsMap : public std::map<qcc::String, qcc::String> { };
+
+class InterfaceDescription::ArgumentDescriptions : public std::map<qcc::String, qcc::String> { };
+
+qcc::String InterfaceDescription::NextArg(const char*& signature, qcc::String& argNames, bool inOut,
+                                          size_t indent, Member const& member, bool withDescriptions,
+                                          const char* langTag, Translator* translator) const
 {
+    qcc::String name;
     qcc::String in(indent, ' ');
     qcc::String arg = in + "<arg";
     qcc::String argType;
@@ -70,7 +77,8 @@ static qcc::String NextArg(const char*& signature, qcc::String& argNames, bool i
 
     if (!argNames.empty()) {
         size_t pos = argNames.find_first_of(',');
-        arg += " name=\"" + argNames.substr(0, pos) + "\"";
+        name = argNames.substr(0, pos);
+        arg += " name=\"" + name + "\"";
         if (pos == qcc::String::npos) {
             argNames.clear();
         } else {
@@ -78,13 +86,35 @@ static qcc::String NextArg(const char*& signature, qcc::String& argNames, bool i
         }
     }
     arg += " type=\"" + argType + "\" direction=\"";
-    arg += inOut ? "in\"/>\n" : "out\"/>\n";
+    arg += inOut ? "in\"" : "out\"";
+
+    const char* myDesc = NULL;
+    if (withDescriptions) {
+        ArgumentDescriptions::const_iterator search = member.argumentDescriptions->find(name);
+        if (member.argumentDescriptions->end() != search) {
+            myDesc = search->second.c_str();
+        }
+    }
+    if (myDesc) {
+        arg += ">\n";
+        AppendDescriptionXml(arg, langTag, myDesc, translator, in);
+        arg += in + "</arg>\n";
+    } else {
+        arg += "/>\n";
+    }
     return arg;
 }
 
-
-class InterfaceDescription::AnnotationsMap : public std::map<qcc::String, qcc::String> { };
-
+void InterfaceDescription::AppendDescriptionXml(qcc::String& xml, const char* language,
+                                                const char* localDescription, Translator* translator, qcc::String const& indent) const
+{
+    qcc::String buffer;
+    const char* d = Translate(language, localDescription, buffer, translator);
+    if (!d || d[0] == '\0') {
+        return;
+    }
+    xml += indent + "  <description>" + d + "</description>\n";
+}
 
 InterfaceDescription::Member::Member(
     const InterfaceDescription* iface,
@@ -102,7 +132,11 @@ InterfaceDescription::Member::Member(
     returnSignature(returnSignature ? returnSignature : ""),
     argNames(argNames ? argNames : ""),
     annotations(new AnnotationsMap()),
-    accessPerms(accessPerms ? accessPerms : "") {
+    accessPerms(accessPerms ? accessPerms : ""),
+    description(),
+    argumentDescriptions(new ArgumentDescriptions()),
+    isSessionlessSignal(false)
+{
 
     if (annotation & MEMBER_ANNOTATE_DEPRECATED) {
         (*annotations)[org::freedesktop::DBus::AnnotateDeprecated] = "true";
@@ -121,7 +155,10 @@ InterfaceDescription::Member::Member(const Member& other)
     returnSignature(other.returnSignature),
     argNames(other.argNames),
     annotations(new AnnotationsMap(*(other.annotations))),
-    accessPerms(other.accessPerms)
+    accessPerms(other.accessPerms),
+    description(other.description),
+    argumentDescriptions(new ArgumentDescriptions(*(other.argumentDescriptions))),
+    isSessionlessSignal(other.isSessionlessSignal)
 {
 }
 
@@ -137,6 +174,9 @@ InterfaceDescription::Member& InterfaceDescription::Member::operator=(const Memb
         delete annotations;
         annotations = new AnnotationsMap(*(other.annotations));
         accessPerms = other.accessPerms;
+        description = other.description;
+        *argumentDescriptions = *(other.argumentDescriptions);
+        isSessionlessSignal = other.isSessionlessSignal;
     }
     return *this;
 }
@@ -144,6 +184,7 @@ InterfaceDescription::Member& InterfaceDescription::Member::operator=(const Memb
 InterfaceDescription::Member::~Member()
 {
     delete annotations;
+    delete argumentDescriptions;
 }
 
 size_t InterfaceDescription::Member::GetAnnotations(qcc::String* names, qcc::String* values, size_t size) const
@@ -153,12 +194,15 @@ size_t InterfaceDescription::Member::GetAnnotations(qcc::String* names, qcc::Str
 
 bool InterfaceDescription::Member::operator==(const Member& o) const {
     return ((memberType == o.memberType) && (name == o.name) && (signature == o.signature)
-            && (returnSignature == o.returnSignature) && (*annotations == *(o.annotations)));
+            && (returnSignature == o.returnSignature) && (*annotations == *(o.annotations))
+            && (description == o.description) && (*argumentDescriptions == *(o.argumentDescriptions))
+            && (isSessionlessSignal == o.isSessionlessSignal));
 }
 
 
 InterfaceDescription::Property::Property(const char* name, const char* signature, uint8_t access)
-    : name(name), signature(signature ? signature : ""), access(access), annotations(new AnnotationsMap())
+    : name(name), signature(signature ? signature : ""), access(access), annotations(new AnnotationsMap()),
+    description()
 {
 }
 
@@ -166,7 +210,8 @@ InterfaceDescription::Property::Property(const Property& other)
     : name(other.name),
     signature(other.signature),
     access(other.access),
-    annotations(new AnnotationsMap(*(other.annotations)))
+    annotations(new AnnotationsMap(*(other.annotations))),
+    description(other.description)
 {
 
 }
@@ -179,6 +224,7 @@ InterfaceDescription::Property& InterfaceDescription::Property::operator=(const 
         access = other.access;
         delete annotations;
         annotations = new AnnotationsMap(*(other.annotations));
+        description = other.description;
     }
     return *this;
 }
@@ -195,7 +241,8 @@ size_t InterfaceDescription::Property::GetAnnotations(qcc::String* names, qcc::S
 
 /** Equality */
 bool InterfaceDescription::Property::operator==(const Property& o) const {
-    return ((name == o.name) && (signature == o.signature) && (access == o.access) && (*annotations == *(o.annotations)));
+    return ((name == o.name) && (signature == o.signature) && (access == o.access) && (*annotations == *(o.annotations))
+            && description == o.description);
 }
 
 
@@ -206,10 +253,21 @@ struct InterfaceDescription::Definitions {
     MemberMap members;              /**< Interface members */
     PropertyMap properties;         /**< Interface properties */
     AnnotationsMap annotations;     /**< Interface Annotations */
+    qcc::String languageTag;
+    qcc::String description;
+    Translator* translator;
+    bool hasDescription;
 
-    Definitions() { }
-    Definitions(const MemberMap& m, const PropertyMap& p, const AnnotationsMap& a) :
-        members(m), properties(p), annotations(a) { }
+
+    Definitions() :
+        translator(NULL), hasDescription(false)
+    { }
+
+    Definitions(const MemberMap& m, const PropertyMap& p, const AnnotationsMap& a,
+                const qcc::String& langTag, const qcc::String& desc, Translator* dt, bool hd) :
+        members(m), properties(p), annotations(a),
+        languageTag(langTag), description(desc), translator(dt), hasDescription(hd)
+    { }
 };
 
 bool InterfaceDescription::Member::GetAnnotation(const qcc::String& name, qcc::String& value) const
@@ -248,11 +306,11 @@ InterfaceDescription::~InterfaceDescription()
 }
 
 InterfaceDescription::InterfaceDescription(const InterfaceDescription& other) :
-    defs(new Definitions(other.defs->members, other.defs->properties, other.defs->annotations)),
+    defs(new Definitions(other.defs->members, other.defs->properties, other.defs->annotations,
+                         other.defs->languageTag, other.defs->description, other.defs->translator, other.defs->hasDescription)),
     name(other.name),
     isActivated(false),
     secPolicy(other.secPolicy)
-
 {
     /* Update the iface pointer in each member */
     Definitions::MemberMap::iterator mit = defs->members.begin();
@@ -270,6 +328,9 @@ InterfaceDescription& InterfaceDescription::operator=(const InterfaceDescription
         defs->members = other.defs->members;
         defs->properties = other.defs->properties;
         defs->annotations = other.defs->annotations;
+        defs->languageTag = other.defs->languageTag;
+        defs->description = other.defs->description;
+        defs->translator = other.defs->translator;
 
         /* Update the iface pointer in each member */
         Definitions::MemberMap::iterator mit = defs->members.begin();
@@ -280,13 +341,46 @@ InterfaceDescription& InterfaceDescription::operator=(const InterfaceDescription
     return *this;
 }
 
-qcc::String InterfaceDescription::Introspect(size_t indent) const
+qcc::String InterfaceDescription::Introspect(size_t indent, const char* languageTag, Translator* translator) const
 {
     qcc::String in(indent, ' ');
     const qcc::String close = "\">\n";
-    qcc::String xml = in + "<interface name=\"";
 
+    Translator* myTranslator = defs->translator ? defs->translator : translator;
+
+    bool withDescriptions = false;
+    do {
+        if (NULL == languageTag) {
+            break;
+        }
+
+        if (0 == strcmp(languageTag, defs->languageTag.c_str())) {
+            withDescriptions = true;
+            break;
+        }
+
+        if (!myTranslator) {
+            break;
+        }
+
+        for (size_t i = 0; i < myTranslator->NumTargetLanguages(); i++) {
+            qcc::String targ;
+            myTranslator->GetTargetLanguage(i, targ);
+            if (0 == strcmp(targ.c_str(), languageTag)) {
+                withDescriptions = true;
+                break;
+            }
+        }
+    } while (false);
+
+
+    qcc::String xml = in + "<interface name=\"";
     xml += name + close;
+
+    if (withDescriptions) {
+        AppendDescriptionXml(xml, languageTag, defs->description.c_str(), myTranslator, in);
+    }
+
     /*
      * Iterate over interface defs->members
      */
@@ -294,17 +388,29 @@ qcc::String InterfaceDescription::Introspect(size_t indent) const
     while (mit != defs->members.end()) {
         const Member& member = mit->second;
         qcc::String argNames = member.argNames;
-        qcc::String mtype = (member.memberType == MESSAGE_METHOD_CALL) ? "method" : "signal";
-        xml += in + "  <" + mtype + " name=\"" + member.name + close;
+
+        bool isMethod = (member.memberType == MESSAGE_METHOD_CALL);
+        qcc::String mtype = isMethod ? "method" : "signal";
+        xml += in + "  <" + mtype + " name=\"" + member.name;
+        if (withDescriptions && !isMethod) {
+            xml += "\" sessionless=\"" + (member.isSessionlessSignal ? qcc::String("true") : qcc::String("false"));
+        }
+        xml     += close;
+
+        if (withDescriptions) {
+            xml += "  ";
+            AppendDescriptionXml(xml, languageTag, member.description.c_str(), myTranslator, in);
+        }
 
         /* Iterate over IN arguments */
         for (const char* sig = member.signature.c_str(); *sig;) {
             // always treat signals as direction=out
-            xml += NextArg(sig, argNames, member.memberType != MESSAGE_SIGNAL, indent + 4);
+            xml += NextArg(sig, argNames, member.memberType != MESSAGE_SIGNAL,
+                           indent + 4, member, withDescriptions, languageTag, myTranslator);
         }
         /* Iterate over OUT arguments */
         for (const char* sig = member.returnSignature.c_str(); *sig;) {
-            xml += NextArg(sig, argNames, false, indent + 4);
+            xml += NextArg(sig, argNames, false, indent + 4, member, withDescriptions, languageTag, myTranslator);
         }
         /*
          * Add annotations
@@ -333,15 +439,21 @@ qcc::String InterfaceDescription::Introspect(size_t indent) const
             xml += " access=\"readwrite\"";
         }
 
-        if (property.annotations->size()) {
-            xml += ">\n";
 
-            // add annotations
-            AnnotationsMap::const_iterator ait = property.annotations->begin();
-            for (; ait != property.annotations->end(); ++ait) {
-                xml += in + "    <annotation name=\"" + ait->first.c_str() + "\" value=\"" + ait->second + "\"/>\n";
+        if (property.annotations->size() || withDescriptions) {
+            if (property.annotations->size() || withDescriptions) {
+                xml += ">\n";
+
+                // add annotations
+                AnnotationsMap::const_iterator ait = property.annotations->begin();
+                for (; ait != property.annotations->end(); ++ait) {
+                    xml += in + "    <annotation name=\"" + ait->first.c_str() + "\" value=\"" + ait->second + "\"/>\n";
+                }
             }
-
+            if (withDescriptions) {
+                xml += "  ";
+                AppendDescriptionXml(xml, languageTag, property.description.c_str(), myTranslator, in);
+            }
             xml += in + "  </property>\n";
         } else {
             xml += "/>\n";
@@ -542,5 +654,107 @@ bool InterfaceDescription::HasMember(const char* name, const char* inSig, const 
     }
 }
 
+void InterfaceDescription::SetDescriptionLanguage(const char* language)
+{
+    defs->languageTag = language;
+}
+
+const char* InterfaceDescription::GetDescriptionLanguage() const
+{
+    return defs->languageTag.c_str();
+}
+
+void InterfaceDescription::SetDescription(const char* desc)
+{
+    defs->description = desc;
+    defs->hasDescription = true;
+}
+
+QStatus InterfaceDescription::SetMemberDescription(const char* member, const char* desc, bool isSessionlessSignal)
+{
+    if (isActivated) {
+        return ER_BUS_INTERFACE_ACTIVATED;
+    }
+
+    Definitions::MemberMap::iterator it = defs->members.find(StringMapKey(member));
+    if (it == defs->members.end()) {
+        return ER_BUS_INTERFACE_NO_SUCH_MEMBER;
+    }
+
+    Member& m = it->second;
+    m.description.assign(desc);
+    m.isSessionlessSignal = isSessionlessSignal;
+    defs->hasDescription = true;
+
+    return ER_OK;
+}
+
+
+QStatus InterfaceDescription::SetArgDescription(const char* member, const char* arg, const char* desc)
+{
+    if (isActivated) {
+        return ER_BUS_INTERFACE_ACTIVATED;
+    }
+
+    Definitions::MemberMap::iterator it = defs->members.find(StringMapKey(member));
+    if (it == defs->members.end()) {
+        return ER_BUS_INTERFACE_NO_SUCH_MEMBER;
+    }
+
+    Member& m = it->second;
+    m.argumentDescriptions->insert(ArgumentDescriptions::value_type(arg, desc));
+    defs->hasDescription = true;
+
+    return ER_OK;
+}
+
+QStatus InterfaceDescription::SetPropertyDescription(const char* propName, const char* desc)
+{
+    if (isActivated) {
+        return ER_BUS_INTERFACE_ACTIVATED;
+    }
+
+    Definitions::PropertyMap::iterator pit = defs->properties.find(StringMapKey(propName));
+    if (pit == defs->properties.end()) {
+        return ER_BUS_NO_SUCH_PROPERTY;
+    }
+
+    Property& property = pit->second;
+    property.description.assign(desc);
+    defs->hasDescription = true;
+
+    return ER_OK;
+}
+
+bool InterfaceDescription::HasDescription() const
+{
+    return defs->hasDescription;
+}
+
+const char* InterfaceDescription::Translate(const char* toLanguage, const char* text, qcc::String& buffer, Translator* translator) const
+{
+    if (NULL == text) {
+        return NULL;
+    }
+    if (translator) {
+        const char* ret = translator->Translate(defs->languageTag.c_str(), toLanguage, text, buffer);
+        if (ret) {
+            return ret;
+        }
+    }
+    if (!defs->languageTag.empty() && 0 == strcmp(toLanguage, defs->languageTag.c_str())) {
+        return text;
+    }
+    return NULL;
+}
+
+void InterfaceDescription::SetDescriptionTranslator(Translator* translator) {
+    defs->translator = translator;
+}
+
+Translator* InterfaceDescription::GetDescriptionTranslator() const
+{
+    return defs->translator;
+}
 
 }

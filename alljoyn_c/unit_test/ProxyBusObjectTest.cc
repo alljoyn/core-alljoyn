@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -291,17 +291,19 @@ TEST_F(ProxyBusObjectTest, getinterface_getinterfaces) {
     alljoyn_interfacedescription intf_array[6];
     size_t count = alljoyn_proxybusobject_getinterfaces(proxyObj, intf_array, 6);
     /*
-     * the org.alljoyn.Bus object should contain 4 interfaces
+     * the org.alljoyn.Bus object should contain 5 interfaces
      * org.alljoyn.Bus
      * org.alljoyn.Deamon
      * org.freedesktop.DBus.Introspectable
+     * org.allseen.Introspectable
      * org.freedesktop.DBus.Peer
      */
-    ASSERT_EQ((size_t)4, count);
+    ASSERT_EQ((size_t)5, count);
     EXPECT_STREQ("org.alljoyn.Bus", alljoyn_interfacedescription_getname(intf_array[0]));
     EXPECT_STREQ("org.alljoyn.Daemon", alljoyn_interfacedescription_getname(intf_array[1]));
-    EXPECT_STREQ("org.freedesktop.DBus.Introspectable", alljoyn_interfacedescription_getname(intf_array[2]));
-    EXPECT_STREQ("org.freedesktop.DBus.Peer", alljoyn_interfacedescription_getname(intf_array[3]));
+    EXPECT_STREQ("org.allseen.Introspectable", alljoyn_interfacedescription_getname(intf_array[2]));
+    EXPECT_STREQ("org.freedesktop.DBus.Introspectable", alljoyn_interfacedescription_getname(intf_array[3]));
+    EXPECT_STREQ("org.freedesktop.DBus.Peer", alljoyn_interfacedescription_getname(intf_array[4]));
 
     EXPECT_NO_FATAL_FAILURE(alljoyn_proxybusobject_destroy(proxyObj));
 }

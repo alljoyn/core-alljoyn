@@ -196,6 +196,8 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
             }
         } else if (ifChildName == "annotation") {
             status = intf.AddAnnotation(ifChildElem->GetAttribute("name"), ifChildElem->GetAttribute("value"));
+        } else if (ifChildName == "description") {
+            //pass, this is completely legal but irrelevant here
         } else {
             status = ER_FAIL;
             QCC_LogError(status, ("Unknown element \"%s\" found in introspection data from %s", ifChildName.c_str(), ident));
