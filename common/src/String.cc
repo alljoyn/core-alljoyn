@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -22,6 +22,7 @@
 #include <qcc/platform.h>
 #include <qcc/atomic.h>
 #include <qcc/String.h>
+#include <assert.h>
 #include <new>
 
 #if defined(WIN32) || (defined(QCC_OS_DARWIN) && MAC_OS_X_VERSION_MAX_ALLOWED < 1070)
@@ -384,7 +385,7 @@ size_t String::find(const String& str, size_t pos) const
 
 size_t String::find_first_of(const char c, size_t pos) const
 {
-    if (context == &nullContext) {
+    if ((context == &nullContext) || (pos >= size())) {
         return npos;
     }
 
@@ -542,7 +543,9 @@ void String::NewContext(const char* str, size_t strLen, size_t sizeHint)
     }
     size_t capacity = MAX(MinCapacity, MAX(strLen, sizeHint));
     size_t mallocSz = capacity + 1 + sizeof(ManagedCtx) - MinCapacity;
-    context = new (malloc(mallocSz))ManagedCtx();
+    void* newCtxMem = malloc(mallocSz);
+    assert(newCtxMem);
+    context = new (newCtxMem)ManagedCtx();
     context->refCount = 1;
 
     context->capacity = static_cast<uint32_t>(capacity);

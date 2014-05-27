@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -112,7 +112,9 @@ QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, uint3
         if (propIface == NULL) {
             status = ER_BUS_NO_SUCH_INTERFACE;
         } else {
-            status = MethodCall(*(propIface->GetMember("GetAll")), &arg, 1, reply, timeout, flags);
+            const InterfaceDescription::Member* getAllProperties = propIface->GetMember("GetAll");
+            assert(getAllProperties);
+            status = MethodCall(*getAllProperties, &arg, 1, reply, timeout, flags);
             if (ER_OK == status) {
                 value = *(reply->GetArg(0));
             }
@@ -167,7 +169,9 @@ QStatus ProxyBusObject::GetAllPropertiesAsync(const char* iface,
             status = ER_BUS_NO_SUCH_INTERFACE;
         } else {
             CBContext<Listener::GetAllPropertiesCB>* ctx = new CBContext<Listener::GetAllPropertiesCB>(this, listener, callback, context);
-            status = MethodCallAsync(*(propIface->GetMember("GetAll")),
+            const InterfaceDescription::Member* getAllProperties = propIface->GetMember("GetAll");
+            assert(getAllProperties);
+            status = MethodCallAsync(*getAllProperties,
                                      this,
                                      static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::GetAllPropsMethodCB),
                                      &arg,
@@ -205,7 +209,9 @@ QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, Msg
         if (propIface == NULL) {
             status = ER_BUS_NO_SUCH_INTERFACE;
         } else {
-            status = MethodCall(*(propIface->GetMember("Get")), inArgs, numArgs, reply, timeout, flags);
+            const InterfaceDescription::Member* getProperty = propIface->GetMember("Get");
+            assert(getProperty);
+            status = MethodCall(*getProperty, inArgs, numArgs, reply, timeout, flags);
             if (ER_OK == status) {
                 value = *(reply->GetArg(0));
             }
@@ -260,7 +266,9 @@ QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
             status = ER_BUS_NO_SUCH_INTERFACE;
         } else {
             CBContext<Listener::GetPropertyCB>* ctx = new CBContext<Listener::GetPropertyCB>(this, listener, callback, context);
-            status = MethodCallAsync(*(propIface->GetMember("Get")),
+            const InterfaceDescription::Member* getProperty = propIface->GetMember("Get");
+            assert(getProperty);
+            status = MethodCallAsync(*getProperty,
                                      this,
                                      static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::GetPropMethodCB),
                                      inArgs,
@@ -298,7 +306,9 @@ QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, Msg
         if (propIface == NULL) {
             status = ER_BUS_NO_SUCH_INTERFACE;
         } else {
-            status = MethodCall(*(propIface->GetMember("Set")),
+            const InterfaceDescription::Member* setProperty = propIface->GetMember("Set");
+            assert(setProperty);
+            status = MethodCall(*setProperty,
                                 inArgs,
                                 numArgs,
                                 reply,
@@ -354,7 +364,9 @@ QStatus ProxyBusObject::SetPropertyAsync(const char* iface,
             status = ER_BUS_NO_SUCH_INTERFACE;
         } else {
             CBContext<Listener::SetPropertyCB>* ctx = new CBContext<Listener::SetPropertyCB>(this, listener, callback, context);
-            status = MethodCallAsync(*(propIface->GetMember("Set")),
+            const InterfaceDescription::Member* setProperty = propIface->GetMember("Set");
+            assert(setProperty);
+            status = MethodCallAsync(*setProperty,
                                      this,
                                      static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::SetPropMethodCB),
                                      inArgs,
@@ -400,7 +412,8 @@ QStatus ProxyBusObject::AddInterface(const InterfaceDescription& iface) {
     StringMapKey key = iface.GetName();
     pair<StringMapKey, const InterfaceDescription*> item(key, &iface);
     lock->Lock(MUTEX_CONTEXT);
-    if (!hasProperties && iface == *(bus->GetInterface(::ajn::org::freedesktop::DBus::Properties::InterfaceName))) {
+    const InterfaceDescription* propIntf = bus->GetInterface(::ajn::org::freedesktop::DBus::Properties::InterfaceName);
+    if (!hasProperties && propIntf && iface == *propIntf) {
         hasProperties = true;
     }
     pair<map<StringMapKey, const InterfaceDescription*>::const_iterator, bool> ret = components->ifaces.insert(item);
@@ -408,7 +421,6 @@ QStatus ProxyBusObject::AddInterface(const InterfaceDescription& iface) {
 
     /* Add org.freedesktop.DBus.Properties interface implicitly if iface specified properties */
     if ((status == ER_OK) && !hasProperties && (iface.GetProperties() > 0)) {
-        const InterfaceDescription* propIntf = bus->GetInterface(::ajn::org::freedesktop::DBus::Properties::InterfaceName);
         if (propIntf) {
             hasProperties = true;
             StringMapKey propKey = ::ajn::org::freedesktop::DBus::Properties::InterfaceName;
@@ -585,7 +597,7 @@ QStatus ProxyBusObject::AddChild(const ProxyBusObject& child)
                 const char* tempPath = item.c_str();
                 _ProxyBusObject ro(*bus, tempServiceName, tempPath, sessionId);
                 ch.push_back(ro);
-                cur = ch.empty() ? NULL : &(*(ch.back()));
+                cur = &(*(ro));
             }
         }
         idx = ((qcc::String::npos == end) || ((end + 1) == childPath.size())) ? qcc::String::npos : end + 1;

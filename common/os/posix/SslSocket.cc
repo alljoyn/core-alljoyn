@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009,2012-2013 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009,2012-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -99,6 +99,7 @@ SslSocket::SslSocket(String host, const char* rootCert, const char* caCert) :
 
             /* Set up our own trust store */
             X509_STORE* store = X509_STORE_new();
+            assert(store);
 
             /* Replace the certificate verification storage of sslCtx with store */
             SSL_CTX_set_cert_store(sslCtx, store);
