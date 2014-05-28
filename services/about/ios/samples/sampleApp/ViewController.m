@@ -30,6 +30,7 @@ static NSString * const APPNAME = @"AboutClientMain"; // About Client - default 
 static NSString * const DAEMON_QUIET_PREFIX  = @"quiet@";   // About Client - quiet advertising
 static NSString * const ABOUT_ICON_OBJECT_PATH = @"/About/DeviceIcon"; //About Service - Icon
 static NSString * const ABOUT_ICON_INTERFACE_NAME = @"org.alljoyn.Icon";   //About Service - Icon
+static NSString * const ABOUT_INTERFACE_NAME = @"org.alljoyn.About";
 
 @interface ViewController ()
 @property NSString *className;
@@ -388,10 +389,10 @@ static NSString * const ABOUT_ICON_INTERFACE_NAME = @"org.alljoyn.Icon";   //Abo
 	[self.clientBusAttachment registerBusListener:self];
     
 	self.announcementReceiver = [[AJNAnnouncementReceiver alloc] initWithAnnouncementListener:self andBus:self.clientBusAttachment];
-	status = [self.announcementReceiver registerAnnouncementReceiver];
+    const char* interfaces[] = { [ABOUT_INTERFACE_NAME UTF8String] };
+	status = [self.announcementReceiver registerAnnouncementReceiverForInterfaces:interfaces withNumberOfInterfaces:1];
 	if (status != ER_OK) {
         NSLog(@"[%@] [%@] Failed to registerAnnouncementReceiver - exiting application", @"FATAL", [[self class] description]);
-
         exit(1);
 	}
     
@@ -498,7 +499,8 @@ static NSString * const ABOUT_ICON_INTERFACE_NAME = @"org.alljoyn.Icon";   //Abo
 	}
 	self.clientInformationDict = nil;
     
-	status = [self.announcementReceiver unRegisterAnnouncementReceiver];
+    const char* interfaces[] = { [ABOUT_INTERFACE_NAME UTF8String] };
+	status = [self.announcementReceiver unRegisterAnnouncementReceiverForInterfaces:interfaces withNumberOfInterfaces:1];
 	if (status == ER_OK) {
          NSLog(@"[%@] [%@] Successfully unregistered AnnouncementReceiver", @"DEBUG", [[self class] description]);
 	}

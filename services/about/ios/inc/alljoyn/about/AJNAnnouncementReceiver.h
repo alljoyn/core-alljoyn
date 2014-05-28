@@ -34,12 +34,18 @@
 
 /**
  Register the to announcement listener to receive org.alljoyn.about Announce signals.
+ * @param interfaces A list of interfaces that the Announce signal reports as implmented.
+ *               NULL to recieve all Announce signals regardless of interfaces
+ * @param numberInterfaces the number of interfaces in the interfaces list
  @return ER_OK if successful.
  */
 - (QStatus)registerAnnouncementReceiverForInterfaces:(const char **)interfaces withNumberOfInterfaces:(size_t)numOfInterfaces;
 
 /**
  Unregister the announcement listener from receiving org.alljoyn.about Announce signal.
+ * @param interfaces A list of interfaces that the Announce signal reports as implmented.
+ *               NULL to recieve all Announce signals regardless of interfaces
+ * @param numberInterfaces the number of interfaces in the interfaces list
  @return ER_OK if successful.
  */
 - (QStatus)unRegisterAnnouncementReceiverForInterfaces:(const char  **)interfaces withNumberOfInterfaces:(size_t)numOfInterfaces;
