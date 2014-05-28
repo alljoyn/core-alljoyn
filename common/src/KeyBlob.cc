@@ -234,13 +234,13 @@ QStatus KeyBlob::Load(qcc::Source& source)
             uint8_t tagLen = 0;
             status = source.PullBytes(&tagLen, sizeof(tagLen), pulled);
             if (status == ER_OK) {
-                char*tagBytes = new char[tagLen + 1];
+                char* tagBytes = new char[tagLen + 1];
                 status = source.PullBytes(tagBytes, tagLen, pulled);
                 if (status == ER_OK) {
                     tagBytes[pulled] = 0;
                     tag.insert(0, tagBytes, pulled);
                 }
-                delete tagBytes;
+                delete [] tagBytes;
             }
         }
         if (status == ER_OK) {
@@ -277,7 +277,7 @@ QStatus KeyBlob::Load(qcc::Source& source)
                     if (status == ER_OK) {
                         association.SetBytes(buf);
                     }
-                    delete buf;
+                    delete [] buf;
                     if (associationMode == ASSOCIATE_HEAD) {
                         associationMode = ASSOCIATE_BOTH;
                     } else {

@@ -68,7 +68,6 @@ static QStatus GenerateCertificateType1(bool selfSign, bool regenKeys, uint32_t 
     valid.validFrom = now.seconds;
     valid.validTo = valid.validFrom + expiredInSecs;
 
-    printf("GenerateCertificateType1 now %ld UTCTime %s valid from %ld to %ld\n", now.seconds, UTCTime().c_str(), valid.validFrom, valid.validTo);
 
     cert.SetValidity(&valid);
     cert.SetDelegate(false);
@@ -121,7 +120,6 @@ static QStatus GenerateCertificateType2(bool selfSign, bool regenKeys, uint32_t 
     valid.validFrom = now.seconds;
     valid.validTo = valid.validFrom + expiredInSecs;
 
-    printf("GenerateCertificateType1 now %ld UTCTime %s valid from %ld to %ld\n", now.seconds, UTCTime().c_str(), valid.validFrom, valid.validTo);
 
     cert.SetValidity(&valid);
     cert.SetDelegate(false);
@@ -428,8 +426,8 @@ TEST_F(CertificateECCTest, EncodePrivateKey)
     status = CertECCUtil_DecodePrivateKey(encoded, (uint32_t*) &pk, sizeof(pk));
     ASSERT_EQ(ER_OK, status) << " CertECCUtil_DecodePrivateKey failed with actual status: " << QCC_StatusText(status);
 
-    printf("Original private key %s len: %ld\n", BytesToHexString((uint8_t*) ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey)).c_str(), sizeof(ECCPrivateKey));
-    printf("Decoded private key %s len: %ld\n", BytesToHexString((uint8_t*) &pk, sizeof(pk)).c_str(), sizeof(pk));
+    printf("Original private key %s\n", BytesToHexString((uint8_t*) ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey)).c_str());
+    printf("Decoded private key %s\n", BytesToHexString((uint8_t*) &pk, sizeof(pk)).c_str());
     ASSERT_EQ(memcmp(ecc.GetDSAPrivateKey(), &pk, sizeof(ECCPrivateKey)), 0) << " decoded private key not equal to original";
 
     /* test buffer len */
@@ -493,11 +491,12 @@ TEST_F(CertificateECCTest, EncodePublicKey)
     printf("The encoded public key PEM %s\n", encoded.c_str());
 
     ECCPublicKey pk;
+    memset(&pk, 0, sizeof(ECCPublicKey));
     status = CertECCUtil_DecodePublicKey(encoded, (uint32_t*) &pk, sizeof(pk));
     ASSERT_EQ(ER_OK, status) << " CertECCUtil_DecodePublicKey failed with actual status: " << QCC_StatusText(status);
 
-    printf("Original public key %s len: %ld\n", BytesToHexString((uint8_t*) ecc.GetDSAPublicKey(), sizeof(ECCPublicKey)).c_str(), sizeof(ECCPublicKey));
-    printf("Decoded public key %s len: %ld\n", BytesToHexString((uint8_t*) &pk, sizeof(pk)).c_str(), sizeof(pk));
+    printf("Original public key %s\n", BytesToHexString((uint8_t*) ecc.GetDSAPublicKey(), sizeof(ECCPublicKey)).c_str());
+    printf("Decoded public key %s\n", BytesToHexString((uint8_t*) &pk, sizeof(pk)).c_str());
     ASSERT_EQ(memcmp(ecc.GetDSAPublicKey(), &pk, sizeof(ECCPublicKey)), 0) << " decoded private key not equal to original";
 
     /* test buffer len */
@@ -506,75 +505,7 @@ TEST_F(CertificateECCTest, EncodePublicKey)
 
 }
 
-TEST_F(CertificateECCTest, GenericCert)
-{
-    QStatus status;
-    CertificateType2 cert1(ecc.GetDSAPublicKey(), ecc.GetDHPublicKey());
 
-    Timespec now;
-    GetTimeNow(&now);
-    Certificate::ValidPeriod valid;
-    valid.validFrom = now.seconds;
-    valid.validTo = valid.validFrom + 3600;   /* one hour from now */
-
-    cert1.SetValidity(&valid);
-    cert1.SetDelegate(true);
-    GUID128 aGuid;
-    cert1.SetGuild(aGuid.GetBytes(), GUID128::SIZE);
-
-    String externalData("This is a test with generic cert");
-    Crypto_SHA256 digestUtil;
-    digestUtil.Init();
-    digestUtil.Update(externalData);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    digestUtil.GetDigest(digest);
-
-    cert1.SetExternalDataDigest(digest);
-
-    status = cert1.Sign(ecc.GetDSAPrivateKey());
-
-    String encoded = cert1.GetEncoded();
-
-    CertificateECC cert2;
-
-    status = cert2.LoadEncoded(encoded);
-    ASSERT_EQ(ER_OK, status) << " CertificateECC::LoadEncoded failed with actual status: " << QCC_StatusText(status);
-
-    ASSERT_EQ(memcmp(cert2.GetIssuer(), cert1.GetIssuer(), sizeof(ECCPublicKey)), 0) << " new cert's issuer not equal to original";
-    ASSERT_EQ(memcmp(cert2.GetSubject(), cert1.GetSubject(), sizeof(ECCPublicKey)), 0) << " new cert's subject not equal to original";
-    ASSERT_EQ(cert2.GetValidity()->validFrom, cert1.GetValidity()->validFrom) << " new cert's validity.validFrom not equal to original";
-    ASSERT_EQ(cert2.GetValidity()->validTo, cert1.GetValidity()->validTo) << " new cert's validity.validTo not equal to original";
-    EXPECT_TRUE(cert2.IsDelegate());
-    ASSERT_EQ(memcmp(cert2.GetExternalDataDigest(), cert1.GetExternalDataDigest(), sizeof(digest)), 0) << " new cert's digest not equal to original";
-
-    ASSERT_EQ(memcmp(cert2.GetSig(), cert1.GetSig(), sizeof(ECCSignature)), 0) << " new cert's signature not equal to original";
-
-    ASSERT_EQ(cert2.GetEncoded(), encoded) << " new cert's encoded not equal to original";
-    std::cout << "Original cert: " << cert1.ToString().c_str() << endl;
-    std::cout << "New cert loaded from encoded string: " << cert2.ToString().c_str() << endl;
-}
-
-TEST_F(CertificateECCTest, GetLeafCert)
-{
-    CertificateType1 cert1;
-    CertificateType2 cert2;
-    QStatus status = GenerateCertificateType1(cert1, "SUCCESS_GetLeafCert 1");;
-    ASSERT_EQ(ER_OK, status) << " GenereateCertificateType1 failed with actual status: " << QCC_StatusText(status);
-    status = GenerateCertificateType2(cert2, "SUCCESS_GetLeafCert 2");;
-    ASSERT_EQ(ER_OK, status) << " GenereateCertificateType2 failed with actual status: " << QCC_StatusText(status);
-
-    String encoded = cert1.GetEncoded();
-    encoded += "\n";
-    encoded += cert2.GetEncoded();
-
-    CertificateECC cert3;
-    status = CertECCUtil_GetLeafCert(encoded, cert3);
-    ASSERT_EQ(ER_OK, status) << " CertECCUtil_GetLeafCert failed with actual status: " << QCC_StatusText(status);
-    ASSERT_EQ(memcmp(cert3.GetIssuer(), cert1.GetIssuer(), sizeof(ECCPublicKey)), 0) << " leaf cert's issuer not equal to original";
-    ASSERT_EQ(memcmp(cert3.GetSig(), cert1.GetSig(), sizeof(ECCSignature)), 0) << " leaf cert's signature not equal to original";
-    std::cout << "Original cert: " << cert1.ToString().c_str() << endl;
-    std::cout << "New leaf cert loaded from encoded string: " << cert3.ToString().c_str() << endl;
-}
 
 TEST_F(CertificateECCTest, GenerateKeyPairs)
 {
@@ -621,14 +552,15 @@ TEST_F(CertificateECCTest, GenerateCertChain)
     cout << "Calling CertECCUtil_GetCertChain" << endl;
     CertificateECC** certChain = new CertificateECC * [count];
     status = CertECCUtil_GetCertChain(encoded, certChain, count);
-    ASSERT_EQ(ER_OK, status) << " CertECCUtil_GetCertChain failed with actual status: " << QCC_StatusText(status);
-
-    std::cout << "The cert chain:" << endl;
-    for (size_t idx = 0; idx < count; idx++) {
-        std::cout << certChain[idx]->ToString().c_str() << endl;
-        delete certChain[idx];
+    if (status == ER_OK) {
+        std::cout << "The cert chain:" << endl;
+        for (size_t idx = 0; idx < count; idx++) {
+            std::cout << certChain[idx]->ToString().c_str() << endl;
+            delete certChain[idx];
+        }
     }
     delete [] certChain;
+    ASSERT_EQ(ER_OK, status) << " CertECCUtil_GetCertChain failed with actual status: " << QCC_StatusText(status);
 }
 
 /**

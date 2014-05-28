@@ -787,6 +787,7 @@ QStatus KeyStore::SearchAssociatedKeys(const qcc::GUID128& guid, qcc::GUID128** 
         if (it->second.key.GetAssociation() == guid) {
             if (idx >= count) { /* bound check */
                 delete [] guids;
+                lock.Unlock(MUTEX_CONTEXT);
                 return ER_FAIL;
             }
             guids[idx++] = it->first;

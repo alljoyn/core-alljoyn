@@ -116,28 +116,6 @@ static QStatus RetrieveNumOfChunksFromEncoded(const String& encoded, const char*
     return ER_OK;
 }
 
-static QStatus RetrieveFirstChunkFromEncoded(const String& encoded, const char* beginToken, const char* endToken, String& chunk)
-{
-    qcc::String base64;
-
-    size_t pos;
-
-    pos = encoded.find(beginToken);
-    if (pos == qcc::String::npos) {
-        return ER_INVALID_DATA;
-    }
-    qcc::String remainder = encoded.substr(pos + strlen(beginToken));
-    pos = remainder.find(endToken);
-    if (pos == qcc::String::npos) {
-        return ER_INVALID_DATA;
-    } else {
-        base64 = remainder.substr(0, pos);
-    }
-    chunk = beginToken;
-    chunk += base64;
-    chunk += endToken;
-    return ER_OK;
-}
 
 static QStatus RetrieveRawFromEncoded(const String& encoded, const char* beginToken, const char* endToken, String& rawStr)
 {
@@ -207,15 +185,6 @@ QStatus CertECCUtil_DecodePublicKey(const String& encoded, uint32_t* publicKey, 
                                 "-----BEGIN PUBLIC KEY-----", "-----END PUBLIC KEY-----");
 }
 
-QStatus CertECCUtil_GetLeafCert(const String& encoded, CertificateECC& cert)
-{
-    String chunk;
-    QStatus status = RetrieveFirstChunkFromEncoded(encoded, "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----", chunk);
-    if (status != ER_OK) {
-        return status;
-    }
-    return cert.LoadEncoded(chunk);
-}
 
 QStatus CertECCUtil_GetCertCount(const String& encoded, size_t* count)
 {
@@ -273,7 +242,8 @@ QStatus CertECCUtil_GetCertChain(const String& encoded, CertificateECC* certChai
             break;
 
         default:
-            certChain[idx] = new CertificateECC();
+            delete [] chunks;
+            return ER_INVALID_DATA;
         }
         status = certChain[idx]->LoadEncoded(chunks[idx]);
         if (status != ER_OK) {
@@ -285,147 +255,12 @@ QStatus CertECCUtil_GetCertChain(const String& encoded, CertificateECC* certChai
     return status;
 }
 
-const ECCPublicKey* CertificateECC::GetIssuer()
-{
-    if ((bufLen == 0) | !buf) {
-        return NULL;
-    }
-    uint8_t* raw = buf;
-    raw += sizeof(uint32_t);     /* skip certVersion */
-    return (ECCPublicKey*) raw;
-}
-
-const ECCPublicKey* CertificateECC::GetSubject()
-{
-    if ((bufLen == 0) | !buf) {
-        return NULL;
-    }
-    uint8_t* raw = buf;
-    raw += sizeof(uint32_t);     /* skip certVersion */
-    raw += sizeof(ECCPublicKey);     /* skip issuer */
-    return (ECCPublicKey* ) raw;
-}
-
-const Certificate::ValidPeriod* CertificateECC::GetValidity()
-{
-    if ((bufLen == 0) | !buf) {
-        return NULL;
-    }
-
-    uint8_t* raw = buf;
-    raw += sizeof(uint32_t);     /* skip certVersion */
-    raw += sizeof(ECCPublicKey);     /* skip issuer */
-    raw += sizeof(ECCPublicKey);     /* skip subject */
-    return (ValidPeriod*) raw;
-}
-
-const bool CertificateECC::IsDelegate()
-{
-    if ((bufLen == 0) | !buf) {
-        return false;
-    }
-    uint8_t* raw = buf;
-    raw += sizeof(uint32_t);     /* skip certVersion */
-    raw += sizeof(ECCPublicKey);     /* skip issuer */
-    raw += sizeof(ECCPublicKey);     /* skip subject */
-    raw += sizeof(ValidPeriod);     /* skip validity */
-    return *raw;
-}
-const uint8_t*  CertificateECC::GetExternalDataDigest()
-{
-    if ((bufLen == 0) | !buf) {
-        return NULL;
-    }
-    uint8_t* raw = buf + bufLen - sizeof(ECCSignature) - Crypto_SHA256::DIGEST_SIZE;
-    return raw;
-}
-
-const ECCSignature* CertificateECC::GetSig()
-{
-    if ((bufLen == 0) | !buf) {
-        return NULL;
-    }
-    uint8_t* raw = buf + bufLen - sizeof(ECCSignature);
-    return (ECCSignature*) raw;
-}
-
-String CertificateECC::GetEncoded()
-{
-    if ((bufLen == 0) | !buf) {
-        return "";
-    }
-    return EncodeCertRawByte(buf, bufLen);
-}
-
-QStatus CertificateECC::LoadEncoded(const String& encoded)
-{
-    qcc::String rawStr;
-    QStatus status = RetrieveRawCertFromEncoded(encoded, rawStr);
-    if (status != ER_OK) {
-        return status;
-    }
-    uint8_t* raw = (uint8_t*) rawStr.data();
-    size_t rawLen = rawStr.length();
-    size_t minRawLen = sizeof(uint32_t) + sizeof(ECCPublicKey) + sizeof(ECCPublicKey) + sizeof(ValidPeriod) + sizeof (uint8_t) + Crypto_SHA256::DIGEST_SIZE + sizeof(ECCSignature);
-
-    if (rawLen < minRawLen) {
-        return ER_INVALID_DATA;
-    }
-    uint32_t certVersion;
-    memcpy(&certVersion, raw, sizeof(certVersion));
-    SetVersion(certVersion);
-    buf = new uint8_t[rawLen];
-    bufLen = rawLen;
-    memcpy(buf, raw, rawLen);
-    return ER_OK;
-}
-
-String CertificateECC::ToString()
-{
-    qcc::String str("Certificate:\n");
-    str += "version: ";
-    str += U32ToString(GetVersion());
-    str += "\n";
-    str += "issuer: ";
-    str += BytesToHexString((const uint8_t*) GetIssuer(), sizeof(ECCPublicKey));
-    str += "\n";
-    str += "subject: ";
-    str +=  BytesToHexString((const uint8_t*) GetSubject(), sizeof(ECCPublicKey));
-    str += "\n";
-    str += "validity: not-before ";
-    str += U64ToString(GetValidity()->validFrom);
-    str += " not-after ";
-    str += U64ToString(GetValidity()->validTo);
-    str += "\n";
-    if (IsDelegate()) {
-        str += "delegate: true\n";
-    } else {
-        str += "delegate: false\n";
-    }
-    str += "digest: ";
-    str += BytesToHexString((const uint8_t*) GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE);
-    str += "\n";
-    str += "sig: ";
-    str += BytesToHexString((const uint8_t*) GetSig(), sizeof(ECCSignature));
-    str += "\n";
-    return str;
-}
-
-CertificateECC::~CertificateECC()
-{
-    if ((bufLen > 0) && buf) {
-        delete [] buf;
-        bufLen = 0;
-        buf = NULL;
-    }
-}
-
 void CertificateType0::SetIssuer(const ECCPublicKey* issuer)
 {
     memcpy(&signable.issuer, issuer, sizeof(ECCPublicKey));
 }
 
-CertificateType0::CertificateType0(const ECCPublicKey* issuer, const uint8_t* externalDigest) : CertificateECC(0, false)
+CertificateType0::CertificateType0(const ECCPublicKey* issuer, const uint8_t* externalDigest) : CertificateECC(0)
 {
     SetIssuer(issuer);
     SetExternalDataDigest(externalDigest);
@@ -532,7 +367,7 @@ void CertificateType1::SetSubject(const ECCPublicKey* subject)
     memcpy(&signable.subject, subject, sizeof(ECCPublicKey));
 }
 
-CertificateType1::CertificateType1(const ECCPublicKey* issuer, const ECCPublicKey* subject) : CertificateECC(1, false)
+CertificateType1::CertificateType1(const ECCPublicKey* issuer, const ECCPublicKey* subject) : CertificateECC(1)
 {
     SetIssuer(issuer);
     SetSubject(subject);
@@ -697,7 +532,7 @@ void CertificateType2::SetGuild(const uint8_t* newGuild, size_t guildLen)
     memcpy(signable.guild, newGuild, len);
 }
 
-CertificateType2::CertificateType2(const ECCPublicKey* issuer, const ECCPublicKey* subject) : CertificateECC(2, false)
+CertificateType2::CertificateType2(const ECCPublicKey* issuer, const ECCPublicKey* subject) : CertificateECC(2)
 {
     SetIssuer(issuer);
     SetSubject(subject);

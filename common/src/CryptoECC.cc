@@ -118,6 +118,8 @@ typedef ECDSASig ECDSA_sig_t;
  */
 static int get_random_bytes(void*buf, int len);
 
+static boolean_t big_is_zero(bigval_t const* a);
+
 /*
  * CONFIGURATION STUFF
  *
@@ -395,9 +397,14 @@ big_mpyP(bigval_t* tgt, bigval_t const* a, bigval_t const* b,
 #define MODSELECT MOD_MODULUS
 #endif
 
+    if (big_is_zero(a) || big_is_zero(b)) {
+        /* a or b is zero, so a*b is zero */
+        memset(tgt, 0, sizeof(bigval_t));
+        return;
+    }
 
     a_words = BIGLEN;
-    while (a_words > 0 && a->data[a_words - 1] == 0) {
+    while (a_words > 1 && a->data[a_words - 1] == 0) {
         --a_words;
     }
 
@@ -427,7 +434,7 @@ big_mpyP(bigval_t* tgt, bigval_t const* a, bigval_t const* b,
 
         /* compute length of b */
         b_words = BIGLEN;
-        while (b_words > 0 && b->data[b_words - 1] == 0) {
+        while (b_words > 1 && b->data[b_words - 1] == 0) {
             --b_words;
         }
 
