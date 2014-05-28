@@ -509,6 +509,14 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getMessageContext
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_enableConcurrentCallbacks
   (JNIEnv *, jobject);
 
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    setDescriptionTranslator
+ * Signature: (Lorg/alljoyn/bus/Translator;)V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setDescriptionTranslator
+  (JNIEnv *, jobject, jobject);
+
 #ifdef __cplusplus
 }
 #endif
