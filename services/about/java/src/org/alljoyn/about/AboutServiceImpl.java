@@ -118,7 +118,24 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     }
 
     /**
-     * @see org.alljoyn.about.AboutService#addAnnouncementHandler
+     * @deprecated use {@link addAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)} instead.
+     *
+     * This function has been deprecated please change your code
+     * to use the new addAnnouncementHandler where you specify the
+     * interface(s) that you are interested finding.
+     *
+     * Using this member function could have significant impact on network
+     * performance.
+     *
+     * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler)
+     */
+    @Deprecated
+    public void addAnnouncementHandler(AnnouncementHandler handler)
+    {
+        addAnnouncementHandler(handler, null);
+    }
+    /**
+     * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler)
      */
     @Override
     public synchronized void addAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)
@@ -149,6 +166,18 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
         } else {
             interfacelist.add(new HashSet<String>(Arrays.asList(interfaces)));
         }
+    }
+
+
+    /**
+     * @deprecated use {@link removeAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)} instead.
+     *
+     * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler)
+     */
+    @Deprecated
+    public void removeAnnouncementHandler(AnnouncementHandler handler)
+    {
+        removeAnnouncementHandler(handler, null);
     }
 
     /**

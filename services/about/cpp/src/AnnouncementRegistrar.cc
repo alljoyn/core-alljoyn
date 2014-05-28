@@ -115,6 +115,11 @@ QStatus AnnouncementRegistrar::RegisterAnnounceHandler(ajn::BusAttachment& bus, 
     return status;
 }
 
+QStatus AnnouncementRegistrar::RegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler) {
+    QCC_LogError(ER_OK, ("Using deprecated version of RegisterAnnounceHandler. Network performance may be reduced."));
+    return RegisterAnnounceHandler(bus, handler, NULL, 0);
+}
+
 QStatus AnnouncementRegistrar::UnRegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler, const char** implementsInterfaces, size_t numberInterfaces) {
     QCC_DbgTrace(("AnnouncementRegistrar::%s", __FUNCTION__));
     QStatus status = ER_OK;
@@ -138,6 +143,10 @@ QStatus AnnouncementRegistrar::UnRegisterAnnounceHandler(ajn::BusAttachment& bus
 
     QCC_DbgPrintf(("AnnouncementRegistrar::%s result %s", __FUNCTION__, QCC_StatusText(status)));
     return status;
+}
+
+QStatus AnnouncementRegistrar::UnRegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler) {
+    return UnRegisterAnnounceHandler(bus, handler, NULL, 0);
 }
 
 QStatus AnnouncementRegistrar::UnRegisterAllAnnounceHandlers(ajn::BusAttachment& bus) {

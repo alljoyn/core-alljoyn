@@ -119,6 +119,10 @@ public interface AboutService extends ServiceCommon
      * handlers responsibility to parse through the reported interfaces to
      * figure out what should be done in response to the Announce signal.
      *
+     * Note: specifying null for the interfaces parameter could have
+     * significant impact on network performance and should be avoided unless
+     * all announcements are needed.
+     *
      * @param handler the AnnouncementHandler that will be receiving the
      *                announcement.
      * @param interfaces an array of interfaces the remote service must
