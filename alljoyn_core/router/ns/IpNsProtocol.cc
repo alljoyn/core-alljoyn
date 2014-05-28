@@ -2715,10 +2715,12 @@ void MDNSAdvertiseRData::RemoveNameAt(TransportMask transportMask, int index)
         if (it->first.find("t_") != String::npos && (StringToU32(it->second, 16) == transportMask)) {
             it++;
             while (it != m_fields.end() && it->first.find("t_") == String::npos) {
+                Fields::const_iterator nxt = it;
+                nxt++;
                 if (it->first.find("n_") != String::npos && index-- == 0) {
                     MDNSTextRData::RemoveEntry(it->first);
                 }
-                it++;
+                it = nxt;
             }
             break;
         }
