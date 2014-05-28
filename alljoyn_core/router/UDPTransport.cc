@@ -2930,7 +2930,7 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
          * back to the passive side if required, but we don't have anything
          * of interest to say.
          */
-        ARDP_Acknowledge(handle, conn, NULL, 0);
+        //ARDP_Acknowledge(handle, conn, NULL, 0);
 
         /*
          * We now have a UDPEndpoint that needs to be Start()ed and put on the

@@ -88,10 +88,6 @@ void ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* 
     if (status == ER_OK) {
         if (!passive) {
             QCC_DbgPrintf(("ConnectCb: response string \"%s\"", (char*)buf));
-        } else {
-            uint16_t length = random() % ARDP_USRBMAX;
-            uint8_t* buffer = new uint8_t[length];
-            ARDP_Acknowledge(handle, conn, buffer, length);
         }
 
         uint16_t length = random() % ARDP_USRBMAX;
