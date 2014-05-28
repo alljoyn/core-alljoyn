@@ -4607,7 +4607,7 @@ void AllJoynObj::PingReplyMethodHandler(Message& reply, void* context)
     QCC_LogError(ER_OK, ("AllJoynObj::PingReplyMethodHandler(Message, context)"));
     Message* msg = static_cast<Message*>(context);
     uint32_t replyCode = (ajn::MESSAGE_ERROR == reply->GetType()) ? ALLJOYN_PING_REPLY_FAILED : ALLJOYN_PING_REPLY_SUCCESS;
-    PingReplyMethodHandler(*msg, replyCode);
+    PingReplyMethodHandlerUsingCode(*msg, replyCode);
     delete msg;
 }
 
@@ -4639,7 +4639,7 @@ bool AllJoynObj::ResponseHandler(TransportMask transport, MDNSPacket response, u
     while (it != pingReplyContexts.end() && it->first == name) {
         // TODO May need to filter on transport
         Message* msg = static_cast<Message*>(it->second);
-        PingReplyMethodHandler(*msg, replyCode);
+        PingReplyMethodHandlerUsingCode(*msg, replyCode);
         delete msg;
         pingReplyContexts.erase(it);
         it = pingReplyContexts.lower_bound(name);
@@ -4648,7 +4648,7 @@ bool AllJoynObj::ResponseHandler(TransportMask transport, MDNSPacket response, u
     return false;
 }
 
-void AllJoynObj::PingReplyMethodHandler(Message& msg, uint32_t replyCode)
+void AllJoynObj::PingReplyMethodHandlerUsingCode(Message& msg, uint32_t replyCode)
 {
     QCC_LogError(ER_OK, ("AllJoynObj::PingReplyMethodHandler()"));
     const char* name = NULL;
