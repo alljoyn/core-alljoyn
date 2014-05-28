@@ -21,5 +21,5 @@ public interface EventActionListener {
 	
 	public void onActionsFound(Device info);
 	
-	public void onRuleEngineFound(String sessionName);
+	public void onRuleEngineFound(String sessionName, String friendlyName);
 }

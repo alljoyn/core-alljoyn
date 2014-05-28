@@ -40,7 +40,7 @@ public class ActionsFragment extends Fragment {
 	private ExpandableListView actionDevices;
 	private static ExpandableAdapter actionAdapter;
 	
-	private Vector<Description> mSelectedActions = new Vector<Description>();
+	static private Vector<Description> mSelectedActions = new Vector<Description>();
 	
 	public Vector<Description> getSelectedActions() { return mSelectedActions; }
 	public void clearSelectedActions() { mSelectedActions.clear(); }
@@ -169,6 +169,8 @@ public class ActionsFragment extends Fragment {
 			if(check.isChecked() && checkboxDirtyFlags.elementAt(groupPosition).elementAt(childPosition) == true) {
 				check.setChecked(false);
 				checkboxDirtyFlags.elementAt(groupPosition).set(childPosition, false);
+			} else if (mSelectedActions.contains(check.getTag())) {
+				check.setChecked(true);
 			}
 			return convertView;
 		}

@@ -97,11 +97,13 @@ void MyAllJoynCode::Announce(unsigned short version, unsigned short port, const 
         ajn::MsgArg value = it->second;
         if (value.typeId == ALLJOYN_STRING) {
             if (key.compare("DeviceName") == 0) {
-                mBusFriendlyMap.insert(std::pair<qcc::String, qcc::String>(busName, value.v_string.str));
+                friendlyName = ::strdup(value.v_string.str);
+                mBusFriendlyMap.insert(std::pair<qcc::String, qcc::String>(busName, friendlyName));
             }
             LOGTHIS("(Announce handler) aboutData (key, val) (%s, %s)", key.c_str(), value.v_string.str);
         }
     }
+    LOGTHIS("Friendly Name: %s", friendlyName);
     for (AboutClient::ObjectDescriptions::const_iterator it = objectDescs.begin(); it != objectDescs.end(); ++it) {
         qcc::String key = it->first;
         std::vector<qcc::String> vector = it->second;
@@ -116,13 +118,15 @@ void MyAllJoynCode::Announce(unsigned short version, unsigned short port, const 
                 }
 
                 jclass jcls = env->GetObjectClass(jobj);
-                jmethodID mid = env->GetMethodID(jcls, "foundRuleEngineApplication", "(Ljava/lang/String;)V");
+                jmethodID mid = env->GetMethodID(jcls, "foundRuleEngineApplication", "(Ljava/lang/String;Ljava/lang/String;)V");
                 if (mid == 0) {
                     LOGTHIS("Failed to get Java foundRuleEngineApplication");
                 } else {
                     jstring jName = env->NewStringUTF(busName);
-                    env->CallVoidMethod(jobj, mid, jName);
+                    jstring jFriendly = env->NewStringUTF(friendlyName);
+                    env->CallVoidMethod(jobj, mid, jName, jFriendly);
                     env->DeleteLocalRef(jName);
+                    env->DeleteLocalRef(jFriendly);
                 }
                 if (JNI_EDETACHED == jret) {
                     vm->DetachCurrentThread();
@@ -198,6 +202,7 @@ char* MyAllJoynCode::introspectWithDescriptions(const char* sessionName, const c
 
     /* Parse the XML reply */
     if (status != ER_OK) {
+        LOGTHIS("Introspection error: %d", status);
         return NULL;
     }
     return ::strdup(reply->GetArg(0)->v_string.str);
