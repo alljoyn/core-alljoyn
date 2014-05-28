@@ -425,7 +425,7 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
     //
     // We don't enable v0 and v1 traffic unless explicitly configured to do so.
     //
-    m_enableV1 = config->GetFlag("ns_enable_v1");
+    m_enableV1 = config->GetFlag("ns_enable_v1", true);
 
     //
     // Set the broadcast bit to true for WinRT. For all other platforms,
