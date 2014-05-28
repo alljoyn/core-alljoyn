@@ -1423,14 +1423,12 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
         //
         m_liveInterfaces.push_back(live);
     }
-#ifndef QCC_OS_GROUP_WINDOWS
     if (m_refreshAdvertisements) {
-        QCC_LogError(ER_OK, ("Now refreshing advertisements on interface event"));
+        QCC_DbgHLPrintf(("Now refreshing advertisements on interface event"));
         m_timer = m_tRetransmit;
         m_packetScheduler.Alert(RESET_SCHEDULE_ALERTCODE);
         m_refreshAdvertisements = false;
     }
-#endif
 }
 
 QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
@@ -4275,6 +4273,7 @@ void* IpNameServiceImpl::Run(void* arg)
 #else
                 networkEvent.ResetEvent();
                 m_forceLazyUpdate = true;
+                m_refreshAdvertisements = true;
 #endif
             } else {
                 QCC_DbgPrintf(("IpNameServiceImpl::Run(): Socket event fired"));
