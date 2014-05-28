@@ -177,6 +177,7 @@ void* ARDP_GetHandleContext(ArdpHandle* handle);
 void ARDP_ReleaseConn(ArdpHandle* handle, ArdpConnRecord* conn);
 void ARDP_SetConnContext(ArdpConnRecord* conn, void* context);
 void* ARDP_GetConnContext(ArdpConnRecord* conn);
+uint32_t ARDP_GetConnId(ArdpConnRecord* conn);
 qcc::IPAddress ARDP_GetIpAddrFromConn(ArdpConnRecord* conn);
 uint16_t ARDP_GetIpPortFromConn(ArdpConnRecord* conn);
 QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool socketReady, uint32_t* ms);

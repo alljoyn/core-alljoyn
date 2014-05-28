@@ -736,6 +736,11 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     ArdpHandle* m_handle;
     std::map<ArdpConnRecord* const, UDPEndpoint> m_demux;  /**< Map to demultiplex connection records to endpoints */
 
+#ifndef NDEBUG
+    void DebugEndpointListCheck(UDPEndpoint uep);
+    void DebugAuthListCheck(UDPEndpoint uep);
+#endif
+
     static bool ArdpAcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status);
     static void ArdpConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status);
     static void ArdpDisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status);
