@@ -15,10 +15,7 @@
  ******************************************************************************/
 package org.alljoyn.about.sample;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.UUID;
 
 import org.alljoyn.about.AboutKeys;

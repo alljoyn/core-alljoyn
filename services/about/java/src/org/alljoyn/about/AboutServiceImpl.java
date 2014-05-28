@@ -56,7 +56,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
     /********* Client *********/
     // the AnnouncmentReceiver will specify the interface and signal names.
-    private static final String ANNOUNCE_MATCH_RULE = "type='signal',sessionless='t',interface='" + ANNOUNCE_IFNAME + "'";
+    private static final String ANNOUNCE_MATCH_RULE = "type='signal',sessionless='t',member='Announce',interface='" + ANNOUNCE_IFNAME + "'";
 
     private static AboutServiceImpl m_instance      = new AboutServiceImpl();
     private final Map<AnnouncementHandler, List <Set<String> > > m_announcementHandlers;
@@ -127,6 +127,20 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
             throw new IllegalArgumentException("The AnnouncementHandler can't be null");
         }
 
+        StringBuffer announceRule = new StringBuffer(ANNOUNCE_MATCH_RULE);
+        if(interfaces != null) {
+            for(int i = 0 ; i < interfaces.length; ++i){
+                announceRule.append(",implements='");
+                announceRule.append(interfaces[i]);
+                announceRule.append("'");
+            }
+        }
+
+        Status status = getBus().addMatch(announceRule.toString());
+        if ( status != Status.OK ) {
+            throw new AboutServiceException("Failed to call AddMatch for the rule: '" + announceRule.toString() + "', Status: '" + status + "'");
+        }
+
         List<Set<String>> interfacelist = m_announcementHandlers.get(handler);
         if (interfacelist == null)
             m_announcementHandlers.put(handler, interfacelist= new ArrayList<Set<String>>());
@@ -145,6 +159,20 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     {
         if ( handler == null ) {
             throw new IllegalArgumentException("The AnnouncementHandler can't be null");
+        }
+
+        StringBuffer announceRule = new StringBuffer(ANNOUNCE_MATCH_RULE);
+        if(interfaces != null) {
+            for(int i = 0 ; i < interfaces.length; ++i){
+                announceRule.append(",implements='");
+                announceRule.append(interfaces[i]);
+                announceRule.append("'");
+            }
+        }
+
+        Status status = getBus().removeMatch(announceRule.toString());
+        if ( status != Status.OK ) {
+            throw new AboutServiceException("Failed to call RemoveMatch for the rule: '" + announceRule.toString() + "', Status: '" + status + "'");
         }
 
         List< Set<String> > interfacelist = m_announcementHandlers.get(handler);
@@ -221,12 +249,6 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
         if ( status != Status.OK ) {
             throw new AboutServiceException("Register Announcement signal handler has failed, Status: '" + status + "'");
         }
-
-        status = bus.addMatch(ANNOUNCE_MATCH_RULE);
-        if ( status != Status.OK ) {
-            throw new AboutServiceException("Failed to call AddMatch for the rule: '" + ANNOUNCE_MATCH_RULE + "', Status: '" + status + "'");
-        }
-
     }//registerAnnouncementReceiver
 
     /**

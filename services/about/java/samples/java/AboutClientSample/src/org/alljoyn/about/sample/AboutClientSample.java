@@ -19,11 +19,7 @@ package org.alljoyn.about.sample;
 import org.alljoyn.about.AboutService;
 import org.alljoyn.about.AboutServiceImpl;
 import org.alljoyn.bus.BusAttachment;
-import org.alljoyn.bus.BusListener;
-import org.alljoyn.bus.PasswordManager;
-import org.alljoyn.bus.SessionOpts;
 import org.alljoyn.bus.Status;
-import org.alljoyn.services.common.utils.GenericLogger;
 
 public class AboutClientSample
 {
