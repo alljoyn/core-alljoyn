@@ -28,6 +28,10 @@
 #include "BusController.h"
 #include "ConfigDB.h"
 
+#ifdef ENABLE_POLICYDB
+#include "PolicyDB.h"
+#endif
+
 #define QCC_MODULE "SESSIONLESS"
 
 using namespace std;
@@ -1023,7 +1027,19 @@ QStatus SessionlessObj::RequestRangeMatch(const char* name, SessionId sid, uint3
 QStatus SessionlessObj::SendThroughEndpoint(Message& msg, BusEndpoint& ep, SessionId sid)
 {
     QStatus status;
-    if (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
+
+#ifdef ENABLE_POLICYDB
+    PolicyDB policyDB = ConfigDB::GetConfigDB()->GetPolicyDB();
+    BusEndpoint dummy;
+    NormalizedMsgHdr nmh(msg, policyDB, dummy);
+    bool okToReceive = policyDB->OKToReceive(nmh, ep);
+#else
+    bool okToReceive = true;
+#endif
+
+    if (!okToReceive) {
+        status = ER_BUS_POLICY_VIOLATION;
+    } else if (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
         status = VirtualEndpoint::cast(ep)->PushMessage(msg, sid);
     } else {
         status = ep->PushMessage(msg);
