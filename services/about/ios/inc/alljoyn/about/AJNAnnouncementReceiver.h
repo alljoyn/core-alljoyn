@@ -36,12 +36,12 @@
  Register the to announcement listener to receive org.alljoyn.about Announce signals.
  @return ER_OK if successful.
  */
-- (QStatus)registerAnnouncementReceiver;
+- (QStatus)registerAnnouncementReceiverForInterfaces:(const char **)interfaces withNumberOfInterfaces:(size_t)numOfInterfaces;
 
 /**
  Unregister the announcement listener from receiving org.alljoyn.about Announce signal.
  @return ER_OK if successful.
  */
-- (QStatus)unRegisterAnnouncementReceiver;
+- (QStatus)unRegisterAnnouncementReceiverForInterfaces:(const char  **)interfaces withNumberOfInterfaces:(size_t)numOfInterfaces;
 
 @end

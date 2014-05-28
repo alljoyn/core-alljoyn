@@ -117,7 +117,15 @@ typedef enum {
  @param deviceName new device name to set
  @return ER_OK if successful.
  */
-- (QStatus)setDeviceName:(NSString *)deviceName;
+- (QStatus)setDeviceName:(NSString *)deviceName __attribute__ ((deprecated));
+
+/**
+ setDeviceName sets the device name property in the property store
+ @param deviceName new device name to set
+ @param language define this property for a specific language
+ @return ER_OK if successful.
+ */
+- (QStatus)setDeviceName:(NSString *)deviceName language:(NSString *)language;
 
 /**
  setAppId sets the app ID property in the property store

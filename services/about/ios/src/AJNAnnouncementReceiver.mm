@@ -48,17 +48,17 @@
 	return self;
 }
 
-- (QStatus)registerAnnouncementReceiver
+- (QStatus)registerAnnouncementReceiverForInterfaces:(const char  **)interfaces withNumberOfInterfaces:(size_t)numOfInterfaces
 {
     NSLog(@"[%@] [%@] Calling %@", @"DEBUG", [[self class] description],NSStringFromSelector(_cmd));
 
-	return ajn::services::AnnouncementRegistrar::RegisterAnnounceHandler((*(self.busAttachment)), *(self.announceHandlerAdapter));
+	return ajn::services::AnnouncementRegistrar::RegisterAnnounceHandler((*(self.busAttachment)), *(self.announceHandlerAdapter), interfaces, numOfInterfaces);
 }
 
-- (QStatus)unRegisterAnnouncementReceiver
+- (QStatus)unRegisterAnnouncementReceiverForInterfaces:(const char  **)interfaces withNumberOfInterfaces:(size_t)numOfInterfaces
 {
     NSLog(@"[%@] [%@] Calling %@", @"DEBUG", [[self class] description],NSStringFromSelector(_cmd));
-	return ajn::services::AnnouncementRegistrar::UnRegisterAnnounceHandler(*(self.busAttachment), *(self.announceHandlerAdapter));
+	return ajn::services::AnnouncementRegistrar::UnRegisterAnnounceHandler(*(self.busAttachment), *(self.announceHandlerAdapter), interfaces, numOfInterfaces);
 }
 
 @end
