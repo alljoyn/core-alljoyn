@@ -37,7 +37,7 @@ public interface AnnouncementHandler
      * @see AboutKeys
      * @see AboutTransport#Announce(short, short, BusObjectDescription[], java.util.Map)
      */
-    public void onAnnouncement(String serviceName, short version, short port, BusObjectDescription[] objectDescriptions, Map<String, Variant> aboutData);
+    public void onAnnouncement(String serviceName, short port, BusObjectDescription[] objectDescriptions, Map<String, Variant> aboutData);
 
     /**
      * Handle a loss of connectivity with this bus name
