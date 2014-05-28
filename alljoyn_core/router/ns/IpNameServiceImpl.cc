@@ -4355,15 +4355,14 @@ void* IpNameServiceImpl::Run(void* arg)
                 }
                 QCC_DbgHLPrintf(("Processing packet on interface index %d that was received on index %d from %s:%u to %s:%u",
                                  ifIndex, localInterfaceIndex, remoteAddress.ToString().c_str(), remotePort, localAddress.ToString().c_str(), recvPort));
-                /*
-                   if (ifIndex != localInterfaceIndex) {
+                if (ifIndex != localInterfaceIndex) {
                     if (localAddress.ToString() == IPV4_MDNS_MULTICAST_GROUP ||
                         localAddress.ToString() == IPV6_MDNS_MULTICAST_GROUP ||
                         localAddress.ToString() == IPV4_ALLJOYN_MULTICAST_GROUP ||
-                   #if WORKAROUND_2_3_BUG
+#if WORKAROUND_2_3_BUG
                         localAddress.ToString() == IPV4_MULTICAST_GROUP ||
                         localAddress.ToString() == IPV6_MULTICAST_GROUP ||
-                   #endif
+#endif
                         localAddress.ToString() == IPV4_ALLJOYN_MULTICAST_GROUP) {
                         QCC_DbgHLPrintf(("Ignoring  multicast packet that was received on a different interface"));
                         continue;
@@ -4373,8 +4372,7 @@ void* IpNameServiceImpl::Run(void* arg)
                         continue;
                     }
 
-                   }
-                 */
+                }
                 //
                 // We got a message over the multicast channel.  Deal with it.
                 //
