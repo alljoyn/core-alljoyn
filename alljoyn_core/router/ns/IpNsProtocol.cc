@@ -2728,8 +2728,11 @@ void MDNSAdvertiseRData::RemoveNameAt(TransportMask transportMask, int index)
 std::pair<qcc::String, qcc::String> MDNSAdvertiseRData::GetFieldAt(int i)
 {
     Fields::const_iterator it = m_fields.begin();
-    while (i--) {
+    while (i-- && it != m_fields.end()) {
         ++it;
+    }
+    if (it == m_fields.end()) {
+        return pair<String, String>("", "");
     }
     String key = it->first;
     key = key.substr(0, key.find_last_of('_'));
@@ -2777,9 +2780,13 @@ uint16_t MDNSSearchRData::GetNumFields()
 std::pair<qcc::String, qcc::String> MDNSSearchRData::GetFieldAt(int i)
 {
     Fields::const_iterator it = m_fields.begin();
-    while (i--) {
+    while (i-- && it != m_fields.end()) {
         ++it;
     }
+    if (it == m_fields.end()) {
+        return pair<String, String>("", "");
+    }
+
     String key = it->first;
     key = key.substr(0, key.find_last_of('_'));
     if (key == "n") {
