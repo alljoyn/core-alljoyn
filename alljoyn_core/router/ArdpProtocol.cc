@@ -1413,40 +1413,6 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
     return status;
 }
 
-/* This is a special case: ACK with handshake data.
- * Used only for connection establishment in active mode. */
-static QStatus DoSendAck(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t seq, uint32_t ack, uint8_t* const buf, uint16_t len)
-{
-    QCC_DbgTrace(("DoSendAck(handle=%p, conn=%p, seq=%u, ack=%u, buf=%p, len = %d)", handle, conn, seq, ack, buf, len));
-
-    assert(len < conn->RBUF.MAX);
-
-    ArdpHeader h;
-    h.flags = ARDP_FLAG_ACK | ARDP_FLAG_VER;
-    h.hlen = conn->sndHdrLen / 2;
-    h.src = htons(conn->local);
-    h.dst = htons(conn->foreign);;
-    h.dlen = htons(len);
-    h.seq = htonl(seq);
-    h.ack = htonl(ack);
-    h.lcs = htonl(conn->RCV.LCS);
-    QCC_DbgPrintf(("DoSendAck lcs %u ", conn->RCV.LCS));
-
-#if USE_SG_LIST
-    qcc::ScatterGatherList msgSG;
-    size_t sent;
-
-    msgSG.AddBuffer(&h, ARDP_FIXED_HEADER_LEN);
-    msgSG.AddBuffer(conn->rcvMsk.htnMask, conn->rcvMsk.fixedSz * sizeof(uint32_t));
-    msgSG.AddBuffer(buf, len);
-    return qcc::SendToSG(conn->sock, conn->ipAddr, conn->ipPort, msgSG, sent);
-#else
-    struct iovec iov[] = { { &h, ARDP_FIXED_HEADER_LEN }, { conn->rcvMsk.htnMask, conn->rcvMsk.fixedSz * sizeof(uint32_t) }, { buf, len }};
-    return SendMsg(handle, conn, iov, ArraySize(iov));
-#endif /* USE_SG_LIST */
-
-}
-
 static QStatus DoSendSyn(ArdpHandle* handle, ArdpConnRecord* conn, bool synack, uint32_t seq, uint32_t ack, uint16_t segmax, uint16_t segbmax, uint8_t* buf, uint16_t len)
 {
     QCC_DbgTrace(("DoSendSyn(handle=%p, conn=%p, synack=%u, seq=%u, ack=%u, segmax=%d, segbmax=%d, buf=%p, len = %d)",
@@ -2063,9 +2029,9 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                     }
 
                     /*
-                     * Do not send the ACK immediately.  Wait for the ARDP_Acknowledge to give the final
-                     * bits of connection data.
+                     * <SEQ=SND.NXT><ACK=RCV.CUR><ACK>
                      */
+                    Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.MAX);
                 } else {
                     QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN with no ACK implies simulateous connection attempt: state -> SYN_RCVD"));
                     uint8_t* data = buf + sizeof(ArdpSynSegment);
@@ -2354,25 +2320,6 @@ QStatus ARDP_Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t segmax, u
     return ER_OK;
 }
 
-QStatus ARDP_Acknowledge(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint16_t len)
-{
-    QCC_DbgTrace(("ARDP_Acknowledge(handle=%p, conn=%p, buf=%p (%s), len=%d)", handle, conn, buf, buf, len));
-
-    if (!IsConnValid(handle, conn)) {
-        return ER_ARDP_INVALID_STATE;
-    }
-
-    /*
-     * This is the function that an Active connector uses to drive the sending of the
-     * final ACK in the SYN, SYN + ACK, ACK three-way handshake.
-     *
-     * <SEQ=SND.NXT><ACK=RCV.CUR><ACK>
-     */
-
-    DoSendAck(handle, conn, conn->SND.NXT, conn->RCV.CUR, buf, len);
-    return ER_OK;
-}
-
 QStatus ARDP_Disconnect(ArdpHandle* handle, ArdpConnRecord* conn)
 {
     QCC_DbgTrace(("Disconnect(handle=%p, conn=%p)", handle, conn));
@@ -2471,22 +2418,22 @@ QStatus Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint16_t 
 
 QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool socketReady, uint32_t* ms)
 {
-    QCC_DbgTrace(("ARDP_Run(handle=%p, sock=%d., socketReady=%d., ms=%p)", handle, sock, socketReady, ms));
+    //QCC_DbgTrace(("ARDP_Run(handle=%p, sock=%d., socketReady=%d., ms=%p)", handle, sock, socketReady, ms));
     uint8_t buf[65536];                   /* UDP packet can be up to 64K long */
     qcc::IPAddress address;               /* The IP address of the foreign side */
     uint16_t port;                        /* Will be the UDP port of the foreign side */
     size_t nbytes;                        /* The number of bytes actually received */
 
     *ms = CheckTimers(handle);            /* When to call back (timer expiration) */
-    QCC_DbgPrintf(("ARDP_Run %u", *ms));
+    //QCC_DbgPrintf(("ARDP_Run %u", *ms));
 
     while (socketReady) {
         QStatus status = qcc::RecvFrom(sock, address, port, buf, sizeof(buf), nbytes);
         if (status == ER_WOULDBLOCK) {
-            QCC_DbgPrintf(("ARDP_Run(): qcc::RecvFrom() ER_WOULDBLOCK"));
+            //QCC_DbgPrintf(("ARDP_Run(): qcc::RecvFrom() ER_WOULDBLOCK"));
             return ER_OK;
         } else if (status != ER_OK) {
-            QCC_LogError(status, ("ARDP_Run(): qcc::RecvFrom() failed"));
+            //QCC_LogError(status, ("ARDP_Run(): qcc::RecvFrom() failed"));
             return status;
         }
 

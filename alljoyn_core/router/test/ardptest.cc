@@ -62,7 +62,6 @@ char const* g_foreign_address = "127.0.0.1";
 
 char const* g_ajnConnString = "AUTH ANONYMOUS; BEGIN THE CONNECTION; Bus Hello; Bellevue";
 char const* g_ajnAcceptString = "OK 123455678; Hello; Redmond";
-char const* g_ajnAcknowledgeString = "Acking: WE ARE ON!";
 
 std::map<ArdpConnRecord*, std::queue<ArdpRcvBuf*> > RecvMapQueue;
 std::map<uint32_t, ArdpConnRecord*> connList;
@@ -164,7 +163,6 @@ void ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* 
         printf("Connection no is  %d, conn pointer is   %p \n", g_conn, conn);
         connList[g_conn] = conn;
         g_conn++;
-        ARDP_Acknowledge(handle, conn, (uint8_t*)g_ajnAcknowledgeString, strlen(g_ajnAcknowledgeString) + 1);
     }
 }
 
