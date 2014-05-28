@@ -791,7 +791,7 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
     QStatus status = ER_OK;
     // if the MsgArg passed in is NULL force the numArgs to be zero.
     if (args == NULL) {
-        numArgs == 0;
+        numArgs = 0;
     }
     size_t argsLen = (numArgs == 0) ? 0 : SignatureUtils::GetSize(args, numArgs);
     size_t hdrLen = 0;
