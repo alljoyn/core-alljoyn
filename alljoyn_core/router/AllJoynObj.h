@@ -966,7 +966,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
 
     /* TODO document */
     void PingReplyMethodHandler(Message& reply, void* context);
-    void PingReplyMethodHandler(Message& msg, uint32_t replyCode);
+    void PingReplyMethodHandlerUsingCode(Message& msg, uint32_t replyCode);
     void PingReplyTransportHandler(Message& reply, void* context);
 
     bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
