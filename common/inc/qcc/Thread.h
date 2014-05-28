@@ -323,6 +323,7 @@ class Thread {
     int32_t waitCount;
     Mutex waitLock;
     bool hasBeenJoined;
+    qcc::Mutex hbjMutex;
     int32_t exitCount;
 #endif
 
