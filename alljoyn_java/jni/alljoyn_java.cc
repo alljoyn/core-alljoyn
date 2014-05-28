@@ -1780,7 +1780,7 @@ class JBusObject : public BusObject {
                    const MsgArg* args, size_t numArgs, uint32_t timeToLive, uint8_t flags, Message& msg);
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
     QStatus Set(const char* ifcName, const char* propName, MsgArg& val);
-    String GenerateIntrospection(bool deep = false, size_t indent = 0, const char* languageTag = NULL) const;
+    String GenerateIntrospection(const char* languageTag, bool deep = false, size_t indent = 0) const;
     void ObjectRegistered();
     void ObjectUnregistered();
     void SetDescriptions(jstring jlangTag, jstring jdescription, jobject jdescTrans);
@@ -8144,7 +8144,7 @@ QStatus JBusObject::Set(const char* ifcName, const char* propName, MsgArg& val)
     return ER_OK;
 }
 
-String JBusObject::GenerateIntrospection(bool deep, size_t indent, const char* languageTag) const
+String JBusObject::GenerateIntrospection(const char* languageTag, bool deep, size_t indent) const
 {
     QCC_DbgPrintf(("JBusObject::GenerateIntrospection()"));
 
@@ -8179,7 +8179,7 @@ String JBusObject::GenerateIntrospection(bool deep, size_t indent, const char* l
 
         return String(introspection.c_str());
     }
-    return BusObject::GenerateIntrospection(deep, indent, languageTag);
+    return BusObject::GenerateIntrospection(languageTag, deep, indent);
 }
 
 void JBusObject::ObjectRegistered()

@@ -111,8 +111,8 @@ class InterfaceDescription {
         AnnotationsMap* annotations;           /**< Map of annotations */
         qcc::String accessPerms;              /**< Required permissions to invoke this call */
         qcc::String description;                    /**< Introspection description for this member */
-        ArgumentDescriptions* argumentDescriptions; /** Introspection descriptions for arguments to this member */
-        bool isSessionlessSignal;                     /**< True if this is a sessionless signal */
+        ArgumentDescriptions* argumentDescriptions; /**< Introspection descriptions for arguments to this member */
+        bool isSessionlessSignal;                     /**< True if this is described as a sessionless signal */
 
         /** %Member constructor.
          *
@@ -749,7 +749,7 @@ class InterfaceDescription {
      * @return
      *      - #ER_OK if successful.
      *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
-     *      - #ER_BUS_NO_SUCH_MEMBER If the member was not found
+     *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found
      */
     QStatus SetMemberDescription(const char* member,
                                  const char* description, bool isSessionlessSignal = false);
@@ -763,7 +763,7 @@ class InterfaceDescription {
      * @return
      *      - #ER_OK if successful.
      *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
-     *      - #ER_BUS_NO_SUCH_MEMBER If the member was not found
+     *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found
      */
     QStatus SetArgDescription(const char* member, const char* arg, const char* description);
 
@@ -783,7 +783,7 @@ class InterfaceDescription {
      * Set the Translator that provides this InterfaceDescription's
      * introspection description in multiple languages.
      *
-     * @param dt The Translator instance.
+     * @param translator The Translator instance.
      */
     void SetDescriptionTranslator(Translator* translator);
 

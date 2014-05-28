@@ -124,7 +124,12 @@ qcc::String BusObject::GetName()
     }
 }
 
-qcc::String BusObject::GenerateIntrospection(bool deep, size_t indent, const char* languageTag) const
+qcc::String BusObject::GenerateIntrospection(bool deep, size_t indent) const
+{
+    return GenerateIntrospection(NULL, deep, indent);
+}
+
+qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep, size_t indent) const
 {
     qcc::String in(indent, ' ');
     qcc::String xml;
@@ -147,7 +152,7 @@ qcc::String BusObject::GenerateIntrospection(bool deep, size_t indent, const cha
                 xml += in + "  <description>" + nodeDesc + "</description>";
             }
             if (deep) {
-                xml += child->GenerateIntrospection(deep, indent + 2, languageTag);
+                xml += child->GenerateIntrospection(languageTag, deep, indent + 2);
             }
 
             xml += "\n" + in + "</node>\n";
@@ -809,7 +814,7 @@ void BusObject::IntrospectWithDescription(const InterfaceDescription::Member* me
         xml += "  <annotation name=\"org.alljoyn.Bus.Secure\" value=\"true\"/>\n";
     }
 
-    xml += GenerateIntrospection(false, 2, langTag);
+    xml += GenerateIntrospection(langTag, false, 2);
     xml += "</node>\n";
     MsgArg arg("s", xml.c_str());
     QStatus status = MethodReply(msg, &arg, 1);
