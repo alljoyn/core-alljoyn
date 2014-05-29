@@ -8982,6 +8982,27 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_enableConcurrentCallba
     return;
 }
 
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setDescriptionTranslator(
+    JNIEnv*env, jobject thiz, jobject jdescriptionTranslator)
+{
+    QCC_DbgPrintf(("BusAttachment_setDescsriptionTranslator()"));
+
+    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_setDescriptionTranslator(): Exception"));
+        return;
+    }
+    assert(busPtr);
+
+    Translator* dt = GetHandle<Translator*>(jdescriptionTranslator);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_setDescriptionTranslator(): Exception"));
+        return;
+    }
+
+    busPtr->SetDescriptionTranslator(dt);
+}
+
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_create(JNIEnv* env, jobject thiz, jobject jbus, jstring jname,
                                                                            jint securePolicy, jint numProps, jint numMembers)
 {
