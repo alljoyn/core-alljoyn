@@ -455,7 +455,7 @@ using namespace std;
 using namespace qcc;
 
 /* BUGBUG FIXME TODO: Change timer value */
-const uint32_t UDP_ENDPOINT_MANAGEMENT_TIMER = 1000;  /* Limit maximum frequency of ManageEndpoints calls to this time */
+const uint32_t UDP_ENDPOINT_MANAGEMENT_TIMER = 100;  /* Limit maximum frequency of ManageEndpoints calls to this time */
 
 const uint32_t UDP_LINK_TIMEOUT_PROBE_ATTEMPTS       = 1;
 const uint32_t UDP_LINK_TIMEOUT_PROBE_RESPONSE_DELAY = 10;
@@ -491,6 +491,7 @@ const char* const UDPTransport::ALLJOYN_DEFAULT_ROUTER_ADVERTISEMENT_PREFIX = "o
 const char* TestConnStr = "ARDP TEST CONNECT REQUEST";
 const char* TestAcceptStr = "ARDP TEST ACCEPT";
 
+#ifndef NDEBUG
 static void DumpLine(uint8_t* buf, uint32_t len, uint32_t width)
 {
     for (uint32_t i = 0; i < width; ++i) {
@@ -519,6 +520,7 @@ static void DumpBytes(uint8_t* buf, uint32_t len)
         }
     }
 }
+#endif // NDEBUG
 
 class _UDPEndpoint;
 
@@ -1258,7 +1260,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
             bool empty = m_stream->IsThreadSetEmpty();
             assert(empty && "_UdpEndpoint::Start(): Threads present during Start()");
             if (empty == false) {
-                QCC_LogError(ER_FAIL, ("UDPTransport::Start(): Threads present during Start()"));
+                QCC_LogError(ER_FAIL, ("_UDPEndpoint::Start(): Threads present during Start()"));
                 return ER_FAIL;
             }
         }
@@ -1319,6 +1321,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     QStatus Stop()
     {
         QCC_DbgTrace(("_UDPEndpoint::Stop()"));
+        QCC_DbgPrintf(("_UDPEndpoint::Stop(): Unique name == %s", GetUniqueName().c_str()));
 
         /*
          * The AllJoyn threading model says there can be exactly one Stop() for
@@ -1353,16 +1356,14 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * If the endpoint is stopping, we need to stop demultiplexing data from ARDP
          * to the endpoint.
          */
+        uint32_t connId = GetConnId();
         m_transport->m_endpointListLock.Lock(MUTEX_CONTEXT);
-        ArdpConnRecord* conn = GetConn();
-        std::map<ArdpConnRecord* const, UDPEndpoint>::iterator i = m_transport->m_demux.find(conn);
+        std::map<uint32_t, UDPEndpoint>::iterator i = m_transport->m_demux.find(connId);
         if (i != m_transport->m_demux.end()) {
-            QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("_UDPEndpoint::Stop(): Erasing conn ID == %d. from m_demux",
-                                                    ARDP_GetConnId(conn)));
+            QCC_DbgPrintf(("_UDPEndpoint::Stop(): Endpoint \"%s\" erasing conn ID == %d. from m_demux", GetUniqueName().c_str(), connId));
             m_transport->m_demux.erase(i);
         } else {
-            QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("_UDPEndpoint::Stop(): Conn ID == %d. not in m_demux",
-                                                    ARDP_GetConnId(conn)));
+            QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("_UDPEndpoint::Stop(): conn with conn ID == %d. not in m_demux", connId));
         }
         m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
@@ -1411,6 +1412,13 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * endpoint code that it is ready to go down.
          */
         Exit();
+
+        /*
+         * Tell the endpoint management code that something has happened that
+         * it may be concerned about.
+         */
+        m_transport->m_manage = UDPTransport::STATE_MANAGE;
+        m_transport->Alert();
         return ER_OK;
     }
 
@@ -1474,6 +1482,14 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * references to it.
          */
         SetEpDone();
+
+        /*
+         * Tell the endpoint management code that something has happened that
+         * it may be concerned about.
+         */
+        m_transport->m_manage = UDPTransport::STATE_MANAGE;
+        m_transport->Alert();
+
         return ER_OK;
     }
 
@@ -1650,7 +1666,12 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * connection, so we can just igore this data.
          */
         if (GetEpState() != EP_STARTED) {
-            QCC_DbgTrace(("_UDPEndpoint::RecvCb(): Stopping"));
+            QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Stopping"));
+            return;
+        }
+
+        if (rcv == NULL || rcv->data == NULL || rcv->datalen == 0) {
+            QCC_LogError(ER_UDP_INVALID, ("_UDPEndpoint::RecvCb(): No data on RecvCb()"));
             return;
         }
 
@@ -1659,69 +1680,20 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * TODO: Should do something about rcv->fcnt
          */
         assert(rcv->fcnt == 1 && "_UDPEndpoint::RecvCb(): message partitioning not supported yet");
-
+#ifndef NDEBUG
         DumpBytes(rcv->data, rcv->datalen);
+#endif
+        UDPTransport::ReceiveBufferEntry entry;
+        entry.m_handle = handle;
+        entry.m_conn = conn;
+        entry.m_rcv = rcv;
+        entry.m_endpoint = this;
 
-        /*
-         * The point here is to create an AllJoyn Message from the inbound bytes
-         * which we know a priori to contain exactly one Message if present.  We
-         * have a back door in the Message code that lets us load our bytes
-         * directly into the message.  Note that this LoadBytes does a buffer
-         * copy, so we are free to release ownership of the incoming buffer at
-         * any time after that.
-         */
-        Message msg(m_transport->m_bus);
-        status = msg->LoadBytes(rcv->data, rcv->datalen);
-        if (status != ER_OK) {
-            QCC_LogError(status, ("UDPTransport::RecvCb(): Can't LoadBytes() Message"));
-            return;
-        }
-
-        /*
-         * The bytes are now loaded into what amounts to a backing buffer for
-         * the Message.  With the exception of the Message header, these are
-         * still the raw bytes from the wire, so we have to Unmarshal() them
-         * before proceeding.
-         */
-        RemoteEndpoint rep = RemoteEndpoint::wrap(this);
-        qcc::String endpointName(rep->GetUniqueName());
-        status = msg->Unmarshal(endpointName, false, false, true, 0);
-        if (status != ER_OK) {
-            QCC_LogError(status, ("UDPTransport::RecvCb(): Can't Unmarhsal() BusHello Message"));
-            return;
-        }
-
-        /*
-         * Now, we have an AllJoyn Message that is ready for delivery.  We just
-         * hand it off to the daemon router at this point.  It will try to find
-         * the implied destination endpoint and stick it on the receive queue
-         * for that endpoint.
-         *
-         * BUGBUG FIXME
-         * TODO: If the PushMessage cannot enqueue the message it blocks!  We
-         * need it to fail, not to block.
-         */
-        BusEndpoint bep  = BusEndpoint::cast(rep);
-        status = m_transport->m_bus.GetInternal().GetRouter().PushMessage(msg, bep);
-        if (status != ER_OK) {
-            QCC_LogError(status, ("_UDPEndpoint::RecvCb(): PushMessage() failed"));
-        }
-
-        /*
-         * BUGBUG FIXME
-         * TODO: If the daemon router cannot deliver the message, we need to
-         * enqueue it on a list and NOT call ARDP_RecvReady().  This opens the
-         * receive window for the protocol, so after we enqueue a receive
-         * window's full of data the protocol will apply backpressure to the
-         * remote side which will stop sending data and further apply
-         * backpressure to the ultimate sender.  We either need to retry
-         * delivery or get a callback from the destination endpoint telling us
-         * to retry.
-         */
-        QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady()"));
-        m_transport->m_ardpLock.Lock();
-        ARDP_RecvReady(m_handle, m_conn, rcv);
-        m_transport->m_ardpLock.Unlock();
+        QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): sending to message dispatcher)"));
+        m_transport->m_rxQueueLock.Lock(MUTEX_CONTEXT);
+        m_transport->m_rxQueue.push(entry);
+        m_transport->m_rxQueueLock.Unlock(MUTEX_CONTEXT);
+        m_transport->m_dispatcher->Alert();
     }
 
     /**
@@ -2035,10 +2007,12 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     m_foundCallback(m_listener), m_isAdvertising(false), m_isDiscovering(false), m_isListening(false),
     m_isNsEnabled(false),
     m_reload(STATE_RELOADING),
+    m_manage(STATE_MANAGE),
     m_listenPort(0), m_nsReleaseCount(0),
     m_routerName(), m_maxUntrustedClients(0), m_numUntrustedClients(0),
     m_authTimeout(0), m_sessionSetupTimeout(0), m_maxAuth(0), m_maxConn(0),
-    m_ardpLock(), m_cbLock(), m_handle(NULL), m_demux()
+    m_ardpLock(), m_cbLock(), m_handle(NULL), m_demux(),
+    m_dispatcher(NULL), m_rxQueue(), m_rxQueueLock()
 {
     QCC_DbgTrace(("UDPTransport::UDPTransport()"));
 
@@ -2108,28 +2082,137 @@ void UDPTransport::EndpointExit(RemoteEndpoint& ep)
     QCC_DbgTrace(("UDPTransport::EndpointExit()"));
 }
 
+ThreadReturn STDCALL UDPTransport::MessageDispatcherThread::Run(void* arg)
+{
+    QCC_DbgTrace(("UDPTransport::MessageDispatcherThread::Run()"));
+
+    vector<Event*> checkEvents, signaledEvents;
+    checkEvents.push_back(&stopEvent);
+
+    while (!IsStopping()) {
+        QCC_DbgTrace(("UDPTransport::MessageDispatcherThread::Run(): Wait for some action"));
+
+        QStatus status = Event::Wait(checkEvents, signaledEvents);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("UDPTransport::MessageDispatcherThread::Run(): Event::Wait failed"));
+            break;
+        }
+
+        for (vector<Event*>::iterator i = signaledEvents.begin(); i != signaledEvents.end(); ++i) {
+            if (*i == &stopEvent) {
+                QCC_DbgTrace(("UDPTransport::MessageDispatcherThread::Run(): Reset stopEvent"));
+                stopEvent.ResetEvent();
+            }
+        }
+
+        bool drained = false;
+        do {
+            ReceiveBufferEntry entry;
+
+            m_transport->m_rxQueueLock.Lock(MUTEX_CONTEXT);
+            if (m_transport->m_rxQueue.empty()) {
+                drained = true;
+            } else {
+                entry = m_transport->m_rxQueue.front();
+                m_transport->m_rxQueue.pop();
+            }
+            m_transport->m_rxQueueLock.Unlock(MUTEX_CONTEXT);
+
+            if (drained == false) {
+                QCC_DbgTrace(("UDPTransport::MessageDispatcherThread::Run(): handle=0x%p, conn=0x%p, rcv=0x%p)",
+                              entry.m_handle, entry.m_conn, entry.m_rcv));
+
+                /*
+                 * The point here is to create an AllJoyn Message from the
+                 * inbound bytes which we know a priori to contain exactly one
+                 * Message if present.  We have a back door in the Message code
+                 * that lets us load our bytes directly into the message.  Note
+                 * that this LoadBytes does a buffer copy, so we are free to
+                 * release ownership of the incoming buffer at any time after
+                 * that.
+                 */
+                Message msg(m_transport->m_bus);
+                status = msg->LoadBytes(entry.m_rcv->data, entry.m_rcv->datalen);
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("UDPTransport::MessageDispatcherThread::Run(): Cannot load bytes"));
+
+                    /*
+                     * If there's some kind of problem, we have to give the buffer
+                     * back to the protocol now.
+                     */
+                    m_transport->m_ardpLock.Lock();
+                    ARDP_RecvReady(entry.m_handle, entry.m_conn, entry.m_rcv);
+                    m_transport->m_ardpLock.Unlock();
+                    continue;
+                }
+
+                /*
+                 * The bytes are now loaded into what amounts to a backing buffer for
+                 * the Message.  With the exception of the Message header, these are
+                 * still the raw bytes from the wire, so we have to Unmarshal() them
+                 * before proceeding.
+                 */
+                _UDPEndpoint* endpoint = const_cast<_UDPEndpoint*>(entry.m_endpoint);
+                RemoteEndpoint rep = RemoteEndpoint::wrap(endpoint);
+                qcc::String endpointName(rep->GetUniqueName());
+                status = msg->Unmarshal(endpointName, false, false, true, 0);
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("UDPTransport::MessageDispatcherThread::Run(): Can't Unmarhsal() Message"));
+
+                    /*
+                     * If there's some kind of problem, we have to give the buffer
+                     * back to the protocol now.
+                     */
+                    m_transport->m_ardpLock.Lock();
+                    ARDP_RecvReady(entry.m_handle, entry.m_conn, entry.m_rcv);
+                    m_transport->m_ardpLock.Unlock();
+                    continue;
+                }
+
+                /*
+                 * Now, we have an AllJoyn Message that is ready for delivery.
+                 * We just hand it off to the daemon router at this point.  It
+                 * will try to find the implied destination endpoint and stick
+                 * it on the receive queue for that endpoint.
+                 *
+                 * BUGBUG FIXME
+                 * TODO: If the PushMessage cannot enqueue the message it blocks!  We
+                 * need it to fail, not to block.
+                 */
+                BusEndpoint bep  = BusEndpoint::cast(rep);
+                status = m_transport->m_bus.GetInternal().GetRouter().PushMessage(msg, bep);
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("UDPTransport::MessageDispatcherThread::Run(): PushMessage failed"));
+                }
+
+                /*
+                 * BUGBUG FIXME TODO: If the daemon router cannot deliver the
+                 * message, we need to enqueue it on a list and NOT call
+                 * ARDP_RecvReady().  This opens the receive window for the
+                 * protocol, so after we enqueue a receive window's full of data
+                 * the protocol will apply backpressure to the remote side which
+                 * will stop sending data and further apply backpressure to the
+                 * ultimate sender.  We either need to retry delivery or get a
+                 * callback from the destination endpoint telling us to retry.
+                 */
+                QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady()"));
+                m_transport->m_ardpLock.Lock();
+                ARDP_RecvReady(entry.m_handle, entry.m_conn, entry.m_rcv);
+                m_transport->m_ardpLock.Unlock();
+            }
+        } while (drained == false);
+    }
+
+    QCC_DbgTrace(("UDPTransport::MessageDispatcherThread::Run(): Exiting"));
+    return 0;
+}
+
 QStatus UDPTransport::Start()
 {
+    QCC_DbgTrace(("UDPTransport::Start()"));
+
     /*
-     * We rely on the status of the server maintenance thead as the primary
-     * gatekeeper.
-     *
-     * A true response from IsRunning tells us that the server maintenance
-     * thread is STARTED, RUNNING or STOPPING.
-     *
-     * When a thread is created it is in state INITIAL.  When an actual tread is
-     * spun up as a result of Start(), it becomes STARTED.  Just before the
-     * user's Run method is called, the thread becomes RUNNING.  If the Run
-     * method exits, the thread becomes STOPPING.  When the thread is Join()ed
-     * it becomes DEAD.
-     *
-     * IsRunning means that someone has called Thread::Start() and the process
-     * has progressed enough that the thread has begun to execute.  If we get
-     * multiple Start() calls calls on multiple threads, this test may fail to
-     * detect multiple starts in a failsafe way and we may end up with multiple
-     * server maintenance threads running.  We assume that since Start()
-     * requests come in from our containing transport list it will not allow
-     * concurrent start requests.
+     * The AllJoyn threading model says exactly one Start() can be done.
      */
     if (IsRunning()) {
         QCC_LogError(ER_BUS_BUS_ALREADY_STARTED, ("UDPTransport::Start(): Already started"));
@@ -2156,6 +2239,7 @@ QStatus UDPTransport::Start()
      * variable that allows us to only release the singleton on the first transport
      * Join()
      */
+    QCC_DbgPrintf(("UDPTransport::Start(): Aquire instance of NS"));
     m_nsReleaseCount = 0;
     IpNameService::Instance().Acquire(guidStr);
 
@@ -2163,15 +2247,25 @@ QStatus UDPTransport::Start()
      * Tell the name service to call us back on our FoundCallback method when
      * we hear about a new well-known bus name.
      */
+    QCC_DbgPrintf(("UDPTransport::Start(): Set NS callback"));
     IpNameService::Instance().SetCallback(TRANSPORT_UDP,
                                           new CallbackImpl<FoundCallback, void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint8_t>
                                               (&m_foundCallback, &FoundCallback::Found));
+
+    QCC_DbgPrintf(("UDPTransport::Start(): Spin up message dispatcher thread"));
+    m_dispatcher = new MessageDispatcherThread(this);
+    QStatus status = m_dispatcher->Start(NULL, NULL);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("UDPTransport::Start(): Failed to Start() message dispatcher thread"));
+        return status;
+    }
 
     /*
      * Start the maintenance loop through the thread base class.  This will
      * close or open the IsRunning() gate we use to control access to our public
      * API.
      */
+    QCC_DbgPrintf(("UDPTransport::Start(): Spin up main thread"));
     return Thread::Start();
 }
 
@@ -2195,6 +2289,7 @@ QStatus UDPTransport::Stop(void)
      * called more than once in the chain of destruction) so the pointer is not
      * required to be non-NULL.
      */
+    QCC_DbgPrintf(("UDPTransport::Stop(): Clear NS callback"));
     IpNameService::Instance().SetCallback(TRANSPORT_UDP, NULL);
 
     /*
@@ -2203,6 +2298,7 @@ QStatus UDPTransport::Stop(void)
      * that may be waiting for I/O and arrange for itself to be cleaned up by
      * the maintenance thread.
      */
+    QCC_DbgPrintf(("UDPTransport::Stop(): Stop endpoints"));
     m_endpointListLock.Lock(MUTEX_CONTEXT);
     for (set<UDPEndpoint>::iterator i = m_authList.begin(); i != m_authList.end(); ++i) {
         UDPEndpoint ep = *i;
@@ -2218,10 +2314,16 @@ QStatus UDPTransport::Stop(void)
      * need to wake them up so they leave before we actually go away.  We stored
      * a pair of thread ID, ArdpConnRecord, so alert the first.
      */
+    QCC_DbgPrintf(("UDPTransport::Stop(): Alert connectThreads"));
     for (set<ConnectEntry>::const_iterator i = m_connectThreads.begin(); i != m_connectThreads.end(); ++i) {
         (*i).m_thread->Alert();
     }
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
+
+    QCC_DbgPrintf(("UDPTransport::Stop(): Stop dispatcher thread"));
+    if (m_dispatcher) {
+        m_dispatcher->Stop();
+    }
 
     /*
      * Tell the server maintenance loop thread to shut down.  It needs to wait
@@ -2229,6 +2331,7 @@ QStatus UDPTransport::Stop(void)
      * unexpectedly disappear out from underneath them.  We'll wait for it
      * to actually stop when we do a required Join() below.
      */
+    QCC_DbgPrintf(("UDPTransport::Stop(): Stop main thread"));
     QStatus status = Thread::Stop();
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::Stop(): Failed to Stop() server thread"));
@@ -2242,6 +2345,22 @@ QStatus UDPTransport::Join(void)
 {
     QCC_DbgTrace(("UDPTransport::Join()"));
 
+    QCC_DbgPrintf(("UDPTransport::Join(): Join and delete dispatcher thread"));
+    if (m_dispatcher) {
+        m_dispatcher->Join();
+        delete m_dispatcher;
+        m_dispatcher = NULL;
+    }
+
+    QCC_DbgPrintf(("UDPTransport::Join(): Return unused message buffers to ARDP"));
+    while (m_rxQueue.empty() == false) {
+        ReceiveBufferEntry entry = m_rxQueue.front();
+        m_rxQueue.pop();
+        m_ardpLock.Lock();
+        ARDP_RecvReady(entry.m_handle, entry.m_conn, entry.m_rcv);
+        m_ardpLock.Unlock();
+    }
+
     /*
      * It is legal to call Join() more than once, so it must be possible to
      * call Join() on a joined transport and also on a joined name service.
@@ -2249,6 +2368,7 @@ QStatus UDPTransport::Join(void)
      * maintenance thread.  When it finally closes, all of the threads
      * previously wandering around in the transport must be gone.
      */
+    QCC_DbgPrintf(("UDPTransport::Stop(): Join main thread"));
     QStatus status = Thread::Join();
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::Join(): Failed to Join() server thread"));
@@ -2729,6 +2849,12 @@ void UDPTransport::ArdpSendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, ui
 bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::AcceptCb(handle=0x%p, ipAddr=\"%s\", ipPort=%d., conn=0x%p)", handle, ipAddr.ToString().c_str(), ipPort, conn));
+
+    if (buf == NULL || len == 0) {
+        QCC_LogError(ER_UDP_INVALID, ("UDPTransport::AcceptCb(): No BusHello with SYN"));
+        return false;
+    }
+
     m_endpointListLock.Lock(MUTEX_CONTEXT);
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): m_mAuthList.size() == %d", m_authList.size()));
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): m_mEndpointList.size() == %d", m_endpointList.size()));
@@ -3046,11 +3172,11 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
 #endif
                 m_endpointList.insert(ep);
 
-                QCC_DbgPrintf(("UDPTransport::ConnectCb(): Connecting endpoint with conn ID == %d. to m_demux",
-                               ARDP_GetConnId(conn)));
-                m_demux.insert(std::pair<ArdpConnRecord*, UDPEndpoint>(conn, ep));
+                uint32_t connId = ARDP_GetConnId(conn);
+                QCC_DbgPrintf(("UDPTransport::ConnectCb(): Connecting endpoint with conn ID == %d. to m_demux", connId));
+                m_demux.insert(std::pair<uint32_t, UDPEndpoint>(connId, ep));
 
-                QCC_DbgPrintf(("UDPTransport::ConnectCb(): Start()ing endpoint with conn ID == %d.", ARDP_GetConnId(conn)));
+                QCC_DbgPrintf(("UDPTransport::ConnectCb(): Start()ing endpoint with conn ID == %d.", connId));
                 ep->SetListener(this);
                 ep->Start();
                 break;
@@ -3074,6 +3200,11 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
                        ARDP_GetConnId(conn)));
         qcc::Event* event = static_cast<qcc::Event*>(ARDP_GetConnContext(conn));
         assert(event && "UDPTransport::ConnectCb(): Connection context did not provide an event");
+
+        if (buf == NULL || len == 0) {
+            QCC_LogError(ER_UDP_INVALID, ("UDPTransport::ConnectCb(): No BusHello reply with SYN + ACK"));
+            return;
+        }
 
         Message helloReply(m_bus);
         status = helloReply->LoadBytes(buf, len);
@@ -3204,9 +3335,9 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
 #endif
         m_endpointList.insert(udpEp);
 
-        QCC_DbgPrintf(("UDPTransport::ConnectCb(): Connecting endpoint with conn ID == %d. to m_demux",
-                       ARDP_GetConnId(udpEp->GetConn())));
-        m_demux.insert(std::pair<ArdpConnRecord*, UDPEndpoint>(conn, udpEp));
+        uint32_t connId = ARDP_GetConnId(udpEp->GetConn());
+        QCC_DbgPrintf(("UDPTransport::ConnectCb(): Connecting endpoint with conn ID == %d. to m_demux", connId));
+        m_demux.insert(std::pair<uint32_t, UDPEndpoint>(connId, udpEp));
 
         QCC_DbgPrintf(("UDPTransport::ConnectCb(): giving endpoint list lock"));
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
@@ -3244,17 +3375,26 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
 void UDPTransport::DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::DisconnectCb(handle=0x%p, conn=0x%p, foreign=%d.)", handle, conn));
+
     m_endpointListLock.Lock(MUTEX_CONTEXT);
-    std::map<ArdpConnRecord* const, UDPEndpoint>::iterator i = m_demux.find(conn);
+
+    bool found;
+    uint32_t connId = ARDP_GetConnId(conn);
+
+    std::map<uint32_t, UDPEndpoint>::iterator i = m_demux.find(connId);
     if (i != m_demux.end()) {
-        QCC_DbgPrintf(("UDPTransport::DisconnectCb(): demux callback from conn ID == %d to endpoint",
-                       ARDP_GetConnId(conn)));
-        i->second->DisconnectCb(handle, conn, status);
+        QCC_DbgPrintf(("UDPTransport::DisconnectCb(): demux callback from conn ID == %d to endpoint", connId));
+        found = true;
     } else {
-        QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("UDPTransport::DisconnectCb(): Conn not in m_demux"));
+        QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("UDPTransport::DisconnectCb(): conn with connId == %d. not in m_demux", connId));
+        found = false;
     }
+
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
+    if (found) {
+        i->second->DisconnectCb(handle, conn, status);
+    }
 }
 
 void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status)
@@ -3263,32 +3403,51 @@ void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* 
                   handle, conn, rcv, QCC_StatusText(status)));
     assert(rcv->fcnt == 1 && "_UDPEndpoint::RecvCb(): message partitioning not supported yet");
     QCC_DbgPrintf(("UDPTransport::RecvCb(): got %d. bytes of data", rcv->datalen));
+
     m_endpointListLock.Lock(MUTEX_CONTEXT);
-    std::map<ArdpConnRecord* const, UDPEndpoint>::iterator i = m_demux.find(conn);
+
+    bool found = true;
+    uint32_t connId = ARDP_GetConnId(conn);
+
+    std::map<uint32_t, UDPEndpoint>::iterator i = m_demux.find(connId);
     if (i != m_demux.end()) {
-        QCC_DbgPrintf(("UDPTransport::RecvCb(): demux callback from conn ID == %d to endpoint",
-                       ARDP_GetConnId(conn)));
-        i->second->RecvCb(handle, conn, rcv, status);
+        QCC_DbgPrintf(("UDPTransport::RecvCb(): demux callback from conn ID == %d to endpoint", connId));
+        found = true;
     } else {
-        QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("UDPTransport::RecvCb(): Conn not in m_demux"));
+        QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("UDPTransport::RecvCb(): conn with connId == %d. not in m_demux", connId));
+        found = false;
     }
+
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
+    if (found) {
+        i->second->RecvCb(handle, conn, rcv, status);
+    }
 }
 
 void UDPTransport::SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::SendCb(handle=0x%p, conn=0x%p, buf=0x%p, len=%d.)", handle, conn, buf, len));
+
     m_endpointListLock.Lock(MUTEX_CONTEXT);
-    std::map<ArdpConnRecord* const, UDPEndpoint>::iterator i = m_demux.find(conn);
+
+    bool found = true;
+    uint32_t connId = ARDP_GetConnId(conn);
+
+    std::map<uint32_t, UDPEndpoint>::iterator i = m_demux.find(connId);
     if (i != m_demux.end()) {
-        QCC_DbgPrintf(("UDPTransport::SendCb(): demux callback from conn ID == %d to endpoint",
-                       ARDP_GetConnId(conn)));
-        i->second->SendCb(handle, conn, buf, len, status);
+        QCC_DbgPrintf(("UDPTransport::SendCb(): demux callback from conn ID == %d to endpoint", connId));
+        found = true;
     } else {
-        QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("UDPTransport::SendCb(): Conn not in m_demux"));
+        QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("UDPTransport::SendCb(): conn with connId == %d. not in m_demux", connId));
+        found = false;
     }
+
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
+
+    if (found) {
+        i->second->SendCb(handle, conn, buf, len, status);
+    }
 }
 
 void UDPTransport::SendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t window, QStatus status)
@@ -3388,9 +3547,10 @@ void* UDPTransport::Run(void* arg)
 
         int32_t tRemaining = tLastManage + UDP_ENDPOINT_MANAGEMENT_TIMER - tNow;
 
-        if (tRemaining < 0) {
+        if (m_manage != STATE_MANAGED || tRemaining < 0) {
             ManageEndpoints(m_authTimeout, m_sessionSetupTimeout);
             tLastManage = tNow;
+            m_manage = STATE_MANAGED;
         }
 
         /*

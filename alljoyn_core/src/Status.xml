@@ -244,5 +244,6 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_ARDP_REMOTE_CONNECTION_RESET" value="0x9108" comment="Remote endpoint disconected: sent RST"/>
   <status name="ER_UDP_BUSHELLO" value="0x9109" comment="UDP Transport is unable to complete an operation relating to a BusHello Message"/>
   <status name="ER_UDP_MESSAGE" value="0x910a" comment="UDP Transport is unable to complete an operation on an AllJoyn Message"/>
+  <status name="ER_UDP_INVALID" value="0x910b" comment="UDP Transport detected invalid data or parameters from network"/>
 
 </status_block>

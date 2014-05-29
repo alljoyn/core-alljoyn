@@ -676,13 +676,20 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     bool m_isListening;
     bool m_isNsEnabled;
 
-    enum State {
+    enum ReloadState {
         STATE_RELOADING = 0,    /**< The set of listen FDs has changed and needs to be reloaded by the main thread */
         STATE_RELOADED,         /**< The set of listen FDs has been reloaded by the main thread */
         STATE_EXITED            /**< The main UDPTransport thread has exited */
     };
 
-    State m_reload;             /**< Flag used for synchronization of DoStopListen with the Run thread */
+    ReloadState m_reload;       /**< Flag used for synchronization of DoStopListen with the Run thread */
+
+    enum ManageState {
+        STATE_MANAGE = 0,       /**< The state of the endpoints has changed and needs to be managed by the main thread */
+        STATE_MANAGED           /**< The state of the endpoints has been managed by the main thread */
+    };
+
+    ManageState m_manage;       /**< Flag used for synchronization of ManageEndpoints() */
 
     uint16_t m_listenPort;     /**< If m_isListening, is the port on which we are listening */
 
@@ -734,7 +741,38 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     qcc::Mutex m_cbLock;    /**< Lock to synchronize interactions between callback contexts and other threads */
 
     ArdpHandle* m_handle;
-    std::map<ArdpConnRecord* const, UDPEndpoint> m_demux;  /**< Map to demultiplex connection records to endpoints */
+    std::map<uint32_t, UDPEndpoint> m_demux;  /**< Map to demultiplex connection records to endpoints */
+
+    /**
+     * MessageDispatcherThread handles AllJoyn messages that have been received
+     * by the transport and need to be sent of into the daemon router and off
+     * to a destination.
+     */
+    class MessageDispatcherThread : public qcc::Thread {
+      public:
+        MessageDispatcherThread(UDPTransport* transport) : qcc::Thread(qcc::String("MessageDispatcher")), m_transport(transport) { }
+        void ThreadExit(Thread* thread);
+
+      protected:
+        qcc::ThreadReturn STDCALL Run(void* arg);
+
+      private:
+        UDPTransport* m_transport;
+    };
+
+    MessageDispatcherThread* m_dispatcher;  /** Pointer to the message dispatcher thread for the transport */
+
+    class ReceiveBufferEntry {
+      public:
+        ArdpHandle* m_handle;
+        ArdpConnRecord* m_conn;
+        ArdpRcvBuf* m_rcv;
+        const _UDPEndpoint* m_endpoint;
+    };
+
+    std::queue<ReceiveBufferEntry> m_rxQueue;  /** Queue of ARDP messages queued for dispatch to the router */
+
+    qcc::Mutex m_rxQueueLock; /**< Lock to synchronize access to the rx queue */
 
 #ifndef NDEBUG
     void DebugEndpointListCheck(UDPEndpoint uep);
