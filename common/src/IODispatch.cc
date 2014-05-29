@@ -312,6 +312,11 @@ void IODispatch::AlarmTriggered(const Alarm& alarm, QStatus reason)
             /* Timer is running. Remove any pending alarms */
             timer.ForceRemoveAlarm(dispatchEntry.readAlarm, true /* blocking */);
             timer.ForceRemoveAlarm(dispatchEntry.writeAlarm, true /* blocking */);
+            /*
+             * in some scenarios, there are not only read &write alarms in set, but also some read timeout alarms
+             * if they are not removed, these alarms will be processed--that's not excepected.
+            */
+            timer.ForceRemoveAllAlarms();
             lock.Lock();
         }
         /* If IODispatch has been stopped,

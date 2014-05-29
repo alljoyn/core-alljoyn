@@ -328,6 +328,10 @@ class Timer : public OSTimer, public ThreadListener {
      */
     void TimerCleanupCallback(void* context);
 
+    /**
+     * remove all alarms
+     */
+	void ForceRemoveAllAlarms();
   protected:
 
     Mutex lock;

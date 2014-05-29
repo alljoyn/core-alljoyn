@@ -362,6 +362,17 @@ bool Timer::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
     return foundAlarm;
 }
 
+void Timer::ForceRemoveAllAlarms()
+{
+    lock.Lock();
+
+    if (isRunning || expireOnExit)
+    {
+        alarms.clear();
+    }
+    lock.Unlock();
+}
+
 bool Timer::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
 {
     bool foundAlarm = false;
