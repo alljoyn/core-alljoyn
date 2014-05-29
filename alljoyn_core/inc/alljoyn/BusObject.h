@@ -282,7 +282,7 @@ class BusObject : public MessageReceiver {
      * description. In such a case, language should be set to "".
      *
      * @param language A language tag describing the language of the description
-     * @param description The description
+     * @param text The description
      */
     void SetDescription(const char* language, const char* text);
 
@@ -546,10 +546,23 @@ class BusObject : public MessageReceiver {
      *
      * @param deep     Include XML for all descendants rather than stopping at direct children.
      * @param indent   Number of characters to indent the XML
-     * @param languageTag   language reguested for <description>'s. NULL for no descriptions.
      * @return Description of the object in AllJoyn introspection XML format
      */
-    virtual qcc::String GenerateIntrospection(bool deep = false, size_t indent = 0, const char* languageTag = NULL) const;
+    virtual qcc::String GenerateIntrospection(bool deep = false, size_t indent = 0) const;
+
+    /**
+     * Returns a description of the object in the AllJoyn introspection XML format.
+     * This is the same as the D-Bus format but includes <description> elements.
+     * This method can be overridden by derived classes in order to customize the
+     * introspection XML presented to remote nodes. Note that to DTD description and
+     * the root element are not generated.
+     *
+     * @param languageTag   language reguested for <description>'s. NULL for no descriptions.
+     * @param deep     Include XML for all descendants rather than stopping at direct children.
+     * @param indent   Number of characters to indent the XML
+     * @return Description of the object in AllJoyn introspection XML format
+     */
+    virtual qcc::String GenerateIntrospection(const char* languageTag, bool deep = false, size_t indent = 0) const;
 
     /**
      * Called by the message bus when the object has been successfully registered. The object can
