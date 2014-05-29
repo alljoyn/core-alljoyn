@@ -40,7 +40,7 @@ public class EventsFragment extends Fragment {
 	private ExpandableListView eventDevices;
 	private static ExpandableAdapter eventAdapter;
 	
-	private Description mSelectedEvent;
+	private static Description mSelectedEvent;
 	
 	public Description getSelectedEvent() { return mSelectedEvent; }
 	
@@ -183,6 +183,8 @@ public class EventsFragment extends Fragment {
 			if(check.isChecked() && checkboxDirtyFlags.elementAt(groupPosition).elementAt(childPosition) == true) {
 				check.setChecked(false);
 				checkboxDirtyFlags.elementAt(groupPosition).set(childPosition, false);
+			} else if(check.getTag() == mSelectedEvent) {
+				check.setChecked(true);
 			}
 			return convertView;
 		}

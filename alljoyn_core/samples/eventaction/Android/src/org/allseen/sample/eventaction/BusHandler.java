@@ -121,9 +121,9 @@ public class BusHandler extends Handler {
 	 * Callback from the jni code
 	 * @param sessionName name of the remote device that contains a rule engine
 	 */
-	public void foundRuleEngineApplication(String sessionName) {
+	public void foundRuleEngineApplication(String sessionName, String friendlyName) {
 		Log.d(TAG, "Found Rule Engine: "+sessionName);
-		listener.onRuleEngineFound(sessionName);
+		listener.onRuleEngineFound(sessionName, friendlyName);
 	}
 	
 	/**
@@ -132,11 +132,17 @@ public class BusHandler extends Handler {
 	 */
 	public void saveRule(String data) {
 		Editor editor = mPrefs.edit();
-		Set<String> rules = mPrefs.getStringSet(PREFS_KEY, new HashSet<String>());
-		rules.add(data);
-		Log.d(TAG, "Save Rule: "+data);
+		/** If using a newer version of Android use the following, otherwise create a long string */
+		//Set<String> rules = mPrefs.getStringSet(PREFS_KEY, new HashSet<String>());
+		//rules.add(data);
+		//editor.clear();
+		//editor.putStringSet(PREFS_KEY, rules);
+		/** For Gingerbread use the following */
+		String rules = mPrefs.getString(PREFS_KEY, "");
+		rules += data + ";";
 		editor.clear();
-		editor.putStringSet(PREFS_KEY, rules);
+		editor.putString(PREFS_KEY, rules);
+		Log.d(TAG, "Save Rule: "+data);
 		editor.commit();
 	}
 	
@@ -144,10 +150,23 @@ public class BusHandler extends Handler {
 	 * Method invoked via JNI to read the preferences and then save each stored rule
 	 */
 	public void loadRules() {
-		Set<String> rules = mPrefs.getStringSet(PREFS_KEY, new HashSet<String>());
-		for (String rule : rules) {
-			Log.d(TAG, "Parsing saved rule: "+rule);
-			parseSavedRuleAndAdd(rule);
+		/** If using a newer version of Android use the following, otherwise create a long string */
+		//Set<String> rules = mPrefs.getStringSet(PREFS_KEY, new HashSet<String>());
+		//for (String rule : rules) {
+			//Log.d(TAG, "Parsing saved rule: "+rule);
+			//parseSavedRuleAndAdd(rule);
+		//}
+		/** For Gingerbread use the following */
+		String ruleString = mPrefs.getString(PREFS_KEY, "");
+		Log.d(TAG, "Read saved string: "+ruleString);
+		if(ruleString.length() > 0) {
+			String[] rules = ruleString.split("\\;");
+			for (int i = 0; i < rules.length; i++) {
+				if (rules[i] != null && rules[i].length() > 0) { 
+					Log.d(TAG, "Parsing saved rule: "+rules[i]);
+					parseSavedRuleAndAdd(rules[i]);
+				}
+			}
 		}
 	}
 
@@ -214,6 +233,10 @@ public class BusHandler extends Handler {
     public void introspect(String sessionName, int sessionId, String path, DescriptionParser node) {
     	try{
         	String xml = doIntrospection(sessionName, path, sessionId);
+        	if(xml == null) {
+        		/** The device must not support the new org.allseen.Introspectable interface */
+        		return;
+        	}
 	    	node.parse(xml);
 
 	    	/*

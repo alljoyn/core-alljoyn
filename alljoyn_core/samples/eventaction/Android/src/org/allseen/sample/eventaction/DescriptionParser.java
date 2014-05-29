@@ -71,8 +71,10 @@ public class DescriptionParser {
 			sawRootNode = false;
 			try{
 				xmlReader.parse(new InputSource(new StringReader(xml)));
-			}catch(IOException cantReallyHappen) {
+			} catch(IOException cantReallyHappen) {
 				Log.e("IntrospectionNode", "Failed to read the XML: '" + cantReallyHappen.getMessage() + "', ", cantReallyHappen);
+			} catch(Exception shouldNotHappen) {
+				Log.e("IntrospectionNode", "Failed to read the XML: '" + shouldNotHappen.getMessage() + "', ", shouldNotHappen);
 			}
 			this.currentNode = null;
 		}
@@ -105,12 +107,19 @@ public class DescriptionParser {
 				currInfo.setIface(iface);
 				currInfo.setPath(currentNode.path);
 				currInfo.setMemberName(getNameAttr(attrs));
-				((EventDescription)currInfo).setSessionless(getIfSessionless(attrs));
+				try{
+					((EventDescription)currInfo).setSessionless(getIfSessionless(attrs));
+				} catch(Exception e) {
+					/** Do nothing with this since the isSessionless attribute was not found */
+				}
 			}
 			else if(qName.equals("arg")) {
 				String arg = getSignatureAttr(attrs);
 				currInfo.addSignature(arg);
 				//TODO: parse arg description
+			}
+			else if(qName.equals("descirption")) {
+				Log.d(BusHandler.TAG, "Found a description");
 			}
 		}
 

@@ -17,6 +17,7 @@
 package org.allseen.sample.eventaction;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Vector;
 
 import org.allseen.sample.eventaction.BusHandler;
@@ -43,6 +44,7 @@ public class RulesActivity extends FragmentActivity implements EventActionListen
 	
 	private Spinner mRuleSelector;
     private ArrayAdapter<String> ruleEngineAdapter;
+    private HashMap<String, String> mfriendlyToBusMap = new HashMap<String, String>();
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -64,7 +66,7 @@ public class RulesActivity extends FragmentActivity implements EventActionListen
             public void onItemSelected(AdapterView<?> parentView, View selectedItemView, int position, long id) {
 				//Position 0 is local rule engine
 	            String selected = position == 0 ? null : ruleEngineAdapter.getItem(position);
-	            mBusHandler.setEngine(selected);
+	            mBusHandler.setEngine(mfriendlyToBusMap.get(selected));
             }
 			@Override
             public void onNothingSelected(AdapterView<?> parentView) {
@@ -139,10 +141,11 @@ public class RulesActivity extends FragmentActivity implements EventActionListen
 	}
 	
 	@Override
-	public void onRuleEngineFound(final String sessionName) {
+	public void onRuleEngineFound(final String sessionName, final String friendlyName) {
 		runOnUiThread(new Runnable() {
 			public void run() {
-				ruleEngineAdapter.add(sessionName);
+				mfriendlyToBusMap.put(friendlyName, sessionName);
+				ruleEngineAdapter.add(friendlyName);
 				ruleEngineAdapter.notifyDataSetChanged();
 			}
 		});
