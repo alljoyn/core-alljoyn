@@ -570,6 +570,9 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
     uint32_t transportIndex = IndexFromBit(transportMask);
     assert(transportIndex < 16 && "IpNameServiceImpl::OpenInterface(): Bad transport index");
 
+    if (transportIndex >= 16) {
+        return ER_BAD_TRANSPORT_MASK;
+    }
     //
     // There are at least two threads that can wander through the vector below
     // so we need to protect access to the list with a convenient mutex.
@@ -611,6 +614,10 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
 
     uint32_t transportIndex = IndexFromBit(transportMask);
     assert(transportIndex < 16 && "IpNameServiceImpl::OpenInterface(): Bad transport index");
+
+    if (transportIndex >= 16) {
+        return ER_BAD_TRANSPORT_MASK;
+    }
 
     //
     // Can only call OpenInterface() if the object is running.
@@ -690,6 +697,10 @@ QStatus IpNameServiceImpl::CloseInterface(TransportMask transportMask, const qcc
     uint32_t transportIndex = IndexFromBit(transportMask);
     assert(transportIndex < 16 && "IpNameServiceImpl::CloseInterface(): Bad transport index");
 
+    if (transportIndex >= 16) {
+        return ER_BAD_TRANSPORT_MASK;
+    }
+
     //
     // There are at least two threads that can wander through the vector below
     // so we need to protect access to the list with a convenient mutex.
@@ -738,6 +749,10 @@ QStatus IpNameServiceImpl::CloseInterface(TransportMask transportMask, const qcc
 
     uint32_t transportIndex = IndexFromBit(transportMask);
     assert(transportIndex < 16 && "IpNameServiceImpl::CloseInterface(): Bad transport index");
+
+    if (transportIndex >= 16) {
+        return ER_BAD_TRANSPORT_MASK;
+    }
 
     //
     // There are at least two threads that can wander through the vector below
@@ -1441,6 +1456,10 @@ QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
     uint32_t i = IndexFromBit(transportMask);
     assert(i < 16 && "IpNameServiceImpl::SetCallback(): Bad callback index");
 
+    if (i >= 16) {
+        return ER_BAD_TRANSPORT_MASK;
+    }
+
     //
     // This is a bit non-intuitive.  We have to disable the name service (stop
     // listening on the sockets for the multicast groups) to pass the Android
@@ -1547,6 +1566,10 @@ QStatus IpNameServiceImpl::Enabled(TransportMask transportMask,
     uint32_t i = IndexFromBit(transportMask);
     assert(i < 16 && "IpNameServiceImpl::SetCallback(): Bad callback index");
 
+    if (i >= 16) {
+        return ER_BAD_TRANSPORT_MASK;
+    }
+
     reliableIPv4Port = m_reliableIPv4Port[i];
     unreliableIPv4Port = m_unreliableIPv4Port[i];
     reliableIPv6Port = m_reliableIPv6Port[i];
@@ -1590,6 +1613,10 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
     }
 
     uint32_t transportIndex = IndexFromBit(transportMask);
+
+    if (transportIndex >= 16) {
+        return ER_BAD_TRANSPORT_MASK;
+    }
 
     MatchMap matching;
     ParseMatchRule(matchingStr, matching);
@@ -1706,7 +1733,16 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
 
 QStatus IpNameServiceImpl::CancelFindAdvertisement(TransportMask transportMask, const qcc::String& matchingStr, LocatePolicy policy, TransportMask completeTransportMask)
 {
+    if (CountOnes(transportMask) != 1) {
+        QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::CancelFindAdvertisement(): Bad transport mask"));
+        return ER_BAD_TRANSPORT_MASK;
+    }
+
     uint32_t transportIndex = IndexFromBit(transportMask);
+    if (transportIndex >= 16) {
+        return ER_BAD_TRANSPORT_MASK;
+    }
+
     MatchMap matching;
     ParseMatchRule(matchingStr, matching);
     //
@@ -1812,6 +1848,9 @@ QStatus IpNameServiceImpl::SetCallback(TransportMask transportMask,
 
     uint32_t i = IndexFromBit(transportMask);
     assert(i < 16 && "IpNameServiceImpl::SetCallback(): Bad callback index");
+    if (i >= 16) {
+        return ER_BAD_TRANSPORT_MASK;
+    }
 
     m_mutex.Lock();
     // Wait till the callback is in use.
@@ -1869,7 +1908,10 @@ size_t IpNameServiceImpl::NumAdvertisements(TransportMask transportMask)
     }
 
     uint32_t i = IndexFromBit(transportMask);
-    assert(i < 16 && "IpNameServiceImpl::SetCallback(): Bad callback index");
+    assert(i < 16 && "IpNameServiceImpl::NumAdvertisements(): Bad callback index");
+    if (i >= 16) {
+        return ER_BAD_TRANSPORT_MASK;
+    }
 
     return m_advertised[i].size();
 }
@@ -1899,6 +1941,9 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
 
     uint32_t transportIndex = IndexFromBit(transportMask);
     assert(transportIndex < 16 && "IpNameServiceImpl::AdvertiseName(): Bad transport index");
+    if (transportIndex >= 16) {
+        return ER_BAD_TRANSPORT_MASK;
+    }
 
     if (m_state != IMPL_RUNNING) {
         QCC_DbgPrintf(("IpNameServiceImpl::AdvertiseName(): Not IMPL_RUNNING"));
@@ -2226,6 +2271,10 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
 
     uint32_t transportIndex = IndexFromBit(transportMask);
     assert(transportIndex < 16 && "IpNameServiceImpl::CancelAdvertiseName(): Bad transport index");
+
+    if (transportIndex >= 16) {
+        return ER_BAD_TRANSPORT_MASK;
+    }
 
     if (m_state != IMPL_RUNNING) {
         QCC_DbgPrintf(("IpNameServiceImpl::CancelAdvertiseName(): Not IMPL_RUNNING"));
@@ -3209,6 +3258,9 @@ void IpNameServiceImpl::RewriteVersionSpecific(
 
                 uint32_t transportIndex = IndexFromBit(isAt->GetTransportMask());
                 assert(transportIndex < 16 && "IpNameServiceImpl::RewriteVersionSpecific(): Bad transport index in messageg");
+                if (transportIndex >= 16) {
+                    return;
+                }
 
                 //
                 // Now we can write the various addresses into the
@@ -3752,6 +3804,9 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet)
 
                 uint32_t transportIndex = IndexFromBit(transportMask);
                 assert(transportIndex < 16 && "IpNameServiceImpl::SendOutboundMessageActively(): Bad transport index");
+                if (transportIndex >= 16) {
+                    return;
+                }
 
                 //
                 // If this interface is requested as an outbound interface for this
@@ -3775,6 +3830,9 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet)
 
                 uint32_t transportIndex = IndexFromBit(transportMask);
                 assert(transportIndex < 16 && "IpNameServiceImpl::SendOutboundMessageActively(): Bad transport index");
+                if (transportIndex >= 16) {
+                    return;
+                }
 
                 //
                 // If this interface is requested as an outbound interface for this
@@ -5680,7 +5738,11 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
         }
 
         transportIndex = IndexFromBit(transportMask);
-        assert(transportIndex < 16 && "IpNameServiceImpl::SetCallback(): Bad callback index");
+        assert(transportIndex < 16 && "IpNameServiceImpl::HandleProtocolAnswer(): Bad callback index");
+        if (transportIndex >= 16) {
+            return;
+        }
+
     }
 
     //
@@ -6786,6 +6848,7 @@ uint32_t IpNameServiceImpl::IndexFromBit(uint32_t data)
     // is count (index == number of trailing zero bits).
     //
     QCC_DbgPrintf(("IpNameServiceImpl::IndexFromBit(): Index is %d.", c));
+    assert(c < 16 && "IpNameServiceImpl::IndexFromBit(): Bad transport index");
     return c;
 }
 
@@ -6856,7 +6919,10 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
             qcc::Alarm startBurstAlarm(count, burstResponceTimerListener, context);
             m_burstResponseTimer.AddAlarm(startBurstAlarm);
             m_mutex.Unlock();
+        } else {
+            delete brh_ptr;
         }
+
         return;
     }
     MDNSPacket mdnspacket = MDNSPacket::cast(brh_ptr->packet);
@@ -6996,37 +7062,47 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
         }
     }
 }
-set<String> IpNameServiceImpl::GetAdvertising(TransportMask transport) {
+set<String> IpNameServiceImpl::GetAdvertising(TransportMask transportMask) {
     set<String> set_common, set_return;
+    std::set<String> empty;
     set_intersection(m_advertised[TRANSPORT_INDEX_TCP].begin(), m_advertised[TRANSPORT_INDEX_TCP].end(), m_advertised[TRANSPORT_INDEX_UDP].begin(), m_advertised[TRANSPORT_INDEX_UDP].end(), std::inserter(set_common, set_common.end()));
 
-    if (transport == TRANSPORT_TCP || transport == TRANSPORT_UDP) {
-        uint16_t transportIndex = IndexFromBit(transport);
+    if (transportMask == TRANSPORT_TCP || transportMask == TRANSPORT_UDP) {
+
+
+        uint32_t transportIndex = IndexFromBit(transportMask);
+        if (transportIndex >= 16) {
+            return empty;
+        }
+
         set_difference(m_advertised[transportIndex].begin(), m_advertised[transportIndex].end(), set_common.begin(), set_common.end(), std::inserter(set_return, set_return.end()));
         return set_return;
     }
-    if (transport == (TRANSPORT_TCP | TRANSPORT_UDP)) {
+    if (transportMask == (TRANSPORT_TCP | TRANSPORT_UDP)) {
         return set_common;
     }
-    std::set<String> empty;
 
     return empty;
 
 }
-set<String> IpNameServiceImpl::GetAdvertisingQuietly(TransportMask transport) {
+set<String> IpNameServiceImpl::GetAdvertisingQuietly(TransportMask transportMask) {
     set<String> set_common, set_return;
+    std::set<String> empty;
     set_intersection(m_advertised_quietly[TRANSPORT_INDEX_TCP].begin(), m_advertised_quietly[TRANSPORT_INDEX_TCP].end(), m_advertised_quietly[TRANSPORT_INDEX_UDP].begin(), m_advertised_quietly[TRANSPORT_INDEX_UDP].end(), std::inserter(set_common, set_common.end()));
 
-    if (transport == TRANSPORT_TCP || transport == TRANSPORT_UDP) {
-        uint16_t transportIndex = IndexFromBit(transport);
+    if (transportMask == TRANSPORT_TCP || transportMask == TRANSPORT_UDP) {
+        uint32_t transportIndex = IndexFromBit(transportMask);
+        if (transportIndex >= 16) {
+            return empty;
+        }
+
         set_difference(m_advertised_quietly[transportIndex].begin(), m_advertised_quietly[transportIndex].end(), set_common.begin(), set_common.end(), std::inserter(set_return, set_return.end()));
         return set_return;
     }
-    if (transport == (TRANSPORT_TCP | TRANSPORT_UDP)) {
+    if (transportMask == (TRANSPORT_TCP | TRANSPORT_UDP)) {
 
         return set_common;
     }
-    std::set<String> empty;
 
     return empty;
 
