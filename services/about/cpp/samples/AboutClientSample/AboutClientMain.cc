@@ -31,14 +31,11 @@ static volatile sig_atomic_t quit;
 
 static BusAttachment* busAttachment;
 
-static void SignalHandler(int sig)
+static volatile sig_atomic_t s_interrupt = false;
+
+static void SigIntHandler(int sig)
 {
-    switch (sig) {
-    case SIGINT:
-    case SIGTERM:
-        quit = 1;
-        break;
-    }
+    s_interrupt = true;
 }
 
 #define SERVICE_EXIT_OK       0
@@ -246,6 +243,18 @@ void announceHandlerCallback(qcc::String const& busName, unsigned short port)
     }
 }
 
+/** Wait for SIGINT before continuing. */
+void WaitForSigInt(void)
+{
+    while (s_interrupt == false) {
+#ifdef _WIN32
+        Sleep(100);
+#else
+        usleep(100 * 1000);
+#endif
+    }
+}
+
 /**
  *  client main function.
  *
@@ -269,21 +278,8 @@ int main(int argc, char**argv, char**envArg)
     PasswordManager::SetCredentials("ALLJOYN_PIN_KEYX", "000000");
     #endif
 
-    // QCC_SetLogLevels("ALLJOYN=7;ALL=1");
-    struct sigaction act, oldact;
-    sigset_t sigmask, waitmask;
-
-    // Block all signals by default for all threads.
-    sigfillset(&sigmask);
-    sigdelset(&sigmask, SIGSEGV);
-    pthread_sigmask(SIG_BLOCK, &sigmask, NULL);
-
-    // Setup a handler for SIGINT and SIGTERM
-    act.sa_handler = SignalHandler;
-    sigemptyset(&act.sa_mask);
-    act.sa_flags = SA_SIGINFO | SA_RESTART;
-    sigaction(SIGINT, &act, &oldact);
-    sigaction(SIGTERM, &act, &oldact);
+    // Install SIGINT handler
+    signal(SIGINT, SigIntHandler);
 
     busAttachment = new BusAttachment("AboutClientMain", true);
 
@@ -309,16 +305,9 @@ int main(int argc, char**argv, char**envArg)
     AnnouncementRegistrar::RegisterAnnounceHandler(*busAttachment, *announceHandler,
                                                    interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
 
-    // Setup signals to wait for.
-    sigfillset(&waitmask);
-    sigdelset(&waitmask, SIGINT);
-    sigdelset(&waitmask, SIGTERM);
-
-    quit = 0;
-
-    while (!quit) {
-        // Wait for a signal.
-        sigsuspend(&waitmask);
+    // Perform the service asynchronously until the user signals for an exit.
+    if (ER_OK == status) {
+        WaitForSigInt();
     }
 
     AnnouncementRegistrar::UnRegisterAnnounceHandler(*busAttachment, *announceHandler, NULL, 0);
