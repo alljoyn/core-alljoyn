@@ -2744,6 +2744,14 @@ void AllJoynObj::OnAppResume(const InterfaceDescription::Member* member, Message
     }
 }
 
+TransportMask AllJoynObj::GetCompleteTransportMaskFilter() {
+    TransportList& transList = bus.GetInternal().GetTransportList();
+    Transport* tcpTransport = transList.GetTransport("tcp:");
+    Transport* udpTransport = transList.GetTransport("udp:");
+    TransportMask filterComplete = (tcpTransport && tcpTransport->IsRunning()) ? TRANSPORT_TCP : 0;
+    filterComplete |= (udpTransport && udpTransport->IsRunning()) ? TRANSPORT_UDP : 0;
+    return filterComplete;
+}
 void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Message& msg)
 {
     uint32_t replyCode = ALLJOYN_ADVERTISENAME_REPLY_SUCCESS;
@@ -2758,6 +2766,8 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
     msg->GetArgs(numArgs, args);
     QStatus status = MsgArg::Get(args, numArgs, "sq", &advertiseName, &transports);
     QCC_DbgTrace(("AllJoynObj::AdvertiseName(%s, %x)", (status == ER_OK) ? advertiseName : "", transports));
+
+
 
     if (ER_OK != status) {
         QCC_LogError(status, ("Fail to parse msg parameters"));
@@ -2830,7 +2840,7 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
                 for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
                     Transport* trans = transList.GetTransport(i);
                     if (trans && trans->IsBusToBus() && (trans->GetTransportMask() & transports)) {
-                        status = trans->EnableAdvertisement(advertiseNameStr, quietly, transports);
+                        status = trans->EnableAdvertisement(advertiseNameStr, quietly, transports & GetCompleteTransportMaskFilter());
                         if ((status != ER_OK) && (status != ER_NOT_IMPLEMENTED)) {
                             QCC_LogError(status, ("EnableAdvertisment failed for transport %s - mask=0x%x", trans->GetTransportName(), transports));
                         }
@@ -2952,7 +2962,7 @@ QStatus AllJoynObj::ProcCancelAdvertise(const qcc::String& sender, const qcc::St
         TransportList& transList = bus.GetInternal().GetTransportList();
         for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
             Transport* trans = transList.GetTransport(i);
-            if (trans && (trans->GetTransportMask() & cancelMask)) {
+            if (trans && (trans->GetTransportMask() & (cancelMask & GetCompleteTransportMaskFilter()))) {
                 trans->DisableAdvertisement(advertiseName, cancelMask);
             } else if (!trans) {
                 QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
@@ -3119,7 +3129,7 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
         for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
             Transport* trans = transList.GetTransport(i);
             if (trans && (trans->GetTransportMask() & enableMask)) {
-                trans->EnableDiscovery(matchingStr.c_str(), enableMask);
+                trans->EnableDiscovery(matchingStr.c_str(), enableMask & GetCompleteTransportMaskFilter());
             } else if (!trans) {
                 QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
             }
@@ -3280,7 +3290,7 @@ QStatus AllJoynObj::ProcCancelFindAdvertisement(const qcc::String& sender, const
         TransportList& transList = bus.GetInternal().GetTransportList();
         for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
             Transport* trans =  transList.GetTransport(i);
-            if (trans && (trans->GetTransportMask() & cancelMask)) {
+            if (trans && (trans->GetTransportMask() & (cancelMask & GetCompleteTransportMaskFilter()))) {
                 trans->DisableDiscovery(matchingStr.c_str(), refMask);
             }
         }
