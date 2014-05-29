@@ -354,17 +354,6 @@ const char* IpNameServiceImpl::IPV6_MDNS_MULTICAST_GROUP = "ff02::fb";
 const uint32_t IpNameServiceImpl::RETRY_INTERVALS[] = { 1, 2, 6, 18 };
 
 
-class IpNameServiceImpl::BurstExpiryHandler : public qcc::AlarmListener {
-  public:
-    BurstExpiryHandler() { }
-    void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
-
-};
-
-void IpNameServiceImpl::BurstExpiryHandler::AlarmTriggered(const Alarm& alarm, QStatus reason) {
-
-}
-
 IpNameServiceImpl::IpNameServiceImpl()
     : Thread("IpNameServiceImpl"), m_state(IMPL_SHUTDOWN), m_isProcSuspending(false),
     m_terminal(false), m_protect_callback(false), m_timer(0), m_tDuration(DEFAULT_DURATION),
@@ -375,7 +364,6 @@ IpNameServiceImpl::IpNameServiceImpl()
     m_enabled(false), m_doEnable(false), m_doDisable(false),
     m_ipv4QuietSockFd(-1), m_ipv6QuietSockFd(-1),
     m_burstResponseTimer("BurstResponseTimer", false, 1, false, 50),
-    burstExpiryHandler(new BurstExpiryHandler()),
     m_protectListeners(false), m_packetScheduler(*this, m_retries)
 {
     QCC_DbgHLPrintf(("IpNameServiceImpl::IpNameServiceImpl()"));
@@ -1704,12 +1692,13 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
         MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
         query->AddAdditionalRecord(searchRecord);
         if (completeTransportMask & TRANSPORT_TCP) {
-            m_v2_queries[IndexFromBit(TRANSPORT_TCP)].insert(matchingStr);
+            m_v2_queries[TRANSPORT_INDEX_TCP].insert(matchingStr);
         }
         if (completeTransportMask & TRANSPORT_UDP) {
-            m_v2_queries[IndexFromBit(TRANSPORT_UDP)].insert(matchingStr);
+            m_v2_queries[TRANSPORT_INDEX_UDP].insert(matchingStr);
         }
         Query(completeTransportMask, query);
+        delete searchRData;
     }
 
     return ER_OK;
@@ -2206,6 +2195,7 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
         mdnsPacket->AddAdditionalRecord(advRecord);
         mdnsPacket->SetVersion(2, 2);
         Response(completeTransportMask, 120, mdnsPacket);
+        delete advRData;
     }
 
     return ER_OK;
@@ -2502,6 +2492,7 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
         mdnsPacket->AddAdditionalRecord(advRecord);
         mdnsPacket->SetVersion(2, 2);
         Response(completeTransportMask, 0, mdnsPacket);
+        delete advRData;
     }
 
     return ER_OK;
@@ -2522,6 +2513,7 @@ QStatus IpNameServiceImpl::Ping(TransportMask transportMask, const qcc::String& 
     MDNSPingRData* pingRData = new MDNSPingRData(name);
     MDNSResourceRecord pingRecord("ping." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingRData);
     query->AddAdditionalRecord(pingRecord);
+    delete pingRData;
 
     //
     // The search record is added so that we can piggy back cache refreshes on
@@ -2530,6 +2522,7 @@ QStatus IpNameServiceImpl::Ping(TransportMask transportMask, const qcc::String& 
     MDNSSearchRData* searchRData = new MDNSSearchRData(name);
     MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
     query->AddAdditionalRecord(searchRecord);
+    delete searchRData;
 
     return Query(transportMask, query);
 }
@@ -2563,6 +2556,7 @@ QStatus IpNameServiceImpl::Query(TransportMask completeTransportMask, MDNSPacket
     refRData->SetSearchID(id);
     MDNSResourceRecord refRecord("sender-info." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
     mdnsPacket->AddAdditionalRecord(refRecord);
+    delete refRData;
 
     if (mdnsPacket->DestinationSet()) {
         QueueProtocolMessage(Packet::cast(mdnsPacket));
@@ -2596,10 +2590,12 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
         MDNSPtrRData* ptrRDataTcp = new MDNSPtrRData();
         ptrRDataTcp->SetPtrDName(m_guid + "._alljoyn._tcp.local.");
         MDNSResourceRecord ptrRecordTcp("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRDataTcp);
+        delete ptrRDataTcp;
 
         MDNSSrvRData* srvRDataTcp = new MDNSSrvRData(1 /*priority */, 1 /* weight */,
                                                      m_reliableIPv4Port[TRANSPORT_INDEX_TCP] /* port */, m_guid + ".local." /* target */);
         MDNSResourceRecord srvRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, 120, srvRDataTcp);
+        delete srvRDataTcp;
 
         MDNSTextRData* txtRDataTcp = new MDNSTextRData();
         if (m_reliableIPv6Port[TRANSPORT_INDEX_TCP]) {
@@ -2607,6 +2603,8 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
         }
 
         MDNSResourceRecord txtRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRDataTcp);
+        delete txtRDataTcp;
+
         mdnsPacket->AddAnswer(ptrRecordTcp);
         mdnsPacket->AddAnswer(srvRecordTcp);
         mdnsPacket->AddAnswer(txtRecordTcp);
@@ -2616,10 +2614,12 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
         MDNSPtrRData* ptrRDataUdp = new MDNSPtrRData();
         ptrRDataUdp->SetPtrDName(m_guid + "._alljoyn._udp.local.");
         MDNSResourceRecord ptrRecordUdp("_alljoyn._udp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRDataUdp);
+        delete ptrRDataUdp;
 
         MDNSSrvRData* srvRDataUdp = new MDNSSrvRData(1 /*priority */, 1 /* weight */,
                                                      m_unreliableIPv4Port[TRANSPORT_INDEX_UDP] /* port */, m_guid + ".local." /* target */);
         MDNSResourceRecord srvRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, 120, srvRDataUdp);
+        delete srvRDataUdp;
 
         MDNSTextRData* txtRDataUdp = new MDNSTextRData();
         // TODO: Check these values.
@@ -2628,6 +2628,7 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
         }
 
         MDNSResourceRecord txtRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRDataUdp);
+        delete txtRDataUdp;
 
         mdnsPacket->AddAnswer(ptrRecordUdp);
         mdnsPacket->AddAnswer(srvRecordUdp);
@@ -2638,6 +2639,7 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
     refRData->SetSearchID(id);
     MDNSResourceRecord refRecord("sender-info." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, ttl, refRData);
     mdnsPacket->AddAdditionalRecord(refRecord);
+    delete refRData;
 
     //
     // We don't want allow the caller to advertise an unlimited number of
@@ -3048,7 +3050,7 @@ void IpNameServiceImpl::SendProtocolMessage(
             }
 
 #endif
-            QStatus status;
+            QStatus status = ER_OK;
             if (msgVersion == 2) {
                 qcc::IPAddress ipv6AllJoyn(IPV6_MDNS_MULTICAST_GROUP);
                 QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
@@ -4319,7 +4321,7 @@ void* IpNameServiceImpl::Run(void* arg)
                 QCC_DbgHLPrintf(("IpNameServiceImpl::Run(): Got IPNS message from \"%s\"", remoteAddress.ToString().c_str()));
 
                 // Find out the destination port and interface index for this message.
-                uint16_t recvPort;
+                uint16_t recvPort = -1;
                 int32_t ifIndex;
                 bool destIsIPv4Broadcast = false;
 
@@ -4353,8 +4355,11 @@ void* IpNameServiceImpl::Run(void* arg)
                         }
                     }
                 }
-                QCC_DbgHLPrintf(("Processing packet on interface index %d that was received on index %d from %s:%u to %s:%u",
-                                 ifIndex, localInterfaceIndex, remoteAddress.ToString().c_str(), remotePort, localAddress.ToString().c_str(), recvPort));
+
+                if (recvPort != -1) {
+                    QCC_DbgHLPrintf(("Processing packet on interface index %d that was received on index %d from %s:%u to %s:%u",
+                                     ifIndex, localInterfaceIndex, remoteAddress.ToString().c_str(), remotePort, localAddress.ToString().c_str(), recvPort));
+                }
                 /*
                    if (ifIndex != localInterfaceIndex) {
                     if (localAddress.ToString() == IPV4_MDNS_MULTICAST_GROUP ||
@@ -4378,8 +4383,10 @@ void* IpNameServiceImpl::Run(void* arg)
                 //
                 // We got a message over the multicast channel.  Deal with it.
                 //
-                qcc::IPEndpoint endpoint(remoteAddress, remotePort);
-                HandleProtocolMessage(buffer, nbytes, endpoint, recvPort);
+                if (recvPort != -1) {
+                    qcc::IPEndpoint endpoint(remoteAddress, remotePort);
+                    HandleProtocolMessage(buffer, nbytes, endpoint, recvPort);
+                }
             }
         }
     }
@@ -4434,6 +4441,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
             MDNSSrvRData* srvRDataUdp = new MDNSSrvRData(1 /*priority */, 1 /* weight */,
                                                          m_unreliableIPv4Port[TRANSPORT_INDEX_UDP] /* port */, m_guid + ".local." /* target */);
             MDNSResourceRecord srvRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, 120, srvRDataUdp);
+            delete srvRDataUdp;
 
             MDNSTextRData* txtRDataUdp = new MDNSTextRData();
 
@@ -5510,7 +5518,7 @@ void IpNameServiceImpl::DoPeriodicMaintenance(void)
                 //
                 //Remove periodic unsolicitated responses for V2
                 //
-                Retransmit(index, false, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V0_V1, TRANSPORT_TCP | TRANSPORT_UDP);
+                Retransmit(index, false, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V0_V1, MaskFromIndex(index));
             }
             m_timer = m_tDuration;
         }
