@@ -301,6 +301,16 @@ public class BusAttachment {
             SessionPortListener listener);
 
     /**
+     * Set a Translator for all BusObjects and InterfaceDescriptions. This Translator is used for
+     * descriptions appearing in introspection. Note that any Translators set on a specific
+     * InterfaceDescription or BusObject will be used for those specific elements - this Translator
+     * is used only for BusObjects and InterfaceDescriptions that do not have Translators set for them.
+     *
+     * @param translator       The Translator instance
+     */
+	public native void setDescriptionTranslator(Translator translator);
+
+    /**
      * When passed to BindSessionPort as the requested port, the system will
      * assign an ephemeral session port
      */
