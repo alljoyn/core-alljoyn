@@ -84,7 +84,6 @@ static const char internalConfig[] =
     "<busconfig>"
     "  <type>alljoyn</type>"
     "  <listen>tcp:r4addr=0.0.0.0,r4port=9956</listen>"
-    "  <listen>udp:u4addr=0.0.0.0,u4port=9955</listen>"
     "  <listen>localhost:port=9955</listen>"
     "  <listen>localhost:port=9956</listen>"
     "  <property name=\"ns_interfaces\">*</property>"
