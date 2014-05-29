@@ -322,7 +322,13 @@ def writeCPP0xFooters():
 """)
     if None != CPP0xCodeOut:
         CPP0xCodeOut.write("""    default:
-        return "<unknown>";
+        static char code[20];
+#ifdef _WIN32
+        _snprintf(code, sizeof(code), "<unknown>: 0x%04x", status);
+#else
+        snprintf(code, sizeof(code), "<unknown>: 0x%04x", status);
+#endif
+        return code;
     }
 }
 
@@ -527,7 +533,13 @@ def writeFooters():
 """)
     if None != codeOut:
         codeOut.write("""    default:
-        return "<unknown>";
+        static char code[20];
+#ifdef _WIN32
+        _snprintf(code, sizeof(code), "<unknown>: 0x%04x", status);
+#else
+        snprintf(code, sizeof(code), "<unknown>: 0x%04x", status);
+#endif
+        return code;
     }
 #endif
 }
