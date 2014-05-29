@@ -1,7 +1,7 @@
 LOCAL_PATH := $(call my-dir)
 
 # AllJoyn specifics
-ALLJOYN_DIST := ../../
+ALLJOYN_DIST := ../../../../
 
 include $(CLEAR_VARS)
 
