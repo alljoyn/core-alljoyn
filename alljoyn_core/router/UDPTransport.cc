@@ -812,8 +812,9 @@ class ArdpStream : public qcc::Stream {
          */
         AddCurrentThread();
 
+#ifndef NDEBUG
         DumpBytes((uint8_t*)buf, numBytes);
-
+#endif
         /*
          * Copy in the bytes to preserve the buffer management approach expected by
          * higher level code.
