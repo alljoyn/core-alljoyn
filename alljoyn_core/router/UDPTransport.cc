@@ -454,6 +454,9 @@
 using namespace std;
 using namespace qcc;
 
+/* BUGBUG FIXME TODO: Change timer value */
+const uint32_t UDP_ENDPOINT_MANAGEMENT_TIMER = 1000;  /* Limit maximum frequency of ManageEndpoints calls to this time */
+
 const uint32_t UDP_LINK_TIMEOUT_PROBE_ATTEMPTS       = 1;
 const uint32_t UDP_LINK_TIMEOUT_PROBE_RESPONSE_DELAY = 10;
 const uint32_t UDP_LINK_TIMEOUT_MIN_LINK_TIMEOUT     = 40;
@@ -1157,7 +1160,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         EP_FAILED,           /**< Starting has failed and this endpoint is not usable */
         EP_STARTING,         /**< The endpoint is being started, threads would be starting */
         EP_STARTED,          /**< The endpoint is ready for use, threads would be running */
-        EP_STOPPING,         /**< The endpoint is stopping but managed threads have not been joined */
+        EP_STOPPING,         /**< The endpoint is stopping but join has not been called */
         EP_DONE              /**< Threads have been shut down and joined */
     };
 
@@ -1191,6 +1194,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_stream(NULL),
         m_handle(NULL),
         m_conn(NULL),
+        m_id(0),
         m_ipAddr(),
         m_ipPort(0),
         m_suddenDisconnect(incoming),
@@ -1217,10 +1221,16 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * reason for an assert.
          */
         if (m_stream) {
-            assert(m_epState != EP_STARTING && m_epState != EP_STARTED && m_epState != EP_STOPPING &&
-                   "_UdpEndpoint::~_UdpEndpoint(): Endpoint is not quiescent during destruction");
             assert(m_stream->IsThreadSetEmpty() != false && "_UdpEndpoint::~_UdpEndpoint(): Threads present during destruction");
         }
+
+        /*
+         * Make sure that the stream has been disconnected in case we are deleted
+         * by some reference counting mechanism that is unaware of our little
+         * networking details.
+         */
+        DestroyStream();
+
         /*
          * The remote endpoint is going to poll for its internal->exitCount to
          * bump to one, which happens as a result of the thread exit callback
@@ -1258,16 +1268,9 @@ class _UDPEndpoint : public _RemoteEndpoint {
             SetEndpointType(ENDPOINT_TYPE_BUS2BUS);
         }
 
-        /*
-         * No threads to Start(), so we jumpt right to EP_STARTED
-         */
-        assert(m_epState == EP_STARTING &&
-               "UDPEndpoint::Start(): Endpoint not following expected state transition");
-        m_epState = EP_STARTED;
-
 #ifndef NDEBUG
         /*
-         * Debug consistency check.  If we are stopping an endpoint it must be
+         * Debug consistency check.  If we are starting an endpoint it must be
          * on either the m_authList or the m_endpointList exactly once, and it
          * must be associated with an ARDP connection.
          */
@@ -1275,19 +1278,29 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_transport->m_endpointListLock.Lock(MUTEX_CONTEXT);
         for (set<UDPEndpoint>::iterator i = m_transport->m_authList.begin(); i != m_transport->m_authList.end(); ++i) {
             UDPEndpoint ep = *i;
-            if (GetConn() == ep->GetConn()) {
+            if (GetConnId() == ep->GetConnId()) {
+                QCC_DbgPrintf(("_UDPEndpoint::Start(): found endpoint with conn ID == %d. on m_authList",
+                               GetConnId()));
                 ++found;
             }
         }
         for (set<UDPEndpoint>::iterator i = m_transport->m_endpointList.begin(); i != m_transport->m_endpointList.end(); ++i) {
             UDPEndpoint ep = *i;
-            if (GetConn() == ep->GetConn()) {
+            if (GetConnId() == ep->GetConnId()) {
+                QCC_DbgPrintf(("_UDPEndpoint::Start(): found endpoint with conn ID == %d. on m_endpointList",
+                               GetConnId()));
                 ++found;
             }
         }
         m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
-        assert(found == 1 && "_UdpEndpoint::Start()(): Endpoint not on exactly one pending list");
+        assert(found == 1 && "_UdpEndpoint::Start(): Endpoint not on exactly one pending list");
 #endif
+
+        /*
+         * No threads to Start(), so we jump right to started state.
+         */
+        assert(GetEpState() == EP_INITIALIZED && "_UDPEndpoint::Start(): Endpoint not in EP_INITIALIZED state");
+        SetEpStarted();
 
         /*
          * We need to hook back into the router and do what RemoteEndpoint would have
@@ -1308,17 +1321,50 @@ class _UDPEndpoint : public _RemoteEndpoint {
         QCC_DbgTrace(("_UDPEndpoint::Stop()"));
 
         /*
-         * No threads to Stop(), so we jump right to EP_DONE.
+         * The AllJoyn threading model says there can be exactly one Stop() for
+         * each Start() call.  A complication is that the daemon code can decide
+         * to call Stop() on its own without us ever knowing about it.  So we
+         * really have to allow for multiple calls to Stop() unless we check for
+         * that possibility everywhere we want to transition to stopped state.
          */
-        m_epState = EP_DONE;
+        EndpointState state = GetEpState();
+        if (state == EP_STOPPING || state == EP_DONE) {
+            QCC_DbgTrace(("_UDPEndpoint::Stop(): Already stopping"));
+            return ER_OK;
+        }
+
+        assert(GetEpState() == EP_STARTED && "_UDPEndpoint::Start(): Endpoint not in EP_STARTED state");
 
         /*
-         * If there are any threads blocked waiting to get bytes through to a remote
-         * host, we need to wake them up so they leave before we actually go away.
+         * Close the admission gate so nobody can start any further operations
+         * on the endpoint.
+         */
+        SetEpStopping();
+
+        /*
+         * If there is a live stream associated with this endpoint, we need to make
+         * sure we scare away any threads which might be trying to work with it.
          */
         if (m_stream) {
             m_stream->AlertThreadSet();
         }
+
+        /*
+         * If the endpoint is stopping, we need to stop demultiplexing data from ARDP
+         * to the endpoint.
+         */
+        m_transport->m_endpointListLock.Lock(MUTEX_CONTEXT);
+        ArdpConnRecord* conn = GetConn();
+        std::map<ArdpConnRecord* const, UDPEndpoint>::iterator i = m_transport->m_demux.find(conn);
+        if (i != m_transport->m_demux.end()) {
+            QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("_UDPEndpoint::Stop(): Erasing conn ID == %d. from m_demux",
+                                                    ARDP_GetConnId(conn)));
+            m_transport->m_demux.erase(i);
+        } else {
+            QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("_UDPEndpoint::Stop(): Conn ID == %d. not in m_demux",
+                                                    ARDP_GetConnId(conn)));
+        }
+        m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
 #ifndef NDEBUG
         /*
@@ -1330,19 +1376,24 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_transport->m_endpointListLock.Lock(MUTEX_CONTEXT);
         for (set<UDPEndpoint>::iterator i = m_transport->m_authList.begin(); i != m_transport->m_authList.end(); ++i) {
             UDPEndpoint ep = *i;
-            if (GetConn() == ep->GetConn()) {
+            if (GetConnId() == ep->GetConnId()) {
+                QCC_DbgPrintf(("_UDPEndpoint::Start(): found endpoint with conn ID == %d. on m_authList",
+                               GetConnId()));
                 ++found;
             }
         }
         for (set<UDPEndpoint>::iterator i = m_transport->m_endpointList.begin(); i != m_transport->m_endpointList.end(); ++i) {
             UDPEndpoint ep = *i;
-            if (GetConn() == ep->GetConn()) {
+            if (GetConnId() == ep->GetConnId()) {
+                QCC_DbgPrintf(("_UDPEndpoint::Start(): found endpoint with conn ID == %d. on m_endpointList",
+                               GetConnId()));
                 ++found;
             }
         }
         m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
         assert(found == 1 && "_UdpEndpoint::Stop(): Endpoint not on exactly one pending list");
 #endif
+
         /*
          * We need to hook back into the router and do what RemoteEndpoint would
          * have done had we really started RX and TX threads and their
@@ -1368,14 +1419,14 @@ class _UDPEndpoint : public _RemoteEndpoint {
         QCC_DbgTrace(("_UDPEndpoint::Join()"));
 
         /*
-         * No threads to Join(), so we jumpt right to EP_STOPPING.  We go to
-         * stopped in Join(), which will be called even though there are no
-         * threads to Join().  We go through the motions since the rest of the
-         * system doesn't know we are faking it.
+         * The AllJoyn threading model requires that we allow multiple calls to
+         * Join().  We expect that the first time through the state will be
+         * EP_STOPPING, and the next time through we will take it to EP_DONE.
          */
-        assert(m_epState == EP_STARTED &&
-               "UDPEndpoint::Stop(): Endpoint not following expected state transition");
-        m_epState = EP_STOPPING;
+        if (GetEpState() == EP_DONE) {
+            QCC_DbgTrace(("_UDPEndpoint::Join(): Already Join()ed"));
+            return ER_OK;
+        }
 
         /*
          * If there were any threads blocked waiting to get bytes through to a
@@ -1399,6 +1450,11 @@ class _UDPEndpoint : public _RemoteEndpoint {
                  */
                 qcc::Sleep(10);
             }
+
+            /*
+             * Make sure the stream is disconnected and resources are reclaimed.
+             */
+            DestroyStream();
         }
 
         /*
@@ -1411,6 +1467,13 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * endpoint code that it is ready to go down.
          */
         Exit();
+
+        /*
+         * Jump to done state.  Our ManageEndpoints() will pick up on the fact
+         * that this endpoint is done and deal with it by releasing any
+         * references to it.
+         */
+        SetEpDone();
         return ER_OK;
     }
 
@@ -1421,6 +1484,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
     void CreateStream(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t dataTimeout, uint32_t dataRetries)
     {
         QCC_DbgTrace(("_UDPEndpoint::CreateStream(handle=0x%0, conn=0x%p)", handle, conn));
+
+        m_transport->m_ardpLock.Lock();
         assert(m_stream == NULL && "_UDPEndpoint::CreateStream(): stream already exists");
 
         /*
@@ -1442,6 +1507,35 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * PushMessage() back into the ArdpStream PushBytes().
          */
         SetStream(m_stream);
+        m_transport->m_ardpLock.Unlock();
+    }
+
+    ArdpStream* GetStream()
+    {
+        QCC_DbgTrace(("_UDPEndpoint::GetStream() => 0x%p", m_stream));
+        return m_stream;
+    }
+
+    /**
+     * Create a skeletal stream that we'll use during SASL exhange and as a place to
+     * hold some connection information.
+     */
+    void DestroyStream()
+    {
+        QCC_DbgTrace(("_UDPEndpoint::DestroyStream()"));
+        m_transport->m_ardpLock.Lock();
+        if (m_stream) {
+            ArdpHandle* handle = m_stream->GetHandle();
+            ArdpConnRecord* conn = m_stream->GetConn();
+            if (handle && conn) {
+                ARDP_Disconnect(handle, conn);
+            }
+            m_stream->SetHandle(NULL);
+            m_stream->SetConn(NULL);
+            delete m_stream;
+            m_stream = NULL;
+        }
+        m_transport->m_ardpLock.Unlock();
     }
 
     /**
@@ -1455,44 +1549,82 @@ class _UDPEndpoint : public _RemoteEndpoint {
     QStatus PushMessage(Message& msg)
     {
         QCC_DbgTrace(("_UDPEndpoint::PushMessage(msg=0x%p)", &msg));
+        if (GetEpState() != EP_STARTED) {
+            QStatus status = ER_UDP_STOPPING;
+            QCC_LogError(status, ("_UdpEndpoint::PushBytes(): UDP Transport stopping"));
+            return status;
+        }
+
         RemoteEndpoint rep = RemoteEndpoint::wrap(this);
         QCC_DbgPrintf(("_UDPEndpoint::PushMessage(): DeliverNonBlocking()"));
         return msg->DeliverNonBlocking(rep);
     }
 
     /**
-     * Callback from the ARDP implementation letting us know that our connection
-     * has been disconnected for some reason.
+     * Callback (indirectly) from the ARDP implementation letting us know that
+     * our connection has been disconnected for some reason.
      */
     void DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status)
     {
         QCC_DbgTrace(("_UDPEndpoint::DisconnectCb(handle=0x%p, conn=0x%p)", handle, conn));
         QCC_DbgPrintf(("_UDPEndpoint::DisconnectCb(): sending to m_stream=0x%p", m_stream));
-        assert(m_stream && "_UDPEndpoint::DisconnectCb(): no m_stream");
+
+        /*
+         * We can be shut down multiple ways.  The daemon can decide we are
+         * done and call Stop() and the protocol can decide we are done and
+         * call DisconnectCb().
+         *
+         * If we get a disconnect and the state is not EP_STARTED, it means
+         * we've been shut down from another path and we are getting a redundant
+         * call from ARDP.  Once is enough.
+         */
+        if (GetEpState() != EP_STARTED) {
+            QCC_DbgTrace(("_UDPEndpoint::DisconnectCb(): Already stopping"));
+            return;
+        }
+
         m_stream->DisconnectCb(handle, conn, status);
 
         /*
-         * BUGBUG FIXME
-         * TODO: The connection has disconnected, so we need to shut down the
-         * endpoint and tell the router about it.
+         * Update internal state indicating we got an unexpected disconnect.
          */
         SetSuddenDisconnect(true);
 
+        /*
+         * We need to hook back into the router and do what RemoteEndpoint would
+         * have done had we really started RX and TX threads and their
+         * ExitCallback() been called because of a TCP disconnect.  SetStopping()
+         * is not an internal UDP Endpoint thing, it is a Remote Endpoint thing.
+         * our internal state is unaffected by this call.
+         */
+        SetStopping(true);
+
+        /*
+         * The remote endpoint is going to poll for its internal->exitCount to
+         * bump to one, which happens as a result of the thread exit callback
+         * being called which is going to want to wake up all of the threads
+         * that are blocked on the endpoint and call UntrustedClientExit, and
+         * call close on the Stream associated with the endpoint.  None of that
+         * applies to us; so we call the Exit() method which just tells the
+         * endpoint code that it is ready to go down.
+         */
+        Exit();
+
+        /*
+         * Tell any listeners that the connection was lost.
+         */
         if (m_transport->m_listener) {
             RemoteEndpoint rep = RemoteEndpoint::wrap(this);
-            /*
-             * BUGBUG FIXME
-             * TODO: Connect spec doesn't include any kind of connection ID.
-             * This just says, one of the connections to the remote host
-             * at the provided the IP address that was connected through the
-             * provided well-known contact port, was lost.  How is this
-             * supposed to address anything more specific that that?  i.e.,
-             * this can't be selecting which endpoint / connection actually
-             * was lost; just that one of them (given more than one) was
-             * lost and we'll just whack the first one!
-             */
             m_transport->m_listener->BusConnectionLost(rep->GetConnectSpec());
         }
+
+        /*
+         * The connection is gone, so Stop() the endpoint (from a UDP Endpoint
+         * perspective -- we did what needed to be done to the Remote Endpoint
+         * to keep the daemon happy already).  ManageEndpoints() will pick up on
+         * the stopping state and clean up the endpoint.
+         */
+        Stop();
     }
 
     /**
@@ -1504,7 +1636,23 @@ class _UDPEndpoint : public _RemoteEndpoint {
     {
         QCC_DbgTrace(("_UDPEndpoint::RecvCb(handle=0x%p, conn=0x%p, rcv=0x%p, status=%s)",
                       handle, conn, rcv, QCC_StatusText(status)));
-        assert(m_stream && "_UDPEndpoint::RecvCb(): no m_stream");
+
+        /*
+         * We can be shut down multiple ways.  The daemon can decide we are done
+         * (it is shutting down, for example) and call Stop() on its endpoints;
+         * but the protocol may not know this yet and will happily keep trying
+         * to deliver bits.
+         *
+         * If we get a RecvCb() and the state is not EP_STARTED, it means we've
+         * been shut down we are getting a data callback from ARDP.  There's
+         * nobody to recieve the data, so we can't deliver it.  Eventually, the
+         * endpoint will be stopped, and that processs will shut down the
+         * connection, so we can just igore this data.
+         */
+        if (GetEpState() != EP_STARTED) {
+            QCC_DbgTrace(("_UDPEndpoint::RecvCb(): Stopping"));
+            return;
+        }
 
         /*
          * BUGBUG FIXME
@@ -1584,7 +1732,27 @@ class _UDPEndpoint : public _RemoteEndpoint {
     {
         QCC_DbgTrace(("_UDPEndpoint::SendCb(handle=0x%p, conn=0x%p, buf=0x%p, len=%d.)", handle, conn, buf, len));
         QCC_DbgPrintf(("_UDPEndpoint::SendCb(): sending to m_stream=0x%p)", m_stream));
-        assert(m_stream && "_UDPEndpoint::SendCb(): no m_stream");
+
+        /*
+         * We can be shut down multiple ways.  The daemon can decide we are done
+         * (it is shutting down, for example) and call Stop() on its endpoints;
+         * but the protocol may not know this yet and will happily keep trying
+         * to deliver bits to the other side.
+         *
+         * If we get a SendCb() and the state is not EP_STARTED, it means we've
+         * been shut down (or are in the process of shutting down) but the
+         * protocol has managed to deliver some bits so we are getting a data
+         * callback from ARDP.
+         *
+         * Since there will be nowhere to call back, we need to delete the buffer
+         * since the Endpoint is responsible for it now.
+         */
+        if (GetEpState() != EP_STARTED) {
+            delete[] buf;
+            QCC_DbgTrace(("_UDPEndpoint::RecvCb(): Stopping"));
+            return;
+        }
+
         m_stream->SendCb(handle, conn, buf, len, status);
     }
 
@@ -1616,12 +1784,33 @@ class _UDPEndpoint : public _RemoteEndpoint {
     }
 
     /**
-     * Get the pointer to the underlying ARDP protocol connection information.
+     * Set the pointer to the underlying ARDP protocol connection information.
      */
     void SetConn(ArdpConnRecord* conn)
     {
         QCC_DbgTrace(("_UDPEndpoint::SetConn(conn=0x%p)", conn));
         m_conn = conn;
+        SetConnId(ARDP_GetConnId(conn));
+    }
+
+    /**
+     * Get the connection ID of the original ARDP protocol connection.  We keep
+     * this around for debugging purposes after the connection goes away.
+     */
+    uint32_t GetConnId()
+    {
+        QCC_DbgTrace(("_UDPEndpoint::GetConnId(): => %d.", m_id));
+        return m_id;
+    }
+
+    /**
+     * Set the connection ID of the original ARDP protocol connection.  We keep
+     * this around for debugging purposes after the connection goes away.
+     */
+    void SetConnId(uint32_t id)
+    {
+        QCC_DbgTrace(("_UDPEndpoint::SetConnId(id=%d.)", id));
+        m_id = id;
     }
 
     /**
@@ -1703,7 +1892,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     };
 
     /**
-     * Set the time at which authentication was startee.
+     * Set the time at which authentication was started.
      */
     void SetStartTime(qcc::Timespec tStart)
     {
@@ -1712,7 +1901,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     }
 
     /**
-     * Get the time at which authentication was startee.
+     * Get the time at which authentication was started.
      */
     qcc::Timespec GetStartTime(void)
     {
@@ -1771,7 +1960,18 @@ class _UDPEndpoint : public _RemoteEndpoint {
     void SetEpStarting(void)
     {
         QCC_DbgTrace(("_UDPEndpoint::SetEpStarting()"));
+        assert(m_epState != EP_STARTING && m_epState != EP_STARTED);
         m_epState = EP_STARTING;
+    }
+
+    /**
+     * Set the state of the endpoint to started
+     */
+    void SetEpStarted(void)
+    {
+        QCC_DbgTrace(("_UDPEndpoint::SetEpStarted()"));
+        assert(m_epState != EP_STARTED);
+        m_epState = EP_STARTED;
     }
 
     /**
@@ -1780,7 +1980,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     void SetEpStopping(void)
     {
         QCC_DbgTrace(("_UDPEndpoint::SetEpStopping()"));
-        assert(m_epState == EP_STARTING || m_epState == EP_STARTED || m_epState == EP_STOPPING || m_epState == EP_FAILED);
+        assert(m_epState == EP_STARTING || m_epState == EP_STARTED);
         m_epState = EP_STOPPING;
     }
 
@@ -1819,6 +2019,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     ArdpStream* m_stream;             /**< Convenient pointer to the underlying stream */
     ArdpHandle* m_handle;             /**< The handle to the underlying protocol */
     ArdpConnRecord* m_conn;           /**< The connection record for the underlying protocol */
+    uint32_t m_id;                    /**< The ID of the connection record for the underlying protocol */
     bool incoming;                    /**< If true, passive connection; if false, we initiated via Connect() */
     qcc::IPAddress m_ipAddr;          /**< Remote IP address. */
     uint16_t m_ipPort;                /**< Remote port. */
@@ -2124,12 +2325,14 @@ QStatus UDPTransport::Join(void)
      */
     for (set<UDPEndpoint>::iterator i = m_authList.begin(); i != m_authList.end(); ++i) {
         UDPEndpoint ep = *i;
-        QCC_DbgTrace(("UDPTransport::Join(): Erasing (auth) endpoint with conn=0x%p from m_endpointList", ep->GetConn()));
+        QCC_DbgTrace(("UDPTransport::Join(): Erasing endpoint with conn ID == %d. from m_authList",
+                      ARDP_GetConnId(ep->GetConn())));
         m_authList.erase(i);
     }
     for (set<UDPEndpoint>::iterator i = m_endpointList.begin(); i != m_endpointList.end(); ++i) {
         UDPEndpoint ep = *i;
-        QCC_DbgTrace(("UDPTransport::Join(): Erasing endpoint with conn=0x%p from m_endpointList", ep->GetConn()));
+        QCC_DbgTrace(("UDPTransport::Join(): Erasing endpoint with conn ID == %d. from m_endpointList",
+                      ARDP_GetConnId(ep->GetConn())));
         m_endpointList.erase(i);
     }
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
@@ -2345,8 +2548,6 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
 
 void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTimeout)
 {
-    QCC_DbgTrace(("UDPTransport::ManageEndpoints()"));
-
     /*
      * Run through the list of connections on the authList and cleanup any that
      * are taking too long to authenticate.  These are connections that are in
@@ -2377,8 +2578,10 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
             bool threadWaiting = false;
             set<ConnectEntry>::iterator j = m_connectThreads.begin();
             for (; j != m_connectThreads.end(); ++j) {
-                if ((*j).m_conn == ep->GetConn()) {
-                    QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Waking thread waiting on slow authenticator"));
+                if ((*j).m_conn == ep->GetConn() && ARDP_GetConnId((*j).m_conn) == ARDP_GetConnId(ep->GetConn())) {
+
+                    QCC_DbgTrace(("UDPTransport::ManageEndpoints(): Waking thread on slow authenticator with conn ID == %d.",
+                                  ep->GetConnId()));
                     (*j).m_thread->Alert();
                     threadWaiting = true;
                 }
@@ -2390,7 +2593,8 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
              * away.
              */
             if (threadWaiting == false) {
-                QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Removing reference for slow authenticator"));
+                QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Removing reference for slow authenticator with conn ID == %d",
+                               ep->GetConnId()));
                 m_authList.erase(i);
                 i = m_authList.upper_bound(ep);
             }
@@ -2406,16 +2610,52 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
         UDPEndpoint ep = *i;
 
         /*
-         * If we find the endpoint in the EP_FAILED or EP_STOPPING state, the
-         * endpoint is going away and has been disconnected from the router.  We
-         * can just pitch it.  When the reference count goes to zero it will be
-         * destroyed.
+         * Get the internal (UDP) endpoint state.  We use this to figure out the
+         * correct strategy for getting rid of endpoints at the end of their
+         * lifetimes.
          */
         _UDPEndpoint::EndpointState endpointState = ep->GetEpState();
+
+        /*
+         * This can be a little tricky since the daemon wants to reference count
+         * the endpoints and will call Stop() but not Join() in
+         * RemoveSessionRef() for example.  This is because it doesn't want to
+         * take possibly unbounded time to wait for the threads in the endpoint
+         * to exit.  What that means is that we can find ourselves with
+         * endpoints in EP_STOPPING state, and we will have to do the Join() to
+         * finish tearing down the endpoint.  That means we have to do a Join(),
+         * but we must also be sensitive to blocking for long periods of time
+         * since we are called in the main loop of the transport.
+         *
+         * The only thing that could cause us to block is an associated stream
+         * thread set not being empty, so we check for that blocking case before
+         * we call Join() and let our own Maintenance thread take care of
+         * waiting for the threads to exit by delaying the next call (to here).
+         *
+         * The Join() call will set the state of the endpoint to EP_DONE, so
+         * if we reload the state, we can release the newly Join()ed endpoint
+         * below.
+         */
+        if (endpointState == _UDPEndpoint::EP_STOPPING) {
+            ArdpStream* stream = ep->GetStream();
+            if (stream->IsThreadSetEmpty()) {
+                QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Join()ing stopping endpoint with conn ID == %d",
+                               ep->GetConnId()));
+                ep->Join();
+                endpointState = ep->GetEpState();
+            }
+        }
+
+        /*
+         * If we find the endpoint in the EP_FAILED or EP_DONE state, the
+         * endpoint is ready to go away.  We can just pitch it.  When the
+         * reference count goes to zero it will be destroyed.
+         */
         if (endpointState == _UDPEndpoint::EP_FAILED ||
-            endpointState == _UDPEndpoint::EP_STOPPING ||
             endpointState == _UDPEndpoint::EP_DONE) {
 
+            QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Removing reference for failed or done endpoint with conn ID == %d.",
+                           ep->GetConnId()));
             m_endpointList.erase(i);
             i = m_endpointList.upper_bound(ep);
             continue;
@@ -2674,7 +2914,11 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): Taking endpoint list lock"));
     m_endpointListLock.Lock(MUTEX_CONTEXT);
 
-    QCC_DbgPrintf(("UDPTransport::AcceptCb(): Adding endpoint with conn=0x%p to m_authList", conn));
+#ifndef NDEBUG
+    DebugAuthListCheck(udpEp);
+#endif
+
+    QCC_DbgPrintf(("UDPTransport::AcceptCb(): Adding endpoint with conn ID == %d. to m_authList", ARDP_GetConnId(conn)));
     m_authList.insert(udpEp);
 
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): giving endpoint list lock"));
@@ -2716,6 +2960,38 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     return true;
 }
 
+#ifndef NDEBUG
+void UDPTransport::DebugAuthListCheck(UDPEndpoint uep)
+{
+    QCC_DbgTrace(("UDPTransport::DebugAuthListCheck()"));
+    m_endpointListLock.Lock(MUTEX_CONTEXT);
+    for (set<UDPEndpoint>::iterator i = m_authList.begin(); i != m_authList.end(); ++i) {
+        UDPEndpoint ep = *i;
+        if (uep->GetConnId() == ep->GetConnId()) {
+            QCC_DbgPrintf(("UDPTransport::DebugAuthListCheck(): Endpoint with conn ID == %d. already on m_authList",
+                           uep->GetConnId()));
+            assert(0 && "UDPTransport::DebugAuthListCheck(): Endpoint already on m_authList");
+        }
+    }
+    m_endpointListLock.Unlock(MUTEX_CONTEXT);
+}
+
+void UDPTransport::DebugEndpointListCheck(UDPEndpoint uep)
+{
+    QCC_DbgTrace(("UDPTransport::DebugEndpointListCheck()"));
+    m_endpointListLock.Lock(MUTEX_CONTEXT);
+    for (set<UDPEndpoint>::iterator i = m_endpointList.begin(); i != m_endpointList.end(); ++i) {
+        UDPEndpoint ep = *i;
+        if (uep->GetConnId() == ep->GetConnId()) {
+            QCC_DbgPrintf(("UDPTransport::DebugEndpointListCheck(): Endpoint with conn ID == %d. already on m_endpointList",
+                           uep->GetConnId()));
+            assert(0 && "UDPTransport::DebugAuthListCheck(): Endpoint already on m_endpointList");
+        }
+    }
+    m_endpointListLock.Unlock(MUTEX_CONTEXT);
+}
+#endif
+
 /*
  * See the note on connection establishment in the start of this file to make
  * sense of this.
@@ -2750,26 +3026,32 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
          * take it off of the m_authlist and put it on the active enpoint list
          * and and now hook up the demux so it can receive inbound data.
          */
-        QCC_DbgPrintf(("UDPTransport::ConnectCb(): passive connection callback"));
+        QCC_DbgPrintf(("UDPTransport::ConnectCb(): passive connection callback with conn ID == %d.",
+                       ARDP_GetConnId(conn)));
 
         QCC_DbgPrintf(("UDPTransport::ConnectCb(): Taking endpoint list lock"));
         m_endpointListLock.Lock(MUTEX_CONTEXT);
 
-        QCC_DbgPrintf(("UDPTransport::ConnectCb(): Finding endpoint with conn=0x%p in m_authList", conn));
+        QCC_DbgPrintf(("UDPTransport::ConnectCb(): Finding endpoint with conn ID == %d. in m_authList",
+                       ARDP_GetConnId(conn)));
         set<UDPEndpoint>::iterator i;
         for (i = m_authList.begin(); i != m_authList.end(); ++i) {
             UDPEndpoint ep = *i;
-            if (ep->GetConn() == conn) {
-                QCC_DbgPrintf(("UDPTransport::ConnectCb(): Moving endpoint with conn=0x%p to m_endpointList", conn));
+            if (ep->GetConn() == conn && ARDP_GetConnId(ep->GetConn()) == ARDP_GetConnId(conn)) {
+                QCC_DbgPrintf(("UDPTransport::ConnectCb(): Moving endpoint with conn ID == %d to m_endpointList",
+                               ARDP_GetConnId(conn)));
                 m_authList.erase(i);
+#ifndef NDEBUG
+                DebugEndpointListCheck(ep);
+#endif
                 m_endpointList.insert(ep);
 
-                QCC_DbgPrintf(("UDPTransport::ConnectCb(): Connecting endpoint with conn=0x%p to m_demux", conn));
+                QCC_DbgPrintf(("UDPTransport::ConnectCb(): Connecting endpoint with conn ID == %d. to m_demux",
+                               ARDP_GetConnId(conn)));
                 m_demux.insert(std::pair<ArdpConnRecord*, UDPEndpoint>(conn, ep));
 
-                QCC_DbgPrintf(("UDPTransport::ConnectCb(): Start()ing endpoint with conn=0x%p", conn));
+                QCC_DbgPrintf(("UDPTransport::ConnectCb(): Start()ing endpoint with conn ID == %d.", ARDP_GetConnId(conn)));
                 ep->SetListener(this);
-                ep->SetEpStarting();
                 ep->Start();
                 break;
             }
@@ -2777,6 +3059,7 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
 
         QCC_DbgPrintf(("UDPTransport::ConnectCb(): giving endpoint list lock"));
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
+        return;
     } else {
         /*
          * On the active side, we expect to be getting this callback when the
@@ -2787,10 +3070,9 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
          * driving the connection and it will be waiting for something to happen
          * good or bad so we need to remember to wake it up.
          */
-        QCC_DbgPrintf(("UDPTransport::ConnectCb(): active connection callback"));
-        m_ardpLock.Lock();
+        QCC_DbgPrintf(("UDPTransport::ConnectCb(): active connection callback with conn ID == %d.",
+                       ARDP_GetConnId(conn)));
         qcc::Event* event = static_cast<qcc::Event*>(ARDP_GetConnContext(conn));
-        m_ardpLock.Unlock();
         assert(event && "UDPTransport::ConnectCb(): Connection context did not provide an event");
 
         Message helloReply(m_bus);
@@ -2915,10 +3197,15 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
         QCC_DbgPrintf(("UDPTransport::ConnectCb(): Taking endpoint list lock"));
         m_endpointListLock.Lock(MUTEX_CONTEXT);
 
-        QCC_DbgPrintf(("UDPTransport::ConnectCb(): Adding endpoint with conn=0x%p to m_endpointList", udpEp->GetConn()));
+        QCC_DbgPrintf(("UDPTransport::ConnectCb(): Adding endpoint with conn ID == %d. to m_endpointList",
+                       ARDP_GetConnId(udpEp->GetConn())));
+#ifndef NDEBUG
+        DebugEndpointListCheck(udpEp);
+#endif
         m_endpointList.insert(udpEp);
 
-        QCC_DbgPrintf(("UDPTransport::ConnectCb(): Connecting endpoint with conn=0x%p to m_demux", conn));
+        QCC_DbgPrintf(("UDPTransport::ConnectCb(): Connecting endpoint with conn ID == %d. to m_demux",
+                       ARDP_GetConnId(udpEp->GetConn())));
         m_demux.insert(std::pair<ArdpConnRecord*, UDPEndpoint>(conn, udpEp));
 
         QCC_DbgPrintf(("UDPTransport::ConnectCb(): giving endpoint list lock"));
@@ -2940,9 +3227,9 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
          * with the router, and that is what will start the ExchangeNames
          * process.
          */
-        QCC_DbgPrintf(("UDPTransport::ConnectCb(): Start()ing endpoint with conn=0x%p", udpEp->GetConn()));
+        QCC_DbgPrintf(("UDPTransport::ConnectCb(): Start()ing endpoint with conn ID == %d.",
+                       ARDP_GetConnId(udpEp->GetConn())));
         udpEp->SetListener(this);
-        udpEp->SetEpStarting();
         udpEp->Start();
 
         /*
@@ -2950,24 +3237,24 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
          * wake it up.
          */
         event->SetEvent();
+        return;
     }
 }
 
 void UDPTransport::DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::DisconnectCb(handle=0x%p, conn=0x%p, foreign=%d.)", handle, conn));
-    if (true) {
-        /*
-         * BUGBUG FIXME
-         * TODO: sudden (unrequested) disconnect
-         */
+    m_endpointListLock.Lock(MUTEX_CONTEXT);
+    std::map<ArdpConnRecord* const, UDPEndpoint>::iterator i = m_demux.find(conn);
+    if (i != m_demux.end()) {
+        QCC_DbgPrintf(("UDPTransport::DisconnectCb(): demux callback from conn ID == %d to endpoint",
+                       ARDP_GetConnId(conn)));
+        i->second->DisconnectCb(handle, conn, status);
     } else {
-        m_ardpLock.Lock();
-        qcc::Event* event = static_cast<qcc::Event*>(ARDP_GetConnContext(conn));
-        m_ardpLock.Unlock();
-        assert(event && "UDPTransport::DisconnectCb(): Context not set on requested disconnect");
-        event->SetEvent();
+        QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("UDPTransport::DisconnectCb(): Conn not in m_demux"));
     }
+    m_endpointListLock.Unlock(MUTEX_CONTEXT);
+
 }
 
 void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status)
@@ -2976,30 +3263,38 @@ void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* 
                   handle, conn, rcv, QCC_StatusText(status)));
     assert(rcv->fcnt == 1 && "_UDPEndpoint::RecvCb(): message partitioning not supported yet");
     QCC_DbgPrintf(("UDPTransport::RecvCb(): got %d. bytes of data", rcv->datalen));
+    m_endpointListLock.Lock(MUTEX_CONTEXT);
     std::map<ArdpConnRecord* const, UDPEndpoint>::iterator i = m_demux.find(conn);
     if (i != m_demux.end()) {
-        QCC_DbgPrintf(("UDPTransport::RecvCb(): demux callback to endpoint"));
+        QCC_DbgPrintf(("UDPTransport::RecvCb(): demux callback from conn ID == %d to endpoint",
+                       ARDP_GetConnId(conn)));
         i->second->RecvCb(handle, conn, rcv, status);
     } else {
-        QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("UDPStream::RecvCb(): Conn not in m_demux"));
+        QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("UDPTransport::RecvCb(): Conn not in m_demux"));
     }
+    m_endpointListLock.Unlock(MUTEX_CONTEXT);
+
 }
 
 void UDPTransport::SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::SendCb(handle=0x%p, conn=0x%p, buf=0x%p, len=%d.)", handle, conn, buf, len));
+    m_endpointListLock.Lock(MUTEX_CONTEXT);
     std::map<ArdpConnRecord* const, UDPEndpoint>::iterator i = m_demux.find(conn);
     if (i != m_demux.end()) {
-        QCC_DbgPrintf(("UDPTransport::SendCb(): demux callback to endpoint"));
+        QCC_DbgPrintf(("UDPTransport::SendCb(): demux callback from conn ID == %d to endpoint",
+                       ARDP_GetConnId(conn)));
         i->second->SendCb(handle, conn, buf, len, status);
     } else {
-        QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("UDPStream::SendCb(): Conn not in m_demux"));
+        QCC_LogError(ER_UDP_DEMUX_NO_ENDPOINT, ("UDPTransport::SendCb(): Conn not in m_demux"));
     }
+    m_endpointListLock.Unlock(MUTEX_CONTEXT);
 }
 
 void UDPTransport::SendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t window, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::SendWindowCb(handle=0x%p, conn=0x%p, window=%d.)", handle, conn, window));
+    QCC_DbgPrintf(("UDPTransport::SendWindowCb(): callback from conn ID == %d", ARDP_GetConnId(conn)));
 }
 
 void* UDPTransport::Run(void* arg)
@@ -3029,14 +3324,18 @@ void* UDPTransport::Run(void* arg)
      * starts waiting forever.
      */
     vector<Event*> checkEvents, signaledEvents;
-    qcc::Event timerEvent(qcc::Event::WAIT_FOREVER, 0);
+    qcc::Event ardpTimerEvent(qcc::Event::WAIT_FOREVER, 0);
+    qcc::Event maintenanceTimerEvent(qcc::Event::WAIT_FOREVER, 0);
+
+    Timespec tLastManage;
+    GetTimeNow(&tLastManage);
 
     QStatus status = ER_OK;
 
     /*
      * The purpose of this thread is to (1) manage all of our endpoints going
      * through the various states they do; (2) watch for the various sockets
-     * corresponding to endpoints on sundry networks for becomin ready; and
+     * corresponding to endpoints on sundry networks for becoming ready; and
      * (3) drive/whip the ARDP protocol to do our bidding.
      */
     while (!IsStopping()) {
@@ -3051,12 +3350,11 @@ void* UDPTransport::Run(void* arg)
          * Instead of trying to figure out the delta, we just restart the whole
          * shebang.
          */
-        QCC_DbgPrintf(("UDPTransport::Run(): Top of maintenance loop"));
         m_listenFdsLock.Lock(MUTEX_CONTEXT);
         if (m_reload != STATE_RELOADED) {
             QCC_DbgPrintf(("UDPTransport::Run(): Not STATE_RELOADED.  Deleting events"));
             for (vector<Event*>::iterator i = checkEvents.begin(); i != checkEvents.end(); ++i) {
-                if (*i != &stopEvent && *i != &timerEvent) {
+                if (*i != &stopEvent && *i != &ardpTimerEvent && *i != &maintenanceTimerEvent) {
                     delete *i;
                 }
             }
@@ -3065,7 +3363,8 @@ void* UDPTransport::Run(void* arg)
 
             QCC_DbgPrintf(("UDPTransport::Run(): Not STATE_RELOADED. Creating events"));
             checkEvents.push_back(&stopEvent);
-            checkEvents.push_back(&timerEvent);
+            checkEvents.push_back(&ardpTimerEvent);
+            checkEvents.push_back(&maintenanceTimerEvent);
 
             QCC_DbgPrintf(("UDPTransport::Run(): Not STATE_RELOADED. Creating socket events"));
             for (list<pair<qcc::String, SocketFd> >::const_iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
@@ -3078,21 +3377,39 @@ void* UDPTransport::Run(void* arg)
         m_listenFdsLock.Unlock(MUTEX_CONTEXT);
 
         /*
+         * In order to rationalize management of resources, we manage the
+         * various lists in one place on one thread.  This isn't super-expensive
+         * but can add up if there are lots of endpoings, so We don't want to do
+         * this resource management exercise every time throught the socket read
+         * loop, so limit the number of times it will be called.
+         */
+        Timespec tNow;
+        GetTimeNow(&tNow);
+
+        int32_t tRemaining = tLastManage + UDP_ENDPOINT_MANAGEMENT_TIMER - tNow;
+
+        if (tRemaining < 0) {
+            ManageEndpoints(m_authTimeout, m_sessionSetupTimeout);
+            tLastManage = tNow;
+        }
+
+        /*
          * We have our list of events, so now wait for something to happen on
-         * that list.  The number of events in checkEvents should be 2 + the
-         * number of sockets listened (stopEvent, timerEvent, and sockets).
+         * that list.  The number of events in checkEvents should be 3 + the
+         * number of sockets listened (stopEvent, ardpTimerEvent, maintenanceTimerEvent and sockets).
          */
         signaledEvents.clear();
 
-        QCC_DbgPrintf(("UDPTransport::Run(): Event::Wait() on %d checkEvents and %d signaledEvents", checkEvents.size(), signaledEvents.size()));
+        /*
+         * Make sure we get awakened in order to manage our endpoints.
+         */
+        maintenanceTimerEvent.ResetTime(tLastManage + UDP_ENDPOINT_MANAGEMENT_TIMER - tNow, 0);
 
         status = Event::Wait(checkEvents, signaledEvents);
         if (ER_OK != status) {
             QCC_LogError(status, ("Event::Wait failed"));
             break;
         }
-
-        QCC_DbgPrintf(("UDPTransport::Run(): Got %d signaled events", signaledEvents.size()));
 
         /*
          * We're back from our Wait() so one of four things has happened.  Our
@@ -3107,7 +3424,6 @@ void* UDPTransport::Run(void* arg)
          * the endpoints.
          */
         for (vector<Event*>::iterator i = signaledEvents.begin(); i != signaledEvents.end(); ++i) {
-            QCC_DbgPrintf(("UDPTransport::Run(): Checking event"));
 
             /*
              * Reset the stop event since we've heard it.
@@ -3116,13 +3432,6 @@ void* UDPTransport::Run(void* arg)
                 QCC_DbgPrintf(("UDPTransport::Run(): Reset stopEvent"));
                 stopEvent.ResetEvent();
             }
-
-            /*
-             * In order to rationalize management of resources, we manage the
-             * various lists in one place on one thread.
-             */
-            QCC_DbgPrintf(("UDPTransport::Run(): Manage endpoints"));
-            ManageEndpoints(m_authTimeout, m_sessionSetupTimeout);
 
             /*
              * If the event we're looking at is the stop event, then there's
@@ -3134,20 +3443,12 @@ void* UDPTransport::Run(void* arg)
                 continue;
             }
 
-            if (*i == &timerEvent) {
-                QCC_DbgPrintf(("UDPTransport::Run(): Event was timerEvent"));
-            } else {
-                QCC_DbgPrintf(("UDPTransport::Run(): Event was a socket event for socket %d", (*i)->GetFD()));
-            }
-
-            uint32_t ms;
             /*
              * TODO: If we are passing the socket FD in every time, why do we
              * have it stashed in the handle or conn?
              */
-            bool socketReady = (*i != &timerEvent);
-            QCC_DbgPrintf(("UDPTransport::Run(): %s event fired -- ARDP_Run()", socketReady ? "socket" : "timer"));
-
+            bool socketReady = (*i != &ardpTimerEvent && *i != &maintenanceTimerEvent);
+            uint32_t ms;
             m_ardpLock.Lock();
             ARDP_Run(m_handle, socketReady ? (*i)->GetFD() : -1, socketReady, &ms);
             m_ardpLock.Unlock();
@@ -3155,9 +3456,9 @@ void* UDPTransport::Run(void* arg)
             /*
              * Every time we call ARDP_Run(), it lets us know when its next
              * timer will expire, so we tell our event to set itself in that
-             * numebr of milliseconds so we can call back then.
+             * number of milliseconds so we can call back then.
              */
-            timerEvent.ResetTime(ms, 0);
+            ardpTimerEvent.ResetTime(ms, 0);
         }
     }
 
@@ -4208,6 +4509,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         return status;
     }
 
+    QCC_DbgPrintf(("UDPTransport::Connect(): Compose BusHello"));
     Message hello(m_bus);
     status = hello->HelloMessage(true, m_bus.GetInternal().AllowRemoteMessages(), opts.nameTransfer);
     if (status != ER_OK) {
@@ -4231,6 +4533,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     qcc::Event event;
     ArdpConnRecord* conn;
 
+    QCC_DbgPrintf(("UDPTransport::Connect(): ARDP_Connect()"));
     m_ardpLock.Lock();
     status = ARDP_Connect(m_handle, sock, ipAddr, ipPort, ARDP_SEGMAX, ARDP_SEGBMAX, &conn, buf, buflen, &event);
     m_ardpLock.Unlock();
@@ -4250,6 +4553,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * that list when the transport is stopping.
      */
     Thread* thread = GetThread();
+    QCC_DbgPrintf(("UDPTransport::Connect(): Add thread=0x%p to m_connectThreads", thread));
     ConnectEntry entry(thread, conn);
     m_endpointListLock.Lock(MUTEX_CONTEXT);
     m_connectThreads.insert(entry);
@@ -4271,6 +4575,8 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      */
     uint32_t timeout = m_ardpConfig.connectTimeout * (2 + m_ardpConfig.connectRetries);
 
+    QCC_DbgPrintf(("UDPTransport::Connect(): qcc::Event::Wait(): timeout=%d.", timeout));
+
     /*
      * We fired off the connect request.  If the connect succeeds, when we wake
      * up we will find a UDPEndpoint on the m_endpointList with an ARDP
@@ -4286,7 +4592,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     QCC_DbgPrintf(("UDPTransport::Connect(): Taking endpoint list lock"));
     m_endpointListLock.Lock(MUTEX_CONTEXT);
 
-    QCC_DbgPrintf(("UDPTransport::Connect(): Finding endpoint with conn=0x%p in m_endpointList", conn));
+    QCC_DbgPrintf(("UDPTransport::Connect(): Finding endpoint with conn ID = %d. in m_endpointList", ARDP_GetConnId(conn)));
     set<UDPEndpoint>::iterator i;
     for (i = m_endpointList.begin(); i != m_endpointList.end(); ++i) {
         UDPEndpoint ep = *i;
@@ -4304,6 +4610,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * current thread, so we need to remove its pointer from the list we
      * kept around to break it out.
      */
+    QCC_DbgPrintf(("UDPTransport::Connect(): Removing thread 0x%p from m_connectThreads"));
     entry.m_thread = thread;
     entry.m_conn = conn;
     m_endpointListLock.Lock(MUTEX_CONTEXT);

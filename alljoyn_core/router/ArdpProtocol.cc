@@ -227,6 +227,7 @@ typedef struct {
  */
 struct ARDP_CONN_RECORD {
     ListNode list;          /* Doubly linked list node on which this connection might be */
+    uint32_t id;            /* Randomly chosen connection identifier */
     ArdpState STATE;        /* The current sate of the connection */
     bool passive;           /* If true, this is a passive open (we've been connected to); if false, we did the connecting */
     ArdpSnd SND;            /* Send-side related state information */
@@ -1189,6 +1190,12 @@ void* ARDP_GetConnContext(ArdpConnRecord* conn)
     return conn->context;
 }
 
+uint32_t ARDP_GetConnId(ArdpConnRecord* conn)
+{
+    QCC_DbgTrace(("ARDP_GetConnId(conn=%p)", conn));
+    return conn->id;
+}
+
 qcc::IPAddress ARDP_GetIpAddrFromConn(ArdpConnRecord* conn)
 {
     QCC_DbgTrace(("ARDP_GetIpAddrFromConn()"));
@@ -1206,6 +1213,7 @@ static ArdpConnRecord* NewConnRecord(void)
     QCC_DbgTrace(("NewConnRecord()"));
     ArdpConnRecord* conn = new ArdpConnRecord();
     memset(conn, 0, sizeof(ArdpConnRecord));
+    conn->id = qcc::Rand32();
     SetEmpty(&conn->list);
     return conn;
 }
