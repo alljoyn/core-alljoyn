@@ -33,6 +33,7 @@ if jsenv['BR'] == 'on':
 vars = Variables()
 vars.Add(PathVariable('CORDOVA_BASE', 'Base directory of Cordova (aka PhoneGap)', os.environ.get('CORDOVA_BASE')))
 vars.Add(PathVariable('GECKO_BASE', 'Base directory of Gecko SDK', os.environ.get('GECKO_BASE')))
+vars.Add(PathVariable('JSDOC_DIR', 'The path to the JsDoc toolkit', os.environ.get('JSDOC_DIR'), PathVariable.PathIsDir))
 vars.Add(PathVariable('WIDLPROC', 'Path to widlproc executable', os.environ.get('WIDLPROC')))
 vars.Add(PathVariable('XSLTPROC', 'Path to xsltproc executable', 'xsltproc', PathVariable.PathAccept))
 vars.Update(jsenv)
@@ -54,6 +55,9 @@ if not jsenv.has_key('BULLSEYE_BIN'):
     print('BULLSEYE_BIN not specified')
 else:
     jsenv.PrependENVPath('PATH', jsenv.get('BULLSEYE_BIN'))
+
+if jsenv.has_key('JSDOC_DIR'):
+    jsenv.PrependENVPath('PATH', jsenv.get('JSDOC_DIR'))
 
 # add support for NPAPI plugins
 jsenv.Append(CPPDEFINES = '__STDC_LIMIT_MACROS')
@@ -98,6 +102,9 @@ if '' != jsenv.subst('$GECKO_BASE'):
 #    jsenv.Install('$JS_DISTDIR/assets/www', 'assets/www/alljoyn.js')
 
 # Build docs
+if jsenv['DOCS'] == 'html':
+    jsenv.SConscript('docs/SConscript')
+
 def widlproc_cmd(widl, wxml):
     xml = open(wxml, 'w')
     p = subprocess.Popen(jsenv['WIDLPROC'] + ' ' + widl, shell=True, stdout=xml)
@@ -107,9 +114,8 @@ def widlproc_cmd(widl, wxml):
 
 if 'WIDLPROC' in jsenv:
     print("*******************************************************************")
-    print("* The documentation files created will not be removed when        *")
-    print("* using scons' -c option. The docs/html folder must manually be   *")
-    print("* deleted to remove the documentation files created.              *")
+    print("* Documentation generated using widlproc has been DEPRICATED      *")
+    print("* please switch to JsDoc3                                         *")
     print("*******************************************************************")
     footer = '"<hr/><p class=\\"copyright\\"></p><small>AllJoyn&trade; JavaScript API Reference Manual Version 00.00.01 ' + time.strftime('%a %B %d %H:%M:%S %Z %Y') + '<br/>Copyright &copy; 2011-2014 AllSeen Alliance.<br/><p>AllJoyn is a trademark of Qualcomm Innovation Center, Inc. AllJoyn is used here with permission to identify unmodified materials originating in the AllJoyn project.<br/>The AllJoyn open source project is hosted by the AllSeen Alliance.</p><b>THIS DOCUMENT AND ALL INFORMATION CONTAIN HEREIN ARE PROVIDED ON AN \\"AS-IS\\" BASIS WITHOUT WARRANTY OF ANY KIND</b>.<br/><b>MAY CONTAIN U.S. AND INTERNATIONAL EXPORT CONTROLLED INFORMATION</b><br/></small>"'
     Widl('docs/alljoyn.widl.in', 'jni/Status.xml', 'docs/alljoyn.widl')
@@ -124,5 +130,7 @@ if 'WIDLPROC' in jsenv:
             ' ' + File(os.path.dirname(jsenv['WIDLPROC']) + '/../src/widlprocxmltohtml.xsl').path +
             ' ' + File('docs/alljoyn.wxml').path
             ])
-    jsenv.Install('docs/html', 'docs/widlhtml.css')
+    css = jsenv.Install('docs/html', 'docs/widlhtml.css')
+    # make sure the output from widlproc is cleaned
+    jsenv.Clean([css], env.Dir('docs/html'))
 
