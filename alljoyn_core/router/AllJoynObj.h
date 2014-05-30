@@ -975,6 +975,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     void PingResponse(TransportMask transport, const qcc::IPEndpoint& ns4, const qcc::String& name, uint32_t replyCode);
 
     std::multimap<qcc::String, void*> pingReplyContexts;
+    TransportMask GetCompleteTransportMaskFilter();
 };
 
 }
