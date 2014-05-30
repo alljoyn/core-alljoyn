@@ -222,7 +222,7 @@ void AboutService::GetObjectDescription(const ajn::InterfaceDescription::Member*
             int interfaceIndex = 0;
 
             for (interfaceIt = it->second.begin(); interfaceIt != it->second.end(); ++interfaceIt) {
-                interfacesVec[interfaceIndex] = interfaceIt->c_str();
+                interfacesVec[interfaceIndex++] = interfaceIt->c_str();
             }
 
             objectArg[objIndex].Set("(oas)", key.c_str(), interfacesVec.size(), (interfacesVec.empty()) ? NULL : &interfacesVec.front());
