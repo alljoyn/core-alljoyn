@@ -2025,6 +2025,11 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                     conn->windowTimer = timer;
                     DeList((ListNode*) conn->windowTimer);
 
+                    /*
+                     * <SEQ=SND.NXT><ACK=RCV.CUR><ACK>
+                     */
+                    Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.MAX);
+
                     if (handle->cb.ConnectCb) {
                         QCC_DbgPrintf(("ArdpMachine(): SYN_SENT->OPEN: ConnectCb(handle=%p, conn=%p", handle, conn));
                         assert(!conn->passive);
@@ -2035,11 +2040,6 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                             conn->synSnd.data = NULL;
                         }
                     }
-
-                    /*
-                     * <SEQ=SND.NXT><ACK=RCV.CUR><ACK>
-                     */
-                    Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.MAX);
                 } else {
                     QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN with no ACK implies simulateous connection attempt: state -> SYN_RCVD"));
                     uint8_t* data = buf + sizeof(ArdpSynSegment);
