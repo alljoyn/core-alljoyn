@@ -42,7 +42,8 @@ class Certificate {
                                 expressed in the number of seconds in EPOCH Jan 1, 1970 */
     };
 
-    Certificate(uint32_t version) : version(version) {
+    Certificate(uint32_t version) {
+        SetVersion(version);
     }
 
     /**
@@ -58,29 +59,58 @@ class Certificate {
      * Set the certificate version
      * @param val the certificate version
      */
-    void SetVersion(uint32_t val)
+    virtual void SetVersion(uint32_t val)
     {
         version = val;
     }
 
+
     /**
-     * Get the encoded value in PEM for certificate.
-     * @return the encoded PEM
+     * Get the encoded bytes for the certificate
+     * @return the encoded bytes
      */
-    virtual String GetEncoded()
+    virtual const uint8_t* GetEncoded()
+    {
+        return NULL;
+    }
+
+    /**
+     * Get the length of the encoded bytes for the certificate
+     * @return the length of the encoded bytes
+     */
+    virtual size_t GetEncodedLen()
+    {
+        return 0;
+    }
+    /**
+     * Load the encoded bytes for the certificate
+     * @param encodedBytes the encoded bytes
+     * @param len the length of the encoded bytes
+     * @return ER_OK for sucess; otherwise, error code.
+     */
+    virtual QStatus LoadEncoded(const uint8_t* encodedBytes, size_t len)
+    {
+        return ER_NOT_IMPLEMENTED;
+    }
+
+    /**
+     * Get the PEM encoded bytes for the certificate
+     * @return the PEM encoded bytes
+     */
+    virtual String GetPEM()
     {
         return "";
     }
 
     /**
-     * Loaded the PEM format for the certificate.
-     * @param encoded the PEM encoded certificate
+     * Load the PEM encoded bytes for the certificate
+     * @param encoded the encoded bytes
+     * @return ER_OK for sucess; otherwise, error code.
      */
-    virtual QStatus LoadEncoded(const String& encoded)
+    virtual QStatus LoadPEM(const String& PEM)
     {
         return ER_NOT_IMPLEMENTED;
     }
-
     /**
      * Get the validity period
      */

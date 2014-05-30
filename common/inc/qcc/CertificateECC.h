@@ -42,44 +42,46 @@ class CertificateECC : public Certificate {
     {
     }
 
+    virtual void SetVersion(uint32_t val) {
+        Certificate::SetVersion(val);
+    }
+
     virtual const ECCPublicKey* GetIssuer()
     {
         return NULL;
     }
+
     virtual const ECCPublicKey* GetSubject()
     {
         return NULL;
     }
+
     virtual const ValidPeriod* GetValidity()
     {
         return NULL;
     }
+
     virtual const bool IsDelegate()
     {
         return false;
     }
+
     virtual const uint8_t* GetExternalDataDigest()
     {
         return NULL;
     }
+
     virtual const ECCSignature* GetSig()
     {
         return NULL;
     }
 
-    virtual String GetEncoded()
-    {
-        return "";
-    }
-    virtual QStatus LoadEncoded(const String& encoded)
-    {
-        return ER_NOT_IMPLEMENTED;
-    }
 
     virtual String ToString()
     {
-        return "";
+        return String::Empty;
     }
+
     virtual ~CertificateECC()
     {
     }
@@ -95,25 +97,35 @@ class CertificateType0 : public CertificateECC {
   public:
     CertificateType0() : CertificateECC(0)
     {
+        SetVersion(0);
     }
     CertificateType0(const ECCPublicKey* issuer, const uint8_t* externalDigest);
 
+    /**
+     * Set the certificate version
+     * @param val the certificate version
+     */
+    virtual void SetVersion(uint32_t val);
+
     const ECCPublicKey* GetIssuer()
     {
-        return &signable.issuer;
+        return &encoded.issuer;
     }
+
     void SetIssuer(const ECCPublicKey* issuer);
 
     const uint8_t* GetExternalDataDigest()
     {
-        return signable.digest;
+        return encoded.signable.digest;
     }
+
     void SetExternalDataDigest(const uint8_t* externalDataDigest);
 
     const ECCSignature* GetSig()
     {
-        return &sig;
+        return &encoded.sig;
     }
+
     void SetSig(const ECCSignature* sig);
 
     /**
@@ -124,8 +136,44 @@ class CertificateType0 : public CertificateECC {
 
     bool VerifySignature();
 
-    String GetEncoded();
-    QStatus LoadEncoded(const String& encoded);
+    /**
+     * Get the encoded bytes for the certificate
+     * @return the encoded bytes
+     */
+    const uint8_t* GetEncoded()
+    {
+        return (uint8_t*) &encoded;
+    }
+
+    /**
+     * Get the length of the encoded bytes for the certificate
+     * @return the length of the encoded bytes
+     */
+    size_t GetEncodedLen()
+    {
+        return sizeof(encoded);
+    }
+
+    /**
+     * Load the encoded bytes for the certificate
+     * @param encodedBytes the encoded bytes
+     * @param len the length of the encoded bytes
+     * @return ER_OK for sucess; otherwise, error code.
+     */
+    QStatus LoadEncoded(const uint8_t* encodedBytes, size_t len);
+
+    /**
+     * Get the PEM encoded bytes for the certificate
+     * @return the PEM encoded bytes
+     */
+    String GetPEM();
+
+    /**
+     * Load the PEM encoded bytes for the certificate
+     * @param encoded the encoded bytes
+     * @return ER_OK for sucess; otherwise, error code.
+     */
+    QStatus LoadPEM(const String& PEM);
 
     String ToString();
 
@@ -136,11 +184,15 @@ class CertificateType0 : public CertificateECC {
   private:
 
     struct Signable {
-        ECCPublicKey issuer;
         uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     };
-    Signable signable;
-    ECCSignature sig;
+    struct Encoded {
+        uint8_t version[sizeof(uint32_t)];
+        ECCPublicKey issuer;
+        Signable signable;
+        ECCSignature sig;
+    };
+    Encoded encoded;
 };
 
 /**
@@ -151,62 +203,104 @@ class CertificateType1 : public CertificateECC {
   public:
     CertificateType1() : CertificateECC(1)
     {
-        signable.delegate = false;
+        SetVersion(1);
+        encoded.signable.delegate = false;
     }
     CertificateType1(const ECCPublicKey* issuer, const ECCPublicKey* subject);
 
+    /**
+     * Set the certificate version
+     * @param val the certificate version
+     */
+    virtual void SetVersion(uint32_t val);
+
     const ECCPublicKey* GetIssuer()
     {
-        return &signable.issuer;
+        return &encoded.signable.issuer;
     }
 
     void SetIssuer(const ECCPublicKey* issuer);
 
     const ECCPublicKey* GetSubject()
     {
-        return &signable.subject;
+        return &encoded.signable.subject;
     }
 
     void SetSubject(const ECCPublicKey* subject);
 
     const ValidPeriod* GetValidity()
     {
-        return &signable.validity;
+        return &validity;
     }
 
-    void SetValidity(const ValidPeriod* validPeriod)
-    {
-        signable.validity = *validPeriod;
-    }
+    void SetValidity(const ValidPeriod* validPeriod);
 
     const bool IsDelegate()
     {
-        return signable.delegate;
+        return (bool) encoded.signable.delegate;
     }
 
     void SetDelegate(bool enabled)
     {
-        signable.delegate = enabled;
+        encoded.signable.delegate = enabled;
     }
 
     const uint8_t* GetExternalDataDigest()
     {
-        return signable.digest;
+        return encoded.signable.digest;
     }
+
     void SetExternalDataDigest(const uint8_t* externalDataDigest);
 
     const ECCSignature* GetSig()
     {
-        return &sig;
+        return &encoded.sig;
     }
+
     void SetSig(const ECCSignature* sig);
 
     QStatus Sign(const ECCPrivateKey* dsaPrivateKey);
 
     bool VerifySignature();
 
-    String GetEncoded();
-    QStatus LoadEncoded(const String& encoded);
+    /**
+     * Get the encoded bytes for the certificate
+     * @return the encoded bytes
+     */
+    const uint8_t* GetEncoded()
+    {
+        return (uint8_t*) &encoded;
+    }
+
+    /**
+     * Get the length of the encoded bytes for the certificate
+     * @return the length of the encoded bytes
+     */
+    size_t GetEncodedLen()
+    {
+        return sizeof(encoded);
+    }
+
+    /**
+     * Load the encoded bytes for the certificate
+     * @param encodedBytes the encoded bytes
+     * @param len the length of the encoded bytes
+     * @return ER_OK for sucess; otherwise, error code.
+     */
+    QStatus LoadEncoded(const uint8_t* encodedBytes, size_t len);
+
+    /**
+     * Get the PEM encoded bytes for the certificate
+     * @return the PEM encoded bytes
+     */
+    String GetPEM();
+
+    /**
+     * Load the PEM encoded bytes for the certificate
+     * @param encoded the encoded bytes
+     * @return ER_OK for sucess; otherwise, error code.
+     */
+    QStatus LoadPEM(const String& PEM);
 
     String ToString();
 
@@ -215,17 +309,22 @@ class CertificateType1 : public CertificateECC {
     }
 
   private:
-    QStatus GenSignable(uint8_t* digest, size_t len);
 
     struct Signable {
+        uint8_t version[sizeof(uint32_t)];
         ECCPublicKey issuer;
         ECCPublicKey subject;
-        ValidPeriod validity;
+        uint8_t validFrom[sizeof(uint64_t)];
+        uint8_t validTo[sizeof(uint64_t)];
         uint8_t delegate;
         uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     };
-    Signable signable;
-    ECCSignature sig;
+    struct Encoded {
+        Signable signable;
+        ECCSignature sig;
+    };
+    Encoded encoded;
+    ValidPeriod validity;
 };
 
 /**
@@ -236,63 +335,110 @@ class CertificateType2 : public CertificateECC {
   public:
     CertificateType2() : CertificateECC(2)
     {
-        signable.delegate = false;
+        SetVersion(2);
+        encoded.signable.delegate = false;
     }
     CertificateType2(const ECCPublicKey* issuer, const ECCPublicKey* subject);
 
+    /**
+     * Set the certificate version
+     * @param val the certificate version
+     */
+    virtual void SetVersion(uint32_t val);
+
     const ECCPublicKey* GetIssuer()
     {
-        return &signable.issuer;
+        return &encoded.signable.issuer;
     }
+
     void SetIssuer(const ECCPublicKey* issuer);
+
     const ECCPublicKey* GetSubject()
     {
-        return &signable.subject;
+        return &encoded.signable.subject;
     }
+
     void SetSubject(const ECCPublicKey* subject);
 
     const ValidPeriod* GetValidity()
     {
-        return &signable.validity;
+        return &validity;
     }
 
-    void SetValidity(const ValidPeriod* validPeriod)
-    {
-        signable.validity.validFrom = validPeriod->validFrom;
-        signable.validity.validTo = validPeriod->validTo;
-    }
+    void SetValidity(const ValidPeriod* validPeriod);
 
     const bool IsDelegate()
     {
-        return signable.delegate;
+        return (bool) encoded.signable.delegate;
     }
 
     void SetDelegate(bool enabled)
     {
-        signable.delegate = enabled;
+        encoded.signable.delegate = enabled;
     }
+
     const uint8_t* GetGuild()
     {
-        return signable.guild;
+        return encoded.signable.guild;
     }
+
     void SetGuild(const uint8_t* newGuild, size_t guildLen);
 
     const uint8_t* GetExternalDataDigest()
     {
-        return signable.digest;
+        return encoded.signable.digest;
     }
     void SetExternalDataDigest(const uint8_t* externalDataDigest);
 
     const ECCSignature* GetSig()
     {
-        return &sig;
+        return &encoded.sig;
     }
+
     void SetSig(const ECCSignature* sig);
+
     QStatus Sign(const ECCPrivateKey* dsaPrivateKey);
+
     bool VerifySignature();
 
-    String GetEncoded();
-    QStatus LoadEncoded(const String& encoded);
+    /**
+     * Get the encoded bytes for the certificate
+     * @return the encoded bytes
+     */
+    const uint8_t* GetEncoded()
+    {
+        return (uint8_t*) &encoded;
+    }
+
+    /**
+     * Get the length of the encoded bytes for the certificate
+     * @return the length of the encoded bytes
+     */
+    size_t GetEncodedLen()
+    {
+        return sizeof(encoded);
+    }
+
+    /**
+     * Load the encoded bytes for the certificate
+     * @param encodedBytes the encoded bytes
+     * @param len the length of the encoded bytes
+     * @return ER_OK for sucess; otherwise, error code.
+     */
+    QStatus LoadEncoded(const uint8_t* encodedBytes, size_t len);
+
+    /**
+     * Get the PEM encoded bytes for the certificate
+     * @return the PEM encoded bytes
+     */
+    String GetPEM();
+
+    /**
+     * Load the PEM encoded bytes for the certificate
+     * @param encoded the encoded bytes
+     * @return ER_OK for sucess; otherwise, error code.
+     */
+    QStatus LoadPEM(const String& PEM);
 
     String ToString();
 
@@ -301,18 +447,23 @@ class CertificateType2 : public CertificateECC {
     }
 
   private:
-    QStatus GenSignable(uint8_t* digest, size_t len);
 
     struct Signable {
+        uint8_t version[sizeof(uint32_t)];
         ECCPublicKey issuer;
         ECCPublicKey subject;
-        ValidPeriod validity;
+        uint8_t validFrom[sizeof(uint64_t)];
+        uint8_t validTo[sizeof(uint64_t)];
         uint8_t delegate;
         uint8_t guild[GUILD_ID_LEN];
         uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     };
-    Signable signable;
-    ECCSignature sig;
+    struct Encoded {
+        Signable signable;
+        ECCSignature sig;
+    };
+    Encoded encoded;
+    ValidPeriod validity;
 
 };
 
@@ -362,12 +513,21 @@ QStatus CertECCUtil_DecodePublicKey(const String& encoded, uint32_t* publicKey, 
 QStatus CertECCUtil_GetCertCount(const String& encoded, size_t* count);
 
 /**
- * Get the certificate version from the PEM string
- * @param encoded the input string holding the PEM string
+ * Get the certificate version from the encoded bytes
+ * @param encoded the input encoded bytes
+ * @param len the length of the input encoded bytes
  * @param[out] certVersion the buffer holding the certificate version
  * @return ER_OK for sucess; otherwise, error code.
  */
-QStatus CertECCUtil_GetVersionFromEncoded(const String& encoded, uint32_t* certVersion);
+QStatus CertECCUtil_GetVersionFromEncoded(const uint8_t* encoded, size_t len, uint32_t* certVersion);
+
+/**
+ * Get the certificate version from the PEM string
+ * @param pem the input string holding the PEM string
+ * @param[out] certVersion the buffer holding the certificate version
+ * @return ER_OK for sucess; otherwise, error code.
+ */
+QStatus CertECCUtil_GetVersionFromPEM(const String& pem, uint32_t* certVersion);
 
 /**
  * Retrieve the number of certificates in a PEM string representing a cert chain.
@@ -377,6 +537,16 @@ QStatus CertECCUtil_GetVersionFromEncoded(const String& encoded, uint32_t* certV
  * @return ER_OK for sucess; otherwise, error code.
  */
 QStatus CertECCUtil_GetCertChain(const String &encoded, CertificateECC * certChain[], size_t count);
+
+/**
+ * A factory method to generate an instance of the certificate using the encode d bytes.
+ * @param encoded the input encoded bytes
+ * @param len the size of the encoded bytes
+ * @return
+ *      - the instance of the certificate using the encoded bytes.  The certificate instance must be allocated after used.
+ *      - NULL if the encoded bytes are invalid
+ */
+CertificateECC* CertECCUtil_GetInstance(const uint8_t* encoded, size_t len);
 
 } /* namespace qcc */
 

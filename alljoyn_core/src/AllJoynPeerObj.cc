@@ -795,11 +795,14 @@ void AllJoynPeerObj::DoKeyAuthentication(Message& msg)
     /*
      * Report the failed authentication to allow application to clear UI etc.
      */
-    peerAuthListener.AuthenticationComplete(keyExchanger->GetSuiteName(), sender.c_str(), false /* failure */);
-
+    const char* suiteName;
     if (keyExchanger) {
+        suiteName = keyExchanger->GetSuiteName();
         delete keyExchanger;
+    } else {
+        suiteName = "Unknown";
     }
+    peerAuthListener.AuthenticationComplete(suiteName, sender.c_str(), false /* failure */);
 
     /*
      * Let remote peer know the authentication failed.

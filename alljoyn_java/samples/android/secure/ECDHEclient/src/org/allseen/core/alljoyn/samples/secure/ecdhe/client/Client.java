@@ -304,28 +304,28 @@ public class Client extends Activity {
         private boolean sendBackKeys = true;  /* toggle the send back keys */
         /* the followings are same data to try out the ECDHE_ECDSA key exchange */
         private static final String CLIENT_PK_PEM =
-                "-----BEGIN PRIVATE KEY-----\n" +
-                "lTS6s6V3UcWnROasQs5jqWLY9QRTs53jS/cTedC9CjgAAAAA\n" +
+                "-----BEGIN PRIVATE KEY-----" +
+                "CkzgQdvZSOQMmqOnddsw0BRneCNZhioNMyUoJwec9rMAAAAA" +
                 "-----END PRIVATE KEY-----";
         private static final String CLIENT_CERT1_PEM =
-                "-----BEGIN CERTIFICATE-----\n" +
-                "AQAAAE1r3SCKpWMqlThhfeaGzhSw3WfjC+RUl789tu7w+oMvAAAAAO+n7qGITw6f\n" +
-                "O6DfW+gDkNMT6V2PsWrW1V4J//3VK6MOAAAAAAAAAABdLtszk+y8//p6JKAccohl\n" +
-                "pX275bCW1kv69gzrV4COFgAAAABqMDBRMlWCJ88jmCyixrZKCkis6Qd7PHU7dKqG\n" +
-                "zBb4VQAAAAAAAAAAt7gPAAAAAADjuQ8AAAAAAAABMa7uTLSqjDggO0t6TAgsxKNt\n" +
-                "+Zhu/jc3s242BE0drPMMESb2k5JsdzRX4XslSiQuZpgnPp5t3NPMHh2c+p3qAAAA\n" +
-                "AHSoKiCloD9K/b+Ck8XUeZRaFLac/ZyX0R0t8pvON0YvAAAAAA==\n" +
-                "-----END CERTIFICATE-----";
+        "-----BEGIN CERTIFICATE-----" +
+        "AAAAAZ1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n" +
+        "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n" +
+        "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n" +
+        "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQABMa7uTLSqjDggO0t6TAgsxKNt\n" +
+        "+Zhu/jc3s242BE0drNFJAiGa/u6AX5qdR+7RFxVuqm251vKPgWjfwN2AesHrAAAA\n" +
+        "ANsNwJl8Z1v5jbqo077qdQIT6aM1jc+pKXdgNMk6loqFAAAAAA==\n" +
+        "-----END CERTIFICATE-----";
         private static final String CLIENT_CERT2_PEM =
-                "-----BEGIN CERTIFICATE-----\n" +
-                "AgAAAE1r3SCKpWMqlThhfeaGzhSw3WfjC+RUl789tu7w+oMvAAAAAO+n7qGITw6f\n" +
-                "O6DfW+gDkNMT6V2PsWrW1V4J//3VK6MOAAAAAAAAAABdLtszk+y8//p6JKAccohl\n" +
-                "pX275bCW1kv69gzrV4COFgAAAABqMDBRMlWCJ88jmCyixrZKCkis6Qd7PHU7dKqG\n" +
-                "zBb4VQAAAAAAAAAAt7gPAAAAAADjuQ8AAAAAAAAE+io+6Vdvzy+voMMsGTUoUF0h\n" +
-                "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOcEvfTTt2z76gmnLMPn/fqFXx8J\n" +
-                "9ZOKwNvRiLs0iSoeOwAAAACAltzNB88uFI76BfLwzswjpIwHqN/j/TuVszSOJUXX\n" +
-                "wAAAAAA=\n" +
-                "-----END CERTIFICATE-----";
+        "-----BEGIN CERTIFICATE-----" +
+        "AAAAAp1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n" +
+        "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n" +
+        "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n" +
+        "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQCJ9dkuY0Z6jjx+a8azIQh4UF0h\n" +
+        "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOeMM4sUtoXPArUA+TNahfOS9Bbf\n" +
+        "0Hh08SvDJSDgM2OetQAAAAAYUr2pw2kb90fWblBWVKnrddtrI5Zs8BYx/EodpMrS\n" +
+        "twAAAAA=\n" +
+        "-----END CERTIFICATE-----";
     }
     
     class BusHandler extends Handler {        

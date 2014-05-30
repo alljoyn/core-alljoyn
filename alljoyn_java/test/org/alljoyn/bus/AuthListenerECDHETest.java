@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -309,14 +309,6 @@ public class AuthListenerECDHETest extends TestCase {
             authenticatedMechanism = mech;
         }
             
-        private String toHex(byte[] buf) {
-        	StringBuffer sb = new StringBuffer(buf.length * 2);
-        	for (byte b: buf) {
-        		sb.append(String.format("%02x", b));
-        	}
-        	return sb.toString();
-        }
-
         private int mode;
         private String mechanisms;
         private String psk;
@@ -329,49 +321,49 @@ public class AuthListenerECDHETest extends TestCase {
 
         private static final String CLIENT_PK_PEM =
                 "-----BEGIN PRIVATE KEY-----" +
-                "lTS6s6V3UcWnROasQs5jqWLY9QRTs53jS/cTedC9CjgAAAAA\n" +
-                "-----END PRIVATE KEY-----";
-        private static final String SERVER_PK_PEM =
-                "-----BEGIN PRIVATE KEY-----" +
-                "ukFtYMT6q6WBN6aPBF1pCAYVWqG3N2eezUnPnhcCsPoAAAAA\n" +
+                "CkzgQdvZSOQMmqOnddsw0BRneCNZhioNMyUoJwec9rMAAAAA" +
                 "-----END PRIVATE KEY-----";
         private static final String CLIENT_CERT1_PEM =
         "-----BEGIN CERTIFICATE-----" +
-        "AQAAAE1r3SCKpWMqlThhfeaGzhSw3WfjC+RUl789tu7w+oMvAAAAAO+n7qGITw6f\n" +
-        "O6DfW+gDkNMT6V2PsWrW1V4J//3VK6MOAAAAAAAAAABdLtszk+y8//p6JKAccohl\n" +
-        "pX275bCW1kv69gzrV4COFgAAAABqMDBRMlWCJ88jmCyixrZKCkis6Qd7PHU7dKqG\n" +
-        "zBb4VQAAAAAAAAAAt7gPAAAAAADjuQ8AAAAAAAABMa7uTLSqjDggO0t6TAgsxKNt\n" +
-        "+Zhu/jc3s242BE0drPMMESb2k5JsdzRX4XslSiQuZpgnPp5t3NPMHh2c+p3qAAAA\n" +
-        "AHSoKiCloD9K/b+Ck8XUeZRaFLac/ZyX0R0t8pvON0YvAAAAAA==\n" +
+        "AAAAAZ1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n" +
+        "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n" +
+        "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n" +
+        "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQABMa7uTLSqjDggO0t6TAgsxKNt\n" +
+        "+Zhu/jc3s242BE0drNFJAiGa/u6AX5qdR+7RFxVuqm251vKPgWjfwN2AesHrAAAA\n" +
+        "ANsNwJl8Z1v5jbqo077qdQIT6aM1jc+pKXdgNMk6loqFAAAAAA==\n" +
         "-----END CERTIFICATE-----";
         private static final String CLIENT_CERT2_PEM =
         "-----BEGIN CERTIFICATE-----" +
-        "AgAAAE1r3SCKpWMqlThhfeaGzhSw3WfjC+RUl789tu7w+oMvAAAAAO+n7qGITw6f\n" +
-        "O6DfW+gDkNMT6V2PsWrW1V4J//3VK6MOAAAAAAAAAABdLtszk+y8//p6JKAccohl\n" +
-        "pX275bCW1kv69gzrV4COFgAAAABqMDBRMlWCJ88jmCyixrZKCkis6Qd7PHU7dKqG\n" +
-        "zBb4VQAAAAAAAAAAt7gPAAAAAADjuQ8AAAAAAAAE+io+6Vdvzy+voMMsGTUoUF0h\n" +
-        "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOcEvfTTt2z76gmnLMPn/fqFXx8J\n" +
-        "9ZOKwNvRiLs0iSoeOwAAAACAltzNB88uFI76BfLwzswjpIwHqN/j/TuVszSOJUXX\n" +
-        "wAAAAAA=\n" +
+        "AAAAAp1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n" +
+        "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n" +
+        "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n" +
+        "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQCJ9dkuY0Z6jjx+a8azIQh4UF0h\n" +
+        "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOeMM4sUtoXPArUA+TNahfOS9Bbf\n" +
+        "0Hh08SvDJSDgM2OetQAAAAAYUr2pw2kb90fWblBWVKnrddtrI5Zs8BYx/EodpMrS\n" +
+        "twAAAAA=\n" +
         "-----END CERTIFICATE-----";
+        private static final String SERVER_PK_PEM =
+                "-----BEGIN PRIVATE KEY-----" +
+                "tV/tGPp7kI0pUohc+opH1LBxzk51pZVM/RVKXHGFjAcAAAAA" +
+                "-----END PRIVATE KEY-----";
         private static final String SERVER_CERT1_PEM =
         "-----BEGIN CERTIFICATE-----" +
-        "AQAAACfpsyeIsOynYHi6SES+FLeTsyt6eV5O2PndyjOlj5V8AAAAAAxjqUs9OTM1\n" +
-        "p0lIUJFDV2dY6QYfXQxF6g2u/8eFwfiiAAAAAAAAAADwEWxEYYxIWM/D5G8ZVysJ\n" +
-        "U9/BUaL9lDIh1abVdm5rXgAAAACyYTdLdgukyBREEqEpWaS7Owz6KxPzLrwhVU8G\n" +
-        "r1JM8AAAAAAAAAAAQLgPAAAAAABsuQ8AAAAAAAABMa7uTLSqjDggO0t6TAgsxKNt\n" +
-        "+Zhu/jc3s242BE0drGu9+3UZklMTHgOjlJKfPtXnm1mZLKTN2pmyJvCpayYwAAAA\n" +
-        "AN1/Mt5/wtgSsksJsK6Yh6U2OjmwZbX8ulNZqwihKIY0AAAAAA==\n" +
+        "AAAAAfUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n" +
+        "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n" +
+        "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n" +
+        "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3AABMa7uTLSqjDggO0t6TAgsxKNt\n" +
+        "+Zhu/jc3s242BE0drPcL4K+FOVJf+tlivskovQ3RfzTQ+zLoBH5ZCzG9ua/dAAAA\n" +
+        "ACt5bWBzbcaT0mUqwGOVosbMcU7SmhtE7vWNn/ECvpYFAAAAAA==\n" +
         "-----END CERTIFICATE-----";
         private static final String SERVER_CERT2_PEM =
         "-----BEGIN CERTIFICATE-----" +
-        "AgAAACfpsyeIsOynYHi6SES+FLeTsyt6eV5O2PndyjOlj5V8AAAAAAxjqUs9OTM1\n" +
-        "p0lIUJFDV2dY6QYfXQxF6g2u/8eFwfiiAAAAAAAAAADwEWxEYYxIWM/D5G8ZVysJ\n" +
-        "U9/BUaL9lDIh1abVdm5rXgAAAACyYTdLdgukyBREEqEpWaS7Owz6KxPzLrwhVU8G\n" +
-        "r1JM8AAAAAAAAAAAQLgPAAAAAABsuQ8AAAAAAAA7TcKkkVyxXnD+ZuEUHxDLUF0h\n" +
-        "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOczQlzDbM3GjqLtqxhn/HpTdEv3\n" +
-        "+EX3EtDWE1A5D2CplwAAAABKue1s92aX+s7c2vDgmHQiDtfzJJzh6SDZMRJyeKw+\n" +
-        "qQAAAAA=\n" +
+        "AAAAAvUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n" +
+        "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n" +
+        "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n" +
+        "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3ABjeWi1/GbBcdnK0yJvL4X/UF0h\n" +
+        "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOc+WvKloM7m5NFJNSd3qFFGUhfj\n" +
+        "xx/0CCRJlk/jeIWmzQAAAAB8bexqa95eHEKTqdc8+qKFKggZZXlpaj9af/MFocIP\n" +
+        "NQAAAAA=\n" +
         "-----END CERTIFICATE-----";
     }
 

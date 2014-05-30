@@ -174,28 +174,29 @@ class ECDHEKeyXListener : public AuthListener {
         } else if (strcmp(authMechanism, KEYX_ECDHE_ECDSA) == 0) {
             static const char privateKeyPEM[] = {
                 "-----BEGIN PRIVATE KEY-----\n"
-                "ukFtYMT6q6WBN6aPBF1pCAYVWqG3N2eezUnPnhcCsPoAAAAA\n"
+                "tV/tGPp7kI0pUohc+opH1LBxzk51pZVM/RVKXHGFjAcAAAAA\n"
                 "-----END PRIVATE KEY-----"
             };
             static const char certChainType1PEM[] = {
                 "-----BEGIN CERTIFICATE-----\n"
-                "AQAAACfpsyeIsOynYHi6SES+FLeTsyt6eV5O2PndyjOlj5V8AAAAAAxjqUs9OTM1\n"
-                "p0lIUJFDV2dY6QYfXQxF6g2u/8eFwfiiAAAAAAAAAADwEWxEYYxIWM/D5G8ZVysJ\n"
-                "U9/BUaL9lDIh1abVdm5rXgAAAACyYTdLdgukyBREEqEpWaS7Owz6KxPzLrwhVU8G\n"
-                "r1JM8AAAAAAAAAAAQLgPAAAAAABsuQ8AAAAAAAABMa7uTLSqjDggO0t6TAgsxKNt\n"
-                "+Zhu/jc3s242BE0drGu9+3UZklMTHgOjlJKfPtXnm1mZLKTN2pmyJvCpayYwAAAA\n"
-                "AN1/Mt5/wtgSsksJsK6Yh6U2OjmwZbX8ulNZqwihKIY0AAAAAA==\n"
+                "AAAAAfUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n"
+                "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n"
+                "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n"
+                "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3AABMa7uTLSqjDggO0t6TAgsxKNt\n"
+                "+Zhu/jc3s242BE0drPcL4K+FOVJf+tlivskovQ3RfzTQ+zLoBH5ZCzG9ua/dAAAA\n"
+                "ACt5bWBzbcaT0mUqwGOVosbMcU7SmhtE7vWNn/ECvpYFAAAAAA==\n"
                 "-----END CERTIFICATE-----"
             };
             static const char certChainType2PEM[] = {
                 "-----BEGIN CERTIFICATE-----\n"
-                "AgAAACfpsyeIsOynYHi6SES+FLeTsyt6eV5O2PndyjOlj5V8AAAAAAxjqUs9OTM1\n"
-                "p0lIUJFDV2dY6QYfXQxF6g2u/8eFwfiiAAAAAAAAAADwEWxEYYxIWM/D5G8ZVysJ\n"
-                "U9/BUaL9lDIh1abVdm5rXgAAAACyYTdLdgukyBREEqEpWaS7Owz6KxPzLrwhVU8G\n"
-                "r1JM8AAAAAAAAAAAQLgPAAAAAABsuQ8AAAAAAAA7TcKkkVyxXnD+ZuEUHxDLUF0h\n"
-                "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOczQlzDbM3GjqLtqxhn/HpTdEv3\n"
-                "+EX3EtDWE1A5D2CplwAAAABKue1s92aX+s7c2vDgmHQiDtfzJJzh6SDZMRJyeKw+\n"
-                "qQAAAAA=\n"
+                "AAAAAvUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n"
+                "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n"
+                "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n"
+                "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3ABjeWi1/GbBcdnK0yJvL4X/UF0h\n"
+                "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOc+WvKloM7m5NFJNSd3qFFGUhfj\n"
+                "xx/0CCRJlk/jeIWmzQAAAAB8bexqa95eHEKTqdc8+qKFKggZZXlpaj9af/MFocIP\n"
+                "NQAAAAA=\n"
+
                 "-----END CERTIFICATE-----"
             };
             /*

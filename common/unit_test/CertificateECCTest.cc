@@ -344,11 +344,57 @@ TEST_F(CertificateECCTest, LoadCertificateType1)
 
     status = cert1.Sign(ecc.GetDSAPrivateKey());
 
-    String encoded = cert1.GetEncoded();
+    const uint8_t* encoded = cert1.GetEncoded();
     CertificateType1 cert2;
 
-    status = cert2.LoadEncoded(encoded);
+    status = cert2.LoadEncoded(encoded, cert1.GetEncodedLen());
     ASSERT_EQ(ER_OK, status) << " CertificateType1::LoadEncoded failed with actual status: " << QCC_StatusText(status);
+
+    ASSERT_EQ(memcmp(cert2.GetIssuer(), cert1.GetIssuer(), sizeof(ECCPublicKey)), 0) << " new cert's issuer not equal to original";
+    ASSERT_EQ(memcmp(cert2.GetSubject(), cert1.GetSubject(), sizeof(ECCPublicKey)), 0) << " new cert's subject not equal to original";
+    ASSERT_EQ(cert2.GetValidity()->validFrom, cert1.GetValidity()->validFrom) << " new cert's validity.validFrom not equal to original";
+    ASSERT_EQ(cert2.GetValidity()->validTo, cert1.GetValidity()->validTo) << " new cert's validity.validTo not equal to original";
+    EXPECT_TRUE(cert2.IsDelegate());
+    ASSERT_EQ(memcmp(cert2.GetExternalDataDigest(), cert1.GetExternalDataDigest(), sizeof(digest)), 0) << " new cert's digest not equal to original";
+
+    EXPECT_TRUE(cert2.VerifySignature());
+    ASSERT_EQ(memcmp(cert2.GetSig(), cert1.GetSig(), sizeof(ECCSignature)), 0) << " new cert's signature not equal to original";
+
+    std::cout << "Original cert: " << cert1.ToString().c_str() << endl;
+    std::cout << "New cert loaded from encoded string: " << cert2.ToString().c_str() << endl;
+}
+
+TEST_F(CertificateECCTest, LoadCertificateType1PEM)
+{
+    QStatus status;
+
+    CertificateType1 cert1(ecc.GetDSAPublicKey(), ecc.GetDHPublicKey());
+
+    Timespec now;
+    GetTimeNow(&now);
+    Certificate::ValidPeriod valid;
+    valid.validFrom = now.seconds;
+    valid.validTo = valid.validFrom + 3600;   /* one hour from now */
+
+    cert1.SetValidity(&valid);
+    cert1.SetDelegate(true);
+
+    String externalData("This is a test from generate encoded cert");
+    Crypto_SHA256 digestUtil;
+    digestUtil.Init();
+    digestUtil.Update(externalData);
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    digestUtil.GetDigest(digest);
+
+    cert1.SetExternalDataDigest(digest);
+
+    status = cert1.Sign(ecc.GetDSAPrivateKey());
+
+    String pem = cert1.GetPEM();
+    CertificateType1 cert2;
+
+    status = cert2.LoadPEM(pem);
+    ASSERT_EQ(ER_OK, status) << " CertificateType1::LoadPEM failed with actual status: " << QCC_StatusText(status);
 
     ASSERT_EQ(memcmp(cert2.GetIssuer(), cert1.GetIssuer(), sizeof(ECCPublicKey)), 0) << " new cert's issuer not equal to original";
     ASSERT_EQ(memcmp(cert2.GetSubject(), cert1.GetSubject(), sizeof(ECCPublicKey)), 0) << " new cert's subject not equal to original";
@@ -391,11 +437,59 @@ TEST_F(CertificateECCTest, LoadCertificateType2)
 
     status = cert1.Sign(ecc.GetDSAPrivateKey());
 
-    String encoded = cert1.GetEncoded();
+    const uint8_t* encoded = cert1.GetEncoded();
     CertificateType2 cert2;
 
-    status = cert2.LoadEncoded(encoded);
-    ASSERT_EQ(ER_OK, status) << " CertificateType1::LoadEncoded failed with actual status: " << QCC_StatusText(status);
+    status = cert2.LoadEncoded(encoded, cert1.GetEncodedLen());
+    ASSERT_EQ(ER_OK, status) << " CertificateType2::LoadEncoded failed with actual status: " << QCC_StatusText(status);
+
+    ASSERT_EQ(memcmp(cert2.GetIssuer(), cert1.GetIssuer(), sizeof(ECCPublicKey)), 0) << " new cert's issuer not equal to original";
+    ASSERT_EQ(memcmp(cert2.GetSubject(), cert1.GetSubject(), sizeof(ECCPublicKey)), 0) << " new cert's subject not equal to original";
+    ASSERT_EQ(cert2.GetValidity()->validFrom, cert1.GetValidity()->validFrom) << " new cert's validity.validFrom not equal to original";
+    ASSERT_EQ(cert2.GetValidity()->validTo, cert1.GetValidity()->validTo) << " new cert's validity.validTo not equal to original";
+    EXPECT_TRUE(cert2.IsDelegate());
+    ASSERT_EQ(memcmp(cert2.GetGuild(), cert1.GetGuild(), GUID128::SIZE), 0) << " new cert's guild not equal to original";
+    ASSERT_EQ(memcmp(cert2.GetExternalDataDigest(), cert1.GetExternalDataDigest(), sizeof(digest)), 0) << " new cert's digest not equal to original";
+
+    EXPECT_TRUE(cert2.VerifySignature());
+    ASSERT_EQ(memcmp(cert2.GetSig(), cert1.GetSig(), sizeof(ECCSignature)), 0) << " new cert's signature not equal to original";
+
+    std::cout << "Original cert: " << cert1.ToString().c_str() << endl;
+    std::cout << "New cert loaded from encoded string: " << cert2.ToString().c_str() << endl;
+}
+
+TEST_F(CertificateECCTest, LoadCertificateType2PEM)
+{
+    QStatus status;
+    CertificateType2 cert1(ecc.GetDSAPublicKey(), ecc.GetDHPublicKey());
+
+    Timespec now;
+    GetTimeNow(&now);
+    Certificate::ValidPeriod valid;
+    valid.validFrom = now.seconds;
+    valid.validTo = valid.validFrom + 3600;   /* one hour from now */
+
+    cert1.SetValidity(&valid);
+    cert1.SetDelegate(true);
+    GUID128 aGuid;
+    cert1.SetGuild(aGuid.GetBytes(), GUID128::SIZE);
+
+    String externalData("This is a test from generate encoded cert");
+    Crypto_SHA256 digestUtil;
+    digestUtil.Init();
+    digestUtil.Update(externalData);
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    digestUtil.GetDigest(digest);
+
+    cert1.SetExternalDataDigest(digest);
+
+    status = cert1.Sign(ecc.GetDSAPrivateKey());
+
+    String pem = cert1.GetPEM();
+    CertificateType2 cert2;
+
+    status = cert2.LoadPEM(pem);
+    ASSERT_EQ(ER_OK, status) << " CertificateType2::LoadPEM failed with actual status: " << QCC_StatusText(status);
 
     ASSERT_EQ(memcmp(cert2.GetIssuer(), cert1.GetIssuer(), sizeof(ECCPublicKey)), 0) << " new cert's issuer not equal to original";
     ASSERT_EQ(memcmp(cert2.GetSubject(), cert1.GetSubject(), sizeof(ECCPublicKey)), 0) << " new cert's subject not equal to original";
@@ -468,15 +562,15 @@ TEST_F(CertificateECCTest, CompareWithWrongPEM)
 
     status = cert1.Sign(ecc.GetDSAPrivateKey());
 
-    String certEncoded = cert1.GetEncoded();
+    String certPEM = cert1.GetPEM();
 
     /* test decode with the wrong PEM */
     CertificateType1 cert2;
-    status = cert2.LoadEncoded(pkEncoded);
+    status = cert2.LoadPEM(pkEncoded);
     ASSERT_NE(ER_OK, status) << " cert2.LoadEncoded succeeded when expected to fail.  The actual actual status: " << QCC_StatusText(status);
 
     ECCPrivateKey pk;
-    status = CertECCUtil_DecodePrivateKey(certEncoded, (uint32_t* ) &pk, sizeof(pk));
+    status = CertECCUtil_DecodePrivateKey(certPEM, (uint32_t* ) &pk, sizeof(pk));
     ASSERT_NE(ER_OK, status) << " CertECCUtil_DecodePrivateKey succeeded when expected to fail.  The actual actual status: " << QCC_StatusText(status);
 }
 
@@ -524,8 +618,8 @@ TEST_F(CertificateECCTest, GenerateKeyPairs)
 
     std::cout << "The encoded private key PEM:" << endl << encodedPK.c_str() << endl;
 
-    String encodedCert = cert.GetEncoded();
-    std::cout << "The encoded cert PEM:" << endl << encodedCert.c_str() << endl;
+    String pem = cert.GetPEM();
+    std::cout << "The encoded cert PEM:" << endl << pem.c_str() << endl;
 
     std::cout << "The cert: " << endl << cert.ToString().c_str() << endl;
 
@@ -540,18 +634,18 @@ TEST_F(CertificateECCTest, GenerateCertChain)
     status = GenerateCertificateType2(cert2, "SUCCESS_GetLeafCert 2");;
     ASSERT_EQ(ER_OK, status) << " GenereateCertificateType2 failed with actual status: " << QCC_StatusText(status);
 
-    String encoded = cert1.GetEncoded();
-    encoded += "\n";
-    encoded += cert2.GetEncoded();
+    String pem = cert1.GetPEM();
+    pem += "\n";
+    pem += cert2.GetPEM();
 
     size_t count = 0;
-    status = CertECCUtil_GetCertCount(encoded, &count);
+    status = CertECCUtil_GetCertCount(pem, &count);
     ASSERT_EQ(ER_OK, status) << " CertECCUtil_GetCertCount failed with actual status: " << QCC_StatusText(status);
     ASSERT_EQ(2U, count) << " CertECCUtil_GetCertCount failed to count certs: ";
 
     cout << "Calling CertECCUtil_GetCertChain" << endl;
     CertificateECC** certChain = new CertificateECC * [count];
-    status = CertECCUtil_GetCertChain(encoded, certChain, count);
+    status = CertECCUtil_GetCertChain(pem, certChain, count);
     if (status == ER_OK) {
         std::cout << "The cert chain:" << endl;
         for (size_t idx = 0; idx < count; idx++) {
@@ -586,8 +680,8 @@ TEST_F(CertificateECCTest, GenCertForBBservice)
     std::cout << "The encoded private key PEM:" << endl << encodedPK.c_str() << endl;
 
     EXPECT_TRUE(cert1.VerifySignature());
-    String encodedCert1 = cert1.GetEncoded();
-    std::cout << "The encoded cert PEM for cert1:" << endl << encodedCert1.c_str() << endl;
+    String pem1 = cert1.GetPEM();
+    std::cout << "The encoded cert PEM for cert1:" << endl << pem1.c_str() << endl;
 
     std::cout << "The cert1: " << endl << cert1.ToString().c_str() << endl;
 
@@ -598,8 +692,8 @@ TEST_F(CertificateECCTest, GenCertForBBservice)
     ASSERT_EQ(ER_OK, status) << " GenereateCertificateType2 failed with actual status: " << QCC_StatusText(status);
     EXPECT_TRUE(cert2.VerifySignature());
 
-    String encodedCert2 = cert2.GetEncoded();
-    std::cout << "The encoded cert PEM for cert2:" << endl << encodedCert2.c_str() << endl;
+    String pem2 = cert2.GetPEM();
+    std::cout << "The encoded cert PEM for cert2:" << endl << pem2.c_str() << endl;
 
     std::cout << "The cert2: " << endl << cert2.ToString().c_str() << endl;
 
