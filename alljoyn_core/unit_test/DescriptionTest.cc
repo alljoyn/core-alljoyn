@@ -360,74 +360,40 @@ class MyTranslator : public Translator {
 
 class DescriptionObject : public BusObject {
   public:
-    DescriptionObject(BusAttachment& bus, const char* path) :
+    DescriptionObject(InterfaceDescription& intf, const char* path) :
         BusObject(path),
         prop_name("Default name")
     {
-        InterfaceDescription* intf = NULL;
-        EXPECT_EQ(ER_OK, bus.CreateInterface(INTERFACE_NAME, intf));
-
-        intf->AddProperty("name", "s", PROP_ACCESS_RW);
-        intf->SetDescriptionLanguage("");
-        intf->SetDescription(ifcId);
-        intf->SetPropertyDescription("name", propId);
-        intf->SetDescriptionTranslator(&translator);
-        intf->Activate();
-
-        EXPECT_EQ(ER_OK, AddInterface(*intf));
-
+        EXPECT_EQ(ER_OK, AddInterface(intf));
         SetDescription("", objId);
-        SetDescriptionTranslator(&translator);
     }
 
   private:
     qcc::String prop_name;
-    MyTranslator translator;
+
 };
 
 class DescriptionObjectNoTranslate : public BusObject {
   public:
-    DescriptionObjectNoTranslate(BusAttachment& bus, const char* path) :
+    DescriptionObjectNoTranslate(InterfaceDescription& intf, const char* path) :
         BusObject(path),
         prop_name("Default name")
     {
-        InterfaceDescription* intf = NULL;
-        EXPECT_EQ(ER_OK, bus.CreateInterface(INTERFACE_NAME, intf));
-
-        intf->AddProperty("name", "s", PROP_ACCESS_RW);
-        intf->SetDescriptionLanguage("");
-        intf->SetDescription(ifcId);
-        intf->SetPropertyDescription("name", propId);
-        intf->SetDescriptionTranslator(&translator);
-        intf->Activate();
-
-        EXPECT_EQ(ER_OK, AddInterface(*intf));
-
+        EXPECT_EQ(ER_OK, AddInterface(intf));
         SetDescription("", objId);
     }
 
   private:
     qcc::String prop_name;
-    MyTranslator translator;
 };
 
 class DescriptionObjectNoIntfTranslate : public BusObject {
   public:
-    DescriptionObjectNoIntfTranslate(BusAttachment& bus, const char* path) :
+    DescriptionObjectNoIntfTranslate(InterfaceDescription& intf, const char* path) :
         BusObject(path),
         prop_name("Default name")
     {
-        InterfaceDescription* intf = NULL;
-        EXPECT_EQ(ER_OK, bus.CreateInterface(INTERFACE_NAME, intf));
-
-        intf->AddProperty("name", "s", PROP_ACCESS_RW);
-        intf->SetDescriptionLanguage("");
-        intf->SetDescription(ifcId);
-        intf->SetPropertyDescription("name", propId);
-        intf->Activate();
-
-        EXPECT_EQ(ER_OK, AddInterface(*intf));
-
+        EXPECT_EQ(ER_OK, AddInterface(intf));
         SetDescription("", objId);
         SetDescriptionTranslator(&translator);
     }
@@ -516,7 +482,20 @@ class DescriptionTest : public::testing::Test {
 
 TEST_F(DescriptionTest, IntrospectableDescriptionObject) {
     // Service part
-    ASSERT_TRUE((m_testObj = new DescriptionObject(*s_msgBusServer, SERVICE_PATH)) != NULL);
+    InterfaceDescription* intf = NULL;
+    MyTranslator translator;
+    EXPECT_EQ(ER_OK, s_msgBusServer->CreateInterface(INTERFACE_NAME, intf));
+    ASSERT_TRUE(intf != NULL);
+
+    intf->AddProperty("name", "s", PROP_ACCESS_RW);
+    intf->SetDescriptionLanguage("");
+    intf->SetDescription(ifcId);
+    intf->SetPropertyDescription("name", propId);
+    intf->SetDescriptionTranslator(&translator);
+    intf->Activate();
+
+    ASSERT_TRUE((m_testObj = new DescriptionObject(*intf, SERVICE_PATH)) != NULL);
+    m_testObj->SetDescriptionTranslator(&translator);
     ASSERT_EQ(ER_OK, s_msgBusServer->RegisterBusObject(*m_testObj));
     ASSERT_EQ(ER_OK, s_msgBusServer->Connect());
 
@@ -530,7 +509,20 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObject) {
 
 TEST_F(DescriptionTest, IntrospectableDescriptionObjectNoTranslate) {
     // Service part
-    ASSERT_TRUE((m_testObj = new DescriptionObjectNoTranslate(*s_msgBusServer, SERVICE_PATH)) != NULL);
+    MyTranslator translator;
+    InterfaceDescription* intf = NULL;
+    EXPECT_EQ(ER_OK, s_msgBusServer->CreateInterface(INTERFACE_NAME, intf));
+    ASSERT_TRUE(intf != NULL);
+
+    intf->AddProperty("name", "s", PROP_ACCESS_RW);
+    intf->SetDescriptionLanguage("");
+    intf->SetDescription(ifcId);
+    intf->SetPropertyDescription("name", propId);
+    intf->SetDescriptionTranslator(&translator);
+    intf->Activate();
+
+    ASSERT_TRUE((m_testObj = new DescriptionObjectNoTranslate(*intf, SERVICE_PATH)) != NULL);
+
     ASSERT_EQ(ER_OK, s_msgBusServer->RegisterBusObject(*m_testObj));
     ASSERT_EQ(ER_OK, s_msgBusServer->Connect());
 
@@ -544,7 +536,18 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectNoTranslate) {
 
 TEST_F(DescriptionTest, IntrospectableDescriptionObjectNoIntfTranslate) {
     // Service part
-    ASSERT_TRUE((m_testObj = new DescriptionObjectNoIntfTranslate(*s_msgBusServer, SERVICE_PATH)) != NULL);
+    InterfaceDescription* intf = NULL;
+    EXPECT_EQ(ER_OK, s_msgBusServer->CreateInterface(INTERFACE_NAME, intf));
+    ASSERT_TRUE(intf != NULL);
+
+    intf->AddProperty("name", "s", PROP_ACCESS_RW);
+    intf->SetDescriptionLanguage("");
+    intf->SetDescription(ifcId);
+    intf->SetPropertyDescription("name", propId);
+    intf->Activate();
+
+    ASSERT_TRUE((m_testObj = new DescriptionObjectNoIntfTranslate(*intf, SERVICE_PATH)) != NULL);
+
     ASSERT_EQ(ER_OK, s_msgBusServer->RegisterBusObject(*m_testObj));
     ASSERT_EQ(ER_OK, s_msgBusServer->Connect());
 
