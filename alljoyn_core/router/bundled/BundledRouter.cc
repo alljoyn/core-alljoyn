@@ -64,7 +64,6 @@ static const char bundledConfig[] =
     "<busconfig>"
     "  <type>alljoyn_bundled</type>"
     "  <listen>tcp:r4addr=0.0.0.0,r4port=0</listen>"
-    "  <listen>udp:u4addr=0.0.0.0,u4port=0</listen>"
     "  <limit name=\"auth_timeout\">5000</limit>"
     "  <limit name=\"max_incomplete_connections\">4</limit>"
     "  <limit name=\"max_completed_connections\">16</limit>"
