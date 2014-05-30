@@ -21,6 +21,9 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		1987CB001935CCA90020729E /* AJNTranslator.h in Headers */ = {isa = PBXBuildFile; fileRef = 1987CAFD1935CCA90020729E /* AJNTranslator.h */; };
+		1987CB011935CCA90020729E /* AJNTranslatorImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = 1987CAFE1935CCA90020729E /* AJNTranslatorImpl.h */; };
+		1987CB021935CCA90020729E /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1987CAFF1935CCA90020729E /* AJNTranslatorImpl.mm */; };
 		7D43EA59192C274F001C75BB /* libAllJoynFramework_iOS.a in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC1030A8156EC82300D2853A /* libAllJoynFramework_iOS.a */; };
 		7D682D661899BC54009424AA /* AJNPasswordManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 7D682D651899BC54009424AA /* AJNPasswordManager.h */; };
 		7D682D681899BC96009424AA /* AJNPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7D682D671899BC96009424AA /* AJNPasswordManager.mm */; };
@@ -122,6 +125,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1987CAFD1935CCA90020729E /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
+		1987CAFE1935CCA90020729E /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
+		1987CAFF1935CCA90020729E /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
 		7D682D651899BC54009424AA /* AJNPasswordManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPasswordManager.h; path = ../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.h; sourceTree = "<group>"; };
 		7D682D671899BC96009424AA /* AJNPasswordManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPasswordManager.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.mm; sourceTree = "<group>"; };
 		AC1030A8156EC82300D2853A /* libAllJoynFramework_iOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libAllJoynFramework_iOS.a; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -270,6 +276,9 @@
 		AC1030AD156EC82300D2853A /* AllJoynFramework_iOS */ = {
 			isa = PBXGroup;
 			children = (
+				1987CAFD1935CCA90020729E /* AJNTranslator.h */,
+				1987CAFE1935CCA90020729E /* AJNTranslatorImpl.h */,
+				1987CAFF1935CCA90020729E /* AJNTranslatorImpl.mm */,
 				7D682D671899BC96009424AA /* AJNPasswordManager.mm */,
 				7D682D651899BC54009424AA /* AJNPasswordManager.h */,
 				AC3A98531578079200CFF856 /* AJNAuthenticationListener.h */,
@@ -387,6 +396,7 @@
 				AC10310B156EC85100D2853A /* AJNBusObjectImpl.h in Headers */,
 				AC10310D156EC85100D2853A /* AJNHandle.h in Headers */,
 				AC10310E156EC85100D2853A /* AJNInterfaceDescription.h in Headers */,
+				1987CB001935CCA90020729E /* AJNTranslator.h in Headers */,
 				AC103110156EC85100D2853A /* AJNInterfaceMember.h in Headers */,
 				AC103112156EC85100D2853A /* AJNInterfaceProperty.h in Headers */,
 				AC103114156EC85100D2853A /* AJNMessage.h in Headers */,
@@ -411,6 +421,7 @@
 				AC3A985E1578079200CFF856 /* AJNKeyStoreListener.h in Headers */,
 				AC3A985F1578079200CFF856 /* AJNKeyStoreListenerImpl.h in Headers */,
 				AC3A98611578079200CFF856 /* AJNSecurityCredentials.h in Headers */,
+				1987CB011935CCA90020729E /* AJNTranslatorImpl.h in Headers */,
 				ACEB7DDB15CB00AF00B1D72E /* AJNMessageHeaderFields.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -533,6 +544,7 @@
 				AC103123156EC85100D2853A /* AJNSessionPortListenerImpl.mm in Sources */,
 				AC103126156EC85100D2853A /* AJNSignalHandlerImpl.mm in Sources */,
 				AC103128156EC85100D2853A /* AJNStatus.m in Sources */,
+				1987CB021935CCA90020729E /* AJNTranslatorImpl.mm in Sources */,
 				AC10312A156EC85100D2853A /* AJNTransportMask.m in Sources */,
 				AC10312D156EC85100D2853A /* AJNVersion.mm in Sources */,
 				AC3A985D1578079200CFF856 /* AJNAuthenticationListenerImpl.mm in Sources */,

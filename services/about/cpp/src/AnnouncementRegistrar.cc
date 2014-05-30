@@ -95,7 +95,10 @@ QStatus AnnouncementRegistrar::RegisterAnnounceHandler(ajn::BusAttachment& bus, 
     }
 
     // Add the user handler to the internal AnnounceHandler.
-    internalAnnounceHandler->AddHandler(handler, implementsInterfaces, numberInterfaces);
+    status = internalAnnounceHandler->AddHandler(handler, implementsInterfaces, numberInterfaces);
+    if (ER_OK != status) {
+        return status;
+    }
 
     qcc::String matchRule = "type='signal',interface='org.alljoyn.About',member='Announce',sessionless='t'";
     for (size_t i = 0; i < numberInterfaces; ++i) {
@@ -128,6 +131,7 @@ QStatus AnnouncementRegistrar::UnRegisterAnnounceHandler(ajn::BusAttachment& bus
             }
             QCC_DbgPrintf(("AnnouncementRegistrar::%s Unregistered Signal Handler", __FUNCTION__));
             delete internalAnnounceHandler;
+            internalAnnounceHandler = NULL;
         }
     }
 
@@ -143,5 +147,6 @@ QStatus AnnouncementRegistrar::UnRegisterAllAnnounceHandlers(ajn::BusAttachment&
     }
     QCC_DbgPrintf(("AnnouncementRegistrar::%s Unregistered All Announce Handlers", __FUNCTION__));
     delete internalAnnounceHandler;
+    internalAnnounceHandler = NULL;
     return status;
 }
