@@ -4461,13 +4461,23 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     assert(IpNameService::Instance().Started() && "UDPTransport::Connect(): IpNameService not started");
 
     /*
+     * UDP Transport does not support raw sockets of any flavor.
+     */
+    QStatus status;
+    if (opts.traffic & SessionOpts::TRAFFIC_RAW_RELIABLE || opts.traffic & SessionOpts::TRAFFIC_RAW_UNRELIABLE) {
+        status = ER_UDP_UNSUPPORTED;
+        QCC_LogError(status, ("UDPTransport::Connect(): UDP Transport does not support raw traffic"));
+        return status;
+    }
+
+    /*
      * Parse and normalize the connectArgs.  When connecting to the outside
      * world, there are no reasonable defaults and so the addr and port keys
      * MUST be present.
      */
     qcc::String normSpec;
     map<qcc::String, qcc::String> argMap;
-    QStatus status = NormalizeTransportSpec(connectSpec, normSpec, argMap);
+    status = NormalizeTransportSpec(connectSpec, normSpec, argMap);
     if (ER_OK != status) {
         QCC_LogError(status, ("UDPTransport::Connect(): Invalid UDP connect spec \"%s\"", connectSpec));
         return status;
