@@ -53,7 +53,7 @@ void MyAllJoynCode::initialize(const char* packageName) {
         LOGTHIS("Created BusAttachment and connected");
 
 
-        AnnouncementRegistrar::RegisterAnnounceHandler(*mBusAttachment, *this);
+        AnnouncementRegistrar::RegisterAnnounceHandler(*mBusAttachment, *this, NULL, 0);
 
         /* Setup sample rule engine interface */
         InterfaceDescription* ruleEngineIntf = NULL;
