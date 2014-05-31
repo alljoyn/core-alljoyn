@@ -747,6 +747,8 @@ static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
     DelConnRecord(handle, conn);
 }
 
+static QStatus Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t flags, uint32_t seq, uint32_t ack, uint32_t lcs);
+
 static void ConnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
 {
     QCC_DbgTrace(("ConnectTimerHandler: handle=%p conn=%p", handle, conn));
@@ -784,6 +786,13 @@ static void ConnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* 
         if (handle->cb.ConnectCb != NULL) {
             handle->cb.ConnectCb(handle, conn, conn->passive, NULL, 0, ER_TIMEOUT);
         }
+        /*
+         * BUGBUG FIXME TODO: If we are changing our minds, shouldn't we send an
+         * RST, go to state CLOSED and delete the connection record?
+         *
+         * <SEQ=SEG.ACK + 1><RST>
+         */
+        Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, conn->SND.UNA, 0, conn->RCV.MAX);
         SetState(conn, CLOSED);
         DelConnRecord(handle, conn);
     } else {
@@ -1968,6 +1977,15 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                     uint8_t* data = buf + sizeof(ArdpSynSegment);
                     if (handle->cb.AcceptCb(handle, conn->ipAddr, conn->ipPort, conn, data, seg->DLEN, ER_OK) == false) {
                         QCC_DbgPrintf(("ArdpMachine(): LISTEN: SYN received. AcceptCb() returned \"false\""));
+                        /*
+                         * BUGBUG FIXME TODO: If the application does not accept
+                         * the connection shouldn't we RST, go to state CLOSED
+                         * and delete the connection record?
+                         *
+                         * <SEQ=SEG.ACK + 1><RST>
+                         */
+                        Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, seg->ACK + 1, 0, conn->RCV.MAX);
+                        SetState(conn, CLOSED);
                         DelConnRecord(handle, conn);
                     }
                 }
@@ -2312,12 +2330,28 @@ QStatus ARDP_Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t segmax, u
 
     status = InitRcv(conn, segmax, segbmax);     /* Initialize the receiver side of the connection */
     if (status != ER_OK) {
+        /*
+         * BUGBUG FIXME TODO: If we cannot accept, shouldn't we send an RST, go
+         * to state CLOSED and delete the connection record?
+         *
+         * <SEQ=SEG.ACK + 1><RST>
+         */
+        Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, conn->SND.UNA, 0, conn->RCV.MAX);
+        SetState(conn, CLOSED);
         DelConnRecord(handle, conn);
         return status;
     }
 
     status = InitSBUF(conn);
     if (status != ER_OK) {
+        /*
+         * BUGBUG FIXME TODO: If we cannot accept, shouldn't we send an RST, go
+         * to state CLOSED and delete the connection record?
+         *
+         * <SEQ=SEG.ACK + 1><RST>
+         */
+        Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, conn->SND.UNA, 0, conn->RCV.MAX);
+        SetState(conn, CLOSED);
         DelConnRecord(handle, conn);
         return status;
     }
