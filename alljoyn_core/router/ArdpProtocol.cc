@@ -320,6 +320,7 @@ static void DeList(ListNode* node)
     node->fwd = node->bwd = node;
 }
 
+#ifndef NDEBUG
 static void DumpBuffer(uint8_t* buf, uint16_t len)
 {
     QCC_DbgPrintf(("DumpBuffer buf=%p, len=%d", buf, len));
@@ -369,6 +370,7 @@ static void DumpSndInfo(ArdpConnRecord* conn)
                        ntohs(h->fcnt), ntohl(h->som)));
     }
 }
+#endif // NDEBUG
 
 static QStatus InitSBUF(ArdpConnRecord* conn)
 {
@@ -421,6 +423,7 @@ static QStatus InitSBUF(ArdpConnRecord* conn)
     return ER_OK;
 }
 
+#ifndef NDEBUG
 static const char* State2Text(ArdpState state)
 {
     switch (state) {
@@ -439,6 +442,7 @@ static const char* State2Text(ArdpState state)
     default: return "UNDEFINED";
     }
 }
+#endif
 
 static inline void SetState(ArdpConnRecord* conn, ArdpState state)
 {
@@ -1085,7 +1089,9 @@ static void WindowCheckTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, vo
 
 static void ProbeTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
 {
+#ifndef NDEBUG
     ArdpTimer* timer = (ArdpTimer*) context;
+#endif
     uint32_t now = TimeNow(handle->tbase);
     uint32_t elapsed = now - conn->lastSeen;
     /* Connection timeout */
@@ -1194,6 +1200,12 @@ uint32_t ARDP_GetConnId(ArdpConnRecord* conn)
 {
     QCC_DbgTrace(("ARDP_GetConnId(conn=%p)", conn));
     return conn->id;
+}
+
+uint32_t ARDP_GetConnPending(ArdpConnRecord* conn)
+{
+    QCC_DbgTrace(("ARDP_GetConnPending(conn=%p)", conn));
+    return conn->SBUF.pending;
 }
 
 qcc::IPAddress ARDP_GetIpAddrFromConn(ArdpConnRecord* conn)
@@ -1591,7 +1603,9 @@ static void CancelEackedSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint3
     uint32_t start = conn->SND.UNA;
     uint32_t index =  start % conn->SND.MAX;
 
+#ifndef NDEBUG
     DumpBitMask(conn, bitMask, conn->remoteMskSz, true);
+#endif
     FastRetransmit(handle, conn, index);
 
     /* Bitmask starts at SND.UNA + 1. Cycle through the mask and cancel retransmit timers
@@ -1896,8 +1910,9 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
         AddRcvMsk(conn, (seg->SEQ - (conn->RCV.CUR + 1)));
     }
 
+#ifndef NDEBUG
     DumpBitMask(conn, conn->rcvMsk.mask, conn->rcvMsk.fixedSz, false);
-
+#endif
     return ER_OK;
 }
 
@@ -2162,7 +2177,9 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 } else {
                     /* If this is NUL packet, it's a ping */
                     if (seg->DLEN) {
+#ifndef NDEBUG
                         DumpBuffer(buf, len);
+#endif
                         assert(false);
                     }
                 }

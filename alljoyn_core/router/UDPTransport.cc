@@ -527,8 +527,8 @@ class _UDPEndpoint;
 /**
  * A skeletal variety of a Stream used to fake the system into believing that
  * there is a stream-based protocol at work here.  This is not intended to be
- * wired into IODispatch or used by anything but to fake out SASL and allow
- * it to be run without major changes.
+ * wired into IODispatch but is used to allow the daemon to to run in a
+ * threadless, streamless environment without major changes.
  */
 class ArdpStream : public qcc::Stream {
   public:
@@ -1460,6 +1460,17 @@ class _UDPEndpoint : public _RemoteEndpoint {
             }
 
             /*
+             * If there are any messages waiting to be sent, we need to do the
+             * equivalent of a shutdown() and wait a reasonable time for them to
+             * be delivered.
+             */
+            ArdpConnRecord* conn = m_stream->GetConn();
+            while (ARDP_GetConnPending(conn)) {
+                QCC_DbgTrace(("_UDPEndpoint::Join(): Waiting for pending messsages to send"));
+                qcc::Sleep(10);
+            }
+
+            /*
              * Make sure the stream is disconnected and resources are reclaimed.
              */
             DestroyStream();
@@ -1494,8 +1505,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
     }
 
     /**
-     * Create a skeletal stream that we'll use during SASL exhange and as a place to
-     * hold some connection information.
+     * Create a skeletal stream that we'll use basically as a place to hold some
+     * connection information.
      */
     void CreateStream(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t dataTimeout, uint32_t dataRetries)
     {
@@ -1533,8 +1544,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
     }
 
     /**
-     * Create a skeletal stream that we'll use during SASL exhange and as a place to
-     * hold some connection information.
+     * Delete the skeletal stream that we used to stash our connection
+     * information.
      */
     void DestroyStream()
     {
@@ -2747,22 +2758,46 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
          * but we must also be sensitive to blocking for long periods of time
          * since we are called in the main loop of the transport.
          *
-         * The only thing that could cause us to block is an associated stream
-         * thread set not being empty, so we check for that blocking case before
-         * we call Join() and let our own Maintenance thread take care of
-         * waiting for the threads to exit by delaying the next call (to here).
+         * There are two things that could cause us to block: an associated
+         * stream thread set not being empty, and the connection draining as it
+         * shuts down.  We check for those blocking cases before we call Join()
+         * and let our own Maintenance thread (we are on that thread now) take
+         * care of waiting for the threads to exit by delaying the next call.
+         * We expect to be Alert()ed every time an interesting event happens,
+         * like a thread returning or a pending message being delivered.
          *
          * The Join() call will set the state of the endpoint to EP_DONE, so
          * if we reload the state, we can release the newly Join()ed endpoint
          * below.
          */
         if (endpointState == _UDPEndpoint::EP_STOPPING) {
+            QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d is EP_STOPPING", ep->GetConnId()));
+
             ArdpStream* stream = ep->GetStream();
+            ArdpConnRecord* conn = stream->GetConn();
+
+            /*
+             * Wait for the threads blocked on the endpoint for writing to exit.
+             * If they don't go away, we just can't delete the object or we
+             * probably crash the daemon.
+             */
             if (stream->IsThreadSetEmpty()) {
-                QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Join()ing stopping endpoint with conn ID == %d",
-                               ep->GetConnId()));
-                ep->Join();
-                endpointState = ep->GetEpState();
+
+                /*
+                 * BUGBUG FIXME TODO: Actually wait some finite amount of time.
+                 * Wait for a reasonable amount of time for the connection to
+                 * drain before we whack it.  This is roughly equivalent to a
+                 * TCP socket's shutdown (graceful shutdown) call.
+                 */
+                if (ARDP_GetConnPending(conn) == 0) {
+                    QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Join()ing stopping endpoint with conn ID == %d", ep->GetConnId()));
+                    ep->Join();
+                    endpointState = ep->GetEpState();
+#ifndef DEBUG
+                } else {
+                    QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d has messages pending", ep->GetConnId()));
+#endif
+                }
             }
         }
 
