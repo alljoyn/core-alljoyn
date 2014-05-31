@@ -1596,6 +1596,10 @@ void IpNameServiceImpl::TriggerTransmission(Packet packet)
             m_mutex.Lock();
         }
     }
+    //If the alarm is added successfully, AlarmTriggered will delete the BurstResponseHeader ptr.
+    if (status != ER_OK) {
+        delete brh_ptr;
+    }
     m_mutex.Unlock();
 }
 
