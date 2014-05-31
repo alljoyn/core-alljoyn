@@ -3271,14 +3271,13 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                             srvRData = static_cast<MDNSSrvRData*>(answerRecord->GetRData());
 
                             if (haveIPv4address) {
-                                if (mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord)) {
-                                    addrRData = static_cast<MDNSARData*>(resourceRecord->GetRData());
-                                } else {
+                                if (!mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord)) {
                                     // Add an IPv4 address record
                                     addrRData = new MDNSARData();
                                     mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, addrRData));
                                     mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord);
                                 }
+                                addrRData = static_cast<MDNSARData*>(resourceRecord->GetRData());
                                 if (addrRData) {
                                     addrRData->SetAddr(ipv4address.ToString());
                                     refRData->SetIPV4ResponsePort(unicastIpv4Port);
@@ -3304,14 +3303,13 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                         } else if (answerRecord->GetDomainName().find("._udp.") != String::npos) {
                             srvRData = static_cast<MDNSSrvRData*>(answerRecord->GetRData());
                             if (haveIPv4address) {
-                                if (mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord)) {
-                                    addrRData = static_cast<MDNSARData*>(resourceRecord->GetRData());
-                                } else {
+                                if (!mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord)) {
                                     // Add an IPv4 address record
                                     addrRData = new MDNSARData();
                                     mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, addrRData));
                                     mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord);
                                 }
+                                addrRData = static_cast<MDNSARData*>(resourceRecord->GetRData());
                                 if (addrRData) {
                                     addrRData->SetAddr(ipv4address.ToString());
                                     if (unicastIpv4Port != 0) {
