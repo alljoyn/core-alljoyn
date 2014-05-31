@@ -5539,7 +5539,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
 
             if (quietly) {
-                set<String> advertising_quietly = GetAdvertising(tm);
+                set<String> advertising_quietly = GetAdvertisingQuietly(tm);
 
                 for (set<qcc::String>::iterator i = advertising_quietly.begin(); i != advertising_quietly.end(); ++i) {
                     QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Accumulating (quiet) \"%s\"", (*i).c_str()));
