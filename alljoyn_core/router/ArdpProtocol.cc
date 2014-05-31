@@ -2154,6 +2154,13 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                     timer = AddTimer(handle, conn, WINDOW_CHECK_TIMER, WindowCheckTimerHandler, NULL, handle->config.persistTimeout, handle->config.persistRetries);
                     timer->context = (void*) timer;
 
+                    conn->windowTimer = timer;
+                    DeList((ListNode*) conn->windowTimer);
+
+                    if (seg->FLG & ARDP_FLAG_NUL) {
+                        Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
+                    }
+
                     if (handle->cb.ConnectCb) {
                         QCC_DbgPrintf(("ArdpMachine(): SYN_RCVD->OPEN: ConnectCb(handle=%p, conn=%p", handle, conn));
                         assert(conn->passive);
@@ -2165,9 +2172,6 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                         }
                     }
 
-                    if (seg->FLG & ARDP_FLAG_NUL) {
-                        Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
-                    }
                     break;
 
                 } else {
