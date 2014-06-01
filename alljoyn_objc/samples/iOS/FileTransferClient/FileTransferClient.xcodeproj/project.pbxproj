@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		83592561193B12CB007C5728 /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 83592560193B12CB007C5728 /* AJNTranslatorImpl.mm */; };
 		AC880FD5164845E5006CD25A /* AJNAuthenticationListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC880F9E164845E5006CD25A /* AJNAuthenticationListenerImpl.mm */; };
 		AC880FD6164845E5006CD25A /* AJNBus.m in Sources */ = {isa = PBXBuildFile; fileRef = AC880FA0164845E5006CD25A /* AJNBus.m */; };
 		AC880FD7164845E5006CD25A /* AJNBusAttachment.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC880FA2164845E5006CD25A /* AJNBusAttachment.mm */; };
@@ -52,6 +53,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		8359255E193B12CB007C5728 /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
+		8359255F193B12CB007C5728 /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
+		83592560193B12CB007C5728 /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
 		AC880F9C164845E5006CD25A /* AJNAuthenticationListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAuthenticationListener.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAuthenticationListener.h; sourceTree = "<group>"; };
 		AC880F9D164845E5006CD25A /* AJNAuthenticationListenerImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAuthenticationListenerImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAuthenticationListenerImpl.h; sourceTree = "<group>"; };
 		AC880F9E164845E5006CD25A /* AJNAuthenticationListenerImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAuthenticationListenerImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAuthenticationListenerImpl.mm; sourceTree = "<group>"; };
@@ -158,6 +162,9 @@
 		AC880F9B164845C9006CD25A /* AllJoynFramework */ = {
 			isa = PBXGroup;
 			children = (
+				8359255E193B12CB007C5728 /* AJNTranslator.h */,
+				8359255F193B12CB007C5728 /* AJNTranslatorImpl.h */,
+				83592560193B12CB007C5728 /* AJNTranslatorImpl.mm */,
 				AC880F9C164845E5006CD25A /* AJNAuthenticationListener.h */,
 				AC880F9D164845E5006CD25A /* AJNAuthenticationListenerImpl.h */,
 				AC880F9E164845E5006CD25A /* AJNAuthenticationListenerImpl.mm */,
@@ -370,6 +377,7 @@
 				AC880FE0164845E5006CD25A /* AJNMessageArgument.mm in Sources */,
 				AC880FE1164845E5006CD25A /* AJNMessageHeaderFields.mm in Sources */,
 				AC880FE2164845E5006CD25A /* AJNObject.m in Sources */,
+				83592561193B12CB007C5728 /* AJNTranslatorImpl.mm in Sources */,
 				AC880FE3164845E5006CD25A /* AJNProxyBusObject.mm in Sources */,
 				AC880FE4164845E5006CD25A /* AJNSecurityCredentials.mm in Sources */,
 				AC880FE5164845E5006CD25A /* AJNServiceController.m in Sources */,

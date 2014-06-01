@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		83E242AB193B129A007F7C1D /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 83E242AA193B129A007F7C1D /* AJNTranslatorImpl.mm */; };
 		AC4765B8160B9B0E0073AC47 /* AJNBasicObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC4765B5160B9B0E0073AC47 /* AJNBasicObject.mm */; };
 		AC4765B9160B9B0E0073AC47 /* BasicObject.m in Sources */ = {isa = PBXBuildFile; fileRef = AC4765B7160B9B0E0073AC47 /* BasicObject.m */; };
 		AC4765F2160B9B240073AC47 /* AJNAuthenticationListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC4765BD160B9B240073AC47 /* AJNAuthenticationListenerImpl.mm */; };
@@ -50,6 +51,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		83E242A8193B129A007F7C1D /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
+		83E242A9193B129A007F7C1D /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
+		83E242AA193B129A007F7C1D /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
 		AC4765B4160B9B0E0073AC47 /* AJNBasicObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNBasicObject.h; path = ../../BasicClient/BasicClient/AJNBasicObject.h; sourceTree = "<group>"; };
 		AC4765B5160B9B0E0073AC47 /* AJNBasicObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNBasicObject.mm; path = ../../BasicClient/BasicClient/AJNBasicObject.mm; sourceTree = "<group>"; };
 		AC4765B6160B9B0E0073AC47 /* BasicObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BasicObject.h; path = ../../BasicClient/BasicClient/BasicObject.h; sourceTree = "<group>"; };
@@ -151,6 +155,9 @@
 		AC4765BA160B9B130073AC47 /* AllJoynFramework */ = {
 			isa = PBXGroup;
 			children = (
+				83E242A8193B129A007F7C1D /* AJNTranslator.h */,
+				83E242A9193B129A007F7C1D /* AJNTranslatorImpl.h */,
+				83E242AA193B129A007F7C1D /* AJNTranslatorImpl.mm */,
 				AC4765BB160B9B240073AC47 /* AJNAuthenticationListener.h */,
 				AC4765BC160B9B240073AC47 /* AJNAuthenticationListenerImpl.h */,
 				AC4765BD160B9B240073AC47 /* AJNAuthenticationListenerImpl.mm */,
@@ -344,6 +351,7 @@
 				ACB2C772160B976000D7E3A6 /* main.m in Sources */,
 				ACB2C776160B976000D7E3A6 /* AppDelegate.m in Sources */,
 				ACB2C785160B976000D7E3A6 /* ViewController.m in Sources */,
+				83E242AB193B129A007F7C1D /* AJNTranslatorImpl.mm in Sources */,
 				AC4765B8160B9B0E0073AC47 /* AJNBasicObject.mm in Sources */,
 				AC4765B9160B9B0E0073AC47 /* BasicObject.m in Sources */,
 				AC4765F2160B9B240073AC47 /* AJNAuthenticationListenerImpl.mm in Sources */,

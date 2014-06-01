@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		83B0F434193B13BE0091ACDD /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 83B0F433193B13BE0091ACDD /* AJNTranslatorImpl.mm */; };
 		AC11566A150EA89200359BDC /* BasicClientViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = AC115669150EA89200359BDC /* BasicClientViewController.m */; };
 		AC115678150FB45A00359BDC /* BasicClient.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC115677150FB45A00359BDC /* BasicClient.mm */; };
 		AC1D97B6150E7C980005211D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC1D97B5150E7C980005211D /* Cocoa.framework */; };
@@ -64,6 +65,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		83B0F431193B13BE0091ACDD /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
+		83B0F432193B13BE0091ACDD /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
+		83B0F433193B13BE0091ACDD /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
 		AC115668150EA89200359BDC /* BasicClientViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BasicClientViewController.h; sourceTree = "<group>"; };
 		AC115669150EA89200359BDC /* BasicClientViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BasicClientViewController.m; sourceTree = "<group>"; };
 		AC115676150FB45A00359BDC /* BasicClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BasicClient.h; sourceTree = "<group>"; };
@@ -334,6 +338,9 @@
 				AC8D8EAF1614EA2100361742 /* AJNSignalHandlerImpl.mm */,
 				AC8D8EB01614EA2100361742 /* AJNStatus.h */,
 				AC8D8EB11614EA2100361742 /* AJNStatus.m */,
+				83B0F431193B13BE0091ACDD /* AJNTranslator.h */,
+				83B0F432193B13BE0091ACDD /* AJNTranslatorImpl.h */,
+				83B0F433193B13BE0091ACDD /* AJNTranslatorImpl.mm */,
 				AC8D8EB21614EA2100361742 /* AJNTransportMask.h */,
 				AC8D8EB31614EA2100361742 /* AJNTransportMask.m */,
 				AC8D8EB41614EA2100361742 /* AJNType.h */,
@@ -454,6 +461,7 @@
 				AC1D97C2150E7C980005211D /* main.m in Sources */,
 				AC1D97C9150E7C990005211D /* AppDelegate.m in Sources */,
 				AC11566A150EA89200359BDC /* BasicClientViewController.m in Sources */,
+				83B0F434193B13BE0091ACDD /* AJNTranslatorImpl.mm in Sources */,
 				AC115678150FB45A00359BDC /* BasicClient.mm in Sources */,
 				AC8D8EB71614EA2100361742 /* AJNAuthenticationListenerImpl.mm in Sources */,
 				AC8D8EB81614EA2100361742 /* AJNBus.m in Sources */,

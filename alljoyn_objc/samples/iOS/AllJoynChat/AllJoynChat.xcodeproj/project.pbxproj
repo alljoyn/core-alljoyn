@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		83EBB784193B11F4009B2FDF /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 83EBB783193B11F4009B2FDF /* AJNTranslatorImpl.mm */; };
 		AC0175761610C66600ADB2B0 /* AJNCConversation.m in Sources */ = {isa = PBXBuildFile; fileRef = AC0175751610C66600ADB2B0 /* AJNCConversation.m */; };
 		AC0175791610CABF00ADB2B0 /* AJNCMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = AC0175781610CABF00ADB2B0 /* AJNCMessage.m */; };
 		AC01C742152CCF3800DD620F /* AJNCBusObjectImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC01C741152CCF3800DD620F /* AJNCBusObjectImpl.mm */; };
@@ -77,6 +78,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		83EBB781193B11F4009B2FDF /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
+		83EBB782193B11F4009B2FDF /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
+		83EBB783193B11F4009B2FDF /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
 		AC0175731610C5F700ADB2B0 /* AJNCChatReceiver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNCChatReceiver.h; sourceTree = "<group>"; };
 		AC0175741610C66600ADB2B0 /* AJNCConversation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNCConversation.h; sourceTree = "<group>"; };
 		AC0175751610C66600ADB2B0 /* AJNCConversation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AJNCConversation.m; sourceTree = "<group>"; };
@@ -319,6 +323,9 @@
 		AC799E13155855C300BBDDBC /* AllJoynFramework */ = {
 			isa = PBXGroup;
 			children = (
+				83EBB781193B11F4009B2FDF /* AJNTranslator.h */,
+				83EBB782193B11F4009B2FDF /* AJNTranslatorImpl.h */,
+				83EBB783193B11F4009B2FDF /* AJNTranslatorImpl.mm */,
 				AC8D8DEF1614CA6600361742 /* AJNAuthenticationListener.h */,
 				AC8D8DF01614CA6600361742 /* AJNAuthenticationListenerImpl.h */,
 				AC8D8DF11614CA6600361742 /* AJNAuthenticationListenerImpl.mm */,
@@ -527,6 +534,7 @@
 				AC8D8E391614CA6600361742 /* AJNSignalHandlerImpl.mm in Sources */,
 				AC8D8E3A1614CA6600361742 /* AJNStatus.m in Sources */,
 				AC8D8E3B1614CA6600361742 /* AJNTransportMask.m in Sources */,
+				83EBB784193B11F4009B2FDF /* AJNTranslatorImpl.mm in Sources */,
 				AC8D8E3C1614CA6600361742 /* AJNVersion.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

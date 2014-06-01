@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8314CA60193B14FF0070DF4F /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8314CA5F193B14FF0070DF4F /* AJNTranslatorImpl.mm */; };
 		ACCF73D716681C0E001CB5E9 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACCF73D616681C0E001CB5E9 /* Cocoa.framework */; };
 		ACCF73E116681C0E001CB5E9 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = ACCF73DF16681C0E001CB5E9 /* InfoPlist.strings */; };
 		ACCF73E316681C0E001CB5E9 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = ACCF73E216681C0E001CB5E9 /* main.m */; };
@@ -49,6 +50,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		8314CA5D193B14FF0070DF4F /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
+		8314CA5E193B14FF0070DF4F /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
+		8314CA5F193B14FF0070DF4F /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
 		ACCF73D216681C0E001CB5E9 /* BasicBusService.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BasicBusService.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACCF73D616681C0E001CB5E9 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		ACCF73D916681C0E001CB5E9 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -284,6 +288,9 @@
 				ACCF742B16681C6E001CB5E9 /* AJNSignalHandlerImpl.mm */,
 				ACCF742C16681C6E001CB5E9 /* AJNStatus.h */,
 				ACCF742D16681C6E001CB5E9 /* AJNStatus.m */,
+				8314CA5D193B14FF0070DF4F /* AJNTranslator.h */,
+				8314CA5E193B14FF0070DF4F /* AJNTranslatorImpl.h */,
+				8314CA5F193B14FF0070DF4F /* AJNTranslatorImpl.mm */,
 				ACCF742E16681C6E001CB5E9 /* AJNTransportMask.h */,
 				ACCF742F16681C6E001CB5E9 /* AJNTransportMask.m */,
 				ACCF743016681C6E001CB5E9 /* AJNType.h */,
@@ -383,6 +390,7 @@
 				ACCF744816681C6E001CB5E9 /* AJNSignalHandlerImpl.mm in Sources */,
 				ACCF744916681C6E001CB5E9 /* AJNStatus.m in Sources */,
 				ACCF744A16681C6E001CB5E9 /* AJNTransportMask.m in Sources */,
+				8314CA60193B14FF0070DF4F /* AJNTranslatorImpl.mm in Sources */,
 				ACCF744B16681C6E001CB5E9 /* AJNVersion.mm in Sources */,
 				ACCF745016681C8B001CB5E9 /* AJNPingObject.mm in Sources */,
 				ACCF745116681C8B001CB5E9 /* PingObject.m in Sources */,
@@ -547,6 +555,7 @@
 				ACCF73F216681C0E001CB5E9 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

@@ -287,9 +287,6 @@
 		ACD9B1B0152233C100F9B0F1 /* AllJoynFramework */ = {
 			isa = PBXGroup;
 			children = (
-				833CA3DF19229A1800D8C62B /* AJNTranslator.h */,
-				833CA3E019229A1800D8C62B /* AJNTranslatorImpl.h */,
-				833CA3E119229A1800D8C62B /* AJNTranslatorImpl.mm */,
 				AC8D8EE01614F3ED00361742 /* AJNAuthenticationListener.h */,
 				AC8D8EE11614F3ED00361742 /* AJNAuthenticationListenerImpl.h */,
 				AC8D8EE21614F3ED00361742 /* AJNAuthenticationListenerImpl.mm */,
@@ -340,6 +337,9 @@
 				AC8D8F0F1614F3ED00361742 /* AJNSignalHandlerImpl.mm */,
 				AC8D8F101614F3ED00361742 /* AJNStatus.h */,
 				AC8D8F111614F3ED00361742 /* AJNStatus.m */,
+				833CA3DF19229A1800D8C62B /* AJNTranslator.h */,
+				833CA3E019229A1800D8C62B /* AJNTranslatorImpl.h */,
+				833CA3E119229A1800D8C62B /* AJNTranslatorImpl.mm */,
 				AC8D8F121614F3ED00361742 /* AJNTransportMask.h */,
 				AC8D8F131614F3ED00361742 /* AJNTransportMask.m */,
 				AC8D8F141614F3ED00361742 /* AJNType.h */,

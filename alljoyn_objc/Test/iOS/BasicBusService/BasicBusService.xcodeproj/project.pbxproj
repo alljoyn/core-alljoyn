@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		83F0A496193B1459000462EA /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 83F0A495193B1459000462EA /* AJNTranslatorImpl.mm */; };
 		AC360BDD1639A98900D2CAC3 /* AJNPingObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC360BD81639A98900D2CAC3 /* AJNPingObject.mm */; };
 		AC360BDE1639A98900D2CAC3 /* Constants.m in Sources */ = {isa = PBXBuildFile; fileRef = AC360BDA1639A98900D2CAC3 /* Constants.m */; };
 		AC360BDF1639A98900D2CAC3 /* PingObject.m in Sources */ = {isa = PBXBuildFile; fileRef = AC360BDC1639A98900D2CAC3 /* PingObject.m */; };
@@ -53,6 +54,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		83F0A493193B1459000462EA /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
+		83F0A494193B1459000462EA /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
+		83F0A495193B1459000462EA /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
 		AC360BD71639A98900D2CAC3 /* AJNPingObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPingObject.h; path = ../../BasicBusClient/BasicBusClient/AJNPingObject.h; sourceTree = "<group>"; };
 		AC360BD81639A98900D2CAC3 /* AJNPingObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPingObject.mm; path = ../../BasicBusClient/BasicBusClient/AJNPingObject.mm; sourceTree = "<group>"; };
 		AC360BD91639A98900D2CAC3 /* Constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Constants.h; path = ../../BasicBusClient/BasicBusClient/Constants.h; sourceTree = "<group>"; };
@@ -217,6 +221,9 @@
 				ACCF734316680FF6001CB5E9 /* AJNSignalHandlerImpl.mm */,
 				ACCF734416680FF6001CB5E9 /* AJNStatus.h */,
 				ACCF734516680FF6001CB5E9 /* AJNStatus.m */,
+				83F0A493193B1459000462EA /* AJNTranslator.h */,
+				83F0A494193B1459000462EA /* AJNTranslatorImpl.h */,
+				83F0A495193B1459000462EA /* AJNTranslatorImpl.mm */,
 				ACCF734616680FF6001CB5E9 /* AJNTransportMask.h */,
 				ACCF734716680FF6001CB5E9 /* AJNTransportMask.m */,
 				ACCF734816680FF6001CB5E9 /* AJNType.h */,
@@ -387,6 +394,7 @@
 				ACCF735C16680FF7001CB5E9 /* AJNServiceController.m in Sources */,
 				ACCF735D16680FF7001CB5E9 /* AJNSessionListenerImpl.mm in Sources */,
 				ACCF735E16680FF7001CB5E9 /* AJNSessionOptions.mm in Sources */,
+				83F0A496193B1459000462EA /* AJNTranslatorImpl.mm in Sources */,
 				ACCF735F16680FF7001CB5E9 /* AJNSessionPortListenerImpl.mm in Sources */,
 				ACCF736016680FF7001CB5E9 /* AJNSignalHandlerImpl.mm in Sources */,
 				ACCF736116680FF7001CB5E9 /* AJNStatus.m in Sources */,

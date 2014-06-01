@@ -23,6 +23,9 @@
 /* Begin PBXBuildFile section */
 		7D89F7A21716280B00C372A5 /* AJNPasswordManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 7D89F7A01716280A00C372A5 /* AJNPasswordManager.h */; };
 		7D89F7A31716280B00C372A5 /* AJNPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7D89F7A11716280B00C372A5 /* AJNPasswordManager.mm */; };
+		8341BF0A193B10650009B66E /* AJNTranslator.h in Headers */ = {isa = PBXBuildFile; fileRef = 8341BF07193B10650009B66E /* AJNTranslator.h */; };
+		8341BF0B193B10650009B66E /* AJNTranslatorImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = 8341BF08193B10650009B66E /* AJNTranslatorImpl.h */; };
+		8341BF0C193B10650009B66E /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8341BF09193B10650009B66E /* AJNTranslatorImpl.mm */; };
 		AC3A98441577CF9700CFF856 /* AJNKeyStoreListenerImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = AC3A98421577CF9600CFF856 /* AJNKeyStoreListenerImpl.h */; };
 		AC3A98451577CF9700CFF856 /* AJNKeyStoreListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC3A98431577CF9600CFF856 /* AJNKeyStoreListenerImpl.mm */; };
 		AC3A98471577D5E400CFF856 /* AJNAuthenticationListener.h in Headers */ = {isa = PBXBuildFile; fileRef = AC3A98461577D5E300CFF856 /* AJNAuthenticationListener.h */; };
@@ -112,6 +115,9 @@
 /* Begin PBXFileReference section */
 		7D89F7A01716280A00C372A5 /* AJNPasswordManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNPasswordManager.h; sourceTree = "<group>"; };
 		7D89F7A11716280B00C372A5 /* AJNPasswordManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNPasswordManager.mm; sourceTree = "<group>"; };
+		8341BF07193B10650009B66E /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNTranslator.h; sourceTree = "<group>"; };
+		8341BF08193B10650009B66E /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNTranslatorImpl.h; sourceTree = "<group>"; };
+		8341BF09193B10650009B66E /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNTranslatorImpl.mm; sourceTree = "<group>"; };
 		AC3A983D1576DE4100CFF856 /* AJNKeyStoreListener.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AJNKeyStoreListener.h; sourceTree = "<group>"; };
 		AC3A98421577CF9600CFF856 /* AJNKeyStoreListenerImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNKeyStoreListenerImpl.h; sourceTree = "<group>"; };
 		AC3A98431577CF9600CFF856 /* AJNKeyStoreListenerImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNKeyStoreListenerImpl.mm; sourceTree = "<group>"; };
@@ -285,6 +291,9 @@
 		ACB44E5B15485F3E00FF7DBC /* AllJoynFramework */ = {
 			isa = PBXGroup;
 			children = (
+				8341BF07193B10650009B66E /* AJNTranslator.h */,
+				8341BF08193B10650009B66E /* AJNTranslatorImpl.h */,
+				8341BF09193B10650009B66E /* AJNTranslatorImpl.mm */,
 				7D89F7A01716280A00C372A5 /* AJNPasswordManager.h */,
 				7D89F7A11716280B00C372A5 /* AJNPasswordManager.mm */,
 				AC3A98461577D5E300CFF856 /* AJNAuthenticationListener.h */,
@@ -409,6 +418,7 @@
 				ACB44EBF15485F7800FF7DBC /* AJNProxyBusObject.h in Headers */,
 				ACB44EC115485F7800FF7DBC /* AJNSessionListener.h in Headers */,
 				ACB44EC215485F7800FF7DBC /* AJNSessionListenerImpl.h in Headers */,
+				8341BF0A193B10650009B66E /* AJNTranslator.h in Headers */,
 				ACB44EC415485F7800FF7DBC /* AJNSessionOptions.h in Headers */,
 				ACB44EC615485F7800FF7DBC /* AJNSessionPortListener.h in Headers */,
 				ACB44EC715485F7800FF7DBC /* AJNSessionPortListenerImpl.h in Headers */,
@@ -422,6 +432,7 @@
 				AC3A98441577CF9700CFF856 /* AJNKeyStoreListenerImpl.h in Headers */,
 				AC3A98471577D5E400CFF856 /* AJNAuthenticationListener.h in Headers */,
 				AC3A984A1577D60600CFF856 /* AJNAuthenticationListenerImpl.h in Headers */,
+				8341BF0B193B10650009B66E /* AJNTranslatorImpl.h in Headers */,
 				AC3A984E1577DE2900CFF856 /* AJNSecurityCredentials.h in Headers */,
 				AC700F0715A754A8000C8862 /* AJNMessageHeaderFields.h in Headers */,
 				7D89F7A21716280B00C372A5 /* AJNPasswordManager.h in Headers */,
@@ -545,6 +556,7 @@
 				ACB44ECD15485F7800FF7DBC /* AJNStatus.m in Sources */,
 				ACB44ECF15485F7800FF7DBC /* AJNTransportMask.m in Sources */,
 				ACB44ED115485F7800FF7DBC /* AJNVersion.mm in Sources */,
+				8341BF0C193B10650009B66E /* AJNTranslatorImpl.mm in Sources */,
 				AC5C560A154A157900C13A0B /* AJNMessageArgument.mm in Sources */,
 				AC3A98451577CF9700CFF856 /* AJNKeyStoreListenerImpl.mm in Sources */,
 				AC3A984B1577D60600CFF856 /* AJNAuthenticationListenerImpl.mm in Sources */,
