@@ -24,8 +24,10 @@ public class DescriptionTest extends TestCase {
         super(name);
     }
 
+    private static SimpleDescriptionInterfaceTranslator sdit = null;
     static {
         System.loadLibrary("alljoyn_java");
+        sdit = new SimpleDescriptionInterfaceTranslator();
     }
     /* The AllJoyn object that is our service. */
     private SimpleDescriptionService mSimpleDescriptionService;
@@ -64,7 +66,7 @@ public class DescriptionTest extends TestCase {
     public void testGetDescriptionLanguages()throws Exception {
         mSimpleDescriptionService = new SimpleDescriptionService();
         assertNotNull(mSimpleDescriptionService);
-        assertEquals(Status.OK, mServiceBus.registerBusObject(mSimpleDescriptionService, "/SimpleService", false, "en", "My service object", new SimpleDescriptionInterfaceTranslator()));
+        assertEquals(Status.OK, mServiceBus.registerBusObject(mSimpleDescriptionService, "/SimpleService", false, "en", "My service object", sdit));
         assertEquals(Status.OK, mServiceBus.connect());
 
         assertEquals(Status.OK,mClientBus.connect());
@@ -155,7 +157,7 @@ public class DescriptionTest extends TestCase {
     public void testIntrospectWithDescription()throws Exception {
         mSimpleDescriptionService = new SimpleDescriptionService();
         assertNotNull(mSimpleDescriptionService);
-        assertEquals(Status.OK, mServiceBus.registerBusObject(mSimpleDescriptionService, "/SimpleService", false, "en", "My service object", new SimpleDescriptionInterfaceTranslator()));
+        assertEquals(Status.OK, mServiceBus.registerBusObject(mSimpleDescriptionService, "/SimpleService", false, "en", "My service object", sdit));
         assertEquals(Status.OK, mServiceBus.connect());
 
         assertEquals(Status.OK,mClientBus.connect());
@@ -248,7 +250,7 @@ public class DescriptionTest extends TestCase {
     public void testIntrospectWithDescriptionNoTranslate()throws Exception {
         mSimpleDescriptionNoTranslateService = new SimpleDescriptionNoTranslateService();
         assertNotNull(mSimpleDescriptionNoTranslateService);
-        assertEquals(Status.OK, mServiceBus.registerBusObject(mSimpleDescriptionNoTranslateService, "/SimpleService", false, "en", "My service object", new SimpleDescriptionInterfaceTranslator()));
+        assertEquals(Status.OK, mServiceBus.registerBusObject(mSimpleDescriptionNoTranslateService, "/SimpleService", false, "en", "My service object", sdit));
         assertEquals(Status.OK, mServiceBus.connect());
 
         assertEquals(Status.OK,mClientBus.connect());
@@ -340,7 +342,7 @@ public class DescriptionTest extends TestCase {
     public void testIntrospectWithNoDescription()throws Exception {
         mSimpleNoDescriptionService = new SimpleNoDescriptionService();
         assertNotNull(mSimpleNoDescriptionService);
-        assertEquals(Status.OK, mServiceBus.registerBusObject(mSimpleNoDescriptionService, "/SimpleService", false, "en", "My service object", new SimpleDescriptionInterfaceTranslator()));
+        assertEquals(Status.OK, mServiceBus.registerBusObject(mSimpleNoDescriptionService, "/SimpleService", false, "en", "My service object", sdit));
         assertEquals(Status.OK, mServiceBus.connect());
 
         assertEquals(Status.OK,mClientBus.connect());

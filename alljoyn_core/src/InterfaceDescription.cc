@@ -367,14 +367,8 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
             break;
         }
 
-        for (size_t i = 0; i < myTranslator->NumTargetLanguages(); i++) {
-            qcc::String targ;
-            myTranslator->GetTargetLanguage(i, targ);
-            if (0 == strcmp(targ.c_str(), languageTag)) {
-                withDescriptions = true;
-                break;
-            }
-        }
+        withDescriptions = myTranslator->SupportsTargetLanguage(languageTag);
+
     } while (false);
 
 
