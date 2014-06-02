@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011,2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,7 +18,7 @@ package org.alljoyn.bus;
 
 /**
  * Implemented by a user-defined {@link BusObject} that is interested in
- * customizing the D-Bus introspection XML presented to remote nodes.
+ * customizing the AllJoyn introspection XML presented to remote nodes.
  *
  * Listener objects are the Java objects that handle notification events and are
  * called from AllJoyn in the context of one of its threads.  All listener
@@ -26,7 +26,7 @@ package org.alljoyn.bus;
  * and destruction.  That is, every thread executing in a listener object's
  * methods 1) gets a unique copy of all temporary data (it is re-entrant); and
  * 2) all shared data -- the object instance's member variables or any globals
- * must contain no read-modify-write access patterns (okay to write or read,
+ * must contain no read-modify-write access patterns (okay to write or read, 
  * just never to read-modify-write).  If such access patterns are required, it
  * is the responsibility of the client to, for example, add the synchronized
  * keyword when overriding one of the listener methods or provide some other
@@ -42,7 +42,7 @@ package org.alljoyn.bus;
  * dealing with multithreaded code.
  *
  * Since listener objects generally run in the context of the AllJoyn thread
- * which manages reception of events, If a blocking AllJoyn call is made in
+ * which manages reception of events, If a blocking AllJoyn call is made in 
  * the context of a notification, the necessary and sufficient conditions for
  * deadlock are established.
  *
@@ -53,10 +53,10 @@ package org.alljoyn.bus;
  * receive thread will deadlock (with itself).  The deadlock is typically broken
  * after a bus timeout eventually happens.
  */
-public interface IntrospectionListener {
+public interface IntrospectionWithDescriptionListener {
 
     /**
-     * Returns a description of the object in the D-Bus introspection XML
+     * Returns a description of the object in the AllJoyn introspection XML
      * format.  Note that the DTD description and the root element are not
      * generated.
      *
@@ -66,8 +66,9 @@ public interface IntrospectionListener {
      * @param deep include XML for all decendents rather than stopping at direct
      *             children
      * @param indent number of characters to indent the XML
+     * @param language language to provide description tags in
      * @return the description of the object in D-Bus introspection XML format
      */
-    String generateIntrospection(boolean deep, int indent);
+    String generateIntrospection(String language, boolean deep, int indent);
 }
 
