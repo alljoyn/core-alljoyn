@@ -1303,7 +1303,7 @@ static void InitConnRecord(ArdpHandle* handle, ArdpConnRecord* conn, qcc::Socket
     SetEmpty(&conn->timers);
 
     conn->rttMean = handle->config.dataTimeout;
-    conn->rttMeanVar = handle->config.dataTimeout >> 1;
+    conn->rttMeanVar = 0;
 
     conn->sndHdrLen = ARDP_FIXED_HEADER_LEN;
     conn->rcvHdrLen = ARDP_FIXED_HEADER_LEN;
