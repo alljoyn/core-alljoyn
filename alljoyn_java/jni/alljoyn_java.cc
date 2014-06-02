@@ -748,6 +748,7 @@ static jclass CLS_String = NULL;
 static jclass CLS_BusException = NULL;
 static jclass CLS_ErrorReplyBusException = NULL;
 static jclass CLS_IntrospectionListener = NULL;
+static jclass CLS_IntrospectionWithDescListener = NULL;
 static jclass CLS_BusObjectListener = NULL;
 static jclass CLS_MessageContext = NULL;
 static jclass CLS_MsgArg = NULL;
@@ -876,6 +877,12 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
             return JNI_ERR;
         }
         CLS_IntrospectionListener = (jclass)env->NewGlobalRef(clazz);
+
+        clazz = env->FindClass("org/alljoyn/bus/IntrospectionWithDescriptionListener");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_IntrospectionWithDescListener = (jclass)env->NewGlobalRef(clazz);
 
         clazz = env->FindClass("org/alljoyn/bus/BusObjectListener");
         if (!clazz) {
@@ -1796,6 +1803,7 @@ class JBusObject : public BusObject {
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
     QStatus Set(const char* ifcName, const char* propName, MsgArg& val);
     String GenerateIntrospection(const char* languageTag, bool deep = false, size_t indent = 0) const;
+    String GenerateIntrospection(bool deep = false, size_t indent = 0) const;
     void ObjectRegistered();
     void ObjectUnregistered();
     void SetDescriptions(jstring jlangTag, jstring jdescription, jobject jtranslator);
@@ -1812,6 +1820,7 @@ class JBusObject : public BusObject {
     typedef map<String, Property> JProperty;
     jobject jbusObj;
     jmethodID MID_generateIntrospection;
+    jmethodID MID_generateIntrospectionWithDesc;
     jmethodID MID_registered;
     jmethodID MID_unregistered;
 
@@ -7433,7 +7442,8 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_enablePeerSecurity(
  * JBusObject pair.
  */
 JBusObject::JBusObject(JBusAttachment* jbap, const char* path, jobject jobj)
-    : BusObject(path), jbusObj(NULL), MID_generateIntrospection(NULL), MID_registered(NULL), MID_unregistered(NULL), jtranslatorRef(NULL)
+    : BusObject(path), jbusObj(NULL), MID_generateIntrospection(NULL), MID_generateIntrospectionWithDesc(NULL),
+    MID_registered(NULL), MID_unregistered(NULL), jtranslatorRef(NULL)
 {
     QCC_DbgPrintf(("JBusObject::JBusObject()"));
 
@@ -7469,8 +7479,18 @@ JBusObject::JBusObject(JBusAttachment* jbap, const char* path, jobject jobj)
     if (env->IsInstanceOf(jobj, CLS_IntrospectionListener)) {
         JLocalRef<jclass> clazz = env->GetObjectClass(jobj);
 
-        MID_generateIntrospection = env->GetMethodID(clazz, "generateIntrospection", "(ZILjava/lang/String;)Ljava/lang/String;");
+        MID_generateIntrospection = env->GetMethodID(clazz, "generateIntrospection", "(ZI)Ljava/lang/String;");
         if (!MID_generateIntrospection) {
+            return;
+        }
+    }
+
+    if (env->IsInstanceOf(jobj, CLS_IntrospectionWithDescListener)) {
+        JLocalRef<jclass> clazz = env->GetObjectClass(jobj);
+
+        MID_generateIntrospectionWithDesc = env->GetMethodID(clazz, "generateIntrospection",
+                                                             "(Ljava/lang/String;ZI)Ljava/lang/String;");
+        if (!MID_generateIntrospectionWithDesc) {
             return;
         }
     }
@@ -8179,7 +8199,11 @@ String JBusObject::GenerateIntrospection(const char* languageTag, bool deep, siz
 {
     QCC_DbgPrintf(("JBusObject::GenerateIntrospection()"));
 
-    if (NULL != MID_generateIntrospection) {
+    if (!languageTag) {
+        return JBusObject::GenerateIntrospection(deep, indent);
+    }
+
+    if (MID_generateIntrospectionWithDesc) {
         /*
          * JScopedEnv will automagically attach the JVM to the current native
          * thread.
@@ -8198,7 +8222,54 @@ String JBusObject::GenerateIntrospection(const char* languageTag, bool deep, siz
         }
 
         JLocalRef<jstring> jlang = env->NewStringUTF(languageTag);
-        JLocalRef<jstring> jintrospection = (jstring)env->CallObjectMethod(jo, MID_generateIntrospection, deep, indent, (jstring)jlang);
+        JLocalRef<jstring> jintrospection = (jstring)env->CallObjectMethod(
+            jo, MID_generateIntrospectionWithDesc, (jstring)jlang, deep, indent);
+        if (env->ExceptionCheck()) {
+            return BusObject::GenerateIntrospection(languageTag, deep, indent);
+        }
+
+        JString introspection(jintrospection);
+        if (env->ExceptionCheck()) {
+            return BusObject::GenerateIntrospection(languageTag, deep, indent);
+        }
+
+        return String(introspection.c_str());
+    }
+
+    return BusObject::GenerateIntrospection(languageTag, deep, indent);
+}
+
+String JBusObject::GenerateIntrospection(bool deep, size_t indent) const
+{
+    QCC_DbgPrintf(("JBusObject::GenerateIntrospection()"));
+
+
+    //Use either interface but prefer IntrospectionListener since it's more specific
+    if (MID_generateIntrospectionWithDesc || MID_generateIntrospection) {
+        /*
+         * JScopedEnv will automagically attach the JVM to the current native
+         * thread.
+         */
+        JScopedEnv env;
+
+        /*
+         * The weak global reference jbusObj cannot be directly used.  We have to
+         * get a "hard" reference to it and then use that.  If you try to use a weak
+         * reference directly you will crash and burn.
+         */
+        jobject jo = env->NewLocalRef(jbusObj);
+        if (!jo) {
+            QCC_LogError(ER_FAIL, ("JBusObject::GenerateIntrospection(): Can't get new local reference to BusObject"));
+            return "";
+        }
+
+        JLocalRef<jstring> jintrospection;
+        if (MID_generateIntrospection) {
+            jintrospection = (jstring)env->CallObjectMethod(jo, MID_generateIntrospection, deep, indent);
+        } else {
+            jintrospection = (jstring)env->CallObjectMethod(jo, MID_generateIntrospectionWithDesc, deep, indent, NULL);
+        }
+
         if (env->ExceptionCheck()) {
             return BusObject::GenerateIntrospection(deep, indent);
         }
@@ -8210,7 +8281,8 @@ String JBusObject::GenerateIntrospection(const char* languageTag, bool deep, siz
 
         return String(introspection.c_str());
     }
-    return BusObject::GenerateIntrospection(languageTag, deep, indent);
+
+    return BusObject::GenerateIntrospection(deep, indent);
 }
 
 void JBusObject::ObjectRegistered()

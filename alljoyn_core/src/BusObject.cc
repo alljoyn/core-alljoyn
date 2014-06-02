@@ -126,7 +126,7 @@ qcc::String BusObject::GetName()
 
 qcc::String BusObject::GenerateIntrospection(bool deep, size_t indent) const
 {
-    return GenerateIntrospection(NULL, deep, indent);
+    return BusObject::GenerateIntrospection(NULL, deep, indent);
 }
 
 qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep, size_t indent) const
