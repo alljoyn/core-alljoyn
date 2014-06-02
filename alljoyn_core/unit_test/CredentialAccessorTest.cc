@@ -148,19 +148,21 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
     }
 
     ASSERT_EQ(2U, numGuids) << " ca.GetKeys expected to return 2 guids";
+    GUID128 twoGuids[2];
+    for (size_t cnt = 0; cnt < numGuids; cnt++) {
+        twoGuids[cnt] = customGuidList[cnt];
+    }
+    delete [] customGuidList;
 
     for (size_t cnt = 0; cnt < numGuids; cnt++) {
-        cout << "Custom GUID: " << customGuidList[cnt].ToString().c_str()  << endl;
-        ASSERT_TRUE((customGuidList[cnt] == customGuid1) || (customGuidList[cnt] == customGuid2)) << " custom GUID does not match any of the originals";
+        cout << "Custom GUID: " << twoGuids[cnt].ToString().c_str()  << endl;
+        ASSERT_TRUE((twoGuids[cnt] == customGuid1) || (twoGuids[cnt] == customGuid2)) << " custom GUID does not match any of the originals";
 
         KeyBlob readBackKb;
-        status = ca.GetKey(customGuidList[cnt], readBackKb);
+        status = ca.GetKey(twoGuids[cnt], readBackKb);
         ASSERT_EQ(ER_OK, status) << " ca.GetKey failed with actual status: " << QCC_StatusText(status);
 
         ASSERT_TRUE((memcmp(customKb1.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0) || (memcmp(customKb2.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0)) << " the read back KB does not match original";
-    }
-    if (numGuids > 0) {
-        delete [] customGuidList;
     }
 
     /* now delete customGuid1 */
@@ -181,19 +183,16 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
 
     ASSERT_EQ(1U, numGuids) << " ca.GetKeys expected to return 1 guid";
 
-    for (size_t cnt = 0; cnt < numGuids; cnt++) {
-        cout << "Custom GUID: " << customGuidList[cnt].ToString().c_str()  << endl;
-        ASSERT_TRUE(customGuidList[cnt] == customGuid2) << " custom GUID does not match any of the originals";
+    GUID128 oneCustomGuid = customGuidList[0];
+    delete [] customGuidList;
+    cout << "Custom GUID: " << oneCustomGuid.ToString().c_str()  << endl;
+    ASSERT_TRUE(oneCustomGuid == customGuid2) << " custom GUID does not match any of the originals";
 
-        KeyBlob readBackKb;
-        status = ca.GetKey(customGuidList[cnt], readBackKb);
-        ASSERT_EQ(ER_OK, status) << " ca.GetKey failed with actual status: " << QCC_StatusText(status);
+    KeyBlob readBackKb;
+    status = ca.GetKey(oneCustomGuid, readBackKb);
+    ASSERT_EQ(ER_OK, status) << " ca.GetKey failed with actual status: " << QCC_StatusText(status);
 
-        ASSERT_TRUE(memcmp(customKb2.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0) << " the read back KB does not match original";
-    }
-    if (numGuids > 0) {
-        delete [] customGuidList;
-    }
+    ASSERT_TRUE(memcmp(customKb2.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0) << " the read back KB does not match original";
 
     /* delete the header key */
     status = ca.DeleteKey(peerGuid);
@@ -322,10 +321,8 @@ TEST_F(CredentialAccessorTest, KeysExpired)
 
     Timespec now;
     GetTimeNow(&now);
-    printf("*** now %lu -- sleep 35 secs since the minimum key expiration time is 30 seconds\n", now.seconds);
+    printf("*** Sleep 35 secs since the minimum key expiration time is 30 seconds\n");
     qcc::Sleep(35000);
-    GetTimeNow(&now);
-    printf("*** now %lu -- wake up\n", now.seconds);
 
     KeyBlob kb2("This is the peer secret 2", KeyBlob::GENERIC);
     kb2.SetExpiration(60);
@@ -420,19 +417,23 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
 
     ASSERT_EQ(2U, numGuids) << " ca.GetKeys expected to return 2 guids";
 
+    GUID128 twoGuids[2];
     for (size_t cnt = 0; cnt < numGuids; cnt++) {
-        cout << "Custom GUID: " << customGuidList[cnt].ToString().c_str()  << endl;
-        ASSERT_TRUE((customGuidList[cnt] == customGuid1) || (customGuidList[cnt] == customGuid2)) << " custom GUID does not match any of the originals";
+        twoGuids[cnt] = customGuidList[cnt];
+    }
+    delete [] customGuidList;
+
+    for (size_t cnt = 0; cnt < numGuids; cnt++) {
+        cout << "Custom GUID: " << twoGuids[cnt].ToString().c_str()  << endl;
+        ASSERT_TRUE((twoGuids[cnt] == customGuid1) || (twoGuids[cnt] == customGuid2)) << " custom GUID does not match any of the originals";
 
         KeyBlob readBackKb;
-        status = ca.GetKey(customGuidList[cnt], readBackKb);
+        status = ca.GetKey(twoGuids[cnt], readBackKb);
         ASSERT_EQ(ER_OK, status) << " ca.GetKey failed with actual status: " << QCC_StatusText(status);
 
         ASSERT_TRUE((memcmp(customKb1.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0) || (memcmp(customKb2.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0)) << " the read back KB does not match original";
     }
-    if (numGuids > 0) {
-        delete [] customGuidList;
-    }
+
     /* get the custom keys for customGUID2 */
     numGuids = 0;
     customGuidList = NULL;
@@ -445,19 +446,16 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
 
     ASSERT_EQ(1U, numGuids) << " ca.GetKeys expected to return 1 guids";
 
-    for (size_t cnt = 0; cnt < numGuids; cnt++) {
-        cout << "Custom GUID: " << customGuidList[cnt].ToString().c_str()  << endl;
-        ASSERT_TRUE((customGuidList[cnt] == customGuid3)) << " custom GUID does not match any of the originals";
+    GUID128 oneCustomGuid = customGuidList[0];
+    delete [] customGuidList;
+    cout << "Custom GUID: " << oneCustomGuid.ToString().c_str()  << endl;
+    ASSERT_TRUE(oneCustomGuid == customGuid3) << " custom GUID does not match any of the originals";
 
-        KeyBlob readBackKb;
-        status = ca.GetKey(customGuidList[cnt], readBackKb);
-        ASSERT_EQ(ER_OK, status) << " ca.GetKey failed with actual status: " << QCC_StatusText(status);
+    KeyBlob readBackKb;
+    status = ca.GetKey(oneCustomGuid, readBackKb);
+    ASSERT_EQ(ER_OK, status) << " ca.GetKey failed with actual status: " << QCC_StatusText(status);
 
-        ASSERT_TRUE((memcmp(customKb3.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0)) << " the read back KB does not match original";
-    }
-    if (numGuids > 0) {
-        delete [] customGuidList;
-    }
+    ASSERT_TRUE(memcmp(customKb3.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0) << " the read back KB does not match original";
 
     /* now delete customGuid1 */
     status = ca.DeleteKey(customGuid1);
@@ -477,19 +475,15 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
 
     ASSERT_EQ(1U, numGuids) << " ca.GetKeys expected to return 1 guid";
 
-    for (size_t cnt = 0; cnt < numGuids; cnt++) {
-        cout << "Custom GUID: " << customGuidList[cnt].ToString().c_str()  << endl;
-        ASSERT_TRUE(customGuidList[cnt] == customGuid2) << " custom GUID does not match any of the originals";
+    oneCustomGuid = customGuidList[0];
+    delete [] customGuidList;
+    cout << "Custom GUID: " << oneCustomGuid.ToString().c_str()  << endl;
+    ASSERT_TRUE(oneCustomGuid == customGuid2) << " custom GUID does not match any of the originals";
 
-        KeyBlob readBackKb;
-        status = ca.GetKey(customGuidList[cnt], readBackKb);
-        ASSERT_EQ(ER_OK, status) << " ca.GetKey failed with actual status: " << QCC_StatusText(status);
+    status = ca.GetKey(oneCustomGuid, readBackKb);
+    ASSERT_EQ(ER_OK, status) << " ca.GetKey failed with actual status: " << QCC_StatusText(status);
 
-        ASSERT_TRUE(memcmp(customKb2.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0) << " the read back KB does not match original";
-    }
-    if (numGuids > 0) {
-        delete [] customGuidList;
-    }
+    ASSERT_TRUE(memcmp(customKb2.GetData(), readBackKb.GetData(), readBackKb.GetSize()) == 0) << " the read back KB does not match original";
 
     /* delete the header key */
     status = ca.DeleteKey(peerGuid);

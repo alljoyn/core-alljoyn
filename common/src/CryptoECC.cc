@@ -21,6 +21,7 @@
  ******************************************************************************/
 
 #include <qcc/platform.h>
+#include <qcc/Util.h>
 
 #include <qcc/Debug.h>
 #include <qcc/CryptoECC.h>
@@ -39,9 +40,28 @@ namespace qcc {
 typedef enum {B_FALSE, B_TRUE} boolean_t;
 static const int BIGLEN = ECC_BIGVAL_SZ;
 
+struct ECCBigVal {
+    uint32_t data[ECC_BIGVAL_SZ];
+};
+
+struct ECCAffinePoint {
+    ECCBigVal x;
+    ECCBigVal y;
+    uint32_t infinity;
+};
+
+struct ECDSASig {
+    ECCBigVal r;
+    ECCBigVal s;
+};
+
 typedef ECCBigVal bigval_t;
 typedef ECCAffinePoint affine_point_t;
 typedef ECDSASig ECDSA_sig_t;
+
+static const size_t U32_BIGVAL_SZ = ECC_BIGVAL_SZ;
+static const size_t U32_AFFINEPOINT_SZ = 2 * ECC_BIGVAL_SZ + 1;
+static const size_t U32_ECDSASIG_SZ = 2 * ECC_BIGVAL_SZ;
 
 
 /* P256 is tested directly with known answer tests from example in
@@ -625,9 +645,9 @@ big_mpyP(bigval_t* tgt, bigval_t const* a, bigval_t const* b,
      * signvedval(a) = unsignedval(a) - 2^(32*BIGLEN)*isneg(a).
      *
      * so signval(a) * signedval(b) = unsignedval(a) * unsignedval[b] -
-     *	isneg(a) * unsignedval(b) * 2^(32*BIGLEN) -
-     *	isneg(b) * unsingedval(a) * 2^ (32*BIGLEN) +
-     *	isneg(a) * isneg(b) * 2 ^(2 * 32 * BIGLEN)
+     *  isneg(a) * unsignedval(b) * 2^(32*BIGLEN) -
+     *  isneg(b) * unsingedval(a) * 2^ (32*BIGLEN) +
+     *  isneg(a) * isneg(b) * 2 ^(2 * 32 * BIGLEN)
      *
      * If one arg is zero and the other is negative, obviously no
      * correction is needed, but we do not make a special case, since
@@ -1708,6 +1728,28 @@ get_random_bytes(void* buf, int len) {
     return -1;
 }
 
+/*
+ * convert a host uint32_t array to a big-endian byte array
+ */
+static void U32ArrayToU8BeArray(const uint32_t* src, size_t len, uint8_t* dest)
+{
+    uint32_t* p = (uint32_t*) dest;
+    for (size_t cnt = 0; cnt < len; cnt++) {
+        p[cnt] = htobe32(src[cnt]);
+    }
+}
+
+/*
+ * convert a big-endian byte array to a host uint32_t array
+ */
+static void U8BeArrayToU32Array(const uint8_t* src, size_t len, uint32_t* dest)
+{
+    uint32_t* p = (uint32_t*) src;
+    size_t u32Len = len / sizeof(uint32_t);
+    for (size_t cnt = 0; cnt < u32Len; cnt++) {
+        dest[cnt] = betoh32(p[cnt]);
+    }
+}
 
 /*
  * Generates the key pair.
@@ -1720,10 +1762,14 @@ get_random_bytes(void* buf, int len) {
  */
 static QStatus Crypto_ECC_GenerateKeyPair(ECCPublicKey* publicKey, ECCPrivateKey* privateKey)
 {
-    if (ECDH_generate(publicKey, privateKey) == 0) {
-        return ER_OK;
+    affine_point_t ap;
+    bigval_t k;
+    if (ECDH_generate(&ap, &k) != 0) {
+        return ER_FAIL;
     }
-    return ER_FAIL;
+    U32ArrayToU8BeArray((const uint32_t*) &ap, U32_AFFINEPOINT_SZ, (uint8_t*) publicKey);
+    U32ArrayToU8BeArray((const uint32_t*) &k, U32_BIGVAL_SZ, (uint8_t*) privateKey);
+    return ER_OK;
 }
 
 QStatus Crypto_ECC::GenerateDHKeyPair() {
@@ -1745,16 +1791,22 @@ static QStatus Crypto_ECC_GenerateSharedSecret(const ECCPublicKey* peerPublicKey
 {
 
     boolean_t derive_rv;
+    affine_point_t localSecret;
+    affine_point_t pub;
+    bigval_t pk;
 
-    derive_rv = ECDH_derive_pt(secret, privateKey, peerPublicKey);
+    U8BeArrayToU32Array((const uint8_t*) peerPublicKey, sizeof(ECCPublicKey), (uint32_t*) &pub);
+    U8BeArrayToU32Array((const uint8_t*) privateKey, sizeof(ECCPrivateKey), (uint32_t*) &pk);
+    derive_rv = ECDH_derive_pt(&localSecret, &pk, &pub);
     if (!derive_rv) {
         return ER_FAIL;  /* bad */
     }
     if (derive_rv) {
-        if (!in_curveP(secret)) {
+        if (!in_curveP(&localSecret)) {
             return ER_FAIL;  /* bad */
         }
     }
+    U32ArrayToU8BeArray((const uint32_t*) &localSecret, U32_AFFINEPOINT_SZ, (uint8_t*) secret);
     return ER_OK;
 }
 
@@ -1787,10 +1839,16 @@ static QStatus Crypto_ECC_DSASignDigest(const uint8_t* digest, uint32_t len, con
     }
     bigval_t source;
     ECC_hash_to_bigval(&source, digest, len);
-    if (ECDSA_sign(&source, signingPrivateKey, sig) == 0) {
-        return ER_OK;
+    bigval_t privKey;
+    ECDSA_sig_t localSig;
+
+    U8BeArrayToU32Array((const uint8_t*) signingPrivateKey, sizeof(ECCPrivateKey), (uint32_t*) &privKey);
+    if (ECDSA_sign(&source, &privKey, &localSig) != 0) {
+        return ER_FAIL;
     }
-    return ER_FAIL;
+    U32ArrayToU8BeArray((const uint32_t*) &localSig, U32_ECDSASIG_SZ, (uint8_t*) sig);
+
+    return ER_OK;
 }
 
 /*
@@ -1842,10 +1900,16 @@ static QStatus Crypto_ECC_DSAVerifyDigest(const uint8_t* digest, uint32_t len, c
     }
     bigval_t source;
     ECC_hash_to_bigval(&source, digest, len);
-    if (ECDSA_verify(&source, signingPubKey, sig)) {
-        return ER_OK;
+    affine_point_t pub;
+    ECDSA_sig_t localSig;
+
+    U8BeArrayToU32Array((const uint8_t*) signingPubKey, sizeof(ECCPublicKey), (uint32_t*) &pub);
+    U8BeArrayToU32Array((const uint8_t*) sig, sizeof(ECCSignature), (uint32_t*) &localSig);
+
+    if (!ECDSA_verify(&source, &pub, &localSig)) {
+        return ER_FAIL;
     }
-    return ER_FAIL;
+    return ER_OK;
 }
 
 /*

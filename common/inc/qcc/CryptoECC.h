@@ -31,39 +31,53 @@
 
 namespace qcc {
 
-static const size_t ECC_BIGVAL_SZ = 9;  /* the size of big value */
-
-/*
- * For P256 bigval_t types hold 288-bit 2's complement numbers (9
- * 32-bit words).  For P192 they hold 224-bit 2's complement numbers
- * (7 32-bit words).
- *
- * The representation is little endian by word and native endian
- * within each word.
+/**
+ * The size of the ECC big value
  */
+static const size_t ECC_BIGVAL_SZ = 9;
+/**
+ * The size of the ECC private key
+ */
+static const size_t ECC_PRIVATE_KEY_SZ = ECC_BIGVAL_SZ * sizeof(uint32_t);
 
-struct ECCBigVal {
-    uint32_t data[ECC_BIGVAL_SZ];
+/**
+ * The size of the ECC public key
+ */
+static const size_t ECC_PUBLIC_KEY_SZ = (2 * ECC_BIGVAL_SZ * sizeof(uint32_t)) + sizeof(uint32_t);
+
+/**
+ * The size of the ECC secret
+ */
+static const size_t ECC_SECRET_SZ = ECC_PUBLIC_KEY_SZ;
+
+/**
+ * The size of the ECC signature
+ */
+static const size_t ECC_SIGNATURE_SZ = 2 * ECC_BIGVAL_SZ * sizeof(uint32_t);
+
+
+/**
+ * The ECC private key big endian byte array
+ */
+struct ECCPrivateKey {
+    uint8_t data[ECC_PRIVATE_KEY_SZ];
 };
 
-struct ECCAffinePoint {
-    ECCBigVal x;
-    ECCBigVal y;
-    uint32_t infinity;
+/**
+ * The ECC public key big endian byte array
+ */
+struct ECCPublicKey {
+    uint8_t data[ECC_PUBLIC_KEY_SZ];
 };
 
-struct ECDSASig {
-    ECCBigVal r;
-    ECCBigVal s;
+typedef ECCPublicKey ECCSecret;
+
+/**
+ * The ECC signature big endian byte array
+ */
+struct ECCSignature {
+    uint8_t data[ECC_SIGNATURE_SZ];
 };
-
-typedef ECCBigVal ECCPrivateKey;
-typedef ECCAffinePoint ECCPublicKey;
-typedef ECCAffinePoint ECCSecret;
-typedef ECDSASig ECCSignature;
-
-typedef ECCBigVal ECCPrivateKey;
-
 
 /**
  * Elliptic Curve Cryptography

@@ -20,12 +20,10 @@
  ******************************************************************************/
 
 #include <qcc/platform.h>
-
-#include <sys/types.h>
-
 #include <qcc/CertificateECC.h>
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
+#include <qcc/Util.h>
 
 #include <Status.h>
 
@@ -45,7 +43,7 @@ namespace qcc {
 #define CERT_TYPE2_SIGN_LEN sizeof(uint32_t) + 2 * sizeof(ECCPublicKey) + sizeof(ValidPeriod) + sizeof (uint8_t) + GUILD_ID_LEN + Crypto_SHA256::DIGEST_SIZE
 #define CERT_TYPE2_RAW_LEN CERT_TYPE2_SIGN_LEN + sizeof(ECCSignature)
 
-static qcc::String EncodeRawByte(uint8_t* raw, size_t rawLen, const char* beginToken, const char* endToken)
+static qcc::String EncodeRawByte(const uint8_t* raw, size_t rawLen, const char* beginToken, const char* endToken)
 {
     qcc::String str;
     qcc::String rawStr((const char*) raw, rawLen);
@@ -62,7 +60,7 @@ static qcc::String EncodeRawByte(uint8_t* raw, size_t rawLen, const char* beginT
     return str;
 }
 
-static qcc::String EncodeCertRawByte(uint8_t* raw, size_t rawLen)
+static qcc::String EncodeCertRawByte(const uint8_t* raw, size_t rawLen)
 {
     return EncodeRawByte(raw, rawLen, "-----BEGIN CERTIFICATE-----",
                          "-----END CERTIFICATE-----");
@@ -92,7 +90,7 @@ static QStatus CountNumOfChunksFromEncoded(const String& encoded, const char* be
     return ER_OK;
 }
 
-static QStatus RetrieveNumOfChunksFromEncoded(const String& encoded, const char* beginToken, const char* endToken, qcc::String chunks[],  size_t count)
+static QStatus RetrieveNumOfChunksFromPEM(const String& encoded, const char* beginToken, const char* endToken, qcc::String chunks[],  size_t count)
 {
     size_t pos;
 
@@ -117,17 +115,17 @@ static QStatus RetrieveNumOfChunksFromEncoded(const String& encoded, const char*
 }
 
 
-static QStatus RetrieveRawFromEncoded(const String& encoded, const char* beginToken, const char* endToken, String& rawStr)
+static QStatus RetrieveRawFromPEM(const String& pem, const char* beginToken, const char* endToken, String& rawStr)
 {
     qcc::String base64;
 
     size_t pos;
 
-    pos = encoded.find(beginToken);
+    pos = pem.find(beginToken);
     if (pos == qcc::String::npos) {
         return ER_INVALID_DATA;
     }
-    qcc::String remainder = encoded.substr(pos + strlen(beginToken));
+    qcc::String remainder = pem.substr(pos + strlen(beginToken));
     pos = remainder.find(endToken);
     if (pos == qcc::String::npos) {
         base64 = remainder;
@@ -137,17 +135,17 @@ static QStatus RetrieveRawFromEncoded(const String& encoded, const char* beginTo
     return Crypto_ASN1::DecodeBase64(base64, rawStr);
 }
 
-static QStatus RetrieveRawCertFromEncoded(const String& encoded, String& rawStr)
+static QStatus RetrieveRawCertFromPEM(const String& pem, String& rawStr)
 {
-    return RetrieveRawFromEncoded(encoded,
-                                  "-----BEGIN CERTIFICATE-----",
-                                  "-----END CERTIFICATE-----", rawStr);
+    return RetrieveRawFromPEM(pem,
+                              "-----BEGIN CERTIFICATE-----",
+                              "-----END CERTIFICATE-----", rawStr);
 }
 
-static QStatus DecodeKeyFromEncoded(const String& encoded, uint32_t* key, size_t len, const char* beginToken, const char* endToken)
+static QStatus DecodeKeyFromPEM(const String& pem, uint32_t* key, size_t len, const char* beginToken, const char* endToken)
 {
     String rawStr;
-    QStatus status = RetrieveRawFromEncoded(encoded, beginToken, endToken, rawStr);
+    QStatus status = RetrieveRawFromPEM(pem, beginToken, endToken, rawStr);
     if (status != ER_OK) {
         return status;
     }
@@ -168,8 +166,8 @@ QStatus CertECCUtil_EncodePrivateKey(const uint32_t* privateKey, size_t len, Str
 
 QStatus CertECCUtil_DecodePrivateKey(const String& encoded, uint32_t* privateKey, size_t len)
 {
-    return DecodeKeyFromEncoded(encoded, privateKey, len,
-                                "-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----");
+    return DecodeKeyFromPEM(encoded, privateKey, len,
+                            "-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----");
 }
 
 QStatus CertECCUtil_EncodePublicKey(const uint32_t* publicKey, size_t len, String& encoded)
@@ -181,10 +179,9 @@ QStatus CertECCUtil_EncodePublicKey(const uint32_t* publicKey, size_t len, Strin
 
 QStatus CertECCUtil_DecodePublicKey(const String& encoded, uint32_t* publicKey, size_t len)
 {
-    return DecodeKeyFromEncoded(encoded, publicKey, len,
-                                "-----BEGIN PUBLIC KEY-----", "-----END PUBLIC KEY-----");
+    return DecodeKeyFromPEM(encoded, publicKey, len,
+                            "-----BEGIN PUBLIC KEY-----", "-----END PUBLIC KEY-----");
 }
-
 
 QStatus CertECCUtil_GetCertCount(const String& encoded, size_t* count)
 {
@@ -193,30 +190,34 @@ QStatus CertECCUtil_GetCertCount(const String& encoded, size_t* count)
                                        "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----", count);
 }
 
-QStatus CertECCUtil_GetVersionFromEncoded(const String& encoded, uint32_t* certVersion)
+QStatus CertECCUtil_GetVersionFromEncoded(const uint8_t* encoded, size_t len, uint32_t* certVersion)
+{
+    if (len < sizeof(uint32_t)) {
+        return ER_INVALID_DATA;
+    }
+    uint32_t* p = (uint32_t*) encoded;
+    *certVersion = betoh32(*p);
+    return ER_OK;
+}
+
+QStatus CertECCUtil_GetVersionFromPEM(const String& pem, uint32_t* certVersion)
 {
     qcc::String rawStr;
-    QStatus status = RetrieveRawCertFromEncoded(encoded, rawStr);
+    QStatus status = RetrieveRawCertFromPEM(pem, rawStr);
     if (status != ER_OK) {
         return status;
     }
     uint8_t* raw = (uint8_t*) rawStr.data();
     size_t rawLen = rawStr.length();
-    size_t minRawLen = sizeof(uint32_t);
 
-    if (rawLen < minRawLen) {
-        return ER_INVALID_DATA;
-    }
-    memcpy(certVersion, raw, sizeof(uint32_t));
-    return ER_OK;
+    return CertECCUtil_GetVersionFromEncoded(raw, rawLen, certVersion);
 }
 
-QStatus CertECCUtil_GetCertChain(const String& encoded, CertificateECC* certChain[], size_t count)
+QStatus CertECCUtil_GetCertChain(const String& pem, CertificateECC* certChain[], size_t count)
 {
     qcc::String* chunks = new  qcc::String[count];
 
-    QStatus status = RetrieveNumOfChunksFromEncoded(encoded,
-                                                    "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----", chunks, count);
+    QStatus status = RetrieveNumOfChunksFromPEM(pem, "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----", chunks, count);
     if (status != ER_OK) {
         delete [] chunks;
         return status;
@@ -224,7 +225,7 @@ QStatus CertECCUtil_GetCertChain(const String& encoded, CertificateECC* certChai
 
     for (size_t idx = 0; idx < count; idx++) {
         uint32_t certVersion;
-        status = CertECCUtil_GetVersionFromEncoded(chunks[idx], &certVersion);
+        status = CertECCUtil_GetVersionFromPEM(chunks[idx], &certVersion);
         if (status != ER_OK) {
             break;
         }
@@ -245,7 +246,7 @@ QStatus CertECCUtil_GetCertChain(const String& encoded, CertificateECC* certChai
             delete [] chunks;
             return ER_INVALID_DATA;
         }
-        status = certChain[idx]->LoadEncoded(chunks[idx]);
+        status = certChain[idx]->LoadPEM(chunks[idx]);
         if (status != ER_OK) {
             break;
         }
@@ -255,24 +256,32 @@ QStatus CertECCUtil_GetCertChain(const String& encoded, CertificateECC* certChai
     return status;
 }
 
-void CertificateType0::SetIssuer(const ECCPublicKey* issuer)
-{
-    memcpy(&signable.issuer, issuer, sizeof(ECCPublicKey));
-}
-
 CertificateType0::CertificateType0(const ECCPublicKey* issuer, const uint8_t* externalDigest) : CertificateECC(0)
 {
+    SetVersion(0);
     SetIssuer(issuer);
     SetExternalDataDigest(externalDigest);
 }
 
-void CertificateType0::SetExternalDataDigest(const uint8_t* externalDataDigest) {
-    memcpy(signable.digest, externalDataDigest, sizeof(signable.digest));
+void CertificateType0::SetVersion(uint32_t val)
+{
+    uint32_t* p = (uint32_t*) &encoded.version;
+    *p = htobe32(val);
+}
+
+void CertificateType0::SetIssuer(const ECCPublicKey* issuer)
+{
+    memcpy(&encoded.issuer, issuer, sizeof(ECCPublicKey));
+}
+
+void CertificateType0::SetExternalDataDigest(const uint8_t* externalDataDigest)
+{
+    memcpy(encoded.signable.digest, externalDataDigest, sizeof(encoded.signable.digest));
 }
 
 void CertificateType0::SetSig(const ECCSignature* sig)
 {
-    memcpy(&this->sig, sig, sizeof(ECCSignature));
+    memcpy(&encoded.sig, sig, sizeof(ECCSignature));
 }
 
 
@@ -280,62 +289,46 @@ QStatus CertificateType0::Sign(const ECCPrivateKey* dsaPrivateKey)
 {
     Crypto_ECC ecc;
     ecc.SetDSAPrivateKey(dsaPrivateKey);
-    return ecc.DSASignDigest(signable.digest, sizeof(signable.digest), &sig);
+    return ecc.DSASignDigest(encoded.signable.digest, sizeof(encoded.signable.digest), &encoded.sig);
 }
 
 bool CertificateType0::VerifySignature()
 {
     Crypto_ECC ecc;
-    ecc.SetDSAPublicKey(&signable.issuer);
-    return ecc.DSAVerifyDigest(signable.digest, sizeof(signable.digest), &sig) == ER_OK;
+    ecc.SetDSAPublicKey(&encoded.issuer);
+    return ecc.DSAVerifyDigest(encoded.signable.digest, sizeof(encoded.signable.digest), &encoded.sig) == ER_OK;
 }
 
-String CertificateType0::GetEncoded()
+QStatus CertificateType0::LoadEncoded(const uint8_t* encodedBytes, size_t len)
 {
-    qcc::String str;
-
-    /* build the raw buffer */
-    uint8_t raw[CERT_TYPE0_RAW_LEN];
-    uint8_t* dest = raw;
-    uint32_t certVersion = GetVersion();
-    memcpy(dest, &certVersion, sizeof(certVersion));
-    dest += sizeof(certVersion);
-    memcpy(dest, &signable.issuer, sizeof(signable.issuer));
-    dest += sizeof(signable.issuer);
-    memcpy(dest, signable.digest, sizeof(signable.digest));
-    dest += sizeof(signable.digest);
-    memcpy(dest, &sig, sizeof(sig));
-    dest += sizeof(sig);
-    return EncodeCertRawByte(raw, sizeof(raw));
+    if (len != GetEncodedLen()) {
+        return ER_INVALID_DATA;
+    }
+    uint32_t*pVersion = (uint32_t*) encodedBytes;
+    uint32_t version = betoh32(*pVersion);
+    if (version != GetVersion()) {
+        return ER_INVALID_DATA;
+    }
+    memcpy(&encoded, encodedBytes, len);
+    return ER_OK;
 }
 
-QStatus CertificateType0::LoadEncoded(const String& encoded)
+String CertificateType0::GetPEM()
+{
+    return EncodeCertRawByte(GetEncoded(), GetEncodedLen());
+}
+
+QStatus CertificateType0::LoadPEM(const String& pem)
 {
     qcc::String rawStr;
-    QStatus status = RetrieveRawCertFromEncoded(encoded, rawStr);
+    QStatus status = RetrieveRawCertFromPEM(pem, rawStr);
     if (status != ER_OK) {
         return status;
     }
     uint8_t* raw = (uint8_t*) rawStr.data();
     size_t rawLen = rawStr.length();
 
-    if (rawLen != CERT_TYPE0_RAW_LEN) {
-        return ER_INVALID_DATA;
-    }
-    uint32_t certVersion;
-    memcpy(&certVersion, raw, sizeof(certVersion));
-    if (certVersion != GetVersion()) {
-        return ER_INVALID_DATA;
-    }
-    raw += sizeof(certVersion);
-
-    memcpy(&signable.issuer, raw, sizeof(signable.issuer));
-    raw += sizeof(signable.issuer);
-    memcpy(&signable.digest, raw, sizeof(signable.digest));
-    raw += sizeof(signable.digest);
-    memcpy(&sig, raw, sizeof(sig));
-
-    return ER_OK;
+    return LoadEncoded(raw, rawLen);
 }
 
 qcc::String CertificateType0::ToString()
@@ -357,50 +350,49 @@ qcc::String CertificateType0::ToString()
     return str;
 }
 
+void CertificateType1::SetVersion(uint32_t val)
+{
+    uint32_t* p = (uint32_t*) &encoded.signable.version;
+    *p = htobe32(val);
+}
+
 void CertificateType1::SetIssuer(const ECCPublicKey* issuer)
 {
-    memcpy(&signable.issuer, issuer, sizeof(ECCPublicKey));
+    memcpy(&encoded.signable.issuer, issuer, sizeof(ECCPublicKey));
 }
 
 void CertificateType1::SetSubject(const ECCPublicKey* subject)
 {
-    memcpy(&signable.subject, subject, sizeof(ECCPublicKey));
+    memcpy(&encoded.signable.subject, subject, sizeof(ECCPublicKey));
+}
+
+void CertificateType1::SetValidity(const ValidPeriod* validPeriod)
+{
+    validity = *validPeriod;
+    /* setup encoded buffer */
+    uint64_t* p = (uint64_t*) &encoded.signable.validFrom;
+    *p = htobe64(validity.validFrom);
+    validity = *validPeriod;
+    p = (uint64_t*) &encoded.signable.validTo;
+    *p = htobe64(validity.validTo);
 }
 
 CertificateType1::CertificateType1(const ECCPublicKey* issuer, const ECCPublicKey* subject) : CertificateECC(1)
 {
+    SetVersion(1);
     SetIssuer(issuer);
     SetSubject(subject);
-    signable.delegate = false;
+    encoded.signable.delegate = false;
 }
 
 void CertificateType1::SetExternalDataDigest(const uint8_t* externalDataDigest)
 {
-    memcpy(signable.digest, externalDataDigest, sizeof(signable.digest));
+    memcpy(encoded.signable.digest, externalDataDigest, sizeof(encoded.signable.digest));
 }
 
 void CertificateType1::SetSig(const ECCSignature* sig)
 {
-    memcpy(&this->sig, sig, sizeof(ECCSignature));
-}
-
-QStatus CertificateType1::GenSignable(uint8_t* digest, size_t len)
-{
-    if (len != Crypto_SHA256::DIGEST_SIZE) {
-        return ER_FAIL;
-    }
-    Crypto_SHA256 hash;
-
-    hash.Init();
-    uint32_t certVersion = GetVersion();
-    hash.Update((const uint8_t*) &certVersion, sizeof(certVersion));
-    hash.Update((const uint8_t*) &signable.issuer, sizeof(signable.issuer));
-    hash.Update((const uint8_t*) &signable.subject, sizeof(signable.subject));
-    hash.Update((const uint8_t*) &signable.validity, sizeof(signable.validity));
-    hash.Update((const uint8_t*) &signable.delegate, sizeof(signable.delegate));
-    hash.Update((const uint8_t*) signable.digest, sizeof(signable.digest));
-    hash.GetDigest(digest);
-    return ER_OK;
+    memcpy(&encoded.sig, sig, sizeof(ECCSignature));
 }
 
 QStatus CertificateType1::Sign(const ECCPrivateKey* dsaPrivateKey)
@@ -408,77 +400,60 @@ QStatus CertificateType1::Sign(const ECCPrivateKey* dsaPrivateKey)
     Crypto_ECC ecc;
     ecc.SetDSAPrivateKey(dsaPrivateKey);
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    GenSignable(digest, sizeof(digest));
-    return ecc.DSASignDigest(digest, sizeof(digest), &sig);
+    Crypto_SHA256 hash;
+    hash.Init();
+    hash.Update((const uint8_t*) &encoded.signable, sizeof(encoded.signable));
+    hash.GetDigest(digest);
+    return ecc.DSASignDigest(digest, sizeof(digest), &encoded.sig);
 }
 
 bool CertificateType1::VerifySignature()
 {
     Crypto_ECC ecc;
-    ecc.SetDSAPublicKey(&signable.issuer);
+    ecc.SetDSAPublicKey(&encoded.signable.issuer);
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    GenSignable(digest, sizeof(digest));
-    return ecc.DSAVerifyDigest(digest, sizeof(digest), &sig) == ER_OK;
+    Crypto_SHA256 hash;
+    hash.Init();
+    hash.Update((const uint8_t*) &encoded.signable, sizeof(encoded.signable));
+    hash.GetDigest(digest);
+    return ecc.DSAVerifyDigest(digest, sizeof(digest), &encoded.sig) == ER_OK;
 }
 
-String CertificateType1::GetEncoded()
+QStatus CertificateType1::LoadEncoded(const uint8_t* encodedBytes, size_t len)
 {
-    qcc::String str;
+    if (len != GetEncodedLen()) {
+        return ER_INVALID_DATA;
+    }
+    uint32_t* pVersion = (uint32_t*) encodedBytes;
+    uint32_t version = betoh32(*pVersion);
+    if (version != GetVersion()) {
+        return ER_INVALID_DATA;
+    }
+    memcpy(&encoded, encodedBytes, len);
+    /* setup the localized validitiy value from the encoded bytes */
+    uint64_t* p = (uint64_t*) &encoded.signable.validFrom;
+    validity.validFrom = betoh64(*p);
+    p = (uint64_t*) &encoded.signable.validTo;
+    validity.validTo = betoh64(*p);
 
-    /* build the raw buffer */
-    uint8_t raw[CERT_TYPE1_RAW_LEN];
-    uint8_t* dest = raw;
-    uint32_t certVersion = GetVersion();
-    memcpy(dest, &certVersion, sizeof(certVersion));
-    dest += sizeof(certVersion);
-    memcpy(dest, &signable.issuer, sizeof(signable.issuer));
-    dest += sizeof(signable.issuer);
-    memcpy(dest, &signable.subject, sizeof(signable.subject));
-    dest += sizeof(signable.subject);
-    memcpy(dest, &signable.validity, sizeof(signable.validity));
-    dest += sizeof(signable.validity);
-    memcpy(dest, &signable.delegate, sizeof(signable.delegate));
-    dest += sizeof(signable.delegate);
-    memcpy(dest, signable.digest, sizeof(signable.digest));
-    dest += sizeof(signable.digest);
-    memcpy(dest, &sig, sizeof(sig));
-    dest += sizeof(sig);
-    return EncodeCertRawByte(raw, sizeof(raw));
+    return ER_OK;
 }
 
-QStatus CertificateType1::LoadEncoded(const String& encoded)
+String CertificateType1::GetPEM()
+{
+    return EncodeCertRawByte(GetEncoded(), GetEncodedLen());
+}
+
+QStatus CertificateType1::LoadPEM(const String& pem)
 {
     qcc::String rawStr;
-    QStatus status = RetrieveRawCertFromEncoded(encoded, rawStr);
+    QStatus status = RetrieveRawCertFromPEM(pem, rawStr);
     if (status != ER_OK) {
         return status;
     }
     uint8_t* raw = (uint8_t*) rawStr.data();
     size_t rawLen = rawStr.length();
-
-    if (rawLen != CERT_TYPE1_RAW_LEN) {
-        return ER_INVALID_DATA;
-    }
-    uint32_t certVersion;
-    memcpy(&certVersion, raw, sizeof(certVersion));
-    if (certVersion != GetVersion()) {
-        return ER_INVALID_DATA;
-    }
-    raw += sizeof(certVersion);
-
-    memcpy(&signable.issuer, raw, sizeof(signable.issuer));
-    raw += sizeof(signable.issuer);
-    memcpy(&signable.subject, raw, sizeof(signable.subject));
-    raw += sizeof(signable.subject);
-    memcpy(&signable.validity, raw, sizeof(signable.validity));
-    raw += sizeof(signable.validity);
-    memcpy(&signable.delegate, raw, sizeof(signable.delegate));
-    raw += sizeof(signable.delegate);
-    memcpy(&signable.digest, raw, sizeof(signable.digest));
-    raw += sizeof(signable.digest);
-    memcpy(&sig, raw, sizeof(sig));
-
-    return ER_OK;
+    return LoadEncoded(raw, rawLen);
 }
 
 qcc::String CertificateType1::ToString()
@@ -512,61 +487,50 @@ qcc::String CertificateType1::ToString()
     return str;
 }
 
+
+void CertificateType2::SetVersion(uint32_t val)
+{
+    uint32_t* p = (uint32_t*) &encoded.signable.version;
+    *p = htobe32(val);
+}
+
 void CertificateType2::SetIssuer(const ECCPublicKey* issuer)
 {
-    memcpy(&signable.issuer, issuer, sizeof(ECCPublicKey));
+    memcpy(&encoded.signable.issuer, issuer, sizeof(ECCPublicKey));
 }
 
 void CertificateType2::SetSubject(const ECCPublicKey* subject)
 {
-    memcpy(&signable.subject, subject, sizeof(ECCPublicKey));
+    memcpy(&encoded.signable.subject, subject, sizeof(ECCPublicKey));
 }
 
-void CertificateType2::SetGuild(const uint8_t* newGuild, size_t guildLen)
+void CertificateType2::SetValidity(const ValidPeriod* validPeriod)
 {
-    size_t len = sizeof(signable.guild);
-    memset(signable.guild, 0, len);
-    if (len > guildLen) {
-        len = guildLen;
-    }
-    memcpy(signable.guild, newGuild, len);
+    validity = *validPeriod;
+    /* setup encoded buffer */
+    uint64_t* p = (uint64_t*) &encoded.signable.validFrom;
+    *p = htobe64(validity.validFrom);
+    validity = *validPeriod;
+    p = (uint64_t*) &encoded.signable.validTo;
+    *p = htobe64(validity.validTo);
 }
 
 CertificateType2::CertificateType2(const ECCPublicKey* issuer, const ECCPublicKey* subject) : CertificateECC(2)
 {
+    SetVersion(2);
     SetIssuer(issuer);
     SetSubject(subject);
-    signable.delegate = false;
+    encoded.signable.delegate = false;
 }
 
 void CertificateType2::SetExternalDataDigest(const uint8_t* externalDataDigest)
 {
-    memcpy(signable.digest, externalDataDigest, sizeof(signable.digest));
+    memcpy(encoded.signable.digest, externalDataDigest, sizeof(encoded.signable.digest));
 }
 
 void CertificateType2::SetSig(const ECCSignature* sig)
 {
-    memcpy(&this->sig, sig, sizeof(ECCSignature));
-}
-
-QStatus CertificateType2::GenSignable(uint8_t* digest, size_t len)
-{
-    if (len != Crypto_SHA256::DIGEST_SIZE) {
-        return ER_FAIL;
-    }
-    Crypto_SHA256 hash;
-
-    hash.Init();
-    uint32_t certVersion = GetVersion();
-    hash.Update((const uint8_t*) &certVersion, sizeof(certVersion));
-    hash.Update((const uint8_t*) &signable.issuer, sizeof(signable.issuer));
-    hash.Update((const uint8_t*) &signable.subject, sizeof(signable.subject));
-    hash.Update((const uint8_t*) &signable.validity, sizeof(signable.validity));
-    hash.Update((const uint8_t*) &signable.delegate, sizeof(signable.delegate));
-    hash.Update((const uint8_t*) signable.guild, sizeof(signable.guild));
-    hash.Update((const uint8_t*) signable.digest, sizeof(signable.digest));
-    hash.GetDigest(digest);
-    return ER_OK;
+    memcpy(&encoded.sig, sig, sizeof(ECCSignature));
 }
 
 QStatus CertificateType2::Sign(const ECCPrivateKey* dsaPrivateKey)
@@ -574,82 +538,72 @@ QStatus CertificateType2::Sign(const ECCPrivateKey* dsaPrivateKey)
     Crypto_ECC ecc;
     ecc.SetDSAPrivateKey(dsaPrivateKey);
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    GenSignable(digest, sizeof(digest));
-    return ecc.DSASignDigest(digest, sizeof(digest), &sig);
+    Crypto_SHA256 hash;
+    hash.Init();
+    hash.Update((const uint8_t*) &encoded.signable, sizeof(encoded.signable));
+    hash.GetDigest(digest);
+    return ecc.DSASignDigest(digest, sizeof(digest), &encoded.sig);
 }
 
 bool CertificateType2::VerifySignature()
 {
     Crypto_ECC ecc;
-    ecc.SetDSAPublicKey(&signable.issuer);
+    ecc.SetDSAPublicKey(&encoded.signable.issuer);
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    GenSignable(digest, sizeof(digest));
-    return ecc.DSAVerifyDigest(digest, sizeof(digest), &sig) == ER_OK;
+    Crypto_SHA256 hash;
+    hash.Init();
+    hash.Update((const uint8_t*) &encoded.signable, sizeof(encoded.signable));
+    hash.GetDigest(digest);
+    return ecc.DSAVerifyDigest(digest, sizeof(digest), &encoded.sig) == ER_OK;
 }
 
-String CertificateType2::GetEncoded()
+QStatus CertificateType2::LoadEncoded(const uint8_t* encodedBytes, size_t len)
 {
-    qcc::String str;
+    if (len != GetEncodedLen()) {
+        return ER_INVALID_DATA;
+    }
+    uint32_t* pVersion = (uint32_t*) encodedBytes;
+    uint32_t version = betoh32(*pVersion);
+    if (version != GetVersion()) {
+        return ER_INVALID_DATA;
+    }
+    memcpy(&encoded, encodedBytes, len);
+    /* setup the localized validitiy value from the encoded bytes */
+    uint64_t* p = (uint64_t*) &encoded.signable.validFrom;
+    validity.validFrom = betoh64(*p);
+    p = (uint64_t*) &encoded.signable.validTo;
+    validity.validTo = betoh64(*p);
 
-    /* build the raw buffer */
-    uint8_t raw[CERT_TYPE2_RAW_LEN];
-    uint8_t* dest = raw;
-    uint32_t certVersion = GetVersion();
-    memcpy(dest, &certVersion, sizeof(certVersion));
-    dest += sizeof(certVersion);
-    memcpy(dest, &signable.issuer, sizeof(signable.issuer));
-    dest += sizeof(signable.issuer);
-    memcpy(dest, &signable.subject, sizeof(signable.subject));
-    dest += sizeof(signable.subject);
-    memcpy(dest, &signable.validity, sizeof(signable.validity));
-    dest += sizeof(signable.validity);
-    memcpy(dest, &signable.delegate, sizeof(signable.delegate));
-    dest += sizeof(signable.delegate);
-    memcpy(dest, signable.guild, sizeof(signable.guild));
-    dest += sizeof(signable.guild);
-    memcpy(dest, signable.digest, sizeof(signable.digest));
-    dest += sizeof(signable.digest);
-    memcpy(dest, &sig, sizeof(sig));
-    dest += sizeof(sig);
-    return EncodeCertRawByte(raw, sizeof(raw));
+    return ER_OK;
 }
 
-QStatus CertificateType2::LoadEncoded(const String& encoded)
+String CertificateType2::GetPEM()
+{
+    return EncodeCertRawByte(GetEncoded(), GetEncodedLen());
+}
+
+QStatus CertificateType2::LoadPEM(const String& pem)
 {
     qcc::String rawStr;
-    QStatus status = RetrieveRawCertFromEncoded(encoded, rawStr);
+    QStatus status = RetrieveRawCertFromPEM(pem, rawStr);
     if (status != ER_OK) {
         return status;
     }
     uint8_t* raw = (uint8_t*) rawStr.data();
     size_t rawLen = rawStr.length();
-
-    if (rawLen != CERT_TYPE2_RAW_LEN) {
-        return ER_INVALID_DATA;
-    }
-    uint32_t certVersion;
-    memcpy(&certVersion, raw, sizeof(certVersion));
-    if (certVersion != GetVersion()) {
-        return ER_INVALID_DATA;
-    }
-    raw += sizeof(certVersion);
-
-    memcpy(&signable.issuer, raw, sizeof(signable.issuer));
-    raw += sizeof(signable.issuer);
-    memcpy(&signable.subject, raw, sizeof(signable.subject));
-    raw += sizeof(signable.subject);
-    memcpy(&signable.validity, raw, sizeof(signable.validity));
-    raw += sizeof(signable.validity);
-    memcpy(&signable.delegate, raw, sizeof(signable.delegate));
-    raw += sizeof(signable.delegate);
-    memcpy(signable.guild, raw, sizeof(signable.guild));
-    raw += sizeof(signable.guild);
-    memcpy(signable.digest, raw, sizeof(signable.digest));
-    raw += sizeof(signable.digest);
-    memcpy(&sig, raw, sizeof(sig));
-
-    return ER_OK;
+    return LoadEncoded(raw, rawLen);
 }
+
+void CertificateType2::SetGuild(const uint8_t* newGuild, size_t guildLen)
+{
+    size_t len = sizeof(encoded.signable.guild);
+    memset(encoded.signable.guild, 0, len);
+    if (len > guildLen) {
+        len = guildLen;
+    }
+    memcpy(encoded.signable.guild, newGuild, len);
+}
+
 
 String CertificateType2::ToString()
 {
