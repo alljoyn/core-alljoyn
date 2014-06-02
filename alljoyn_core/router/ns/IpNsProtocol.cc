@@ -2779,6 +2779,82 @@ uint16_t MDNSSearchRData::GetNumFields()
     return m_fields.size();
 }
 
+uint16_t MDNSSearchRData::GetNumSearchCriteria() {
+    int numEntries = GetNumFields() - 1 /*txtvers*/;
+
+    return (numEntries > 0) ? (MDNSTextRData::GetNumFields(";") + 1) : 0;
+}
+String MDNSSearchRData::GetSearchCriterion(int index)
+{
+    Fields::const_iterator it = m_fields.begin();
+    String ret = "";
+    while (it != m_fields.end()) {
+        String key = it->first;
+        key = key.substr(0, key.find_last_of('_'));
+        if (key == ";") {
+            if (index-- == 0) {
+                break;
+            }
+            ret = "";
+        } else if (key != "txtvers") {
+            if (key == "n") {
+                key = "name";
+            } else if (key == "i") {
+                key = "implements";
+            }
+            if (!ret.empty()) {
+                ret += ",";
+            }
+            ret += key + "='" + it->second + "'";
+        }
+        ++it;
+    }
+    return ret;
+
+
+}
+void MDNSSearchRData::RemoveSearchCriterion(int index)
+{
+    Fields::iterator it = m_fields.begin();
+    String ret = "";
+    while (it != m_fields.end() && index > 0) {
+        String key = it->first;
+        key = key.substr(0, key.find_last_of('_'));
+        if (key == ";") {
+            if (--index == 0) {
+                it++;
+                break;
+            }
+            ret = "";
+        } else if (key != "txtvers") {
+            if (key == "n") {
+                key = "name";
+            } else if (key == "i") {
+                key = "implements";
+            }
+            if (!ret.empty()) {
+                ret += ",";
+            }
+            ret += key + "='" + it->second + "'";
+        }
+        ++it;
+    }
+    if (it != m_fields.end()) {
+        while (it != m_fields.end()) {
+            String key = it->first;
+            key = key.substr(0, key.find_last_of('_'));
+            if (key == ";") {
+                m_fields.erase(it);
+                break;
+            } else if (key == "txtvers") {
+                it++;
+            } else {
+                m_fields.erase(it++);
+            }
+        }
+
+    }
+}
 std::pair<qcc::String, qcc::String> MDNSSearchRData::GetFieldAt(int i)
 {
     Fields::const_iterator it = m_fields.begin();
