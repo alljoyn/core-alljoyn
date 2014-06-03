@@ -243,9 +243,23 @@ class Crypto_ECC {
      */
     QStatus DSAVerify(const uint8_t* buf, uint16_t len, const ECCSignature* sig);
 
+    /**
+     * Retrieve the ECC curve type.
+     * @return the ECC curve type
+     */
+    const uint8_t GetCurveType()
+    {
+        return ECC_NIST_P256;
+    }
+
     ~Crypto_ECC();
 
   private:
+
+    /**
+     * The NIST recommended elliptic curve P-256
+     */
+    static const uint8_t ECC_NIST_P256 = 0;
 
     ECCPrivateKey dhPrivateKey;
     ECCPublicKey dhPublicKey;
