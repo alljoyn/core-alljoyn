@@ -1649,6 +1649,8 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
     // Do it once for version zero.
     //
     if (type & TRANSMIT_V0_V1) {
+        m_v0_v1_queries[transportIndex].insert(name->second);
+
         WhoHas whoHas;
 
         //
@@ -1701,19 +1703,21 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
         nspacket->SetVersion(1, 1);
         nspacket->SetTimer(m_tDuration);
         nspacket->AddQuestion(whoHas);
-        m_v0_v1_queries[transportIndex].insert(name->second);
 
         TriggerTransmission(Packet::cast(nspacket));
     }
-    if ((transportMask == TRANSPORT_FIRST_OF_PAIR) && ((completeTransportMask & TRANSPORT_SECOND_OF_PAIR) == TRANSPORT_SECOND_OF_PAIR)) {
 
-        return ER_OK;
-    }
 
     //
     // Do it again for version two.
     //
     if (type & TRANSMIT_V2) {
+        m_v2_queries[transportIndex].insert(matchingStr);
+        if ((transportMask == TRANSPORT_FIRST_OF_PAIR) && ((completeTransportMask & TRANSPORT_SECOND_OF_PAIR) == TRANSPORT_SECOND_OF_PAIR)) {
+
+            return ER_OK;
+        }
+
         MDNSPacket query;
 
         MDNSSearchRData* searchRData = new MDNSSearchRData();
@@ -1722,12 +1726,6 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
         }
         MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
         query->AddAdditionalRecord(searchRecord);
-        if (completeTransportMask & TRANSPORT_TCP) {
-            m_v2_queries[TRANSPORT_INDEX_TCP].insert(matchingStr);
-        }
-        if (completeTransportMask & TRANSPORT_UDP) {
-            m_v2_queries[TRANSPORT_INDEX_UDP].insert(matchingStr);
-        }
         Query(completeTransportMask, query);
         delete searchRData;
     }
@@ -1757,25 +1755,16 @@ QStatus IpNameServiceImpl::CancelFindAdvertisement(TransportMask transportMask, 
     if ((matching.size() == 1) && (name != matching.end())) {
         nameOnly = true;
     }
-    return ER_OK;
-    if (CountOnes(transportMask) == 1 && transportIndex < 16) {
-        m_mutex.Lock();
-        if (nameOnly) {
-            m_v0_v1_queries[transportIndex].erase(name->second);
-        }
-        if ((transportMask == TRANSPORT_FIRST_OF_PAIR) && ((completeTransportMask & TRANSPORT_SECOND_OF_PAIR) == TRANSPORT_SECOND_OF_PAIR)) {
-            return ER_OK;
-        }
-        if (completeTransportMask & TRANSPORT_TCP) {
-            m_v2_queries[TRANSPORT_INDEX_TCP].erase(matchingStr);
-        }
-        if (completeTransportMask & TRANSPORT_UDP) {
-            m_v2_queries[TRANSPORT_INDEX_UDP].erase(matchingStr);
-        }
-        m_mutex.Unlock();
-        return ER_OK;
+
+    m_mutex.Lock();
+    if (m_enableV1 && nameOnly) {
+        m_v0_v1_queries[transportIndex].erase(name->second);
     }
-    return ER_BAD_TRANSPORT_MASK;
+
+    m_v2_queries[transportIndex].erase(matchingStr);
+
+    m_mutex.Unlock();
+    return ER_OK;
 }
 
 QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::String& guid, const qcc::String& matchingStr, LocatePolicy policy) {
@@ -2675,7 +2664,6 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
         delete srvRDataUdp;
 
         MDNSTextRData* txtRDataUdp = new MDNSTextRData();
-        // TODO: Check these values.
         if (m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]) {
             txtRDataUdp->SetValue("u6port", m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]);
         }
@@ -3718,7 +3706,6 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
                 SendProtocolMessage(m_liveInterfaces[i].m_multicastsockFd, ipv4address, interfaceAddressPrefixLen,
                                     flags, interfaceIsIPv4, packet, i);
             }
-// TODO Check why are we not sending over IPv6 address ?
         }
     }
 }
@@ -4010,7 +3997,6 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet)
         // rewritten is-at messages out on the socket that corresponds to the
         // live interface we approved for sending.
         //
-// TODO Why are we not sending on IPv6 address ??
         if (msgVersion == 2) {
             SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
                                 flags, interfaceIsIPv4, packet, i);
@@ -5432,7 +5418,6 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
             MDNSResourceRecord srvRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, 120, srvRDataUdp);
 
             MDNSTextRData* txtRDataUdp = new MDNSTextRData();
-            // TODO: Check these values.
             if (m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]) {
                 txtRDataUdp->SetValue("u6port", m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]);
             }
@@ -6641,7 +6626,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
     m_mutex.Unlock();
     bool handled = false;
     for (list<IpNameServiceListener*>::iterator it = m_listeners.begin(); !handled && it != m_listeners.end(); ++it) {
-        handled = (*it)->QueryHandler(completeTransportMask, mdnsPacket, recvPort, ns4, ns6); //TODO SVL
+        handled = (*it)->QueryHandler(completeTransportMask, mdnsPacket, recvPort, ns4, ns6);
     }
     m_mutex.Lock();
     m_protectListeners = false;
@@ -6649,7 +6634,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
         m_mutex.Unlock();
         return;
     }
-    HandleSearchQuery(completeTransportMask, mdnsPacket, recvPort, guid, ns4, ns6); //TODO SVL
+    HandleSearchQuery(completeTransportMask, mdnsPacket, recvPort, guid, ns4, ns6);
 
     m_mutex.Unlock();
 }
@@ -6977,19 +6962,65 @@ void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) 
 
         //version two
         if (mdnspacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
-            QueueProtocolMessage(brh_ptr->packet);
             m_mutex.Lock();
-            //	    if (mdnspacket->DestinationSet()){
-            // QCC_LogError(ER_OK,("Outgoing unicast packet to %s",mdnspacket->GetDestination().ToString().c_str()));
-            //brh_ptr->burstResponseCount = 3;
-            //} else {
-            brh_ptr->burstResponseCount++;
-            uint32_t count = BURST_RESPONSE_INTERVAL;
-            AlarmListener* burstResponceTimerListener = this;
-            qcc::Alarm startBurstAlarm(count, burstResponceTimerListener, context);
-            m_burstResponseTimer.AddAlarm(startBurstAlarm);
-            //}
+
+            MDNSResourceRecord* searchRecord;
+            mdnspacket->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &searchRecord);
+            MDNSSearchRData* searchRData = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
+
+            set<String> set_union_tcp_udp;
+            set_union(m_v2_queries[TRANSPORT_INDEX_TCP].begin(), m_v2_queries[TRANSPORT_INDEX_TCP].end(), m_v2_queries[TRANSPORT_INDEX_UDP].begin(), m_v2_queries[TRANSPORT_INDEX_UDP].end(), std::inserter(set_union_tcp_udp, set_union_tcp_udp.end()));
+            uint32_t numSearch = searchRData->GetNumSearchCriteria();
+            for (uint32_t k = 0; k < numSearch; k++) {
+                String crit = searchRData->GetSearchCriterion(k);
+                if (std::find(set_union_tcp_udp.begin(), set_union_tcp_udp.end(), crit) == set_union_tcp_udp.end()) {
+                    searchRData->RemoveSearchCriterion(k);
+                    k--;
+                    numSearch = searchRData->GetNumSearchCriteria();
+                }
+            }
+
+            if (m_v2_queries[TRANSPORT_INDEX_TCP].size() == 0) {
+                //Remove TCP PTR/SRV/TXT records
+                MDNSResourceRecord* ptrRecord;
+                if (mdnspacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
+                    MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
+                    String name = ptrRData->GetPtrDName();
+                    mdnspacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
+                    mdnspacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
+                    mdnspacket->RemoveAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR);
+                }
+            }
+            if (m_v2_queries[TRANSPORT_INDEX_UDP].size() == 0) {
+                //Remove UDP PTR/SRV/TXT records
+                MDNSResourceRecord* ptrRecord;
+                if (mdnspacket->GetAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
+                    MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
+                    String name = ptrRData->GetPtrDName();
+                    mdnspacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
+                    mdnspacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
+                    mdnspacket->RemoveAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR);
+                }
+
+            }
             m_mutex.Unlock();
+            if (numSearch > 0) {
+                QueueProtocolMessage(brh_ptr->packet);
+                //	    if (mdnspacket->DestinationSet()){
+                // QCC_LogError(ER_OK,("Outgoing unicast packet to %s",mdnspacket->GetDestination().ToString().c_str()));
+                //brh_ptr->burstResponseCount = 3;
+                //} else {
+                brh_ptr->burstResponseCount++;
+                uint32_t count = BURST_RESPONSE_INTERVAL;
+                AlarmListener* burstResponceTimerListener = this;
+                qcc::Alarm startBurstAlarm(count, burstResponceTimerListener, context);
+                m_burstResponseTimer.AddAlarm(startBurstAlarm);
+
+            } else {
+                delete brh_ptr;
+            }
+            //}
+
         } else {
             m_mutex.Lock();
             MDNSResourceRecord* advRecord;
@@ -7169,6 +7200,7 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                 m_impl.GetQueryPackets(packets);
                 for (std::list<Packet>::const_iterator i = packets.begin();
                      i != packets.end(); i++) {
+
                     m_impl.QueueProtocolMessage(*i);
                 }
                 // Wait for burst interval = BURST_RESPONSE_INTERVAL ms

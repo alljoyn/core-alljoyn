@@ -2903,10 +2903,35 @@ class MDNSSearchRData : public MDNSTextRData {
 
     /**
      * @internal
-     * @brief Get the number of fields in this Search RData.
-     * @return The number of fields in this Search RData.
+     * @brief Get the field at a certain index in this Search RData.
+     * @param index     The index at which the field is to be returned
+     * @return Field at the specified index
      */
     std::pair<qcc::String, qcc::String> GetFieldAt(int index);
+
+    /**
+     * @internal
+     * @brief Get the number of search criteria in this Search RData.
+     * @return The number of search criteria in this Search RData.
+     */
+    uint16_t GetNumSearchCriteria();
+
+    /**
+     * @internal
+     * @brief Get the search criterion at a certain index in this Search RData.
+     * @param index     The index at which the search criterion is to be returned
+     * @return Search Criterion at the specified index
+     */
+    qcc::String GetSearchCriterion(int index);
+
+
+    /**
+     * @internal
+     * @brief Remove the search criterion at a certain index in this Search RData.
+     * @param index     The index at which the search criterion is to be removed
+     */
+    void RemoveSearchCriterion(int index);
+
 };
 
 /**
@@ -3259,7 +3284,7 @@ class MDNSSenderRData : public MDNSTextRData {
  */
 class MDNSResourceRecord {
   public:
-    enum RRType : uint16_t {
+    enum RRType {
         A = 1,          //Host IPv4 Address
         NS = 2,         //Authoritative name server
         MD = 3,         //Mail destination
@@ -3281,7 +3306,7 @@ class MDNSResourceRecord {
         OPT = 41,       //OPT record
         NSEC = 47       //NSEC record
     };
-    enum RRClass : uint16_t {
+    enum RRClass {
         INTERNET = 1,   //Internet
         CS = 2,         //CSNET class
         CH = 3,         //CHAOS class
@@ -3747,7 +3772,7 @@ class MDNSHeader {
     bool m_qrType;
     bool m_authAnswer;
 
-    enum RCodeType : uint16_t {
+    enum RCodeType {
         NOT_ERROR = 0,
         FORMAT_ERROR = 1,
         SERVER_FAILURE = 2,
