@@ -104,13 +104,19 @@ QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, u
     uint8_t* replyPubKey;
     size_t replyPubKeyLen;
     variant->Get("ay", &replyPubKeyLen, &replyPubKey);
-    if (replyPubKeyLen != sizeof(ECCPublicKey)) {
+    /* the first byte is the ECC curve type */
+    if (replyPubKeyLen != (1 + sizeof(ECCPublicKey))) {
         return ER_INVALID_DATA;
     }
-    memcpy(&peerPubKey, replyPubKey, sizeof(ECCPublicKey));
+    uint8_t eccCurveType = replyPubKey[0];
+    if (eccCurveType != ecc.GetCurveType()) {
+        QCC_DbgHLPrintf(("KeyExchangerECDHE::RespondToKeyExchange invalid ECC curve %d\n", eccCurveType));
+        return ER_INVALID_DATA;
+    }
+    memcpy(&peerPubKey, &replyPubKey[1], sizeof(ECCPublicKey));
     /* hash the handshake data */
     hashUtil.Update(HexStringToByteString(U32ToString(remoteAuthMask, 16, 2 * sizeof (authMask), '0')));
-    hashUtil.Update((const uint8_t*) &peerPubKey, sizeof(ECCPublicKey));
+    hashUtil.Update(replyPubKey, replyPubKeyLen);
 
     QStatus status = GenerateECDHEKeyPair();
     if (status != ER_OK) {
@@ -125,13 +131,16 @@ QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, u
         return status;
     }
     MsgArg outVariant;
-    outVariant.Set("ay", sizeof(ECCPublicKey), GetECDHEPublicKey());
+    uint8_t buf[1 + sizeof(ECCPublicKey)];
+    buf[0] = ecc.GetCurveType();
+    memcpy(&buf[1], GetECDHEPublicKey(), sizeof(ECCPublicKey));
+    outVariant.Set("ay", sizeof(buf), buf);
     MsgArg args[2];
     args[0].Set("u", authMask);
     args[1].Set("v", &outVariant);
     /* hash the handshake data */
     hashUtil.Update(HexStringToByteString(U32ToString(authMask, 16, 2 * sizeof (authMask), '0')));
-    hashUtil.Update((const uint8_t*) GetECDHEPublicKey(), sizeof(ECCPublicKey));
+    hashUtil.Update(buf, sizeof(buf));
     return peerObj->HandleMethodReply(msg, args, ArraySize(args));
 }
 
@@ -145,14 +154,17 @@ QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& ca
     }
     Message replyMsg(bus);
     MsgArg variant;
-    variant.Set("ay", sizeof(ECCPublicKey), GetECDHEPublicKey());
+    uint8_t buf[1 + sizeof(ECCPublicKey)];
+    buf[0] = ecc.GetCurveType();
+    memcpy(&buf[1], GetECDHEPublicKey(), sizeof(ECCPublicKey));
+    variant.Set("ay", sizeof(buf), buf);
     MsgArg args[2];
     args[0].Set("u", authMask);
     args[1].Set("v", &variant);
 
     /* hash the handshake data */
     hashUtil.Update(HexStringToByteString(U32ToString(authMask, 16, 2 * sizeof (authMask), '0')));
-    hashUtil.Update((const uint8_t*) GetECDHEPublicKey(), sizeof(ECCPublicKey));
+    hashUtil.Update(buf, sizeof(buf));
 
     status = callback.SendKeyExchange(args, ArraySize(args), &replyMsg);
     if (status != ER_OK) {
@@ -164,13 +176,19 @@ QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& ca
     uint8_t* replyPubKey;
     size_t replyPubKeyLen;
     outVariant->Get("ay", &replyPubKeyLen, &replyPubKey);
-    if (replyPubKeyLen != sizeof(ECCPublicKey)) {
+    /* the first byte is the ECC curve type */
+    if (replyPubKeyLen != (1 + sizeof(ECCPublicKey))) {
         return ER_INVALID_DATA;
     }
-    memcpy(&peerPubKey, replyPubKey, sizeof(ECCPublicKey));
+    uint8_t eccCurveID = replyPubKey[0];
+    if (eccCurveID != ecc.GetCurveType()) {
+        QCC_DbgHLPrintf(("KeyExchangerECDHE::ExecKeyExchange invalid ECC curve %d\n", eccCurveID));
+        return ER_INVALID_DATA;
+    }
+    memcpy(&peerPubKey, &replyPubKey[1], sizeof(ECCPublicKey));
     /* hash the handshake data */
     hashUtil.Update(HexStringToByteString(U32ToString(*remoteAuthMask, 16, 2 * sizeof (authMask), '0')));
-    hashUtil.Update((const uint8_t*) &peerPubKey, sizeof(ECCPublicKey));
+    hashUtil.Update(replyPubKey, replyPubKeyLen);
 
     return status;
 }
