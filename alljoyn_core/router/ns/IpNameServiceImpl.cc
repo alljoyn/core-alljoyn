@@ -4751,12 +4751,12 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
     m_mutex.Unlock();
 }
 
-void IpNameServiceImpl::GetQueryPackets(std::list<Packet>& packets)
+void IpNameServiceImpl::GetQueryPackets(std::list<Packet>& packets, const uint8_t type)
 {
     m_mutex.Lock();
     packets.clear();
     for (uint32_t transportIndex = 0; transportIndex < N_TRANSPORTS; ++transportIndex) {
-        if (!m_v0_v1_queries[transportIndex].empty()) {
+        if (m_enableV1 && (type & TRANSMIT_V0_V1) && !m_v0_v1_queries[transportIndex].empty()) {
 
             {
                 uint32_t nQuerySent = 0;
@@ -4865,7 +4865,7 @@ void IpNameServiceImpl::GetQueryPackets(std::list<Packet>& packets)
     pilotPacket->ClearDestination();
     bool pilotAdded = false;
     for (uint32_t transportIndex = 0; transportIndex < N_TRANSPORTS; ++transportIndex) {
-        if (!m_v2_queries[transportIndex].empty()) {
+        if ((type & TRANSMIT_V2) && !m_v2_queries[transportIndex].empty()) {
             if (!pilotAdded) {
                 packets.push_back(Packet::cast(pilotPacket));
                 pilotAdded = true;
@@ -7200,7 +7200,15 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                     m_impl.QueueProtocolMessage(*i);
                 }
                 packets.clear();
-                m_impl.GetQueryPackets(packets);
+                if (!burstIndex) {
+                    m_impl.GetQueryPackets(packets, TRANSMIT_V0_V1);
+                    for (std::list<Packet>::const_iterator i = packets.begin();
+                         i != packets.end(); i++) {
+                        m_impl.QueueProtocolMessage(*i);
+                    }
+                    packets.clear();
+                }
+                m_impl.GetQueryPackets(packets, TRANSMIT_V2);
                 for (std::list<Packet>::const_iterator i = packets.begin();
                      i != packets.end(); i++) {
 

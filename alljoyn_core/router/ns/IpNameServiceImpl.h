@@ -1316,7 +1316,7 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
 
     void GetResponsePackets(std::list<Packet>& packets, bool quietly = false, const qcc::IPEndpoint destination = qcc::IPEndpoint("0.0.0.0", 0), uint8_t type = TRANSMIT_V2, TransportMask transportMask = (TRANSPORT_TCP | TRANSPORT_UDP));
 
-    void GetQueryPackets(std::list<Packet>& packets);
+    void GetQueryPackets(std::list<Packet>& packets, const uint8_t type = TRANSMIT_V0_V1 | TRANSMIT_V2);
     /**
      * @internal
      * @brief Retry locate requests.
