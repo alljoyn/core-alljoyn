@@ -570,7 +570,7 @@ WARN_LOGFILE           =
 
 INPUT                  = $(CPP_DISTDIR)/inc/alljoyn \
                          $(CPP_DISTDIR)/inc/qcc \
-                         $(CPP_DISTDIR)/../about/inc/alljoyn/about \
+                         ../../services/about/cpp/inc/alljoyn/ \
                          allJoynDocumentation
 
 # This tag can be used to specify the character encoding of the source files
