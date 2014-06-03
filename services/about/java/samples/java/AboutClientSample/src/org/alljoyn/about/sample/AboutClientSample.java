@@ -66,7 +66,7 @@ public class AboutClientSample
             aboutService.setLogger(new SampleLogger());
             aboutService.startAboutClient(mBus);
             System.out.println("started about service in client mode");
-            announcementHandler = new DeviceAnnouncementHandler();
+            announcementHandler = new DeviceAnnouncementHandler(mBus);
             String[] interfaces = new String[] { "org.alljoyn.Icon", "org.alljoyn.About" };
             aboutService.addAnnouncementHandler(announcementHandler, interfaces);
             System.out.println("added announcement handler");
