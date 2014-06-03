@@ -58,12 +58,6 @@ typedef qcc::ManagedObj<_UDPEndpoint> UDPEndpoint;
 
 /**
  * @brief A class for UDP Transports used in daemons.
- *
- * The UDPTransport class has different incarnations depending on whether or not
- * an instantiated endpoint using the transport resides in a daemon, or in the
- * case of Windows, on a service or client.  The differences between these
- * versions revolves around routing and discovery. This class provides a
- * specialization of class Transport for use by daemons.
  */
 class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener, public qcc::Thread {
     friend class _UDPEndpoint;
@@ -741,16 +735,15 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     qcc::Mutex m_cbLock;    /**< Lock to synchronize interactions between callback contexts and other threads */
 
     ArdpHandle* m_handle;
-    std::map<uint32_t, UDPEndpoint> m_demux;  /**< Map to demultiplex connection records to endpoints */
 
     /**
      * MessageDispatcherThread handles AllJoyn messages that have been received
      * by the transport and need to be sent of into the daemon router and off
      * to a destination.
      */
-    class MessageDispatcherThread : public qcc::Thread {
+    class DispatcherThread : public qcc::Thread {
       public:
-        MessageDispatcherThread(UDPTransport* transport) : qcc::Thread(qcc::String("MessageDispatcher")), m_transport(transport) { }
+        DispatcherThread(UDPTransport* transport) : qcc::Thread(qcc::String("UDP Dispatcher")), m_transport(transport) { }
         void ThreadExit(Thread* thread);
 
       protected:
@@ -760,19 +753,33 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         UDPTransport* m_transport;
     };
 
-    MessageDispatcherThread* m_dispatcher;  /** Pointer to the message dispatcher thread for the transport */
+    DispatcherThread* m_dispatcher;  /** Pointer to the message dispatcher thread for the transport */
 
-    class ReceiveBufferEntry {
+    class WorkerCommandQueueEntry {
       public:
+        WorkerCommandQueueEntry()
+            : m_command(NONE), m_handle(NULL), m_conn(NULL), m_connId(0), m_rcv(NULL), m_passive(false), m_buf(NULL), m_len(0), m_status(ER_OK) { }
+        enum Command {
+            NONE,
+            CONNECT_CB,
+            DISCONNECT_CB,
+            RECV_CB,
+            SEND_CB
+        };
+        Command m_command;
         ArdpHandle* m_handle;
         ArdpConnRecord* m_conn;
+        uint32_t m_connId;
         ArdpRcvBuf* m_rcv;
-        const _UDPEndpoint* m_endpoint;
+        bool m_passive;
+        uint8_t* m_buf;
+        uint32_t m_len;
+        QStatus m_status;
     };
 
-    std::queue<ReceiveBufferEntry> m_rxQueue;  /** Queue of ARDP messages queued for dispatch to the router */
+    std::queue<WorkerCommandQueueEntry> m_workerCommandQueue;  /** Queue of commands to dispatch to the router */
 
-    qcc::Mutex m_rxQueueLock; /**< Lock to synchronize access to the rx queue */
+    qcc::Mutex m_workerCommandQueueLock; /**< Lock to synchronize access to the rx queue */
 
 #ifndef NDEBUG
     void DebugEndpointListCheck(UDPEndpoint uep);
@@ -788,6 +795,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     bool AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status);
     void ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status);
+    void DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status);
     void DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status);
     void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status);
     void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status);
