@@ -468,6 +468,12 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      */
     void Exit();
 
+    /**
+     * Internal method used to indicate that non-stream-based endpoints have no threads
+     * running.
+     */
+    void Exited();
+
   private:
 
     class Internal;

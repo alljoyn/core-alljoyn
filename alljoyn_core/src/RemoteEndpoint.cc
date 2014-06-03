@@ -546,6 +546,14 @@ void _RemoteEndpoint::Exit()
     internal->exitCount = 1;
 }
 
+void _RemoteEndpoint::Exited()
+{
+    QCC_DbgTrace(("_RemoteEndpoint::Exited()"));
+    if (internal) {
+        internal->exitCount = 1;
+    }
+}
+
 void _RemoteEndpoint::ExitCallback()
 {
     assert(minimalEndpoint == false && "_RemoteEndpoint::ExitCallback(): Where did a callback come from if no thread?");
@@ -988,6 +996,7 @@ void _RemoteEndpoint::DecrementRef()
         if (minimalEndpoint && refs == 0) {
             internal->stopping = true;
             Invalidate();
+            Stop();
             return;
         }
 
