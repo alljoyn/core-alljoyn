@@ -2433,7 +2433,9 @@ QStatus UDPTransport::Stop(void)
      */
     QCC_DbgPrintf(("UDPTransport::Stop(): Alert connectThreads"));
     for (set<ConnectEntry>::const_iterator i = m_connectThreads.begin(); i != m_connectThreads.end(); ++i) {
-        (*i).m_thread->Alert();
+        if ((*i).m_thread) {
+            (*i).m_thread->Alert();
+        }
     }
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
@@ -2842,12 +2844,14 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
 
             /*
              * No threads waiting in this endpoint.  Just take it off of the
-             * authList which will decrement its reference count and it will go
-             * away.
+             * authList, make sure it is at least stopping and put it on the
+             * endpoint list where it will be picked up and done away with.
              */
             if (threadWaiting == false) {
-                QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Removing reference for slow authenticator with conn ID == %d", ep->GetConnId()));
+                QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Removing reference for slow authenticator with conn ID == %d", ep->GetConnId()));
                 m_authList.erase(i);
+                m_endpointList.insert(ep);
+                ep->Stop();
                 i = m_authList.upper_bound(ep);
             }
         }
@@ -2911,7 +2915,7 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                  * TCP socket's shutdown (graceful shutdown) call.
                  */
                 if (ARDP_GetConnPending(conn) == 0) {
-                    QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Join()ing stopping endpoint with conn ID == %d", ep->GetConnId()));
+                    QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Join()ing stopping endpoint with conn ID == %d", ep->GetConnId()));
                     ep->Join();
                     endpointState = ep->GetEpState();
 #ifndef DEBUG
@@ -2930,7 +2934,7 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
         if (endpointState == _UDPEndpoint::EP_FAILED ||
             endpointState == _UDPEndpoint::EP_DONE) {
 
-            QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Removing reference for failed or done endpoint with conn ID == %d.", ep->GetConnId()));
+            QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Removing reference for failed or done endpoint with conn ID == %d.", ep->GetConnId()));
             m_endpointList.erase(i);
             i = m_endpointList.upper_bound(ep);
             continue;
