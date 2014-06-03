@@ -24,8 +24,10 @@ commonsrc: \
 	BigNum.o \
 	BufferedSink.o \
 	BufferedSource.o \
+	CertificateECC.o \
 	Config.o \
 	Crypto.o \
+	CryptoECC.o \
 	CryptoSRP.o \
 	Debug.o \
 	GUID.o \
