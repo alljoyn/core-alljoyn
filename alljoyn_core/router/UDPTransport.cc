@@ -1450,13 +1450,24 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
             /*
              * If there are any messages waiting to be sent, we need to do the
-             * equivalent of a shutdown() and wait a reasonable time for them to
-             * be delivered.
+             * equivalent of a shutdown() and wait a "reasonable" time for them
+             * to be delivered.  If we just blindly multiply timeout, retries
+             * and the depth of the pending queue, we can come up with an
+             * enormous number.  The time spent by UDP in the TIMWAIT state
+             * seems like a more appropriate number since that is all the time
+             * the other side will spend waiting.
              */
+            int32_t timewait = m_transport->m_ardpConfig.timewait;
+
             ArdpConnRecord* conn = m_stream->GetConn();
             while (ARDP_GetConnPending(conn)) {
                 QCC_DbgTrace(("_UDPEndpoint::Join(): Waiting for pending messsages to send"));
                 qcc::Sleep(10);
+                timewait -= 10;
+                if (timewait <= 0) {
+                    QCC_DbgTrace(("_UDPEndpoint::Join(): TIMWAIT expired with messages pending"));
+                    break;
+                }
             }
 
             /*
