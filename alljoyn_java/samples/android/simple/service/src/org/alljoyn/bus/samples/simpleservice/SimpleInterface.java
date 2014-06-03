@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2011,2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -27,10 +27,7 @@ import org.alljoyn.bus.annotation.BusMethod;
  * not given the fully qualified name of the Java interface is be used.  In most instances its best
  * to assign an interface name since it helps promote code reuse.
  */
-@BusInterface(name = "org.alljoyn.bus.samples.simple.SimpleInterface",
-				descriptionLanguage="en",
-				description="This is a simple interface",
-				descriptionTranslator="org.alljoyn.bus.samples.simpleservice.MyTranslator")
+@BusInterface(name = "org.alljoyn.bus.samples.simple.SimpleInterface")
 public interface SimpleInterface {
 
     /*
@@ -41,6 +38,6 @@ public interface SimpleInterface {
      * All methods that use the BusMethod annotation can throw a BusException and should indicate
      * this fact.
      */
-    @BusMethod(description="The ping method sends a small piece of data")
+    @BusMethod
     String Ping(String inStr) throws BusException;
 }
