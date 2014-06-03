@@ -1800,6 +1800,7 @@ QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::
             }
             MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
             query->AddAdditionalRecord(searchRecord);
+            delete searchRData;
             Query(transportMask, query);
 
             ++pit;
