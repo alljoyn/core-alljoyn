@@ -2253,7 +2253,7 @@ QStatus BusAttachment::OnAppResume()
 
 QStatus BusAttachment::Ping(const char* name, uint32_t timeout)
 {
-    QCC_LogError(ER_OK, ("Inside BusAttachment::Ping() for name : %s", name));
+    QCC_DbgTrace(("BusAttachment::Ping(name = %s , timeout = %d)", name, timeout));
     if (!IsConnected()) {
         return ER_BUS_NOT_CONNECTED;
     }

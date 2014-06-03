@@ -4500,7 +4500,8 @@ void AllJoynObj::BusConnectionLost(const qcc::String& busAddr)
 
 void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
 {
-    QCC_LogError(ER_OK, ("Inside AllJoynObj::Ping"));
+    QCC_DbgTrace(("AllJoynObj::Ping()"));
+
     uint32_t replyCode = ALLJOYN_PING_REPLY_SUCCESS;
     TransportMask transports = TRANSPORT_ANY;
     size_t numArgs;
@@ -4640,7 +4641,7 @@ bool AllJoynObj::ResponseHandler(TransportMask transport, MDNSPacket response, u
         QCC_DbgPrintf(("Ignoring response with invalid ping info"));
         return false;
     }
-    QCC_LogError(ER_OK, ("Recieved a ping response for name %s", pingRData->GetWellKnownName().c_str()));
+    QCC_DbgPrintf(("Recieved a ping response for name %s", pingRData->GetWellKnownName().c_str()));
 
     const String& name = pingRData->GetWellKnownName();
     uint32_t replyCode = pingRData->GetReplyCode() == "ALLJOYN_PING_REPLY_SUCCESS" ? 1 : 2;
@@ -4660,7 +4661,7 @@ bool AllJoynObj::ResponseHandler(TransportMask transport, MDNSPacket response, u
 
 void AllJoynObj::PingReplyMethodHandlerUsingCode(Message& msg, uint32_t replyCode)
 {
-    QCC_LogError(ER_OK, ("AllJoynObj::PingReplyMethodHandler()"));
+    QCC_DbgTrace(("AllJoynObj::PingReplyMethodHandlerUsingCode()"));
     const char* name = NULL;
     msg->GetArgs("s", &name);
     QCC_DbgPrintf(("AllJoynObj::Ping(%s) returned %d", name, replyCode));
