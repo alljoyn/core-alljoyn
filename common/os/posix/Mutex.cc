@@ -136,6 +136,8 @@ QStatus Mutex::Unlock()
         return ER_INIT_FAILED;
     }
 
+    this->file = NULL;
+    this->line = -1;
     int ret = pthread_mutex_unlock(&mutex);
     if (ret != 0) {
         fflush(stdout);
@@ -144,8 +146,6 @@ QStatus Mutex::Unlock()
         assert(false);
         return ER_OS_ERROR;
     }
-    this->file = NULL;
-    this->line = -1;
     return ER_OK;
 }
 
@@ -157,6 +157,8 @@ QStatus Mutex::Unlock(const char* file, uint32_t line)
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
+    this->file = NULL;
+    this->line = -1;
     int ret = pthread_mutex_unlock(&mutex);
     if (ret != 0) {
         fflush(stdout);
@@ -164,8 +166,6 @@ QStatus Mutex::Unlock(const char* file, uint32_t line)
         assert(false);
         return ER_OS_ERROR;
     }
-    this->file = NULL;
-    this->line = -1;
     return ER_OK;
 #endif
 }
