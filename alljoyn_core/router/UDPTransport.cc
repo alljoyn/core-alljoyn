@@ -2209,7 +2209,7 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
                  * make the connection between ArdpConnRecord* and UDPEndpoint
                  * (which also serves as our protocol demux functionality).
                  */
-                if (entry.m_command == WorkerCommandQueueEntry::Command::CONNECT_CB) {
+                if (entry.m_command == WorkerCommandQueueEntry::CONNECT_CB) {
                     /*
                      * We can't call out to some possibly windy code path out
                      * through the daemon router with the m_endpointListLock
@@ -2265,21 +2265,21 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
                              * amounting to usually a push onto a messsage queue.
                              */
                             switch (entry.m_command) {
-                            case WorkerCommandQueueEntry::Command::SEND_CB:
+                            case WorkerCommandQueueEntry::SEND_CB:
                                 {
                                     QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): SEND_CB: SendCb()"));
                                     ep->SendCb(entry.m_handle, entry.m_conn, entry.m_buf, entry.m_len, entry.m_status);
                                     break;
                                 }
 
-                            case WorkerCommandQueueEntry::Command::RECV_CB:
+                            case WorkerCommandQueueEntry::RECV_CB:
                                 {
                                     QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): RECV_CB: RecvCb()"));
                                     ep->RecvCb(entry.m_handle, entry.m_conn, entry.m_rcv, entry.m_status);
                                     break;
                                 }
 
-                            case WorkerCommandQueueEntry::Command::DISCONNECT_CB:
+                            case WorkerCommandQueueEntry::DISCONNECT_CB:
                                 {
                                     QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): DISCONNECT_CB: DisconnectCb()"));
                                     ep->DisconnectCb(entry.m_handle, entry.m_conn, entry.m_status);
@@ -2481,7 +2481,7 @@ QStatus UDPTransport::Join(void)
          * ignore that situation or we may leak memory.  Give any buffers back
          * to the protocol before leaving.
          */
-        if (entry.m_command == WorkerCommandQueueEntry::Command::RECV_CB) {
+        if (entry.m_command == WorkerCommandQueueEntry::RECV_CB) {
             m_ardpLock.Lock();
             ARDP_RecvReady(entry.m_handle, entry.m_conn, entry.m_rcv);
             m_ardpLock.Unlock();
@@ -2491,7 +2491,7 @@ QStatus UDPTransport::Join(void)
          * Similarly, we may have copied out the BusHello in a connect callback
          * so we need to delete that buffer if it's there.
          */
-        if (entry.m_command == WorkerCommandQueueEntry::Command::CONNECT_CB) {
+        if (entry.m_command == WorkerCommandQueueEntry::CONNECT_CB) {
             delete[] entry.m_buf;
         }
     }
