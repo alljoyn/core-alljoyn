@@ -1383,6 +1383,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
             if (status != ER_OK) {
                 QCC_DbgPrintf(("Failed to create multicast socket for NS packets."));
                 qcc::Close(unicastsockFd);
+                qcc::Close(multicastMDNSsockFd);
                 continue;
             }
         }
@@ -3630,7 +3631,8 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
             // current interface.  It may be either IPv4 or IPv6 -- all we know
             // now is that it matches the destination.
             //
-            uint16_t unicastPortv4, unicastPortv6;
+            uint16_t unicastPortv4 = 0;
+            uint16_t unicastPortv6 = 0;
             qcc::IPAddress ipv4address;
             bool haveIPv4address = m_liveInterfaces[i].m_address.IsIPv4();
             if (haveIPv4address) {
