@@ -42,6 +42,9 @@ static void SigIntHandler(int sig)
 #define SERVICE_OPTION_ERROR  1
 #define SERVICE_CONFIG_ERROR  2
 
+// when pinging a remote bus wait a max of 5 seconds
+#define PING_WAIT_TIME    5000
+
 void sessionJoinedCallback(qcc::String const& busName, SessionId id)
 {
     QStatus status;
@@ -229,17 +232,30 @@ void sessionJoinedCallback(qcc::String const& busName, SessionId id)
 
 void announceHandlerCallback(qcc::String const& busName, unsigned short port)
 {
+    QStatus status;
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
 
     AboutClientSessionListener* aboutClientSessionListener = new AboutClientSessionListener(busName);
     AboutClientSessionJoiner* joincb = new AboutClientSessionJoiner(busName.c_str(), sessionJoinedCallback);
 
-    QStatus status = busAttachment->JoinSessionAsync(busName.c_str(), (ajn::SessionPort)port, aboutClientSessionListener,
-                                                     opts, joincb, aboutClientSessionListener);
+    /*
+     * Check that the unique bus name found by the Announce handler is reachable
+     * before forming a session.
+     *
+     * It possible for the Announce signal to contain stale information.
+     * By pinging the bus name we are able to determine if it is still present
+     * and responsive before joining a session to it.
+     */
+    busAttachment->EnableConcurrentCallbacks();
+    status = busAttachment->Ping(busName.c_str(), PING_WAIT_TIME);
+    if (ER_OK == status) {
+        status = busAttachment->JoinSessionAsync(busName.c_str(), (ajn::SessionPort)port, aboutClientSessionListener,
+                                                 opts, joincb, aboutClientSessionListener);
 
-    if (status != ER_OK) {
-        std::cout << "Unable to JoinSession with " << busName.c_str() << std::endl;
-        return;
+        if (status != ER_OK) {
+            std::cout << "Unable to JoinSession with " << busName.c_str() << std::endl;
+            return;
+        }
     }
 }
 
