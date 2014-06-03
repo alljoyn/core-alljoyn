@@ -9054,10 +9054,15 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_create(JNIEn
          * annotation. However, to work properly with object security, it must
          * still report its interface security as 'off'.
          */
-        bool isDBusStandardIfac = (strcmp(org::freedesktop::DBus::Introspectable::InterfaceName, name.c_str()) == 0) ||
-                                  (strcmp(org::freedesktop::DBus::Peer::InterfaceName, name.c_str()) == 0) ||
-                                  (strcmp(org::freedesktop::DBus::Properties::InterfaceName, name.c_str()) == 0) ||
-                                  (strcmp(org::allseen::Introspectable::InterfaceName, name.c_str()) == 0);
+        bool isDBusStandardIfac;
+        if (name.c_str() == NULL) { // passing NULL into strcmp is undefined behavior.
+            isDBusStandardIfac = false;
+        } else {
+            isDBusStandardIfac = (strcmp(org::freedesktop::DBus::Introspectable::InterfaceName, name.c_str()) == 0) ||
+                                 (strcmp(org::freedesktop::DBus::Peer::InterfaceName, name.c_str()) == 0) ||
+                                 (strcmp(org::freedesktop::DBus::Properties::InterfaceName, name.c_str()) == 0) ||
+                                 (strcmp(org::allseen::Introspectable::InterfaceName, name.c_str()) == 0);
+        }
         if ((status != ER_OK) &&
             isDBusStandardIfac &&
             (intf->GetSecurityPolicy() == static_cast<InterfaceSecurityPolicy>(org_alljoyn_bus_InterfaceDescription_AJ_IFC_SECURITY_OFF))) {
@@ -9741,22 +9746,24 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_methodCall(JNIEnv*
      *    - Failure to find a security indication will result the properties
      *      methods being used without encryption.
      */
-    if (strcmp(interfaceName.c_str(), org::freedesktop::DBus::Properties::InterfaceName) == 0) {
-        char* interface_name;
-        /* the fist member of the struct is the interface name*/
-        args.v_struct.members[0].Get("s", &interface_name);
-        const InterfaceDescription* ifac_with_property = proxyBusObj->GetInterface(interface_name);
-        /*
-         * If the object or the property interface is secure method call
-         * must be encrypted.
-         */
-        if (ifac_with_property == NULL) {
-            if (proxyBusObj->IsSecure()) {
+    if (interfaceName.c_str() != NULL) { //if interfaceName.c_str() is null strcmp is undefined behavior
+        if (strcmp(interfaceName.c_str(), org::freedesktop::DBus::Properties::InterfaceName) == 0) {
+            char* interface_name;
+            /* the fist member of the struct is the interface name*/
+            args.v_struct.members[0].Get("s", &interface_name);
+            const InterfaceDescription* ifac_with_property = proxyBusObj->GetInterface(interface_name);
+            /*
+             * If the object or the property interface is secure method call
+             * must be encrypted.
+             */
+            if (ifac_with_property == NULL) {
+                if (proxyBusObj->IsSecure()) {
+                    flags |= ALLJOYN_FLAG_ENCRYPTED;
+                }
+            } else
+            if (SecurityApplies(proxyBusObj, ifac_with_property)) {
                 flags |= ALLJOYN_FLAG_ENCRYPTED;
             }
-        } else
-        if (SecurityApplies(proxyBusObj, ifac_with_property)) {
-            flags |= ALLJOYN_FLAG_ENCRYPTED;
         }
     }
     qcc::String val;

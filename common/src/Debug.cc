@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -494,6 +494,11 @@ void _QCC_DbgDumpHex(DbgMsgType type, const char* module, const char* filename, 
 
 void QCC_SetDebugLevel(const char* module, uint32_t level)
 {
+    // strcmp can not take a NULL pointer its undefined behavior
+    if (module == NULL) {
+        return;
+    }
+
     if (strcmp(module, "ALL") == 0) {
         dbgControl->SetAllLevel(level);
     } else {
