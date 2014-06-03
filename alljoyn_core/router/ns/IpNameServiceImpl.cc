@@ -408,7 +408,7 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
     //
     m_enableIPv4 = !config->GetFlag("ns_disable_ipv4");
     m_enableIPv6 = !config->GetFlag("ns_disable_ipv6");
-    m_broadcast = config->GetFlag("ns_disable_directed_broadcast");
+    m_broadcast = !config->GetFlag("ns_disable_directed_broadcast");
 
     //
     // We don't enable v0 and v1 traffic unless explicitly configured to do so.
