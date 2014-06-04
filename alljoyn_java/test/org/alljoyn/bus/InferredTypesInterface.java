@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -131,6 +131,9 @@ public interface InferredTypesInterface {
 
     @BusMethod
     public boolean[] BooleanArray(boolean[] ab) throws BusException;
+
+    @BusMethod
+    public Boolean[] CapitalBooleanArray(Boolean[] aB) throws BusException;
 
     @BusMethod
     public short[] Int16Array(short[] an) throws BusException;

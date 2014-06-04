@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -195,6 +195,14 @@ final class MsgArg {
     public static native long setVariant(long msgArg, String signature, long val) throws BusException;
     public static native long setVariant(long msgArg) throws BusException;
 
+    public static long set(long msgArg, String signature, Boolean[] arg) throws BusException {
+        boolean[] ab = new boolean[arg.length];
+        for (int i = 0; i < arg.length; ++i) {
+            ab[i] = arg[i];
+        }
+        return set(msgArg, signature, ab);
+    }
+
     /**
      * Returns a string representation of the signature of an array of message
      * args.
@@ -259,7 +267,16 @@ final class MsgArg {
             case ALLJOYN_BOOLEAN:
                 return getBool(msgArg);
             case ALLJOYN_BOOLEAN_ARRAY:
-                return getBoolArray(msgArg);
+                boolean[] b = getBoolArray(msgArg);
+                Class<?> componentClass = ((Class) type).getComponentType();
+                if (componentClass == Boolean.class) {
+                    Boolean[] B = new Boolean[b.length];
+                    for (int i = 0; i < b.length; ++i) {
+                        B[i] = b[i];
+                    }
+                    return B;
+                }
+                return b;
             case ALLJOYN_BYTE:
                 object = getEnumObject(type, (int) getByte(msgArg));
                 if (object == null) {
@@ -449,7 +466,11 @@ final class MsgArg {
                     set(msgArg, sig, (byte[]) arg);
                     break;
                 case ALLJOYN_BOOLEAN:
-                    set(msgArg, sig, (boolean[]) arg);
+                    if (arg instanceof boolean[]) {
+                        set(msgArg, sig, (boolean[]) arg);
+                    } else {
+                        set(msgArg, sig, (Boolean[]) arg);
+                    }
                     break;
                 case ALLJOYN_INT16:
                 case ALLJOYN_UINT16:
