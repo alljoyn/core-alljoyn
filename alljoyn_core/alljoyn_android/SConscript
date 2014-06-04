@@ -16,23 +16,7 @@
 Import('env')
 
 # Install source
-if env['OS'] == 'android':
-    distDir = '$CPP_DISTDIR/alljoyn_android/bundle_test/BundledClient'
-    env.Install(distDir, 'bundle_test/BundledClient/AndroidManifest.xml')
-    env.Install(distDir, 'bundle_test/BundledClient/.classpath')
-    env.Install(distDir, 'bundle_test/BundledClient/.project')
-    env.Install(distDir, 'bundle_test/BundledClient/project.properties')
-    env.Install(distDir, env.Dir('bundle_test/BundledClient/src').srcnode())
-    env.Install(distDir, env.Dir('bundle_test/BundledClient/res').srcnode())
-
-    distDir = '$CPP_DISTDIR/alljoyn_android/bundle_test/BundledService'
-    env.Install(distDir, 'bundle_test/BundledService/AndroidManifest.xml')
-    env.Install(distDir, 'bundle_test/BundledService/.classpath')
-    env.Install(distDir, 'bundle_test/BundledService/.project')
-    env.Install(distDir, 'bundle_test/BundledService/project.properties')
-    env.Install(distDir, env.Dir('bundle_test/BundledService/src').srcnode())
-    env.Install(distDir, env.Dir('bundle_test/BundledService/res').srcnode())
-    
+if env['OS'] == 'android':    
     distDir = '$CPP_DISTDIR/alljoyn_android/alljoyn_android_ext'
     env.Install(distDir, 'alljoyn_android_ext/AndroidManifest.xml')
     env.Install(distDir, 'alljoyn_android_ext/.classpath')
