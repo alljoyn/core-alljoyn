@@ -268,9 +268,6 @@ class _Message {
     /**
      * Return the type of the message
      *
-     * See also these sample file(s): @n
-     * windows/Service/Service.cpp @n
-     *
      * @return  The type of message which can be one of MESSAGE_INVALID, MESSAGE_METHOD_CALL, MESSAGE_METHOD_RET,
      *          MESSAGE_ERROR, or MESSAGE_SIGNAL.
      */
@@ -279,9 +276,6 @@ class _Message {
     /**
      * Return the arguments for this message.
      *
-     * See also these sample file(s): @n
-     * windows/Service/Service.cpp @n
-     *
      * @param[out] args  Returns the arguments
      * @param[out] numArgs The number of arguments
      */
@@ -289,43 +283,6 @@ class _Message {
 
     /**
      * Return a specific argument.
-     *
-     * See also these sample file(s): @n
-     * basic/basic_client.cc @n
-     * basic/basic_service.cc @n
-     * basic/signalConsumer_client.cc @n
-     * chat/android/jni/Chat_jni.cpp @n
-     * chat/linux/chat.cc @n
-     * FileTransfer/FileTransferClient.cc @n
-     * secure/DeskTopSharedKSClient.cc @n
-     * secure/DeskTopSharedKSService.cc @n
-     * simple/android/client/jni/Client_jni.cpp @n
-     * simple/android/service/jni/Service_jni.cpp @n
-     * windows/chat/ChatLib32/ChatClasses.cpp @n
-     * windows/Client/Client.cpp @n
-     * windows/PhotoChat/AllJoynBusLib/AllJoynBusLib.cpp @n
-     * windows/PhotoChat/AllJoynBusLib/AllJoynConnection.cpp @n
-     * windows/Service/Service.cpp @n
-     *
-     * For Windows 8 see also these sample file(s): @n
-     * cpp/AllJoynStreaming/src/MediaSink.cc @n
-     * cpp/AllJoynStreaming/src/MediaSource.cc @n
-     * cpp/Basic/Basic_Client/BasicClient/MainPage.xaml.cpp @n
-     * cpp/Basic/Basic_Service/BasicService/AllJoynObjects.cpp @n
-     * cpp/Basic/Signal_Consumer_Client/SignalConsumerClient/AllJoynObjects.cpp @n
-     * cpp/Chat/Chat/AllJoynObjects.cpp @n
-     * cpp/Secure/Secure/AllJoynObjects.cpp @n
-     * cpp/Secure/Secure/MainPage.xaml.cpp @n
-     * csharp/Basic/Basic_Client/BasicClient/MainPage.xaml.cs @n
-     * csharp/Basic/Basic_Service/BasicService/Common/BasicServiceBusObject.cs @n
-     * csharp/Basic/Signal_Consumer_Client/SignalConsumerClient/Common/SignalConsumerBusListener.cs @n
-     * csharp/BusStress/BusStress/Common/ServiceBusObject.cs @n
-     * csharp/BusStress/BusStress/Common/StressOperation.cs @n
-     * csharp/chat/chat/Common/ChatSessionObject.cs @n
-     * csharp/FileTransfer/Client/Common/FileTransferBusObject.cs @n
-     * csharp/Secure/Secure/Common/Client.cs @n
-     * csharp/Secure/Secure/Common/SecureBusObject.cs @n
-     * csharp/Sessions/Sessions/Common/MyBusObject.cs @n
      *
      * @param argN  The index of the argument to get.
      *
@@ -377,11 +334,6 @@ class _Message {
     /**
      * Accessor function to get the object path for this message
      *
-     * See also these sample file(s): @n
-     * windows/chat/AlljoynSetup.cs @n
-     * windows/chat/ChatLib32/ChatLib32.cpp @n
-     * windows/chat/ChatLib32/ChatLib32.h @n
-     *
      * @return
      *      - The AllJoyn object path string stored in the AllJoyn header field
      *      - An empty string if unable to find the AllJoyn object path
@@ -396,34 +348,6 @@ class _Message {
 
     /**
      * Accessor function to get the interface for this message
-     *
-     * See also these sample file(s): @n
-     * basic/basic_client.cc @n
-     * basic/basic_service.cc @n
-     * chat/android/jni/Chat_jni.cpp @n
-     * chat/linux/chat.cc @n
-     * secure/DeskTopSharedKSClient.cc @n
-     * secure/DeskTopSharedKSService.cc @n
-     * simple/android/service/jni/Service_jni.cpp @n
-     * windows/chat/ChatLib32/ChatClasses.cpp @n
-     * windows/Client/Client.cpp @n
-     * windows/PhotoChat/AllJoynBusLib/AllJoynConnection.cpp @n
-     * windows/Service/Service.cpp @n
-     *
-     * For Windows 8 see also these sample file(s): @n
-     * cpp/AllJoynStreaming/src/MediaCommon.cc @n
-     * cpp/Basic/Basic_Client/BasicClient/MainPage.xaml.cpp @n
-     * cpp/Basic/Basic_Service/BasicService/AllJoynObjects.cpp @n
-     * cpp/Basic/Signal_Consumer_Client/SignalConsumerClient/AllJoynObjects.cpp @n
-     * cpp/Basic/Signal_Service/SignalService/AllJoynObjects.cpp @n
-     * cpp/Chat/Chat/AllJoynObjects.cpp @n
-     * cpp/Secure/Secure/MainPage.xaml.cpp @n
-     * csharp/Basic/Basic_Client/BasicClient/MainPage.xaml.cs @n
-     * csharp/Basic/Signal_Consumer_Client/SignalConsumerClient/Common/SignalConsumerBusListener.cs @n
-     * csharp/BusStress/BusStress/Common/StressOperation.cs @n
-     * csharp/chat/chat/Common/ChatSessionObject.cs @n
-     * csharp/FileTransfer/Client/Common/FileTransferBusObject.cs @n
-     * csharp/Secure/Secure/Common/Client.cs @n
      *
      * @return
      *      - The AllJoyn interface string stored in the AllJoyn header field
@@ -467,13 +391,6 @@ class _Message {
 
     /**
      * Accessor function to get the sender for this message.
-     *
-     * See also these sample file(s): @n
-     * chat/android/jni/Chat_jni.cpp @n
-     * chat/linux/chat.cc @n
-     * simple/android/service/jni/Service_jni.cpp @n
-     * windows/chat/ChatLib32/ChatClasses.cpp @n
-     * windows/PhotoChat/AllJoynBusLib/AllJoynConnection.cpp @n
      *
      * @return
      *      - The senders well-known name string stored in the AllJoyn header field.
@@ -528,10 +445,6 @@ class _Message {
 
     /**
      * Accessor function to get the session id for the message.
-     *
-     * For Windows 8 see also these sample file(s): @n
-     * csharp/Sessions/Sessions/Common/SessionOperations.cs @n
-     * csharp/Sessions/Sessions/MainPage.xaml.cs @n
      *
      * @return
      *      - Session id for the message
