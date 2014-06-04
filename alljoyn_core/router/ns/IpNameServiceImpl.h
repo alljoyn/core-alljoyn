@@ -1155,20 +1155,20 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
      * @internal
      * @brief Do something with a received MDNS protocol query.
      */
-    void HandleProtocolQuery(MDNSPacket packet, uint16_t recvPort);
+    void HandleProtocolQuery(MDNSPacket packet, qcc::IPEndpoint endpoint, uint16_t recvPort);
 
     /**
      * @internal
      * @brief Do something with a received MDNS protocol response.
      */
-    void HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t recvPort);
+    void HandleProtocolResponse(MDNSPacket mdnsPacket, qcc::IPEndpoint endpoint, uint16_t recvPort);
 
     /**
      * @internal
      * @brief Update the MDNSPacketTracker which is useful for keep track of burst and
      *        not responding to each packet of a burst
      */
-    bool UpdateMDNSPacketTracker(qcc::String guid, uint16_t burstId);
+    bool UpdateMDNSPacketTracker(qcc::String guid, qcc::IPEndpoint endpoint, uint16_t burstId);
 
     /**
      * One possible callback for each of the corresponding transport masks in a
@@ -1545,7 +1545,22 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
         }
     };
 
-    std::unordered_map<qcc::String, uint16_t, Hash, Equal> m_mdnsPacketTracker;
+    /**
+     * Hash functor for PacketTracker Key
+     */
+    struct HashPacketTracker {
+        inline size_t operator()(const std::pair<qcc::String, qcc::IPEndpoint>& s) const {
+            qcc::String str = s.first + s.second.ToString();
+            return qcc::hash_string(str.c_str());
+        }
+    };
+
+    struct EqualPacketTracker {
+        inline bool operator()(const std::pair<qcc::String, qcc::IPEndpoint>& s1, const std::pair<qcc::String, qcc::IPEndpoint>& s2) const {
+            return (s1.first == s2.first) && (s1.second == s2.second);
+        }
+    };
+    std::unordered_map<std::pair<qcc::String, qcc::IPEndpoint>, uint16_t, HashPacketTracker, EqualPacketTracker> m_mdnsPacketTracker;
 
     /*
      * PeerInfo holds the information about a peer for which we know the unicast address

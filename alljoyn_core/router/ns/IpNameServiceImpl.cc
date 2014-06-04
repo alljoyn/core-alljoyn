@@ -6157,9 +6157,9 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
         }
 
         if (mdnsPacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
-            HandleProtocolQuery(mdnsPacket, recvPort);
+            HandleProtocolQuery(mdnsPacket, endpoint, recvPort);
         } else {
-            HandleProtocolResponse(mdnsPacket, recvPort);
+            HandleProtocolResponse(mdnsPacket, endpoint, recvPort);
         }
     }
 }
@@ -6220,9 +6220,9 @@ bool IpNameServiceImpl::RemoveFromPeerInfoMap(const qcc::String& guid)
     return false;
 }
 
-bool IpNameServiceImpl::UpdateMDNSPacketTracker(qcc::String guid, uint16_t burstId)
+bool IpNameServiceImpl::UpdateMDNSPacketTracker(qcc::String guid, IPEndpoint endpoint, uint16_t burstId)
 {
-    //QCC_LogError(ER_OK, ("IpNameServiceImpl::UpdateMDNSPacketTracker(%s,%d)", guid.c_str(), burstId));
+    //QCC_DbgPrintf(("IpNameServiceImpl::UpdateMDNSPacketTracker(%s, %s,%d)", guid.c_str(), endpoint.ToString().c_str(), burstId));
 
     //
     // We check for the entry in MDNSPacketTracker
@@ -6230,13 +6230,13 @@ bool IpNameServiceImpl::UpdateMDNSPacketTracker(qcc::String guid, uint16_t burst
     // If we do not find it we return true that implies that we have not seen a packet from this burst.
     //     We add/update the guid with this burst id
     //
-    unordered_map<qcc::String, uint16_t, Hash, Equal>::iterator it = m_mdnsPacketTracker.find(guid);
+    pair<String, IPEndpoint> key(guid, endpoint);
+    unordered_map<pair<String, IPEndpoint>, uint16_t, HashPacketTracker, EqualPacketTracker>::iterator it = m_mdnsPacketTracker.find(key);
     // Check if the GUID is present in the Map
     // If Yes check if the incoming burst id is same or lower
     if (it != m_mdnsPacketTracker.end()) {
         // Drop the packet if burst id is lower or same
         if (it->second >= burstId) {
-            //QCC_LogError(ER_OK,("Dropping packet from GUID : %s with BURST ID : %d",guid.c_str(),burstId));
             return false;
         }
         // Update the last seen burst id from this guid
@@ -6247,14 +6247,14 @@ bool IpNameServiceImpl::UpdateMDNSPacketTracker(qcc::String guid, uint16_t burst
     }
     // GUID is not present in the Map so we add the entry
     else {
-        m_mdnsPacketTracker[guid] = burstId;
+        m_mdnsPacketTracker[key] = burstId;
         return true;
     }
     return true;
 }
 
 
-void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t recvPort)
+void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint endpoint, uint16_t recvPort)
 {
     // Check if someone is providing info. about an alljoyn service.
     MDNSResourceRecord* answerTcp;
@@ -6409,7 +6409,8 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
     //
     if (recvPort == MULTICAST_MDNS_PORT) {
         // We need to check if this packet is from a burst which we have seen before in which case we will ignore it
-        if (!UpdateMDNSPacketTracker(guid, refRData->GetSearchID())) {
+        if (!UpdateMDNSPacketTracker(guid, endpoint, refRData->GetSearchID())) {
+            QCC_DbgPrintf(("Ignoring response with duplicate burst ID"));
             m_mutex.Unlock();
             return;
         }
@@ -6565,7 +6566,7 @@ bool IpNameServiceImpl::HandleAdvertiseResponse(MDNSPacket mdnsPacket, uint16_t 
     return true;
 }
 
-void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recvPort)
+void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, IPEndpoint endpoint, uint16_t recvPort)
 {
     bool isAllJoynQuery = true;
     // Check if someone is asking about an alljoyn service.
@@ -6615,7 +6616,8 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, uint16_t recv
     //
     if (recvPort == MULTICAST_MDNS_PORT) {
         // We need to check if this packet is from a burst which we have seen before in which case we will ignore it
-        if (!UpdateMDNSPacketTracker(guid, refRData->GetSearchID())) {
+        if (!UpdateMDNSPacketTracker(guid, endpoint, refRData->GetSearchID())) {
+            QCC_DbgPrintf(("Ignoring query with duplicate burst ID"));
             m_mutex.Unlock();
             return;
         }
