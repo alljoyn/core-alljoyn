@@ -1199,7 +1199,7 @@ class JBusAttachment : public BusAttachment {
     void Disconnect(const char* connectArgs);
     QStatus EnablePeerSecurity(const char* authMechanisms, jobject jauthListener, const char* keyStoreFileName, jboolean isShared);
     QStatus RegisterBusObject(const char* objPath, jobject jbusObject, jobjectArray jbusInterfaces,
-                              jboolean jsecure, jstring jlangTag, jstring jdesc, jobject jdescTrans);
+                              jboolean jsecure, jstring jlangTag, jstring jdesc, jobject jtranslator);
     void UnregisterBusObject(jobject jbusObject);
     QStatus RegisterSignalHandler(const char* ifaceName, const char* signalName,
                                   jobject jsignalHandler, jobject jmethod, const char* srcPath);
@@ -1296,6 +1296,21 @@ class JBusAttachment : public BusAttachment {
      * wrote will usse it correctly.
      */
     list<jobject> busListeners;
+
+    /**
+     * A list of strong references to Java translator objects.
+     *
+     * If clients use the unnamed parameter / unnamed class idiom to provide bus
+     * listeners to setDescriptionTranslator, they can forget that the listeners
+     * exist after the register call and never explicitly call unregister.
+     *
+     * Since we need these Java objects around, we need to hold a strong
+     * reference to them to keep them from being garbage collected.
+     *
+     * Note that this member is public since we trust that the native binding we
+     * wrote will usse it correctly.
+     */
+    list<jobject> translators;
 
     /**
      * A list of strong references to Java Bus Objects we use to indicate that
@@ -1783,7 +1798,7 @@ class JBusObject : public BusObject {
     String GenerateIntrospection(const char* languageTag, bool deep = false, size_t indent = 0) const;
     void ObjectRegistered();
     void ObjectUnregistered();
-    void SetDescriptions(jstring jlangTag, jstring jdescription, jobject jdescTrans);
+    void SetDescriptions(jstring jlangTag, jstring jdescription, jobject jtranslator);
   private:
     JBusObject(const JBusObject& other);
     JBusObject& operator =(const JBusObject& other);
@@ -1805,6 +1820,8 @@ class JBusObject : public BusObject {
     Mutex mapLock;
 
     JBusAttachment* busPtr;
+
+    jobject jtranslatorRef;
 };
 
 /**
@@ -2084,7 +2101,7 @@ class JTranslator : public Translator {
     JTranslator(const JTranslator& other);
     JTranslator& operator =(const JTranslator& other);
 
-    jweak jdescriptionTranslator;
+    jweak jtranslator;
     jmethodID MID_numTargetLanguages;
     jmethodID MID_getTargetLanguage;
     jmethodID MID_translate;
@@ -4118,6 +4135,16 @@ void JBusAttachment::Disconnect(const char* connectArgs)
     busListeners.clear();
 
     /*
+     * Release any strong references we may hold to Java translator objects.
+     */
+    QCC_DbgPrintf(("JBusAttachment::Disconnect(): Releasing Translators"));
+    for (list<jobject>::iterator i = translators.begin(); i != translators.end(); ++i) {
+        QCC_DbgPrintf(("JBusAttachment::Disconnect(): Releasing strong global reference to Translator %p", *i));
+        env->DeleteGlobalRef(*i);
+    }
+    translators.clear();
+
+    /*
      * Release any strong references we may hold to objects passed in through an
      * async join.  We assume that since we have done a disconnect/stop/join, there
      * will never be a callback firing that expects to call out into one of these
@@ -4344,7 +4371,7 @@ void JBusAttachment::ForgetLocalBusObject(jobject jbusObject)
 
 QStatus JBusAttachment::RegisterBusObject(const char* objPath, jobject jbusObject,
                                           jobjectArray jbusInterfaces, jboolean jsecure,
-                                          jstring jlangTag, jstring jdesc, jobject jdescTrans)
+                                          jstring jlangTag, jstring jdesc, jobject jtranslator)
 {
     QCC_DbgPrintf(("JBusAttachment::RegisterBusObject(%p)", jbusObject));
 
@@ -4427,7 +4454,7 @@ QStatus JBusAttachment::RegisterBusObject(const char* objPath, jobject jbusObjec
     } else {
         busObject = new JBusObject(this, objPath, jglobalref);
         busObject->AddInterfaces(jbusInterfaces);
-        busObject->SetDescriptions(jlangTag, jdesc, jdescTrans);
+        busObject->SetDescriptions(jlangTag, jdesc, jtranslator);
         if (env->ExceptionCheck()) {
             delete busObject;
             QCC_DbgPrintf(("JBusAttachment::RegisterBusObject(): Releasing Bus Attachment common lock"));
@@ -7406,7 +7433,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_enablePeerSecurity(
  * JBusObject pair.
  */
 JBusObject::JBusObject(JBusAttachment* jbap, const char* path, jobject jobj)
-    : BusObject(path), jbusObj(NULL), MID_generateIntrospection(NULL), MID_registered(NULL), MID_unregistered(NULL)
+    : BusObject(path), jbusObj(NULL), MID_generateIntrospection(NULL), MID_registered(NULL), MID_unregistered(NULL), jtranslatorRef(NULL)
 {
     QCC_DbgPrintf(("JBusObject::JBusObject()"));
 
@@ -7493,6 +7520,10 @@ JBusObject::~JBusObject()
         env->DeleteWeakGlobalRef(jbusObj);
         jbusObj = NULL;
     }
+
+    QCC_DbgPrintf(("JBusObject::~JBusObject(): Releasing strong global reference to Translator %p", jtranslatorRef));
+    env->DeleteGlobalRef(jtranslatorRef);
+    jtranslatorRef = NULL;
 
     QCC_DbgPrintf(("JBusObject::~JBusObject(): Refcount on busPtr before decrement is %d", busPtr->GetRef()));
     busPtr->DecRef();
@@ -8236,9 +8267,10 @@ void JBusObject::ObjectUnregistered()
     }
 }
 
-void JBusObject::SetDescriptions(jstring jlangTag, jstring jdescription, jobject jdescTrans)
+void JBusObject::SetDescriptions(jstring jlangTag, jstring jdescription, jobject jtranslator)
 {
     QCC_DbgPrintf(("JBusObject::SetDescriptions()"));
+    JNIEnv* env = GetEnv();
 
     JString langTag(jlangTag);
     JString description(jdescription);
@@ -8247,22 +8279,26 @@ void JBusObject::SetDescriptions(jstring jlangTag, jstring jdescription, jobject
         SetDescription(langTag.c_str(), description.c_str());
     }
 
-    if (jdescTrans) {
-        Translator* dt = GetHandle<Translator*>(jdescTrans);
-        JNIEnv* env = GetEnv();
-        if (env->ExceptionCheck()) {
-            QCC_LogError(ER_FAIL, ("JBusObject::SetDescriptions(): Exception"));
+    if (jtranslator) {
+        jobject jglobalref = env->NewGlobalRef(jtranslator);
+        if (!jglobalref) {
             return;
         }
-        SetDescriptionTranslator(dt);
+        jtranslatorRef = jglobalref;
+        JTranslator* translator = GetHandle<JTranslator*>(jtranslator);
+        if (env->ExceptionCheck()) {
+            QCC_LogError(ER_FAIL, ("BusAttachment_setDescriptionTranslator(): Exception"));
+            return;
+        }
+        assert(translator);
+        SetDescriptionTranslator(translator);
     }
-
 }
 
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerBusObject(JNIEnv* env, jobject thiz, jstring jobjPath,
                                                                                jobject jbusObject, jobjectArray jbusInterfaces,
                                                                                jboolean jsecure, jstring jlangTag, jstring jdesc,
-                                                                               jobject jdescTrans)
+                                                                               jobject jtranslator)
 {
     QCC_DbgPrintf(("BusAttachment_registerBusObject()"));
 
@@ -8289,7 +8325,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerBusObject(J
 
     QCC_DbgPrintf(("BusAttachment_registerBusObject(): Refcount on busPtr is %d", busPtr->GetRef()));
 
-    QStatus status = busPtr->RegisterBusObject(objPath.c_str(), jbusObject, jbusInterfaces, jsecure, jlangTag, jdesc, jdescTrans);
+    QStatus status = busPtr->RegisterBusObject(objPath.c_str(), jbusObject, jbusInterfaces, jsecure, jlangTag, jdesc, jtranslator);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("BusAttachment_registerBusObject(): Exception"));
         return NULL;
@@ -8448,20 +8484,20 @@ void JSignalHandler::SignalHandler(const InterfaceDescription::Member* member,
     env->CallObjectMethod(jmethod, mid, jo, (jobjectArray)jargs);
 }
 
-JTranslator::JTranslator(jobject jdescTrans)
+JTranslator::JTranslator(jobject jobj)
 {
     QCC_DbgPrintf(("JTranslator::JTranslator()"));
 
     JNIEnv* env = GetEnv();
 
-    QCC_DbgPrintf(("JTranslator::JTranslator(): Taking weak global reference to DescriptionListener %p", jdescTrans));
-    jdescriptionTranslator = env->NewWeakGlobalRef(jdescTrans);
-    if (!jdescriptionTranslator) {
+    QCC_DbgPrintf(("JTranslator::JTranslator(): Taking weak global reference to DescriptionListener %p", jobj));
+    jtranslator = env->NewWeakGlobalRef(jobj);
+    if (!jtranslator) {
         QCC_LogError(ER_FAIL, ("JTranslator::JTranslator(): Can't create new weak global reference to Translator"));
         return;
     }
 
-    JLocalRef<jclass> clazz = env->GetObjectClass(jdescTrans);
+    JLocalRef<jclass> clazz = env->GetObjectClass(jtranslator);
     if (!clazz) {
         QCC_LogError(ER_FAIL, ("JTranslator::JTranslator(): Can't GetObjectClass() for Translator"));
         return;
@@ -8488,11 +8524,11 @@ JTranslator::~JTranslator()
 {
     QCC_DbgPrintf(("JTranslator::~JTranslator()"));
 
-    if (jdescriptionTranslator) {
+    if (jtranslator) {
         QCC_DbgPrintf(("JTranslator::~JTranslator(): Releasing weak global reference to Translator %p",
-                       jdescriptionTranslator));
-        GetEnv()->DeleteWeakGlobalRef(jdescriptionTranslator);
-        jdescriptionTranslator = NULL;
+                       jtranslator));
+        GetEnv()->DeleteWeakGlobalRef(jtranslator);
+        jtranslator = NULL;
     }
 }
 
@@ -8500,7 +8536,7 @@ size_t JTranslator::NumTargetLanguages()
 {
     QCC_DbgPrintf(("JTranslator::NumTargetLanguages()"));
     JScopedEnv env;
-    jobject jo = env->NewLocalRef(jdescriptionTranslator);
+    jobject jo = env->NewLocalRef(jtranslator);
     if (!jo) {
         QCC_LogError(ER_FAIL, ("JTranslator::NumTargetLanguages(): Can't get new local reference to Translator"));
         return 0;
@@ -8520,7 +8556,7 @@ void JTranslator::GetTargetLanguage(size_t index, qcc::String& ret)
     QCC_DbgPrintf(("JTranslator::GetTargetLanguage()"));
     JScopedEnv env;
 
-    jobject jo = env->NewLocalRef(jdescriptionTranslator);
+    jobject jo = env->NewLocalRef(jtranslator);
     if (!jo) {
         QCC_LogError(ER_FAIL, ("JTranslator::GetTargetLanguage(): Can't get new local reference to Translator"));
         return;
@@ -8551,7 +8587,7 @@ const char* JTranslator::Translate(const char* sourceLanguage,
     JLocalRef<jstring> jtargLang = env->NewStringUTF(targetLanguage);
     JLocalRef<jstring> jsource = env->NewStringUTF(source);
 
-    jobject jo = env->NewLocalRef(jdescriptionTranslator);
+    jobject jo = env->NewLocalRef(jtranslator);
     if (!jo) {
         QCC_LogError(ER_FAIL, ("JTranslator::Translate(): Can't get new local reference to Translator"));
         return NULL;
@@ -8983,9 +9019,9 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_enableConcurrentCallba
 }
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setDescriptionTranslator(
-    JNIEnv*env, jobject thiz, jobject jdescriptionTranslator)
+    JNIEnv*env, jobject thiz, jobject jtranslator)
 {
-    QCC_DbgPrintf(("BusAttachment_setDescsriptionTranslator()"));
+    QCC_DbgPrintf(("BusAttachment_setDescriptionTranslator()"));
 
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
     if (env->ExceptionCheck()) {
@@ -8994,13 +9030,41 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setDescriptionTranslat
     }
     assert(busPtr);
 
-    Translator* dt = GetHandle<Translator*>(jdescriptionTranslator);
-    if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("BusAttachment_setDescriptionTranslator(): Exception"));
-        return;
-    }
+    JTranslator* translator = NULL;
+    if (jtranslator) {
+        /*
+         * We always take a strong global reference to the translator object.
+         */
+        QCC_DbgPrintf(("BusAttachment_setDescriptionTranslator(): Taking strong global reference to Translator %p", jtranslator));
+        jobject jglobalref = env->NewGlobalRef(jtranslator);
+        if (!jglobalref) {
+            return;
+        }
 
-    busPtr->SetDescriptionTranslator(dt);
+        QCC_DbgPrintf(("BusAttachment_setDescriptionTranslator(): Taking Bus Attachment common lock"));
+        busPtr->baCommonLock.Lock();
+
+        busPtr->translators.push_back(jglobalref);
+
+        QCC_DbgPrintf(("BusAttachment_setDescriptionTranslator(): Releasing Bus Attachment common lock"));
+        busPtr->baCommonLock.Unlock();
+
+        /*
+         * Get the C++ object that must be there backing the Java object
+         */
+        translator = GetHandle<JTranslator*>(jtranslator);
+        if (env->ExceptionCheck()) {
+            QCC_LogError(ER_FAIL, ("BusAttachment_setDescriptionTranslator(): Exception"));
+            return;
+        }
+
+        assert(translator);
+    }
+    /*
+     * Make the call into AllJoyn.
+     */
+    QCC_DbgPrintf(("BusAttachment_setDescriptionTranslator(): Call SetDescriptionTranslator()"));
+    busPtr->SetDescriptionTranslator(translator);
 }
 
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_create(JNIEnv* env, jobject thiz, jobject jbus, jstring jname,
@@ -9335,9 +9399,9 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescription(
 }
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionTranslator(
-    JNIEnv*env, jobject thiz, jobject jdescriptionTranslator)
+    JNIEnv*env, jobject thiz, jobject jbus, jobject jtranslator)
 {
-    QCC_DbgPrintf(("InterfaceDescription_setDescsriptionTranslator()"));
+    QCC_DbgPrintf(("InterfaceDescription_setDescriptionTranslator()"));
 
     InterfaceDescription* intf = GetHandle<InterfaceDescription*>(thiz);
     if (env->ExceptionCheck()) {
@@ -9346,13 +9410,57 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionT
     }
     assert(intf);
 
-    Translator* dt = GetHandle<Translator*>(jdescriptionTranslator);
+    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(jbus);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescriptionTranslator(): Exception"));
         return;
     }
 
-    intf->SetDescriptionTranslator(dt);
+    /*
+     * We don't want to force the user to constantly check for NULL return
+     * codes, so if we have a problem, we throw an exception.
+     */
+    if (busPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescriptionTranslator(): NULL bus pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return;
+    }
+
+    JTranslator* translator = NULL;
+    if (jtranslator) {
+        /*
+         * We always take a strong global reference to the translator object.
+         */
+        QCC_DbgPrintf(("BusAttachment_setDescriptionTranslator(): Taking strong global reference to Translator %p", jtranslator));
+        jobject jglobalref = env->NewGlobalRef(jtranslator);
+        if (!jglobalref) {
+            return;
+        }
+
+        QCC_DbgPrintf(("BusAttachment_setDescriptionTranslator(): Taking Bus Attachment common lock"));
+        busPtr->baCommonLock.Lock();
+
+        busPtr->translators.push_back(jglobalref);
+
+        QCC_DbgPrintf(("BusAttachment_setDescriptionTranslator(): Releasing Bus Attachment common lock"));
+        busPtr->baCommonLock.Unlock();
+
+        /*
+         * Get the C++ object that must be there backing the Java object
+         */
+        translator = GetHandle<JTranslator*>(jtranslator);
+        if (env->ExceptionCheck()) {
+            QCC_LogError(ER_FAIL, ("BusAttachment_setDescriptionTranslator(): Exception"));
+            return;
+        }
+
+        assert(translator);
+    }
+    /*
+     * Make the call into AllJoyn.
+     */
+    QCC_DbgPrintf(("BusAttachment_setDescriptionTranslator(): Call SetDescriptionTranslator()"));
+    intf->SetDescriptionTranslator(translator);
 }
 
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDescription(JNIEnv*env, jobject thiz,

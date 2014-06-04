@@ -658,10 +658,10 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescription
 /*
  * Class:     org_alljoyn_bus_InterfaceDescription
  * Method:    setDescriptionTranslator
- * Signature: (Lorg/alljoyn/bus/Translator;)V
+ * Signature: (Lorg/alljoyn/bus/BusAttachment;Lorg/alljoyn/bus/Translator;)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionTranslator
-  (JNIEnv *, jobject, jobject);
+  (JNIEnv *, jobject, jobject, jobject);
 
 /*
  * Class:     org_alljoyn_bus_InterfaceDescription

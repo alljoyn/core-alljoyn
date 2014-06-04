@@ -120,7 +120,7 @@ class InterfaceDescription {
 
     private native void setDescriptionLanguage(String language);
     private native void setDescription(String Description);
-    private native void setDescriptionTranslator(Translator dt);
+    private native void setDescriptionTranslator(BusAttachment busAttachment, Translator dt);
     private native Status setMemberDescription(String member, String description, boolean isSessionlessSignal);
     private native Status setPropertyDescription(String propName, String description);
 
@@ -212,13 +212,13 @@ class InterfaceDescription {
             }
         }
 
-        configureDescriptions(busInterface);
+        configureDescriptions(busAttachment, busInterface);
 
         activate();
         return Status.OK;
     }
 
-    private void configureDescriptions(Class<?> busInterface) throws AnnotationBusException {
+    private void configureDescriptions(BusAttachment busAttachment, Class<?> busInterface) throws AnnotationBusException {
         BusInterface ifcNote = busInterface.getAnnotation(BusInterface.class);
         if(null == ifcNote) return;
 
@@ -266,7 +266,7 @@ class InterfaceDescription {
                     dt = (Translator)c.newInstance();
                     translatorCache.put(ifcNote.descriptionTranslator(), dt);
                 }
-                setDescriptionTranslator(dt);
+                setDescriptionTranslator(busAttachment, dt);
             }
         }catch(Exception e) {
             e.printStackTrace();
