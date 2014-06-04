@@ -1388,7 +1388,7 @@ public class BusAttachment {
     /**
      * Registers a user-defined authentication listener class with a specific default key store.
      *
-     * @param authMechanisms the authentication mechanism(s) to use for peer-to-peer authentication
+     * @param authMechanisms the authentication mechanism(s) to use for peer-to-peer authentication. This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA.
      * @param listener the authentication listener
      * @param keyStoreFileName the name of the default key store.  Under Android, the recommended
      *                         value of this parameter is {@code
@@ -1426,7 +1426,7 @@ public class BusAttachment {
     /**
      * Registers a user-defined authentication listener class with a specific default key store.
      *
-     * @param authMechanisms the authentication mechanism(s) to use for peer-to-peer authentication
+     * @param authMechanisms the authentication mechanism(s) to use for peer-to-peer authentication.  This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA.
      * @param listener the authentication listener
      * @param keyStoreFileName the name of the default key store.  Under Android, the recommended
      *                         value of this parameter is {@code
@@ -1445,7 +1445,7 @@ public class BusAttachment {
      * use {@link #registerAuthListener(String, AuthListener, String)} instead to specify the path
      * of the default key store.
      *
-     * @param authMechanisms the authentication mechanism(s) to use for peer-to-peer authentication
+     * @param authMechanisms the authentication mechanism(s) to use for peer-to-peer authentication.  This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA.
      * @param listener the authentication listener
      * @return OK if successful
      */

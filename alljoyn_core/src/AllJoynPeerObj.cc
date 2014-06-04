@@ -1320,7 +1320,7 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
     uint32_t remoteAuthMask = 0;
     uint32_t currentSuite = keyExchanger->GetSuite();
     mech = keyExchanger->GetSuiteName();
-    KeyExchangerCB kxCB(remotePeerObj, ifc, DEFAULT_TIMEOUT);
+    KeyExchangerCB kxCB(remotePeerObj, ifc, AUTH_TIMEOUT);
     status = keyExchanger->ExecKeyExchange(currentSuite, kxCB, &remoteAuthMask);
 
     if ((status == ER_OK) && (remoteAuthMask == currentSuite)) {

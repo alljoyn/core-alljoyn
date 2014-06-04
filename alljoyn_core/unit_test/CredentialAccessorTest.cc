@@ -121,7 +121,7 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
     QStatus status = ca.StoreKey(peerGuid, kb);
     ASSERT_EQ(ER_OK, status) << " ca.StoreKey failed with actual status: " << QCC_StatusText(status);
 
-    const char*blobName = "This is the custom key 1";
+    const char* blobName = "This is the custom key 1";
     KeyBlob customKb1((const uint8_t*) blobName, strlen(blobName), KeyBlob::SPKI_CERT);
 
     printf("customKb1 has blob type %d\n", customKb1.GetType());
@@ -147,12 +147,12 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
         return;
     }
 
-    ASSERT_EQ(2U, numGuids) << " ca.GetKeys expected to return 2 guids";
     GUID128 twoGuids[2];
     for (size_t cnt = 0; cnt < numGuids; cnt++) {
         twoGuids[cnt] = customGuidList[cnt];
     }
     delete [] customGuidList;
+    ASSERT_EQ(2U, numGuids) << " ca.GetKeys expected to return 2 guids";
 
     for (size_t cnt = 0; cnt < numGuids; cnt++) {
         cout << "Custom GUID: " << twoGuids[cnt].ToString().c_str()  << endl;
@@ -181,7 +181,11 @@ TEST_F(CredentialAccessorTest, StoreCustomKey)
         return;
     }
 
-    ASSERT_EQ(1U, numGuids) << " ca.GetKeys expected to return 1 guid";
+    if (numGuids != 1) {
+        delete [] customGuidList;
+        FAIL() << " ca.GetKeys expected to return 1 guid";
+        return;
+    }
 
     GUID128 oneCustomGuid = customGuidList[0];
     delete [] customGuidList;
@@ -220,7 +224,7 @@ QStatus HeaderKeyExpired_Pre(CredentialAccessor& ca, GUID128& peerGuid, GUID128&
     }
     Timespec expiry;
     kb.GetExpiration(expiry);
-    const char*blobName = "This is the custom key 1";
+    const char* blobName = "This is the custom key 1";
     KeyBlob customKb1((const uint8_t*) blobName, strlen(blobName), KeyBlob::SPKI_CERT);
 
     status = ca.AddAssociatedKey(peerGuid, customGuid1, customKb1);
@@ -245,7 +249,7 @@ QStatus MemberKeyExpired_Pre(CredentialAccessor& ca, GUID128& peerGuid, GUID128&
     }
     Timespec expiry;
     kb.GetExpiration(expiry);
-    const char*blobName = "This is the custom key 1";
+    const char* blobName = "This is the custom key 1";
     KeyBlob customKb1((const uint8_t*) blobName, strlen(blobName), KeyBlob::SPKI_CERT);
     customKb1.SetExpiration(30);
 
@@ -271,7 +275,7 @@ QStatus ComboMemberKeyExpired_Pre(CredentialAccessor& ca, GUID128& peerGuid, GUI
     }
     Timespec expiry;
     kb.GetExpiration(expiry);
-    const char*blobName = "This is the custom key 1";
+    const char* blobName = "This is the custom key 1";
     KeyBlob customKb1((const uint8_t*) blobName, strlen(blobName), KeyBlob::SPKI_CERT);
     customKb1.SetExpiration(75);
     status = ca.AddAssociatedKey(peerGuid, customGuid1, customKb1);
@@ -382,7 +386,7 @@ TEST_F(CredentialAccessorTest, StoreComplexKeyChain)
     QStatus status = ca.StoreKey(peerGuid, kb);
     ASSERT_EQ(ER_OK, status) << " ca.StoreKey failed with actual status: " << QCC_StatusText(status);
 
-    const char*blobName = "This is the custom key 1";
+    const char* blobName = "This is the custom key 1";
     KeyBlob customKb1((const uint8_t*) blobName, strlen(blobName), KeyBlob::SPKI_CERT);
 
     printf("customKb1 has blob type %d\n", customKb1.GetType());

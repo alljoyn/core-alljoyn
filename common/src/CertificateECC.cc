@@ -265,23 +265,23 @@ CertificateType0::CertificateType0(const ECCPublicKey* issuer, const uint8_t* ex
 
 void CertificateType0::SetVersion(uint32_t val)
 {
-    uint32_t* p = (uint32_t*) &encoded.version;
+    uint32_t* p = (uint32_t*) &encoded[OFFSET_VERSION];
     *p = htobe32(val);
 }
 
 void CertificateType0::SetIssuer(const ECCPublicKey* issuer)
 {
-    memcpy(&encoded.issuer, issuer, sizeof(ECCPublicKey));
+    memcpy(&encoded[OFFSET_ISSUER], issuer, sizeof(ECCPublicKey));
 }
 
 void CertificateType0::SetExternalDataDigest(const uint8_t* externalDataDigest)
 {
-    memcpy(encoded.signable.digest, externalDataDigest, sizeof(encoded.signable.digest));
+    memcpy(&encoded[OFFSET_DIGEST], externalDataDigest, Crypto_SHA256::DIGEST_SIZE);
 }
 
 void CertificateType0::SetSig(const ECCSignature* sig)
 {
-    memcpy(&encoded.sig, sig, sizeof(ECCSignature));
+    memcpy(&encoded[OFFSET_SIG], sig, sizeof(ECCSignature));
 }
 
 
@@ -289,14 +289,14 @@ QStatus CertificateType0::Sign(const ECCPrivateKey* dsaPrivateKey)
 {
     Crypto_ECC ecc;
     ecc.SetDSAPrivateKey(dsaPrivateKey);
-    return ecc.DSASignDigest(encoded.signable.digest, sizeof(encoded.signable.digest), &encoded.sig);
+    return ecc.DSASignDigest(GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE, (ECCSignature*) &encoded[OFFSET_SIG]);
 }
 
 bool CertificateType0::VerifySignature()
 {
     Crypto_ECC ecc;
-    ecc.SetDSAPublicKey(&encoded.issuer);
-    return ecc.DSAVerifyDigest(encoded.signable.digest, sizeof(encoded.signable.digest), &encoded.sig) == ER_OK;
+    ecc.SetDSAPublicKey(GetIssuer());
+    return ecc.DSAVerifyDigest(GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE, GetSig()) == ER_OK;
 }
 
 QStatus CertificateType0::LoadEncoded(const uint8_t* encodedBytes, size_t len)
@@ -352,28 +352,27 @@ qcc::String CertificateType0::ToString()
 
 void CertificateType1::SetVersion(uint32_t val)
 {
-    uint32_t* p = (uint32_t*) &encoded.signable.version;
+    uint32_t* p = (uint32_t*) &encoded[OFFSET_VERSION];
     *p = htobe32(val);
 }
 
 void CertificateType1::SetIssuer(const ECCPublicKey* issuer)
 {
-    memcpy(&encoded.signable.issuer, issuer, sizeof(ECCPublicKey));
+    memcpy(&encoded[OFFSET_ISSUER], issuer, sizeof(ECCPublicKey));
 }
 
 void CertificateType1::SetSubject(const ECCPublicKey* subject)
 {
-    memcpy(&encoded.signable.subject, subject, sizeof(ECCPublicKey));
+    memcpy(&encoded[OFFSET_SUBJECT], subject, sizeof(ECCPublicKey));
 }
 
 void CertificateType1::SetValidity(const ValidPeriod* validPeriod)
 {
     validity = *validPeriod;
     /* setup encoded buffer */
-    uint64_t* p = (uint64_t*) &encoded.signable.validFrom;
+    uint64_t* p = (uint64_t*) &encoded[OFFSET_VALIDFROM];
     *p = htobe64(validity.validFrom);
-    validity = *validPeriod;
-    p = (uint64_t*) &encoded.signable.validTo;
+    p = (uint64_t*) &encoded[OFFSET_VALIDTO];
     *p = htobe64(validity.validTo);
 }
 
@@ -382,17 +381,17 @@ CertificateType1::CertificateType1(const ECCPublicKey* issuer, const ECCPublicKe
     SetVersion(1);
     SetIssuer(issuer);
     SetSubject(subject);
-    encoded.signable.delegate = false;
+    SetDelegate(false);
 }
 
 void CertificateType1::SetExternalDataDigest(const uint8_t* externalDataDigest)
 {
-    memcpy(encoded.signable.digest, externalDataDigest, sizeof(encoded.signable.digest));
+    memcpy(&encoded[OFFSET_DIGEST], externalDataDigest, Crypto_SHA256::DIGEST_SIZE);
 }
 
 void CertificateType1::SetSig(const ECCSignature* sig)
 {
-    memcpy(&encoded.sig, sig, sizeof(ECCSignature));
+    memcpy(&encoded[OFFSET_SIG], sig, sizeof(ECCSignature));
 }
 
 QStatus CertificateType1::Sign(const ECCPrivateKey* dsaPrivateKey)
@@ -402,21 +401,21 @@ QStatus CertificateType1::Sign(const ECCPrivateKey* dsaPrivateKey)
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     Crypto_SHA256 hash;
     hash.Init();
-    hash.Update((const uint8_t*) &encoded.signable, sizeof(encoded.signable));
+    hash.Update(encoded, OFFSET_SIG);
     hash.GetDigest(digest);
-    return ecc.DSASignDigest(digest, sizeof(digest), &encoded.sig);
+    return ecc.DSASignDigest(digest, sizeof(digest), (ECCSignature*) &encoded[OFFSET_SIG]);
 }
 
 bool CertificateType1::VerifySignature()
 {
     Crypto_ECC ecc;
-    ecc.SetDSAPublicKey(&encoded.signable.issuer);
+    ecc.SetDSAPublicKey(GetIssuer());
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     Crypto_SHA256 hash;
     hash.Init();
-    hash.Update((const uint8_t*) &encoded.signable, sizeof(encoded.signable));
+    hash.Update(encoded, OFFSET_SIG);
     hash.GetDigest(digest);
-    return ecc.DSAVerifyDigest(digest, sizeof(digest), &encoded.sig) == ER_OK;
+    return ecc.DSAVerifyDigest(digest, sizeof(digest), GetSig()) == ER_OK;
 }
 
 QStatus CertificateType1::LoadEncoded(const uint8_t* encodedBytes, size_t len)
@@ -431,9 +430,9 @@ QStatus CertificateType1::LoadEncoded(const uint8_t* encodedBytes, size_t len)
     }
     memcpy(&encoded, encodedBytes, len);
     /* setup the localized validitiy value from the encoded bytes */
-    uint64_t* p = (uint64_t*) &encoded.signable.validFrom;
+    uint64_t* p = (uint64_t*) &encoded[OFFSET_VALIDFROM];
     validity.validFrom = betoh64(*p);
-    p = (uint64_t*) &encoded.signable.validTo;
+    p = (uint64_t*) &encoded[OFFSET_VALIDTO];
     validity.validTo = betoh64(*p);
 
     return ER_OK;
@@ -490,28 +489,27 @@ qcc::String CertificateType1::ToString()
 
 void CertificateType2::SetVersion(uint32_t val)
 {
-    uint32_t* p = (uint32_t*) &encoded.signable.version;
+    uint32_t* p = (uint32_t*) &encoded[OFFSET_VERSION];
     *p = htobe32(val);
 }
 
 void CertificateType2::SetIssuer(const ECCPublicKey* issuer)
 {
-    memcpy(&encoded.signable.issuer, issuer, sizeof(ECCPublicKey));
+    memcpy(&encoded[OFFSET_ISSUER], issuer, sizeof(ECCPublicKey));
 }
 
 void CertificateType2::SetSubject(const ECCPublicKey* subject)
 {
-    memcpy(&encoded.signable.subject, subject, sizeof(ECCPublicKey));
+    memcpy(&encoded[OFFSET_SUBJECT], subject, sizeof(ECCPublicKey));
 }
 
 void CertificateType2::SetValidity(const ValidPeriod* validPeriod)
 {
     validity = *validPeriod;
     /* setup encoded buffer */
-    uint64_t* p = (uint64_t*) &encoded.signable.validFrom;
+    uint64_t* p = (uint64_t*) &encoded[OFFSET_VALIDFROM];
     *p = htobe64(validity.validFrom);
-    validity = *validPeriod;
-    p = (uint64_t*) &encoded.signable.validTo;
+    p = (uint64_t*) &encoded[OFFSET_VALIDTO];
     *p = htobe64(validity.validTo);
 }
 
@@ -520,17 +518,17 @@ CertificateType2::CertificateType2(const ECCPublicKey* issuer, const ECCPublicKe
     SetVersion(2);
     SetIssuer(issuer);
     SetSubject(subject);
-    encoded.signable.delegate = false;
+    SetDelegate(false);
 }
 
 void CertificateType2::SetExternalDataDigest(const uint8_t* externalDataDigest)
 {
-    memcpy(encoded.signable.digest, externalDataDigest, sizeof(encoded.signable.digest));
+    memcpy(&encoded[OFFSET_DIGEST], externalDataDigest, Crypto_SHA256::DIGEST_SIZE);
 }
 
 void CertificateType2::SetSig(const ECCSignature* sig)
 {
-    memcpy(&encoded.sig, sig, sizeof(ECCSignature));
+    memcpy(&encoded[OFFSET_SIG], sig, sizeof(ECCSignature));
 }
 
 QStatus CertificateType2::Sign(const ECCPrivateKey* dsaPrivateKey)
@@ -540,21 +538,21 @@ QStatus CertificateType2::Sign(const ECCPrivateKey* dsaPrivateKey)
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     Crypto_SHA256 hash;
     hash.Init();
-    hash.Update((const uint8_t*) &encoded.signable, sizeof(encoded.signable));
+    hash.Update(encoded, OFFSET_SIG);
     hash.GetDigest(digest);
-    return ecc.DSASignDigest(digest, sizeof(digest), &encoded.sig);
+    return ecc.DSASignDigest(digest, sizeof(digest), (ECCSignature*) &encoded[OFFSET_SIG]);
 }
 
 bool CertificateType2::VerifySignature()
 {
     Crypto_ECC ecc;
-    ecc.SetDSAPublicKey(&encoded.signable.issuer);
+    ecc.SetDSAPublicKey(GetIssuer());
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     Crypto_SHA256 hash;
     hash.Init();
-    hash.Update((const uint8_t*) &encoded.signable, sizeof(encoded.signable));
+    hash.Update(encoded, OFFSET_SIG);
     hash.GetDigest(digest);
-    return ecc.DSAVerifyDigest(digest, sizeof(digest), &encoded.sig) == ER_OK;
+    return ecc.DSAVerifyDigest(digest, sizeof(digest), GetSig()) == ER_OK;
 }
 
 QStatus CertificateType2::LoadEncoded(const uint8_t* encodedBytes, size_t len)
@@ -569,9 +567,9 @@ QStatus CertificateType2::LoadEncoded(const uint8_t* encodedBytes, size_t len)
     }
     memcpy(&encoded, encodedBytes, len);
     /* setup the localized validitiy value from the encoded bytes */
-    uint64_t* p = (uint64_t*) &encoded.signable.validFrom;
+    uint64_t* p = (uint64_t*) &encoded[OFFSET_VALIDFROM];
     validity.validFrom = betoh64(*p);
-    p = (uint64_t*) &encoded.signable.validTo;
+    p = (uint64_t*) &encoded[OFFSET_VALIDTO];
     validity.validTo = betoh64(*p);
 
     return ER_OK;
@@ -596,12 +594,12 @@ QStatus CertificateType2::LoadPEM(const String& pem)
 
 void CertificateType2::SetGuild(const uint8_t* newGuild, size_t guildLen)
 {
-    size_t len = sizeof(encoded.signable.guild);
-    memset(encoded.signable.guild, 0, len);
+    size_t len = GUILD_ID_LEN;
+    memset(&encoded[OFFSET_GUILD], 0, len);
     if (len > guildLen) {
         len = guildLen;
     }
-    memcpy(encoded.signable.guild, newGuild, len);
+    memcpy(&encoded[OFFSET_GUILD], newGuild, len);
 }
 
 
