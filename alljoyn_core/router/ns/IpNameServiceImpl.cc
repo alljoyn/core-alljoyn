@@ -4237,18 +4237,6 @@ void* IpNameServiceImpl::Run(void* arg)
             break;
         }
 
-        //
-        // While waiting, the interfaces may have changed.  Do a quick check before
-        // handling any events.
-        //
-        m_mutex.Lock();
-        if (LiveInterfacesNeedsUpdate()) {
-            GetTimeNow(&tNow);
-            LazyUpdateInterfaces();
-            tLastLazyUpdate = tNow;
-            m_forceLazyUpdate = false;
-        }
-        m_mutex.Unlock();
 
         //
         // Loop over the events for which we expect something has happened
