@@ -246,5 +246,6 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_UDP_MESSAGE" value="0x910a" comment="UDP Transport is unable to complete an operation on an AllJoyn Message"/>
   <status name="ER_UDP_INVALID" value="0x910b" comment="UDP Transport detected invalid data or parameters from network"/>
   <status name="ER_UDP_UNSUPPORTED" value="0x910c" comment="UDP Transport does not support the indicated operation or type"/>
+  <status name="ER_UDP_ENDPOINT_STALLED" value="0x910d" comment="UDP Transport has detected an endpoint that is not terminating correctly"/>
 
 </status_block>
