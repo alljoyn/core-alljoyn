@@ -994,8 +994,6 @@ void _RemoteEndpoint::DecrementRef()
     QCC_DbgPrintf(("_RemoteEndpoint::DecrementRef(%s) refs=%d\n", GetUniqueName().c_str(), refs));
     if (refs <= 0) {
         if (minimalEndpoint && refs == 0) {
-            internal->stopping = true;
-            Invalidate();
             Stop();
             return;
         }

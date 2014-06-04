@@ -423,7 +423,15 @@ class ManagedObj {
     /** Increment the ref count */
     void IncRef()
     {
+#ifndef NDEBUG
+        uint32_t refs =
+#endif
         IncrementAndFetch(&context->refCount);
+
+#ifndef NDEBUG
+        assert(refs != 1 && "IncRef(): Incrementing from zero reference count!");
+#endif
+
     }
 
     /** Decrement the ref count and deallocate if necessary. */

@@ -761,6 +761,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
             : m_command(NONE), m_handle(NULL), m_conn(NULL), m_connId(0), m_rcv(NULL), m_passive(false), m_buf(NULL), m_len(0), m_status(ER_OK) { }
         enum Command {
             NONE,
+            EXIT,
             CONNECT_CB,
             DISCONNECT_CB,
             RECV_CB,
@@ -800,6 +801,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status);
     void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status);
     void SendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t window, QStatus status);
+    void ExitEndpoint(uint32_t connId);
 };
 
 } // namespace ajn
