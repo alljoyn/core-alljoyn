@@ -564,7 +564,7 @@ static uint32_t CheckConnTimers(ArdpHandle* handle, ArdpConnRecord* conn, uint32
                 break;
             }
 
-        } else if (timer->when > next) {
+        } else if (timer->when < next) {
             /* Update "call-me-next-ms" value */
             next = timer->when;
         }
