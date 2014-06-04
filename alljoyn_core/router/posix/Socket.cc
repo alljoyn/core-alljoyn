@@ -88,8 +88,12 @@ static QStatus SendSGCommon(SocketFd sockfd, struct sockaddr_storage* addr, sock
 
     ret = sendmsg(static_cast<int>(sockfd), &msg, MSG_NOSIGNAL);
     if (ret == -1) {
-        status = ER_OS_ERROR;
-        QCC_LogError(status, ("SendSGCommon (sockfd = %u): %d - %s", sockfd, errno, strerror(errno)));
+        if (errno == EAGAIN || errno == EINTR || errno == EWOULDBLOCK) {
+            status = ER_WOULDBLOCK;
+        } else {
+            status = ER_OS_ERROR;
+            QCC_LogError(status, ("SendSGCommon (sockfd = %u): %d - %s", sockfd, errno, strerror(errno)));
+        }
     } else {
         sent = static_cast<size_t>(ret);
     }
