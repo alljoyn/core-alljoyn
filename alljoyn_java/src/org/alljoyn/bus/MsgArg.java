@@ -54,12 +54,12 @@ final class MsgArg {
     private static final int ALLJOYN_VARIANT          = 'v';
     private static final int ALLJOYN_INT64            = 'x';
     private static final int ALLJOYN_BYTE             = 'y';
-    
+
     private static final int ALLJOYN_STRUCT_OPEN      = '(';
     private static final int ALLJOYN_STRUCT_CLOSE     = ')';
     private static final int ALLJOYN_DICT_ENTRY_OPEN  = '{';
     private static final int ALLJOYN_DICT_ENTRY_CLOSE = '}';
-    
+
     private static final int ALLJOYN_BOOLEAN_ARRAY    = ('b' << 8) | 'a';
     private static final int ALLJOYN_DOUBLE_ARRAY     = ('d' << 8) | 'a';
     private static final int ALLJOYN_INT32_ARRAY      = ('i' << 8) | 'a';
@@ -73,7 +73,7 @@ final class MsgArg {
     private MsgArg() {}
 
     /**
-     * Marshals an {@code int} value into a Java {@code Enum}.  
+     * Marshals an {@code int} value into a Java {@code Enum}.
      *
      * @param type the type of the {@code Enum}
      * @param int the ordinal value of the enum
@@ -137,7 +137,7 @@ final class MsgArg {
         }
         return -1;
     }
-    
+
     /*
      * Accessor functions for talking to the native MsgArgs.  The msgArg
      * parameter is a native (MsgArg *).
@@ -231,7 +231,7 @@ final class MsgArg {
                     }
                     return object;
                 } else {
-                    Type componentType = (type instanceof GenericArrayType) 
+                    Type componentType = (type instanceof GenericArrayType)
                         ? ((GenericArrayType) type).getGenericComponentType()
                         : ((Class) type).getComponentType();
                     Class<?> componentClass;
@@ -264,7 +264,7 @@ final class MsgArg {
                 object = getEnumObject(type, (int) getByte(msgArg));
                 if (object == null) {
                     return getByte(msgArg);
-                } 
+                }
                 return object;
             case ALLJOYN_BYTE_ARRAY:
                 return getByteArray(msgArg);
@@ -306,8 +306,8 @@ final class MsgArg {
                 Type[] types = Signature.structTypes((Class) type);
                 if (types.length != getNumMembers(msgArg)) {
                     throw new MarshalBusException(
-                        "cannot marshal '" + getSignature(new long[] { msgArg }) + "' with " 
-                        + getNumMembers(msgArg) + " members into " + type + " with " 
+                        "cannot marshal '" + getSignature(new long[] { msgArg }) + "' with "
+                        + getNumMembers(msgArg) + " members into " + type + " with "
                         + types.length + " fields");
                 }
                 object = ((Class) type).newInstance();
@@ -346,15 +346,15 @@ final class MsgArg {
                 variant.setMsgArg(msgArg);
                 return variant;
             default:
-                throw new MarshalBusException("unimplemented '" 
+                throw new MarshalBusException("unimplemented '"
                                               + getSignature(new long[] { msgArg }) + "'");
             }
         } catch (Throwable th) {
-            throw new MarshalBusException("cannot marshal '" + getSignature(new long[] { msgArg }) 
+            throw new MarshalBusException("cannot marshal '" + getSignature(new long[] { msgArg })
                                           + "' into " + type, th);
-        }    
+        }
     }
-    
+
     /**
      * Unmarshals an array of native MsgArgs into an array of Java objects.  The
      * MsgArgs are unmarshalled into the parameter types of the specified Java
@@ -480,7 +480,7 @@ final class MsgArg {
                 Object[] args = Signature.structArgs(arg);
                 String[] memberSigs = Signature.split(sig.substring(1, sig.length() - 1));
                 if (memberSigs == null) {
-                    throw new MarshalBusException("cannot marshal " + arg.getClass() + " into '" 
+                    throw new MarshalBusException("cannot marshal " + arg.getClass() + " into '"
                                                   + sig + "'");
                 }
                 setStruct(msgArg, memberSigs.length);
@@ -501,7 +501,7 @@ final class MsgArg {
                 Map.Entry<?, ?> entry = (Map.Entry<?, ?>) arg;
                 String[] sigs = Signature.split(sig.substring(1, sig.length() - 1));
                 if (sigs == null) {
-                    throw new MarshalBusException("cannot marshal " + arg.getClass() + " into '" 
+                    throw new MarshalBusException("cannot marshal " + arg.getClass() + " into '"
                                                   + sig + "'");
                 }
                 setDictEntry(msgArg);
@@ -512,8 +512,8 @@ final class MsgArg {
                 throw new MarshalBusException("unimplemented '" + sig + "'");
             }
         } catch (Throwable th) {
-            throw new MarshalBusException("cannot marshal " + 
-                                          ((arg == null) ? "null" : arg.getClass()) + 
+            throw new MarshalBusException("cannot marshal " +
+                                          ((arg == null) ? "null" : arg.getClass()) +
                                           " into '" + sig + "'", th);
         }
     }

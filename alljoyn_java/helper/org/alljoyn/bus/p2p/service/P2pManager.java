@@ -1206,7 +1206,7 @@ public class P2pManager implements ConnectionInfoListener, DnsSdServiceResponseL
 
         // if no connection, initiate connect;
         // else if connection exists to the same device, request group info,
-        // else if connection exists to a different device and the current app is in foreground, 
+        // else if connection exists to a different device and the current app is in foreground,
         // tear the existing connection down and initiate a new one.
 
         // Remove pending  calls

@@ -32,7 +32,7 @@ import java.util.Arrays;
 public interface AnnotatedTypesInterface {
 
     public class InnerStruct {
-        @Position(0) 
+        @Position(0)
         @Signature("i")
         public int i;
 
@@ -42,119 +42,119 @@ public interface AnnotatedTypesInterface {
     }
 
     public class Struct {
-        
-        @Position(0) 
+
+        @Position(0)
         @Signature("y")
         public byte y;
 
-        @Position(1) 
+        @Position(1)
         @Signature("b")
         public boolean b;
 
-        @Position(2) 
+        @Position(2)
         @Signature("n")
         public short n;
 
-        @Position(3) 
+        @Position(3)
         @Signature("q")
         public short q;
 
-        @Position(4) 
+        @Position(4)
         @Signature("i")
         public int i;
 
-        @Position(5) 
+        @Position(5)
         @Signature("u")
         public int u;
 
-        @Position(6) 
+        @Position(6)
         @Signature("x")
         public long x;
 
-        @Position(7) 
+        @Position(7)
         @Signature("t")
         public long t;
 
-        @Position(8) 
+        @Position(8)
         @Signature("d")
         public double d;
 
-        @Position(9) 
+        @Position(9)
         @Signature("s")
         public String s;
 
-        @Position(10) 
+        @Position(10)
         @Signature("o")
         public String o;
 
-        @Position(11) 
+        @Position(11)
         @Signature("g")
         public String g;
 
-        @Position(12) 
+        @Position(12)
         @Signature("ay")
         public byte[] ay;
 
-        @Position(13) 
+        @Position(13)
         @Signature("ab")
         public boolean[] ab;
 
-        @Position(14) 
+        @Position(14)
         @Signature("an")
         public short[] an;
 
-        @Position(15) 
+        @Position(15)
         @Signature("aq")
         public short[] aq;
 
-        @Position(16) 
+        @Position(16)
         @Signature("ai")
         public int[] ai;
 
-        @Position(17) 
+        @Position(17)
         @Signature("au")
         public int[] au;
 
-        @Position(18) 
+        @Position(18)
         @Signature("ax")
         public long[] ax;
 
-        @Position(19) 
+        @Position(19)
         @Signature("at")
         public long[] at;
 
-        @Position(20) 
+        @Position(20)
         @Signature("ad")
         public double[] ad;
 
-        @Position(21) 
+        @Position(21)
         @Signature("as")
         public String[] as;
 
-        @Position(22) 
+        @Position(22)
         @Signature("ao")
         public String[] ao;
 
-        @Position(23) 
+        @Position(23)
         @Signature("ag")
         public String[] ag;
 
-        @Position(24) 
+        @Position(24)
         @Signature("r")
         public InnerStruct r;
 
-        @Position(25) 
+        @Position(25)
         @Signature("a{ss}")
         public TreeMap<String, String> ae;
 
-        @Position(26) 
+        @Position(26)
         @Signature("v")
         public Variant v;
 
         public Struct() {}
-        public Struct(byte y, boolean b, short n, short q, int i, int u, long x, long t, double d, 
-                      String s, String o, String g, byte[] ay, boolean[] ab, short[] an, short[] aq, 
-                      int[] ai, int[] au, long[] ax, long[] at, double[] ad, String[] as, String[] ao, 
+        public Struct(byte y, boolean b, short n, short q, int i, int u, long x, long t, double d,
+                      String s, String o, String g, byte[] ay, boolean[] ab, short[] an, short[] aq,
+                      int[] ai, int[] au, long[] ax, long[] at, double[] ad, String[] as, String[] ao,
                       String[] ag, InnerStruct r, Variant v, TreeMap<String, String> ae) {
             this.y = y;
             this.b = b;
@@ -186,7 +186,7 @@ public interface AnnotatedTypesInterface {
         }
         public boolean equals(Object obj) {
             Struct struct = (Struct)obj;
-            return 
+            return
                 y == struct.y &&
                 b == struct.b &&
                 n == struct.n &&

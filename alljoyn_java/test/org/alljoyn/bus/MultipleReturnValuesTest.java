@@ -92,7 +92,7 @@ public class MultipleReturnValuesTest extends TestCase {
         DBusProxyObj.RequestNameResult res = control.RequestName("org.alljoyn.bus.MultipleReturnValuesTest",
                                                                 DBusProxyObj.REQUEST_NAME_NO_FLAGS);
         assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, res);
-        
+
         ProxyBusObject remoteObj = bus.getProxyBusObject("org.alljoyn.bus.MultipleReturnValuesTest",
                                                          "/service",
                                                          BusAttachment.SESSION_ID_ANY,

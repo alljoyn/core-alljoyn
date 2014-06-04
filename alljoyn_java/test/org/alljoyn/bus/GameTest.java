@@ -48,7 +48,7 @@ public class GameTest extends TestCase {
             if (Status.OK != status) {
                 throw new GameException("BusAttachment.registerBusObject() failed: " + status.toString());
             }
-        
+
             /* Request a well-known name */
             DBusProxyObj control = bus.getDBusProxyObj();
             DBusProxyObj.RequestNameResult res = control.RequestName("org.alljoyn.bus.game",
@@ -83,20 +83,20 @@ public class GameTest extends TestCase {
     }
 
     public void testGame() throws Exception {
-        
+
         /* Create a bus connection and connect to the bus */
         BusAttachment bus = new BusAttachment(getClass().getName());
         Status status = bus.connect();
         if (Status.OK != status) {
             throw new GameException("BusAttachment.connect() failed with " + status.toString());
         }
-            
+
         /* Register the service */
         Game game = new Game();
         game.register(bus);
 
         /* Register a signal handler to receive other players' state */
-        status = bus.registerSignalHandlers(this);        
+        status = bus.registerSignalHandlers(this);
         if (Status.OK != status) {
             throw new GameException("Cannot register signal handler");
         }

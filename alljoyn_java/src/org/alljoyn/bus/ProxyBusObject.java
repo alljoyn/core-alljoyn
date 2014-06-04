@@ -93,7 +93,7 @@ public class ProxyBusObject {
         replyTimeoutMsecs = 25000;
         proxy = Proxy.newProxyInstance(busInterfaces[0].getClassLoader(), busInterfaces, new Handler());
         try {
-            busConnectionLost = 
+            busConnectionLost =
                 getClass().getDeclaredMethod("busConnectionLost", String.class);
             busConnectionLost.setAccessible(true);
         } catch (NoSuchMethodException ex) {
@@ -211,8 +211,8 @@ public class ProxyBusObject {
                     }
                 }
             } else {
-                /* 
-                 * The very slow path.  The first time a proxy method is invoked. 
+                /*
+                 * The very slow path.  The first time a proxy method is invoked.
                  *
                  * Walk through all the methods looking for ones that match the invoked method name.
                  * This creates a list of all the cached invocation information that we'll use later
@@ -248,7 +248,7 @@ public class ProxyBusObject {
                                    flags);
             } else {
                 if (invocation.isGet) {
-                    Variant v = getProperty(bus, 
+                    Variant v = getProperty(bus,
                                             invocation.interfaceName,
                                             invocation.methodName);
                     value = v.getObject(invocation.genericReturnType);
@@ -261,7 +261,7 @@ public class ProxyBusObject {
                 }
             }
 
-            /* 
+            /*
              * The JNI layer can't perform complete type checking (at least not easily),
              * so this extra code is here.  The conditions below are taken from the
              * InvocationHandler documentation.
@@ -291,7 +291,7 @@ public class ProxyBusObject {
 
     /**
      * Release resources immediately.
-     * 
+     *
      * Normally, when all references are removed to a given object, the Java
      * garbage collector notices the fact that the object is no longer required
      * and will destory it.  This can happen at the garbage collector's leisure

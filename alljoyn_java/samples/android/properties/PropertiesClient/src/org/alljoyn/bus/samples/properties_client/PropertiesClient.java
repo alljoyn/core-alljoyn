@@ -55,17 +55,17 @@ public class PropertiesClient extends Activity {
     static {
         System.loadLibrary("alljoyn_java");
     }
-    
+
     private static final String TAG = "PropertiesClient";
     private static final String SERVICE_NAME = "org.alljoyn.bus.samples.properties";
-    
+
     // Values used by mHandler to specify different types of messages
     private static final int MESSAGE_UPDATE_BACKGROUND_COLOR = 1;
     private static final int MESSAGE_UPDATE_TEXT_SIZE = 2;
     private static final int MESSAGE_POST_TOAST = 3;
     private static final int MESSAGE_START_PROGRESS_DIALOG = 4;
     private static final int MESSAGE_STOP_PROGRESS_DIALOG = 5;
-    
+
     // Values used to as default text sizes. tiny/small/medium/regular/large/x-large
     private static final int TEXT_TINY = 8;
     private static final int TEXT_SMALL = 12;
@@ -73,7 +73,7 @@ public class PropertiesClient extends Activity {
     private static final int TEXT_REGULAR = 20;
     private static final int TEXT_LARGE = 24;
     private static final int TEXT_XLARGE = 28;
-    
+
     String mBackgroundColor;
     int mTextSize;
 
@@ -85,7 +85,7 @@ public class PropertiesClient extends Activity {
     Button mGetPropertiesButton;
     Button mSetPropertiesButton;
     Menu menu;
-    
+
     private BusHandler mBusHandler;
     private ProgressDialog mDialog;
 
@@ -93,11 +93,11 @@ public class PropertiesClient extends Activity {
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
-            case MESSAGE_UPDATE_BACKGROUND_COLOR: 
+            case MESSAGE_UPDATE_BACKGROUND_COLOR:
                 mBackgroundColor = (String) msg.obj;
                 updateColor();
                 break;
-            case MESSAGE_UPDATE_TEXT_SIZE: 
+            case MESSAGE_UPDATE_TEXT_SIZE:
                 mTextSize = msg.arg1;
                 updateTextSize();
                 break;
@@ -105,9 +105,9 @@ public class PropertiesClient extends Activity {
                 Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_LONG).show();
                 break;
             case MESSAGE_START_PROGRESS_DIALOG:
-                mDialog = ProgressDialog.show(PropertiesClient.this, 
-                                              "", 
-                                              "Finding Properties Service.\nPlease wait...", 
+                mDialog = ProgressDialog.show(PropertiesClient.this,
+                                              "",
+                                              "Finding Properties Service.\nPlease wait...",
                                               true,
                                               true);
                 break;
@@ -119,8 +119,8 @@ public class PropertiesClient extends Activity {
             }
         }
     };
-            
-    
+
+
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -153,7 +153,7 @@ public class PropertiesClient extends Activity {
 
         mBackgroundColor = "";
         mTextSize = -1;
-        
+
         /* Make all AllJoyn calls through a separate handler thread to prevent blocking the UI. */
         HandlerThread busThread = new HandlerThread("BusHandler");
         busThread.start();
@@ -163,7 +163,7 @@ public class PropertiesClient extends Activity {
         mBusHandler.sendEmptyMessage(BusHandler.CONNECT);
         mHandler.sendEmptyMessage(MESSAGE_START_PROGRESS_DIALOG);
     }
-    
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -171,22 +171,22 @@ public class PropertiesClient extends Activity {
         this.menu = menu;
         return true;
     }
-    
+
     @Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-	    // Handle item selection
-	    switch (item.getItemId()) {
-	    case R.id.quit:
-	    	finish();
-	        return true;
-	    default:
-	        return super.onOptionsItemSelected(item);
-	    }
-	}
-    
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+        case R.id.quit:
+            finish();
+            return true;
+        default:
+            return super.onOptionsItemSelected(item);
+        }
+    }
+
     @Override
     protected void onDestroy() {
-        super.onDestroy();   
+        super.onDestroy();
 
         mBusHandler.sendEmptyMessage(BusHandler.DISCONNECT);
     }
@@ -226,11 +226,11 @@ public class PropertiesClient extends Activity {
         public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
 
             switch(pos) {
-            case 0:  mTextSize = TEXT_TINY; break; 
+            case 0:  mTextSize = TEXT_TINY; break;
             case 1:  mTextSize = TEXT_SMALL; break;
             case 2:  mTextSize = TEXT_MEDIUM; break;
             case 3:  mTextSize = TEXT_REGULAR; break;
-            case 4:  mTextSize = TEXT_LARGE; break; 
+            case 4:  mTextSize = TEXT_LARGE; break;
             case 5:  mTextSize = TEXT_XLARGE; break;
             default: mTextSize = TEXT_REGULAR; break;
             }
@@ -248,7 +248,7 @@ public class PropertiesClient extends Activity {
      */
     public class GetPropertiesListener implements View.OnClickListener {
         public void onClick(View v) {
-            
+
             mBusHandler.sendEmptyMessage(BusHandler.GET_BACKGROUND_COLOR_PROPERTY);
             mBusHandler.sendEmptyMessage(BusHandler.GET_TEXT_SIZE_PROPERTY);
         }
@@ -262,7 +262,7 @@ public class PropertiesClient extends Activity {
      */
     public class SetPropertiesListener implements View.OnClickListener {
         public void onClick(View v) {
-            Message msg = mBusHandler.obtainMessage(BusHandler.SET_BACKGROUND_COLOR_PROPERTY, 
+            Message msg = mBusHandler.obtainMessage(BusHandler.SET_BACKGROUND_COLOR_PROPERTY,
                                                     mBackgroundColor);
             mBusHandler.sendMessage(msg);
             msg = mBusHandler.obtainMessage(BusHandler.SET_TEXT_SIZE_PROPERTY);
@@ -314,11 +314,11 @@ public class PropertiesClient extends Activity {
             mTextSizeLabel.setText(getResources().getStringArray(R.array.text_size_array)[5]);
         }
     }
-    
+
     /*
      * This class will handle all AllJoyn calls.
      * For a detailed description of the code shown in the BusHandler
-     * class see the SimpleClient sample code. 
+     * class see the SimpleClient sample code.
      */
     class BusHandler extends Handler {
 
@@ -330,21 +330,21 @@ public class PropertiesClient extends Activity {
         public static final int SET_BACKGROUND_COLOR_PROPERTY = 5;
         public static final int GET_TEXT_SIZE_PROPERTY = 6;
         public static final int SET_TEXT_SIZE_PROPERTY = 7;
-        
+
 
         private BusAttachment mBus;
         private ProxyBusObject mProxyObj;
         private PropertiesInterface mPropertiesInterface;
-        
-        private int 	mSessionId;
+
+        private int     mSessionId;
         private boolean mIsConnected;
         private boolean mIsStoppingDiscovery;
-        
+
         private static final short CONTACT_PORT=42;
-        
+
         public BusHandler(Looper looper) {
             super(looper);
-            
+
             mIsConnected = false;
             mIsStoppingDiscovery = false;
         }
@@ -352,28 +352,28 @@ public class PropertiesClient extends Activity {
         public void handleMessage(Message msg) {
             switch(msg.what) {
             case (CONNECT): {
-            	org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
+                org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
                 mBus = new BusAttachment(getPackageName(), BusAttachment.RemoteMessage.Receive);
-                
+
                 mBus.registerBusListener(new BusListener() {
                     @Override
                     public void foundAdvertisedName(String name, short transport, String namePrefix) {
-                    	logInfo(String.format("MyBusListener.foundAdvertisedName(%s, 0x%04x, %s)", name, transport, namePrefix));
-                    	/*
+                        logInfo(String.format("MyBusListener.foundAdvertisedName(%s, 0x%04x, %s)", name, transport, namePrefix));
+                        /*
                          * This client will only join the first service that it sees advertising
-                         * the indicated well-known name.  If the program is already a member of 
-                         * a session (i.e. connected to a service) we will not attempt to join 
+                         * the indicated well-known name.  If the program is already a member of
+                         * a session (i.e. connected to a service) we will not attempt to join
                          * another session.
-                         * It is possible to join multiple session however joining multiple 
-                         * sessions is not shown in this sample. 
+                         * It is possible to join multiple session however joining multiple
+                         * sessions is not shown in this sample.
                          */
-                    	if(!mIsConnected){
-                    	    Message msg = obtainMessage(JOIN_SESSION, name);
-                    	    sendMessage(msg);
-                    	}
+                        if(!mIsConnected){
+                            Message msg = obtainMessage(JOIN_SESSION, name);
+                            sendMessage(msg);
+                        }
                     }
                 });
-                
+
                 // Connect the BusAttachment with the bus.
                 Status status = mBus.connect();
                 logStatus("BusAttachment.connect()", status);
@@ -381,35 +381,35 @@ public class PropertiesClient extends Activity {
                     finish();
                     return;
                 }
-                                
+
                 status = mBus.findAdvertisedName(SERVICE_NAME);
                 logStatus("BusAttachement.findAdvertisedName()", status);
                 if (Status.OK != status) {
-                	finish();
-                	return;
+                    finish();
+                    return;
                 }
                 break;
             }
             case (JOIN_SESSION): {
-            	/*
+                /*
                  * If discovery is currently being stopped don't join to any other sessions.
                  */
                 if (mIsStoppingDiscovery) {
                     break;
                 }
-                
+
                 /*
                  * In order to join the session, we need to provide the well-known
                  * contact port.  This is pre-arranged between both sides as part
                  * of the definition of the chat service.  As a result of joining
-                 * the session, we get a session identifier which we must use to 
+                 * the session, we get a session identifier which we must use to
                  * identify the created session communication channel whenever we
                  * talk to the remote side.
                  */
                 short contactPort = CONTACT_PORT;
                 SessionOpts sessionOpts = new SessionOpts();
                 Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
-                
+
                 Status status = mBus.joinSession((String) msg.obj, contactPort, sessionId, sessionOpts, new SessionListener(){
                     @Override
                     public void sessionLost(int sessionId, int reason) {
@@ -420,32 +420,32 @@ public class PropertiesClient extends Activity {
                 });
                 logStatus("BusAttachment.joinSession()", status);
                 if (status == Status.OK) {
-                	mProxyObj =  mBus.getProxyBusObject(SERVICE_NAME,
-                										"/testProperties",
-                										sessionId.value,
-                										new Class<?>[] { PropertiesInterface.class });
+                    mProxyObj =  mBus.getProxyBusObject(SERVICE_NAME,
+                                                        "/testProperties",
+                                                        sessionId.value,
+                                                        new Class<?>[] { PropertiesInterface.class });
 
-                	mPropertiesInterface = mProxyObj.getInterface(PropertiesInterface.class);
-                	mSessionId = sessionId.value;
-                	mIsConnected = true;
-                	mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
+                    mPropertiesInterface = mProxyObj.getInterface(PropertiesInterface.class);
+                    mSessionId = sessionId.value;
+                    mIsConnected = true;
+                    mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
                 }
                 break;
             }
             case (DISCONNECT): {
-            	mIsStoppingDiscovery = true;
-            	if (mIsConnected) {
-                	Status status = mBus.leaveSession(mSessionId);
+                mIsStoppingDiscovery = true;
+                if (mIsConnected) {
+                    Status status = mBus.leaveSession(mSessionId);
                     logStatus("BusAttachment.leaveSession()", status);
-            	}
+                }
                 mBus.disconnect();
                 getLooper().quit();
                 break;
             }
             case (GET_BACKGROUND_COLOR_PROPERTY): {
-            	if (!mIsConnected) {
-            		break;
-            	}
+                if (!mIsConnected) {
+                    break;
+                }
                 try {
                     String backgroundColor = mPropertiesInterface.getBackGroundColor();
                     mHandler.sendMessage(mHandler.obtainMessage(MESSAGE_UPDATE_BACKGROUND_COLOR, backgroundColor));
@@ -454,21 +454,21 @@ public class PropertiesClient extends Activity {
                 break;
             }
             case (SET_BACKGROUND_COLOR_PROPERTY): {
-            	if (!mIsConnected) {
-            		break;
-            	}
+                if (!mIsConnected) {
+                    break;
+                }
                 try {
                     mPropertiesInterface.setBackGroundColor((String)msg.obj);
                     mHandler.sendMessage(mHandler.obtainMessage(MESSAGE_UPDATE_BACKGROUND_COLOR, (String) msg.obj));
                 } catch (BusException e) {
-                    logException(getString(R.string.get_properties_error), e);   
+                    logException(getString(R.string.get_properties_error), e);
                 }
                 break;
             }
             case (GET_TEXT_SIZE_PROPERTY): {
-            	if (!mIsConnected) {
-            		break;
-            	}
+                if (!mIsConnected) {
+                    break;
+                }
                 try {
                     int textSize = mPropertiesInterface.getTextSize();
                     Message textMsg = mHandler.obtainMessage(MESSAGE_UPDATE_TEXT_SIZE);
@@ -480,9 +480,9 @@ public class PropertiesClient extends Activity {
                 break;
             }
             case (SET_TEXT_SIZE_PROPERTY): {
-            	if (!mIsConnected) {
-            		break;
-            	}
+                if (!mIsConnected) {
+                    break;
+                }
                 try {
                     mPropertiesInterface.setTextSize(msg.arg1);
                     Message textMsg = mHandler.obtainMessage(MESSAGE_UPDATE_TEXT_SIZE);
@@ -498,7 +498,7 @@ public class PropertiesClient extends Activity {
             }
         }
     }
-    
+
     private void logStatus(String msg, Status status) {
         String log = String.format("%s: %s", msg, status);
         if (status == Status.OK) {
@@ -516,13 +516,13 @@ public class PropertiesClient extends Activity {
         mHandler.sendMessage(toastMsg);
         Log.e(TAG, log, ex);
     }
-    
+
     /*
      * print the status or result to the Android log. If the result is the expected
      * result only print it to the log.  Otherwise print it to the error log and
-     * Sent a Toast to the users screen. 
+     * Sent a Toast to the users screen.
      */
     private void logInfo(String msg) {
-            Log.i(TAG, msg);
+        Log.i(TAG, msg);
     }
 }

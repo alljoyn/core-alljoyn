@@ -24,11 +24,11 @@ import org.alljoyn.bus.annotation.Signature;
 public class Contact {
     /*
      * Contact Name
-     * The Position annotation indicates the numeric position of a field within an 
-     * AllJoyn struct (Java class). This value defines the order that fields are 
+     * The Position annotation indicates the numeric position of a field within an
+     * AllJoyn struct (Java class). This value defines the order that fields are
      * marshalled and unmarshalled.
-     * 
-     * Each element in the class must have a unique position index. The Position 
+     *
+     * Each element in the class must have a unique position index. The Position
      * count starts with a zero index and is incremented by one for each element.
      */
     @Position(0)
@@ -79,12 +79,12 @@ public class Contact {
             this.email[i] = new Email();
         }
     }
-    
+
     /*
      * Simple container to hold information about a single phone number.
-     * 
+     *
      * When specifying an AllJoyn struct (Java class) inside another class
-     * it must be declared as a static class with out any methods.  
+     * it must be declared as a static class with out any methods.
      */
     public static class Phone {
         @Position(0)
@@ -94,7 +94,7 @@ public class Contact {
         @Position(2)
         public String label;
     }
-    
+
     /*
      * simple container to hold information about a single email
      */

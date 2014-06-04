@@ -17,7 +17,7 @@
 package org.alljoyn.bus;
 
 /**
- * AllJoyn annotation related exceptions.  
+ * AllJoyn annotation related exceptions.
  * This exception will occur if
  * <ul>
  * <li>a field of a user-defined type is not annotated with its position,

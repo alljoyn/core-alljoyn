@@ -31,7 +31,7 @@ public class AllJoynDaemon {
 
     private class StreamReader extends Thread {
         private BufferedReader br;
-            
+
         public StreamReader(InputStream stream) {
             br = new BufferedReader(new InputStreamReader(stream));
         }
@@ -53,9 +53,9 @@ public class AllJoynDaemon {
     }
 
     public AllJoynDaemon() {
-        daemonAddress = System.getProperty("org.alljoyn.bus.daemonaddress", 
+        daemonAddress = System.getProperty("org.alljoyn.bus.daemonaddress",
             "unix:abstract=AllJoynDaemonTest");
-        daemonRemoteAddress = System.getProperty("org.alljoyn.bus.daemonremoteaddress", 
+        daemonRemoteAddress = System.getProperty("org.alljoyn.bus.daemonremoteaddress",
             "tcp:addr=127.0.0.1,port=5343");
         if ("The Android Project".equals(System.getProperty("java.vendor"))) {
             return;

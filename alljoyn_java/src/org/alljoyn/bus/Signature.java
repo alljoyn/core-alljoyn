@@ -122,7 +122,7 @@ final class Signature {
         }
     }
 
-    private static String parameterizedTypeSig(ParameterizedType type, String signature) 
+    private static String parameterizedTypeSig(ParameterizedType type, String signature)
             throws AnnotationBusException {
         Class cls = (Class) type.getRawType();
         if (Map.class.isAssignableFrom(cls)) {
@@ -178,7 +178,7 @@ final class Signature {
         }
     }
 
-    private static String genericArrayTypeSig(GenericArrayType type, String signature) 
+    private static String genericArrayTypeSig(GenericArrayType type, String signature)
             throws AnnotationBusException {
         return "a" + typeSig(type.getGenericComponentType(),
                              (signature == null) ? null : signature.substring(1));

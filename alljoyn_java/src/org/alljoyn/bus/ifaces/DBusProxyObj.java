@@ -295,7 +295,7 @@ public interface DBusProxyObj {
      */
     @BusMethod
     void ReloadConfig() throws BusException;
-    
+
     /**
      * Signal broadcast whenever a name (well-known or unique) changes
      * ownership.

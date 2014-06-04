@@ -25,7 +25,7 @@ public interface PropertiesTestServiceInterface {
 
     @BusProperty
     public String getStringProp() throws BusException;
-    
+
     @BusProperty
     public void setStringProp(String string) throws BusException;
 }

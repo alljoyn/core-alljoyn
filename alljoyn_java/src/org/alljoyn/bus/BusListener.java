@@ -146,7 +146,7 @@ public class BusListener {
     /**
      * Called by the bus when the value of a property changes if that property has annotation
      * org.freedesktop.DBus.Properties.PropertiesChanged=true
-     * 
+     *
      * Any implementation of this function must be multithread safe.  See the
      * class documentation for details.
      *

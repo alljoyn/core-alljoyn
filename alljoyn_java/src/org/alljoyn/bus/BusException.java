@@ -52,7 +52,7 @@ public class BusException extends java.lang.Exception {
     static void log(Throwable th) {
         String prefix = "";
         do {
-            logln(prefix + th.getClass().getName() 
+            logln(prefix + th.getClass().getName()
                   + (th.getMessage() == null ? "" : ": " + th.getMessage()));
             StackTraceElement[] stack = th.getStackTrace();
             for (int frame = 0; frame < stack.length; ++frame) {

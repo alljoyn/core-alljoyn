@@ -572,16 +572,16 @@ public class BusAttachmentTest extends TestCase {
                         "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n" +
                         "    </method>\n" +
                         "  </interface>\n" +
-						"  <interface name=\"org.allseen.Introspectable\">\n" +
-						"    <method name=\"GetDescriptionLanguages\">\n" +
-						"      <arg name=\"languageTags\" type=\"as\" direction=\"out\"/>\n" +
-						"    </method>\n" +
-					    "    <method name=\"IntrospectWithDescription\">\n" +
-					    "      <arg name=\"languageTag\" type=\"s\" direction=\"in\"/>\n" +
-					    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n" +
-					    "    </method>\n" +
-					    "    <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n" +
-					    "  </interface>\n" +
+                        "  <interface name=\"org.allseen.Introspectable\">\n" +
+                        "    <method name=\"GetDescriptionLanguages\">\n" +
+                        "      <arg name=\"languageTags\" type=\"as\" direction=\"out\"/>\n" +
+                        "    </method>\n" +
+                        "    <method name=\"IntrospectWithDescription\">\n" +
+                        "      <arg name=\"languageTag\" type=\"s\" direction=\"in\"/>\n" +
+                        "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n" +
+                        "    </method>\n" +
+                        "    <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n" +
+                        "  </interface>\n" +
                         "</node>\n";
         assertEquals(expected, actual);
     }
@@ -1013,7 +1013,7 @@ public class BusAttachmentTest extends TestCase {
     /*
      * this test verifies when bindSessionPort is called when the bus is not
      * connected the BUS_NOT_CONNECTED status is returned.
-     * 
+     *
      * Also test bindSessionPort after connecting with the bus.
      */
     public void testBindSessionPort() throws Exception {
@@ -1347,7 +1347,7 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(Status.OK, otherBus.findAdvertisedName(name));
 
         // Make sure name was found and session was joined
-        assertEquals(true, waitForLambda(4 * 1000, new Lambda() { 
+        assertEquals(true, waitForLambda(4 * 1000, new Lambda() {
                 @Override
                 public boolean func() { return found && sessionAccepted && sessionJoined && (joinSessionStatus == Status.OK); }
             }));
@@ -1369,12 +1369,12 @@ public class BusAttachmentTest extends TestCase {
                 @Override
                 public boolean func() { return found && sessionAccepted && sessionJoined; }
             }));
-        
+
         assertEquals(Status.OK, joinSessionStatus);
         assertEquals(true, sessionAccepted);
         assertEquals(true, sessionJoined);
         assertEquals(busSessionId, otherBusSessionId);
-        
+
         assertEquals(Status.OK, bus.leaveSession(busSessionId));
         status = otherBus.leaveSession(otherBusSessionId);
         assertTrue((status == Status.OK) || (status == Status.ALLJOYN_LEAVESESSION_REPLY_NO_SESSION));
@@ -1548,9 +1548,9 @@ public class BusAttachmentTest extends TestCase {
                 public boolean func() { return sessionJoinedFlag && sessionMemberAddedFlagA && sessionMemberAddedFlagB; }
             }));
 
-	assertEquals(true, sessionJoinedFlag);
-	assertEquals(true, sessionMemberAddedFlagA);
-	assertEquals(true, sessionMemberAddedFlagB);
+    assertEquals(true, sessionJoinedFlag);
+    assertEquals(true, sessionMemberAddedFlagA);
+    assertEquals(true, sessionMemberAddedFlagB);
 
         assertEquals(Status.ALLJOYN_REMOVESESSIONMEMBER_NOT_BINDER, busB.removeSessionMember(sessionId.value, busA.getUniqueName()));
 

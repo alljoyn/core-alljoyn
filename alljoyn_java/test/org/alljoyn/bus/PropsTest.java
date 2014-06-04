@@ -36,7 +36,7 @@ public class PropsTest extends TestCase {
     public class Service implements PropsInterface, BusObject {
 
         private String stringProperty = "Hello";
-    
+
         private int intProperty = 6;
 
         public String getStringProp() { return stringProperty; }
@@ -78,7 +78,7 @@ public class PropsTest extends TestCase {
     public void testProps() throws Exception {
         /* Request a well-known name */
         DBusProxyObj control = bus.getDBusProxyObj();
-        DBusProxyObj.RequestNameResult res = control.RequestName("org.alljoyn.bus.samples.props", 
+        DBusProxyObj.RequestNameResult res = control.RequestName("org.alljoyn.bus.samples.props",
                                                                 DBusProxyObj.REQUEST_NAME_NO_FLAGS);
         if (res != DBusProxyObj.RequestNameResult.PrimaryOwner) {
             throw new BusException("Failed to obtain well-known name");
@@ -97,7 +97,7 @@ public class PropsTest extends TestCase {
 
         /* Set a property */
         proxy.setStringProp("MyNewValue");
-        
+
         /* Get all of the properties of the interface */
         assertEquals("MyNewValue", proxy.getStringProp());
         assertEquals(6, proxy.getIntProp());
@@ -134,7 +134,7 @@ public class PropsTest extends TestCase {
         assertEquals("Hello", map.get("StringProp").getObject(String.class));
         assertEquals(6, (int)map.get("IntProp").getObject(Integer.class));
     }
-    
+
     /* ALLJOYN-2043 */
     public void testGetAllThenMethodCall() throws Exception {
         /* Get a remote object */
@@ -149,7 +149,7 @@ public class PropsTest extends TestCase {
         Map<String, Variant> map = properties.GetAll("org.alljoyn.bus.PropsInterface");
         assertEquals("Hello", map.get("StringProp").getObject(String.class));
         assertEquals(6, (int)map.get("IntProp").getObject(Integer.class));
-        
+
         PropsInterface proxy = remoteObj.getInterface(PropsInterface.class);
         assertEquals("World", proxy.Ping("World"));
    }

@@ -23,7 +23,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Indicates peer access permission requirement on the Method. When a call is made, the callee ensures that caller has 
+ * Indicates peer access permission requirement on the Method. When a call is made, the callee ensures that caller has
  * the permission to use resource related to the call. Currently only supported for Android.
  */
 @Documented

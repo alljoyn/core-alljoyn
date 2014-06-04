@@ -37,7 +37,7 @@ public class IntrospectionListenerTest extends TestCase {
         super(name);
     }
 
-    private String introspection = 
+    private String introspection =
         "  <interface name=\"\">\n" +
         "    <method name=\"Ping\">\n" +
         "      <arg name=\"inStr\" type=\"s\" direction=\"in\"/>\n" +
@@ -60,10 +60,10 @@ public class IntrospectionListenerTest extends TestCase {
 
         Service service = new Service();
         assertEquals(Status.OK, bus.registerBusObject(service, "/introspectionlistener"));
-            
+
         DBusProxyObj control = bus.getDBusProxyObj();
         assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner,
-                     control.RequestName("org.alljoyn.bus.IntrospectionListenerTest", 
+                     control.RequestName("org.alljoyn.bus.IntrospectionListenerTest",
                                          DBusProxyObj.REQUEST_NAME_NO_FLAGS));
 
         ProxyBusObject remoteObj = bus.getProxyBusObject("org.alljoyn.bus.IntrospectionListenerTest",
@@ -72,7 +72,7 @@ public class IntrospectionListenerTest extends TestCase {
                                                          new Class[] { Introspectable.class });
         Introspectable introspectable = remoteObj.getInterface(Introspectable.class);
         String actual = introspectable.Introspect();
-        String expected = 
+        String expected =
             "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n" +
             "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n" +
             "<node>\n" +

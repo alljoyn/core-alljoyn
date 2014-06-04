@@ -36,7 +36,7 @@ package org.alljoyn.bus;
  * dealing with multithreaded code.
  *
  * Since listener objects generally run in the context of the AllJoyn thread
- * which manages reception of events, If a blocking AllJoyn call is made in 
+ * which manages reception of events, If a blocking AllJoyn call is made in
  * the context of a notification, the necessary and sufficient conditions for
  * deadlock are established.
  *

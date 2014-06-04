@@ -36,7 +36,7 @@ public class PigTranslator extends Translator {
         if(!toLanguage.equals("pig") || null == fromText) {
             return null;
         }
-        
+
         StringBuilder res = new StringBuilder();
         String lower = fromText.toLowerCase();
 
@@ -62,7 +62,7 @@ public class PigTranslator extends Translator {
         }
 
         res.setLength(res.length() - 1);
-        
+
         return res.toString();
     }
 }

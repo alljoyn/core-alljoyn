@@ -73,7 +73,7 @@ public class Chat extends Activity {
     private Handler mHandler = new Handler(new Handler.Callback() {
 
         @Override
-       public boolean handleMessage(Message msg) {
+        public boolean handleMessage(Message msg) {
             switch (msg.what) {
             case MESSAGE_CHAT:
                 /* Add the chat message received to the List View */
@@ -122,22 +122,22 @@ public class Chat extends Activity {
         /* Set the action to be taken when the 'Return' key is pressed in the text box */
         mMessageEditText = (EditText) findViewById(R.id.MessageEditText);
         mMessageEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-                public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
-                    if (actionId == EditorInfo.IME_NULL
+            public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_NULL
                         && event.getAction() == KeyEvent.ACTION_UP) {
-                        /* Send a sessionless signal chat message using the mBusHandler. */
-                        String senderName = mNameEditText.getText().toString();
-                        String message = view.getText().toString();
+                    /* Send a sessionless signal chat message using the mBusHandler. */
+                    String senderName = mNameEditText.getText().toString();
+                    String message = view.getText().toString();
 
-                        Message msg = mBusHandler.obtainMessage(BusHandlerCallback.CHAT,
-                                          new PingInfo(senderName,message));
+                    Message msg = mBusHandler.obtainMessage(BusHandlerCallback.CHAT,
+                                                            new PingInfo(senderName,message));
 
-                        mBusHandler.sendMessage(msg);
-                        mMessageEditText.setText("");
-                    }
-                    return true;
+                    mBusHandler.sendMessage(msg);
+                    mMessageEditText.setText("");
                 }
-            });
+                return true;
+            }
+        });
 
         /* Make all AllJoyn calls through a separate handler thread to prevent blocking the UI. */
         HandlerThread busThread = new HandlerThread("BusHandler");
@@ -177,7 +177,7 @@ public class Chat extends Activity {
     /* The class that is our AllJoyn service.  It implements the ChatInterface. */
     class ChatService implements ChatInterface, BusObject {
         public ChatService(BusAttachment bus){
-             this.bus = bus;
+            this.bus = bus;
         }
         /*
          * This is the Signal Handler code which has the interface name and the name of the signal
@@ -187,11 +187,11 @@ public class Chat extends Activity {
          * This code also prints the string it received from the user and the string it is
          * returning to the user to the screen.
          */
-         @BusSignalHandler(iface = "org.alljoyn.bus.samples.slchat", signal = "Chat")
-         public void Chat(String senderName, String message) {
-             Log.i(TAG, "Signal  : " + senderName +": "+ message);
-             sendUiMessage(MESSAGE_CHAT, senderName + ": "+ message);
-         }
+        @BusSignalHandler(iface = "org.alljoyn.bus.samples.slchat", signal = "Chat")
+        public void Chat(String senderName, String message) {
+            Log.i(TAG, "Signal  : " + senderName +": "+ message);
+            sendUiMessage(MESSAGE_CHAT, senderName + ": "+ message);
+        }
 
         /* Helper function to send a message to the UI thread. */
         private void sendUiMessage(int what, Object obj) {

@@ -23,7 +23,7 @@ package org.alljoyn.bus;
  * Listener objects are the Java objects that handle notification events and are
  * called from AllJoyn in the context of one of its threads.  All listener
  * objects are expected to be multithread safe (MT-Safe) between construction
- * and destruction.  
+ * and destruction.
  *
  * This rule extends to other objects accessed during processing of
  * notifications.  For example, it is a programming error to allow a notifiation
@@ -35,7 +35,7 @@ package org.alljoyn.bus;
  * dealing with multithreaded code.
  *
  * Since listener objects generally run in the context of the AllJoyn thread
- * which manages reception of events, If a blocking AllJoyn call is made in 
+ * which manages reception of events, If a blocking AllJoyn call is made in
  * the context of a notification, the necessary and sufficient conditions for
  * deadlock are established.
  *
@@ -83,7 +83,7 @@ public interface AuthListener {
          *
          * @return {@code true} if request is for a newly created password
          */
-        public boolean isNewPassword() { 
+        public boolean isNewPassword() {
             return isNew;
         }
 
@@ -198,7 +198,7 @@ public interface AuthListener {
          *
          * @param expiration the expiration time in seconds
          */
-        public void setExpiration(int expiration) { 
+        public void setExpiration(int expiration) {
             credentials.expiration = expiration;
         }
     }

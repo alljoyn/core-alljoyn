@@ -64,7 +64,7 @@ public class PropertiesTest extends TestCase {
         assertEquals(Status.OK, status);
 
         DBusProxyObj control = bus.getDBusProxyObj();
-        DBusProxyObj.RequestNameResult res = control.RequestName("org.alljoyn.bus.ifaces.PropertiesTest", 
+        DBusProxyObj.RequestNameResult res = control.RequestName("org.alljoyn.bus.ifaces.PropertiesTest",
                                                                 DBusProxyObj.REQUEST_NAME_NO_FLAGS);
         assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, res);
     }
@@ -86,7 +86,7 @@ public class PropertiesTest extends TestCase {
                                                          "/testobject",  BusAttachment.SESSION_ID_ANY,
                                                          new Class<?>[] { Properties.class });
         Properties properties = remoteObj.getInterface(Properties.class);
-        Variant stringProp = properties.Get("org.alljoyn.bus.ifaces.PropertiesTestServiceInterface", 
+        Variant stringProp = properties.Get("org.alljoyn.bus.ifaces.PropertiesTestServiceInterface",
                                             "StringProp");
         assertEquals("get", stringProp.getObject(String.class));
     }
@@ -96,9 +96,9 @@ public class PropertiesTest extends TestCase {
                                                          "/testobject",  BusAttachment.SESSION_ID_ANY,
                                                          new Class<?>[] { Properties.class });
         Properties properties = remoteObj.getInterface(Properties.class);
-        properties.Set("org.alljoyn.bus.ifaces.PropertiesTestServiceInterface", 
+        properties.Set("org.alljoyn.bus.ifaces.PropertiesTestServiceInterface",
                        "StringProp", new Variant("set"));
-        Variant stringProp = properties.Get("org.alljoyn.bus.ifaces.PropertiesTestServiceInterface", 
+        Variant stringProp = properties.Get("org.alljoyn.bus.ifaces.PropertiesTestServiceInterface",
                                             "StringProp");
         assertEquals("set", stringProp.getObject(String.class));
     }

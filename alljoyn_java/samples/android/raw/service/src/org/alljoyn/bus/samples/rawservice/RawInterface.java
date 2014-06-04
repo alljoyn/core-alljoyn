@@ -34,12 +34,12 @@ public interface RawInterface {
      * Ask the service to arrange a raw reliable session that can be used to
      * transfer a "file" and return a contact port over which this session
      * can be joined.
-     * 
+     *
      * @return an integer session port with which the raw session may be
      * joined
-     * 
+     *
      * @throws BusException
      */
-	@BusMethod
+    @BusMethod
     short RequestRawSession() throws BusException;
 }

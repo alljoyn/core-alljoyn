@@ -58,7 +58,7 @@ public class SimpleTest extends TestCase {
         if (Status.OK != status) {
             throw new BusException(status.toString());
         }
-            
+
         /* Request a well-known name */
         DBusProxyObj control = bus.getDBusProxyObj();
         DBusProxyObj.RequestNameResult res = control.RequestName("org.alljoyn.bus.samples.simple",

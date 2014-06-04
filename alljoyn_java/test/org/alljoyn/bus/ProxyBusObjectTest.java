@@ -130,7 +130,7 @@ public class ProxyBusObjectTest extends TestCase {
         // Connect two proxy objects
         proxyObj = bus.getProxyBusObject(name, "/simple", BusAttachment.SESSION_ID_ANY, new Class[] { SimpleInterface.class });
         ProxyBusObject proxyObj2 = bus.getProxyBusObject(name, "/simple", BusAttachment.SESSION_PORT_ANY, new Class[] { SimpleInterface.class });
-        
+
         // Verify they're both operating
         assertEquals("ping", proxyObj.getInterface(SimpleInterface.class).Ping("ping"));
         assertEquals("ping2", proxyObj2.getInterface(SimpleInterface.class).Ping("ping2"));
@@ -145,7 +145,7 @@ public class ProxyBusObjectTest extends TestCase {
         proxyObj.release();
     }
 
-    public class Emitter implements EmitterInterface, 
+    public class Emitter implements EmitterInterface,
                                     BusObject {
         public void Emit(String str) { /* Do nothing, this is a signal. */ }
     }

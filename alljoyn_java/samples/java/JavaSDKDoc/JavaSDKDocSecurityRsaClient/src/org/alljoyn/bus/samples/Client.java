@@ -28,69 +28,69 @@ import org.alljoyn.bus.SessionOpts;
 import org.alljoyn.bus.Status;
 
 public class Client {
-	static { 
-		System.loadLibrary("alljoyn_java");
-	}
-	private static final short CONTACT_PORT=42;
-	static BusAttachment mBus;
-	
-	private static ProxyBusObject mProxyObj;
-	private static SecureInterface mSecureInterface;
-	
-	private static boolean isJoined = false;
-	
-	static class MyBusListener extends BusListener {
-		public void foundAdvertisedName(String name, short transport, String namePrefix) {
-			System.out.println(String.format("BusListener.foundAdvertisedName(%s, %d, %s)", name, transport, namePrefix));
-			short contactPort = CONTACT_PORT;
-			SessionOpts sessionOpts = new SessionOpts();
-			sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
-			sessionOpts.isMultipoint = false;
-			sessionOpts.proximity = SessionOpts.PROXIMITY_ANY;
-			sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
-			
-			Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
-			
-			mBus.enableConcurrentCallbacks();
-			
-			Status status = mBus.joinSession(name, contactPort, sessionId, sessionOpts,	new SessionListener(){
+    static { 
+        System.loadLibrary("alljoyn_java");
+    }
+    private static final short CONTACT_PORT=42;
+    static BusAttachment mBus;
+    
+    private static ProxyBusObject mProxyObj;
+    private static SecureInterface mSecureInterface;
+    
+    private static boolean isJoined = false;
+    
+    static class MyBusListener extends BusListener {
+        public void foundAdvertisedName(String name, short transport, String namePrefix) {
+            System.out.println(String.format("BusListener.foundAdvertisedName(%s, %d, %s)", name, transport, namePrefix));
+            short contactPort = CONTACT_PORT;
+            SessionOpts sessionOpts = new SessionOpts();
+            sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
+            sessionOpts.isMultipoint = false;
+            sessionOpts.proximity = SessionOpts.PROXIMITY_ANY;
+            sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
+            
+            Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
+            
+            mBus.enableConcurrentCallbacks();
+            
+            Status status = mBus.joinSession(name, contactPort, sessionId, sessionOpts,    new SessionListener(){
                             public void sessionLost(int sessionId, int reason) {
                                 System.out.println("Session Lost : " + sessionId + " reason: " + reason);
                             }
-			});
-			if (status != Status.OK) {
-				return;
-			}
-			System.out.println(String.format("BusAttachement.joinSession successful sessionId = %d", sessionId.value));
-			
-			mProxyObj =  mBus.getProxyBusObject("com.my.well.known.name",
-					"/testRsaSecurity",
-					sessionId.value,
-					new Class<?>[] { SecureInterface.class});
+            });
+            if (status != Status.OK) {
+                return;
+            }
+            System.out.println(String.format("BusAttachement.joinSession successful sessionId = %d", sessionId.value));
+            
+            mProxyObj =  mBus.getProxyBusObject("com.my.well.known.name",
+                    "/testRsaSecurity",
+                    sessionId.value,
+                    new Class<?>[] { SecureInterface.class});
 
-			mSecureInterface = mProxyObj.getInterface(SecureInterface.class);
-			isJoined = true;
-			
-		}
-		public void nameOwnerChanged(String busName, String previousOwner, String newOwner){
-			if ("com.my.well.known.name".equals(busName)) {
-				System.out.println("BusAttachement.nameOwnerChagned(" + busName + ", " + previousOwner + ", " + newOwner);
-			}
-		}
-		
-	}
-	
+            mSecureInterface = mProxyObj.getInterface(SecureInterface.class);
+            isJoined = true;
+            
+        }
+        public void nameOwnerChanged(String busName, String previousOwner, String newOwner){
+            if ("com.my.well.known.name".equals(busName)) {
+                System.out.println("BusAttachement.nameOwnerChagned(" + busName + ", " + previousOwner + ", " + newOwner);
+            }
+        }
+        
+    }
+    
     static class RsaKeyXListener implements AuthListener {
         public boolean requested(String mechanism, String peerName, int count, String userName,
                                  AuthRequest[] requests) {
-        	System.out.println(String.format("AuthListener.requested(%s, %s, %d, %s, %s);", 
-        			mechanism ,
-        			peerName,
-        			count,
-        			userName,
-        			AuthRequestsToString(requests)));
-        	
-        	 /* Collect the requests we're interested in to simplify processing below. */
+            System.out.println(String.format("AuthListener.requested(%s, %s, %d, %s, %s);", 
+                    mechanism ,
+                    peerName,
+                    count,
+                    userName,
+                    AuthRequestsToString(requests)));
+            
+             /* Collect the requests we're interested in to simplify processing below. */
             PasswordRequest passwordRequest = null;
             CertificateRequest certificateRequest = null;
             VerifyRequest verifyRequest = null;
@@ -125,32 +125,32 @@ public class Client {
                  * for us (as part of creating a self-signed certificate).  Otherwise it is
                  * expecting the passphrase for the existing private key.
                  */
-            	if (count <= 3) {
-            		/*
-            		 * Request the passphrase of our private key via the UI.  We need to wait
-            		 * here for the user to enter the passphrase before we can return.  The
-            		 * latch takes care of the synchronization for us.
-            		 */
-            	    if(passwordRequest.isNewPassword()){
+                if (count <= 3) {
+                    /*
+                     * Request the passphrase of our private key via the UI.  We need to wait
+                     * here for the user to enter the passphrase before we can return.  The
+                     * latch takes care of the synchronization for us.
+                     */
+                    if(passwordRequest.isNewPassword()){
                         System.out.print("Enter password to generate new " +
-                        		"private key and certificate : ");
+                                "private key and certificate : ");
                     } else {
                         System.out.print("Please enter private key password : ");
                     }
-            		Scanner in = new Scanner(System.in);
-            		String password = in.nextLine();
-            		passwordRequest.setPassword(password.toCharArray());
-            		return true;
-            	}
+                    Scanner in = new Scanner(System.in);
+                    String password = in.nextLine();
+                    passwordRequest.setPassword(password.toCharArray());
+                    return true;
+                }
             }
             return false;
         }
 
         public void completed(String authMechanism, String authPeer, boolean authenticated) {
             if (!authenticated) {
-            	System.out.println("Authentication failed.");
+                System.out.println("Authentication failed.");
             } else {
-            	System.out.println("Authentication successful.");
+                System.out.println("Authentication successful.");
             }
         }
         
@@ -181,47 +181,47 @@ public class Client {
             return str;
         }
     }
-	
-	public static void main(String[] args) {
-		mBus = new BusAttachment("RsaKeyXClient", BusAttachment.RemoteMessage.Receive);
-		
-		RsaKeyXListener authListener = new RsaKeyXListener();
-		Status status = mBus.registerAuthListener("ALLJOYN_RSA_KEYX", authListener);
-		if (status != Status.OK) {
-			return;
-		}
-		
-		BusListener listener = new MyBusListener();
-		mBus.registerBusListener(listener);
+    
+    public static void main(String[] args) {
+        mBus = new BusAttachment("RsaKeyXClient", BusAttachment.RemoteMessage.Receive);
+        
+        RsaKeyXListener authListener = new RsaKeyXListener();
+        Status status = mBus.registerAuthListener("ALLJOYN_RSA_KEYX", authListener);
+        if (status != Status.OK) {
+            return;
+        }
+        
+        BusListener listener = new MyBusListener();
+        mBus.registerBusListener(listener);
 
-		status = mBus.connect();
-		if (status != Status.OK) {
-			return;
-		}
-		
-		
-		System.out.println("BusAttachment.connect successful");
-		
-		status = mBus.findAdvertisedName("com.my.well.known.name");
-		if (status != Status.OK) {
-			return;
-		}
-		System.out.println("BusAttachment.findAdvertisedName successful " + "com.my.well.known.name");
-		
-		while(!isJoined) {
-			try {
-				Thread.sleep(10);
-			} catch (InterruptedException e) {
-				System.out.println("Program interupted");
-			}
-		}
-		
-		try {
-			System.out.println("Ping = " + mSecureInterface.Ping("Hello AllJoyn"));
-		} catch (BusException e1) {
-			System.out.println("-----BusException-----");
-			e1.printStackTrace();
-		}
-		
-	}
+        status = mBus.connect();
+        if (status != Status.OK) {
+            return;
+        }
+        
+        
+        System.out.println("BusAttachment.connect successful");
+        
+        status = mBus.findAdvertisedName("com.my.well.known.name");
+        if (status != Status.OK) {
+            return;
+        }
+        System.out.println("BusAttachment.findAdvertisedName successful " + "com.my.well.known.name");
+        
+        while(!isJoined) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                System.out.println("Program interupted");
+            }
+        }
+        
+        try {
+            System.out.println("Ping = " + mSecureInterface.Ping("Hello AllJoyn"));
+        } catch (BusException e1) {
+            System.out.println("-----BusException-----");
+            e1.printStackTrace();
+        }
+        
+    }
 }

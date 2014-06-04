@@ -42,7 +42,7 @@ public class MarshalTest extends TestCase {
 
     public MarshalTest(String name) {
         super(name);
-        if ("The Android Project".equals(System.getProperty("java.vendor"))) 
+        if ("The Android Project".equals(System.getProperty("java.vendor")))
         {
             isAndroid = true;
         }
@@ -52,7 +52,7 @@ public class MarshalTest extends TestCase {
         System.loadLibrary("alljoyn_java");
     }
 
-    public class Service implements InferredTypesInterface, 
+    public class Service implements InferredTypesInterface,
                                     AnnotatedTypesInterface,
                                     BusObject {
 
@@ -522,7 +522,7 @@ public class MarshalTest extends TestCase {
 
         public Map<Long, String> DictionaryTO(Map<Long, String> aeto) throws BusException { return aeto; }
 
-        public Map<String, String> getDictionarySS() throws BusException {         
+        public Map<String, String> getDictionarySS() throws BusException {
             TreeMap<String, String> aess = new TreeMap<String, String>();
             aess.put("six", "six");
             return aess;
@@ -551,7 +551,7 @@ public class MarshalTest extends TestCase {
         public TwoByteArrays TwoByteArrays(TwoByteArrays rayay) throws BusException { return rayay; }
     }
 
-    public class NullService implements InferredTypesInterface, 
+    public class NullService implements InferredTypesInterface,
                                         AnnotatedTypesInterface,
                                         BusObject {
 
@@ -1021,7 +1021,7 @@ public class MarshalTest extends TestCase {
 
         public Map<Long, String> DictionaryTO(Map<Long, String> aeto) throws BusException { return null; }
 
-        public Map<String, String> getDictionarySS() throws BusException {         
+        public Map<String, String> getDictionarySS() throws BusException {
             TreeMap<String, String> aess = new TreeMap<String, String>();
             aess.put("six", "six");
             return null;
@@ -1054,7 +1054,7 @@ public class MarshalTest extends TestCase {
 
     private Service service;
     private NullService nullService;
-    
+
     private ProxyBusObject remoteObj;
     private ProxyBusObject remoteNullReturnsObj;
 
@@ -1078,7 +1078,7 @@ public class MarshalTest extends TestCase {
 
         Class[] ifaces = { InferredTypesInterface.class, AnnotatedTypesInterface.class };
         remoteObj = bus.getProxyBusObject("org.alljoyn.bus.MarshalTest", "/testobject", BusAttachment.SESSION_ID_ANY, ifaces);
-        remoteNullReturnsObj = bus.getProxyBusObject("org.alljoyn.bus.MarshalTest", "/testnullobject", 
+        remoteNullReturnsObj = bus.getProxyBusObject("org.alljoyn.bus.MarshalTest", "/testnullobject",
                                                      BusAttachment.SESSION_ID_ANY, ifaces);
     }
 
@@ -1125,7 +1125,7 @@ public class MarshalTest extends TestCase {
         }
         short[] an = new short[] { 3, 4, 5 };
         assertArrayEquals(an, proxy.Int16Array(an));
-        int[] ai = new int[] { 7 }; 
+        int[] ai = new int[] { 7 };
         assertArrayEquals(ai, proxy.Int32Array(ai));
         long[] ax = new long[] { 8, 9, 10, 11 };
         assertArrayEquals(ax, proxy.Int64Array(ax));
@@ -1135,7 +1135,7 @@ public class MarshalTest extends TestCase {
         assertArrayEquals(as, proxy.StringArray(as));
         byte[][] aay = new byte[][] { new byte[] { 1 }, new byte[] { 2 } };
         assertArrayEquals(aay, proxy.ArrayArray(aay));
-        InferredTypesInterface.InnerStruct[] ar = new InferredTypesInterface.InnerStruct[] { 
+        InferredTypesInterface.InnerStruct[] ar = new InferredTypesInterface.InnerStruct[] {
             new InferredTypesInterface.InnerStruct(12), new InferredTypesInterface.InnerStruct(13) };
         assertArrayEquals(ar, proxy.InferredStructArray(ar));
         Variant[] av = new Variant[] { new Variant(new String("three")) };
@@ -1153,12 +1153,12 @@ public class MarshalTest extends TestCase {
         TreeMap<String, String> ae = new TreeMap<String, String>();
         ae.put("fourteen", "fifteen");
         ae.put("sixteen", "seventeen");
-        InferredTypesInterface.Struct r = 
-            new InferredTypesInterface.Struct((byte)1, false, (short)1, 2, (long)3, 4.1, "five", 
+        InferredTypesInterface.Struct r =
+            new InferredTypesInterface.Struct((byte)1, false, (short)1, 2, (long)3, 4.1, "five",
                                               new byte[] { 6 }, new boolean[] { true }, new short[] { 7 },
                                               new int[] { 8 }, new long[] { 10 }, new double[] { 10.1 },
                                               new String[] { "eleven" },
-                                              new InferredTypesInterface.InnerStruct(12), 
+                                              new InferredTypesInterface.InnerStruct(12),
                                               new Variant(new String("thirteen")), ae);
         assertEquals(r, proxy.InferredStruct(r));
 
@@ -1590,14 +1590,14 @@ public class MarshalTest extends TestCase {
         TreeMap<String, String> ae = new TreeMap<String, String>();
         ae.put("fourteen", "fifteen");
         ae.put("sixteen", "seventeen");
-        AnnotatedTypesInterface.Struct r = 
+        AnnotatedTypesInterface.Struct r =
             new AnnotatedTypesInterface.Struct((byte)0, false, (short)1, (short)2, 3, 4, (long)5, (long)6,
                                                7.1, "eight", "/nine", "t",
                                                new byte[] { 11 }, new boolean[] { true }, new short[] { 12 },
-                                               new short[] { 13 }, new int[] { 14 }, new int[] { 15 }, 
+                                               new short[] { 13 }, new int[] { 14 }, new int[] { 15 },
                                                new long[] { 16 }, new long[] { 17 }, new double[] { 18.1 },
                                                new String[] { "nineteen" }, new String[] { "/twenty" },
-                                               new String[] { "t" }, new AnnotatedTypesInterface.InnerStruct(12), 
+                                               new String[] { "t" }, new AnnotatedTypesInterface.InnerStruct(12),
                                                new Variant(new String("thirteen")), ae);
         assertEquals(r, proxy.AnnotatedStruct(r));
 
@@ -2352,9 +2352,9 @@ public class MarshalTest extends TestCase {
     }
 
     public void testGenericArrayTypes() throws Exception {
-        
+
         InferredTypesInterface proxy = remoteObj.getInterface(InferredTypesInterface.class);
-        
+
         @SuppressWarnings(value="unchecked")
         TreeMap<String, String>[] aaess = (TreeMap<String, String>[]) new TreeMap[2];
         aaess[0] = new TreeMap<String, String>();
@@ -2393,11 +2393,11 @@ public class MarshalTest extends TestCase {
 
             // There exists a soft limit of 128k-132k bytes in a total message
             int k = 131072;
-            
+
             InferredTypesInterface.TwoByteArrays rayay = new InferredTypesInterface.TwoByteArrays();
             rayay.ay0 = new byte[k];
             rayay.ay1 = new byte[k];
-            
+
             boolean thrown = false;
             try {
                 proxy.TwoByteArrays(rayay);
@@ -3098,7 +3098,7 @@ public class MarshalTest extends TestCase {
         assertEquals(true, thrown);
         thrown = false;
         try {
-            int[] ai = new int[] { 7 }; 
+            int[] ai = new int[] { 7 };
             proxy.Int32Array(ai);
         } catch (BusException ex) {
             thrown = true;
@@ -3138,7 +3138,7 @@ public class MarshalTest extends TestCase {
         assertEquals(true, thrown);
         thrown = false;
         try {
-            InferredTypesInterface.InnerStruct[] ar = new InferredTypesInterface.InnerStruct[] { 
+            InferredTypesInterface.InnerStruct[] ar = new InferredTypesInterface.InnerStruct[] {
                 new InferredTypesInterface.InnerStruct(12), new InferredTypesInterface.InnerStruct(13) };
             proxy.InferredStructArray(ar);
         } catch (BusException ex) {
@@ -3174,12 +3174,12 @@ public class MarshalTest extends TestCase {
             TreeMap<String, String> ae = new TreeMap<String, String>();
             ae.put("fourteen", "fifteen");
             ae.put("sixteen", "seventeen");
-            InferredTypesInterface.Struct r = 
-                new InferredTypesInterface.Struct((byte)1, false, (short)1, 2, (long)3, 4.1, "five", 
+            InferredTypesInterface.Struct r =
+                new InferredTypesInterface.Struct((byte)1, false, (short)1, 2, (long)3, 4.1, "five",
                                                   new byte[] { 6 }, new boolean[] { true }, new short[] { 7 },
                                                   new int[] { 8 }, new long[] { 10 }, new double[] { 10.1 },
                                                   new String[] { "eleven" },
-                                                  new InferredTypesInterface.InnerStruct(12), 
+                                                  new InferredTypesInterface.InnerStruct(12),
                                                   new Variant(new String("thirteen")), ae);
             proxy.InferredStruct(r);
         } catch (BusException ex) {

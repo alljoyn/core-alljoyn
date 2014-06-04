@@ -51,7 +51,7 @@ public class Client extends Activity {
     static {
         System.loadLibrary("alljoyn_java");
     }
-    
+
     private static final int MESSAGE_PING = 1;
     private static final int MESSAGE_PING_REPLY = 2;
     private static final int MESSAGE_POST_TOAST = 3;
@@ -64,43 +64,43 @@ public class Client extends Activity {
     private ArrayAdapter<String> mListViewArrayAdapter;
     private ListView mListView;
     private Menu menu;
-    
+
     /* Handler used to make calls to AllJoyn methods. See onCreate(). */
     private BusHandler mBusHandler;
-    
+
     private ProgressDialog mDialog;
-    
+
     private Handler mHandler = new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                switch (msg.what) {
-                case MESSAGE_PING:
-                    String ping = (String) msg.obj;
-                    mListViewArrayAdapter.add("Ping:  " + ping);
-                    break;
-                case MESSAGE_PING_REPLY:
-                    String ret = (String) msg.obj;
-                    mListViewArrayAdapter.add("Reply:  " + ret);
-                    mEditText.setText("");
-                    break;
-                case MESSAGE_POST_TOAST:
-                	Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_LONG).show();
-                	break;
-                case MESSAGE_START_PROGRESS_DIALOG:
-                    mDialog = ProgressDialog.show(Client.this, 
-                                                  "", 
-                                                  "Finding Simple Service.\nPlease wait...", 
-                                                  true,
-                                                  true);
-                    break;
-                case MESSAGE_STOP_PROGRESS_DIALOG:
-                    mDialog.dismiss();
-                    break;
-                default:
-                    break;
-                }
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+            case MESSAGE_PING:
+                String ping = (String) msg.obj;
+                mListViewArrayAdapter.add("Ping:  " + ping);
+                break;
+            case MESSAGE_PING_REPLY:
+                String ret = (String) msg.obj;
+                mListViewArrayAdapter.add("Reply:  " + ret);
+                mEditText.setText("");
+                break;
+            case MESSAGE_POST_TOAST:
+                Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_LONG).show();
+                break;
+            case MESSAGE_START_PROGRESS_DIALOG:
+                mDialog = ProgressDialog.show(Client.this,
+                                              "",
+                                              "Finding Simple Service.\nPlease wait...",
+                                              true,
+                                              true);
+                break;
+            case MESSAGE_STOP_PROGRESS_DIALOG:
+                mDialog.dismiss();
+                break;
+            default:
+                break;
             }
-        };
+        }
+    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -113,17 +113,17 @@ public class Client extends Activity {
 
         mEditText = (EditText) findViewById(R.id.EditText);
         mEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-                public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
-                    if (actionId == EditorInfo.IME_NULL
+            public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_NULL
                         && event.getAction() == KeyEvent.ACTION_UP) {
-                        /* Call the remote object's Ping method. */
-                        Message msg = mBusHandler.obtainMessage(BusHandler.PING, 
-                                                                view.getText().toString());
-                        mBusHandler.sendMessage(msg);
-                    }
-                    return true;
+                    /* Call the remote object's Ping method. */
+                    Message msg = mBusHandler.obtainMessage(BusHandler.PING,
+                                                            view.getText().toString());
+                    mBusHandler.sendMessage(msg);
                 }
-            });
+                return true;
+            }
+        });
 
         /* Make all AllJoyn calls through a separate handler thread to prevent blocking the UI. */
         HandlerThread busThread = new HandlerThread("BusHandler");
@@ -134,7 +134,7 @@ public class Client extends Activity {
         mBusHandler.sendEmptyMessage(BusHandler.CONNECT);
         mHandler.sendEmptyMessage(MESSAGE_START_PROGRESS_DIALOG);
     }
-    
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -142,41 +142,41 @@ public class Client extends Activity {
         this.menu = menu;
         return true;
     }
-    
+
     @Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-	    // Handle item selection
-	    switch (item.getItemId()) {
-	    case R.id.quit:
-	    	finish();
-	        return true;
-	    default:
-	        return super.onOptionsItemSelected(item);
-	    }
-	}
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+        case R.id.quit:
+            finish();
+            return true;
+        default:
+            return super.onOptionsItemSelected(item);
+        }
+    }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        
+
         /* Disconnect to prevent resource leaks. */
         mBusHandler.sendEmptyMessage(BusHandler.DISCONNECT);
     }
-    
+
     class SignalService implements SimpleInterface, BusObject {
-    	/**                                                                                                                          
+        /**
          * Intentionally empty implementation of Ping.  Since this
          * method is only used as a signal emitter, it will never be called
          * directly.
-	     */
-    	public void Ping(String str) throws BusException {                                                                                              
-        }     
+         */
+        public void Ping(String str) throws BusException {
+        }
     }
-    
-    
-    
+
+
+
     /* This class will handle all AllJoyn calls. See onCreate(). */
-    class BusHandler extends Handler {    	
+    class BusHandler extends Handler {
         /*
          * Name used as the well-known name and the advertised name of the service this client is
          * interested in.  This name must be a unique name both to the bus and to the network as a
@@ -190,25 +190,25 @@ public class Client extends Activity {
         private BusAttachment mBus;
         private ProxyBusObject mProxyObj;
         private SimpleInterface mSimpleInterface;
-        
-        private int 	mSessionId;
+
+        private int     mSessionId;
         private boolean mIsInASession;
         private boolean mIsConnected;
         private boolean mIsStoppingDiscovery;
-        
+
         /* These are the messages sent to the BusHandler from the UI. */
         public static final int CONNECT = 1;
         public static final int JOIN_SESSION = 2;
         public static final int DISCONNECT = 3;
         public static final int PING = 4;
 
-        
+
         private SignalService mySignalService = new SignalService();
         private SimpleInterface mSignalSimpleInterface = null;
-        
+
         public BusHandler(Looper looper) {
             super(looper);
-            
+
             mIsInASession = false;
             mIsConnected = false;
             mIsStoppingDiscovery = false;
@@ -219,7 +219,7 @@ public class Client extends Activity {
             switch(msg.what) {
             /* Connect to a remote instance of an object implementing the SimpleInterface. */
             case CONNECT: {
-            	org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
+                org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
                 /*
                  * All communication through AllJoyn begins with a BusAttachment.
                  *
@@ -231,33 +231,33 @@ public class Client extends Activity {
                  * between devices.
                  */
                 mBus = new BusAttachment(getPackageName(), BusAttachment.RemoteMessage.Receive);
-                
+
                 /*
                  * Create a bus listener class
                  */
                 mBus.registerBusListener(new BusListener() {
                     @Override
                     public void foundAdvertisedName(String name, short transport, String namePrefix) {
-                    	logInfo(String.format("MyBusListener.foundAdvertisedName(%s, 0x%04x, %s)", name, transport, namePrefix));
-                    	/*
-                    	 * This client will only join the first service that it sees advertising
-                    	 * the indicated well-known name.  If the program is already a member of 
-                    	 * a session (i.e. connected to a service) we will not attempt to join 
-                    	 * another session.
-                    	 * It is possible to join multiple session however joining multiple 
-                    	 * sessions is not shown in this sample. 
-                    	 */
-                    	if(!mIsConnected) {
-                    	    Message msg = obtainMessage(JOIN_SESSION, name);
-                    	    sendMessage(msg);
-                    	}
+                        logInfo(String.format("MyBusListener.foundAdvertisedName(%s, 0x%04x, %s)", name, transport, namePrefix));
+                        /*
+                         * This client will only join the first service that it sees advertising
+                         * the indicated well-known name.  If the program is already a member of
+                         * a session (i.e. connected to a service) we will not attempt to join
+                         * another session.
+                         * It is possible to join multiple session however joining multiple
+                         * sessions is not shown in this sample.
+                         */
+                        if(!mIsConnected) {
+                            Message msg = obtainMessage(JOIN_SESSION, name);
+                            sendMessage(msg);
+                        }
                     }
                 });
-                
+
                 Status status = mBus.registerBusObject(mySignalService, "/SignalService");
                 if (Status.OK != status) {
-                	logStatus("BusAttachment.registerBusObject()", status);
-                	return;
+                    logStatus("BusAttachment.registerBusObject()", status);
+                    return;
                 }
 
                 /* To communicate with AllJoyn objects, we must connect the BusAttachment to the bus. */
@@ -277,32 +277,32 @@ public class Client extends Activity {
                 status = mBus.findAdvertisedName(SERVICE_NAME);
                 logStatus(String.format("BusAttachement.findAdvertisedName(%s)", SERVICE_NAME), status);
                 if (Status.OK != status) {
-                	finish();
-                	return;
+                    finish();
+                    return;
                 }
 
                 break;
             }
             case (JOIN_SESSION): {
-            	/*
+                /*
                  * If discovery is currently being stopped don't join to any other sessions.
                  */
                 if (mIsStoppingDiscovery) {
                     break;
                 }
-                
+
                 /*
                  * In order to join the session, we need to provide the well-known
                  * contact port.  This is pre-arranged between both sides as part
                  * of the definition of the chat service.  As a result of joining
-                 * the session, we get a session identifier which we must use to 
+                 * the session, we get a session identifier which we must use to
                  * identify the created session communication channel whenever we
                  * talk to the remote side.
                  */
                 short contactPort = CONTACT_PORT;
                 SessionOpts sessionOpts = new SessionOpts();
                 Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
-                
+
                 Status status = mBus.joinSession((String) msg.obj, contactPort, sessionId, sessionOpts, new SessionListener() {
                     @Override
                     public void sessionLost(int sessionId, int reason) {
@@ -312,32 +312,32 @@ public class Client extends Activity {
                     }
                 });
                 logStatus("BusAttachment.joinSession() - sessionId: " + sessionId.value, status);
-                    
+
                 if (status == Status.OK) {
 
-                	mSessionId = sessionId.value;
-                	mIsConnected = true;
-                	mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
-                	
-                	SignalEmitter emitter = new SignalEmitter(mySignalService, sessionId.value, SignalEmitter.GlobalBroadcast.Off);
-                	mSignalSimpleInterface = emitter.getInterface(SimpleInterface.class);
-                	
+                    mSessionId = sessionId.value;
+                    mIsConnected = true;
+                    mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
+
+                    SignalEmitter emitter = new SignalEmitter(mySignalService, sessionId.value, SignalEmitter.GlobalBroadcast.Off);
+                    mSignalSimpleInterface = emitter.getInterface(SimpleInterface.class);
+
                 }
                 break;
             }
-            
+
             /* Release all resources acquired in the connect. */
             case DISCONNECT: {
-            	mIsStoppingDiscovery = true;
-            	if (mIsConnected) {
-                	Status status = mBus.leaveSession(mSessionId);
+                mIsStoppingDiscovery = true;
+                if (mIsConnected) {
+                    Status status = mBus.leaveSession(mSessionId);
                     logStatus("BusAttachment.leaveSession()", status);
-            	}
+                }
                 mBus.disconnect();
                 getLooper().quit();
                 break;
             }
-            
+
             /*
              * Call the service's Ping method through the ProxyBusObject.
              *
@@ -346,11 +346,11 @@ public class Client extends Activity {
              */
             case PING: {
                 try {
-                	if (mSignalSimpleInterface != null) {
-                		sendUiMessage(MESSAGE_PING, msg.obj);
-                		mSignalSimpleInterface.Ping((String) msg.obj);
-                		//sendUiMessage(MESSAGE_PING_REPLY, reply);
-                	}
+                    if (mSignalSimpleInterface != null) {
+                        sendUiMessage(MESSAGE_PING, msg.obj);
+                        mSignalSimpleInterface.Ping((String) msg.obj);
+                        //sendUiMessage(MESSAGE_PING_REPLY, reply);
+                    }
                 } catch (BusException ex) {
                     logException("SimpleInterface.Ping()", ex);
                 }
@@ -360,7 +360,7 @@ public class Client extends Activity {
                 break;
             }
         }
-        
+
         /* Helper function to send a message to the UI thread. */
         private void sendUiMessage(int what, Object obj) {
             mHandler.sendMessage(mHandler.obtainMessage(what, obj));
@@ -372,7 +372,7 @@ public class Client extends Activity {
         if (status == Status.OK) {
             Log.i(TAG, log);
         } else {
-        	Message toastMsg = mHandler.obtainMessage(MESSAGE_POST_TOAST, log);
+            Message toastMsg = mHandler.obtainMessage(MESSAGE_POST_TOAST, log);
             mHandler.sendMessage(toastMsg);
             Log.e(TAG, log);
         }
@@ -384,13 +384,13 @@ public class Client extends Activity {
         mHandler.sendMessage(toastMsg);
         Log.e(TAG, log, ex);
     }
-    
+
     /*
      * print the status or result to the Android log. If the result is the expected
      * result only print it to the log.  Otherwise print it to the error log and
-     * Sent a Toast to the users screen. 
+     * Sent a Toast to the users screen.
      */
     private void logInfo(String msg) {
-            Log.i(TAG, msg);
+        Log.i(TAG, msg);
     }
 }

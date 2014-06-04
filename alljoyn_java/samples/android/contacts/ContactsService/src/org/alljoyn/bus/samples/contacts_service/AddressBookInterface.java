@@ -31,14 +31,14 @@ public interface AddressBookInterface {
      * The BusMethod annotation signifies that this function should be used as part of the AllJoyn
      * interface.  For this BusMethod we have manually specified the signature and replySignature.
      * In most circumstances runtime can figure out what the signature should be.
-     * 
+     *
      * In this instance we inform the bus that the input is a String and integer. while the output
      * is a struct.  All AllJoyn structs must specify their marshaling order using the the @position
-     * annotation see Contact.java  
+     * annotation see Contact.java
      *
-     * replySignature could also be "(sa(sis)a(sis))" however it is best to let runtime figure out 
+     * replySignature could also be "(sa(sis)a(sis))" however it is best to let runtime figure out
      * as much as it can with out manually specifying the signature.
-     * 
+     *
      * All methods that use the BusMethod annotation can throw a BusException and should indicate
      * this fact.
      *

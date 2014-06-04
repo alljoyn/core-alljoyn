@@ -21,7 +21,7 @@ import org.alljoyn.bus.annotation.BusInterface;
 import org.alljoyn.bus.annotation.BusMethod;
 import org.alljoyn.bus.annotation.BusProperty;
 
-/** 
+/**
  * PropsInterface is an example of an interface that is published onto
  * alljoyn by org.alljoyn.bus.samples.props.Service and is subscribed
  * to by org.alljoyn.bus.samples.props.Client.  The interface
@@ -38,15 +38,15 @@ public interface PropsInterface {
      */
     @BusProperty
     public String getStringProp() throws BusException;
-    
+
     /**
      * Set the property named 'StringProp' to the value.
-     * 
+     *
      * @param value The new value of 'StringProp'.
      */
     @BusProperty
     public void setStringProp(String value) throws BusException;
-    
+
     /**
      * Get the property named 'IntProp'.
      *
@@ -54,10 +54,10 @@ public interface PropsInterface {
      */
     @BusProperty
     public int getIntProp() throws BusException;
-    
+
     /**
      * Set the property named 'IntProp' to the value.
-     * 
+     *
      * @param value The new value of 'IntProp'.
      */
     @BusProperty

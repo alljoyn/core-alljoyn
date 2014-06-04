@@ -37,20 +37,20 @@ public class Service {
     static int sessionId;
 
     public static class Described implements DescribedInterface, BusObject {
-    	public Described() {
+        public Described() {
 
-    	}
+        }
 
-    	private int myProperty = 0;
+        private int myProperty = 0;
 
-    	public void setMyProperty(int p){
-    		myProperty = p;
-    	}
+        public void setMyProperty(int p){
+            myProperty = p;
+        }
 
-    	public int getMyProperty(){
-    		return myProperty;
-    	}
-    	
+        public int getMyProperty(){
+            return myProperty;
+        }
+        
         public void myMethod(){
             System.out.println("myMethod invoked");
         }

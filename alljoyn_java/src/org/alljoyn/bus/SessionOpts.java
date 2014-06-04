@@ -91,7 +91,7 @@ public class SessionOpts {
      * encapsulation is used.
      */
     public static final byte TRAFFIC_RAW_RELIABLE   = 0x04;
-    
+
     /**
      * Do not limit the spatial scope of sessions.  This means that sessions may
      * be joined by jointers located anywhere.
@@ -99,7 +99,7 @@ public class SessionOpts {
     public static final byte PROXIMITY_ANY      = (byte)0xff;
 
     /**
-     * Limit the spatial scope of sessions to the local host.  Interpret as 
+     * Limit the spatial scope of sessions to the local host.  Interpret as
      * "the same physical machine."  This means that sessions may be joined by
      * jointers located only on the same physical machine as the one hosting the
      * session.
@@ -112,7 +112,7 @@ public class SessionOpts {
      * located somewhere on the network.
      */
     public static final byte PROXIMITY_NETWORK  = 0x02;
-    
+
     /**
      * Use no transport to communicate with a given session.
      */
@@ -137,17 +137,17 @@ public class SessionOpts {
      * Transport using TCP (same as TRANSPORT_WLAN)
      */
     public static final short TRANSPORT_TCP       = TRANSPORT_WLAN;
-    
+
     /**
      * Use only a wireless wide area network to communicate with a given session.
      */
     public static final short TRANSPORT_WWAN      = 0x0008;
-    
+
     /**
      * Use only a wired local area network to communicate with a given session.
      */
     public static final short TRANSPORT_LAN      = 0x0010;
-    
+
     /**
      * Use only the Wi-Fi Direct transport to communicate with a given session.
      */
@@ -200,7 +200,7 @@ public class SessionOpts {
         result.append(", isMultipoint = ");
         value = String.format("%b", isMultipoint);
         result.append(value);
-        
+
         result.append(", proximity =");
         value = String.format("(0x%02x)", proximity);
         result.append(value);
@@ -215,7 +215,7 @@ public class SessionOpts {
         if ((transports & TRANSPORT_WLAN) != 0) result.append(" TRANSPORT_WLAN");
         if ((transports & TRANSPORT_WWAN) != 0) result.append(" TRANSPORT_WWAN");
         if ((transports & TRANSPORT_WFD) != 0) result.append(" TRANSPORT_WFD");
-        
+
         result.append("}");
         return result.toString();
     }

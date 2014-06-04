@@ -54,55 +54,55 @@ public class ContactsService extends Activity {
     }
 
     private static final String TAG = "ContactsService";
-    
+
     private static final int MESSAGE_ACTION = 1;
     private static final int MESSAGE_POST_TOAST = 2;
-    
+
     private BusHandler mBusHandler;
-    
+
     public Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            switch (msg.what) { 
+            switch (msg.what) {
             case MESSAGE_ACTION: {
-                mListViewArrayAdapter.add((String) msg.obj); 
+                mListViewArrayAdapter.add((String) msg.obj);
                 break;
             }
             case MESSAGE_POST_TOAST:
                 Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_LONG).show();
                 break;
-            default: 
+            default:
                 break;
             }
         }
     };
-    
+
     private ArrayAdapter<String> mListViewArrayAdapter;
     private Menu menu;
-    
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-        
+
         mListViewArrayAdapter = new ArrayAdapter<String>(this, android.R.layout.test_list_item);
         ListView lv = (ListView) findViewById(R.id.ListView);
         lv.setAdapter(mListViewArrayAdapter);
-        
+
         /*
          * Send an empty message to list to make it clear where the start of
-         * the list is. 
+         * the list is.
          */
         Message msg = mHandler.obtainMessage(MESSAGE_ACTION, "");
         mHandler.sendMessage(msg);
-        
+
         HandlerThread busThread = new HandlerThread("BusHandler");
         busThread.start();
         mBusHandler = new BusHandler(busThread.getLooper());
-        mBusHandler.sendEmptyMessage(BusHandler.CONNECT); 
+        mBusHandler.sendEmptyMessage(BusHandler.CONNECT);
     }
-    
-    
+
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -110,25 +110,25 @@ public class ContactsService extends Activity {
         this.menu = menu;
         return true;
     }
-    
+
     @Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-	    switch (item.getItemId()) {
-	    case R.id.quit:
-	    	finish();
-	        return true;
-	    default:
-	        return super.onOptionsItemSelected(item);
-	    }
-	}
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+        case R.id.quit:
+            finish();
+            return true;
+        default:
+            return super.onOptionsItemSelected(item);
+        }
+    }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        
+
         mBusHandler.sendEmptyMessage(BusHandler.DISCONNECT);
     }
-    
+
     /**
      * Local implementation of the AddressBookInterface
      */
@@ -148,10 +148,10 @@ public class ContactsService extends Activity {
                  * Get all the contact details of type PHONE for the contact
                  */
                 String where = ContactsContract.Data.CONTACT_ID + " = " + contactId + " AND " +
-                ContactsContract.Data.MIMETYPE + " = '" +
-                ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE + "'";
+                        ContactsContract.Data.MIMETYPE + " = '" +
+                        ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE + "'";
                 Cursor dataCursor = getContentResolver().query(ContactsContract.Data.CONTENT_URI,
-                        null, where, null, null);
+                                                               null, where, null, null);
 
                 int phoneIdx = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER);
                 int typeIdx  = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.TYPE);
@@ -179,7 +179,7 @@ public class ContactsService extends Activity {
                         } while(dataCursor.moveToNext());
                     } else {
                         /*
-                         * If for some reason we are unable to move the dataCursor to the first element 
+                         * If for some reason we are unable to move the dataCursor to the first element
                          * fill in all contacts with a default empty value.
                          */
                         for (int i = 0; i < count; i++) {
@@ -204,14 +204,14 @@ public class ContactsService extends Activity {
                  * Get all the contact details of type EMAIL for the contact
                  */
                 where = ContactsContract.Data.CONTACT_ID + " = " + contactId + " AND " +
-                ContactsContract.Data.MIMETYPE + " = '" +
-                ContactsContract.CommonDataKinds.Email.CONTENT_ITEM_TYPE + "'";
+                        ContactsContract.Data.MIMETYPE + " = '" +
+                        ContactsContract.CommonDataKinds.Email.CONTENT_ITEM_TYPE + "'";
                 dataCursor = getContentResolver().query(ContactsContract.Data.CONTENT_URI, null, where, null, null);
                 int addressIdx = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Email.DATA);
                 typeIdx  = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Email.TYPE);
                 labelIdx = dataCursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Email.LABEL);
                 count = dataCursor.getCount();
-                if (count > 0) { 
+                if (count > 0) {
                     contact.setEmailCount(count);
                     if (dataCursor.moveToFirst()) {
                         do {
@@ -253,7 +253,7 @@ public class ContactsService extends Activity {
             Message msg = mHandler.obtainMessage(MESSAGE_ACTION, action);
             mHandler.sendMessage(msg);
             Log.i(TAG, action);
-            
+
             return contact;
         }
 
@@ -267,7 +267,7 @@ public class ContactsService extends Activity {
              * ascending order based on the display name.
              */
             Cursor cursor = getContentResolver().query(ContactsContract.Contacts.CONTENT_URI, null, null, null,
-                    ContactsContract.Contacts.DISPLAY_NAME + " ASC");
+                                                       ContactsContract.Contacts.DISPLAY_NAME + " ASC");
 
             /*
              * Let the activity manage the cursor lifecycle.
@@ -302,22 +302,22 @@ public class ContactsService extends Activity {
             }
 
             stopManagingCursor(cursor);
-            
+
             String action = String.format("Sending list of %d contacts to Client", count);
             Message msg = mHandler.obtainMessage(MESSAGE_ACTION, action);
             mHandler.sendMessage(msg);
-            
+
             Log.i(TAG, action);
             return result;
         }
     }
-    
+
     class BusHandler extends Handler {
         private static final String SERVICE_NAME = "org.alljoyn.bus.addressbook";
         private static final short CONTACT_PORT = 42;
-        
+
         BusAttachment mBus;
-        
+
         private AllJoynContactService mService;
 
         /* These are the messages sent to the BusHandler from the UI. */
@@ -326,7 +326,7 @@ public class ContactsService extends Activity {
 
         public BusHandler(Looper looper) {
             super(looper);
-            
+
             mService = new AllJoynContactService();
         }
 
@@ -334,17 +334,17 @@ public class ContactsService extends Activity {
         public void handleMessage(Message msg) {
             switch (msg.what) {
             case CONNECT: {
-            	org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
+                org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
                 mBus = new BusAttachment(getPackageName(), BusAttachment.RemoteMessage.Receive);
-                
+
                 mBus.registerBusListener(new BusListener());
 
                 Status status = mBus.registerBusObject(mService, "/addressbook");
                 logStatus("BusAttachment.registerBusObject()", status);
-                              
+
                 status = mBus.connect();
                 logStatus("BusAttachment.connect()", status);
-                
+
                 Mutable.ShortValue contactPort = new Mutable.ShortValue(CONTACT_PORT);
 
                 SessionOpts sessionOpts = new SessionOpts();
@@ -354,26 +354,26 @@ public class ContactsService extends Activity {
                 sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
 
                 status = mBus.bindSessionPort(contactPort, sessionOpts, new SessionPortListener() {
-                	@Override
-                	public boolean acceptSessionJoiner(short sessionPort, String joiner, SessionOpts sessionOpts) {
-                		if (sessionPort == CONTACT_PORT) {
-                			return true;
+                    @Override
+                    public boolean acceptSessionJoiner(short sessionPort, String joiner, SessionOpts sessionOpts) {
+                        if (sessionPort == CONTACT_PORT) {
+                            return true;
                         } else {
-                        	return false;
+                            return false;
                         }
                     }
                 });
                 logStatus(String.format("BusAttachment.bindSessionPort(%d, %s)",
-                    contactPort.value, sessionOpts.toString()), status);
+                                        contactPort.value, sessionOpts.toString()), status);
 
                 if (status != Status.OK) {
                     finish();
                     return;
                 }
- 
+
                 status = mBus.requestName(SERVICE_NAME, BusAttachment.ALLJOYN_REQUESTNAME_FLAG_DO_NOT_QUEUE);
                 logStatus("BusAttachment.requestName()", status);
-                
+
                 status = mBus.advertiseName(SERVICE_NAME, SessionOpts.TRANSPORT_ANY);
                 logStatus(String.format("BusAttachment.advertiseName(%s)", SERVICE_NAME), status);
                 break;
@@ -386,11 +386,11 @@ public class ContactsService extends Activity {
             }
             default:
                 break;
-            
+
             }
         }
     }
-    
+
     private void logStatus(String msg, Status status) {
         String log = String.format("%s: %s", msg, status);
         if (status == Status.OK) {

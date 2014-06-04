@@ -53,7 +53,7 @@ public class PeerTest extends TestCase {
         service = new Service();
         status = bus.registerBusObject(service, "/testobject");
         assertEquals(Status.OK, status);
-        
+
         DBusProxyObj control = bus.getDBusProxyObj();
         DBusProxyObj.RequestNameResult res = control.RequestName("org.alljoyn.bus.ifaces.PeerTest",
                                                                 DBusProxyObj.REQUEST_NAME_NO_FLAGS);
