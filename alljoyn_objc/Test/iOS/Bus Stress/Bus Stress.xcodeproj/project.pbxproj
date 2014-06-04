@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		83218182193B148A002F6A5A /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 83218181193B148A002F6A5A /* AJNTranslatorImpl.mm */; };
 		AC898AB41602497F001F19EA /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = AC898AB31602497F001F19EA /* Default-568h@2x.png */; };
 		ACC1723515EEC42300525051 /* AJNBasicObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = ACC1723215EEC42300525051 /* AJNBasicObject.mm */; };
 		ACC1723615EEC42300525051 /* BasicObject.m in Sources */ = {isa = PBXBuildFile; fileRef = ACC1723415EEC42300525051 /* BasicObject.m */; };
@@ -49,6 +50,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		8321817F193B148A002F6A5A /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
+		83218180193B148A002F6A5A /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
+		83218181193B148A002F6A5A /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
 		AC898AB31602497F001F19EA /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
 		ACC1723115EEC42300525051 /* AJNBasicObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNBasicObject.h; sourceTree = "<group>"; };
 		ACC1723215EEC42300525051 /* AJNBasicObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNBasicObject.mm; sourceTree = "<group>"; };
@@ -206,6 +210,9 @@
 				ACCF739D16681A2C001CB5E9 /* AJNSignalHandlerImpl.mm */,
 				ACCF739E16681A2C001CB5E9 /* AJNStatus.h */,
 				ACCF739F16681A2C001CB5E9 /* AJNStatus.m */,
+				8321817F193B148A002F6A5A /* AJNTranslator.h */,
+				83218180193B148A002F6A5A /* AJNTranslatorImpl.h */,
+				83218181193B148A002F6A5A /* AJNTranslatorImpl.mm */,
 				ACCF73A016681A2C001CB5E9 /* AJNTransportMask.h */,
 				ACCF73A116681A2C001CB5E9 /* AJNTransportMask.m */,
 				ACCF73A216681A2C001CB5E9 /* AJNType.h */,
@@ -358,6 +365,7 @@
 				ACCF73AD16681A2C001CB5E9 /* AJNInterfaceMember.mm in Sources */,
 				ACCF73AE16681A2C001CB5E9 /* AJNInterfaceProperty.mm in Sources */,
 				ACCF73AF16681A2C001CB5E9 /* AJNKeyStoreListenerImpl.mm in Sources */,
+				83218182193B148A002F6A5A /* AJNTranslatorImpl.mm in Sources */,
 				ACCF73B016681A2C001CB5E9 /* AJNMessage.mm in Sources */,
 				ACCF73B116681A2C001CB5E9 /* AJNMessageArgument.mm in Sources */,
 				ACCF73B216681A2C001CB5E9 /* AJNMessageHeaderFields.mm in Sources */,

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		833B9BC6193B133400673DEE /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 833B9BC5193B133400673DEE /* AJNTranslatorImpl.mm */; };
 		AC8810111649DA32006CD25A /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8810101649DA32006CD25A /* UIKit.framework */; };
 		AC8810131649DA32006CD25A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8810121649DA32006CD25A /* Foundation.framework */; };
 		AC8810151649DA32006CD25A /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8810141649DA32006CD25A /* CoreGraphics.framework */; };
@@ -54,6 +55,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		833B9BC3193B133400673DEE /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
+		833B9BC4193B133400673DEE /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
+		833B9BC5193B133400673DEE /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
 		AC88100C1649DA32006CD25A /* SecureClient.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SecureClient.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AC8810101649DA32006CD25A /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		AC8810121649DA32006CD25A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -285,6 +289,9 @@
 				AC88111D1649DE85006CD25A /* AJNSignalHandlerImpl.mm */,
 				AC88111E1649DE85006CD25A /* AJNStatus.h */,
 				AC88111F1649DE85006CD25A /* AJNStatus.m */,
+				833B9BC3193B133400673DEE /* AJNTranslator.h */,
+				833B9BC4193B133400673DEE /* AJNTranslatorImpl.h */,
+				833B9BC5193B133400673DEE /* AJNTranslatorImpl.mm */,
 				AC8811201649DE85006CD25A /* AJNTransportMask.h */,
 				AC8811211649DE85006CD25A /* AJNTransportMask.m */,
 				AC8811221649DE85006CD25A /* AJNType.h */,
@@ -407,6 +414,7 @@
 				AC88113A1649DE85006CD25A /* AJNSignalHandlerImpl.mm in Sources */,
 				AC88113B1649DE85006CD25A /* AJNStatus.m in Sources */,
 				AC88113C1649DE85006CD25A /* AJNTransportMask.m in Sources */,
+				833B9BC6193B133400673DEE /* AJNTranslatorImpl.mm in Sources */,
 				AC88113D1649DE85006CD25A /* AJNVersion.mm in Sources */,
 				AC8811401649DFFC006CD25A /* Constants.m in Sources */,
 				AC88116B164ACBA7006CD25A /* AJNSecureObject.mm in Sources */,
