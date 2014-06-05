@@ -263,7 +263,7 @@ QStatus _RemoteEndpoint::Establish(const qcc::String& authMechanisms, qcc::Strin
 {
     QStatus status = ER_OK;
 
-    if (!internal) {
+    if (!internal || minimalEndpoint) {
         status = ER_BUS_NO_ENDPOINT;
     } else {
         RemoteEndpoint rep = RemoteEndpoint::wrap(this);
@@ -297,8 +297,9 @@ _RemoteEndpoint::_RemoteEndpoint(BusAttachment& bus,
                                  const qcc::String& connectSpec,
                                  Stream* stream,
                                  const char* threadName,
-                                 bool isSocket) :
-    _BusEndpoint(ENDPOINT_TYPE_REMOTE)
+                                 bool isSocket,
+                                 bool minimal) :
+    _BusEndpoint(ENDPOINT_TYPE_REMOTE), minimalEndpoint(minimal)
 {
     internal = new Internal(bus, incoming, connectSpec, stream, threadName, isSocket);
 }
@@ -329,6 +330,10 @@ QStatus _RemoteEndpoint::SetLinkTimeout(uint32_t idleTimeout, uint32_t probeTime
 {
     QCC_DbgTrace(("_RemoteEndpoint::SetLinkTimeout(%u, %u, %u) for %s", idleTimeout, probeTimeout, maxIdleProbes, GetUniqueName().c_str()));
 
+    if (minimalEndpoint) {
+        return ER_BUS_NO_ENDPOINT;
+    }
+
     if (GetRemoteProtocolVersion() >= 3) {
         internal->lock.Lock(MUTEX_CONTEXT);
         internal->idleTimeout = idleTimeout;
@@ -348,6 +353,14 @@ QStatus _RemoteEndpoint::SetLinkTimeout(uint32_t idleTimeout, uint32_t probeTime
 QStatus _RemoteEndpoint::Start()
 {
     assert(internal);
+
+    if (minimalEndpoint) {
+        if (internal->features.isBusToBus) {
+            endpointType = ENDPOINT_TYPE_BUS2BUS;
+        }
+        return ER_OK;
+    }
+
     assert(internal->stream);
     QCC_DbgTrace(("_RemoteEndpoint::Start(isBusToBus = %s, allowRemote = %s)",
                   internal->features.isBusToBus ? "true" : "false",
@@ -360,6 +373,7 @@ QStatus _RemoteEndpoint::Start()
     if (internal->features.isBusToBus) {
         endpointType = ENDPOINT_TYPE_BUS2BUS;
     }
+
     /* Set the send timeout for this endpoint */
     internal->stream->SetSendTimeout(0);
 
@@ -412,16 +426,16 @@ QStatus _RemoteEndpoint::Stop(void)
     }
     QCC_DbgPrintf(("_RemoteEndpoint::Stop(%s) called", GetUniqueName().c_str()));
 
-    /*
-     * Make the endpoint invalid - this prevents any further use of the endpoint that might delay
-     * its ultimate demise.
-     */
-    if (internal->started) {
-        ret = internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
-
+    if (minimalEndpoint == false) {
+        /*
+         * Make the endpoint invalid - this prevents any further use of the endpoint that might delay
+         * its ultimate demise.
+         */
+        if (internal->started) {
+            ret = internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+        }
     }
     internal->stopping = true;
-
     Invalidate();
     return ret;
 
@@ -434,7 +448,7 @@ QStatus _RemoteEndpoint::StopAfterTxEmpty(uint32_t maxWaitMs)
     uint32_t startTime = maxWaitMs ? GetTimestamp() : 0;
 
     /* Ensure the endpoint is valid */
-    if (!internal) {
+    if (!internal || minimalEndpoint) {
         return ER_BUS_NO_ENDPOINT;
     }
 
@@ -456,8 +470,7 @@ QStatus _RemoteEndpoint::StopAfterTxEmpty(uint32_t maxWaitMs)
 
 QStatus _RemoteEndpoint::PauseAfterRxReply()
 {
-
-    if (internal) {
+    if (internal || minimalEndpoint) {
         internal->armRxPause = true;
         return ER_OK;
     } else {
@@ -484,6 +497,9 @@ QStatus _RemoteEndpoint::Join(void)
 
 void _RemoteEndpoint::ThreadExit(Thread* thread)
 {
+    if (minimalEndpoint) {
+        return;
+    }
     /* This is notification of a txQueue waiter has died. Remove him */
     internal->lock.Lock(MUTEX_CONTEXT);
     deque<Thread*>::iterator it = find(internal->txWaitQueue.begin(), internal->txWaitQueue.end(), thread);
@@ -510,17 +526,29 @@ void _RemoteEndpoint::Exit()
 {
     QCC_DbgTrace(("_RemoteEndpoint::Exit()"));
 
+    assert(minimalEndpoint == true && "_RemoteEndpoint::Exit(): You should have had ExitCallback() called for you!");
     /* Ensure the endpoint is valid */
     if (!internal) {
-        QCC_DbgPrintf(("_RemoteEndpoint::Exit(): invalid endpoint"));
         return;
     }
 
-    QCC_DbgPrintf(("_RemoteEndpoint::Exit(): exitCount = 1"));
+    Invalidate();
+
+    RemoteEndpoint rep = RemoteEndpoint::wrap(this);
+    /* Un-register this remote endpoint from the router */
+    internal->bus.GetInternal().GetRouter().UnregisterEndpoint(this->GetUniqueName(), this->GetEndpointType());
+
+    if (internal->listener) {
+        internal->listener->EndpointExit(rep);
+        internal->listener = NULL;
+    }
+
     internal->exitCount = 1;
 }
 
-void _RemoteEndpoint::ExitCallback() {
+void _RemoteEndpoint::ExitCallback()
+{
+    assert(minimalEndpoint == false && "_RemoteEndpoint::ExitCallback(): Where did a callback come from if no thread?");
     /* Ensure the endpoint is valid */
     if (!internal) {
         return;
@@ -564,6 +592,7 @@ void _RemoteEndpoint::ExitCallback() {
 
 QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
 {
+    assert(minimalEndpoint == false && "_RemoteEndpoint::ReadCallback(): Where did a callback come from if no thread?");
     /* Remote endpoints can be invalid if they were created with the default
      * constructor or being torn down. Return ER_BUS_NO_ENDPOINT only if the
      * endpoint was created with the default constructor. i.e. internal=NULL
@@ -743,7 +772,10 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
 /* Note: isTimedOut indicates that this is a timeout alarm. This is used to implement
  * the SendTimeout functionality.
  */
-QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut) {
+QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
+{
+    assert(minimalEndpoint == false && "_RemoteEndpoint::WriteCallback(): Where did a callback come from if no thread?");
+
     /* Remote endpoints can be invalid if they were created with the default
      * constructor or being torn down. Return ER_BUS_NO_ENDPOINT only if the
      * endpoint was created with the default constructor. i.e. internal=NULL
@@ -838,6 +870,8 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut) {
 
 QStatus _RemoteEndpoint::PushMessage(Message& msg)
 {
+    assert(minimalEndpoint == false && "_RemoteEndpoint::PushMessage(): Unexpected PushMessage with no queues");
+
     QCC_DbgTrace(("RemoteEndpoint::PushMessage %s (serial=%d)", GetUniqueName().c_str(), msg->GetCallSerial()));
     static const size_t MAX_TX_QUEUE_SIZE = 30;
 
@@ -951,6 +985,12 @@ void _RemoteEndpoint::DecrementRef()
     int refs = DecrementAndFetch(&internal->refCount);
     QCC_DbgPrintf(("_RemoteEndpoint::DecrementRef(%s) refs=%d\n", GetUniqueName().c_str(), refs));
     if (refs <= 0) {
+        if (minimalEndpoint && refs == 0) {
+            internal->stopping = true;
+            Invalidate();
+            return;
+        }
+
         Thread* curThread = Thread::GetThread();
         if (strcmp(curThread->GetThreadName(), "iodisp") == 0) {
             Stop();

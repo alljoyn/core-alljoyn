@@ -131,7 +131,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Default constructor initializes an invalid endpoint. This allows for the declaration of uninitialized RemoteEndpoint variables.
      */
-    _RemoteEndpoint() : internal(NULL) { }
+    _RemoteEndpoint() : internal(NULL), minimalEndpoint(false) { }
 
     /**
      * Constructor
@@ -148,7 +148,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
                     const qcc::String& connectSpec,
                     qcc::Stream* stream,
                     const char* type = "endpoint",
-                    bool isSocket = true);
+                    bool isSocket = true, bool minimal = false);
 
     /**
      * Destructor
@@ -398,7 +398,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     void IncrementRef();
 
     /**
-     * Decrement the reference count for this remote endpoing.
+     * Decrement the reference count for this remote endpoint.
      * RemoteEndpoints are stopped when the number of refereneces reaches zero.
      */
     void DecrementRef();
@@ -471,7 +471,8 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
   private:
 
     class Internal;
-    Internal* internal; /* All the internal state for a remote endpoint */
+    Internal* internal;    /** All the internal state for a remote endpoint */
+    bool minimalEndpoint;  /* Whether or not the remote endpoint manages IODispatch and queues (true) or not (false) */
 
     /**
      * Copy constructor is undefined.
