@@ -96,7 +96,7 @@ Rule::Rule(const char* ruleSpec, QStatus* outStatus) : type(MESSAGE_INVALID), se
             QCC_LogError(status, ("arg keys are not supported in ruleSpec \"%s\"", ruleSpec));
             break;
         } else if (0 == strncmp("implements", pos, 10)) {
-            implements.push_back(qcc::String(begQuotePos, endQuotePos - begQuotePos));
+            implements.insert(qcc::String(begQuotePos, endQuotePos - begQuotePos));
         } else {
             status = ER_FAIL;
             QCC_LogError(status, ("Invalid key in ruleSpec \"%s\"", ruleSpec));
@@ -104,8 +104,6 @@ Rule::Rule(const char* ruleSpec, QStatus* outStatus) : type(MESSAGE_INVALID), se
         }
         pos = endPos + 1;
     }
-    /* Sort the implements vector for equality comparison later */
-    std::sort(implements.begin(), implements.end());
     if (outStatus) {
         *outStatus = status;
     }
@@ -154,27 +152,28 @@ bool Rule::IsMatch(Message& msg) const
         if (status != ER_OK) {
             return false;
         }
-        size_t numMatches = 0;
-        for (size_t im = 0; im < implements.size(); ++im) {
-            for (size_t ob = 0; ob < numObjectDescriptions; ++ob) {
-                char* path;
-                size_t numInterfaces;
-                MsgArg* interfaces;
-                status = objectDescriptions[ob].Get("(oas)", &path, &numInterfaces, &interfaces);
+        set<String> interfaces;
+        for (size_t ob = 0; ob < numObjectDescriptions; ++ob) {
+            char* path;
+            size_t numIntfs;
+            MsgArg* intfs;
+            status = objectDescriptions[ob].Get("(oas)", &path, &numIntfs, &intfs);
+            if (status != ER_OK) {
+                return false;
+            }
+            for (size_t in = 0; in < numIntfs; ++in) {
+                char* intf;
+                status = intfs[in].Get("s", &intf);
                 if (status != ER_OK) {
                     return false;
                 }
-                for (size_t in = 0; in < numInterfaces; ++in) {
-                    char* interface;
-                    status = interfaces[in].Get("s", &interface);
-                    if (status != ER_OK) {
-                        return false;
-                    }
-                    if (implements[im] == interface) {
-                        ++numMatches;
-                        continue;
-                    }
-                }
+                interfaces.insert(intf);
+            }
+        }
+        size_t numMatches = 0;
+        for (set<String>::const_iterator it = implements.begin(); it != implements.end(); ++it) {
+            if (interfaces.find(*it) != interfaces.end()) {
+                ++numMatches;
             }
         }
         if (numMatches != implements.size()) {
@@ -228,7 +227,7 @@ qcc::String Rule::ToString() const
         }
         rule += "destination='" + destination + "'";
     }
-    for (vector<String>::const_iterator it = implements.begin(); it != implements.end(); ++it) {
+    for (set<String>::const_iterator it = implements.begin(); it != implements.end(); ++it) {
         if (!rule.empty()) {
             rule += ",";
         }
