@@ -564,7 +564,6 @@ QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, String seed, qcc::String& v
              * Return verifier string
              */
             verifier = BytesToHexString(keymatter + Crypto_AES::AES128_SIZE, VERIFIER_LEN);
-            QCC_DbgHLPrintf(("KeyGen verifier %s", verifier.c_str()));
         }
         delete [] keymatter;
     }
