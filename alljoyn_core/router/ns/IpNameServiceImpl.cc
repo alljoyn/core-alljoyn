@@ -4832,6 +4832,13 @@ void IpNameServiceImpl::GetQueryPackets(std::list<Packet>& packets, const uint8_
     pilotPacket->SetHeader(mdnsHeader);
     pilotPacket->SetVersion(2, 2);
 
+    if (!m_v2_queries[TRANSPORT_INDEX_UDP].empty()) {
+        pilotPacket->AddQuestion(mdnsUDPQuestion);
+    }
+    if (!m_v2_queries[TRANSPORT_INDEX_TCP].empty()) {
+        pilotPacket->AddQuestion(mdnsTCPQuestion);
+    }
+
     MDNSSearchRData searchRefData;
     MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &searchRefData);
 
@@ -4852,14 +4859,18 @@ void IpNameServiceImpl::GetQueryPackets(std::list<Packet>& packets, const uint8_
     refRData->SetSearchID(id);
     pilotPacket->ClearDestination();
     bool pilotAdded = false;
+    uint32_t count = 0;
+    set<qcc::String> addedQueries;
     for (uint32_t transportIndex = 0; transportIndex < N_TRANSPORTS; ++transportIndex) {
         if ((type & TRANSMIT_V2) && !m_v2_queries[transportIndex].empty()) {
             if (!pilotAdded) {
                 packets.push_back(Packet::cast(pilotPacket));
                 pilotAdded = true;
             }
-            uint32_t count = 0;
             for (set<qcc::String>::const_iterator i = m_v2_queries[transportIndex].begin(); i != m_v2_queries[transportIndex].end(); ++i) {
+                if (addedQueries.find(*i) != addedQueries.end() && (transportIndex == TRANSPORT_INDEX_UDP || transportIndex == TRANSPORT_INDEX_TCP)) {
+                    continue;
+                }
                 size_t currentSize = packets.back()->GetSerializedSize();
                 currentSize += aaaaRecordSize;
                 MatchMap matching;
@@ -4886,10 +4897,10 @@ void IpNameServiceImpl::GetQueryPackets(std::list<Packet>& packets, const uint8_
                     additionalPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, &refRecord1);
                     refRData = static_cast<MDNSSenderRData*>(refRecord1->GetRData());
                     searchRData->Reset();
-                    if (transportIndex == TRANSPORT_INDEX_UDP) {
+                    if (!m_v2_queries[TRANSPORT_INDEX_UDP].empty()) {
                         additionalPacket->AddQuestion(mdnsUDPQuestion);
                     }
-                    if (transportIndex == TRANSPORT_INDEX_TCP) {
+                    if (!m_v2_queries[TRANSPORT_INDEX_TCP].empty()) {
                         additionalPacket->AddQuestion(mdnsTCPQuestion);
                     }
                     for (MatchMap::iterator j = matching.begin(); j != matching.end(); ++j) {
@@ -4899,21 +4910,16 @@ void IpNameServiceImpl::GetQueryPackets(std::list<Packet>& packets, const uint8_
                     refRData->SetSearchID(id);
                     additionalPacket->ClearDestination();
                     packets.push_back(Packet::cast(additionalPacket));
+                    addedQueries.insert(*i);
                 } else {
-                    MDNSQuestion* question;
-                    bool tcpQuestion = MDNSPacket::cast(packets.back())->GetQuestion("_alljoyn._tcp.local.", &question);
-                    bool udpQuestion = MDNSPacket::cast(packets.back())->GetQuestion("_alljoyn._udp.local.", &question);
-                    if (!udpQuestion &&  transportIndex == TRANSPORT_INDEX_UDP) {
-                        MDNSPacket::cast(packets.back())->AddQuestion(mdnsUDPQuestion);
-                    }
-                    if (!tcpQuestion && transportIndex == TRANSPORT_INDEX_TCP) {
-                        MDNSPacket::cast(packets.back())->AddQuestion(mdnsTCPQuestion);
-                    }
                     if (count > 0) {
                         searchRData->SetValue(";");
                     }
                     for (MatchMap::iterator j = matching.begin(); j != matching.end(); ++j) {
                         searchRData->SetValue(j->first, j->second);
+                    }
+                    if (transportIndex == TRANSPORT_INDEX_UDP || transportIndex == TRANSPORT_INDEX_TCP) {
+                        addedQueries.insert(*i);
                     }
                     count++;
                 }
