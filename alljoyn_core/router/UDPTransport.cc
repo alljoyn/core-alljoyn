@@ -790,7 +790,7 @@ class ArdpStream : public qcc::Stream {
      * the buffer.  The status of the write is not known until the next read or
      * write operation.
      */
-    QStatus PushBytes(const void* buf, size_t numBytes, size_t& numSent, int32_t ttl)
+    QStatus PushBytes(const void* buf, size_t numBytes, size_t& numSent, uint32_t ttl)
     {
         QCC_DbgTrace(("ArdpStream::PushBytes(buf=%p, numBytes=%d., numSent=%p)", buf, numBytes, &numSent));
         QStatus status;
