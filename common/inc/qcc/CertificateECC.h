@@ -109,21 +109,21 @@ class CertificateType0 : public CertificateECC {
 
     const ECCPublicKey* GetIssuer()
     {
-        return &encoded.issuer;
+        return (ECCPublicKey*) &encoded[OFFSET_ISSUER];
     }
 
     void SetIssuer(const ECCPublicKey* issuer);
 
     const uint8_t* GetExternalDataDigest()
     {
-        return encoded.signable.digest;
+        return &encoded[OFFSET_DIGEST];
     }
 
     void SetExternalDataDigest(const uint8_t* externalDataDigest);
 
     const ECCSignature* GetSig()
     {
-        return &encoded.sig;
+        return (ECCSignature*) &encoded[OFFSET_SIG];
     }
 
     void SetSig(const ECCSignature* sig);
@@ -142,7 +142,7 @@ class CertificateType0 : public CertificateECC {
      */
     const uint8_t* GetEncoded()
     {
-        return (uint8_t*) &encoded;
+        return encoded;
     }
 
     /**
@@ -151,7 +151,8 @@ class CertificateType0 : public CertificateECC {
      */
     size_t GetEncodedLen()
     {
-        return sizeof(encoded);
+        assert(sizeof(encoded) == ENCODED_LEN);
+        return ENCODED_LEN;
     }
 
     /**
@@ -182,17 +183,20 @@ class CertificateType0 : public CertificateECC {
     }
 
   private:
+    /*
+     * The encoded is a network-order byte array representing the following fields:
+     * version: uint32_t
+     * issuer: ECCPublicKey
+     * digest: SHA256
+     * sig: ECCSignature
+     */
+    static const size_t OFFSET_VERSION = 0;
+    static const size_t OFFSET_ISSUER = OFFSET_VERSION + 4;
+    static const size_t OFFSET_DIGEST = OFFSET_ISSUER + ECC_PUBLIC_KEY_SZ;
+    static const size_t OFFSET_SIG = OFFSET_DIGEST + Crypto_SHA256::DIGEST_SIZE;
+    static const size_t ENCODED_LEN = OFFSET_SIG + ECC_SIGNATURE_SZ;
 
-    struct Signable {
-        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    };
-    struct Encoded {
-        uint8_t version[sizeof(uint32_t)];
-        ECCPublicKey issuer;
-        Signable signable;
-        ECCSignature sig;
-    };
-    Encoded encoded;
+    uint8_t encoded[ENCODED_LEN];
 };
 
 /**
@@ -204,7 +208,7 @@ class CertificateType1 : public CertificateECC {
     CertificateType1() : CertificateECC(1)
     {
         SetVersion(1);
-        encoded.signable.delegate = false;
+        SetDelegate(false);
     }
     CertificateType1(const ECCPublicKey* issuer, const ECCPublicKey* subject);
 
@@ -216,14 +220,14 @@ class CertificateType1 : public CertificateECC {
 
     const ECCPublicKey* GetIssuer()
     {
-        return &encoded.signable.issuer;
+        return (ECCPublicKey*) &encoded[OFFSET_ISSUER];
     }
 
     void SetIssuer(const ECCPublicKey* issuer);
 
     const ECCPublicKey* GetSubject()
     {
-        return &encoded.signable.subject;
+        return (ECCPublicKey*) &encoded[OFFSET_SUBJECT];
     }
 
     void SetSubject(const ECCPublicKey* subject);
@@ -237,24 +241,24 @@ class CertificateType1 : public CertificateECC {
 
     const bool IsDelegate()
     {
-        return (bool) encoded.signable.delegate;
+        return (bool) encoded[OFFSET_DELEGATE];
     }
 
     void SetDelegate(bool enabled)
     {
-        encoded.signable.delegate = enabled;
+        encoded[OFFSET_DELEGATE] = enabled;
     }
 
     const uint8_t* GetExternalDataDigest()
     {
-        return encoded.signable.digest;
+        return &encoded[OFFSET_DIGEST];
     }
 
     void SetExternalDataDigest(const uint8_t* externalDataDigest);
 
     const ECCSignature* GetSig()
     {
-        return &encoded.sig;
+        return (ECCSignature*) &encoded[OFFSET_SIG];
     }
 
     void SetSig(const ECCSignature* sig);
@@ -269,7 +273,7 @@ class CertificateType1 : public CertificateECC {
      */
     const uint8_t* GetEncoded()
     {
-        return (uint8_t*) &encoded;
+        return encoded;
     }
 
     /**
@@ -278,7 +282,8 @@ class CertificateType1 : public CertificateECC {
      */
     size_t GetEncodedLen()
     {
-        return sizeof(encoded);
+        assert(sizeof(encoded) == ENCODED_LEN);
+        return ENCODED_LEN;
     }
 
     /**
@@ -309,21 +314,28 @@ class CertificateType1 : public CertificateECC {
     }
 
   private:
+    /*
+     * The encoded is a network-order byte array representing the following fields:
+     * version: uint32_t
+     * issuer: ECCPublicKey
+     * subject: ECCPublicKey
+     * validFrom: uint64_t
+     * validTo: uint64_t
+     * delegate: uint8_t
+     * digest: SHA256
+     * sig: ECCSignature
+     */
+    static const size_t OFFSET_VERSION = 0;
+    static const size_t OFFSET_ISSUER = OFFSET_VERSION + 4;
+    static const size_t OFFSET_SUBJECT = OFFSET_ISSUER + ECC_PUBLIC_KEY_SZ;
+    static const size_t OFFSET_VALIDFROM = OFFSET_SUBJECT + ECC_PUBLIC_KEY_SZ;
+    static const size_t OFFSET_VALIDTO = OFFSET_VALIDFROM + 8;
+    static const size_t OFFSET_DELEGATE = OFFSET_VALIDTO + 8;
+    static const size_t OFFSET_DIGEST = OFFSET_DELEGATE + 1;
+    static const size_t OFFSET_SIG = OFFSET_DIGEST + Crypto_SHA256::DIGEST_SIZE;
+    static const size_t ENCODED_LEN = OFFSET_SIG + ECC_SIGNATURE_SZ;
 
-    struct Signable {
-        uint8_t version[sizeof(uint32_t)];
-        ECCPublicKey issuer;
-        ECCPublicKey subject;
-        uint8_t validFrom[sizeof(uint64_t)];
-        uint8_t validTo[sizeof(uint64_t)];
-        uint8_t delegate;
-        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    };
-    struct Encoded {
-        Signable signable;
-        ECCSignature sig;
-    };
-    Encoded encoded;
+    uint8_t encoded[ENCODED_LEN];
     ValidPeriod validity;
 };
 
@@ -336,7 +348,7 @@ class CertificateType2 : public CertificateECC {
     CertificateType2() : CertificateECC(2)
     {
         SetVersion(2);
-        encoded.signable.delegate = false;
+        SetDelegate(false);
     }
     CertificateType2(const ECCPublicKey* issuer, const ECCPublicKey* subject);
 
@@ -348,14 +360,14 @@ class CertificateType2 : public CertificateECC {
 
     const ECCPublicKey* GetIssuer()
     {
-        return &encoded.signable.issuer;
+        return (ECCPublicKey*) &encoded[OFFSET_ISSUER];
     }
 
     void SetIssuer(const ECCPublicKey* issuer);
 
     const ECCPublicKey* GetSubject()
     {
-        return &encoded.signable.subject;
+        return (ECCPublicKey*) &encoded[OFFSET_SUBJECT];
     }
 
     void SetSubject(const ECCPublicKey* subject);
@@ -369,30 +381,30 @@ class CertificateType2 : public CertificateECC {
 
     const bool IsDelegate()
     {
-        return (bool) encoded.signable.delegate;
+        return (bool) encoded[OFFSET_DELEGATE];
     }
 
     void SetDelegate(bool enabled)
     {
-        encoded.signable.delegate = enabled;
+        encoded[OFFSET_DELEGATE] = enabled;
     }
 
     const uint8_t* GetGuild()
     {
-        return encoded.signable.guild;
+        return &encoded[OFFSET_GUILD];
     }
 
     void SetGuild(const uint8_t* newGuild, size_t guildLen);
 
     const uint8_t* GetExternalDataDigest()
     {
-        return encoded.signable.digest;
+        return &encoded[OFFSET_DIGEST];
     }
     void SetExternalDataDigest(const uint8_t* externalDataDigest);
 
     const ECCSignature* GetSig()
     {
-        return &encoded.sig;
+        return (ECCSignature*) &encoded[OFFSET_SIG];
     }
 
     void SetSig(const ECCSignature* sig);
@@ -407,7 +419,7 @@ class CertificateType2 : public CertificateECC {
      */
     const uint8_t* GetEncoded()
     {
-        return (uint8_t*) &encoded;
+        return encoded;
     }
 
     /**
@@ -416,7 +428,8 @@ class CertificateType2 : public CertificateECC {
      */
     size_t GetEncodedLen()
     {
-        return sizeof(encoded);
+        assert(sizeof(encoded) == ENCODED_LEN);
+        return ENCODED_LEN;
     }
 
     /**
@@ -447,22 +460,31 @@ class CertificateType2 : public CertificateECC {
     }
 
   private:
+    /*
+     * The encoded is a network-order byte array representing the following fields:
+     * version: uint32_t
+     * issuer: ECCPublicKey
+     * subject: ECCPublicKey
+     * validFrom: uint64_t
+     * validTo: uint64_t
+     * delegate: uint8_t
+     * guild: GUILD_ID_LEN
+     * digest: SHA256
+     * sig: ECCSignature
+     */
 
-    struct Signable {
-        uint8_t version[sizeof(uint32_t)];
-        ECCPublicKey issuer;
-        ECCPublicKey subject;
-        uint8_t validFrom[sizeof(uint64_t)];
-        uint8_t validTo[sizeof(uint64_t)];
-        uint8_t delegate;
-        uint8_t guild[GUILD_ID_LEN];
-        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    };
-    struct Encoded {
-        Signable signable;
-        ECCSignature sig;
-    };
-    Encoded encoded;
+    static const size_t OFFSET_VERSION = 0;
+    static const size_t OFFSET_ISSUER = OFFSET_VERSION + 4;
+    static const size_t OFFSET_SUBJECT = OFFSET_ISSUER + ECC_PUBLIC_KEY_SZ;
+    static const size_t OFFSET_VALIDFROM = OFFSET_SUBJECT + ECC_PUBLIC_KEY_SZ;
+    static const size_t OFFSET_VALIDTO = OFFSET_VALIDFROM + 8;
+    static const size_t OFFSET_DELEGATE = OFFSET_VALIDTO + 8;
+    static const size_t OFFSET_GUILD = OFFSET_DELEGATE + 1;
+    static const size_t OFFSET_DIGEST = OFFSET_GUILD + GUILD_ID_LEN;
+    static const size_t OFFSET_SIG = OFFSET_DIGEST + Crypto_SHA256::DIGEST_SIZE;
+    static const size_t ENCODED_LEN = OFFSET_SIG + ECC_SIGNATURE_SZ;
+
+    uint8_t encoded[ENCODED_LEN];
     ValidPeriod validity;
 
 };
