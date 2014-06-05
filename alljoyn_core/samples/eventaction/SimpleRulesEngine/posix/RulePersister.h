@@ -15,9 +15,6 @@
  ******************************************************************************/
 
 #include "../Rule.h"
-#include <stdio.h>
-#include <fstream>
-#include <iostream>
 
 #ifndef _RULE_PERSISTER_POSIX_
 #define _RULE_PERSISTER_POSIX_
@@ -33,9 +30,6 @@ class RulePersister {
     void loadRules();
 
     void clearRules();
-
-  private:
-    fstream ruleFile;
 };
 
 #endif //_RULE_PERSISTER_POSIX_
