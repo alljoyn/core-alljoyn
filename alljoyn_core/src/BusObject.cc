@@ -437,6 +437,18 @@ QStatus BusObject::AddInterface(const InterfaceDescription& iface)
         QCC_LogError(status, ("%s is automatically added if needed and cannot be added manually", iface.GetName()));
         goto ExitAddInterface;
     }
+    /* The DBus.Introspectable interface is automatically added when needed so cannot be explicitly added */
+    if (strcmp(iface.GetName(), org::freedesktop::DBus::Introspectable::InterfaceName) == 0) {
+        status = ER_BUS_IFACE_ALREADY_EXISTS;
+        QCC_LogError(status, ("%s is automatically added if needed and cannot be added manually", iface.GetName()));
+        goto ExitAddInterface;
+    }
+    /* The allseen.Introspectable interface is automatically added when needed so cannot be explicitly added */
+    if (strcmp(iface.GetName(), org::allseen::Introspectable::InterfaceName) == 0) {
+        status = ER_BUS_IFACE_ALREADY_EXISTS;
+        QCC_LogError(status, ("%s is automatically added if needed and cannot be added manually", iface.GetName()));
+        goto ExitAddInterface;
+    }
     /* Check interface has not already been added */
     if (ImplementsInterface(iface.GetName())) {
         status = ER_BUS_IFACE_ALREADY_EXISTS;
