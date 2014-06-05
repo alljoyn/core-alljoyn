@@ -51,7 +51,7 @@ namespace ajn {
 #define ARDP_TTL_INFINITE   0
 
 /* Minimum Retransmit Timeout */
-#define ARDP_MIN_RTO 1000
+#define ARDP_MIN_RTO 500
 
 /* Maximum Retransmit Timeout */
 #define ARDP_MAX_RTO 64000
@@ -704,19 +704,17 @@ static void FlushMessage(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* s
 {
     ArdpHeader* h = (ArdpHeader*) snd->hdr;
     uint16_t fcnt = ntohs(h->fcnt);
-    uint32_t len;
+    uint32_t len = 0;
     /* Original sent data buffer */
     uint8_t*buf = snd->data;
-
-    /* Calculate original message length */
-    h = (ArdpHeader*) snd[fcnt - 1].hdr;
-    len =  conn->SBUF.maxDlen * (fcnt - 1) + ntohs(h->dlen);
 
     /* Mark all fragment SND buffers as available */
     do {
         snd->inUse = false;
         snd->fastRT = 0;
+        len += ntohs(h->dlen);
         snd = snd->next;
+        h = (ArdpHeader*) snd->hdr;
         conn->SBUF.pending--;
         QCC_DbgPrintf(("FlushMessage(fcnt = %d): pending = %d", fcnt, conn->SBUF.pending));
         assert((conn->SBUF.pending < conn->SND.MAX) && "Invalid number of pending segments in send queue!");
@@ -1055,7 +1053,7 @@ inline static uint32_t GetRTO(ArdpHandle* handle, ArdpConnRecord* conn)
      * No backoff accounting.
      * RTO = rttMean + (4 * rttMeanVar)
      */
-    uint32_t ms = (uint32_t) (conn->rttMean + (4 * conn->rttMeanVar));
+    uint32_t ms = (uint32_t) (MAX((uint32_t)ARDP_MIN_RTO, conn->rttMean + (4 * conn->rttMeanVar)));
     return ms;
 }
 
