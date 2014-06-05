@@ -1348,6 +1348,7 @@ bool SessionlessObj::SendResponseIfMatch(TransportMask transport, const qcc::IPE
         MDNSPacket response;
         response->SetDestination(ns4);
         MDNSAdvertiseRData advRData;
+        advRData.SetTransport(TRANSPORT_TCP | TRANSPORT_UDP);
         advRData.SetValue("name", name);
         String guid = bus.GetInternal().GetGlobalGUID().ToString();
         MDNSResourceRecord advertiseRecord("advertise." + guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &advRData);

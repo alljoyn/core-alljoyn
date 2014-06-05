@@ -6415,6 +6415,13 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
         }
     }
 
+    //
+    // Handle the advertised names first in case one of the registered response
+    // handlers triggers an action that requires the name to be in the name
+    // table (e.g. JoinSession).
+    //
+    HandleAdvertiseResponse(mdnsPacket, recvPort, guid, ns4, ns6, r4, r6, u4, u6);
+
     m_protectListeners = true;
     m_mutex.Unlock();
     bool handled = false;
@@ -6423,12 +6430,6 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, uint16_t r
     }
     m_mutex.Lock();
     m_protectListeners = false;
-    if (handled) {
-        m_mutex.Unlock();
-        return;
-    }
-
-    HandleAdvertiseResponse(mdnsPacket, recvPort, guid, ns4, ns6, r4, r6, u4, u6);
 
     m_mutex.Unlock();
 }
