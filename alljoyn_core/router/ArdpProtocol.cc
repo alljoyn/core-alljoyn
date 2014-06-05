@@ -704,11 +704,13 @@ static void FlushMessage(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* s
 {
     ArdpHeader* h = (ArdpHeader*) snd->hdr;
     uint16_t fcnt = ntohs(h->fcnt);
-
-    /* Original message length */
-    uint32_t len =  conn->SBUF.maxDlen * (fcnt - 1) + ntohs(h->dlen);
+    uint32_t len;
     /* Original sent data buffer */
     uint8_t*buf = snd->data;
+
+    /* Calculate original message length */
+    h = (ArdpHeader*) snd[fcnt - 1].hdr;
+    len =  conn->SBUF.maxDlen * (fcnt - 1) + ntohs(h->dlen);
 
     /* Mark all fragment SND buffers as available */
     do {
