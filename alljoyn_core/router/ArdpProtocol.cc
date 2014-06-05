@@ -249,6 +249,7 @@ struct ARDP_CONN_RECORD {
     uint32_t lastSeen;      /* Last time we received communication on this connection. */
     ListNode timers;        /* List of currently scheduled timeout callbacks */
     ArdpSynSnd synSnd;      /* Connection establishment data */
+    bool rttInit;           /* Flag indicating that the first RTT was measured and SRTT calculation applies */
     uint32_t rttMean;       /* Smoothed RTT value */
     uint32_t rttMeanVar;    /* RTT variance */
     ArdpTimer* windowTimer; /* Persist timer */
@@ -1018,7 +1019,7 @@ static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reas
 
 /*
  *    error = measuredRTT - meanRTT
- *    new meanRTT = meanRTT + 1/8 * error
+ *    new meanRTT = 7/8 * meanRTT + 1/8 * error
  *    new meanVar = 3/4 * meanVar + 1/4 * |error|
  */
 static void AdjustRTT(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* snd)
@@ -1026,6 +1027,12 @@ static void AdjustRTT(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* snd)
     uint32_t now = TimeNow(handle->tbase);
     uint32_t rtt = now - snd->tStart;
     int32_t err;
+
+    if (!conn->rttInit) {
+        conn->rttMean = rtt;
+        conn->rttMeanVar = rtt >> 1;
+        conn->rttInit = true;
+    }
 
     err = rtt - conn->rttMean;
 
@@ -1041,10 +1048,10 @@ inline static uint32_t GetRTO(ArdpHandle* handle, ArdpConnRecord* conn)
 {
     /*
      * No backoff accounting.
-     * RTO = max(ARDP_MIN_RTO, rttMean + (4 * rttMeanVar))
+     * RTO = rttMean + (4 * rttMeanVar)
      */
-    uint32_t ms = MAX((uint32_t)ARDP_MIN_RTO, conn->rttMean + (4 * conn->rttMeanVar));
-    return MIN(ms, (uint32_t)ARDP_MAX_RTO);
+    uint32_t ms = (uint32_t) (conn->rttMean + (4 * conn->rttMeanVar));
+    return ms;
 }
 
 static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
@@ -1304,8 +1311,9 @@ static void InitConnRecord(ArdpHandle* handle, ArdpConnRecord* conn, qcc::Socket
 
     SetEmpty(&conn->timers);
 
+    conn->rttInit = false;
     conn->rttMean = handle->config.dataTimeout;
-    conn->rttMeanVar = handle->config.dataTimeout >> 1;
+    conn->rttMeanVar = 0;
 
     conn->sndHdrLen = ARDP_FIXED_HEADER_LEN;
     conn->rcvHdrLen = ARDP_FIXED_HEADER_LEN;
