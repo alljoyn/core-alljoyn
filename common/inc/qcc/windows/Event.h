@@ -230,7 +230,7 @@ class Event {
     qcc::SocketFd ioFd;     /**< Socket descriptor or -1 if not socket based IO */
     int32_t numThreads;     /**< Number of threads currently waiting on this event */
     bool networkIfaceEvent;
-    OVERLAPPED overlap;
+    HANDLE networkIfaceHandle;
 
     /**
      * Protected copy constructor.

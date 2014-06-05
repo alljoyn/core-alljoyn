@@ -24,6 +24,8 @@
 #include <map>
 #include <list>
 #include <winsock2.h>
+#include <ws2def.h>
+#include <ws2ipdef.h>
 #include <iphlpapi.h>
 #include <windows.h>
 #include <errno.h>
@@ -46,8 +48,20 @@ namespace qcc {
 static const long READ_SET = FD_READ | FD_CLOSE | FD_ACCEPT;
 static const long WRITE_SET = FD_WRITE | FD_CLOSE | FD_CONNECT;
 
+
+VOID WINAPI IpInterfaceChangeCallback(PVOID arg, PMIB_IPINTERFACE_ROW row, MIB_NOTIFICATION_TYPE notificationType);
+
 VOID CALLBACK IoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired);
 
+
+void WINAPI IpInterfaceChangeCallback(PVOID arg, PMIB_IPINTERFACE_ROW row, MIB_NOTIFICATION_TYPE notificationType)
+{
+    Event* event = (Event*) arg;
+    QCC_DbgHLPrintf(("Received network interface event type %u", notificationType));
+    if (!::SetEvent(event->GetHandle())) {
+        QCC_LogError(ER_OS_ERROR, ("Setting network interface event failed"));
+    }
+}
 
 class IoEventMonitor {
   public:
@@ -426,7 +440,7 @@ Event::Event() :
     ioFd(-1),
     numThreads(0),
     networkIfaceEvent(false),
-    overlap(OVERLAPPED())
+    networkIfaceHandle(INVALID_HANDLE_VALUE)
 {
 }
 
@@ -439,12 +453,10 @@ Event::Event(bool networkIfaceEvent) :
     ioFd(-1),
     numThreads(0),
     networkIfaceEvent(networkIfaceEvent),
-    overlap(OVERLAPPED())
+    networkIfaceHandle(INVALID_HANDLE_VALUE)
 {
     if (networkIfaceEvent) {
-        HANDLE h = NULL;
-        overlap.hEvent = handle;
-        NotifyAddrChange(&h, &overlap);
+        NotifyIpInterfaceChange(AF_UNSPEC, (PIPINTERFACE_CHANGE_CALLBACK)IpInterfaceChangeCallback, this, false, &networkIfaceHandle);
     }
 }
 
@@ -457,7 +469,7 @@ Event::Event(Event& event, EventType eventType, bool genPurpose) :
     ioFd(event.ioFd),
     numThreads(0),
     networkIfaceEvent(false),
-    overlap(OVERLAPPED())
+    networkIfaceHandle(INVALID_HANDLE_VALUE)
 {
     /* Create an auto reset event for the socket fd */
     if (ioFd > 0) {
@@ -479,7 +491,7 @@ Event::Event(int ioFd, EventType eventType, bool genPurpose) :
     ioFd(ioFd),
     numThreads(0),
     networkIfaceEvent(false),
-    overlap(OVERLAPPED())
+    networkIfaceHandle(INVALID_HANDLE_VALUE)
 {
     /* Create an auto reset event for the socket fd */
     if (ioFd > 0) {
@@ -501,7 +513,7 @@ Event::Event(uint32_t timestamp, uint32_t period) :
     ioFd(-1),
     numThreads(0),
     networkIfaceEvent(false),
-    overlap(OVERLAPPED())
+    networkIfaceHandle(INVALID_HANDLE_VALUE)
 {
 }
 
@@ -524,6 +536,11 @@ Event::~Event()
     /* Close the handles */
     if (handle != INVALID_HANDLE_VALUE) {
         CloseHandle(handle);
+    }
+
+    /* Cancel network change notification */
+    if (networkIfaceEvent && networkIfaceHandle != INVALID_HANDLE_VALUE) {
+        CancelMibChangeNotify2(networkIfaceHandle);
     }
 }
 
@@ -562,10 +579,6 @@ QStatus Event::ResetEvent()
         if (!::ResetEvent(handle)) {
             status = ER_FAIL;
             QCC_LogError(status, ("ResetEvent failed with %d", GetLastError()));
-        }
-        if (networkIfaceEvent) {
-            HANDLE h = NULL;
-            NotifyAddrChange(&h, &overlap);
         }
     } else if (TIMED == eventType) {
         if (0 < period) {
