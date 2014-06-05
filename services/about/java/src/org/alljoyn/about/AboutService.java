@@ -87,6 +87,26 @@ public interface AboutService extends ServiceCommon
 
     /**
      * Register a handler for Announcements.
+     *
+     * The announcement handler is only called if the all the interfaces are implemented.
+     * i.e. if addAnnouncementHandler is called while specifying both com.example.media
+     * interface and the com.example.media.server interface as follows.
+     * <code>
+     * addAnnouncementHandler(handler, new String[]{"com.example.media", "com.example.media.server"});
+     * </code>
+     * then the AnnouncementHandler will only be called if both interfaces are implemented.
+     *
+     * If AnnouncementHandler should be called if "com.example.media" or
+     * "com.example.media.server" is implemented then call addAnnounceHandlerMultiple times
+     * <code>
+     * addAnnouncementHandler(handler, new String[]{"com.example.media.server"});
+     * addAnnouncementHandler(handler, new String[]{"com.example.media"});
+     * </code>
+     *
+     * If the same handler is used for for multiple interfaces.  It is the handlers
+     * responsibility to parse through the reported interfaces to figure out what
+     * should be done in response to the Announce signal.
+     *
      * @param handler The AnnouncementHandler that will be receiving the Announce signal
      * @param interfaces an array of interfaces the remote service must implement to receive
      *                   the Announce signal.  if interfaces == null the handler will receive
@@ -97,6 +117,10 @@ public interface AboutService extends ServiceCommon
 
     /**
      * Unregister a handler for Announcements.
+     *
+     * When calling removeAnnouncementHandler the list of interfaces must match
+     * the list that was used when calling addAnnouncementHander.
+     *
      * @param handler the AnnouncementHandler to remove. The Set of interfaces must be the
      *                same as the set used when calling addAnnouncementHandler.
      * @param interfaces an array of interfaces that were used when calling addAnnouncementHandler
