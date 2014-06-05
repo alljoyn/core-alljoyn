@@ -92,8 +92,9 @@ static QStatus SendSGCommon(SocketFd sockfd,
 
     DWORD dwsent;
     DWORD ret = WSASendMsg(static_cast<SOCKET>(sockfd), &msg, 0, &dwsent, NULL, NULL);
-    if (ret == SOCKET_ERROR) {
-        if (WSAGetLastError() == WSAEWOULDBLOCK) {
+    DWORD err;
+    if (ret == SOCKET_ERROR && (err = WSAGetLastError()) != WSA_IO_PENDING) {
+        if (err == WSAEWOULDBLOCK || err == WSAEINPROGRESS || err == WSAEINTR) {
             status = ER_WOULDBLOCK;
             sent = 0;
         } else {
