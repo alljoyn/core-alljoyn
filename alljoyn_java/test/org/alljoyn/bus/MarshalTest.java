@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -85,6 +85,8 @@ public class MarshalTest extends TestCase {
         public byte[] ByteArray(byte[] ay) throws BusException { return ay; }
 
         public boolean[] BooleanArray(boolean[] ab) throws BusException { return ab; }
+
+        public Boolean[] CapitalBooleanArray(Boolean[] aB) throws BusException { return aB; }
 
         public short[] Int16Array(short[] an) throws BusException { return an; }
 
@@ -584,6 +586,8 @@ public class MarshalTest extends TestCase {
         public byte[] ByteArray(byte[] ay) throws BusException { return null; }
 
         public boolean[] BooleanArray(boolean[] ab) throws BusException { return null; }
+
+        public Boolean[] CapitalBooleanArray(Boolean[] aB) throws BusException { return null; }
 
         public short[] Int16Array(short[] an) throws BusException { return null; }
 
@@ -1123,6 +1127,11 @@ public class MarshalTest extends TestCase {
         for (int i = 0;  i < ab2.length; ++i) {
             assertEquals(ab2[i], ab[i]);
         }
+        Boolean[] aB = new Boolean[] { true, false };
+        Boolean[] aB2 = proxy.CapitalBooleanArray(aB);
+        for (int i = 0;  i < aB2.length; ++i) {
+            assertEquals(aB2[i], aB[i]);
+        }
         short[] an = new short[] { 3, 4, 5 };
         assertArrayEquals(an, proxy.Int16Array(an));
         int[] ai = new int[] { 7 }; 
@@ -1582,6 +1591,11 @@ public class MarshalTest extends TestCase {
         boolean[] ab2 = proxy.BooleanArray(ab);
         for (int i = 0;  i < ab2.length; ++i) {
             assertEquals(ab2[i], ab[i]);
+        }
+        Boolean[] aB = new Boolean[] { true, false };
+        Boolean[] aB2 = proxy.CapitalBooleanArray(aB);
+        for (int i = 0;  i < aB2.length; ++i) {
+            assertEquals(aB2[i], aB[i]);
         }
         String[] ao = new String[] { "/path1", "/path2" };
         assertArrayEquals(ao, proxy.ObjectPathArray(ao));
@@ -2437,6 +2451,13 @@ public class MarshalTest extends TestCase {
         assertEquals(true, thrown);
         thrown = false;
         try {
+            proxy.CapitalBooleanArray(null);
+        } catch (MarshalBusException ex) {
+            thrown = true;
+        }
+        assertEquals(true, thrown);
+        thrown = false;
+        try {
             proxy.Int16Array(null);
         } catch (MarshalBusException ex) {
             thrown = true;
@@ -3084,6 +3105,14 @@ public class MarshalTest extends TestCase {
         try {
             boolean[] ab = new boolean[] { true, false };
             proxy.BooleanArray(ab);
+        } catch (BusException ex) {
+            thrown = true;
+        }
+        assertEquals(true, thrown);
+        thrown = false;
+        try {
+            Boolean[] aB = new Boolean[] { true, false };
+            proxy.CapitalBooleanArray(aB);
         } catch (BusException ex) {
             thrown = true;
         }

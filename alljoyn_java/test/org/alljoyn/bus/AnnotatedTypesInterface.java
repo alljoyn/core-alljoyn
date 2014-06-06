@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -300,6 +300,9 @@ public interface AnnotatedTypesInterface {
 
     @BusMethod(signature="ab", replySignature="ab")
     public boolean[] BooleanArray(boolean[] ab) throws BusException;
+
+    @BusMethod(signature="ab", replySignature="ab")
+    public Boolean[] CapitalBooleanArray(Boolean[] aB) throws BusException;
 
     @BusMethod(signature="ao", replySignature="ao")
     public String[] ObjectPathArray(String[] ao) throws BusException;
