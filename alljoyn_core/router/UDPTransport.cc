@@ -3309,6 +3309,8 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
             int32_t tRemaining = tStop + m_ardpConfig.timewait - tNow;
             if (tRemaining < 0) {
                 QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d stalled", ep->GetConnId()));
+                qcc::Sleep(10);
+                Alert();
             }
 
             if (threadSetEmpty && disconnected && notPending) {
