@@ -576,3 +576,66 @@ TEST_F(BusAttachmentTest, Ping_other_on_same_bus) {
     otherBus.Stop();
     otherBus.Join();
 }
+
+
+static bool pingAsyncFlag = false;
+
+class TestPingAsyncCB : public BusAttachment::PingAsyncCB {
+  public:
+    TestPingAsyncCB() : m_status(ER_FAIL), m_context(NULL) { }
+
+    void PingCB(QStatus status, void* context) {
+        m_status = status;
+        m_context = context;
+        pingAsyncFlag = true;
+    }
+    QStatus m_status;
+    void* m_context;
+};
+
+TEST_F(BusAttachmentTest, Ping_self_async) {
+    pingAsyncFlag = false;
+    TestPingAsyncCB pingCB;
+    const char* contextStr = "PingContextTestString";
+    ASSERT_EQ(ER_OK, bus.PingAsync(bus.GetUniqueName().c_str(), 1000, &pingCB, (void*)contextStr));
+
+    //wait just over 1 seconds
+    for (size_t msecs = 0; msecs < 1100; msecs += 5) {
+        if (pingAsyncFlag) {
+            break;
+        }
+        qcc::Sleep(5);
+    }
+
+    EXPECT_EQ(ER_OK, pingCB.m_status);
+    EXPECT_STREQ(contextStr, (char*)pingCB.m_context);
+}
+
+TEST_F(BusAttachmentTest, PingAsync_other_on_same_bus) {
+    BusAttachment otherBus("BusAttachment OtherBus", false);
+
+    QStatus status = ER_OK;
+    status = otherBus.Start();
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = otherBus.Connect(getConnectArg().c_str());
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    pingAsyncFlag = false;
+    TestPingAsyncCB pingCB;
+    const char* contextStr = "PingOtherContextTestString";
+    ASSERT_EQ(ER_OK, bus.PingAsync(otherBus.GetUniqueName().c_str(), 1000,  &pingCB, (void*)contextStr));
+
+    //wait just over 1 seconds
+    for (size_t msecs = 0; msecs < 1100; msecs += 5) {
+        if (pingAsyncFlag) {
+            break;
+        }
+        qcc::Sleep(5);
+    }
+
+    EXPECT_EQ(ER_OK, pingCB.m_status);
+    EXPECT_STREQ(contextStr, (char*)pingCB.m_context);
+
+    otherBus.Stop();
+    otherBus.Join();
+}
