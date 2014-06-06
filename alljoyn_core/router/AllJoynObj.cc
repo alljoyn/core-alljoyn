@@ -4615,7 +4615,7 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
 
 void AllJoynObj::PingReplyMethodHandler(Message& reply, void* context)
 {
-    QCC_LogError(ER_OK, ("AllJoynObj::PingReplyMethodHandler(Message, context)"));
+    QCC_DbgTrace(("AllJoynObj::PingReplyMethodHandler()"));
     Message* msg = static_cast<Message*>(context);
     uint32_t replyCode = (ajn::MESSAGE_ERROR == reply->GetType()) ? ALLJOYN_PING_REPLY_FAILED : ALLJOYN_PING_REPLY_SUCCESS;
     PingReplyMethodHandlerUsingCode(*msg, replyCode);
