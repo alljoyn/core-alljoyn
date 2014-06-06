@@ -52,23 +52,23 @@ private:
     /** The objective-c delegate to communicate with whenever JoinSessionCB is called.
      */
     __weak id<AJNLinkTimeoutDelegate> m_delegate;
-    
+
     /** The objective-c block to call when JoinSessionCB is called.
      */
     AJNLinkTimeoutBlock m_block;
 public:
     /** Constructors */
     AJNSetLinkTimeoutAsyncCallbackImpl(id<AJNLinkTimeoutDelegate> delegate) : m_delegate(delegate) { }
-    
+
     AJNSetLinkTimeoutAsyncCallbackImpl(AJNLinkTimeoutBlock block) : m_block(block) { }
-    
+
     /** Destructor */
     virtual ~AJNSetLinkTimeoutAsyncCallbackImpl() 
     { 
         m_delegate = nil;
         m_block = nil;
     }
-    
+
     /**
      * Called when SetLinkTimeoutAsync() completes.
      *
@@ -93,7 +93,7 @@ public:
             });
         }
     }
-    
+
 };
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -110,7 +110,7 @@ private:
     /** The objective-c delegate to communicate with whenever JoinSessionCB is called.
      */
     __weak id<AJNSessionDelegate> m_delegate;
-    
+
     /** The objective-c block to call when JoinSessionCB is called.
      */
     AJNJoinSessionBlock m_block;
@@ -126,7 +126,7 @@ public:
         m_delegate = nil;
         m_block = nil;
     }
-    
+
     /**
      * Called when JoinSessionAsync() completes.
      *
@@ -152,7 +152,7 @@ public:
             });
         }
     }
-    
+
 };
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -164,6 +164,7 @@ public:
 @property (nonatomic, strong) NSMutableArray *signalHandlers;
 @property (nonatomic, strong) NSMutableArray *keyStoreListeners;
 @property (nonatomic, strong) NSMutableArray *authenticationListeners;
+@property (nonatomic, strong) NSMutableArray *translatorImpls;
 
 /** C++ AllJoyn API object
  */
@@ -179,6 +180,7 @@ public:
 @synthesize signalHandlers = _signalHandlers;
 @synthesize keyStoreListeners = _keyStoreListeners;
 @synthesize authenticationListeners = _authenticationListeners;
+@synthesize translatorImpls = _translatorImpls;
 
 /** Accessor for the internal C++ API object this objective-c class encapsulates
  */
@@ -233,6 +235,14 @@ public:
         _authenticationListeners = [[NSMutableArray alloc] init];
     }
     return _authenticationListeners;
+}
+
+- (NSMutableArray*)translatorImpls
+{
+    if (_translatorImpls == nil) {
+        _translatorImpls = [[NSMutableArray alloc] init];
+    }
+    return _translatorImpls;
 }
 
 - (BOOL)isConnected
@@ -358,7 +368,7 @@ public:
         }
         [self.sessionPortListeners removeAllObjects];
     }
-    
+
     @synchronized(self.keyStoreListeners) {
         for (NSValue *ptrValue in self.keyStoreListeners) {
             AJNKeyStoreListenerImpl * listenerImpl = (AJNKeyStoreListenerImpl*)[ptrValue pointerValue];
@@ -375,14 +385,16 @@ public:
         [self.authenticationListeners removeAllObjects];
     }
 
+    @synchronized(self.translatorImpls) {
+        for (NSValue *ptrValue in self.translatorImpls) {
+            AJNTranslatorImpl * translatorImpl = (AJNTranslatorImpl*)[ptrValue pointerValue];
+            delete translatorImpl;
+        }
+        [self.translatorImpls removeAllObjects];
+    }
+
     @synchronized(self.signalHandlers) {
         [self.signalHandlers removeAllObjects];
-    }
-    
-    if(self.translator)
-    {
-        delete (AJNTranslatorImpl*)self.translator;
-        self.translator = nil;
     }
 
     ajn::BusAttachment* ptr = [self busAttachment];
@@ -408,6 +420,8 @@ public:
     else {
         interfaceDescription = [[AJNInterfaceDescription alloc] initWithHandle:handle];
     }
+
+    interfaceDescription.bus = self;
     return interfaceDescription;
 }
 
@@ -422,19 +436,22 @@ public:
     else {
         interfaceDescription = [[AJNInterfaceDescription alloc] initWithHandle:handle];
     }
+
+    interfaceDescription.bus = self;
     return interfaceDescription;
 }
 
 - (AJNInterfaceDescription*)interfaceWithName:(NSString*)interfaceName
 {
     const ajn::InterfaceDescription *pInterfaceDescription = self.busAttachment->GetInterface([interfaceName UTF8String]);
-    
+
     AJNInterfaceDescription *interfaceDescription;
-    
+
     if (pInterfaceDescription) {
         interfaceDescription = [[AJNInterfaceDescription alloc] initWithHandle:(AJNHandle)pInterfaceDescription];
     }
 
+    interfaceDescription.bus = self;
     return interfaceDescription;
 }
 
@@ -504,7 +521,7 @@ public:
     @synchronized(self.signalHandlers) {
         [self.signalHandlers addObject:delegate];
     }
-    
+
     static_cast<AJNSignalHandlerImpl*>(delegate.handle)->RegisterSignalHandler(*self.busAttachment);    
 }
 
@@ -523,7 +540,7 @@ public:
     if ([receiver conformsToProtocol:@protocol(AJNSignalHandler)]) {
         [self unregisterSignalHandler:(id<AJNSignalHandler>)receiver];
     }
-    
+
     if ([receiver conformsToProtocol:@protocol(AJNBusListener)]) {
         [self unregisterBusListener:(id<AJNBusListener>)receiver];
     }
@@ -540,6 +557,13 @@ public:
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::registerBusObject failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
+
+    if(busObject.translator != 0)
+    {
+        [self holdTranslatorImpl:busObject.translator];
+        busObject.translator = nil;
+    }
+
     return status;
 }
 
@@ -939,12 +963,16 @@ public:
 
 - (void)setDescriptionTranslator:(id<AJNTranslator>)translator
 {
-    if(self.translator)
-    {
-        delete (AJNTranslatorImpl*)self.translator;
+    AJNTranslatorImpl* translatorImpl = new AJNTranslatorImpl(translator);
+    [self busAttachment]->SetDescriptionTranslator(translatorImpl);
+    [self holdTranslatorImpl:translatorImpl];
+}
+
+- (void)holdTranslatorImpl:(void*)translatorImpl
+{
+    @synchronized(self.translatorImpls) {
+        [self.translatorImpls addObject:[NSValue valueWithPointer:translatorImpl]];
     }
-    self.translator = new AJNTranslatorImpl(translator);
-    [self busAttachment]->SetDescriptionTranslator((ajn::Translator*)self.translator);
 }
 
 

@@ -19,6 +19,9 @@
 #import "AJNInterfaceProperty.h"
 #import "AJNObject.h"
 #import "AJNTranslator.h"
+
+@class AJNBusAttachment;
+
 /**
  * Class for describing message bus interfaces. AJNInterfaceDescription objects describe the methods,
  * signals and properties of a AJNBusObject or AJNProxyBusObject.
@@ -67,7 +70,7 @@
  */
 @property (readonly, nonatomic) BOOL hasProperties;
 
-@property (nonatomic) void* translator;
+@property (nonatomic) AJNBusAttachment *bus;
 
 /**
  * The interface security policy can be inherit, required, or off. If security is
