@@ -4267,19 +4267,9 @@ void* UDPTransport::Run(void* arg)
              * will not happen on this side.  We need to bug this thread (send
              * an Alert() to wake us up) if we do anything that may require
              * deferred action.  Since we don't know what that might be, it
-             * means we need to do the Alert() whenever we call into ARDP.
+             * means we need to do the Alert() whenever we call into ARDP and
+             * do something we expect to require a retransmission or callback.
              */
-            if (ms != (uint32_t)-1) {
-                printf("=====================================================================\n");
-                printf("========UDPTransport::Run(): ARDP says wake up in %d. ms ============\n", ms);
-                printf("=====================================================================\n");
-            } else {
-                /*
-                 * BUGBUG FIXME TODO: Workaround for ARDP bug.  Remove when
-                 * ms is set properly.
-                 */
-                ms = UDP_ENDPOINT_ARDP_TIMER;
-            }
             ardpTimerEvent.ResetTime(ms, 0);
         }
     }
