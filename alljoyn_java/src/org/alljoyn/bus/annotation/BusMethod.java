@@ -54,7 +54,7 @@ public @interface BusMethod {
     /**
      * Description of this method
      */
-	String description() default "";
+    String description() default "";
 
     /** No reply annotate flag. */
     int ANNOTATE_NO_REPLY = 1;

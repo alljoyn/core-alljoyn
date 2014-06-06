@@ -30,7 +30,7 @@ public class PasswordManagerTest extends TestCase {
     }
 
     public void testSetCredentials() throws Exception {
-	PasswordManager.setCredentials("ABC","1234");
+    PasswordManager.setCredentials("ABC","1234");
     }
 }
 

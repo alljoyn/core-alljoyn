@@ -54,7 +54,7 @@ class InterfaceDescription {
     private static final int AJ_IFC_SECURITY_REQUIRED  = 1; /**< Security is required for an interface */
     private static final int AJ_IFC_SECURITY_OFF       = 2; /**< Security does not apply to this interface */
 
-	private static Map<String, Translator> translatorCache = new HashMap<String, Translator>();
+    private static Map<String, Translator> translatorCache = new HashMap<String, Translator>();
 
     private class Property {
 
@@ -99,7 +99,7 @@ class InterfaceDescription {
     }
 
     /** Allocate native resources. */
-    private native Status create(BusAttachment busAttachment, String name, 
+    private native Status create(BusAttachment busAttachment, String name,
             int securePolicy, int numProps, int numMembers);
 
     /** Add a member to the native interface description. */
@@ -118,11 +118,11 @@ class InterfaceDescription {
     /** Add an annotation to the interface */
     private native Status addAnnotation(String annotation, String value);
 
-	private native void setDescriptionLanguage(String language);
-	private native void setDescription(String Description);
-	private native void setDescriptionTranslator(Translator dt);
-	private native Status setMemberDescription(String member, String description, boolean isSessionlessSignal);
-	private native Status setPropertyDescription(String propName, String description);
+    private native void setDescriptionLanguage(String language);
+    private native void setDescription(String Description);
+    private native void setDescriptionTranslator(Translator dt);
+    private native Status setMemberDescription(String member, String description, boolean isSessionlessSignal);
+    private native Status setPropertyDescription(String propName, String description);
 
     /** Activate the interface on the bus. */
     private native void activate();
@@ -189,7 +189,7 @@ class InterfaceDescription {
             securePolicy = AJ_IFC_SECURITY_INHERIT;
         }
         status = create(busAttachment, getName(busInterface), securePolicy, properties.size(),
-                members.size());
+                        members.size());
         if (status != Status.OK) {
             return status;
         }
@@ -212,66 +212,66 @@ class InterfaceDescription {
             }
         }
 
-		configureDescriptions(busInterface);
+        configureDescriptions(busInterface);
 
         activate();
         return Status.OK;
     }
 
-	private void configureDescriptions(Class<?> busInterface) throws AnnotationBusException {
-		BusInterface ifcNote = busInterface.getAnnotation(BusInterface.class);
-		if(null == ifcNote) return;
+    private void configureDescriptions(Class<?> busInterface) throws AnnotationBusException {
+        BusInterface ifcNote = busInterface.getAnnotation(BusInterface.class);
+        if(null == ifcNote) return;
 
-		boolean hasDescriptions = false;
-		
-		if(!ifcNote.description().equals("")){
-			setDescription(ifcNote.description());
-			hasDescriptions = true;
-		}
+        boolean hasDescriptions = false;
 
-		for(Method method : busInterface.getMethods()) {
-			String name = getName(method);
+        if(!ifcNote.description().equals("")){
+            setDescription(ifcNote.description());
+            hasDescriptions = true;
+        }
 
-			BusMethod methodNote = method.getAnnotation(BusMethod.class);
-			if(null != methodNote && (methodNote.description().length() > 0)){
-				setMemberDescription(name, methodNote.description(), false);
-				hasDescriptions = true;
-			}
+        for(Method method : busInterface.getMethods()) {
+            String name = getName(method);
 
-			BusSignal signalNote = method.getAnnotation(BusSignal.class);
-			if(null != signalNote && (signalNote.description().length() > 0)){
-				setMemberDescription(name, signalNote.description(), signalNote.sessionless());
-				hasDescriptions = true;
-			}
+            BusMethod methodNote = method.getAnnotation(BusMethod.class);
+            if(null != methodNote && (methodNote.description().length() > 0)){
+                setMemberDescription(name, methodNote.description(), false);
+                hasDescriptions = true;
+            }
 
-			BusProperty propNote = method.getAnnotation(BusProperty.class);
-			if(null != propNote && (propNote.description().length() > 0)){
-				setPropertyDescription(name, propNote.description());
-				hasDescriptions = true;
-			}
-		}
+            BusSignal signalNote = method.getAnnotation(BusSignal.class);
+            if(null != signalNote && (signalNote.description().length() > 0)){
+                setMemberDescription(name, signalNote.description(), signalNote.sessionless());
+                hasDescriptions = true;
+            }
 
-		if(hasDescriptions) {
-			setDescriptionLanguage(ifcNote.descriptionLanguage());
-		}
+            BusProperty propNote = method.getAnnotation(BusProperty.class);
+            if(null != propNote && (propNote.description().length() > 0)){
+                setPropertyDescription(name, propNote.description());
+                hasDescriptions = true;
+            }
+        }
 
-		try{
-			if(ifcNote.descriptionTranslator().length() > 0){
-				//We store these so as not to create a separate instance each time it is used.
-				//Although this means we'll be holding on to each instance forever this is probably
-				//not a problem since most Translators will need to live forever anyway
-				Translator dt = translatorCache.get(ifcNote.descriptionTranslator());
-				if(null == dt) {
-					Class c = Class.forName(ifcNote.descriptionTranslator());
-					dt = (Translator)c.newInstance();
-					translatorCache.put(ifcNote.descriptionTranslator(), dt);
-				}
-				setDescriptionTranslator(dt);
-			}
-		}catch(Exception e) {
-			e.printStackTrace();
-		}
-	}
+        if(hasDescriptions) {
+            setDescriptionLanguage(ifcNote.descriptionLanguage());
+        }
+
+        try{
+            if(ifcNote.descriptionTranslator().length() > 0){
+                //We store these so as not to create a separate instance each time it is used.
+                //Although this means we'll be holding on to each instance forever this is probably
+                //not a problem since most Translators will need to live forever anyway
+                Translator dt = translatorCache.get(ifcNote.descriptionTranslator());
+                if(null == dt) {
+                    Class c = Class.forName(ifcNote.descriptionTranslator());
+                    dt = (Translator)c.newInstance();
+                    translatorCache.put(ifcNote.descriptionTranslator(), dt);
+                }
+                setDescriptionTranslator(dt);
+            }
+        }catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     private Status getProperties(Class<?> busInterface) throws AnnotationBusException {
         for (Method method : busInterface.getMethods()) {
@@ -358,7 +358,7 @@ class InterfaceDescription {
 
                 String memberName = getName(member);
                 Status status = addMember(type, memberName, getInputSig(member),
-                        getOutSig(member), annotation, accessPerm);
+                                          getOutSig(member), annotation, accessPerm);
                 if (status != Status.OK) {
                     return status;
                 }

@@ -52,7 +52,7 @@ public class DBusProxyObjTest extends TestCase {
 
     public void tearDown() throws Exception {
         dbus = null;
-        
+
         bus.disconnect();
         bus = null;
     }
@@ -112,36 +112,36 @@ public class DBusProxyObjTest extends TestCase {
     }
 
     public void testGetConnectionUnixUser() throws Exception {
-    	if ( System.getProperty("os.name").startsWith("Windows")){
-    		/* 
-    		 * In windows there is no UnixUser.  Calling the DBus method 
-    		 * GetConnectionUnixUser will result in a ErrorReplyBusEception when
-    		 * running in windows.
-    		 */
-    		String name = "org.alljoyn.bus.ifaces.testGetConnectionUnixUser";
-    		DBusProxyObj.RequestNameResult res1 = dbus.RequestName(name, DBusProxyObj.REQUEST_NAME_NO_FLAGS);
-    		assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, res1);
-    		boolean thrown = false;
-    		try {
-    			int uid = dbus.GetConnectionUnixUser(name);
-    		} catch (ErrorReplyBusException ex) {
-    			thrown=true;
-    		} finally {
-    			assertTrue(thrown);
-    		}
-    		
-    		DBusProxyObj.ReleaseNameResult res2 = dbus.ReleaseName(name);
-    		assertEquals(DBusProxyObj.ReleaseNameResult.Released, res2);
-    	} else {
-    		String name = "org.alljoyn.bus.ifaces.testGetConnectionUnixUser";
-    		DBusProxyObj.RequestNameResult res1 = dbus.RequestName(name, DBusProxyObj.REQUEST_NAME_NO_FLAGS);
-    		assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, res1);
+        if ( System.getProperty("os.name").startsWith("Windows")){
+            /*
+             * In windows there is no UnixUser.  Calling the DBus method
+             * GetConnectionUnixUser will result in a ErrorReplyBusEception when
+             * running in windows.
+             */
+            String name = "org.alljoyn.bus.ifaces.testGetConnectionUnixUser";
+            DBusProxyObj.RequestNameResult res1 = dbus.RequestName(name, DBusProxyObj.REQUEST_NAME_NO_FLAGS);
+            assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, res1);
+            boolean thrown = false;
+            try {
+                int uid = dbus.GetConnectionUnixUser(name);
+            } catch (ErrorReplyBusException ex) {
+                thrown=true;
+            } finally {
+                assertTrue(thrown);
+            }
 
-    		int uid = dbus.GetConnectionUnixUser(name);
+            DBusProxyObj.ReleaseNameResult res2 = dbus.ReleaseName(name);
+            assertEquals(DBusProxyObj.ReleaseNameResult.Released, res2);
+        } else {
+            String name = "org.alljoyn.bus.ifaces.testGetConnectionUnixUser";
+            DBusProxyObj.RequestNameResult res1 = dbus.RequestName(name, DBusProxyObj.REQUEST_NAME_NO_FLAGS);
+            assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, res1);
 
-    		DBusProxyObj.ReleaseNameResult res2 = dbus.ReleaseName(name);
-    		assertEquals(DBusProxyObj.ReleaseNameResult.Released, res2);
-    	}
+            int uid = dbus.GetConnectionUnixUser(name);
+
+            DBusProxyObj.ReleaseNameResult res2 = dbus.ReleaseName(name);
+            assertEquals(DBusProxyObj.ReleaseNameResult.Released, res2);
+        }
     }
 
     public void testGetConnectionUnixUserNoName() throws Exception {
@@ -156,36 +156,36 @@ public class DBusProxyObjTest extends TestCase {
     }
 
     public void testGetConnectionUnixProcessID() throws Exception {
-    	if ( System.getProperty("os.name").startsWith("Windows")){
-    		/* 
-    		 * In windows there is no UnixUser.  Calling the DBus method 
-    		 * GetConnectionUnixProcessID will result in a ErrorReplyBusEception 
-    		 * when running in windows.
-    		 */
-    		String name = "org.alljoyn.bus.ifaces.testGetConnectionUnixProcessID";
-    		DBusProxyObj.RequestNameResult res1 = dbus.RequestName(name, DBusProxyObj.REQUEST_NAME_NO_FLAGS);
-    		assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, res1);
-    		boolean thrown = false;
-    		try {
-    			int pid = dbus.GetConnectionUnixProcessID(name);
-    		} catch (ErrorReplyBusException ex) {
-    			thrown = true;
-    		} finally {
-    			assertTrue(thrown);
-    		}
+        if ( System.getProperty("os.name").startsWith("Windows")){
+            /*
+             * In windows there is no UnixUser.  Calling the DBus method
+             * GetConnectionUnixProcessID will result in a ErrorReplyBusEception
+             * when running in windows.
+             */
+            String name = "org.alljoyn.bus.ifaces.testGetConnectionUnixProcessID";
+            DBusProxyObj.RequestNameResult res1 = dbus.RequestName(name, DBusProxyObj.REQUEST_NAME_NO_FLAGS);
+            assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, res1);
+            boolean thrown = false;
+            try {
+                int pid = dbus.GetConnectionUnixProcessID(name);
+            } catch (ErrorReplyBusException ex) {
+                thrown = true;
+            } finally {
+                assertTrue(thrown);
+            }
 
-    		DBusProxyObj.ReleaseNameResult res2 = dbus.ReleaseName(name);
-    		assertEquals(DBusProxyObj.ReleaseNameResult.Released, res2);    		
-    	} else {
-    		String name = "org.alljoyn.bus.ifaces.testGetConnectionUnixProcessID";
-    		DBusProxyObj.RequestNameResult res1 = dbus.RequestName(name, DBusProxyObj.REQUEST_NAME_NO_FLAGS);
-    		assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, res1);
+            DBusProxyObj.ReleaseNameResult res2 = dbus.ReleaseName(name);
+            assertEquals(DBusProxyObj.ReleaseNameResult.Released, res2);
+        } else {
+            String name = "org.alljoyn.bus.ifaces.testGetConnectionUnixProcessID";
+            DBusProxyObj.RequestNameResult res1 = dbus.RequestName(name, DBusProxyObj.REQUEST_NAME_NO_FLAGS);
+            assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, res1);
 
-    		int pid = dbus.GetConnectionUnixProcessID(name);
+            int pid = dbus.GetConnectionUnixProcessID(name);
 
-    		DBusProxyObj.ReleaseNameResult res2 = dbus.ReleaseName(name);
-    		assertEquals(DBusProxyObj.ReleaseNameResult.Released, res2);
-    	}
+            DBusProxyObj.ReleaseNameResult res2 = dbus.ReleaseName(name);
+            assertEquals(DBusProxyObj.ReleaseNameResult.Released, res2);
+        }
     }
 
     public void testGetConnectionUnixProcessIDNoName() throws Exception {
@@ -204,7 +204,7 @@ public class DBusProxyObjTest extends TestCase {
         dbus.RemoveMatch("type='signal'");
     }
 
-    /* 
+    /*
      * Ignored because DBus daemon returns both a METHOD_RET and ERROR
      * message for this.  The ERROR message is discarded due to the
      * METHOD_RET (will see ER_ALLJOYN_UNMATCHED_REPLY_SERIAL in output),
@@ -239,7 +239,7 @@ public class DBusProxyObjTest extends TestCase {
             notify();
         }
     }
-    
+
     @BusSignalHandler(iface="org.freedesktop.DBus", signal="NameLost")
     public void NameLost(String name) throws BusException {
         if (nameAcquired.equals(name)) {
@@ -259,7 +259,7 @@ public class DBusProxyObjTest extends TestCase {
     }
 
     public void testNameSignals() throws Exception {
-        Status status = bus.registerSignalHandlers(this);        
+        Status status = bus.registerSignalHandlers(this);
         if (Status.OK != status) {
             throw new BusException("Cannot register signal handler");
         }
@@ -289,65 +289,65 @@ public class DBusProxyObjTest extends TestCase {
         }
         bus.unregisterSignalHandlers(this);
     }
-    
+
     public void testListQueuedOwners() throws Exception {
         String name = "org.alljoyn.bus.ifaces.testListQueuedOwners";
-        String[] queuedNames; 
+        String[] queuedNames;
         Status status = Status.OK;
-        
+
         BusAttachment bus2;
         bus2 = new BusAttachment(getClass().getName());
         status = bus2.connect();
         assertEquals(Status.OK, status);
-        
+
         BusAttachment bus3;
         bus3 = new BusAttachment(getClass().getName());
         status = bus3.connect();
         assertEquals(Status.OK, status);
-        
+
         BusAttachment bus4;
         bus4 = new BusAttachment(getClass().getName());
         status = bus4.connect();
         assertEquals(Status.OK, status);
-        
+
         /*
          * Test that no errors are returned when calling ListQueuedOwners when
          * there are no name owners
          */
         queuedNames = dbus.ListQueuedOwners(name);
-        
+
         assertEquals(queuedNames.length, 0);
-        
+
         /*
-         * Test that no names are returned when only the primary owner has the 
+         * Test that no names are returned when only the primary owner has the
          * name.
          */
         int flags = BusAttachment.ALLJOYN_NAME_FLAG_ALLOW_REPLACEMENT;
         status = bus.requestName(name, flags);
         assertEquals(Status.OK, status);
-        
+
         queuedNames = dbus.ListQueuedOwners(name);
-        
+
         assertEquals(queuedNames.length, 0);
-        
-        
+
+
         /*
          * Test that names that already have a primary owner are being queued
          */
         flags = 0;
         status = bus2.requestName(name, flags);
         assertEquals(Status.DBUS_REQUEST_NAME_REPLY_IN_QUEUE, status);
-        
+
         flags = 0;
         status = bus3.requestName(name, flags);
         assertEquals(Status.DBUS_REQUEST_NAME_REPLY_IN_QUEUE, status);
-        
+
         queuedNames = dbus.ListQueuedOwners(name);
-        
+
         assertEquals(queuedNames.length, 2);
         assertEquals(queuedNames[0], bus2.getUniqueName());
         assertEquals(queuedNames[1], bus3.getUniqueName());
-        
+
         /*
          * Test that the ALLJOYN_NAME_FLAG_ALLOW_REPLACEMENT affecting the queue
          * as it should
@@ -355,14 +355,14 @@ public class DBusProxyObjTest extends TestCase {
         flags = BusAttachment.ALLJOYN_REQUESTNAME_FLAG_REPLACE_EXISTING;
         status = bus4.requestName(name, flags);
         assertEquals(Status.OK, status);
-        
+
         queuedNames = dbus.ListQueuedOwners(name);
-        
+
         assertEquals(queuedNames.length, 3);
         assertEquals(queuedNames[0], bus.getUniqueName());
         assertEquals(queuedNames[1], bus2.getUniqueName());
         assertEquals(queuedNames[2], bus3.getUniqueName());
-        
+
         //cleanup
         bus2.releaseName(name);
         bus3.releaseName(name);

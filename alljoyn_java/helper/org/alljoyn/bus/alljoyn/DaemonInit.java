@@ -34,7 +34,7 @@ import android.util.Log;
  *
  */
 public class DaemonInit {
-    
+
     private final static String TAG = "DaemonInit";
     private static Context sContext;
 
@@ -42,9 +42,9 @@ public class DaemonInit {
     // public static P2pHelperService sP2pHelper;
 
     public static Context getContext(){
-    	return sContext;
+        return sContext;
     }
-    
+
     /**
      * Initialize daemon service if needed.
      * First it checks whether any daemon is running; if no daemon is running, then it starts the APK daemon if it is installed;
@@ -59,13 +59,13 @@ public class DaemonInit {
 
         sContext = context.getApplicationContext();
         Log.v(TAG, "Saved application context");
-        
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
-	    // Instantiate and start the P2pHelperService
-	    // sP2pHelper = new P2pHelperService(sContext, "null:");
-	    // sP2pHelper.startup();
+        // Instantiate and start the P2pHelperService
+        // sP2pHelper = new P2pHelperService(sContext, "null:");
+        // sP2pHelper.startup();
         }
         return true;
     }
-    
+
 }

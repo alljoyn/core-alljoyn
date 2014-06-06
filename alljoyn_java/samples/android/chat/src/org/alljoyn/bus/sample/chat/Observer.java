@@ -18,5 +18,5 @@ package org.alljoyn.bus.sample.chat;
 import org.alljoyn.bus.sample.chat.Observable;
 
 public interface Observer {
-	public void update(Observable o, Object arg);
+    public void update(Observable o, Object arg);
 }

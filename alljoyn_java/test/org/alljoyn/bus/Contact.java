@@ -21,7 +21,7 @@ import org.alljoyn.bus.annotation.Signature;
 
 import java.util.TreeMap;
 
-/** 
+/**
  * Contact is a data container that describes an entry in the address book.
  */
 public class Contact {
@@ -34,7 +34,7 @@ public class Contact {
     @Position(1)
     public String lastName;
 
-    /** 
+    /**
      * Map of phone numbers.
      * Key is type of phone number such as "Home", "Main", etc.
      * Value is the actual phone number as a String.

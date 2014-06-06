@@ -67,7 +67,7 @@ public abstract class Translator {
 
     /**
      * Translate a string into another language
-     * 
+     *
      * @param fromLanguage the language to translate from
      * @param toLanguage the language to translate to
      * @param fromText the text to be translated

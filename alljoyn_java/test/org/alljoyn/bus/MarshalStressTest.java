@@ -141,7 +141,7 @@ public class MarshalStressTest extends TestCase {
 
     public void setUp() throws Exception {
         serviceBus = new BusAttachment(getClass().getName() + "Service");
-        
+
         service = new Service();
         Status status = serviceBus.registerBusObject(service, "/service");
         assertEquals(Status.OK, status);
@@ -150,7 +150,7 @@ public class MarshalStressTest extends TestCase {
         assertEquals(Status.OK, status);
 
         DBusProxyObj control = serviceBus.getDBusProxyObj();
-        DBusProxyObj.RequestNameResult res = control.RequestName("org.alljoyn.bus.MarshalStressTest", 
+        DBusProxyObj.RequestNameResult res = control.RequestName("org.alljoyn.bus.MarshalStressTest",
                                                                  DBusProxyObj.REQUEST_NAME_NO_FLAGS);
         assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, res);
 
@@ -158,7 +158,7 @@ public class MarshalStressTest extends TestCase {
         status = bus.connect();
         assertEquals(Status.OK, status);
 
-        ProxyBusObject remoteObj = bus.getProxyBusObject("org.alljoyn.bus.MarshalStressTest", "/service", 
+        ProxyBusObject remoteObj = bus.getProxyBusObject("org.alljoyn.bus.MarshalStressTest", "/service",
                                                          BusAttachment.SESSION_ID_ANY,
                                                          new Class[] { MarshalStressInterfaceInvalid.class });
         proxy = remoteObj.getInterface(MarshalStressInterfaceInvalid.class);
@@ -177,7 +177,7 @@ public class MarshalStressTest extends TestCase {
         serviceBus.disconnect();
         serviceBus.release();
         serviceBus = null;
-        
+
         bus.disconnect();
         bus.release();
         bus = null;

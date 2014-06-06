@@ -50,7 +50,7 @@ public class ErrorReplyBusException extends BusException {
      */
     public ErrorReplyBusException(String name) {
         super(name);
-	this.status = Status.BUS_REPLY_IS_ERROR_MESSAGE;
+        this.status = Status.BUS_REPLY_IS_ERROR_MESSAGE;
         this.name = name;
         this.message = null;
     }
@@ -64,7 +64,7 @@ public class ErrorReplyBusException extends BusException {
      */
     public ErrorReplyBusException(String name, String message) {
         super(name);
-	this.status = Status.BUS_REPLY_IS_ERROR_MESSAGE;
+        this.status = Status.BUS_REPLY_IS_ERROR_MESSAGE;
         this.name = name;
         this.message = message;
     }

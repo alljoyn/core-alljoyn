@@ -62,7 +62,7 @@ public class ContactsClient extends Activity {
     }
 
     private static final int DIALOG_CONTACT = 1;
-    
+
     private static final int MESSAGE_DISPLAY_ALL_CONTACTS = 1;
     private static final int MESSAGE_DISPLAY_CONTACT = 2;
     private static final int MESSAGE_POST_TOAST = 3;
@@ -70,7 +70,7 @@ public class ContactsClient extends Activity {
     private static final int MESSAGE_STOP_PROGRESS_DIALOG = 5;
 
     private static final String TAG = "ContactsClient";
-    
+
     private Button mGetContactsBtn;
     private ArrayAdapter<String> mContactsListAdapter;
     private ListView mContactsListView;
@@ -78,24 +78,24 @@ public class ContactsClient extends Activity {
 
     private Contact mAddressEntry;
     private NameId[] mContactNames;
-    
+
     String mSingleName;
     int mSingleUserId;
 
     BusHandler mBusHandler;
     private ProgressDialog mDialog;
-    
+
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
-            case MESSAGE_DISPLAY_ALL_CONTACTS: 
+            case MESSAGE_DISPLAY_ALL_CONTACTS:
                 mContactNames = (NameId[]) msg.obj;
                 /*
                  * Make sure the Contacts list is clear of any old information before filling the list.
                  */
                 mContactsListAdapter.clear();
-                
+
                 /*
                  * Change the name of the button from "Get Contacts List" to "Update Contacts List"
                  */
@@ -112,21 +112,21 @@ public class ContactsClient extends Activity {
                 Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_LONG).show();
                 break;
             case MESSAGE_START_PROGRESS_DIALOG:
-                mDialog = ProgressDialog.show(ContactsClient.this, 
-                                              "", 
-                                              "Finding Contacts Service.\nPlease wait...", 
+                mDialog = ProgressDialog.show(ContactsClient.this,
+                                              "",
+                                              "Finding Contacts Service.\nPlease wait...",
                                               true,
                                               true);
                 break;
             case MESSAGE_STOP_PROGRESS_DIALOG:
                 mDialog.dismiss();
-                break;                
+                break;
             default:
                 break;
             }
         }
     };
-    
+
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -150,7 +150,7 @@ public class ContactsClient extends Activity {
         mBusHandler.sendEmptyMessage(BusHandler.CONNECT);
         mHandler.sendEmptyMessage(MESSAGE_START_PROGRESS_DIALOG);
     }
-    
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -158,18 +158,18 @@ public class ContactsClient extends Activity {
         this.menu = menu;
         return true;
     }
-    
+
     @Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-	    switch (item.getItemId()) {
-	    case R.id.quit:
-	    	finish();
-	        return true;
-	    default:
-	        return super.onOptionsItemSelected(item);
-	    }
-	}
-    
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+        case R.id.quit:
+            finish();
+            return true;
+        default:
+            return super.onOptionsItemSelected(item);
+        }
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -178,7 +178,7 @@ public class ContactsClient extends Activity {
 
     /**
      * Implementation of the OnClickListener attached to the "Get Contacts List"
-     * "Update Contacts List"  button.  When clicked this will fill the 
+     * "Update Contacts List"  button.  When clicked this will fill the
      * mcontactsListAdapter with an alphabetized list of all the contacts on
      * the phone.
      */
@@ -225,8 +225,8 @@ public class ContactsClient extends Activity {
         switch (id) {
         /*
          * build a dialog that show the contents of the an individual contact
-         * This will dynamically build the dialog based on how much information 
-         * is known about the contact. 
+         * This will dynamically build the dialog based on how much information
+         * is known about the contact.
          */
         case DIALOG_CONTACT: {
             /*
@@ -275,7 +275,7 @@ public class ContactsClient extends Activity {
             break;
         }
     }
-    
+
     /**
      * Insert a phone number into the table at the indicated position
      */
@@ -310,7 +310,7 @@ public class ContactsClient extends Activity {
         TableRow tr = new TableRow(getApplicationContext());
         TextView type = new TextView(getApplicationContext());
         type.setLayoutParams(new TableRow.LayoutParams(1));
-        /* 
+        /*
          * if the email type has a custom label use that label other wise pull
          * the type from the email_types string array.
          */
@@ -329,64 +329,64 @@ public class ContactsClient extends Activity {
         tr.addView(address);
         table.addView(tr, position);
     }
-    
+
     /*
-     * See the SimpleClient sample for a more complete description of the code used 
+     * See the SimpleClient sample for a more complete description of the code used
      * to connect this code to the Bus
      */
     class BusHandler extends Handler {
         private static final String SERVICE_NAME = "org.alljoyn.bus.addressbook";
         private static final short CONTACT_PORT = 42;
-        
+
         public static final int CONNECT = 1;
         public static final int DISCONNECT = 2;
         public static final int GET_CONTACT = 3;
         public static final int GET_ALL_CONTACT_NAMES = 4;
         public static final int JOIN_SESSION = 5;
-        
+
         private BusAttachment mBus;
         private ProxyBusObject mProxyObj;
         private AddressBookInterface mAddressBookInterface;
-        
+
         private int     mSessionId;
         private boolean mIsConnected;
         private boolean mIsStoppingDiscovery;
-        
+
         public BusHandler(Looper looper) {
             super(looper);
             mIsConnected = false;
             mIsStoppingDiscovery = false;
         }
-        
+
         @Override
         public void handleMessage(Message msg) {
             switch(msg.what) {
             case CONNECT: {
-            	org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
+                org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
                 mBus = new BusAttachment(getPackageName(), BusAttachment.RemoteMessage.Receive);
-                
+
                 mBus.registerBusListener(new BusListener() {
                     @Override
                     public void foundAdvertisedName(String name, short transport, String namePrefix) {
-                    	logInfo(String.format("MyBusListener.foundAdvertisedName(%s, 0x%04x, %s)", name, transport, namePrefix));
-                    	/*
+                        logInfo(String.format("MyBusListener.foundAdvertisedName(%s, 0x%04x, %s)", name, transport, namePrefix));
+                        /*
                          * This client will only join the first service that it sees advertising
-                         * the indicated well-known name.  If the program is already a member of 
-                         * a session (i.e. connected to a service) we will not attempt to join 
+                         * the indicated well-known name.  If the program is already a member of
+                         * a session (i.e. connected to a service) we will not attempt to join
                          * another session.
-                         * It is possible to join multiple session however joining multiple 
-                         * sessions is not shown in this sample. 
+                         * It is possible to join multiple session however joining multiple
+                         * sessions is not shown in this sample.
                          */
-                    	if (! mIsConnected){
-                    	    Message msg = obtainMessage(JOIN_SESSION, name);
-                    	    sendMessage(msg);
-                    	}
+                        if (! mIsConnected){
+                            Message msg = obtainMessage(JOIN_SESSION, name);
+                            sendMessage(msg);
+                        }
                     }
                 });
 
                 Status status = mBus.connect();
                 logStatus("BusAttachment.connect()", status);
-                
+
                 status = mBus.findAdvertisedName(SERVICE_NAME);
                 logStatus(String.format("BusAttachement.findAdvertisedName(%s)", SERVICE_NAME), status);
                 break;
@@ -411,12 +411,12 @@ public class ContactsClient extends Activity {
                 logStatus("BusAttachment.joinSession()", status);
 
                 if (status == Status.OK) {
-                	mProxyObj = mBus.getProxyBusObject(SERVICE_NAME, "/addressbook", sessionId.value,
-                				                       new Class[] { AddressBookInterface.class });
-                   	mAddressBookInterface = mProxyObj.getInterface(AddressBookInterface.class);
-                	mSessionId = sessionId.value;
-                	mIsConnected = true;
-                	mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
+                    mProxyObj = mBus.getProxyBusObject(SERVICE_NAME, "/addressbook", sessionId.value,
+                                                       new Class[] { AddressBookInterface.class });
+                    mAddressBookInterface = mProxyObj.getInterface(AddressBookInterface.class);
+                    mSessionId = sessionId.value;
+                    mIsConnected = true;
+                    mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
                 }
                 break;
             }
@@ -436,9 +436,9 @@ public class ContactsClient extends Activity {
             // Call AddressBookInterface.getContact method and send the result to the UI handler.
             case GET_CONTACT: {
                 if (mAddressBookInterface == null) {
-                	break;
+                    break;
                 }
-            	try {
+                try {
                     NameId nameId = (NameId)msg.obj;
                     Contact reply = mAddressBookInterface.getContact(nameId.displayName, nameId.userId);
                     Message replyMsg = mHandler.obtainMessage(MESSAGE_DISPLAY_CONTACT, reply);
@@ -464,7 +464,7 @@ public class ContactsClient extends Activity {
             }
         }
     }
-        
+
     private void logStatus(String msg, Status status) {
         String log = String.format("%s: %s", msg, status);
         if (status == Status.OK) {
@@ -482,7 +482,7 @@ public class ContactsClient extends Activity {
         mHandler.sendMessage(toastMsg);
         Log.e(TAG, log, ex);
     }
-    
+
     private void logInfo(String msg) {
         Log.i(TAG, msg);
     }

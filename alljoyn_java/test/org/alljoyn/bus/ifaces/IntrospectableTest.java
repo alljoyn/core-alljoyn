@@ -49,7 +49,7 @@ public class IntrospectableTest extends TestCase {
 
     public void testIntrospect() throws Exception {
         ProxyBusObject remoteObj = bus.getProxyBusObject("org.freedesktop.DBus",
-                                                         "/org/freedesktop/DBus", 
+                                                         "/org/freedesktop/DBus",
                                                          BusAttachment.SESSION_ID_ANY,
                                                          new Class[] { Introspectable.class });
         Introspectable introspectable = remoteObj.getInterface(Introspectable.class);

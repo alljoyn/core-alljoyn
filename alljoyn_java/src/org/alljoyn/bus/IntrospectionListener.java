@@ -26,7 +26,7 @@ package org.alljoyn.bus;
  * and destruction.  That is, every thread executing in a listener object's
  * methods 1) gets a unique copy of all temporary data (it is re-entrant); and
  * 2) all shared data -- the object instance's member variables or any globals
- * must contain no read-modify-write access patterns (okay to write or read, 
+ * must contain no read-modify-write access patterns (okay to write or read,
  * just never to read-modify-write).  If such access patterns are required, it
  * is the responsibility of the client to, for example, add the synchronized
  * keyword when overriding one of the listener methods or provide some other
@@ -42,7 +42,7 @@ package org.alljoyn.bus;
  * dealing with multithreaded code.
  *
  * Since listener objects generally run in the context of the AllJoyn thread
- * which manages reception of events, If a blocking AllJoyn call is made in 
+ * which manages reception of events, If a blocking AllJoyn call is made in
  * the context of a notification, the necessary and sufficient conditions for
  * deadlock are established.
  *

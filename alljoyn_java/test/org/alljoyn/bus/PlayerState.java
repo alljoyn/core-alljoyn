@@ -20,9 +20,9 @@ import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.annotation.BusInterface;
 import org.alljoyn.bus.annotation.BusSignal;
 
-/** 
+/**
  * PlayerState contains the state information of a single player for a fictitional
- * multi-player game. In this game, each player periodially and continuously 
+ * multi-player game. In this game, each player periodially and continuously
  * broadcasts his state to all the other players of the game using signals.
  */
 @BusInterface

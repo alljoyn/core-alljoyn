@@ -22,6 +22,6 @@ import org.alljoyn.bus.annotation.Secure;
 @BusInterface (name = "org.samples.secure")
 @Secure
 public interface SecureInterface {
-	@BusMethod
-	String Ping(String inStr) throws BusException;
+    @BusMethod
+    String Ping(String inStr) throws BusException;
 }

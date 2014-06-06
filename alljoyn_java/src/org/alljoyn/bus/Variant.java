@@ -90,9 +90,9 @@ public class Variant {
     /** Gets the wrapped object. */
     Object getValue() { return value; }
 
-    /** 
+    /**
      * Gets the DBus type signature of the wrapped object.
-     * 
+     *
      *  @return the signature of the wrapped object.
      */
     public String getSignature() throws AnnotationBusException {

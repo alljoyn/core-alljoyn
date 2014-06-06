@@ -55,13 +55,13 @@ public class PropertiesService extends Activity {
     static {
         System.loadLibrary("alljoyn_java");
     }
-    
+
     private static final String TAG = "PropertiesService";
-    
+
     private static final int MESSAGE_UPDATE_TEXT_SIZE = 1;
     private static final int MESSAGE_UPDATE_COLOR = 2;
     private static final int MESSAGE_POST_TOAST = 3;
-    
+
     Spinner mColorSpinner;
     Spinner mTextSizeSpinner;
 
@@ -72,7 +72,7 @@ public class PropertiesService extends Activity {
 
     private Handler mHandler;
     private BusHandler mBusHandler;
-    
+
     private AllJoynProperties mProperties;
 
     /** Called when the activity is first created. */
@@ -99,7 +99,7 @@ public class PropertiesService extends Activity {
         mPrimarylayout = (LinearLayout) findViewById(R.id.main_layout);
 
         mHandler = new UpdateUI();
-        
+
         /* Make all AllJoyn calls through a separate handler thread to prevent blocking the UI. */
         HandlerThread busThread = new HandlerThread("BusHandler");
         busThread.start();
@@ -107,14 +107,14 @@ public class PropertiesService extends Activity {
 
         /* Start our service. */
         mProperties = new AllJoynProperties();
-        
+
         // Update the UI to show the default values.
         updateColor();
         updateTextSize();
-        
+
         mBusHandler.sendEmptyMessage(BusHandler.CONNECT);
     }
-    
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -122,18 +122,18 @@ public class PropertiesService extends Activity {
         this.menu = menu;
         return true;
     }
-    
+
     @Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-	    // Handle item selection
-	    switch (item.getItemId()) {
-	    case R.id.quit:
-	    	finish();
-	        return true;
-	    default:
-	        return super.onOptionsItemSelected(item);
-	    }
-	}
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+        case R.id.quit:
+            finish();
+            return true;
+        default:
+            return super.onOptionsItemSelected(item);
+        }
+    }
 
     @Override
     protected void onDestroy() {
@@ -141,8 +141,8 @@ public class PropertiesService extends Activity {
         // Use the mBusHandler to disconnect from the bus. Failing to to this could result in memory leaks
         mBusHandler.sendEmptyMessage(BusHandler.DISCONNECT);
     }
-    
-    
+
+
     /*
      * update the background color based on user input for the text-size dropdown box.
      */
@@ -159,7 +159,7 @@ public class PropertiesService extends Activity {
             default: mProperties.setBackGroundColor(AllJoynProperties.COLOR_RED); break;
             }
         }
-        
+
         public void onNothingSelected(AdapterView<?> parent) {
             // leave everything unchanged if nothing is selected.
         }
@@ -170,7 +170,7 @@ public class PropertiesService extends Activity {
      * update the text-size based on user input for the text-size dropdown box.
      */
     public class TextSizeSelectedListener implements OnItemSelectedListener {
-        
+
         /*
          * update the text-size.
          */
@@ -185,7 +185,7 @@ public class PropertiesService extends Activity {
             default: mProperties.setTextSize(AllJoynProperties.TEXT_REGULAR); break;
             }
         }
-  
+
         public void onNothingSelected(AdapterView<?> parent) {
             // leave everything unchanged if nothing is selected.
         }
@@ -206,7 +206,7 @@ public class PropertiesService extends Activity {
             case MESSAGE_UPDATE_COLOR: {
                 updateColor();
                 break;
-            }     
+            }
             case MESSAGE_POST_TOAST:
                 Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_LONG).show();
                 break;
@@ -221,7 +221,7 @@ public class PropertiesService extends Activity {
      * colors are Red/Green/Blue/Yellow.
      */
     private void updateColor() {
-        String backgroundColor = mProperties.getBackGroundColor(); 
+        String backgroundColor = mProperties.getBackGroundColor();
         if (backgroundColor.equals(AllJoynProperties.COLOR_RED)) {
             mPrimarylayout.setBackgroundColor(Color.RED);
             mColorSpinner.setSelection(0);
@@ -259,16 +259,16 @@ public class PropertiesService extends Activity {
             mTextSizeSpinner.setSelection(5);
         }
     }
-    
+
     /*
-     * The PropertiesInterface needs to be implemented so there is a place 
-     * that contains the properties we are interested in.  This class 
-     * implements all of the get/set methods listed.  
-     * When ever a set method is used send a Message to the UI so it can 
+     * The PropertiesInterface needs to be implemented so there is a place
+     * that contains the properties we are interested in.  This class
+     * implements all of the get/set methods listed.
+     * When ever a set method is used send a Message to the UI so it can
      * be updated based on the new property.
      */
     class AllJoynProperties  implements PropertiesInterface, BusObject {
-        
+
         // Values used to as default text sizes.
         public static final int TEXT_TINY = 8;
         public static final int TEXT_SMALL = 12;
@@ -276,22 +276,22 @@ public class PropertiesService extends Activity {
         public static final int TEXT_REGULAR = 20;
         public static final int TEXT_LARGE = 24;
         public static final int TEXT_XLARGE = 28;
-        
+
         // Values used as possible colors that can be selected.
         public static final String COLOR_RED = "Red";
         public static final String COLOR_GREEN = "Green";
         public static final String COLOR_BLUE = "Blue";
         public static final String COLOR_YELLOW = "Yellow";
-            
+
         private String mBackgroundColor;
         private int    mTextSize;
-        
+
         public AllJoynProperties() {
             //default values used at startup.
             mBackgroundColor = COLOR_RED;
-            mTextSize = TEXT_REGULAR; //text size in dip    
+            mTextSize = TEXT_REGULAR; //text size in dip
         }
-        
+
         public String getBackGroundColor() {
             return mBackgroundColor;
         }
@@ -310,33 +310,33 @@ public class PropertiesService extends Activity {
             mHandler.sendEmptyMessage(MESSAGE_UPDATE_TEXT_SIZE);
         }
     }
-    
+
     /*
      * This class will handle all AllJoyn calls.
      * For a detailed description of each part of the code shown in the BusHandler
-     * class see the SimpleService sample code. 
+     * class see the SimpleService sample code.
      */
-    class BusHandler extends Handler {         
+    class BusHandler extends Handler {
         private static final String SERVICE_NAME = "org.alljoyn.bus.samples.properties";
         private static final short CONTACT_PORT = 42;
-        
+
         public static final int CONNECT = 1;
         public static final int DISCONNECT = 2;
-        
-        private BusAttachment mBus;      
-    
+
+        private BusAttachment mBus;
+
         public BusHandler(Looper looper) {
             super(looper);
         }
-        
+
         public void handleMessage(Message msg) {
             switch (msg.what) {
             case CONNECT: {
-            	org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
+                org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
                 mBus = new BusAttachment(getPackageName(), BusAttachment.RemoteMessage.Receive);
-                
+
                 mBus.registerBusListener(new BusListener());
-                
+
                 /*
                  * Register the BusObject with the path "/testProperties"
                  */
@@ -358,7 +358,7 @@ public class PropertiesService extends Activity {
                  * Create a new session listening on the contact port of the chat service.
                  */
                 Mutable.ShortValue contactPort = new Mutable.ShortValue(CONTACT_PORT);
-                
+
                 SessionOpts sessionOpts = new SessionOpts();
                 sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
                 sessionOpts.isMultipoint = false;
@@ -376,38 +376,38 @@ public class PropertiesService extends Activity {
                     }
                 });
                 logStatus(String.format("BusAttachment.bindSessionPort(%d, %s)",
-                                         contactPort.value, sessionOpts.toString()), status);
+                                        contactPort.value, sessionOpts.toString()), status);
                 if (status != Status.OK) {
                     finish();
                     return;
                 }
-                
+
                 /*
                  * request a well-known name from the bus
-                 */                
+                 */
                 int flag = BusAttachment.ALLJOYN_REQUESTNAME_FLAG_REPLACE_EXISTING | BusAttachment.ALLJOYN_REQUESTNAME_FLAG_DO_NOT_QUEUE;
-                
+
                 status = mBus.requestName(SERVICE_NAME, flag);
                 logStatus(String.format("BusAttachment.requestName(%s, 0x%08x)", SERVICE_NAME, flag), status);
                 if (status == Status.OK) {
-                	/*
-                	 * If we successfully obtain a well-known name from the bus 
-                	 * advertise the same well-known name
-                	 */
-                	status = mBus.advertiseName(SERVICE_NAME, SessionOpts.TRANSPORT_ANY);
+                    /*
+                     * If we successfully obtain a well-known name from the bus
+                     * advertise the same well-known name
+                     */
+                    status = mBus.advertiseName(SERVICE_NAME, SessionOpts.TRANSPORT_ANY);
                     logStatus("BusAttachement.advertiseName()", status);
                     if (status != Status.OK) {
-                    	 /*
+                        /*
                          * If we are unable to advertise the name, release
                          * the name from the local bus.
                          */
                         status = mBus.releaseName(SERVICE_NAME);
                         logStatus(String.format("BusAttachment.releaseName(%s)", SERVICE_NAME), status);
-                    	finish();
-                    	return;
+                        finish();
+                        return;
                     }
                 }
-                
+
                 break;
             }
             case DISCONNECT: {
@@ -421,7 +421,7 @@ public class PropertiesService extends Activity {
             }
         }
     }
-    
+
     private void logStatus(String msg, Status status) {
         String log = String.format("%s: %s", msg, status);
         if (status == Status.OK) {

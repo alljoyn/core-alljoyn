@@ -52,12 +52,12 @@ public class InterfaceDescriptionTest extends TestCase {
 
     public void setUp() throws Exception {
         bus = new BusAttachment(getClass().getName());
-        
+
         Status status = bus.connect();
         assertEquals(Status.OK, status);
 
         DBusProxyObj control = bus.getDBusProxyObj();
-        DBusProxyObj.RequestNameResult res = control.RequestName("org.alljoyn.bus.InterfaceDescriptionTest", 
+        DBusProxyObj.RequestNameResult res = control.RequestName("org.alljoyn.bus.InterfaceDescriptionTest",
                                                                  DBusProxyObj.REQUEST_NAME_NO_FLAGS);
         assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, res);
     }
@@ -78,9 +78,9 @@ public class InterfaceDescriptionTest extends TestCase {
 
         boolean thrown = false;
         try {
-            SimpleInterfaceB proxy = bus.getProxyBusObject("org.alljoyn.bus.InterfaceDescriptionTest", 
-                "/service", 
-                BusAttachment.SESSION_ID_ANY, 
+            SimpleInterfaceB proxy = bus.getProxyBusObject("org.alljoyn.bus.InterfaceDescriptionTest",
+                "/service",
+                BusAttachment.SESSION_ID_ANY,
                 new Class[] { SimpleInterfaceB.class }).getInterface(SimpleInterfaceB.class);
             proxy.Ping(1);
         } catch (BusException ex) {
@@ -98,7 +98,7 @@ public class InterfaceDescriptionTest extends TestCase {
 
         boolean thrown = false;
         try {
-            SimpleInterface proxy = bus.getProxyBusObject("org.alljoyn.bus.InterfaceDescriptionTest", "/service", 
+            SimpleInterface proxy = bus.getProxyBusObject("org.alljoyn.bus.InterfaceDescriptionTest", "/service",
                 BusAttachment.SESSION_ID_ANY,
                 new Class[] { SimpleInterface.class }).getInterface(SimpleInterface.class);
             proxy.Ping("str");
@@ -117,14 +117,14 @@ public class InterfaceDescriptionTest extends TestCase {
 
         boolean thrown = false;
         try {
-            SimpleInterfaceC proxy = bus.getProxyBusObject("org.alljoyn.bus.InterfaceDescriptionTest", 
-                "/service", 
+            SimpleInterfaceC proxy = bus.getProxyBusObject("org.alljoyn.bus.InterfaceDescriptionTest",
+                "/service",
                 BusAttachment.SESSION_ID_ANY,
                 new Class[] { SimpleInterfaceC.class }).getInterface(SimpleInterfaceC.class);
             proxy.Ping("str");
         } catch (BusException ex) {
             thrown = true;
-        } 
+        }
         assertTrue(thrown);
 
         bus.unregisterBusObject(service);

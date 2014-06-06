@@ -52,5 +52,5 @@ public @interface BusProperty {
     /**
      * Description of this property
      */
-	String description() default "";
+    String description() default "";
 }

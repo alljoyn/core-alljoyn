@@ -1,4 +1,4 @@
- /*
+/*
  * This sample is identical to the simple sample, with the addition of security.  Refer to the
  * simple sample for further explanation of the AllJoyn code not called out here.
  *
@@ -55,14 +55,14 @@ public class Client extends Activity {
     static {
         System.loadLibrary("alljoyn_java");
     }
-    
+
 
     private static final int MESSAGE_PING = 1;
     private static final int MESSAGE_PING_REPLY = 2;
     private static final int MESSAGE_AUTH_COMPLETE = 3;
     private static final int MESSAGE_POST_TOAST = 4;
     private static final int MESSAGE_START_PROGRESS_DIALOG = 5;
-    private static final int MESSAGE_STOP_PROGRESS_DIALOG = 6;    
+    private static final int MESSAGE_STOP_PROGRESS_DIALOG = 6;
 
     private static final String TAG = "ECDHEClient";
 
@@ -71,7 +71,7 @@ public class Client extends Activity {
     private ListView mListView;
     private Menu menu;
     private ProgressDialog mDialog;
-    
+
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -85,7 +85,7 @@ public class Client extends Activity {
                 mListViewArrayAdapter.add("Reply:  " + ret);
                 mEditText.setText("");
                 break;
-            
+
             case MESSAGE_AUTH_COMPLETE:
                 Boolean authenticated = (Boolean) msg.obj;
                 if (authenticated.equals(Boolean.FALSE)) {
@@ -96,18 +96,18 @@ public class Client extends Activity {
                 Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_LONG).show();
                 break;
             case MESSAGE_START_PROGRESS_DIALOG:
-                mDialog = ProgressDialog.show(Client.this, "", 
-                    "Finding Security Service.\nPlease wait...", true, true);
+                mDialog = ProgressDialog.show(Client.this, "",
+                                              "Finding Security Service.\nPlease wait...", true, true);
                 break;
             case MESSAGE_STOP_PROGRESS_DIALOG:
                 mDialog.dismiss();
-                break;              
+                break;
             default:
                 break;
             }
         }
     };
-    
+
     /* The authentication listener for our bus attachment. */
     private ECDHEKeyXListener mAuthListener;
 
@@ -124,16 +124,16 @@ public class Client extends Activity {
 
         mEditText = (EditText) findViewById(R.id.EditText);
         mEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-                public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
-                    if (actionId == EditorInfo.IME_NULL
+            public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_NULL
                         && event.getAction() == KeyEvent.ACTION_UP) {
-                        Message msg = mBusHandler.obtainMessage(BusHandler.PING, 
-                                                                view.getText().toString());
-                        mBusHandler.sendMessage(msg);
-                    }
-                    return true;
+                    Message msg = mBusHandler.obtainMessage(BusHandler.PING,
+                                                            view.getText().toString());
+                    mBusHandler.sendMessage(msg);
                 }
-            });
+                return true;
+            }
+        });
 
         HandlerThread busThread = new HandlerThread("BusHandler");
         busThread.start();
@@ -143,7 +143,7 @@ public class Client extends Activity {
         mBusHandler.sendEmptyMessage(BusHandler.CONNECT);
         mHandler.sendEmptyMessage(MESSAGE_START_PROGRESS_DIALOG);
     }
-    
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -151,7 +151,7 @@ public class Client extends Activity {
         this.menu = menu;
         return true;
     }
-    
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
@@ -167,17 +167,17 @@ public class Client extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        
+
         mBusHandler.sendEmptyMessage(BusHandler.DISCONNECT);
     }
 
-   
+
 
     private void sendUiMessage(int what, Object obj) {
         mHandler.sendMessage(mHandler.obtainMessage(what, obj));
     }
-    
-    
+
+
 
     /*
      * The main differences between a secure application and a plain application, besides the
@@ -189,21 +189,21 @@ public class Client extends Activity {
     class ECDHEKeyXListener implements AuthListener {
 
         public ECDHEKeyXListener() {
-            
+
         }
-        /* Returns the list of supported mechanisms. The valid list is a combo of 
+        /* Returns the list of supported mechanisms. The valid list is a combo of
          * ALLJOYN_ECDHE_NULL
          * ALLJOYN_ECDHE_PSK
          * ALLJOYN_ECDHE_ECDSA
-         * 
+         *
          */
         public String getMechanisms() {
             return  "ALLJOYN_ECDHE_ECDSA";
         }
 
-        /* 
-         * Persistent authentication and encryption data is stored at this location.  
-         * 
+        /*
+         * Persistent authentication and encryption data is stored at this location.
+         *
          * This uses the private file area associated with the application package.
          */
         public String getKeyStoreFileName() {
@@ -214,23 +214,23 @@ public class Client extends Activity {
          * Authentication requests are being made.  Contained in this call are the mechanism in use,
          * the number of attempts made so far, the desired user name for the requests, and the
          * specific credentials being requested in the form of AuthRequests.
-         * 
-         * The ECDHE key exchange can request for private key, public key, and to verify the peer 
+         *
+         * The ECDHE key exchange can request for private key, public key, and to verify the peer
          */
         public boolean requested(String authMechanism, String authPeer, int count, String userName, AuthRequest[] requests) {
             try {
                 Log.d(TAG, "Listener requested with mechanism " + authMechanism);
                 if (!authMechanism.equals("ALLJOYN_ECDHE_NULL") &&
-                    !authMechanism.equals("ALLJOYN_ECDHE_PSK") &&
-                    !authMechanism.equals("ALLJOYN_ECDHE_ECDSA")) {
+                        !authMechanism.equals("ALLJOYN_ECDHE_PSK") &&
+                        !authMechanism.equals("ALLJOYN_ECDHE_ECDSA")) {
                     return false;
                 }
-               
+
                 for (AuthRequest rqst: requests) {
                     if (rqst instanceof PrivateKeyRequest) {
-                        /* 
+                        /*
                          * Only the ALLJOYN_ECDHE_ECDSA requests for DSA private key.
-                         * The application may provide the DSA private key and public key in the certificate.  
+                         * The application may provide the DSA private key and public key in the certificate.
                          * AllJoyn stores the keys in the key store for future use.
                          * If the application does not provide the private key, AllJoyn will
                          * generate the DSA key pair.
@@ -243,9 +243,9 @@ public class Client extends Activity {
                         }
                     }
                     else if (rqst instanceof CertificateRequest) {
-                        /* 
+                        /*
                          * Only the ALLJOYN_ECDHE_ECDSA requests for DSA private key.
-                         * The application may provide the DSA private key and public key in the certificate.  
+                         * The application may provide the DSA private key and public key in the certificate.
                          * AllJoyn stores the keys in the key store for future use.
                          * If the application does not provide the private key, AllJoyn will
                          * generate the DSA key pair.
@@ -258,12 +258,12 @@ public class Client extends Activity {
                         }
                     }
                     else if (rqst instanceof PasswordRequest) {
-                        /* 
+                        /*
                          * Only the ECDHE_PSK key exchange requests for the pre shared secret.
-                         * Based on the pre shared secret id given the username input variable, 
-                         * the application can retrieve the pre shared secret 
-                         * from storage or from the end user.  
-                         * In this example, the pre shared secret is a hard coded string 
+                         * Based on the pre shared secret id given the username input variable,
+                         * the application can retrieve the pre shared secret
+                         * from storage or from the end user.
+                         * In this example, the pre shared secret is a hard coded string
                          */
                         PasswordRequest pskRqst = (PasswordRequest) rqst;
                         String psk = "123456";
@@ -273,9 +273,9 @@ public class Client extends Activity {
                     else if (rqst instanceof VerifyRequest) {
                         /*
                          * Only the ECDHE_ECDSA key exchange sends a VerifyRequest
-                         * with the certificate chain from the peer for the 
+                         * with the certificate chain from the peer for the
                          * application to verify.
-                         * The application has to option to verify the certificate chain.  
+                         * The application has to option to verify the certificate chain.
                          * If the cert chain is validated and trusted then return true; otherwise, return false.
                          */
                         VerifyRequest verifyRqst = (VerifyRequest) rqst;
@@ -287,9 +287,9 @@ public class Client extends Activity {
                         er.setExpiration(100); /* expired 100 seconds from now */
                     }
                 }
-                
+
                 return true;
-               
+
             } catch (Exception ex) {
                 Log.e(TAG, "Error processing auth request", ex);
             }
@@ -299,8 +299,8 @@ public class Client extends Activity {
         public void completed(String authMechanism, String authPeer, boolean authenticated) {
             sendUiMessage(MESSAGE_AUTH_COMPLETE, authenticated);
         }
-       
-        
+
+
         private boolean sendBackKeys = true;  /* toggle the send back keys */
         /* the followings are same data to try out the ECDHE_ECDSA key exchange */
         private static final String CLIENT_PK_PEM =
@@ -308,38 +308,38 @@ public class Client extends Activity {
                 "CkzgQdvZSOQMmqOnddsw0BRneCNZhioNMyUoJwec9rMAAAAA" +
                 "-----END PRIVATE KEY-----";
         private static final String CLIENT_CERT1_PEM =
-        "-----BEGIN CERTIFICATE-----" +
-        "AAAAAZ1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n" +
-        "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n" +
-        "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n" +
-        "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQABMa7uTLSqjDggO0t6TAgsxKNt\n" +
-        "+Zhu/jc3s242BE0drNFJAiGa/u6AX5qdR+7RFxVuqm251vKPgWjfwN2AesHrAAAA\n" +
-        "ANsNwJl8Z1v5jbqo077qdQIT6aM1jc+pKXdgNMk6loqFAAAAAA==\n" +
-        "-----END CERTIFICATE-----";
+                "-----BEGIN CERTIFICATE-----" +
+                "AAAAAZ1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n" +
+                "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n" +
+                "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n" +
+                "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQABMa7uTLSqjDggO0t6TAgsxKNt\n" +
+                "+Zhu/jc3s242BE0drNFJAiGa/u6AX5qdR+7RFxVuqm251vKPgWjfwN2AesHrAAAA\n" +
+                "ANsNwJl8Z1v5jbqo077qdQIT6aM1jc+pKXdgNMk6loqFAAAAAA==\n" +
+                "-----END CERTIFICATE-----";
         private static final String CLIENT_CERT2_PEM =
-        "-----BEGIN CERTIFICATE-----" +
-        "AAAAAp1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n" +
-        "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n" +
-        "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n" +
-        "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQCJ9dkuY0Z6jjx+a8azIQh4UF0h\n" +
-        "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOeMM4sUtoXPArUA+TNahfOS9Bbf\n" +
-        "0Hh08SvDJSDgM2OetQAAAAAYUr2pw2kb90fWblBWVKnrddtrI5Zs8BYx/EodpMrS\n" +
-        "twAAAAA=\n" +
-        "-----END CERTIFICATE-----";
+                "-----BEGIN CERTIFICATE-----" +
+                "AAAAAp1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n" +
+                "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n" +
+                "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n" +
+                "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQCJ9dkuY0Z6jjx+a8azIQh4UF0h\n" +
+                "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOeMM4sUtoXPArUA+TNahfOS9Bbf\n" +
+                "0Hh08SvDJSDgM2OetQAAAAAYUr2pw2kb90fWblBWVKnrddtrI5Zs8BYx/EodpMrS\n" +
+                "twAAAAA=\n" +
+                "-----END CERTIFICATE-----";
     }
-    
-    class BusHandler extends Handler {        
+
+    class BusHandler extends Handler {
         private static final String SERVICE_NAME = "org.alljoyn.bus.samples.secure";
         private static final short CONTACT_PORT=42;
-        
+
         private BusAttachment mBus;
         private ProxyBusObject mProxyObj;
         private SecureInterface mSecureInterface;
-        
+
         private int     mSessionId;
         private boolean mIsConnected;
         private boolean mIsStoppingDiscovery;
-        
+
         public static final int CONNECT = 1;
         public static final int JOIN_SESSION = 2;
         public static final int DISCONNECT = 3;
@@ -347,7 +347,7 @@ public class Client extends Activity {
 
         public BusHandler(Looper looper) {
             super(looper);
-            
+
             mIsConnected = false;
             mIsStoppingDiscovery = false;
         }
@@ -372,7 +372,7 @@ public class Client extends Activity {
                  * Register the AuthListener before calling connect() to ensure that everything is
                  * in place before any remote peers access the service.
                  */
-                Status status = mBus.registerAuthListener(mAuthListener.getMechanisms(), 
+                Status status = mBus.registerAuthListener(mAuthListener.getMechanisms(),
                                                           mAuthListener,
                                                           mAuthListener.getKeyStoreFileName());
                 logStatus("BusAttachment.registerAuthListener()", status);
@@ -380,18 +380,18 @@ public class Client extends Activity {
                     finish();
                     return;
                 }
-                
+
                 mBus.registerBusListener(new BusListener() {
                     @Override
                     public void foundAdvertisedName(String name, short transport, String namePrefix) {
                         logInfo(String.format("MyBusListener.foundAdvertisedName(%s, 0x%04x, %s)", name, transport, namePrefix));
                         /*
                          * This client will only join the first service that it sees advertising
-                         * the indicated well-known name.  If the program is already a member of 
-                         * a session (i.e. connected to a service) we will not attempt to join 
+                         * the indicated well-known name.  If the program is already a member of
+                         * a session (i.e. connected to a service) we will not attempt to join
                          * another session.
-                         * It is possible to join multiple session however joining multiple 
-                         * sessions is not shown in this sample. 
+                         * It is possible to join multiple session however joining multiple
+                         * sessions is not shown in this sample.
                          */
                         if(!mIsConnected){
                             Message msg = obtainMessage(JOIN_SESSION, name);
@@ -415,7 +415,7 @@ public class Client extends Activity {
                     finish();
                     return;
                 }
-                
+
                 /*
                  * Now find an instance of the AllJoyn object we want to call.  We start by looking for
                  * a name, then connecting to the device that is advertising that name.
@@ -430,7 +430,7 @@ public class Client extends Activity {
                 }
                 break;
             }
-            
+
             case (JOIN_SESSION): {
                 /*
                  * If discovery is currently being stopped don't join to any other sessions.
@@ -438,19 +438,19 @@ public class Client extends Activity {
                 if (mIsStoppingDiscovery) {
                     break;
                 }
-                
+
                 /*
                  * In order to join the session, we need to provide the well-known
                  * contact port.  This is pre-arranged between both sides as part
                  * of the definition of the chat service.  As a result of joining
-                 * the session, we get a session identifier which we must use to 
+                 * the session, we get a session identifier which we must use to
                  * identify the created session communication channel whenever we
                  * talk to the remote side.
                  */
                 short contactPort = CONTACT_PORT;
                 SessionOpts sessionOpts = new SessionOpts();
                 Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
-                
+
                 Status status = mBus.joinSession((String) msg.obj, contactPort, sessionId, sessionOpts, new SessionListener(){
                     @Override
                     public void sessionLost(int sessionId) {
@@ -460,23 +460,23 @@ public class Client extends Activity {
                     }
                 });
                 logStatus("BusAttachment.joinSession()", status);
-                    
+
                 if (status == Status.OK) {
                     /*
-                     * To communicate with an AllJoyn object, we create a ProxyBusObject.  
+                     * To communicate with an AllJoyn object, we create a ProxyBusObject.
                      * A ProxyBusObject is composed of a name, path, sessionID and interfaces.
-                     * 
+                     *
                      * This ProxyBusObject is located at the well-known SERVICE_NAME, under path
                      * "/SimpleService", uses sessionID of CONTACT_PORT, and implements the SimpleInterface.
                      */
-                    mProxyObj =  mBus.getProxyBusObject(SERVICE_NAME, 
+                    mProxyObj =  mBus.getProxyBusObject(SERVICE_NAME,
                                                         "/SecureService",
                                                         sessionId.value,
                                                         new Class[] { SecureInterface.class });
 
                     /* We make calls to the methods of the AllJoyn object through one of its interfaces. */
                     mSecureInterface = mProxyObj.getInterface(SecureInterface.class);
-                    
+
                     mSessionId = sessionId.value;
                     mIsConnected = true;
                     mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
@@ -493,7 +493,7 @@ public class Client extends Activity {
                 getLooper().quit();
                 break;
             }
-            
+
             case PING: {
                 if (mSecureInterface != null) {
                     try {
@@ -509,7 +509,7 @@ public class Client extends Activity {
             default:
                 break;
             }
-        }        
+        }
     }
 
     private void logStatus(String msg, Status status) {
@@ -529,11 +529,11 @@ public class Client extends Activity {
         mHandler.sendMessage(toastMsg);
         Log.e(TAG, log, ex);
     }
-    
+
     /*
      * print the status or result to the Android log. If the result is the expected
      * result only print it to the log.  Otherwise print it to the error log and
-     * Sent a Toast to the users screen. 
+     * Sent a Toast to the users screen.
      */
     private void logInfo(String msg) {
         Log.i(TAG, msg);

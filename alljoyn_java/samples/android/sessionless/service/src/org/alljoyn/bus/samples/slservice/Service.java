@@ -44,9 +44,9 @@ public class Service extends Activity {
     static {
         System.loadLibrary("alljoyn_java");
     }
-    
+
     private static final String TAG = "SessionlessService";
-    
+
     private static final int MESSAGE_PING = 1;
     private static final int MESSAGE_PING_REPLY = 2;
     private static final int MESSAGE_POST_TOAST = 3;
@@ -54,28 +54,28 @@ public class Service extends Activity {
     private ArrayAdapter<String> mListViewArrayAdapter;
     private ListView mListView;
     private Menu menu;
-    
+
     private Handler mHandler = new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                switch (msg.what) {
-                case MESSAGE_PING:
-                    String ping = (String) msg.obj;
-                    mListViewArrayAdapter.add("Ping:  " + ping);
-                    break;
-                case MESSAGE_PING_REPLY:
-                    String reply = (String) msg.obj;
-                    mListViewArrayAdapter.add("Reply:  " + reply);
-                    break;
-                case MESSAGE_POST_TOAST:
-                    Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_LONG).show();
-                    break;
-                default:
-                    break;
-                }
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+            case MESSAGE_PING:
+                String ping = (String) msg.obj;
+                mListViewArrayAdapter.add("Ping:  " + ping);
+                break;
+            case MESSAGE_PING_REPLY:
+                String reply = (String) msg.obj;
+                mListViewArrayAdapter.add("Reply:  " + reply);
+                break;
+            case MESSAGE_POST_TOAST:
+                Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_LONG).show();
+                break;
+            default:
+                break;
             }
-        };
-    
+        }
+    };
+
     /* The AllJoyn object that is our service. */
     private SimpleService mSimpleService;
 
@@ -90,7 +90,7 @@ public class Service extends Activity {
         mListViewArrayAdapter = new ArrayAdapter<String>(this, R.layout.message);
         mListView = (ListView) findViewById(R.id.ListView);
         mListView.setAdapter(mListViewArrayAdapter);
-        
+
         /* Make all AllJoyn calls through a separate handler thread to prevent blocking the UI. */
         HandlerThread busThread = new HandlerThread("BusHandler");
         busThread.start();
@@ -108,54 +108,54 @@ public class Service extends Activity {
         this.menu = menu;
         return true;
     }
-    
+
     @Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-	    // Handle item selection
-	    switch (item.getItemId()) {
-	    case R.id.quit:
-	    	finish();
-	        return true;
-	    default:
-	        return super.onOptionsItemSelected(item);
-	    }
-	}
-    
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+        case R.id.quit:
+            finish();
+            return true;
+        default:
+            return super.onOptionsItemSelected(item);
+        }
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        
+
         /* Disconnect to prevent any resource leaks. */
-        mBusHandler.sendEmptyMessage(BusHandler.DISCONNECT);        
+        mBusHandler.sendEmptyMessage(BusHandler.DISCONNECT);
     }
-    
+
     /* The class that is our AllJoyn service.  It implements the SimpleInterface. */
     class SimpleService implements SimpleInterface, BusObject {
 
         /*
          * This is the Signal Handler code which has the interface name and the name of the signal
-         * which is sent by the client. It prints out the string it receives as parameter in the 
+         * which is sent by the client. It prints out the string it receives as parameter in the
          * signal on the UI
          *
          * This code also prints the string it received from the user and the string it is
          * returning to the user to the screen.
          */
-    	
-    	 @BusSignalHandler(iface = "org.alljoyn.bus.test.sessions", signal = "Chat")
-    	 public void Chat(String inStr) {
-    	    	 
-    	    	 Log.i(TAG, "Signal  : "+ inStr);
-    	    	 sendUiMessage(MESSAGE_PING, inStr);
-    	    	
-    	 }
+
+        @BusSignalHandler(iface = "org.alljoyn.bus.test.sessions", signal = "Chat")
+        public void Chat(String inStr) {
+
+            Log.i(TAG, "Signal  : "+ inStr);
+            sendUiMessage(MESSAGE_PING, inStr);
+
+        }
 
         /* Helper function to send a message to the UI thread. */
         private void sendUiMessage(int what, Object obj) {
             mHandler.sendMessage(mHandler.obtainMessage(what, obj));
         }
     }
-    
-   
+
+
 
     /* This class will handle all AllJoyn calls. See onCreate(). */
     class BusHandler extends Handler {
@@ -165,13 +165,13 @@ public class Service extends Activity {
          */
         private static final String SERVICE_NAME = "org.alljoyn.bus.test.sessions";
         private static final short CONTACT_PORT=42;
-        
+
         private BusAttachment mBus;
 
         /* These are the messages sent to the BusHandler from the UI. */
         public static final int ADDMATCH = 1;
         public static final int DISCONNECT = 2;
-        
+
 
         public BusHandler(Looper looper) {
             super(looper);
@@ -181,8 +181,8 @@ public class Service extends Activity {
         public void handleMessage(Message msg) {
             switch (msg.what) {
             /* Connect to the bus and start our service. */
-            case ADDMATCH: { 
-            	org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
+            case ADDMATCH: {
+                org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
                 /*
                  * All communication through AllJoyn begins with a BusAttachment.
                  *
@@ -192,15 +192,15 @@ public class Service extends Activity {
                  * By default AllJoyn does not allow communication between devices (i.e. bus to bus
                  * communication).  The second argument must be set to Receive to allow
                  * communication between devices.
-                 */ 
+                 */
                 mBus = new BusAttachment(getPackageName(), BusAttachment.RemoteMessage.Receive);
-                
+
                 /*
-                 * Create a bus listener class  
+                 * Create a bus listener class
                  */
                 mBus.registerBusListener(new BusListener());
-                
-                /* 
+
+                /*
                  * To make a service available to other AllJoyn peers, first register a BusObject with
                  * the BusAttachment at a specific path.
                  *
@@ -212,10 +212,10 @@ public class Service extends Activity {
                     finish();
                     return;
                 }
-                
+
                 /*
                  * The next step in making a service available to other AllJoyn peers is to connect the
-                 * BusAttachment to the bus with a well-known name.  
+                 * BusAttachment to the bus with a well-known name.
                  */
                 /*
                  * connect the BusAttachement to the bus
@@ -226,35 +226,35 @@ public class Service extends Activity {
                     finish();
                     return;
                 }
-                
-                
+
+
                 /*
                  *  We register our signal handler which is implemented inside the SimpleService
                  */
                 status = mBus.registerSignalHandlers(mSimpleService);
-            	if (status != Status.OK) {
-            		Log.i(TAG, "Problem while registering signal handler");
-                	return;
-            	}
-            	 
+                if (status != Status.OK) {
+                    Log.i(TAG, "Problem while registering signal handler");
+                    return;
+                }
+
                 status = mBus.addMatch("sessionless='t'");
                 if (status == Status.OK) {
-                	Log.i(TAG,"AddMatch was called successfully");
+                    Log.i(TAG,"AddMatch was called successfully");
                 }
-                
+
                 break;
             }
-            
+
             /* Release all resources acquired in connect. */
             case DISCONNECT: {
-                /* 
+                /*
                  * It is important to unregister the BusObject before disconnecting from the bus.
                  * Failing to do so could result in a resource leak.
                  */
                 mBus.unregisterBusObject(mSimpleService);
                 mBus.disconnect();
                 mBusHandler.getLooper().quit();
-                break;   
+                break;
             }
 
             default:

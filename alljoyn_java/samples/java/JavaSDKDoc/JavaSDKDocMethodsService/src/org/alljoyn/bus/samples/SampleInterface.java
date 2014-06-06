@@ -21,16 +21,16 @@ import org.alljoyn.bus.annotation.BusMethod;
 
 @BusInterface (name = "org.sample.busMethods")
 public interface SampleInterface {
-    
+
     @BusMethod
     public String Ping(String str) throws BusException;
-    
+
     @BusMethod
     public String Concatenate(String arg1, String arg2) throws BusException;
-    
+
     @BusMethod
     public int Fibonacci(int arg1) throws BusException;
-    
+
     @BusMethod
     public double Pi(int iterations) throws BusException;
 }

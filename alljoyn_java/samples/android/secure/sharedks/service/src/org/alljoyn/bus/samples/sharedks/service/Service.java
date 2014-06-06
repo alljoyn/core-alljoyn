@@ -61,7 +61,7 @@ public class Service extends Activity {
     static {
         System.loadLibrary("alljoyn_java");
     }
-    
+
     private static final String TAG = "SecureService";
 
     private static final int DIALOG_ONE_TIME_PASSWORD = 1;
@@ -81,52 +81,52 @@ public class Service extends Activity {
     private int mCredentialsDialog;
     private CountDownLatch mLatch;
     private String mPassword;
-    
+
     private Handler mHandler = new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                switch (msg.what) {
-                case MESSAGE_PING:
-                    String ping = (String) msg.obj;
-                    mListViewArrayAdapter.add("Ping:  " + ping);
-                    break;
-                case MESSAGE_PING_REPLY:
-                    String reply = (String) msg.obj;
-                    mListViewArrayAdapter.add("Reply:  " + reply);
-                    break;
-                case MESSAGE_SHOW_ONE_TIME_PASSWORD_DIALOG:
-                    mCredentialsDialog = DIALOG_ONE_TIME_PASSWORD;
-                    showDialog(mCredentialsDialog);
-                    break;
-                case MESSAGE_SHOW_PASSPHRASE_DIALOG:
-                    AuthListener.PasswordRequest request = (AuthListener.PasswordRequest) msg.obj;
-                    mCredentialsDialog = request.isNewPassword() 
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+            case MESSAGE_PING:
+                String ping = (String) msg.obj;
+                mListViewArrayAdapter.add("Ping:  " + ping);
+                break;
+            case MESSAGE_PING_REPLY:
+                String reply = (String) msg.obj;
+                mListViewArrayAdapter.add("Reply:  " + reply);
+                break;
+            case MESSAGE_SHOW_ONE_TIME_PASSWORD_DIALOG:
+                mCredentialsDialog = DIALOG_ONE_TIME_PASSWORD;
+                showDialog(mCredentialsDialog);
+                break;
+            case MESSAGE_SHOW_PASSPHRASE_DIALOG:
+                AuthListener.PasswordRequest request = (AuthListener.PasswordRequest) msg.obj;
+                mCredentialsDialog = request.isNewPassword()
                         ? DIALOG_CREATE_PASSPHRASE : DIALOG_ENTER_PASSPHRASE;
-                    showDialog(mCredentialsDialog);
-                    break;
-                case MESSAGE_AUTH_COMPLETE:
-                    if (mCredentialsDialog != 0) {
-                        dismissDialog(mCredentialsDialog);
-                        mCredentialsDialog = 0;
-                    }
-                    Boolean authenticated = (Boolean) msg.obj;
-                    if (authenticated.equals(Boolean.FALSE)) {
-                        Toast.makeText(Service.this, "Authentication failed", 
-                                       Toast.LENGTH_LONG).show();
-                    }
-                    break;
-                case MESSAGE_POST_TOAST:
-                    Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_LONG).show();
-                    break;
-                default:
-                    break;
+                showDialog(mCredentialsDialog);
+                break;
+            case MESSAGE_AUTH_COMPLETE:
+                if (mCredentialsDialog != 0) {
+                    dismissDialog(mCredentialsDialog);
+                    mCredentialsDialog = 0;
                 }
+                Boolean authenticated = (Boolean) msg.obj;
+                if (authenticated.equals(Boolean.FALSE)) {
+                    Toast.makeText(Service.this, "Authentication failed",
+                                   Toast.LENGTH_LONG).show();
+                }
+                break;
+            case MESSAGE_POST_TOAST:
+                Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_LONG).show();
+                break;
+            default:
+                break;
             }
-        };
-    
+        }
+    };
+
     /* The authentication listener for our bus attachment. */
     private AuthListeners mAuthListener;
-    
+
     private SecureService mSecureService;
 
     private Handler mBusHandler;
@@ -139,7 +139,7 @@ public class Service extends Activity {
         mListViewArrayAdapter = new ArrayAdapter<String>(this, R.layout.message);
         mListView = (ListView) findViewById(R.id.ListView);
         mListView.setAdapter(mListViewArrayAdapter);
-        
+
         HandlerThread busThread = new HandlerThread("BusHandler");
         busThread.start();
         mBusHandler = new BusHandler(busThread.getLooper());
@@ -148,7 +148,7 @@ public class Service extends Activity {
         mSecureService = new SecureService();
         mBusHandler.sendEmptyMessage(BusHandler.CONNECT);
     }
-    
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -156,23 +156,23 @@ public class Service extends Activity {
         this.menu = menu;
         return true;
     }
-    
+
     @Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-	    // Handle item selection
-	    switch (item.getItemId()) {
-	    case R.id.quit:
-	    	finish();
-	        return true;
-	    default:
-	        return super.onOptionsItemSelected(item);
-	    }
-	}
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+        case R.id.quit:
+            finish();
+            return true;
+        default:
+            return super.onOptionsItemSelected(item);
+        }
+    }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mBusHandler.sendEmptyMessage(BusHandler.DISCONNECT);        
+        mBusHandler.sendEmptyMessage(BusHandler.DISCONNECT);
     }
 
     @Override
@@ -190,28 +190,28 @@ public class Service extends Activity {
         }
         case DIALOG_CREATE_PASSPHRASE:
         case DIALOG_ENTER_PASSPHRASE: {
-            int title = (id == DIALOG_CREATE_PASSPHRASE) 
-                ? R.string.create_passphrase_dialog : R.string.enter_passphrase_dialog;
+            int title = (id == DIALOG_CREATE_PASSPHRASE)
+                    ? R.string.create_passphrase_dialog : R.string.enter_passphrase_dialog;
             LayoutInflater factory = LayoutInflater.from(this);
             View view = factory.inflate(R.layout.passphrase_dialog, null);
             EditText editText = (EditText) view.findViewById(R.id.PassphraseEditText);
             editText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-                    public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
-                        if (actionId == EditorInfo.IME_NULL
+                public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
+                    if (actionId == EditorInfo.IME_NULL
                             && event.getAction() == KeyEvent.ACTION_UP) {
-                            mPassword = view.getText().toString();
-                            mLatch.countDown();
-                            dismissDialog(mCredentialsDialog);
-                        }
-                        return true;
+                        mPassword = view.getText().toString();
+                        mLatch.countDown();
+                        dismissDialog(mCredentialsDialog);
                     }
-                });
+                    return true;
+                }
+            });
             return new AlertDialog.Builder(this)
                 .setIcon(android.R.drawable.ic_dialog_alert)
                 .setTitle(title)
                 .setCancelable(false)
                 .setView(view)
-                .create();            
+                .create();
         }
         default:
             return null;
@@ -234,7 +234,7 @@ public class Service extends Activity {
     private void sendUiMessage(int what, Object obj) {
         mHandler.sendMessage(mHandler.obtainMessage(what, obj));
     }
-    
+
     /*
      * The main differences between a secure application and a plain application, besides the
      * @Secure annotations of the interfaces, are encapsulated in the AuthListener.  The
@@ -266,13 +266,13 @@ public class Service extends Activity {
             return mechanisms.toString();
         }
 
-        /* 
-         * Persistent authentication and encryption data is stored at this location.  
-         * 
+        /*
+         * Persistent authentication and encryption data is stored at this location.
+         *
          * This uses the private file area associated with the application package.
          */
         public String getKeyStoreFileName() {
-//            return getFileStreamPath("alljoyn_keystore").getAbsolutePath();
+            //            return getFileStreamPath("alljoyn_keystore").getAbsolutePath();
             String keyStoreLocation = "/data/data/" + "org.alljoyn.bus.samples.sharedks.service" + "/files/central.ks";
             return keyStoreLocation;
         }
@@ -286,8 +286,8 @@ public class Service extends Activity {
          *
          * This simply defers to the specific listener based on the mechanism in use.
          */
-        public boolean requested(String mechanism, String peer, int count, String userName, 
-                                 AuthRequest[] requests) {
+        public boolean requested(String mechanism, String peer, int count, String userName,
+                AuthRequest[] requests) {
             AuthListener listener = mAuthListeners.get(mechanism);
             if (listener != null) {
                 return listener.requested(mechanism, peer, count, userName, requests);
@@ -322,9 +322,9 @@ public class Service extends Activity {
             mPasswordGenerator = new Random();
             mGeneratePassword = true;
         }
-            
+
         public boolean requested(String mechanism, String peer, int count, String userName,
-                                 AuthRequest[] requests) {
+                AuthRequest[] requests) {
             if (mGeneratePassword) {
                 mGeneratePassword = false;
                 mPassword = String.format("%06d", mPasswordGenerator.nextInt(1000000));
@@ -348,7 +348,7 @@ public class Service extends Activity {
      * of username, password pairs similar to /etc/passwd.
      */
     class SrpLogonListener implements AuthListener {
-        private Map<String, char[]> mUserNamePassword; 
+        private Map<String, char[]> mUserNamePassword;
 
         /* Populate the username, password table used by this listener. */
         public SrpLogonListener() {
@@ -365,7 +365,7 @@ public class Service extends Activity {
          * password.  See LogonEntryRequest.
          */
         public boolean requested(String mechanism, String peer, int count, String userName,
-                                 AuthRequest[] requests) {
+                AuthRequest[] requests) {
             char[] password = mUserNamePassword.get(userName);
             if (password != null) {
                 for (AuthRequest request : requests) {
@@ -385,7 +385,7 @@ public class Service extends Activity {
     class RsaKeyXListener implements AuthListener {
 
         public boolean requested(String mechanism, String peer, int count, String userName,
-                                 AuthRequest[] requests) {
+                AuthRequest[] requests) {
             /* Collect the requests we're interested in to simplify processing below. */
             PasswordRequest passwordRequest = null;
             CertificateRequest certificateRequest = null;
@@ -404,12 +404,12 @@ public class Service extends Activity {
                 /* Verify a certificate chain supplied by the peer. */
                 return true;
             } else if (certificateRequest != null) {
-                /* 
-                 * The engine is asking us for our certificate chain.  
+                /*
+                 * The engine is asking us for our certificate chain.
                  *
                  * If we return true and do not supply the certificate chain, then the engine will
                  * create a self-signed certificate for us.  It will ask for the passphrase to use
-                 * for the private key via a PasswordRequest. 
+                 * for the private key via a PasswordRequest.
                  */
                 return true;
             } else if (passwordRequest != null) {
@@ -451,15 +451,15 @@ public class Service extends Activity {
             sendUiMessage(MESSAGE_PING, inStr);
             sendUiMessage(MESSAGE_PING_REPLY, inStr);
             return inStr;
-        }        
+        }
     }
 
     class BusHandler extends Handler {
-        
+
         private static final String SERVICE_NAME = "org.alljoyn.bus.samples.secure";
         private static final String OBJ_PATH = "/SecureService";
         private static final short CONTACT_PORT = 42;
-        
+
         private BusAttachment mBus;
 
         public static final int CONNECT = 1;
@@ -472,15 +472,15 @@ public class Service extends Activity {
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
-            case CONNECT: { 
-            	org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
+            case CONNECT: {
+                org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
                 mBus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
-                
+
                 /*
                  * Register the AuthListener before calling connect() to ensure that everything is
                  * in place before any remote peers access the service.
                  */
-                Status status = mBus.registerAuthListener(mAuthListener.getMechanisms(), 
+                Status status = mBus.registerAuthListener(mAuthListener.getMechanisms(),
                                                           mAuthListener,
                                                           mAuthListener.getKeyStoreFileName(),
                                                           true);
@@ -489,16 +489,16 @@ public class Service extends Activity {
                     finish();
                     return;
                 }
-                
+
                 mBus.registerBusListener(new BusListener());
-                         
+
                 status = mBus.registerBusObject(mSecureService, OBJ_PATH);
                 logStatus("BusAttachment.registerBusObject()", status);
                 if (status != Status.OK) {
                     finish();
                     return;
                 }
-                
+
                 status = mBus.connect();
                 logStatus("BusAttachment.connect()", status);
                 if (status != Status.OK) {
@@ -510,18 +510,18 @@ public class Service extends Activity {
                  * Create a new session listening on the contact port of the chat service.
                  */
                 Mutable.ShortValue contactPort = new Mutable.ShortValue(CONTACT_PORT);
-                
+
                 SessionOpts sessionOpts = new SessionOpts();
                 sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
                 sessionOpts.isMultipoint = false;
                 sessionOpts.proximity = SessionOpts.PROXIMITY_ANY;
                 sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
 
-                status = mBus.bindSessionPort(contactPort, sessionOpts, new SessionPortListener() { 
+                status = mBus.bindSessionPort(contactPort, sessionOpts, new SessionPortListener() {
                     @Override
                     public boolean acceptSessionJoiner(short sessionPort, String joiner, SessionOpts sessionOpts) {
-                        logInfo(String.format("MyBusListener.acceptSessionJoiner(%d, %s, %s)", sessionPort, joiner, 
-                            sessionOpts.toString()));
+                        logInfo(String.format("MyBusListener.acceptSessionJoiner(%d, %s, %s)", sessionPort, joiner,
+                                              sessionOpts.toString()));
                         if (sessionPort == CONTACT_PORT) {
                             return true;
                         } else {
@@ -534,40 +534,40 @@ public class Service extends Activity {
                     finish();
                     return;
                 }
-                
+
                 /*
                  * request a well-known name from the bus
                  */
                 int flag = BusAttachment.ALLJOYN_REQUESTNAME_FLAG_REPLACE_EXISTING | BusAttachment.ALLJOYN_REQUESTNAME_FLAG_DO_NOT_QUEUE;
-                
+
                 status = mBus.requestName(SERVICE_NAME, flag);
                 logStatus(String.format("BusAttachment.requestName(%s, 0x%08x)", SERVICE_NAME, flag), status);
                 if (status == Status.OK) {
-                	/*
-                	 * If we successfully obtain a well-known name from the bus 
-                	 * advertise the same well-known name
-                	 */
-                	status = mBus.advertiseName(SERVICE_NAME, SessionOpts.TRANSPORT_ANY);
+                    /*
+                     * If we successfully obtain a well-known name from the bus
+                     * advertise the same well-known name
+                     */
+                    status = mBus.advertiseName(SERVICE_NAME, SessionOpts.TRANSPORT_ANY);
                     logStatus(String.format("BusAttachement.advertiseName(%s)", SERVICE_NAME), status);
                     if (status != Status.OK) {
-                    	/*
+                        /*
                          * If we are unable to advertise the name, release
                          * the well-known name from the local bus.
                          */
                         status = mBus.releaseName(SERVICE_NAME);
                         logStatus(String.format("BusAttachment.releaseName(%s)", SERVICE_NAME), status);
-                    	finish();
-                    	return;
+                        finish();
+                        return;
                     }
-                }                
+                }
                 break;
             }
-            
+
             case DISCONNECT: {
                 mBus.unregisterBusObject(mSecureService);
                 mBus.disconnect();
                 mBusHandler.getLooper().quit();
-                break;   
+                break;
             }
 
             default:
@@ -586,13 +586,13 @@ public class Service extends Activity {
             Log.e(TAG, log);
         }
     }
-    
+
     /*
      * print the status or result to the Android log. If the result is the expected
      * result only print it to the log.  Otherwise print it to the error log and
-     * Sent a Toast to the users screen. 
+     * Sent a Toast to the users screen.
      */
     private void logInfo(String msg) {
-            Log.i(TAG, msg);
+        Log.i(TAG, msg);
     }
 }

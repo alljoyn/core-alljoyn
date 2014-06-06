@@ -55,14 +55,14 @@ public class SignalEmitterTest extends TestCase {
             emitter.getInterface(EmitterInterface.class).Emit(string);
         }
 
-        public void setTimeToLive(int timeToLive) { 
-            local.setTimeToLive(timeToLive); 
-            global.setTimeToLive(timeToLive); 
+        public void setTimeToLive(int timeToLive) {
+            local.setTimeToLive(timeToLive);
+            global.setTimeToLive(timeToLive);
         }
-        
-        public void setCompressHeader(boolean compress) { 
-            local.setCompressHeader(compress); 
-            global.setCompressHeader(compress); 
+
+        public void setCompressHeader(boolean compress) {
+            local.setCompressHeader(compress);
+            global.setCompressHeader(compress);
         }
 
         public void setSessionlessFlag(boolean isSessionless) {
@@ -70,7 +70,7 @@ public class SignalEmitterTest extends TestCase {
             global.setSessionlessFlag(isSessionless);
         }
 
-        public void setGlobalBroadcast(boolean globalBroadcast) { 
+        public void setGlobalBroadcast(boolean globalBroadcast) {
             emitter = globalBroadcast ? global : local;
         }
 
@@ -95,7 +95,7 @@ public class SignalEmitterTest extends TestCase {
         assertEquals(Status.OK, status);
 
         assertEquals(Status.OK, bus.registerSignalHandler("org.alljoyn.bus.EmitterInterface", "Emit",
-                                                          this, getClass().getMethod("signalHandler", 
+                                                          this, getClass().getMethod("signalHandler",
                                                                                      String.class)));
 
         /* Add rule to receive non-session based signals */
@@ -190,7 +190,7 @@ public class SignalEmitterTest extends TestCase {
 //        BusAttachment otherConn = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
 //        assertEquals(Status.OK, otherConn.connect());
 //        assertEquals(Status.OK, otherConn.registerSignalHandler("org.alljoyn.bus.EmitterInterface", "Emit",
-//                                                                this, getClass().getMethod("signalHandler", 
+//                                                                this, getClass().getMethod("signalHandler",
 //                                                                                           String.class)));
 //
 //        /* Emit the signal from this daemon. */

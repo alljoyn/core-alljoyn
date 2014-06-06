@@ -31,7 +31,7 @@ public interface PropertiesInterface {
     /*
      * The BusProperty annotation signifies that this function should be used as part of the AllJoyn
      * interface. A BusProperty is always a method that starts with get or set.  The set method
-     * always takes a single value.  while the get method always returns a single value. The single 
+     * always takes a single value.  while the get method always returns a single value. The single
      * value can be a complex data type such as an array or an Object.
      *
      * All methods that use the BusProperty annotation can throw a BusException and should indicate

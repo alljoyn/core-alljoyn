@@ -54,14 +54,14 @@ public @interface BusSignal {
     /**
      * Description for this signal
      */
-	String description() default "";
+    String description() default "";
 
     /**
      * Set to true to document that this signal will be sent sessionless.
      * Note that this does not cause the signal to be sent sessionless,
      * just documents it as such.
      */
-	boolean sessionless() default false;
+    boolean sessionless() default false;
 
     /** Deprecated annotate flag. */
     int ANNOTATE_DEPRECATED = 2;

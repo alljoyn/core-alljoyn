@@ -42,7 +42,7 @@ public class SecurityViolationListenerTest extends TestCase {
     }
 
     public class BusAuthListener implements AuthListener {
-        public boolean requested(String mechanism, String authPeer, int count, String userName, 
+        public boolean requested(String mechanism, String authPeer, int count, String userName,
                                  AuthRequest[] requests) {
             for (AuthRequest request : requests) {
                 if (request instanceof PasswordRequest) {
@@ -70,14 +70,14 @@ public class SecurityViolationListenerTest extends TestCase {
         assertEquals(Status.OK, serviceBus.registerBusObject(service, "/secure"));
         assertEquals(Status.OK, serviceBus.connect());
         DBusProxyObj control = serviceBus.getDBusProxyObj();
-        assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, 
-                     control.RequestName("org.alljoyn.bus.BusAttachmentTest", 
+        assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner,
+                     control.RequestName("org.alljoyn.bus.BusAttachmentTest",
                                          DBusProxyObj.REQUEST_NAME_NO_FLAGS));
 
         bus = new BusAttachment(getClass().getName());
         assertEquals(Status.OK, bus.connect());
         ProxyBusObject proxyObj = bus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
-                                                        "/secure", 
+                                                        "/secure",
                                                         BusAttachment.SESSION_ID_ANY,
                                                         new Class[] { SimpleInterface.class });
         proxy = proxyObj.getInterface(SimpleInterface.class);
@@ -89,7 +89,7 @@ public class SecurityViolationListenerTest extends TestCase {
         bus = null;
 
         DBusProxyObj control = serviceBus.getDBusProxyObj();
-        assertEquals(DBusProxyObj.ReleaseNameResult.Released, 
+        assertEquals(DBusProxyObj.ReleaseNameResult.Released,
                      control.ReleaseName("org.alljoyn.bus.BusAttachmentTest"));
         serviceBus.disconnect();
         serviceBus.unregisterBusObject(service);

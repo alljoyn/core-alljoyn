@@ -59,7 +59,7 @@ public class Client extends Activity {
     static {
         System.loadLibrary("alljoyn_java");
     }
-    
+
     private static final int DIALOG_LOGON = 1;
 
     private static final int MESSAGE_PING = 1;
@@ -80,48 +80,48 @@ public class Client extends Activity {
     private String mUserName;
     private String mPassword;
     private ProgressDialog mDialog;
-    
+
     private Handler mHandler = new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                switch (msg.what) {
-                case MESSAGE_PING:
-                    String ping = (String) msg.obj;
-                    mListViewArrayAdapter.add("Ping:  " + ping);
-                    break;
-                case MESSAGE_PING_REPLY:
-                    String ret = (String) msg.obj;
-                    mListViewArrayAdapter.add("Reply:  " + ret);
-                    mEditText.setText("");
-                    break;
-                case MESSAGE_SHOW_LOGON_DIALOG:
-                    showDialog(DIALOG_LOGON);
-                    break;
-                case MESSAGE_AUTH_COMPLETE:
-                    Boolean authenticated = (Boolean) msg.obj;
-                    if (authenticated.equals(Boolean.FALSE)) {
-                        Toast.makeText(Client.this, "Authentication failed", Toast.LENGTH_LONG).show();
-                    }
-                    break;
-                case MESSAGE_POST_TOAST:
-                	Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_LONG).show();
-                	break;
-                case MESSAGE_START_PROGRESS_DIALOG:
-                    mDialog = ProgressDialog.show(Client.this, 
-                                                  "", 
-                                                  "Finding Security Service.\nPlease wait...", 
-                                                  true,
-                                                  true);
-                    break;
-                case MESSAGE_STOP_PROGRESS_DIALOG:
-                    mDialog.dismiss();
-                    break;
-                default:
-                    break;
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+            case MESSAGE_PING:
+                String ping = (String) msg.obj;
+                mListViewArrayAdapter.add("Ping:  " + ping);
+                break;
+            case MESSAGE_PING_REPLY:
+                String ret = (String) msg.obj;
+                mListViewArrayAdapter.add("Reply:  " + ret);
+                mEditText.setText("");
+                break;
+            case MESSAGE_SHOW_LOGON_DIALOG:
+                showDialog(DIALOG_LOGON);
+                break;
+            case MESSAGE_AUTH_COMPLETE:
+                Boolean authenticated = (Boolean) msg.obj;
+                if (authenticated.equals(Boolean.FALSE)) {
+                    Toast.makeText(Client.this, "Authentication failed", Toast.LENGTH_LONG).show();
                 }
+                break;
+            case MESSAGE_POST_TOAST:
+                Toast.makeText(getApplicationContext(), (String) msg.obj, Toast.LENGTH_LONG).show();
+                break;
+            case MESSAGE_START_PROGRESS_DIALOG:
+                mDialog = ProgressDialog.show(Client.this,
+                                              "",
+                                              "Finding Security Service.\nPlease wait...",
+                                              true,
+                                              true);
+                break;
+            case MESSAGE_STOP_PROGRESS_DIALOG:
+                mDialog.dismiss();
+                break;
+            default:
+                break;
             }
-        };
-    
+        }
+    };
+
     /* The authentication listener for our bus attachment. */
     private SrpLogonListener mAuthListener;
 
@@ -138,16 +138,16 @@ public class Client extends Activity {
 
         mEditText = (EditText) findViewById(R.id.EditText);
         mEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-                public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
-                    if (actionId == EditorInfo.IME_NULL
+            public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_NULL
                         && event.getAction() == KeyEvent.ACTION_UP) {
-                        Message msg = mBusHandler.obtainMessage(BusHandler.PING, 
-                                                                view.getText().toString());
-                        mBusHandler.sendMessage(msg);
-                    }
-                    return true;
+                    Message msg = mBusHandler.obtainMessage(BusHandler.PING,
+                                                            view.getText().toString());
+                    mBusHandler.sendMessage(msg);
                 }
-            });
+                return true;
+            }
+        });
 
         HandlerThread busThread = new HandlerThread("BusHandler");
         busThread.start();
@@ -157,7 +157,7 @@ public class Client extends Activity {
         mBusHandler.sendEmptyMessage(BusHandler.CONNECT);
         mHandler.sendEmptyMessage(MESSAGE_START_PROGRESS_DIALOG);
     }
-    
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -165,23 +165,23 @@ public class Client extends Activity {
         this.menu = menu;
         return true;
     }
-    
+
     @Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-	    // Handle item selection
-	    switch (item.getItemId()) {
-	    case R.id.quit:
-	    	finish();
-	        return true;
-	    default:
-	        return super.onOptionsItemSelected(item);
-	    }
-	}
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+        case R.id.quit:
+            finish();
+            return true;
+        default:
+            return super.onOptionsItemSelected(item);
+        }
+    }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        
+
         mBusHandler.sendEmptyMessage(BusHandler.DISCONNECT);
     }
 
@@ -227,9 +227,9 @@ public class Client extends Activity {
             return "ALLJOYN_SRP_LOGON";
         }
 
-        /* 
-         * Persistent authentication and encryption data is stored at this location.  
-         * 
+        /*
+         * Persistent authentication and encryption data is stored at this location.
+         *
          * This uses the private file area associated with the application package.
          */
         public String getKeyStoreFileName() {
@@ -244,7 +244,7 @@ public class Client extends Activity {
          * The ALLJOYN_SRP_LOGON mechanism will request the username and password.
          */
         public boolean requested(String authMechanism, String authPeer, int count, String userName,
-                                 AuthRequest[] requests) {
+                AuthRequest[] requests) {
             /* Collect the requests we're interested in to simplify processing below. */
             PasswordRequest passwordRequest = null;
             UserNameRequest userNameRequest = null;
@@ -278,20 +278,20 @@ public class Client extends Activity {
             sendUiMessage(MESSAGE_AUTH_COMPLETE, authenticated);
         }
     }
-    
+
     class BusHandler extends Handler {
-         
+
         private static final String SERVICE_NAME = "org.alljoyn.bus.samples.secure";
         private static final short CONTACT_PORT=42;
-        
+
         private BusAttachment mBus;
         private ProxyBusObject mProxyObj;
         private SecureInterface mSecureInterface;
-        
-        private int 	mSessionId;
+
+        private int     mSessionId;
         private boolean mIsConnected;
         private boolean mIsStoppingDiscovery;
-        
+
         public static final int CONNECT = 1;
         public static final int JOIN_SESSION = 2;
         public static final int DISCONNECT = 3;
@@ -299,7 +299,7 @@ public class Client extends Activity {
 
         public BusHandler(Looper looper) {
             super(looper);
-            
+
             mIsConnected = false;
             mIsStoppingDiscovery = false;
         }
@@ -308,14 +308,14 @@ public class Client extends Activity {
         public void handleMessage(Message msg) {
             switch(msg.what) {
             case CONNECT: {
-            	org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
+                org.alljoyn.bus.alljoyn.DaemonInit.PrepareDaemon(getApplicationContext());
                 mBus = new BusAttachment(getPackageName(), BusAttachment.RemoteMessage.Receive);
 
                 /*
                  * Register the AuthListener before calling connect() to ensure that everything is
                  * in place before any remote peers access the service.
                  */
-                Status status = mBus.registerAuthListener(mAuthListener.getMechanisms(), 
+                Status status = mBus.registerAuthListener(mAuthListener.getMechanisms(),
                                                           mAuthListener,
                                                           mAuthListener.getKeyStoreFileName());
                 logStatus("BusAttachment.registerAuthListener()", status);
@@ -323,24 +323,24 @@ public class Client extends Activity {
                     finish();
                     return;
                 }
-                
+
                 mBus.registerBusListener(new BusListener() {
-                  	@Override
-                  	public void foundAdvertisedName(String name, short transport, String namePrefix) {
-                  		logInfo(String.format("MyBusListener.foundAdvertisedName(%s, 0x%04x, %s)", name, transport, namePrefix));
-                  		/*
+                    @Override
+                    public void foundAdvertisedName(String name, short transport, String namePrefix) {
+                        logInfo(String.format("MyBusListener.foundAdvertisedName(%s, 0x%04x, %s)", name, transport, namePrefix));
+                        /*
                          * This client will only join the first service that it sees advertising
-                         * the indicated well-known name.  If the program is already a member of 
-                         * a session (i.e. connected to a service) we will not attempt to join 
+                         * the indicated well-known name.  If the program is already a member of
+                         * a session (i.e. connected to a service) we will not attempt to join
                          * another session.
-                         * It is possible to join multiple session however joining multiple 
-                         * sessions is not shown in this sample. 
+                         * It is possible to join multiple session however joining multiple
+                         * sessions is not shown in this sample.
                          */
-                  		if(!mIsConnected){
-                  		    Message msg = obtainMessage(JOIN_SESSION, name);
-                  		    sendMessage(msg);
-                  		}
-                  	}
+                        if(!mIsConnected){
+                            Message msg = obtainMessage(JOIN_SESSION, name);
+                            sendMessage(msg);
+                        }
+                    }
                 });
 
                 status = mBus.connect();
@@ -349,7 +349,7 @@ public class Client extends Activity {
                     finish();
                     return;
                 }
-                
+
                 /*
                  * Now find an instance of the AllJoyn object we want to call.  We start by looking for
                  * a name, then connecting to the device that is advertising that name.
@@ -359,32 +359,32 @@ public class Client extends Activity {
                 status = mBus.findAdvertisedName(SERVICE_NAME);
                 logStatus(String.format("BusAttachement.findAdvertisedName(%s)", SERVICE_NAME), status);
                 if (Status.OK != status) {
-                	finish();
-                	return;
+                    finish();
+                    return;
                 }
                 break;
             }
-            
+
             case (JOIN_SESSION): {
-            	/*
+                /*
                  * If discovery is currently being stopped don't join to any other sessions.
                  */
                 if (mIsStoppingDiscovery) {
                     break;
                 }
-                
+
                 /*
                  * In order to join the session, we need to provide the well-known
                  * contact port.  This is pre-arranged between both sides as part
                  * of the definition of the chat service.  As a result of joining
-                 * the session, we get a session identifier which we must use to 
+                 * the session, we get a session identifier which we must use to
                  * identify the created session communication channel whenever we
                  * talk to the remote side.
                  */
                 short contactPort = CONTACT_PORT;
                 SessionOpts sessionOpts = new SessionOpts();
                 Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
-                
+
                 Status status = mBus.joinSession((String) msg.obj, contactPort, sessionId, sessionOpts, new SessionListener(){
                     @Override
                     public void sessionLost(int sessionId, int reason) {
@@ -394,41 +394,41 @@ public class Client extends Activity {
                     }
                 });
                 logStatus("BusAttachment.joinSession()", status);
-                    
+
                 if (status == Status.OK) {
-                	/*
-                     * To communicate with an AllJoyn object, we create a ProxyBusObject.  
+                    /*
+                     * To communicate with an AllJoyn object, we create a ProxyBusObject.
                      * A ProxyBusObject is composed of a name, path, sessionID and interfaces.
-                     * 
+                     *
                      * This ProxyBusObject is located at the well-known SERVICE_NAME, under path
                      * "/SimpleService", uses sessionID of CONTACT_PORT, and implements the SimpleInterface.
                      */
-                	mProxyObj =  mBus.getProxyBusObject(SERVICE_NAME, 
-                										"/SecureService",
-                										sessionId.value,
-                										new Class[] { SecureInterface.class });
+                    mProxyObj =  mBus.getProxyBusObject(SERVICE_NAME,
+                                                        "/SecureService",
+                                                        sessionId.value,
+                                                        new Class[] { SecureInterface.class });
 
-                	/* We make calls to the methods of the AllJoyn object through one of its interfaces. */
-                	mSecureInterface = mProxyObj.getInterface(SecureInterface.class);
-                	
-                	mSessionId = sessionId.value;
-                	mIsConnected = true;
-                	mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
+                    /* We make calls to the methods of the AllJoyn object through one of its interfaces. */
+                    mSecureInterface = mProxyObj.getInterface(SecureInterface.class);
+
+                    mSessionId = sessionId.value;
+                    mIsConnected = true;
+                    mHandler.sendEmptyMessage(MESSAGE_STOP_PROGRESS_DIALOG);
                 }
                 break;
             }
-            
+
             case DISCONNECT: {
-            	mIsStoppingDiscovery = true;
-            	if (mIsConnected) {
-                	Status status = mBus.leaveSession(mSessionId);
+                mIsStoppingDiscovery = true;
+                if (mIsConnected) {
+                    Status status = mBus.leaveSession(mSessionId);
                     logStatus("BusAttachment.leaveSession()", status);
-            	}
+                }
                 mBus.disconnect();
                 getLooper().quit();
                 break;
             }
-            
+
             case PING: {
                 if (mSecureInterface != null){
                     try {
@@ -444,7 +444,7 @@ public class Client extends Activity {
             default:
                 break;
             }
-        }        
+        }
     }
 
     private void logStatus(String msg, Status status) {
@@ -452,7 +452,7 @@ public class Client extends Activity {
         if (status == Status.OK) {
             Log.i(TAG, log);
         } else {
-        	Message toastMsg = mHandler.obtainMessage(MESSAGE_POST_TOAST, log);
+            Message toastMsg = mHandler.obtainMessage(MESSAGE_POST_TOAST, log);
             mHandler.sendMessage(toastMsg);
             Log.e(TAG, log);
         }
@@ -464,11 +464,11 @@ public class Client extends Activity {
         mHandler.sendMessage(toastMsg);
         Log.e(TAG, log, ex);
     }
-    
+
     /*
      * print the status or result to the Android log. If the result is the expected
      * result only print it to the log.  Otherwise print it to the error log and
-     * Sent a Toast to the users screen. 
+     * Sent a Toast to the users screen.
      */
     private void logInfo(String msg) {
         Log.i(TAG, msg);

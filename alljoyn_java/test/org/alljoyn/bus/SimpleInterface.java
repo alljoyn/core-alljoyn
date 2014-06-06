@@ -20,7 +20,7 @@ import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.annotation.BusInterface;
 import org.alljoyn.bus.annotation.BusMethod;
 
-/** 
+/**
  * SimpleInterface is an example of an interface that is published
  * onto alljoyn by org.alljoyn.bus.samples.simple.Service and is subscribed
  * to by org.alljoyn.bus.samples.simple.Client.

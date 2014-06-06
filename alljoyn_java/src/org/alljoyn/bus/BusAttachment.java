@@ -16,6 +16,7 @@
 
 package org.alljoyn.bus;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -23,12 +24,11 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.lang.ref.WeakReference;
 
 import org.alljoyn.bus.AuthListener.AuthRequest;
 import org.alljoyn.bus.AuthListener.CertificateRequest;
@@ -308,7 +308,7 @@ public class BusAttachment {
      *
      * @param translator       The Translator instance
      */
-	public native void setDescriptionTranslator(Translator translator);
+    public native void setDescriptionTranslator(Translator translator);
 
     /**
      * When passed to BindSessionPort as the requested port, the system will
@@ -462,7 +462,7 @@ public class BusAttachment {
      * <li>ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus</li>
      * <li>other error status codes indicating a failure.</li>
      * </ul>
-     * 
+     *
      */
     public native Status getSessionFd(int sessionId, Mutable.IntegerValue sockFd);
 
@@ -677,7 +677,7 @@ public class BusAttachment {
             requests.add(new ExpirationRequest(credentials));
 
             if (authListener.requested(authMechanism, authPeer, authCount, userName,
-                    requests.toArray(new AuthRequest[0]))) {
+                                       requests.toArray(new AuthRequest[0]))) {
                 return credentials;
             }
             return null;
@@ -775,7 +775,7 @@ public class BusAttachment {
          * The corresponding interface (dbus) is what we give the clients.
          */
         dbusbo = new ProxyBusObject(this, "org.freedesktop.DBus", "/org/freedesktop/DBus", SESSION_ID_ANY,
-                new Class[] { DBusProxyObj.class });
+                                    new Class[] { DBusProxyObj.class });
         dbus = dbusbo.getInterface(DBusProxyObj.class);
         executor = Executors.newSingleThreadExecutor();
     }
@@ -840,8 +840,8 @@ public class BusAttachment {
             AuthListenerInternal busAuthListener, String keyStoreFileName, Boolean isShared);
 
     private native Status registerBusObject(String objPath, BusObject busObj,
-            InterfaceDescription[] busInterfaces, boolean secure, 
-			String languageTag, String description, Translator dt);
+            InterfaceDescription[] busInterfaces, boolean secure,
+            String languageTag, String description, Translator dt);
 
     private native boolean isSecureBusObject(BusObject busObj);
 
@@ -850,7 +850,7 @@ public class BusAttachment {
 
     /**
      * Release resources immediately.
-     * 
+     *
      * Normally, when all references are removed to a given object, the Java
      * garbage collector notices the fact that the object is no longer required
      * and will destroy it.  This can happen at the garbage collector's leisure
@@ -1032,7 +1032,7 @@ public class BusAttachment {
      */
     public Status registerBusObject(BusObject busObj, String objPath, boolean secure) {
         return registerBusObject(busObj, objPath, secure, null, null, null);
-	}	
+    }
 
     /**
      * Registers a bus object.
@@ -1044,14 +1044,14 @@ public class BusAttachment {
      * @param busObj the BusObject to register
      * @param objPath the object path of the BusObject
      * @param secure true if authentication is required to access this object
-	 * @param languageTag a language tag describing the language of the description of this BusObject
-	 * @param description a textual description of this BusObject
+     * @param languageTag a language tag describing the language of the description of this BusObject
+     * @param description a textual description of this BusObject
      * @return OK if successful
      * @see org.alljoyn.bus.annotation.BusInterface
      */
     public Status registerBusObject(BusObject busObj, String objPath, boolean secure, String languageTag, String description) {
         return registerBusObject(busObj, objPath, secure, languageTag, description, null);
-	}	
+    }
     /**
      * Registers a bus object.
      * Once registered, the bus object may communicate to and from other
@@ -1062,23 +1062,23 @@ public class BusAttachment {
      * @param busObj the BusObject to register
      * @param objPath the object path of the BusObject
      * @param secure true if authentication is required to access this object
-	 * @param languageTag a language tag describing the language of the description of this BusObject
-	 * @param description a textual description of this BusObject
-	 * @param dt a Translator instance to translate descriptions of this object
+     * @param languageTag a language tag describing the language of the description of this BusObject
+     * @param description a textual description of this BusObject
+     * @param dt a Translator instance to translate descriptions of this object
      * @return OK if successful
      * @see org.alljoyn.bus.annotation.BusInterface
      */
-    public Status registerBusObject(BusObject busObj, String objPath, boolean secure, 
-											String languageTag, String description, Translator dt) {
+    public Status registerBusObject(BusObject busObj, String objPath, boolean secure,
+            String languageTag, String description, Translator dt) {
         try {
             List<InterfaceDescription> descs = new ArrayList<InterfaceDescription>();
             Status status = InterfaceDescription.create(this, busObj.getClass().getInterfaces(),
-                    descs);
+                                                        descs);
             if (status != Status.OK) {
                 return status;
             }
-            return registerBusObject(objPath, busObj, descs.toArray(new InterfaceDescription[0]), secure, 
-																				languageTag, description, dt);
+            return registerBusObject(objPath, busObj, descs.toArray(new InterfaceDescription[0]), secure,
+                                     languageTag, description, dt);
         } catch (AnnotationBusException ex) {
             BusException.log(ex);
             return Status.BAD_ANNOTATION;
@@ -1229,7 +1229,7 @@ public class BusAttachment {
             Method handlerMethod,
             String source) {
         Status status = registerNativeSignalHandler(ifaceName, signalName, obj, handlerMethod,
-                source);
+                                                    source);
         if (status == Status.BUS_NO_SUCH_INTERFACE) {
             try {
                 Class<?> iface = Class.forName(ifaceName);
@@ -1244,7 +1244,7 @@ public class BusAttachment {
                         // Ignore, use signalName parameter provided
                     }
                     status = registerNativeSignalHandler(ifaceName, signalName, obj, handlerMethod,
-                            source);
+                                                         source);
                 }
             } catch (ClassNotFoundException ex) {
                 BusException.log(ex);
@@ -1415,7 +1415,7 @@ public class BusAttachment {
         this.keyStoreFileName = keyStoreFileName;
         this.isShared = isShared;
         Status status = enablePeerSecurity(this.authMechanisms, busAuthListener,
-                this.keyStoreFileName, isShared);
+                                           this.keyStoreFileName, isShared);
         if (status != Status.OK) {
             busAuthListener.setAuthListener(null);
             this.authMechanisms = null;
@@ -1483,13 +1483,13 @@ public class BusAttachment {
      * handler, signal handler or other AllJoyn callback.
      * <p>
      * This method can ONLY be called from within the body of a signal handler,
-     * method handler or other AllJoyn callback. It allows AllJoyn to dispatch 
+     * method handler or other AllJoyn callback. It allows AllJoyn to dispatch
      * a single (additional) callback while the current one is still executing.
      * This method is typically used when a method, signal handler or other
-     * AllJoyn callback needs to execute for a long period of time or when the 
+     * AllJoyn callback needs to execute for a long period of time or when the
      * callback needs to make any kind of blocking call.
      * <p>
-     * This method MUST be called prior to making any non-asynchronous AllJoyn 
+     * This method MUST be called prior to making any non-asynchronous AllJoyn
      * remote procedure calls from within an AllJoyn callback. This includes
      * calls such as joinSession(), advertiseName(), cancelAdvertisedName(),
      * findAdvertisedName(), cancelFindAdvertisedName(), setLinkTimeout(), etc.
@@ -1509,9 +1509,9 @@ public class BusAttachment {
      * AllJoyn limits arrays to a maximum sze of 2^16
      */
     public static final int ALLJOYN_MAX_ARRAY_LEN = 131072;
-    
+
     /**
-     * The maximum number of concurrent method and signal handlers locally 
+     * The maximum number of concurrent method and signal handlers locally
      * executing by default.
      */
     private static final int DEFAULT_CONCURRENCY = 4;

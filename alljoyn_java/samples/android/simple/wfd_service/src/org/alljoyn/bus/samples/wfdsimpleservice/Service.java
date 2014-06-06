@@ -275,15 +275,15 @@ public class Service extends Activity {
                 sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
 
                 status = mBus.bindSessionPort(contactPort, sessionOpts, new SessionPortListener() {
-                                                  @Override
-                                                  public boolean acceptSessionJoiner(short sessionPort, String joiner, SessionOpts sessionOpts) {
-                                                      if (sessionPort == CONTACT_PORT) {
-                                                          return true;
-                                                      } else {
-                                                          return false;
-                                                      }
-                                                  }
-                                              });
+                    @Override
+                    public boolean acceptSessionJoiner(short sessionPort, String joiner, SessionOpts sessionOpts) {
+                        if (sessionPort == CONTACT_PORT) {
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    }
+                });
                 logStatus(String.format("BusAttachment.bindSessionPort(%d, %s)",
                                         contactPort.value, sessionOpts.toString()), status);
                 if (status != Status.OK) {

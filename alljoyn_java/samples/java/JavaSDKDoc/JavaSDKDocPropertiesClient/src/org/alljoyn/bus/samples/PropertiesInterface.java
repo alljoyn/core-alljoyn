@@ -21,7 +21,7 @@ import org.alljoyn.bus.annotation.BusProperty;
 
 @BusInterface (name = "org.samples.properties")
 public interface PropertiesInterface {
-	@BusProperty
+    @BusProperty
     public int getTextSize() throws BusException;
     @BusProperty
     public void setTextSize(int size) throws BusException;

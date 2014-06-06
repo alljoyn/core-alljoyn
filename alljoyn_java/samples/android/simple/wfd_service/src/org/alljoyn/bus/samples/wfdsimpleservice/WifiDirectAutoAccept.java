@@ -83,29 +83,29 @@ public class WifiDirectAutoAccept {
         dialogListener = newDialogListener();
     }
 
-/**
- * Construct a WifiDirectAutoAccept object using the application's existing
- * manager and channel.
- */
+    /**
+     * Construct a WifiDirectAutoAccept object using the application's existing
+     * manager and channel.
+     */
     public WifiDirectAutoAccept(WifiP2pManager manager, WifiP2pManager.Channel channel) {
         this(null, manager, channel);
     }
 
-/**
- * Construct a WifiDirectAutoAccept object with automatically created manager and
- * channel objects for the given context.
- */
+    /**
+     * Construct a WifiDirectAutoAccept object with automatically created manager and
+     * channel objects for the given context.
+     */
     public WifiDirectAutoAccept(Context context) {
         this(context, null, null);
     }
 
-/**
- * Enable or disable interception of Wifi Direct group formation requests.
- *
- * A user of this object should make sure to call intercept(false) before
- * deleting the object, otherwise the internal dialog listener object will
- * remain registered until the app goes in to the background.
- */
+    /**
+     * Enable or disable interception of Wifi Direct group formation requests.
+     *
+     * A user of this object should make sure to call intercept(false) before
+     * deleting the object, otherwise the internal dialog listener object will
+     * remain registered until the app goes in to the background.
+     */
     public void intercept(boolean enable) {
         if (enable) {
             setDialogListener(dialogListener);
@@ -114,17 +114,17 @@ public class WifiDirectAutoAccept {
         }
     }
 
-/**
- * Creating a new DialogListenerProxy object that also inherits the
- * DialogListener interface.
- *
- * The caller does not need to have any awareness of the
- * DialogListener interface.
- *
- * Returns null if the object could not be created.  This can
- * happen if the DialogListener interface is not available at
- * runtime.
- */
+    /**
+     * Creating a new DialogListenerProxy object that also inherits the
+     * DialogListener interface.
+     *
+     * The caller does not need to have any awareness of the
+     * DialogListener interface.
+     *
+     * Returns null if the object could not be created.  This can
+     * happen if the DialogListener interface is not available at
+     * runtime.
+     */
     private Object newDialogListener() {
         Object dialogListener;
 
@@ -168,18 +168,18 @@ public class WifiDirectAutoAccept {
         return dialogListener;
     }
 
-/**
- * Call WifiP2pManager.setDialogListener() using reflection.
- *
- * Passing null for the listener parameter will deregister any
- * previous listener and cause the WiFi P2P framework to revert to
- * system handling of P2P group formation.
- *
- * If the method is not available at runtime, no action is taken.
- *
- * WifiP2pManager.setDialogListener() exists in Android API 16, but
- * not in earlier APIs.
- */
+    /**
+     * Call WifiP2pManager.setDialogListener() using reflection.
+     *
+     * Passing null for the listener parameter will deregister any
+     * previous listener and cause the WiFi P2P framework to revert to
+     * system handling of P2P group formation.
+     *
+     * If the method is not available at runtime, no action is taken.
+     *
+     * WifiP2pManager.setDialogListener() exists in Android API 16, but
+     * not in earlier APIs.
+     */
     private void setDialogListener(Object listener) {
         if (dialogListenerMethod == null) {
             return;
@@ -196,13 +196,13 @@ public class WifiDirectAutoAccept {
         }
     }
 
-/**
- * A DialogListenerProxy provides access to the DialogListener
- * interface and associated functionality.
- *
- * DialogListener is used to handle WiFi P2P group formation events in
- * Android API 16 and later.
- */
+    /**
+     * A DialogListenerProxy provides access to the DialogListener
+     * interface and associated functionality.
+     *
+     * DialogListener is used to handle WiFi P2P group formation events in
+     * Android API 16 and later.
+     */
     private class DialogListenerProxy {
 
         public static final String TAG = "DialogListenerProxy";
@@ -244,16 +244,16 @@ public class WifiDirectAutoAccept {
             Log.d(TAG, "    config: " + config.wps.setup + " " + config.wps.pin);
             manager.connect(channel, config, new ActionListener() {
 
-                                @Override
-                                public void onSuccess() {
-                                    // WiFiDirectBroadcastReceiver will notify us. Ignore for now.
-                                }
+                @Override
+                public void onSuccess() {
+                    // WiFiDirectBroadcastReceiver will notify us. Ignore for now.
+                }
 
-                                @Override
-                                public void onFailure(int reason) {
-                                    Log.d(TAG, "Connect failed");
-                                }
-                            });
+                @Override
+                public void onFailure(int reason) {
+                    Log.d(TAG, "Connect failed");
+                }
+            });
         }
 
         /**

@@ -42,12 +42,12 @@ public @interface BusInterface {
 
     /**
      * This interface's description language
-     */ 
+     */
     String descriptionLanguage() default "";
 
     /**
-     * This interface's description 
-     */ 
+     * This interface's description
+     */
     String description() default "";
 
     /**

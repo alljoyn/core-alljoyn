@@ -23,8 +23,8 @@ import org.alljoyn.bus.annotation.Secure;
 
 import java.util.Map;
 
-/** 
- * AddressBookInterface is an example of an AllJoyn interface that uses complex 
+/**
+ * AddressBookInterface is an example of an AllJoyn interface that uses complex
  * data types (Struct, Dictionary, etc.) to publish a simple addressbook.
  */
 @BusInterface

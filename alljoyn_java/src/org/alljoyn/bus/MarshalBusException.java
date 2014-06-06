@@ -18,7 +18,7 @@ package org.alljoyn.bus;
 
 /**
  * AllJoyn marshalling related exceptions.  Marshalling exceptions occur when a
- * Java type cannot be marshalled into an AllJoyn type and vice versa.  
+ * Java type cannot be marshalled into an AllJoyn type and vice versa.
  * <p>
  * When a Java type cannot be marshalled into an AllJoyn type, the message reported
  * will be similar to {@code cannot marshal class java.lang.Byte into 'a{ss}'} .

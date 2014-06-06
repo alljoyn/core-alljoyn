@@ -81,7 +81,7 @@ public interface InferredTypesInterface {
         }
         public boolean equals(Object obj) {
             Struct struct = (Struct)obj;
-            return 
+            return
                 y == struct.y &&
                 b == struct.b &&
                 n == struct.n &&
@@ -102,7 +102,7 @@ public interface InferredTypesInterface {
         }
     }
 
-    @BusMethod 
+    @BusMethod
     public void Void() throws BusException;
 
     @BusMethod
@@ -164,7 +164,7 @@ public interface InferredTypesInterface {
 
     @BusMethod(name="Struct")
     public Struct InferredStruct(Struct r) throws BusException;
-    
+
     @BusMethod
     public Variant Variant(Variant v) throws BusException;
 
@@ -402,7 +402,7 @@ public interface InferredTypesInterface {
     @BusMethod
     public TreeMap<String, String>[] TreeDictionaryArray(TreeMap<String, String>[] aaess) throws BusException;
 
-    @BusProperty 
+    @BusProperty
     public Map<String, String> getDictionarySS() throws BusException;
 
     @BusProperty

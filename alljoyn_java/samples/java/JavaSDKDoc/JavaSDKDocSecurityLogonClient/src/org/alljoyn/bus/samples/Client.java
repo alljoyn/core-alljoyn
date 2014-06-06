@@ -59,7 +59,7 @@ public class Client {
                 }
             });
             if (status != Status.OK) {
-		return;
+        return;
             }
             System.out.println(String.format("BusAttachement.joinSession successful sessionId = %d", sessionId.value));
 
@@ -165,7 +165,7 @@ public class Client {
         SrpLogonListener authListener = new SrpLogonListener();
         Status status = mBus.registerAuthListener("ALLJOYN_SRP_LOGON", authListener);
         if (status != Status.OK) {
-	    return;
+        return;
         }
 
         BusListener listener = new MyBusListener();
@@ -173,7 +173,7 @@ public class Client {
 
         status = mBus.connect();
         if (status != Status.OK) {
-	    return;
+        return;
         }
 
 
@@ -181,7 +181,7 @@ public class Client {
 
         status = mBus.findAdvertisedName("com.my.well.known.name");
         if (status != Status.OK) {
-	    return;
+        return;
         }
         System.out.println("BusAttachment.findAdvertisedName successful " + "com.my.well.known.name");
 

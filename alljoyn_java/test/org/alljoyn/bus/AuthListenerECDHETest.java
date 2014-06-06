@@ -51,12 +51,12 @@ public class AuthListenerECDHETest extends TestCase {
     }
 
     public class SecureService implements SecureInterface, InsecureInterface, BusObject {
-        public String Ping(String str) { 
+        public String Ping(String str) {
             assertTrue(bus.getMessageContext().authMechanism.length() > 0);
-            return str; 
+            return str;
         }
-        public String InsecurePing(String str) { 
-            return str; 
+        public String InsecurePing(String str) {
+            return str;
         }
     }
 
@@ -71,7 +71,7 @@ public class AuthListenerECDHETest extends TestCase {
         setUp(serviceKeyStoreListener, keyStoreListener);
     }
 
-    public void setUp(KeyStoreListener serviceKeyStoreListener, 
+    public void setUp(KeyStoreListener serviceKeyStoreListener,
                       KeyStoreListener keyStoreListener) throws Exception{
         serviceBus = new BusAttachment("receiver");
         serviceBus.registerKeyStoreListener(serviceKeyStoreListener);
@@ -79,8 +79,8 @@ public class AuthListenerECDHETest extends TestCase {
         assertEquals(Status.OK, serviceBus.registerBusObject(service, "/secure"));
         assertEquals(Status.OK, serviceBus.connect());
         DBusProxyObj control = serviceBus.getDBusProxyObj();
-        assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, 
-                     control.RequestName("org.alljoyn.bus.BusAttachmentTest", 
+        assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner,
+                     control.RequestName("org.alljoyn.bus.BusAttachmentTest",
                                          DBusProxyObj.REQUEST_NAME_NO_FLAGS));
 
         bus = new BusAttachment("sender");
@@ -97,31 +97,31 @@ public class AuthListenerECDHETest extends TestCase {
             bus.setDebugLevel("AUTH_KEY_EXCHANGER", 3);
         }
         ProxyBusObject proxyObj = bus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
-                                                        "/secure", 
+                                                        "/secure",
                                                         BusAttachment.SESSION_ID_ANY,
                                                         new Class[] { SecureInterface.class, InsecureInterface.class });
         proxy = proxyObj.getInterface(SecureInterface.class);
         insecureProxy = proxyObj.getInterface(InsecureInterface.class);
     }
-    
+
     public void partTearDown() throws Exception {
         proxy = null;
         insecureProxy = null;
-        
+
         bus.disconnect();
         bus = null;
 
         DBusProxyObj control = serviceBus.getDBusProxyObj();
-        assertEquals(DBusProxyObj.ReleaseNameResult.Released, 
+        assertEquals(DBusProxyObj.ReleaseNameResult.Released,
                      control.ReleaseName("org.alljoyn.bus.BusAttachmentTest"));
         serviceBus.disconnect();
         serviceBus.unregisterBusObject(service);
 
         serviceBus = null;
         /*
-         * Each BusAttachment is a very heavy object that creates many file 
+         * Each BusAttachment is a very heavy object that creates many file
          * descripters for each BusAttachment.  This will force Java's Garbage
-         * collector to remove the BusAttachments 'bus' and 'serviceBus' before 
+         * collector to remove the BusAttachments 'bus' and 'serviceBus' before
          * continuing on to the next test.
          */
         do{
@@ -134,7 +134,7 @@ public class AuthListenerECDHETest extends TestCase {
         keyStoreListener = null;
         serviceKeyStoreListener = null;
     }
-    
+
     public void doPing(ECDHEKeyXListener serviceAuthListener, ECDHEKeyXListener clientAuthListener) throws Exception {
         assertEquals(Status.OK, serviceBus.registerAuthListener(serviceAuthListener.getMechanisms(), serviceAuthListener));
         assertEquals(Status.OK, bus.registerAuthListener(clientAuthListener.getMechanisms(), clientAuthListener));
@@ -160,16 +160,16 @@ public class AuthListenerECDHETest extends TestCase {
         public static final int SERVER_MODE = 0;
         public static final int CLIENT_MODE = 1;
 
-    	public ECDHEKeyXListener(int mode, String authList) {
+        public ECDHEKeyXListener(int mode, String authList) {
             this(mode, true, authList);
         }
-    	public ECDHEKeyXListener(int mode, boolean sendBackKeys, String authList) {
+        public ECDHEKeyXListener(int mode, boolean sendBackKeys, String authList) {
             this.mode = mode;
-    		/* the keys can be stored in a key store */
+            /* the keys can be stored in a key store */
             this.sendBackKeys = sendBackKeys;
             setMechanisms(authList);
             setPsk("679812");
-    	}
+        }
         /* Set the mechanisms */
         public void setMechanisms(String list) {
             mechanisms = list;
@@ -189,35 +189,35 @@ public class AuthListenerECDHETest extends TestCase {
          * Authentication requests are being made.  Contained in this call are the mechanism in use,
          * the number of attempts made so far, the desired user name for the requests, and the
          * specific credentials being requested in the form of AuthRequests.
-         * 
-         * The ALLJOYN_ECDHE_KEYX can request for private key, public key, and to verify the peer 
+         *
+         * The ALLJOYN_ECDHE_KEYX can request for private key, public key, and to verify the peer
          */
         @Override
         public boolean requested(String authMechanism, String authPeer, int count, String userName, AuthRequest[] requests) {
             try {
                 System.out.println(getName() + ":requested with authMechanisms " + authMechanism + " and " + requests.length + " requests");
-                if (!authMechanism.equals("ALLJOYN_ECDHE_NULL") && 
+                if (!authMechanism.equals("ALLJOYN_ECDHE_NULL") &&
                     !authMechanism.equals("ALLJOYN_ECDHE_PSK") &&
                     !authMechanism.equals("ALLJOYN_ECDHE_ECDSA")) {
-                	return false;
+                    return false;
                 }
                 for (AuthRequest rqst: requests) {
-                	if (rqst instanceof PrivateKeyRequest) {
+                    if (rqst instanceof PrivateKeyRequest) {
                         System.out.println(getName() + ": got a PrivateKeyRequest");
                         if (sendBackKeys) {
-                		    PrivateKeyRequest pkRqst = (PrivateKeyRequest) rqst;
+                            PrivateKeyRequest pkRqst = (PrivateKeyRequest) rqst;
                             String privateKeyPEM;
                             if (mode == CLIENT_MODE) {
-                		        privateKeyPEM = CLIENT_PK_PEM;
+                                privateKeyPEM = CLIENT_PK_PEM;
                             }
                             else {
-                		        privateKeyPEM = SERVER_PK_PEM;
+                                privateKeyPEM = SERVER_PK_PEM;
                             }
-                		    pkRqst.setPrivateKey(privateKeyPEM);
+                            pkRqst.setPrivateKey(privateKeyPEM);
                             System.out.println(getName() + ": send back private key " + privateKeyPEM);
                         }
-                	}
-                	else if (rqst instanceof CertificateRequest) {
+                    }
+                    else if (rqst instanceof CertificateRequest) {
                         System.out.println(getName() + ": got a CertificateRequest");
                         if (sendBackKeys) {
                             String certChainPEM;
@@ -227,19 +227,19 @@ public class AuthListenerECDHETest extends TestCase {
                             else {
                                 certChainPEM = SERVER_CERT1_PEM;
                             }
-                	        CertificateRequest certChainRqst = (CertificateRequest) rqst;
-                		    certChainRqst.setCertificateChain(certChainPEM);
+                            CertificateRequest certChainRqst = (CertificateRequest) rqst;
+                            certChainRqst.setCertificateChain(certChainPEM);
                             System.out.println(getName() + ": send back cert chain " + certChainPEM);
                         }
-                	}
-                	else if (rqst instanceof VerifyRequest) {
+                    }
+                    else if (rqst instanceof VerifyRequest) {
                         System.out.println(getName() + ": got a VerifyRequest");
                         peerVerificationCalled = true;
                         if (failVerification) {
                             return false;  /* auto fail verification */
                         }
-                		VerifyRequest verifyRqst = (VerifyRequest) rqst;
-                		String certPEM = verifyRqst.getCertificateChain();
+                        VerifyRequest verifyRqst = (VerifyRequest) rqst;
+                        String certPEM = verifyRqst.getCertificateChain();
                         System.out.println(getName() + ": verifying cert " + certPEM);
                         /* verify cert chain if possible */
                         System.out.println(getName() + ": verifying cert " + certPEM);
@@ -250,26 +250,26 @@ public class AuthListenerECDHETest extends TestCase {
                             peerCertVerified = certPEM.equals(CLIENT_CERT2_PEM);
                         }
                         System.out.println(getName() + ": verifying cert succeeds");
-                	}
-                	else if (rqst instanceof PasswordRequest) {
+                    }
+                    else if (rqst instanceof PasswordRequest) {
                         System.out.println(getName() + ": got a PasswordRequest");
                         if (sendBackKeys) {
                             System.out.println(getName() + ": send back PSK " + getPsk());
                             ((PasswordRequest) rqst).setPassword(getPsk().toCharArray());
                         }
                     }
-                	else if (rqst instanceof ExpirationRequest) {
+                    else if (rqst instanceof ExpirationRequest) {
                         System.out.println(getName() + ": got an ExpirationRequest");
-                	    ExpirationRequest er = (ExpirationRequest) rqst;
+                        ExpirationRequest er = (ExpirationRequest) rqst;
                         er.setExpiration(100);  /* expired 100 seconds from now */
                     }
                     else {
                         System.out.println(getName() + ": got other Request" + rqst);
                     }
                 }
-                
+
                 return true;
-               
+
             } catch (Exception ex) {
             }
             return false;
@@ -283,7 +283,7 @@ public class AuthListenerECDHETest extends TestCase {
                 setAuthenticatedMechanism(authMechanism);
             }
         }
-       
+
         public boolean isAuthenticated() {
             return authenticated;
         }
@@ -308,7 +308,7 @@ public class AuthListenerECDHETest extends TestCase {
         public void setAuthenticatedMechanism(String mech) {
             authenticatedMechanism = mech;
         }
-            
+
         private int mode;
         private String mechanisms;
         private String psk;
@@ -368,12 +368,12 @@ public class AuthListenerECDHETest extends TestCase {
     }
 
     class ServerECDHEKeyXListener extends ECDHEKeyXListener {
-    	public ServerECDHEKeyXListener(boolean sendBackKeys, String authList) {
+        public ServerECDHEKeyXListener(boolean sendBackKeys, String authList) {
             super(SERVER_MODE, sendBackKeys, authList);
         }
     }
     class ClientECDHEKeyXListener extends ECDHEKeyXListener {
-    	public ClientECDHEKeyXListener(boolean sendBackKeys, String authList) {
+        public ClientECDHEKeyXListener(boolean sendBackKeys, String authList) {
             super(CLIENT_MODE, sendBackKeys, authList);
         }
     }
@@ -386,14 +386,14 @@ public class AuthListenerECDHETest extends TestCase {
         assertTrue(clientAuthListener.isAuthenticated());
         assertFalse(serviceAuthListener.isPeerVerificationCalled());
         assertFalse(clientAuthListener.isPeerVerificationCalled());
-    } 
+    }
     public void testECDHESuccessPSK_SendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_PSK");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_PSK");
         doPing(serviceAuthListener, clientAuthListener);
         assertTrue(serviceAuthListener.isAuthenticated());
         assertTrue(clientAuthListener.isAuthenticated());
-    } 
+    }
     public void testECDHEFailPSK_DoNotSendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(false, "ALLJOYN_ECDHE_PSK");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(false, "ALLJOYN_ECDHE_PSK");
@@ -403,7 +403,7 @@ public class AuthListenerECDHETest extends TestCase {
         catch (Exception e) {}
         assertFalse(serviceAuthListener.isAuthenticated());
         assertFalse(clientAuthListener.isAuthenticated());
-    } 
+    }
     public void testECDHEFailPSK_ServerNotSendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(false, "ALLJOYN_ECDHE_PSK");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_PSK");
@@ -413,7 +413,7 @@ public class AuthListenerECDHETest extends TestCase {
         catch (Exception e) {}
         assertFalse(serviceAuthListener.isAuthenticated());
         assertFalse(clientAuthListener.isAuthenticated());
-    } 
+    }
     public void testECDHEFailPSK_ClientNotSendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_PSK");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(false, "ALLJOYN_ECDHE_PSK");
@@ -423,7 +423,7 @@ public class AuthListenerECDHETest extends TestCase {
         catch (Exception e) {}
         assertFalse(serviceAuthListener.isAuthenticated());
         assertFalse(clientAuthListener.isAuthenticated());
-    } 
+    }
     public void testECDHEFailPSK_DifferentSendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_PSK");
         serviceAuthListener.setPsk("123456");
@@ -435,7 +435,7 @@ public class AuthListenerECDHETest extends TestCase {
         catch (Exception e) {}
         assertFalse(serviceAuthListener.isAuthenticated());
         assertFalse(clientAuthListener.isAuthenticated());
-    } 
+    }
     public void testECDHESuccessECDSA_SendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
@@ -446,7 +446,7 @@ public class AuthListenerECDHETest extends TestCase {
         assertTrue(clientAuthListener.isPeerVerificationCalled());
         assertTrue(serviceAuthListener.isPeerCertVerified());
         assertTrue(clientAuthListener.isPeerCertVerified());
-    } 
+    }
     public void testECDHESuccessECDSA_DoNotSendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(false, "ALLJOYN_ECDHE_ECDSA");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(false, "ALLJOYN_ECDHE_ECDSA");
@@ -457,7 +457,7 @@ public class AuthListenerECDHETest extends TestCase {
         assertFalse(clientAuthListener.isPeerVerificationCalled());
         assertFalse(serviceAuthListener.isPeerCertVerified());
         assertFalse(clientAuthListener.isPeerCertVerified());
-    } 
+    }
 
     public void testECDHESuccessECDSA_ClientNotSendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
@@ -469,7 +469,7 @@ public class AuthListenerECDHETest extends TestCase {
         assertTrue(clientAuthListener.isPeerVerificationCalled());
         assertFalse(serviceAuthListener.isPeerCertVerified());
         assertTrue(clientAuthListener.isPeerCertVerified());
-    } 
+    }
     public void testECDHESuccessECDSA_ServerNotSendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(false, "ALLJOYN_ECDHE_ECDSA");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
@@ -480,7 +480,7 @@ public class AuthListenerECDHETest extends TestCase {
         assertFalse(clientAuthListener.isPeerVerificationCalled());
         assertTrue(serviceAuthListener.isPeerCertVerified());
         assertFalse(clientAuthListener.isPeerCertVerified());
-    } 
+    }
     public void testECDHESuccessPSK_ECDSA_SendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA");
@@ -493,7 +493,7 @@ public class AuthListenerECDHETest extends TestCase {
         assertTrue(clientAuthListener.isPeerCertVerified());
         assertEquals(serviceAuthListener.getAuthenticatedMechanism(), "ALLJOYN_ECDHE_ECDSA");
         assertEquals(clientAuthListener.getAuthenticatedMechanism(), "ALLJOYN_ECDHE_ECDSA");
-    } 
+    }
     public void testECDHESuccess_NULL_PSK_ECDSA_SendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA");
@@ -506,7 +506,7 @@ public class AuthListenerECDHETest extends TestCase {
         assertTrue(clientAuthListener.isPeerCertVerified());
         assertEquals(serviceAuthListener.getAuthenticatedMechanism(), "ALLJOYN_ECDHE_ECDSA");
         assertEquals(clientAuthListener.getAuthenticatedMechanism(), "ALLJOYN_ECDHE_ECDSA");
-    } 
+    }
     public void testECDHESuccess_NULL_PSK_SendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_PSK");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK");
@@ -517,7 +517,7 @@ public class AuthListenerECDHETest extends TestCase {
         assertEquals(clientAuthListener.getAuthenticatedMechanism(), "ALLJOYN_ECDHE_PSK");
         assertFalse(serviceAuthListener.isPeerVerificationCalled());
         assertFalse(clientAuthListener.isPeerVerificationCalled());
-    } 
+    }
     public void testECDHEFail_NULL_PSK_SendKeys() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_NULL");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_PSK");
@@ -529,7 +529,7 @@ public class AuthListenerECDHETest extends TestCase {
         }
         assertFalse(serviceAuthListener.isAuthenticated());
         assertFalse(clientAuthListener.isAuthenticated());
-    } 
+    }
     public void testECDHEFail_NULL_ECDSA() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_NULL");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
@@ -541,7 +541,7 @@ public class AuthListenerECDHETest extends TestCase {
         }
         assertFalse(serviceAuthListener.isAuthenticated());
         assertFalse(clientAuthListener.isAuthenticated());
-    } 
+    }
     public void testECDHEFail_ECDSA_PSK() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_PSK");
@@ -553,7 +553,7 @@ public class AuthListenerECDHETest extends TestCase {
         }
         assertFalse(serviceAuthListener.isAuthenticated());
         assertFalse(clientAuthListener.isAuthenticated());
-    } 
+    }
     public void testECDHEFail_ECDSA_NULL() throws Exception {
         ECDHEKeyXListener serviceAuthListener = new ServerECDHEKeyXListener(true, "ALLJOYN_ECDHE_ECDSA");
         ECDHEKeyXListener clientAuthListener = new ClientECDHEKeyXListener(true, "ALLJOYN_ECDHE_NULL");
@@ -565,5 +565,5 @@ public class AuthListenerECDHETest extends TestCase {
         }
         assertFalse(serviceAuthListener.isAuthenticated());
         assertFalse(clientAuthListener.isAuthenticated());
-    } 
+    }
 }

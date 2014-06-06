@@ -43,7 +43,7 @@ public class VariantTest extends TestCase {
     }
 
     public void testGetSignature() throws Exception {
-    	 Variant v = new Variant((byte)1);
+         Variant v = new Variant((byte)1);
          assertEquals("y", v.getSignature());
          v = new Variant(true);
          assertEquals("b", v.getSignature());
@@ -75,7 +75,7 @@ public class VariantTest extends TestCase {
          assertEquals("(i)", v.getSignature());
          v = new Variant(new Variant(new String("thirteen")));
          assertEquals("v", v.getSignature());
-         
+
          v = new Variant();
          assertNull(v.getSignature());
     }
