@@ -42,6 +42,31 @@ class AnnouncementRegistrar {
     /**
      * Registers the AnnounceHandler to receive org.alljoyn.about Announce signals
      *
+     * The announce handler is only called if the all the interfaces are implemented.
+     * i.e. if RegisterAnnounceHandler is called while specifying both com.example.Image
+     * interface and the com.example.Video interface as follows.
+     * @code
+     * const char* interfaces[] = {"com.example.Image", "com.example.Video"};
+     * RegisterAnnounceHandler(busAttachment, handler, interfaces,
+     *                         sizeof(interfaces) / sizeof(interfaces[0]));
+     * @endcode
+     * then the AnnouncementHandler will only be called if both interfaces are implemented.
+     *
+     * If AnnouncementHandler should be called if "com.example.Image" or
+     * "com.example.Video" is implemented then call RegisterAnnounceHandler times
+     * @code
+     * const char* imageInterface[] = {"com.example.Image"};
+     * RegisterAnnounceHandler(busAttachment, handler, imageInterface,
+     *                         sizeof(imageInterface) / sizeof(imageInterface[0]));
+     * const char* videoInterface[] = {"com.example.Video"};
+     * RegisterAnnounceHandler(busAttachment, handler, videoInterface,
+     *                         sizeof(videoInterface) / sizeof(videoInterface[0]));
+     * @endcode
+     *
+     * If the same handler is used for for multiple interfaces.  It is the handlers
+     * responsibility to parse through the reported interfaces to figure out what
+     * should be done in response to the Announce signal.
+     *
      * @param[in] bus reference to BusAttachment
      * @param[in] handler reference to AnnounceHandler
      * @param[in] implementsInterfaces a list of interfaces that the Announce signal
