@@ -27,7 +27,7 @@
 #include <qcc/platform.h>
 
 #include <map>
-#include <vector>
+#include <set>
 
 #include <qcc/String.h>
 #include <qcc/Mutex.h>
@@ -67,7 +67,7 @@ struct Rule {
     enum {SESSIONLESS_NOT_SPECIFIED, SESSIONLESS_FALSE, SESSIONLESS_TRUE} sessionless;
 
     /** Interfaces implemented in org.alljoyn.About.Announce sessionless signal */
-    std::vector<qcc::String> implements;
+    std::set<qcc::String> implements;
 
     /** Map of argument matches */
     // @@ TODO

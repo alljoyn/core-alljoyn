@@ -1145,7 +1145,7 @@ void SessionlessObj::FindAdvertisedNames()
         if (rit->second.implements.empty()) {
             name = "name='" + (rit->second.iface.empty() ? WildcardInterfaceName : rit->second.iface) + ".sl.*'";
         } else {
-            for (vector<String>::const_iterator iit = rit->second.implements.begin(); iit != rit->second.implements.end(); ++iit) {
+            for (set<String>::const_iterator iit = rit->second.implements.begin(); iit != rit->second.implements.end(); ++iit) {
                 if (!name.empty()) {
                     name += ",";
                 }
