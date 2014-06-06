@@ -360,7 +360,7 @@ IpNameServiceImpl::IpNameServiceImpl()
     m_tRetransmit(RETRANSMIT_TIME), m_tQuestion(QUESTION_TIME),
     m_modulus(QUESTION_MODULUS), m_retries(sizeof(RETRY_INTERVALS) / sizeof(RETRY_INTERVALS[0])),
     m_loopback(false), m_enableIPv4(false), m_enableIPv6(false), m_enableV1(false),
-    m_wakeEvent(), m_forceLazyUpdate(false),
+    m_wakeEvent(), m_forceLazyUpdate(false), m_refreshAdvertisements(false),
     m_enabled(false), m_doEnable(false), m_doDisable(false),
     m_ipv4QuietSockFd(-1), m_ipv6QuietSockFd(-1),
     m_burstResponseTimer("BurstResponseTimer", false, 1, false, 50),
