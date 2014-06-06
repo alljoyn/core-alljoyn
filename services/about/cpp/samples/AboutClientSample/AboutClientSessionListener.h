@@ -22,7 +22,7 @@
 
 class AboutClientSessionListener : public ajn::SessionListener {
   public:
-    AboutClientSessionListener(qcc::String const& inServiceNAme);
+    AboutClientSessionListener(qcc::String inServiceName);
 
     virtual ~AboutClientSessionListener();
 
