@@ -5444,11 +5444,13 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         for (int i = 0; i < 3; i++) {
             TransportMask tm = transportMaskArr[i];
             set<String> advertising = GetAdvertising(tm);
-            if (!advertising.empty()) {
+            set<String> advertising_quietly = GetAdvertisingQuietly(tm);
+            //Insert the transport mask if there are any active or quiet advertisements we are sending out.
+            if (!advertising.empty() || (quietly && !advertising_quietly.empty())) {
                 advRData->SetTransport(tm);
             }
-            for (set<qcc::String>::iterator i = advertising.begin(); i != advertising.end(); ++i) {
-                QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Accumulating \"%s\"", (*i).c_str()));
+            for (set<qcc::String>::iterator it = advertising.begin(); it != advertising.end(); ++it) {
+                QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Accumulating \"%s\"", (*it).c_str()));
 
                 //
                 // It is possible that we have accumulated more advertisements than will
@@ -5480,7 +5482,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                 // assembled message, we need to flush the current message and start
                 // again.
                 //
-                if (currentSize + 1 + (*i).size() > NS_MESSAGE_MAX) {
+                if (currentSize + 1 + (*it).size() > NS_MESSAGE_MAX) {
                     QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Message is full"));
                     //
                     // The current message cannot hold another name.  We need to send it
@@ -5508,28 +5510,27 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                     QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Resetting current list"));
                     advRData->Reset();
                     advRData->SetTransport(tm);
-                    advRData->SetValue("name", *i);
+                    advRData->SetValue("name", *it);
                     id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
                     refRData->SetSearchID(id);
 
                 } else {
-                    QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Message has room.  Adding \"%s\"", (*i).c_str()));
-                    advRData->SetValue("name", *i);
+                    QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Message has room.  Adding \"%s\"", (*it).c_str()));
+                    advRData->SetValue("name", *it);
                 }
             }
 
 
 
             if (quietly) {
-                set<String> advertising_quietly = GetAdvertisingQuietly(tm);
 
-                for (set<qcc::String>::iterator i = advertising_quietly.begin(); i != advertising_quietly.end(); ++i) {
-                    QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Accumulating (quiet) \"%s\"", (*i).c_str()));
+                for (set<qcc::String>::iterator it = advertising_quietly.begin(); it != advertising_quietly.end(); ++it) {
+                    QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Accumulating (quiet) \"%s\"", (*it).c_str()));
 
                     size_t currentSize = mdnsPacket->GetSerializedSize();
                     currentSize += 100;
 
-                    if (currentSize + 1 + (*i).size() > NS_MESSAGE_MAX) {
+                    if (currentSize + 1 + (*it).size() > NS_MESSAGE_MAX) {
                         QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Message is full"));
                         QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Sending partial list"));
 
@@ -5544,12 +5545,12 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                         advRData->Reset();
                         advRData->SetTransport(tm);
 
-                        advRData->SetValue("name", *i);
+                        advRData->SetValue("name", *it);
                         id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
                         refRData->SetSearchID(id);
                     } else {
-                        QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Message has room.  Adding (quiet) \"%s\"", (*i).c_str()));
-                        advRData->SetValue("name", *i);
+                        QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Message has room.  Adding (quiet) \"%s\"", (*it).c_str()));
+                        advRData->SetValue("name", *it);
                     }
                 }
             }
