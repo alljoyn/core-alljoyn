@@ -54,7 +54,19 @@ class Translator {
     virtual void GetTargetLanguage(size_t index, qcc::String& ret) = 0;
 
     /**
-     * Translate source from sourceLanguage into targetLanguage
+     * Check whether or not this Translator knows how to translate into
+     * a given language.
+     *
+     * @param targetLanguage The language tag to check
+     * @return True if the language tag is supported
+     */
+    bool SupportsTargetLanguage(const char* targetLanguage);
+
+    /**
+     * Translate source from sourceLanguage into targetLanguage.
+     * If this Translator does not have a translation for the given
+     * parameters it should return NULL.
+     *
      * @param sourceLanguage The language tag of the text in source
      * @param targetLanguage The language tag to translate into
      * @param source The source text to translate
@@ -65,10 +77,13 @@ class Translator {
     }
 
     /**
-     * Translate source from sourceLanguage into targetLanguage. This version of the
+     * Translate source from sourceLanguage into targetLanguage.
+     * If this Translator does not have a translation for the given
+     * parameters it should return NULL. This version of the
      * function is designed for imeplementations that return dynamically allocated strings.
      * The string should be copied into buffer and buffer.c_str() must be returned. When alljoyn
      * finishes using the string buffer will be free'ed
+     *
      * @param sourceLanguage The language tag of the text in source
      * @param targetLanguage The language tag to translate into
      * @param source The source text to translate
