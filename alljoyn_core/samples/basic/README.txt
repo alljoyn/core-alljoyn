@@ -1,6 +1,6 @@
-(note: if you don't have D-Bus or AllJoyn daemon already running on your system these examples will not run.)
+As the samples are built with the builtin router, you do not need to have the daemon running.
 
-The following are samples of a basic service and client that will use the already existing D-Bus or AllJoyn daemon to transfer messages.
+The following are samples of a basic service and client.
     +basic_service.cc
     +basic_client.cc
 
