@@ -30,7 +30,7 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_BUS_BAD_BUS_NAME" value="0x900a" comment="A bus name contained an illegal character"/>
   <status name="ER_BUS_NAME_TOO_LONG" value="0x900b" comment="A name exceeded the permitted length"/>
   <status name="ER_BUS_BAD_LENGTH" value="0x900c" comment="Length of an array was not a multiple of the array element size"/>
-  <status name="ER_BUS_BAD_VALUE" value="0x900d" comment="Parsed value in a message was invalid (for example: boolean > 1) "/>
+  <status name="ER_BUS_BAD_VALUE" value="0x900d" comment="Parsed value in a message was invalid (for example: boolean &gt; 1) "/>
   <status name="ER_BUS_BAD_HDR_FLAGS" value="0x900e" comment="Unknown header flags"/>
   <status name="ER_BUS_BAD_BODY_LEN" value="0x900f" comment="Body length was to long or too short"/>
   <status name="ER_BUS_BAD_HEADER_LEN" value="0x9010" comment="Header length was to long or too short"/>

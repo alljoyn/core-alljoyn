@@ -19,6 +19,7 @@ import sys
 import os
 import getopt
 from xml.dom import minidom
+from xml.sax.saxutils import escape
 
 if sys.version_info[:3] < (2,4,0):
     from sets import Set as set
@@ -190,12 +191,12 @@ def parseStatusBlock(blockNode):
         elif node.localName == 'status':
             if isFirst:
                 if None != codeOut:
-                    codeOut.write("\n    /** <b><tt>%s</tt></b> %s. */" % (node.getAttribute('value'), node.getAttribute('comment')))
+                    codeOut.write("\n    /** <b><tt>%s</tt></b> %s. */" % (escape(node.getAttribute('value')), escape(node.getAttribute('comment'))))
                     codeOut.write("\n    %s(%s)" % (node.getAttribute('name')[3:], node.getAttribute('value')))
                 isFirst = False
             else:
                 if None != codeOut:
-                    codeOut.write(",\n    /** <b><tt>%s</tt></b> %s. */" % (node.getAttribute('value'), node.getAttribute('comment')))
+                    codeOut.write(",\n    /** <b><tt>%s</tt></b> %s. */" % (escape(node.getAttribute('value')), escape(node.getAttribute('comment'))))
                     codeOut.write("\n    %s(%s)" % (node.getAttribute('name')[3:], node.getAttribute('value')))
             offset += 1
         elif node.localName == 'include' and node.namespaceURI == 'http://www.w3.org/2001/XInclude':
