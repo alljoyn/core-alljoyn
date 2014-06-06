@@ -2493,6 +2493,9 @@ UDPTransport::~UDPTransport()
     Stop();
     Join();
 
+    ARDP_FreeHandle(m_handle);
+    m_handle = NULL;
+
     QCC_DbgPrintf(("UDPTransport::~UDPTransport(): m_mAuthList.size() == %d", m_authList.size()));
     QCC_DbgPrintf(("UDPTransport::~UDPTransport(): m_mEndpointList.size() == %d", m_endpointList.size()));
     assert(m_authList.size() + m_endpointList.size() == 0 &&
