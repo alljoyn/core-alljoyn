@@ -234,7 +234,6 @@
 				ORGANIZATIONNAME = AllJoyn;
 				TargetAttributes = {
 					19E2F03E17E87CE10005851F = {
-						DevelopmentTeam = CKX258TW87;
 						SystemCapabilities = {
 							com.apple.BackgroundModes = {
 								enabled = 0;
@@ -396,6 +395,8 @@
 					"$(inherited)",
 					"$(SRCROOT)/../../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib",
 					"$(OPENSSL_ROOT)/build/$(CONFIGURATION)-$(PLATFORM_NAME)",
+					"$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/about/lib",
+					"$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib",
 				);
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = (
@@ -445,6 +446,8 @@
 					"$(inherited)",
 					"$(SRCROOT)/../../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib",
 					"$(OPENSSL_ROOT)/build/$(CONFIGURATION)-$(PLATFORM_NAME)",
+					"$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/about/lib",
+					"$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib",
 				);
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = (
