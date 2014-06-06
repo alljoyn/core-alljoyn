@@ -732,7 +732,6 @@ static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
 {
     QCC_DbgTrace(("DisconnectTimerHandler: handle=%p conn=%p", handle, conn));
 
-
     /* Tricking the compiler */
     QStatus reason = *reinterpret_cast<QStatus*>(&context);
 
@@ -749,7 +748,12 @@ static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         }
     }
 
-    if (handle->cb.DisconnectCb != NULL) {
+    /*
+     * In case when the remote peer requested disconnnect, we have already
+     * informed upper layer (i.e., issued DisconnectCb) upon arrival of RST segment.
+     * Do not issue disconnect here
+     */
+    if (reason != ER_ARDP_REMOTE_CONNECTION_RESET) {
         handle->cb.DisconnectCb(handle, conn, reason);
     }
     DelConnRecord(handle, conn);
@@ -1003,6 +1007,8 @@ static QStatus Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t flags, uin
 static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reason)
 {
     QCC_DbgTrace(("Disconnect(handle=%p, conn=%p, reason=%s)", handle, conn, QCC_StatusText(reason)));
+    QStatus status = ER_OK;
+
     if (!IsConnValid(handle, conn) || conn->STATE == CLOSED || conn->STATE == CLOSE_WAIT) {
         return ER_ARDP_INVALID_STATE;
     }
@@ -1010,14 +1016,19 @@ static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reas
     /* Is there a nice macro that would nicely wrap integer into pointer? Just to avoid nasty surprises... */
     assert(sizeof(QStatus) <=  sizeof(void*));
     if (conn->STATE == OPEN) {
-        AddTimer(handle, conn, DISCONNECT_TIMER, DisconnectTimerHandler, (void*) reason, handle->config.timewait, ARDP_DISCONNECT_RETRY);
+        uint32_t timeout = handle->config.timewait;
+        if (reason != ER_ARDP_REMOTE_CONNECTION_RESET) {
+            timeout = 0;
+            status = Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
+        }
         SetState(conn, CLOSE_WAIT);
-        return Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
+        AddTimer(handle, conn, DISCONNECT_TIMER, DisconnectTimerHandler, (void*) reason, timeout, ARDP_DISCONNECT_RETRY);
     } else {
         SetState(conn, CLOSED);
         AddTimer(handle, conn, DISCONNECT_TIMER, DisconnectTimerHandler, (void*) reason, 0, ARDP_DISCONNECT_RETRY);
     }
-    return ER_OK;
+
+    return status;
 }
 
 /*
@@ -2217,6 +2228,9 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
             if (seg->FLG & ARDP_FLAG_RST) {
                 QCC_DbgPrintf(("ArdpMachine(): OPEN: got RST.  state -> CLOSE_WAIT"));
                 Disconnect(handle, conn, ER_ARDP_REMOTE_CONNECTION_RESET);
+                /* Let the upper layer know that the connection is going away.
+                 * Resources clean up will happen in DisconnectTimerHandler when it fires up. */
+                handle->cb.DisconnectCb(handle, conn, ER_ARDP_REMOTE_CONNECTION_RESET);
                 break;
             }
 
