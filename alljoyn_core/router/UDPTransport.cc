@@ -3770,6 +3770,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
         m_endpointListLock.Lock(MUTEX_CONTEXT);
 
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Finding endpoint with conn ID == %d. in m_authList", connId));
+        bool haveLock = true;
         set<UDPEndpoint>::iterator i;
         for (i = m_authList.begin(); i != m_authList.end(); ++i) {
             UDPEndpoint ep = *i;
@@ -3781,14 +3782,26 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
 #endif
                 m_endpointList.insert(ep);
                 QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Start()ing endpoint with conn ID == %d.", connId));
+                /*
+                 * Cannot call out with the endpoint list lock taken.
+                 */
+                QCC_DbgPrintf(("UDPTransport::DoConnectCb(): giving endpoint list lock"));
+                m_endpointListLock.Unlock(MUTEX_CONTEXT);
+                haveLock = false;
                 ep->SetListener(this);
                 ep->Start();
                 break;
             }
         }
 
-        QCC_DbgPrintf(("UDPTransport::DoConnectCb(): giving endpoint list lock"));
-        m_endpointListLock.Unlock(MUTEX_CONTEXT);
+        /*
+         * If we didn't find the endpoint for the connection, we still have the
+         * lock taken.
+         */
+        if (haveLock) {
+            QCC_DbgPrintf(("UDPTransport::DoConnectCb(): giving endpoint list lock"));
+            m_endpointListLock.Unlock(MUTEX_CONTEXT);
+        }
         return;
     } else {
         /*
