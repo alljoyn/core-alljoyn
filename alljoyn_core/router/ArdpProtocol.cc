@@ -557,10 +557,15 @@ static void DelConnRecord(ArdpHandle* handle, ArdpConnRecord* conn)
         free(conn->SBUF.snd[0].hdr);
         free(conn->SBUF.snd);
     }
-    if (conn->RBUF.rcv != NULL && conn->RBUF.rcv[0].data != NULL) {
-        free(conn->RBUF.rcv[0].data);
+    if (conn->RBUF.rcv != NULL) {
+        for (uint32_t i = 0; i < conn->RCV.MAX; i++) {
+            if (conn->RBUF.rcv[i].data != NULL) {
+                free(conn->RBUF.rcv[i].data);
+            }
+        }
         free(conn->RBUF.rcv);
     }
+
     DeList((ListNode*)conn);
 
     if (conn->synSnd.data != NULL) {
