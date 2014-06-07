@@ -807,12 +807,6 @@ class ArdpStream : public qcc::Stream {
             return status;
         }
 
-        if (numBytes > ARDP_USRBMAX) {
-            status = ER_UDP_MSG_TOO_LONG;
-            QCC_LogError(status, ("ArdpStream::PushBytes(): Message too long"));
-            return status;
-        }
-
         /*
          * There's a new thread in town, so add it to the list of threads
          * wandering around in the associated endpoint.  We need to keep track

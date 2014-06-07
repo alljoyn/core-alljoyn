@@ -31,12 +31,13 @@ const alljoyn_transportmask ALLJOYN_TRANSPORT_NONE      = 0x0000;   /**< no tran
 const alljoyn_transportmask ALLJOYN_TRANSPORT_ANY       = 0xFFFF;   /**< ANY transport */
 const alljoyn_transportmask ALLJOYN_TRANSPORT_LOCAL     = 0x0001;   /**< Local (same device) transport */
 const alljoyn_transportmask ALLJOYN_TRANSPORT_BLUETOOTH = 0x0002;   /**< Bluetooth transport */
-const alljoyn_transportmask ALLJOYN_TRANSPORT_TCP       = 0x0004;   /**< Transport using TCP (same as TRANSPORT_WLAN) */
 const alljoyn_transportmask ALLJOYN_TRANSPORT_WLAN      = 0x0004;   /**< Wireless local-area network transport */
 const alljoyn_transportmask ALLJOYN_TRANSPORT_WWAN      = 0x0008;   /**< Wireless wide-area network transport */
 const alljoyn_transportmask ALLJOYN_TRANSPORT_LAN       = 0x0010;   /**< Wired local-area network transport */
 const alljoyn_transportmask ALLJOYN_TRANSPORT_PROXIMITY = 0x0040;   /**< Transport using WinRT Proximity Framework */
 const alljoyn_transportmask ALLJOYN_TRANSPORT_WFD       = 0x0080;   /**< Transport using Wi-Fi Direct transport */
-const alljoyn_transportmask ALLJOYN_TRANSPORT_UDP       = 0x0100;   /**< Transport using the AllJoyn Reliable Datagram Protocol (flavor of reliable UDP) */
+const alljoyn_transportmask ALLJOYN_TRANSPORT_TCP       = 0x0004;   /**< TCP/IP transport */
+const alljoyn_transportmask ALLJOYN_TRANSPORT_UDP       = 0x0100;   /**< UDP/IP transport */
+const alljoyn_transportmask ALLJOYN_TRANSPORT_IP        = 0x0104;   /**< IP transport (system chooses between TCP and UDP) */
 
 #endif
