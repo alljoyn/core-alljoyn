@@ -1545,6 +1545,9 @@ QStatus BusAttachment::GetJoinSessionResponse(Message& reply, SessionId& session
 
 QStatus BusAttachment::JoinSession(const char* sessionHost, SessionPort sessionPort, SessionListener* listener, SessionId& sessionId, SessionOpts& opts)
 {
+    if (busInternal->localEndpoint->IsReentrantCall()) {
+        return ER_BUS_BLOCKING_CALL_NOT_ALLOWED;
+    }
     if (!IsConnected()) {
         return ER_BUS_NOT_CONNECTED;
     }
