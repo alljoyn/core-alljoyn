@@ -1254,7 +1254,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_sideState(SIDE_INITIALIZED),
         m_epState(EP_INITIALIZED),
         m_tStart(qcc::Timespec(0)),
-        m_remoteExited(false)
+        m_remoteExited(false),
+        m_disconnected(false)
     {
         QCC_DbgHLPrintf(("_UdpEndpoint::_UdpEndpoint(transport=%p, bus=%p, incoming=%d., connectSpec=\"%s\")",
                          transport, &bus, incoming, connectSpec.c_str()));
@@ -1415,25 +1416,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
             return ER_OK;
         }
 
-        /*
-         * Make a note to ourselves that we are stopping.  We expect the
-         * endpoint manager to notice and do the cleanup that may deal with the
-         * possibility of blocking.  Also, calling out to the remote endoint
-         * which will call out to the daemon may result in another Stop()
-         * command being issued.
-         */
-        SetEpStopping();
-
-        /*
-         * If there is a live stream associated with this endpoint, we need to make
-         * sure we scare away any threads which might be trying to work with it
-         * and send a disconnect to the other side.
-         */
-        if (m_stream) {
-            m_stream->AlertThreadSet();
-            m_stream->Disconnect();
-        }
-
 #ifndef NDEBUG
         /*
          * Debug consistency check.  If we are stopping an endpoint it must be
@@ -1459,14 +1441,68 @@ class _UDPEndpoint : public _RemoteEndpoint {
 #endif
 
         /*
+         * If there is a live stream associated with this endpoint, we need to
+         * make sure we scare away any threads which might be trying to work
+         * with it and send a disconnect to the other side.  We can do the
+         * AlertThreadSet() here, but it is not safe to issue an ARDP call here
+         * since we hold the m_endpointList lock to keep our state straight.
+         *
+         * Since we would have the lock order {m_endpointListLock, m_ardpLock}
+         * any callback coming in with ardpLock taken and needing the
+         * m_endpointListLock, i.e., {m_ardpLock, m_endpointListLock} would
+         * deadlock.
+         *
+         * the m_stream is going to be valid until the endpoint destructor is
+         * called, so we need to ensure that the endpoint is not destroyed until
+         * we get throught the Disconnect() call.  That means we cannot set
+         * EP_STOPPING, which would allow the maintenance thread to start the
+         * teardown sequence.
+         *
+         * So, we need to let go of the m_endpointlistLock but we can't set the
+         * endpoint to EP_STOPPING which could immediately cause the endpoint to
+         * be deleted in another thread.  If there are multiple concurrent
+         * Stop() calls happening, we need to make sure that only one of them
+         * calls ARDP_Disconnect() (which takes m_ardpLock) and sets the
+         * condition for deletion (EP_STOPPING) and also make sure others do not
+         * look at any internal state after that happens.
+         */
+        bool handleDisconnect = false;
+        if (m_disconnected == false) {
+            handleDisconnect = true;
+            m_disconnected = true;
+        }
+
+        /*
+         * We know if we have responsibility for disconnecting and stopping, so
+         * we can let go of the lock now.  If we don't have responsibility for
+         * disconnecting we are not allowed to touch any endpoint state from
+         * now on.
+         */
+        QCC_DbgPrintf(("_UDPEndpoint::Stop(): Giving m_endpointListLock"));
+        m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
+
+        if (handleDisconnect) {
+            if (m_stream) {
+                m_stream->AlertThreadSet();
+                m_stream->Disconnect();
+            }
+
+            /*
+             * We have now set the tiny little time bomb for destruction so
+             * nobody is allowed to touch internal state from now on except
+             * the management thread which is solely responsible for its
+             * content.
+             */
+            SetEpStopping();
+        }
+
+        /*
          * Tell the endpoint management code that something has happened that
          * it may be concerned about.
          */
         m_transport->m_manage = UDPTransport::STATE_MANAGE;
         m_transport->Alert();
 
-        QCC_DbgPrintf(("_UDPEndpoint::Stop(): Giving m_endpointListLock"));
-        m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
         return ER_OK;
     }
 
@@ -2415,6 +2451,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     qcc::Timespec m_tStart;           /**< Timestamp indicating when the authentication process started */
     qcc::Timespec m_tStop;            /**< Timestamp indicating when the stop process for the endpoint was begun */
     bool m_remoteExited;              /**< Indicates if the remote endpoint exit function has been run.  Cannot delete until true. */
+    volatile bool m_disconnected;     /**< Indicates an interlocked handling of the ARDP_Disconnect has happened */
 };
 
 UDPTransport::UDPTransport(BusAttachment& bus) :
