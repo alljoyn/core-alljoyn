@@ -401,6 +401,10 @@ static uint32_t TimeNow(qcc::Timespec base)
 
 static bool IsConnValid(ArdpHandle* handle, ArdpConnRecord* conn)
 {
+    if (conn == NULL) {
+        return false;
+    }
+
     if (IsEmpty(&handle->conns)) {
         return false;
     }
@@ -549,7 +553,10 @@ static uint32_t CheckTimers(ArdpHandle* handle)
 
 static void DelConnRecord(ArdpHandle* handle, ArdpConnRecord* conn)
 {
-    QCC_DbgTrace(("DelConnRecord(handle=%p conn=%p)", handle, conn));
+    QCC_DbgTrace(("DelConnRecord(handle=%p conn=%p state = %s)", handle, conn, State2Text(conn->STATE)));
+    if (conn->STATE != CLOSED) {
+        QCC_LogError(ER_OK, ("DelConnRecord(): Delete while not CLOSED conn %p state %s", conn, State2Text(conn->STATE)));
+    }
     assert(conn->STATE == CLOSED && "DelConnRecord(): Delete while not CLOSED");
 
     /* Safe to check together as these buffers are always allocated together */
@@ -682,8 +689,7 @@ static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
 
     /* Tricking the compiler */
     QStatus reason = *reinterpret_cast<QStatus*>(&context);
-
-    QCC_LogError(reason, ("DisconnectTimerHandler: handle=%p conn=%p", handle, conn));
+    QCC_LogError(reason, ("DisconnectTimerHandler: handle=%p conn=%p reason=%p", handle, conn, QCC_StatusText(reason)));
     assert((handle != NULL && conn != NULL) && "Handle and connection cannot be NULL");
     SetState(conn, CLOSED);
 
@@ -697,11 +703,11 @@ static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
     }
 
     /*
-     * In case when the remote peer requested disconnnect, we have already
-     * informed upper layer (i.e., issued DisconnectCb) upon arrival of RST segment.
-     * Do not issue disconnect here
+     * In case the upper layer initiated the disconnect, we still need to send\
+     * DisconnectCb(). For all the other cases the DisconnectCb was issued inside Disconnect().
      */
-    if (reason != ER_ARDP_REMOTE_CONNECTION_RESET) {
+    if (reason == ER_OK) {
+        QCC_LogError(ER_OK, ("DisconnectTimerHandler: DisconnectCb(handle=%p conn=%p reason = %s)", handle, conn, QCC_StatusText(reason)));
         handle->cb.DisconnectCb(handle, conn, reason);
     }
     DelConnRecord(handle, conn);
@@ -742,15 +748,7 @@ static void ConnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* 
     }
 
     if (status != ER_OK) {
-        if (handle->cb.ConnectCb != NULL) {
-            handle->cb.ConnectCb(handle, conn, conn->passive, NULL, 0, ER_TIMEOUT);
-        }
-        /*
-         * BUGBUG FIXME TODO: If we are changing our minds, shouldn't we send an
-         * RST, go to state CLOSED and delete the connection record?
-         *
-         * <SEQ=SEG.ACK + 1><RST>
-         */
+        handle->cb.ConnectCb(handle, conn, conn->passive, NULL, 0, ER_TIMEOUT);
         Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, conn->SND.UNA, 0, conn->RCV.MAX);
         SetState(conn, CLOSED);
         DelConnRecord(handle, conn);
@@ -953,27 +951,35 @@ static QStatus Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t flags, uin
 
 static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reason)
 {
-    QCC_DbgTrace(("Disconnect(handle=%p, conn=%p, reason=%s)", handle, conn, QCC_StatusText(reason)));
+    QCC_LogError(ER_OK, ("Disconnect(handle=%p, conn=%p, reason=%s)", handle, conn, QCC_StatusText(reason)));
     QStatus status = ER_OK;
+    uint32_t timeout = 0;
 
-    if (!IsConnValid(handle, conn) || conn->STATE == CLOSED || conn->STATE == CLOSE_WAIT) {
-        return ER_ARDP_INVALID_STATE;
+    if (!IsConnValid(handle, conn)) {
+        return ER_ARDP_INVALID_CONNECTION;
     }
 
     /* Is there a nice macro that would nicely wrap integer into pointer? Just to avoid nasty surprises... */
     assert(sizeof(QStatus) <=  sizeof(void*));
-    if (conn->STATE == OPEN) {
-        uint32_t timeout = handle->config.timewait;
-        if (reason != ER_ARDP_REMOTE_CONNECTION_RESET) {
-            timeout = 0;
-            status = Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
+
+    SetState(conn, CLOSE_WAIT);
+
+    /* If the local side is the one initiating the disconnect, send RST segment to the remote */
+    if (reason != ER_ARDP_REMOTE_CONNECTION_RESET) {
+        status = Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Disconnect: failed to send RST to the remote"));
         }
-        SetState(conn, CLOSE_WAIT);
-        InitTimer(handle, conn, &conn->connectTimer, DisconnectTimerHandler, (void*) reason, timeout, ARDP_DISCONNECT_RETRY);
-    } else {
-        SetState(conn, CLOSED);
-        InitTimer(handle, conn, &conn->connectTimer, DisconnectTimerHandler, (void*) reason, 0, ARDP_DISCONNECT_RETRY);
     }
+
+    /* If this disconnect is not a result of ARDP_Disconnect(), inform the upper layer that we are disconnecting */
+    if (reason != ER_OK) {
+        timeout = handle->config.timewait;
+        QCC_LogError(ER_OK, ("Disconnect: Call DisconnectCb() on conn %p, reason %s", conn, State2Text(conn->STATE)));
+        handle->cb.DisconnectCb(handle, conn, reason);
+    }
+
+    InitTimer(handle, conn, &conn->connectTimer, DisconnectTimerHandler, (void*) reason, timeout, ARDP_DISCONNECT_RETRY);
 
     return status;
 }
@@ -1183,24 +1189,29 @@ void* ARDP_GetConnContext(ArdpConnRecord* conn)
 uint32_t ARDP_GetConnId(ArdpConnRecord* conn)
 {
     QCC_DbgTrace(("ARDP_GetConnId(conn=%p)", conn));
+    assert(conn != NULL && "Connection cannot be NULL");
     return conn->id;
 }
 
 uint32_t ARDP_GetConnPending(ArdpConnRecord* conn)
 {
     QCC_DbgTrace(("ARDP_GetConnPending(conn=%p)", conn));
+    assert(conn != NULL && "Connection cannot be NULL");
     return conn->SBUF.pending;
 }
 
 qcc::IPAddress ARDP_GetIpAddrFromConn(ArdpConnRecord* conn)
 {
     QCC_DbgTrace(("ARDP_GetIpAddrFromConn()"));
+    assert(conn != NULL && "Connection cannot be NULL");
     return conn->ipAddr;
 }
 
 uint16_t ARDP_GetIpPortFromConn(ArdpConnRecord* conn)
 {
     QCC_DbgTrace(("ARDP_GetIpPortFromConn()"));
+    assert(conn != NULL && "Connection cannot be NULL");
+
     return conn->ipPort;
 }
 
@@ -2001,6 +2012,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                  * <SEQ=SEG.ACK + 1><RST>
                  */
                 Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, seg->ACK + 1, 0, 0);
+                Disconnect(handle, conn, ER_ARDP_INVALID_RESPONSE);
                 break;
             }
 
@@ -2020,13 +2032,6 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                     uint8_t* data = buf + sizeof(ArdpSynSegment);
                     if (handle->cb.AcceptCb(handle, conn->ipAddr, conn->ipPort, conn, data, seg->DLEN, ER_OK) == false) {
                         QCC_DbgPrintf(("ArdpMachine(): LISTEN: SYN received. AcceptCb() returned \"false\""));
-                        /*
-                         * BUGBUG FIXME TODO: If the application does not accept
-                         * the connection shouldn't we RST, go to state CLOSED
-                         * and delete the connection record?
-                         *
-                         * <SEQ=SEG.ACK + 1><RST>
-                         */
                         Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, seg->ACK + 1, 0, conn->RCV.MAX);
                         SetState(conn, CLOSED);
                         DelConnRecord(handle, conn);
@@ -2043,7 +2048,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
             if (seg->FLG & ARDP_FLAG_RST) {
                 QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: connection refused. state -> CLOSED"));
-                SetState(conn, CLOSED);
+                Disconnect(handle, conn, ER_ARDP_REMOTE_CONNECTION_RESET);
                 break;
             }
 
@@ -2108,13 +2113,9 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
             }
 
             if (seg->FLG & ARDP_FLAG_ACK) {
-                if ((seg->FLG & ARDP_FLAG_RST) == 0 && seg->ACK != conn->SND.ISS) {
+                if (seg->ACK != conn->SND.ISS) {
                     QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: ACK does not ASK ISS"));
-                    SetState(conn, CLOSED);
-                    /*
-                     * <SEQ=SEG.ACK + 1><RST>
-                     */
-                    Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, seg->ACK + 1, 0, conn->RCV.MAX);
+                    Disconnect(handle, conn, ER_ARDP_INVALID_RESPONSE);
                     break;
                 }
             }
@@ -2139,24 +2140,20 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                     SetState(conn, LISTEN);
                 } else {
                     QCC_DbgPrintf(("ArdpMachine(): SYN_RCVD: Got RST during active open.  state -> CLOSED"));
-                    SetState(conn, CLOSED);
+                    Disconnect(handle, conn, ER_ARDP_REMOTE_CONNECTION_RESET);
                 }
                 break;
             }
 
             if (seg->FLG & ARDP_FLAG_SYN) {
                 QCC_DbgPrintf(("ArdpMachine(): SYN_RCVD: Got SYN, state -> CLOSED"));
-                SetState(conn, CLOSED);
-
-                /* <SEQ=SEG.ACK + 1><RST> */
-                Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, seg->ACK + 1, 0, conn->RCV.MAX);
+                Disconnect(handle, conn, ER_ARDP_INVALID_RESPONSE);
                 break;
             }
 
             if (seg->FLG & ARDP_FLAG_EACK) {
                 QCC_DbgPrintf(("ArdpMachine(): SYN_RCVD: Got EACK. Send RST"));
-                /* <SEQ=SEG.ACK + 1><RST> */
-                Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, seg->ACK + 1, 0, conn->RCV.MAX);
+                Disconnect(handle, conn, ER_ARDP_INVALID_RESPONSE);
                 break;
             }
 
@@ -2197,7 +2194,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 } else {
                     /* <SEQ=SEG.ACK + 1><RST> */
                     QCC_DbgPrintf(("ArdpMachine(): SYN_RCVD: Got ACK with incorrect acknowledge %u. RST", seg->ACK));
-                    Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, seg->ACK + 1, 0, conn->RCV.MAX);
+                    Disconnect(handle, conn, ER_ARDP_INVALID_RESPONSE);
                     break;
                 }
             } else {
@@ -2222,26 +2219,14 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
             }
 
             if (seg->FLG & ARDP_FLAG_RST) {
-                QCC_DbgPrintf(("ArdpMachine(): OPEN: got RST.  state -> CLOSE_WAIT"));
+                QCC_DbgPrintf(("ArdpMachine(): OPEN: got RST, disconnect"));
                 Disconnect(handle, conn, ER_ARDP_REMOTE_CONNECTION_RESET);
-                /* Let the upper layer know that the connection is going away.
-                 * Resources clean up will happen in DisconnectTimerHandler when it fires up. */
-                handle->cb.DisconnectCb(handle, conn, ER_ARDP_REMOTE_CONNECTION_RESET);
                 break;
             }
 
             if (seg->FLG & ARDP_FLAG_SYN) {
-                if (conn->passive) {
-                    QCC_DbgPrintf(("ArdpMachine(): OPEN: Got SYN while passive open.  state -> LISTEN"));
-                    SetState(conn, LISTEN);
-                } else {
-                    QCC_DbgPrintf(("ArdpMachine(): OPEN: Got SYN while active open.  state -> CLOSED"));
-                    SetState(conn, CLOSED);
-                }
-                /*
-                 * <SEQ=SEG.ACK + 1><RST>
-                 */
-                Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, seg->ACK + 1, 0, conn->RCV.LCS);
+                QCC_DbgPrintf(("ArdpMachine(): OPEN: Got SYN, disconnect"));
+                Disconnect(handle, conn, ER_ARDP_INVALID_RESPONSE);
                 break;
             }
 
@@ -2354,31 +2339,15 @@ QStatus ARDP_Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t segmax, u
                   handle, conn, segmax, segbmax, buf, buf, len));
     QStatus status;
     if (!IsConnValid(handle, conn)) {
-        return ER_ARDP_INVALID_STATE;
+        return ER_ARDP_INVALID_CONNECTION;
     }
 
     status = InitRcv(conn, segmax, segbmax); /* Initialize the receiver side of the connection */
-    if (status != ER_OK) {
-        /*
-         * BUGBUG FIXME TODO: If we cannot accept, shouldn't we send an RST, go
-         * to state CLOSED and delete the connection record?
-         *
-         * <SEQ=SEG.ACK + 1><RST>
-         */
-        Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, conn->SND.UNA, 0, conn->RCV.MAX);
-        SetState(conn, CLOSED);
-        DelConnRecord(handle, conn);
-        return status;
+    if (status == ER_OK) {
+        status = InitSBUF(handle, conn);
     }
 
-    status = InitSBUF(handle, conn);
     if (status != ER_OK) {
-        /*
-         * BUGBUG FIXME TODO: If we cannot accept, shouldn't we send an RST, go
-         * to state CLOSED and delete the connection record?
-         *
-         * <SEQ=SEG.ACK + 1><RST>
-         */
         Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, conn->SND.UNA, 0, conn->RCV.MAX);
         SetState(conn, CLOSED);
         DelConnRecord(handle, conn);
@@ -2393,7 +2362,10 @@ QStatus ARDP_Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t segmax, u
 
 QStatus ARDP_Disconnect(ArdpHandle* handle, ArdpConnRecord* conn)
 {
-    QCC_DbgTrace(("Disconnect(handle=%p, conn=%p)", handle, conn));
+    QCC_DbgTrace(("ARDP_Disconnect(handle=%p, conn=%p)", handle, conn));
+    if (!IsConnValid(handle, conn)) {
+        return ER_ARDP_INVALID_CONNECTION;
+    }
     return Disconnect(handle, conn, ER_OK);
 }
 
@@ -2401,7 +2373,7 @@ QStatus ARDP_RecvReady(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv
 {
     QCC_DbgTrace(("ARDP_RecvReady(handle=%p, conn=%p, rcv=%p, cnt=%d)", handle, conn, rcv));
     if (!IsConnValid(handle, conn)) {
-        return ER_ARDP_INVALID_STATE;
+        return ER_ARDP_INVALID_CONNECTION;
     }
     return UpdateRcvBuffers(handle, conn, rcv);
 }
@@ -2409,7 +2381,11 @@ QStatus ARDP_RecvReady(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv
 QStatus ARDP_Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, uint32_t ttl)
 {
     QCC_DbgTrace(("ARDP_Send(handle=%p, conn=%p, buf=%p, len=%d., ttl=%d.)", handle, conn, buf, len, ttl));
-    if (!IsConnValid(handle, conn) || conn->STATE != OPEN) {
+    if (!IsConnValid(handle, conn)) {
+        return ER_ARDP_INVALID_CONNECTION;
+    }
+
+    if (conn->STATE != OPEN) {
         return ER_ARDP_INVALID_STATE;
     }
 
