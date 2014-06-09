@@ -497,7 +497,20 @@ class NormalizedMsgHdr {
         senderIDSet(policy->LookupBusNameID(msg->GetSender())),
         type(msg->GetType()),
         sender(sender)
-    { }
+    {
+        if (destIDSet->empty()) {
+            StringID nid = policy->LookupStringID(msg->GetDestination());
+            if (nid != _PolicyDB::ID_NOT_FOUND) {
+                destIDSet->insert(nid);
+            }
+        }
+        if (senderIDSet->empty()) {
+            StringID nid = policy->LookupStringID(msg->GetSender());
+            if (nid != _PolicyDB::ID_NOT_FOUND) {
+                senderIDSet->insert(nid);
+            }
+        }
+    }
 
   private:
     friend class _PolicyDB;  /**< Give PolicyDB access to the internals */
@@ -510,8 +523,8 @@ class NormalizedMsgHdr {
     StringID errorID;                       /**< normalized error name */
     StringID pathID;                        /**< normalized object path */
     const _PolicyDB::IDSet pathIDSet;       /**< set of normalized object path prefixes */
-    const _PolicyDB::IDSet destIDSet;       /**< set of normalized well known bus name destinations */
-    const _PolicyDB::IDSet senderIDSet;     /**< set of normalized well known bus name senders */
+    _PolicyDB::IDSet destIDSet;             /**< set of normalized well known bus name destinations */
+    _PolicyDB::IDSet senderIDSet;           /**< set of normalized well known bus name senders */
     AllJoynMessageType type;                /**< message type */
     BusEndpoint& sender;                    /**< sender bus endpoint */
 };
