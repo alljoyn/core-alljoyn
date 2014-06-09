@@ -1104,12 +1104,7 @@ class ArdpStream : public qcc::Stream {
         QCC_DbgTrace(("ArdpStream::DisconnectCb(handle=%p, conn=%p)", handle, conn));
         m_disc = true;
         m_discStatus = status;
-        if (conn == m_conn) {
-            QCC_DbgPrintf(("ArdpStream::DisconnectCb(): Callback for connId == %d.", ARDP_GetConnId(conn)));
-            m_conn = NULL;
-        } else {
-            QCC_LogError(ER_FAIL, ("ArdpStream::Disconnect(): Spurious callback for connId == %d.", ARDP_GetConnId(conn)));
-        }
+        m_conn = NULL;
         m_writeEvent->SetEvent();
     }
 
@@ -1286,13 +1281,15 @@ class _UDPEndpoint : public _RemoteEndpoint {
          */
         if (m_stream) {
             assert(m_stream->IsThreadSetEmpty() != false && "_UdpEndpoint::~_UdpEndpoint(): Threads present during destruction");
+
+            /*
+             * Make sure that the stream has been disconnected in case we are deleted
+             * by some reference counting mechanism that is unaware of our little
+             * networking details.
+             */
+            m_stream->Disconnect();
         }
 
-        /*
-         * Make sure that the stream has been disconnected in case we are deleted
-         * by some reference counting mechanism that is unaware of our little
-         * networking details.
-         */
         DestroyStream();
     }
 
@@ -1410,7 +1407,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         /*
          * If we're already stopping, there's nothing to do.
          */
-        if (GetEpState() == EP_STOPPING || GetEpState() == EP_DONE) {
+        if (GetEpState() == EP_STOPPING || GetEpState() == EP_DONE || GetEpState() == EP_FAILED) {
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
             QCC_DbgPrintf(("_UDPEndpoint::Stop(): Already stopping or done"));
             return ER_OK;
@@ -1532,7 +1529,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * Join().  We expect that the first time through the state will be
          * EP_STOPPING, and the next time through we will take it to EP_DONE.
          */
-        if (GetEpState() == EP_DONE) {
+        if (GetEpState() == EP_DONE || GetEpState() == EP_FAILED) {
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
             QCC_DbgPrintf(("_UDPEndpoint::Join(): Already Join()ed"));
             return ER_OK;
@@ -2414,6 +2411,18 @@ class _UDPEndpoint : public _RemoteEndpoint {
         QCC_DbgTrace(("_UDPEndpoint::SetEpDone()"));
         assert(m_epState == EP_FAILED || m_epState == EP_STOPPING);
         m_epState = EP_DONE;
+    }
+
+    /**
+     * Set the boolean indicating that the disconenct logic has happened.  This
+     * is provided so that the transport can manually override this logic if an
+     * error is detected prior to calling start (and where the disconnect
+     * callback that drives that logic will never be called).
+     */
+    void SetDisconnected()
+    {
+        QCC_DbgTrace(("_UDPEndpoint::SetDisconnected()"));
+        m_disconnected = true;
     }
 
     /**
@@ -3488,10 +3497,6 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     /*
      * Do we have a slot available for a new connection?  If so, allow the
      * connection to proceed.
-     *
-     * BUGBUG FIXME
-     * TODO: there's a possible race between two simultaneous connectors that
-     * could cause us to accept too many connections.
      */
     if ((m_authList.size() >= m_maxAuth) || (m_authList.size() + m_endpointList.size() >= m_maxConn)) {
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
@@ -3663,19 +3668,6 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     udpEp->SetStartTime(tNow);
     udpEp->SetStopTime(tNow);
 
-    QCC_DbgPrintf(("UDPTransport::AcceptCb(): Taking endpoint list lock"));
-    m_endpointListLock.Lock(MUTEX_CONTEXT);
-
-#ifndef NDEBUG
-    DebugAuthListCheck(udpEp);
-#endif
-
-    QCC_DbgPrintf(("UDPTransport::AcceptCb(): Adding endpoint with conn ID == %d. to m_authList", ARDP_GetConnId(conn)));
-    m_authList.insert(udpEp);
-
-    QCC_DbgPrintf(("UDPTransport::AcceptCb(): giving endpoint list lock"));
-    m_endpointListLock.Unlock(MUTEX_CONTEXT);
-
     /*
      * Note that our endpoint isn't actually connected to anything yet or saved
      * anywhere.  Send a hello reply from our local endpoint.  The unique name
@@ -3702,13 +3694,38 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     uint8_t* helloReplyBuf = new uint8_t[helloReplyBufLen];
     memcpy(helloReplyBuf, const_cast<uint8_t*>(activeHello->GetBuffer()), helloReplyBufLen);
 
+    QCC_DbgPrintf(("UDPTransport::AcceptCb(): Taking endpoint list lock"));
+    m_endpointListLock.Lock(MUTEX_CONTEXT);
+
+#ifndef NDEBUG
+    DebugAuthListCheck(udpEp);
+#endif
+
+    QCC_DbgPrintf(("UDPTransport::AcceptCb(): Adding endpoint with conn ID == %d. to m_authList", ARDP_GetConnId(conn)));
+    m_authList.insert(udpEp);
+
     /*
-     * Since we are in a callback, that callback must have been driven by a
-     * call to ARDP_Run() which must be called with the ARDP lock taken.  We
-     * don't have to do it again.
+     * Since we are in a callback, that callback must have been driven by a call
+     * to ARDP_Run() which must be called with the ARDP lock taken.  We don't
+     * have to do it again.  Note that we are calling out to ARDP with the
+     * endpoint list lock taken, but we don't expect ARDP to call out of this
+     * function; and we expect it to be very quick.
      */
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): ARDP_Accept()"));
-    ARDP_Accept(handle, conn, ARDP_SEGMAX, ARDP_SEGBMAX, helloReplyBuf, helloReplyBufLen);
+    status = ARDP_Accept(handle, conn, ARDP_SEGMAX, ARDP_SEGBMAX, helloReplyBuf, helloReplyBufLen);
+    if (status != ER_OK) {
+        /*
+         * If ARDP_Accept returns an error, most likely it is becuase the underlying
+         * SYN + ACK didn't go out.  The contract with ARDP says that if an error
+         * happens here, we shouldn't expect an disconnect, so we have to just
+         * fail.
+         */
+        udpEp->SetEpFailed();
+        udpEp->SetDisconnected();
+    }
+
+    QCC_DbgPrintf(("UDPTransport::AcceptCb(): giving endpoint list lock"));
+    m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
     /*
      * If we do something that is going to bug the ARDP protocol, we need to
@@ -3784,18 +3801,21 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
     if (passive) {
         /*
          * On the passive side, when we get a ConnectCb, we're done with the
-         * three-way handshake.  This marks the end of the connection
-         * establishment phase and after we return, we should expect AllJoyn
-         * messages to be flowing on the connection.
+         * three-way handshake if no error is returned.  This marks the end of
+         * the connection establishment phase and after we return, we should
+         * expect AllJoyn messages to be flowing on the connection.
          *
          * If this is happening, we should have a UDPEndpoint on the m_authList
          * that reflects the ARDP connection that is in the process of being
          * formed.  We need to find that endpoint (based on the provided conn),
-         * take it off of the m_authlist and put it on the active enpoint list
-         * and and now hook up the demux so it can receive inbound data.
+         * take it off of the m_authlist and put it on the active enpoint list.
+         *
+         * If an error has been returned, we are getting the one notification
+         * that the connection has failed.  We nedd to find the endpoint that
+         * has failed, so the error case looks pretty much like the success
+         * case except for the final disposition.
          */
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): passive connection callback with conn ID == %d.", connId));
-
 
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Taking endpoint list lock"));
         m_endpointListLock.Lock(MUTEX_CONTEXT);
@@ -3817,10 +3837,26 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
                  * Cannot call out with the endpoint list lock taken.
                  */
                 QCC_DbgPrintf(("UDPTransport::DoConnectCb(): giving endpoint list lock"));
-                m_endpointListLock.Unlock(MUTEX_CONTEXT);
-                haveLock = false;
-                ep->SetListener(this);
-                ep->Start();
+
+                /*
+                 * If the inbound connection succeeded, we need to tell the daemon
+                 * that a new connection is ready to go.  If the connection failed
+                 * we need to mark the connection for deletion and bug the endpoint
+                 * management code so it can purge the endpoint without delay.
+                 */
+                if (status == ER_OK) {
+                    m_endpointListLock.Unlock(MUTEX_CONTEXT);
+                    haveLock = false;
+                    ep->SetListener(this);
+                    ep->Start();
+                } else {
+                    ep->SetEpFailed();
+                    ep->SetDisconnected();
+                    m_endpointListLock.Unlock(MUTEX_CONTEXT);
+                    haveLock = false;
+                    m_manage = UDPTransport::STATE_MANAGE;
+                    Alert();
+                }
                 break;
             }
         }
@@ -4025,6 +4061,16 @@ void UDPTransport::ExitEndpoint(uint32_t connId)
 {
     QCC_DbgHLPrintf(("UDPTransport::ExitEndpoint(connId=%d.)", connId));
 
+    /*
+     * If m_dispatcher is NULL, it means we are shutting down and the dispatcher
+     * has gone away before the endpoint management thread has actually stopped
+     * running.  This is rare, but possible.
+     */
+    if (m_dispatcher == NULL) {
+        QCC_DbgPrintf(("UDPTransport::ExitEndpoint(): m_dispatcher is NULL"));
+        return;
+    }
+
     UDPTransport::WorkerCommandQueueEntry entry;
     entry.m_command = UDPTransport::WorkerCommandQueueEntry::EXIT;
     entry.m_connId = connId;
@@ -4047,6 +4093,16 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
 {
     QCC_DbgHLPrintf(("UDPTransport::ConnectCb(handle=%p, conn=%p, passive=%d., buf=%p, len=%d., status=\"%s\")",
                      handle, conn, passive, buf, len, QCC_StatusText(status)));
+
+    /*
+     * If m_dispatcher is NULL, it means we are shutting down and the dispatcher
+     * has gone away before the endpoint management thread has actually stopped
+     * running.  This is rare, but possible.
+     */
+    if (m_dispatcher == NULL) {
+        QCC_DbgPrintf(("UDPTransport::ConnectCb(): m_dispatcher is NULL"));
+        return;
+    }
 
     UDPTransport::WorkerCommandQueueEntry entry;
     entry.m_command = UDPTransport::WorkerCommandQueueEntry::CONNECT_CB;
@@ -4076,6 +4132,16 @@ void UDPTransport::DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatu
 {
     QCC_DbgHLPrintf(("UDPTransport::DisconnectCb(handle=%p, conn=%p, foreign=%d.)", handle, conn));
 
+    /*
+     * If m_dispatcher is NULL, it means we are shutting down and the dispatcher
+     * has gone away before the endpoint management thread has actually stopped
+     * running.  This is rare, but possible.
+     */
+    if (m_dispatcher == NULL) {
+        QCC_DbgPrintf(("UDPTransport::DisconnectCb(): m_dispatcher is NULL"));
+        return;
+    }
+
     UDPTransport::WorkerCommandQueueEntry entry;
     entry.m_command = UDPTransport::WorkerCommandQueueEntry::DISCONNECT_CB;
     entry.m_handle = handle;
@@ -4101,6 +4167,16 @@ void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* 
 {
     QCC_DbgHLPrintf(("UDPTransport::RecvCb(handle=%p, conn=%p, rcv=%p, status=%s)",
                      handle, conn, rcv, QCC_StatusText(status)));
+
+    /*
+     * If m_dispatcher is NULL, it means we are shutting down and the dispatcher
+     * has gone away before the endpoint management thread has actually stopped
+     * running.  This is rare, but possible.
+     */
+    if (m_dispatcher == NULL) {
+        QCC_DbgPrintf(("UDPTransport::RecvCb(): m_dispatcher is NULL"));
+        return;
+    }
 
     UDPTransport::WorkerCommandQueueEntry entry;
     entry.m_command = UDPTransport::WorkerCommandQueueEntry::RECV_CB;
@@ -4128,6 +4204,16 @@ void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* 
 void UDPTransport::SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
 {
     QCC_DbgHLPrintf(("UDPTransport::SendCb(handle=%p, conn=%p, buf=%p, len=%d.)", handle, conn, buf, len));
+
+    /*
+     * If m_dispatcher is NULL, it means we are shutting down and the dispatcher
+     * has gone away before the endpoint management thread has actually stopped
+     * running.  This is rare, but possible.
+     */
+    if (m_dispatcher == NULL) {
+        QCC_DbgPrintf(("UDPTransport::SendCb(): m_dispatcher is NULL"));
+        return;
+    }
 
     UDPTransport::WorkerCommandQueueEntry entry;
     entry.m_command = UDPTransport::WorkerCommandQueueEntry::SEND_CB;
@@ -5491,7 +5577,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         }
     }
 
-    QCC_DbgPrintf(("UDPTransport::ConnectCb(): giving endpoint list lock"));
+    QCC_DbgPrintf(("UDPTransport::Connect(): giving endpoint list lock"));
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
     /*
