@@ -249,4 +249,5 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_UDP_ENDPOINT_STALLED" value="0x910d" comment="UDP Transport has detected an endpoint that is not terminating correctly"/>
   <status name="ER_ARDP_INVALID_RESPONSE" value="0x910e" comment="ARDP Transport detected invalid message data that causes disconnect"/>
   <status name="ER_ARDP_INVALID_CONNECTION" value="0x910f" comment="ARDP connection not found"/>
+  <status name="ER_ARDP_DISCONNECTING" value="0x9110" comment="ARDP connection is being shut down"/>
 </status_block>
