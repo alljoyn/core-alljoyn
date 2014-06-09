@@ -1960,14 +1960,49 @@ class _UDPEndpoint : public _RemoteEndpoint {
             return;
         }
 
+        assert(rcv->fcnt && "_UDPEndpoint::RecvCb(): Expect at least one fragment");
+
         /*
-         * BUGBUG FIXME
-         * TODO: Should do something about rcv->fcnt
+         * The daemon knows nothing about message fragments, so we must
+         * reassemble the fragements into a contiguous buffer before doling it
+         * out to the daemon router.  What we get is a singly linked list of
+         * ArdpRcvBuf* that we have to walk.  There is no cumulative length, so
+         * we have to do two passes through the list: one pass to calculate the
+         * length so we can allocate a contiguous buffer, and one to copy the
+         * data into the buffer.
          */
-        assert(rcv->fcnt == 1 && "_UDPEndpoint::RecvCb(): message partitioning not supported yet");
+        uint8_t* msgbuf = NULL;
+        uint32_t mlen = 0;
+        if (rcv->fcnt != 1) {
+            QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Calculating message length"));
+            ArdpRcvBuf* tmp = rcv;
+            uint32_t myfcnt = 0;
+            for (uint32_t i = 0; i < rcv->fcnt; ++i) {
+                QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Found fragment of %d. bytes", tmp->datalen));
+                mlen += tmp->datalen;
+                tmp = tmp->next;
+            }
+
+            QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Found Message of %d. bytes", mlen));
+            msgbuf = new uint8_t[mlen];
+            uint32_t offset = 0;
+            tmp = rcv;
+            QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Reassembling fragements"));
+            for (uint32_t i = 0; i < rcv->fcnt; ++i) {
+                QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Copying fragment of %d. bytes", tmp->datalen));
+                memcpy(msgbuf + offset, tmp->data, tmp->datalen);
+                offset += tmp->datalen;
+                tmp = tmp->next;
+            }
+
+            QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Message of %d. bytes reassembled", mlen));
+        }
+
+        uint8_t* messageBuf = msgbuf ? msgbuf : rcv->data;
+        uint32_t messageLen = mlen ? mlen : rcv->datalen;
 
 #ifndef NDEBUG
-        DumpBytes(rcv->data, rcv->datalen);
+        DumpBytes(messageBuf, messageLen);
 #endif
 
         /*
@@ -2028,7 +2063,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
          */
         Message msg(m_transport->m_bus);
         QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): LoadBytes()"));
-        status = msg->LoadBytes(rcv->data, rcv->datalen);
+        status = msg->LoadBytes(messageBuf, messageLen);
         if (status != ER_OK) {
             QCC_LogError(status, ("_UDPEndpoint::RecvCb(): Cannot load bytes"));
 
@@ -2053,8 +2088,13 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * The bytes are now loaded into what amounts to a backing buffer for
          * the Message.  With the exception of the Message header, these are
          * still the raw bytes from the wire, so we have to Unmarshal() them
-         * before proceeding.
+         * before proceeding (remembering to free the reassembly buffer if it
+         * exists.
          */
+        if (msgbuf) {
+            delete[] msgbuf;
+            msgbuf = NULL;
+        }
         qcc::String endpointName(rep->GetUniqueName());
         QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Unmarshal()"));
         status = msg->Unmarshal(endpointName, false, false, true, 0);
