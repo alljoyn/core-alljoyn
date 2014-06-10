@@ -1976,7 +1976,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
         if (rcv->fcnt != 1) {
             QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Calculating message length"));
             ArdpRcvBuf* tmp = rcv;
-            uint32_t myfcnt = 0;
             for (uint32_t i = 0; i < rcv->fcnt; ++i) {
                 QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Found fragment of %d. bytes", tmp->datalen));
                 mlen += tmp->datalen;
@@ -2551,6 +2550,14 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     memcpy(&m_ardpConfig, &ardpConfig, sizeof(ArdpGlobalConfig));
 
     /*
+     * User configured UDP-specific values trump defaults if longer.
+     */
+    qcc::Timespec t = Timespec(ardpConfig.connectTimeout * ardpConfig.connectRetries);
+    if (m_authTimeout < t) {
+        m_authTimeout = m_sessionSetupTimeout = t;
+    }
+
+    /*
      * Initialize the hooks to and from the ARDP protocol
      */
     m_ardpLock.Lock();
@@ -2881,9 +2888,7 @@ QStatus UDPTransport::Stop(void)
      */
     QCC_DbgPrintf(("UDPTransport::Stop(): Alert connectThreads"));
     for (set<ConnectEntry>::const_iterator i = m_connectThreads.begin(); i != m_connectThreads.end(); ++i) {
-        if ((*i).m_thread) {
-            (*i).m_thread->Alert();
-        }
+        (*i).m_thread->Alert();
     }
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
@@ -3006,8 +3011,17 @@ QStatus UDPTransport::Join(void)
      * will ultimately mean the destruction of the transport.
      */
     while (m_connectThreads.empty() == false) {
-        m_endpointListLock.Unlock(MUTEX_CONTEXT);
         QCC_DbgTrace(("UDPTransport::Join(): Waiting for threads to exit"));
+
+        /*
+         * In case a thread trying to connect snuck its way in while we were in
+         * the process of shutting down an endpoint, bug any remaining threads
+         * to get them to leave.
+         */
+        for (set<ConnectEntry>::iterator j = m_connectThreads.begin(); j != m_connectThreads.end(); ++j) {
+            (*j).m_thread->Alert();
+        }
+
         /*
          * Wait for "a while."  This means long enough to get all of the
          * threads scheduled and run so they can wander out of the endpoint.
@@ -3024,6 +3038,7 @@ QStatus UDPTransport::Join(void)
          * and expect the loop to run every 20 ms in the usual case,
          * ensuring that the waiting threads get time to run and leave.
          */
+        m_endpointListLock.Unlock(MUTEX_CONTEXT);
         qcc::Sleep(10);
         m_endpointListLock.Lock(MUTEX_CONTEXT);
     }
@@ -3307,12 +3322,12 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
              * endpoint list where it will be picked up and done away with.
              */
             if (threadWaiting == false) {
-                QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Moving slow authenticator with conn ID == %d. to m_endpointList",
-                                 ep->GetConnId()));
+                QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Moving slow authenticator with conn ID == %d. to m_endpointList", ep->GetConnId()));
                 m_authList.erase(i);
                 m_endpointList.insert(ep);
                 ep->Stop();
-                i = m_authList.lower_bound(ep);
+                i = m_authList.upper_bound(ep);
+                continue;
             }
         }
         ++i;
@@ -3382,16 +3397,30 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
              * true.  Time passing should have resulted in any pending writes
              * completing, and if not, the ARDP_Disconnect() should have caused
              * them to complete anyway, resulting in notPending going true.
-             *
-             * If this doesn't happen, something has gone wrong, but there's
-             * nothing we can do about it, so we just log an error saying that
-             * it has happened.
              */
             Timespec tNow, tStop;
             GetTimeNow(&tNow);
             int32_t tRemaining = tStop + m_ardpConfig.timewait - tNow;
             if (tRemaining < 0) {
                 QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d stalled", ep->GetConnId()));
+
+                if (threadSetEmpty == false) {
+                    QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled not threadSetEmpty"));
+                }
+                if (disconnected == false) {
+                    QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled not disconnected"));
+                    /*
+                     * If the endpoint hasn't disconnected for some reason, kick it.
+                     */
+                    ep->Stop();
+                }
+                if (notPending == false) {
+                    QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled not notPending"));
+                    /*
+                     * If the endpoint hasn't disconnected for some reason, kick it.
+                     */
+                    ep->Stop();
+                }
                 qcc::Sleep(10);
                 Alert();
             }
@@ -4424,10 +4453,14 @@ void* UDPTransport::Run(void* arg)
             }
 
             /*
+             * Determine if this was a socket event (the socket became ready) or
+             * if it was a timer event.  If we are calling ARDP because
+             * something new came in, let it know by setting a flag.
+             *
              * BUGBUG FIXME TODO: If we are passing the socket FD in every time,
              * why do we have it stashed in the handle or conn?
              */
-            bool socketReady = (*i != &ardpTimerEvent && *i != &maintenanceTimerEvent);
+            bool socketReady = (*i != &ardpTimerEvent && *i != &maintenanceTimerEvent && *i != &stopEvent);
             uint32_t ms;
             m_ardpLock.Lock();
             ARDP_Run(m_handle, socketReady ? (*i)->GetFD() : -1, socketReady, &ms);
@@ -5561,6 +5594,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      */
     Thread* thread = GetThread();
     QCC_DbgPrintf(("UDPTransport::Connect(): Add thread=%p to m_connectThreads", thread));
+    assert(thread && "UDPTransport::Connect(): GetThread() returns NULL");
     ConnectEntry entry(thread, conn);
     m_endpointListLock.Lock(MUTEX_CONTEXT);
     m_connectThreads.insert(entry);
