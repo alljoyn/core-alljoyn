@@ -73,81 +73,116 @@ public class DeviceAnnouncementHandler implements AnnouncementHandler
         Status status = mBusAttachment.ping(serviceName, PING_WAIT_TIME);
         if (Status.OK == status) {
             System.out.println("BusAttachment with name " + serviceName + " is still present joining session.");
-            SessionOpts sessionOpts = new SessionOpts();
-            sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
-            sessionOpts.isMultipoint = false;
-            sessionOpts.proximity = SessionOpts.PROXIMITY_ANY;
-            sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
-
-            Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
-
-            status = mBusAttachment.joinSession(serviceName, port, sessionId, sessionOpts, new SessionListener());
-            if (Status.OK == status) {
-                System.out.println("Succesfully joined session with: \"" + serviceName + "\" SessionId: \"" + sessionId.value +"\"");
-                ProxyBusObject aboutObj = mBusAttachment.getProxyBusObject(serviceName, AboutTransport.OBJ_PATH,
-                        sessionId.value, new Class<?>[] { AboutTransport.class});
-                AboutTransport aboutIntf = aboutObj.getInterface(AboutTransport.class);
-                try {
-                    /*
-                     * Get property org.alljoyn.About.Version
-                     */
-                    System.out.println("--------------Getting org.alljoyn.About.Version property-------------");
-                    int version = aboutIntf.getVersion();
-                    System.out.println("version: " + version);
-                } catch(BusException e1){
-                    System.out.println(e1.getMessage());
-                }
-
-                try{
-                    /*
-                     * Call org.alljoyn.About.GetObjectDescription method for default language
-                     */
-                    System.out.println("--------Calling org.alljoyn.About.GetObjectDescription method--------");
-                    BusObjectDescription[] objDescription = aboutIntf.GetObjectDescription();
-                    System.out.println("ObjectDescriptions:");
-                    for(BusObjectDescription busObjectDescription : objDescription) {
-                        System.out.println("\tObjectPath = " + busObjectDescription.path);
-                        for(String allJoynInterface : busObjectDescription.interfaces) {
-                            System.out.println("\t\tInterface = " + allJoynInterface);
-                        }
-                    }
-                } catch(BusException e2) {
-                    System.out.println(e2.getMessage());
-                }
-
-                try {
-                    /*
-                     * Call org.alljoyn.About.GetAboutData method for default language
-                     */
-                    String defaultLanguage = announceData.get(AboutKeys.ABOUT_DEFAULT_LANGUAGE).getObject(String.class);
-                    System.out.println("---------Calling org.alljoyn.About.GetAboutData method for " + defaultLanguage + "--------");
-                    Map<String, Variant> defaultAboutData = aboutIntf.GetAboutData(defaultLanguage);
-                    System.out.println("AboutData: for " + defaultLanguage + " language");
-                    printAboutData(defaultAboutData);
-
-                    Variant variant = defaultAboutData.get(AboutKeys.ABOUT_SUPPORTED_LANGUAGES);
-                    String[] supportedLangs = variant.getObject(String[].class);
-                    /*
-                     * Call org.alljoyn.About.GetAboutData method for supported languages
-                     */
-                    for (String lang: supportedLangs) {
-                        if (!lang.equals(defaultLanguage)) {
-                            System.out.println("---------Calling org.alljoyn.About.GetAboutData method for " + lang + "--------");
-                            Map<String, Variant> aboutData = aboutIntf.GetAboutData(lang);
-                            System.out.println("AboutData: for " + lang + " language");
-                            printAboutData(aboutData);
-                        }
-                    }
-
-                } catch(BusException e3) {
-                    System.out.println(e3.getMessage());
-                }
-            }
+            attemptToJoinSession(serviceName, port, announceData);
         } else {
-            System.out.println("BusAttachment with name " + serviceName + " is no longer present.");
+            /*
+             * If the BusAttachment.ping fails its for one of two reasons. The remote
+             * BusAttachment can no longer be found or the remote device is running
+             * a version of AllJoyn that is older than 14.06.
+             *
+             * Its still possible to Join the session with the older BusAttachment.
+             * However, if the remote BusAttachment is no longer present the JoinSession
+             * call could run to timeout (about 90 seconds by default). Blocking
+             * inside the onAnnounce handler for 90 seconds could cause concurrency
+             * problems so we call JoinSession on a different thread.
+             *
+             * If no services are running a version of AllJoyn older than 14.06
+             * then there is no need to attempt to JoinSessions.  Just exit without
+             * doing anything since the remote bus is no longer present.
+             */
+            class JoinSessionThread extends Thread {
+                JoinSessionThread(String serviceName, short port, Map<String, Variant> announceData) {
+                    mServiceName = serviceName;
+                    mPort = port;
+                    mAnnounceData = announceData;
+                }
+                public void run() {
+                    attemptToJoinSession(mServiceName, mPort, mAnnounceData);
+                }
+                String mServiceName;
+                short mPort;
+                Map<String, Variant> mAnnounceData;
+            }
+
+            System.out.println("BusAttachment with name " + serviceName + " is no longer present or is older than v14.06.");
+            System.out.println("Attempting to JoinSession just incase " + serviceName + " is running an older version of AllJoyn.");
+            new JoinSessionThread(serviceName, port, announceData).run();
         }
     }
 
+    public void attemptToJoinSession(String serviceName, short port, Map<String, Variant> announceData)
+    {
+        SessionOpts sessionOpts = new SessionOpts();
+        sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
+        sessionOpts.isMultipoint = false;
+        sessionOpts.proximity = SessionOpts.PROXIMITY_ANY;
+        sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
+
+        Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
+
+        Status status = mBusAttachment.joinSession(serviceName, port, sessionId, sessionOpts, new SessionListener());
+        if (Status.OK == status) {
+            System.out.println("Succesfully joined session with: \"" + serviceName + "\" SessionId: \"" + sessionId.value +"\"");
+            ProxyBusObject aboutObj = mBusAttachment.getProxyBusObject(serviceName, AboutTransport.OBJ_PATH,
+                    sessionId.value, new Class<?>[] { AboutTransport.class});
+            AboutTransport aboutIntf = aboutObj.getInterface(AboutTransport.class);
+            try {
+                /*
+                 * Get property org.alljoyn.About.Version
+                 */
+                System.out.println("--------------Getting org.alljoyn.About.Version property-------------");
+                int version = aboutIntf.getVersion();
+                System.out.println("version: " + version);
+            } catch(BusException e1){
+                System.out.println(e1.getMessage());
+            }
+
+            try{
+                /*
+                 * Call org.alljoyn.About.GetObjectDescription method for default language
+                 */
+                System.out.println("--------Calling org.alljoyn.About.GetObjectDescription method--------");
+                BusObjectDescription[] objDescription = aboutIntf.GetObjectDescription();
+                System.out.println("ObjectDescriptions:");
+                for(BusObjectDescription busObjectDescription : objDescription) {
+                    System.out.println("\tObjectPath = " + busObjectDescription.path);
+                    for(String allJoynInterface : busObjectDescription.interfaces) {
+                        System.out.println("\t\tInterface = " + allJoynInterface);
+                    }
+                }
+            } catch(BusException e2) {
+                System.out.println(e2.getMessage());
+            }
+
+            try {
+                /*
+                 * Call org.alljoyn.About.GetAboutData method for default language
+                 */
+                String defaultLanguage = announceData.get(AboutKeys.ABOUT_DEFAULT_LANGUAGE).getObject(String.class);
+                System.out.println("---------Calling org.alljoyn.About.GetAboutData method for " + defaultLanguage + "--------");
+                Map<String, Variant> defaultAboutData = aboutIntf.GetAboutData(defaultLanguage);
+                System.out.println("AboutData: for " + defaultLanguage + " language");
+                printAboutData(defaultAboutData);
+
+                Variant variant = defaultAboutData.get(AboutKeys.ABOUT_SUPPORTED_LANGUAGES);
+                String[] supportedLangs = variant.getObject(String[].class);
+                /*
+                 * Call org.alljoyn.About.GetAboutData method for supported languages
+                 */
+                for (String lang: supportedLangs) {
+                    if (!lang.equals(defaultLanguage)) {
+                        System.out.println("---------Calling org.alljoyn.About.GetAboutData method for " + lang + "--------");
+                        Map<String, Variant> aboutData = aboutIntf.GetAboutData(lang);
+                        System.out.println("AboutData: for " + lang + " language");
+                        printAboutData(aboutData);
+                    }
+                }
+
+            } catch(BusException e3) {
+                System.out.println(e3.getMessage());
+            }
+        }
+    }
     public void onDeviceLost(String deviceName)
     {
         System.out.format("onDeviceLost: %s\n", deviceName);

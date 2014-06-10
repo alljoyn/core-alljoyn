@@ -246,24 +246,41 @@ class AboutClientPingAsyncCB : public BusAttachment::PingAsyncCB {
 
         PingContext* ctx = (PingContext*)context;
         if (ER_OK == status) {
-            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-
-            AboutClientSessionListener* aboutClientSessionListener = new AboutClientSessionListener(ctx->busName);
-            AboutClientSessionJoiner* joincb = new AboutClientSessionJoiner(ctx->busName, sessionJoinedCallback);
-
-            status = busAttachment->JoinSessionAsync(ctx->busName.c_str(), ctx->port, aboutClientSessionListener,
-                                                     opts, joincb, aboutClientSessionListener);
-
+            status = AttemptToJoinSession(ctx->busName, ctx->port);
             if (status != ER_OK) {
                 std::cout << "Unable to JoinSession with " << ctx->busName.c_str() << std::endl;
             }
         } else {
             std::cout << "Unable to ping " << ctx->busName.c_str() << ". The Bus is either unreachable or is running an version of AllJoyn older than v14.06." << std::endl;
+            std::cout << "Attempting to Join a session with " << ctx->busName.c_str() << ". Just in case the remote device is running an older version of AllJoyn." << std::endl;
+            /*
+             * If all the services are running Code that is AllJoyn v14.06
+             * or newer then nothing needs to be done.  If some of the services
+             * are older then AllJoyn v14.06 the only way to find out if the
+             * service is reachable is to try and create a session. Unlike calling
+             * ping there is no timeout option when calling JoinSessionAsync.
+             * We must wait for the default timeout (90 seconds) to know that the
+             * service is unreachable.
+             */
+            status = AttemptToJoinSession(ctx->busName, ctx->port);
+            if (status != ER_OK) {
+                std::cout << "Unable to JoinSession with " << ctx->busName.c_str() << std::endl;
+            }
         }
-
         delete ctx;
         ctx = NULL;
         delete this;
+    }
+  private:
+    QStatus AttemptToJoinSession(qcc::String busName, SessionPort port) {
+        SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+
+        AboutClientSessionListener* aboutClientSessionListener = new AboutClientSessionListener(busName);
+        AboutClientSessionJoiner* joincb = new AboutClientSessionJoiner(busName, sessionJoinedCallback);
+
+        QStatus status = busAttachment->JoinSessionAsync(busName.c_str(), port, aboutClientSessionListener,
+                                                         opts, joincb, aboutClientSessionListener);
+        return status;
     }
 };
 
