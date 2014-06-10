@@ -1331,6 +1331,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
         /* Need fragmentation */
         fcnt = (len + (conn->SBUF.maxDlen - 1)) / conn->SBUF.maxDlen;
         lastLen = len % conn->SBUF.maxDlen;
+        lastLen  = (lastLen != 0) ? lastLen : conn->SBUF.maxDlen;
 
         QCC_DbgPrintf(("SendData(): Large buffer %d, partitioning into %d segments", len, fcnt));
 
