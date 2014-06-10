@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -25,6 +25,7 @@
 #include <qcc/platform.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iostream>
 
 namespace qcc {
 
@@ -533,4 +534,12 @@ class String {
  */
 qcc::String operator+(const qcc::String& s1, const qcc::String& s2);
 
+/**
+ * Global "<<" operator for qcc::String
+ *
+ * @param   os  Output stream to print string contents on
+ * @param   str  String to be printed.
+ * @return  Output stream
+ */
+std::ostream& operator<<(std::ostream& os, const qcc::String& str);
 #endif

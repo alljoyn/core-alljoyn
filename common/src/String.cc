@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -587,5 +587,10 @@ qcc::String operator+(const qcc::String& s1, const qcc::String& s2)
 {
     qcc::String ret(s1);
     return ret.append(s2);
+}
+
+std::ostream& operator<<(std::ostream& os, const qcc::String& str)
+{
+    return os << str.c_str();
 }
 
