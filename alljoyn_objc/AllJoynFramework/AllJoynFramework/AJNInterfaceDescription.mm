@@ -17,6 +17,11 @@
 #import <alljoyn/InterfaceDescription.h>
 #import "AJNInterfaceDescription.h"
 #import "AJNTranslatorImpl.h"
+#import "AJNBusAttachment.h"
+
+@interface AJNBusAttachment()
+- (void)holdTranslatorImpl:(void*)translatorImpl;
+@end
 
 @interface AJNInterfaceDescription()
 
@@ -275,9 +280,9 @@
 
 - (void)setDescriptionTranslator:(id<AJNTranslator>)translator
 {
-    AJNTranslatorImpl* i = new AJNTranslatorImpl(translator);
-    self.interfaceDescription->SetDescriptionTranslator(i);
-    self.translator = (AJNTranslatorImpl*)i;
+    AJNTranslatorImpl* translatorImpl = new AJNTranslatorImpl(translator);
+    [self interfaceDescription]->SetDescriptionTranslator(translatorImpl);
+    [self.bus holdTranslatorImpl:translatorImpl];
 }
 
 - (void)activate
@@ -289,22 +294,13 @@
 
 - (id)initWithHandle:(AJNHandle)handle
 {
-    self.translator = 0;
     return [super initWithHandle:handle];
 }
 
 - (id)initWithHandle:(AJNHandle)handle shouldDeleteHandleOnDealloc:(BOOL)deletionFlag;
 {
-    self.translator = 0;
     return [super initWithHandle:handle shouldDeleteHandleOnDealloc:deletionFlag];
 }
 
--(void)dealloc
-{
-    if(self.translator)
-    {
-        delete (AJNTranslatorImpl*)self.translator;
-    }
-}
 
 @end

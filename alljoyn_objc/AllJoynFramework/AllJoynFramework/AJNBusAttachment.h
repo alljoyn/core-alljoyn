@@ -172,11 +172,6 @@ typedef void (^ AJNLinkTimeoutBlock)(QStatus status, uint32_t timeout, void *con
 @property (nonatomic, readonly) NSArray *interfaces;
 
 /**
- * Pointer to this BusAttachment's AJNTranslatorImpl
- */
-@property (nonatomic) void *translator;
-
-/**
  * Construct a BusAttachment.
  *
  * @param applicationName       Name of the application.
@@ -1199,6 +1194,5 @@ typedef void (^ AJNLinkTimeoutBlock)(QStatus status, uint32_t timeout, void *con
  * @param translator AJNTranslator instance
  */
 - (void)setDescriptionTranslator:(id<AJNTranslator>)translator;
-
 
 @end

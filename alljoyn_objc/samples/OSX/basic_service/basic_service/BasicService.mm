@@ -23,7 +23,7 @@
 
 static BasicService *s_basicService;
 
-@interface MyTranslator : NSObject<AJNTranslator>
+@interface ObjectTranslator : NSObject<AJNTranslator>
 
 - (size_t)numTargetLanguages;
 - (NSString*)getTargetLanguage:(size_t)index;
@@ -31,7 +31,7 @@ static BasicService *s_basicService;
 
 @end
 
-@implementation MyTranslator
+@implementation ObjectTranslator
 - (size_t)numTargetLanguages
 {
     return 1;
@@ -127,7 +127,7 @@ static BasicService *s_basicService;
         
         
         [self.basicSampleObject setDescription:@"Isthay siay naay jectobay" inLanguage:@"pig"];
-        [self.basicSampleObject setDescriptionTranslator:[MyTranslator alloc]];
+        [self.basicSampleObject setDescriptionTranslator:[ObjectTranslator alloc]];
         
 
         

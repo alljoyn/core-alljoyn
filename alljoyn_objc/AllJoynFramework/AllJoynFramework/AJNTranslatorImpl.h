@@ -24,7 +24,7 @@
 class AJNTranslatorImpl : public ajn::Translator {
   protected:
 
-    id<AJNTranslator> m_delegate;
+    __strong id<AJNTranslator> m_delegate;
 
   public:
 

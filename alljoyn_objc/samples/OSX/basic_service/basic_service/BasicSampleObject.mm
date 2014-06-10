@@ -18,6 +18,48 @@
 #import "BasicSampleObjectImpl.h"
 #import "AJNInterfaceDescription.h"
 
+@interface InterfaceTranslator : NSObject<AJNTranslator>
+
+- (size_t)numTargetLanguages;
+- (NSString*)getTargetLanguage:(size_t)index;
+- (NSString*)translateText:(NSString*)text from:(NSString*)fromLang to:(NSString*)toLang;
+
+@end
+
+@implementation InterfaceTranslator
+- (size_t)numTargetLanguages
+{
+    return 1;
+}
+
+- (NSString*)getTargetLanguage:(size_t)index
+{
+    return @"en";
+}
+
+- (NSString*)translateText:(NSString*)text from:(NSString*)fromLang to:(NSString*)toLang
+{
+    if(![toLang isEqualToString:(@"en")])
+    {
+        return nil;
+    }
+    if([text isEqualToString:@"Isthay siay naay nterfacenay"])
+    {
+        return @"This is an interface";
+    }
+    if([text isEqualToString:@"IsThay siay ethay atcay"])
+    {
+        return @"This is the cat";
+    }
+    if([text isEqualToString:@"IsThay siay ethay esponsray"])
+    {
+        return @"This is the response";
+    }
+    return nil;
+}
+
+@end
+
 @implementation MyBasicSampleObject
 
 @synthesize delegate = _delegate;
@@ -39,7 +81,7 @@
         //
         interfaceDescription = [busAttachment createInterfaceWithName:kBasicObjectInterfaceName];
 
-       result = [interfaceDescription addMethodWithName:kBasicObjectMethodName inputSignature:@"ss" outputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"str1", @"str2", @"outStr", nil]];
+        result = [interfaceDescription addMethodWithName:kBasicObjectMethodName inputSignature:@"ss" outputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"str1", @"str2", @"outStr", nil]];
         
         if (result != ER_OK) {
             [self.delegate didReceiveStatusUpdateMessage:@"Failed to create interface 'org.alljoyn.Bus.method_sample'\n"];
@@ -52,6 +94,7 @@
         [interfaceDescription setDescription:@"Isthay siay naay nterfacenay"];
         [interfaceDescription setMemberDescription:@"IsThay siay ethay atcay" forMemberWithName:@"cat" sessionlessSignal:FALSE];
         [interfaceDescription setArgDescription:@"IsThay siay ethay esponsray" forArgument:@"outStr" ofMember:@"cat"];
+        [interfaceDescription setDescriptionTranslator:[InterfaceTranslator alloc]];
         
         [interfaceDescription activate];
         
