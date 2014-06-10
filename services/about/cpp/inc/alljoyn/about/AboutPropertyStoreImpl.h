@@ -162,11 +162,11 @@ class AboutPropertyStoreImpl : public PropertyStore {
 
     /**
      * setAppName
-     * @param[out] appName
-     * @param[out] language
-     * @param[out] isPublic
-     * @param[out] isWritable
-     * @param[out] isAnnouncable
+     * @param[in] appName
+     * @param[in] language
+     * @param[in] isPublic
+     * @param[in] isWritable
+     * @param[in] isAnnouncable
      * @return QStatus.
      */
     QStatus setAppName(qcc::String const& appName, qcc::String const& language = "", bool isPublic = true, bool isWritable = false, bool isAnnouncable = true);
