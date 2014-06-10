@@ -65,14 +65,13 @@ void sessionJoinedCallback(qcc::String const& busName, SessionId id)
                  it != objectDescriptions.end(); ++it) {
                 qcc::String key = it->first;
                 std::vector<qcc::String> vector = it->second;
-                std::cout << "key=" << key.c_str();
+                std::cout << "Object Path = " << key.c_str() << std::endl;
                 for (std::vector<qcc::String>::const_iterator itv = vector.begin(); itv != vector.end(); ++itv) {
                     if (key.compare("/About/DeviceIcon") == 0 && itv->compare("org.alljoyn.Icon") == 0) {
                         hasIconInterface = true;
                     }
-                    std::cout << " value=" << itv->c_str() << " ";
+                    std::cout << "\tInterface = " << itv->c_str() << std::endl;
                 }
-                std::cout << std::endl;
             }
         }
 
@@ -110,9 +109,10 @@ void sessionJoinedCallback(qcc::String const& busName, SessionId id)
                     qcc::String key = itx->first;
                     ajn::MsgArg value = itx->second;
                     if (value.typeId == ALLJOYN_STRING) {
-                        std::cout << "Key name=" << key.c_str() << " value=" << value.v_string.str << std::endl;
+                        std::cout << "Key name = " << std::setfill(' ') << std::setw(20) << std::left << key.c_str()
+                                  << " value = " << value.v_string.str << std::endl;
                     } else if (value.typeId == ALLJOYN_ARRAY && value.Signature().compare("as") == 0) {
-                        std::cout << "Key name=" << key.c_str() << " values: ";
+                        std::cout << "Key name = " << std::setfill(' ') << std::setw(20) << std::left << key.c_str() << " values: ";
                         const MsgArg* stringArray;
                         size_t fieldListNumElements;
                         status = value.Get("as", &fieldListNumElements, &stringArray);
@@ -123,7 +123,8 @@ void sessionJoinedCallback(qcc::String const& busName, SessionId id)
                         }
                         std::cout << std::endl;
                     } else if (value.typeId == ALLJOYN_BYTE_ARRAY) {
-                        std::cout << "Key name=" << key.c_str() << " value:" << std::hex << std::uppercase << std::setfill('0');
+                        std::cout << "Key name = " << std::setfill(' ') << std::setw(20) << std::left << key.c_str()
+                                  << " value = " << std::hex << std::uppercase << std::setfill('0');
                         uint8_t* AppIdBuffer;
                         size_t numElements;
                         value.Get("ay", &numElements, &AppIdBuffer);
@@ -144,14 +145,14 @@ void sessionJoinedCallback(qcc::String const& busName, SessionId id)
         if (status != ER_OK) {
             std::cout << "Call to to getVersion failed " << QCC_StatusText(status) << std::endl;
         } else {
-            std::cout << "Version=" << ver << std::endl;
+            std::cout << "Version = " << ver << std::endl;
         }
     } //if (aboutClient)
 
     if (hasIconInterface) {
         iconClient = new AboutIconClient(*busAttachment);
         if (iconClient) {
-            std::cout << std::endl << busName.c_str() << " AboutIcontClient GetUrl" << std::endl;
+            std::cout << std::endl << busName.c_str() << " AboutIconClient GetUrl" << std::endl;
             std::cout << "-----------------------------------" << std::endl;
 
             size_t contentSize;
@@ -160,30 +161,10 @@ void sessionJoinedCallback(qcc::String const& busName, SessionId id)
             if (status != ER_OK) {
                 std::cout << "Call to getUrl failed: " << QCC_StatusText(status) << std::endl;
             } else {
-                std::cout << "url=" << url.c_str() << std::endl;
+                std::cout << "url = " << url.c_str() << std::endl;
             }
 
-            std::cout << std::endl << busName.c_str() << " AboutIcontClient GetContent" << std::endl;
-            std::cout << "-----------------------------------" << std::endl;
-
-            uint8_t* content = NULL;
-            status = iconClient->GetContent(busName.c_str(), &content, contentSize, id);
-            if (status != ER_OK) {
-                std::cout << "Call to GetContent failed: " << QCC_StatusText(status) << std::endl;
-            } else {
-                std::cout << "Content size=" << contentSize << std::endl;
-                std::cout << "Content :\t";
-                for (size_t i = 0; i < contentSize; i++) {
-                    if (i % 8 == 0 && i > 0) {
-                        std::cout << "\n\t\t";
-                    }
-                    std::cout << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << (unsigned int)content[i]
-                              << std::nouppercase << std::dec;
-                }
-                std::cout << std::endl;
-            }
-
-            std::cout << std::endl << busName.c_str() << " AboutIcontClient GetVersion" << std::endl;
+            std::cout << std::endl << busName.c_str() << " AboutIconClient GetVersion" << std::endl;
             std::cout << "-----------------------------------" << std::endl;
 
             int ver;
@@ -191,10 +172,10 @@ void sessionJoinedCallback(qcc::String const& busName, SessionId id)
             if (status != ER_OK) {
                 std::cout << "Call to getVersion failed: " << QCC_StatusText(status) << std::endl;
             } else {
-                std::cout << "Version=" << ver << std::endl;
+                std::cout << "Version = " << ver << std::endl;
             }
 
-            std::cout << std::endl << busName.c_str() << " AboutIcontClient GetMimeType" << std::endl;
+            std::cout << std::endl << busName.c_str() << " AboutIconClient GetMimeType" << std::endl;
             std::cout << "-----------------------------------" << std::endl;
 
             qcc::String mimetype;
@@ -203,18 +184,39 @@ void sessionJoinedCallback(qcc::String const& busName, SessionId id)
             if (status != ER_OK) {
                 std::cout << "Call to getMimetype failed: " << QCC_StatusText(status) << std::endl;
             } else {
-                std::cout << "Mimetype" << mimetype.c_str() << std::endl;
+                std::cout << "Mimetype : " << mimetype.c_str() << std::endl;
             }
 
-            std::cout << std::endl << busName.c_str() << " AboutIcontClient GetSize" << std::endl;
+            std::cout << std::endl << busName.c_str() << " AboutIconClient GetSize" << std::endl;
             std::cout << "-----------------------------------" << std::endl;
 
             status = iconClient->GetSize(busName.c_str(), contentSize, id);
             if (status != ER_OK) {
                 std::cout << "Call to getSize failed: " << QCC_StatusText(status) << std::endl;
             } else {
-                std::cout << "Size=" << contentSize << std::endl;
+                std::cout << "Size = " << contentSize << std::endl;
             }
+
+            std::cout << std::endl << busName.c_str() << " AboutIconClient GetIcon" << std::endl;
+            std::cout << "-----------------------------------" << std::endl;
+            AboutIconClient::Icon icon;
+            status = iconClient->GetIcon(busName.c_str(), icon, id);
+            if (status != ER_OK) {
+                std::cout << "Call to GetIcon failed: " << QCC_StatusText(status) << std::endl;
+            } else {
+                std::cout << "Content size = " << icon.contentSize << std::endl;
+                std::cout << "Content :\t";
+                for (size_t i = 0; i < contentSize; i++) {
+                    if (i % 8 == 0 && i > 0) {
+                        std::cout << "\n\t\t";
+                    }
+                    std::cout << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << (unsigned int)icon.content[i]
+                              << std::nouppercase << std::dec;
+                }
+                std::cout << std::endl;
+                std::cout << "Mimetype :\t" << icon.mimetype.c_str() << std::endl;
+            }
+
         } //if (iconClient)
     } //if (isIconInterface)
     status = busAttachment->LeaveSession(id);
