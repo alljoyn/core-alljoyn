@@ -178,7 +178,7 @@ namespace AllJoynUnity
 			LAN = 0x0010, /**< Wired local-area network transport */
 			TCP = 0x0004, /**< TCP/IP transport */
 			UDP = 0x0100, /**< UDP/IP transport */
-			IP =  0x0104  /**< IP transport (system chooses betwen TCP or UDP) */
+			IP =  0x0004  /**< IP transport (system chooses best IP transport) */
 
 		}
 

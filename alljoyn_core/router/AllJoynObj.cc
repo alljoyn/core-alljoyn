@@ -3018,7 +3018,7 @@ void AllJoynObj::FindAdvertisedName(const InterfaceDescription::Member* member, 
         matchingStr = String("name='") + str + "*'";
     }
 
-    ProcFindAdvertisement(status, msg, matchingStr, TRANSPORT_ANY);
+    ProcFindAdvertisement(status, msg, matchingStr, TRANSPORT_ALL);
 }
 
 void AllJoynObj::FindAdvertisedNameByTransport(const InterfaceDescription::Member* member, Message& msg)
@@ -3192,7 +3192,7 @@ void AllJoynObj::CancelFindAdvertisedName(const InterfaceDescription::Member* me
         matchingStr = String("name='") + str + "*'";
     }
 
-    HandleCancelFindAdvertisement(status, msg, matchingStr, TRANSPORT_ANY);
+    HandleCancelFindAdvertisement(status, msg, matchingStr, TRANSPORT_ALL);
 }
 
 void AllJoynObj::CancelFindAdvertisedNameByTransport(const InterfaceDescription::Member* member, Message& msg)

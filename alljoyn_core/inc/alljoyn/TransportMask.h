@@ -36,7 +36,7 @@ const TransportMask TRANSPORT_TCP       = 0x0004;   /**< Transport using TCP (sa
 const TransportMask TRANSPORT_WLAN      = 0x0004;   /**< Wireless local-area network transport (same as TRANSPORT_TCP) */
 const TransportMask TRANSPORT_WWAN      = 0x0008;   /**< Wireless wide-area network transport */
 const TransportMask TRANSPORT_LAN       = 0x0010;   /**< Wired local-area network transport */
-const TransportMask TRANSPORT_WFD       = 0x0080;   /**< Transport using Wi-Fi Direct transport */
+const TransportMask TRANSPORT_WFD       = 0x0080;   /**< Transport using Wi-Fi Direct transport (currently unused) */
 const TransportMask TRANSPORT_UDP       = 0x0100;   /**< Transport using the AllJoyn Reliable Datagram Protocol (flavor of reliable UDP) */
 
 /**
@@ -51,19 +51,26 @@ const TransportMask TRANSPORT_UDP       = 0x0100;   /**< Transport using the All
  * surprising results in existing applications that are unaware of the
  * limitations, we do no enable Wi-Fi Direct automatically.
  *
- * Selecting ANY transport really means selecting ANY but Wi-Fi Direct.  In
- * order to enable discovery over Wi-Fi Direct, and use of the Wi-Fi Direct
- * transport an application author must positively act and OR in the
- * TRANSPORT_WFD bit.
+ * Selecting ANY transport really means selecting ANY but Wi-Fi Direct and UDP.
+ * In order to enable discovery and use of the UDP transport an application
+ * author must positively act and OR in the TRANSPORT_UDP bit.
  */
-const TransportMask TRANSPORT_ANY       = (0xFFFF & ~TRANSPORT_WFD);
+const TransportMask TRANSPORT_ANY       = (0xFFFF & ~TRANSPORT_WFD & ~TRANSPORT_UDP);
+
+/**
+ * A constant indicating that literally any transport is acceptable.  It is
+ * typically used in the routing node to enable advertisements over all
+ * transports.
+ */
+const TransportMask TRANSPORT_ALL       = (0xFFFF);
 
 /**
  * A constant indicating that any IP-based transport is acceptable.  It is left
  * up to the system to decide which of the available transports is best suited
- * to the implied situation
+ * to the implied situation.  It is expected that when TRANSPORT_UDP is fully
+ * performance tuned, it will be added to the TRANSPORT_IP mask.
  */
-const TransportMask TRANSPORT_IP        = TRANSPORT_TCP | TRANSPORT_UDP;
+const TransportMask TRANSPORT_IP        = TRANSPORT_TCP;
 
 }
 

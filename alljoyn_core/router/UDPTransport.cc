@@ -2211,7 +2211,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
      */
     ArdpConnRecord* GetConn()
     {
-        QCC_DbgTrace(("_UDPEndpoint::GetConn(): => %p", m_conn));
+        QCC_DbgTrace(("_UdpEndpoint::GetConn(): => %p", m_conn));
         return m_conn;
     }
 
@@ -4112,9 +4112,32 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
 
         /*
          * There is a thread waiting for this process to finish, so we need to
-         * wake it up.
+         * wake it up.  The moment we gave up the m_endpointListLock, though,
+         * the endpoint management thread can decide to tear down the endpoint
+         * and invalidate all of our work.  That means that the event can
+         * be torn down out from underneath us.  So we have got to make sure
+         * that the endpoint is still there in order to ensure the event is
+         * still valid.
          */
-        event->SetEvent();
+        QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Taking endpoint list lock"));
+        m_endpointListLock.Lock(MUTEX_CONTEXT);
+
+        /*
+         * We know the endpoint is still there since we hold a managed object
+         * reference to it.  What might be missing is the connection and the
+         * event.  So first, get the connection from the endpoint and if it is
+         * still there, the event must still be there.  If the connection is not
+         * there, the thread waiting on the event has been released in the same
+         * process that zeroed out the conn.  We get this holding the endpoint
+         * list lock so this can't happen underneath us.
+         */
+        conn = udpEp->GetConn();
+        if (conn) {
+            event->SetEvent();
+        }
+
+        QCC_DbgPrintf(("UDPTransport::DoConnectCb(): giving endpoint list lock"));
+        m_endpointListLock.Unlock(MUTEX_CONTEXT);
         return;
     }
 }
