@@ -94,6 +94,16 @@ struct SetLinkTimeoutAsyncCBContext {
     { }
 };
 
+struct PingAsyncCBContext {
+    BusAttachment::PingAsyncCB* callback;
+    void* context;
+
+    PingAsyncCBContext(BusAttachment::PingAsyncCB* callback, void* context) :
+        callback(callback),
+        context(context)
+    { }
+};
+
 }
 
 namespace ajn {
@@ -2299,6 +2309,76 @@ QStatus BusAttachment::Ping(const char* name, uint32_t timeout)
     }
     return status;
 }
+
+QStatus BusAttachment::PingAsync(const char* name, uint32_t timeout, BusAttachment::PingAsyncCB* callback, void* context)
+{
+    if (!IsConnected()) {
+        return ER_BUS_NOT_CONNECTED;
+    }
+    if (!IsLegalBusName(name)) {
+        return ER_BUS_BAD_BUS_NAME;
+    }
+
+    MsgArg args[2];
+    size_t numArgs = ArraySize(args);
+
+    MsgArg::Set(args, numArgs, "su", name, timeout);
+
+    const ProxyBusObject& alljoynObj = this->GetAllJoynProxyObj();
+    PingAsyncCBContext* cbCtx = new PingAsyncCBContext(callback, context);
+
+    QStatus status = alljoynObj.MethodCallAsync(org::alljoyn::Bus::InterfaceName,
+                                                "Ping",
+                                                busInternal,
+                                                static_cast<MessageReceiver::ReplyHandler>(&BusAttachment::Internal::PingAsyncCB),
+                                                args,
+                                                ArraySize(args),
+                                                cbCtx,
+                                                timeout);
+    if (status != ER_OK) {
+        delete cbCtx;
+    }
+    return status;
+}
+
+
+void BusAttachment::Internal::PingAsyncCB(Message& reply, void* context)
+{
+    PingAsyncCBContext* ctx = reinterpret_cast<PingAsyncCBContext*>(context);
+
+    QStatus status = ER_FAIL;
+    if (reply->GetType() == MESSAGE_METHOD_RET) {
+        uint32_t disposition;
+        status = reply->GetArgs("u", &disposition);
+        if (ER_OK == status) {
+            switch (disposition) {
+            case ALLJOYN_PING_REPLY_SUCCESS:
+                status = ER_OK;
+                break;
+
+            case ALLJOYN_PING_REPLY_FAILED:
+                status = ER_ALLJOYN_PING_FAILED;
+                break;
+
+            case ALLJOYN_PING_REPLY_TIMEOUT:
+                status = ER_TIMEOUT;
+                break;
+
+            default:
+                status = ER_BUS_UNEXPECTED_DISPOSITION;
+                break;
+            }
+        }
+    } else if (reply->GetType() == MESSAGE_ERROR) {
+        status = ER_BUS_REPLY_IS_ERROR_MESSAGE;
+        QCC_LogError(status, ("%s.Ping returned ERROR_MESSAGE (error=%s)", org::alljoyn::Bus::InterfaceName, reply->GetErrorDescription().c_str()));
+    }
+
+    /* Call the callback */
+    ctx->callback->PingCB(status, ctx->context);
+    delete ctx;
+}
+
 
 bool KeyStoreKeyEventListener::NotifyAutoDelete(KeyStore* holder, const qcc::GUID128& guid)
 {

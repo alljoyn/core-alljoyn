@@ -234,6 +234,11 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     void SetLinkTimeoutAsyncCB(Message& message, void* context);
 
     /**
+     * PingAsync method_reply handler
+     */
+    void PingAsyncCB(Message& message, void* context);
+
+    /**
      * Push a message into the local endpoint
      *
      * @param msg  The message to push

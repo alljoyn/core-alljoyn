@@ -87,6 +87,24 @@ class BusAttachment : public MessageReceiver {
         virtual void SetLinkTimeoutCB(QStatus status, uint32_t timeout, void* context) = 0;
     };
 
+
+    /**
+     * Pure virtual base class implemented by classes that wish to call PingAsync().
+     */
+    class PingAsyncCB {
+      public:
+        /** Destructor */
+        virtual ~PingAsyncCB() { }
+
+        /**
+         * Called when PingAsync() completes.
+         *
+         * @param status       ER_OK if successful
+         * @param context      User defined context which will be passed as-is to callback.
+         */
+        virtual void PingCB(QStatus status, void* context) = 0;
+    };
+
     /**
      * Construct a BusAttachment.
      *
@@ -1164,17 +1182,40 @@ class BusAttachment : public MessageReceiver {
     static uint32_t GetTimestamp();
 
     /**
-
      * Determine if you are able to find a remote connection based on its BusName.
      * The BusName can be the Unique or well-known name.
+     *
      * @param name The unique or well-known name to ping
      * @param timeout Timeout specified in milliseconds to wait for reply
+     *
      * @return
      *   - #ER_OK on success
      *   - #ER_TIMEOUT the Ping attempt timed out
      *   - An error status otherwise
      */
     QStatus Ping(const char* name, uint32_t timeout);
+
+    /**
+     * Determine if you are able to find a remote connection based on its BusName.
+     * The BusName can be the Unique or well-known name.
+     *
+     * This call executes asynchronously. When the PingAsync response is received,
+     * the callback will be called.
+     *
+     * @param[in] name The  unique or well-known name to ping
+     * @param[in] timeout   Timeout specified in milliseconds to wait for reply
+     * @param[in] callback  Called when PingAsync response is received.
+     * @param[in] context   User defined context which will be passed as-is to callback.
+     *
+     * @see PingAsyncCB
+     *
+     * @return
+     *     - #ER_OK if ping was successful.
+     *     - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+     *     - #ER_BUS_BAD_BUS_NAME if the name passed in is an invalid bus name
+     *     - Other error status codes indicating a failure.
+     */
+    QStatus PingAsync(const char* name, uint32_t timeout, BusAttachment::PingAsyncCB* callback, void* context);
 
     /**
      * Set a Translator for all BusObjects and InterfaceDescriptions. This Translator is used for
