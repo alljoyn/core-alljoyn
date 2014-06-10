@@ -157,8 +157,18 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     @Override
     public synchronized void removeAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)
     {
+        if (m_announcementHandlers == null) {
+            // the announcementHandlers list is already empty nothing to remove
+            return;
+        }
         if ( handler == null ) {
             throw new IllegalArgumentException("The AnnouncementHandler can't be null");
+        }
+
+        List< Set<String> > interfacelist = m_announcementHandlers.get(handler);
+        if (interfacelist == null) {
+            // the map does not contain the handler nothing to remove.
+            return;
         }
 
         StringBuffer announceRule = new StringBuffer(ANNOUNCE_MATCH_RULE);
@@ -175,7 +185,6 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
             throw new AboutServiceException("Failed to call RemoveMatch for the rule: '" + announceRule.toString() + "', Status: '" + status + "'");
         }
 
-        List< Set<String> > interfacelist = m_announcementHandlers.get(handler);
         Set<String> toRemoveIntfs;
         if(interfaces == null) {
             toRemoveIntfs = new HashSet<String>();
