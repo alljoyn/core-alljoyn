@@ -3322,6 +3322,7 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                     addrRData = new MDNSARData();
                                     mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, addrRData));
                                     mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord);
+                                    delete addrRData;
                                 }
                                 addrRData = static_cast<MDNSARData*>(resourceRecord->GetRData());
                                 if (addrRData) {
@@ -3337,6 +3338,7 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                     aaaaRData = new MDNSAAAARData();
                                     mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::AAAA, MDNSResourceRecord::INTERNET, 120, aaaaRData));
                                     mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord);
+                                    delete aaaaRData;
                                 }
                                 aaaaRData = static_cast<MDNSAAAARData*>(resourceRecord->GetRData());
                                 if (aaaaRData) {

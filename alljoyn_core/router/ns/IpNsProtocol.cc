@@ -1852,6 +1852,9 @@ MDNSResourceRecord& MDNSResourceRecord::operator=(const MDNSResourceRecord& r)
         m_rrType = r.m_rrType;
         m_rrClass = r.m_rrClass;
         m_rrTTL = r.m_rrTTL;
+        if (m_rdata) {
+            delete m_rdata;
+        }
         m_rdata = r.m_rdata->GetDeepCopy();
     }
     return *this;
