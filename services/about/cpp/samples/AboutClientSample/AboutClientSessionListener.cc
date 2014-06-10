@@ -18,8 +18,8 @@
 #include <stdio.h>
 #include <iostream>
 
-AboutClientSessionListener::AboutClientSessionListener(qcc::String const& inServiceNAme) :
-    mySessionID(0), serviceName(inServiceNAme)
+AboutClientSessionListener::AboutClientSessionListener(qcc::String inServiceName) :
+    mySessionID(0), serviceName(inServiceName)
 {
 }
 

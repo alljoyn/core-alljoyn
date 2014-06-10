@@ -230,13 +230,56 @@ void sessionJoinedCallback(qcc::String const& busName, SessionId id)
     }
 }
 
+/*
+ * Container use to pass the BusName and Port that was discoverd from the
+ * Announce signal.
+ */
+struct PingContext {
+    qcc::String busName;
+    SessionPort port;
+    PingContext(qcc::String bus, SessionPort p) : busName(bus), port(p) { }
+};
+
+class AboutClientPingAsyncCB : public BusAttachment::PingAsyncCB {
+  public:
+    void PingCB(QStatus status, void* context) {
+
+        PingContext* ctx = (PingContext*)context;
+        if (ER_OK == status) {
+            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+
+            AboutClientSessionListener* aboutClientSessionListener = new AboutClientSessionListener(ctx->busName);
+            AboutClientSessionJoiner* joincb = new AboutClientSessionJoiner(ctx->busName, sessionJoinedCallback);
+
+            status = busAttachment->JoinSessionAsync(ctx->busName.c_str(), ctx->port, aboutClientSessionListener,
+                                                     opts, joincb, aboutClientSessionListener);
+
+            if (status != ER_OK) {
+                std::cout << "Unable to JoinSession with " << ctx->busName.c_str() << std::endl;
+            }
+        } else {
+            std::cout << "Unable to ping " << ctx->busName.c_str() << ". The Bus is either unreachable or is running an version of AllJoyn older than v14.06." << std::endl;
+        }
+
+        delete ctx;
+        ctx = NULL;
+        delete this;
+    }
+};
+
 void announceHandlerCallback(qcc::String const& busName, unsigned short port)
 {
     QStatus status;
-    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+    /*
+     * create a new PingContextPointer to pass to the PingAsyncCB
+     */
+    PingContext* pingContext = new PingContext(busName, (SessionPort)port);
 
-    AboutClientSessionListener* aboutClientSessionListener = new AboutClientSessionListener(busName);
-    AboutClientSessionJoiner* joincb = new AboutClientSessionJoiner(busName.c_str(), sessionJoinedCallback);
+    /*
+     * Create an instance of the PingAsyncCB that will respond to the PingAsync
+     * method call.
+     */
+    AboutClientPingAsyncCB* pingAsyncCB = new AboutClientPingAsyncCB();
 
     /*
      * Check that the unique bus name found by the Announce handler is reachable
@@ -245,17 +288,24 @@ void announceHandlerCallback(qcc::String const& busName, unsigned short port)
      * It possible for the Announce signal to contain stale information.
      * By pinging the bus name we are able to determine if it is still present
      * and responsive before joining a session to it.
+     *
+     * PingAsync is being used in favor of the the regular ping since many announce
+     * signals can come in at the same time using the non Async version of ping
+     * could result in running out of concurrent callback threads which results
+     * in a deadlock.
      */
-    busAttachment->EnableConcurrentCallbacks();
-    status = busAttachment->Ping(busName.c_str(), PING_WAIT_TIME);
-    if (ER_OK == status) {
-        status = busAttachment->JoinSessionAsync(busName.c_str(), (ajn::SessionPort)port, aboutClientSessionListener,
-                                                 opts, joincb, aboutClientSessionListener);
-
-        if (status != ER_OK) {
-            std::cout << "Unable to JoinSession with " << busName.c_str() << std::endl;
-            return;
-        }
+    status = busAttachment->PingAsync(busName.c_str(), PING_WAIT_TIME, pingAsyncCB, pingContext);
+    /*
+     * The PingAsync call failed make sure pointers are cleaned up so no memory
+     * leaks occur.
+     */
+    if (ER_OK != status) {
+        std::cout << "Unable to ping " << busName.c_str() << " reason reported: "
+                  << QCC_StatusText(status);
+        delete pingContext;
+        pingContext = NULL;
+        delete pingAsyncCB;
+        pingAsyncCB = NULL;
     }
 }
 
@@ -284,10 +334,11 @@ int main(int argc, char**argv, char**envArg)
     std::cout << "AllJoyn Library version: " << ajn::GetVersion() << std::endl;
     std::cout << "AllJoyn Library build info: " << ajn::GetBuildInfo() << std::endl;
 
-    QCC_SetLogLevels("ALLJOYN_ABOUT_CLIENT=7");
-    QCC_SetLogLevels("ALLJOYN_ABOUT_ICON_CLIENT=7");
-    QCC_SetLogLevels("ALLJOYN_ABOUT_ANNOUNCE_HANDLER=7");
-    QCC_SetLogLevels("ALLJOYN_ABOUT_ANNOUNCEMENT_REGISTRAR=7");
+    // Uncomment the following lines to view About Service debug information.
+    //QCC_SetLogLevels("ALLJOYN_ABOUT_CLIENT=7");
+    //QCC_SetLogLevels("ALLJOYN_ABOUT_ICON_CLIENT=7");
+    //QCC_SetLogLevels("ALLJOYN_ABOUT_ANNOUNCE_HANDLER=7");
+    //QCC_SetLogLevels("ALLJOYN_ABOUT_ANNOUNCEMENT_REGISTRAR=7");
 
     //set Daemon password only for bundled app
     #ifdef QCC_USING_BD

@@ -19,14 +19,23 @@
 
 #include <alljoyn/about/AboutClient.h>
 #include <alljoyn/BusAttachment.h>
+#include "AboutClientSessionListener.h"
 
 typedef void (*SessionJoinedCallback)(qcc::String const& busName, ajn::SessionId id);
+
+struct SessionJoinerContext {
+    qcc::String busName;
+    AboutClientSessionListener* aboutClientSessionListener;
+
+    SessionJoinerContext(qcc::String name, AboutClientSessionListener* absl) :
+        busName(name), aboutClientSessionListener(absl) { }
+};
 
 class AboutClientSessionJoiner : public ajn::BusAttachment::JoinSessionAsyncCB {
 
   public:
 
-    AboutClientSessionJoiner(const char* name, SessionJoinedCallback callback = 0);
+    AboutClientSessionJoiner(qcc::String name, SessionJoinedCallback callback = 0);
 
     virtual ~AboutClientSessionJoiner();
 
