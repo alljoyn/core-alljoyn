@@ -48,5 +48,14 @@ extern const AJNTransportMask kAJNTransportMaskProximity;
 /**< Transport using Wi-Fi Direct transport */
 extern const AJNTransportMask kAJNTransportMaskWiFiDirect;
 
+/**< Transport using TCP transport */
+extern const AJNTransportMask kAJNTransportMaskTCP;
+
+/**< Transport using UDP transport */
+extern const AJNTransportMask kAJNTransportMaskUDP;
+
+/**< Transport using IP-based transport */
+extern const AJNTransportMask kAJNTransportMaskIP;
+
 
 
