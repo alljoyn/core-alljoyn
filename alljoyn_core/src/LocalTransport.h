@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -648,19 +648,19 @@ class LocalTransport : public Transport {
     /**
      * Start discovering busses.
      */
-    void EnableDiscovery(const char* namePrefix) { }
+    void EnableDiscovery(const char* namePrefix, TransportMask transports) { }
 
     /**
      * Stop discovering busses to connect to
      */
-    void DisableDiscovery(const char* namePrefix) { }
+    void DisableDiscovery(const char* namePrefix, TransportMask transports) { }
 
     /**
      * Start advertising a well-known name with a given quality of service.
      *
      * @param advertiseName   Well-known name to add to list of advertised names.
      */
-    QStatus EnableAdvertisement(const qcc::String& advertiseName, bool quietly) { return ER_FAIL; }
+    QStatus EnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports) { return ER_FAIL; }
 
     /**
      * Stop advertising a well-known name with a given quality of service.
@@ -668,7 +668,7 @@ class LocalTransport : public Transport {
      * @param advertiseName   Well-known name to remove from list of advertised names.
      * @param nameListEmpty   Indicates whether advertise name list is completely empty (safe to disable OTA advertising).
      */
-    void DisableAdvertisement(const qcc::String& advertiseName, bool nameListEmpty) { }
+    void DisableAdvertisement(const qcc::String& advertiseName, TransportMask transports) { }
 
     /**
      * Returns the name of this transport
