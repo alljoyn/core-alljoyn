@@ -32,6 +32,7 @@
 #include <alljoyn/Status.h>
 
 #include <qcc/platform.h>
+#include <qcc/atomic.h>
 #include <qcc/String.h>
 #include <qcc/Mutex.h>
 #include <qcc/Thread.h>
@@ -261,7 +262,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      *      - ER_OK if successful.
      *      - an error status otherwise.
      */
-    QStatus GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs) const;
+    QStatus GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs);
 
     /**
      * Indicates whether this transport is used for client-to-bus or bus-to-bus connections.
@@ -296,6 +297,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     UDPTransport& operator =(const UDPTransport& other);
 
     BusAttachment& m_bus;                                          /**< The message bus for this transport */
+    volatile int32_t m_refCount;                                   /**< Incremented if a thread is doing something somewhere */
     bool m_stopping;                                               /**< True if Stop() has been called but endpoints still exist */
     TransportListener* m_listener;                                 /**< Registered TransportListener */
     std::set<UDPEndpoint> m_authList;                              /**< List of authenticating endpoints */
