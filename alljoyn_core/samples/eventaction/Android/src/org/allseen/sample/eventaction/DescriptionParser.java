@@ -48,6 +48,7 @@ public class DescriptionParser {
 		private String iface;
 		private boolean sawRootNode = false;
 		private Description currInfo = null;
+		private boolean ignoreArgDescriptions = false;
 		private String inbetween = "";
 
 		public IntrospectionParser() throws IOException, ParserConfigurationException, SAXException {
@@ -116,7 +117,8 @@ public class DescriptionParser {
 			else if(qName.equals("arg")) {
 				String arg = getSignatureAttr(attrs);
 				currInfo.addSignature(arg);
-				//TODO: parse arg description
+				//TODO: parse arg description, for now ignore them
+				ignoreArgDescriptions = true;
 			}
 			else if(qName.equals("descirption")) {
 				Log.d(BusHandler.TAG, "Found a description");
@@ -126,9 +128,13 @@ public class DescriptionParser {
 		public void endElement(String namespaceURI, String localName, 
 				String qName) throws SAXException {
 			if(qName.equals("method") || qName.equals("signal") || qName.equals("property") || qName.equals("node")){
-				if(null == currentNode) throw new SAXException("member not in node");
 				currInfo = null;
-			} else if(qName.equals("description")){
+				ignoreArgDescriptions = false;
+			} else if(ignoreArgDescriptions) {
+				if(qName.equals("arg")) {
+					ignoreArgDescriptions = false;
+				}
+			}else if(qName.equals("description")){
 				if(currInfo != null) {
 					currInfo.setDescription(inbetween);
 					if(currInfo instanceof EventDescription) {
