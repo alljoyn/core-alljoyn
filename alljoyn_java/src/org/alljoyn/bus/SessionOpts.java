@@ -176,7 +176,7 @@ public class SessionOpts {
      * transport an application author must positively act and OR in the
      * TRANSPORT_WFD bit.
      */
-    public static final short TRANSPORT_ANY       = (short)0xffff & ~TRANSPORT_WFD;
+    public static final short TRANSPORT_ANY       = (short)0xffff & ~TRANSPORT_WFD & ~TRANSPORT_UDP;
 
     /**
      * Use any available IP-based transport to communicate with a given session.
@@ -184,7 +184,7 @@ public class SessionOpts {
      * Selecting the IP transport really implies letting the system decice which
      * transport is best.
      */
-    public static final short TRANSPORT_IP       = TRANSPORT_TCP | TRANSPORT_UDP;
+    public static final short TRANSPORT_IP       = TRANSPORT_TCP;
 
     public String toString( ) {
         StringBuilder result = new StringBuilder();

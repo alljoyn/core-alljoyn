@@ -38,6 +38,6 @@ const alljoyn_transportmask ALLJOYN_TRANSPORT_PROXIMITY = 0x0040;   /**< Transpo
 const alljoyn_transportmask ALLJOYN_TRANSPORT_WFD       = 0x0080;   /**< Transport using Wi-Fi Direct transport */
 const alljoyn_transportmask ALLJOYN_TRANSPORT_TCP       = 0x0004;   /**< TCP/IP transport */
 const alljoyn_transportmask ALLJOYN_TRANSPORT_UDP       = 0x0100;   /**< UDP/IP transport */
-const alljoyn_transportmask ALLJOYN_TRANSPORT_IP        = 0x0104;   /**< IP transport (system chooses between TCP and UDP) */
+const alljoyn_transportmask ALLJOYN_TRANSPORT_IP        = 0x0004;   /**< IP transport (system chooses actual IP-based transport */
 
 #endif

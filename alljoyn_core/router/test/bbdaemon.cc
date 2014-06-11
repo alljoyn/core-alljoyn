@@ -420,7 +420,7 @@ int main(int argc, char** argv)
      * bluetooth.
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES",
-                           "localhost:port=9956;tcp:;bluetooth:");
+                           "localhost:port=9956;tcp:;udp:u4addr=0.0.0.0,u4port=9955;bluetooth:");
 
 #endif
 
@@ -441,22 +441,23 @@ int main(int argc, char** argv)
      *
      * The daemon lib version of the Android-based daemon supports the unix
      * transport as the local transport, uses the TCP transport with defaults as
-     * the remote transport, and since it is on Android, supports the WFD
+     * the remote transport, UDP, and since it is on Android, supports the WFD
      * transport (which is an alternate remote transport).
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES",
-                           "unix:abstract=alljoyn;tcp:;wfd:");
+                           "unix:abstract=alljoyn;tcp:;udp:u4addr=0.0.0.0,u4port=9955;wfd:");
 
 #else /* !defined(ROUTER_LIB) */
 
     /*
      * The native or bundled version of the Android-based daemon supports the
      * unix transport as the local transport, uses the TCP transport with
-     * defaults as the remote transport, and since it is on Android, supports
-     * the WFD transport and may support the bluetooth transport if desired.
+     * defaults as the remote transport, UDP and since it is on Android,
+     * supports the WFD transport and may support the bluetooth transport if
+     * desired.
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES",
-                           "unix:abstract=alljoyn;tcp:;wfd:");
+                           "unix:abstract=alljoyn;tcp:;udp:u4addr=0.0.0.0,u4port=9955;wfd:");
 
 #endif /* !defined(ROUTER_LIB) */
 #endif /* defined(QCC_OS_ANDROID) */
@@ -465,11 +466,11 @@ int main(int argc, char** argv)
 
     /*
      * Darwin uses the unix transport as the local transport, uses the TCP
-     * transport for the remote transport and does not supports neither
-     * bluetooth nor WFD.
+     * transport for the remote transport, UDP, and supports neither bluetooth
+     * nor WFD.
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES",
-                           "unix:abstract=alljoyn;tcp:");
+                           "unix:abstract=alljoyn;tcp:;udp:u4addr=0.0.0.0,u4port=9955");
 
 #endif /* defined(QCC_OS_DARWIN) */
 
@@ -477,11 +478,11 @@ int main(int argc, char** argv)
 
     /*
      * Assume that any other platform uses the unix transport as the local
-     * transport, uses the TCP transport for the remote transport and may or may
-     * not support bluetooth if desired.
+     * transport, uses the TCP transport for the remote transport, UDP and may
+     * or may not support bluetooth if desired.
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES",
-                           "unix:abstract=alljoyn;tcp:");
+                           "unix:abstract=alljoyn;tcp:;udp:u4addr=0.0.0.0,u4port=9955");
 
 
 #endif /* !defined(QCC_OS_GROUP_WINDOWS) && !defined(QCC_OS_ANDROID) && !defined(QCC_OS_DARWIN) */
