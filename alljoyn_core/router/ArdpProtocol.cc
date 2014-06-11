@@ -55,6 +55,9 @@ namespace ajn {
 /* Maximum Retransmit Timeout */
 #define ARDP_MAX_RTO 64000
 
+/* Delayed ACK timeout */
+#define ARDP_ACK_TIMEOUT 100
+
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define ABS(a) ((a) >= 0 ? (a) : -(a))
@@ -244,8 +247,8 @@ struct ARDP_CONN_RECORD {
     uint32_t backoff;       /* Backoff factor accounting for retransmits on connection, resets to 1 when receive "good ack" */
     ArdpTimer connectTimer; /* Connect/Disconnect timer */
     ArdpTimer probeTimer;   /* Probe (link timeout) timer */
+    ArdpTimer ackTimer;   /* Delayed ACK timer */
     ArdpTimer persistTimer; /* Persist (frozen window) timer */
-    bool persist;           /* Persist timer activity flag */
     void* context;          /* A client-defined context pointer */
 };
 
@@ -283,7 +286,6 @@ static QStatus Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t flags, uin
  * Test hooks
  ******************/
 
-#define TEST_DROP_SEGMENTS 0
 #define TEST_SEQ32_WRAPAROUND 0
 
 /**************
@@ -457,10 +459,12 @@ static uint32_t CheckConnTimers(ArdpHandle* handle, ArdpConnRecord* conn, uint32
             QCC_DbgPrintf(("CheckConnTimers: Fire connection( %p ) timer %p at %u (now=%u)",
                            conn, conn->connectTimer, conn->connectTimer.when, now));
             (conn->connectTimer.handler)(handle, conn, conn->connectTimer.context);
-            conn->connectTimer.when = now + conn->connectTimer.delta;
-            if (conn->connectTimer.when < next && conn->connectTimer.retry != 0) {
-                /* Update "call-me-next-ms" value */
-                next = conn->connectTimer.when;
+            if (IsConnValid(handle, conn)) {
+                conn->connectTimer.when = now + conn->connectTimer.delta;
+                if (conn->connectTimer.when < next && conn->connectTimer.retry != 0) {
+                    /* Update "call-me-next-ms" value */
+                    next = conn->connectTimer.when;
+                }
             }
         }
         return next;
@@ -475,6 +479,17 @@ static uint32_t CheckConnTimers(ArdpHandle* handle, ArdpConnRecord* conn, uint32
         if (conn->probeTimer.when < next && conn->probeTimer.retry != 0) {
             /* Update "call-me-next-ms" value */
             next = conn->probeTimer.when;
+        }
+    }
+
+    /* Check delayed ACK timer */
+    if (conn->ackTimer.retry != 0 && conn->ackTimer.when <= now) {
+        QCC_DbgPrintf(("CheckConnTimers (conn %p): Fire ACK timer %p at %u (now=%u)",
+                       conn, conn->ackTimer, conn->ackTimer.when, now));
+        (conn->ackTimer.handler)(handle, conn, conn->ackTimer.context);
+        if (conn->ackTimer.when < next && conn->ackTimer.retry != 0) {
+            /* Update "call-me-next-ms" value */
+            next = conn->ackTimer.when;
         }
     }
 
@@ -763,6 +778,16 @@ static void ConnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* 
     }
 }
 
+static void AckTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
+{
+    QStatus status = Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
+
+    if (status == ER_OK) {
+        /* Stop timer until there is something else to acknowledge */
+        conn->ackTimer.retry = 0;
+    }
+}
+
 static QStatus SendMsgHeader(ArdpHandle* handle, ArdpConnRecord* conn, ArdpHeader* h)
 {
     QCC_DbgTrace(("SendMsgHeader(): handle=0x%p, conn=0x%p, hdr=0x%p", handle, conn, h));
@@ -794,6 +819,7 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
 
     qcc::ScatterGatherList msgSG;
     size_t sent;
+    QStatus status;
 
     msgSG.AddBuffer(sndBuf->hdr, ARDP_FIXED_HEADER_LEN);
     msgSG.AddBuffer(conn->rcvMsk.htnMask, conn->rcvMsk.fixedSz * sizeof(uint32_t));
@@ -910,29 +936,17 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
 
     sndBuf->onTheWire = true;
 
-#if TEST_DROP_SEGMENTS
-    static int drop = 0;
-    drop++;
-    if (!(drop % 6) || !((drop + 1) % 7)) {
-        QCC_DbgPrintf(("SendMsgData: dropping %u", (ntohl) (h->seq)));
-        return ER_OK;
-    } else {
 #if USE_SG_LIST
-        return qcc::SendToSG(conn->sock, conn->ipAddr, conn->ipPort, msgSG, sent);
+    status = qcc::SendToSG(conn->sock, conn->ipAddr, conn->ipPort, msgSG, sent);
 #else
-        return SendMsg(conn, iov, ArraySize(iov));
+    status = SendMsg(handle, conn, iov, ArraySize(iov));
 #endif /* USE_SG_LIST */
+
+    if (status == ER_OK && conn->ackTimer.retry != 0) {
+        UpdateTimer(handle, conn, &conn->ackTimer, ARDP_ACK_TIMEOUT, 1);
     }
 
-#else
-
-#if USE_SG_LIST
-    return qcc::SendToSG(conn->sock, conn->ipAddr, conn->ipPort, msgSG, sent);
-#else
-    return SendMsg(handle, conn, iov, ArraySize(iov));
-#endif /* USE_SG_LIST */
-
-#endif /* TEST_DROP_SEGMENTS */
+    return status;
 }
 
 static QStatus Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t flags, uint32_t seq, uint32_t ack, uint32_t lcs)
@@ -1042,9 +1056,11 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
     ArdpSndBuf* snd = (ArdpSndBuf*) context;
     assert(snd->inUse && "RetransmitTimerHandler: trying to resend flushed buffer");
     ArdpTimer* timer = &snd->timer;
+    ArdpHeader*h = (ArdpHeader*) snd->hdr;
 
     if (timer->retry > 1) {
-        QCC_DbgPrintf(("RetransmitTimerHandler: context=snd=%p retries=%d", snd, timer->retry));
+        QCC_DbgPrintf(("RetransmitTimerHandler: context=snd=%p seq=%u retries=%d", snd, ntohl(h->seq), timer->retry));
+        QCC_LogError(ER_OK, ("RetransmitTimerHandler: context=snd=%p seq=%u retries=%d", snd, ntohl(h->seq), timer->retry));
         QStatus status = SendMsgData(handle, conn, snd);
 
         if (status == ER_OK) {
@@ -1061,7 +1077,7 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         }
 
     } else {
-        QCC_DbgPrintf(("RetransmitTimerHandler retries hit the limit: %d", handle->config.dataRetries));
+        QCC_LogError(ER_TIMEOUT, ("RetransmitTimerHandler seq=%u retries hit the limit: %d", ntohl(h->seq), handle->config.dataRetries));
         timer->retry = 0;
         Disconnect(handle, conn, ER_TIMEOUT);
     }
@@ -1105,8 +1121,9 @@ static void ProbeTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* co
         if (elapsed >= linkTimeout) {
             QCC_LogError(ER_ARDP_PROBE_TIMEOUT, ("ProbeTimerHandler: Probe Timeout: now =%u, lastSeen = %u, elapsed=%u(vs limit of %u)", now, conn->lastSeen, elapsed, linkTimeout));
             Disconnect(handle, conn, ER_ARDP_PROBE_TIMEOUT);
-        } else {
+        } else if (elapsed >= handle->config.probeTimeout) {
             QCC_DbgPrintf(("ProbeTimerHandler: send ping (NUL packet)"));
+            QCC_LogError(ER_OK, ("ProbeTimerHandler: send ping (NUL packet)"));
             Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER | ARDP_FLAG_NUL, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
             timer->delta = RTO;
         }
@@ -1204,6 +1221,8 @@ uint32_t ARDP_GetConnId(ArdpConnRecord* conn)
 {
     QCC_DbgTrace(("ARDP_GetConnId(conn=%p)", conn));
     assert(conn != NULL && "Connection cannot be NULL");
+    QCC_DbgTrace(("ARDP_GetConnId(conn=%p, id=%u)", conn, conn->id));
+
     return conn->id;
 }
 
@@ -1235,6 +1254,7 @@ static ArdpConnRecord* NewConnRecord(void)
     ArdpConnRecord* conn = new ArdpConnRecord();
     memset(conn, 0, sizeof(ArdpConnRecord));
     conn->id = qcc::Rand32();
+    QCC_DbgTrace(("NewConnRecord(): conn %p, id %u", conn, conn->id));
     SetEmpty(&conn->list);
     return conn;
 }
@@ -1446,6 +1466,8 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
         if (status == ER_OK) {
             snd->inUse = true;
             UpdateTimer(handle, conn, &snd->timer, timeout, retries);
+            /* Since we scheduled a retransmit timer, cancel active persist timer */
+            conn->persistTimer.retry = 0;
             EnList(conn->dataTimers.bwd, (ListNode*) &snd->timer);
             conn->SBUF.pending++;
             conn->SND.NXT++;
@@ -1776,6 +1798,13 @@ static QStatus UpdateRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRc
     conn->RBUF.window = conn->RCV.MAX - (conn->RBUF.last - conn->RCV.LCS);
     QCC_DbgPrintf(("UpdateRcvBuffers: window %d last %u lsc %u", conn->RBUF.window, conn->RBUF.last, conn->RCV.LCS));
 
+    /* Send "unsolicited" ACK if the ACK timer is not running.
+     * TODO: add to check if the window is at it's minimum, otherwise do not send ack.
+     * Introduce the conn->minRcvWindow concept */
+    if (conn->ackTimer.retry == 0) {
+        UpdateTimer(handle, conn, &conn->ackTimer, 0, 1);
+    }
+
     return ER_OK;
 }
 
@@ -1914,7 +1943,7 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
                         UpdateRcvBuffers(handle, conn, startFrag);
                     }
                 } else {
-                    QCC_DbgPrintf(("ArdpRcvBuffer(): RecvCb(conn=0x%p, buf=%p, seq=%u)", conn, startFrag, startFrag->seq));
+                    QCC_DbgPrintf(("ArdpRcvBuffer(): RecvCb(conn=0x%p, buf=%p, seq=%u, fcnt (@ %p)=%d)", conn, startFrag, startFrag->seq, &(startFrag->fcnt), startFrag->fcnt));
                     handle->cb.RecvCb(handle, conn, startFrag, ER_OK);
                 }
             }
@@ -2119,6 +2148,9 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                     /* Initialize persist (dead window) timer */
                     InitTimer(handle, conn, &conn->persistTimer, PersistTimerHandler, NULL, handle->config.persistTimeout, 0);
 
+                    /* Initialize delayed ACK timer */
+                    InitTimer(handle, conn, &conn->ackTimer, AckTimerHandler, NULL, ARDP_ACK_TIMEOUT, 0);
+
                     /*
                      * <SEQ=SND.NXT><ACK=RCV.CUR><ACK>
                      */
@@ -2206,6 +2238,10 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                     /* Initialize persist (dead window) timer */
                     InitTimer(handle, conn, &conn->persistTimer, PersistTimerHandler, NULL, handle->config.persistTimeout, 0);
 
+
+                    /* Initialize delayed ACK timer */
+                    InitTimer(handle, conn, &conn->ackTimer, AckTimerHandler, NULL, ARDP_ACK_TIMEOUT, 0);
+
                     if (seg->FLG & ARDP_FLAG_NUL) {
                         Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
                     }
@@ -2262,9 +2298,15 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 break;
             }
 
+            /* If we got NUL segment, send ACK without delay */
             if (seg->FLG & ARDP_FLAG_NUL) {
                 QCC_DbgPrintf(("ArdpMachine(): OPEN: got NUL, send LCS %u", conn->RCV.LCS));
-                Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
+                status = Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
+                if (status == ER_OK && conn->ackTimer.retry != 0) {
+                    UpdateTimer(handle, conn, &conn->ackTimer, ARDP_ACK_TIMEOUT, 1);
+                } else if (status != ER_OK) {
+                    UpdateTimer(handle, conn, &conn->ackTimer, 0, 1);
+                }
                 break;
             }
 
@@ -2292,21 +2334,20 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                     status = AddRcvBuffer(handle, conn, seg, buf, len, seg->SEQ == (conn->RCV.CUR + 1));
                 }
 
-                if (status == ER_OK) {
-                    Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
+                if (conn->ackTimer.retry == 0) {
+                    UpdateTimer(handle, conn, &conn->ackTimer, ARDP_ACK_TIMEOUT, 1);
                 }
+
             }
 
             if (conn->window != seg->WINDOW) {
                 /* Schedule persist timer only if there are no pending retransmits */
-                if (IsEmpty((ListNode*) &conn->dataTimers) && seg->WINDOW < conn->minSendWindow && !conn->persist) {
+                if (IsEmpty((ListNode*) &conn->dataTimers) && (seg->WINDOW < conn->minSendWindow) && (conn->persistTimer.retry == 0)) {
                     /* Start Persist Timer */
                     UpdateTimer(handle, conn, &conn->persistTimer, handle->config.persistTimeout, handle->config.persistRetries + 1);
-                    conn->persist = true;
-                } else if (conn->persist && (seg->WINDOW >= conn->minSendWindow || !IsEmpty((ListNode*) &conn->dataTimers))) {
+                } else if ((conn->persistTimer.retry != 0) && (seg->WINDOW >= conn->minSendWindow || !IsEmpty((ListNode*) &conn->dataTimers))) {
                     /* Cancel Persist Timer */
                     conn->persistTimer.retry = 0;
-                    conn->persist = false;
                 }
 
                 conn->window = seg->WINDOW;
