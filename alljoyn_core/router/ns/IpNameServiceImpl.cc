@@ -56,6 +56,8 @@ using namespace qcc;
 namespace ajn {
 int32_t INCREMENTAL_PACKET_ID;
 #define RESET_SCHEDULE_ALERTCODE  1
+#define PACKET_TIME_ACCURACY_MS 20
+
 // ============================================================================
 // Long sidebar on why this looks so complicated:
 //
@@ -363,8 +365,8 @@ IpNameServiceImpl::IpNameServiceImpl()
     m_wakeEvent(), m_forceLazyUpdate(false), m_refreshAdvertisements(false),
     m_enabled(false), m_doEnable(false), m_doDisable(false),
     m_ipv4QuietSockFd(-1), m_ipv6QuietSockFd(-1),
-    m_burstResponseTimer("BurstResponseTimer", false, 1, false, 50),
-    m_protectListeners(false), m_packetScheduler(*this, m_retries)
+    m_protectListeners(false), m_packetScheduler(*this),
+    m_networkChangeScheduleCount(m_retries + 1)
 {
     QCC_DbgHLPrintf(("IpNameServiceImpl::IpNameServiceImpl()"));
     TRANSPORT_INDEX_TCP = IndexFromBit(TRANSPORT_TCP);
@@ -427,6 +429,7 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
     m_loopback = loopback;
     m_terminal = false;
 
+    m_networkChangeScheduleCount = m_retries + 1;
     return ER_OK;
 }
 
@@ -1430,7 +1433,12 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
     if (m_refreshAdvertisements) {
         QCC_DbgHLPrintf(("Now refreshing advertisements on interface event"));
         m_timer = m_tRetransmit;
-        m_packetScheduler.Alert(RESET_SCHEDULE_ALERTCODE);
+        m_mutex.Lock();
+        m_burstQueue.clear();
+        m_networkChangeScheduleCount = 0;
+        m_mutex.Unlock();
+
+        m_packetScheduler.Alert();
         m_refreshAdvertisements = false;
     }
 }
@@ -1581,26 +1589,23 @@ QStatus IpNameServiceImpl::Enabled(TransportMask transportMask,
 
 void IpNameServiceImpl::TriggerTransmission(Packet packet)
 {
+    BurstResponseHeader brh(packet);
+    // Maximum number of IpNameService protocol burst messages that can be queued.
+    static const size_t MAX_IPNS_MESSAGES = 50;
+
+    uint32_t nsVersion, msgVersion;
+    packet->GetVersion(nsVersion, msgVersion);
+    assert(m_enableV1 || (msgVersion != 0 && msgVersion != 1));
+
     m_mutex.Lock();
-    BurstResponseHeader* brh_ptr = new BurstResponseHeader(packet);
-    //launch timer
-    uint32_t zero = 0;
-    AlarmListener* burstResponceTimerListener = this;
-    void* context = (void*)brh_ptr;
-    qcc::Alarm startBurstAlarm(zero, burstResponceTimerListener, context);
-    QStatus status = ER_TIMER_FULL;
-    while (status == ER_TIMER_FULL) {
-        status = m_burstResponseTimer.AddAlarmNonBlocking(startBurstAlarm);
-        if (status == ER_TIMER_FULL) {
-            m_mutex.Unlock();
-            qcc::Sleep(10);
-            m_mutex.Lock();
-        }
+    while (m_burstQueue.size() >= MAX_IPNS_MESSAGES) {
+        m_mutex.Unlock();
+        qcc::Sleep(10);
+        m_mutex.Lock();
     }
-    //If the alarm is added successfully, AlarmTriggered will delete the BurstResponseHeader ptr.
-    if (status != ER_OK) {
-        delete brh_ptr;
-    }
+    m_burstQueue.push_back(brh);
+
+    m_packetScheduler.Alert();
     m_mutex.Unlock();
 }
 
@@ -1649,7 +1654,7 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
     //
     // Do it once for version zero.
     //
-    if (type & TRANSMIT_V0_V1) {
+    if ((type & TRANSMIT_V0_V1) && (transportMask != TRANSPORT_UDP)) {
         m_v0_v1_queries[transportIndex].insert(name->second);
 
         WhoHas whoHas;
@@ -1684,12 +1689,37 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
         nspacket->SetTimer(m_tDuration);
         nspacket->AddQuestion(whoHas);
 
-        TriggerTransmission(Packet::cast(nspacket));
+        m_mutex.Lock();
+        bool found = false;
+        //Search for the same name in the burstQueue. If present, just reset the scheduleCount for it.
+        std::list<BurstResponseHeader>::iterator it = m_burstQueue.begin();
+        while (it != m_burstQueue.end() && !found) {
+            uint32_t nsVersion;
+            uint32_t msgVersion;
+
+            (*it).packet->GetVersion(nsVersion, msgVersion);
+            if (nsVersion == 0 && msgVersion == 0) {
+                NSPacket temp = NSPacket::cast((*it).packet);
+                if (temp->GetQuestion(0).GetName(0) == name->second) {
+                    (*it).scheduleCount = 0;
+                    found = true;
+                    break;
+                }
+            }
+            it++;
+        }
+        m_mutex.Unlock();
+        if (found) {
+
+            m_packetScheduler.Alert();
+        } else {
+            TriggerTransmission(Packet::cast(nspacket));
+        }
     }
     //
     // Do it again for version one.
     //
-    if (type & TRANSMIT_V0_V1) {
+    if ((type & TRANSMIT_V0_V1) && (transportMask != TRANSPORT_UDP)) {
         WhoHas whoHas;
 
         //
@@ -1705,7 +1735,31 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
         nspacket->SetTimer(m_tDuration);
         nspacket->AddQuestion(whoHas);
 
-        TriggerTransmission(Packet::cast(nspacket));
+        m_mutex.Lock();
+        //Search for the same name in the burstQueue. If present, just reset the scheduleCount for it.
+        bool found = false;
+        std::list<BurstResponseHeader>::iterator it = m_burstQueue.begin();
+        while (it != m_burstQueue.end() && !found) {
+            uint32_t nsVersion;
+            uint32_t msgVersion;
+
+            (*it).packet->GetVersion(nsVersion, msgVersion);
+            if (nsVersion == 1 && msgVersion == 1) {
+                NSPacket temp = NSPacket::cast((*it).packet);
+                if (temp->GetQuestion(0).GetName(0) == name->second) {
+                    (*it).scheduleCount = 0;
+                    found = true;
+                    break;
+                }
+            }
+            it++;
+        }
+        m_mutex.Unlock();
+        if (found) {
+            m_packetScheduler.Alert();
+        } else {
+            TriggerTransmission(Packet::cast(nspacket));
+        }
     }
 
 
@@ -1727,6 +1781,7 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
         }
         MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
         query->AddAdditionalRecord(searchRecord);
+
         Query(completeTransportMask, query);
         delete searchRData;
     }
@@ -2597,7 +2652,10 @@ QStatus IpNameServiceImpl::Query(TransportMask completeTransportMask, MDNSPacket
         mdnsPacket->AddQuestion(mdnsQuestion);
     }
     MDNSSenderRData* refRData =  new MDNSSenderRData();
-    refRData->SetSearchID(id);
+    if (mdnsPacket->DestinationSet()) {
+
+        refRData->SetSearchID(id);
+    }
     MDNSResourceRecord refRecord("sender-info." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
     mdnsPacket->AddAdditionalRecord(refRecord);
     delete refRData;
@@ -2605,7 +2663,46 @@ QStatus IpNameServiceImpl::Query(TransportMask completeTransportMask, MDNSPacket
     if (mdnsPacket->DestinationSet()) {
         QueueProtocolMessage(Packet::cast(mdnsPacket));
     } else {
-        TriggerTransmission(Packet::cast(mdnsPacket));
+
+        m_mutex.Lock();
+        bool found = false;
+        //Search for the same name in the burstQueue. If present, just reset the scheduleCount for it.
+        std::list<BurstResponseHeader>::iterator it = m_burstQueue.begin();
+        while (it != m_burstQueue.end() && !found) {
+            uint32_t nsVersion;
+            uint32_t msgVersion;
+
+            (*it).packet->GetVersion(nsVersion, msgVersion);
+            if (msgVersion == 2) {
+                MDNSPacket temp = MDNSPacket::cast((*it).packet);
+                if (temp->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
+
+                    if ((completeTransportMask & temp->GetTransportMask()) == completeTransportMask) {
+                        MDNSResourceRecord* tmpSearchRecord;
+                        temp->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &tmpSearchRecord);
+                        MDNSSearchRData* tmpSearchRData = static_cast<MDNSSearchRData*>(tmpSearchRecord->GetRData());
+
+                        MDNSResourceRecord* searchRecord;
+                        mdnsPacket->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &searchRecord);
+                        MDNSSearchRData* searchRData = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
+
+                        if (tmpSearchRData->GetNumSearchCriteria() == 1) {
+                            if (searchRData->GetSearchCriterion(0) == tmpSearchRData->GetSearchCriterion(0)) {
+                                (*it).scheduleCount = 0;
+                                found = true;
+                            }
+                        }
+                    }
+                }
+            }
+            it++;
+        }
+        m_mutex.Unlock();
+        if (found) {
+            m_packetScheduler.Alert();
+        } else {
+            TriggerTransmission(Packet::cast(mdnsPacket));
+        }
     }
 
     return ER_OK;
@@ -2679,7 +2776,9 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
     }
 
     MDNSSenderRData* refRData =  new MDNSSenderRData();
-    refRData->SetSearchID(id);
+    if (mdnsPacket->DestinationSet()) {
+        refRData->SetSearchID(id);
+    }
     MDNSResourceRecord refRecord("sender-info." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, ttl, refRData);
     mdnsPacket->AddAdditionalRecord(refRecord);
     delete refRData;
@@ -2711,7 +2810,54 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
         if (mdnsPacket->DestinationSet()) {
             QueueProtocolMessage(Packet::cast(mdnsPacket));
         } else {
-            TriggerTransmission(Packet::cast(mdnsPacket));
+            bool found = false;
+            MDNSResourceRecord* advRecord;
+
+            if (mdnsPacket->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &advRecord)) {
+                MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
+
+                m_mutex.Lock();
+                //Search for a packet with the same names in the same order. If present, just reset its scheduleCount.
+                std::list<BurstResponseHeader>::iterator it = m_burstQueue.begin();
+                while (it != m_burstQueue.end() && !found) {
+                    uint32_t nsVersion;
+                    uint32_t msgVersion;
+
+                    (*it).packet->GetVersion(nsVersion, msgVersion);
+                    if (msgVersion == 2) {
+                        MDNSPacket temp = MDNSPacket::cast((*it).packet);
+                        if (temp->GetHeader().GetQRType() == MDNSHeader::MDNS_RESPONSE) {
+
+                            if (completeTransportMask == temp->GetTransportMask()) {
+                                MDNSResourceRecord* tmpAdvRecord;
+                                if (temp->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &tmpAdvRecord)) {
+                                    MDNSAdvertiseRData* tmpAdvRData = static_cast<MDNSAdvertiseRData*>(tmpAdvRecord->GetRData());
+                                    if ((advRecord->GetRRttl() == tmpAdvRecord->GetRRttl()) && (tmpAdvRData->GetNumTransports() == 1) && (advRData->GetNumNames(completeTransportMask) == tmpAdvRData->GetNumNames(completeTransportMask))) {
+                                        bool matching = true;
+                                        for (uint32_t k = 0; k < advRData->GetNumNames(completeTransportMask); k++) {
+                                            if (advRData->GetNameAt(completeTransportMask, k) != tmpAdvRData->GetNameAt(completeTransportMask, k)) {
+                                                matching  = false;
+                                            }
+                                        }
+                                        if (matching) {
+                                            found = true;
+                                            (*it).scheduleCount = 0;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    it++;
+                }
+                m_mutex.Unlock();
+
+            }
+            if (found) {
+                m_packetScheduler.Alert();
+            } else {
+                TriggerTransmission(Packet::cast(mdnsPacket));
+            }
         }
     } else {
         QCC_LogError(ER_PACKET_TOO_LARGE, ("IpNameServiceImpl::AdvertiseName(): Resulting NS message too large"));
@@ -4422,7 +4568,6 @@ void* IpNameServiceImpl::Run(void* arg)
 void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quietly, const qcc::IPEndpoint destination, uint8_t type, TransportMask completeTransportMask)
 {
     m_mutex.Lock();
-    packets.clear();
     bool tcpProcessed = false;
     bool udpProcessed = false;
     for (uint32_t transportIndex = 0; transportIndex < N_TRANSPORTS; ++transportIndex) {
@@ -4722,7 +4867,6 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
 void IpNameServiceImpl::GetQueryPackets(std::list<Packet>& packets, const uint8_t type)
 {
     m_mutex.Lock();
-    packets.clear();
     for (uint32_t transportIndex = 0; transportIndex < N_TRANSPORTS; ++transportIndex) {
         if (m_enableV1 && (type & TRANSMIT_V0_V1) && !m_v0_v1_queries[transportIndex].empty()) {
 
@@ -6741,7 +6885,6 @@ QStatus IpNameServiceImpl::Start()
     QStatus status = Thread::Start(this);
     QCC_DbgPrintf(("IpNameServiceImpl::Start(): Started"));
     m_mutex.Unlock();
-    m_burstResponseTimer.Start();
     m_packetScheduler.Start();
     return status;
 }
@@ -6762,15 +6905,12 @@ QStatus IpNameServiceImpl::Stop()
     QStatus status = Thread::Stop();
     QCC_DbgPrintf(("IpNameServiceImpl::Stop(): Stopped"));
     m_mutex.Unlock();
-    m_burstResponseTimer.RemoveAlarmsWithListener(*this);
-    m_burstResponseTimer.Stop();
     m_packetScheduler.Stop();
     return status;
 }
 
 QStatus IpNameServiceImpl::Join()
 {
-    m_burstResponseTimer.Join();
     m_packetScheduler.Join();
     QCC_DbgPrintf(("IpNameServiceImpl::Join()"));
     assert(m_state == IMPL_STOPPING || m_state == IMPL_SHUTDOWN);
@@ -6905,216 +7045,6 @@ bool IpNameServiceImpl::LiveInterfacesNeedsUpdate()
     return false;
 }
 
-void IpNameServiceImpl::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason) {
-    void* context = alarm->GetContext();
-    BurstResponseHeader* brh_ptr = (BurstResponseHeader*) context;
-    // the the BurstResponse Header has already reached then number of RETRIES then
-    // free the burst response header.
-    uint32_t nsVersion;
-    uint32_t msgVersion;
-    brh_ptr->packet->GetVersion(nsVersion, msgVersion);
-
-    if (msgVersion <= 1) {
-
-        if (brh_ptr->scheduleCount < m_retries) {
-            QueueProtocolMessage(brh_ptr->packet);
-
-            m_mutex.Lock();
-            uint32_t count = RETRY_INTERVALS[brh_ptr->scheduleCount] * 1000;
-            brh_ptr->scheduleCount++;
-            AlarmListener* burstResponceTimerListener = this;
-            qcc::Alarm startBurstAlarm(count, burstResponceTimerListener, context);
-            m_burstResponseTimer.AddAlarm(startBurstAlarm);
-            m_mutex.Unlock();
-        } else {
-            delete brh_ptr;
-        }
-
-        return;
-    }
-    MDNSPacket mdnspacket = MDNSPacket::cast(brh_ptr->packet);
-
-    if (brh_ptr->burstResponseCount < BURST_RESPONSE_RETRIES) {
-        // before Queuing the header make sure none of the names contained in the
-        // header have been canceled. If the advertisement of the name has been
-        // canceled remove the name from the header.
-        // if the header no longer contains any names. Don't queue the header and
-        // free the burst response header.
-
-        //version two
-        if (mdnspacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
-            m_mutex.Lock();
-
-            MDNSResourceRecord* searchRecord;
-            mdnspacket->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &searchRecord);
-            MDNSSearchRData* searchRData = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
-
-            set<String> set_union_tcp_udp;
-            set_union(m_v2_queries[TRANSPORT_INDEX_TCP].begin(), m_v2_queries[TRANSPORT_INDEX_TCP].end(), m_v2_queries[TRANSPORT_INDEX_UDP].begin(), m_v2_queries[TRANSPORT_INDEX_UDP].end(), std::inserter(set_union_tcp_udp, set_union_tcp_udp.end()));
-            uint32_t numSearch = searchRData->GetNumSearchCriteria();
-            for (uint32_t k = 0; k < numSearch; k++) {
-                String crit = searchRData->GetSearchCriterion(k);
-                if (std::find(set_union_tcp_udp.begin(), set_union_tcp_udp.end(), crit) == set_union_tcp_udp.end()) {
-                    searchRData->RemoveSearchCriterion(k);
-                    k--;
-                    numSearch = searchRData->GetNumSearchCriteria();
-                }
-            }
-
-            if (m_v2_queries[TRANSPORT_INDEX_TCP].size() == 0) {
-                //Remove TCP PTR/SRV/TXT records
-                MDNSResourceRecord* ptrRecord;
-                if (mdnspacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
-                    MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
-                    String name = ptrRData->GetPtrDName();
-                    mdnspacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
-                    mdnspacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
-                    mdnspacket->RemoveAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR);
-                }
-            }
-            if (m_v2_queries[TRANSPORT_INDEX_UDP].size() == 0) {
-                //Remove UDP PTR/SRV/TXT records
-                MDNSResourceRecord* ptrRecord;
-                if (mdnspacket->GetAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
-                    MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
-                    String name = ptrRData->GetPtrDName();
-                    mdnspacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
-                    mdnspacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
-                    mdnspacket->RemoveAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR);
-                }
-
-            }
-            m_mutex.Unlock();
-            if (numSearch > 0) {
-                QueueProtocolMessage(brh_ptr->packet);
-                //	    if (mdnspacket->DestinationSet()){
-                // QCC_LogError(ER_OK,("Outgoing unicast packet to %s",mdnspacket->GetDestination().ToString().c_str()));
-                //brh_ptr->burstResponseCount = 3;
-                //} else {
-                brh_ptr->burstResponseCount++;
-                uint32_t count = BURST_RESPONSE_INTERVAL;
-                AlarmListener* burstResponceTimerListener = this;
-                qcc::Alarm startBurstAlarm(count, burstResponceTimerListener, context);
-                m_burstResponseTimer.AddAlarm(startBurstAlarm);
-
-            } else {
-                delete brh_ptr;
-            }
-            //}
-
-        } else {
-            m_mutex.Lock();
-            MDNSResourceRecord* advRecord;
-            mdnspacket->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &advRecord);
-            MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
-
-            TransportMask transportMaskArr[3] = { TRANSPORT_TCP, TRANSPORT_UDP, TRANSPORT_TCP | TRANSPORT_UDP };
-            uint32_t numNamesTotal = 0;
-            uint32_t ttl = advRecord->GetRRttl();
-            uint32_t numNames[3];
-            for (int i = 0; i < 3; i++) {
-                TransportMask tm = transportMaskArr[i];
-                set<String> advertising = GetAdvertising(tm);
-                numNames[i] = advRData->GetNumNames(tm);
-                for (uint32_t k = 0; k < numNames[i]; k++) {
-
-                    if (ttl == 0) {
-                        //If this is a packet with ttl == 0, ensure that we are NOT advertising the names mentioned in the packet.
-
-                        if (std::find(advertising.begin(), advertising.end(), advRData->GetNameAt(tm, k)) != advertising.end()) {
-                            advRData->RemoveNameAt(tm, k);
-                            // a name has been removed from the IsAt response header make
-                            // sure the numNames used in the for loop is updated to reflect
-                            // the removal of that name.
-                            k = k - 1;
-                            numNames[i] = advRData->GetNumNames(tm);
-
-                        }
-                    } else {
-                        //If this is a packet with ttl >0, ensure that we are still advertising all the names mentioned in the packet.
-
-                        if (std::find(advertising.begin(), advertising.end(), advRData->GetNameAt(tm, k)) == advertising.end()) {
-                            advRData->RemoveNameAt(tm, k);
-                            // a name has been removed from the IsAt response header make
-                            // sure the numNames used in the for loop is updated to reflect
-                            // the removal of that name.
-                            k = k - 1;
-                            numNames[i] = advRData->GetNumNames(tm);
-
-                        }
-
-                    }
-                }
-                numNamesTotal += numNames[i];
-
-
-            }
-
-            if (numNames[0] == 0 && numNames[2] == 0) {
-                //Remove TCP PTR/SRV/TXT records
-                MDNSResourceRecord* ptrRecord;
-                if (mdnspacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
-                    MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
-                    String name = ptrRData->GetPtrDName();
-                    mdnspacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
-                    mdnspacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
-                    mdnspacket->RemoveAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR);
-                }
-            }
-            if (numNames[1] == 0 && numNames[2] == 0) {
-                //Remove UDP PTR/SRV/TXT records
-                MDNSResourceRecord* ptrRecord;
-                if (mdnspacket->GetAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
-                    MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
-                    String name = ptrRData->GetPtrDName();
-                    mdnspacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
-                    mdnspacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
-                    mdnspacket->RemoveAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR);
-                }
-
-            }
-
-
-            m_mutex.Unlock();
-            // As long as the BurstResponse Header still contains at least one IsAt
-            // header (answers) we will Queue The header.  If there are no IsAt headers
-            // then delete the BurstRespnse Header.
-            if (numNamesTotal > 0) {
-                QueueProtocolMessage(brh_ptr->packet);
-
-                m_mutex.Lock();
-                brh_ptr->burstResponseCount++;
-                uint32_t count = BURST_RESPONSE_INTERVAL;
-                AlarmListener* burstResponceTimerListener = this;
-                qcc::Alarm startBurstAlarm(count, burstResponceTimerListener, context);
-                m_burstResponseTimer.AddAlarm(startBurstAlarm);
-                m_mutex.Unlock();
-            } else {
-                delete brh_ptr;
-            }
-        }
-    } else {
-        if (brh_ptr->scheduleCount == m_retries) {
-            delete brh_ptr;
-        } else {
-            MDNSResourceRecord* refRecord;
-            mdnspacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord);
-            MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
-            int32_t id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
-
-            refRData->SetSearchID(id);
-            m_mutex.Lock();
-            uint32_t count = RETRY_INTERVALS[brh_ptr->scheduleCount] * 1000;
-            AlarmListener* burstResponceTimerListener = this;
-
-            brh_ptr->scheduleCount++;
-            brh_ptr->burstResponseCount = 0;
-            qcc::Alarm startBurstAlarm(count, burstResponceTimerListener, context);
-            m_burstResponseTimer.AddAlarm(startBurstAlarm);
-            m_mutex.Unlock();
-        }
-    }
-}
 set<String> IpNameServiceImpl::GetAdvertising(TransportMask transportMask) {
     set<String> set_common, set_return;
     std::set<String> empty;
@@ -7161,61 +7091,252 @@ set<String> IpNameServiceImpl::GetAdvertisingQuietly(TransportMask transportMask
 
 }
 
+bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket)
+{
+    MDNSResourceRecord* refRecord;
+    mdnspacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord);
+    MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
+    int32_t id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
 
+    refRData->SetSearchID(id);
+
+    if (mdnspacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
+        MDNSResourceRecord* searchRecord;
+        mdnspacket->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &searchRecord);
+        MDNSSearchRData* searchRData = static_cast<MDNSSearchRData*>(searchRecord->GetRData());
+
+        set<String> set_union_tcp_udp;
+        set_union(m_v2_queries[TRANSPORT_INDEX_TCP].begin(), m_v2_queries[TRANSPORT_INDEX_TCP].end(), m_v2_queries[TRANSPORT_INDEX_UDP].begin(), m_v2_queries[TRANSPORT_INDEX_UDP].end(), std::inserter(set_union_tcp_udp, set_union_tcp_udp.end()));
+        uint32_t numSearch = searchRData->GetNumSearchCriteria();
+        for (uint32_t k = 0; k < numSearch; k++) {
+            String crit = searchRData->GetSearchCriterion(k);
+            if (std::find(set_union_tcp_udp.begin(), set_union_tcp_udp.end(), crit) == set_union_tcp_udp.end()) {
+                searchRData->RemoveSearchCriterion(k);
+                k--;
+                numSearch = searchRData->GetNumSearchCriteria();
+            }
+        }
+
+        if (m_v2_queries[TRANSPORT_INDEX_TCP].size() == 0) {
+            //Remove TCP PTR/SRV/TXT records
+            MDNSResourceRecord* ptrRecord;
+            if (mdnspacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
+                MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
+                String name = ptrRData->GetPtrDName();
+                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
+                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
+                mdnspacket->RemoveAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR);
+            }
+        }
+        if (m_v2_queries[TRANSPORT_INDEX_UDP].size() == 0) {
+            //Remove UDP PTR/SRV/TXT records
+            MDNSResourceRecord* ptrRecord;
+            if (mdnspacket->GetAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
+                MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
+                String name = ptrRData->GetPtrDName();
+                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
+                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
+                mdnspacket->RemoveAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR);
+            }
+
+        }
+        return (numSearch > 0);
+    } else {
+        MDNSResourceRecord* advRecord;
+        mdnspacket->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &advRecord);
+        MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
+
+        TransportMask transportMaskArr[3] = { TRANSPORT_TCP, TRANSPORT_UDP, TRANSPORT_TCP | TRANSPORT_UDP };
+        uint32_t numNamesTotal = 0;
+        uint32_t ttl = advRecord->GetRRttl();
+        uint32_t numNames[3];
+        for (int i = 0; i < 3; i++) {
+            TransportMask tm = transportMaskArr[i];
+            set<String> advertising = GetAdvertising(tm);
+            numNames[i] = advRData->GetNumNames(tm);
+            for (uint32_t k = 0; k < numNames[i]; k++) {
+                if (ttl == 0) {
+                    //If this is a packet with ttl == 0, ensure that we are NOT advertising the names mentioned in the packet.
+
+                    if (std::find(advertising.begin(), advertising.end(), advRData->GetNameAt(tm, k)) != advertising.end()) {
+
+                        advRData->RemoveNameAt(tm, k);
+                        // a name has been removed from the IsAt response header make
+                        // sure the numNames used in the for loop is updated to reflect
+                        // the removal of that name.
+                        k = k - 1;
+                        numNames[i] = advRData->GetNumNames(tm);
+                    }
+                } else {
+                    //If this is a packet with ttl >0, ensure that we are still advertising all the names mentioned in the packet.
+
+                    if (std::find(advertising.begin(), advertising.end(), advRData->GetNameAt(tm, k)) == advertising.end()) {
+
+                        advRData->RemoveNameAt(tm, k);
+                        // a name has been removed from the IsAt response header make
+                        // sure the numNames used in the for loop is updated to reflect
+                        // the removal of that name.
+                        k = k - 1;
+                        numNames[i] = advRData->GetNumNames(tm);
+
+                    }
+
+                }
+            }
+            numNamesTotal += numNames[i];
+
+
+        }
+
+        if (numNames[0] == 0 && numNames[2] == 0) {
+            //Remove TCP PTR/SRV/TXT records
+            MDNSResourceRecord* ptrRecord;
+            if (mdnspacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
+                MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
+                String name = ptrRData->GetPtrDName();
+                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
+                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
+                mdnspacket->RemoveAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR);
+            }
+        }
+        if (numNames[1] == 0 && numNames[2] == 0) {
+            //Remove UDP PTR/SRV/TXT records
+            MDNSResourceRecord* ptrRecord;
+            if (mdnspacket->GetAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR, &ptrRecord)) {
+                MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecord->GetRData());
+                String name = ptrRData->GetPtrDName();
+                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
+                mdnspacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
+                mdnspacket->RemoveAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR);
+            }
+
+        }
+
+        return (numNamesTotal > 0);
+    }
+    return false;
+}
 ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
 
-    uint32_t scheduleCount = m_retries + 1;
+    m_impl.m_mutex.Lock();
     while (!IsStopping()) {
-        QStatus status = ER_TIMEOUT;
+        Timespec now;
+        GetTimeNow(&now);
+        uint32_t timeToSleep = -1;
+        //Step 1: Collect all packets
+        std::list<Packet> packets;
+        packets.clear();
 
-        while (status == ER_TIMEOUT && (scheduleCount <= m_retries)) {
-            uint32_t burstIndex  = 0;
-            while (burstIndex < BURST_RESPONSE_RETRIES && status == ER_TIMEOUT) {
-                std::list<Packet> packets;
-                m_impl.GetResponsePackets(packets);
-                for (std::list<Packet>::const_iterator i = packets.begin();
-                     i != packets.end(); i++) {
-                    m_impl.QueueProtocolMessage(*i);
+        //Collect network change burst packets
+        if ((m_impl.m_networkChangeScheduleCount <= m_impl.m_retries) && ((m_impl.m_networkChangeScheduleCount == 0) || ((m_impl.m_networkChangeTimeStamp - now) < PACKET_TIME_ACCURACY_MS))) {
+
+            m_impl.GetResponsePackets(packets);
+            m_impl.GetQueryPackets(packets);
+            if (m_impl.m_networkChangeScheduleCount == 0) {
+                m_impl.m_networkChangeTimeStamp = now + RETRY_INTERVALS[0] * 1000 - BURST_RESPONSE_RETRIES * BURST_RESPONSE_INTERVAL;
+            } else {
+                //adjust m_networkChangeTimeStamp
+                m_impl.m_networkChangeTimeStamp += RETRY_INTERVALS[m_impl.m_networkChangeScheduleCount] * 1000;
+
+            }
+            if (now < m_impl.m_networkChangeTimeStamp) {
+                uint32_t delay = m_impl.m_networkChangeTimeStamp - now;
+                if (timeToSleep > delay) {
+                    timeToSleep = delay;
                 }
-                packets.clear();
-                if (!burstIndex) {
-                    m_impl.GetQueryPackets(packets, TRANSMIT_V0_V1);
-                    for (std::list<Packet>::const_iterator i = packets.begin();
-                         i != packets.end(); i++) {
-                        m_impl.QueueProtocolMessage(*i);
+
+            } else {
+                timeToSleep = 0;
+            }
+
+            //adjust m_networkChangeScheduleCount
+            m_impl.m_networkChangeScheduleCount++;
+        }
+
+        //Collect unsolicited Advertise/CancelAdvertise/FindAdvertisement burst packets
+        std::list<BurstResponseHeader>::iterator it = m_impl.m_burstQueue.begin();
+        it = m_impl.m_burstQueue.begin();
+        while (it != m_impl.m_burstQueue.end()) {
+            if ((*it).scheduleCount == 0 || (((*it).nextScheduleTime - now) < PACKET_TIME_ACCURACY_MS)) {
+                uint32_t nsVersion;
+                uint32_t msgVersion;
+                (*it).packet->GetVersion(nsVersion, msgVersion);
+                if (msgVersion == 2) {
+                    MDNSPacket mdnspacket = MDNSPacket::cast((*it).packet);
+                    //PurgeAndUpdatePacket will remove any names that have changed - not being advertised/discovered
+                    // and also update the burst ID in the packet.
+                    if (!m_impl.PurgeAndUpdatePacket(mdnspacket)) {
+                        //No names found, remove this packet
+                        m_impl.m_burstQueue.erase(it++);
+                        continue;
                     }
-                    packets.clear();
                 }
-                m_impl.GetQueryPackets(packets, TRANSMIT_V2);
-                for (std::list<Packet>::const_iterator i = packets.begin();
-                     i != packets.end(); i++) {
 
+                packets.push_back((*it).packet);
+
+                if ((*it).scheduleCount == 0) {
+                    (*it).nextScheduleTime = now + RETRY_INTERVALS[0] * 1000 - BURST_RESPONSE_RETRIES * BURST_RESPONSE_INTERVAL;
+                } else {
+                    (*it).nextScheduleTime += RETRY_INTERVALS[(*it).scheduleCount] * 1000;
+                }
+
+
+                //if scheduleCount has reached max_retries, get rid of entry and advance iterator.
+                if ((*it).scheduleCount == m_impl.m_retries) {
+                    m_impl.m_burstQueue.erase(it++);
+                    continue;
+                }
+
+                (*it).scheduleCount++;
+
+            }
+
+            if (now < (*it).nextScheduleTime) {
+                uint32_t delay = (*it).nextScheduleTime - now;
+                if (timeToSleep > delay) {
+                    timeToSleep = delay;
+                }
+            } else {
+                timeToSleep = 0;
+            }
+            it++;
+
+        }
+        m_impl.m_mutex.Unlock();
+        //Step 2: Burst the packets
+        uint32_t burstIndex  = 0;
+        while (burstIndex < BURST_RESPONSE_RETRIES && !packets.empty() && !IsStopping()) {
+            for (std::list<Packet>::const_iterator i = packets.begin(); i != packets.end(); i++) {
+                Packet packet = *i;
+                uint32_t nsVersion;
+                uint32_t msgVersion;
+
+                packet->GetVersion(nsVersion, msgVersion);
+                if ((msgVersion == 2) || (burstIndex == 0)) {
                     m_impl.QueueProtocolMessage(*i);
                 }
-                // Wait for burst interval = BURST_RESPONSE_INTERVAL ms
-                status = Event::Wait(Event::neverSet, BURST_RESPONSE_INTERVAL);
-                burstIndex++;
-            }
-            if (status == ER_TIMEOUT) {
-                uint32_t time = RETRY_INTERVALS[scheduleCount] * 1000;
-                //Wait for the next interval in the schedule
-                status = Event::Wait(Event::neverSet, time);
-                scheduleCount++;
-            }
-        }
 
-        if (status == ER_TIMEOUT) {
-            status = Event::Wait(Event::neverSet, Event::WAIT_FOREVER);
-        }
-
-        if (status == ER_ALERTED_THREAD) {
-            if (GetAlertCode() == RESET_SCHEDULE_ALERTCODE) {
-                scheduleCount = 0;
             }
-        }
 
-        GetStopEvent().ResetEvent();
+            // Wait for burst interval = BURST_RESPONSE_INTERVAL
+            Event::Wait(Event::neverSet, BURST_RESPONSE_INTERVAL);
+            GetStopEvent().ResetEvent();
+            burstIndex++;
+        }
+        m_impl.m_mutex.Lock();
+
+        //Step 3: Wait for a specific amount of time
+        if (!IsStopping()) {
+            m_impl.m_mutex.Unlock();
+            Event::Wait(Event::neverSet, timeToSleep);
+            GetStopEvent().ResetEvent();
+            m_impl.m_mutex.Lock();
+
+        }
     }
+    m_impl.m_burstQueue.clear();
+    m_impl.m_mutex.Unlock();
+
     return 0;
 
 }
