@@ -275,6 +275,10 @@ struct ARDP_HANDLE {
                                   ((static_cast<tp>((beg) + (sz)) < (beg)) && !(((p) < (beg)) && (p) >= static_cast<tp>((beg) + (sz)))))
 
 
+
+static ArdpConnRecord* FindConn(ArdpHandle* handle, uint16_t local, uint16_t foreign);
+static QStatus Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t flags, uint32_t seq, uint32_t ack, uint32_t lcs);
+
 /******************
  * Test hooks
  ******************/
@@ -468,7 +472,7 @@ static uint32_t CheckConnTimers(ArdpHandle* handle, ArdpConnRecord* conn, uint32
                        conn, conn->probeTimer, conn->probeTimer.when, now));
         (conn->probeTimer.handler)(handle, conn, conn->probeTimer.context);
         conn->probeTimer.when = now + conn->probeTimer.delta;
-        if (conn->probeTimer.when < next && conn->connectTimer.retry != 0) {
+        if (conn->probeTimer.when < next && conn->probeTimer.retry != 0) {
             /* Update "call-me-next-ms" value */
             next = conn->probeTimer.when;
         }
@@ -480,7 +484,7 @@ static uint32_t CheckConnTimers(ArdpHandle* handle, ArdpConnRecord* conn, uint32
                        conn, conn->persistTimer, conn->persistTimer.when, now));
         (conn->persistTimer.handler)(handle, conn, conn->persistTimer.context);
         conn->persistTimer.when = now + conn->persistTimer.delta;
-        if (conn->persistTimer.when < next && conn->connectTimer.retry != 0) {
+        if (conn->persistTimer.when < next && conn->persistTimer.retry != 0) {
             /* Update "call-me-next-ms" value */
             next = conn->persistTimer.when;
         }
@@ -554,10 +558,10 @@ static uint32_t CheckTimers(ArdpHandle* handle)
 static void DelConnRecord(ArdpHandle* handle, ArdpConnRecord* conn)
 {
     QCC_DbgTrace(("DelConnRecord(handle=%p conn=%p state = %s)", handle, conn, State2Text(conn->STATE)));
-    if (conn->STATE != CLOSED) {
-        QCC_LogError(ER_OK, ("DelConnRecord(): Delete while not CLOSED conn %p state %s", conn, State2Text(conn->STATE)));
+    if (conn->STATE != CLOSED && conn->STATE != CLOSE_WAIT) {
+        QCC_LogError(ER_OK, ("DelConnRecord(): Delete while not CLOSED or CLOSE-WAIT conn %p state %s", conn, State2Text(conn->STATE)));
     }
-    assert(conn->STATE == CLOSED && "DelConnRecord(): Delete while not CLOSED");
+    assert((conn->STATE == CLOSED || conn->STATE == CLOSE_WAIT)  && "DelConnRecord(): Delete while not CLOSED or CLOSE-WAIT");
 
     /* Safe to check together as these buffers are always allocated together */
     if (conn->SBUF.snd != NULL && conn->SBUF.snd[0].hdr != NULL) {
@@ -683,6 +687,18 @@ static void FlushMessage(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* s
     handle->cb.SendCb(handle, conn, buf, len, status);
 }
 
+static void FlushSendQueue(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status)
+{
+    /* SendCb() for all pending messages so that the upper layer knows
+     * to release the corresponding buffers */
+    for (uint32_t i = 0; i < conn->SND.MAX; i++) {
+        ArdpHeader* h = (ArdpHeader* ) conn->SBUF.snd[i].hdr;
+        if (conn->SBUF.snd[i].inUse && (h->seq == h->som)) {
+            FlushMessage(handle, conn, &conn->SBUF.snd[i], status);
+        }
+    }
+}
+
 static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
 {
     QCC_DbgTrace(("DisconnectTimerHandler: handle=%p conn=%p", handle, conn));
@@ -693,27 +709,17 @@ static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
     assert((handle != NULL && conn != NULL) && "Handle and connection cannot be NULL");
     SetState(conn, CLOSED);
 
-    /* SendCb() for all pending messages so that the upper layer knows
-     * to release the corresponding buffers */
-    for (uint32_t i = 0; i < conn->SND.MAX; i++) {
-        ArdpHeader* h = (ArdpHeader* ) conn->SBUF.snd[i].hdr;
-        if (conn->SBUF.snd[i].inUse && (h->seq == h->som)) {
-            FlushMessage(handle, conn, &conn->SBUF.snd[i], reason);
-        }
-    }
-
     /*
-     * In case the upper layer initiated the disconnect, we still need to send\
+     * In case the upper layer initiated the disconnect, we still need to send
      * DisconnectCb(). For all the other cases the DisconnectCb was issued inside Disconnect().
      */
     if (reason == ER_OK) {
+        FlushSendQueue(handle, conn, ER_ARDP_DISCONNECTING);
         QCC_LogError(ER_OK, ("DisconnectTimerHandler: DisconnectCb(handle=%p conn=%p reason = %s)", handle, conn, QCC_StatusText(reason)));
         handle->cb.DisconnectCb(handle, conn, reason);
     }
     DelConnRecord(handle, conn);
 }
-
-static QStatus Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t flags, uint32_t seq, uint32_t ack, uint32_t lcs);
 
 static void ConnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
 {
@@ -955,6 +961,12 @@ static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reas
     QStatus status = ER_OK;
     uint32_t timeout = 0;
 
+    if (conn->STATE == CLOSE_WAIT || conn->STATE == CLOSED) {
+        QCC_LogError(ER_OK, ("Disconnect(handle=%p, conn=%p, reason=%s) Already disconnect%s",
+                             handle, conn, QCC_StatusText(reason), conn->STATE == CLOSED ? "ed" : "ing"));
+        return ER_OK;
+    }
+
     if (!IsConnValid(handle, conn)) {
         return ER_ARDP_INVALID_CONNECTION;
     }
@@ -974,8 +986,10 @@ static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reas
 
     /* If this disconnect is not a result of ARDP_Disconnect(), inform the upper layer that we are disconnecting */
     if (reason != ER_OK) {
+        FlushSendQueue(handle, conn, ER_ARDP_DISCONNECTING);
         timeout = handle->config.timewait;
-        QCC_LogError(ER_OK, ("Disconnect: Call DisconnectCb() on conn %p, reason %s", conn, State2Text(conn->STATE)));
+        QCC_LogError(ER_OK, ("Disconnect: Call DisconnectCb() on conn %p, state %s reason %s ",
+                             conn, State2Text(conn->STATE), QCC_StatusText(reason)));
         handle->cb.DisconnectCb(handle, conn, reason);
     }
 
@@ -1271,14 +1285,29 @@ static void PostInitRcv(ArdpConnRecord* conn)
     }
 }
 
-static void InitConnRecord(ArdpHandle* handle, ArdpConnRecord* conn, qcc::SocketFd sock, qcc::IPAddress ipAddr, uint16_t ipPort, uint16_t foreign)
+static QStatus InitConnRecord(ArdpHandle* handle, ArdpConnRecord* conn, qcc::SocketFd sock, qcc::IPAddress ipAddr, uint16_t ipPort, uint16_t foreign)
 {
     QCC_DbgTrace(("InitConnRecord(handle=%p, conn=%p, sock=%d, ipAddr=\"%s\", ipPort=%d, foreign=%d)",
                   handle, conn, sock, ipAddr.ToString().c_str(), ipPort, foreign));
+    uint16_t local;
+    uint32_t count = 0;
 
     conn->STATE = CLOSED;                        /* Starting state is always CLOSED */
     InitSnd(conn);                               /* Initialize the sender side of the connection */
-    conn->local = (qcc::Rand32() % 65534) + 1;   /* Allocate an "ephemeral" source port */
+    local = (qcc::Rand32() % 65534) + 1;   /* Allocate an "ephemeral" source port */
+    /* Make sure this is a unique combiation of foreign/local */
+    while (FindConn(handle, conn->local, foreign) != NULL) {
+        local++;
+        count++;
+        if (count == 65535) {
+            /* Really? We exhausted all the connections?! */
+            QCC_LogError(ER_FAIL, ("InitConnRecord: Cannot get a new connection record. Too many connections?"));
+            return ER_FAIL;
+        }
+    }
+
+    conn->local = local;
+
     conn->foreign = foreign;                     /* The ARDP port of the foreign host */
     conn->sock = sock;                           /* The socket to use when talking on this connection */
     conn->ipAddr = ipAddr;                       /* The IP address of the foreign host */
@@ -1295,6 +1324,8 @@ static void InitConnRecord(ArdpHandle* handle, ArdpConnRecord* conn, qcc::Socket
     conn->sndHdrLen = ARDP_FIXED_HEADER_LEN;
     conn->rcvHdrLen = ARDP_FIXED_HEADER_LEN;
     conn->backoff = 0;
+
+    return ER_OK;
 }
 
 static void ProtocolDemux(uint8_t* buf, uint16_t len, uint16_t* local, uint16_t* foreign)
@@ -2319,7 +2350,11 @@ QStatus ARDP_Connect(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ipAd
     ArdpConnRecord* conn = NewConnRecord();
     QStatus status;
 
-    InitConnRecord(handle, conn, sock, ipAddr, ipPort, 0);
+    status = InitConnRecord(handle, conn, sock, ipAddr, ipPort, 0);
+    if (status != ER_OK) {
+        return status;
+    }
+
     status = InitRcv(conn, segmax, segbmax); /* Initialize the receiver side of the connection */
     if (status != ER_OK) {
         delete conn;
@@ -2490,9 +2525,11 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool socketReady, uint3
             if (local == 0) {
                 if (handle->accepting && handle->cb.AcceptCb) {
                     ArdpConnRecord* conn = NewConnRecord();
-                    InitConnRecord(handle, conn, sock, address, port, foreign);
-                    EnList(handle->conns.bwd, (ListNode*)conn);
-                    status = Accept(handle, conn, buf, nbytes);
+                    status = InitConnRecord(handle, conn, sock, address, port, foreign);
+                    if (status == ER_OK) {
+                        EnList(handle->conns.bwd, (ListNode*)conn);
+                        status = Accept(handle, conn, buf, nbytes);
+                    }
                 } else {
                     status = SendRst(handle, sock, address, port, local, foreign);
                 }
