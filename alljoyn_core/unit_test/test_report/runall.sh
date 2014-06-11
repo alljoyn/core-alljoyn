@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -158,7 +158,7 @@ then
 
 	rm -f alljoyn-daemon.log
 
-	killall -v alljoyn-daemon || : ok
+	killall -9 -v alljoyn-daemon || : ok
 	(
 		set -ex
 		cd "$daemon_bin"
@@ -206,7 +206,7 @@ done
 if $start_daemon
 then
 	sleep 5
-	killall -v alljoyn-daemon || : ok
+	killall -9 -v alljoyn-daemon || : ok
 	sleep 5
 fi
 

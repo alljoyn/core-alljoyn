@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2010 - 2012, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010-2012, 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -17,7 +17,7 @@
 
 
 set -x
-killall -v alljoyn-daemon
+killall -9 -v alljoyn-daemon
 rm -rf alljoyn-daemon.log junit.log
 
 # set ALLJOYN_JAVA and/or ALLJOYN_DIST either through environment variables...
@@ -156,7 +156,7 @@ date
 	exit $xit
 ) ; xit=$?
 
-killall -v alljoyn-daemon
+killall -9 -v alljoyn-daemon
 
 echo exit status $xit
 exit $xit
