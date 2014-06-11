@@ -122,7 +122,8 @@ QStatus _Message::ParseArray(MsgArg* arg,
                 uint16_t* p = (uint16_t*)arg->v_scalarArray.v_uint16;
                 uint16_t* n = (uint16_t*)bufPos;
                 for (size_t i = 0; i < arg->v_scalarArray.numElements; i++) {
-                    *p++ = EndianSwap16(*n++);
+                    *p++ = EndianSwap16(*n);
+                    n++;
                 }
                 arg->flags = MsgArg::OwnsData;
             } else {
@@ -179,7 +180,8 @@ QStatus _Message::ParseArray(MsgArg* arg,
                 uint32_t* p = (uint32_t*)arg->v_scalarArray.v_uint32;
                 uint32_t* n = (uint32_t*)bufPos;
                 for (size_t i = 0; i < arg->v_scalarArray.numElements; i++) {
-                    *p++ = EndianSwap32(*n++);
+                    *p++ = EndianSwap32(*n);
+                    n++;
                 }
                 arg->flags = MsgArg::OwnsData;
             } else {
@@ -204,7 +206,8 @@ QStatus _Message::ParseArray(MsgArg* arg,
                 uint64_t* p = (uint64_t*)arg->v_scalarArray.v_uint64;
                 uint64_t* n = (uint64_t*)bufPos;
                 for (size_t i = 0; i < arg->v_scalarArray.numElements; i++) {
-                    *p++ = EndianSwap64(*n++);
+                    *p++ = EndianSwap64(*n);
+                    n++;
                 }
                 arg->flags = MsgArg::OwnsData;
             } else {
