@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -17,6 +17,7 @@
 #include "AboutClientAnnounceHandler.h"
 #include <alljoyn/about/AboutClient.h>
 #include <iostream>
+#include <iomanip>
 
 using namespace ajn;
 using namespace services;
@@ -36,27 +37,29 @@ void AboutClientAnnounceHandler::Announce(unsigned short version, unsigned short
 {
     std::cout << std::endl << std::endl << "*********************************************************************************"
               << std::endl;
-    std::cout << "version  " << version << std::endl;
-    std::cout << "port  " << port << std::endl;
-    std::cout << "busName  " << busName << std::endl;
-    std::cout << "ObjectDescriptions" << std::endl;
+    std::cout << "version   " << version << std::endl;
+    std::cout << "port      " << port << std::endl;
+    std::cout << "busName   " << busName << std::endl;
+    std::cout << "ObjectDescriptions :" << std::endl;
     for (AboutClient::ObjectDescriptions::const_iterator it = objectDescs.begin(); it != objectDescs.end(); ++it) {
         qcc::String key = it->first;
         std::vector<qcc::String> vector = it->second;
-        std::cout << "key=" << key.c_str();
+        std::cout << "Object path = " << key.c_str() << std::endl;
         for (std::vector<qcc::String>::const_iterator itv = vector.begin(); itv != vector.end(); ++itv) {
-            std::cout << " value=" << itv->c_str() << std::endl;
+            std::cout << "\tInterface = " << itv->c_str() << std::endl;
         }
     }
 
-    std::cout << "Announcedata" << std::endl;
+    std::cout << "AnnounceData :" << std::endl;
     for (AboutClient::AboutData::const_iterator it = aboutData.begin(); it != aboutData.end(); ++it) {
         qcc::String key = it->first;
         ajn::MsgArg value = it->second;
         if (value.typeId == ALLJOYN_STRING) {
-            std::cout << "Key name=" << key.c_str() << " value=" << value.v_string.str << std::endl;
+            std::cout << "Key name = "  << std::setfill(' ') << std::setw(20) << std::left << key.c_str()
+                      << " value = " << value.v_string.str << std::endl;
         } else if (value.typeId == ALLJOYN_BYTE_ARRAY) {
-            std::cout << "Key name=" << key.c_str() << " value:" << std::hex << std::uppercase;
+            std::cout << "Key name = "  << std::setfill(' ') << std::setw(20) << std::left << key.c_str()
+                      << " value = " << std::hex << std::uppercase;
             uint8_t* AppIdBuffer;
             size_t numElements;
             value.Get("ay", &numElements, &AppIdBuffer);

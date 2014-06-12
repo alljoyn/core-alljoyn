@@ -25,6 +25,12 @@ using namespace services;
 static const char* ABOUT_ICON_OBJECT_PATH = "/About/DeviceIcon";
 static const char* ABOUT_ICON_INTERFACE_NAME = "org.alljoyn.Icon";
 
+QStatus AboutIconClient::Icon::SetContent(const MsgArg& arg) {
+    m_arg = arg;
+    m_arg.Stabilize();
+    return m_arg.Get("ay", &contentSize, &content);
+}
+
 AboutIconClient::AboutIconClient(ajn::BusAttachment& bus)
     : m_BusAttachment(&bus)
 {
@@ -127,7 +133,10 @@ QStatus AboutIconClient::GetContent(const char* busName, uint8_t** content, size
         size_t numArgs;
         replyMsg->GetArgs(numArgs, returnArgs);
         if (numArgs == 1) {
-            status = returnArgs[0].Get("ay", &contentSize, content);
+            uint8_t* temp = NULL;
+            status = returnArgs[0].Get("ay", &contentSize, &temp);
+            (*content) = new uint8_t[contentSize];
+            memcpy((*content), temp, sizeof(uint8_t) * contentSize);
         } else {
             status = ER_BUS_BAD_VALUE;
         }
@@ -135,7 +144,49 @@ QStatus AboutIconClient::GetContent(const char* busName, uint8_t** content, size
     delete proxyBusObj;
     proxyBusObj = NULL;
     return status;
+}
 
+QStatus AboutIconClient::GetIcon(const char* busName, Icon& icon, ajn::SessionId sessionId) {
+    QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
+    QStatus status = ER_OK;
+    const InterfaceDescription* p_InterfaceDescription = m_BusAttachment->GetInterface(ABOUT_ICON_INTERFACE_NAME);
+    if (!p_InterfaceDescription) {
+        return ER_FAIL;
+    }
+    ProxyBusObject*proxyBusObj = new ProxyBusObject(*m_BusAttachment, busName, ABOUT_ICON_OBJECT_PATH, sessionId);
+    if (!proxyBusObj) {
+        return ER_FAIL;
+    }
+    status = proxyBusObj->AddInterface(*p_InterfaceDescription);
+    if (status != ER_OK) {
+        delete proxyBusObj;
+        proxyBusObj = NULL;
+        return status;
+    }
+    Message replyMsg(*m_BusAttachment);
+    status = proxyBusObj->MethodCall(ABOUT_ICON_INTERFACE_NAME, "GetContent", NULL, 0, replyMsg);
+    if (status == ER_OK) {
+        const ajn::MsgArg* returnArgs;
+        size_t numArgs;
+        replyMsg->GetArgs(numArgs, returnArgs);
+        if (numArgs == 1) {
+            status = icon.SetContent(returnArgs[0]);
+        } else {
+            status = ER_BUS_BAD_VALUE;
+        }
+    }
+
+    MsgArg arg;
+    status = proxyBusObj->GetProperty(ABOUT_ICON_INTERFACE_NAME, "MimeType", arg);
+    if (ER_OK == status) {
+        char* temp;
+        arg.Get("s", &temp);
+        icon.mimetype = temp;
+    }
+
+    delete proxyBusObj;
+    proxyBusObj = NULL;
+    return status;
 }
 
 QStatus AboutIconClient::GetVersion(const char* busName, int& version, ajn::SessionId sessionId) {
