@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -30,7 +30,8 @@ if env['MSVC_VERSION'] >= '8.0':
 env.Append(CPPDEFINES=['QCC_CPU_X86',
                        'UNICODE',
                        '_UNICODE',
-                       'WIN32_LEAN_AND_MEAN'])
+                       'WIN32_LEAN_AND_MEAN',
+                       ('_VARIADIC_MAX','10')])
 
 # Visual Studio compiler complains that functions like strncpy are unsafe. We
 # are aware that its possible to create a non-nul terminated string using the
