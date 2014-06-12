@@ -60,8 +60,6 @@ public interface AboutClient extends ClientBase
      * @return the array of object paths and the list of all interfaces available
      *         at the given object path.
      * @throws BusException
-     * @see BusInterface
-     * @see BusObject
      */
     public BusObjectDescription[] getBusObjectDescriptions() throws BusException;
 }

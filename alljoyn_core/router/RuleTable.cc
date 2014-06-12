@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <cstring>
 
+#include "BusUtil.h"
 #include "RuleTable.h"
 
 #include <qcc/Debug.h>
@@ -171,9 +172,12 @@ bool Rule::IsMatch(Message& msg) const
             }
         }
         size_t numMatches = 0;
-        for (set<String>::const_iterator it = implements.begin(); it != implements.end(); ++it) {
-            if (interfaces.find(*it) != interfaces.end()) {
-                ++numMatches;
+        for (set<String>::const_iterator im = implements.begin(); im != implements.end(); ++im) {
+            for (set<String>::const_iterator in = interfaces.begin(); in != interfaces.end(); ++in) {
+                if (WildcardMatch(*in, *im) == 0) {
+                    ++numMatches;
+                    break;
+                }
             }
         }
         if (numMatches != implements.size()) {
