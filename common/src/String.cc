@@ -251,6 +251,8 @@ String& String::append(const char* str, size_t strLen)
         return *this;
     }
 
+    // Make sure strLen does not cause any kind of overflow.
+    strLen = MIN(strLen, std::numeric_limits<uint32_t>::max() - context->offset - 1);
     size_t totalLen = strLen + context->offset;
     if ((1 != context->refCount) || (totalLen > context->capacity)) {
         /* Append wont fit in existing allocation or modifying a context with other refs */
@@ -258,8 +260,9 @@ String& String::append(const char* str, size_t strLen)
         NewContext(oldContext->c_str, oldContext->offset, totalLen + totalLen / 2);
         DecRef(oldContext);
     }
-    ::memcpy(context->c_str + context->offset, str, strLen);
-    context->offset += strLen;
+    size_t copySize = MIN(strLen, context->capacity - context->offset);
+    ::memcpy(context->c_str + context->offset, str, copySize);
+    context->offset += copySize;
     context->c_str[context->offset] = '\0';
     return *this;
 }
