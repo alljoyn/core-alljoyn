@@ -32,7 +32,7 @@ AboutClientSessionJoiner::~AboutClientSessionJoiner()
 void AboutClientSessionJoiner::JoinSessionCB(QStatus status, SessionId id, const SessionOpts& opts, void* context)
 {
     if (status == ER_OK) {
-        std::cout << "JoinSessionCB(" << m_Busname.c_str() << ") succeeded with id" << id << std::endl;
+        std::cout << "JoinSessionCB(" << m_Busname.c_str() << ") succeeded with id: " << id << std::endl;
         if (m_Callback) {
             std::cout << "Calling SessionJoiner Callback" << std::endl;
             m_Callback(m_Busname, id);
