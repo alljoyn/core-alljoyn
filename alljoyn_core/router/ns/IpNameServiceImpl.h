@@ -1576,6 +1576,7 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
             unicastIPV6Info(ipv6),
             timestamp(qcc::GetTimestamp64()),
             alarm(ttl, listener) { }
+        qcc::String ToString(const qcc::String& guid);
     };
 
     std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal> m_peerInfoMap;
