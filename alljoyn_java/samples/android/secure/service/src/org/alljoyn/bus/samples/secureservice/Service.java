@@ -2,7 +2,7 @@
  * This sample is identical to the simple sample, with the addition of security.  Refer to the
  * simple sample for further explanation of the AllJoyn code not called out here.
  *
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -27,10 +27,10 @@ import java.util.concurrent.CountDownLatch;
 import org.alljoyn.bus.AuthListener;
 import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusListener;
-import org.alljoyn.bus.SessionPortListener;
 import org.alljoyn.bus.BusObject;
 import org.alljoyn.bus.Mutable;
 import org.alljoyn.bus.SessionOpts;
+import org.alljoyn.bus.SessionPortListener;
 import org.alljoyn.bus.Status;
 
 import android.app.Activity;
@@ -253,6 +253,10 @@ public class Service extends Activity {
             mAuthListeners.put("ALLJOYN_SRP_KEYX", new SrpKeyXListener());
             mAuthListeners.put("ALLJOYN_SRP_LOGON", new SrpLogonListener());
             mAuthListeners.put("ALLJOYN_RSA_KEYX", new RsaKeyXListener());
+            ECDHEKeyXListener ecdheListener = new ECDHEKeyXListener();
+            mAuthListeners.put("ALLJOYN_ECDHE_NULL", ecdheListener);
+            mAuthListeners.put("ALLJOYN_ECDHE_PSK", ecdheListener);
+            mAuthListeners.put("ALLJOYN_ECDHE_ECDSA", ecdheListener);
         }
 
         /* Returns the list of supported mechanisms. */
@@ -439,6 +443,139 @@ public class Service extends Activity {
 
         public void completed(String mechanism, String peer, boolean authenticated) {
         }
+    }
+    
+    /* the ECDHEKeyXListener supports the Elliptic Curve Cryptography Diffie-Hellman Ephemeral 
+     * key exchanges.
+     */
+    class ECDHEKeyXListener implements AuthListener {
+
+        public ECDHEKeyXListener() {
+
+        }
+
+        /*
+         * Authentication requests are being made.  Contained in this call are the mechanism in use,
+         * the number of attempts made so far, the desired user name for the requests, and the
+         * specific credentials being requested in the form of AuthRequests.
+         *
+         * The ECDHE key exchange can request for private key, public key, and to verify the peer
+         */
+        public boolean requested(String authMechanism, String authPeer, int count, String userName, AuthRequest[] requests) {
+            try {
+                Log.d(TAG, "Listener requested with mechanism " + authMechanism);
+                if (!authMechanism.equals("ALLJOYN_ECDHE_NULL") &&
+                        !authMechanism.equals("ALLJOYN_ECDHE_PSK") &&
+                        !authMechanism.equals("ALLJOYN_ECDHE_ECDSA")) {
+                    return false;
+                }
+
+                for (AuthRequest rqst: requests) {
+                    if (rqst instanceof PrivateKeyRequest) {
+                        /*
+                         * Only the ALLJOYN_ECDHE_ECDSA requests for DSA private key.
+                         * The application may provide the DSA private key and public key in the certificate.
+                         * AllJoyn stores the keys in the key store for future use.
+                         * If the application does not provide the private key, AllJoyn will
+                         * generate the DSA key pair.
+                         */
+                        if (sendBackKeys) {
+                            PrivateKeyRequest pkRqst = (PrivateKeyRequest) rqst;
+                            String privateKeyPEM = SERVER_PK_PEM;
+                            pkRqst.setPrivateKey(privateKeyPEM);
+                            Log.d(TAG, "Listener sends back private key " + privateKeyPEM);
+                        }
+                    }
+                    else if (rqst instanceof CertificateRequest) {
+                        /*
+                         * Only the ALLJOYN_ECDHE_ECDSA requests for DSA private key.
+                         * The application may provide the DSA private key and public key in the certificate.
+                         * AllJoyn stores the keys in the key store for future use.
+                         * If the application does not provide the private key, AllJoyn will
+                         * generate the DSA key pair.
+                         */
+                        if (sendBackKeys) {
+                        	String certChainPEM;
+                        	boolean useCert1 = true;
+                        	if (useCert1) {
+                        		certChainPEM = SERVER_CERT1_PEM;
+                        	}
+                        	else {
+                        		certChainPEM = SERVER_CERT2_PEM;
+                        	}
+                            CertificateRequest certChainRqst = (CertificateRequest) rqst;
+                            certChainRqst.setCertificateChain(certChainPEM);
+                            Log.d(TAG, "Listener sends back cert chain " + certChainPEM);
+                        }
+                    }
+                    else if (rqst instanceof PasswordRequest) {
+                        /*
+                         * Only the ECDHE_PSK key exchange requests for the pre shared secret.
+                         * Based on the pre shared secret id given the username input variable,
+                         * the application can retrieve the pre shared secret
+                         * from storage or from the end user.
+                         * In this example, the pre shared secret is a hard coded string
+                         */
+                        PasswordRequest pskRqst = (PasswordRequest) rqst;
+                        String psk = "123456";
+                        pskRqst.setPassword(psk.toCharArray());
+                        Log.d(TAG, "Listener sends back PSK " + psk);
+                    }
+                    else if (rqst instanceof VerifyRequest) {
+                        /*
+                         * Only the ECDHE_ECDSA key exchange sends a VerifyRequest
+                         * with the certificate chain from the peer for the
+                         * application to verify.
+                         * The application has to option to verify the certificate chain.
+                         * If the cert chain is validated and trusted then return true; otherwise, return false.
+                         */
+                        VerifyRequest verifyRqst = (VerifyRequest) rqst;
+                        String certPEM = verifyRqst.getCertificateChain();
+                        Log.d(TAG, "Listener: verifying cert " + certPEM);
+                    }
+                    else if (rqst instanceof ExpirationRequest) {
+                        ExpirationRequest er = (ExpirationRequest) rqst;
+                        er.setExpiration(100); /* expired 100 seconds from now */
+                    }
+                }
+
+                return true;
+
+            } catch (Exception ex) {
+                Log.e(TAG, "Error processing auth request", ex);
+            }
+            return false;
+        }
+
+        public void completed(String authMechanism, String authPeer, boolean authenticated) {
+            sendUiMessage(MESSAGE_AUTH_COMPLETE, authenticated);
+        }
+
+
+        private boolean sendBackKeys = true;  /* toggle the send back keys */
+        /* the followings are same data to try out the ECDHE_ECDSA key exchange */
+        private static final String SERVER_PK_PEM =
+                "-----BEGIN PRIVATE KEY-----" +
+                "tV/tGPp7kI0pUohc+opH1LBxzk51pZVM/RVKXHGFjAcAAAAA" +
+                "-----END PRIVATE KEY-----";
+        private static final String SERVER_CERT1_PEM =
+                "-----BEGIN CERTIFICATE-----" +
+                "AAAAAfUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n" + 
+                "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n" + 
+                "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n" + 
+                "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3AABMa7uTLSqjDggO0t6TAgsxKNt\n" + 
+                "+Zhu/jc3s242BE0drPcL4K+FOVJf+tlivskovQ3RfzTQ+zLoBH5ZCzG9ua/dAAAA\n" + 
+                "ACt5bWBzbcaT0mUqwGOVosbMcU7SmhtE7vWNn/ECvpYFAAAAAA==\n" +
+                "-----END CERTIFICATE-----";
+        private static final String SERVER_CERT2_PEM =
+        		"AAAAAvUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n" +
+                "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n" +
+                "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n" +
+                "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3ABjeWi1/GbBcdnK0yJvL4X/UF0h\n" +
+                "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOc+WvKloM7m5NFJNSd3qFFGUhfj\n" +
+                "xx/0CCRJlk/jeIWmzQAAAAB8bexqa95eHEKTqdc8+qKFKggZZXlpaj9af/MFocIP\n" +
+                "NQAAAAA=\n" +
+                "-----END CERTIFICATE-----";
     }
 
     class SecureService implements SecureInterface, BusObject {

@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2012, 2014 AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -123,7 +123,8 @@
     // enable security for the bus
     //
     NSString *keystoreFilePath = @"Documents/alljoyn_keystore/s_central.ks";
-    QStatus status = [bus enablePeerSecurity:@"ALLJOYN_SRP_KEYX" authenticationListener:self keystoreFileName:keystoreFilePath sharing:YES];
+    // Enable the authentication you want to support
+    QStatus status = [bus enablePeerSecurity:@"ALLJOYN_SRP_KEYX ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA" authenticationListener:self keystoreFileName:keystoreFilePath sharing:YES];
     NSString *message;
     if (status != ER_OK) {
         message = [NSString stringWithFormat:@"ERROR: Failed to enable security on the bus. %@", [AJNStatus descriptionForStatusCode:status]];
@@ -151,6 +152,44 @@
             if (authenticationCount <= 3) {
                 credentials = [[AJNSecurityCredentials alloc] init];
                 credentials.password = self.password;
+            }
+        }
+    }
+    else if ([authenticationMechanism compare:@"ALLJOYN_ECDHE_NULL"] == NSOrderedSame) {
+        if (authenticationCount <= 3) {
+            // Need to send back something other the nil
+            credentials = [[AJNSecurityCredentials alloc] init];
+        }
+    }
+    else if ([authenticationMechanism compare:@"ALLJOYN_ECDHE_PSK"] == NSOrderedSame) {
+        if (mask & kAJNSecurityCredentialTypePassword) {
+            if (authenticationCount <= 3) {
+                credentials = [[AJNSecurityCredentials alloc] init];
+                credentials.password = self.password;
+            }
+        }
+    }
+    else if ([authenticationMechanism compare:@"ALLJOYN_ECDHE_ECDSA"] == NSOrderedSame) {
+        if (authenticationCount <= 3) {
+            credentials = [[AJNSecurityCredentials alloc] init];
+            if (mask & kAJNSecurityCredentialTypePrivateKey) {
+                const char privakteKey[] = {
+                    "-----BEGIN PRIVATE KEY-----\n"
+                    "tV/tGPp7kI0pUohc+opH1LBxzk51pZVM/RVKXHGFjAcAAAAA"
+                    "-----END PRIVATE KEY-----"};
+                credentials.privateKey = [NSString stringWithUTF8String:privakteKey];
+            }
+            if (mask & kAJNSecurityCredentialTypeCertificateChain) {
+                const char certchain[] = {
+                    "-----BEGIN CERTIFICATE-----\n"
+                    "AAAAAfUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n"
+                    "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n"
+                    "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n"
+                    "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3AABMa7uTLSqjDggO0t6TAgsxKNt\n"
+                    "+Zhu/jc3s242BE0drPcL4K+FOVJf+tlivskovQ3RfzTQ+zLoBH5ZCzG9ua/dAAAA\n"
+                    "ACt5bWBzbcaT0mUqwGOVosbMcU7SmhtE7vWNn/ECvpYFAAAAAA==\n"
+                    "-----END CERTIFICATE-----"};
+                credentials.certificateChain = [NSString stringWithUTF8String:certchain];
             }
         }
     }
