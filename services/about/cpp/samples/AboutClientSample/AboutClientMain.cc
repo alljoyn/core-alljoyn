@@ -20,6 +20,7 @@
 #include <signal.h>
 #include <iostream>
 #include <iomanip>
+#include <deque>
 #include "AboutClientSessionListener.h"
 #include "AboutClientAnnounceHandler.h"
 #include "AboutClientSessionJoiner.h"
@@ -45,10 +46,42 @@ static void SigIntHandler(int sig)
 // when pinging a remote bus wait a max of 5 seconds
 #define PING_WAIT_TIME    5000
 
+struct JoinedSession {
+    qcc::String busName;
+    SessionId id;
+    JoinedSession(qcc::String const& busName, SessionId id) : busName(busName), id(id) { }
+};
+
+static std::deque<JoinedSession> s_joinedSessions;
+
 void sessionJoinedCallback(qcc::String const& busName, SessionId id)
 {
+    /*
+     * If we start calling remote methods from inside an AllJoyn callback we must
+     * call the BusAttachment.EnableConcurrentCallbacks() method. There is a
+     * limit to the maximum number of concurrent callbacks that can be called
+     * at any time. The default limit is 4 but can be changed when the
+     * BusAttachment is created.
+     *
+     * Depending on how many devices are advertising an Announce signal its possible
+     * to quickly join lots of sessions one after another.  If we start calling
+     * remote methods from the callback we could cause a deadlock situation where
+     * there are no threads to respond to method responses. The threads are all
+     * busy up making method calls and waiting on the response they can't not receive.
+     *
+     * To prevent this deadlock situation we create a list of BusAttachements
+     * that have formed a session an the session id.
+     *
+     * This list of sessions will checked by the main wait loop to see if any
+     * new session has been added to the list.  If so it will call all the methods
+     * associated with the AboutSerivice in the order the sessions were formed.
+     * Once that is done we leave the session.
+     */
+    s_joinedSessions.push_back(JoinedSession(busName, id));
+}
+
+void ViewAboutServiceData(qcc::String const& busName, SessionId id) {
     QStatus status;
-    busAttachment->EnableConcurrentCallbacks();
     AboutClient* aboutClient = new AboutClient(*busAttachment);
     AboutIconClient* iconClient = NULL;
     bool hasIconInterface = false;
@@ -219,8 +252,6 @@ void sessionJoinedCallback(qcc::String const& busName, SessionId id)
 
         } //if (iconClient)
     } //if (isIconInterface)
-    status = busAttachment->LeaveSession(id);
-    std::cout << "Leaving session id = " << id << " with " << busName.c_str() << " status: " << QCC_StatusText(status) << std::endl;
 
     if (aboutClient) {
         delete aboutClient;
@@ -279,7 +310,7 @@ class AboutClientPingAsyncCB : public BusAttachment::PingAsyncCB {
 
         AboutClientSessionListener* aboutClientSessionListener = new AboutClientSessionListener(busName);
         AboutClientSessionJoiner* joincb = new AboutClientSessionJoiner(busName, sessionJoinedCallback);
-
+        printf("Calling JoinSession BusName = %s port = %d\n", busName.c_str(), port);
         QStatus status = busAttachment->JoinSessionAsync(busName.c_str(), port, aboutClientSessionListener,
                                                          opts, joincb, aboutClientSessionListener);
         return status;
@@ -313,6 +344,7 @@ void announceHandlerCallback(qcc::String const& busName, unsigned short port)
      * could result in running out of concurrent callback threads which results
      * in a deadlock.
      */
+    printf("Calling PingAsync BusName = %s\n", busName.c_str());
     status = busAttachment->PingAsync(busName.c_str(), PING_WAIT_TIME, pingAsyncCB, pingContext);
     /*
      * The PingAsync call failed make sure pointers are cleaned up so no memory
@@ -331,12 +363,24 @@ void announceHandlerCallback(qcc::String const& busName, unsigned short port)
 /** Wait for SIGINT before continuing. */
 void WaitForSigInt(void)
 {
+    QStatus status;
     while (s_interrupt == false) {
 #ifdef _WIN32
-        Sleep(100);
+        Sleep(10);
 #else
-        usleep(100 * 1000);
+        usleep(10 * 1000);
 #endif
+        while ((!s_joinedSessions.empty()) && s_interrupt == false) {
+            /*
+             * for each session joined display all of the data associated with the
+             * AboutService and the AboutIconService.  Once we have displayed the
+             * about service information we simply leave the session.
+             */
+            ViewAboutServiceData(s_joinedSessions.front().busName, s_joinedSessions.front().id);
+            status = busAttachment->LeaveSession(s_joinedSessions.front().id);
+            std::cout << "Leaving session id = " << s_joinedSessions.front().id << " with " << s_joinedSessions.front().busName.c_str() << " status: " << QCC_StatusText(status) << std::endl;
+            s_joinedSessions.pop_front();
+        }
     }
 }
 
