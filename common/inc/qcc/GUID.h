@@ -8,7 +8,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -97,7 +97,7 @@ class GUID128 {
      * a 48 string that is generated uniquely from the original 128-bit GUID value.
      * The mapping of GUID128 to "shortened string" is therefore many to one.
      *
-     * This representation does NOT have the full 128 bits of randomne
+     * This representation does NOT have the full 128 bits of randomness
      */
     const qcc::String& ToShortString() const;
 
