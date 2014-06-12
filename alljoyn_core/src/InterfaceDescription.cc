@@ -350,7 +350,7 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
 
     bool withDescriptions = false;
     do {
-        if (!languageTag) {
+        if (!languageTag || languageTag[0] == '\0') {
             break;
         }
 
