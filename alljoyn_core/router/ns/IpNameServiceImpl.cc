@@ -6301,42 +6301,47 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
     }
 }
 
+qcc::String IpNameServiceImpl::PeerInfo::ToString(const qcc::String& guid)
+{
+    String s;
+    s += "guid=" + guid + "/" + GUID128(guid).ToShortString();
+    s += ",ipv4=" + unicastIPV4Info.ToString();
+    s += ",ipv6=" + unicastIPV6Info.ToString();
+    return s;
+}
+
 void IpNameServiceImpl::PrintPeerInfoMap()
 {
-    std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.begin();
-    while (it != m_peerInfoMap.end()) {
-        std::list<PeerInfo>::iterator pit = it->second.begin();
-        while (pit != it->second.end()) {
-            QCC_DbgHLPrintf(("\nGuid :%s , IPv4: %s , IPV6 :%s \n", it->first.c_str(),
-                             (*pit).unicastIPV4Info.ToString().c_str(), (*pit).unicastIPV6Info.ToString().c_str()));
-            ++pit;
+    for (std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.begin();
+         it != m_peerInfoMap.end(); ++it) {
+        for (std::list<PeerInfo>::iterator pit = it->second.begin(); pit != it->second.end(); ++pit) {
+            QCC_DbgHLPrintf(("  %s", pit->ToString(it->first).c_str()));
         }
-        ++it;
     }
 }
 
 bool IpNameServiceImpl::AddToPeerInfoMap(const qcc::String& guid, const qcc::IPEndpoint& ipv4, const qcc::IPEndpoint& ipv6, uint32_t ttl)
 {
     m_mutex.Lock();
-    bool foundEntry = false;
     std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.find(guid);
     if (it != m_peerInfoMap.end()) {
-        std::list<PeerInfo>::iterator pit = it->second.begin();
-        while (pit != it->second.end()) {
-            if (((*pit).unicastIPV4Info == ipv4) && ((*pit).unicastIPV6Info == ipv6)) {
+        bool foundEntry = false;
+        for (std::list<PeerInfo>::iterator pit = it->second.begin(); !foundEntry && pit != it->second.end(); ++pit) {
+            if ((pit->unicastIPV4Info == ipv4) && (pit->unicastIPV6Info == ipv6)) {
                 foundEntry = true;
             }
-            ++pit;
         }
         if (!foundEntry) {
             PeerInfo peerInfo(ipv4, ipv6);
             it->second.push_back(peerInfo);
-            QCC_DbgPrintf(("Adding entry in PeerInfoMap"));
+            QCC_DbgHLPrintf(("Add to peer info map: %s", peerInfo.ToString(it->first).c_str()));
         }
     } else {
+        PeerInfo peerInfo(ipv4, ipv6);
         std::list<PeerInfo> peerInfoList;
-        peerInfoList.push_back(PeerInfo(ipv4, ipv6));
+        peerInfoList.push_back(peerInfo);
         m_peerInfoMap.insert(std::pair<qcc::String, std::list<PeerInfo> >(guid, peerInfoList));
+        QCC_DbgHLPrintf(("Add to peer info map: %s", peerInfo.ToString(guid).c_str()));
     }
     m_mutex.Unlock();
     return true;
@@ -6347,13 +6352,15 @@ bool IpNameServiceImpl::RemoveFromPeerInfoMap(const qcc::String& guid)
     m_mutex.Lock();
     std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.find(guid);
     if (it != m_peerInfoMap.end()) {
+        for (std::list<PeerInfo>::iterator pit = it->second.begin(); pit != it->second.end(); ++pit) {
+            QCC_DbgHLPrintf(("Remove from peer info map: %s", pit->ToString(guid).c_str()));
+        }
+        QCC_DbgHLPrintf(("Erase from peer info map: guid=%s", guid.c_str()));
         m_peerInfoMap.erase(guid);
-        QCC_DbgPrintf(("Removing guid : %s from PeerInfoMap", guid.c_str()));
         m_mutex.Unlock();
         return true;
     }
     m_mutex.Unlock();
-    //PrintPeerInfoMap();
     return false;
 }
 

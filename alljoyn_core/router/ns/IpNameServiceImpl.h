@@ -1553,6 +1553,7 @@ class IpNameServiceImpl : public qcc::Thread {
             unicastIPV4Info(ipv4),
             unicastIPV6Info(ipv6)
         { }
+        qcc::String ToString(const qcc::String& guid);
     };
 
     std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal> m_peerInfoMap;

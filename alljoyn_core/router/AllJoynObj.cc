@@ -4632,20 +4632,30 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
              */
             TransportMask transport = TRANSPORT_TCP | TRANSPORT_UDP; // TODO transport hard-coded
             String guid;
-            multimap<String, NameMapEntry>::iterator nmit = nameMap.lower_bound(name);
-            while (nmit != nameMap.end() && (nmit->first == name)) {
+            for (multimap<String, NameMapEntry>::iterator nmit = nameMap.lower_bound(name);
+                 nmit != nameMap.end() && (nmit->first == name); ++nmit) {
                 if (nmit->second.transport & transport) {
                     guid = nmit->second.guid;
                     goto have_guid;
                 }
-                ++nmit;
             }
             if (guid.empty() && (name[0] == ':')) {
-                qcc::String nameStr(name);
-                guid = nameStr.substr(1, nameStr.find_last_of(".") - 1);
-                QCC_DbgPrintf(("Pinging GUID %s", guid.c_str()));
+                String guidStr = String(name).substr(1, GUID128::SHORT_SIZE);
+                for (multimap<String, pair<String, TransportMask> >::iterator ait = advAliasMap.lower_bound(guidStr);
+                     (ait != advAliasMap.end()) && (ait->first == guidStr); ++ait) {
+                    if (ait->second.second & transport) {
+                        for (multimap<String, NameMapEntry>::iterator nmit = nameMap.lower_bound(name);
+                             nmit != nameMap.end() && (nmit->first == ait->second.first); ++nmit) {
+                            if (nmit->second.transport & transport) {
+                                guid = nmit->second.guid;
+                                goto have_guid;
+                            }
+                        }
+                    }
+                }
             }
         have_guid:
+            QCC_DbgPrintf(("Pinging GUID %s", guid.c_str()));
             multimap<String, void*>::iterator it = pingReplyContexts.insert(pair<String, void*>(name, new Message(msg)));
             status = IpNameService::Instance().Ping(transport, guid, name);
             if (status != ER_OK) {
