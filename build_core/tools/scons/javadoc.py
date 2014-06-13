@@ -56,6 +56,7 @@ def javadoc_emitter(source, target, env):
             if os.path.splitext(fn)[1] in ['.java']:
                f = d.File(fn)
                f.attributes.javadoc_src = source
+               f.attributes.javadoc_sourcepath = entry.abspath
                pkg = parse_javadoc_file(str(f))
                if pkg:
                   f.attributes.javadoc_pkg = pkg
@@ -63,6 +64,7 @@ def javadoc_emitter(source, target, env):
             elif os.path.splitext(fn)[1] in ['.html']:
                f = d.File(fn)
                f.attributes.javadoc_src = source
+               f.attributes.javadoc_sourcepath = entry.abspath
                if os.path.basename(str(f)) == 'overview.html':
                   f.attributes.javadoc_overview = '"' + env.File(str(f)).abspath + '"'
                slist.append(f)
@@ -89,6 +91,13 @@ def javadoc_generator(source, target, env, for_signature):
          javadoc_overview = '-overview ' + s.attributes.javadoc_overview
       except AttributeError:
          pass
+   javadoc_sourcepath = []
+   for s in source:
+      try:
+         javadoc_sourcepath.append(s.attributes.javadoc_sourcepath)
+      except AttributeError:
+         pass
+   javadoc_sourcepath = os.pathsep.join(set(javadoc_sourcepath))
    javadoc_packages = []
    for s in source:
       try:
@@ -96,7 +105,7 @@ def javadoc_generator(source, target, env, for_signature):
       except AttributeError:
          pass
    javadoc_packages = ' '.join(set(javadoc_packages))
-   com = 'javadoc %s -use %s %s -quiet -public -noqualifier all %s %s %s -sourcepath ${SOURCE.srcdir} -d ${TARGET.dir} %s' % (javadoc_classpath, javadoc_windowtitle, javadoc_doctitle, javadoc_header, javadoc_bottom, javadoc_overview, javadoc_packages)
+   com = 'javadoc %s -use %s %s -quiet -public -noqualifier all %s %s %s -sourcepath %s -d ${TARGET.dir} %s' % (javadoc_classpath, javadoc_windowtitle, javadoc_doctitle, javadoc_header, javadoc_bottom, javadoc_overview, javadoc_sourcepath, javadoc_packages)
    return com
 
 def JavaDoc(env, target, source, *args, **kw):
