@@ -676,6 +676,7 @@ void* DaemonSLAPTransport::Run(void* arg)
             }
         }
         vector<Event*> checkEvents, signaledEvents;
+        checkEvents.clear();
         checkEvents.push_back(&stopEvent);
 
         for (list<ListenEntry>::iterator i = m_listenList.begin(); i != m_listenList.end(); i++) {
@@ -735,6 +736,12 @@ void* DaemonSLAPTransport::Run(void* arg)
                     }
                 }
                 delete e;
+            }
+        }
+        for (vector<qcc::Event*>::iterator i = checkEvents.begin(); i != checkEvents.end(); ++i) {
+            Event* evt = *i;
+            if (evt != &stopEvent) {
+                delete evt;
             }
         }
     }
