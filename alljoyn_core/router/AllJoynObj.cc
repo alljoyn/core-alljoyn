@@ -4104,15 +4104,30 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
         vector<String>::const_iterator nit = names->begin();
         while (nit != names->end()) {
             multimap<String, NameMapEntry>::iterator it = nameMap.find(*nit);
+            bool sendSignal = true;
             bool isNew = true;
+            /* Send a FoundAdvertisedName signal if this is the first namemap entry of this transport for this name. */
+            /* Send a LostAdvertisedName signal if this is the last namemap entry of this transport for this name. */
             while ((it != nameMap.end()) && (*nit == it->first)) {
-                if ((it->second.guid == guid) && (it->second.transport & transport)) {
+                if ((it->second.guid == guid) && (it->second.transport & transport) && (busAddr != it->second.busAddr)) {
+                    sendSignal = false;
+                    break;
+                }
+                it++;
+            }
+
+            it = nameMap.find(*nit);
+            while ((it != nameMap.end()) && (*nit == it->first)) {
+                if ((it->second.guid == guid) && (it->second.transport & transport) && (busAddr == it->second.busAddr)) {
                     isNew = false;
                     break;
+
                 }
                 ++it;
             }
+
             if (0 < ttl) {
+
                 if (isNew) {
                     QCC_DbgPrintf(("Adding new entry %d  %d", (1000LL * ttl), (1000LL * ttl * 80 / 100)));
                     /* Add new name to map */
@@ -4136,14 +4151,16 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
                         }
                     }
                     /* Send FoundAdvertisedName to anyone who is discovering *nit */
-                    if (0 < discoverMap.size()) {
-                        for (DiscoverMapType::const_iterator dit = discoverMap.begin(); dit != discoverMap.end(); ++dit) {
-                            MatchMap::const_iterator namePrefix = dit->second.matching.find("name");
-                            if (namePrefix == dit->second.matching.end()) {
-                                continue;
-                            }
-                            if (!WildcardMatch(*nit, namePrefix->second) && (transport & dit->second.transportMask)) {
-                                foundNameSet.insert(FoundNameEntry(*nit, namePrefix->second, dit->second.sender));
+                    if (sendSignal) {
+                        if (0 < discoverMap.size()) {
+                            for (DiscoverMapType::const_iterator dit = discoverMap.begin(); dit != discoverMap.end(); ++dit) {
+                                MatchMap::const_iterator namePrefix = dit->second.matching.find("name");
+                                if (namePrefix == dit->second.matching.end()) {
+                                    continue;
+                                }
+                                if (!WildcardMatch(*nit, namePrefix->second) && (transport & dit->second.transportMask)) {
+                                    foundNameSet.insert(FoundNameEntry(*nit, namePrefix->second, dit->second.sender));
+                                }
                             }
                         }
                     }
@@ -4174,11 +4191,14 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
                     }
                 }
             } else {
+
                 /* 0 == ttl means flush the record */
                 if (!isNew) {
                     NameMapEntry& nme = it->second;
                     qcc::String guidToBeChecked = it->second.guid;
-                    lostNameSet.insert(it->first);
+                    if (sendSignal) {
+                        lostNameSet.insert(it->first);
+                    }
                     timer.RemoveAlarm(nme.alarm, false);
                     nameMap.erase(it);
                     //
@@ -4416,8 +4436,20 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                 NameMapEntry& nme = it->second;
                 qcc::String guidToBeChecked = it->second.guid;
                 if ((now - nme.timestamp) >= nme.ttl) {
-                    QCC_DbgPrintf(("Expiring discovered name %s for guid %s", it->first.c_str(), nme.guid.c_str()));
-                    lostNameSet.insert(pair<String, TransportMask>(it->first, nme.transport));
+                    bool sendSignal = true;
+                    multimap<String, NameMapEntry>::iterator it1 = nameMap.find(it->first);
+                    /* Send a LostAdvertisedName signal if this is the last namemap entry of this transport for this name. */
+                    while ((it1 != nameMap.end()) && (it->first == it1->first)) {
+                        if ((nme.guid == it1->second.guid) && (nme.transport & it1->second.transport) && (nme.busAddr != it1->second.busAddr)) {
+                            sendSignal = false;
+                            break;
+                        }
+                        it1++;
+                    }
+                    if (sendSignal) {
+                        QCC_DbgPrintf(("Expiring discovered name %s for guid %s", it->first.c_str(), nme.guid.c_str()));
+                        lostNameSet.insert(pair<String, TransportMask>(it->first, nme.transport));
+                    }
                     /* Remove alarm */
                     timer.RemoveAlarm(nme.alarm, false);
                     nme.alarm->SetContext((void*)false);
