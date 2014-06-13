@@ -691,8 +691,9 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     }
 
     @Override
-    public void stopAboutServer() throws Exception
+    public void stopAboutServer()
     {
+        unregisterIcon();
         if(getBus() != null)
         {
             if (m_aboutInterface != null)
@@ -709,7 +710,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     }
 
     @Override
-    public void unregisterIcon() throws Exception {
+    public void unregisterIcon() {
 
         if(getBus() != null){
             if (m_iconInterface != null){

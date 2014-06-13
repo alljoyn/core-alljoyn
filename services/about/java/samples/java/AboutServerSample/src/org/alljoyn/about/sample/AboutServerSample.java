@@ -65,17 +65,19 @@ public class AboutServerSample {
 
         public static class Property
         {
-            private  String m_language=null;
+            private final boolean m_isLocalized;
             private final boolean m_isWritable;
             private final boolean m_isAnnounced;
             private final boolean m_isPublic;
             private final String m_name;
             private Object m_object=null;
+            private Map<String, String> m_localizable_value = null;
             // public.write.announce
 
             public Property(String m_name,Object value, boolean isPublic,boolean isWritable,boolean isAnnounced)
             {
                 super();
+                this.m_isLocalized = false;
                 this.m_isWritable = isWritable;
                 this.m_isAnnounced = isAnnounced;
                 this.m_isPublic = isPublic;
@@ -83,6 +85,37 @@ public class AboutServerSample {
                 this.m_object=value;
             }
 
+            /*
+             * localizable property
+             */
+            public Property(String m_name, String value, String languageTag, boolean isPublic, boolean isWritable, boolean isAnnounced)
+            {
+                this.m_isLocalized = true;
+                this.m_isWritable = isWritable;
+                this.m_isAnnounced = isAnnounced;
+                this.m_isPublic = isPublic;
+                this.m_name = m_name;
+                if(this.m_localizable_value == null) {
+                    this.m_localizable_value = new HashMap<String, String>();
+                }
+                this.m_localizable_value.put(languageTag, value);
+            }
+
+            public void addLocalizedValue(String value, String languageTag)
+            {
+                if (this.m_isLocalized == false) {
+                    return;
+                }
+                if(this.m_localizable_value == null) {
+                    this.m_localizable_value = new HashMap<String, String>();
+                }
+                this.m_localizable_value.put(languageTag, value);
+            }
+
+            public boolean isLocalized()
+            {
+                return m_isLocalized;
+            }
             public boolean isWritable()
             {
                 return m_isWritable;
@@ -100,14 +133,12 @@ public class AboutServerSample {
                 return m_name;
             }
 
-            public String getLangauge()
-            {
-                return m_language;
-            }
-            public void setLanguage(String language ) { this.m_language = language; }
-
             public Object getObject() {
                 return m_object;
+            }
+
+            public Object getObject(String languageTag) {
+                return (Object)m_localizable_value.get(languageTag);
             }
         }
 
@@ -140,14 +171,16 @@ public class AboutServerSample {
                             Property property=properyList.get(i);
                             if (!property.isAnnounced())
                                 continue;
-                            if (!(property.getLangauge()==null|| property.getLangauge().compareTo(languageTag) == 0))
-                                continue;
-                            dataMap.put(key, property.getObject());
+                            if (property.isLocalized()){
+                                dataMap.put(key, property.getObject(languageTag));
+                            } else {
+                                dataMap.put(key, property.getObject());
+                            }
                         }
                     }
-                }else
+                }else {
                     throw new  PropertyStoreException(PropertyStoreException.UNSUPPORTED_KEY);
-
+                }
             }
             else if (filter==Filter.READ)
             {
@@ -184,9 +217,11 @@ public class AboutServerSample {
                         Property property=properyList.get(i);
                         if (!property.isPublic())
                             continue;
-                        if (!(property.getLangauge()==null|| property.getLangauge().compareTo(languageTag) == 0))
-                            continue;
-                        dataMap.put(key, property.getObject());
+                        if (property.isLocalized()){
+                            dataMap.put(key, property.getObject(languageTag));
+                        } else {
+                            dataMap.put(key, property.getObject());
+                        }
                     }
                 }
             }//end of read.
@@ -207,6 +242,7 @@ public class AboutServerSample {
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
+                AboutServiceImpl.getInstance().stopAboutServer();
                 mBus.release();
             }
         });
@@ -223,12 +259,14 @@ public class AboutServerSample {
         }
 
         Map<String, List<PropertyStoreImpl.Property>> data=new HashMap<String, List<PropertyStoreImpl.Property>>();
-
+        // With this implementation of a propertyStore the Default language must be the first entry.
         data.put(AboutKeys.ABOUT_DEFAULT_LANGUAGE, new ArrayList<PropertyStoreImpl.Property>(
                 Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_DEFAULT_LANGUAGE,"en",true,true,true))));
 
-        data.put(AboutKeys.ABOUT_DEVICE_NAME, new ArrayList<PropertyStoreImpl.Property>(
-                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_DEVICE_NAME,"MyDeviceName",true,false,true))));
+        PropertyStoreImpl.Property deviceName = new PropertyStoreImpl.Property(AboutKeys.ABOUT_DEVICE_NAME,"MyDeviceName", "en",true,false,true);
+        deviceName.addLocalizedValue("Nombre de mi dispositivo", "es");
+        deviceName.addLocalizedValue("Мое устройство Имя", "ru");
+        data.put(AboutKeys.ABOUT_DEVICE_NAME, new ArrayList<PropertyStoreImpl.Property>(Arrays.asList(deviceName)));
 
         data.put(AboutKeys.ABOUT_DEVICE_ID, new ArrayList<PropertyStoreImpl.Property>(
                 Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_DEVICE_ID,"1231232145667745675477",true,false,true))));
@@ -241,88 +279,41 @@ public class AboutServerSample {
         data.put(AboutKeys.ABOUT_APP_ID, new ArrayList<PropertyStoreImpl.Property>(
                 Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_APP_ID,uid,true,false,true))));
 
-        data.put(AboutKeys.ABOUT_APP_NAME, new ArrayList<PropertyStoreImpl.Property>(
-                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_APP_NAME,"AboutConfig",true,false,true))));
+        PropertyStoreImpl.Property appName = new PropertyStoreImpl.Property(AboutKeys.ABOUT_APP_NAME,"AboutConfig", "en" ,true,false,true);
+        appName.addLocalizedValue("Acerca Config", "es");
+        appName.addLocalizedValue("О Настройка", "ru");
+        data.put(AboutKeys.ABOUT_APP_NAME, new ArrayList<PropertyStoreImpl.Property>(Arrays.asList(appName)));
 
-        data.put(AboutKeys.ABOUT_MANUFACTURER, new ArrayList<PropertyStoreImpl.Property>(
-                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_MANUFACTURER,"Company",true,false,true))));
+        PropertyStoreImpl.Property manufacture = new PropertyStoreImpl.Property(AboutKeys.ABOUT_MANUFACTURER,"Company", "en", true,false,true);
+        manufacture.addLocalizedValue("empresa", "es");
+        manufacture.addLocalizedValue("компания", "ru");
+        data.put(AboutKeys.ABOUT_MANUFACTURER, new ArrayList<PropertyStoreImpl.Property>(Arrays.asList(manufacture)));
 
         data.put(AboutKeys.ABOUT_MODEL_NUMBER, new ArrayList<PropertyStoreImpl.Property>(
-                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_MODEL_NUMBER,"Wxfy388i",true,false,true))));
+                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_MODEL_NUMBER,"Wxfy388i",true,false,false))));
 
         data.put(AboutKeys.ABOUT_SUPPORTED_LANGUAGES, new ArrayList<PropertyStoreImpl.Property>(
-                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_SUPPORTED_LANGUAGES,new HashSet <String>(){{add("en");add("sp");add("ru");}},true,false,true))));
+                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_SUPPORTED_LANGUAGES,new HashSet <String>(){{add("en");add("es");add("ru");}},true,false,false))));
+
+        PropertyStoreImpl.Property description = new PropertyStoreImpl.Property(AboutKeys.ABOUT_DESCRIPTION,"Wonderful description of the application.", "en", true,false,false);
+        description.addLocalizedValue("Maravillosa descripción de la aplicación.", "es");
+        description.addLocalizedValue("Замечательный описание приложения.", "ru");
+        data.put(AboutKeys.ABOUT_DESCRIPTION, new ArrayList<PropertyStoreImpl.Property>(Arrays.asList(description)));
 
         data.put(AboutKeys.ABOUT_DATE_OF_MANUFACTURE, new ArrayList<PropertyStoreImpl.Property>(
-                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_DATE_OF_MANUFACTURE,"10/1/2199",true,false,true))));
+                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_DATE_OF_MANUFACTURE,"10/1/2199",true,false,false))));
 
         data.put(AboutKeys.ABOUT_SOFTWARE_VERSION, new ArrayList<PropertyStoreImpl.Property>(
-                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_SOFTWARE_VERSION,"12.20.44 build 44454",true,false,true))));
+                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_SOFTWARE_VERSION,"12.20.44 build 44454",true,false,false))));
 
         data.put(AboutKeys.ABOUT_AJ_SOFTWARE_VERSION, new ArrayList<PropertyStoreImpl.Property>(
-                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_AJ_SOFTWARE_VERSION,"3.3.2",true,false,true))));
+                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_AJ_SOFTWARE_VERSION,"3.3.2",true,false,false))));
 
         data.put(AboutKeys.ABOUT_HARDWARE_VERSION, new ArrayList<PropertyStoreImpl.Property>(
-                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_HARDWARE_VERSION,"355.499. b",true,false,true))));
+                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_HARDWARE_VERSION,"355.499. b",true,false,false))));
 
         data.put(AboutKeys.ABOUT_SUPPORT_URL, new ArrayList<PropertyStoreImpl.Property>(
-                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_SUPPORT_URL,"http://www.alljoyn.org",true,false,true))));
-
-        /*
-        data.put(AboutKeys.ABOUT_DEVICE_NAME, new ArrayList<PropertyStoreImpl.Property>() {{
-            add(new PropertyStoreImpl.Property(AboutKeys.ABOUT_DEVICE_NAME,"MyDeviceName",true,true,true) );
-        }});
-
-        data.put(AboutKeys.ABOUT_DEVICE_ID, new ArrayList<PropertyStoreImpl.Property>() {{
-            add(new PropertyStoreImpl.Property(AboutKeys.ABOUT_DEVICE_ID,"1231232145667745675477",true,false,true) );
-        }});
-
-        data.put(AboutKeys.ABOUT_DESCRIPTION, new ArrayList<PropertyStoreImpl.Property>() {{
-            add(new PropertyStoreImpl.Property(AboutKeys.ABOUT_DESCRIPTION,"This is car",true,false,false) );
-        }});
-
-        data.put(AboutKeys.ABOUT_APP_ID, new ArrayList<PropertyStoreImpl.Property>() {{
-            add(new PropertyStoreImpl.Property(AboutKeys.ABOUT_APP_ID,UUID.randomUUID(),true,false,true) );
-        }});
-
-        data.put(AboutKeys.ABOUT_APP_NAME, new ArrayList<PropertyStoreImpl.Property>() {{
-            add(new PropertyStoreImpl.Property(AboutKeys.ABOUT_APP_NAME,"AboutConfig",true,false,true) );
-        }});
-
-        data.put(AboutKeys.ABOUT_MANUFACTURER, new ArrayList<PropertyStoreImpl.Property>() {{
-            add(new PropertyStoreImpl.Property(AboutKeys.ABOUT_MANUFACTURER,"Company",true,false,true) );
-        }});
-
-        data.put(AboutKeys.ABOUT_MODEL_NUMBER, new ArrayList<PropertyStoreImpl.Property>() {{
-            add(new PropertyStoreImpl.Property(AboutKeys.ABOUT_MODEL_NUMBER,"Wxfy388i",true,false,true) );
-        }});
-
-        data.put(AboutKeys.ABOUT_SUPPORTED_LANGUAGES, new ArrayList<PropertyStoreImpl.Property>() {{
-            add(new PropertyStoreImpl.Property(AboutKeys.ABOUT_SUPPORTED_LANGUAGES,new HashSet <String>(){{add("en");add("sp");add("ru");}},true,false,true) );
-        }});
-
-        data.put(AboutKeys.ABOUT_DATE_OF_MANUFACTURE, new ArrayList<PropertyStoreImpl.Property>() {{
-            add(new PropertyStoreImpl.Property(AboutKeys.ABOUT_DATE_OF_MANUFACTURE,"10/1/2199",true,false,true) );
-        }});
-
-        data.put(AboutKeys.ABOUT_SOFTWARE_VERSION, new ArrayList<PropertyStoreImpl.Property>() {{
-            add(new PropertyStoreImpl.Property(AboutKeys.ABOUT_SOFTWARE_VERSION,"12.20.44 build 44454",true,false,true) );
-        }});
-
-        data.put(AboutKeys.ABOUT_AJ_SOFTWARE_VERSION, new ArrayList<PropertyStoreImpl.Property>() {{
-            add(new PropertyStoreImpl.Property(AboutKeys.ABOUT_AJ_SOFTWARE_VERSION,"3.3.2",true,false,true) );
-        }});
-
-
-        data.put(AboutKeys.ABOUT_HARDWARE_VERSION, new ArrayList<PropertyStoreImpl.Property>() {{
-            add(new PropertyStoreImpl.Property(AboutKeys.ABOUT_HARDWARE_VERSION,"355.499. b",true,false,true) );
-        }});
-
-
-        data.put(AboutKeys.ABOUT_SUPPORT_URL, new ArrayList<PropertyStoreImpl.Property>() {{
-            add(new PropertyStoreImpl.Property(AboutKeys.ABOUT_SUPPORT_URL,"http://www.alljoyn.org",true,false,true) );
-        }});
-         */
+                Arrays.asList(new PropertyStoreImpl.Property(AboutKeys.ABOUT_SUPPORT_URL,"http://www.allseenalliance.org",true,false,false))));
 
         PropertyStore impl=new PropertyStoreImpl(data);
 
@@ -388,8 +379,7 @@ public class AboutServerSample {
         if (mBus.isConnected() && mBus.getUniqueName().length() > 0) {
             status=mBus.advertiseName( mBus.getUniqueName(), SessionOpts.TRANSPORT_ANY);
             if (status != Status.OK) {
-                System.out.println("Status = " + status);
-                mBus.releaseName("com.my.well.known.name");
+                System.out.println("AdvertiseName failed Status = " + status);
                 System.exit(0);
                 return;
             }

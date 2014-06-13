@@ -161,9 +161,8 @@ public interface AboutService extends ServiceCommon
 
     /**
      * Stop server mode.
-     * @throws Exception
      */
-    public void stopAboutServer() throws Exception;
+    public void stopAboutServer();
 
     /**
      * Add a BusObject and the BusInterfaces that it implements, to the server's
@@ -211,5 +210,5 @@ public interface AboutService extends ServiceCommon
     /**
      * Unregister the application icon
      */
-    public void unregisterIcon() throws Exception;
+    public void unregisterIcon();
 }
