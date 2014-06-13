@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/alljoyn_java/bin/jar/alljoyn.jar" sourcepath="/alljoyn_java/src">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="alljoyn_java/bin/libs"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="/AboutFeature/bin/classes"/>
+	<classpathentry kind="src" path="/AboutFeature"/>
+	<classpathentry kind="output" path="classes"/>
+</classpath>
