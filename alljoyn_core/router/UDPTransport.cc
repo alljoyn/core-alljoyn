@@ -1160,6 +1160,13 @@ class ArdpStream : public qcc::Stream {
 
     void Disconnect(bool sudden, QStatus status)
     {
+        if (status == ER_OK) {
+            assert(sudden == false);
+        }
+        if (sudden) {
+            assert(status != ER_OK);
+        }
+
         QCC_DbgTrace(("ArdpStream::Disconnect(sudden==%d., status==\"%s\")", sudden, QCC_StatusText(status)));
 #if POFF
         printf("==== %.6f ==== ArdpStream::Disconnect(sudden==%d., status==\"%s\")\n", GetTickCount(), sudden, QCC_StatusText(status));
@@ -1342,9 +1349,15 @@ class ArdpStream : public qcc::Stream {
                      * yet received the DisconnectCb() as a result of that
                      * ARDP_Disconnect().
                      *
-                     * We should ignore this event and wait for the
-                     * DisconnectCb() we know must happen
+                     * This indicates a race between the local disconnect and a
+                     * remote disconnect.  Any sudden disconnect means the
+                     * connection is gone; so a remote disconnect trumps an
+                     * in-process local disconnect.  This means we go right to
+                     * m_disc = true.  We'll leave the original m_discStatus
+                     * alone.
                      */
+                    m_conn = NULL;
+                    m_disc = true;
 #if POFF
                     printf("==== %.6f ==== ArdpStream::Disconnect(): ignore remote disconnect with already pending local disconnect\n", GetTickCount());
 #endif
@@ -1357,9 +1370,12 @@ class ArdpStream : public qcc::Stream {
                      * This is a second unsolicited remote disconnect event that
                      * is happening on a stream that has previously gotten a
                      * remote disconnect event -- a duplicate in other words.
+                     * We'll leave the original m_discStatus alone.
                      *
-                     * We should ignore this event.
+                     * The connection should already be gone.
                      */
+                    assert(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
+                    assert(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
 #if POFF
                     printf("==== %.6f ==== ArdpStream::Disconnect(): ignore second remote disconnect\n", GetTickCount());
 #endif
@@ -1373,10 +1389,12 @@ class ArdpStream : public qcc::Stream {
                      * called ARDP_Disconnect() and gotten the DisconnectCb()
                      * and the connection is gone.  This can happen if both
                      * sides decide to take down connections at about the same
-                     * time.
+                     * time.  We'll leave the original m_discStatus alone.
                      *
-                     * We should ignore this event.
+                     * The connection should already be gone.
                      */
+                    assert(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
+                    assert(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
 #if POFF
                     printf("==== %.6f ==== ArdpStream::Disconnect(): ignore remote disconnect on locally disconnected connection\n", GetTickCount());
 #endif
@@ -3988,6 +4006,16 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                 }
                 if (disconnected == false) {
                     QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled not disconnected"));
+                    ArdpStream* stream = ep->GetStream();
+                    if (stream) {
+                        bool disc = stream->GetDisconnected();
+                        bool discSent = stream->GetDiscSent();
+                        ArdpConnRecord* conn = stream->GetConn();
+                        bool suddenDisconnect = ep->GetSuddenDisconnect();
+                        QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled not disconneccted. disc=\"%s\", discSent=\"%s\", conn=%p, suddendisconnect=\"%s\"", disc ? "true" : "false", discSent ? "true" : "false", conn, suddenDisconnect ? "true" : "false"));
+                    } else {
+                        QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled not disconnected. No stream"));
+                    }
                 }
             }
 
