@@ -3501,6 +3501,7 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                     // Add an IPv4 address record
                                     addrRData = new MDNSARData();
                                     mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, addrRData));
+                                    delete addrRData;
                                     mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::A, &resourceRecord);
                                 }
                                 addrRData = static_cast<MDNSARData*>(resourceRecord->GetRData());
@@ -3518,6 +3519,7 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                     // Add an IPV6 address record
                                     aaaaRData = new MDNSAAAARData();
                                     mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::AAAA, MDNSResourceRecord::INTERNET, 120, aaaaRData));
+                                    delete aaaaRData;
                                     mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord);
                                 }
                                 aaaaRData = static_cast<MDNSAAAARData*>(resourceRecord->GetRData());
@@ -5497,13 +5499,16 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
         MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
         MDNSResourceRecord advertiseRecord("advertise." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
+        delete advRData;
 
         MDNSSenderRData* refRData =  new MDNSSenderRData();
         refRData->SetSearchID(id);
         MDNSResourceRecord refRecord("sender-info." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
+        delete refRData;
 
         MDNSARData* addrRData = new MDNSARData();
         MDNSResourceRecord aRecord(m_guid + ".local.", MDNSResourceRecord::A, MDNSResourceRecord::INTERNET, 120, addrRData);
+        delete addrRData;
 
         MDNSPacket mdnsPacket;
         mdnsPacket->SetHeader(mdnsHeader);
@@ -5513,10 +5518,12 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
             MDNSPtrRData* ptrRDataTcp = new MDNSPtrRData();
             ptrRDataTcp->SetPtrDName(m_guid + "._alljoyn._tcp.local.");
             MDNSResourceRecord ptrRecordTcp("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRDataTcp);
+            delete ptrRDataTcp;
 
             MDNSSrvRData* srvRDataTcp = new MDNSSrvRData(1 /*priority */, 1 /* weight */,
                                                          m_reliableIPv4Port[TRANSPORT_INDEX_TCP] /* port */, m_guid + ".local." /* target */);
             MDNSResourceRecord srvRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, 120, srvRDataTcp);
+            delete srvRDataTcp;
 
             MDNSTextRData* txtRDataTcp = new MDNSTextRData();
             if (m_reliableIPv6Port[TRANSPORT_INDEX_TCP]) {
@@ -5524,6 +5531,8 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
             }
 
             MDNSResourceRecord txtRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRDataTcp);
+            delete txtRDataTcp;
+
             mdnsPacket->AddAnswer(ptrRecordTcp);
             mdnsPacket->AddAnswer(srvRecordTcp);
             mdnsPacket->AddAnswer(txtRecordTcp);
@@ -5533,10 +5542,12 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
             MDNSPtrRData* ptrRDataUdp = new MDNSPtrRData();
             ptrRDataUdp->SetPtrDName(m_guid + "._alljoyn._udp.local.");
             MDNSResourceRecord ptrRecordUdp("_alljoyn._udp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRDataUdp);
+            delete ptrRDataUdp;
 
             MDNSSrvRData* srvRDataUdp = new MDNSSrvRData(1 /*priority */, 1 /* weight */,
                                                          m_unreliableIPv4Port[TRANSPORT_INDEX_UDP] /* port */, m_guid + ".local." /* target */);
             MDNSResourceRecord srvRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::SRV, MDNSResourceRecord::INTERNET, 120, srvRDataUdp);
+            delete srvRDataUdp;
 
             MDNSTextRData* txtRDataUdp = new MDNSTextRData();
             if (m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]) {
@@ -5544,6 +5555,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
             }
 
             MDNSResourceRecord txtRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRDataUdp);
+            delete txtRDataUdp;
 
             mdnsPacket->AddAnswer(ptrRecordUdp);
             mdnsPacket->AddAnswer(srvRecordUdp);
