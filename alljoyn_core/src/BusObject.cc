@@ -164,7 +164,7 @@ qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep,
         /* Iterate over interfaces */
         vector<const InterfaceDescription*>::const_iterator itIf = components->ifaces.begin();
         while (itIf != components->ifaces.end()) {
-            xml += (*itIf++)->Introspect(indent, languageTag, bus->GetDescriptionTranslator());
+            xml += (*itIf++)->Introspect(indent, languageTag, bus ? bus->GetDescriptionTranslator() : NULL);
         }
     }
     return xml;
@@ -796,7 +796,11 @@ void BusObject::SetDescription(const char* language, const char* text)
 
 const char* BusObject::GetDescription(const char* toLanguage, qcc::String& buffer) const
 {
-    Translator* myTranslator = translator ? translator : bus->GetDescriptionTranslator();
+    Translator* myTranslator = translator;
+    if (!myTranslator && bus) {
+        myTranslator = bus->GetDescriptionTranslator();
+    }
+
     if (myTranslator && myTranslator->SupportsTargetLanguage(toLanguage)) {
         const char* ret = myTranslator->Translate(languageTag.c_str(), toLanguage, description.c_str(), buffer);
         if (ret) {
@@ -888,7 +892,7 @@ void BusObject::GetDescriptionLanguages(const InterfaceDescription::Member* memb
     //...finally, if this object or one of its interfaces does not have a Translator,
     //add the global Translator's languages
     if (hasDescription && someoneHasNoTranslator) {
-        Translator* globalTranslator = bus->GetDescriptionTranslator();
+        Translator* globalTranslator = bus ? bus->GetDescriptionTranslator() : NULL;
         if (globalTranslator) {
             mergeTranslationLanguages(globalTranslator, langs);
         }
