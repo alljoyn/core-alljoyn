@@ -31,17 +31,13 @@ if enaEnv['OS'] == 'android':
     enaEnv.Install(clientDistDir + '/Android', enaEnv.Dir('Android/src').srcnode())
     enaEnv.Install(clientDistDir + '/Android', enaEnv.Dir('Android/res').srcnode())
 
-if enaEnv['OS'] in ['linux', 'darwin'] and not enaEnv.has_key('_ALLJOYN_ABOUT_') and os.path.exists('../../services/about/SConscript'):
-    enaEnv.Program('eventaction_introspect', ['eventaction_introspect.cc'])
-    enaEnv.Install('$CPP_DISTDIR/bin/samples', ['eventaction_introspect'] )
-    enaEnv.Install(clientDistDir, enaEnv.Glob('*.cc'))
-
-    enaEnv.SConscript('../../services/about/SConscript')
+# This sample depends on the About Service
+if enaEnv['OS'] in ['linux', 'darwin', 'openwrt'] and 'BINDINGS' in enaEnv and enaEnv['BINDINGS'] in ['cpp', 'core'] and 'services' in enaEnv and os.path.exists('../../../services/about/SConscript'):
+    enaEnv.SConscript('../../../services/about/SConscript')
 
     enaEnv.Append(CPPPATH = [ enaEnv.Dir('$CPP_DISTDIR/../about/inc') ])
     enaEnv.Append(LIBPATH = [ enaEnv.Dir('$CPP_DISTDIR/../about/lib') ])
 
-    print 'libpath: %s' % enaEnv.get('LIBPATH')
     enaEnv.Prepend(LIBS = ['alljoyn_about'])
     ruleSrcFiles = enaEnv.Glob('SimpleRulesEngine/*.cc')
     ruleSrcFiles += enaEnv.Glob('SimpleRulesEngine/posix/*.cc')

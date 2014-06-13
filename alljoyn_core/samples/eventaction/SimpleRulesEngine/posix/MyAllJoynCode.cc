@@ -99,7 +99,7 @@ void MyAllJoynCode::initialize(const char* packageName) {
         interfaces.push_back("org.allseen.sample.rule.engine");
         aboutService->AddObjectDescription("/ruleengine", interfaces);
 
-        AnnouncementRegistrar::RegisterAnnounceHandler(*mBusAttachment, *this);
+        AnnouncementRegistrar::RegisterAnnounceHandler(*mBusAttachment, *this, NULL, 0);
 
         status = mBusAttachment->AddMatch("sessionless='t'");
 

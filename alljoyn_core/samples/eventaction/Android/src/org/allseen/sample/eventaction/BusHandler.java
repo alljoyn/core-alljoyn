@@ -17,10 +17,6 @@
 package org.allseen.sample.eventaction;
 
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
-
-
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
