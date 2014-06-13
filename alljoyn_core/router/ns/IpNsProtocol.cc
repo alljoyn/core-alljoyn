@@ -1799,6 +1799,9 @@ size_t MDNSQuestion::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::m
 {
     // Deserialize the QNAME first
     size_t size = m_qName.Deserialize(buffer, bufsize, compressedOffsets, headerOffset);
+    if (size >= bufsize) {
+        return 0;
+    }
     bufsize -= size;
     if (size == 0 || bufsize < 4) {
         //Error while deserializing QNAME or insufficient buffer size
@@ -1924,6 +1927,9 @@ size_t MDNSResourceRecord::Deserialize(uint8_t const* buffer, uint32_t bufsize, 
     }
 
     //Next two octets are TYPE
+    if (size > bufsize || ((size + 8) > bufsize)) {
+        return 0;
+    }
     m_rrType = (RRType)((buffer[size] << 8) | buffer[size + 1]);
     switch (m_rrType) {
     case A:
@@ -3526,13 +3532,16 @@ size_t _MDNSPacket::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         //QRType = 0  and QDCount = 0. Invalid
         return 0;
     }
+    if (size >= bufsize) {
+        return 0;
+    }
     bufsize -= size;
     uint8_t const* p = &buffer[size];
     size_t headerOffset = size;
     for (int i = 0; i < m_header.GetQDCount(); i++) {
         MDNSQuestion q;
         ret = q.Deserialize(p, bufsize, compressedOffsets, headerOffset);
-        if (ret == 0) {
+        if (ret == 0 || ret > bufsize) {
             QCC_DbgPrintf(("Error while deserializing question"));
             return 0;
         }
@@ -3547,7 +3556,7 @@ size_t _MDNSPacket::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     for (int i = 0; i < m_header.GetANCount(); i++) {
         MDNSResourceRecord r;
         ret = r.Deserialize(p, bufsize, compressedOffsets, headerOffset);
-        if (ret == 0) {
+        if (ret == 0 || ret > bufsize) {
             QCC_DbgPrintf(("Error while deserializing answer"));
             return 0;
         }
@@ -3561,7 +3570,7 @@ size_t _MDNSPacket::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     for (int i = 0; i < m_header.GetNSCount(); i++) {
         MDNSResourceRecord r;
         ret = r.Deserialize(p, bufsize, compressedOffsets, headerOffset);
-        if (ret == 0) {
+        if (ret == 0 || ret > bufsize) {
             QCC_DbgPrintf(("Error while deserializing NS"));
             return 0;
         }
@@ -3576,7 +3585,7 @@ size_t _MDNSPacket::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         MDNSResourceRecord r;
         ret = r.Deserialize(p, bufsize, compressedOffsets, headerOffset);
 
-        if (ret == 0) {
+        if (ret == 0 || ret > bufsize) {
             QCC_DbgPrintf(("Error while deserializing additional"));
             return 0;
         }
