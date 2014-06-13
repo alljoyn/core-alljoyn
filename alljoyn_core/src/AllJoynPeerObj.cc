@@ -1534,6 +1534,8 @@ void AllJoynPeerObj::NameOwnerChanged(const char* busName, const char* previousO
         lock.Lock(MUTEX_CONTEXT);
         delete conversations[busName];
         conversations.erase(busName);
+        delete keyExConversations[busName];
+        keyExConversations.erase(busName);
         lock.Unlock(MUTEX_CONTEXT);
     }
 }
