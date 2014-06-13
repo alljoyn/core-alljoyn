@@ -29,10 +29,10 @@
 class Rule : public ajn::BusAttachment::JoinSessionAsyncCB, public ajn::SessionListener, public ajn::MessageReceiver {
   public:
     Rule(ajn::BusAttachment* bus, EventInfo* event, ActionInfo* action)
-        : mBus(bus), mEvent(event), mAction(action), eventMember(NULL), mSessionId(0)
+        : mBus(bus), mEvent(event), mAction(action), eventMember(NULL), mSessionId(0), actionObject(NULL)
     { };
 
-    virtual ~Rule() { };
+    virtual ~Rule() { if (actionObject) { delete actionObject; actionObject = NULL; } };
 
     QStatus enable();
     QStatus disable();
@@ -83,7 +83,7 @@ class Rule : public ajn::BusAttachment::JoinSessionAsyncCB, public ajn::SessionL
 
     const ajn::InterfaceDescription::Member* eventMember;
     ajn::SessionId mSessionId;
-    ajn::ProxyBusObject actionObject;
+    ajn::ProxyBusObject* actionObject;
 
     ajn::BusAttachment*mBus;
 

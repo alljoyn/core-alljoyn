@@ -40,15 +40,11 @@ QStatus Rule::enable()
         return status;
     }
 
-    const InterfaceDescription* theIntf = mBus->GetInterface(mEvent->mIfaceName.c_str());
-    if (!theIntf) {
-        InterfaceDescription* tempIntf;
-        status = mBus->CreateInterface(mEvent->mIfaceName.c_str(), tempIntf);
-        tempIntf->AddSignal(mEvent->mMember.c_str(), mEvent->mSignature.c_str(), mEvent->mSignature.c_str(), 0);
-        tempIntf->Activate();
-    }
-    theIntf = mBus->GetInterface(mEvent->mIfaceName.c_str());
-    eventMember = theIntf->GetMember(mEvent->mMember.c_str());
+    InterfaceDescription* tempIntf;
+    status = mBus->CreateInterface(mEvent->mIfaceName.c_str(), tempIntf);
+    tempIntf->AddSignal(mEvent->mMember.c_str(), mEvent->mSignature.c_str(), mEvent->mSignature.c_str(), 0);
+
+    eventMember = tempIntf->GetMember(mEvent->mMember.c_str());
 
     status =  mBus->RegisterSignalHandler(this,
                                           static_cast<MessageReceiver::SignalHandler>(&Rule::EventHandler),
@@ -81,7 +77,7 @@ void Rule::EventHandler(const ajn::InterfaceDescription::Member* member, const c
                                                 mAction->mPort, this, opts, this, this);
     } else {
         //Have a session so call the method to execute the action
-        LOGTHIS("Already in session %s/%d", mAction->mUniqueName.c_str(), mAction->mPort);
+        LOGTHIS("Already in session %s/%d/%d", mAction->mUniqueName.c_str(), mAction->mPort, mSessionId);
         callAction();
     }
 }
@@ -95,41 +91,44 @@ void Rule::JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts&
 
 void Rule::callAction() {
     QStatus status = ER_OK;
-    if (!actionObject.IsValid()) {
-        actionObject = ProxyBusObject(*mBus, mAction->mUniqueName.c_str(), mAction->mPath.c_str(), mSessionId);
-        const InterfaceDescription* theIntf = mBus->GetInterface(mAction->mIfaceName.c_str());
-        if (!theIntf) {
-            InterfaceDescription* tempIntf;
-            status = mBus->CreateInterface(mAction->mIfaceName.c_str(), tempIntf);
-            tempIntf->AddMethod(mAction->mMember.c_str(), mAction->mSignature.c_str(), "", "", 0);
-            tempIntf->Activate();
-        }
-
-        status = actionObject.AddInterface(mAction->mIfaceName.c_str());
+    mBus->EnableConcurrentCallbacks();
+    if (!actionObject || !actionObject->ImplementsInterface(mAction->mIfaceName.c_str())) {
+        LOGTHIS("Creating ProxyBusObject with SessionId: %d", mSessionId);
+        actionObject = new ProxyBusObject(*mBus, mAction->mUniqueName.c_str(), mAction->mPath.c_str(), mSessionId);
+        status = actionObject->IntrospectRemoteObject();
     }
-    if (ER_OK == status) {
+    if (ER_OK == status && actionObject) {
         MsgArg args;
         LOGTHIS("Calling device(%s) action %s::%s(%s)",
                 mAction->mUniqueName.c_str(), mAction->mIfaceName.c_str(),
                 mAction->mMember.c_str(), mAction->mSignature.c_str());
         //TODO: set args to action->mSignature & fill in dummy values if they exist
-        status = actionObject.MethodCall(mAction->mIfaceName.c_str(), mAction->mMember.c_str(), &args, 0);
+        status = actionObject->MethodCall(mAction->mIfaceName.c_str(), mAction->mMember.c_str(), &args, 0);
         LOGTHIS("MethodCall status: %s(%x)", QCC_StatusText(status), status);
+    } else {
+        LOGTHIS("Failed MethodCall interface status: %s(%x)", QCC_StatusText(status), status);
     }
 }
 
 QStatus Rule::disable()
 {
     QStatus status = ER_OK;
-    const InterfaceDescription* theIntf = mBus->GetInterface(mEvent->mIfaceName.c_str());
-    eventMember = theIntf->GetMember(mEvent->mMember.c_str());
-//	if(eventMember) {
-//		status = mBus->UnregisterSignalHandler(this,
-//						static_cast<MessageReceiver::SignalHandler>(&Rule::EventHandler),
-//						eventMember,
-//						NULL);
-//	}
+    qcc::String matchRule = "type='signal',interface='";
+    matchRule.append(mEvent->mIfaceName);
+    matchRule.append("',member='");
+    matchRule.append(mEvent->mMember);
+    matchRule.append("'");
+    if (eventMember) {
+        status = mBus->RemoveMatch(matchRule.c_str());
+        status = mBus->UnregisterSignalHandler(this,
+                                               static_cast<MessageReceiver::SignalHandler>(&Rule::EventHandler),
+                                               eventMember,
+                                               NULL);
+    }
     eventMember = NULL;
+
+    LOGTHIS("Unregistered a rule for the event: %s to to invoke action %s(%s)",
+            matchRule.c_str(), mAction->mMember.c_str(), mAction->mSignature.c_str());
 
     return status;
 }
