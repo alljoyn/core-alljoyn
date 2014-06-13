@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -95,7 +95,7 @@ javaenv.SConscript('test/SConscript', exports = {'env':javaenv})
 javaenv['PROJECT_SHORT_NAME'] = 'AllJoyn&trade; Java API<br/>Reference Manual'
 javaenv['PROJECT_LONG_NAME'] = 'AllJoyn&trade; Java API Reference Manual'
 javaenv['PROJECT_NUMBER'] = 'Version 0.0.1'
-javaenv.JavaDoc('$JAVA_DISTDIR/docs/html', 'src', JAVACLASSPATH=javaenv.subst('$JAVACLASSPATH'))
+javaenv.JavaDoc('$JAVA_DISTDIR/docs/html', ['src', '../services/about/java/src'], JAVACLASSPATH=javaenv.subst('$JAVACLASSPATH'))
 
 # AllJoyn samples
 javaenv.SConscript('samples/SConscript', exports = {'env':javaenv})
