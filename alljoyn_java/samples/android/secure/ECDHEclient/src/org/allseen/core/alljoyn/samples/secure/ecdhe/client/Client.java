@@ -23,6 +23,7 @@ import org.alljoyn.bus.AuthListener;
 import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.BusListener;
+import org.alljoyn.bus.ErrorReplyBusException;
 import org.alljoyn.bus.Mutable;
 import org.alljoyn.bus.ProxyBusObject;
 import org.alljoyn.bus.SessionListener;
@@ -251,7 +252,14 @@ public class Client extends Activity {
                          * generate the DSA key pair.
                          */
                         if (sendBackKeys) {
-                            String certChainPEM = CLIENT_CERT2_PEM;
+                        	String certChainPEM;
+                        	boolean useCert1 = false;
+                        	if (useCert1) {
+                        		certChainPEM = CLIENT_CERT1_PEM;
+                        	}
+                        	else {
+                        		certChainPEM = CLIENT_CERT2_PEM;
+                        	}
                             CertificateRequest certChainRqst = (CertificateRequest) rqst;
                             certChainRqst.setCertificateChain(certChainPEM);
                             Log.d(TAG, "Listener sends back cert chain " + certChainPEM);
@@ -500,7 +508,12 @@ public class Client extends Activity {
                         sendUiMessage(MESSAGE_PING, msg.obj);
                         String reply = mSecureInterface.Ping((String) msg.obj);
                         sendUiMessage(MESSAGE_PING_REPLY, reply);
-                    } catch (BusException ex) {
+                    } 
+                    catch (ErrorReplyBusException erbe) {
+                    	logException("SecureInterface.Ping() " + erbe.getErrorName() + ": " +
+                           erbe.getErrorMessage() + " status: " + erbe.getErrorStatus().getErrorCode(), erbe);
+                    }
+                    catch (BusException ex) {
                         logException("SecureInterface.Ping()", ex);
                     }
                 }
