@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -632,17 +632,18 @@ QStatus Crypto_ASN1::EncodeOID(qcc::String& asn, const qcc::String& oid)
 qcc::String Crypto_ASN1::DecodeOID(const uint8_t* p, size_t len)
 {
     qcc::String oid;
-
-    oid += U32ToString(*p / 40);
-    oid.push_back('.');
-    oid += U32ToString(*p % 40);
-    uint32_t v = 0;
-    while (--len) {
-        v = (v << 7) + (*(++p) % 128);
-        if (!(*p & 0x80)) {
-            oid.push_back('.');
-            oid += U32ToString(v);
-            v = 0;
+    if (p && len > 0) {
+        oid += U32ToString(*p / 40);
+        oid.push_back('.');
+        oid += U32ToString(*p % 40);
+        uint32_t v = 0;
+        while (--len) {
+            v = (v << 7) + (*(++p) % 128);
+            if (!(*p & 0x80)) {
+                oid.push_back('.');
+                oid += U32ToString(v);
+                v = 0;
+            }
         }
     }
     return oid;
