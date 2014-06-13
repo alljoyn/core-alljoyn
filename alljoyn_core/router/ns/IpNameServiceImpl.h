@@ -39,6 +39,7 @@
 #include <qcc/platform.h>
 #include <qcc/StringMapKey.h>
 #include <qcc/Thread.h>
+#include <qcc/time.h>
 
 #include <alljoyn/TransportMask.h>
 
@@ -68,16 +69,16 @@ namespace ajn {
  * 9955 and another is at IP address 10.0.0.2, listening on port 9955".  The
  * client can then do a TCP connect to one of those addresses and ports.
  */
-class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
+class IpNameServiceImpl : public qcc::Thread {
   public:
     class PacketScheduler : public qcc::Thread {
       public:
-        PacketScheduler(IpNameServiceImpl& impl, uint32_t retries) : m_impl(impl), m_retries(retries) { };
+        PacketScheduler(IpNameServiceImpl& impl) : m_impl(impl) { };
         virtual qcc::ThreadReturn STDCALL Run(void* arg);
       private:
         IpNameServiceImpl& m_impl;
-        uint32_t m_retries;
     };
+    friend class PacketScheduler;
     static const TransportMask TRANSPORT_FIRST_OF_PAIR = TRANSPORT_TCP;
     static const TransportMask TRANSPORT_SECOND_OF_PAIR = TRANSPORT_UDP;
     uint32_t TRANSPORT_INDEX_TCP;
@@ -1491,45 +1492,22 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
     bool m_doDisable;
 
     /**
-     * AlarmTriggered listener that is triggered when a burst response is sent.
-     * this trigger is responsible for responding when new names have been added
-     * to the advertised names list.
-     */
-    void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
-
-    /**
      * The BurstResponceHeader struct holds a copy of the header that will be
      * sent using the burst response.  The struct also tracks how many times the
      * header had been added to the outbound queue.
      */
-    struct BurstResponseHeader {
-        BurstResponseHeader(Packet packet) : packet(packet), burstResponseCount(0), scheduleCount(0) { }
-        ~BurstResponseHeader() { }
+    typedef struct _BurstResponseHeader {
+        _BurstResponseHeader(Packet packet) : packet(packet), scheduleCount(0) { }
+        ~_BurstResponseHeader() { }
         Packet packet;
-        uint32_t burstResponseCount;
         uint32_t scheduleCount;
-    };
+        qcc::Timespec nextScheduleTime;
+    }BurstResponseHeader;
 
     qcc::SocketFd m_ipv4QuietSockFd;
     qcc::SocketFd m_ipv6QuietSockFd;
 
-    /**
-     * @internal
-     * timer responsible for sending burst IS-AT responses
-     */
-    qcc::Timer m_burstResponseTimer;
-
-    typedef struct {
-        uint16_t burstId;
-        uint64_t timestamp;
-    } BurstEntry;
-
-
-    typedef struct {
-        std::list<BurstEntry> bursts;
-        qcc::Alarm alarm;
-    } Bursts;
-
+    std::list<BurstResponseHeader> m_burstQueue;
     /**
      * Hash functor
      */
@@ -1595,6 +1573,10 @@ class IpNameServiceImpl : public qcc::Thread, public qcc::AlarmListener {
     std::list<IpNameServiceListener*> m_listeners;
     bool m_protectListeners;
     PacketScheduler m_packetScheduler;
+
+    uint32_t m_networkChangeScheduleCount;
+    qcc::Timespec m_networkChangeTimeStamp;
+    bool PurgeAndUpdatePacket(MDNSPacket mdnspacket);
 };
 
 } // namespace ajn
