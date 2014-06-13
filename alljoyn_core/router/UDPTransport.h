@@ -286,10 +286,12 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     class ConnectEntry;
     class ConnectEntry {
       public:
-        ConnectEntry(qcc::Thread* thread, ArdpConnRecord* conn) : m_thread(thread), m_conn(conn) { }
+        ConnectEntry(qcc::Thread* thread, ArdpConnRecord* conn, uint32_t connId, qcc::Event* event) : m_thread(thread), m_conn(conn), m_connId(connId), m_event(event) { }
         friend bool operator<(const ConnectEntry& lhs, const ConnectEntry& rhs);
         qcc::Thread* m_thread;
         ArdpConnRecord* m_conn;
+        uint32_t m_connId;
+        qcc::Event* m_event;
     };
 
   private:
@@ -300,6 +302,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     volatile int32_t m_refCount;                                   /**< Incremented if a thread is doing something somewhere */
     bool m_stopping;                                               /**< True if Stop() has been called but endpoints still exist */
     TransportListener* m_listener;                                 /**< Registered TransportListener */
+    std::set<UDPEndpoint> m_preList;                               /**< "Pre" list of authenticating endpoints (see AcceptCb comments) */
+    qcc::Mutex m_preListLock;                                      /**< Mutex that protects the endpoint and auth lists */
     std::set<UDPEndpoint> m_authList;                              /**< List of authenticating endpoints */
     std::set<UDPEndpoint> m_endpointList;                          /**< List of active endpoints */
     std::set<ConnectEntry> m_connectThreads;                       /**< List of threads starting up active endpoints */
@@ -714,18 +718,32 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     qcc::Timespec m_sessionSetupTimeout;
 
     /**
-     * maxAuth is the maximum number of incoming connections that can be in
+     * m_maxAuth is the maximum number of incoming connections that can be in
      * the process of authenticating.  If starting to authenticate a new
      * connection would mean exceeding this number, we drop the new connection.
      */
     uint32_t m_maxAuth;
 
     /**
-     * maxConn is the maximum number of active connections possible over the
+     * m_currAuth is the current number of incoming connections that are in the
+     * process of authenticating.  If starting to authenticate a new connection
+     * would mean this number exceeding m_maxAuth, we reject the new connection.
+     */
+    volatile int32_t m_currAuth;
+
+    /**
+     * m_maxConn is the maximum number of active connections possible over the
      * UDP transport.  If starting to process a new connection would mean
-     * exceeding this number, we drop the new connection.
+     * exceeding this number, we reject the new connection.
      */
     uint32_t m_maxConn;
+
+    /**
+     * m_currConn is current number of active connections running over the
+     * UDP transport.  If starting to process a new connection would mean
+     * this number exceeds m_maxConn, we reject the new connection.
+     */
+    volatile int32_t m_currConn;
 
     /**
      * arcpConfig are the limits from the daemon configuration database relating
@@ -785,8 +803,9 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     qcc::Mutex m_workerCommandQueueLock; /**< Lock to synchronize access to the rx queue */
 
 #ifndef NDEBUG
-    void DebugEndpointListCheck(UDPEndpoint uep);
+    void DebugPreListCheck(UDPEndpoint uep);
     void DebugAuthListCheck(UDPEndpoint uep);
+    void DebugEndpointListCheck(UDPEndpoint uep);
 #endif
 
     static bool ArdpAcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status);
