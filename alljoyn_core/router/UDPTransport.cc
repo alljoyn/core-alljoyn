@@ -1417,7 +1417,7 @@ class ArdpStream : public qcc::Stream {
         m_transport->m_cbLock.Lock();
         set<uint8_t*>::iterator i = find(m_sentSet.begin(), m_sentSet.end(), buf);
         if (i == m_sentSet.end()) {
-            QCC_LogError(ER_FAIL, ("ArdpStream::SendCb(): Callback for buffer never sent or already freed (%p, %d.).  Ignored.", buf, len));
+            QCC_LogError(ER_FAIL, ("ArdpStream::SendCb(): Callback for buffer never sent or already freed (%p, %d.).  Ignored", buf, len));
         } else {
             m_sentSet.erase(i);
 #ifndef NDEBUG
@@ -2176,7 +2176,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         }
 
         if (found == 0) {
-            QCC_LogError(ER_UDP_STOPPING, ("_UDPEndpoint::PushMessage(): Endpoint is gone!"));
+            QCC_LogError(ER_UDP_STOPPING, ("_UDPEndpoint::PushMessage(): Endpoint is gone"));
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
             return ER_UDP_STOPPING;
@@ -2357,6 +2357,12 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
         if (GetEpState() != EP_STARTING && GetEpState() != EP_STARTED) {
             QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Not accepting inbound messages"));
+
+            QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady()"));
+            m_transport->m_ardpLock.Lock();
+            ARDP_RecvReady(handle, conn, rcv);
+            m_transport->m_ardpLock.Unlock();
+
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
             return;
@@ -2372,6 +2378,12 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
         if (rcv->fcnt == 0 || rcv->fcnt > 3) {
             QCC_LogError(ER_UDP_INVALID, ("_UDPEndpoint::RecvCb(): Unexpected rcv->fcnt==%d.", rcv->fcnt));
+
+            QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady()"));
+            m_transport->m_ardpLock.Lock();
+            ARDP_RecvReady(handle, conn, rcv);
+            m_transport->m_ardpLock.Unlock();
+
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
             assert(false && "_UDPEndpoint::RecvCb(): unexpected rcv->fcnt");
@@ -3081,6 +3093,11 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
         signaledEvents.clear();
 
         QStatus status = Event::Wait(checkEvents, signaledEvents);
+        if (status == ER_TIMEOUT) {
+            QCC_LogError(status, ("UDPTransport::DispatcherThread::Run(): Catching Windows returning ER_TIMEOUT from Event::Wait()"));
+            continue;
+        }
+
         if (ER_OK != status) {
             QCC_LogError(status, ("UDPTransport::DispatcherThread::Run(): Event::Wait failed"));
             break;
@@ -5234,8 +5251,13 @@ void* UDPTransport::Run(void* arg)
         signaledEvents.clear();
 
         status = Event::Wait(checkEvents, signaledEvents);
+        if (status == ER_TIMEOUT) {
+            QCC_LogError(status, ("UDPTransport::Run(): Catching Windows returning ER_TIMEOUT from Event::Wait()"));
+            continue;
+        }
+
         if (ER_OK != status) {
-            QCC_LogError(status, ("Event::Wait failed"));
+            QCC_LogError(status, ("UDPTransport::Run(): Event::Wait failed"));
             break;
         }
 
@@ -5596,7 +5618,7 @@ void UDPTransport::StopListenInstance(ListenRequest& listenRequest)
      * since they are soon to be meaningless.
      */
     if (empty && m_isAdvertising) {
-        QCC_LogError(ER_UDP_NO_LISTENER, ("UDPTransport::StopListenInstance(): No listeners with outstanding advertisements."));
+        QCC_LogError(ER_UDP_NO_LISTENER, ("UDPTransport::StopListenInstance(): No listeners with outstanding advertisements"));
         for (list<qcc::String>::iterator i = m_advertising.begin(); i != m_advertising.end(); ++i) {
             IpNameService::Instance().CancelAdvertiseName(TRANSPORT_UDP, *i, TRANSPORT_UDP);
         }
@@ -5922,42 +5944,42 @@ QStatus UDPTransport::NormalizeListenSpec(const char* inSpec, qcc::String& outSp
     iter = argMap.find("r4addr");
     if (iter != argMap.end()) {
         QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
-                     ("UDPTransport::NormalizeListenSpec(): The mechanism implied by \"r4addr\" is not supported."));
+                     ("UDPTransport::NormalizeListenSpec(): The mechanism implied by \"r4addr\" is not supported"));
         argMap.erase(iter);
     }
 
     iter = argMap.find("r4port");
     if (iter != argMap.end()) {
         QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
-                     ("UDPTransport::NormalizeListenSpec(): The mechanism implied by \"r4port\" is not supported."));
+                     ("UDPTransport::NormalizeListenSpec(): The mechanism implied by \"r4port\" is not supported"));
         argMap.erase(iter);
     }
 
     iter = argMap.find("r6addr");
     if (iter != argMap.end()) {
         QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
-                     ("UDPTransport::NormalizeListenSpec(): The mechanism implied by \"r6addr\" is not supported."));
+                     ("UDPTransport::NormalizeListenSpec(): The mechanism implied by \"r6addr\" is not supported"));
         argMap.erase(iter);
     }
 
     iter = argMap.find("r6port");
     if (iter != argMap.end()) {
         QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
-                     ("UDPTransport::NormalizeListenSpec(): The mechanism implied by \"r6port\" is not supported."));
+                     ("UDPTransport::NormalizeListenSpec(): The mechanism implied by \"r6port\" is not supported"));
         argMap.erase(iter);
     }
 
     iter = argMap.find("u6addr");
     if (iter != argMap.end()) {
         QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
-                     ("UDPTransport::NormalizeListenSpec(): The mechanism implied by \"u6addr\" is not supported."));
+                     ("UDPTransport::NormalizeListenSpec(): The mechanism implied by \"u6addr\" is not supported"));
         argMap.erase(iter);
     }
 
     iter = argMap.find("u6port");
     if (iter != argMap.end()) {
         QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
-                     ("UDPTransport::NormalizeListenSpec(): The mechanism implied by \"u6port\" is not supported."));
+                     ("UDPTransport::NormalizeListenSpec(): The mechanism implied by \"u6port\" is not supported"));
         argMap.erase(iter);
     }
 
@@ -6007,7 +6029,7 @@ QStatus UDPTransport::NormalizeListenSpec(const char* inSpec, qcc::String& outSp
              */
             if (!addr.IsIPv4()) {
                 QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
-                             ("UDPTransport::NormalizeListenSpec(): The u4addr \"%s\" is not a legal IPv4 address.",
+                             ("UDPTransport::NormalizeListenSpec(): The u4addr \"%s\" is not a legal IPv4 address",
                               iter->second.c_str()));
                 return ER_BUS_BAD_TRANSPORT_ARGS;
             }
@@ -6015,7 +6037,7 @@ QStatus UDPTransport::NormalizeListenSpec(const char* inSpec, qcc::String& outSp
             outSpec.append("u4addr=" + addr.ToString());
         } else {
             QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
-                         ("UDPTransport::NormalizeListenSpec(): The u4addr \"%s\" is not a legal IPv4 address.",
+                         ("UDPTransport::NormalizeListenSpec(): The u4addr \"%s\" is not a legal IPv4 address",
                           iter->second.c_str()));
             return ER_BUS_BAD_TRANSPORT_ARGS;
         }
@@ -6065,7 +6087,7 @@ QStatus UDPTransport::NormalizeListenSpec(const char* inSpec, qcc::String& outSp
             outSpec.append(",u4port=" + iter->second);
         } else {
             QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
-                         ("UDPTransport::NormalizeListenSpec(): The key \"u4port\" has a bad value \"%s\".", iter->second.c_str()));
+                         ("UDPTransport::NormalizeListenSpec(): The key \"u4port\" has a bad value \"%s\"", iter->second.c_str()));
             return ER_BUS_BAD_TRANSPORT_ARGS;
         }
     } else {
@@ -6110,7 +6132,7 @@ QStatus UDPTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& ou
     assert(i != argMap.end());
     if ((i->second == ADDR4_DEFAULT)) {
         QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
-                     ("UDPTransport::NormalizeTransportSpec(): The u4addr may not be the default address."));
+                     ("UDPTransport::NormalizeTransportSpec(): The u4addr may not be the default address"));
         return ER_BUS_BAD_TRANSPORT_ARGS;
     }
 
