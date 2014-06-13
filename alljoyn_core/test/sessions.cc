@@ -774,7 +774,7 @@ int main(int argc, char** argv)
             opts.isMultipoint = (NextTok(line) == "true");
             opts.traffic = static_cast<SessionOpts::TrafficType>(StringToU32(NextTok(line), 0, 0x1));
             opts.proximity = static_cast<SessionOpts::Proximity>(StringToU32(NextTok(line), 0, 0xFF));
-            opts.transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, 0xFFFF));
+            opts.transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, TRANSPORT_ANY));
             DoBind(port, opts);
         } else if (cmd == "unbind") {
             SessionPort port = static_cast<SessionPort>(StringToU32(NextTok(line), 0, 0));
@@ -789,7 +789,7 @@ int main(int argc, char** argv)
                 printf("Usage: advertise <name> [transports]\n");
                 continue;
             }
-            TransportMask transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, 0xFFFF));
+            TransportMask transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, TRANSPORT_ANY));
             DoAdvertise(name, transports);
         } else if (cmd == "canceladvertise") {
             String name = NextTok(line);
@@ -797,7 +797,7 @@ int main(int argc, char** argv)
                 printf("Usage: canceladvertise <name> [transports]\n");
                 continue;
             }
-            TransportMask transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, 0xFFFF));
+            TransportMask transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, TRANSPORT_ANY));
             DoCancelAdvertise(name, transports);
         } else if (cmd == "find") {
             String namePrefix = NextTok(line);
@@ -826,7 +826,7 @@ int main(int argc, char** argv)
             opts.isMultipoint = (NextTok(line) == "true");
             opts.traffic = static_cast<SessionOpts::TrafficType>(StringToU32(NextTok(line), 0, 0x1));
             opts.proximity = static_cast<SessionOpts::Proximity>(StringToU32(NextTok(line), 0, 0xFF));
-            opts.transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, 0xFFFF));
+            opts.transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, TRANSPORT_ANY));
             DoJoin(name, port, opts);
         } else if (cmd == "asyncjoin") {
             String name = NextTok(line);
@@ -839,7 +839,7 @@ int main(int argc, char** argv)
             opts.isMultipoint = (NextTok(line) == "true");
             opts.traffic = static_cast<SessionOpts::TrafficType>(StringToU32(NextTok(line), 0, 0x1));
             opts.proximity = static_cast<SessionOpts::Proximity>(StringToU32(NextTok(line), 0, 0xFF));
-            opts.transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, 0xFFFF));
+            opts.transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, TRANSPORT_ANY));
             DoJoinAsync(name, port, opts);
         } else if (cmd == "leave") {
             SessionId id = NextTokAsSessionId(line);
