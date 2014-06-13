@@ -151,7 +151,7 @@ void MyAllJoynCode::joinSession(const char* sessionName, short port)
 }
 
 void MyAllJoynCode::JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context) {
-    if (status == ER_OK) {
+    if (status == ER_OK || status == ER_ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED) {
         //cast context to a char* then check sessionName to save off correct sessionId value
         char* sessionName = (char*)context;
         LOGTHIS("Joined the sesssion %s have sessionId %d\n", sessionName, sessionId);

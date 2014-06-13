@@ -23,11 +23,14 @@ import java.util.Vector;
 import org.allseen.sample.eventaction.BusHandler;
 import org.allseen.sample.eventaction.R;
 
+import android.content.Context;
+import android.net.wifi.WifiManager;
+import android.net.wifi.WifiManager.MulticastLock;
 import android.os.Bundle;
 import android.os.HandlerThread;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentActivity;
-import android.view.Menu;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
@@ -42,6 +45,9 @@ public class RulesActivity extends FragmentActivity implements EventActionListen
 	private ActionsFragment actionsFragment;
 	private EventsFragment eventsFragment;
 	
+	private MulticastLock m_multicastLock;
+	private WifiManager m_wifi;
+	
 	private Spinner mRuleSelector;
     private ArrayAdapter<String> ruleEngineAdapter;
     private HashMap<String, String> mfriendlyToBusMap = new HashMap<String, String>();
@@ -50,6 +56,8 @@ public class RulesActivity extends FragmentActivity implements EventActionListen
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.rulesassigner_main);
+		
+		m_wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
 
 		FragmentManager fm = this.getSupportFragmentManager();
 		actionsFragment = (ActionsFragment) fm.findFragmentById(R.id.rules_actions_fragment);
@@ -124,6 +132,33 @@ public class RulesActivity extends FragmentActivity implements EventActionListen
 			mBusHandler = new BusHandler(busThread.getLooper(), this, this);
 			mBusHandler.sendEmptyMessage(BusHandler.INITIALIZE);
 			mBusHandler.sendEmptyMessage(BusHandler.START_RULE_ENGINE);
+		}
+		lockMulticast();
+	}
+	
+	@Override
+    public void onDestroy() {
+        super.onDestroy();
+        unlockMulticast();
+	}
+	
+	public void lockMulticast() {
+		Log.d(BusHandler.TAG, "Trying to check if we already have a lock");
+		if(m_multicastLock == null) {
+			m_multicastLock = m_wifi.createMulticastLock("multicastLock");
+			m_multicastLock.setReferenceCounted(true);
+			m_multicastLock.acquire();
+			Log.d(BusHandler.TAG, "MulticastLock acquired");
+		}
+	}
+	
+	public void unlockMulticast() {
+		Log.d(BusHandler.TAG, "Trying to check if we have a lock to release");
+		if(m_multicastLock != null) {
+			Log.d(BusHandler.TAG, "releasing MulticastLock");
+			m_multicastLock.release();
+			m_multicastLock = null;
+			Log.d(BusHandler.TAG, "released MulticastLock");
 		}
 	}
 
