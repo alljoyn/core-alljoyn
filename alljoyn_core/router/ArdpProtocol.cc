@@ -62,9 +62,11 @@ namespace ajn {
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define ABS(a) ((a) >= 0 ? (a) : -(a))
 
-/**
- * A simple circularly linked list node suitable for use in thin core library implementations.
- */
+#define UDP_HEADER_SIZE 8
+#define IPV4_HEADER_SIZE 20
+#define IPV6_HEADER_SIZE 40
+
+/* A simple circularly linked list node suitable for use in thin core library implementations */
 typedef struct LISTNODE {
     struct LISTNODE* fwd;
     struct LISTNODE* bwd;
@@ -99,10 +101,10 @@ typedef struct {
  * the local side of the connection and which we may send to THEM.
  */
 typedef struct {
-    uint32_t NXT;         /* The sequence number of the next segment that is to be sent. */
-    uint32_t UNA;         /* The sequence number of the oldest unacknowledged segment. */
-    uint32_t MAX;         /* The maximum number of unacknowledged segments that can be sent. */
-    uint32_t ISS;         /* The initial send sequence number.  The number that was sent in the SYN segment. */
+    uint32_t NXT;         /* The sequence number of the next segment that is to be sent */
+    uint32_t UNA;         /* The sequence number of the oldest unacknowledged segment */
+    uint32_t MAX;         /* The maximum number of unacknowledged segments that can be sent */
+    uint32_t ISS;         /* The initial send sequence number. The number that was sent in the SYN segment */
     uint32_t LCS;         /* Sequence number of last consumed segment (we get this form them) */
 } ArdpSnd;
 
@@ -452,8 +454,10 @@ static void UpdateTimer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpTimer* tim
 
 static uint32_t CheckConnTimers(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t next, uint32_t now)
 {
-    /* Check connect/disconnect timer. This timer is alive only when the connection is being established or going away.
-     * No other timers should be active on the connection. */
+    /*
+     * Check connect/disconnect timer. This timer is alive only when the connection is being established or going away.
+     * No other timers should be active on the connection.
+     */
     if (conn->connectTimer.retry != 0) {
         if (conn->connectTimer.when <= now) {
             QCC_DbgPrintf(("CheckConnTimers: Fire connection( %p ) timer %p at %u (now=%u)",
@@ -574,9 +578,11 @@ static void DelConnRecord(ArdpHandle* handle, ArdpConnRecord* conn)
 {
     QCC_DbgTrace(("DelConnRecord(handle=%p conn=%p state = %s)", handle, conn, State2Text(conn->STATE)));
     if (conn->STATE != CLOSED && conn->STATE != CLOSE_WAIT) {
-        QCC_LogError(ER_OK, ("DelConnRecord(): Delete while not CLOSED or CLOSE-WAIT conn %p state %s", conn, State2Text(conn->STATE)));
+        QCC_LogError(ER_OK, ("DelConnRecord(): Delete while not CLOSED or CLOSE-WAIT conn %p state %s",
+                             conn, State2Text(conn->STATE)));
     }
-    assert((conn->STATE == CLOSED || conn->STATE == CLOSE_WAIT)  && "DelConnRecord(): Delete while not CLOSED or CLOSE-WAIT");
+    assert((conn->STATE == CLOSED || conn->STATE == CLOSE_WAIT)  &&
+           "DelConnRecord(): Delete while not CLOSED or CLOSE-WAIT");
 
     /* Safe to check together as these buffers are always allocated together */
     if (conn->SBUF.snd != NULL && conn->SBUF.snd[0].hdr != NULL) {
@@ -642,7 +648,6 @@ static QStatus SendMsg(ArdpHandle* handle, ArdpConnRecord* conn, struct iovec*io
     QStatus status;
 
     status = GetSockAddr(conn->ipAddr, conn->ipPort, &addr, addrLen);
-    //status = qcc::GetSockAddr(&addr, addrLen, conn->ipAddr, conn->ipPort);
     if (status != ER_OK) {
         return status;
     }
@@ -704,8 +709,10 @@ static void FlushMessage(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* s
 
 static void FlushSendQueue(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status)
 {
-    /* SendCb() for all pending messages so that the upper layer knows
-     * to release the corresponding buffers */
+    /*
+     * SendCb() for all pending messages so that the upper layer knows
+     * to release the corresponding buffers
+     */
     for (uint32_t i = 0; i < conn->SND.MAX; i++) {
         ArdpHeader* h = (ArdpHeader* ) conn->SBUF.snd[i].hdr;
         if (conn->SBUF.snd[i].inUse && (h->seq == h->som)) {
@@ -1113,8 +1120,10 @@ static void ProbeTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* co
     /* Connection timeout */
     uint32_t linkTimeout = MAX(RTO, handle->config.probeTimeout) * handle->config.probeRetries;
 
-    /* Relevant only if there are no pending retransmissions.
-     * We will disconnect on retransmission attempts if we hit the limit there. */
+    /*
+     * Relevant only if there are no pending retransmissions.
+     * We will disconnect on retransmission attempts if we hit the limit there.
+     */
     if (IsEmpty(&conn->dataTimers)) {
         QCC_DbgTrace(("ProbeTimerHandler: handle=%p conn=%p context=%p delta %u now %u lastSeen = %u elapsed %u",
                       handle, conn, context, timer->delta, now, conn->lastSeen, elapsed));
@@ -1297,7 +1306,6 @@ static QStatus InitRcv(ArdpConnRecord* conn, uint32_t segmax, uint32_t segbmax)
 /* Extra Initialization after connection has been established */
 static void PostInitRcv(ArdpConnRecord* conn)
 {
-    //conn->RBUF.first = conn->RCV.CUR + 1;
     conn->RCV.LCS = conn->RCV.CUR;
     conn->RBUF.last = conn->RCV.CUR + 1;
     for (uint16_t i = 0; i < conn->RCV.MAX; i++) {
@@ -1479,7 +1487,6 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
 
         segData += segLen;
         snd = snd->next;
-        //DumpSndInfo(conn);
     }
 
     return status;
@@ -1584,8 +1591,10 @@ static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t
         return;
     }
 
-    /* Count only "good" roundrips to ajust RTT values.
-     * Note, that we decrement retries with each retransmit. */
+    /*
+     * Count only "good" roundrips to ajust RTT values.
+     * Note, that we decrement retries with each retransmit.
+     */
     if (snd->timer.retry == (handle->config.dataRetries + 1)) {
         AdjustRTT(handle, conn, snd);
     }
@@ -1614,8 +1623,10 @@ static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t
                 snd->timer.retry = 0;
             }
 
-            /* If the message has been consumed by the receiver,
-             * sheck if this is the last fragment in the message and issue SendCb() */
+            /*
+             * If the message has been consumed by the receiver,
+             * check if this is the last fragment in the message and issue SendCb()
+             */
             if (SEQ32_LET(seq, lcs) && seq == (ntohl(h->som) + (fcnt - 1))) {
                 QCC_DbgPrintf(("UpdateSndSegments(): last fragment=%u, som=%u, fcnt=%d",
                                seq, ntohl(h->som), fcnt));
@@ -1631,7 +1642,6 @@ static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t
 
     /* Update the counter on our SND side */
     conn->SND.LCS = lcs;
-    //DumpSndInfo(conn);
 }
 
 static void FastRetransmit(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* snd)
@@ -1656,8 +1666,10 @@ static void CancelEackedSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint3
 #endif
     FastRetransmit(handle, conn, snd);
 
-    /* Bitmask starts at SND.UNA + 1. Cycle through the mask and cancel retransmit timers
-     * on EACKed segments. */
+    /*
+     * Bitmask starts at SND.UNA + 1. Cycle through the mask and cancel retransmit timers
+     * on EACKed segments.
+     */
     start = start + 1;
     for (uint32_t i = 0; i < conn->remoteMskSz; i++) {
         uint32_t mask32 = ntohl(bitMask[i]);
@@ -1673,8 +1685,10 @@ static void CancelEackedSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint3
                     snd->timer.retry = 0;
                 }
             } else if (i < 1) {
-                /* Schedule fast retransmits for gaps in the first 32-segment window.
-                 * Catch the others next time the EACK window moves */
+                /*
+                 * Schedule fast retransmits for gaps in the first 32-segment window.
+                 * Catch the others next time the EACK window moves.
+                 */
                 FastRetransmit(handle, conn, snd);
             }
 
@@ -1747,8 +1761,10 @@ static QStatus UpdateRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRc
 
     QCC_DbgTrace(("UpdateRcvBuffers(handle=%p, conn=%p, consumed=%p)", handle, conn, consumed));
 
-    /* Important! The contract with the upper layer is that the buffers are ALWAYS released in the same order
-     * they have been delivered. */
+    /*
+     * Important! The contract with the upper layer is that the buffers are ALWAYS released in the same order
+     * they have been delivered.
+     */
 
     if (first != consumed->seq) {
         QCC_LogError(ER_FAIL, ("UpdateRcvBuffers: released buffer %p (seq=%u) is not first in line to be released: rcv %p (seq %u)",
@@ -1769,9 +1785,11 @@ static QStatus UpdateRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRc
 
     assert((consumed->fcnt >= 1) && "fcnt cannot be less than one!");
 
-    /* Release the current buffers associated with the consumed message.
+    /*
+     * Release the current buffers associated with the consumed message.
      * At the same time check whether the next in queue message expired,
-     * and if so, release the corresponding buffers as well. */
+     * and if so, release the corresponding buffers as well.
+     */
     do {
         for (uint32_t i = 0; i < count; i++) {
             assert((consumed->inUse) && "UpdateRcvBuffers: Attempt to release a buffer that is not in use");
@@ -1787,14 +1805,15 @@ static QStatus UpdateRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRc
                 consumed->data = NULL;
             }
             conn->RCV.LCS++;
-            //conn->RBUF.first++;
             consumed = consumed->next;
         }
         count = consumed->fcnt;
     } while ((consumed->isDelivered) && (consumed->ttl == ARDP_TTL_EXPIRED));
 
-    /* Update receive window size and sequence number of last consumed segment
-     * which will be communicated to the remote side. */
+    /*
+     * Update receive window size and sequence number of last consumed segment
+     * which will be communicated to the remote side.
+     */
     conn->RBUF.window = conn->RCV.MAX - (conn->RBUF.last - conn->RCV.LCS);
     QCC_DbgPrintf(("UpdateRcvBuffers: window %d last %u lsc %u", conn->RBUF.window, conn->RBUF.last, conn->RCV.LCS));
 
@@ -1975,7 +1994,9 @@ static QStatus InitSBUF(ArdpHandle* handle, ArdpConnRecord* conn)
 {
     uint8_t* buffer;
     uint8_t hdrlen;
-    uint32_t overhead = 20 + 8;     /* IP header size minus UDP header size */
+    /* IP header size plus UDP header size */
+    uint32_t ipHeaderSize = (conn->ipAddr.IsIPv4()) ? IPV4_HEADER_SIZE : IPV6_HEADER_SIZE;
+    uint32_t overhead = ipHeaderSize + UDP_HEADER_SIZE;
     uint32_t ackMaskSize = (conn->RCV.MAX + 31) >> 5;
 
     QCC_DbgPrintf(("InitSBUF(conn=%p)", conn));
