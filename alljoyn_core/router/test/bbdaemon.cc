@@ -69,9 +69,6 @@ static const char daemonConfig[] =
     "  <limit name=\"max_untrusted_clients\">0</limit>"
     "  <flag name=\"restrict_untrusted_clients\">true</flag>"
     "  <property name=\"ns_interfaces\">*</property>"
-    "  <flag name=\"ns_disable_directed_broadcast\">false</flag>"
-    "  <flag name=\"ns_disable_ipv4\">false</flag>"
-    "  <flag name=\"ns_disable_ipv6\">false</flag>"
     "</busconfig>";
 
 /** Static top level message bus object */

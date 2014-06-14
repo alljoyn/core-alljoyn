@@ -44,9 +44,6 @@ using namespace ajn;
 
 static const char config[] =
     "<busconfig>"
-    "    <flag name=\"ns_disable_directed_broadcast\">false</flag>"
-    "    <flag name=\"ns_disable_ipv4\">false</flag>"
-    "    <flag name=\"ns_disable_ipv6\">false</flag>"
     "</busconfig>";
 
 char const* g_names[] = {
