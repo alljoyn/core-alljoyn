@@ -1141,8 +1141,8 @@ class ArdpStream : public qcc::Stream {
          */
         m_lock.Lock(MUTEX_CONTEXT);
         m_disc = true;
-        m_discStatus = ER_UDP_EARLY_EXIT;
         m_conn = NULL;
+        m_discStatus = ER_UDP_EARLY_EXIT;
         m_lock.Unlock(MUTEX_CONTEXT);
     }
 
@@ -1227,8 +1227,8 @@ class ArdpStream : public qcc::Stream {
 #if POFF
                         printf("==== %.6f ==== ArdpStream::Disconnect(): ARDP_Disconnect() fails.  m_disc=true, m_discSent=true, m_conn=NULL\n", GetTickCount());
 #endif
-                        m_conn = NULL;
                         m_disc = true;
+                        m_conn = NULL;
                         m_discSent = true;
                         m_discStatus = status;
                     }
@@ -1260,8 +1260,8 @@ class ArdpStream : public qcc::Stream {
 #endif
                     assert(status == ER_OK && "ArdpStream::Disconnect(): Unexpected status");
                     assert(m_discStatus == ER_UDP_LOCAL_DISCONNECT && "ArdpStream::Disconnect(): Unexpected status");
-                    m_conn = NULL;
                     m_disc = true;
+                    m_conn = NULL;
 #if POFF
                     printf("==== %.6f ==== ArdpStream::Disconnect(): m_conn=NULL, m_disc=true\n", GetTickCount());
 #endif
@@ -2123,11 +2123,12 @@ class _UDPEndpoint : public _RemoteEndpoint {
         IncrementAndFetch(&m_refCount);
         QCC_DbgHLPrintf(("_UDPEndpoint::DestroyStream()"));
         if (m_stream) {
-            assert(m_conn == NULL && "_UDPEndpoint::DestroyStream(): Cannot destroy stream unless m_conn is released (NULL)");
+            assert(m_stream->GetConn() == NULL && "_UDPEndpoint::DestroyStream(): Cannot destroy stream unless stream's m_conn is NULL");
             m_stream->SetHandle(NULL);
             delete m_stream;
-            m_stream = NULL;
         }
+        m_stream = NULL;
+        m_conn = NULL;
         DecrementAndFetch(&m_refCount);
     }
 
@@ -2370,6 +2371,12 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
         if (rcv == NULL || rcv->data == NULL || rcv->datalen == 0) {
             QCC_LogError(ER_UDP_INVALID, ("_UDPEndpoint::RecvCb(): No data on RecvCb()"));
+
+            QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady()"));
+            m_transport->m_ardpLock.Lock();
+            ARDP_RecvReady(handle, conn, rcv);
+            m_transport->m_ardpLock.Unlock();
+
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
             assert(false && "_UDPEndpoint::RecvCb(): No data on RecvCb()");
@@ -2427,7 +2434,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
             QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Found Message of %d. bytes", mlen));
 #ifndef NDEBUG
-            uint8_t* msgbuf  = new uint8_t[mlen + SEAL_SIZE];
+            msgbuf  = new uint8_t[mlen + SEAL_SIZE];
             SealBuffer(msgbuf + mlen);
 #else
             msgbuf = new uint8_t[mlen];
@@ -2491,6 +2498,17 @@ class _UDPEndpoint : public _RemoteEndpoint {
             m_transport->m_ardpLock.Unlock();
 
             /*
+             * If we allocated a reassembly buffer, free it too.
+             */
+            if (msgbuf) {
+#ifndef NDEBUG
+                CheckSeal(msgbuf + mlen);
+#endif
+                delete[] msgbuf;
+                msgbuf = NULL;
+            }
+
+            /*
              * If we do something that is going to bug the ARDP protocol, we
              * need to call back into ARDP ASAP to get it moving.  This is done
              * in the main thread, which we need to wake up.
@@ -2514,6 +2532,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
             delete[] msgbuf;
             msgbuf = NULL;
         }
+
         qcc::String endpointName(rep->GetUniqueName());
         QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Unmarshal()"));
         status = msg->Unmarshal(endpointName, false, false, true, 0);

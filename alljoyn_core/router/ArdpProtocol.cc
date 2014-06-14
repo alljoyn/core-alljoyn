@@ -721,6 +721,18 @@ static void FlushSendQueue(ArdpHandle* handle, ArdpConnRecord* conn, QStatus sta
     }
 }
 
+static bool IsRcvQueueEmpty(ArdpHandle* handle, ArdpConnRecord* conn)
+{
+    for (uint32_t i = 0; i < conn->RCV.MAX; i++) {
+        if (conn->RBUF.rcv[i].isDelivered) {
+            QCC_LogError(ER_OK, ("IsRcvQueueEmpty: handle %p, conn %p waiting for buf %p (msg buf %p)",
+                                 handle, conn, &conn->RBUF.rcv[i], &conn->RBUF.rcv[conn->RBUF.rcv[i].som % conn->RCV.MAX]));
+            return false;
+        }
+    }
+    return true;
+}
+
 static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
 {
     QCC_DbgTrace(("DisconnectTimerHandler: handle=%p conn=%p", handle, conn));
@@ -739,8 +751,22 @@ static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         FlushSendQueue(handle, conn, ER_ARDP_DISCONNECTING);
         QCC_LogError(ER_OK, ("DisconnectTimerHandler: DisconnectCb(handle=%p conn=%p reason = %s)", handle, conn, QCC_StatusText(reason)));
         handle->cb.DisconnectCb(handle, conn, reason);
+        /*
+         * Change the status to ER_ARDP_INVALID_CONNECTION. This is needed in case the DisconnectTimer is rescheduled
+         * in order to wait on RCV queue to drain. */
+        reason = ER_ARDP_INVALID_CONNECTION;
+        conn->connectTimer.context  = (void*) reason;
     }
-    DelConnRecord(handle, conn);
+
+    /* Check if there are any received buffers delivered to the upper layer that haven't been comsumed yet */
+    if (IsRcvQueueEmpty(handle, conn)) {
+        DelConnRecord(handle, conn);
+    } else {
+        /* Reschedule connection removal */
+        QCC_LogError(ER_OK, ("DisconnectTimerHandler: waiting for receive Q to drain handle=%p, con=%p",
+                             handle, conn));
+    }
+
 }
 
 static void ConnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
@@ -1860,7 +1886,8 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
                                current->seq, seg->SEQ));
     }
 
-    assert((!(current->inUse) || (current->inUse && current->seq == seg->SEQ)) && "AddRcvBuffer: attempt to overwrite buffer that has not been released");
+    assert((!(current->inUse) || (current->inUse && current->seq == seg->SEQ)) &&
+           "AddRcvBuffer: attempt to overwrite buffer that has not been released");
     if (current->seq == seg->SEQ) {
         QCC_DbgPrintf(("AddRcvBuffer: duplicate segment %u, acknowledge", seg->SEQ));
         return ER_OK;
@@ -1876,7 +1903,6 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
         assert((seg->SEQ - conn->RBUF.last) < conn->RCV.MAX);
         conn->RBUF.last = seg->SEQ;
     }
-
 
     current->seq = seg->SEQ;
     current->datalen = seg->DLEN;
