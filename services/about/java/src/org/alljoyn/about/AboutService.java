@@ -86,44 +86,61 @@ public interface AboutService extends ServiceCommon
     public void stopAboutClient() throws Exception;
 
     /**
-     * Register a handler for Announcements.
+     * Registers a handler to receive announcements.
+     * <p>
+     * The handler is only called if all the interfaces are implemented.
+     * For example, if the handler should be called if both "com.example.Audio"
+     * <i>and</i> "com.example.Video" are implemented then call
+     * addAnnouncementHandler once:
+     * <pre>
+     * {@code
+     * addAnnouncementHandler(handler, new String[] {"com.example.Audio", "com.example.Video"});
+     * }</pre>
+     * <p>
+     * If the handler should be called if "com.example.Audio" <i>or</i>
+     * "com.example.Video" is implemented then call
+     * addAnnouncementHandler multiple times:
+     * <pre>
+     * {@code
+     * addAnnouncementHandler(handler, new String[] {"com.example.Audio"});
+     * addAnnouncementHandler(handler, new String[] {"com.example.Video"});
+     * }</pre>
+     * <p>
+     * The interface name may be a prefix followed by a <code>*</code>.  Using
+     * this, the example above could be written as:
+     * <pre>
+     * {@code
+     * addAnnouncementHandler(handler, new String[] {"com.example.*"});
+     * }</pre>
+     * The handler will receive any announcement that implements an interface
+     * beginning with the "com.example." name.
+     * <p>
+     * If the same handler is used for for multiple interfaces then it is the
+     * handlers responsibility to parse through the reported interfaces to
+     * figure out what should be done in response to the Announce signal.
      *
-     * The announcement handler is only called if the all the interfaces are implemented.
-     * i.e. if addAnnouncementHandler is called while specifying both com.example.media
-     * interface and the com.example.media.server interface as follows.
-     * <code>
-     * addAnnouncementHandler(handler, new String[]{"com.example.media", "com.example.media.server"});
-     * </code>
-     * then the AnnouncementHandler will only be called if both interfaces are implemented.
+     * @param handler the AnnouncementHandler that will be receiving the
+     *                announcement.
+     * @param interfaces an array of interfaces the remote service must
+     *                   implement to receive the announcement.  If this
+     *                   parameter is <code>null</code> the handler will receive
+     *                   all announcements.
      *
-     * If AnnouncementHandler should be called if "com.example.media" or
-     * "com.example.media.server" is implemented then call addAnnounceHandlerMultiple times
-     * <code>
-     * addAnnouncementHandler(handler, new String[]{"com.example.media.server"});
-     * addAnnouncementHandler(handler, new String[]{"com.example.media"});
-     * </code>
-     *
-     * If the same handler is used for for multiple interfaces.  It is the handlers
-     * responsibility to parse through the reported interfaces to figure out what
-     * should be done in response to the Announce signal.
-     *
-     * @param handler The AnnouncementHandler that will be receiving the Announce signal
-     * @param interfaces an array of interfaces the remote service must implement to receive
-     *                   the Announce signal.  if interfaces == null the handler will receive
-     *                   all Announce signal.
      * @see AboutTransport#Announce(short, short, BusObjectDescription[], java.util.Map)
      */
     public void addAnnouncementHandler(AnnouncementHandler handler, String[] interfaces);
 
     /**
-     * Unregister a handler for Announcements.
+     * Unregisters an announcement handler.
      *
-     * When calling removeAnnouncementHandler the list of interfaces must match
-     * the list that was used when calling addAnnouncementHander.
+     * When calling this the array of interfaces must match the array that was
+     * used when calling <code>addAnnouncementHander</code>.
      *
-     * @param handler the AnnouncementHandler to remove. The Set of interfaces must be the
-     *                same as the set used when calling addAnnouncementHandler.
-     * @param interfaces an array of interfaces that were used when calling addAnnouncementHandler
+     * @param handler the AnnouncementHandler to remove. The array of interfaces
+     *                must be the same as the array used when calling
+     *                addAnnouncementHandler.
+     * @param interfaces an array of interfaces that were used when calling
+     *                   addAnnouncementHandler
      */
     public void removeAnnouncementHandler(AnnouncementHandler handler, String[] interfaces);
 

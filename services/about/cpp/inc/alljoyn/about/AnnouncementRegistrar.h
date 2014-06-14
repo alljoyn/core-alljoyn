@@ -40,38 +40,49 @@ class AnnouncementRegistrar {
 
   public:
     /**
-     * Registers the AnnounceHandler to receive org.alljoyn.about Announce signals
+     * Registers a handler to receive the org.alljoyn.about Announce signal.
      *
-     * The announce handler is only called if the all the interfaces are implemented.
-     * i.e. if RegisterAnnounceHandler is called while specifying both com.example.Image
-     * interface and the com.example.Video interface as follows.
+     * The handler is only called if all the interfaces are implemented.
+     * For example, if the handler should be called if both "com.example.Audio"
+     * <em>and</em> "com.example.Video" are implemented then call
+     * addAnnouncementHandler once:
      * @code
-     * const char* interfaces[] = {"com.example.Image", "com.example.Video"};
+     * const char* interfaces[] = {"com.example.Audio", "com.example.Video"};
      * RegisterAnnounceHandler(busAttachment, handler, interfaces,
      *                         sizeof(interfaces) / sizeof(interfaces[0]));
      * @endcode
-     * then the AnnouncementHandler will only be called if both interfaces are implemented.
      *
-     * If AnnouncementHandler should be called if "com.example.Image" or
-     * "com.example.Video" is implemented then call RegisterAnnounceHandler times
+     * If the handler should be called if "com.example.Audio" <em>or</em>
+     * "com.example.Video" is implemented then call
+     * addAnnouncementHandler multiple times:
      * @code
-     * const char* imageInterface[] = {"com.example.Image"};
-     * RegisterAnnounceHandler(busAttachment, handler, imageInterface,
-     *                         sizeof(imageInterface) / sizeof(imageInterface[0]));
+     * const char* audioInterface[] = {"com.example.Audio"};
+     * RegisterAnnounceHandler(busAttachment, handler, audioInterface,
+     *                         sizeof(audioInterface) / sizeof(audioInterface[0]));
      * const char* videoInterface[] = {"com.example.Video"};
      * RegisterAnnounceHandler(busAttachment, handler, videoInterface,
      *                         sizeof(videoInterface) / sizeof(videoInterface[0]));
      * @endcode
      *
-     * If the same handler is used for for multiple interfaces.  It is the handlers
-     * responsibility to parse through the reported interfaces to figure out what
-     * should be done in response to the Announce signal.
+     * The interface name may be a prefix followed by a *.  Using
+     * this, the example above could be written as:
+     * @code
+     * const char* exampleInterface[] = {"com.example.*"};
+     * RegisterAnnounceHandler(busAttachment, handler, exampleInterface,
+     *                         sizeof(exampleInterface) / sizeof(exampleInterface[0]));
+     * @endcode
+     * The handler will receive any announcement that implements an interface
+     * beginning with the "com.example." name.
+     *
+     * If the same handler is used for for multiple interfaces then it is the
+     * handlers responsibility to parse through the reported interfaces to
+     * figure out what should be done in response to the Announce signal.
      *
      * @param[in] bus reference to BusAttachment
      * @param[in] handler reference to AnnounceHandler
-     * @param[in] implementsInterfaces a list of interfaces that the Announce signal
-     *               reports as implmented. NULL to recieve all Announce signals
-     *               regardless of interfaces
+     * @param[in] implementsInterfaces a list of interfaces that the Announce
+     *               signal reports as implmented. NULL to recieve all Announce
+     *               signals regardless of interfaces
      * @param[in] numberInterfaces the number of interfaces in the
      *               implementsInterfaces list
      * @return status
@@ -79,7 +90,8 @@ class AnnouncementRegistrar {
     static QStatus RegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler, const char** implementsInterfaces, size_t numberInterfaces);
 
     /**
-     * UnRegisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal
+     * Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
+     *
      * @param[in] bus reference to BusAttachment
      * @param[in] handler reference to AnnounceHandler
      * @param[in] implementsInterfaces a list of interfaces that the Announce signal
@@ -92,7 +104,7 @@ class AnnouncementRegistrar {
     static QStatus UnRegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler, const char** implementsInterfaces, size_t numberInterfaces);
 
     /**
-     * UnRegisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal
+     * Unregisters all AnnounceHandlers from receiving any org.alljoyn.about Announce signal
      * @param[in] bus reference to BusAttachment
      * @return status
      */

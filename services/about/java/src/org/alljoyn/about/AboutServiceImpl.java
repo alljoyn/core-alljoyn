@@ -118,7 +118,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     }
 
     /**
-     * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler)
+     * @see org.alljoyn.about.AboutService#addAnnouncementHandler
      */
     @Override
     public synchronized void addAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)
@@ -152,7 +152,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     }
 
     /**
-     * @see org.alljoyn.about.AboutService#removeAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler)
+     * @see org.alljoyn.about.AboutService#removeAnnouncementHandler
      */
     @Override
     public synchronized void removeAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)
@@ -264,8 +264,28 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
      * The class is an Announcement signal receiver.
      * The class implements {@link AboutTransport} interface that extends {@link BusObject}
      */
-    private class AnnouncmentReceiver implements AboutTransport
+    public class AnnouncmentReceiver implements AboutTransport
     {
+        /*
+         * Returns true if a set of interfaces contains the impl interface.
+         * impl may contain the wildcard '*' so this is not just a simple check
+         * on membership of impl in the set.
+         */
+        private boolean containsInterface(Set<String> intfs, String impl) {
+            int n = impl.indexOf('*');
+            if (n != -1) {
+                impl = impl.substring(0, n);
+            }
+            for (String intf : intfs) {
+                if ((n == -1) && intf.equals(impl)) {
+                    return true;
+                } else if ((n != -1) && intf.startsWith(impl)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         /**
          * Signal handler
          * @see org.alljoyn.about.transport.AboutTransport#Announce(short, short, org.alljoyn.services.common.BusObjectDescription[], java.util.Map)
@@ -294,7 +314,14 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
                             announcementsToCall.add(current);
                         } else {
                             //check to see if interface entry is found in the ObjectDescriptions
-                            if (interfacesFromObjectDescription.containsAll(interfaceEntry)) {
+                            boolean matchFound = true;
+                            for (String impl : interfaceEntry) {
+                                matchFound = containsInterface(interfacesFromObjectDescription, impl);
+                                if (!matchFound) {
+                                    break;
+                                }
+                            }
+                            if (matchFound) {
                                 announcementsToCall.add(current);
                             }
                         }

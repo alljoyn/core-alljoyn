@@ -125,9 +125,12 @@ QStatus InternalAnnounceHandler::RemoveHandler(AnnounceHandler& handler, const c
 
 
 bool InternalAnnounceHandler::ContainsInterface(const ObjectDescriptions& objectDescriptions, const qcc::String interface) const {
+    size_t n = interface.find_first_of('*');
     for (ObjectDescriptions::const_iterator oit = objectDescriptions.begin(); oit != objectDescriptions.end(); ++oit) {
         for (size_t j = 0; j < oit->second.size(); ++j) {
-            if (interface == oit->second[j]) {
+            if (n == qcc::String::npos && interface == oit->second[j]) {
+                return true;
+            } else if (n != qcc::String::npos && interface.compare(0, n, oit->second[j].substr(0, n)) == 0) {
                 return true;
             }
         }
