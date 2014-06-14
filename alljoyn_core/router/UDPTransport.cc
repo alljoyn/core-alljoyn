@@ -3112,8 +3112,14 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
         signaledEvents.clear();
 
         QStatus status = Event::Wait(checkEvents, signaledEvents);
+        /*
+         * BUGBUG FIXME TODO: This should never happen since we provide a
+         * timeout value of WAIT_FOREVER by default, but it does.  This means
+         * that there is a problem in the Windows implementation of
+         * Event::Wait().  Bug filed, but we do this quietly.
+         */
         if (status == ER_TIMEOUT) {
-            QCC_LogError(status, ("UDPTransport::DispatcherThread::Run(): Catching Windows returning ER_TIMEOUT from Event::Wait()"));
+//          QCC_LogError(status, ("UDPTransport::DispatcherThread::Run(): Catching Windows returning ER_TIMEOUT from Event::Wait()"));
             continue;
         }
 
