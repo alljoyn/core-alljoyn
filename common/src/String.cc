@@ -23,6 +23,7 @@
 #include <qcc/atomic.h>
 #include <qcc/String.h>
 #include <assert.h>
+#include <limits>
 #include <new>
 
 #if defined(WIN32) || (defined(QCC_OS_DARWIN) && MAC_OS_X_VERSION_MAX_ALLOWED < 1070)
@@ -541,6 +542,12 @@ void String::NewContext(const char* str, size_t strLen, size_t sizeHint)
     } else if (0 == strLen) {
         strLen = ::strlen(str);
     }
+
+    // Truncate strLen and sizeHint to prevent computational overflows.
+    size_t maxSize = std::numeric_limits<uint32_t>::max() - 1 - (sizeof(ManagedCtx) - MinCapacity);
+    strLen = MIN(strLen, maxSize);
+    sizeHint = MIN(sizeHint, maxSize);
+
     size_t capacity = MAX(MinCapacity, MAX(strLen, sizeHint));
     size_t mallocSz = capacity + 1 + sizeof(ManagedCtx) - MinCapacity;
     void* newCtxMem = malloc(mallocSz);
