@@ -1978,7 +1978,7 @@ size_t MDNSResourceRecord::Deserialize(uint8_t const* buffer, uint32_t bufsize, 
 
     //Next four octets are TTL
     m_rrTTL = (buffer[size + 4] << 24) | (buffer[size + 5] << 16) | (buffer[size + 6] << 8) | buffer[size + 7];
-    bufsize -= 8;
+    bufsize -= (size + 8);
     size += 8;
     headerOffset += size;
     uint8_t const* p = &buffer[size];
