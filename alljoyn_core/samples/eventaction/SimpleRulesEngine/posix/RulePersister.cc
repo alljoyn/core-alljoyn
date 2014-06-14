@@ -16,22 +16,18 @@
 
 #include "RulePersister.h"
 
-#define FILE_PATH "/usr/lib/rule_engine_sample/rules.conf"
-
-RulePersister::RulePersister() : ruleFile(FILE_PATH, std::fstream::in | std::fstream::out | std::fstream::app)
+RulePersister::RulePersister()
 {
 
 }
 
 RulePersister::~RulePersister() {
-    ruleFile.close();
+
 }
 
 void RulePersister::saveRule(Rule* rule)
 {
-    if (ruleFile.is_open()) {
-        ruleFile << rule->toString().c_str() << std::endl;
-    }
+
 }
 
 void RulePersister::loadRules()
@@ -41,6 +37,5 @@ void RulePersister::loadRules()
 
 void RulePersister::clearRules()
 {
-    ruleFile.close();
-    ruleFile.open(FILE_PATH, std::fstream::in | std::fstream::out | std::fstream::truc);
+
 }

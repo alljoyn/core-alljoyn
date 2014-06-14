@@ -17,9 +17,9 @@
 #include <fstream>
 
 static const char versionPreamble[] = "AboutService version: %s\n"
-                                      "Copyright (c) 2009-2013 AllSeenAlliance.\n"
+                                      "Copyright (c) 2014 AllSeenAlliance.\n";
 
-                                      using namespace ajn;
+using namespace ajn;
 
 OptParser::OptParser(int argc, char** argv) :
     argc(argc), argv(argv), internal(false) {

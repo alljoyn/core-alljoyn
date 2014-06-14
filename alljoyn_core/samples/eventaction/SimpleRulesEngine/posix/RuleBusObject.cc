@@ -78,6 +78,7 @@ void RuleBusObject::addRule(const InterfaceDescription::Member* member, Message&
         ActionInfo* action = new ActionInfo(aUniqueName, aPath, aIface, aMember, aSig);
 
         Rule* rule = new Rule(mBusAttachment, event, action);
+        mBusAttachment->EnableConcurrentCallbacks();
         mRuleEngine->addRule(rule, args[2].v_bool);
         LOGTHIS("Added rule");
     } else {
@@ -92,6 +93,7 @@ void RuleBusObject::addRule(const InterfaceDescription::Member* member, Message&
 void RuleBusObject::deleteAllRules(const InterfaceDescription::Member* member, Message& msg)
 {
     LOGTHIS("Removing all rules");
+    mBusAttachment->EnableConcurrentCallbacks();
     mRuleEngine->removeAllRules();
     QStatus status = MethodReply(msg);
     if (ER_OK != status) {
