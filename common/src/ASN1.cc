@@ -553,10 +553,14 @@ bool Crypto_ASN1::DecodeLen(const uint8_t*& p, const uint8_t* eod, size_t& l)
             if (p == eod) {
                 return false;
             }
+            if ((l << 8) < l) {
+                // Length decode overflow.
+                return false;
+            }
             l = (l << 8) + *p++;
         }
     }
-    return (p + l) <= eod;
+    return l <= (uintptr_t)(eod - p);
 }
 
 void Crypto_ASN1::EncodeLen(qcc::String& asn, size_t len)
