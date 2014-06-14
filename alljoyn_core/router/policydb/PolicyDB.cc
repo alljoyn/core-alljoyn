@@ -543,11 +543,12 @@ void _PolicyDB::NameOwnerChanged(const String& alias, const String* oldOwner, co
 
     if (oldOwner) {
         BusNameIDMap::iterator it = busNameIDMap.find(alias);
-        assert(it != busNameIDMap.end());
         if (it != busNameIDMap.end()) {
             QCC_DbgPrintf(("Remove %s{%d} from table for %s", alias.c_str(), aliasID, oldOwner->c_str()));
             it->second->erase(aliasID);
             busNameIDMap.erase(it);
+        } else {
+            QCC_LogError(ER_FAIL, ("Alias '%s' not in busNameIDMap", alias.c_str()));
         }
     }
 
