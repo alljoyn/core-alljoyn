@@ -528,6 +528,7 @@ static void usage(void)
     QCC_SyncPrintf("   -os                   = Operate in service mode\n");
     QCC_SyncPrintf("   -p                    = Use point-to-point sessions, default is multipoint\n");
     QCC_SyncPrintf("   -m <mask>             = Transport mask to use for client\n");
+    QCC_SyncPrintf("   -u                    = Use UDP Transport for client\n");
     QCC_SyncPrintf("   -n <well-known-name>  = Well-known name to advertise\n");
 }
 
@@ -579,6 +580,8 @@ int main(int argc, char**argv)
             } else {
                 s_transports = static_cast<TransportMask>(StringToU32(argv[i], 16, TRANSPORT_ANY));
             }
+        } else if (0 == strcmp("-u", argv[i])) {
+            s_transports = TRANSPORT_UDP;
         } else if (0 == strcmp("-n", argv[i])) {
             ++i;
             if (i == argc) {
