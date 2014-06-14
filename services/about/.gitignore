@@ -36,9 +36,8 @@ Thumbs.db
 .DS_Store
 ios/.DS_Store
 ios/samples/.DS_Store
+xcuserdata/*.xcuserdatad/*
 ios/samples/sampleApp/AboutService/.DS_Store
-ios/samples/sampleApp/AboutService.xcodeproj/xcuserdata/*.xcuserdatad/*
-ios/samples/sampleApp/AboutService.xcodeproj/project.xcworkspace/xcuserdata/*.xcuserdatad/*
 ios/samples/sampleApp/AboutService.xcodeproj/project.xcworkspace/xcshareddata/AboutService.xccheckout
 ios/samples/AboutServiceWorkspace.xcworkspace/xcshareddata/
 ios/samples/AboutServiceWorkspace.xcworkspace/xcuserdata/
