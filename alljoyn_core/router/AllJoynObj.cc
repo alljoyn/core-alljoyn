@@ -4388,6 +4388,7 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
     uint64_t timePassed;
     uint64_t ttl;
     multimap<String, NameMapEntry>::iterator it = nameMap.begin();
+    set<String> guidSet;
     while (it != nameMap.end()) {
         NameMapEntry& nme = it->second;
         timePassed = now - nme.timestamp;
@@ -4399,11 +4400,7 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
             // Send Unicast search query
             //
             QCC_DbgPrintf(("AlarmTriggered sending query \"*\" Name : %s GUID : %s", it->first.c_str(), it->second.guid.c_str()));
-            qcc::String searchNames = String("name='*'");
-            QStatus status = IpNameService::Instance().RefreshCache(TRANSPORT_TCP | TRANSPORT_UDP, it->second.guid, searchNames);
-            if (ER_OK != status) {
-                QCC_LogError(status, ("Error while sending query for Cache refresh"));
-            }
+            guidSet.insert(it->second.guid);
         }
 
         if ((timePassed >= (ttl * 80 / 100)) &&
@@ -4450,6 +4447,15 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         ++it;
     }
     ReleaseLocks();
+    set<String>::const_iterator git = guidSet.begin();
+    while (git != guidSet.end()) {
+
+        QStatus status = IpNameService::Instance().RefreshCache(TRANSPORT_TCP | TRANSPORT_UDP, *git, "name='*'");
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Error while sending query for Cache refresh"));
+        }
+        git++;
+    }
     // if 100* of time
     //     do all the things below
     //     AND if not in a session
