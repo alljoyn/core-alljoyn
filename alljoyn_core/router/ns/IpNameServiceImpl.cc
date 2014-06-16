@@ -1432,7 +1432,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(void)
     }
     if (m_refreshAdvertisements) {
         QCC_DbgHLPrintf(("Now refreshing advertisements on interface event"));
-        m_timer = m_tRetransmit;
+        m_timer = m_tRetransmit + 1;
         m_mutex.Lock();
         m_burstQueue.clear();
         m_networkChangeScheduleCount = 0;
