@@ -71,6 +71,13 @@ namespace ajn {
 
 void* AllJoynObj::NameMapEntry::truthiness = reinterpret_cast<void*>(true);
 int AllJoynObj::JoinSessionThread::jstCount = 0;
+struct PingReplyTransportContext {
+    TransportMask transport;
+    String name;
+    IPEndpoint ns4;
+    PingReplyTransportContext(TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& ns4)
+        : transport(transport), name(name), ns4(ns4) { }
+};
 
 void AllJoynObj::AcquireLocks()
 {
@@ -4345,6 +4352,28 @@ QStatus AllJoynObj::SendLostAdvertisedName(const String& name, TransportMask tra
 void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 {
     QCC_DbgPrintf(("AlarmTriggered"));
+    if (alarm->GetContext() != NameMapEntry::truthiness) {
+        assert(alarm->GetContext());
+
+        PingReplyTransportContext* ctx = static_cast<PingReplyTransportContext*>(alarm->GetContext());
+        ProxyBusObject peerObj(bus, ctx->name.c_str(), "/", 0);
+        const InterfaceDescription* intf = bus.GetInterface(org::freedesktop::DBus::Peer::InterfaceName);
+        assert(intf);
+        peerObj.AddInterface(*intf);
+
+        QStatus status = peerObj.MethodCallAsync(org::freedesktop::DBus::Peer::InterfaceName,
+                                                 "Ping",
+                                                 this, static_cast<MessageReceiver::ReplyHandler>(&AllJoynObj::PingReplyTransportHandler),
+                                                 NULL, 0,
+                                                 ctx);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Send Ping failed"));
+            PingResponse(ctx->transport, ctx->ns4, ctx->name, ALLJOYN_PING_REPLY_FAILED);
+            delete ctx;
+        }
+
+        return;
+    }
     //
     // Check if TTL is 80% of time or 90% of time
     // If 80%
@@ -4702,13 +4731,6 @@ void AllJoynObj::PingReplyMethodHandlerUsingCode(Message& msg, uint32_t replyCod
     MethodReply(msg, &replyArg, 1);
 }
 
-struct PingReplyTransportContext {
-    TransportMask transport;
-    String name;
-    IPEndpoint ns4;
-    PingReplyTransportContext(TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& ns4)
-        : transport(transport), name(name), ns4(ns4) { }
-};
 
 /* From IpNameServiceListener */
 bool AllJoynObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
@@ -4727,25 +4749,13 @@ bool AllJoynObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_
         return true;
     }
     const String& name = pingRData->GetWellKnownName();
-    QCC_DbgPrintf(("Received a ping request for name %s", name.c_str()));
-
-    ProxyBusObject peerObj(bus, name.c_str(), "/", 0);
-    const InterfaceDescription* intf = bus.GetInterface(org::freedesktop::DBus::Peer::InterfaceName);
-    assert(intf);
-    peerObj.AddInterface(*intf);
 
     PingReplyTransportContext* ctx = new PingReplyTransportContext(transport, name, ns4);
-    QStatus status = peerObj.MethodCallAsync(org::freedesktop::DBus::Peer::InterfaceName,
-                                             "Ping",
-                                             this, static_cast<MessageReceiver::ReplyHandler>(&AllJoynObj::PingReplyTransportHandler),
-                                             NULL, 0,
-                                             ctx);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Send Ping failed"));
-        PingResponse(transport, ns4, name, ALLJOYN_PING_REPLY_FAILED);
-        delete ctx;
-    }
+    const uint32_t timeout = 0; // Schedule Alarm for Now
+    AllJoynObj* pObj = this;
+    Alarm newAlarm(timeout, pObj, ctx);
 
+    timer.AddAlarm(newAlarm);
     return true;
 }
 
