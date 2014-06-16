@@ -4773,6 +4773,7 @@ void AllJoynObj::PingResponse(TransportMask transport, const qcc::IPEndpoint& ns
     pingReplyRData->SetReplyCode(replyCode == 1 ? "ALLJOYN_PING_REPLY_SUCCESS" : "ALLJOYN_PING_REPLY_FAILED");
     MDNSResourceRecord pingReplyRecord("ping-reply." + guid.ToString() + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingReplyRData);
     response->AddAdditionalRecord(pingReplyRecord);
+    delete pingReplyRData;
 
     QStatus status = IpNameService::Instance().Response(transport, 120, response);
     if (ER_OK != status) {
