@@ -17,6 +17,7 @@
 #include <alljoyn/about/AboutClient.h>
 #include <alljoyn/about/AnnouncementRegistrar.h>
 
+#include <stdio.h>
 #include <signal.h>
 #include <iostream>
 #include <iomanip>
