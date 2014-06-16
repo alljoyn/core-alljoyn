@@ -4399,8 +4399,8 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
             // Send Unicast search query
             //
             QCC_DbgPrintf(("AlarmTriggered sending query \"*\" Name : %s GUID : %s", it->first.c_str(), it->second.guid.c_str()));
-            qcc::String searchNames = String("name='") + it->first + "*'";
-            QStatus status = IpNameService::Instance().RefreshCache(it->second.transport, it->second.guid, searchNames);
+            qcc::String searchNames = String("name='*'");
+            QStatus status = IpNameService::Instance().RefreshCache(TRANSPORT_TCP | TRANSPORT_UDP, it->second.guid, searchNames);
             if (ER_OK != status) {
                 QCC_LogError(status, ("Error while sending query for Cache refresh"));
             }

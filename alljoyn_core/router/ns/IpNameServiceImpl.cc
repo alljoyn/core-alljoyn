@@ -1822,19 +1822,10 @@ QStatus IpNameServiceImpl::CancelFindAdvertisement(TransportMask transportMask, 
     m_mutex.Unlock();
     return ER_OK;
 }
-
+#define MIN_THRESHOLD_CACHE_REFRESH_MS 1000
 QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::String& guid, const qcc::String& matchingStr, LocatePolicy policy) {
-
     QCC_DbgHLPrintf(("IpNameServiceImpl::RefreshCache(0x%x, \"%s\", %d)", transportMask, matchingStr.c_str(), policy));
     QCC_DbgPrintf(("IpNameServiceImpl::RefreshCache %s", matchingStr.c_str()));
-    //
-    // Exactly one bit must be set in a transport mask in order to identify the
-    // one transport (in the AllJoyn sense) that is making the request.
-    //
-    if (CountOnes(transportMask) != 1) {
-        QCC_LogError(ER_BAD_TRANSPORT_MASK, ("IpNameServiceImpl::RefreshCache(): Bad transport mask"));
-        return ER_BAD_TRANSPORT_MASK;
-    }
 
     MatchMap matching;
     ParseMatchRule(matchingStr, matching);
@@ -1844,16 +1835,25 @@ QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::
     //
     std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.find(guid);
     if (it != m_peerInfoMap.end()) {
+        Timespec now;
+        GetTimeNow(&now);
         QCC_DbgPrintf(("Entry found in Peer Info Map. Setting unicast destination"));
+
         std::list<PeerInfo>::iterator pit = it->second.begin();
         while (pit != it->second.end()) {
+            if ((now - (*pit).lastQueryTimeStamp) < MIN_THRESHOLD_CACHE_REFRESH_MS) {
+                ++pit;
+                continue;
+            }
+            (*pit).lastQueryTimeStamp = now;
+
             MDNSPacket query;
             query->SetDestination((*pit).unicastIPV4Info);
             MDNSSearchRData* searchRData = new MDNSSearchRData();
-            for (MatchMap::iterator it = matching.begin(); it != matching.end(); ++it) {
-                QCC_DbgPrintf(("Outgoing Search query %s = %s", it->first.c_str(), it->second.c_str()));
-                searchRData->SetValue(it->first, it->second);
+            for (MatchMap::iterator it1 = matching.begin(); it1 != matching.end(); ++it1) {
+                searchRData->SetValue(it1->first, it1->second);
             }
+
             MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
             query->AddAdditionalRecord(searchRecord);
             delete searchRData;
@@ -6329,13 +6329,13 @@ bool IpNameServiceImpl::AddToPeerInfoMap(const qcc::String& guid, const qcc::IPE
             ++pit;
         }
         if (!foundEntry) {
-            PeerInfo peerInfo(ipv4, ipv6, ttl, NULL);
+            PeerInfo peerInfo(ipv4, ipv6);
             it->second.push_back(peerInfo);
             QCC_DbgPrintf(("Adding entry in PeerInfoMap"));
         }
     } else {
         std::list<PeerInfo> peerInfoList;
-        peerInfoList.push_back(PeerInfo(ipv4, ipv6, ttl, NULL));
+        peerInfoList.push_back(PeerInfo(ipv4, ipv6));
         m_peerInfoMap.insert(std::pair<qcc::String, std::list<PeerInfo> >(guid, peerInfoList));
     }
     m_mutex.Unlock();
