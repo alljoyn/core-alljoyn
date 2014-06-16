@@ -93,6 +93,18 @@ const uint32_t SessionlessObj::version = 1;
 const Rule SessionlessObj::legacyRule = Rule("type='error',sessionless='t'");
 
 /*
+ * The context for the implements query response.  It must be delivered on
+ * a separate thread than the Query callback to avoid deadlock.
+ */
+struct ResponseContext {
+    TransportMask transport;
+    String name;
+    IPEndpoint ns4;
+    ResponseContext(TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& ns4)
+        : transport(transport), name(name), ns4(ns4) { }
+};
+
+/*
  * Internal context passed through JoinSessionAsync.  This holds a snapshot of
  * the remote cache state at the time we issue the JoinSessionAsync.
  */
@@ -791,6 +803,26 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         Timespec tilExpire;
         uint32_t expire;
 
+        /* Send name service responses if needed */
+        ResponseContext* ctx = static_cast<ResponseContext*>(alarm->GetContext());
+        if (ctx) {
+            MDNSPacket response;
+            response->SetDestination(ctx->ns4);
+            MDNSAdvertiseRData advRData;
+            advRData.SetTransport(TRANSPORT_TCP | TRANSPORT_UDP);
+            advRData.SetValue("name", ctx->name);
+            String guid = bus.GetInternal().GetGlobalGUID().ToString();
+            MDNSResourceRecord advertiseRecord("advertise." + guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &advRData);
+            response->AddAdditionalRecord(advertiseRecord);
+            QStatus status = IpNameService::Instance().Response(ctx->transport, 120, response);
+            if (ER_OK == status) {
+                QCC_DbgPrintf(("Sent implements response for name=%s", ctx->name.c_str()));
+            } else {
+                QCC_LogError(status, ("Response failed"));
+            }
+            delete ctx;
+        }
+
         /* Purge the local cache of expired messages */
         lock.Lock();
         LocalCache::iterator it = localCache.begin();
@@ -1345,19 +1377,13 @@ bool SessionlessObj::SendResponseIfMatch(TransportMask transport, const qcc::IPE
     lock.Unlock();
 
     if (sendResponse) {
-        MDNSPacket response;
-        response->SetDestination(ns4);
-        MDNSAdvertiseRData advRData;
-        advRData.SetTransport(TRANSPORT_TCP | TRANSPORT_UDP);
-        advRData.SetValue("name", name);
-        String guid = bus.GetInternal().GetGlobalGUID().ToString();
-        MDNSResourceRecord advertiseRecord("advertise." + guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &advRData);
-        response->AddAdditionalRecord(advertiseRecord);
-        QStatus status = IpNameService::Instance().Response(transport, 120, response);
-        if (ER_OK == status) {
-            QCC_DbgPrintf(("Sent implements response for name=%s", name.c_str()));
-        } else {
+        ResponseContext* ctx = new ResponseContext(transport, name, ns4);
+        const uint32_t timeout = 0;
+        Alarm alarm(timeout, this, ctx);
+        QStatus status = timer.AddAlarm(alarm);
+        if (ER_OK != status) {
             QCC_LogError(status, ("Response failed"));
+            delete ctx;
         }
     }
 
