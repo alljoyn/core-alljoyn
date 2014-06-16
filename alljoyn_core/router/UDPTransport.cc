@@ -4726,10 +4726,46 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
          * Since this is an active connection, we expect there to be a thread
          * driving the connection and it will be waiting for something to happen
          * good or bad so we need to remember to wake it up.
+         *
+         * An event used to wake the thread up is provided in the connection,
+         * but we also need to make sure that the thread hasn't timed out or
+         * been stopped for some other reason, in which case the event will not
+         * be valid.
          */
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): active connection callback with conn ID == %d.", connId));
         qcc::Event* event = static_cast<qcc::Event*>(ARDP_GetConnContext(conn));
         assert(event && "UDPTransport::DoConnectCb(): Connection context did not provide an event");
+
+        /*
+         * Is there still a thread with an event on its stack waiting for us
+         * here?  If there is, we need to bug it.  If the thread is gone, we go
+         * there is no point in going though the motions, and creating an
+         * endpoint we would just have to fail.
+         */
+        QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Taking endpoint list lock"));
+        m_endpointListLock.Lock(MUTEX_CONTEXT);
+
+        bool eventValid = false;
+        for (set<ConnectEntry>::iterator j = m_connectThreads.begin(); j != m_connectThreads.end(); ++j) {
+            if (j->m_conn == conn && j->m_connId == ARDP_GetConnId(conn)) {
+                assert(j->m_event == event && "UDPTransport::DoConnectCb(): event != j->m_event");
+                eventValid = true;
+                break;
+            }
+        }
+
+        /*
+         * There is no thread waiting for the connect to complete.  It must be
+         * gone if it has removed its ConnectEntry.  It must have done so with
+         * the endpoint list lock taken, so we know it is there if this test
+         * passes; and we know it is not there if it does not.
+         */
+        if (eventValid == false) {
+            QCC_LogError(status, ("UDPTransport::DoConnectCb(): No thread waiting for Connect() to complete"));
+            m_endpointListLock.Unlock(MUTEX_CONTEXT);
+            DecrementAndFetch(&m_refCount);
+            return;
+        }
 
         /*
          * If the connection failed, wake up the thread waiting for completion
@@ -4738,6 +4774,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
         if (status != ER_OK) {
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): Connect error"));
             event->SetEvent();
+            m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -4749,22 +4786,27 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
         if (buf == NULL || len == 0) {
             QCC_LogError(ER_UDP_INVALID, ("UDPTransport::DoConnectCb(): No BusHello reply with SYN + ACK"));
             event->SetEvent();
-            DecrementAndFetch(&m_refCount);
-            return;
-        }
-
-        Message helloReply(m_bus);
-        status = helloReply->LoadBytes(buf, len);
-        if (status != ER_OK) {
-            QCC_LogError(status, ("UDPTransport::DoConnectCb(): Can't Unmarhsal() BusHello Reply Message"));
-            event->SetEvent();
+            m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
             return;
         }
 
         /*
-         * The dispatcher allocated a copy of the buffer from ARDP so we need to
-         * delete it.
+         * Load the bytes from the BusHello reply into a Message.
+         */
+        Message helloReply(m_bus);
+        status = helloReply->LoadBytes(buf, len);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("UDPTransport::DoConnectCb(): Can't Unmarhsal() BusHello Reply Message"));
+            event->SetEvent();
+            m_endpointListLock.Unlock(MUTEX_CONTEXT);
+            DecrementAndFetch(&m_refCount);
+            return;
+        }
+
+        /*
+         * The dispatcher thread allocated a copy of the buffer from ARDP since
+         * ARDP expected its buffer back, so we need to delete this copy.
          */
 #ifndef NDEBUG
         CheckSeal(buf + len);
@@ -4786,6 +4828,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
         if (status != ER_OK) {
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): Can't Unmarhsal() BusHello Message"));
             event->SetEvent();
+            m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -4797,6 +4840,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
             status = ER_BUS_ESTABLISH_FAILED;
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): Response was not a reply Message"));
             event->SetEvent();
+            m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -4813,6 +4857,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
         if (status != ER_OK) {
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): Can't UnmarhsalArgs() BusHello Reply Message"));
             event->SetEvent();
+            m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -4830,6 +4875,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
             status = ER_BUS_ESTABLISH_FAILED;
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): Unexpected number or type of arguments in BusHello Reply Message"));
             event->SetEvent();
+            m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -4888,9 +4934,6 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
          * From our perspective as the active opener of the connection, we are
          * done.
          */
-        QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Taking endpoint list lock"));
-        m_endpointListLock.Lock(MUTEX_CONTEXT);
-
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Adding endpoint with conn ID == %d. to m_endpointList", connId));
 
 #ifndef NDEBUG
@@ -4899,7 +4942,13 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
         m_endpointList.insert(udpEp);
         IncrementAndFetch(&m_currConn);
 
-
+        /*
+         * We cannot call out to the daemon (which Start() will do) with the
+         * endpointListLock taken.  This means that we will have to re-verify
+         * that the thread originally attempting the connect is still there when
+         * we come back.  If it is going, we need to arrange to undo the
+         * following work, but that's the way the threading-cookie crumbles.
+         */
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): giving endpoint list lock"));
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
@@ -4929,16 +4978,29 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
 
         /*
          * We know the endpoint is still there since we hold a managed object
-         * reference to it.  What might be missing is the connection and the
-         * event.  So first, get the connection from the endpoint and if it is
-         * still there, the event must still be there.  If the connection is not
-         * there, the thread waiting on the event has been released in the same
-         * process that zeroed out the conn.  We get this holding the endpoint
-         * list lock so this can't happen underneath us.
+         * reference to it.  What might be missing is the thread that started
+         * this whole long and involved process.
          */
-        conn = udpEp->GetConn();
-        if (conn) {
+        eventValid = false;
+        for (set<ConnectEntry>::iterator j = m_connectThreads.begin(); j != m_connectThreads.end(); ++j) {
+            if (j->m_conn == conn && j->m_connId == ARDP_GetConnId(conn)) {
+                assert(j->m_event == event && "UDPTransport::DoConnectCb(): event != j->m_event");
+                eventValid = true;
+                break;
+            }
+        }
+
+        /*
+         * We're all done cranking up the endpoint.  If there's someone waiting,
+         * wake them up.  If there's nobody there, stop the endpoint since
+         * someone changed their mind.
+         */
+        if (eventValid) {
+            QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Waking thread waiting for endpoint"));
             event->SetEvent();
+        } else {
+            QCC_DbgPrintf(("UDPTransport::DoConnectCb(): No thread waiting for endpoint"));
+            udpEp->Stop();
         }
 
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): giving endpoint list lock"));
