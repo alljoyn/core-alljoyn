@@ -1547,13 +1547,12 @@ class IpNameServiceImpl : public qcc::Thread {
     struct PeerInfo {
         qcc::IPEndpoint unicastIPV4Info;
         qcc::IPEndpoint unicastIPV6Info;
-        uint64_t timestamp;
-        qcc::Alarm alarm;
-        PeerInfo(const qcc::IPEndpoint& ipv4, const qcc::IPEndpoint& ipv6, uint64_t ttl, qcc::AlarmListener* listener) :
+        qcc::Timespec lastQueryTimeStamp;
+
+        PeerInfo(const qcc::IPEndpoint& ipv4, const qcc::IPEndpoint& ipv6) :
             unicastIPV4Info(ipv4),
-            unicastIPV6Info(ipv6),
-            timestamp(qcc::GetTimestamp64()),
-            alarm(ttl, listener) { }
+            unicastIPV6Info(ipv6)
+        { }
     };
 
     std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal> m_peerInfoMap;
