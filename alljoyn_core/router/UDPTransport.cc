@@ -3005,7 +3005,7 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     m_manage(STATE_MANAGE),
     m_listenPort(0), m_nsReleaseCount(0),
     m_routerName(), m_maxUntrustedClients(0), m_numUntrustedClients(0),
-    m_authTimeout(0), m_sessionSetupTimeout(0), m_maxAuth(0), m_maxConn(0),
+    m_authTimeout(0), m_sessionSetupTimeout(0), m_maxAuth(0), m_currAuth(0), m_maxConn(0), m_currConn(0),
     m_ardpLock(), m_cbLock(), m_handle(NULL),
     m_dispatcher(NULL), m_workerCommandQueue(), m_workerCommandQueueLock()
 {
