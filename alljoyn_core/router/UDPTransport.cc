@@ -3829,13 +3829,11 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
 {
     set<UDPEndpoint>::iterator i;
 
-    QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Taking endpoint list lock"));
     m_endpointListLock.Lock(MUTEX_CONTEXT);
 
     /*
      * If there are any endpoints on the preList, move them to the authList.
      */
-    QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Taking pre-auth list lock"));
     m_preListLock.Lock(MUTEX_CONTEXT);
 
     i = m_preList.begin();
@@ -3847,7 +3845,6 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
         i = m_preList.begin();
     }
 
-    QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Giving pre-auth list lock"));
     m_preListLock.Unlock(MUTEX_CONTEXT);
 
     /*
