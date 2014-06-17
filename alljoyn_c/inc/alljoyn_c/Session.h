@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -46,7 +46,7 @@ typedef struct _alljoyn_sessionopts_handle*                 alljoyn_sessionopts;
 typedef uint16_t alljoyn_sessionport;
 
 /** Invalid SessionPort value used to indicate that BindSessionPort should choose any available port */
-const alljoyn_sessionport ALLJOYN_SESSION_PORT_ANY = 0;
+#define ALLJOYN_SESSION_PORT_ANY (alljoyn_sessionport)0;
 
 /** SessionId uniquely identifies an AllJoyn session instance */
 typedef uint32_t alljoyn_sessionid;
