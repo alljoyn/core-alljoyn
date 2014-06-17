@@ -4699,7 +4699,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                     MDNSAdvertiseRData currentAdvert;
                     currentAdvert.SetUniqueCount(advRData->GetUniqueCount());
                     if (!count) {
-                        currentAdvert.SetValue("transport", U32ToString(tm));
+                        currentAdvert.SetTransport(tm);
                     }
                     currentAdvert.SetValue("name", *i);
                     uint32_t currentAdvertSize = currentAdvert.GetSerializedSize() - 2;
@@ -4742,7 +4742,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                         additionalPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, &refRecord1);
                         refRData = static_cast<MDNSSenderRData*>(refRecord1->GetRData());
                         advRData->Reset();
-                        advRData->SetValue("transport", U32ToString(tm));
+                        advRData->SetTransport(tm);
                         advRData->SetValue("name", *i);
                         refRData->SetSearchID(id);
                         if (quietly) {
@@ -4768,7 +4768,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                             MDNSPacket::cast(packets.back())->AddAnswer(txtRecordTcp);
                         }
                         if (!count) {
-                            advRData->SetValue("transport", U32ToString(tm));
+                            advRData->SetTransport(tm);
                         }
                         advRData->SetValue("name", *i);
                         count++;
@@ -4786,7 +4786,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                         MDNSAdvertiseRData currentAdvert;
                         currentAdvert.SetUniqueCount(advRData->GetUniqueCount());
                         if (!count) {
-                            currentAdvert.SetValue("transport", U32ToString(tm));
+                            currentAdvert.SetTransport(tm);
                         }
                         advRData->SetValue("name", *i);
                         uint32_t currentAdvertSize = currentAdvert.GetSerializedSize() - 2;
@@ -4829,7 +4829,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                             additionalPacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, &refRecord1);
                             refRData = static_cast<MDNSSenderRData*>(refRecord1->GetRData());
                             advRData->Reset();
-                            advRData->SetValue("transport", U32ToString(tm));
+                            advRData->SetTransport(tm);
                             advRData->SetValue("name", *i);
                             refRData->SetSearchID(id);
                             additionalPacket->SetDestination(destination);
@@ -4850,7 +4850,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
                                 MDNSPacket::cast(packets.back())->AddAnswer(txtRecordTcp);
                             }
                             if (!count) {
-                                advRData->SetValue("transport", U32ToString(tm));
+                                advRData->SetTransport(tm);
                             }
                             QCC_DbgPrintf(("IpNameServiceImpl::GetResponsePackets(): Message has room.  Adding (quiet) \"%s\"", (*i).c_str()));
                             advRData->SetValue("name", *i);
