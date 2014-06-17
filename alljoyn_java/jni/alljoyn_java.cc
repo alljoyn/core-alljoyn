@@ -8569,7 +8569,7 @@ JTranslator::JTranslator(jobject jobj)
         return;
     }
 
-    JLocalRef<jclass> clazz = env->GetObjectClass(jtranslator);
+    JLocalRef<jclass> clazz = env->GetObjectClass(jobj);
     if (!clazz) {
         QCC_LogError(ER_FAIL, ("JTranslator::JTranslator(): Can't GetObjectClass() for Translator"));
         return;
