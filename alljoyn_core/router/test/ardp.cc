@@ -94,7 +94,7 @@ void ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* 
         uint8_t* buffer = new uint8_t[length];
         QCC_DbgPrintf(("ConnectCb(): ARDP_Send(handle=%p, conn=%p, buffer=%p, length=%d)", handle, conn, buffer, length));
 
-        status = ARDP_Send(handle, conn, buffer, length, ARDP_TTL_PLACEHOLDER);
+        status = ARDP_Send(handle, conn, buffer, length, 0);
         if (status != ER_OK) {
             QCC_DbgPrintf(("ConnectCb(): ARDP_Send failed with %s", QCC_StatusText(status)));
         }
@@ -135,7 +135,7 @@ void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len
     uint8_t* buffer = new uint8_t[length];
     QCC_DbgTrace(("SendCb(): ARDP_Send(handle=%p, conn=%p, buffer=%p, length=%d.)", handle, conn, buffer, length));
 
-    status = ARDP_Send(handle, conn, buffer, length, ARDP_TTL_PLACEHOLDER);
+    status = ARDP_Send(handle, conn, buffer, length, 0);
     if (status != ER_OK) {
         QCC_DbgPrintf(("SendCb(): ARDP_Send failed with %s", QCC_StatusText(status)));
     }

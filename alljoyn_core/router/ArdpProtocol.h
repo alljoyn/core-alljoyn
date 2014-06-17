@@ -34,10 +34,8 @@ const uint32_t ARDP_NO_TIMEOUT = 0xffffffff; /**< To indicate that no timed acti
 
 const uint16_t ARDP_SEGBMAX = 65535 - 20 - 8; /**< Maximum size of a datagram (UDP payload minus IP header size minus UDP header size */
 const uint16_t ARDP_SEGMAX = 16;              /**< Max number of segments in flight. */
-const uint16_t ARDP_WKP = 0;                  /**< Well-known (ARDP) contact port for an ARDP passive listener. */
-const uint16_t ARDP_MCAST = 65535;            /**< Well-known (ARDP) port for sending multicast messages. */
 
-const uint32_t ARDP_TTL_PLACEHOLDER = 0xfffffffe; // TODO: remove when switching to actual TTL values
+const uint32_t ARDP_CONN_ID_INVALID = 0xffffffff; /* To indicate invalid connection */
 
 /**
  * @brief Per-protocol-instance (global) configuration variables.
@@ -175,12 +173,12 @@ void ARDP_FreeHandle(ArdpHandle* handle);
 void ARDP_SetHandleContext(ArdpHandle* handle, void* context);
 void* ARDP_GetHandleContext(ArdpHandle* handle);
 void ARDP_ReleaseConn(ArdpHandle* handle, ArdpConnRecord* conn);
-void ARDP_SetConnContext(ArdpConnRecord* conn, void* context);
-void* ARDP_GetConnContext(ArdpConnRecord* conn);
-uint32_t ARDP_GetConnId(ArdpConnRecord* conn);
-uint32_t ARDP_GetConnPending(ArdpConnRecord* conn);
-qcc::IPAddress ARDP_GetIpAddrFromConn(ArdpConnRecord* conn);
-uint16_t ARDP_GetIpPortFromConn(ArdpConnRecord* conn);
+QStatus ARDP_SetConnContext(ArdpHandle* handle, ArdpConnRecord* conn, void* context);
+void* ARDP_GetConnContext(ArdpHandle* handle, ArdpConnRecord* conn);
+uint32_t ARDP_GetConnId(ArdpHandle* handle, ArdpConnRecord* conn);
+uint32_t ARDP_GetConnPending(ArdpHandle* handle, ArdpConnRecord* conn);
+qcc::IPAddress ARDP_GetIpAddrFromConn(ArdpHandle* handle, ArdpConnRecord* conn);
+uint16_t ARDP_GetIpPortFromConn(ArdpHandle* handle, ArdpConnRecord* conn);
 QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool socketReady, uint32_t* ms);
 QStatus ARDP_StartPassive(ArdpHandle* handle);
 QStatus ARDP_Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t segmax, uint16_t segbmax, uint8_t* buf, uint16_t len);
@@ -190,6 +188,7 @@ QStatus ARDP_Connect(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ipAd
 void ARDP_SetConnectCb(ArdpHandle* handle, ARDP_CONNECT_CB ConnectCb);
 QStatus ARDP_Disconnect(ArdpHandle* handle, ArdpConnRecord* conn);
 void ARDP_SetDisconnectCb(ArdpHandle* handle, ARDP_DISCONNECT_CB DisconnectCb);
+void ARDP_ReleaseConnection(ArdpHandle* handle, ArdpConnRecord* conn);
 QStatus ARDP_RecvReady(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcvbuf);
 void ARDP_SetRecvCb(ArdpHandle* handle, ARDP_RECV_CB RecvCb);
 QStatus ARDP_Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, uint32_t ttl);

@@ -2632,7 +2632,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     {
         QCC_DbgTrace(("_UDPEndpoint::SetConn(conn=%p)", conn));
         m_conn = conn;
-        SetConnId(ARDP_GetConnId(conn));
+        SetConnId(ARDP_GetConnId(m_handle, conn));
     }
 
     /**
@@ -4610,7 +4610,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
      * Useful to have laying around for debug prints
      */
 #ifndef NDEBUG
-    uint32_t connId = ARDP_GetConnId(conn);
+    uint32_t connId = ARDP_GetConnId(handle, conn);
 #endif
 
     if (passive) {
@@ -4639,7 +4639,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
         set<UDPEndpoint>::iterator i;
         for (i = m_authList.begin(); i != m_authList.end(); ++i) {
             UDPEndpoint ep = *i;
-            if (ep->GetConn() == conn && ARDP_GetConnId(ep->GetConn()) == ARDP_GetConnId(conn)) {
+            if (ep->GetConn() == conn && ARDP_GetConnId(m_handle, ep->GetConn()) == ARDP_GetConnId(m_handle, conn)) {
                 QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Moving endpoint with conn ID == %d to m_endpointList", connId));
                 m_authList.erase(i);
                 DecrementAndFetch(&m_currAuth);
@@ -4674,6 +4674,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
                     ep->Stop();
                     m_endpointListLock.Unlock(MUTEX_CONTEXT);
                     haveLock = false;
+                    ARDP_ReleaseConnection(handle, conn);
                     m_manage = UDPTransport::STATE_MANAGE;
                     Alert();
                 }
@@ -4707,7 +4708,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
          * be valid.
          */
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): active connection callback with conn ID == %d.", connId));
-        qcc::Event* event = static_cast<qcc::Event*>(ARDP_GetConnContext(conn));
+        qcc::Event* event = static_cast<qcc::Event*>(ARDP_GetConnContext(m_handle, conn));
         assert(event && "UDPTransport::DoConnectCb(): Connection context did not provide an event");
 
         /*
@@ -4721,7 +4722,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
 
         bool eventValid = false;
         for (set<ConnectEntry>::iterator j = m_connectThreads.begin(); j != m_connectThreads.end(); ++j) {
-            if (j->m_conn == conn && j->m_connId == ARDP_GetConnId(conn)) {
+            if (j->m_conn == conn && j->m_connId == ARDP_GetConnId(m_handle, conn)) {
                 assert(j->m_event == event && "UDPTransport::DoConnectCb(): event != j->m_event");
                 eventValid = true;
                 break;
@@ -4737,6 +4738,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
         if (eventValid == false) {
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): No thread waiting for Connect() to complete"));
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
+            ARDP_ReleaseConnection(handle, conn);
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -4749,6 +4751,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): Connect error"));
             event->SetEvent();
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
+            ARDP_ReleaseConnection(handle, conn);
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -4761,6 +4764,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
             QCC_LogError(ER_UDP_INVALID, ("UDPTransport::DoConnectCb(): No BusHello reply with SYN + ACK"));
             event->SetEvent();
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
+            ARDP_ReleaseConnection(handle, conn);
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -4774,6 +4778,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): Can't Unmarhsal() BusHello Reply Message"));
             event->SetEvent();
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
+            ARDP_ReleaseConnection(handle, conn);
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -4803,6 +4808,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): Can't Unmarhsal() BusHello Message"));
             event->SetEvent();
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
+            ARDP_ReleaseConnection(handle, conn);
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -4815,6 +4821,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): Response was not a reply Message"));
             event->SetEvent();
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
+            ARDP_ReleaseConnection(handle, conn);
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -4832,6 +4839,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): Can't UnmarhsalArgs() BusHello Reply Message"));
             event->SetEvent();
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
+            ARDP_ReleaseConnection(handle, conn);
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -4850,6 +4858,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): Unexpected number or type of arguments in BusHello Reply Message"));
             event->SetEvent();
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
+            ARDP_ReleaseConnection(handle, conn);
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -4866,8 +4875,8 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
          * We have everything we need to start up, so it is now time to create
          * our new endpoint.
          */
-        qcc::IPAddress ipAddr = ARDP_GetIpAddrFromConn(conn);
-        uint16_t ipPort = ARDP_GetIpPortFromConn(conn);
+        qcc::IPAddress ipAddr = ARDP_GetIpAddrFromConn(handle, conn);
+        uint16_t ipPort = ARDP_GetIpPortFromConn(handle, conn);
         static const bool truthiness = true;
         UDPTransport* ptr = this;
         String normSpec = "udp:guid=" + remoteGUID + ",u4addr=" + ipAddr.ToString() + ",u4port=" + U32ToString(ipPort);
@@ -4957,7 +4966,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
          */
         eventValid = false;
         for (set<ConnectEntry>::iterator j = m_connectThreads.begin(); j != m_connectThreads.end(); ++j) {
-            if (j->m_conn == conn && j->m_connId == ARDP_GetConnId(conn)) {
+            if (j->m_conn == conn && j->m_connId == ARDP_GetConnId(m_handle, conn)) {
                 assert(j->m_event == event && "UDPTransport::DoConnectCb(): event != j->m_event");
                 eventValid = true;
                 break;
@@ -5048,7 +5057,7 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
     entry.m_command = UDPTransport::WorkerCommandQueueEntry::CONNECT_CB;
     entry.m_handle = handle;
     entry.m_conn = conn;
-    entry.m_connId = ARDP_GetConnId(conn);
+    entry.m_connId = ARDP_GetConnId(handle, conn);
     entry.m_passive = passive;
 #ifndef NDEBUG
     entry.m_buf = new uint8_t[len + SEAL_SIZE];
@@ -5094,7 +5103,7 @@ void UDPTransport::DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatu
     entry.m_command = UDPTransport::WorkerCommandQueueEntry::DISCONNECT_CB;
     entry.m_handle = handle;
     entry.m_conn = conn;
-    entry.m_connId = ARDP_GetConnId(conn);
+    entry.m_connId = ARDP_GetConnId(handle, conn);
     entry.m_status = status;
 
     QCC_DbgPrintf(("UDPTransport::DisconnectCb(): sending DISCONNECT_CB request to dispatcher)"));
@@ -5139,7 +5148,7 @@ void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* 
     entry.m_command = UDPTransport::WorkerCommandQueueEntry::RECV_CB;
     entry.m_handle = handle;
     entry.m_conn = conn;
-    entry.m_connId = ARDP_GetConnId(conn);
+    entry.m_connId = ARDP_GetConnId(handle, conn);
     entry.m_rcv = rcv;
     entry.m_status = status;
 
@@ -5179,7 +5188,7 @@ void UDPTransport::SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf
     entry.m_command = UDPTransport::WorkerCommandQueueEntry::SEND_CB;
     entry.m_handle = handle;
     entry.m_conn = conn;
-    entry.m_connId = ARDP_GetConnId(conn);
+    entry.m_connId = ARDP_GetConnId(handle, conn);
     entry.m_buf = buf;
     entry.m_len = len;
     entry.m_status = status;
@@ -5199,7 +5208,7 @@ void UDPTransport::SendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16
 {
     IncrementAndFetch(&m_refCount);
     QCC_DbgTrace(("UDPTransport::SendWindowCb(handle=%p, conn=%p, window=%d.)", handle, conn, window));
-    QCC_DbgPrintf(("UDPTransport::SendWindowCb(): callback from conn ID == %d", ARDP_GetConnId(conn)));
+    QCC_DbgPrintf(("UDPTransport::SendWindowCb(): callback from conn ID == %d", ARDP_GetConnId(handle, conn)));
     DecrementAndFetch(&m_refCount);
 }
 
@@ -6552,7 +6561,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     Thread* thread = GetThread();
     QCC_DbgPrintf(("UDPTransport::Connect(): Add thread=%p to m_connectThreads", thread));
     assert(thread && "UDPTransport::Connect(): GetThread() returns NULL");
-    ConnectEntry entry(thread, conn, ARDP_GetConnId(conn), &event);
+    ConnectEntry entry(thread, conn, ARDP_GetConnId(m_handle, conn), &event);
 
     /*
      * Now, we can safely insert the entry into the set.  We're danger close to
@@ -6628,7 +6637,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * endpoint with a connection ID that is the same as the one returned to us
      * by the original call to ARDP_Connect().
      */
-    QCC_DbgPrintf(("UDPTransport::Connect(): Finding endpoint with conn ID = %d. in m_endpointList", ARDP_GetConnId(conn)));
+    QCC_DbgPrintf(("UDPTransport::Connect(): Finding endpoint with conn ID = %d. in m_endpointList", ARDP_GetConnId(m_handle, conn)));
     set<UDPEndpoint>::iterator i;
     for (i = m_endpointList.begin(); i != m_endpointList.end(); ++i) {
         UDPEndpoint ep = *i;

@@ -461,7 +461,7 @@ int main(int argc, char** argv)
                     while (true) {
                         uint32_t length = random() % (135000);
                         uint8_t* buffer = new uint8_t[length];
-                        status = ARDP_Send(handle, connList[t_connno], buffer, length, ARDP_TTL_PLACEHOLDER);
+                        status = ARDP_Send(handle, connList[t_connno], buffer, length, 0);
                         if (status != ER_OK) {
                             printf("Error while ARDP_Send.. %s \n", QCC_StatusText(status));
                             break;
