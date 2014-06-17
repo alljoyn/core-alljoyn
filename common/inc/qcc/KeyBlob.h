@@ -77,7 +77,23 @@ class KeyBlob {
     /**
      * Default constructor.
      */
-    KeyBlob() : blobType(EMPTY), role(NO_ROLE), associationMode(ASSOCIATE_NONE) { }
+    KeyBlob() : version(1), blobType(EMPTY), role(NO_ROLE), associationMode(ASSOCIATE_NONE) { }
+
+    /**
+     * KeyBlob with specific version
+     * @param version   Valid versions are 0 and 1.
+     */
+    KeyBlob(uint8_t version) : version(version), blobType(EMPTY), role(NO_ROLE), associationMode(ASSOCIATE_NONE) { }
+
+    /**
+     * Constructor that initializes the key blob from a byte array.
+     *
+     * @param version   Valid versions are 0 and 1.
+     * @param key       Pointer to memory containing data to initialize the key blob.
+     * @param len       The length of the key in bytes.
+     * @param initType  The type for the key blob.
+     */
+    KeyBlob(uint8_t version, const uint8_t* key, size_t len, const Type initType) : version(version), blobType(EMPTY), associationMode(ASSOCIATE_NONE) { Set(key, len, initType); }
 
     /**
      * Constructor that initializes the key blob from a byte array.
@@ -86,15 +102,23 @@ class KeyBlob {
      * @param len       The length of the key in bytes.
      * @param initType  The type for the key blob.
      */
-    KeyBlob(const uint8_t* key, size_t len, const Type initType) : blobType(EMPTY), associationMode(ASSOCIATE_NONE) { Set(key, len, initType); }
+    KeyBlob(const uint8_t* key, size_t len, const Type initType) : version(1), blobType(EMPTY), associationMode(ASSOCIATE_NONE) { Set(key, len, initType); }
 
+    /**
+     * Constructor that initializes the key blob from a string.
+     *
+     * @param version   Valid versions are 0 and 1.
+     * @param str       String containing data to initialize the key blob.
+     * @param blobType  The type for the key blob.
+     */
+    KeyBlob(uint8_t version, const qcc::String& str, const Type blobType) : version(version), blobType(EMPTY), associationMode(ASSOCIATE_NONE) { Set((const uint8_t*)str.data(), str.size(), blobType); }
     /**
      * Constructor that initializes the key blob from a string.
      *
      * @param str       String containing data to initialize the key blob.
      * @param blobType  The type for the key blob.
      */
-    KeyBlob(const qcc::String& str, const Type blobType) : blobType(EMPTY), associationMode(ASSOCIATE_NONE) { Set((const uint8_t*)str.data(), str.size(), blobType); }
+    KeyBlob(const qcc::String& str, const Type blobType) : version(1), blobType(EMPTY), associationMode(ASSOCIATE_NONE) { Set((const uint8_t*)str.data(), str.size(), blobType); }
 
     /**
      * Copy constructor.
@@ -318,6 +342,7 @@ class KeyBlob {
     AssociationMode GetAssociationMode() { return associationMode; }
   private:
 
+    uint8_t version;
     Type blobType;
     Timespec expiration;
     uint8_t* data;

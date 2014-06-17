@@ -126,28 +126,33 @@ QStatus KeyBlob::Set(const uint8_t* key, size_t len, Type initType)
 }
 
 #define EXPIRES_FLAG        0x80
-#define VERSION_FLAG     0x40
+#define VERSION_FLAG        0x40
 
-#define HEADER_NODE      0x20
-#define UNUSED_FLAG1     0x10
-#define V0_MAX_TAG_LEN   0x3F
-#define CURRENT_VERSION     1
+#define HEADER_NODE         0x20
+#define UNUSED_FLAG1        0x10
+#define V0_MAX_TAG_LEN      0x3F
 
 QStatus KeyBlob::Store(qcc::Sink& sink) const
 {
     QStatus status;
     size_t pushed;
-    /* flags format 8MSB: blob type, 8 bit: options */
-    uint16_t flags = (uint16_t)(blobType << 8) | VERSION_FLAG | CURRENT_VERSION;
+    uint16_t flags;
     /* Temporaries for endian-ness conversion */
     uint16_t u16;
     uint64_t u64;
-
+    if (version == 0) {
+        flags = (uint16_t)(blobType << 8) | tag.size();
+    } else {
+        /* flags format 8MSB: blob type, 8 bit: options */
+        flags = (uint16_t)(blobType << 8) | VERSION_FLAG | version;
+    }
     if (expiration.seconds) {
         flags |= EXPIRES_FLAG;
     }
-    if ((associationMode == ASSOCIATE_HEAD) || (associationMode == ASSOCIATE_BOTH)) {
-        flags |= HEADER_NODE;
+    if (version != 0) {
+        if ((associationMode == ASSOCIATE_HEAD) || (associationMode == ASSOCIATE_BOTH)) {
+            flags |= HEADER_NODE;
+        }
     }
     u16 = htole16(flags);
     status = sink.PushBytes(&u16, sizeof(u16), pushed);
@@ -161,8 +166,10 @@ QStatus KeyBlob::Store(qcc::Sink& sink) const
             }
         }
         if (status == ER_OK) {
-            uint8_t tagLen = tag.size();
-            status = sink.PushBytes(&tagLen, sizeof(tagLen), pushed);
+            if (version != 0) {
+                uint8_t tagLen = tag.size();
+                status = sink.PushBytes(&tagLen, sizeof(tagLen), pushed);
+            }
         }
         if (status == ER_OK) {
             status = sink.PushBytes(tag.data(), tag.size(), pushed);
@@ -174,14 +181,16 @@ QStatus KeyBlob::Store(qcc::Sink& sink) const
         if (status == ER_OK) {
             status = sink.PushBytes(data, size, pushed);
         }
-        uint8_t associationLen = 0;
-        if ((associationMode == ASSOCIATE_MEMBER) || (associationMode == ASSOCIATE_BOTH)) {
-            associationLen = GUID128::SIZE;
-        }
-        status = sink.PushBytes(&associationLen, sizeof(associationLen), pushed);
-        if ((status == ER_OK) && (associationLen > 0)) {
-            status = sink.PushBytes(association.GetBytes(), associationLen, pushed);
+        if ((version != 0) && (status == ER_OK)) {
+            uint8_t associationLen = 0;
+            if ((associationMode == ASSOCIATE_MEMBER) || (associationMode == ASSOCIATE_BOTH)) {
+                associationLen = GUID128::SIZE;
+            }
+            status = sink.PushBytes(&associationLen, sizeof(associationLen), pushed);
+            if ((status == ER_OK) && (associationLen > 0)) {
+                status = sink.PushBytes(association.GetBytes(), associationLen, pushed);
 
+            }
         }
     }
     return status;
@@ -295,6 +304,7 @@ QStatus KeyBlob::Load(qcc::Source& source)
 
 KeyBlob::KeyBlob(const KeyBlob& other)
 {
+    version = other.version;
     if (other.blobType != EMPTY) {
         data = new uint8_t[other.size];
         memcpy(data, other.data, other.size);
@@ -318,6 +328,7 @@ KeyBlob& KeyBlob::operator=(const KeyBlob& other)
     if (this != &other) {
         assert(other.blobType < INVALID);
         Erase();
+        version = other.version;
         if (other.blobType != EMPTY) {
             data = new uint8_t[other.size];
             memcpy(data, other.data, other.size);
