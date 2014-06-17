@@ -4396,11 +4396,13 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         QCC_DbgPrintf(("Time Passed %ld ttl-80 : %ld ttl-90 : %ld", timePassed, (uint64_t)(ttl * 80 / 100), (uint64_t)(ttl * 90 / 100)));
         if ((timePassed >= (ttl * 80 / 100)) &&
             (timePassed < ttl)) {
-            //
-            // Send Unicast search query
-            //
-            QCC_DbgPrintf(("AlarmTriggered sending query \"*\" Name : %s GUID : %s", it->first.c_str(), it->second.guid.c_str()));
-            guidSet.insert(it->second.guid);
+            if (discoverMap.size() > 0) {
+                //
+                // Send Unicast search query only if there are discoverers
+                //
+                QCC_DbgPrintf(("AlarmTriggered sending query \"*\" Name : %s GUID : %s nme.transport %x", it->first.c_str(), it->second.guid.c_str(), nme.transport));
+                guidSet.insert(nme.guid);
+            }
         }
 
         if ((timePassed >= (ttl * 80 / 100)) &&
@@ -4456,6 +4458,7 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         }
         git++;
     }
+
     // if 100* of time
     //     do all the things below
     //     AND if not in a session
