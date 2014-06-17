@@ -127,7 +127,7 @@
     //
     NSString *keystoreFilePath = @"Documents/alljoyn_keystore/s_central.ks";
     // Enable the authentication you want to use (ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA)
-    QStatus status = [bus enablePeerSecurity:@"ALLJOYN_ECDHE_ECDSA" authenticationListener:self keystoreFileName:keystoreFilePath sharing:YES];
+    QStatus status = [bus enablePeerSecurity:@"ALLJOYN_ECDHE_PSK" authenticationListener:self keystoreFileName:keystoreFilePath sharing:YES];
     NSString *message;
     if (status != ER_OK) {
         message = [NSString stringWithFormat:@"ERROR: Failed to enable security on the bus. %@", [AJNStatus descriptionForStatusCode:status]];
