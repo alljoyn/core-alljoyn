@@ -51,22 +51,21 @@
  * abstract way for the daemon to use different network mechanisms for getting
  * Messages from place to another.  Conceptually, think of, for example, a Unix
  * transport that moves bits using unix domain sockets, a Bluetooth transport
- * that moves bits over a Bluetooth link and a TCP transport that moves Messages
+ * that moves bits over a Bluetooth link, or a TCP transport that moves Messages
  * over a TCP connection.  A UDP transport moves Messages over UDP datagrams
  * using a reliability layer.
  *
- * In networking 101, one discovers that BSD sockets is oriented toward clients
- * and servers.  There are different sockets calls required for a program
- * implementing a server-side part and a client side part.  The server-side
- * listens for incoming connection requests and the client-side initiates the
- * requests.  AllJoyn clients are bus attachments that our Applications may use
- * and these can only initiate connection requests to AllJoyn daemons.  Although
- * dameons may at first blush appear as the service side of a typical BSD
- * sockets client-server pair, it turns out that while daemons obviously must
- * listen for incoming connections, they also must be able to initiate
- * connection requests to other daemons.  This file is the UDPTransport.  It
- * needs to act as both a client and a server explains the presence of both
- * connect-like methods and listen-like methods here.
+ * BSD sockets is oriented toward clients and servers.  There are different
+ * sockets calls required for a program implementing a server-side part and a
+ * client side part.  The server-side listens for incoming connection requests
+ * and the client-side initiates the requests.  AllJoyn clients are bus
+ * attachments that our Applications may use and these can only initiate
+ * connection requests to AllJoyn daemons.  Although dameons may at first blush
+ * appear as the service side of a typical BSD sockets client-server pair, it
+ * turns out that while daemons obviously must listen for incoming connections,
+ * they also must be able to initiate connection requests to other daemons.
+ * This explains the presence of both connect-like methods and listen-like
+ * methods here.
  *
  * A fundamental idiom in the AllJoyn system is that of a thread.  Active
  * objects in the system that have threads wandering through them will implement
@@ -80,43 +79,53 @@
  * for the start of thread execution.  Threads are not necessarily running when
  * the start method returns, but they are being *started*.  Some time later, a
  * thread of execution appears in a thread run function, at which point the
- * thread is considered *running*.  In the case of the UDPTransport, the Start() method
- * spins up a thread to run the basic maintenance operations such as deciding when
- * to listen and advertise.  Another thread(s) is started to deal with the actual
- * movement of UDP datagrams since this is a time-critical operation.  This
- * means that as soon as Start() is executed, multiple threads may be wandering
- * around uin the transport and so one must be very careful about resource
- * management.
+ * thread is considered *running*.  In the case of the UDPTransport, the Start()
+ * method spins up a thread to run the basic maintenance operations such as
+ * deciding when to listen and advertise.  Another thread(s) is started to deal
+ * with handling callbacks for deadlock avoidance.  The AllJoyn daemon is a
+ * fundamentally multithreaded environemnt, so multiple threads may be trying to
+ * connect, disconnect, and write from the daemon side, and at the same time
+ * connect, disconnect, read and write callbacks may be coming from the network
+ * side.  This means that as soon as UDPTransport::Start() is executed, multiple
+ * threads, originating both in the transport and from outside, may be wandering
+ * around in objects used by the tansport; and so one must be very careful about
+ * resource management.  This is the source of much of the complexity in this
+ * module.
  *
  * In generic threads packages, executing a stop method asks the underlying
  * system to arrange for a thread to end its execution.  The system typically
  * sends a message to the thread to ask it to stop doing what it is doing.  The
  * thread is running until it responds to the stop message, at which time the
- * run method exits and the thread is considered *stopping*.  The
- * UDPTransport provides a Stop() method to do exactly that.
+ * run method exits and the thread is considered *stopping*.  The UDPTransport
+ * provides a Stop() method to do exactly that.  Note that neither of Start()
+ * nor Stop() are synchronous in the sense that one has actually accomplished
+ * the desired effect upon the return from a call.  Of particular interest is
+ * the fact that after a call to Stop(), threads will still be *running* for
+ * some non-deterministic time.  In order to wait until all of the threads have
+ * actually stopped, a blocking call is required.  In threading packages this is
+ * typically called join, and our corresponding method is called Join().  A user
+ * of the UDPTransport must assume that immediately after a call to Start() is
+ * begun, and until a call to Join() returns, there may be threads of execution
+ * wandering anywhere in the transport and in any callback registered by the
+ * caller.  The same model applies to connection endpoints (_UDPEndpoint)
+ * instances.  Further complicating _UDPEndpoint design is that the thread
+ * lifetime methods may be called repeatedly or never (in the case of some forms
+ * of timeout); and so the transport needs to ensure that all combinations of
+ * these state transitions occur in an orderly and deterministic manner.
  *
- * Note that neither of Start() nor Stop() are synchronous in the sense that one
- * has actually accomplished the desired effect upon the return from a call.  Of
- * particular interest is the fact that after a call to Stop(), threads will
- * still be *running* for some non-deterministic time.
- *
- * In order to wait until all of the threads have actually stopped, a blocking
- * call is required.  In threading packages this is typically called join, and
- * our corresponding method is called Join().  A user of the UDPTransport
- * must assume that immediately after a call to Start() is begun, and until a
- * call to Join() returns, there may be threads of execution wandering anywhere
- * in the transport and in any callback registered by the caller.
- *
- * The high-level process for how an advertisement translates into a transport
- * Connect() is a bit opaque, so we paint a high-level picture here.
- *
- * First, a service (that will be handling RPC calls and emitting signals)
- * acquires a name on the bus, binds a session and calls AdvertiseName.  This
- * filters down (possibly through language bindings) to the AllJoyn Object, into
- * the transports on the transport list (the UDP transport is one of those) and
- * eventually to the IpNameService::AdvertiseName() method we call since we are
- * an IP-based transport.  The IP name service will multicast the advertisements
- * to other daemons listening on our device's connected networks.
+ * The high-level process regarding how an advertisement translates into a
+ * transport Connect() is a bit opaque, so we paint a high-level picture here.
+ * First, a service (that will be *handling* RPC calls and *emitting* signals)
+ * acquires a name on the bus, binds a session port and calls AdvertiseName.
+ * This filters down (possibly through language bindings) to the AllJoyn Object.
+ * The AllJoynObj essentially turns a DBus into an AllJoyn bus.  The AllJoyn
+ * Object consults the transports on the transport list (the UDP transport is
+ * one of those) and eventually sends an advertisement request to each specified
+ * transport by calling each transport's EnableAdvertisement() method.  We
+ * transnslate this call to a call to the the IpNameService::AdvertiseName()
+ * method we call since we are an IP-based transport.  The IP name service will
+ * multicast the advertisements to other daemons listening on our device's
+ * connected networks.
  *
  * A client that is interested in using the service calls the discovery
  * method FindAdvertisedName.  This filters down (possibly through
@@ -128,17 +137,25 @@
  * The daemon remembers which clients have expressed interest in which services,
  * and expects name services to call back with the bus addresses of daemons they
  * find which have the associated services.  When a new advertisement is
- * received (because we called our listener's Found() method here, the bus
- * address is "hidden" from interested clients and replaced with a more generic
- * TransportMask bit (for us it will be TRANSPORT_UDP).  The client either
- * responds by ignoring the advertisement, waits to accumulate more answers or
- * joins a session to the implied daemon/service.  A reference to a SessionOpts
- * object is provided as a parameter to a JoinSession call if the client wants
- * to connect.  This SessionOpts reference is passed down into the transport
- * (selected by the TransportMask) into the Connect() method which is used to
- * establish the connection.
+ * received, the name service fires a callback into the transport, and it, in turn, calls
+ * into its associated BusListener to pass the information back to the daemon.
  *
- * The four different connection mechanisms can be viewed as a matrix;
+ * The callback includes information about the discovered name, the IP address,
+ * port and daemon GUID of the remote daemon (now Routing Node).  This bus
+ * address is "hidden" from interested clients and replaced with a more generic
+ * name and TransportMask bit (for us it will be TRANSPORT_UDP).  The client
+ * either responds by (1) ignoring the advertisement; (2) waiting to accumulate
+ * more answers to see what the options are; or (3) joins a session to the
+ * implied daemon/service.  A reference to a SessionOpts object is provided as a
+ * parameter to a JoinSession call if the client wants to connect.  This
+ * SessionOpts reference is passed down into the transport (selected by the
+ * TransportMask) into the Connect() method which is used to establish the
+ * connection and can be used to determine if the discovered name posesses
+ * certain desired characteristics (to aid in determine the course of action
+ * of the client
+ *
+ * There are four basic connection mechanisms that are described by the options.
+ * These can be viewed as a matrix;
  *
  *                                                      IPv4               IPv6
  *                                                 ---------------    ---------------
@@ -156,8 +173,17 @@
  * connect spec in the Connect() method) the transport should choose that one.
  * If both IPv4 or IPv6 are available, it is up to the transport (again, us) to
  * choose the "best" method since we don't bother clients with that level of
- * detail.  We (UDP) generally choose IPv6 when given the choice since DHCP on
- * IPv4 is sometimes problematic in some networks.
+ * detail.
+ *
+ * Perhaps somewhat counter-intuitively, advertisements relating to the UDP
+ * Transport use the u4addr (unreliable IPv4 address), u4port (unreliable IPv4
+ * port), u6addr (unreliable IPv6 address), and u6port (unreliable IPv6 port).
+ * At the same time, the UDP Transport tells clients of the transport that it
+ * supports TRAFFIC MESSAGES only.  This is because the underlying network
+ * protocol used is UDP which is inherently unreliable.  We provide a
+ * reliability layer to translate the unreliable UDP4 and UDP6 datagrams into
+ * reliable AllJoyn messages.  The UDP Transpot does not provide RAW sockets
+ * which is a deprecated traffic type.
  *
  * Internals
  * =========
@@ -170,7 +196,7 @@
  * are looking at the UDPTransport.  Each transport also has the concept of an
  * Endpoint.  The most important function fo an endpoint is to provide (usually)
  * non-blocking semantics to higher level code.  If the source thread overruns
- * the ability of the transport to move bits (reliably), we do apply
+ * the ability of the transport to move bits (reliably), we must apply
  * back-pressure by blocking the calling thread, but usually a call to PushBytes
  * results in an immediate UDP datagram sendto.  In the UDP transport there are
  * separate worker threads assigned to reading UDP datagrams, running the
@@ -190,187 +216,133 @@
  * RemoteEndpoints use AllJoyn stream objects to actually move bits.  In UDP
  * this is a bit of an oxymoron, however an AllJoyn stream is a thin layer on
  * top of a Socket (which is another thin layer on top of a BSD socket) that
- * provides PushBytes() and PullBytes() methods.  Although UDP is not a stream-
- * based protocol, we treat each received datagram as a separate stream for the
- * purposes of passing back to the AllJoyn core which expectes to be able to
- * read bytes from a message backing object.
+ * provides a PushBytes() method.  Although UDP is not a stream-based protocol,
+ * we treat each received datagram as a separate stream for the purposes of
+ * passing back to the AllJoyn core which expectes to be able to read bytes from
+ * a message backing object.
  *
- * Unlike a TCP transport, receive threads in UDP are not associted with a
- * particular endpoint.  The job of the receive (worker) threads are to wait for
- * incoming UDP datagrams, to run the reliability layer and to unmarshal
- * incoming reassembled datagrams into AllJoyn Messages.  Once a worker thread
- * has a message, it calls into the daemon's Message router (PushMessage) to
- * arrange for delivery.  A separate thread runs the maintenance aspects of the
- * UDP reliability layer (to drive retransmissions, timeouts, etc.).
+ * Unlike a TCP transport, there are no dedicated receive threads.  Receive
+ * operations in UDP are not associted with a particular endpoint at all, other
+ * than using the required endpoint as a convencient place holder for a
+ * connection data structure.  The UDP Transport operates more in an
+ * Asynchronous IO-like fashion.  Received datagrams appear out of the ARDP
+ * protocol as callbacks and are sent into a callback dispatcher thread.  Once
+ * the dispatcher has an inbound datagram(s) it reassembles and unmarshals the
+ * datagrams into an AllJoyn Message.  It then calls into the daemon
+ * (PushMessage) to arrange for delivery.  A separate thread runs the
+ * maintenance aspects of the UDP reliability layer (to drive retransmissions,
+ * timeouts, etc.) and the endpoint management code (to drive the lifetime state
+ * transitions of endpoints).
  *
- * The UDPEndpoint inherits the infrastructure requred to do much of its work
- * from the more generic RemoteEndpoint class.  Since the UDP transport is a not
- * a stream-based protocol, it does redefine some of the basic operation of the
- * RemoteEndpoint to suit its needs.  The UDP endpoint also needs to provide for
- * authenticating the endpoint before it is allowed to start pumping messages.
- * Authentication means running some mysterious (to us) process that may involve
- * some unknown number of challenge and response messsages being exchanged
- * between the client and server side of the connection.  Since we cannot block
- * a caller waiting for authentication, this must done on another thread; and
- * this must be done before the RemoteEndpoint is Start()ed -- before its
- * transmit and receive threads are started, lest they start pumping messages
- * and interfering with the authentication process.  This complicates the work
- * of the endpoing considerably.
+ * The UDPEndpoint inherits some infrastructure from the more generic
+ * RemoteEndpoint class.  Since the UDP transport is a not a stream-based
+ * protocol, it does redefine some of the basic operation of the RemoteEndpoint
+ * to suit its needs.  The RemoteEndpoint is also somewhat bound to the concept
+ * of stream and receive thread, so we have to jump through some hoops to
+ * coexist.
  *
- * Authentication can, of course, succeed or fail based on timely interaction
- * between the two sides, but it can also be abused in a denial of service
- * attack.  If a client simply starts the process but never responds, it could
- * tie up a daemon's resources, and coordinated action could bring down a
- * daemon.  Because of this, we need to provide a way to reach in and abort
- * authentications that are "taking too long."
+ * The UDP endpoint does not use SASL for authentication and implements required
+ * dameon exchanges in the SYN, SYN + ACK echanges of the underlying ARDP
+ * protocol.  Although there is no authentication, per se, we still call this
+ * handshake phase authentication since the BusHello is part of the
+ * authentication phase of the TCP Transport.  Authentication can, of course,
+ * succeed or fail based on timely interaction between the two sides, but it can
+ * also be abused in a denial of service attack.  If a client simply starts the
+ * process but never responds, it could tie up a daemon's resources, and
+ * coordinated action could bring down a daemon.  Because of this, we provide a
+ * way to reach in and abort authentications that are "taking too long" and free
+ * the associated resources.
  *
  * As described above, a daemon can listen for inbound connections and it can
  * initiate connections to remote daemons.  Authentication must happen in both
- * cases.
- *
- * If you consider all that is happening, we are talking about a complicated
- * system of many threads that are appearing and disappearing in the system at
- * unpredictable times.  These threads have dependencies in the resources
- * associated with them (sockets and events in particular).  These resources may
- * have further dependencies that must be respected.
- *
- * To summarize, consider the following "big picture' view of the transport.  A
- * single UDPTransport is constructed if the daemon TransportList indicates that
- * UDP support is required.  The high-level daemon code (see bbdaemon.cc for
- * example) builds a TransportFactoryContainer that is initialized with a
- * factory that knows how to make UDPTransport objects if they are needed, and
- * associates the factory with the string "udp".  The daemon also constructs
- * "server args" which may contain the string "udp" or "tcp" or "bluetooth" or
- * "unix".  If the factory container provides a "udp" factory and the server
- * args specify a "udp" transport is needed then a UDPTransport object is
- * instantiated and entered into the daemon's internal transport list (list of
- * available transports).  Also provided for each transport is an abstract
- * address/port to listen for incoming connection requests on.
+ * cases and so we need to worry about denial of service in both directions and
+ * recover gracefully.
  *
  * When the daemon is brought up, its TransportList is Start()ed.  The transport
  * specs string (e.g., "unix:abstract=alljoyn;udp:;tcp:;bluetooth:") is provided
  * to TransportList::Start() as a parameter.  The transport specs string is
  * parsed and in the example above, results in "unix" transports, "tcp"
  * transports, "udp" transports and "bluetooth" transports being instantiated
- * and started.  As mentioned previously "udp" in the daemon translates into
+ * and started.  As mentioned previously "udp:" in the daemon translates into
  * UDPTransport.  Once the desired transports are instantiated, each is
  * Start()ed in turn.  In the case of the UDPTransport, this will start the
  * maintenance loop.  Initially there are no sockets to listen on.
  *
- * The daemon then needs to start listening on some inbound addresses and ports.
- * This is done by the StartListen() command which you can find in bbdaemon, for
- * example.  This also takes the same kind of server args string shown above but
- * this time the address and port information are used.  For example, one might
- * use the string "udp:addr=0.0.0.0,port=9955;" to specify which address and
- * port to listen to.  This Bus::StartListen() call is translated into a
- * UDPTransport::StartListen() call which is provided with the string
- * which we call a "listen spec".  Our StartListen() will create a Socket, bind
- * the socket to the address and port provided and save the new socket on a list
- * of "listenFds" (we may listen on separate sockets corresponding to multiple
- * network interfaces).   It will then Alert() the already running maintenance
- * thread -- see UDPTransport::Run().  Each time through the maintenance
- * loop, Run() will examine the list of listenFds and will associate an Event
- * with the corresponding socketFd and wait for inbound datagrams.
- *
- * There is a complementary call to stop listening on addresses.  Since the
- * protocol handler loop is depending on the associated sockets, StopListen must
- * not close those Sockets, it must ask the maintenance loop to do so in a
- * coordinated way.
+ * The daemon then needs to start listening on inbound addresses and ports.
+ * This is done by the StartListen() command.  This also takes the same kind of
+ * server args string shown above but this time the address and port information
+ * are used.  For example, one might use the string
+ * "udp:u4addr=0.0.0.0,u4port=9955;" to specify which address and port to listen
+ * to.  This Bus::StartListen() call is translated into a transport
+ * StartListen() call which is provided with the string described above, which
+ * we call a "listen spec".  Our UDPTransport::StartListen() will arange to
+ * create a Socket, bind the socket to the address and port provided and save
+ * the new socket on a list of "listenFds" (we may listen on separate sockets
+ * corresponding to multiple network interfaces).  Another of the many
+ * complications we have to deal with is that the Android Compatibility Test
+ * Suite (CTS) requires that an idle phone not have any sockets listening for
+ * inbound data.  In order to pass the CTS in the case of the pre-installed
+ * daemon, we must only have open name service sockets when actively advertising
+ * or discovering.  This implies that we need to track the adveritsement state
+ * and enable or disable the name service depending on that state.
  *
  * An inbound connection request in the UDP transport is consists of receiving a
- * SYN datagram.  A worker thread will handle the incoming request and create a
- * UDPEndpoint for the *proposed* new connection.  Recall that an endpoint is
- * not brought up immediately, but an authentication step must be performed.
- * The worker thread starts this process by placing the new UDPEndpoint on
- * an authList, or list of authenticating endpoints.  It then calls the endpoint
- * Authenticate() method which spins up an authentication thread and returns
- * immediately.  This process transfers the responsibility for the connection
- * and its resources to the authentication thread.  Authentication can succeed,
- * fail, or take to long and be aborted.
+ * SYN datagram.  The AcceptCb() is called from the reliability layer (on
+ * reception of a SYN packet) in order to ask whether or not the connection
+ * should be accepted.  If AcceptCb() determines there are enough resources for
+ * a new connection it will call ARDP_Accept to provide a BusHello reply and
+ * return true indicating acceptance, or false which means rejection.  If the
+ * connection is accepted, a ConnectCb() is fired and the callback dispatcher
+ * thread will ultimately handle the incoming request and create a UDPEndpoint
+ * for the *proposed* new connection.
  *
- * If authentication succeeds, the authentication thread calls back into the
- * UDPTransport's Authenticated() method.  Along with indicating that
- * authentication has completed successfully, this transfers ownership of the
- * UDPEndpoint back to the UDPTransport from the authentication thread.  At this
- * time, the UDPEndpoint is Start()ed which enaables Message routing across the
- * transport.
- *
- * If the authentication fails, the authentication thread simply sets the
- * UDPEndpoint state to FAILED and exits.  The maintenance thread looks at
- * authenticating endpoints (those on the authList) each time through its loop.
- * If an endpoint has failed authentication, and its thread has actually gone
- * away (or more precisely is at least going away in such a way that it will
- * never touch the endpoint data structure again).  This means that the endpoint
- * can be deleted.
- *
+ * Recall that an endpoint is not brought up immediately, but an authentication
+ * step must be performed.  The required information (BusHello reply) is
+ * provided back in the SYN + ACK packet.  The final ACK of the three-way
+ * handshake completes the inbound connection establishment process.
  * If the authentication takes "too long" we assume that a denial of service
- * attack in in progress.  We call AuthStop() on such an endpoint.  This
- * AuthStop() will cause the endpoint to be scavenged using the above mechanism
- * the next time through the maintenance loop.
+ * attack in in progress.  We fail such partial connections and the endpoint
+ * management code removes them.
  *
  * A daemon transport can accept incoming connections, and it can make outgoing
  * connections to another daemon.  This case is simpler than the accept case
  * since it is expected that a socket connect can block higner level code, so it
  * is possible to do authentication in the context of the thread calling
  * Connect().  Connect() is provided a so-called "connect spec" which provides
- * an IP address ("u4addr=xxxx"), port ("y4port=yyyy") in a String.
- *
- * A check is always made to catch an attempt for the daemon to connect to
- * itself which is a system-defined error (it causes the daemon grief, so we
- * avoid it here by looking to see if one of the listenFds is listening on an
- * interface that corresponds to the address in the connect spec).
- *
- * If the connect is allowed, ee kick off a process in the underlying UDP reliability
- * layer that corresponds to the 3-way handshake of TCP.
- *
- * The next step is to create a UDPEndpoint and to put it on the endpointList.
- * Note that the endpoint doesn't go on the authList as in the server case, it
- * goes on the list of active endpoints.  This is because a failure to
- * authenticate on the client side results in a call to EndpointExit which is
- * the same code path as a failure when the endpoint is up.  The failing
- * endpoint must be on the endpoint list in order to allow authentication errors
- * to be propagated back to higher-level code in a meaningful context.  Once the
- * endpoint is stored on the list, Connect() starts client-side Authentication
- * with the remote (server) side.  If Authentication succeeds, the endpoint is
- * Start()ed as described above.  If authentication fails, the endpoint is
- * removed from the active list.  This is thread-safe since there is no
- * authentication thread running because the authentication was done in the
- * context of the thread calling Connect() which is the one deleting the
- * endpoint.
+ * an IP address ("u4addr=xxxx"), port ("y4port=yyyy") in a String.  A check is
+ * always made to catch an attempt for the daemon to connect to itself which is
+ * a system-defined error (it causes the daemon grief, so we avoid it here by
+ * looking to see if one of the listenFds is listening on an interface that
+ * corresponds to the address in the connect spec).  If the connect is allowed,
+ * ee kick off a process in the underlying UDP reliability layer that
+ * corresponds to the 3-way handshake of TCP.
  *
  * Shutting the UDPTransport down involves orchestrating the orderly termination
  * of:
  *
  *   1) Threads that may be running in the maintenance loop with associated Events
- *      and their dependent socketFds stored in the listenFds list.
- *   2) Threads that may be running authentication with associated endpoint objects,
- *      streams and SocketFds.  These threads are accessible through endpoint objects
- *      stored on the authList.
- *   3) Worker threads that may be running and through endpoints which are up and
- *      running, transporting routable Messages through the system.
+ *      and their dependent socketFds stored in the listenFds list;
+ *   3) The callback dispatcher thread that may be out wandering around in the
+ *      daemon doing its work;
+ *   2) Threads that may be running around in endpoints and streams trying to write
+ *      Mesages to the network.
  *
- * Note that we also have to understand and deal with the fact that threads
- * running in state (2) above, will exit and depend on the maintenance loop to
- * scavenge the associated objects off of the authList and delete them.  This
- * means that the server maintenance loop cannot be Stop()ped until the authList
- * is empty.  We further have to understand that threads running in state (3)
- * above will depend on the hooked EndpointExit function.  We can't delete the
- * transport until all of its associated endpoint threads are Join()ed.  Also,
- * since the transmport may be looking at the list of listenFDs, we must be
- * careful about deleting those sockets out from under the server thread.  The
- * system should call StopListen() on all of the listen specs it called
- * StartListen() on; but we need to be prepared to clean up any "unstopped"
- * listen specs in a coordinated way.  This, in turn, means that the server
- * maintenance loop cannot be Stop()ped until all of the listenFds are cleaned
- * up.
+ * We have to be careful to follow the AllJoyn threading model transitions in
+ * both the UDPTransport and all of its associated _UdpEndpoints.  There are
+ * reference counts of endpoints to be respected as well.  In order to ensure
+ * orderly termination of endoints and deterministic disposition of threads
+ * which may be executing in those endpoints, We want the last reference count
+ * held on an endpoint to be the one held by the transport.  There is much
+ * work (see IncrementAndFetch, DecrementAndFetch, ManagedObj for example)
+ * done to ensure this outcome.
  *
- * There are a lot of dependencies here, so be careful when making changes to
- * the thread and resource management here.  It's quite easy to shoot yourself
- * in multiple feet you never knew you had if you make an unwise modification,
- * and sometimes the results are tiny little time-bombs set to go off in
- * completely unrelated code (if, for example, a socket is deleted and reused
- * by another piece of code while the transport still has an event referencing
- * the socket now used by the other module).
+ * There are a lot of very carefully managed relationships here, so be careful
+ * when making changes to the thread and resource management aspects of any
+ * transport.  Taking lock order lightly is a recipe for disaster.  Always
+ * consider what locks are taken where and in what order.  It's quite easy to
+ * shoot yourself in multiple feet you never knew you had if you make an unwise
+ * modification, and this can sometimes result in tiny little time-bombs set to
+ * go off in seemingly completely unrelated code.
  *
  * A note on connection establishment
  * ==================================
@@ -380,6 +352,10 @@
  * in the DBus spec.  In order to get a destination address for the BusHello
  * message, the local side relies on the SASL three-way handshake exchange:
  *
+ *     SYN ------------>
+ *                       <- SYN + ACK
+ *     ACK ------------>
+ *     NUL ------------>
  *     AUTH ANONYMOUS ->
  *                       <- OK <GUID>
  *     BEGIN ---------->
@@ -388,57 +364,57 @@
  * passive side sends a response
  *
  *     BusHello ------->
- *                       <- BusHello response
+ *                       <- BusHello reply
  *
  * In the UDP Transport, we get rid of basically the whole Authentication
  * process and exchange required information in the SYN, SYN + ACK and
  * ACK packets of the protocol three-way handshake.
  *
- * The initial SYN packet implies AUTH_ANONYMOUS and contains the BusHello
- * message data from the Local (initiating/active) side of the connection.
- * The SYN + ACK segment then contains the response to the BusHello that
- * was sent in the SYN packet.
+ * The initial ARDP SYN packet *implies* AUTH_ANONYMOUS and contains the
+ * BusHello message data from the Local (initiating/active) side of the
+ * connection.  The SYN + ACK segment in response from the remote side contains
+ * the response to the BusHello that was sent in the SYN packet.
  *
  *     SYN + BusHello -->
  *                        <- SYN + ACK + BusHello Reply
  *     ACK ------------->
  *
- * At this point, the connection is up and running.
+ * This all happens in a TCP-like SYN, SYN + ACK, ACK exchange with AllJoyn
+ * data.  At the reception of the final ACK, the connection is up and running.
  *
  * This exchange is implemented using a number of callback functions that
  * fire on the local (active) and remote (passive) side of the connection.
  *
  * 1) The actively connecting side provides a BusHello message in call to
- *    ARDP_Connect.  As described above, ARDP provides this message as data in
+ *    ARDP_Connect().  As described above, ARDP provides this message as data in
  *    the SYN segment which is the first part of the three-way handshake;
  *
- * 2) When the passive side receives the SYN segment, its AcceptCB callback is
+ * 2) When the passive side receives the SYN segment, its AcceptCb() callback is
  *    fired.  The data provided in the accept callback contains the BusHello
  *    message from the actively opening side.  The passive side, if it chooses
- *    to accept the connection, makes a call to ARDP_Accept with its reply to
+ *    to accept the connection, makes a call to ARDP_Accept() with its reply to
  *    the BusHello from the active side as data.  ARDP provides this data back
  *    in the SYN + ACK segment as the second part of its three-way handshake;
  *
- * 3) The actively connecting side receives a ConnectCb callback as a result of
- *    the SYN + ACK coming back from the passive side.  This indicates that the
- *    newly established connection is going into the OPEN state from the local
- *    side's perspective.  This callback includes the data from the passive side
- *    that includes the reply to the active side's original BusHello message.
- *    The active opener then creates a reply to the BusHello message from the
- *    passive side and provides it to the function ARDP_Acknowledge.  This
- *    drives the ACK to the SYN + ACK and starts the third part of the three-way
- *    handshake.
+ * 3) The actively connecting side receives a ConnectCb() callback as a result
+ *    of the SYN + ACK coming back from the passive side.  This indicates that
+ *    the newly established connection is going into the OPEN state from the
+ *    local side's (ARDP) perspective.  Prior to firing the callback, ARDP
+ *    automatically sends the final ACK and completes the three-way handshake.
+ *    The ConectCb() with the active indication means that a SYN + ACK has been
+ *    received that includes the reply to the original BusHello message.
  *
  * 4) When the final ACK of the three-way handshake is delivered to the passive
  *    opener side, it transitions the passive side to the OPEN state and fires
- *    the AcknowledgeCb callback.
+ *    a ConnectCb() callback with the passive indication meaning that the final
+ *    ACK of the three-way handhake has arrived.
  *
  * From the perspective of the UDP Transport, this translates into the following
  * sequence diagram that reflects the three-way handshake that is going on under
  * the whole thing.
  *
- *                       Active Side                                                  Passive Side
- *                       ===========                                                  ============
+ *                  Active Side                          Passive Side
+ *                  ===========                          ============
  *      ARDP_Connect([out]BusHello message) --> AcceptCb([in]BusHello message) -----+
  *                                                                                  |
  * +--- ConnectCb([in]BusHello reply) <-------- ARDP_Accept([out]BusHello reply) <--+
@@ -473,8 +449,7 @@ const uint32_t UDP_DATA_TIMEOUT = 3000;     /**< How long do we wait before retr
 const uint32_t UDP_DATA_RETRIES = 5;        /**< How many times to we try do send data before giving up and terminating a connection */
 const uint32_t UDP_PERSIST_TIMEOUT = 5000;  /**< How long do we wait before pinging the other side due to a zero window */
 const uint32_t UDP_PERSIST_RETRIES = 5;     /**< How many times do we do a zero window ping before giving up and terminating a connection */
-//const uint32_t UDP_PROBE_TIMEOUT = 3000;    /**< How long to we wait on an idle link before generating link activity */
-const uint32_t UDP_PROBE_TIMEOUT = 10000;    /**< How long to we wait on an idle link before generating link activity */
+const uint32_t UDP_PROBE_TIMEOUT = 10000;   /**< How long to we wait on an idle link before generating link activity */
 const uint32_t UDP_PROBE_RETRIES = 5;       /**< How many times do we try to probe on an idle link before terminating the connection */
 const uint32_t UDP_DUPACK_COUNTER = 1;      /**< How many duplicate acknowledgements to we need to trigger a data retransmission */
 const uint32_t UDP_TIMEWAIT = 1000;         /**< How long do we stay in TIMWAIT state before releasing the per-connection resources */
@@ -660,6 +635,10 @@ class ArdpStream : public qcc::Stream {
         m_conn = conn;
     }
 
+    /**
+     * Get the number of outstanding write operations in process on the stream.
+     * connection.
+     */
     uint32_t GetWritesOutstanding()
     {
         QCC_DbgTrace(("ArdpStream::GetWritesOutstanding() => %d.", m_writesOutstanding));
@@ -717,6 +696,10 @@ class ArdpStream : public qcc::Stream {
         m_lock.Unlock(MUTEX_CONTEXT);
     }
 
+    /**
+     * Determine whether or not there is a thread waiting on the stream for a write
+     * operation to complete.
+     */
     bool ThreadSetEmpty()
     {
         QCC_DbgTrace(("ArdpStream::ThreadSetEmpty()"));
@@ -1110,6 +1093,10 @@ class ArdpStream : public qcc::Stream {
         return ER_FAIL;
     }
 
+    /**
+     * Set the stram up for being torn down before going through the expected
+     * lifetime state transitions.
+     */
     void EarlyExit()
     {
         QCC_DbgTrace(("ArdpStream::EarlyExit()"));
@@ -1127,18 +1114,29 @@ class ArdpStream : public qcc::Stream {
         m_lock.Unlock(MUTEX_CONTEXT);
     }
 
+    /**
+     * Get the disconnected status.  If the stream has been disconnected, return
+     * true otherwise false.
+     */
     bool GetDisconnected()
     {
         QCC_DbgTrace(("ArdpStream::Disconnected(): -> %s", m_disc ? "true" : "false"));
         return m_disc;
     }
 
+    /**
+     * In the case of a local disconnect, disc sent means that ARDP_Disconnect()
+     * has been called.  Determine if this call has been made or not.
+     */
     bool GetDiscSent()
     {
         QCC_DbgTrace(("ArdpStream::GetDiscSent(): -> %s", m_discSent ? "true" : "false"));
         return m_discSent;
     }
 
+    /**
+     * Process a disconnect event, either local or remote.
+     */
     void Disconnect(bool sudden, QStatus status)
     {
         if (status == ER_OK) {
@@ -1665,8 +1663,13 @@ class _UDPEndpoint : public _RemoteEndpoint {
     }
 
     /**
-     * Override RemoteEndpoint::Stop() since we are not going to unhook IOdispatch or stop TX and
-     * RX threads or anything like that.
+     * Perform the AllJoyn thread lifecycle Stop() operation.  Unlike the
+     * standard method, Stop() can be called multiple times in this transport
+     * since not all operations are serialized through a single RemoteEndpoint
+     * ThreadExit.
+     *
+     * Override RemoteEndpoint::Stop() since we are not going to unhook
+     * IOdispatch or stop TX and RX threads or anything like that.
      */
     QStatus Stop()
     {
@@ -1776,6 +1779,10 @@ class _UDPEndpoint : public _RemoteEndpoint {
         return ER_OK;
     }
 
+    /**
+     * Perform the AllJoyn thread lifecycle Join() operation.  Join() can be called
+     * multiple times.
+     */
     QStatus Join()
     {
         IncrementAndFetch(&m_refCount);
@@ -1963,24 +1970,40 @@ class _UDPEndpoint : public _RemoteEndpoint {
         return ER_OK;
     }
 
+    /**
+     * Get the boolean indication that the RemoteEndpoint exit function has been
+     * called.
+     */
     bool GetExited()
     {
         QCC_DbgHLPrintf(("_UDPEndpoint::GetExited(): -> %s", m_remoteExited ? "true" : "false"));
         return m_remoteExited;
     }
 
+    /**
+     * Set the boolean indication that the RemoteEndpoint exit function has been
+     * scheduled.
+     */
     void SetExitScheduled()
     {
         QCC_DbgHLPrintf(("_UDPEndpoint::SetExitScheduled()"));
         m_exitScheduled = true;
     }
 
+    /**
+     * Get the boolean indication that the RemoteEndpoint exit function has been
+     * scheduled.
+     */
     bool GetExitScheduled()
     {
         QCC_DbgHLPrintf(("_UDPEndpoint::GetExitScheduled(): -> %s", m_exitScheduled ? "true" : "false"));
         return m_exitScheduled;
     }
 
+    /**
+     * Get a boolean indication that the endpoint has been registered with the
+     * daemon.
+     */
     bool GetRegistered()
     {
         QCC_DbgHLPrintf(("_UDPEndpoint::GetRegistered(): -> %s", m_registered ? "true" : "false"));
@@ -2022,6 +2045,10 @@ class _UDPEndpoint : public _RemoteEndpoint {
         DecrementAndFetch(&m_refCount);
     }
 
+    /**
+     * Get the ArdpStream* pointer to the skeletal stream associated with this
+     * endpoint.
+     */
     ArdpStream* GetStream()
     {
         QCC_DbgTrace(("_UDPEndpoint::GetStream() => %p", m_stream));
@@ -2902,6 +2929,9 @@ class _UDPEndpoint : public _RemoteEndpoint {
     qcc::Mutex m_stateLock;           /**< Mutex protecting the endpoint state against multiple threads attempting changes */
 };
 
+/**
+ * Construct a UDP Transport object.
+ */
 UDPTransport::UDPTransport(BusAttachment& bus) :
     Thread("UDPTransport"),
     m_bus(bus), m_stopping(false), m_listener(0),
@@ -2974,6 +3004,9 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
 
 }
 
+/**
+ * Destroy a UDP Transport object.
+ */
 UDPTransport::~UDPTransport()
 {
     QCC_DbgHLPrintf(("UDPTransport::~UDPTransport()"));
@@ -2990,6 +3023,13 @@ UDPTransport::~UDPTransport()
     //assert(IncrementAndFetch(&m_refCount) == 1 && "UDPTransport::~UDPTransport(): non-zero reference count");
 }
 
+/**
+ * Define an EndpointExit function even though it is not used in the UDP
+ * Transport.  This virtual function is expected by the daemon and must be
+ * defined even though we will not use it.  We short-circuit the EndpointExit
+ * functionality by defining a new RemoteEndpoint::Stop() function that doesn't
+ * require the functionality.
+ */
 void UDPTransport::EndpointExit(RemoteEndpoint& ep)
 {
     QCC_DbgTrace(("UDPTransport::EndpointExit()"));
@@ -3223,6 +3263,10 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
     return 0;
 }
 
+/**
+ * Start the UDP Transport and prepare it for accepting inbound connections or
+ * forming outbound connections.
+ */
 QStatus UDPTransport::Start()
 {
     IncrementAndFetch(&m_refCount);
@@ -3295,6 +3339,10 @@ bool operator<(const UDPTransport::ConnectEntry& lhs, const UDPTransport::Connec
     return lhs.m_connId < rhs.m_connId;
 }
 
+/**
+ * Ask all of the threads that may be wandering around in the UDP Transport or
+ * its associated endpoints to begin leaving.
+ */
 QStatus UDPTransport::Stop(void)
 {
     IncrementAndFetch(&m_refCount);
@@ -3369,6 +3417,12 @@ QStatus UDPTransport::Stop(void)
     return ER_OK;
 }
 
+/**
+ * Wait for all of the threads that may be wandering around in the UDP Transport
+ * or its associated endpoints to complete their cleanup process and leave the
+ * transport.  When this method completes, it must be safe to delete the object.
+ * Note that this method may be called multiple times.
+ */
 QStatus UDPTransport::Join(void)
 {
     IncrementAndFetch(&m_refCount);
@@ -3553,6 +3607,13 @@ QStatus UDPTransport::Join(void)
  */
 static const char* INTERFACES_DEFAULT = "*";
 
+/**
+ * This is a somewhat obscure method used by the AllJoyn object to determine if
+ * there are possibly multiple ways to connect to an advertised bus address.
+ * Our goal is to enumerate all of the possible interfaces over which we can be
+ * contacted -- for example, eth0, wlan0 -- and construct bus address strings
+ * matching each one.
+ */
 QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs)
 {
     IncrementAndFetch(&m_refCount);
@@ -3756,6 +3817,20 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
     return ER_OK;
 }
 
+/**
+ * This method is used to deal with the lifecycle of all endpoints created by
+ * the UDP Transport.  It is called on-demand and periodically by the main run
+ * loop in order to detect connections / endpoints that are taking too long to
+ * authenticate and also to deal with endpoints that are being torn down.
+ *
+ * The main complexities here are to ensure that there are no threads wandering
+ * around in endpoints before we remove them, ensuring that the endpoints are
+ * completely detached from the router and that the UDP Transport holds the final
+ * reference to endpoints to make absolutely sure that there are going to be no
+ * suprise threads popping up in a deleted object.  We also cannot block waiting
+ * for things to happen, since we would block the protocol (as it stands now there
+ * is one thread managing endpoints and driving ARDP).
+ */
 void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTimeout)
 {
     set<UDPEndpoint>::iterator i;
@@ -4026,6 +4101,9 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 }
 
+/**
+ * Callback from the ARDP Protocol.  We just plumb this callback directly into the transport.
+ */
 bool UDPTransport::ArdpAcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::ArdpAcceptCb(handle=%p, ipAddr=\"%s\", port=%d., conn=%p, buf =%p, len = %d)",
@@ -4034,6 +4112,9 @@ bool UDPTransport::ArdpAcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint1
     return transport->AcceptCb(handle, ipAddr, ipPort, conn, buf, len, status);
 }
 
+/**
+ * Callback from the ARDP Protocol.  We just plumb this callback directly into the transport.
+ */
 void UDPTransport::ArdpConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::ArdpConnectCb(handle=%p, conn=%p, passive=%s, buf = %p, len = %d, status=%s)",
@@ -4042,6 +4123,9 @@ void UDPTransport::ArdpConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool 
     transport->ConnectCb(handle, conn, passive, buf, len, status);
 }
 
+/**
+ * Callback from the ARDP Protocol.  We just plumb this callback directly into the transport.
+ */
 void UDPTransport::ArdpDisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::ArdpDisconnectCb(handle=%p, conn=%p, foreign=%d.)", handle, conn));
@@ -4049,6 +4133,9 @@ void UDPTransport::ArdpDisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QS
     transport->DisconnectCb(handle, conn, status);
 }
 
+/**
+ * Callback from the ARDP Protocol.  We just plumb this callback directly into the transport.
+ */
 void UDPTransport::ArdpRecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::ArdpRecvCb(handle=%p, conn=%p, buf=%p, status=%s)",
@@ -4057,6 +4144,9 @@ void UDPTransport::ArdpRecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvB
     transport->RecvCb(handle, conn, rcv, status);
 }
 
+/**
+ * Callback from the ARDP Protocol.  We just plumb this callback directly into the transport.
+ */
 void UDPTransport::ArdpSendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::ArdpSendCb(handle=%p, conn=%p, buf=%p, len=%d.)", handle, conn, buf, len));
@@ -4064,6 +4154,9 @@ void UDPTransport::ArdpSendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t*
     transport->SendCb(handle, conn, buf, len, status);
 }
 
+/**
+ * Callback from the ARDP Protocol.  We just plumb this callback directly into the transport.
+ */
 void UDPTransport::ArdpSendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t window, QStatus status)
 {
     QCC_DbgTrace(("UDPTransport::ArdpSendWindowCb(handle=%p, conn=%p, window=%d.)", handle, conn, window));
@@ -4072,7 +4165,7 @@ void UDPTransport::ArdpSendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, ui
 }
 
 /*
- * See the note on connection establishment to make sense of this.
+ * See the note on connection establishment to really make sense of this.
  *
  * This callback indicates that we are receiving a passive open request.  We are
  * in LISTEN state and are responding to another side that has done an
@@ -4892,11 +4985,9 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
 }
 
 /*
- * This is the indication from the ARDP protocol that a connection is in the
- * process of being formed.  We want to spend as little time as possible here
- * (and avoid deadlocks as much as possible here) so we just immediately ask the
- * transport dispatcher to do something with this message and return.  This case
- * is unlike the others because there may not be an endpoint to demux to yet.
+ * This is method that is called in order to begin the process of detaching from
+ * the router.  We dispatch the call to another thread since we absolutely do
+ * not want to hold any locks when we call out to the daemon.
  */
 void UDPTransport::ExitEndpoint(uint32_t connId)
 {
@@ -5034,6 +5125,12 @@ void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* 
      */
     if (m_dispatcher == NULL) {
         QCC_DbgPrintf(("UDPTransport::RecvCb(): m_dispatcher is NULL"));
+
+        QCC_DbgPrintf(("UDPTransport::RecvCb(): ARDP_RecvReady()"));
+        m_ardpLock.Lock();
+        ARDP_RecvReady(handle, conn, rcv);
+        m_ardpLock.Unlock();
+
         DecrementAndFetch(&m_refCount);
         return;
     }
@@ -5095,6 +5192,9 @@ void UDPTransport::SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf
     DecrementAndFetch(&m_refCount);
 }
 
+/**
+ * This is an indication from the ARDP Procotol that the send window has changed.
+ */
 void UDPTransport::SendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t window, QStatus status)
 {
     IncrementAndFetch(&m_refCount);
@@ -5103,6 +5203,10 @@ void UDPTransport::SendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16
     DecrementAndFetch(&m_refCount);
 }
 
+/**
+ * This is the run method of the main loop of the UDP Transport maintenance
+ * thread -- the center of the UDP Transport universe.
+ */
 void* UDPTransport::Run(void* arg)
 {
     QCC_DbgTrace(("UDPTransport::Run()"));
@@ -6107,6 +6211,11 @@ QStatus UDPTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& ou
     return ER_OK;
 }
 
+/**
+ * This is the method that is called in order to initiate an outbound (active)
+ * connection.  This is called from the AllJoyn Object in the course of
+ * processing a JoinSession request in the context of a JoinSessionThread.
+ */
 QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newEp)
 {
     IncrementAndFetch(&m_refCount);
@@ -6542,6 +6651,12 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     return status;
 }
 
+/**
+ * This is a (surprisingly) unused method call.  One would expect that since it
+ * is defined, it would be the symmetrical opposigte of Connect.  That turns out
+ * not to be the case.  Some transports define implementations as if it was
+ * used, but it is not.  Our implementation is to simply assert.
+ */
 QStatus UDPTransport::Disconnect(const char* connectSpec)
 {
     IncrementAndFetch(&m_refCount);
@@ -6557,6 +6672,10 @@ QStatus UDPTransport::Disconnect(const char* connectSpec)
     return ER_FAIL;
 }
 
+/**
+ * Start listening for inbound connections over the ARDP Protocol using the
+ * address and port information provided in the listenSpec.
+ */
 QStatus UDPTransport::StartListen(const char* listenSpec)
 {
     IncrementAndFetch(&m_refCount);
@@ -6924,17 +7043,30 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
     return status;
 }
 
+/**
+ * Since untrusted clients are only Thin Library clients, and the Thin Library
+ * only supports TCP, this is a NOP here.
+ */
 void UDPTransport::UntrustedClientExit()
 {
     QCC_DbgTrace((" UDPTransport::UntrustedClientExit()"));
 }
 
+/**
+ * Since untrusted clients are only Thin Library clients, and the Thin Library
+ * only supports TCP, this is a NOP here.
+ */
 QStatus UDPTransport::UntrustedClientStart()
 {
     QCC_DbgTrace((" UDPTransport::UntrustedClientStart()"));
     return ER_UDP_NOT_IMPLEMENTED;
 }
 
+/**
+ * Stop listening for inbound connections over the ARDP Protocol using the
+ * address and port information provided in the listenSpec.  Must match a
+ * previously started listenSpec.
+ */
 QStatus UDPTransport::StopListen(const char* listenSpec)
 {
     IncrementAndFetch(&m_refCount);
