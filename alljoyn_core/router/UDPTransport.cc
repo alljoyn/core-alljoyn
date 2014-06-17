@@ -3608,7 +3608,7 @@ static const char* INTERFACES_DEFAULT = "*";
  * contacted -- for example, eth0, wlan0 -- and construct bus address strings
  * matching each one.
  */
-QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs)
+QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs) const
 {
     IncrementAndFetch(&m_refCount);
     QCC_DbgTrace(("UDPTransport::GetListenAddresses()"));
