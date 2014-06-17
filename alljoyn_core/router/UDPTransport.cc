@@ -3324,13 +3324,28 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
                      * operation and broke out of the iterator loop assuming the
                      * iterator was no good any more.  If we did not find the
                      * endpoint, we still have the lock and we need to give it
-                     * up.
+                     * up.  Also, if we did not find an endpoint, we may have
+                     * a receive buffer we have to dispose of.  We assume that
+                     * when the endpoint bailed, any callers waiting to write
+                     * were ejected and so there are no transmit buffers to
+                     * deal with.
                      */
                     if (haveLock) {
-#if POFF
-                        printf("==== %.6f ====== UDPTransport::DispatcherThread::Run(): Give lock\n", GetTickCount());
-#endif
                         m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
+
+                        switch (entry.m_command) {
+                        case WorkerCommandQueueEntry::RECV_CB:
+                            {
+                                QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): Orphaned RECV_CB: ARDP_RecvReady()"));
+                                m_transport->m_ardpLock.Lock();
+                                ARDP_RecvReady(entry.m_handle, entry.m_conn, entry.m_rcv);
+                                m_transport->m_ardpLock.Unlock();
+                                break;
+                            }
+
+                        default:
+                            break;
+                        }
                     }
                 } // else not CONNECT_CB
             } // if (drained == false)
