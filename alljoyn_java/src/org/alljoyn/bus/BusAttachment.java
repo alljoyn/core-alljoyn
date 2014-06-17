@@ -806,20 +806,21 @@ public class BusAttachment {
     private static HashSet<WeakReference<BusAttachment>> busAttachmentSet = new HashSet<WeakReference<BusAttachment>>();
 
     /* Shutdown hook used to release any connected BusAttachments when the VM exits */
-    private static class ShutdownHookThread extends Thread{
-        public void run(){
-
-            /* Iterate through the busAttachmentSet and release any BusAttachments that havent been released yet.*/
-            Iterator<WeakReference<BusAttachment>> iterator = busAttachmentSet.iterator();
-            while(iterator.hasNext()){
-                WeakReference<BusAttachment> temp = iterator.next();
-                BusAttachment temp1 = temp.get();
-                if(temp1 != null){
-                    temp1.release();
-                } else{
-                    busAttachmentSet.remove(temp);
+    private static class ShutdownHookThread extends Thread {
+        public void run() {
+            synchronized (this) {
+                /* Iterate through the busAttachmentSet and release any BusAttachments that havent been released yet.*/
+                Iterator<WeakReference<BusAttachment>> iterator = busAttachmentSet.iterator();
+                while (iterator.hasNext()) {
+                    WeakReference<BusAttachment> temp = iterator.next();
+                    BusAttachment temp1 = temp.get();
+                    if(temp1 != null){
+                        temp1.release();
+                    } else{
+                        busAttachmentSet.remove(temp);
+                    }
+                    iterator = busAttachmentSet.iterator();
                 }
-                iterator = busAttachmentSet.iterator();
             }
         }
     }
@@ -873,21 +874,21 @@ public class BusAttachment {
      * after the release() method has been called.
      */
     public void release() {
-        if (isConnected == true) {
-            disconnect();
-        }
-        if (dbusbo != null) {
-            dbusbo.release();
-            dbusbo = null;
-        }
-        dbus = null;
-        destroy();
-        /* Remove this bus attachment from the busAttachmentSet */
-        synchronized(busAttachmentSet){
+        synchronized (this) {
+            if (isConnected == true) {
+                disconnect();
+            }
+            if (dbusbo != null) {
+                dbusbo.release();
+                dbusbo = null;
+            }
+            dbus = null;
+            destroy();
+            /* Remove this bus attachment from the busAttachmentSet */
             Iterator<WeakReference<BusAttachment>> iterator = busAttachmentSet.iterator();
-            while(iterator.hasNext()){
+            while (iterator.hasNext()) {
                 BusAttachment temp = iterator.next().get();
-                if(temp!=null && temp.equals(this)){
+                if (temp!=null && temp.equals(this)) {
                     iterator.remove();
                 }
             }
@@ -968,9 +969,9 @@ public class BusAttachment {
             Status status = connect(address, keyStoreListener, authMechanisms, busAuthListener, keyStoreFileName, isShared);
             if (status == Status.OK) {
                 /* Add this BusAttachment to the busAttachmentSet */
-                synchronized(busAttachmentSet){
+                synchronized (this) {
                     /* Register a shutdown hook if it is not already registered. */
-                    if(shutdownHookRegistered == false){
+                    if (shutdownHookRegistered == false) {
                         Runtime.getRuntime().addShutdownHook(new ShutdownHookThread());
                         shutdownHookRegistered = true;
                     }
