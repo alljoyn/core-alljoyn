@@ -3194,13 +3194,7 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
                             case WorkerCommandQueueEntry::DISCONNECT_CB:
                                 {
                                     QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): DISCONNECT_CB: DisconnectCb()"));
-#if POFF
-                                    printf("==== %.6f ====== UDPTransport::DispatcherThread::Run(): DISCONNECT_CB: DisconnectCb()\n", GetTickCount());
-#endif
                                     ep->DisconnectCb(entry.m_handle, entry.m_conn, entry.m_status);
-#if POFF
-                                    printf("==== %.6f ====== UDPTransport::DispatcherThread::Run(): DISCONNECT_CB: Done with DisconnectCb()\n", GetTickCount());
-#endif
                                     break;
                                 }
 
@@ -3900,9 +3894,6 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                  */
                 if (j->m_connId == ep->GetConnId()) {
                     QCC_DbgTrace(("UDPTransport::ManageEndpoints(): Waking thread on slow authenticator with conn ID == %d.", j->m_connId));
-#if POFF
-                    printf("==== %.6f ==== UDPTransport::ManageEndpoints(): Waking thread on slow authenticator with conn ID == %d.\n", GetTickCount(), j->m_connId);
-#endif
                     j->m_event->SetEvent();
                     threadWaiting = true;
                     changeMade = true;
@@ -3916,9 +3907,6 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
              */
             if (threadWaiting == false) {
                 QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Moving slow authenticator with conn ID == %d. to m_endpointList", ep->GetConnId()));
-#if POFF
-                printf("==== %.6f ==== UDPTransport::ManageEndpoints(): Moving slow authenticator with conn ID == %d. to m_endpointList\n", GetTickCount(), ep->GetConnId());
-#endif
                 m_authList.erase(i);
                 DecrementAndFetch(&m_currAuth);
                 m_endpointList.insert(ep);
@@ -3961,9 +3949,6 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
          */
         if (endpointState == _UDPEndpoint::EP_STOPPING || endpointState == _UDPEndpoint::EP_JOINED) {
             QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d is EP_STOPPING or EP_JOINED", ep->GetConnId()));
-#if POFF
-            printf("==== %.6f ==== UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d is EP_STOPPING or EP_JOINED\n", GetTickCount(), ep->GetConnId());
-#endif
 
             /*
              * If we are in state EP_STOPPING, not surprisingly Stop() must have
@@ -4002,8 +3987,10 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                 if (threadSetEmpty == false) {
                     QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled not threadSetEmpty"));
                 }
+
                 if (disconnected == false) {
                     QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled not disconnected"));
+#ifndef NDEBUG
                     ArdpStream* stream = ep->GetStream();
                     if (stream) {
                         bool disc = stream->GetDisconnected();
@@ -4014,14 +4001,12 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                     } else {
                         QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled not disconnected. No stream"));
                     }
+#endif
                 }
             }
 
             if (threadSetEmpty && disconnected) {
                 QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Join()ing stopping endpoint with conn ID == %d.", ep->GetConnId()));
-#if POFF
-                printf("==== %.6f ==== UDPTransport::ManageEndpoints(): Join()ing stopping endpoint with conn ID == %d.\n", GetTickCount(), ep->GetConnId());
-#endif
 
                 /*
                  * We now expect that Join() will complete without having to
@@ -4052,9 +4037,6 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
 #ifndef NDEBUG
             } else {
                 QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. is not idle", ep->GetConnId()));
-#if POFF
-                printf("======== UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. is not idle", ep->GetConnId());
-#endif
 #endif
             }
         }
@@ -4075,9 +4057,6 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                 if (refs == 1) {
                     ep->DecrementRefs();
                     QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. is histoire", ep->GetConnId()));
-#if POFF
-                    printf("==== %.6f ==== UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. is histoire\n", GetTickCount(), ep->GetConnId());
-#endif
                     m_endpointList.erase(i);
                     DecrementAndFetch(&m_currConn);
                     i = m_endpointList.upper_bound(ep);
@@ -4092,9 +4071,6 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
 
     if (changeMade) {
         m_manage = STATE_MANAGE;
-#if POFF
-        printf("==== %.6f ==== UDPTransport::ManageEndpoints(): Alert()\n", GetTickCount());
-#endif
         Alert();
     }
 
@@ -5010,9 +4986,6 @@ void UDPTransport::ExitEndpoint(uint32_t connId)
     entry.m_connId = connId;
 
     QCC_DbgPrintf(("UDPTransport::ExitEndpoint(): sending EXIT request to dispatcher"));
-#if POFF
-    printf("==== %.6f ==== UDPTransport::ExitEndpoint(): sending EXIT request to dispatcher\n", GetTickCount());
-#endif
     m_workerCommandQueueLock.Lock(MUTEX_CONTEXT);
     m_workerCommandQueue.push(entry);
     m_workerCommandQueueLock.Unlock(MUTEX_CONTEXT);
