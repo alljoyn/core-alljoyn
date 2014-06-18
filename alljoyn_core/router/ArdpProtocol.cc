@@ -1069,6 +1069,7 @@ void ARDP_FreeHandle(ArdpHandle* handle)
         for (ListNode* ln = &handle->conns; (ln = ln->fwd) != &handle->conns;) {
             ListNode* tmp = ln;
             ln = ln->bwd;
+            SetState((ArdpConnRecord*)tmp, CLOSED);
             DelConnRecord(handle, (ArdpConnRecord*)tmp, false);
         }
     }
