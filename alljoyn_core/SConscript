@@ -32,6 +32,8 @@ env['CPP_DISTDIR'] = env['DISTDIR'] + '/cpp'
 env['CPP_TESTDIR'] = env['TESTDIR'] + '/cpp'
 env['WINRT_DISTDIR'] = env['DISTDIR'] + '/winRT'
 
+env['OBJDIR_ALLJOYN_CORE'] = env['OBJDIR'] + '/alljoyn_core'
+
 ajenv = env.Clone()
 
 # Bullseye code coverage for 'debug' builds.
@@ -48,31 +50,31 @@ if ajenv['VARIANT'] == 'debug':
             ajenv.PrependENVPath('COVFILE', os.environ['COVFILE'])
 
 # manually add dependencies for xml to h, and for files included in the xml
-ajenv.Depends('$OBJDIR/Status.h', 'src/Status.xml')
-ajenv.Depends('$OBJDIR/Status.h', '../common/src/Status.xml')
+ajenv.Depends('$OBJDIR_ALLJOYN_CORE/Status.h', 'src/Status.xml')
+ajenv.Depends('$OBJDIR_ALLJOYN_CORE/Status.h', '../common/src/Status.xml')
 ajenv.Append(STATUS_FLAGS=['--base=%s' % os.getcwd()])
 
 
 if ajenv['OS_GROUP'] == 'winrt':
-    ajenv.Depends('$OBJDIR/Status_CPP0x.h', 'src/Status.xml')
-    ajenv.Depends('$OBJDIR/Status_CPP0x.h', '../common/src/Status.xml')
+    ajenv.Depends('$OBJDIR_ALLJOYN_CORE/Status_CPP0x.h', 'src/Status.xml')
+    ajenv.Depends('$OBJDIR_ALLJOYN_CORE/Status_CPP0x.h', '../common/src/Status.xml')
     ajenv.AppendUnique(CFLAGS=['/D_WINRT_DLL'])
     ajenv.AppendUnique(CXXFLAGS=['/D_WINRT_DLL'])
     ajenv.Append(STATUS_FLAGS=['--cpp0xnamespace=AllJoyn'])
 
 # Add support for multiple build targets in the same workset
-ajenv.VariantDir('$OBJDIR', 'src', duplicate = 0)
-ajenv.VariantDir('$OBJDIR/test', 'test', duplicate = 0)
-ajenv.VariantDir('$OBJDIR/router', 'router', duplicate = 0)
-ajenv.VariantDir('$OBJDIR/samples', 'samples', duplicate = 0)
-ajenv.VariantDir('$OBJDIR/alljoyn_android', 'alljoyn_android', duplicate = 0)
+ajenv.VariantDir('$OBJDIR_ALLJOYN_CORE', 'src', duplicate = 0)
+ajenv.VariantDir('$OBJDIR_ALLJOYN_CORE/test', 'test', duplicate = 0)
+ajenv.VariantDir('$OBJDIR_ALLJOYN_CORE/router', 'router', duplicate = 0)
+ajenv.VariantDir('$OBJDIR_ALLJOYN_CORE/samples', 'samples', duplicate = 0)
+ajenv.VariantDir('$OBJDIR_ALLJOYN_CORE/alljoyn_android', 'alljoyn_android', duplicate = 0)
 
 # AllJoyn Install
-ajenv.Install('$OBJDIR', ajenv.File('src/Status.xml'))
-ajenv.Status('$OBJDIR/Status')
-core_headers = ajenv.Install('$CPP_DISTDIR/inc/alljoyn', '$OBJDIR/Status.h')
+ajenv.Install('$OBJDIR_ALLJOYN_CORE', ajenv.File('src/Status.xml'))
+ajenv.Status('$OBJDIR_ALLJOYN_CORE/Status')
+core_headers = ajenv.Install('$CPP_DISTDIR/inc/alljoyn', '$OBJDIR_ALLJOYN_CORE/Status.h')
 if ajenv['OS_GROUP'] == 'winrt':
-    core_headers += ajenv.Install('$CPP_DISTDIR/inc/alljoyn', '$OBJDIR/Status_CPP0x.h')
+    core_headers += ajenv.Install('$CPP_DISTDIR/inc/alljoyn', '$OBJDIR_ALLJOYN_CORE/Status_CPP0x.h')
 
 core_headers += ajenv.Install('$CPP_DISTDIR/inc/alljoyn', [ h for h in ajenv.Glob('inc/alljoyn/*.h') if h not in ajenv.Glob('inc/alljoyn/Status*.h') ])
 
@@ -86,7 +88,7 @@ for d, h in common_hdrs.items():
 ajenv.Append(CPPPATH = [ajenv.Dir('src')])
 
 # AllJoyn Libraries
-libs, static_objs, shared_objs = ajenv.SConscript('$OBJDIR/SConscript', exports = ['ajenv', 'common_static_objs', 'common_shared_objs'])
+libs, static_objs, shared_objs = ajenv.SConscript('$OBJDIR_ALLJOYN_CORE/SConscript', exports = ['ajenv', 'common_static_objs', 'common_shared_objs'])
 
 ajenv.Install('$CPP_DISTDIR/lib', libs)
 
@@ -97,14 +99,14 @@ if ajenv['OS_GROUP'] != 'winrt':
 # AllJoyn Daemon, daemon library, and bundled daemon object file
 if ajenv['OS_GROUP'] == 'winrt':
     winrt_objs = static_objs
-    daemon_progs, ajrlib, brobj = ajenv.SConscript('$OBJDIR/router/SConscript', exports = ['winrt_objs'])
+    daemon_progs, ajrlib, brobj = ajenv.SConscript('$OBJDIR_ALLJOYN_CORE/router/SConscript', exports = ['winrt_objs'])
     ajenv.Install('$WINRT_DISTDIR/bin', daemon_progs)
     # WinRT needs the full path to the exact file.
     bundled_router_obj = brobj
     router_lib = ajrlib
 
 else:
-    daemon_progs, ajrlib, brobj = ajenv.SConscript('$OBJDIR/router/SConscript')
+    daemon_progs, ajrlib, brobj = ajenv.SConscript('$OBJDIR_ALLJOYN_CORE/router/SConscript')
     ajenv.Install('$CPP_DISTDIR/bin', daemon_progs)
     ajenv.Install('$CPP_DISTDIR/lib', ajrlib)
     bundled_router_obj = ajenv.Install('$CPP_DISTDIR/lib', brobj)
@@ -120,8 +122,9 @@ env['ajrlib'] = router_lib
 # building the AboutService.
 
 about_env = env.Clone()
-about_env.VariantDir('$OBJDIR/services/about/cpp', '../services/about/cpp', duplicate = 0)
-about_env.SConscript('$OBJDIR/services/about/cpp/SConscript', exports = ['about_env'])
+about_env['OBJDIR_ABOUT'] = env['OBJDIR'] + '/about'
+about_env.VariantDir('$OBJDIR_ABOUT/cpp', '../services/about/cpp', duplicate = 0)
+about_env.SConscript('$OBJDIR_ABOUT/cpp/SConscript', exports = ['about_env'])
 
 # only include command line samples, unit test, test programs if we are not 
 # building for iOS. No support on iOS for command line applications.
@@ -129,17 +132,17 @@ if env['OS'] == 'darwin' and env['CPU'] in ['arm', 'armv7', 'armv7s']:
     progs = []
 else:
     # Test programs
-    progs = env.SConscript('$OBJDIR/test/SConscript')
+    progs = env.SConscript('$OBJDIR_ALLJOYN_CORE/test/SConscript')
     ajenv.Install('$CPP_DISTDIR/bin', progs)
 
     # Build unit Tests
-    env.SConscript('unit_test/SConscript', variant_dir='$OBJDIR/unittest', duplicate = 0)
+    env.SConscript('unit_test/SConscript', variant_dir='$OBJDIR_ALLJOYN_CORE/unittest', duplicate = 0)
 
     # Sample programs
-    env.SConscript('$OBJDIR/samples/SConscript')
+    env.SConscript('$OBJDIR_ALLJOYN_CORE/samples/SConscript')
 
 # Android daemon runner
-ajenv.SConscript('$OBJDIR/alljoyn_android/SConscript')
+ajenv.SConscript('$OBJDIR_ALLJOYN_CORE/alljoyn_android/SConscript')
 
 # Release notes and misc. legals
 if ajenv['OS_CONF'] == 'darwin':

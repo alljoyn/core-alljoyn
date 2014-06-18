@@ -37,4 +37,4 @@ about_env.Install('$ABOUT_DISTDIR/bin', about_env.SConscript('samples/SConscript
 # building for iOS. No support on iOS for command line applications.
 if not (about_env['OS'] == 'darwin' and about_env['CPU'] in ['arm', 'armv7', 'armv7s']):
     # Build unit Tests
-    about_env.SConscript('unit_test/SConscript', exports = ['about_env'], variant_dir='$OBJDIR/unittest', duplicate = 0)
+    about_env.SConscript('unit_test/SConscript', exports = ['about_env'], variant_dir='$OBJDIR_ABOUT/unittest', duplicate = 0)

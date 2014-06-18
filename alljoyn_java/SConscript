@@ -25,6 +25,8 @@ if not env.has_key('_ALLJOYNCORE_'):
 # Indicate that this SConscript file has been loaded already
 env['_ALLJOYN_JAVA_'] = True
 
+env['OBJDIR_ALLJOYN_JAVA'] = env['OBJDIR'] + '/alljoyn_java'
+
 javaenv = env.Clone()
 
 vars = Variables();
@@ -68,20 +70,20 @@ javaenv['JAVA_DISTDIR'] = javaenv['DISTDIR'] + '/java'
 javaenv['JAVA_TESTDIR'] = javaenv['TESTDIR'] + '/java'
 
 # Tell dependent dirs where to stick classes
-javaenv.Append(CLASSDIR='$OBJDIR/classes')
+javaenv.Append(CLASSDIR='$OBJDIR_ALLJOYN_JAVA/classes')
 
 # Tell dependent dirs where jar files are located. ("#" doesn't work here for some reason)
 javaenv.Append(JARDIR='$JAVA_DISTDIR/jar')
 
 # Add support for mulitiple build targets in the same workset
-javaenv.VariantDir('$OBJDIR', '.', duplicate = 0)
+javaenv.VariantDir('$OBJDIR_ALLJOYN_JAVA', '.', duplicate = 0)
 
 
 # AllJoyn Java binding
 alljoyn_jar = javaenv.SConscript('src/SConscript', exports = {'env':javaenv})
 
 # AllJoyn JNI library
-libs = javaenv.SConscript('$OBJDIR/jni/SConscript', exports = {'env':javaenv})
+libs = javaenv.SConscript('$OBJDIR_ALLJOYN_JAVA/jni/SConscript', exports = {'env':javaenv})
 javaenv.Install('$JAVA_DISTDIR/lib', libs)
 # Also install a copy of liballjoyn_java, and junit.jar, alljoyn.jar into 
 # the bin folder so it can be found by the alljoyn_java eclipse project 
@@ -90,6 +92,7 @@ javaenv.Install('bin/jar', alljoyn_jar)
 
 # Always build Java version of the AboutService
 about_env = javaenv.Clone()
+about_env['OBJDIR_ABOUT'] = env['OBJDIR'] + '/about'
 about_env.VariantDir('$OBJDIR/services/about/java', '../services/about/java', duplicate = 0)
 about_env.SConscript('$OBJDIR/services/about/java/SConscript', exports = ['about_env'])
 

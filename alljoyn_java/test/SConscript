@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2011, 2013 AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2011, 2013-2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -18,8 +18,9 @@ import string
 Import('env')
 
 # AllJoyn Java binding
-test_classes = env.Java('$CLASSDIR', '.', JAVACLASSPATH=os.pathsep.join(
-        [env.subst('$JAVACLASSPATH'), env.GetBuildPath(env.subst('$JARDIR/alljoyn.jar'))]))
+test_classes = env.Java('$OBJDIR_ALLJOYN_JAVA/test/classes', '.', JAVACLASSPATH=os.pathsep.join(
+        [env['JAVACLASSPATH'], env.GetBuildPath(env.subst('$JARDIR/alljoyn.jar'))]))
+
 # The return value is the collection of files installed in the build destination.
 returnValue = env.Jar('$JARDIR/alljoyn_test.jar', test_classes)
 env.Requires(test_classes, '$JARDIR/alljoyn.jar')

@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2013 AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2014 AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -33,6 +33,8 @@ if env['VARIANT'] == 'debug':
         else:
             env.PrependENVPath('COVFILE', os.environ['COVFILE'])
 
+# Make alljoyn C++ dist a sub-directory of the alljoyn dist.
+env['OBJDIR_COMMON'] = env['OBJDIR'] + '/common'
 
 # All AllJoyn subprojects have access to common so add the include path to the global environment
 env.Append(CPPPATH = [env.Dir('inc')])
@@ -92,9 +94,9 @@ elif env['OS'] == 'android':
 commonenv = env.Clone()
 
 # Variant settings
-commonenv.VariantDir('$OBJDIR', 'src', duplicate = 0)
-commonenv.VariantDir('$OBJDIR/os', 'os/${OS_GROUP}', duplicate = 0)
-commonenv.VariantDir('$OBJDIR/crypto', 'crypto/${CRYPTO}', duplicate = 0)
+commonenv.VariantDir('$OBJDIR_COMMON', 'src', duplicate = 0)
+commonenv.VariantDir('$OBJDIR_COMMON/os', 'os/${OS_GROUP}', duplicate = 0)
+commonenv.VariantDir('$OBJDIR_COMMON/crypto', 'crypto/${CRYPTO}', duplicate = 0)
 
 # Setup dependent include directories
 if commonenv['OS_GROUP'] == 'winrt':
@@ -121,7 +123,7 @@ else:
 # of the alljoyn_core we will have to create Status.h and Status.cc for common.
 status_obj = [];
 if commonenv.has_key('BUILD_COMMON_STATUS'):
-    status_src, status_hdr = commonenv.Status('$OBJDIR/Status')
+    status_src, status_hdr = commonenv.Status('$OBJDIR_COMMON/Status')
     status_obj = commonenv.Object(status_src)
     commonenv.Append(CPPPATH = ['#' + os.path.dirname(str(status_hdr))])
 else:
@@ -134,7 +136,7 @@ status_cpp0x_src = ['Status_CPP0x.cc', 'StatusComment.cc']
 status_src = ['Status.cc']
 
 
-srcs = commonenv.Glob('$OBJDIR/*.cc') + commonenv.Glob('$OBJDIR/os/*.cc') + commonenv.Glob('$OBJDIR/crypto/*.cc')
+srcs = commonenv.Glob('$OBJDIR_COMMON/*.cc') + commonenv.Glob('$OBJDIR_COMMON/os/*.cc') + commonenv.Glob('$OBJDIR_COMMON/crypto/*.cc')
 
 if commonenv['OS_GROUP'] == 'winrt':
     srcs = [ f for f in srcs if basename(str(f)) not in status_cpp0x_src ]
@@ -150,10 +152,10 @@ else:
     shared_objs = []
 
 
-libcommon = commonenv.StaticLibrary('$OBJDIR/common_static', [static_objs, status_obj])
+libcommon = commonenv.StaticLibrary('$OBJDIR_COMMON/common_static', [static_objs, status_obj])
 
 # Build unit Tests
-commonenv.SConscript('unit_test/SConscript', variant_dir='$OBJDIR/unittest', duplicate=0, exports=['commonenv', 'libcommon'])
+commonenv.SConscript('unit_test/SConscript', variant_dir='$OBJDIR_COMMON/unittest', duplicate=0, exports=['commonenv', 'libcommon'])
 
 ret = (hdrs, static_objs, shared_objs)
 

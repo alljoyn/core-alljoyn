@@ -1,4 +1,4 @@
-# Copyright (c) 2011, 2013-2014, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
 import os.path
 Import('env')
 
-sdk_spectClient_sample = env.Java('$CLASSDIR' , 'src'  ,
+sdk_spectClient_sample = env.Java('$OBJDIR_ALLJOYN_JAVA/samples/JavaSDKDoc/JavaSDKDocIntrospectWithDescriptionClient/classes', 'src',
                                        JAVACLASSPATH=env.GetBuildPath(env.subst('$JARDIR/alljoyn.jar')))
 
 #if the manifest file does not yet exist create it unless clean has be specified.

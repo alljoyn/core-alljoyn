@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2011, 2013, 2014, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2011, 2013-2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -36,6 +36,8 @@ sys.path.append(str(unityenv.Dir('../build_core/tools/scons').srcnode()))
 unityenv['UNITY_DISTDIR'] = unityenv['DISTDIR'] + '/unity'
 unityenv['UNITY_TESTDIR'] = unityenv['TESTDIR'] + '/unity'
 
+unityenv['OBJDIR_UNITY'] = unityenv['OBJDIR'] + '/alljoyn_unity'
+
 # create the alljoyn_unity_native library this libary will link in the bundled daemon
 # similar to other language bindings.
 unityenv.Prepend(LIBS=[unityenv['brobj'], unityenv['ajrlib']])
@@ -43,8 +45,8 @@ libaj_unity_native = unityenv.SharedLibrary('alljoyn_unity_native', [env['AJ_C_O
 unityenv.Install('$UNITY_DISTDIR/lib', libaj_unity_native)
 
 # Add support for multiple build targets in the same workset
-unityenv.VariantDir('$OBJDIR', 'src', duplicate = 0)
-unityenv.VariantDir('$OBJDIR/samples', 'samples', duplicate = 0)
+unityenv.VariantDir('$OBJDIR_UNITY', 'src', duplicate = 0)
+unityenv.VariantDir('$OBJDIR_UNITY/samples', 'samples', duplicate = 0)
 
 #alljoyn_unity.dll
 unityenv['ALLJOYN_UNITY_LIB'] = unityenv.SConscript('src/SConscript', exports = {'env':unityenv})

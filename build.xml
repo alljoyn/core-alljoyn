@@ -7,7 +7,7 @@
   <property name="src" value="${alljoyn_java}/src" />
   <property name="build" value="build/${OS}/${CPU}/${VARIANT}" />
   <property name="dist" value="${top}/${build}/dist/java" />
-  <property name="classes" value="${alljoyn_java}/test/${build}/obj/classes" />
+  <property name="classes" value="${top}/${build}/obj/alljoyn_java/test/classes" />
   <property name="test" value="${top}/${build}/test/java" />
   
   <!-- Unknown do we need android,android_donut,maemo, or darwin -->

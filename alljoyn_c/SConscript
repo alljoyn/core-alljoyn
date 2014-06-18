@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -41,9 +41,11 @@ sys.path.append(str(clibenv.Dir('../build_core/tools/scons').srcnode()))
 clibenv['C_DISTDIR'] = clibenv['DISTDIR'] + '/c'
 clibenv['C_TESTDIR'] = clibenv['TESTDIR'] + '/c'
 
+clibenv['OBJDIR_ALLJOYN_C'] = clibenv['OBJDIR'] + '/alljoyn_c'
+
 # Add support for multiple build targets in the same workset
-clibenv.VariantDir('$OBJDIR', 'src', duplicate = 0)
-clibenv.VariantDir('$OBJDIR/samples', 'samples', duplicate = 0)
+clibenv.VariantDir('$OBJDIR_ALLJOYN_C', 'src', duplicate = 0)
+clibenv.VariantDir('$OBJDIR_ALLJOYN_C/samples', 'samples', duplicate = 0)
 
 # Install headers
 # C bindings use the following headers from alljoyn_core
@@ -64,7 +66,7 @@ clibenv.Depends(c_headers, alljoyn_core_headers)
 
 # AllJoyn Libraries, and shared object files.  The shared object files are exported into the environment
 # so that they can be used when building the alljoyn_unity_native library 
-static_lib, shared_lib, env['AJ_C_OBJS'] = clibenv.SConscript('$OBJDIR/SConscript', exports = {'env':clibenv})
+static_lib, shared_lib, env['AJ_C_OBJS'] = clibenv.SConscript('$OBJDIR_ALLJOYN_C/SConscript', exports = {'env':clibenv})
 libs = [static_lib, shared_lib]
 dlibs = clibenv.Install('$C_DISTDIR/lib', libs)
 
@@ -83,16 +85,17 @@ for x in dlibs:
         clibenv['ALLJOYN_C_LIB_SHARED'] = x;
 
 # Build docs
-clibenv.SConscript('docs/SConscript', exports = {'env':clibenv})
+c_docs = clibenv.SConscript('docs/SConscript', exports = {'env':clibenv})
+clibenv.Depends(c_docs, c_headers)
 
 # Sample programs
-clibenv.SConscript('$OBJDIR/samples/SConscript', exports = {'env':clibenv})
+clibenv.SConscript('$OBJDIR_ALLJOYN_C/samples/SConscript', exports = {'env':clibenv})
 
 # Test programs
-clibenv.SConscript('test/SConscript', variant_dir='$OBJDIR/test', duplicate=0, exports = {'env':clibenv})
+clibenv.SConscript('test/SConscript', variant_dir='$OBJDIR_ALLJOYN_C/test', duplicate=0, exports = {'env':clibenv})
 
 # Build unit Tests
-clibenv.SConscript('unit_test/SConscript', variant_dir='$OBJDIR/unittest', duplicate=0, exports = {'env':clibenv})
+clibenv.SConscript('unit_test/SConscript', variant_dir='$OBJDIR_ALLJOYN_C/unittest', duplicate=0, exports = {'env':clibenv})
 
 # don't try and build the samples till the header files are copied into place
 #clibenv.Depends(dlibs, c_headers)

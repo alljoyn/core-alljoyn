@@ -1,4 +1,4 @@
-# Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -19,6 +19,7 @@ Import('env')
 env['_ALLJOYN_ABOUT_'] = True
 
 if (not env.has_key('_ALLJOYNCORE_')) and os.path.exists('../../alljoyn_core/SConscript'):
+
     env.SConscript('../../alljoyn_core/SConscript')
 
 if ('java' in env['bindings']) and (not env.has_key('_ALLJOYN_JAVA_')) and os.path.exists('../../alljoyn_java/SConscript'):

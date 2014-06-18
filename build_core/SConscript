@@ -74,7 +74,7 @@ if default_msvc_version:
 
 # Standard variant directories
 build_dir = 'build/${OS}/${CPU}/${VARIANT}'
-vars.AddVariables(('OBJDIR', '', build_dir + '/obj'),
+vars.AddVariables(('OBJDIR', '', '#' + build_dir + '/obj'),
                   ('DISTDIR', '', '#' + build_dir + '/dist'),
                   ('TESTDIR', '', '#' + build_dir + '/test'))
 

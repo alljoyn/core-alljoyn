@@ -14,7 +14,7 @@
 
 Import('about_env')
 
-classes = about_env.Java(about_env.Dir('./classes').srcnode(), source = ['org'])
+classes = about_env.Java('$OBJDIR_ABOUT/java/classes', source = ['org'])
 if about_env['dep_jars']:
     about_env.Depends(classes, about_env['dep_jars'])
 jars = about_env.Jar(target = 'alljoyn_about', source = classes)

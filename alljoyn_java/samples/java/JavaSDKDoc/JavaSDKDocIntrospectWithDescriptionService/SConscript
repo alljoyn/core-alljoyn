@@ -15,7 +15,7 @@
 import os.path
 Import('env')
 
-sdk_spectService_sample = env.Java('$CLASSDIR' , 'src'  ,
+sdk_spectService_sample = env.Java('$OBJDIR_ALLJOYN_JAVA/samples/JavaSDKDoc/JavaSDKDocIntrospectWithDescriptionService', 'src',
                                         JAVACLASSPATH=env.GetBuildPath(env.subst('$JARDIR/alljoyn.jar')))
 
 #if the manifest file does not yet exist create it unless clean has be specified.

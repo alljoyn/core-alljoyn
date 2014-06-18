@@ -15,7 +15,7 @@
 Import('sample_env')
 
 sample_env.Append(JAVACFLAGS = ['-encoding', 'UTF-8'])
-classes = sample_env.Java(sample_env.Dir('./classes').srcnode(), 'src', JAVAVERSION='1.6')
+classes = sample_env.Java(sample_env.Dir('$OBJDIR_ABOUT/java/samples/classes').srcnode(), 'src', JAVAVERSION='1.6')
 sample_env.Depends(classes, sample_env['dep_jars'])
 classes.append('MANIFEST.MF') 
 

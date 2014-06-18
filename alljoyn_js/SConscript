@@ -30,6 +30,8 @@ if jsenv['BR'] == 'on':
     # Build JS with bundled daemon support
     jsenv.Prepend(LIBS = [jsenv['brobj'], jsenv['ajrlib']])
 
+jsenv['OBJDIR_ALLJOYN_JS'] = env['OBJDIR'] + '/alljoyn_js'
+
 vars = Variables()
 vars.Add(PathVariable('CORDOVA_BASE', 'Base directory of Cordova (aka PhoneGap)', os.environ.get('CORDOVA_BASE')))
 vars.Add(PathVariable('GECKO_BASE', 'Base directory of Gecko SDK', os.environ.get('GECKO_BASE')))
@@ -74,13 +76,13 @@ if jsenv['OS_CONF'] == 'windows':
 jsenv['JS_DISTDIR'] = jsenv['DISTDIR'] + '/js'
 
 # Add support for mulitiple build targets in the same workset
-jsenv.VariantDir('$OBJDIR/jni', 'jni', duplicate = 0)
+jsenv.VariantDir('$OBJDIR_ALLJOYN_JS/jni', 'jni', duplicate = 0)
 
 # AllJoyn JavaScript status codes
 JavaScriptStatus('jni/Status.xml', 'jni/BusErrorInterface.cc')
 
 # AllJoyn plugin library
-libs = jsenv.SConscript('$OBJDIR/jni/SConscript', exports = {'env': jsenv})
+libs = jsenv.SConscript('$OBJDIR_ALLJOYN_JS/jni/SConscript', exports = {'env': jsenv})
 if '' != jsenv.subst('$GECKO_BASE'):
     jsenv.Install('$JS_DISTDIR/lib', libs)
 else:
