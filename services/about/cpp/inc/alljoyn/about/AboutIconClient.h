@@ -117,7 +117,7 @@ class AboutIconClient {
      * @param[in] sessionId the session received  after joining AllJoyn session
      * @return ER_OK if successful
      */
-    QCC_DEPRECATED(QStatus GetContent(const char* busName, uint8_t * *content, size_t & contentSize, ajn::SessionId sessionId = 0); )
+    QCC_DEPRECATED(QStatus GetContent(const char* busName, uint8_t * *content, size_t & contentSize, ajn::SessionId sessionId = 0));
 
     /**
      * @param[in] busName Unique or well-known name of AllJoyn bus

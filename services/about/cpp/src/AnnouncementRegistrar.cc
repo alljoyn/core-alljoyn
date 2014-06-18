@@ -123,13 +123,14 @@ QStatus AnnouncementRegistrar::UnRegisterAnnounceHandler(ajn::BusAttachment& bus
         if (status != ER_OK) {
             return status;
         }
+
         if (internalAnnounceHandler->announceMap.empty()) {
             status = bus.UnregisterSignalHandler(internalAnnounceHandler, static_cast<MessageReceiver::SignalHandler>(&InternalAnnounceHandler::AnnounceSignalHandler),
                                                  internalAnnounceHandler->announceSignalMember, NULL);
             if (status != ER_OK) {
                 return status;
             }
-            QCC_DbgPrintf(("AnnouncementRegistrar::%s Unregistered Signal Handler", __FUNCTION__));
+            QCC_DbgPrintf(("AnnouncementRegistrar::%s Internal signalHandler is empty. Free memory.", __FUNCTION__));
             delete internalAnnounceHandler;
             internalAnnounceHandler = NULL;
         }
@@ -140,13 +141,18 @@ QStatus AnnouncementRegistrar::UnRegisterAnnounceHandler(ajn::BusAttachment& bus
 }
 
 QStatus AnnouncementRegistrar::UnRegisterAllAnnounceHandlers(ajn::BusAttachment& bus) {
+    QCC_DbgTrace(("AnnouncementRegistrar::%s", __FUNCTION__));
+    if (internalAnnounceHandler == NULL) {
+        return ER_OK;
+    }
+
     QStatus status = bus.UnregisterSignalHandler(internalAnnounceHandler, static_cast<MessageReceiver::SignalHandler>(&InternalAnnounceHandler::AnnounceSignalHandler),
                                                  internalAnnounceHandler->announceSignalMember, NULL);
     if (status != ER_OK) {
         return status;
     }
-    QCC_DbgPrintf(("AnnouncementRegistrar::%s Unregistered All Announce Handlers", __FUNCTION__));
     delete internalAnnounceHandler;
     internalAnnounceHandler = NULL;
+    QCC_DbgPrintf(("AnnouncementRegistrar::%s Unregistered All Announce Handlers", __FUNCTION__));
     return status;
 }

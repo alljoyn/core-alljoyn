@@ -42,7 +42,6 @@ InternalAnnounceHandler::~InternalAnnounceHandler() {
 
     announceHandlerLock.Lock(MUTEX_CONTEXT);
     /* clear the contents of the announceHandlerList and wait for any outstanding callbacks. */
-    /* since the announceHandlerList is a vector it more efficient to erase from the last element to the first element */
     std::vector<ProtectedAnnounceHandler>::iterator pahit = announceHandlerList.begin();
     while (pahit != announceHandlerList.end()) {
         ProtectedAnnounceHandler l = *pahit;
@@ -57,6 +56,7 @@ InternalAnnounceHandler::~InternalAnnounceHandler() {
         announceHandlerLock.Lock(MUTEX_CONTEXT);
         pahit = announceHandlerList.begin();
     }
+    assert(announceHandlerList.empty());
     announceHandlerLock.Unlock(MUTEX_CONTEXT);
 }
 
@@ -69,7 +69,8 @@ QStatus InternalAnnounceHandler::AddHandler(AnnounceHandler& handler, const char
     }
 
     announceMapLock.Lock(MUTEX_CONTEXT);
-    announceMap.insert(std::make_pair(&handler, interfaces));
+    std::pair<AnnounceHandler*, std::set<qcc::String> > hi_pair = std::make_pair(&handler, interfaces);
+    announceMap.insert(hi_pair);
     announceMapLock.Unlock(MUTEX_CONTEXT);
 
     return ER_OK;

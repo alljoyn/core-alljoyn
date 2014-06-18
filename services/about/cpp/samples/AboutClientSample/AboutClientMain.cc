@@ -29,8 +29,6 @@
 using namespace ajn;
 using namespace services;
 
-static volatile sig_atomic_t quit;
-
 static BusAttachment* busAttachment;
 
 static volatile sig_atomic_t s_interrupt = false;
@@ -441,10 +439,11 @@ int main(int argc, char**argv, char**envArg)
         WaitForSigInt();
     }
 
-    AnnouncementRegistrar::UnRegisterAnnounceHandler(*busAttachment, *announceHandler, NULL, 0);
+    AnnouncementRegistrar::UnRegisterAnnounceHandler(*busAttachment, *announceHandler, interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
     delete announceHandler;
 
     busAttachment->Stop();
+    busAttachment->Join();
     delete busAttachment;
 
     return 0;

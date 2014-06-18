@@ -255,6 +255,8 @@ static void shutdown(AboutPropertyStoreImpl*& aboutPropertyStore, AboutIconServi
         aboutIconService = NULL;
     }
 
+    s_msgBus->Stop();
+    s_msgBus->Join();
     delete s_msgBus;
     s_msgBus = NULL;
 }
