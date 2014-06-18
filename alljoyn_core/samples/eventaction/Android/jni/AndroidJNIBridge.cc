@@ -48,6 +48,17 @@ JNIEXPORT void JNICALL Java_org_allseen_sample_eventaction_BusHandler_initialize
 
 /*
  * Class:     org_allseen_sample_eventaction_BusHandler
+ * Method:    startRuleEngine
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_allseen_sample_eventaction_BusHandler_startRuleEngine(JNIEnv* env, jobject jobj) {
+    if (myAllJoynCode != NULL) {
+        myAllJoynCode->startRuleEngine();
+    }
+}
+
+/*
+ * Class:     org_allseen_sample_eventaction_BusHandler
  * Method:    dointrospection
  * Signature: (Ljava/lang/String;Ljava/lang/String;I)Ljava/langString;
  */

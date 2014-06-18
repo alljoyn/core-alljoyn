@@ -131,6 +131,7 @@ public class RulesActivity extends FragmentActivity implements EventActionListen
 			busThread.start();
 			mBusHandler = new BusHandler(busThread.getLooper(), this, this);
 			mBusHandler.sendEmptyMessage(BusHandler.INITIALIZE);
+			mBusHandler.sendEmptyMessage(BusHandler.START_RULE_ENGINE);
 		}
 		lockMulticast();
 	}
