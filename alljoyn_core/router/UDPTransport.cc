@@ -5294,7 +5294,7 @@ void* UDPTransport::Run(void* arg)
 
         status = Event::Wait(checkEvents, signaledEvents);
         if (status == ER_TIMEOUT) {
-            QCC_LogError(status, ("UDPTransport::Run(): Catching Windows returning ER_TIMEOUT from Event::Wait()"));
+//            QCC_LogError(status, ("UDPTransport::Run(): Catching Windows returning ER_TIMEOUT from Event::Wait()"));
             continue;
         }
 
