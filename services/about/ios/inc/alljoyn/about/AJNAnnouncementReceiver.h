@@ -73,6 +73,24 @@
 - (QStatus)registerAnnouncementReceiverForInterfaces:(const char **)interfaces withNumberOfInterfaces:(size_t)numOfInterfaces;
 
 /**
+ @deprecated This function has been deprecated please change your code
+ to use registerAnnouncementReceiverForInterfaces where you specify the interface(s) that you
+ are interested finding.
+
+ Using this member function could have significant impact on network
+ performance.
+
+ @see registerAnnouncementReceiverForInterfaces(ajn::BusAttachment&, AnnounceHandler&, const char**, size_t)
+
+ Registers a handler to receive the org.alljoyn.about Announce signal.
+
+ @param[in] handler reference to AnnounceHandler
+
+ @return ER_OK if successful.
+ */
+- (QStatus)registerAnnouncementReceiver;
+
+/**
  Unregister the announcement listener from receiving org.alljoyn.about Announce signal.
  @param interfaces A list of interfaces that the Announce signal reports as implmented.
                NULL to recieve all Announce signals regardless of interfaces
@@ -80,5 +98,17 @@
  @return ER_OK if successful.
  */
 - (QStatus)unRegisterAnnouncementReceiverForInterfaces:(const char  **)interfaces withNumberOfInterfaces:(size_t)numOfInterfaces;
+
+/**
+ @deprecated This function has been deprecated in please change your code
+ to use UnRegisterAnnounceHandler where you specify the interface(s).
+
+ @see unRegisterAnnouncementReceiverForInterfaces(ajn::BusAttachment&, AnnounceHandler&, const char**, size_t)
+
+ Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
+
+ @return ER_OK if successful.
+ */
+- (QStatus)unRegisterAnnouncementReceiver;
 
 @end

@@ -71,6 +71,7 @@ class AnnouncementRegistrar {
      * RegisterAnnounceHandler(busAttachment, handler, exampleInterface,
      *                         sizeof(exampleInterface) / sizeof(exampleInterface[0]));
      * @endcode
+     *
      * The handler will receive any announcement that implements an interface
      * beginning with the "com.example." name.
      *
@@ -78,10 +79,14 @@ class AnnouncementRegistrar {
      * handlers responsibility to parse through the reported interfaces to
      * figure out what should be done in response to the Announce signal.
      *
+     * Note: specifying NULL for the implementsInterfaces parameter could have
+     * significant impact on network performance and should be avoided unless
+     * its known that all announcements are needed.
+     *
      * @param[in] bus reference to BusAttachment
      * @param[in] handler reference to AnnounceHandler
      * @param[in] implementsInterfaces a list of interfaces that the Announce
-     *               signal reports as implmented. NULL to recieve all Announce
+     *               signal reports as implemented. NULL to receive all Announce
      *               signals regardless of interfaces
      * @param[in] numberInterfaces the number of interfaces in the
      *               implementsInterfaces list
@@ -89,6 +94,24 @@ class AnnouncementRegistrar {
      */
     static QStatus RegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler, const char** implementsInterfaces, size_t numberInterfaces);
 
+    /**
+     * @deprecated This function has been deprecated please change your code
+     * to use RegisterAnnounceHandler where you specify the interface(s) that you
+     * are interested finding.
+     *
+     * Using this member function could have significant impact on network
+     * performance.
+     *
+     * @see RegisterAnnounceHandler(ajn::BusAttachment&, AnnounceHandler&, const char**, size_t)
+     *
+     * Registers a handler to receive the org.alljoyn.about Announce signal.
+     *
+     * @param[in] bus reference to BusAttachment
+     * @param[in] handler reference to AnnounceHandler
+     *
+     * @return status
+     */
+    QCC_DEPRECATED(static QStatus RegisterAnnounceHandler(ajn::BusAttachment & bus, AnnounceHandler & handler));
     /**
      * Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
      *
@@ -102,6 +125,21 @@ class AnnouncementRegistrar {
      * @return status
      */
     static QStatus UnRegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler, const char** implementsInterfaces, size_t numberInterfaces);
+
+    /**
+     * @deprecated This function has been deprecated please change your code
+     * to use UnRegisterAnnounceHandler where you specify the interface(s).
+     *
+     * @see UnRegisterAnnounceHandler(ajn::BusAttachment&, AnnounceHandler&, const char**, size_t)
+     *
+     * Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
+     *
+     * @param[in] bus reference to BusAttachment
+     * @param[in] handler reference to AnnounceHandler
+     *
+     * @return status
+     */
+    QCC_DEPRECATED(static QStatus UnRegisterAnnounceHandler(ajn::BusAttachment & bus, AnnounceHandler & handler));
 
     /**
      * Unregisters all AnnounceHandlers from receiving any org.alljoyn.about Announce signal
