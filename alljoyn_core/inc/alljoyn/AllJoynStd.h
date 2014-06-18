@@ -447,6 +447,9 @@ extern const char* InterfaceName;                 /**< Interface name */
 #define ALLJOYN_PING_REPLY_SUCCESS          1   /**< Ping reply: Success */
 #define ALLJOYN_PING_REPLY_FAILED           2   /**< Ping reply: Failed */
 #define ALLJOYN_PING_REPLY_TIMEOUT          3   /**< Ping reply: Timed out */
+#define ALLJOYN_PING_REPLY_UNKNOWN_NAME     4   /**< Ping reply: No route */
+#define ALLJOYN_PING_REPLY_UNIMPLEMENTED    5   /**< Ping reply: Unimplemented */
+#define ALLJOYN_PING_REPLY_UNREACHABLE      6   /**< Ping reply: Unreachable */
 // @}
 }
 

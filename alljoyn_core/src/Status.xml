@@ -225,7 +225,7 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_BUS_REMOVED_BY_BINDER" value="0x90f5" comment="The session member was removed by the binder"/>
   <status name="ER_BUS_MATCH_RULE_NOT_FOUND" value="0x90f6" comment="The match rule was not found"/>
   <status name="ER_ALLJOYN_PING_FAILED" value="0x90f7" comment="Ping failed"/>
-  <status name="ER_ALLJOYN_PING_REPLY_UNREACHABLE" value="0x90f8" comment="Ping failed"/>
+  <status name="ER_ALLJOYN_PING_REPLY_UNREACHABLE" value="0x90f8" comment="Name pinged is unreachable"/>
   <status name="ER_UDP_MSG_TOO_LONG" value="0x90f9" comment="The message is too long to transmit over the UDP transport"/>
   <status name="ER_UDP_DEMUX_NO_ENDPOINT" value="0x90fa" comment="Tried to demux the callback but found no endpoint for the connection"/>
   <status name="ER_UDP_NO_NETWORK" value="0x90fb" comment="Not listening on network implied by IP address"/>
@@ -253,5 +253,9 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_UDP_EARLY_EXIT" value="0x9111" comment="UDP Transport connection aborted during setup"/>
   <status name="ER_UDP_LOCAL_DISCONNECT_FAIL" value="0x9112" comment="UDP Transport local connection disconnect failure"/>
   <status name="ER_ARDP_DISCONNECTING" value="0x9113" comment="ARDP connection is being shut down"/>
+  <status name="ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED" value="0x9114" comment="Remote routing node does not implement Ping"/>
+  <status name="ER_ALLJOYN_PING_REPLY_TIMEOUT" value="0x9115" comment="Ping call timeout"/>
+  <status name="ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME" value="0x9116" comment="Name not found currently or part of any known session"/>
+  <status name="ER_ALLJOYN_PING_REPLY_FAILED" value="0x9117" comment="Generic Ping call error"/>
 
 </status_block>

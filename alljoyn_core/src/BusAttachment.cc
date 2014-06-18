@@ -2282,7 +2282,7 @@ QStatus BusAttachment::Ping(const char* name, uint32_t timeout)
     MsgArg::Set(args, numArgs, "su", name, timeout);
 
     const ProxyBusObject& alljoynObj = this->GetAllJoynProxyObj();
-    QStatus status = alljoynObj.MethodCall(org::alljoyn::Bus::InterfaceName, "Ping", args, numArgs, reply);
+    QStatus status = alljoynObj.MethodCall(org::alljoyn::Bus::InterfaceName, "Ping", args, numArgs, reply, timeout + 1000);
     if (ER_OK == status) {
         uint32_t disposition;
         status = reply->GetArgs("u", &disposition);
@@ -2296,7 +2296,19 @@ QStatus BusAttachment::Ping(const char* name, uint32_t timeout)
                 break;
 
             case ALLJOYN_PING_REPLY_TIMEOUT:
-                status = ER_TIMEOUT;
+                status = ER_ALLJOYN_PING_REPLY_TIMEOUT;
+                break;
+
+            case ALLJOYN_PING_REPLY_UNKNOWN_NAME:
+                status = ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME;
+                break;
+
+            case ALLJOYN_PING_REPLY_UNIMPLEMENTED:
+                status = ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED;
+                break;
+
+            case ALLJOYN_PING_REPLY_UNREACHABLE:
+                status = ER_ALLJOYN_PING_REPLY_UNREACHABLE;
                 break;
 
             default:

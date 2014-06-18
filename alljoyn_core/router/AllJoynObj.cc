@@ -71,14 +71,30 @@ namespace ajn {
 
 void* AllJoynObj::NameMapEntry::truthiness = reinterpret_cast<void*>(true);
 int AllJoynObj::JoinSessionThread::jstCount = 0;
-struct PingReplyTransportContext {
+struct PingContext {
+    enum Type {
+        TRANSPORT_CONTEXT,
+        REPLY_CONTEXT
+    };
+    Type type;
     TransportMask transport;
     String name;
     IPEndpoint ns4;
-    PingReplyTransportContext(TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& ns4)
-        : transport(transport), name(name), ns4(ns4) { }
-};
 
+    Message* msg;
+    Alarm alarm;
+    PingContext(TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& ns4)
+        : type(TRANSPORT_CONTEXT), transport(transport), name(name), ns4(ns4), msg(NULL) { }
+    PingContext(String name, Message* msg)
+        : type(REPLY_CONTEXT), name(name), msg(msg)
+    { }
+    ~PingContext() {
+        if (msg) {
+            delete msg;
+        }
+    }
+
+};
 void AllJoynObj::AcquireLocks()
 {
     /*
@@ -2518,7 +2534,7 @@ void AllJoynObj::DetachSessionSignalHandler(const InterfaceDescription::Member* 
         return;
     }
 
-    /* Remove session info from sessionMap, send a SessionLost to the member being removed. */
+    /* Remove session info from sessionmapentry, send a SessionLost to the member being removed. */
     RemoveSessionRefs(src, id, true);
 
     /* Remove session info from router */
@@ -2587,6 +2603,12 @@ AllJoynObj::SessionMapType::iterator AllJoynObj::SessionMapLowerBound(const qcc:
 {
     pair<String, SessionId> key(name, session);
     return sessionMap.lower_bound(key);
+}
+
+AllJoynObj::SessionMapType::iterator AllJoynObj::SessionMapUpperBound(const qcc::String& name, SessionId session)
+{
+    pair<String, SessionId> key(name, session);
+    return sessionMap.upper_bound(key);
 }
 
 void AllJoynObj::SessionMapInsert(SessionMapEntry& sme)
@@ -4355,23 +4377,41 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
     if (alarm->GetContext() != NameMapEntry::truthiness) {
         assert(alarm->GetContext());
 
-        PingReplyTransportContext* ctx = static_cast<PingReplyTransportContext*>(alarm->GetContext());
-        ProxyBusObject peerObj(bus, ctx->name.c_str(), "/", 0);
-        const InterfaceDescription* intf = bus.GetInterface(org::freedesktop::DBus::Peer::InterfaceName);
-        assert(intf);
-        peerObj.AddInterface(*intf);
+        PingContext* ctx = static_cast<PingContext*>(alarm->GetContext());
+        if (ctx->type == PingContext::TRANSPORT_CONTEXT) {
+            ProxyBusObject peerObj(bus, ctx->name.c_str(), "/", 0);
+            const InterfaceDescription* intf = bus.GetInterface(org::freedesktop::DBus::Peer::InterfaceName);
+            assert(intf);
+            peerObj.AddInterface(*intf);
 
-        QStatus status = peerObj.MethodCallAsync(org::freedesktop::DBus::Peer::InterfaceName,
-                                                 "Ping",
-                                                 this, static_cast<MessageReceiver::ReplyHandler>(&AllJoynObj::PingReplyTransportHandler),
-                                                 NULL, 0,
-                                                 ctx);
-        if (status != ER_OK) {
-            QCC_LogError(status, ("Send Ping failed"));
-            PingResponse(ctx->transport, ctx->ns4, ctx->name, ALLJOYN_PING_REPLY_FAILED);
-            delete ctx;
+            QStatus status = peerObj.MethodCallAsync(org::freedesktop::DBus::Peer::InterfaceName,
+                                                     "Ping",
+                                                     this, static_cast<MessageReceiver::ReplyHandler>(&AllJoynObj::PingReplyTransportHandler),
+                                                     NULL, 0,
+                                                     ctx);
+            if (status != ER_OK) {
+                QCC_LogError(status, ("Send Ping failed"));
+                PingResponse(ctx->transport, ctx->ns4, ctx->name, ALLJOYN_PING_REPLY_FAILED);
+                delete ctx;
+            }
+        } else {
+            //REPLY_CONTEXT
+            AcquireLocks();
+            std::multimap<String, void*>::iterator it = pingReplyContexts.lower_bound(ctx->name);
+            while (it != pingReplyContexts.end() && it->first == ctx->name) {
+                if (it->second == alarm->GetContext()) {
+                    pingReplyContexts.erase(it);
+                    ReleaseLocks();
+                    PingReplyMethodHandlerUsingCode(*(ctx->msg), ALLJOYN_PING_REPLY_TIMEOUT);
+                    delete ctx;
+                    return;
+                }
+
+                it++;
+            }
+
+            ReleaseLocks();
         }
-
         return;
     }
     //
@@ -4582,7 +4622,8 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
     /* Parse the message args */
     msg->GetArgs(numArgs, args);
     const char* name = NULL;
-    QStatus status = MsgArg::Get(args, 1, "s", &name);
+    uint32_t timeout;
+    QStatus status = MsgArg::Get(args, 2, "su", &name, &timeout);
 
     if (status == ER_OK && senderEp->IsValid()) {
         status = TransportPermission::FilterTransports(senderEp, sender, transports, "AllJoynObj::Ping");
@@ -4639,41 +4680,70 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
              * First order of business is to locate a guid corresponding to the name.
              * The logic below follows the same logic as joining a session.
              */
+
+            // Check if the name is advertised
             TransportMask transport = TRANSPORT_TCP | TRANSPORT_UDP; // TODO transport hard-coded
             String guid;
+            bool foundEntry = false;
+            AcquireLocks();
             for (multimap<String, NameMapEntry>::iterator nmit = nameMap.lower_bound(name);
                  nmit != nameMap.end() && (nmit->first == name); ++nmit) {
                 if (nmit->second.transport & transport) {
-                    guid = nmit->second.guid;
-                    goto have_guid;
+                    guid = qcc::GUID128(nmit->second.guid).ToShortString();
+                    foundEntry = true;
+                    break;
                 }
             }
+            // Check for unique name. Get the long GUID since the name passed will be short
             if (guid.empty() && (name[0] == ':')) {
                 String guidStr = String(name).substr(1, GUID128::SHORT_SIZE);
-                for (multimap<String, pair<String, TransportMask> >::iterator ait = advAliasMap.lower_bound(guidStr);
-                     (ait != advAliasMap.end()) && (ait->first == guidStr); ++ait) {
-                    if (ait->second.second & transport) {
-                        for (multimap<String, NameMapEntry>::iterator nmit = nameMap.lower_bound(name);
-                             nmit != nameMap.end() && (nmit->first == ait->second.first); ++nmit) {
-                            if (nmit->second.transport & transport) {
-                                guid = nmit->second.guid;
-                                goto have_guid;
-                            }
-                        }
-                    }
+                guid = guidStr;
+                foundEntry = true;
+            }
+            // Check if the well known name is in a session. If yes get the long GUID of remote routing node
+            if (guid.empty() && (name[0] != ':')) {
+                if (name == NULL) {
+                    foundEntry = false;
+                }
+                qcc::String wkn(name);
+                BusEndpoint bep = router.FindEndpoint(wkn);
+                if (bep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
+                    VirtualEndpoint vep = VirtualEndpoint::cast(bep);
+                    guid = String(vep->GetUniqueName()).substr(1, GUID128::SHORT_SIZE);
+                    foundEntry = true;
+                    QCC_DbgPrintf(("Session found ", name));
                 }
             }
-        have_guid:
-            QCC_DbgPrintf(("Pinging GUID %s", guid.c_str()));
-            multimap<String, void*>::iterator it = pingReplyContexts.insert(pair<String, void*>(name, new Message(msg)));
-            status = IpNameService::Instance().Ping(transport, guid, name);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("Query failed"));
-                replyCode = ALLJOYN_PING_REPLY_FAILED;
-                // TODO Should also clean these up on exit
-                Message* msg = static_cast<Message*>(it->second);
-                delete msg;
-                pingReplyContexts.erase(it);
+            if (foundEntry) {
+                QCC_DbgPrintf(("Pinging GUID %s", guid.c_str()));
+                PingContext* ctx = new PingContext(name, new Message(msg));
+                multimap<String, void*>::iterator it = pingReplyContexts.insert(pair<String, void*>(name, ctx));
+                ReleaseLocks();
+                status = IpNameService::Instance().Ping(transport, guid, name);
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("Query failed"));
+                    replyCode = (status == ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED) ? ALLJOYN_PING_REPLY_UNIMPLEMENTED : ALLJOYN_PING_REPLY_FAILED;
+                    AcquireLocks();
+                    it = pingReplyContexts.lower_bound(name);
+                    while (it != pingReplyContexts.end() && it->first == name) {
+                        if (it->second == ctx) {
+                            pingReplyContexts.erase(it);
+                            delete ctx;
+                            break;
+                        }
+
+                        it++;
+                    }
+                    ReleaseLocks();
+
+                } else {
+                    AllJoynObj* pObj = this;
+                    Alarm newAlarm(timeout, pObj, ctx);
+                    timer.AddAlarm(newAlarm);
+                }
+            } else {
+                replyCode = ALLJOYN_PING_REPLY_UNKNOWN_NAME;
+                ReleaseLocks();
             }
         }
     }
@@ -4725,16 +4795,19 @@ bool AllJoynObj::ResponseHandler(TransportMask transport, MDNSPacket response, u
 
     const String& name = pingRData->GetWellKnownName();
     uint32_t replyCode = pingRData->GetReplyCode() == "ALLJOYN_PING_REPLY_SUCCESS" ? 1 : 2;
-
+    AcquireLocks();
     std::multimap<String, void*>::iterator it = pingReplyContexts.lower_bound(name);
     while (it != pingReplyContexts.end() && it->first == name) {
         // TODO May need to filter on transport
-        Message* msg = static_cast<Message*>(it->second);
-        PingReplyMethodHandlerUsingCode(*msg, replyCode);
-        delete msg;
+        PingContext* ctx = static_cast<PingContext*>(it->second);
         pingReplyContexts.erase(it);
+        ReleaseLocks();
+        PingReplyMethodHandlerUsingCode(*(ctx->msg), replyCode);
+        AcquireLocks();
+        delete ctx;
         it = pingReplyContexts.lower_bound(name);
     }
+    ReleaseLocks();
 
     return false;
 }
@@ -4769,7 +4842,7 @@ bool AllJoynObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_
     }
     const String& name = pingRData->GetWellKnownName();
 
-    PingReplyTransportContext* ctx = new PingReplyTransportContext(transport, name, ns4);
+    PingContext* ctx = new PingContext(transport, name, ns4);
     const uint32_t timeout = 0; // Schedule Alarm for Now
     AllJoynObj* pObj = this;
     Alarm newAlarm(timeout, pObj, ctx);
@@ -4780,14 +4853,12 @@ bool AllJoynObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_
 
 void AllJoynObj::PingReplyTransportHandler(Message& reply, void* context)
 {
-    PingReplyTransportContext* ctx = static_cast<PingReplyTransportContext*>(context);
+    PingContext* ctx = static_cast<PingContext*>(context);
     TransportMask transport = ctx->transport;
     const qcc::String& name = ctx->name;
     const qcc::IPEndpoint& ns4 = ctx->ns4;
-    uint32_t replyCode = (ajn::MESSAGE_ERROR == reply->GetType()) ? ALLJOYN_PING_REPLY_FAILED : ALLJOYN_PING_REPLY_SUCCESS;
-
+    uint32_t replyCode = (ajn::MESSAGE_ERROR == reply->GetType()) ? ALLJOYN_PING_REPLY_UNREACHABLE : ALLJOYN_PING_REPLY_SUCCESS;
     PingResponse(transport, ns4, name, replyCode);
-
     delete ctx;
 }
 
@@ -4799,7 +4870,8 @@ void AllJoynObj::PingResponse(TransportMask transport, const qcc::IPEndpoint& ns
     // Similar to advertise record with only one name
     MDNSPingReplyRData* pingReplyRData = new MDNSPingReplyRData();
     pingReplyRData->SetWellKnownName(name);
-    pingReplyRData->SetReplyCode(replyCode == 1 ? "ALLJOYN_PING_REPLY_SUCCESS" : "ALLJOYN_PING_REPLY_FAILED");
+    pingReplyRData->SetReplyCode(replyCode == 1 ? "ALLJOYN_PING_REPLY_SUCCESS" : "ALLJOYN_PING_REPLY_UNREACHABLE");
+
     MDNSResourceRecord pingReplyRecord("ping-reply." + guid.ToString() + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingReplyRData);
     response->AddAdditionalRecord(pingReplyRecord);
     delete pingReplyRData;

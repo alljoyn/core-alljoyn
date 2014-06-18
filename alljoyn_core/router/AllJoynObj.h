@@ -626,6 +626,11 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      */
     SessionMapType::iterator SessionMapLowerBound(const qcc::String& name, SessionId session);
 
+    /*
+     * Helper function to get session map range interator
+     */
+    SessionMapType::iterator SessionMapUpperBound(const qcc::String& name, SessionId session);
+
     /**
      * Helper function to insert a sesssion map
      */
@@ -963,6 +968,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @return true if there are no names in namemap from this guid and there are no active sessions to it
      */
     bool CanRemoveFromPeerInfoMap(qcc::String& guid);
+
 
     /* TODO document */
     void PingReplyMethodHandler(Message& reply, void* context);
