@@ -102,14 +102,19 @@ class Event {
      * Wait on a group of events.
      * The call to Wait will return when any of the events on the list is signaled.
      *
+     * @warning There is a subtle difference between Windows and Posix
+     * implementations of this method.  In the Windows case, the return value of
+     * this method inherits ER_TIMEOUT from any checkEvents that time out; but
+     * in the posix case ER_OK is returned if one of the checkEvents times out.
+     * For portable uses of this method consider ER_OK and ER_TIMEOUT as
+     * indicating success.
+     *
      * @param checkEvents    Vector of event object references to wait on.
      * @param signaledEvents Vector of event object references from checkEvents that are signaled.
      * @param maxMs          Max number of milliseconds to wait or WAIT_FOREVER to wait forever.
      * @return ER_OK if successful.
      */
-    static QStatus Wait(const std::vector<Event*>& checkEvents,
-                        std::vector<Event*>& signaledEvents,
-                        uint32_t maxMs = WAIT_FOREVER);
+    static QStatus Wait(const std::vector<Event*>& checkEvents, std::vector<Event*>& signaledEvents, uint32_t maxMs = WAIT_FOREVER);
 
     /**
      * Wait on a single event.
