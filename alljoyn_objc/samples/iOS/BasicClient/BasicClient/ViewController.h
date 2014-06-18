@@ -21,6 +21,5 @@
 @property (weak, nonatomic) IBOutlet UITextView *eventsTextView;
 
 - (IBAction)didTouchCallServiceButton:(id)sender;
-- (IBAction)didTouchCheckPresenceButton:(id)sender;
 
 @end

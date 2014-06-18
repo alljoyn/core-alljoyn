@@ -44,12 +44,6 @@
     [self.basicClient sendHelloMessage];
 }
 
-- (IBAction)didTouchCheckPresenceButton:(id)sender {
-    [self.basicClient sendPing];
-}
-
-
-
 - (void)didReceiveStatusUpdateMessage:(NSString *)message
 {
     dispatch_async(dispatch_get_main_queue(), ^{

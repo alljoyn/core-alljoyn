@@ -76,14 +76,6 @@ static const AJNSessionPort kBasicClientServicePort = 25;
     });
 }
 
-- (void)sendPing
-{
-    dispatch_queue_t pingQueue = dispatch_queue_create("org.alljoyn.basic-service.pingQueue",NULL);
-    dispatch_async( pingQueue, ^{
-        [self ping];
-    });
-}
-
 - (void)run
 {
     NSLog(@"AllJoyn Library version: %@", AJNVersion.versionInformation);
@@ -175,6 +167,9 @@ static const AJNSessionPort kBasicClientServicePort = 25;
             [self.delegate didReceiveStatusUpdateMessage:@"Successfully called method on remote object!!!\n"];
         }
         
+        // We call ping to make sure the service can be pinged. This is to demonstrate usage of ping API
+        [self ping];
+
         self.basicObjectProxy = nil;
         
     }
@@ -242,7 +237,7 @@ static const AJNSessionPort kBasicClientServicePort = 25;
         // Since we are in a callback we must enable concurrent callbacks before calling a synchronous method.
         //
         [self.bus enableConcurrentCallbacks];
-        
+
         self.sessionId = [self.bus joinSessionWithName:name onPort:kBasicClientServicePort withDelegate:self options:[[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny]];
         
         if (self.sessionId) {
