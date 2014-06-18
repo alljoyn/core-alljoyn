@@ -4388,6 +4388,7 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
     uint64_t timePassed;
     uint64_t ttl;
     multimap<String, NameMapEntry>::iterator it = nameMap.begin();
+    set<String> guidSet;
     while (it != nameMap.end()) {
         NameMapEntry& nme = it->second;
         timePassed = now - nme.timestamp;
@@ -4395,14 +4396,12 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         QCC_DbgPrintf(("Time Passed %ld ttl-80 : %ld ttl-90 : %ld", timePassed, (uint64_t)(ttl * 80 / 100), (uint64_t)(ttl * 90 / 100)));
         if ((timePassed >= (ttl * 80 / 100)) &&
             (timePassed < ttl)) {
-            //
-            // Send Unicast search query
-            //
-            QCC_DbgPrintf(("AlarmTriggered sending query \"*\" Name : %s GUID : %s", it->first.c_str(), it->second.guid.c_str()));
-            qcc::String searchNames = String("name='*'");
-            QStatus status = IpNameService::Instance().RefreshCache(TRANSPORT_TCP | TRANSPORT_UDP, it->second.guid, searchNames);
-            if (ER_OK != status) {
-                QCC_LogError(status, ("Error while sending query for Cache refresh"));
+            if (discoverMap.size() > 0) {
+                //
+                // Send Unicast search query only if there are discoverers
+                //
+                QCC_DbgPrintf(("AlarmTriggered sending query \"*\" Name : %s GUID : %s nme.transport %x", it->first.c_str(), it->second.guid.c_str(), nme.transport));
+                guidSet.insert(nme.guid);
             }
         }
 
@@ -4450,6 +4449,16 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         ++it;
     }
     ReleaseLocks();
+    set<String>::const_iterator git = guidSet.begin();
+    while (git != guidSet.end()) {
+
+        QStatus status = IpNameService::Instance().RefreshCache(TRANSPORT_TCP | TRANSPORT_UDP, *git, "name='*'");
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Error while sending query for Cache refresh"));
+        }
+        git++;
+    }
+
     // if 100* of time
     //     do all the things below
     //     AND if not in a session
