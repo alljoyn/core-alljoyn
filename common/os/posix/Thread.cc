@@ -390,36 +390,45 @@ QStatus Thread::Join(void)
     /* Threads that join themselves must detach without blocking */
     if (handle == pthread_self()) {
         int32_t waiters = IncrementAndFetch(&waitCount);
+        hbjMutex.Lock();
         if ((waiters == 1) && !hasBeenJoined) {
             hasBeenJoined = true;
+            hbjMutex.Unlock();
             int ret = pthread_detach(handle);
+            handle = 0;
             if (ret == 0) {
                 ++joined;
             } else {
                 status = ER_OS_ERROR;
                 QCC_LogError(status, ("Detaching thread: %d - %s", ret, strerror(ret)));
             }
+        } else {
+            hbjMutex.Unlock();
+
         }
         DecrementAndFetch(&waitCount);
-        handle = 0;
         isStopping = false;
-    }
-
-    /*
-     * Unfortunately, POSIX pthread_join can only be called once for a given thread. This is quite
-     * inconvenient in a system of multiple threads that need to synchronize with each other.
-     * This ugly looking code allows multiple threads to Join a thread. All but one thread block
-     * in a Mutex. The first thread to obtain the mutex is the one that is allowed to call pthread_join.
-     * All other threads wait for that join to complete. Then they are released.
-     */
-    if (handle) {
+    } else {
+        /*
+         * Unfortunately, POSIX pthread_join can only be called once for a given thread. This is quite
+         * inconvenient in a system of multiple threads that need to synchronize with each other.
+         * This ugly looking code allows multiple threads to Join a thread. All but one thread block
+         * in a Mutex. The first thread to obtain the mutex is the one that is allowed to call pthread_join.
+         * All other threads wait for that join to complete. Then they are released.
+         */
         int ret = 0;
         int32_t waiters = IncrementAndFetch(&waitCount);
         waitLock.Lock();
+        hbjMutex.Lock();
         if ((waiters == 1) && !hasBeenJoined) {
             hasBeenJoined = true;
+            hbjMutex.Unlock();
             ret = pthread_join(handle, NULL);
+            handle = 0;
             ++joined;
+        } else {
+            hbjMutex.Unlock();
+
         }
         waitLock.Unlock();
         DecrementAndFetch(&waitCount);
@@ -428,7 +437,6 @@ QStatus Thread::Join(void)
             status = ER_OS_ERROR;
             QCC_LogError(status, ("Joining thread: %d - %s", ret, strerror(ret)));
         }
-        handle = 0;
         isStopping = false;
     }
     state = DEAD;
