@@ -3230,32 +3230,109 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
         }
 
         /*
-         * If we were given an IP address, use it to find the interface names
-         * otherwise use the interface name that was specified. Note we need
-         * to disallow hostnames otherwise SetAddress will attempt to treat
-         * the interface name as a host name and start doing DNS lookups.
+         * We have been given a listenSpec that provides an r4addr and an r4port
+         * in the parameters to this method.  We are expected to listen on that
+         * address and port for inbound connections.  We have a separate list of
+         * network interface names that we are walking through that tell us
+         * which interfaces the name service should advertise and discover over.
+         * We always listen on the listen address and port, and we always
+         * respect the interface names given for the name service.
+         *
+         * We can either be given a listenAddr of INADDR_ANY or a specific
+         * address.  If given INADDR_ANY this means that the TCP Transport will
+         * listen for inbound connections on any currently IFF_UP interface or
+         * any interface that may come IFF_UP in the future.  If given a
+         * specific IP address, we must only listen for connections on that
+         * address.
+         *
+         * We are also given a list of interface names in the ns_interfaces
+         * property.  These tell the name service which interfaces to discover and
+         * advertise over.  There are four basic situations we will encounter:
+         *
+         *     listen   ns_interface  Action
+         *     -------  ------------  -----------------------------------------
+         * 1.  0.0.0.0       *        Listen on 0.0.0.0 and advertise/discover
+         *                            over '*'.  This is the default case where
+         *                            the system listens on all interfaces and
+         *                            advertises / discovers on all interfaces.
+         *                            This is the "speak alljoyn over all of
+         *                            your interfaces" situation.
+         *
+         * 2.  a.b.c.d       *        Listen only on a.b.c.d, but advertise and
+         *                            discover over '*'.  In this case, the TCP
+         *                            transport is told to listen on a specific
+         *                            address, but the name service is told to
+         *                            advertise and discover over all network
+         *                            interfaces.  This may not be exactly what
+         *                            is desired, but it may be.  We do what we
+         *                            are told.  Note that by doing this, one
+         *                            is limiting the number of daemons that can
+         *                            be run on a host using the same address
+         *                            and port to one.  Other daemons configured
+         *                            this way must select another port.
+         *
+         * 3.  0.0.0.0   'specific'   Listen on INADDR_ANY and so respond to all
+         *                            inbound connections.  Only advertise and
+         *                            discover over a specific named network
+         *                            interface.  This is how we expect people
+         *                            to limit AllJoyn to talking only over a
+         *                            specific interface.  This allows that
+         *                            interface to change IP addresses on the
+         *                            fly.
+         *
+         * 4.  a.b.c.d   'specific'   Listen on a specified address and so
+         *                            only respond to inbound connections on
+         *                            that interface.  Only advertise and
+         *                            discover over a specific named network
+         *                            interface (presumably the same interface
+         *                            but we don't require it to be set up yet).
+         *                            This allows administrators to to limit
+         *                            AllJoyn to both listening and advertising
+         *                            and discovering only over a specific
+         *                            network interface.  This requires that
+         *                            the IP address of the network interface
+         *                            named 'specific' to be known a-priori.
+         *
+         * Note that the string 'specific' from the ns_interfaces configuration
+         * can also refer to a specific IP address and is not limited to only
+         * network interface names.  Thus, if one has a statically configured
+         * network address, one could specify both listening and advertisement
+         * using IP addresses:
+         *
+         * 5.  a.b.c.d   'a.b.c.d'    Listen on a specified address and so
+         *                            only respond to inbound connections on
+         *                            that interface.  Only advertise and
+         *                            discover over a specific IP address
+         *                            (presumably the same address but we
+         *                            don't require it to be set up yet).
+         *                            Note that there may, in fact, be a list
+         *                            of specific IP addresses, but there can
+         *                            be only one listen addresses.  This is
+         *                            a degenerate version of the a.b.c.d '*'
+         *                            case from above since you can contemplate
+         *                            adding all IP addresses in the list.
+         *
+         * This is much harder to describe than to implement; but the upshot is
+         * that we listen on whatever IP address comes in with the listenSpec
+         * and we enable the name service on whatever interface name or address
+         * that comes in in ns_interfaces.  It is up to the person doing the
+         * configuration to understand what he or she is trying to do and the
+         * impact of choosing those values.
+         *
+         * So, the first order of business is to determine whether or not the
+         * current ns_interfaces item is an IP address or is a network interface
+         * name.  If setting an IPAddress with the current item works, it is an
+         * IP Address, otherwise we assume it must be a network interface.  Once
+         * we know which overloaded NS function to call, just do it.
          */
-        bool any = (listenAddr == qcc::IPAddress(INADDR_ANY)) || (listenAddr == qcc::IPAddress("::"));
         IPAddress currentAddress;
-        if (currentAddress.SetAddress(currentInterface, false) == ER_OK) {
-            if (any || (listenAddr == currentAddress)) {
-                status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, currentAddress);
-            } else {
-                status = ER_INVALID_ADDRESS;
-            }
+        status = currentAddress.SetAddress(currentInterface, false);
+        if (status == ER_OK) {
+            status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, currentAddress);
         } else {
-            if (!any && (currentInterface != INTERFACES_DEFAULT)) {
-                /*
-                 * If the listenAddr is not INADDR_ANY and the interfaces is not
-                 * the interface of the listenAddr we could advertise on an
-                 * interface that we're not listening on.
-                 */
-                QCC_LogError(ER_WARNING,
-                             ("May advertise unconnectable address: IP address of '%s' may not be the same as the listen address '%s'",
-                              currentInterface.c_str(), listenAddr.ToString().c_str()));
-            }
-            status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, listenAddr);
+            status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, currentInterface);
         }
+
         if (status != ER_OK) {
             QCC_LogError(status, ("TCPTransport::DoStartListen(): OpenInterface() failed for %s", currentInterface.c_str()));
         }
@@ -3273,6 +3350,7 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
         QCC_LogError(status, ("TCPTransport::DoStartListen(): Socket() failed"));
         return status;
     }
+
     /*
      * Set the SO_REUSEADDR socket option so we don't have to wait for four
      * minutes while the endpoint is in TIME_WAIT if we crash (or control-C).
@@ -3284,6 +3362,7 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
         qcc::Close(listenFd);
         return status;
     }
+
     /*
      * We call accept in a loop so we need the listenFd to non-blocking
      */
@@ -3294,6 +3373,7 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
         qcc::Close(listenFd);
         return status;
     }
+
     /*
      * Bind the socket to the listen address and start listening for incoming
      * connections on it.
