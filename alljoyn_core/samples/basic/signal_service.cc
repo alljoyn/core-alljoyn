@@ -12,7 +12,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -90,15 +90,9 @@ class MyTranslator : public Translator {
     }
 
     virtual const char* Translate(const char* sourceLanguage, const char* targetLanguage, const char* source) {
-        const char* tag = (*targetLanguage == '\0') ? "en" : targetLanguage;
         size_t i = 0;
-
-        if (0 == strcmp(tag, "en")) {
-            i = 0;
-        } else if (0 == strcmp(tag, "de")) {
+        if (targetLanguage && (0 == strcmp(targetLanguage, "de"))) {
             i = 1;
-        } else {
-            return NULL;
         }
 
         if (0 == strcmp(source, objId)) {

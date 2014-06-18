@@ -179,7 +179,7 @@ public class DescriptionTest extends TestCase {
             description = mIntrospectable.IntrospectWithDescription("de");
             assertEquals(IntrospectWithDescriptionDe1, description);
             description = mIntrospectable.IntrospectWithDescription("fr");
-            assertFalse(description.contains("<description>"));
+            assertEquals(IntrospectWithDescriptionEn1, description);
         } catch (BusException e) {
             e.printStackTrace();
             fail();
@@ -225,7 +225,9 @@ public class DescriptionTest extends TestCase {
             "<node>\n"+
             "  <description>DE: My service object</description>\n"+
             "  <interface name=\"org.alljoyn.bus.SimpleDescriptionNoTranslateInterface\">\n"+
+            "    <description>This is a simple interface</description>\n"+
             "    <method name=\"Ping\">\n"+
+            "      <description>The ping method sends a small piece of data</description>\n" +
             "      <arg type=\"s\" direction=\"in\"/>\n"+
             "      <arg type=\"s\" direction=\"out\"/>\n"+
             "    </method>\n"+
@@ -272,7 +274,7 @@ public class DescriptionTest extends TestCase {
             description = mIntrospectable.IntrospectWithDescription("de");
             assertEquals(IntrospectWithDescriptionDe2, description);
             description = mIntrospectable.IntrospectWithDescription("fr");
-            assertFalse(description.contains("<description>"));
+            assertTrue(description.contains("<description>"));
         } catch (BusException e) {
             e.printStackTrace();
             fail();
@@ -364,7 +366,7 @@ public class DescriptionTest extends TestCase {
             description = mIntrospectable.IntrospectWithDescription("de");
             assertEquals(IntrospectWithDescriptionDe3, description);
             description = mIntrospectable.IntrospectWithDescription("fr");
-            assertFalse(description.contains("<description>"));
+            assertEquals(IntrospectWithDescriptionEn3, description);
         } catch (BusException e) {
             e.printStackTrace();
             fail();
@@ -379,6 +381,7 @@ public class DescriptionTest extends TestCase {
             "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"+
             "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"+
             "<node>\n"+
+            "  <description>My service object</description>\n" + 
             "  <interface name=\"org.alljoyn.bus.SimpleDescriptionInterface\">\n"+
             "    <description>DE: This is a simple interface</description>\n"+
             "    <method name=\"Ping\">\n"+
@@ -429,7 +432,7 @@ public class DescriptionTest extends TestCase {
             description = mIntrospectable.IntrospectWithDescription("de");
             assertEquals(IntrospectWithDescriptionDe4, description);
             description = mIntrospectable.IntrospectWithDescription("fr");
-            assertFalse(description.contains("<description>"));
+            assertTrue(description.contains("<description>"));
         } catch (BusException e) {
             e.printStackTrace();
             fail();
