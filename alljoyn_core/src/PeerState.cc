@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -173,7 +173,7 @@ void PeerStateTable::GetGroupKey(qcc::KeyBlob& key)
 
 void PeerStateTable::Clear()
 {
-    qcc::KeyBlob key;
+    qcc::KeyBlob key(0);  /* use version 0 to exchange with older clients that send keyblob instead of key data */
     lock.Lock(MUTEX_CONTEXT);
     peerMap.clear();
     PeerState nullPeer;
