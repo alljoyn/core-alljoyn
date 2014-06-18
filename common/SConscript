@@ -103,12 +103,14 @@ else:
     hdrs = { 'qcc': commonenv.File(['inc/qcc/Log.h',
                                     'inc/qcc/Debug.h',
                                     'inc/qcc/ManagedObj.h',
+                                    'inc/qcc/Mutex.h',
                                     'inc/qcc/String.h',
                                     'inc/qcc/StringUtil.h',
                                     'inc/qcc/atomic.h',
                                     'inc/qcc/platform.h']),
              'qcc/${OS_GROUP}': commonenv.File(['inc/qcc/${OS_GROUP}/atomic.h',
-                                                'inc/qcc/${OS_GROUP}/platform_types.h']) }
+                                                'inc/qcc/${OS_GROUP}/platform_types.h',
+                                                'inc/qcc/${OS_GROUP}/Mutex.h']) }
 
     if commonenv['OS_GROUP'] == 'windows':
         hdrs['qcc/${OS_GROUP}'] += commonenv.File(['inc/qcc/${OS_GROUP}/mapping.h'])
@@ -123,8 +125,8 @@ if commonenv.has_key('BUILD_COMMON_STATUS'):
     status_obj = commonenv.Object(status_src)
     commonenv.Append(CPPPATH = ['#' + os.path.dirname(str(status_hdr))])
 else:
-    # allow common to "#include <Status.h>" when building all of AllJoyn
-    commonenv.Append(CPPPATH = ['$DISTDIR/cpp/inc/alljoyn'])
+    # allow common to "#include <alljoyn/Status.h>" when building all of AllJoyn
+    commonenv.Append(CPPPATH = ['$DISTDIR/cpp/inc'])
 
 
 # Build the sources
