@@ -9288,9 +9288,9 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addMember(JN
         const InterfaceDescription::Member* member = intf->GetMember(name.c_str());
         if (member &&
             (member->memberType == (AllJoynMessageType)type) &&
-            (member->name == name.c_str()) &&
-            (member->signature == inputSig.c_str()) &&
-            (member->returnSignature == outSig.c_str())) {
+            (name.c_str() && member->name == name.c_str()) &&
+            (inputSig.c_str() && member->signature == inputSig.c_str()) &&
+            (outSig.c_str() && member->returnSignature == outSig.c_str())) {
 
             // for reverse compatibility:
             // two annotations can be represented in the int variable 'annotation': DEPRECATED and NOREPLY
@@ -9385,8 +9385,8 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addProperty(
          */
         const InterfaceDescription::Property* prop = intf->GetProperty(name.c_str());
         if (prop &&
-            (prop->name == name.c_str()) &&
-            (prop->signature == signature.c_str()) &&
+            (name.c_str() && prop->name == name.c_str()) &&
+            (signature.c_str() && prop->signature == signature.c_str()) &&
             (prop->access == access)) {
             status = ER_OK;
         }
