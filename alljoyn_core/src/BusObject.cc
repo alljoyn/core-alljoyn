@@ -801,15 +801,17 @@ const char* BusObject::GetDescription(const char* toLanguage, qcc::String& buffe
         myTranslator = bus->GetDescriptionTranslator();
     }
 
-    if (myTranslator && myTranslator->SupportsTargetLanguage(toLanguage)) {
+    if (myTranslator) {
         const char* ret = myTranslator->Translate(languageTag.c_str(), toLanguage, description.c_str(), buffer);
         if (ret) {
             return ret;
         }
     }
-    if (!languageTag.empty() && 0 == strcmp(toLanguage, languageTag.c_str())) {
+
+    if (!description.empty() && !languageTag.empty()) {
         return description.c_str();
     }
+
     return NULL;
 }
 

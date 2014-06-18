@@ -348,29 +348,7 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
 
     Translator* myTranslator = defs->translator ? defs->translator : translator;
 
-    bool withDescriptions = false;
-    do {
-        if (!languageTag || languageTag[0] == '\0') {
-            break;
-        }
-
-        if (!defs->hasDescription) {
-            break;
-        }
-
-        if (0 == strcmp(languageTag, defs->languageTag.c_str())) {
-            withDescriptions = true;
-            break;
-        }
-
-        if (!myTranslator) {
-            break;
-        }
-
-        withDescriptions = myTranslator->SupportsTargetLanguage(languageTag);
-
-    } while (false);
-
+    bool withDescriptions = languageTag && defs->hasDescription;
 
     qcc::String xml = in + "<interface name=\"";
     xml += name + close;
@@ -396,8 +374,7 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
         xml     += close;
 
         if (withDescriptions) {
-            xml += "  ";
-            AppendDescriptionXml(xml, languageTag, member.description.c_str(), myTranslator, in);
+            AppendDescriptionXml(xml, languageTag, member.description.c_str(), myTranslator, in + "  ");
         }
 
         /* Iterate over IN arguments */
@@ -437,20 +414,26 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
             xml += " access=\"readwrite\"";
         }
 
+        //Does this property have a description? Only if (a) we're doing descriptions,
+        //(b) the property has some description text, and (c) that text is not a
+        //lookup key (empty language tag)  with no Translator to produce a description string
+        bool propWithDescription = withDescriptions && !property.description.empty()
+                                   && !(defs->languageTag.empty() && !myTranslator);
 
-        if (property.annotations->size() || withDescriptions) {
-            if (property.annotations->size() || withDescriptions) {
-                xml += ">\n";
+        //Does this property element have any sub-elements?
+        if (property.annotations->size() || propWithDescription) {
+            xml += ">\n";
 
+            if (property.annotations->size()) {
                 // add annotations
                 AnnotationsMap::const_iterator ait = property.annotations->begin();
                 for (; ait != property.annotations->end(); ++ait) {
                     xml += in + "    <annotation name=\"" + ait->first.c_str() + "\" value=\"" + ait->second + "\"/>\n";
                 }
             }
-            if (withDescriptions) {
-                xml += "  ";
-                AppendDescriptionXml(xml, languageTag, property.description.c_str(), myTranslator, in);
+
+            if (propWithDescription) {
+                AppendDescriptionXml(xml, languageTag, property.description.c_str(), myTranslator, in + "  ");
             }
             xml += in + "  </property>\n";
         } else {
@@ -734,15 +717,18 @@ const char* InterfaceDescription::Translate(const char* toLanguage, const char* 
     if (NULL == text) {
         return NULL;
     }
+
     if (translator) {
         const char* ret = translator->Translate(defs->languageTag.c_str(), toLanguage, text, buffer);
         if (ret) {
             return ret;
         }
     }
-    if (!defs->languageTag.empty() && 0 == strcmp(toLanguage, defs->languageTag.c_str())) {
+
+    if (text && text[0] != '\0' && !defs->languageTag.empty()) {
         return text;
     }
+
     return NULL;
 }
 

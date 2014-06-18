@@ -54,15 +54,6 @@ class Translator {
     virtual void GetTargetLanguage(size_t index, qcc::String& ret) = 0;
 
     /**
-     * Check whether or not this Translator knows how to translate into
-     * a given language.
-     *
-     * @param targetLanguage The language tag to check
-     * @return True if the language tag is supported
-     */
-    bool SupportsTargetLanguage(const char* targetLanguage);
-
-    /**
      * Translate source from sourceLanguage into targetLanguage.
      * If this Translator does not have a translation for the given
      * parameters it should return NULL.

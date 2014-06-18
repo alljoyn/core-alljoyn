@@ -33,7 +33,7 @@ public class PigTranslator extends Translator {
     }
 
     public String translate(String fromLanguage, String toLanguage, String fromText){
-        if(!toLanguage.equals("pig") || null == fromText) {
+        if(toLanguage.equals("en") || null == fromText) {
             return null;
         }
 
