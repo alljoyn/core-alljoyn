@@ -2600,13 +2600,21 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
 QStatus IpNameServiceImpl::Ping(TransportMask transportMask, const qcc::String& guid, const qcc::String& name)
 {
     MDNSPacket query;
+    bool foundEntry = false;
     //TO DO We should look in to ping over different interfaces since a name can be discovered over one interface
     //and we could end up pinging on another interface which is no longer present
-    std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.find(guid);
-    if (it != m_peerInfoMap.end()) {
-        query->SetDestination(it->second.front().unicastIPV4Info);
-    } else {
-        return ER_ALLJOYN_PING_REPLY_UNREACHABLE;
+
+    for (std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.begin();
+         it != m_peerInfoMap.end(); ++it) {
+        if (qcc::GUID128(it->first).ToShortString() == guid) {
+            foundEntry = true;
+            query->SetDestination(it->second.front().unicastIPV4Info);
+            break;
+        }
+    }
+
+    if (!foundEntry) {
+        return ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED;
     }
 
     MDNSPingRData* pingRData = new MDNSPingRData(name);
