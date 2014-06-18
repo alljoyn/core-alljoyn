@@ -20,6 +20,7 @@
 #include <alljoyn/ProxyBusObject.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/InterfaceDescription.h>
+#include <alljoyn/Session.h>
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
 #include <qcc/Util.h>
@@ -87,7 +88,7 @@ static ajn::BusAttachment* s_bus = NULL;
 static MyBusListener* s_busListener = NULL;
 
 static set<String> s_requestedNames;
-static set<String> s_advertisements;
+static set<pair<String, TransportMask> > s_advertisements;
 static set<DiscoverInfo> s_discoverSet;
 static map<SessionPort, SessionPortInfo> s_sessionPortMap;
 static map<SessionId, SessionInfo> s_sessionMap;
@@ -428,7 +429,7 @@ static void DoAdvertise(String name, TransportMask transports)
     QStatus status = s_bus->AdvertiseName(name.c_str(), transports);
     if (status == ER_OK) {
         s_lock.Lock(MUTEX_CONTEXT);
-        s_advertisements.insert(name);
+        s_advertisements.insert(pair<String, TransportMask>(name, transports));
         s_lock.Unlock(MUTEX_CONTEXT);
     } else {
         printf("BusAttachment::AdvertiseName(%s, 0x%x) failed with %s\n", name.c_str(), transports, QCC_StatusText(status));
@@ -444,7 +445,7 @@ static void DoCancelAdvertise(String name, TransportMask transports)
     QStatus status = s_bus->CancelAdvertiseName(name.c_str(), transports);
     if (status == ER_OK) {
         s_lock.Lock(MUTEX_CONTEXT);
-        s_advertisements.erase(name);
+        s_advertisements.erase(pair<String, TransportMask>(name, transports));
         s_lock.Unlock(MUTEX_CONTEXT);
     } else {
         printf("BusAttachment::AdvertiseName(%s, 0x%x) failed with %s\n", name.c_str(), transports, QCC_StatusText(status));
@@ -479,9 +480,9 @@ static void DoList()
 
     printf("---------Outgoing Advertisments----------------\n");
     s_lock.Lock(MUTEX_CONTEXT);
-    set<String>::const_iterator ait = s_advertisements.begin();
+    set<pair<String, TransportMask> >::const_iterator ait = s_advertisements.begin();
     while (ait != s_advertisements.end()) {
-        printf("  %s\n", ait->c_str());
+        printf("  Name: %s: transport=0x%x\n", ait->first.c_str(), ait->second);
         ait++;
     }
     printf("---------Discovered Names----------------------\n");
@@ -737,6 +738,7 @@ int main(int argc, char** argv)
     }
 
     /* Parse commands from stdin */
+    printf("ready\n");
     const int bufSize = 1024;
     char buf[bufSize];
     while ((ER_OK == status) && (get_line(buf, bufSize, stdin))) {
@@ -768,13 +770,46 @@ int main(int argc, char** argv)
             SessionOpts opts;
             SessionPort port = static_cast<SessionPort>(StringToU32(NextTok(line), 0, 0));
             if (port == 0) {
-                printf("Usage: bind <port> [isMultipoint] [traffic] [proximity] [transports]\n");
+                printf("Usage: bind <port> [isMultipoint (false)] [traffic (TRAFFIC_MESSAGES)] [proximity (PROXIMITY_ANY)] [transports (TRANSPORT_TCP)]\n");
+                printf("Example:    bind 1 true TRAFFIC_MESSAGES PROXIMITY_ANY TRANSPORT_UDP\n");
+                printf("Equivalent: bind 1 true 1 255 256\n");
                 continue;
             }
-            opts.isMultipoint = (NextTok(line) == "true");
-            opts.traffic = static_cast<SessionOpts::TrafficType>(StringToU32(NextTok(line), 0, 0x1));
-            opts.proximity = static_cast<SessionOpts::Proximity>(StringToU32(NextTok(line), 0, 0xFF));
-            opts.transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, TRANSPORT_ANY));
+
+            String tok = NextTok(line);
+            opts.isMultipoint = (tok == "true");
+
+            tok = NextTok(line);
+            if (tok == "TRAFFIC_MESSAGES") {
+                opts.traffic = SessionOpts::TRAFFIC_MESSAGES;
+            } else if (tok == "TRAFFIC_RAW_UNRELIABLE") {
+                opts.traffic = SessionOpts::TRAFFIC_RAW_UNRELIABLE;
+            } else if (tok == "TRAFFIC_RAW_RELIABLE") {
+                opts.traffic = SessionOpts::TRAFFIC_RAW_RELIABLE;
+            } else {
+                opts.traffic = static_cast<SessionOpts::TrafficType>(StringToU32(tok, 0, 0x1));
+            }
+
+            tok = NextTok(line);
+            if (tok == "PROXIMITY_ANY") {
+                opts.proximity = SessionOpts::PROXIMITY_ANY;
+            } else if (tok == "PROXIMITY_PHYSICAL") {
+                opts.proximity = SessionOpts::PROXIMITY_PHYSICAL;
+            } else if (tok == "PROXIMITY_NETWORK") {
+                opts.proximity = SessionOpts::PROXIMITY_NETWORK;
+            } else {
+                opts.proximity = static_cast<SessionOpts::Proximity>(StringToU32(tok, 0, 0xFF));
+            }
+
+            tok = NextTok(line);
+            if (tok == "TRANSPORT_TCP") {
+                opts.transports = TRANSPORT_TCP;
+            } else if (tok == "TRANSPORT_UDP") {
+                opts.transports = TRANSPORT_UDP;
+            } else {
+                opts.transports = static_cast<TransportMask>(StringToU32(tok, 0, TRANSPORT_ANY));
+            }
+
             DoBind(port, opts);
         } else if (cmd == "unbind") {
             SessionPort port = static_cast<SessionPort>(StringToU32(NextTok(line), 0, 0));
@@ -786,10 +821,22 @@ int main(int argc, char** argv)
         } else if (cmd == "advertise") {
             String name = NextTok(line);
             if (name.empty()) {
-                printf("Usage: advertise <name> [transports]\n");
+                printf("Usage:      advertise <name> [transports]\n");
+                printf("Example:    advertise com.yadda TRANSPORT_UDP\n");
+                printf("Equivalent: advertise com.yadda 256\n");
                 continue;
             }
-            TransportMask transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, TRANSPORT_ANY));
+
+            TransportMask transports;
+            String tok = NextTok(line);
+            if (tok == "TRANSPORT_TCP") {
+                transports = TRANSPORT_TCP;
+            } else if (tok == "TRANSPORT_UDP") {
+                transports = TRANSPORT_UDP;
+            } else {
+                transports = static_cast<TransportMask>(StringToU32(tok, 0, TRANSPORT_ANY));
+            }
+
             DoAdvertise(name, transports);
         } else if (cmd == "canceladvertise") {
             String name = NextTok(line);
@@ -819,14 +866,47 @@ int main(int argc, char** argv)
             String name = NextTok(line);
             SessionPort port = static_cast<SessionPort>(StringToU32(NextTok(line), 0, 0));
             if (name.empty() || (port == 0)) {
-                printf("Usage: join <name> <port> [isMultipoint] [traffic] [proximity] [transports]\n");
+                printf("Usage:      join <name> <port> [isMultipoint] [traffic] [proximity] [transports]\n");
+                printf("Example:    join com.yadda 1 true TRAFFIC_MESSAGES PROXIMITY_ANY TRANSPORT_UDP\n");
+                printf("Equivalent: join com.yadda 1 true 1 255 256\n");
                 continue;
             }
+
             SessionOpts opts;
-            opts.isMultipoint = (NextTok(line) == "true");
-            opts.traffic = static_cast<SessionOpts::TrafficType>(StringToU32(NextTok(line), 0, 0x1));
-            opts.proximity = static_cast<SessionOpts::Proximity>(StringToU32(NextTok(line), 0, 0xFF));
-            opts.transports = static_cast<TransportMask>(StringToU32(NextTok(line), 0, TRANSPORT_ANY));
+            String tok = NextTok(line);
+            opts.isMultipoint = (tok == "true");
+
+            tok = NextTok(line);
+            if (tok == "TRAFFIC_MESSAGES") {
+                opts.traffic = SessionOpts::TRAFFIC_MESSAGES;
+            } else if (tok == "TRAFFIC_RAW_UNRELIABLE") {
+                opts.traffic = SessionOpts::TRAFFIC_RAW_UNRELIABLE;
+            } else if (tok == "TRAFFIC_RAW_RELIABLE") {
+                opts.traffic = SessionOpts::TRAFFIC_RAW_RELIABLE;
+            } else {
+                opts.traffic = static_cast<SessionOpts::TrafficType>(StringToU32(tok, 0, 0x1));
+            }
+
+            tok = NextTok(line);
+            if (tok == "PROXIMITY_ANY") {
+                opts.proximity = SessionOpts::PROXIMITY_ANY;
+            } else if (tok == "PROXIMITY_PHYSICAL") {
+                opts.proximity = SessionOpts::PROXIMITY_PHYSICAL;
+            } else if (tok == "PROXIMITY_NETWORK") {
+                opts.proximity = SessionOpts::PROXIMITY_NETWORK;
+            } else {
+                opts.proximity = static_cast<SessionOpts::Proximity>(StringToU32(tok, 0, 0xFF));
+            }
+
+            tok = NextTok(line);
+            if (tok == "TRANSPORT_TCP") {
+                opts.transports = TRANSPORT_TCP;
+            } else if (tok == "TRANSPORT_UDP") {
+                opts.transports = TRANSPORT_UDP;
+            } else {
+                opts.transports = static_cast<TransportMask>(StringToU32(tok, 0, TRANSPORT_ANY));
+            }
+
             DoJoin(name, port, opts);
         } else if (cmd == "asyncjoin") {
             String name = NextTok(line);
@@ -936,7 +1016,7 @@ int main(int argc, char** argv)
         } else if (cmd == "removematch") {
             String rule = Trim(line);
             if (rule.empty()) {
-                printf("Usage: removerule <rule>\n");
+                printf("Usage: removematch <rule>\n");
                 continue;
             }
             DoRemoveMatch(rule);
@@ -952,7 +1032,7 @@ int main(int argc, char** argv)
             DoPing(name);
         } else if (cmd == "exit") {
             break;
-        } else if (cmd == "help") {
+        } else if (cmd == "help" || cmd == "?") {
             printf("debug <module_name> <level>                                   - Set debug level for a module\n");
             printf("requestname <name>                                            - Request a well-known name\n");
             printf("releasename <name>                                            - Release a well-known name\n");
