@@ -470,7 +470,7 @@ QStatus _RemoteEndpoint::StopAfterTxEmpty(uint32_t maxWaitMs)
 
 QStatus _RemoteEndpoint::PauseAfterRxReply()
 {
-    if (internal || minimalEndpoint) {
+    if (internal) {
         internal->armRxPause = true;
         return ER_OK;
     } else {
