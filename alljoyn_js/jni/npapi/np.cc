@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -98,7 +98,7 @@ NP_EXPORT(char*) NP_GetPluginVersion()
 {
     InitializeDebug();
     QCC_DbgPrintf(("%s", __FUNCTION__));
-    return const_cast<char*>("0.0.1");
+    return const_cast<char*>("14.06.00");
 }
 
 NP_EXPORT(char*) NP_GetMIMEDescription()
