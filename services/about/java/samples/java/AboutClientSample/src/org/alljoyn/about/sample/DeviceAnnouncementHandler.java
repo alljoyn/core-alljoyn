@@ -180,10 +180,10 @@ public class DeviceAnnouncementHandler implements AnnouncementHandler
 
             } catch(BusException e3) {
                 System.out.println(e3.getMessage());
-                status = mBusAttachment.leaveSession(sessionId.value);
-                if (Status.OK == status) {
-                    System.out.println("left session with: \"" + serviceName + "\" SessionId: \"" + sessionId.value +"\"");
-                }
+            }
+            status = mBusAttachment.leaveSession(sessionId.value);
+            if (Status.OK == status) {
+                System.out.println("left session with: \"" + serviceName + "\" SessionId: \"" + sessionId.value +"\"");
             }
         }
     }
