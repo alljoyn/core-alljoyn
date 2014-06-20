@@ -105,7 +105,7 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
             QStatus status = g_msgBus->JoinSessionAsync(name, SESSION_PORT, this, opts, this, ::strdup(name));
             if (ER_OK != status) {
                 QCC_LogError(status, ("JoinSessionAsync(%s) failed \n", name));
-                exit(1);
+                g_interrupt = true;
             }
         }
     }
