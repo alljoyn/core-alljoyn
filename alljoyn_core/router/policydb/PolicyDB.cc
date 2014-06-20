@@ -76,7 +76,21 @@ using namespace std;
 #define RULE_CONNECT    (0x1 << 3)
 
 
-static const _PolicyDB::IDSet nullIDSet;
+#ifndef NDEBUG
+static String IDSet2String(const _PolicyDB::IDSet& idset)
+{
+    String ids;
+    std::unordered_set<StringID>::const_iterator it = idset->begin();
+    while (it != idset->end()) {
+        ids += I32ToString(*it);
+        ++it;
+        if (it != idset->end()) {
+            ids += ", ";
+        }
+    }
+    return ids;
+}
+#endif
 
 static bool MsgTypeStrToEnum(const String& str, AllJoynMessageType& type)
 {
@@ -188,7 +202,7 @@ const _PolicyDB::IDSet _PolicyDB::LookupStringIDPrefix(const char* idStr, char s
 
 const _PolicyDB::IDSet _PolicyDB::LookupBusNameID(const char* busName) const
 {
-    IDSet ret = nullIDSet;
+    IDSet ret;
 
     if (busName && (busName[0] != '\0')) {
         lock.RDLock();
@@ -503,6 +517,10 @@ void _PolicyDB::Finalize(Bus* bus)
     for (StringIDMap::const_iterator it = dictionary.begin(); it != dictionary.end(); ++it) {
         QCC_DbgPrintf(("    \"%s\" = %u", it->first.c_str(), it->second));
     }
+    QCC_DbgPrintf(("Name Table:"));
+    for (unordered_map<qcc::StringMapKey, IDSet>::const_iterator it = busNameIDMap.begin(); it != busNameIDMap.end(); ++it) {
+        QCC_DbgPrintf(("    \"%s\" = {%s}", it->first.c_str(), IDSet2String(it->second).c_str()));
+    }
 #endif
 }
 
@@ -733,21 +751,6 @@ bool _PolicyDB::OKToOwn(const char* busName, BusEndpoint& ep) const
     return allow;
 }
 
-#ifndef NDEBUG
-static String IDSet2String(const _PolicyDB::IDSet& idset)
-{
-    String ids;
-    std::unordered_set<StringID>::const_iterator it = idset->begin();
-    while (it != idset->end()) {
-        ids += I32ToString(*it);
-        ++it;
-        if (it != idset->end()) {
-            ids += ", ";
-        }
-    }
-    return ids;
-}
-#endif
 
 bool _PolicyDB::OKToReceive(const NormalizedMsgHdr& nmh, BusEndpoint& dest) const
 {
@@ -755,7 +758,7 @@ bool _PolicyDB::OKToReceive(const NormalizedMsgHdr& nmh, BusEndpoint& dest) cons
     bool allow = true;
     bool ruleMatch = false;
 
-    if (nmh.destIDSet.iden(nullIDSet)) {
+    if (nmh.destIDSet->empty()) {
         /*
          * Broadcast/multicast signal - need to re-check send rules for each
          * destination.
