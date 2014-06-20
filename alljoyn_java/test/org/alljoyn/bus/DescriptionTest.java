@@ -20,15 +20,16 @@ import java.util.Arrays;
 import junit.framework.TestCase;
 
 public class DescriptionTest extends TestCase {
+    static {
+        System.loadLibrary("alljoyn_java");
+    }
+
     public DescriptionTest(String name) {
         super(name);
     }
 
-    private static SimpleDescriptionInterfaceTranslator sdit = null;
-    static {
-        System.loadLibrary("alljoyn_java");
-        sdit = new SimpleDescriptionInterfaceTranslator();
-    }
+    private SimpleDescriptionInterfaceTranslator sdit;
+
     /* The AllJoyn object that is our service. */
     private SimpleDescriptionService mSimpleDescriptionService;
     private SimpleDescriptionNoTranslateService mSimpleDescriptionNoTranslateService;
@@ -45,6 +46,7 @@ public class DescriptionTest extends TestCase {
     private org.alljoyn.bus.ifaces.AllSeenIntrospectable mIntrospectable;
 
     public void setUp() throws Exception {
+        sdit = new SimpleDescriptionInterfaceTranslator();
         mSimpleDescriptionService = null;
         mSimpleDescriptionNoTranslateService = null;
         mSimpleDescriptionInterface = null;
