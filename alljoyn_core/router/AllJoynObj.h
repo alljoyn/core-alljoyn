@@ -59,7 +59,7 @@ class BusController;
 class AllJoynObj : public BusObject, public NameListener, public TransportListener, public qcc::AlarmListener,
     public IpNameServiceListener {
     friend class _RemoteEndpoint;
-
+    class PingContext;
   public:
     /**
      * Constructor
