@@ -68,7 +68,7 @@ static const char bundledConfig[] =
     "  <limit name=\"auth_timeout\">5000</limit>"
     "  <limit name=\"max_incomplete_connections\">4</limit>"
     "  <limit name=\"max_completed_connections\">16</limit>"
-    "  <limit name=\"max_untrusted_clients\">16</limit>"
+    "  <limit name=\"max_untrusted_clients\">8</limit>"
     "  <flag name=\"restrict_untrusted_clients\">false</flag>"
     "  <property name=\"ns_interfaces\">*</property>"
     "</busconfig>";
