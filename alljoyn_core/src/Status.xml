@@ -257,5 +257,6 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_ALLJOYN_PING_REPLY_TIMEOUT" value="0x9115" comment="Ping call timeout"/>
   <status name="ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME" value="0x9116" comment="Name not found currently or part of any known session"/>
   <status name="ER_ALLJOYN_PING_REPLY_FAILED" value="0x9117" comment="Generic Ping call error"/>
+  <status name="ER_TCP_MAX_UNTRUSTED" value="0x9118" comment="The maximum configured number of Thin Library connections has been reached"/>
 
 </status_block>

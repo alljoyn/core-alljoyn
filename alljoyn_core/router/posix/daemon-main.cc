@@ -111,7 +111,7 @@ static const char defaultConfig[] =
     "  <limit name=\"auth_timeout\">5000</limit>"
     "  <limit name=\"max_incomplete_connections\">16</limit>"
     "  <limit name=\"max_completed_connections\">32</limit>"
-    "  <limit name=\"max_untrusted_clients\">32</limit>"
+    "  <limit name=\"max_untrusted_clients\">16</limit>"
     "  <flag name=\"restrict_untrusted_clients\">false</flag>"
     "</busconfig>";
 #endif
