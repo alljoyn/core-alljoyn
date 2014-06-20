@@ -542,7 +542,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
 
 bool Crypto_ASN1::DecodeLen(const uint8_t*& p, const uint8_t* eod, size_t& l)
 {
-    if (p == eod) {
+    if (p >= eod) {
         return false;
     }
     l = *p++;
@@ -550,7 +550,7 @@ bool Crypto_ASN1::DecodeLen(const uint8_t*& p, const uint8_t* eod, size_t& l)
         size_t n = l & 0x7F;
         l = 0;
         while (n--) {
-            if (p == eod) {
+            if (p >= eod) {
                 return false;
             }
             if ((l << 8) < l) {
@@ -560,7 +560,7 @@ bool Crypto_ASN1::DecodeLen(const uint8_t*& p, const uint8_t* eod, size_t& l)
             l = (l << 8) + *p++;
         }
     }
-    return l <= (uintptr_t)(eod - p);
+    return l <= (uintptr_t)eod - (uintptr_t)p;
 }
 
 void Crypto_ASN1::EncodeLen(qcc::String& asn, size_t len)
