@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -91,6 +91,10 @@ QStatus ClientRouter::RegisterEndpoint(BusEndpoint& endpoint)
 void ClientRouter::UnregisterEndpoint(const String& epName, EndpointType epType)
 {
     QCC_DbgHLPrintf(("ClientRouter::UnregisterEndpoint"));
+
+    if ((localEndpoint->GetUniqueName() == epName) && (nonLocalEndpoint->GetEndpointType() == epType)) {
+        localEndpoint->OnBusDisconnected();
+    }
 
     /* Unregister static endpoints */
     if ((nonLocalEndpoint->GetUniqueName() == epName) && (nonLocalEndpoint->GetEndpointType() == epType)) {
