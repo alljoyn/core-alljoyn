@@ -1617,6 +1617,11 @@ void* TCPTransport::Run(void* arg)
 
         status = Event::Wait(checkEvents, signaledEvents);
         if (ER_OK != status) {
+            for (vector<Event*>::iterator i = checkEvents.begin(); i != checkEvents.end(); ++i) {
+                if (*i != &stopEvent) {
+                    delete *i;
+                }
+            }
             QCC_LogError(status, ("Event::Wait failed"));
             break;
         }
@@ -2655,10 +2660,13 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     }
 
     /*
-     * These fields (addr, port, family) are all guaranteed to be present now
-     * and an underlying network (even if it is Wi-Fi P2P) is assumed to be
-     * up and functioning.
+     * These fields (addr, port) Are all guaranteed to be present now and an
+     * underlying network (even if it is Wi-Fi P2P) is assumed to be up and
+     * functioning.
      */
+    assert(argMap.find("r4addr") != argMap.end() && "TCPTransport::Connect(): r4addr not present in argMap");
+    assert(argMap.find("r4port") != argMap.end() && "TCPTransport::Connect(): r4port not present in argMap");
+
     IPAddress ipAddr(argMap.find("r4addr")->second);
     uint16_t port = StringToU32(argMap["r4port"]);
 

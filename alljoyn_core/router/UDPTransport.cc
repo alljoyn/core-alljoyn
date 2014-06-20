@@ -5374,6 +5374,15 @@ void* UDPTransport::Run(void* arg)
     }
 
     /*
+     * Don't leak events when stopping.
+     */
+    for (vector<Event*>::iterator i = checkEvents.begin(); i != checkEvents.end(); ++i) {
+        if (*i != &stopEvent && *i != &ardpTimerEvent && *i != &maintenanceTimerEvent) {
+            delete *i;
+        }
+    }
+
+    /*
      * If we're stopping, it is our responsibility to clean up the list of FDs
      * we are listening to.  Since at this point we've Stop()ped and Join()ed
      * the protocol handlers, all we have to do is to close them down.
@@ -6260,10 +6269,13 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     }
 
     /*
-     * These fields (addr, port, family) are all guaranteed to be present now
-     * and an underlying network (even if it is Wi-Fi P2P) is assumed to be
-     * up and functioning.
+     * These fields (addr, port) are all guaranteed to be present now and an
+     * underlying network (even if it is Wi-Fi P2P) is assumed to be up and
+     * functioning.
      */
+    assert(argMap.find("u4addr") != argMap.end() && "UDPTransport::Connect(): u4addr not present in argMap");
+    assert(argMap.find("u4port") != argMap.end() && "UDPTransport::Connect(): u4port not present in argMap");
+
     IPAddress ipAddr(argMap.find("u4addr")->second);
     uint16_t ipPort = StringToU32(argMap["u4port"]);
 
