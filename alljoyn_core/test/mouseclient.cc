@@ -69,6 +69,7 @@ const SessionPort SessionPort = 24;   /**< Well-known session port value for bbc
 }
 
 /** Static data */
+static volatile sig_atomic_t g_interrupt = false;
 static BusAttachment* g_msgBus = NULL;
 static Event g_discoverEvent;
 static String g_wellKnownName = ::org::alljoyn::alljoyn_test::DefaultWellKnownName;
@@ -135,7 +136,7 @@ class MyBusListener : public BusListener, public SessionListener {
 
     void SessionLost(SessionId sessionId, SessionLostReason reason) {
         QCC_SyncPrintf("SessionLost(%08x) was called. Reason = %u.\n", sessionId, reason);
-        _exit(1);
+        g_interrupt = true;
     }
 
     SessionId GetSessionId() const { return sessionId; }
@@ -146,8 +147,6 @@ class MyBusListener : public BusListener, public SessionListener {
 
 /** Static bus listener */
 static MyBusListener* g_busListener;
-
-static volatile sig_atomic_t g_interrupt = false;
 
 static void SigIntHandler(int sig)
 {
