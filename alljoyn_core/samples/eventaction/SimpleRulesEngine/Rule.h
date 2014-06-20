@@ -80,6 +80,7 @@ class Rule : public ajn::BusAttachment::JoinSessionAsyncCB, public ajn::SessionL
     void EventHandler(const ajn::InterfaceDescription::Member* member, const char* srcPath, ajn::Message& msg);
 
     void callAction();
+    void AsyncCallReplyHandler(ajn::Message& msg, void* context);
 
     const ajn::InterfaceDescription::Member* eventMember;
     ajn::SessionId mSessionId;

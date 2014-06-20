@@ -28,7 +28,7 @@ using namespace qcc;
 #define LOG_TAG  "JNI_EventActionBrowser"
 #define LOGTHIS(...) (__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
 #else
-#define LOGTHIS(...) printf(__VA_ARGS__)
+#define LOGTHIS(...) printf(__VA_ARGS__); printf("\n");
 #endif
 #endif
 
@@ -84,18 +84,24 @@ void Rule::EventHandler(const ajn::InterfaceDescription::Member* member, const c
 
 void Rule::JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context) {
     Rule* rule = (Rule*)context;
-    LOGTHIS("Joined session %s/%d", rule->mAction->mUniqueName.c_str(), sessionId);
-    rule->mSessionId = sessionId;
-    rule->callAction();
+    LOGTHIS("Joined session %s/%d status: %s(%x)", rule->mAction->mUniqueName.c_str(), sessionId, QCC_StatusText(status), status);
+    if (status == ER_OK || status == ER_ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED) {
+        rule->mSessionId = sessionId;
+        rule->callAction();
+    }
 }
 
 void Rule::callAction() {
     QStatus status = ER_OK;
-    mBus->EnableConcurrentCallbacks();
     if (!actionObject || !actionObject->ImplementsInterface(mAction->mIfaceName.c_str())) {
         LOGTHIS("Creating ProxyBusObject with SessionId: %d", mSessionId);
         actionObject = new ProxyBusObject(*mBus, mAction->mUniqueName.c_str(), mAction->mPath.c_str(), mSessionId);
-        status = actionObject->IntrospectRemoteObject();
+        if (actionObject != NULL) {
+            mBus->EnableConcurrentCallbacks();
+            status = actionObject->IntrospectRemoteObject();
+        } else {
+            LOGTHIS("Failed to create ProxyBusObject");
+        }
     }
     if (ER_OK == status && actionObject) {
         MsgArg args;
@@ -103,10 +109,24 @@ void Rule::callAction() {
                 mAction->mUniqueName.c_str(), mAction->mIfaceName.c_str(),
                 mAction->mMember.c_str(), mAction->mSignature.c_str());
         //TODO: set args to action->mSignature & fill in dummy values if they exist
-        status = actionObject->MethodCall(mAction->mIfaceName.c_str(), mAction->mMember.c_str(), &args, 0);
+        status = actionObject->MethodCallAsync(mAction->mIfaceName.c_str(), mAction->mMember.c_str(),
+                                               this, static_cast<MessageReceiver::ReplyHandler>(&Rule::AsyncCallReplyHandler),
+                                               &args, 0, NULL, 10000);
         LOGTHIS("MethodCall status: %s(%x)", QCC_StatusText(status), status);
     } else {
-        LOGTHIS("Failed MethodCall interface status: %s(%x)", QCC_StatusText(status), status);
+        LOGTHIS("Failed MethodCall status: %s(%x)", QCC_StatusText(status), status);
+    }
+}
+
+void Rule::AsyncCallReplyHandler(Message& msg, void* context) {
+    size_t numArgs;
+    const MsgArg* args;
+    msg->GetArgs(numArgs, args);
+    if (MESSAGE_METHOD_RET != msg->GetType()) {
+        LOGTHIS("Failed MethodCall message return type: %d", msg->GetType());
+        LOGTHIS("Failed MethodCall message Error name: %s", msg->GetErrorDescription().c_str());
+    } else {
+        LOGTHIS("Action should have been executed");
     }
 }
 
@@ -120,10 +140,13 @@ QStatus Rule::disable()
     matchRule.append("'");
     if (eventMember) {
         status = mBus->RemoveMatch(matchRule.c_str());
-        status = mBus->UnregisterSignalHandler(this,
-                                               static_cast<MessageReceiver::SignalHandler>(&Rule::EventHandler),
-                                               eventMember,
-                                               NULL);
+        LOGTHIS("Removed match status: %d", status);
+        if (status == ER_OK) {
+            status = mBus->UnregisterSignalHandler(this,
+                                                   static_cast<MessageReceiver::SignalHandler>(&Rule::EventHandler),
+                                                   eventMember,
+                                                   NULL);
+        }
     }
     eventMember = NULL;
 
@@ -136,7 +159,12 @@ QStatus Rule::disable()
 /* From SessionListener */
 void Rule::SessionLost(ajn::SessionId sessionId)
 {
-
+    LOGTHIS("Unable to communicate with action device, lost the session.");
+    if (actionObject) {
+        delete actionObject;
+        actionObject = NULL;
+    }
+    mSessionId = 0;
 }
 
 void Rule::SessionMemberAdded(ajn::SessionId sessionId, const char*uniqueName)
