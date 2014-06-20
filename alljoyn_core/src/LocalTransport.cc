@@ -310,7 +310,6 @@ QStatus _LocalEndpoint::Stop(void)
 
     /* Stop the replyTimer */
     replyTimer.Stop();
-
     return ER_OK;
 }
 
@@ -598,7 +597,10 @@ void _LocalEndpoint::UnregisterBusObject(BusObject& object)
     objectsLock.Unlock(MUTEX_CONTEXT);
 
     /* Notify object and detach from bus*/
-    object.ObjectUnregistered();
+    if (object.isRegistered) {
+        object.ObjectUnregistered();
+        object.isRegistered = false;
+    }
 
     /* Detach object from parent */
     objectsLock.Lock(MUTEX_CONTEXT);
@@ -612,7 +614,11 @@ void _LocalEndpoint::UnregisterBusObject(BusObject& object)
         if (!child) {
             break;
         }
+        object.InUseIncrement();
+        objectsLock.Unlock(MUTEX_CONTEXT);
         UnregisterBusObject(*child);
+        objectsLock.Lock(MUTEX_CONTEXT);
+        object.InUseDecrement();
     }
     /* Delete the object if it was a default object */
     vector<BusObject*>::iterator dit = defaultObjects.begin();
@@ -1105,6 +1111,33 @@ void _LocalEndpoint::OnBusConnected()
     if (dispatcher) {
         dispatcher->AddAlarm(Alarm(zero, deferredCallbacks));
     }
+}
+
+void _LocalEndpoint::OnBusDisconnected() {
+    /*
+     * Allow synchronous method calls from within the object Unregistration callbacks
+     */
+    bus->EnableConcurrentCallbacks();
+    /*
+     * Call ObjectUnegistered for any unregistered bus objects
+     */
+    objectsLock.Lock(MUTEX_CONTEXT);
+    unordered_map<const char*, BusObject*, Hash, PathEq>::iterator iter = localObjects.begin();
+    while (iter != localObjects.end()) {
+        if (iter->second->isRegistered) {
+            BusObject* bo = iter->second;
+            bo->isRegistered = false;
+            bo->InUseIncrement();
+            objectsLock.Unlock(MUTEX_CONTEXT);
+            bo->ObjectUnregistered();
+            objectsLock.Lock(MUTEX_CONTEXT);
+            bo->InUseDecrement();
+            iter = localObjects.begin();
+        } else {
+            ++iter;
+        }
+    }
+    objectsLock.Unlock(MUTEX_CONTEXT);
 }
 
 const ProxyBusObject& _LocalEndpoint::GetAllJoynDebugObj()

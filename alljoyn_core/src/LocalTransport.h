@@ -275,6 +275,11 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     void OnBusConnected();
 
     /**
+     * Notify local endpoint that a bus  had disconnected.
+     */
+    void OnBusDisconnected();
+
+    /**
      * Get the org.freedesktop.DBus remote object.
      *
      * @return org.freedesktop.DBus remote object
