@@ -193,12 +193,12 @@ ThreadInternalReturn Thread::RunInternal(void* threadArg)
 
     assert(thread != NULL);
 
+    /* Plug race condition between Start and Run. (pthread_create may not write handle before run is called) */
+    thread->handle = pthread_self();
+
     if (thread->state != STARTED) {
         return NULL;
     }
-
-    /* Plug race condition between Start and Run. (pthread_create may not write handle before run is called) */
-    thread->handle = pthread_self();
 
     ++started;
 
@@ -394,14 +394,18 @@ QStatus Thread::Join(void)
         if ((waiters == 1) && !hasBeenJoined) {
             hasBeenJoined = true;
             hbjMutex.Unlock();
-            int ret = pthread_detach(handle);
-            handle = 0;
+            int ret = 0;
+            if (state != INITIAL) {
+                assert(handle);
+                ret = pthread_detach(handle);
+            }
             if (ret == 0) {
                 ++joined;
             } else {
                 status = ER_OS_ERROR;
                 QCC_LogError(status, ("Detaching thread: %d - %s", ret, strerror(ret)));
             }
+            handle = 0;
         } else {
             hbjMutex.Unlock();
 
@@ -423,7 +427,10 @@ QStatus Thread::Join(void)
         if ((waiters == 1) && !hasBeenJoined) {
             hasBeenJoined = true;
             hbjMutex.Unlock();
-            ret = pthread_join(handle, NULL);
+            if (state != INITIAL) {
+                assert(handle);
+                ret = pthread_join(handle, NULL);
+            }
             handle = 0;
             ++joined;
         } else {
