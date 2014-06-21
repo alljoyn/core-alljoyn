@@ -3502,6 +3502,7 @@ QStatus TCPTransport::UntrustedClientStart() {
         m_numUntrustedClients--;
     }
     if (m_numUntrustedClients >= m_maxUntrustedClients) {
+        QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("TCPTransport::UntrustedClientStart(): Disabling routing node advertisements"));
         DisableAdvertisement(routerName, TRANSPORT_TCP);
     }
     m_listenRequestsLock.Unlock();
