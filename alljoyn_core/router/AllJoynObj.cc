@@ -71,28 +71,43 @@ namespace ajn {
 
 void* AllJoynObj::NameMapEntry::truthiness = reinterpret_cast<void*>(true);
 int AllJoynObj::JoinSessionThread::jstCount = 0;
-struct PingContext {
+class AllJoynObj::PingContext {
+  public:
     enum Type {
         TRANSPORT_CONTEXT,
         REPLY_CONTEXT
     };
+
     Type type;
     TransportMask transport;
     String name;
     IPEndpoint ns4;
-
     Message* msg;
+    AllJoynObj* ajObj;
     Alarm alarm;
-    PingContext(TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& ns4)
-        : type(TRANSPORT_CONTEXT), transport(transport), name(name), ns4(ns4), msg(NULL) { }
-    PingContext(String name, Message* msg)
-        : type(REPLY_CONTEXT), name(name), msg(msg)
-    { }
+
+    PingContext(TransportMask transport, const qcc::String& name, const qcc::IPEndpoint& ns4, AllJoynObj* ajObj, uint32_t timeout)
+        : type(TRANSPORT_CONTEXT), transport(transport), name(name), ns4(ns4), msg(NULL), ajObj(ajObj) {
+        void* tempContext = (void*)this;
+        alarm = Alarm(timeout, ajObj, tempContext);
+
+    }
+    PingContext(String name, Message* msg, AllJoynObj* ajObj, uint32_t timeout)
+        : type(REPLY_CONTEXT), name(name), msg(msg), ajObj(ajObj)
+    {
+        void* tempContext = (void*)this;
+        alarm = Alarm(timeout, ajObj, tempContext);
+    }
     ~PingContext() {
+        ajObj->timer.RemoveAlarm(alarm, false /* don't block if alarm in progress */);
+
         if (msg) {
             delete msg;
         }
     }
+  private:
+    PingContext(const PingContext& other);
+    PingContext operator=(const PingContext& other);
 
 };
 void AllJoynObj::AcquireLocks()
@@ -4716,8 +4731,9 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
             }
             if (foundEntry) {
                 QCC_DbgPrintf(("Pinging GUID %s", guid.c_str()));
-                PingContext* ctx = new PingContext(name, new Message(msg));
+                PingContext* ctx = new PingContext(name, new Message(msg), this, timeout);
                 multimap<String, void*>::iterator it = pingReplyContexts.insert(pair<String, void*>(name, ctx));
+                timer.AddAlarm(ctx->alarm);
                 ReleaseLocks();
                 status = IpNameService::Instance().Ping(transport, guid, name);
                 if (status != ER_OK) {
@@ -4736,10 +4752,6 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                     }
                     ReleaseLocks();
 
-                } else {
-                    AllJoynObj* pObj = this;
-                    Alarm newAlarm(timeout, pObj, ctx);
-                    timer.AddAlarm(newAlarm);
                 }
             } else {
                 replyCode = ALLJOYN_PING_REPLY_UNKNOWN_NAME;
@@ -4842,12 +4854,9 @@ bool AllJoynObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_
     }
     const String& name = pingRData->GetWellKnownName();
 
-    PingContext* ctx = new PingContext(transport, name, ns4);
-    const uint32_t timeout = 0; // Schedule Alarm for Now
-    AllJoynObj* pObj = this;
-    Alarm newAlarm(timeout, pObj, ctx);
+    PingContext* ctx = new PingContext(transport, name, ns4, this, 0);
 
-    timer.AddAlarm(newAlarm);
+    timer.AddAlarm(ctx->alarm);
     return true;
 }
 
