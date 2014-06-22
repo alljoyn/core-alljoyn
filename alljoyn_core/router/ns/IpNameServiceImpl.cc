@@ -4203,16 +4203,6 @@ void IpNameServiceImpl::SendOutboundMessages(void)
         // make sense, so we can discard it and loop back for another.
         //
         m_outbound.pop_front();
-
-        // This is to limit the number of name service messages that
-        // can be sent out on the network for any given amount of time; which
-        // is good for preventing our users from trying to advertise zillions
-        // of names and flooding the net.
-        //
-        m_mutex.Unlock();
-        qcc::Sleep(rand() % 128);
-        m_mutex.Lock();
-
     }
 }
 
