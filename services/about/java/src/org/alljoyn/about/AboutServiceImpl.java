@@ -127,7 +127,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
      * Using this member function could have significant impact on network
      * performance.
      *
-     * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler)
+     * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler, String[] interfaces)
      */
     @Deprecated
     public void addAnnouncementHandler(AnnouncementHandler handler)
@@ -135,7 +135,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
         addAnnouncementHandler(handler, null);
     }
     /**
-     * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler)
+     * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler, String[] interfaces)
      */
     @Override
     public synchronized void addAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)
@@ -172,7 +172,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     /**
      * @deprecated use {@link removeAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)} instead.
      *
-     * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler)
+     * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler, String[] interfaces)
      */
     @Deprecated
     public void removeAnnouncementHandler(AnnouncementHandler handler)
