@@ -589,7 +589,9 @@ void SessionlessObj::FoundAdvertisedNameHandler(const char* name, TransportMask 
     } else {
         cit->second.name = name;
         cit->second.ifaces.insert(iface);
-        cit->second.changeId = changeId;
+        if (IS_GREATER(uint32_t, changeId, cit->second.changeId)) {
+            cit->second.changeId = changeId;
+        }
         cit->second.transport = transport;
     }
     ScheduleWork(doInitialBackoff);
