@@ -105,7 +105,7 @@ def javadoc_generator(source, target, env, for_signature):
       except AttributeError:
          pass
    javadoc_packages = ' '.join(set(javadoc_packages))
-   com = 'javadoc %s -use %s %s -quiet -public -noqualifier all %s %s %s -sourcepath %s -d ${TARGET.dir} %s' % (javadoc_classpath, javadoc_windowtitle, javadoc_doctitle, javadoc_header, javadoc_bottom, javadoc_overview, javadoc_sourcepath, javadoc_packages)
+   com = 'javadoc %s -use %s %s -quiet -public -noqualifier all %s %s %s -sourcepath "%s" -d ${TARGET.dir} %s' % (javadoc_classpath, javadoc_windowtitle, javadoc_doctitle, javadoc_header, javadoc_bottom, javadoc_overview, javadoc_sourcepath, javadoc_packages)
    return com
 
 def JavaDoc(env, target, source, *args, **kw):
