@@ -40,33 +40,49 @@ QStatus Rule::enable()
         return status;
     }
 
-    InterfaceDescription* tempIntf;
-    status = mBus->CreateInterface(mEvent->mIfaceName.c_str(), tempIntf);
-    tempIntf->AddSignal(mEvent->mMember.c_str(), mEvent->mSignature.c_str(), mEvent->mSignature.c_str(), 0);
-
-    eventMember = tempIntf->GetMember(mEvent->mMember.c_str());
-
-    status =  mBus->RegisterSignalHandler(this,
-                                          static_cast<MessageReceiver::SignalHandler>(&Rule::EventHandler),
-                                          eventMember,
-                                          NULL);
-
     qcc::String matchRule = "type='signal',interface='";
     matchRule.append(mEvent->mIfaceName);
     matchRule.append("',member='");
     matchRule.append(mEvent->mMember);
     matchRule.append("'");
-    status = mBus->AddMatch(matchRule.c_str());
-
-    LOGTHIS("Registered a rule for the event: %s to to invoke action %s(%s)",
+    LOGTHIS("Going to setup a rule for the event: %s to to invoke action %s(%s)",
             matchRule.c_str(), mAction->mMember.c_str(), mAction->mSignature.c_str());
+
+    InterfaceDescription* tempIntf;
+    status = mBus->CreateInterface(mEvent->mIfaceName.c_str(), tempIntf);
+    if (status == ER_OK && tempIntf) {
+        tempIntf->AddSignal(mEvent->mMember.c_str(), mEvent->mSignature.c_str(), mEvent->mSignature.c_str(), 0);
+        eventMember = tempIntf->GetMember(mEvent->mMember.c_str());
+    } else if (status == ER_BUS_IFACE_ALREADY_EXISTS) {
+        LOGTHIS("Interface already exists, getting it from the BusAttachment");
+        const InterfaceDescription* existingIntf = mBus->GetInterface(mEvent->mIfaceName.c_str());
+        eventMember = existingIntf->GetMember(mEvent->mMember.c_str());
+    }
+
+    if (eventMember) {
+        status =  mBus->RegisterSignalHandler(this,
+                                              static_cast<MessageReceiver::SignalHandler>(&Rule::EventHandler),
+                                              eventMember,
+                                              NULL);
+
+        if (status == ER_OK) {
+            status = mBus->AddMatch(matchRule.c_str());
+
+            LOGTHIS("Registered a rule for the event: %s to to invoke action %s(%s)",
+                    matchRule.c_str(), mAction->mMember.c_str(), mAction->mSignature.c_str());
+        } else {
+            LOGTHIS("Error registering the signal handler: %s(%d)", QCC_StatusText(status), status);
+        }
+    } else {
+        LOGTHIS("Event Member is null, interface create status %s(%d)", QCC_StatusText(status), status);
+    }
 
     return status;
 }
 
 void Rule::EventHandler(const ajn::InterfaceDescription::Member* member, const char* srcPath, ajn::Message& msg)
 {
-    if (mEvent->mUniqueName.compare(msg->GetSender())) {
+    if (!mAction || !mEvent || mEvent->mUniqueName.compare(msg->GetSender())) {
         return;
     }
     LOGTHIS("Received the event (%s) from %s", mEvent->mMember.c_str(), mEvent->mUniqueName.c_str());

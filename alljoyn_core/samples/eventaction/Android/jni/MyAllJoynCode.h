@@ -65,6 +65,11 @@ class MyAllJoynCode :
     void initialize(const char* packageName);
 
     /**
+     * Starts the local rule engine
+     */
+    void startRuleEngine();
+
+    /**
      * Join an AllJoyn session.
      *
      * @param sessionName	The busName/Wellknown name to join

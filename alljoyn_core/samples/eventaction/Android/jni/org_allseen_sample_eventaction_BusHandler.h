@@ -30,6 +30,9 @@ extern "C" {
 JNIEXPORT void JNICALL Java_org_allseen_sample_eventaction_BusHandler_initialize
     (JNIEnv *, jobject, jstring);
 
+JNIEXPORT void JNICALL Java_org_allseen_sample_eventaction_BusHandler_startRuleEngine
+    (JNIEnv *, jobject);
+
 /*
  * Class:     org_allseen_sample_eventaction_BusHandler
  * Method:    dointrospection
