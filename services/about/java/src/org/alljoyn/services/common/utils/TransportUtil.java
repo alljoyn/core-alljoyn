@@ -32,9 +32,9 @@ public class TransportUtil
 {
 
     /**
-     * A utility method for converting from a String->Object map to a String-Variant map
-     * @param sToObjectMap input String->Object map.
-     * @return String->Variant map
+     * A utility method for converting from a String-&gt;Object map to a String-&gt;Variant map
+     * @param sToObjectMap input String-&gt;Object map.
+     * @return String-&gt;Variant map
      */
     public static Map<String, Variant> toVariantMap(Map<String, Object> sToObjectMap)
     {
@@ -85,9 +85,9 @@ public class TransportUtil
     }
 
     /**
-     * A utility method for converting from a String-Variant map to a String->Object map
-     * @param sToVariantMap input String->Variant map.
-     * @return String->Object map
+     * A utility method for converting from a String-&gt;Variant map to a String-&gt;Object map
+     * @param sToVariantMap input String-&gt;Variant map.
+     * @return String-&gt;Object map
      * @throws BusException
      */
     public static Map<String, Object> fromVariantMap(Map<String, Variant> sToVariantMap) throws BusException
