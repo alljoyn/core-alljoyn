@@ -1576,7 +1576,7 @@ class IpNameServiceImpl : public qcc::Thread {
 
     uint32_t m_networkChangeScheduleCount;
     qcc::Timespec m_networkChangeTimeStamp;
-    bool PurgeAndUpdatePacket(MDNSPacket mdnspacket);
+    bool PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateSid);
 };
 
 } // namespace ajn
