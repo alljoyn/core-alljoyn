@@ -2346,7 +2346,7 @@ QStatus BusAttachment::PingAsync(const char* name, uint32_t timeout, BusAttachme
                                                 args,
                                                 ArraySize(args),
                                                 cbCtx,
-                                                timeout);
+                                                timeout + 1000);
     if (status != ER_OK) {
         delete cbCtx;
     }
@@ -2365,7 +2365,6 @@ void BusAttachment::Internal::PingAsyncCB(Message& reply, void* context)
         if (ER_OK == status) {
             switch (disposition) {
             case ALLJOYN_PING_REPLY_SUCCESS:
-                status = ER_OK;
                 break;
 
             case ALLJOYN_PING_REPLY_FAILED:
@@ -2373,7 +2372,19 @@ void BusAttachment::Internal::PingAsyncCB(Message& reply, void* context)
                 break;
 
             case ALLJOYN_PING_REPLY_TIMEOUT:
-                status = ER_TIMEOUT;
+                status = ER_ALLJOYN_PING_REPLY_TIMEOUT;
+                break;
+
+            case ALLJOYN_PING_REPLY_UNKNOWN_NAME:
+                status = ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME;
+                break;
+
+            case ALLJOYN_PING_REPLY_UNIMPLEMENTED:
+                status = ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED;
+                break;
+
+            case ALLJOYN_PING_REPLY_UNREACHABLE:
+                status = ER_ALLJOYN_PING_REPLY_UNREACHABLE;
                 break;
 
             default:
