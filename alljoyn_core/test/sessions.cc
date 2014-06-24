@@ -95,6 +95,9 @@ static map<SessionId, SessionInfo> s_sessionMap;
 static Mutex s_lock;
 static bool s_chatEcho = true;
 
+static String s_name;
+static bool s_found = false;
+
 /*
  * get a line of input from the the file pointer (most likely stdin).
  * This will capture the the num-1 characters or till a newline character is
@@ -197,6 +200,10 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
         s_lock.Lock(MUTEX_CONTEXT);
         s_discoverSet.insert(DiscoverInfo(name, transport));
         s_lock.Unlock(MUTEX_CONTEXT);
+
+        if (strcmp(name, s_name.c_str()) == 0) {
+            s_found = true;
+        }
     }
 
     void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner)
@@ -320,7 +327,7 @@ class AutoChatThread : public Thread, public ThreadListener {
 
 static void usage()
 {
-    printf("Usage: sessions [-h]\n");
+    printf("Usage: sessions [command-file]\n");
     exit(1);
 }
 
@@ -452,8 +459,19 @@ static void DoCancelAdvertise(String name, TransportMask transports)
     }
 }
 
+static void DoWait(String name)
+{
+    while (s_found == false) {
+        qcc::Sleep(250);
+        printf(".");
+    }
+    printf("\n");
+}
+
 static void DoFind(String name)
 {
+    s_name = name;
+    s_found = false;
     QStatus status = s_bus->FindAdvertisedName(name.c_str());
     if (status != ER_OK) {
         printf("BusAttachment::FindAdvertisedName(%s) failed with %s\n", name.c_str(), QCC_StatusText(status));
@@ -681,13 +699,8 @@ int main(int argc, char** argv)
     QStatus status = ER_OK;
 
     /* Parse command line args */
-    for (int i = 1; i < argc; ++i) {
-        if (0 == ::strcmp("-h", argv[i])) {
-            usage();
-        } else {
-            printf("Unknown argument \"%s\"\n", argv[i]);
-            usage();
-        }
+    if (argc > 2) {
+        usage();
     }
 
     /* Create message bus */
@@ -737,11 +750,38 @@ int main(int argc, char** argv)
         }
     }
 
-    /* Parse commands from stdin */
-    printf("ready\n");
+    /*
+     * If argc is two, argv[1] is a file name from which we will interpret setup
+     * commands until EOF.  If no file, or when the file is parsed, start
+     * reading and parsing commands from stdin.
+     */
     const int bufSize = 1024;
     char buf[bufSize];
-    while ((ER_OK == status) && (get_line(buf, bufSize, stdin))) {
+
+    FILE* fp;
+
+    if (argc == 2) {
+        fp = fopen(argv[1], "r");
+        if (fp == NULL) {
+            fp = stdin;
+        } else {
+            printf("reading commands from \"%s\"\n", argv[1]);
+        }
+    } else {
+        fp = stdin;
+    }
+
+    while (ER_OK == status) {
+        if (get_line(buf, bufSize, fp) == NULL) {
+            if (fp == stdin) {
+                break;
+            } else {
+                fp = stdin;
+                printf("ready\n");
+                continue;
+            }
+        }
+
         String line(buf);
         String cmd = NextTok(line);
         if (cmd == "debug") {
@@ -1030,6 +1070,9 @@ int main(int argc, char** argv)
         } else if (cmd == "ping") {
             String name = NextTok(line);
             DoPing(name);
+        } else if (cmd == "wait") {
+            String name = NextTok(line);
+            DoWait(name);
         } else if (cmd == "exit") {
             break;
         } else if (cmd == "help" || cmd == "?") {
@@ -1059,6 +1102,7 @@ int main(int argc, char** argv)
             printf("removematch <rule>                                            - Remove a DBUS rule\n");
             printf("sendttl <ttl>                                                 - Set ttl (in ms) for all chat messages (0 = infinite)\n");
             printf("ping <name>                                                   - Ping a name\n");
+            printf("wait <name>                                                   - Wait until <name> is found\n");
             printf("exit                                                          - Exit this program\n");
             printf("\n");
             printf("SessionIds can be specified by value or by #<idx> where <idx> is the session index printed with \"list\" command\n");
