@@ -399,6 +399,13 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
         return ER_FAIL;
     }
 
+    //
+    // There should be no queued packets between IMPL_SHUTDOWN to
+    // IMPL_INITIALIZING.
+    //
+    assert(m_outbound.size() == 0);
+    assert(m_burstQueue.size() == 0);
+
     m_state = IMPL_INITIALIZING;
 
     ConfigDB* config = ConfigDB::GetConfigDB();
@@ -2934,8 +2941,10 @@ void IpNameServiceImpl::QueueProtocolMessage(Packet packet)
         qcc::Sleep(10);
         m_mutex.Lock();
     }
-    m_outbound.push_back(packet);
-    m_wakeEvent.SetEvent();
+    if (m_state == IMPL_RUNNING) {
+        m_outbound.push_back(packet);
+        m_wakeEvent.SetEvent();
+    }
     m_mutex.Unlock();
 }
 
