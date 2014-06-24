@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2011, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -15,6 +15,11 @@
 
 Import('env')
 import os
+
+# Linux specific vars
+vars = Variables()
+vars.Add(BoolVariable('GCOV', 'Compile with gcov support', 'no'))
+vars.Update(env)
 
 # Linux specific flags
 env.Append(CPPDEFINES = ['QCC_OS_LINUX'])
@@ -56,5 +61,11 @@ else:
    env.Append(CFLAGS = '-Os')
    env.Append(CXXFLAGS = '-Os')
    env.Append(LINKFLAGS = ['-s', '-Wl,--gc-sections'])
+
+
+if env['GCOV']:
+    env.Append(CCFLAGS = ['-fprofile-arcs', '-ftest-coverage'])
+    env.Append(LIBS = ['gcov'])
+
 
 env.SConscript('${CPU}/SConscript')

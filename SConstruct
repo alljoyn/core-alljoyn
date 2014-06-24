@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -84,6 +84,10 @@ if services.intersection(['config', 'controlpanel', 'notification', 'onboarding'
 if env.has_key('WIN7_MSI') and env['WIN7_MSI'] == 'true':
     win7Sdk = env.SConscript(['alljoyn_core/install/Win7/SConscript'])
     env.Depends(win7Sdk, installedFiles)
+
+# Always build Datadriven_api if it is present
+if os.path.exists('../../data/datadriven_api/SConscript'):
+    env.SConscript(['../../data/datadriven_api/SConscript'])
 
 # Build Alias to make cleaning, building and rebuilding the documentation when
 # working only on the documentation simpler. This can be run by using
