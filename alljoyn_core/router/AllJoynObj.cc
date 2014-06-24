@@ -4623,7 +4623,7 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
     msg->GetArgs(numArgs, args);
     const char* name = NULL;
     uint32_t timeout;
-    QStatus status = MsgArg::Get(args, 2, "su", &name, &timeout);
+    QStatus status = MsgArg::Get(args, numArgs, "su", &name, &timeout);
 
     if (status == ER_OK && senderEp->IsValid()) {
         status = TransportPermission::FilterTransports(senderEp, sender, transports, "AllJoynObj::Ping");
@@ -4653,6 +4653,7 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
         replyCode = ALLJOYN_PING_REPLY_FAILED;
         QCC_DbgTrace(("Ping(<bad_args>"));
     } else {
+        assert(name);
         QCC_DbgTrace(("Ping(%s)", name));
         /* Decide how to proceed based on the endpoint existence/type */
 
@@ -4702,16 +4703,12 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
             }
             // Check if the well known name is in a session. If yes get the long GUID of remote routing node
             if (guid.empty() && (name[0] != ':')) {
-                if (name == NULL) {
-                    foundEntry = false;
-                }
-                qcc::String wkn(name);
-                BusEndpoint bep = router.FindEndpoint(wkn);
+                BusEndpoint bep = router.FindEndpoint(name);
                 if (bep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
                     VirtualEndpoint vep = VirtualEndpoint::cast(bep);
                     guid = String(vep->GetUniqueName()).substr(1, GUID128::SHORT_SIZE);
                     foundEntry = true;
-                    QCC_DbgPrintf(("Session found ", name));
+                    QCC_DbgPrintf(("Session found %s", name));
                 }
             }
             if (foundEntry) {

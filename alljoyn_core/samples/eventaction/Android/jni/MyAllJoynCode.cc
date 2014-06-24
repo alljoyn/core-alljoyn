@@ -76,12 +76,15 @@ void MyAllJoynCode::initialize(const char* packageName) {
         if (ER_OK != status) {
             LOGTHIS("Failed to addMatch for sessionless signals: %s\n", QCC_StatusText(status));
         }
+    }
+}
 
-        /* Startup the rule engine */
-        status = ruleEngine.initialize("simple", mBusAttachment);
-        if (ER_OK != status) {
-            LOGTHIS("Failed to start rule engine");
-        }
+void MyAllJoynCode::startRuleEngine() {
+    QStatus status;
+    /* Startup the rule engine */
+    status = ruleEngine.initialize("simple", mBusAttachment);
+    if (ER_OK != status) {
+        LOGTHIS("Failed to start rule engine");
     }
 }
 

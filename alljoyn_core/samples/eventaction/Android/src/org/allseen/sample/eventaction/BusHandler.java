@@ -41,11 +41,12 @@ public class BusHandler extends Handler {
 
     /* These are the messages sent to the BusHandler from the UI/Application thread. */
     public static final int INITIALIZE = 0;
-    public static final int INTROSPECT = 1;
-    public static final int ADD_RULE = 2;
-    public static final int REMOVE_RULE = 3;
-    public static final int REMOVE_ALL_RULES = 4;
-    public static final int ADD_SAVED_RULE = 5;
+    public static final int START_RULE_ENGINE = 1;
+    public static final int INTROSPECT = 2;
+    public static final int ADD_RULE = 3;
+    public static final int REMOVE_RULE = 4;
+    public static final int REMOVE_ALL_RULES = 5;
+    public static final int ADD_SAVED_RULE = 6;
     public static final int SHUTDOWN = 100;
     
     
@@ -61,6 +62,9 @@ public class BusHandler extends Handler {
 
 	 /** Initialize AllJoyn in JNI(C++) */
     private native void initialize(String packageName);
+    
+    /** Start the local rule engine */
+    private native void startRuleEngine();
     
     /** Perform introspection with description in JNI(C++) */
     private native String doIntrospection(String sessionName, String path, int sessionId);
@@ -330,6 +334,11 @@ public class BusHandler extends Handler {
         case INITIALIZE:
         { 
         	initialize(mContext.getPackageName());
+        	break;
+        }
+        case START_RULE_ENGINE:
+        {
+        	startRuleEngine();
         	break;
         }
         case INTROSPECT:
