@@ -1580,6 +1580,56 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(Status.OK, bus.ping(bus.getUniqueName(), 1000));
     }
 
+
+    private boolean onPinged = false;
+
+    public synchronized void testPingAsync() throws Exception {
+        bus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+        assertEquals(Status.OK, bus.connect());
+
+        onPinged = false;
+        Integer context = new Integer(0xdeedfeed);
+        assertEquals(Status.OK, bus.ping(bus.getUniqueName(), 1000, new OnPingListener() {
+            @Override
+            public void onPing(Status status, Object context) {
+                assertEquals(Status.OK, status);
+                int i = ((Integer)context).intValue();
+                assertEquals(0xdeedfeed, i);
+                onPinged = true;
+                // stopWait seems to block sometimes, so enable concurrency.
+                bus.enableConcurrentCallbacks();
+                stopWait();
+            }
+        }, context));
+        this.wait(5 * 1000);
+        assertEquals(true, onPinged);
+    }
+
+    public synchronized void testPingAsyncOtherBus() throws Exception {
+        bus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+        assertEquals(Status.OK, bus.connect());
+
+        // Create Second BusAttachment
+        otherBus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+        assertEquals(Status.OK, otherBus.connect());
+
+        onPinged = false;
+        Integer context = new Integer(0xdeedfeed);
+        assertEquals(Status.OK, bus.ping(otherBus.getUniqueName(), 1000, new OnPingListener() {
+            @Override
+            public void onPing(Status status, Object context) {
+                assertEquals(Status.OK, status);
+                int i = ((Integer)context).intValue();
+                assertEquals(0xdeedfeed, i);
+                onPinged = true;
+                // stopWait seems to block sometimes, so enable concurrency.
+                bus.enableConcurrentCallbacks();
+                stopWait();
+            }
+        }, context));
+        this.wait(5 * 1000);
+        assertEquals(true, onPinged);
+    }
     /*
      *  TODO
      *  Verify that all of the BusAttachment methods are tested

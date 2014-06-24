@@ -529,6 +529,39 @@ public class BusAttachment {
     public native Status ping(String name, int timeout);
 
     /**
+     * The JNI loader can't resolve the overloaded ping if both the sync and async versions
+     * are native.  This is the workaround.
+     */
+    private native Status pingAsync(String name,
+            int timeout,
+            OnPingListener onPing,
+            Object context);
+
+    /**
+     * Asynchronous version of {@link #ping(String, int)}.
+     *
+     * @param name     The unique or well-known name to ping
+     * @param timeout  Timeout specified in milliseconds to wait for reply
+     * @param onPing   Listener to be called when ping completes.
+     * @param context  User-defined context object.  Passed through to {@link
+     *                 OnPingListener#onPing(Status, Object)}.
+     *
+     * @return
+     * <ul>
+     * <li>OK iff method call to local router response was was successful.</li>
+     * <li>BUS_NOT_CONNECTED if a connection has not been made with a local bus.</li>
+     * <li>BUS_BAD_BUS_NAME if the name passed in is an invalid bus name.</li>
+     * <li>Other error status codes indicating a failure.</li>
+     * </ul>
+     */
+    public Status ping(String name,
+            int timeout,
+            OnPingListener onPing,
+            Object context) {
+        return pingAsync(name, timeout, onPing, context);
+    }
+
+    /**
      * This sets the debug level of the local AllJoyn router if that router
      * was built in debug mode.
      *

@@ -1193,6 +1193,7 @@ class JSignalHandler;
 class JKeyStoreListener;
 class JAuthListener;
 class PendingAsyncJoin;
+class PendingAsyncPing;
 
 /**
  * The C++ class that backs the Java BusAttachment class and provides the
@@ -1352,9 +1353,17 @@ class JBusAttachment : public BusAttachment {
      * A List of pending asynchronous join operation informations.  We store
      * Java object references here while AllJoyn mulls over what it can do about
      * the operation. Note that this member is public since we trust that the
-     * native binding we wrote will usse it correctly.
+     * native binding we wrote will use it correctly.
      */
     list<PendingAsyncJoin*> pendingAsyncJoins;
+
+    /**
+     * A List of pending asynchronous ping operation informations.  We store
+     * Java object references here while AllJoyn mulls over what it can do about
+     * the operation. Note that this member is public since we trust that the
+     * native binding we wrote will use it correctly.
+     */
+    list<PendingAsyncPing*> pendingAsyncPings;
 
     int32_t IncRef(void)
     {
@@ -1765,6 +1774,96 @@ class JOnJoinSessionListener : public BusAttachment::JoinSessionAsyncCB {
     JOnJoinSessionListener& operator =(const JOnJoinSessionListener& other);
 
     jmethodID MID_onJoinSession;
+    JBusAttachment* busPtr;
+};
+
+/**
+ * A C++ class to hold the Java object references required for an asynchronous
+ * ping operation while AllJoyn mulls over what it can do about the operation.
+ *
+ * An instance of this class is given to the C++ PingAsync method as the context
+ * object.  Note well that the context object passed around in the C++ side of
+ * things is **not** the same as the Java context object passed into pingAsync.
+ *
+ * Another thing to keep in mind is that since the Java objects have been taken
+ * into the JNI fold, they are referenced by JNI global references to the
+ * objects provided by Java which may be different than the references seen by
+ * the Java code.  Compare using JNI IsSameObject() to see if they are really
+ * referencing the same object..
+ */
+class PendingAsyncPing {
+  public:
+    PendingAsyncPing(jobject jonPingListener, jobject jcontext) {
+        this->jonPingListener = jonPingListener;
+        this->jcontext = jcontext;
+    }
+    jobject jonPingListener;
+    jobject jcontext;
+  private:
+    /**
+     * private copy constructor this object can not be copied or assigned
+     */
+    PendingAsyncPing(const PendingAsyncPing& other);
+    /**
+     * private assignment operator this object can not be copied or assigned
+     */
+    PendingAsyncPing& operator =(const PendingAsyncPing& other);
+};
+
+/**
+ * The C++ class that imlements the OnPingListener functionality.
+ *
+ * The standard idiom here is that whenever we have a C++ object in the AllJoyn
+ * API, it has a corresponding Java object.  If the objects serve as callback
+ * handlers, the C++ object needs to call into the Java object as a result of
+ * an invocation by the AllJoyn code.
+ *
+ * As mentioned in the memory management sidebar (at the start of this file) we
+ * have an idiom in which the C++ object is allocated and holds a reference to
+ * the corresponding Java object.  This reference is a weak reference so we
+ * don't interfere with Java garbage collection.  See the member variable
+ * jbusListener for this reference.  The bindings hold separate strong references
+ * to prevent the listener from being garbage collected in the presence of the
+ * anonymous class idiom.
+ *
+ * Think of the weak reference as the counterpart to the handle pointer found in
+ * the Java objects that need to call into C++.  Java objects use the handle to
+ * get at the C++ objects, and C++ objects use a weak object reference to get at
+ * the Java objects.
+ *
+ * This object translates C++ callbacks from the OnPingListener to its Java
+ * counterpart.  Because of this, the constructor performs reflection on the
+ * provided Java object to determine the methods that need to be called.  When
+ * The callback from C++ is executed, we make corresponding Java calls using the
+ * weak reference to the java object and the reflection information we
+ * discovered in the constructor.
+ *
+ * Objects of this class are expected to be MT-Safe between construction and
+ * destruction.
+ *
+ * One minor abberation here is that the bus attachment pointer can't be a
+ * managed object since we don't have it when the listener is created, it is
+ * passed in later.
+ */
+class JOnPingListener : public BusAttachment::PingAsyncCB {
+  public:
+    JOnPingListener(jobject jonPingListener);
+    ~JOnPingListener();
+
+    void Setup(JBusAttachment* jbap);
+    void PingCB(QStatus status, void* context);
+
+  private:
+    /**
+     * private copy constructor this object can not be copied or assigned
+     */
+    JOnPingListener(const JOnPingListener& other);
+    /**
+     * private assignment operator this object can not be copied or assigned
+     */
+    JOnPingListener& operator =(const JOnPingListener& other);
+
+    jmethodID MID_onPing;
     JBusAttachment* busPtr;
 };
 
@@ -4156,8 +4255,7 @@ void JBusAttachment::Disconnect(const char* connectArgs)
     /*
      * Release any strong references we may hold to objects passed in through an
      * async join.  We assume that since we have done a disconnect/stop/join, there
-     * will never be a callback firing that expects to call out into one of these
-     * puppies.
+     * will never be a callback firing that expects to call out into one of these.
      */
     QCC_DbgPrintf(("JBusAttachment::Disconnect(): Releasing PendingAsyncJoins"));
     for (list<PendingAsyncJoin*>::iterator i = pendingAsyncJoins.begin(); i != pendingAsyncJoins.end(); ++i) {
@@ -4171,6 +4269,22 @@ void JBusAttachment::Disconnect(const char* connectArgs)
         }
     }
     pendingAsyncJoins.clear();
+
+    /*
+     * Release any strong references we may hold to objects passed in through an
+     * async ping.  We assume that since we have done a disconnect/stop/join, there
+     * will never be a callback firing that expects to call out into one of these.
+     */
+    QCC_DbgPrintf(("JBusAttachment::Disconnect(): Releasing PendingAsyncPings"));
+    for (list<PendingAsyncPing*>::iterator i = pendingAsyncPings.begin(); i != pendingAsyncPings.end(); ++i) {
+        QCC_DbgPrintf(("JBusAttachment::Disconnect(): Releasing strong global reference to OnPingListener %p", (*i)->jonPingListener));
+        env->DeleteGlobalRef((*i)->jonPingListener);
+        if ((*i)->jcontext) {
+            QCC_DbgPrintf(("JBusAttachment::Disconnect(): Releasing strong global reference to context Object %p", (*i)->jcontext));
+            env->DeleteGlobalRef((*i)->jcontext);
+        }
+    }
+    pendingAsyncPings.clear();
 
     /*
      * Release any strong references we may hold to objects passed in through a
@@ -7187,8 +7301,425 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_ping(JNIEnv* env,
     return JStatus(status);
 }
 
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setDaemonDebug(JNIEnv*env, jobject thiz,
-                                                                            jstring jmodule, jint jlevel)
+JOnPingListener::JOnPingListener(jobject jonPingListener)
+    : busPtr(NULL)
+{
+    QCC_DbgPrintf(("JOnPingListener::JOnPingListener()"));
+
+    JNIEnv* env = GetEnv();
+    JLocalRef<jclass> clazz = env->GetObjectClass(jonPingListener);
+
+    MID_onPing = env->GetMethodID(clazz, "onPing", "(Lorg/alljoyn/bus/Status;Ljava/lang/Object;)V");
+    if (!MID_onPing) {
+        QCC_DbgPrintf(("JOnPingListener::JOnPingListener(): Can't find onPing() in OnPingListener"));
+    }
+}
+
+JOnPingListener::~JOnPingListener()
+{
+    QCC_DbgPrintf(("JOnPingListener::~JOnPingListener()"));
+
+    /*
+     * In our Setup method we are passed a pointer to the reference counted bus
+     * attachment.  We don't want to delete the object directly so we need to
+     * DecRef() it.  Once we do this the underlying object can be deleted at any
+     * time, so we need to forget about this pointer immediately.
+     */
+    if (busPtr) {
+        QCC_DbgPrintf(("JOnPingListener::~JOnPingListener(): Refcount on busPtr before decrement is %d", busPtr->GetRef()));
+        busPtr->DecRef();
+        busPtr = NULL;
+    }
+}
+
+void JOnPingListener::Setup(JBusAttachment* jbap)
+{
+    QCC_DbgPrintf(("JOnPingListener::Setup(0x%p)", jbap));
+
+    /*
+     * We need to be able to get back at the bus attachment in the callback to
+     * release and/or reassign resources.  We are going to keep a pointer to the
+     * reference counted bus attachment, so we need to IncRef() it.
+     */
+    busPtr = jbap;
+    QCC_DbgPrintf(("JOnPingListener::Setup(): Refcount on busPtr before is %d", busPtr->GetRef()));
+    busPtr->IncRef();
+    QCC_DbgPrintf(("JOnPingListener::Setup(): Refcount on busPtr after %d", busPtr->GetRef()));
+}
+
+void JOnPingListener::PingCB(QStatus status, void* context)
+{
+    QCC_DbgPrintf(("JOnPingListener::PingCB(%s, %p)", QCC_StatusText(status), context));
+
+    /*
+     * JScopedEnv will automagically attach the JVM to the current native
+     * thread.
+     */
+    JScopedEnv env;
+    // the ping object corresponding to the java OnPingListener class
+    jobject po;
+    JLocalRef<jobject> jstatus;
+
+
+    /*
+     * The context parameter we get here is not the same thing as the context
+     * parameter we gave to Java in joinPingAsync.  Here it is a pointer to a
+     * PendingAsyncPing object which holds the references to the two Java
+     * objects involved in the transaction.
+     */
+    PendingAsyncPing* pap = static_cast<PendingAsyncPing*>(context);
+    assert(pap);
+
+    /*
+     * Translate the C++ formal parameters into their JNI counterparts.
+     */
+    jstatus = JStatus(status);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("JOnPingListener::PingCB(): Exception"));
+        goto exit;
+    }
+
+    /*
+     * The references provided in the PendingAsyncPing are strong global references
+     * so they can be used as-is (we need the on ping listener and the context).
+     */
+    po = pap->jonPingListener;
+
+    QCC_DbgPrintf(("JOnPingListener::PingCB(): Call out to listener object and method"));
+    env->CallVoidMethod(po, MID_onPing, (jobject)jstatus, (jobject)pap->jcontext);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("JOnPingListener::PingCB(): Exception"));
+        goto exit;
+    }
+
+exit:
+    QCC_DbgPrintf(("JOnPingListener::PingCB(): Release Resources"));
+
+    QCC_DbgPrintf(("JOnPingListener::PingCB(): Taking Bus Attachment common lock"));
+    busPtr->baCommonLock.Lock();
+
+    /*
+     * We stored an object containing instances of the Java objects provided in the
+     * original call to the async ping that drove this process in case the call
+     * got lost in a disconnect -- we don't want to leak them.  So we need to find
+     * the matching object and delete it.
+     */
+    for (list<PendingAsyncPing*>::iterator i = busPtr->pendingAsyncPings.begin(); i != busPtr->pendingAsyncPings.end(); ++i) {
+        /*
+         * If the pointer to the PendingAsyncPing in the bus attachment is equal
+         * to the one passed in from the C++ async ping callback, then we are
+         * talkiing about the same async ping instance.
+         */
+        if (*i == context) {
+            /*
+             * Double check that the pointers are consistent and nothing got
+             * changed out from underneath us.  That would be bad (TM).
+             */
+            assert((*i)->jonPingListener == pap->jonPingListener);
+            assert((*i)->jcontext == pap->jcontext);
+
+            /*
+             * We always release our hold on the user context object
+             * irrespective of the outcome of the call since it will no longer
+             * be used by this asynchronous ping instance.
+             */
+            if ((*i)->jcontext) {
+                QCC_DbgPrintf(("JOnPingListener::PingCB(): Release strong global reference to context Object %p", (*i)->jcontext));
+                env->DeleteGlobalRef((*i)->jcontext);
+                (*i)->jcontext = NULL;
+            }
+
+            /*
+             * We always release our hold on the OnPingListener object
+             * and the user context object irrespective of the outcome of the
+             * call since it will no longer be used by this asynchronous ping
+             * instance.
+             *
+             * Releasing the Java OnPingListener is effectively a "delete
+             * this" since the global reference to the Java object controls the
+             * lifetime of its corresponding C++ object, which is what we are
+             * executing in here.  We have got to make sure to do that last.
+             */
+            assert((*i)->jonPingListener);
+            jobject jcallback = (*i)->jonPingListener;
+            (*i)->jonPingListener = NULL;
+            busPtr->pendingAsyncPings.erase(i);
+
+            QCC_DbgPrintf(("JOnPingListener::PingCB(): Release strong global reference to OnPingListener %p", jcallback));
+            env->DeleteGlobalRef(jcallback);
+
+            QCC_DbgPrintf(("JOnPingListener::PingCB(): Releasing Bus Attachment common lock"));
+            busPtr->baCommonLock.Unlock();
+            return;
+        }
+    }
+
+    QCC_DbgPrintf(("JOnPingListener::PingCB(): Releasing Bus Attachment common lock"));
+    busPtr->baCommonLock.Unlock();
+
+    QCC_LogError(ER_FAIL, ("JOnPingListener::PingCB(): Unable to match context"));
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_pingAsync(JNIEnv* env,
+                                                                       jobject thiz,
+                                                                       jstring jname,
+                                                                       jint jtimeout,
+                                                                       jobject jonPingListener,
+                                                                       jobject jcontext)
+{
+    /*
+     * This method is unusual in that there are two objects passed which have
+     * a lifetime past the duration of the method: the OnPingListner needs to be
+     * kept around until the asynchronous ping completes; and the user-defined
+     * context object has the same lifetime (from our perspective) as the
+     * OnPingListener.
+     *
+     * We handle the "AllJoyn" object (the on ping listener) the same way we do
+     * all other long-lived Java objects. We expect them to create their own
+     * corresponding C++ object when their Java constructor is run, and we
+     * expect them to delete the C++ object when they are finalized.  Our memory
+     * management responsibility, then, is then to add a strong global reference
+     * to the objects to keep them alive though the lifetime scopes mentioned above.
+     * The Context object is just a vanilla Java object (for example, Integer)
+     * and so we can assume no C++ backing object.
+     *
+     * One of the challenges we face is because we have to work with the
+     * anonymous class idiom of Java and the underlying C++ functions don't
+     * plumb all the objects through all calls.  For example, the C++ callback
+     * PingAsyncCB gets a pointer to the JOnPingListener this pointer, gets a
+     * pointer to the Java context in its context parameter but doesn't get a
+     * pointer to the ping listener.  This is not a problem in C++ since the
+     * language doesn't support anonymous classes, but in Java we need to be
+     * able to discover that pointer.
+     *
+     * Since different combinations of the same or different three objects can
+     * be used in overlapping calls to PingAsync, we have to keep track of which
+     * instances of which objects need to be freed when a callback is fired.
+     * This may not be intuitively obvious, so consider the following.
+     *
+     *   The user instantiates an OnPingListener OPL and a context object O; and
+     *   starts an async ping.
+     *
+     *   The user decides to reuse the OnPingListener and starts an async ping.
+     *
+     * In this case, the first async ping would take strong global references to
+     * the two objects and save weak references to them into the C++ backing
+     * object of the OnPingListener.  The second async ping would take two more
+     * references to the provided  objects, and write them into the backing
+     * object of the provided OnPingListener.
+     *
+     * What we need is a way to have the C++ code pass us all three instances so
+     * we can keep track of them.  The C++ code does plumb through a context
+     * value, but the problem is that we want the Java code to plumb through a
+     * context value as well.  The answer is to change the meaning of the context
+     * value in the C++ code to be a special object that includes the references
+     * to the two Java objects we need.
+     *
+     * It's a bit counter-intuitive, but the C++ context object in this code path
+     * does not map one-to-one with the Java context object.  The Java context
+     * is stored in a special C++ context -- the two are not at all the same.
+     */
+    QCC_DbgPrintf(("BusAttachment_pingAsync()"));
+
+    /*
+     * Load the C++ session host string from the java parameter
+     */
+    JString name(jname);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_pingAsync(): Exception"));
+        return NULL;
+    }
+
+    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_pingAsync(): Exception"));
+        return NULL;
+    }
+
+    /*
+     * We don't want to force the user to constantly check for NULL return
+     * codes, so if we have a problem, we throw an exception.
+     */
+    if (busPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_pingAsync(): NULL bus pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
+
+    QCC_DbgPrintf(("BusAttachment_pingAsync(): Refcount on busPtr is %d", busPtr->GetRef()));
+
+    QCC_DbgPrintf(("BusAttachment_pingAsync(): Taking strong global reference to OnPingListener %p", jonPingListener));
+    jobject jglobalCallbackRef = env->NewGlobalRef(jonPingListener);
+    if (!jglobalCallbackRef) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_pingAsync(): Unable to take strong global reference"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
+
+    /*
+     * The user context is optional.
+     */
+    jobject jglobalContextRef = NULL;
+    if (jcontext) {
+        QCC_DbgPrintf(("BusAttachment_pingAsync(): Taking strong global reference to context Object %p", jcontext));
+        jglobalContextRef = env->NewGlobalRef(jcontext);
+        if (!jglobalContextRef) {
+            QCC_DbgPrintf(("BusAttachment_pingAsync(): Forgetting jglobalCallbackRef"));
+            env->DeleteGlobalRef(jglobalCallbackRef);
+            return NULL;
+        }
+    }
+
+    /*
+     * Get the C++ object that must be there backing the Java callback object
+     */
+    JOnPingListener* callback = GetNativeListener<JOnPingListener*>(env, jonPingListener);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_pingAsync(): Exception"));
+        return NULL;
+    }
+
+    assert(callback);
+
+    /*
+     * We need to provide a pointer to the bus attachment to the on ping
+     * listener.  This will bump the underlying reference count.
+     */
+    callback->Setup(busPtr);
+
+    /*
+     * There is no C++ object backing the Java context object.  This is just an
+     * object reference that is plumbed through AllJoyn which will pop out the
+     * other side un-molested.  It is not interpreted by AllJoyn so we can just
+     * use our Java global reference to the provided Java object.  We pass the
+     * reference back to the user when the callback fires.  N.B. this is not
+     * going to be passed into the context parameter of the C++ PingAsync method
+     * as described above and below.
+     *
+     * We have two objects now that are closely associated: we have an
+     * OnPingListener that we need to keep a strong reference to until
+     * the C++ async ping completes; and we have a user context object we need
+     * to hold a strong reference to until the async call is finished.  We tie
+     * them together as weak references in the C++ listener object corresponding
+     * to the OnPingListener.
+     *
+     * We have taken the required references above, but we need to assoicate
+     * those references with an instance of a call to async ping.  We do this
+     * by allocating an object that contains the instance information and by
+     * commandeering the C++ async ping context to plumb it through.
+     */
+    PendingAsyncPing* pap = new PendingAsyncPing(jglobalCallbackRef, jglobalContextRef);
+
+    /*
+     * Make the actual call into the C++ PingAsync method.  Not to beat
+     * a dead horse, but note that the context parameter is not the same as the
+     * Java context parameter passed into this method.
+     */
+    QCC_DbgPrintf(("BusAttachment_pingAsync(): Call PingAsync(%s, %d, %p, %p)",
+                   name.c_str(), jtimeout, callback, pap));
+    QStatus status = busPtr->PingAsync(name.c_str(), jtimeout, callback, pap);
+
+    /*
+     * If we get an exception down in the AllJoyn code, it's hard to know what
+     * to do.  The good part is that the C++ code down in AllJoyn hasn't got a
+     * clue that we're up here and won't throw any Java exceptions, so we should
+     * be in good shape and never see this.  Famous last words, I know.  To be
+     * safe, we'll keep the global reference(s) in place (leaking temporarily),
+     * log the exception and let it propagate on up the stack to the client.
+     */
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_pingAsync(): Exception"));
+        return NULL;
+    }
+
+    /*
+     * This is an async ping method, so getting a successful completion only
+     * means that AllJoyn was able to send off a message requesting the ping.
+     * This means we have a special case code to "pend" the Java objects we are
+     * holding until we get a status from AllJoyn.  We will release the callback
+     * and the context unconditionally when the callback fires, but what we do
+     * with the session listener will depend on the completion status.
+     *
+     * If we get an error from the AllJoyn code now it means that the send of
+     * the ping message to the daemon failed, and nothing has worked.
+     * We know from code inspection that neither the C++ listener object, nor
+     * the C++ context will be remembered by AllJoyn if an error happens now.
+     * Since the C++ objects will not be used, the Java objects will never be
+     * used and our saved global references are not required -- we can just
+     * forget about them.
+     *
+     * Pick up the async ping code path in JOnPingListener::PingCB
+     */
+    if (status == ER_OK) {
+        QCC_DbgPrintf(("BusAttachment_pingAsync(): Success"));
+
+        QCC_DbgPrintf(("BusAttachment_pingAsync(): Taking Bus Attachment common lock"));
+        busPtr->baCommonLock.Lock();
+
+        busPtr->pendingAsyncPings.push_back(pap);
+
+        QCC_DbgPrintf(("BusAttachment_pingAsync(): Releasing Bus Attachment common lock"));
+        busPtr->baCommonLock.Unlock();
+    } else {
+        QCC_LogError(status, ("BusAttachment_pingAsync(): Error"));
+
+        QCC_DbgPrintf(("BusAttachment_pingAsync(): Releasing strong global reference to OnPingListener %p", jglobalCallbackRef));
+        env->DeleteGlobalRef(jglobalCallbackRef);
+
+        if (jglobalContextRef) {
+            QCC_DbgPrintf(("BusAttachment_pingAsync(): Releasing strong global reference to context Object %p", jcontext));
+            env->DeleteGlobalRef(jglobalContextRef);
+        }
+    }
+    return JStatus(status);
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_OnPingListener_create(JNIEnv* env, jobject thiz)
+{
+    QCC_DbgPrintf(("OnPingListener_create()"));
+
+    assert(GetHandle<JOnPingListener*>(thiz) == NULL);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("OnPingListener_create(): Exception"));
+        return;
+    }
+
+    QCC_DbgPrintf(("OnPingListener_create(): Create backing object"));
+    JOnPingListener* jopl = new JOnPingListener(thiz);
+    if (jopl == NULL) {
+        Throw("java/lang/OutOfMemoryError", NULL);
+        return;
+    }
+
+    QCC_DbgPrintf(("OnPingListener_create(): Set handle to %p", jopl));
+    SetHandle(thiz, jopl);
+    if (env->ExceptionCheck()) {
+        QCC_DbgPrintf(("OnPingListener_create(): Set handle Exception"));
+        delete jopl;
+    }
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_OnPingListener_destroy(JNIEnv* env, jobject thiz)
+{
+    QCC_DbgPrintf(("OnPingListener_destroy()"));
+
+    JOnPingListener* jopl = GetHandle<JOnPingListener*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("OnPingListener_destroy(): Exception"));
+        return;
+    }
+
+    assert(jopl);
+    delete jopl;
+
+    SetHandle(thiz, NULL);
+    return;
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setDaemonDebug(JNIEnv*env,
+                                                                            jobject thiz,
+                                                                            jstring jmodule,
+                                                                            jint jlevel)
 {
     QCC_DbgPrintf(("BusAttachment_setDaemonDebug()"));
 
