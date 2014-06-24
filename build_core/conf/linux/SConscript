@@ -16,6 +16,11 @@
 Import('env')
 import os
 
+# Linux specific vars
+vars = Variables()
+vars.Add(BoolVariable('GCOV', 'Compile with gcov support', 'no'))
+vars.Update(env)
+
 # Linux specific flags
 env.Append(CPPDEFINES = ['QCC_OS_LINUX'])
 env.Append(CPPDEFINES = ['_GLIBCXX_USE_C99_FP_MACROS_DYNAMIC'])
@@ -56,5 +61,11 @@ else:
    env.Append(CFLAGS = '-Os')
    env.Append(CXXFLAGS = '-Os')
    env.Append(LINKFLAGS = ['-s', '-Wl,--gc-sections'])
+
+
+if env['GCOV']:
+    env.Append(CCFLAGS = ['-fprofile-arcs', '-ftest-coverage'])
+    env.Append(LIBS = ['gcov'])
+
 
 env.SConscript('${CPU}/SConscript')
