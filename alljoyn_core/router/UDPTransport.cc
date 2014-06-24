@@ -2266,6 +2266,12 @@ class _UDPEndpoint : public _RemoteEndpoint {
                          handle, conn, rcv, QCC_StatusText(status)));
 
         /*
+         * Our contract with ARDP says that it will provide us with valid data
+         * if it calls us back.
+         */
+        assert(rcv != NULL && rcv->data != NULL && rcv->datalen != 0 && "_UDPEndpoint::RecvCb(): No data from ARDP in RecvCb()");
+
+        /*
          * We need to look and see if this endpoint is on the endopint list
          * and then make sure that it stays on the list, so take the lock to make sure
          * at least the UDP transport holds a reference during this process.
@@ -2301,20 +2307,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
-            return;
-        }
-
-        if (rcv == NULL || rcv->data == NULL || rcv->datalen == 0) {
-            QCC_LogError(ER_UDP_INVALID, ("_UDPEndpoint::RecvCb(): No data on RecvCb()"));
-
-            QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady()"));
-            m_transport->m_ardpLock.Lock();
-            ARDP_RecvReady(handle, conn, rcv);
-            m_transport->m_ardpLock.Unlock();
-
-            m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
-            DecrementAndFetch(&m_refCount);
-            assert(false && "_UDPEndpoint::RecvCb(): No data on RecvCb()");
             return;
         }
 
