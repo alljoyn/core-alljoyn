@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -13,12 +13,11 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-
 package org.alljoyn.bus;
 
 /**
- * An OnJoinSessionListener is responsible for receiving completion indications
- * from asynchronous join operations.  It is expected that an AllJoyn session
+ * An OnPingListener is responsible for receiving completion indications
+ * from asynchronous ping operations.  It is expected that an AllJoyn session
  * user will specialize this class in order to handle the callback.
  *
  * Listener objects are the Java objects that handle notification events and are
@@ -51,15 +50,14 @@ package org.alljoyn.bus;
  * notification from AllJoyn, that notification is executing in the context of
  * an AllJoyn thread.  If one makes a blocking call back into AllJoyn on that
  * thread, a deadlock cycle is likely, and if this happens your bus attachment
- * receive thread will deadlock (with itself).  The deadlock is typically broken
+ * receiver thread will deadlock (with itself).  The deadlock is typically broken
  * after a bus timeout eventually happens.
  */
-public class OnJoinSessionListener {
-
+public class OnPingListener {
     /**
      * Create native resources held by objects of this class.
      */
-    public OnJoinSessionListener() {
+    public OnPingListener() {
         create();
     }
 
@@ -87,23 +85,22 @@ public class OnJoinSessionListener {
     private native void destroy();
 
     /**
-     * Notification callback that happens when a response to an asynchronous
-     * joinSession request is ready.
+     * Determine if you are able to find a remote connection based on its BusName.
+     * The BusName can be the Unique or well-known name.
      *
-     * Any implementation of this function must be multithread safe.  See the
-     * class documentation for details.
+     * This call executes asynchronously. When the ping response is received,
+     * the callback will be called.
      *
-     * @param status <ul><li>OK if the session was joined.</li>
-     *                   <li>BUS_NOT_CONNECTED if a connection has not been made with a local
-     *                       bus</li>
-     *                   <li>other error status codes indicating a failure.</li></ul>
-     * @param sessionId Set to the unique identifier for session.
-     * @param opts      Set to the actual session options of the joined session.
+     * @param status
+     * <ul>
+     *   <li>OK if ping was successful</li>
+     *   <li>TIMEOUT if the ping attempt timed out</li>
+     *   <li>other error status codes indicating a failure</li>
+     * </ul>
      * @param context   The user-defined context object supplied in the call to {@link
-     *                  BusAttachment#joinSession(String, short, SessionOpts, SessionListener,
-     *                  OnJoinSessionListener, Object)}.
+     *                  BusAttachment#ping(String, int, OnPingListener, Object)}.
      */
-    public void onJoinSession(Status status, int sessionId, SessionOpts opts, Object context) {
+    public void onPing(Status status, Object context) {
     }
 
     /*

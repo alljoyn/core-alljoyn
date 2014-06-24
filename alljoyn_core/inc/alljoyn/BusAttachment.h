@@ -99,7 +99,10 @@ class BusAttachment : public MessageReceiver {
         /**
          * Called when PingAsync() completes.
          *
-         * @param status       ER_OK if successful
+         * @param status
+         *   - #ER_OK on success
+         *   - #ER_TIMEOUT the Ping attempt timed out
+         *   - An error status otherwise
          * @param context      User defined context which will be passed as-is to callback.
          */
         virtual void PingCB(QStatus status, void* context) = 0;

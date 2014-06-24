@@ -322,6 +322,30 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_ping
 
 /*
  * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    pingAsync
+ * Signature: (Ljava/lang/String;ILorg/alljoyn/bus/OnPingListener;Ljava/lang/Object;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_pingAsync
+  (JNIEnv *, jobject, jstring, jint, jobject, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_OnPingListener
+ * Method:    create
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_OnPingListener_create
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_OnPingListener
+ * Method:    destroy
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_OnPingListener_destroy
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
  * Method:    setDaemonDebug
  * Signature: (Ljava/lang/String;I)Lorg/alljoyn/bus/Status;
  */
