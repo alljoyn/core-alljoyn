@@ -1829,7 +1829,7 @@ QStatus IpNameServiceImpl::CancelFindAdvertisement(TransportMask transportMask, 
     return ER_OK;
 }
 #define MIN_THRESHOLD_CACHE_REFRESH_MS 1000
-QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::String& guid, const qcc::String& matchingStr, LocatePolicy policy) {
+QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::String& guid, const qcc::String& matchingStr, LocatePolicy policy, bool ping) {
     QCC_DbgHLPrintf(("IpNameServiceImpl::RefreshCache(0x%x, \"%s\", %d)", transportMask, matchingStr.c_str(), policy));
     QCC_DbgPrintf(("IpNameServiceImpl::RefreshCache %s", matchingStr.c_str()));
 
@@ -1847,7 +1847,7 @@ QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::
 
         std::list<PeerInfo>::iterator pit = it->second.begin();
         while (pit != it->second.end()) {
-            if ((now - (*pit).lastQueryTimeStamp) < MIN_THRESHOLD_CACHE_REFRESH_MS) {
+            if (!ping && ((now - (*pit).lastQueryTimeStamp) < MIN_THRESHOLD_CACHE_REFRESH_MS)) {
                 ++pit;
                 continue;
             }
@@ -1858,6 +1858,16 @@ QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::
             MDNSSearchRData* searchRData = new MDNSSearchRData();
             for (MatchMap::iterator it1 = matching.begin(); it1 != matching.end(); ++it1) {
                 searchRData->SetValue(it1->first, it1->second);
+            }
+
+            if (ping) {
+                MDNSPingRData* pingRData = new MDNSPingRData();
+                for (MatchMap::iterator it1 = matching.begin(); it1 != matching.end(); ++it1) {
+                    pingRData->SetValue("n", it1->second);
+                }
+                MDNSResourceRecord pingRecord("ping." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingRData);
+                query->AddAdditionalRecord(pingRecord);
+                delete pingRData;
             }
 
             MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
@@ -2605,39 +2615,14 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
 
 QStatus IpNameServiceImpl::Ping(TransportMask transportMask, const qcc::String& guid, const qcc::String& name)
 {
-    MDNSPacket query;
-    bool foundEntry = false;
-    //TO DO We should look in to ping over different interfaces since a name can be discovered over one interface
-    //and we could end up pinging on another interface which is no longer present
-
+    qcc::String pingString = "name='" + name + "'";
     for (std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.begin();
          it != m_peerInfoMap.end(); ++it) {
         if (qcc::GUID128(it->first).ToShortString() == guid) {
-            foundEntry = true;
-            query->SetDestination(it->second.front().unicastIPV4Info);
-            break;
+            return RefreshCache(transportMask, it->first, pingString, ALWAYS_RETRY, true);
         }
     }
-
-    if (!foundEntry) {
-        return ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED;
-    }
-
-    MDNSPingRData* pingRData = new MDNSPingRData(name);
-    MDNSResourceRecord pingRecord("ping." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingRData);
-    query->AddAdditionalRecord(pingRecord);
-    delete pingRData;
-
-    //
-    // The search record is added so that we can piggy back cache refreshes on
-    // ping requests.
-    //
-    MDNSSearchRData* searchRData = new MDNSSearchRData(name);
-    MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
-    query->AddAdditionalRecord(searchRecord);
-    delete searchRData;
-
-    return Query(transportMask, query);
+    return ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED;
 }
 
 QStatus IpNameServiceImpl::Query(TransportMask completeTransportMask, MDNSPacket mdnsPacket)
