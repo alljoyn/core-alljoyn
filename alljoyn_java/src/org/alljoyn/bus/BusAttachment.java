@@ -522,7 +522,14 @@ public class BusAttachment {
      * @return
      * <ul>
      * <li>OK on success</li>
-     * <li>TIMEOUT the Ping attempt timed out</li>
+     * <li>ALLJOYN_PING_FAILED Ping failed</li>
+     * <li>ALLJOYN_PING_REPLY_TIMEOUT Ping call timed out</li>
+     * <li>ALLJOYN_PING_REPLY_UNKNOWN_NAME name not found currently or not part of any known session</li>
+     * <li>ALLJOYN_PING_REPLY_UNIMPLEMENTED the remote routing node does not implement Ping</li>
+     * <li>ALLJOYN_PING_REPLY_UNREACHABLE the name pinged is unreachable</li>
+     * <li>BUS_UNEXPECTED_DISPOSITION An unexpected disposition was returned and has been treated as an error</li>
+     * <li>BUS_NOT_CONNECTED the BusAttachment is not connected to the bus</li>
+     * <li>BUS_BAD_BUS_NAME the name parameter is not a valid bus name</li>
      * <li>An error status otherwise</li>
      * </ul>
      */

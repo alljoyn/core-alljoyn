@@ -2271,6 +2271,10 @@ QStatus BusAttachment::Ping(const char* name, uint32_t timeout)
         return ER_BUS_NOT_CONNECTED;
     }
 
+    if (!IsLegalBusName(name)) {
+        return ER_BUS_BAD_BUS_NAME;
+    }
+
     if (!name) {
         return ER_BAD_ARG_1;
     }
@@ -2329,6 +2333,9 @@ QStatus BusAttachment::PingAsync(const char* name, uint32_t timeout, BusAttachme
     }
     if (!IsLegalBusName(name)) {
         return ER_BUS_BAD_BUS_NAME;
+    }
+    if (!name) {
+        return ER_BAD_ARG_1;
     }
 
     MsgArg args[2];

@@ -1202,7 +1202,15 @@ extern AJ_API uint32_t alljoyn_busattachment_gettimestamp();
  * @param timeout Timeout specified in milliseconds to wait for reply
  * @return
  *   - #ER_OK on success
- *   - #ER_TIMEOUT the Ping attempt timed out
+ *   - #ER_ALLJOYN_PING_FAILED Ping failed
+ *   - #ER_ALLJOYN_PING_REPLY_TIMEOUT Ping call timed out
+ *   - #ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME name not found currently or not part of any known session
+ *   - #ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED the remote routing node does not implement Ping
+ *   - #ER_ALLJOYN_PING_REPLY_UNREACHABLE the name pinged is unreachable
+ *   - #ER_BUS_UNEXPECTED_DISPOSITION An unexpected disposition was returned and has been treated as an error
+ *   - #ER_BUS_NOT_CONNECTED the BusAttachment is not connected to the bus
+ *   - #ER_BUS_BAD_BUS_NAME the name parameter is not a valid bus name
+ *   - #ER_BAD_ARG_1 a NULL pointer was passed in for the name
  *   - An error status otherwise
  */
 extern AJ_API QStatus alljoyn_busattachment_ping(alljoyn_busattachment bus, const char* name, uint32_t timeout);
