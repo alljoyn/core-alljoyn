@@ -2043,7 +2043,7 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
         }
 
         //
-        // Since we are advertising quietly, we need to quetly return without
+        // Since we are advertising quietly, we need to quietly return without
         // advertising the name, which would happen if we just fell out of the
         // if-else.
         //
@@ -3121,7 +3121,8 @@ void IpNameServiceImpl::SendProtocolMessage(
             if (family == qcc::QCC_AF_INET) {
                 status = qcc::SendTo(m_ipv4QuietSockFd, destination.addr, destination.port, buffer, size, sent);
             } else {
-                status = qcc::SendTo(m_ipv6QuietSockFd, destination.addr, destination.port, buffer, size, sent);
+                status = qcc::SendTo(m_ipv6QuietSockFd, destination.addr, destination.port, m_liveInterfaces[interfaceIndex].m_index,
+                                     buffer, size, sent);
             }
         }
 
@@ -3743,7 +3744,7 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
     // corresponds to the network part of the destination address.
     //
     for (uint32_t i = 0; (m_state == IMPL_RUNNING) && (i < m_liveInterfaces.size()); ++i) {
-        QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuetly(): Checking out live interface %d. (\"%s\")",
+        QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): Checking out live interface %d. (\"%s\")",
                        i, m_liveInterfaces[i].m_interfaceName.c_str()));
 
         //
@@ -3765,7 +3766,8 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
         // destination address we quite obviously aren't going to send it out an
         // interface with an IPv6 address or vice versa.
         //
-        if ((destination.addr.IsIPv4() && m_liveInterfaces[i].m_address.IsIPv6()) || (destination.addr.IsIPv4() && m_liveInterfaces[i].m_address.IsIPv6())) {
+        if ((destination.addr.IsIPv4() && m_liveInterfaces[i].m_address.IsIPv6()) ||
+            (destination.addr.IsIPv6() && m_liveInterfaces[i].m_address.IsIPv4())) {
             QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): Interface %d. is address family mismatched", i));
             continue;
         }

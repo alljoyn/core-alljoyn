@@ -90,6 +90,7 @@ qcc::String StrError()
 
 void MakeSockAddr(const IPAddress& addr,
                   uint16_t port,
+                  uint32_t scopeId,
                   SOCKADDR_STORAGE* addrBuf,
                   socklen_t& addrSize)
 {
@@ -104,9 +105,19 @@ void MakeSockAddr(const IPAddress& addr,
         struct sockaddr_in6* sa = reinterpret_cast<struct sockaddr_in6*>(addrBuf);
         sa->sin6_family = AF_INET6;
         sa->sin6_port = htons(port);
+        sa->sin6_flowinfo = 0;
         addr.RenderIPv6Binary(sa->sin6_addr.s6_addr, sizeof(sa->sin6_addr.s6_addr));
+        sa->sin6_scope_id = scopeId;
         addrSize = sizeof(*sa);
     }
+}
+
+void MakeSockAddr(const IPAddress& addr,
+                  uint16_t port,
+                  SOCKADDR_STORAGE* addrBuf,
+                  socklen_t& addrSize)
+{
+    return MakeSockAddr(addr, port, 0, addrBuf, addrSize);
 }
 
 QStatus GetSockAddr(const SOCKADDR_STORAGE* addrBuf, socklen_t addrSize,
@@ -454,7 +465,7 @@ QStatus Send(SocketFd sockfd, const void* buf, size_t len, size_t& sent)
 }
 
 
-QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort,
+QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort, uint32_t scopeId,
                const void* buf, size_t len, size_t& sent)
 {
     QStatus status = ER_OK;
@@ -468,7 +479,7 @@ QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort,
 
     QCC_DbgLocalData(buf, len);
 
-    MakeSockAddr(remoteAddr, remotePort, &addr, addrLen);
+    MakeSockAddr(remoteAddr, remotePort, scopeId, &addr, addrLen);
     ret = sendto(static_cast<SOCKET>(sockfd), static_cast<const char*>(buf), len, 0,
                  reinterpret_cast<struct sockaddr*>(&addr), addrLen);
     if (ret == SOCKET_ERROR) {
@@ -486,6 +497,11 @@ QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort,
     return status;
 }
 
+QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort,
+               const void* buf, size_t len, size_t& sent)
+{
+    return SendTo(sockfd, remoteAddr, remotePort, 0, buf, len, sent);
+}
 
 QStatus Recv(SocketFd sockfd, void* buf, size_t len, size_t& received)
 {
