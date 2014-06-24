@@ -30,7 +30,6 @@ build/              core AllJoyn functionality, implemented in C++
     darwin/.../dist/cpp/lib/                  in sub-folders by target platform.
 
     docs/html/                              AllJoyn Core API documentation
-    AllJoyn_API_Changes_cpp.txt
 
 
 alljoyn_objc/       Objective-C language binding for core AllJoyn functionality
