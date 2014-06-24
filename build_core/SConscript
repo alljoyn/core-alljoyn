@@ -64,6 +64,8 @@ vars.Add(EnumVariable('DOCS', '''Output doc type. Setting the doc type to "dev" 
 vars.Add(EnumVariable('WS', 'Whitespace Policy Checker', 'check', allowed_values=('check', 'detail', 'fix', 'off')))
 vars.Add(PathVariable('GTEST_DIR', 'The path to Google Test (gTest) source code',  os.environ.get('GTEST_DIR'), PathVariable.PathIsDir))
 vars.Add(PathVariable('BULLSEYE_BIN', 'The path to Bullseye Code Coverage',  os.environ.get('BULLSEYE_BIN'), PathVariable.PathIsDir))
+vars.Add('CXX', 'C++ compiler to use')
+vars.Add(BoolVariable('GCOV', 'Compile with gcov support', 'no'))
 
 
 if default_msvc_version:
@@ -178,6 +180,9 @@ env.Append(CPPPATH = ["$DISTDIR/cpp/inc",
 env.Append(LIBPATH = ["$DISTDIR/cpp/lib",
                       "$DISTDIR/c/lib"])
 
+if env['GCOV']:
+    env.Append(CCFLAGS = ['-fprofile-arcs', '-ftest-coverage'])
+    env.Append(LIBS = ['gcov'])
 
 # Setup additional builders
 if os.path.exists('tools/scons/doxygen.py'):

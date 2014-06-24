@@ -85,6 +85,10 @@ if env.has_key('WIN7_MSI') and env['WIN7_MSI'] == 'true':
     win7Sdk = env.SConscript(['alljoyn_core/install/Win7/SConscript'])
     env.Depends(win7Sdk, installedFiles)
 
+# Always build Datadriven_api if it is present
+if os.path.exists('../../data/datadriven_api/SConscript'):
+    env.SConscript(['../../data/datadriven_api/SConscript'])
+
 # Build Alias to make cleaning, building and rebuilding the documentation when
 # working only on the documentation simpler. This can be run by using
 # `scons all_docs`
