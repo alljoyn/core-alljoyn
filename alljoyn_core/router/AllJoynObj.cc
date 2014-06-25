@@ -4056,8 +4056,11 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias, const qcc::String* o
                 if (ait->second.second == *oldOwner) {
                     String name = ait->first;
                     TransportMask mask = ait->second.first;
-                    ++ait;
+                    ReleaseLocks();
+
                     QStatus status = ProcCancelAdvertise(*oldOwner, name, mask);
+                    AcquireLocks();
+                    ait = advertiseMap.upper_bound(name);
                     if (ER_OK != status) {
                         QCC_LogError(status, ("Failed to cancel advertise for name \"%s\"", name.c_str()));
                     }
@@ -4072,9 +4075,13 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias, const qcc::String* o
                 if (dit->second.sender == *oldOwner) {
                     last = dit->first;
                     TransportMask mask = dit->second.transportMask;
-                    ++dit;
+
                     QCC_DbgPrintf(("Calling ProcCancelFindAdvertisement from NameOwnerChanged [%s]", Thread::GetThread()->GetName()));
+                    ReleaseLocks();
+
                     QStatus status = ProcCancelFindAdvertisement(*oldOwner, last, mask);
+                    AcquireLocks();
+                    dit = discoverMap.upper_bound(last);
                     if (ER_OK != status) {
                         QCC_LogError(status, ("Failed to cancel discover for name \"%s\"", last.c_str()));
                     }
