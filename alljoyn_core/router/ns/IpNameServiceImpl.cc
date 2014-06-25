@@ -4498,7 +4498,8 @@ void* IpNameServiceImpl::Run(void* arg)
                 size_t nbytes;
                 int32_t localInterfaceIndex;
 
-                QStatus status = qcc::RecvWithAncillaryData(sockFd, remoteAddress, remotePort, localAddress, buffer, bufsize, nbytes, localInterfaceIndex);
+                QStatus status = qcc::RecvWithAncillaryData(sockFd, remoteAddress, remotePort, localAddress,
+                                                            buffer, bufsize, nbytes, localInterfaceIndex);
 
                 if (status != ER_OK) {
                     //
@@ -4531,26 +4532,42 @@ void* IpNameServiceImpl::Run(void* arg)
                 uint16_t recvPort = -1;
                 int32_t ifIndex = -1;
                 bool destIsIPv4Local = false;
+                String ifName;
 
                 for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
 
                     if (m_liveInterfaces[i].m_multicastMDNSsockFd == sockFd) {
                         recvPort = m_liveInterfaces[i].m_multicastMDNSPort;
                         ifIndex = m_liveInterfaces[i].m_index;
+                        ifName = m_liveInterfaces[i].m_interfaceName;
                     }
-                    if (m_liveInterfaces[i].m_multicastsockFd  == sockFd) {
+                    if (m_liveInterfaces[i].m_multicastsockFd == sockFd) {
                         recvPort = m_liveInterfaces[i].m_multicastPort;
                         ifIndex = m_liveInterfaces[i].m_index;
+                        ifName = m_liveInterfaces[i].m_interfaceName;
                     }
 
-                    if (m_liveInterfaces[i].m_unicastsockFd  == sockFd) {
+                    if (m_liveInterfaces[i].m_unicastsockFd == sockFd) {
                         recvPort = m_liveInterfaces[i].m_unicastPort;
                         ifIndex = m_liveInterfaces[i].m_index;
+                        ifName = m_liveInterfaces[i].m_interfaceName;
                     }
 
                     if (!destIsIPv4Local && m_liveInterfaces[i].m_address.IsIPv4()
                         && localAddress == m_liveInterfaces[i].m_address) {
                         destIsIPv4Local = true;
+                    }
+                }
+
+                // Get IPv4 address of interface for this message (message may
+                // have been received on the IPv6 address).  This will be used
+                // as a sanity check later against the connect spec in the
+                // message.
+                uint32_t interfaceIndex;
+                for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
+                    if (ifName == m_liveInterfaces[i].m_interfaceName && m_liveInterfaces[i].m_address.IsIPv4()) {
+                        interfaceIndex = i;
+                        break;
                     }
                 }
 
@@ -4567,7 +4584,7 @@ void* IpNameServiceImpl::Run(void* arg)
                 //
                 if (recvPort != -1 && ifIndex != -1) {
                     qcc::IPEndpoint endpoint(remoteAddress, remotePort);
-                    HandleProtocolMessage(buffer, nbytes, endpoint, recvPort);
+                    HandleProtocolMessage(buffer, nbytes, endpoint, recvPort, interfaceIndex);
                 }
             }
         }
@@ -5890,7 +5907,7 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
     m_mutex.Unlock();
 }
 
-void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qcc::IPEndpoint& endpoint)
+void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qcc::IPEndpoint& endpoint, int32_t interfaceIndex)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(%s)", endpoint.ToString().c_str()));
 
@@ -6040,10 +6057,9 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
         // callbacks with different listen-specs.  This completely changes in
         // version one, BTW.
         //
-        qcc::String recvfromAddress, ipv4address, ipv6address;
+        qcc::String ipv4address, ipv6address;
 
-        recvfromAddress = endpoint.addr.ToString();
-        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): Got IP %s from recvfrom", recvfromAddress.c_str()));
+        QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): Got IP %s from recvfrom", endpoint.addr.ToString().c_str()));
 
         if (isAt.GetIPv4Flag()) {
             ipv4address = isAt.GetIPv4();
@@ -6082,18 +6098,7 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
         // that now.
         //
         if ((endpoint.addr.IsIPv4() && !ipv4address.size())) {
-            snprintf(addrbuf, sizeof(addrbuf), "r4addr=%s,r4port=%d", recvfromAddress.c_str(), port);
-            qcc::String busAddress(addrbuf);
-
-            if (m_callback[transportIndex]) {
-                m_protect_callback = true;
-                m_mutex.Unlock();
-                QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): Calling back with %s", addrbuf));
-                (*m_callback[transportIndex])(busAddress, guid, wkn, timer);
-                m_mutex.Lock();
-                m_protect_callback = false;
-
-            }
+            ipv4address = endpoint.addr.ToString();
         }
 
         //
@@ -6101,18 +6106,30 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
         // one.
         //
         if (ipv4address.size()) {
-            snprintf(addrbuf, sizeof(addrbuf), "r4addr=%s,r4port=%d", ipv4address.c_str(), port);
-            qcc::String busAddress(addrbuf);
+            if (SameNetwork(m_liveInterfaces[interfaceIndex].m_prefixlen, m_liveInterfaces[interfaceIndex].m_address, ipv4address)) {
+                snprintf(addrbuf, sizeof(addrbuf), "r4addr=%s,r4port=%d", ipv4address.c_str(), port);
+                qcc::String busAddress(addrbuf);
 
-            if (m_callback[transportIndex]) {
-                m_protect_callback = true;
-                m_mutex.Unlock();
-
-                QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): Calling back with %s", addrbuf));
-                (*m_callback[transportIndex])(busAddress, guid, wkn, timer);
-                m_mutex.Lock();
-                m_protect_callback = false;
-
+                if (m_callback[transportIndex]) {
+                    m_protect_callback = true;
+                    m_mutex.Unlock();
+                    QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): Calling back with %s", addrbuf));
+                    (*m_callback[transportIndex])(busAddress, guid, wkn, timer);
+                    m_mutex.Lock();
+                    m_protect_callback = false;
+                }
+            } else {
+                //
+                // We expect that a v4 addr may be sent via a v6 link local address.  However
+                // if a v4 addr is sent via a v4 address then someone is misbehaving, so log
+                // a warning.
+                //
+                if (endpoint.addr.IsIPv4()) {
+                    QCC_LogError(ER_WARNING, ("Ignoring advertisement from %s for %s received on %s",
+                                              endpoint.addr.ToString().c_str(),
+                                              ipv4address.c_str(),
+                                              m_liveInterfaces[interfaceIndex].m_address.ToString().c_str()));
+                }
             }
         }
 
@@ -6127,7 +6144,6 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
             if (m_callback[transportIndex]) {
                 m_protect_callback = true;
                 m_mutex.Unlock();
-
                 QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): Calling back with %s", addrbuf));
                 (*m_callback[transportIndex])(busAddress, guid, wkn, timer);
                 m_mutex.Lock();
@@ -6213,22 +6229,36 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
             needComma = true;
         }
 
-        //
-        // In version one of the protocol, we always call back with the
-        // addresses we find in the message.  We don't bother with the address
-        // we got in recvfrom.
-        //
-        qcc::String busAddress(addrbuf);
+        if (!isAt.GetReliableIPv4Flag() || SameNetwork(m_liveInterfaces[interfaceIndex].m_prefixlen,
+                                                       m_liveInterfaces[interfaceIndex].m_address,
+                                                       isAt.GetReliableIPv4Address())) {
+            //
+            // In version one of the protocol, we always call back with the
+            // addresses we find in the message.  We don't bother with the address
+            // we got in recvfrom.
+            //
+            qcc::String busAddress(addrbuf);
 
-        if (m_callback[transportIndex]) {
-            m_protect_callback = true;
-            m_mutex.Unlock();
-
-            QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): Calling back with %s", busAddress.c_str()));
-            (*m_callback[transportIndex])(busAddress, guid, wkn, timer);
-            m_mutex.Lock();
-            m_protect_callback = false;
-
+            if (m_callback[transportIndex]) {
+                m_protect_callback = true;
+                m_mutex.Unlock();
+                QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): Calling back with %s", busAddress.c_str()));
+                (*m_callback[transportIndex])(busAddress, guid, wkn, timer);
+                m_mutex.Lock();
+                m_protect_callback = false;
+            }
+        } else {
+            //
+            // We expect that a v4 addr may be sent via a v6 link local address.  However
+            // if a v4 addr is sent via a v4 address then someone is misbehaving, so log
+            // a warning.
+            //
+            if (isAt.GetReliableIPv4Flag() && endpoint.addr.IsIPv4()) {
+                QCC_LogError(ER_WARNING, ("Ignoring advertisement from %s for %s received on %s",
+                                          endpoint.addr.ToString().c_str(),
+                                          isAt.GetReliableIPv4Address().c_str(),
+                                          m_liveInterfaces[interfaceIndex].m_address.ToString().c_str()));
+            }
         }
     }
 
@@ -6236,7 +6266,7 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
 }
 
 
-void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint, const uint16_t recvPort)
+void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint, const uint16_t recvPort, int32_t interfaceIndex)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolMessage(0x%x, %d, %s)", buffer, nbytes, endpoint.ToString().c_str()));
 
@@ -6300,7 +6330,7 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
             nsPacket->GetVersion(nsVersion, msgVersion);
             isAt.SetVersion(nsVersion, msgVersion);
             if (m_loopback || (isAt.GetGuid() != m_guid)) {
-                HandleProtocolAnswer(isAt, nsPacket->GetTimer(), endpoint);
+                HandleProtocolAnswer(isAt, nsPacket->GetTimer(), endpoint, interfaceIndex);
             }
         }
     } else {
@@ -6315,7 +6345,7 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
         if (mdnsPacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
             HandleProtocolQuery(mdnsPacket, endpoint, recvPort);
         } else {
-            HandleProtocolResponse(mdnsPacket, endpoint, recvPort);
+            HandleProtocolResponse(mdnsPacket, endpoint, recvPort, interfaceIndex);
         }
     }
 }
@@ -6417,7 +6447,7 @@ bool IpNameServiceImpl::UpdateMDNSPacketTracker(qcc::String guid, IPEndpoint end
 }
 
 
-void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint endpoint, uint16_t recvPort)
+void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint endpoint, uint16_t recvPort, int32_t interfaceIndex)
 {
     // Check if someone is providing info. about an alljoyn service.
     MDNSResourceRecord* answerTcp;
@@ -6577,6 +6607,24 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint
             m_mutex.Unlock();
             return;
         }
+    }
+
+    if (r4.addr.IsIPv4() && !SameNetwork(m_liveInterfaces[interfaceIndex].m_prefixlen,
+                                         m_liveInterfaces[interfaceIndex].m_address,
+                                         r4.addr)) {
+        //
+        // We expect that a v4 addr may be sent via a v6 link local address.  However
+        // if a v4 addr is sent via a v4 address then someone is misbehaving, so log
+        // a warning.
+        //
+        if (endpoint.addr.IsIPv4()) {
+            QCC_LogError(ER_WARNING, ("Ignoring advertisement from %s for %s received on %s",
+                                      endpoint.addr.ToString().c_str(),
+                                      r4.addr.ToString().c_str(),
+                                      m_liveInterfaces[interfaceIndex].m_address.ToString().c_str()));
+        }
+        m_mutex.Unlock();
+        return;
     }
 
     //
