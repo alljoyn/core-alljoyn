@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 - 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011 - 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -23,7 +23,7 @@
  * @fileOverview
  *
  * AllJoyn&trade; JavaScript API Reference Manual
- * @version 0.0.1
+ * @version 14.06.00
  * @description
  * Type coercion between DBus and JavaScript types is done according to the following table.
  * <table>
