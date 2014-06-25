@@ -2131,6 +2131,19 @@ class _UDPEndpoint : public _RemoteEndpoint {
         RemoteEndpoint rep = RemoteEndpoint::wrap(this);
 
         /*
+         * If we are going to pass the Message off to be delivered, the act of
+         * delivering will change the write state of the message.  Since
+         * delivering to a multipoint session is done by taking a Message and
+         * sending it off to multiple endpoints for delivery, if we just use the
+         * Message we are given, we will eventually change the writeState of the
+         * message to MESSAGE_COMPLETE when we've pushed all of the bits.  That
+         * would cause any subsequent PushMessage calls to complete before
+         * actually writing any bits since they would think they are done.  This
+         * means we have to do a deep copy of every message before we send it.
+         */
+        Message msgCopy = Message(msg, true);
+
+        /*
          * We know we hold a reference, so now we can call out to the daemon
          * with it.  Even if we release the endpoint list lock, our thread will
          * be registered in the endpoint so it won't go away.  The message
@@ -2139,7 +2152,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
          */
         m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
         QCC_DbgPrintf(("_UDPEndpoint::PushMessage(): DeliverNonBlocking()"));
-        QStatus status = msg->DeliverNonBlocking(rep);
+        QStatus status = msgCopy->DeliverNonBlocking(rep);
+        QCC_DbgPrintf(("_UDPEndpoint::PushMessage(): DeliverNonBlocking() returns \"%s\"", QCC_StatusText(status)));
         DecrementAndFetch(&m_refCount);
         return status;
     }
