@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -39,7 +39,7 @@ public class MultipleAuthListenersTest extends TestCase {
     private SecureInterface proxy;
 
     public class SecureService implements SecureInterface, BusObject {
-        public String Ping(String str) { return str; }
+        public String ping(String str) { return str; }
     }
 
     public class BusAuthListener implements AuthListener {
@@ -113,7 +113,7 @@ public class MultipleAuthListenersTest extends TestCase {
                                                                 serviceAuthListener));
         assertEquals(Status.OK, clientBus.registerAuthListener("ALLJOYN_SRP_KEYX ALLJOYN_RSA_KEYX",
                                                                clientAuthListener));
-        proxy.Ping("hello");
+        proxy.ping("hello");
         assertEquals(serviceAuthListener.getAuthMechanismRequested(),
                      clientAuthListener.getAuthMechanismRequested());
     }
@@ -123,7 +123,7 @@ public class MultipleAuthListenersTest extends TestCase {
         assertEquals(Status.OK, clientBus.registerAuthListener("ALLJOYN_SRP_KEYX", clientAuthListener));
         boolean thrown = false;
         try {
-            proxy.Ping("hello");
+            proxy.ping("hello");
         } catch (BusException ex) {
             thrown = true;
         }

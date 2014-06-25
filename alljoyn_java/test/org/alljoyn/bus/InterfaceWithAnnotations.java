@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -26,21 +26,21 @@ import org.alljoyn.bus.annotation.BusSignal;
 @BusAnnotations({@BusAnnotation(name="org.freedesktop.DBus.Deprecated", value="true")})
 public interface InterfaceWithAnnotations {
 
-    @BusMethod(signature="s", replySignature="s")
+    @BusMethod(name="Ping", signature="s", replySignature="s")
     @BusAnnotations({@BusAnnotation(name="name", value="value"), @BusAnnotation(name="name2", value="value2")})
-    public String Ping(String inStr) throws BusException;
+    public String ping(String inStr) throws BusException;
 
-    @BusMethod(signature="s", replySignature="s")
-    public String Pong(String inStr) throws BusException;
+    @BusMethod(name="Pong", signature="s", replySignature="s")
+    public String pong(String inStr) throws BusException;
 
 
-    @BusMethod(signature="s")
+    @BusMethod(name="Pong2", signature="s")
     @BusAnnotations({@BusAnnotation(name="org.freedesktop.DBus.Deprecated", value="true"),
         @BusAnnotation(name="org.freedesktop.DBus.Method.NoReply", value="true")})
-    public void Pong2(String inStr) throws BusException;
+    public void pong2(String inStr) throws BusException;
 
 
-    @BusSignal()
+    @BusSignal(name="Signal")
     @BusAnnotations({@BusAnnotation(name="org.freedesktop.DBus.Deprecated", value="true")})
-    public void Signal() throws BusException;
+    public void signal() throws BusException;
 }

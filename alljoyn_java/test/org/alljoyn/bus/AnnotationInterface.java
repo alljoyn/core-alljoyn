@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -24,16 +24,16 @@ import org.alljoyn.bus.annotation.BusSignal;
 @BusInterface
 public interface AnnotationInterface {
 
-    @BusMethod(annotation=BusMethod.ANNOTATE_DEPRECATED)
-    public String DeprecatedMethod(String str) throws BusException;
+    @BusMethod(name="DeprecatedMethod", annotation=BusMethod.ANNOTATE_DEPRECATED)
+    public String deprecatedMethod(String str) throws BusException;
 
-    @BusMethod(annotation=BusMethod.ANNOTATE_NO_REPLY)
-    public void NoReplyMethod(String str) throws BusException;
+    @BusMethod(name="NoReplyMethod", annotation=BusMethod.ANNOTATE_NO_REPLY)
+    public void noReplyMethod(String str) throws BusException;
 
-    @BusMethod(annotation=BusMethod.ANNOTATE_DEPRECATED | BusMethod.ANNOTATE_NO_REPLY)
-    public void DeprecatedNoReplyMethod(String str) throws BusException;
+    @BusMethod(name="DeprecatedNoReplyMethod", annotation=BusMethod.ANNOTATE_DEPRECATED | BusMethod.ANNOTATE_NO_REPLY)
+    public void deprecatedNoReplyMethod(String str) throws BusException;
 
-    @BusSignal(annotation=BusSignal.ANNOTATE_DEPRECATED)
-    public void DeprecatedSignal(String str) throws BusException;
+    @BusSignal(name="DeprecatedSignal", annotation=BusSignal.ANNOTATE_DEPRECATED)
+    public void deprecatedSignal(String str) throws BusException;
 }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -41,95 +41,95 @@ public class MarshalStressTest extends TestCase {
     public class Service implements MarshalStressInterface,
                                     BusObject {
         public byte getPropy() throws BusException { return (byte)1; }
-        public void Methody(byte m) throws BusException {}
-        public Structy MethodStructy() throws BusException { Structy s = new Structy(); s.m = (byte)1; return s; }
+        public void methody(byte m) throws BusException {}
+        public Structy methodStructy() throws BusException { Structy s = new Structy(); s.m = (byte)1; return s; }
         public boolean getPropb() throws BusException { return true; }
-        public void Methodb(boolean m) throws BusException {}
-        public Structb MethodStructb() throws BusException { Structb s = new Structb(); s.m = true; return s; }
+        public void methodb(boolean m) throws BusException {}
+        public Structb methodStructb() throws BusException { Structb s = new Structb(); s.m = true; return s; }
         public short getPropn() throws BusException { return (short)2; }
-        public void Methodn(short m) throws BusException {}
-        public Structn MethodStructn() throws BusException { Structn s = new Structn(); s.m = (short)2; return s; }
+        public void methodn(short m) throws BusException {}
+        public Structn methodStructn() throws BusException { Structn s = new Structn(); s.m = (short)2; return s; }
         public short getPropq() throws BusException { return (short)3; }
-        public void Methodq(short m) throws BusException {}
-        public Structq MethodStructq() throws BusException { Structq s = new Structq(); s.m = (short)3; return s; }
+        public void methodq(short m) throws BusException {}
+        public Structq methodStructq() throws BusException { Structq s = new Structq(); s.m = (short)3; return s; }
         public int getPropi() throws BusException { return 4; }
-        public void Methodi(int m) throws BusException {}
-        public Structi MethodStructi() throws BusException { Structi s = new Structi(); s.m = 4; return s; }
+        public void methodi(int m) throws BusException {}
+        public Structi methodStructi() throws BusException { Structi s = new Structi(); s.m = 4; return s; }
         public int getPropu() throws BusException { return 5; }
-        public void Methodu(int m) throws BusException {}
-        public Structu MethodStructu() throws BusException { Structu s = new Structu(); s.m = 5; return s; }
+        public void methodu(int m) throws BusException {}
+        public Structu methodStructu() throws BusException { Structu s = new Structu(); s.m = 5; return s; }
         public long getPropx() throws BusException { return (long)6; }
-        public void Methodx(long m) throws BusException {}
-        public Structx MethodStructx() throws BusException { Structx s = new Structx(); s.m = (long)6; return s; }
+        public void methodx(long m) throws BusException {}
+        public Structx methodStructx() throws BusException { Structx s = new Structx(); s.m = (long)6; return s; }
         public long getPropt() throws BusException { return (long)7; }
-        public void Methodt(long m) throws BusException {}
-        public Structt MethodStructt() throws BusException { Structt s = new Structt(); s.m = (long)7; return s; }
+        public void methodt(long m) throws BusException {}
+        public Structt methodStructt() throws BusException { Structt s = new Structt(); s.m = (long)7; return s; }
         public double getPropd() throws BusException { return 8.1; }
-        public void Methodd(double m) throws BusException {}
-        public Structd MethodStructd() throws BusException { Structd s = new Structd(); s.m = 8.1; return s; }
+        public void methodd(double m) throws BusException {}
+        public Structd methodStructd() throws BusException { Structd s = new Structd(); s.m = 8.1; return s; }
         public String getProps() throws BusException { return "nine"; }
-        public void Methods(String m) throws BusException {}
-        public Structs MethodStructs() throws BusException { Structs s = new Structs(); s.m = "nine"; return s; }
+        public void methods(String m) throws BusException {}
+        public Structs methodStructs() throws BusException { Structs s = new Structs(); s.m = "nine"; return s; }
         public String getPropo() throws BusException { return "/ten"; }
-        public void Methodo(String m) throws BusException {}
-        public Structo MethodStructo() throws BusException { Structo s = new Structo(); s.m = "/ten"; return s; }
+        public void methodo(String m) throws BusException {}
+        public Structo methodStructo() throws BusException { Structo s = new Structo(); s.m = "/ten"; return s; }
         public String getPropg() throws BusException { return "y"; }
-        public void Methodg(String m) throws BusException {}
-        public Structg MethodStructg() throws BusException { Structg s = new Structg(); s.m = "y"; return s; }
+        public void methodg(String m) throws BusException {}
+        public Structg methodStructg() throws BusException { Structg s = new Structg(); s.m = "y"; return s; }
         public byte[] getPropay() throws BusException { return new byte[] { (byte)1 }; }
-        public void Methoday(byte[] m) throws BusException {}
-        public Structay MethodStructay() throws BusException { Structay s = new Structay(); s.m = new byte[] { (byte)1 }; return s; }
+        public void methoday(byte[] m) throws BusException {}
+        public Structay methodStructay() throws BusException { Structay s = new Structay(); s.m = new byte[] { (byte)1 }; return s; }
         public boolean[] getPropab() throws BusException { return new boolean[] { true }; }
-        public void Methodab(boolean[] m) throws BusException {}
-        public Structab MethodStructab() throws BusException { Structab s = new Structab(); s.m = new boolean[] { true }; return s; }
+        public void methodab(boolean[] m) throws BusException {}
+        public Structab methodStructab() throws BusException { Structab s = new Structab(); s.m = new boolean[] { true }; return s; }
         public short[] getPropan() throws BusException { return new short[] { (short)2 }; }
-        public void Methodan(short[] m) throws BusException {}
-        public Structan MethodStructan() throws BusException { Structan s = new Structan(); s.m = new short[] { (short)2 }; return s; }
+        public void methodan(short[] m) throws BusException {}
+        public Structan methodStructan() throws BusException { Structan s = new Structan(); s.m = new short[] { (short)2 }; return s; }
         public short[] getPropaq() throws BusException { return new short[] { (short)3 }; }
-        public void Methodaq(short[] m) throws BusException {}
-        public Structaq MethodStructaq() throws BusException { Structaq s = new Structaq(); s.m = new short[] { (short)3 }; return s; }
+        public void methodaq(short[] m) throws BusException {}
+        public Structaq methodStructaq() throws BusException { Structaq s = new Structaq(); s.m = new short[] { (short)3 }; return s; }
         public int[] getPropai() throws BusException { return new int[] { 4 }; }
-        public void Methodai(int[] m) throws BusException {}
-        public Structai MethodStructai() throws BusException { Structai s = new Structai(); s.m = new int[] { 4 }; return s; }
+        public void methodai(int[] m) throws BusException {}
+        public Structai methodStructai() throws BusException { Structai s = new Structai(); s.m = new int[] { 4 }; return s; }
         public int[] getPropau() throws BusException { return new int[] { 5 }; }
-        public void Methodau(int[] m) throws BusException {}
-        public Structau MethodStructau() throws BusException { Structau s = new Structau(); s.m = new int[] { 5 }; return s; }
+        public void methodau(int[] m) throws BusException {}
+        public Structau methodStructau() throws BusException { Structau s = new Structau(); s.m = new int[] { 5 }; return s; }
         public long[] getPropax() throws BusException { return new long[] { (long)6 }; }
-        public void Methodax(long[] m) throws BusException {}
-        public Structax MethodStructax() throws BusException { Structax s = new Structax(); s.m = new long[] { (long)6 }; return s; }
+        public void methodax(long[] m) throws BusException {}
+        public Structax methodStructax() throws BusException { Structax s = new Structax(); s.m = new long[] { (long)6 }; return s; }
         public long[] getPropat() throws BusException { return new long[] { (long)7 }; }
-        public void Methodat(long[] m) throws BusException {}
-        public Structat MethodStructat() throws BusException { Structat s = new Structat(); s.m = new long[] { (long)7 }; return s; }
+        public void methodat(long[] m) throws BusException {}
+        public Structat methodStructat() throws BusException { Structat s = new Structat(); s.m = new long[] { (long)7 }; return s; }
         public double[] getPropad() throws BusException { return new double[] { 8.1 }; }
-        public void Methodad(double[] m) throws BusException {}
-        public Structad MethodStructad() throws BusException { Structad s = new Structad(); s.m = new double[] { 8.1 }; return s; }
+        public void methodad(double[] m) throws BusException {}
+        public Structad methodStructad() throws BusException { Structad s = new Structad(); s.m = new double[] { 8.1 }; return s; }
         public String[] getPropas() throws BusException { return new String[] { "nine" }; }
-        public void Methodas(String[] m) throws BusException {}
-        public Structas MethodStructas() throws BusException { Structas s = new Structas(); s.m = new String[] { "nine" }; return s; }
+        public void methodas(String[] m) throws BusException {}
+        public Structas methodStructas() throws BusException { Structas s = new Structas(); s.m = new String[] { "nine" }; return s; }
         public String[] getPropao() throws BusException { return new String[] { "/ten" }; }
-        public void Methodao(String[] m) throws BusException {}
-        public Structao MethodStructao() throws BusException { Structao s = new Structao(); s.m = new String[] { "/ten" }; return s; }
+        public void methodao(String[] m) throws BusException {}
+        public Structao methodStructao() throws BusException { Structao s = new Structao(); s.m = new String[] { "/ten" }; return s; }
         public String[] getPropag() throws BusException { return new String[] { "y" }; }
-        public void Methodag(String[] m) throws BusException {}
-        public Structag MethodStructag() throws BusException { Structag s = new Structag(); s.m = new String[] { "y" }; return s; }
-        public void Methoda(byte[] m) throws BusException {}
-        public void Methodaei(Map<Integer, String> m) throws BusException {}
-        public void Methodaers(Map<Struct, String> m) throws BusException {}
-        public void IncompleteMethodaers(Map<Struct, String> m) throws BusException {}
-        public void Methodry(Struct m) throws BusException {}
-        public void Methodray(Struct m) throws BusException {}
-        public void Methodvy(Variant m) throws BusException {}
-        public void Methodvay(Variant m) throws BusException {}
+        public void methodag(String[] m) throws BusException {}
+        public Structag methodStructag() throws BusException { Structag s = new Structag(); s.m = new String[] { "y" }; return s; }
+        public void methoda(byte[] m) throws BusException {}
+        public void methodaei(Map<Integer, String> m) throws BusException {}
+        public void methodaers(Map<Struct, String> m) throws BusException {}
+        public void incompleteMethodaers(Map<Struct, String> m) throws BusException {}
+        public void methodry(Struct m) throws BusException {}
+        public void methodray(Struct m) throws BusException {}
+        public void methodvy(Variant m) throws BusException {}
+        public void methodvay(Variant m) throws BusException {}
         public Map<String, String> getPropaessy() throws BusException { return new TreeMap<String, String>(); }
         public Map<String, String> getPropaesss() throws BusException { return new TreeMap<String, String>(); }
-        public void Methodaessy(Map<String, String> m) throws BusException {}
-        public void Methodaessay(Map<String, String> m) throws BusException {}
+        public void methodaessy(Map<String, String> m) throws BusException {}
+        public void methodaessay(Map<String, String> m) throws BusException {}
         public Struct[] getPropar() throws BusException { return new Struct[] { new Struct() }; }
         public Struct getPropr() throws BusException { return new Struct(); }
-        public Variant Methodv() throws BusException { return new Variant(new String("vs")); }
-        public Structr MethodStructr() throws BusException { Structr s = new Structr(); s.m = new Struct(); return s; }
-        public Structv MethodStructv() throws BusException { Structv s = new Structv(); s.m = new Variant(new String("hello")); return s; }
-        public Structaess MethodStructaess() throws BusException { Structaess s = new Structaess(); s.m = new TreeMap<String, String>(); return s; }
+        public Variant methodv() throws BusException { return new Variant(new String("vs")); }
+        public Structr methodStructr() throws BusException { Structr s = new Structr(); s.m = new Struct(); return s; }
+        public Structv methodStructv() throws BusException { Structv s = new Structv(); s.m = new Variant(new String("hello")); return s; }
+        public Structaess methodStructaess() throws BusException { Structaess s = new Structaess(); s.m = new TreeMap<String, String>(); return s; }
     }
 
     private BusAttachment bus;

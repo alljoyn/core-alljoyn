@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -34,7 +34,7 @@ public interface SimpleInterface {
      * @param inStr   The string to be echoed by the service.
      * @return  The echoed string.
      */
-    @BusMethod(signature="s", replySignature="s")
-    public String Ping(String inStr) throws BusException;
+    @BusMethod(name="Ping", signature="s", replySignature="s")
+    public String ping(String inStr) throws BusException;
 }
 

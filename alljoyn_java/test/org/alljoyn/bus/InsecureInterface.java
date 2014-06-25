@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -23,7 +23,7 @@ import org.alljoyn.bus.annotation.BusMethod;
 @BusInterface(name="org.alljoyn.bus.InsecureInterface")
 public interface InsecureInterface {
 
-    @BusMethod
-    public String InsecurePing(String str) throws BusException;
+    @BusMethod(name="InsecurePing")
+    public String insecurePing(String str) throws BusException;
 }
 

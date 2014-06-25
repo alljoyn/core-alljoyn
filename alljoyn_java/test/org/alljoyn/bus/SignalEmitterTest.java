@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -51,8 +51,8 @@ public class SignalEmitterTest extends TestCase {
             emitter = local;
         }
 
-        public void Emit(String string) throws BusException {
-            emitter.getInterface(EmitterInterface.class).Emit(string);
+        public void emit(String string) throws BusException {
+            emitter.getInterface(EmitterInterface.class).emit(string);
         }
 
         public void setTimeToLive(int timeToLive) {
@@ -131,21 +131,21 @@ public class SignalEmitterTest extends TestCase {
 
     public void testTimeToLive() throws Exception {
         emitter.setTimeToLive(1);
-        emitter.Emit("timeToLiveOn");
+        emitter.emit("timeToLiveOn");
 
         emitter.setTimeToLive(0);
-        emitter.Emit("timeToLiveOff");
+        emitter.emit("timeToLiveOff");
 
         // TODO: how to verify?
     }
 
     public void testCompressHeader() throws Exception {
         emitter.setCompressHeader(true);
-        emitter.Emit("compressHeaderOn1");
-        emitter.Emit("compressHeaderOn2");
+        emitter.emit("compressHeaderOn1");
+        emitter.emit("compressHeaderOn2");
 
         emitter.setCompressHeader(false);
-        emitter.Emit("compressHeaderOff");
+        emitter.emit("compressHeaderOff");
 
         // TODO: how to verify?
     }
@@ -156,7 +156,7 @@ public class SignalEmitterTest extends TestCase {
         emitter.setSessionlessFlag(true);
         emitter.setTimeToLive(0);
         signalReceived = false;
-        emitter.Emit("sessionless1");
+        emitter.emit("sessionless1");
         MessageContext ctx = emitter.getMessageContext();
         assertEquals("/emitter", ctx.objectPath);
         assertEquals("org.alljoyn.bus.EmitterInterface", ctx.interfaceName);
@@ -171,7 +171,7 @@ public class SignalEmitterTest extends TestCase {
         emitter.setSessionlessFlag(true);
         emitter.setTimeToLive(0);
         signalReceived = false;
-        emitter.Emit("sessionless2");
+        emitter.emit("sessionless2");
         int serial = emitter.getMessageContext().serial;
         Status status = emitter.cancelSessionlessSignal(serial);
         assertEquals(Status.OK, status);

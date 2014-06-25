@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -39,13 +39,13 @@ public class InterfaceDescriptionTest extends TestCase {
 
     public class Service implements SimpleInterface,
                                     BusObject {
-        public String Ping(String inStr) throws BusException { return inStr; }
+        public String ping(String inStr) throws BusException { return inStr; }
     }
 
     public class ServiceC implements SimpleInterfaceC,
                                      BusObject {
-        public String Ping(String inStr) throws BusException { return inStr; }
-        public String Pong(String inStr) throws BusException { return inStr; }
+        public String ping(String inStr) throws BusException { return inStr; }
+        public String pong(String inStr) throws BusException { return inStr; }
     }
 
     private BusAttachment bus;
@@ -82,7 +82,7 @@ public class InterfaceDescriptionTest extends TestCase {
                 "/service",
                 BusAttachment.SESSION_ID_ANY,
                 new Class<?>[] { SimpleInterfaceB.class }).getInterface(SimpleInterfaceB.class);
-            proxy.Ping(1);
+            proxy.ping(1);
         } catch (BusException ex) {
             thrown = true;
         }
@@ -101,7 +101,7 @@ public class InterfaceDescriptionTest extends TestCase {
             SimpleInterface proxy = bus.getProxyBusObject("org.alljoyn.bus.InterfaceDescriptionTest", "/service",
                 BusAttachment.SESSION_ID_ANY,
                 new Class<?>[] { SimpleInterface.class }).getInterface(SimpleInterface.class);
-            proxy.Ping("str");
+            proxy.ping("str");
         } catch (BusException ex) {
             thrown = true;
         }
@@ -121,7 +121,7 @@ public class InterfaceDescriptionTest extends TestCase {
                 "/service",
                 BusAttachment.SESSION_ID_ANY,
                 new Class<?>[] { SimpleInterfaceC.class }).getInterface(SimpleInterfaceC.class);
-            proxy.Ping("str");
+            proxy.ping("str");
         } catch (BusException ex) {
             thrown = true;
         }

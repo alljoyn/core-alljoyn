@@ -32,18 +32,18 @@ public class AnnotatedInterfaceTest extends TestCase {
     }
 
     public class AnnotatedService implements InterfaceWithAnnotations, BusObject {
-        public String Ping(String inStr) throws BusException {
+        public String ping(String inStr) throws BusException {
             return inStr;
         }
 
-        public String Pong(String inStr) throws BusException {
+        public String pong(String inStr) throws BusException {
             return inStr;
         }
 
-        public void Pong2(String inStr) throws BusException {
+        public void pong2(String inStr) throws BusException {
         }
 
-        public void Signal() throws BusException {
+        public void signal() throws BusException {
         }
     }
 

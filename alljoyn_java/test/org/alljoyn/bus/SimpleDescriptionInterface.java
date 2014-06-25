@@ -26,6 +26,6 @@ import org.alljoyn.bus.annotation.BusMethod;
                 descriptionTranslator="org.alljoyn.bus.SimpleDescriptionInterfaceTranslator")
 
 public interface SimpleDescriptionInterface {
-    @BusMethod(description="The ping method sends a small piece of data")
-    String Ping(String inStr) throws BusException;
+    @BusMethod(name="Ping", description="The ping method sends a small piece of data")
+    String ping(String inStr) throws BusException;
 }

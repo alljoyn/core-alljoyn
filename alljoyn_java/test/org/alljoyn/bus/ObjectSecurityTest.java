@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -28,11 +28,11 @@ public class ObjectSecurityTest extends TestCase{
     }
 
     public class InsecureService implements InsecureInterface, BusObject {
-        public String InsecurePing(String inStr) throws BusException { return inStr; }
+        public String insecurePing(String inStr) throws BusException { return inStr; }
     }
 
     public class SecureOffService implements SecureOffInterface, BusObject {
-        public String Ping(String str) throws BusException { return str; }
+        public String ping(String str) throws BusException { return str; }
     }
 
     public class SrpAuthListener implements AuthListener {
@@ -136,7 +136,7 @@ public class ObjectSecurityTest extends TestCase{
         InsecureInterface ifac = proxy.getInterface(InsecureInterface.class);
 
         try {
-            assertEquals("alljoyn", ifac.InsecurePing("alljoyn"));
+            assertEquals("alljoyn", ifac.insecurePing("alljoyn"));
         } catch (BusException e) {
             e.printStackTrace();
             // we don't expect to have a BusException if we have on fail
@@ -164,7 +164,7 @@ public class ObjectSecurityTest extends TestCase{
         InsecureInterface ifac = proxy.getInterface(InsecureInterface.class);
 
         try {
-            assertEquals("alljoyn", ifac.InsecurePing("alljoyn"));
+            assertEquals("alljoyn", ifac.insecurePing("alljoyn"));
         } catch (BusException e) {
             e.printStackTrace();
             // we don't expect to have a BusException if we have on fail
@@ -194,7 +194,7 @@ public class ObjectSecurityTest extends TestCase{
         SecureOffInterface ifac = proxy.getInterface(SecureOffInterface.class);
 
         try {
-            assertEquals("alljoyn", ifac.Ping("alljoyn"));
+            assertEquals("alljoyn", ifac.ping("alljoyn"));
         } catch (BusException e) {
             e.printStackTrace();
             // we don't expect to have a BusException if we have on fail

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011,2013-2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -38,7 +38,7 @@ public class SecurityViolationListenerTest extends TestCase {
     private BusAuthListener authListener;
 
     public class SecureService implements SecureInterface, BusObject {
-        public String Ping(String str) { return str; }
+        public String ping(String str) { return str; }
     }
 
     public class BusAuthListener implements AuthListener {
@@ -115,7 +115,7 @@ public class SecurityViolationListenerTest extends TestCase {
             });
         boolean thrown = false;
         try {
-            proxy.Ping("hello");
+            proxy.ping("hello");
         } catch (ErrorReplyBusException ex) {
             thrown = true;
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -233,7 +233,7 @@ public class DBusProxyObjTest extends TestCase {
     private String nameAcquired;
 
     @BusSignalHandler(iface="org.freedesktop.DBus", signal="NameOwnerChanged")
-    public void NameOwnerChanged(String name, String oldOwner, String newOwner) throws BusException {
+    public void nameOwnerChanged(String name, String oldOwner, String newOwner) throws BusException {
         this.newOwner = newOwner;
         synchronized (this) {
             notify();
@@ -241,7 +241,7 @@ public class DBusProxyObjTest extends TestCase {
     }
 
     @BusSignalHandler(iface="org.freedesktop.DBus", signal="NameLost")
-    public void NameLost(String name) throws BusException {
+    public void nameLost(String name) throws BusException {
         if (nameAcquired.equals(name)) {
             nameAcquired = "";
         }
@@ -251,7 +251,7 @@ public class DBusProxyObjTest extends TestCase {
     }
 
     @BusSignalHandler(iface="org.freedesktop.DBus", signal="NameAcquired")
-    public void NameAcquired(String name) throws BusException {
+    public void nameAcquired(String name) throws BusException {
         nameAcquired = name;
         synchronized (this) {
             notify();

@@ -51,11 +51,11 @@ public class AuthListenerECDHETest extends TestCase {
     }
 
     public class SecureService implements SecureInterface, InsecureInterface, BusObject {
-        public String Ping(String str) {
+        public String ping(String str) {
             assertTrue(bus.getMessageContext().authMechanism.length() > 0);
             return str;
         }
-        public String InsecurePing(String str) {
+        public String insecurePing(String str) {
             return str;
         }
     }
@@ -140,7 +140,7 @@ public class AuthListenerECDHETest extends TestCase {
         assertEquals(Status.OK, bus.registerAuthListener(clientAuthListener.getMechanisms(), clientAuthListener));
         BusException ex = null;
         try {
-            proxy.Ping("hello");
+            proxy.ping("hello");
         } catch (BusException e) {
             ex = e;
             // e.printStackTrace();
@@ -149,7 +149,7 @@ public class AuthListenerECDHETest extends TestCase {
          * Make insecure second call to ensure that all the authentication transactions have run
          * their course on both sides.
          */
-        insecureProxy.InsecurePing("goodbye");
+        insecureProxy.insecurePing("goodbye");
         if (ex != null) {
             throw ex;
         }
