@@ -94,8 +94,12 @@ public class OnPingListener {
      * @param status
      * <ul>
      *   <li>OK if ping was successful</li>
-     *   <li>TIMEOUT if the ping attempt timed out</li>
-     *   <li>other error status codes indicating a failure</li>
+     *   <li>ALLJOYN_PING_FAILED Ping failed</li>
+     *   <li>ALLJOYN_PING_REPLY_TIMEOUT Ping call timed out</li>
+     *   <li>ALLJOYN_PING_REPLY_UNKNOWN_NAME name not found currently or not part of any known session</li>
+     *   <li>ALLJOYN_PING_REPLY_UNIMPLEMENTED the remote routing node does not implement Ping</li>
+     *   <li>ALLJOYN_PING_REPLY_UNREACHABLE the name pinged is unreachable</li>
+     *   <li>BUS_UNEXPECTED_DISPOSITION An unexpected disposition was returned and has been treated as an error</li>
      * </ul>
      * @param context   The user-defined context object supplied in the call to {@link
      *                  BusAttachment#ping(String, int, OnPingListener, Object)}.
