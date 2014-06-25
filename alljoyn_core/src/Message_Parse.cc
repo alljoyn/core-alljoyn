@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -973,7 +973,7 @@ QStatus _Message::PullBytes(RemoteEndpoint& endpoint, bool checkSender, bool ped
         toRead = (std::min)(countRead, MAX_PULL);
         status = source.PullBytes(bufPos, toRead, read, timeout);
         if (status == ER_ALERTED_THREAD) {
-            QCC_LogError(status, ("PullBytes ALERTED continuing"));
+            QCC_DbgPrintf(("PullBytes ALERTED continuing"));
             status = ER_OK;
         } else if (status != ER_OK) {
             break;

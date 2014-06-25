@@ -3,7 +3,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -736,7 +736,7 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
         } else {
 
             if ((status != ER_STOPPING_THREAD) && (status != ER_SOCK_OTHER_END_CLOSED) && (status != ER_BUS_STOPPING)) {
-                QCC_LogError(status, ("Endpoint Rx failed (%s)", GetUniqueName().c_str()));
+                QCC_DbgPrintf(("Endpoint Rx failed (%s): %s", GetUniqueName().c_str(), QCC_StatusText(status)));
             }
             /* On an unexpected disconnect save the status that cause the thread exit */
             if (disconnectStatus == ER_OK) {

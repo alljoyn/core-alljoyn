@@ -72,7 +72,7 @@ static inline QStatus SendThroughEndpoint(Message& msg, BusEndpoint& ep, Session
     }
     // if the bus is stopping or the endpoint is closing we don't expect to be able to send
     if ((status != ER_OK) && (status != ER_BUS_ENDPOINT_CLOSING) && (status != ER_BUS_STOPPING)) {
-        QCC_LogError(status, ("SendThroughEndpoint(dest=%s, ep=%s, id=%u) failed", msg->GetDestination(), ep->GetUniqueName().c_str(), sessionId));
+        QCC_DbgPrintf(("SendThroughEndpoint(dest=%s, ep=%s, id=%u) failed: %s", msg->GetDestination(), ep->GetUniqueName().c_str(), sessionId, QCC_StatusText(status)));
     }
     return status;
 }
@@ -188,7 +188,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
             }
             // if the bus is stopping or the endpoint is closing we can't push the message
             if ((ER_OK != status) && (ER_BUS_ENDPOINT_CLOSING != status) && (status != ER_BUS_STOPPING)) {
-                QCC_LogError(status, ("BusEndpoint::PushMessage failed"));
+                QCC_DbgPrintf(("BusEndpoint::PushMessage failed: %s", QCC_StatusText(status)));
             }
             nameTable.Unlock();
         } else {
