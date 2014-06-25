@@ -75,7 +75,7 @@ public interface AboutService extends ServiceCommon
      * @param serviceAvailabilityListener listener for connection loss
      * @param port the peer's bound port of the About server
      * @return AboutIconClient to create a session with the peer
-     * @throws Exception
+     * @throws BusException
      */
     public AboutIconClient createAboutIconClient(String peerName, ServiceAvailabilityListener serviceAvailabilityListener, short port) throws BusException;
 
