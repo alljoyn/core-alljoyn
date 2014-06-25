@@ -1138,7 +1138,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @internal
      * @brief Do something with a received protocol message.
      */
-    void HandleProtocolMessage(uint8_t const* const buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint, const uint16_t recv_port);
+    void HandleProtocolMessage(uint8_t const* const buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint, const uint16_t recv_port, int32_t interfaceIndex);
 
     /**
      * @internal
@@ -1150,7 +1150,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @internal
      * @brief Do something with a received protocol answer.
      */
-    void HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qcc::IPEndpoint& address);
+    void HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qcc::IPEndpoint& address, int32_t interfaceIndex);
 
     /**
      * @internal
@@ -1162,7 +1162,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @internal
      * @brief Do something with a received MDNS protocol response.
      */
-    void HandleProtocolResponse(MDNSPacket mdnsPacket, qcc::IPEndpoint endpoint, uint16_t recvPort);
+    void HandleProtocolResponse(MDNSPacket mdnsPacket, qcc::IPEndpoint endpoint, uint16_t recvPort, int32_t interfaceIndex);
 
     /**
      * @internal
