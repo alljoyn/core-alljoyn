@@ -607,7 +607,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @param[in] policy Policy for refresh
      */
 
-    QStatus RefreshCache(TransportMask transportMask, const qcc::String& guid, const qcc::String& matchingStr, LocatePolicy policy = ALWAYS_RETRY);
+    QStatus RefreshCache(TransportMask transportMask, const qcc::String& guid, const qcc::String& matchingStr, LocatePolicy policy = ALWAYS_RETRY, bool ping = false);
 
     /**
      * @brief Set the Callback for notification of discovery events.
