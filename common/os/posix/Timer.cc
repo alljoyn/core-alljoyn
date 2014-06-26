@@ -631,8 +631,8 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                  * the constant FALLBEHIND_WARNING_MS.
                  */
                 if (delay < 0 && std::abs((long)delay) > FALLBEHIND_WARNING_MS) {
-                    QCC_LogError(ER_TIMER_FALLBEHIND, ("TimerThread::Run(): Timer \"%s\" alarm is late by %ld ms",
-                                                       Thread::GetThreadName(), std::abs((long)delay)));
+                    QCC_DbgHLPrintf(("TimerThread::Run(): Timer \"%s\" alarm is late by %ld ms",
+                                     Thread::GetThreadName(), std::abs((long)delay)));
                 }
 
                 state = RUNNING;
