@@ -6969,8 +6969,8 @@ QStatus IpNameServiceImpl::Stop()
     QCC_DbgPrintf(("IpNameServiceImpl::Stop(): Stopping thread"));
     QStatus status = Thread::Stop();
     QCC_DbgPrintf(("IpNameServiceImpl::Stop(): Stopped"));
-    m_mutex.Unlock();
     m_packetScheduler.Stop();
+    m_mutex.Unlock();
     return status;
 }
 
