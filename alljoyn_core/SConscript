@@ -142,16 +142,12 @@ elif ajenv['OS_CONF'] == 'winrt':
     ajenv.InstallAs('$DISTDIR/README.txt', 'docs/README.winrt.txt')
 elif ajenv['OS_CONF'] == 'windows':
     ajenv.InstallAs('$DISTDIR/README.txt', 'docs/README.windows.txt')
-    ajenv.Install('$DISTDIR', 'docs/AllJoyn_API_Changes_java.txt')
 elif ajenv['OS_CONF'] == 'android':
     ajenv.InstallAs('$DISTDIR/README.txt', 'docs/README.android.txt')
-    ajenv.Install('$DISTDIR', 'docs/AllJoyn_API_Changes_java.txt')
 else:  # linux based platforms
     ajenv.InstallAs('$DISTDIR/README.txt', 'docs/README.linux.txt')
-    ajenv.Install('$DISTDIR', 'docs/AllJoyn_API_Changes_java.txt')
 
 if not (ajenv['OS'] == 'darwin' and ajenv['CPU'] in ['arm', 'armv7', 'armv7s']):
-    ajenv.Install('$DISTDIR', 'docs/AllJoyn_API_Changes_cpp.txt')
     ajenv.Install('$DISTDIR', 'docs/ReleaseNotes.txt')
 
 # Build docs
