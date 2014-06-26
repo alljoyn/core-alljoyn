@@ -145,6 +145,7 @@ typedef struct {
     ArdpRcvBuf* rcv;    /* Array holding received buffers not consumed by the app */
     uint32_t last;      /* Sequence number of the last pending segment */
     uint16_t window;    /* Receive Window */
+    uint16_t ackPending;    /* Receive Window */
 } ArdpRbuf;
 
 /**
@@ -454,10 +455,11 @@ static uint32_t CheckConnTimers(ArdpHandle* handle, ArdpConnRecord* conn, uint32
                        conn, conn->probeTimer, conn->probeTimer.when, now));
         (conn->probeTimer.handler)(handle, conn, conn->probeTimer.context);
         conn->probeTimer.when = now + conn->probeTimer.delta;
-        if (conn->probeTimer.when < next && conn->probeTimer.retry != 0) {
-            /* Update "call-me-next-ms" value */
-            next = conn->probeTimer.when;
-        }
+    }
+
+    if (conn->probeTimer.when < next && conn->probeTimer.retry != 0) {
+        /* Update "call-me-next-ms" value */
+        next = conn->probeTimer.when;
     }
 
     /* Check delayed ACK timer */
@@ -465,10 +467,11 @@ static uint32_t CheckConnTimers(ArdpHandle* handle, ArdpConnRecord* conn, uint32
         QCC_DbgPrintf(("CheckConnTimers (conn %p): Fire ACK timer %p at %u (now=%u)",
                        conn, conn->ackTimer, conn->ackTimer.when, now));
         (conn->ackTimer.handler)(handle, conn, conn->ackTimer.context);
-        if (conn->ackTimer.when < next && conn->ackTimer.retry != 0) {
-            /* Update "call-me-next-ms" value */
-            next = conn->ackTimer.when;
-        }
+    }
+
+    if (conn->ackTimer.when < next && conn->ackTimer.retry != 0) {
+        /* Update "call-me-next-ms" value */
+        next = conn->ackTimer.when;
     }
 
     /* Check persist timer */
@@ -477,15 +480,16 @@ static uint32_t CheckConnTimers(ArdpHandle* handle, ArdpConnRecord* conn, uint32
                        conn, conn->persistTimer, conn->persistTimer.when, now));
         (conn->persistTimer.handler)(handle, conn, conn->persistTimer.context);
         conn->persistTimer.when = now + conn->persistTimer.delta;
-        if (conn->persistTimer.when < next && conn->persistTimer.retry != 0) {
-            /* Update "call-me-next-ms" value */
-            next = conn->persistTimer.when;
-        }
 
         /* No pending retransmits should be present on the connection if
          * we have fired up persist timer */
         assert(IsEmpty(&conn->dataTimers));
         return next;
+    }
+
+    if (conn->persistTimer.when < next && conn->persistTimer.retry != 0) {
+        /* Update "call-me-next-ms" value */
+        next = conn->persistTimer.when;
     }
 
     ListNode* ln = &conn->dataTimers;
@@ -718,6 +722,7 @@ static void AckTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* cont
     if (status == ER_OK) {
         /* Stop timer until there is something else to acknowledge */
         conn->ackTimer.retry = 0;
+        conn->RBUF.ackPending = 0;
     }
 }
 
@@ -2234,6 +2239,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 status = Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
                 if (status == ER_OK && conn->ackTimer.retry != 0) {
                     UpdateTimer(handle, conn, &conn->ackTimer, ARDP_ACK_TIMEOUT, 1);
+                    conn->RBUF.ackPending = 0;
                 } else if (status != ER_OK) {
                     UpdateTimer(handle, conn, &conn->ackTimer, 0, 1);
                 }
@@ -2260,12 +2266,24 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
             if (seg->DLEN) {
                 QCC_DbgPrintf(("ArdpMachine(): OPEN: Got %d bytes of Data with SEQ %u, RCV.CUR = %u).", seg->DLEN, seg->SEQ, conn->RCV.CUR));
                 status = ER_OK;
+                /*
+                 * Update RCV buffers if the segment is not a duplicate (accounting for a case when
+                 * receiving a retransmit of a segment with sequence number between LCS and CUR).
+                 */
                 if (SEQ32_LT(conn->RCV.CUR, seg->SEQ)) {
                     status = AddRcvBuffer(handle, conn, seg, buf, len, seg->SEQ == (conn->RCV.CUR + 1));
+                    conn->RBUF.ackPending++;
                 }
 
+                /*
+                 * ACKS can be scheduled based on timeout value or number of received segments
+                 * pending acknowledgement.
+                 * In future, make the above parameters (i.e., timeout & pending acks) configurable.
+                 */
                 if (conn->ackTimer.retry == 0) {
                     UpdateTimer(handle, conn, &conn->ackTimer, ARDP_ACK_TIMEOUT, 1);
+                } else if (conn->RBUF.ackPending >= ((conn->RCV.MAX >> 1) + 1)) {
+                    UpdateTimer(handle, conn, &conn->ackTimer, 0, 1);
                 }
 
             }
