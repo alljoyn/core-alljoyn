@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -205,8 +205,13 @@ class SessionListenerTest : public testing::Test {
         alljoyn_sessionopts_destroy(opts);
         alljoyn_sessionportlistener_destroy(sessionPortListener);
         alljoyn_busattachment_unregisterbuslistener(clientbus, buslistener);
+        EXPECT_NO_FATAL_FAILURE(alljoyn_sessionlistener_destroy(sessionListener));
         EXPECT_NO_FATAL_FAILURE(alljoyn_buslistener_destroy(buslistener));
+        alljoyn_busattachment_stop(clientbus);
+        alljoyn_busattachment_join(clientbus);
         alljoyn_busattachment_destroy(clientbus);
+        alljoyn_busattachment_stop(servicebus);
+        alljoyn_busattachment_join(servicebus);
         EXPECT_NO_FATAL_FAILURE(alljoyn_busattachment_destroy(servicebus));
         alljoyn_busobject_destroy(testObj);
     }
@@ -437,7 +442,6 @@ void resetServicSessionListenerFlags() {
     service_session_member_added_flag = QCC_FALSE;
     service_session_member_removed_flag = QCC_FALSE;
     sessionlostreason = ALLJOYN_SESSIONLOST_INVALID;
-    service_member_added_uniquename = NULL;
     if (service_member_added_uniquename != NULL) {
         free(service_member_added_uniquename);
         service_member_added_uniquename = NULL;
