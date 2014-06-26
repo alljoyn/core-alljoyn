@@ -1846,19 +1846,39 @@ QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::
     // We first retrieve the destination for the guid from the PeerInfoMap and set the destination for the
     // MDNS packet that we will be sending out over unicast to this guid
     //
-    std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.find(guid);
+    m_mutex.Lock();
+    std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.end();
+    if (!ping) {
+        it = m_peerInfoMap.find(guid);
+    } else {
+        for (std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator i = m_peerInfoMap.begin();
+             i != m_peerInfoMap.end(); ++i) {
+            if (qcc::GUID128(i->first).ToShortString() == guid) {
+                it = i;
+                break;
+            }
+        }
+    }
+    std::list<PeerInfo> peerList;
     if (it != m_peerInfoMap.end()) {
+        peerList = it->second;
+    }
+    m_mutex.Unlock();
+
+    std::list<PeerInfo>::iterator pit = peerList.begin();
+    if (!peerList.empty()) {
         Timespec now;
         GetTimeNow(&now);
         QCC_DbgPrintf(("Entry found in Peer Info Map. Setting unicast destination"));
 
-        std::list<PeerInfo>::iterator pit = it->second.begin();
-        while (pit != it->second.end()) {
+        while (pit != peerList.end()) {
             if (!ping && ((now - (*pit).lastQueryTimeStamp) < MIN_THRESHOLD_CACHE_REFRESH_MS)) {
                 ++pit;
                 continue;
             }
-            (*pit).lastQueryTimeStamp = now;
+            if (!ping) {
+                (*pit).lastQueryTimeStamp = now;
+            }
 
             MDNSPacket query;
             query->SetDestination((*pit).unicastIPV4Info);
@@ -1885,6 +1905,9 @@ QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::
             ++pit;
         }
     } else {
+        if (ping) {
+            return ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED;
+        }
         QCC_DbgPrintf((" IpNameServiceImpl::RefreshCache(): Entry not found in PeerInfoMap"));
     }
 
@@ -2623,13 +2646,7 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
 QStatus IpNameServiceImpl::Ping(TransportMask transportMask, const qcc::String& guid, const qcc::String& name)
 {
     qcc::String pingString = "name='" + name + "'";
-    for (std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.begin();
-         it != m_peerInfoMap.end(); ++it) {
-        if (qcc::GUID128(it->first).ToShortString() == guid) {
-            return RefreshCache(transportMask, it->first, pingString, ALWAYS_RETRY, true);
-        }
-    }
-    return ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED;
+    return RefreshCache(transportMask, guid, pingString, ALWAYS_RETRY, true);
 }
 
 QStatus IpNameServiceImpl::Query(TransportMask completeTransportMask, MDNSPacket mdnsPacket)
