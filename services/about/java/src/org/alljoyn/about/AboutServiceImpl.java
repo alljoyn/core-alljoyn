@@ -144,6 +144,15 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
             throw new IllegalArgumentException("The AnnouncementHandler can't be null");
         }
 
+        List<Set<String>> interfacelist = m_announcementHandlers.get(handler);
+        if (interfacelist == null)
+            m_announcementHandlers.put(handler, interfacelist= new ArrayList<Set<String>>());
+        if (interfaces == null) {
+            interfacelist.add(new HashSet<String>());
+        } else {
+            interfacelist.add(new HashSet<String>(Arrays.asList(interfaces)));
+        }
+
         StringBuffer announceRule = new StringBuffer(ANNOUNCE_MATCH_RULE);
         if(interfaces != null) {
             for(int i = 0 ; i < interfaces.length; ++i){
@@ -156,15 +165,6 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
         Status status = getBus().addMatch(announceRule.toString());
         if ( status != Status.OK ) {
             throw new AboutServiceException("Failed to call AddMatch for the rule: '" + announceRule.toString() + "', Status: '" + status + "'");
-        }
-
-        List<Set<String>> interfacelist = m_announcementHandlers.get(handler);
-        if (interfacelist == null)
-            m_announcementHandlers.put(handler, interfacelist= new ArrayList<Set<String>>());
-        if (interfaces == null) {
-            interfacelist.add(new HashSet<String>());
-        } else {
-            interfacelist.add(new HashSet<String>(Arrays.asList(interfaces)));
         }
     }
 
