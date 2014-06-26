@@ -4260,7 +4260,8 @@ void* IpNameServiceImpl::Run(void* arg)
     qcc::Timespec tNow, tLastLazyUpdate;
     GetTimeNow(&tLastLazyUpdate);
 
-    while ((m_state == IMPL_RUNNING) || stopEvent.IsSet() || m_terminal) {
+    m_mutex.Lock();
+    while ((m_state == IMPL_RUNNING) || (m_state == IMPL_STOPPING) || m_terminal) {
         //
         // If we are shutting down, we need to make sure that we send out the
         // terminal is-at messages that correspond to a CancelAdvertiseName for
@@ -4281,8 +4282,6 @@ void* IpNameServiceImpl::Run(void* arg)
         }
 
         GetTimeNow(&tNow);
-
-        m_mutex.Lock();
 
         //
         // In order to pass the Android Compatibility Test, we need to be able
@@ -4389,6 +4388,7 @@ void* IpNameServiceImpl::Run(void* arg)
         QStatus status = qcc::Event::Wait(checkEvents, signaledEvents);
         if (status != ER_OK && status != ER_TIMEOUT) {
             QCC_LogError(status, ("IpNameServiceImpl::Run(): Event::Wait(): Failed"));
+            m_mutex.Lock();
             break;
         }
 
@@ -4573,7 +4573,9 @@ void* IpNameServiceImpl::Run(void* arg)
                 }
             }
         }
+        m_mutex.Lock();
     }
+    m_mutex.Unlock();
 
     // We took the time to send out a final
     // advertisement(s) above, indicating that we are going away.
