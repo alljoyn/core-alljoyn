@@ -1439,7 +1439,8 @@ bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket respons
             pair<String, String> field = advRData->GetFieldAt(i);
             if ((field.first == "name") && (field.second.find(rule.iface) == 0)) {
                 name = field.second;
-            } else if (field.first == ";") {
+            } else if (field.first == "transport") {
+                transport = StringToU32(field.second, 16);
                 if (!name.empty()) {
                     QCC_DbgPrintf(("Received %s implements response (name=%s)",
                                    (unsolicited ? "unsolicited" : "solicited"),
