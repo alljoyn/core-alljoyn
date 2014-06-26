@@ -276,7 +276,7 @@ TEST_F(ObjectSecurityTest, Test1) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -371,7 +371,7 @@ TEST_F(ObjectSecurityTest, Test2) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -464,7 +464,7 @@ TEST_F(ObjectSecurityTest, Test3) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -558,7 +558,7 @@ TEST_F(ObjectSecurityTest, Test4) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -652,7 +652,7 @@ TEST_F(ObjectSecurityTest, Test5) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -747,7 +747,7 @@ TEST_F(ObjectSecurityTest, Test6) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -828,7 +828,7 @@ TEST_F(ObjectSecurityTest, Test7) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -904,7 +904,7 @@ TEST_F(ObjectSecurityTest, Test8) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -981,7 +981,7 @@ TEST_F(ObjectSecurityTest, Test9) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -1056,7 +1056,7 @@ TEST_F(ObjectSecurityTest, Test10) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -1132,7 +1132,7 @@ TEST_F(ObjectSecurityTest, Test11) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -1208,7 +1208,7 @@ TEST_F(ObjectSecurityTest, Test12) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -1287,7 +1287,7 @@ TEST_F(ObjectSecurityTest, Test13) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -1368,7 +1368,7 @@ TEST_F(ObjectSecurityTest, Test14) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -1448,7 +1448,7 @@ TEST_F(ObjectSecurityTest, Test15) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -1527,7 +1527,7 @@ TEST_F(ObjectSecurityTest, Test16) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -1604,7 +1604,7 @@ TEST_F(ObjectSecurityTest, Test17) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -1681,7 +1681,7 @@ TEST_F(ObjectSecurityTest, Test18) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -2471,7 +2471,7 @@ TEST_F(ObjectSecurityTest, Test26) {
     grandParentPingMethod = ifc->GetMember("grand_parent_ping");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = grandParentProxyObject.MethodCall(*grandParentPingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(grandParentTestObject.msgEncrypted);
 
@@ -2481,7 +2481,7 @@ TEST_F(ObjectSecurityTest, Test26) {
     parentPingMethod = ifc2->GetMember("parent_ping");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = parentProxyObject.MethodCall(*parentPingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(parentTestObject.msgEncrypted);
 
@@ -2491,7 +2491,7 @@ TEST_F(ObjectSecurityTest, Test26) {
     childPingMethod = ifc3->GetMember("child_ping");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = childProxyObject.MethodCall(*childPingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(childTestObject.msgEncrypted);
 
@@ -2567,7 +2567,7 @@ TEST_F(ObjectSecurityTest, Test27) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -2659,7 +2659,7 @@ TEST_F(ObjectSecurityTest, Test28) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -2752,7 +2752,7 @@ TEST_F(ObjectSecurityTest, Test29) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -2845,7 +2845,7 @@ TEST_F(ObjectSecurityTest, Test30) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
 
@@ -2937,7 +2937,7 @@ TEST_F(ObjectSecurityTest, Test31) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
@@ -3029,7 +3029,7 @@ TEST_F(ObjectSecurityTest, Test32) {
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
 
