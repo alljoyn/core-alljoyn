@@ -101,8 +101,12 @@ class BusAttachment : public MessageReceiver {
          *
          * @param status
          *   - #ER_OK on success
-         *   - #ER_TIMEOUT the Ping attempt timed out
-         *   - An error status otherwise
+         *   - #ER_ALLJOYN_PING_FAILED Ping failed
+         *   - #ER_ALLJOYN_PING_REPLY_TIMEOUT Ping call timed out
+         *   - #ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME name not found currently or not part of any known session
+         *   - #ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED the remote routing node does not implement Ping
+         *   - #ER_ALLJOYN_PING_REPLY_UNREACHABLE the name pinged is unreachable
+         *   - #ER_BUS_UNEXPECTED_DISPOSITION An unexpected disposition was returned and has been treated as an error
          * @param context      User defined context which will be passed as-is to callback.
          */
         virtual void PingCB(QStatus status, void* context) = 0;
@@ -1193,7 +1197,15 @@ class BusAttachment : public MessageReceiver {
      *
      * @return
      *   - #ER_OK on success
-     *   - #ER_TIMEOUT the Ping attempt timed out
+     *   - #ER_ALLJOYN_PING_FAILED Ping failed
+     *   - #ER_ALLJOYN_PING_REPLY_TIMEOUT Ping call timed out
+     *   - #ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME name not found currently or not part of any known session
+     *   - #ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED the remote routing node does not implement Ping
+     *   - #ER_ALLJOYN_PING_REPLY_UNREACHABLE the name pinged is unreachable
+     *   - #ER_BUS_UNEXPECTED_DISPOSITION An unexpected disposition was returned and has been treated as an error
+     *   - #ER_BUS_NOT_CONNECTED the BusAttachment is not connected to the bus
+     *   - #ER_BUS_BAD_BUS_NAME the name parameter is not a valid bus name
+     *   - #ER_BAD_ARG_1 a NULL pointer was passed in for the name
      *   - An error status otherwise
      */
     QStatus Ping(const char* name, uint32_t timeout);
@@ -1214,8 +1226,9 @@ class BusAttachment : public MessageReceiver {
      *
      * @return
      *     - #ER_OK if ping was successful.
-     *     - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
-     *     - #ER_BUS_BAD_BUS_NAME if the name passed in is an invalid bus name
+     *     - #ER_BUS_NOT_CONNECTED the BusAttachment is not connected to the bus
+     *     - #ER_BUS_BAD_BUS_NAME the name parameter is not a valid bus name
+     *     - #ER_BAD_ARG_1 a NULL pointer was passed in for the name
      *     - Other error status codes indicating a failure.
      */
     QStatus PingAsync(const char* name, uint32_t timeout, BusAttachment::PingAsyncCB* callback, void* context);
