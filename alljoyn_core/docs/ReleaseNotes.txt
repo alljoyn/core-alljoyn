@@ -1,238 +1,130 @@
-AllJoyn Version 14.06.00 Release Notes
---------------------------------------
+AllJoyn Version 14.06 Beta Release Notes
+========================================
 
 Platform Support
 ----------------
- 1) Linux Ubuntu (32 and 64 bit x86)
+ 1) Linux Ubuntu 12.04 LTS (32 and 64 bit)
  2) Android Gingerbread 2.3.4 (ARM7)
  3) Android Ice Cream Sandwich 4.0 (ARM7)
  4) Android JellyBean 4.1 (ARM7)
- 5) Windows 7 (32 and 64 bit x86)
- 6) Windows 8 (32 and 64 bit x86)
- 7) iOS 7
- 8) OSX 10.7 Lion
+ 5) Windows 7 (32 and 64 bit)
+ 6) Windows 8 (32 and 64 bit)
+ 7) iOS 7.1 (32-bit)
+ 8) OSX 10.9 Lion
  9) OpenWRT (trunk)
 
 
-Features added in Version 14.02.00
-----------------------------------
-
-About feature support added for iOS.
-
-
-Issues Addressed in Version 14.02.00
+Features added in Version 14.06 Beta
 ------------------------------------
-
-AJCORE-221: Added DISCONN and DISCONN_RESP messages as a part of the SLAP
-protocol.
-
-AJCORE-283: Enable the ipv4 loopback interface for the name service.
-
-AJCORE-300: Check that our advertised IPv4 address is correct before sending out
-advertisement.
-
-AJCORE-339: AuthJoin endpoints in addition to Joining them, to fix the crash
-that occurs if the endpoint exits before the auth thread has been joined.
-
-AJCORE-701: ProxyBusObject MethodCall() timeout is not honored in C++ on darwin.
-
-AJCORE-702: Remove default support for rendezvous server.
-
-AJCORE-712: XML parser should allow singles quotes around attributes.
-
-AJCORE-720: XmlElement constructor does not properly add children to parent
-element.
-
-AJCORE-733: Avoid propagating names over sessions created for SLS.
-
-AJCORE-740: Change order of StartStream and RegisterEndpoint to fix
-deadlock.
-
-AJCORE-762: Fix assert failure in IODispatch for ctxt->type.
-
-AJCORE-780: Added a new BusAttachment constructor to Java that allows the
-programmer to specify the maximum number of concurrent methods and signal
-handlers.
-
-AJCORE-783: Fix deadlock in NullTransport::Disconnect
-
-AJCORE-788: Fix IpNameService to not ignore packets from other higher capable
-NS.
-
-AJCORE-802: Add AJNPasswordManager.h/.mm reference to all .xcodeproj files.
-
-AJCORE-806: Update AndroidManifest.xml files to specify minSdkVersion of
-Gingerbread.
-
-AJCORE-807: Ignore lower version Who-HAS packet if it is known that the remote
-router supports higher version.
-
-AJCORE-809: Endpoint is not cleaned up if the auth thread is stopped before it
-enters the Run() function.
-
-AJCORE-817: SendLostAdvertisedName must not be called with the NameTable
-lock.lock.
-
-AJCORE-820: JoinSession fails in stress mode because the SessionHost endpoint
-was not found.
-
-AJCORE-824: Don't advertise over interfaces we're not listening on.
-
-AJCORE-847: Timer controller thread must create a worker thread only after
-grabbing the re-entrancy lock.
-
-AJCORE-859: Compute netmask for IPv4 interfaces on darwin correctly.
-
-AJCORE-872: Fix crash when pointing to freed data in NameTable::AddAlias.
+* Next Generation Name Service (NGNS): New version of the Name Service
+  protocol that is more efficient and reliable.
+* Security Enhancements: support for ECC based authentication
+* Policy DB: rules to manage the flow of messages through the router to
+  and from applications.
+* Sessionless Signal (SLS) Improvements: Allow apps to specify and fetch
+  SLS only when there is a signal they are interested in.
+* Events and Actions: Ability to annotate signals and methods with human
+  readable descriptions. Descriptions are introspectable, and describe
+  semantics of signal or method call
+* UDP Transport (experimental): router to router transport using
+  reliability protocol on top of UDP.  Provide more control over the data
+  flow, and reduction of resources.
 
 
-Known Issues
-------------
+Issues Addressed in Version 14.06 Beta
+--------------------------------------
+ASACORE-35   delay in update of interfaces causes missed announcement in
+             onboarding
+ASACORE-136  A space in the path of a project prevents Java compilation on linux
+ASACORE-139  ICE client login service app should be removed from SDK for Android
+ASACORE-140  SCons should install library files with the "alljoyn_android" apps
+             (Android SDK)
+ASACORE-138  About API docs are integrated with core docs
+ASACORE-145  liballjoyn_about.a binary compatibility for objective C
+ASACORE-147  With Visual Studio 11 Express installed, cannot build
+ASACORE-153  Match multicast packets to the network interface on which they are
+             received.
+ASACORE-169  Socket connect() can block for a long time on darwin
+ASACORE-206  Complete AboutClientSample java code
+ASACORE-213  About iOS SDK: missing API ('SetDeviceName' with language)
+ASACORE-215  JoinSession API hangs instead of returning
+             ER_BUS_BLOCKING_CALL_NOT_ALLOWED, when EnableConcurrentCallbacks()
+             is not used
+ASACORE-220  AllJoynStd.h not automatically included in release mode.
+ASACORE-259  AboutIconClient::GetContent returns garbage
+ASACORE-264  AllJoynFramework_iOS: add missing files to project
+ASACORE-284  Argument of type array of Boolean fails with Android.
+ASACORE-293  AboutService sometimes crashes when responding to
+             GetObjectDescription
+ASACORE-352  Change bus config for bundled router to allow untrusted leaf nodes
+             using AJ thin library
+ASACORE-422  Add object based security APIs to Objective C bindings
+ASACORE-502  Race condition when joining threads can lead to crash
+ASACORE-512  Google Tests cannot compile with VC11
+ASACORE-548  Restrict untrusted Thin Clients in standalone daemon only for
+             Android
+ASACORE-634  Remove or update AllJoyn_API_Changes_cpp and _java files for rel
+             14.06.
 
-ALLJOYN-1967: AllJoyn router cannot (quickly) detect disconnection of non-local
-client connection such as thin-client connection
 
-ALLJOYN-2192: AllJoyn thin client does not support header compression
+Known Issues in Version 14.06 Beta
+----------------------------------
+Stability in complex environments, under load and longevity needs to be
+improved.
 
-ALLJOYN-2374: AllJoyn thin client binding cannot send/receive messages larger
-than 55KB
+ASACORE-49   Multipoint session lost on joiner side and not binder side
+             prevents joiner from rejoining.
+ASACORE-51   Implicit PropertiesChanged emit only works for multi-point sessions
+ASACORE-177  policydb: receive_type error rule with other receive attributes is
+             not working
+ASACORE-181  Memory leak on repeated registration/unregistration of the same
+             BusObject: note this is an unusual use case
+ASACORE-189  BusObject::Unregistered callback is not called for busobjects
+             after the BusAttachment is disconnected and stopped from the bus.
+ASACORE-192  Overlapping ADDMATCH rules should not fetch previously received
+             Sessionless signals again.
+ASACORE-276  If a transport is disabled in the routing node and if user tries
+             to use the exact transport for discovery, it should return
+             suitable error.
+ASACORE-341  Incorrect replyCode from AllJoynObj::AdvertiseName: it should
+             return ALLJOYN_ADVERTISENAME_REPLY_FAILED
+ASACORE-363  NameService discovery does not work over IPv6 when name service
+             IPv4 property is set to false in config file: IPv6 only discovery
+             doesn't work.
+ASACORE-366  alljoyn-daemon crashes when it loads an improper external
+             configuration file
+ASACORE-367  Router AJ objects that don't call BusController::ObjectRegister()
+             due to a failure will cause the program to lockup in a fast
+             spinning while/sleep loop
+ASACORE-370  AllJoyn does not build with Android 4.4 (KitKat) sources
+ASACORE-381  Unable to join session with another RN whose ip address has
+             changed: if an app has a cached IP address for a routing Node, and
+             that routing node's IP address changes, it will not be able to
+             connect as the cache entry is invalid
+ASACORE-401  Error advertising quietly over IPv6 multicast on iOS/OS X
+ASACORE-605  Truncation in posix version of GetTimestamp64() on 32-bit
+             platforms
+ASACORE-621  Objective-C binding needs PingAsync
+ASACORE-636  Unrelated interface down/up causes problems with Ping.
 
-ALLJOYN-2504: Calling GetPeerGUID from RequestCredentialsAsync callback may
-cause deadlock when AllJoyn is built with OpenSSL without multi-thread support
-
-AJCORE-271: Infrequent crash when running thread stress test on OpenWRT.
-
-AJCORE-920: The About library liballjoyn_about.a present in the iOS/OS X SDK
-is not used by the About service Objective C framework. It builds the About
-service libraries using an xcode file of its own. As a result, the About
-service library liballjoyn_about.a present in the core SDK would not get used
-for someone trying to use About service on iOS. They would need to build it
-using the source provided in the SDK using the About service workspace or
-project. The liballjoyn_about.a provided would however be useful for someone
-trying to use About on OS X using C++
 
 Compatibility
 -------------
+Version 14.06 Beta changed the format of the router configuration file to enable
+support for Policy DB.
 
-Applications written for AllJoyn 1.X will need to be modified and rebuilt for
-use with AllJoyn 2.0 and later.
-
-The AllJoyn wire protocol related to encryption and authentication has changed
-in the 2.1.0 release. AllJoyn interfaces that use security will not
-inter-operate with devices whose AllJoyn version is less than 2.1.0.
-
-The AllJoyn wire protocol was modified to have a 128kB maximum message size
-starting with version 2.1.0. Earlier versions of AllJoyn which attempt to send
-messages that are greater than 128kB will not inter-operate with versions
-greater than or equal to 2.1.0.
-
-Starting with version 2.2.0, AllJoyn clients on Android must obtain the manifest
-permissions needed to access wifi and Bluetooth in order to reach external
-AllJoyn nodes. These permissions are INTERNET, CHANGE_WIFI_MULTICAST_STATE,
-BLUETOOTH and BLUETOOTH_ADMIN.
-
-Starting with version 2.2.0 BusAttachment::Stop(bool) and
-BusAttachment::WaitStop() were changed to BusAttachment::Stop() and
-BusAttachment::Join() to be more consistent with the internal threading model of
-AllJoyn (ALLJOYN-803).
-
-Starting with version 2.5.0, AllJoyn control related callbacks such as
-BusListener::FoundAdvertisedName cannot make AllJoyn remote procedure calls or
-any type of blocking call without first enabling concurrent callbacks via the
-new BusAttachment.EnableConcurrentCallbacks() API.
-
-Version 3.0.0 shipped with an issue (ALLJOYN-1423) that prevented earlier versions
-of AllJoyn from seeing multicast advertisements produced by 3.0.0 based
-applications. This issue was addressed in version 3.0.1.
-
-Version 3.3.0 is the first version of the AllJoyn daemon that is compatible with
-AllJoyn thin client usage. Older daemons cannot be used with AllJoyn thin-clients.
-
-Starting with version 3.3.0, the AllJoyn Java binding call
-BusAttachement.registerSignalHandler() no longer implicitly adds a match rule
-that allows all globally broadcast signals of the given interface to be received.
-Beginning with version 3.3.0 of the Java binding, the application developer is
-responsible for explicitly calling BusAttachment.AddMatch with a rule that
-matches the globally broadcast signals that the app wishes to receive.
-
-Starting with version 3.4.0 the AllJoyn daemon and sample programs use a common
-shared library called liballjoyn.so on Linux and OpenWrt. In order to run these
-programs, you will need to set the LD_LIBRARY_PATH environment variable to
-include the directory where liballjoyn.so is located.
-
-Version 14.02.00 renamed libajdaemon.a and BundledDaemon.o to libajrouter.a and
-BundledRouter.o to match the AllJoyn terminology of leaf and router nodes.
+Version 14.02 renamed libajdaemon.a and BundledDaemon.o to libajrouter.a
+and BundledRouter.o to match the AllJoyn terminology of leaf and router
+nodes. 
 
 Change history
 --------------
-
-14.06.00 - Bug fixes.  Removed support for ICE.
-
-14.02.00 - Bug fixes.  Removed support for Windows RT.
-
-3.4.6 - Bug fixes.  Improve CPU and memory usage when using sessionless signals.
-
-3.4.3 - Bug fixes.
-
-3.4.2 - Bug fixes.
-    
-3.4.1 - Bug fixes.
-
-3.4.0 - Added support for Serial Line AllJoyn Protocol (SLAP) transport and
-        object level security.
-
-3.3.2 - Bug fixes.
-
-3.3.0 - Support for AllJoyn thin-clients. Enhanced sessionless signal support.
-
-3.2.0 - Support for OpenWRT, asynchronous callbacks in JavaScript binding, 
-        and sessionless signals.
-        
-3.0.2 - Bug fixes.
-
-3.0.1 - Bug fixes.
-
-3.0.0 - Added support for Win8 / WinRT and iOS / OSX
-
-2.6.0 - Support for "bundled daemon" wherein an application developer can
-        include all necessary AllJoyn components directly into their app.
-        Added AllJoyn Extension for Unity.
-
-2.5.1 - Bug fixes.
-
-2.5.0 - Support for ICE transport.  Support for Concurrent Methods/Signals.
-        Added new API BusAttachment.SetLinkTimeoutAsync. Added GoogleTest
-        Suite for AllJoyn core.
-
-2.3.6 - Added AllJoyn Extension for Unity (AllJoyn 2.3.6 only).
-        Note: AllJoyn Extension for Unity was NOT included in AllJoyn 2.5.x,
-        but was back again in AllJoyn 2.6.0 and later releases.
-
-2.3.5 - Bug fixes.
-
-2.3.3 - Bug fixes.
-
-2.3.2 - Bug fixes.
-
-2.3.1 - Bug fixes.
-
-2.3.0 - Added support for dynamic enable/disable of Bluetooth device on
-        Windows. Alpha support for Android ICS. BT and Windows stability.
-
-2.2.0 - Support for bundled daemon. BT fixes. Minor mods to security API.
-        Support for link timeout. Support for Android manifest enforced
-        security. Support for parallel authentication. Added
-        SessionMemberAdded/SessionMemberRemoved. Added BusAttachment::release()
-        to Java binding. Support for BusAttachment::Set/GetKeyExpiration().
-        Support for Windows CNG.
-
-2.1.0 - Added Java thread safety. Security fixes. Minor mods to security API.
-        Added AllJoyn.apk for non-rooted devices (wifi only).
-
-2.0.1 - Bug fixes.
-
-2.0.0 - Added sessions and topology management.
-        API's and daemon protocols changed.
-
-1.8.0 - Initial Open Source Release
-
+14.06 Beta - Bug fixes. Removed support for ICE. Added a number of features:
+ * Next Generation Name Service (NGNS)
+ * Security Enhancements
+ * Policy DB
+ * Sessionless Signal (SLS) Improvements
+ * Events and Actions
+ * UDP Transport (experimental)
+14.02 - Bug fixes. Removed support for Windows RT.
+3.4.6 - Bug fixes. Improve CPU and memory usage when using sessionless signals.
