@@ -1592,13 +1592,16 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(Status.OK, bus.ping(bus.getUniqueName(), 1000, new OnPingListener() {
             @Override
             public void onPing(Status status, Object context) {
-                assertEquals(Status.OK, status);
-                int i = ((Integer)context).intValue();
-                assertEquals(0xdeedfeed, i);
-                onPinged = true;
+                synchronized(this) {
+                    assertEquals(Status.OK, status);
+                    int i = ((Integer)context).intValue();
+                    assertEquals(0xdeedfeed, i);
+                    onPinged = true;
+                }
                 // stopWait seems to block sometimes, so enable concurrency.
                 bus.enableConcurrentCallbacks();
                 stopWait();
+                
             }
         }, context));
         this.wait(5 * 1000);
@@ -1618,10 +1621,12 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(Status.OK, bus.ping(otherBus.getUniqueName(), 1000, new OnPingListener() {
             @Override
             public void onPing(Status status, Object context) {
-                assertEquals(Status.OK, status);
-                int i = ((Integer)context).intValue();
-                assertEquals(0xdeedfeed, i);
-                onPinged = true;
+                synchronized(this) {
+                    assertEquals(Status.OK, status);
+                    int i = ((Integer)context).intValue();
+                    assertEquals(0xdeedfeed, i);
+                    onPinged = true;
+                }
                 // stopWait seems to block sometimes, so enable concurrency.
                 bus.enableConcurrentCallbacks();
                 stopWait();
