@@ -132,6 +132,9 @@ bool Rule::IsMatch(Message& msg) const
         return false;
     }
     if (!implements.empty()) {
+        if (strcmp(msg->GetInterface(), "org.alljoyn.About") || strcmp(msg->GetMemberName(), "Announce")) {
+            return false;
+        }
         /*
          * Clone the message since this message is unmarshalled by the
          * LocalEndpoint too and the process of unmarshalling is not
