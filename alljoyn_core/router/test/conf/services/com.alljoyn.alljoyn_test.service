@@ -1,3 +1,0 @@
-[D-BUS Service]
-Name=org.alljoyn.alljoyn_test
-Exec=/home/username/git/alljoyn/alljoyn/build/linux/x86/debug/dist/bin/bbservice
