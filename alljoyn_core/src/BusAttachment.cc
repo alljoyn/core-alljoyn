@@ -2315,6 +2315,10 @@ QStatus BusAttachment::Ping(const char* name, uint32_t timeout)
                 status = ER_ALLJOYN_PING_REPLY_UNREACHABLE;
                 break;
 
+            case ALLJOYN_PING_REPLY_IN_PROGRESS:
+                status = ER_ALLJOYN_PING_REPLY_IN_PROGRESS;
+                break;
+
             default:
                 status = ER_BUS_UNEXPECTED_DISPOSITION;
                 break;
@@ -2392,6 +2396,10 @@ void BusAttachment::Internal::PingAsyncCB(Message& reply, void* context)
 
             case ALLJOYN_PING_REPLY_UNREACHABLE:
                 status = ER_ALLJOYN_PING_REPLY_UNREACHABLE;
+                break;
+
+            case ALLJOYN_PING_REPLY_IN_PROGRESS:
+                status = ER_ALLJOYN_PING_REPLY_IN_PROGRESS;
                 break;
 
             default:

@@ -1658,6 +1658,27 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
     // be able to hear our discovery requests, we need to send both flavors of
     // message.  Since the version is located in the message header, this means
     // two messages.
+
+    //
+    // Do it once for version two.
+    //
+    if (type & TRANSMIT_V2) {
+        m_v2_queries[transportIndex].insert(matchingStr);
+        if (!((transportMask == TRANSPORT_FIRST_OF_PAIR) && ((completeTransportMask & TRANSPORT_SECOND_OF_PAIR) == TRANSPORT_SECOND_OF_PAIR))) {
+
+            MDNSPacket query;
+
+            MDNSSearchRData* searchRData = new MDNSSearchRData();
+            for (MatchMap::iterator it = matching.begin(); it != matching.end(); ++it) {
+                searchRData->SetValue(it->first, it->second);
+            }
+            MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
+            query->AddAdditionalRecord(searchRecord);
+
+            Query(completeTransportMask, query);
+            delete searchRData;
+        }
+    }
     //
     // Do it once for version zero.
     //
@@ -1770,28 +1791,6 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
     }
 
 
-    //
-    // Do it again for version two.
-    //
-    if (type & TRANSMIT_V2) {
-        m_v2_queries[transportIndex].insert(matchingStr);
-        if ((transportMask == TRANSPORT_FIRST_OF_PAIR) && ((completeTransportMask & TRANSPORT_SECOND_OF_PAIR) == TRANSPORT_SECOND_OF_PAIR)) {
-
-            return ER_OK;
-        }
-
-        MDNSPacket query;
-
-        MDNSSearchRData* searchRData = new MDNSSearchRData();
-        for (MatchMap::iterator it = matching.begin(); it != matching.end(); ++it) {
-            searchRData->SetValue(it->first, it->second);
-        }
-        MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
-        query->AddAdditionalRecord(searchRecord);
-
-        Query(completeTransportMask, query);
-        delete searchRData;
-    }
 
     return ER_OK;
 }
@@ -1840,19 +1839,39 @@ QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::
     // We first retrieve the destination for the guid from the PeerInfoMap and set the destination for the
     // MDNS packet that we will be sending out over unicast to this guid
     //
-    std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.find(guid);
+    m_mutex.Lock();
+    std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.end();
+    if (!ping) {
+        it = m_peerInfoMap.find(guid);
+    } else {
+        for (std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator i = m_peerInfoMap.begin();
+             i != m_peerInfoMap.end(); ++i) {
+            if (qcc::GUID128(i->first).ToShortString() == guid) {
+                it = i;
+                break;
+            }
+        }
+    }
+    std::list<PeerInfo> peerList;
     if (it != m_peerInfoMap.end()) {
+        peerList = it->second;
+    }
+    m_mutex.Unlock();
+
+    std::list<PeerInfo>::iterator pit = peerList.begin();
+    if (!peerList.empty()) {
         Timespec now;
         GetTimeNow(&now);
         QCC_DbgPrintf(("Entry found in Peer Info Map. Setting unicast destination"));
 
-        std::list<PeerInfo>::iterator pit = it->second.begin();
-        while (pit != it->second.end()) {
+        while (pit != peerList.end()) {
             if (!ping && ((now - (*pit).lastQueryTimeStamp) < MIN_THRESHOLD_CACHE_REFRESH_MS)) {
                 ++pit;
                 continue;
             }
-            (*pit).lastQueryTimeStamp = now;
+            if (!ping) {
+                (*pit).lastQueryTimeStamp = now;
+            }
 
             MDNSPacket query;
             query->SetDestination((*pit).unicastIPV4Info);
@@ -1879,6 +1898,9 @@ QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::
             ++pit;
         }
     } else {
+        if (ping) {
+            return ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED;
+        }
         QCC_DbgPrintf((" IpNameServiceImpl::RefreshCache(): Entry not found in PeerInfoMap"));
     }
 
@@ -2090,6 +2112,25 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
     // daemons be able to hear our advertisements, we need to send both flavors
     // of message.  Since the version is located in the message header, this
     // means two messages.
+
+    //
+    // Do it once for version two.
+    //
+    if (!((transportMask == TRANSPORT_FIRST_OF_PAIR) && ((completeTransportMask & TRANSPORT_SECOND_OF_PAIR) == TRANSPORT_SECOND_OF_PAIR))) {
+        //version two
+        MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
+        advRData->SetTransport(completeTransportMask & (TRANSPORT_TCP | TRANSPORT_UDP));
+        for (uint32_t i = 0; i < wkn.size(); ++i) {
+            advRData->SetValue("name", wkn[i]);
+        }
+        MDNSResourceRecord advRecord("advertise." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
+
+        MDNSPacket mdnsPacket;
+        mdnsPacket->AddAdditionalRecord(advRecord);
+        mdnsPacket->SetVersion(2, 2);
+        Response(completeTransportMask, 120, mdnsPacket);
+        delete advRData;
+    }
     //
     // Do it once for version zero.
     //
@@ -2288,27 +2329,6 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
         }
     }
 
-    //
-    // Do it once for version two.
-    //
-    if ((transportMask == TRANSPORT_FIRST_OF_PAIR) && ((completeTransportMask & TRANSPORT_SECOND_OF_PAIR) == TRANSPORT_SECOND_OF_PAIR)) {
-        return ER_OK;
-    }
-    {
-        //version two
-        MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
-        advRData->SetTransport(completeTransportMask & (TRANSPORT_TCP | TRANSPORT_UDP));
-        for (uint32_t i = 0; i < wkn.size(); ++i) {
-            advRData->SetValue("name", wkn[i]);
-        }
-        MDNSResourceRecord advRecord("advertise." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, advRData);
-
-        MDNSPacket mdnsPacket;
-        mdnsPacket->AddAdditionalRecord(advRecord);
-        mdnsPacket->SetVersion(2, 2);
-        Response(completeTransportMask, 120, mdnsPacket);
-        delete advRData;
-    }
 
     return ER_OK;
 }
@@ -2617,13 +2637,7 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
 QStatus IpNameServiceImpl::Ping(TransportMask transportMask, const qcc::String& guid, const qcc::String& name)
 {
     qcc::String pingString = "name='" + name + "'";
-    for (std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.begin();
-         it != m_peerInfoMap.end(); ++it) {
-        if (qcc::GUID128(it->first).ToShortString() == guid) {
-            return RefreshCache(transportMask, it->first, pingString, ALWAYS_RETRY, true);
-        }
-    }
-    return ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED;
+    return RefreshCache(transportMask, guid, pingString, ALWAYS_RETRY, true);
 }
 
 QStatus IpNameServiceImpl::Query(TransportMask completeTransportMask, MDNSPacket mdnsPacket)
@@ -3025,7 +3039,8 @@ void IpNameServiceImpl::SendProtocolMessage(
     uint32_t flags,
     bool sockFdIsIPv4,
     Packet packet,
-    uint32_t interfaceIndex)
+    uint32_t interfaceIndex,
+    const qcc::IPAddress localAddress)
 {
     QCC_DbgPrintf(("**********IpNameServiceImpl::SendProtocolMessage()"));
 
@@ -3157,11 +3172,13 @@ void IpNameServiceImpl::SendProtocolMessage(
                 }
             } else if (m_enableV1) {
                 qcc::IPAddress ipv4LocalMulticast(IPV4_ALLJOYN_MULTICAST_GROUP);
-                QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
-                                 ipv4LocalMulticast.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
-                QStatus status = qcc::SendTo(sockFd, ipv4LocalMulticast, MULTICAST_PORT, buffer, size, sent);
-                if (status != ER_OK) {
-                    QCC_LogError(status, ("IpNameServiceImpl::SendProtocolMessage():  Error sending to IPv4 Local Network Control Block multicast group"));
+                if (localAddress == qcc::IPAddress("0.0.0.0") || localAddress == ipv4LocalMulticast) {
+                    QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
+                                     ipv4LocalMulticast.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
+                    QStatus status = qcc::SendTo(sockFd, ipv4LocalMulticast, MULTICAST_PORT, buffer, size, sent);
+                    if (status != ER_OK) {
+                        QCC_LogError(status, ("IpNameServiceImpl::SendProtocolMessage():  Error sending to IPv4 Local Network Control Block multicast group"));
+                    }
                 }
             }
         }
@@ -3211,7 +3228,7 @@ void IpNameServiceImpl::SendProtocolMessage(
                 QStatus status;
                 if (msgVersion == 2) {
                     status = qcc::SendTo(sockFd, ipv4Broadcast, BROADCAST_MDNS_PORT, buffer, size, sent);
-                } else if (m_enableV1) {
+                } else if (m_enableV1 && (localAddress == qcc::IPAddress("0.0.0.0") || localAddress == ipv4Broadcast)) {
                     status = qcc::SendTo(sockFd, ipv4Broadcast, BROADCAST_PORT, buffer, size, sent);
                 } else {
                     status = ER_OK;
@@ -3444,6 +3461,9 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                 if (haveIPv6address && (unicastIpv6Port != 0)) {
                     refRData->SetIPV6ResponseAddr(ipv6address.ToString());
                     refRData->SetIPV6ResponsePort(unicastIpv6Port);
+                } else {
+                    refRData->RemoveEntry("ipv6");
+                    refRData->RemoveEntry("upcv6");
                 }
             } else {
 
@@ -3867,7 +3887,7 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
     }
 }
 
-void IpNameServiceImpl::SendOutboundMessageActively(Packet packet)
+void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IPAddress localAddress)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively()"));
 
@@ -3887,6 +3907,11 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet)
     QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively(): Walk interfaces"));
 
     for (uint32_t i = 0; (m_state == IMPL_RUNNING || m_terminal) && (i < m_liveInterfaces.size()); ++i) {
+        if (packet->InterfaceIndexSet() && packet->AddressFamilySet()) {
+            if (!(m_liveInterfaces[i].m_index == packet->GetInterfaceIndex() && m_liveInterfaces[i].m_address.GetAddressFamily() == packet->GetAddressFamily())) {
+                continue;
+            }
+        }
         QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively(): Checking out live interface %d. (\"%s\")",
                        i, m_liveInterfaces[i].m_interfaceName.c_str()));
 
@@ -4157,10 +4182,10 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet)
         //
         if (msgVersion == 2) {
             SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
-                                flags, interfaceIsIPv4, packet, i);
+                                flags, interfaceIsIPv4, packet, i, localAddress);
         } else if (m_liveInterfaces[i].m_multicastsockFd != -1) {
             SendProtocolMessage(m_liveInterfaces[i].m_multicastsockFd, ipv4address, interfaceAddressPrefixLen,
-                                flags, interfaceIsIPv4, packet, i);
+                                flags, interfaceIsIPv4, packet, i, localAddress);
         }
     }
 }
@@ -4544,18 +4569,6 @@ void* IpNameServiceImpl::Run(void* arg)
                     }
                 }
 
-                // Get IPv4 address of interface for this message (message may
-                // have been received on the IPv6 address).  This will be used
-                // as a sanity check later against the connect spec in the
-                // message.
-                uint32_t interfaceIndex;
-                for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
-                    if (ifName == m_liveInterfaces[i].m_interfaceName && m_liveInterfaces[i].m_address.IsIPv4()) {
-                        interfaceIndex = i;
-                        break;
-                    }
-                }
-
                 if (recvPort != -1 && ifIndex != -1) {
                     QCC_DbgHLPrintf(("Processing packet on interface index %d that was received on index %d from %s:%u to %s:%u",
                                      ifIndex, localInterfaceIndex, remoteAddress.ToString().c_str(), remotePort, localAddress.ToString().c_str(), recvPort));
@@ -4569,7 +4582,7 @@ void* IpNameServiceImpl::Run(void* arg)
                 //
                 if (recvPort != -1 && ifIndex != -1) {
                     qcc::IPEndpoint endpoint(remoteAddress, remotePort);
-                    HandleProtocolMessage(buffer, nbytes, endpoint, recvPort, interfaceIndex);
+                    HandleProtocolMessage(buffer, nbytes, endpoint, recvPort, ifIndex, localAddress);
                 }
             }
         }
@@ -5078,7 +5091,7 @@ void IpNameServiceImpl::GetQueryPackets(std::list<Packet>& packets, const uint8_
     m_mutex.Unlock();
 }
 
-void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask completeTransportMask)
+void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask completeTransportMask, int32_t interfaceIndex, qcc::AddressFamily family, const qcc::IPAddress localAddress)
 {
     // Type can be one of the following 3 values:
     // TRANSMIT_V0_V1: transmit version zero and version one messages.
@@ -5136,7 +5149,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
     // possibility in version zero and keeping in mind that we aren't going to
     // send version zero messages over our newly defined "quiet" mechanism.
     //
-    if (transportIndex == TRANSPORT_INDEX_TCP && quietly == false && (type & TRANSMIT_V0_V1)) {
+    if (transportIndex == TRANSPORT_INDEX_TCP && quietly == false && (type & TRANSMIT_V0)) {
         //
         // Keep track of how many messages we actually send in order to get all of
         // the advertisements out.
@@ -5256,10 +5269,23 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                     SendOutboundMessageQuietly(Packet::cast(nspacket));
                 } else {
                     nspacket->ClearDestination();
-                    SendOutboundMessageActively(Packet::cast(nspacket));
+                    if (interfaceIndex != -1) {
+                        nspacket->SetInterfaceIndex(interfaceIndex);
+                    } else {
+                        nspacket->ClearInterfaceIndex();
+                    }
+                    if (family != qcc::QCC_AF_UNSPEC) {
+                        nspacket->SetAddressFamily(family);
+                    } else {
+                        nspacket->ClearAddressFamily();
+                    }
+                    if (localAddress != IPAddress("0.0.0.0")) {
+                        SendOutboundMessageActively(Packet::cast(nspacket), localAddress);
+                    } else {
+                        SendOutboundMessageActively(Packet::cast(nspacket));
+                    }
                 }
 
-                qcc::Sleep(rand() % 128);
 
                 ++nSent;
 
@@ -5294,15 +5320,28 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         nspacket->AddAnswer(isAt);
 
         nspacket->ClearDestination();
-        SendOutboundMessageActively(Packet::cast(nspacket));
-        qcc::Sleep(rand() % 128);
+        if (interfaceIndex != -1) {
+            nspacket->SetInterfaceIndex(interfaceIndex);
+        } else {
+            nspacket->ClearInterfaceIndex();
+        }
+        if (family != qcc::QCC_AF_UNSPEC) {
+            nspacket->SetAddressFamily(family);
+        } else {
+            nspacket->ClearAddressFamily();
+        }
+        if (localAddress != IPAddress("0.0.0.0")) {
+            SendOutboundMessageActively(Packet::cast(nspacket), localAddress);
+        } else {
+            SendOutboundMessageActively(Packet::cast(nspacket));
+        }
     }
 
     //
     // Put together and send response packets for version one.
     //
 
-    if ((transportIndex == TRANSPORT_INDEX_TCP) && type & TRANSMIT_V0_V1) {
+    if ((transportIndex == TRANSPORT_INDEX_TCP) && type & TRANSMIT_V1) {
         //
         // Keep track of how many messages we actually send in order to get all of
         // the advertisements out.
@@ -5426,10 +5465,23 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                     SendOutboundMessageQuietly(Packet::cast(nspacket));
                 } else {
                     nspacket->ClearDestination();
-                    SendOutboundMessageActively(Packet::cast(nspacket));
+                    if (interfaceIndex != -1) {
+                        nspacket->SetInterfaceIndex(interfaceIndex);
+                    } else {
+                        nspacket->ClearInterfaceIndex();
+                    }
+                    if (family != qcc::QCC_AF_UNSPEC) {
+                        nspacket->SetAddressFamily(family);
+                    } else {
+                        nspacket->ClearAddressFamily();
+                    }
+                    if (localAddress != IPAddress("0.0.0.0")) {
+                        SendOutboundMessageActively(Packet::cast(nspacket), localAddress);
+                    } else {
+                        SendOutboundMessageActively(Packet::cast(nspacket));
+                    }
                 }
 
-                qcc::Sleep(rand() % 128);
 
                 ++nSent;
 
@@ -5468,7 +5520,6 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                         SendOutboundMessageActively(Packet::cast(nspacket));
                     }
 
-                    qcc::Sleep(rand() % 128);
 
                     ++nSent;
 
@@ -5503,9 +5554,22 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
             SendOutboundMessageQuietly(Packet::cast(nspacket));
         } else {
             nspacket->ClearDestination();
-            SendOutboundMessageActively(Packet::cast(nspacket));
+            if (interfaceIndex != -1) {
+                nspacket->SetInterfaceIndex(interfaceIndex);
+            } else {
+                nspacket->ClearInterfaceIndex();
+            }
+            if (family != qcc::QCC_AF_UNSPEC) {
+                nspacket->SetAddressFamily(family);
+            } else {
+                nspacket->ClearAddressFamily();
+            }
+            if (localAddress != IPAddress("0.0.0.0")) {
+                SendOutboundMessageActively(Packet::cast(nspacket), localAddress);
+            } else {
+                SendOutboundMessageActively(Packet::cast(nspacket));
+            }
         }
-        qcc::Sleep(rand() % 128);
 
     }
 
@@ -5657,7 +5721,6 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                         SendOutboundMessageActively(Packet::cast(mdnsPacket));
                     }
 
-                    qcc::Sleep(rand() % 128);
 
                     ++nSent;
 
@@ -5696,7 +5759,6 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                         mdnsPacket->SetDestination(destination);
                         SendOutboundMessageQuietly(Packet::cast(mdnsPacket));
 
-                        qcc::Sleep(rand() % 128);
 
                         ++nSent;
 
@@ -5734,7 +5796,6 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
             mdnsPacket->ClearDestination();
             SendOutboundMessageActively(Packet::cast(mdnsPacket));
         }
-        qcc::Sleep(rand() % 128);
 
     }
     m_mutex.Unlock();
@@ -5768,7 +5829,7 @@ void IpNameServiceImpl::DoPeriodicMaintenance(void)
     m_mutex.Unlock();
 }
 
-void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpoint& endpoint)
+void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpoint& endpoint, int32_t interfaceIndex, const qcc::IPAddress& localAddress)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuestion(%s)", endpoint.ToString().c_str()));
 
@@ -5793,6 +5854,13 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
         }
     }
 
+    if (nsVersion == 1 && msgVersion == 1) {
+        if (whoHas.GetUdpFlag()) {
+            QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuestion(): Ignoring version one message from version two peer"));
+            m_mutex.Unlock();
+            return;
+        }
+    }
 
     //
     // The who-has message doesn't specify which transport is doing the asking.
@@ -5886,7 +5954,19 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
         //
         if (respond) {
             m_mutex.Unlock();
-            Retransmit(index, false, respondQuietly, endpoint, TRANSMIT_V0_V1, MaskFromIndex(index));
+            qcc::AddressFamily family = qcc::QCC_AF_UNSPEC;
+            if (endpoint.GetAddress().IsIPv4()) {
+                family = QCC_AF_INET;
+            }
+            if (endpoint.GetAddress().IsIPv6()) {
+                family = QCC_AF_INET6;
+            }
+            if (nsVersion == 0 && msgVersion == 0) {
+                Retransmit(index, false, respondQuietly, endpoint, TRANSMIT_V0, MaskFromIndex(index), interfaceIndex, family, localAddress);
+            }
+            if (nsVersion == 1 && msgVersion == 1) {
+                Retransmit(index, false, respondQuietly, endpoint, TRANSMIT_V1, MaskFromIndex(index), interfaceIndex, family, localAddress);
+            }
             m_mutex.Lock();
         }
     }
@@ -5897,6 +5977,21 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
 void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qcc::IPEndpoint& endpoint, int32_t interfaceIndex)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(%s)", endpoint.ToString().c_str()));
+
+    // Get IPv4 address of interface for this message (message may have been
+    // received on the IPv6 address).  This will be used as a sanity check later
+    // against the connect spec in the message.
+    String ifName;
+    int32_t ifIndexV4 = -1;
+    for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
+        if (interfaceIndex == m_liveInterfaces[i].m_index) {
+            ifName = m_liveInterfaces[i].m_interfaceName;
+            if (m_liveInterfaces[i].m_address.IsIPv4()) {
+                ifIndexV4 = i;
+                break;
+            }
+        }
+    }
 
     //
     // We have to determine where the transport mask is going to come
@@ -6093,7 +6188,8 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
         // one.
         //
         if (ipv4address.size()) {
-            if (SameNetwork(m_liveInterfaces[interfaceIndex].m_prefixlen, m_liveInterfaces[interfaceIndex].m_address, ipv4address)) {
+            if (ifIndexV4 != -1 &&
+                SameNetwork(m_liveInterfaces[ifIndexV4].m_prefixlen, m_liveInterfaces[ifIndexV4].m_address, ipv4address)) {
                 snprintf(addrbuf, sizeof(addrbuf), "r4addr=%s,r4port=%d", ipv4address.c_str(), port);
                 qcc::String busAddress(addrbuf);
 
@@ -6115,7 +6211,7 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
                     QCC_LogError(ER_WARNING, ("Ignoring advertisement from %s for %s received on %s",
                                               endpoint.addr.ToString().c_str(),
                                               ipv4address.c_str(),
-                                              m_liveInterfaces[interfaceIndex].m_address.ToString().c_str()));
+                                              ifName.c_str()));
                 }
             }
         }
@@ -6216,9 +6312,9 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
             needComma = true;
         }
 
-        if (!isAt.GetReliableIPv4Flag() || SameNetwork(m_liveInterfaces[interfaceIndex].m_prefixlen,
-                                                       m_liveInterfaces[interfaceIndex].m_address,
-                                                       isAt.GetReliableIPv4Address())) {
+        if (!isAt.GetReliableIPv4Flag() || (ifIndexV4 != -1 && SameNetwork(m_liveInterfaces[ifIndexV4].m_prefixlen,
+                                                                           m_liveInterfaces[ifIndexV4].m_address,
+                                                                           isAt.GetReliableIPv4Address()))) {
             //
             // In version one of the protocol, we always call back with the
             // addresses we find in the message.  We don't bother with the address
@@ -6244,7 +6340,7 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
                 QCC_LogError(ER_WARNING, ("Ignoring advertisement from %s for %s received on %s",
                                           endpoint.addr.ToString().c_str(),
                                           isAt.GetReliableIPv4Address().c_str(),
-                                          m_liveInterfaces[interfaceIndex].m_address.ToString().c_str()));
+                                          ifName.c_str()));
             }
         }
     }
@@ -6253,7 +6349,7 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
 }
 
 
-void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint, const uint16_t recvPort, int32_t interfaceIndex)
+void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint, const uint16_t recvPort, int32_t interfaceIndex, const qcc::IPAddress& localAddress)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolMessage(0x%x, %d, %s)", buffer, nbytes, endpoint.ToString().c_str()));
 
@@ -6298,7 +6394,7 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
         // to pass on this information to other interested bystanders.
         //
         for (uint8_t i = 0; i < nsPacket->GetNumberQuestions(); ++i) {
-            HandleProtocolQuestion(nsPacket->GetQuestion(i), endpoint);
+            HandleProtocolQuestion(nsPacket->GetQuestion(i), endpoint, interfaceIndex, localAddress);
         }
 
         //
@@ -6436,6 +6532,21 @@ bool IpNameServiceImpl::UpdateMDNSPacketTracker(qcc::String guid, IPEndpoint end
 
 void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint endpoint, uint16_t recvPort, int32_t interfaceIndex)
 {
+    // Get IPv4 address of interface for this message (message may have been
+    // received on the IPv6 address).  This will be used as a sanity check later
+    // against the connect spec in the message.
+    String ifName;
+    int32_t ifIndexV4 = -1;
+    for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
+        if (interfaceIndex == m_liveInterfaces[i].m_index) {
+            ifName = m_liveInterfaces[i].m_interfaceName;
+            if (m_liveInterfaces[i].m_address.IsIPv4()) {
+                ifIndexV4 = i;
+                break;
+            }
+        }
+    }
+
     // Check if someone is providing info. about an alljoyn service.
     MDNSResourceRecord* answerTcp;
     MDNSResourceRecord* answerUdp;
@@ -6596,9 +6707,9 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint
         }
     }
 
-    if (r4.addr.IsIPv4() && !SameNetwork(m_liveInterfaces[interfaceIndex].m_prefixlen,
-                                         m_liveInterfaces[interfaceIndex].m_address,
-                                         r4.addr)) {
+    if (r4.addr.IsIPv4() && (ifIndexV4 == -1 || !SameNetwork(m_liveInterfaces[ifIndexV4].m_prefixlen,
+                                                             m_liveInterfaces[ifIndexV4].m_address,
+                                                             r4.addr))) {
         //
         // We expect that a v4 addr may be sent via a v6 link local address.  However
         // if a v4 addr is sent via a v4 address then someone is misbehaving, so log
@@ -6608,7 +6719,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint
             QCC_LogError(ER_WARNING, ("Ignoring advertisement from %s for %s received on %s",
                                       endpoint.addr.ToString().c_str(),
                                       r4.addr.ToString().c_str(),
-                                      m_liveInterfaces[interfaceIndex].m_address.ToString().c_str()));
+                                      ifName.c_str()));
         }
         m_mutex.Unlock();
         return;
@@ -6832,13 +6943,13 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, IPEndpoint en
         m_mutex.Unlock();
         return;
     }
-    HandleSearchQuery(completeTransportMask, mdnsPacket, recvPort, guid, ns4, ns6);
+    HandleSearchQuery(completeTransportMask, mdnsPacket, recvPort, guid, ns4, ns6, endpoint);
 
     m_mutex.Unlock();
 }
 
 bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, MDNSPacket mdnsPacket, uint16_t recvPort,
-                                          const qcc::String& guid, const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6)
+                                          const qcc::String& guid, const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6, const qcc::IPEndpoint& endpoint)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::HandleSearchQuery"));
     MDNSResourceRecord* searchRecord;
@@ -6940,8 +7051,12 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
         //
         if (respond) {
             m_mutex.Unlock();
-            Retransmit(index, false, true, ns4, TRANSMIT_V2, completeTransportMask);
-            Retransmit(index, false, true, ns6, TRANSMIT_V2, completeTransportMask);
+            if (endpoint.GetAddress().IsIPv4()) {
+                Retransmit(index, false, true, ns4, TRANSMIT_V2, completeTransportMask);
+            }
+            if (endpoint.GetAddress().IsIPv6()) {
+                Retransmit(index, false, true, ns6, TRANSMIT_V2, completeTransportMask);
+            }
             m_mutex.Lock();
         }
     }
@@ -6977,8 +7092,8 @@ QStatus IpNameServiceImpl::Stop()
     QCC_DbgPrintf(("IpNameServiceImpl::Stop(): Stopping thread"));
     QStatus status = Thread::Stop();
     QCC_DbgPrintf(("IpNameServiceImpl::Stop(): Stopped"));
-    m_mutex.Unlock();
     m_packetScheduler.Stop();
+    m_mutex.Unlock();
     return status;
 }
 

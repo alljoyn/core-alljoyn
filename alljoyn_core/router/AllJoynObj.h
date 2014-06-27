@@ -59,7 +59,26 @@ class BusController;
 class AllJoynObj : public BusObject, public NameListener, public TransportListener, public qcc::AlarmListener,
     public IpNameServiceListener {
     friend class _RemoteEndpoint;
+    struct PingAlarmContext;
+    class OutgoingPingInfo {
+      public:
+        qcc::Alarm alarm;
+        Message message;
+        OutgoingPingInfo(qcc::Alarm alarm, Message message) : alarm(alarm), message(message) { };
+      private:
+        OutgoingPingInfo();
+    };
+    class IncomingPingInfo {
+      public:
+        TransportMask transport;
+        qcc::IPEndpoint ns4;
 
+        IncomingPingInfo(TransportMask transport, qcc::IPEndpoint ns4) :
+            transport(transport), ns4(ns4)
+        { };
+      private:
+        IncomingPingInfo();
+    };
   public:
     /**
      * Constructor
@@ -980,8 +999,10 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort);
     void PingResponse(TransportMask transport, const qcc::IPEndpoint& ns4, const qcc::String& name, uint32_t replyCode);
 
-    std::multimap<qcc::String, void*> pingReplyContexts;
+    std::multimap<std::pair<qcc::String, qcc::String>, OutgoingPingInfo> outgoingPingMap;
+    std::multimap<qcc::String, IncomingPingInfo> incomingPingMap;
     TransportMask GetCompleteTransportMaskFilter();
+    void SendIPNSResponse(qcc::String name, uint32_t replyCode);
 };
 
 }
