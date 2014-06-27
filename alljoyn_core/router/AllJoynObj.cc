@@ -919,7 +919,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 uint64_t now = GetTimestamp64();
                 if (now > (startTime + 30000LL)) {
                     replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
-                    QCC_LogError(ER_FAIL, ("JoinSession timed out waiting for %s to appear on %s", sessionHost, b2bEp->GetUniqueName().c_str()));
+                    QCC_DbgPrintf(("JoinSession timed out waiting for %s to appear on %s", sessionHost, b2bEp->GetUniqueName().c_str()));
                     break;
                 }
                 /* Give up the locks while waiting */
