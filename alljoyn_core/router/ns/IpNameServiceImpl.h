@@ -218,8 +218,10 @@ class IpNameServiceImpl : public qcc::Thread {
         IPV6 = 2    /**< Return the address in IPv6 suitable form */
     };
 
-    const static uint8_t TRANSMIT_V0_V1 = 1;
-    const static uint8_t TRANSMIT_V2 = 2;
+    const static uint8_t TRANSMIT_V0 = 1;
+    const static uint8_t TRANSMIT_V1 = 2;
+    const static uint8_t TRANSMIT_V2 = 4;
+    const static uint8_t TRANSMIT_V0_V1 = (TRANSMIT_V0 | TRANSMIT_V1);
 
     /**
      * @internal
@@ -1021,7 +1023,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * Send outbound name service messages over multicast, out the list of live
      * interfaces implied by the transport masks in the message.
      */
-    void SendOutboundMessageActively(Packet packet);
+    void SendOutboundMessageActively(Packet packet, const qcc::IPAddress localAddress = qcc::IPAddress("0.0.0.0"));
 
     /**
      * Main thread entry point.
@@ -1073,7 +1075,9 @@ class IpNameServiceImpl : public qcc::Thread {
         uint32_t flags,
         bool sockFdIsIPv4,
         Packet packet,
-        uint32_t interfaceIndex);
+        uint32_t interfaceIndex,
+        const qcc::IPAddress localAddress =  qcc::IPAddress("0.0.0.0"));
+
 
     /**
      * @internal
@@ -1138,13 +1142,13 @@ class IpNameServiceImpl : public qcc::Thread {
      * @internal
      * @brief Do something with a received protocol message.
      */
-    void HandleProtocolMessage(uint8_t const* const buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint, const uint16_t recv_port, int32_t interfaceIndex);
+    void HandleProtocolMessage(uint8_t const* const buffer, uint32_t nbytes, const qcc::IPEndpoint& endpoint, const uint16_t recv_port, int32_t interfaceIndex, const qcc::IPAddress& localAddress);
 
     /**
      * @internal
      * @brief Do something with a received protocol question.
      */
-    void HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpoint& endpoint);
+    void HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpoint& endpoint, int32_t interfaceIndex, const qcc::IPAddress& localAddress);
 
     /**
      * @internal
@@ -1313,7 +1317,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @internal
      * @brief Retransmit exported advertisements.
      */
-    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask transportMask);
+    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask transportMask, int32_t interfaceIndex = -1, qcc::AddressFamily family = qcc::QCC_AF_UNSPEC, const qcc::IPAddress localAddress =  qcc::IPAddress("0.0.0.0"));
 
     void GetResponsePackets(std::list<Packet>& packets, bool quietly = false, const qcc::IPEndpoint destination = qcc::IPEndpoint("0.0.0.0", 0), uint8_t type = TRANSMIT_V2, TransportMask transportMask = (TRANSPORT_TCP | TRANSPORT_UDP));
 
@@ -1563,7 +1567,7 @@ class IpNameServiceImpl : public qcc::Thread {
     BurstExpiryHandler* burstExpiryHandler;
 
     bool HandleSearchQuery(TransportMask transport, MDNSPacket mdnsPacket, uint16_t recvPort,
-                           const qcc::String& guid, const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6);
+                           const qcc::String& guid, const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6, const qcc::IPEndpoint& endpoint);
 
     bool HandleAdvertiseResponse(MDNSPacket mdnsPacket, uint16_t recvPort,
                                  const qcc::String& guid, const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6,

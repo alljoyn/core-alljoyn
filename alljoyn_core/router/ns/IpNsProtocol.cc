@@ -41,7 +41,7 @@ using namespace qcc;
 
 namespace ajn {
 _Packet::_Packet()
-    : m_timer(0), m_destination("0.0.0.0", 0), m_destinationSet(false), m_retries(0), m_tick(0), m_version(0)
+    : m_timer(0), m_destination("0.0.0.0", 0), m_destinationSet(false), m_interfaceIndex(-1), m_interfaceIndexSet(false), m_addressFamily(qcc::QCC_AF_UNSPEC), m_addressFamilySet(false), m_retries(0), m_tick(0), m_version(0)
 {
 }
 
@@ -1183,6 +1183,8 @@ size_t WhoHas::Serialize(uint8_t* buffer) const
             QCC_DbgPrintf(("WhoHas::Serialize(): F flag"));
             typeAndFlags |= 0x1;
         }
+    } else {
+        typeAndFlags |= 0x4;
     }
 
     buffer[0] = typeAndFlags;
@@ -1281,7 +1283,9 @@ size_t WhoHas::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         break;
 
     case 1:
-        m_flagT = m_flagU = m_flagS = m_flagF = false;
+        m_flagU = (typeAndFlags & 0x4) != 0;
+        m_flagT = m_flagS = m_flagF = false;
+
         break;
 
     default:
