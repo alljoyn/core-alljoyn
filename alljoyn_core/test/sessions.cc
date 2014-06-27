@@ -763,6 +763,7 @@ int main(int argc, char** argv)
     if (argc == 2) {
         fp = fopen(argv[1], "r");
         if (fp == NULL) {
+            printf("unable to open \"%s\"\n", argv[1]);
             fp = stdin;
         } else {
             printf("reading commands from \"%s\"\n", argv[1]);
@@ -776,6 +777,7 @@ int main(int argc, char** argv)
             if (fp == stdin) {
                 break;
             } else {
+                fclose(fp);
                 fp = stdin;
                 printf("ready\n");
                 continue;
