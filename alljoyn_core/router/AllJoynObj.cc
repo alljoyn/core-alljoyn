@@ -4751,13 +4751,7 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                             delete ctx;
                         }
                         ReleaseLocks();
-
                     }
-
-                } else {
-                    AllJoynObj* pObj = this;
-                    Alarm newAlarm(timeout, pObj, ctx);
-                    timer.AddAlarm(newAlarm);
                 }
             } else {
                 replyCode = ALLJOYN_PING_REPLY_UNKNOWN_NAME;
