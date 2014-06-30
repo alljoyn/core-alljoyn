@@ -1,7 +1,7 @@
 /* bbjitter - tests roundtrip times and computes  jitter */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -181,6 +181,7 @@ class PingThread : public qcc::Thread, BusObject {
                     String errMsg;
                     const char* errName = reply->GetErrorName(&errMsg);
                     QCC_LogError(status, ("TimedPing returned ERROR_MESSAGE (error=%s, \"%s\")", errName, errMsg.c_str()));
+                    QCC_UNUSED(errName); /* avoid unused variable warning in release build */
                     break;
                 }
                 uint32_t timestamp;
@@ -265,7 +266,7 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
         free(context);
     }
 
-    void LostAdvertisedName(const char* name, const TransportMask transport, const char* prefix)
+    void LostAdvertisedName(const char* name, TransportMask transport, const char* prefix)
     {
         QCC_SyncPrintf("LostAdvertisedName(name=%s, transport=0x%x,  prefix=%s)\n", name, transport, prefix);
     }

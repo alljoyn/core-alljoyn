@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -68,16 +68,16 @@ public class BusObjectTest extends TestCase {
         Service service = new Service();
         Status status = bus.registerBusObject(service, "/service");
         assertEquals(Status.OK, status);
-        Thread.currentThread().sleep(100);
+        Thread.sleep(100);
         assertFalse(service.registered);
 
         status = bus.connect();
         assertEquals(Status.OK, status);
-        Thread.currentThread().sleep(100);
+        Thread.sleep(100);
         assertTrue(service.registered);
 
         bus.unregisterBusObject(service);
-        Thread.currentThread().sleep(100);
+        Thread.sleep(100);
         assertFalse(service.registered);
     }
 }

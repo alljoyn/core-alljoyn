@@ -1150,7 +1150,7 @@ public class MarshalTest extends TestCase {
         Variant[] av = new Variant[] { new Variant(new String("three")) };
         assertArrayEquals(av, proxy.VariantArray(av));
         @SuppressWarnings(value="unchecked")
-        TreeMap<String, String>[] aaess = (TreeMap<String, String>[]) new TreeMap[2];
+        TreeMap<String, String>[] aaess = (TreeMap<String, String>[]) new TreeMap<?, ?>[2];
         aaess[0] = new TreeMap<String, String>();
         aaess[0].put("a1", "value1");
         aaess[0].put("a2", "value2");
@@ -1554,7 +1554,7 @@ public class MarshalTest extends TestCase {
 
         /* Array types */
         @SuppressWarnings(value="unchecked")
-        TreeMap<String, String>[] aaess = (TreeMap<String, String>[]) new TreeMap[2];
+        TreeMap<String, String>[] aaess = (TreeMap<String, String>[]) new TreeMap<?, ?>[2];
         aaess[0] = new TreeMap<String, String>();
         aaess[0].put("a1", "value1");
         aaess[0].put("a2", "value2");
@@ -2370,7 +2370,7 @@ public class MarshalTest extends TestCase {
         InferredTypesInterface proxy = remoteObj.getInterface(InferredTypesInterface.class);
 
         @SuppressWarnings(value="unchecked")
-        TreeMap<String, String>[] aaess = (TreeMap<String, String>[]) new TreeMap[2];
+        TreeMap<String, String>[] aaess = (TreeMap<String, String>[]) new TreeMap<?, ?>[2];
         aaess[0] = new TreeMap<String, String>();
         aaess[0].put("a1", "value1");
         aaess[0].put("a2", "value2");
@@ -3185,7 +3185,7 @@ public class MarshalTest extends TestCase {
         thrown = false;
         try {
             @SuppressWarnings(value="unchecked")
-            TreeMap<String, String>[] aaess = (TreeMap<String, String>[]) new TreeMap[2];
+            TreeMap<String, String>[] aaess = (TreeMap<String, String>[]) new TreeMap<?, ?>[2];
             aaess[0] = new TreeMap<String, String>();
             aaess[0].put("a1", "value1");
             aaess[0].put("a2", "value2");

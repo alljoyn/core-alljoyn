@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -256,7 +256,6 @@ namespace AllJoynUnity
 			public override int GetHashCode()
 			{
 				object tmp;
-				string sig = this.Signature;
 				Get(this.Signature, out tmp);
 				int hash = 0;
 				try

@@ -817,7 +817,7 @@ public class BusAttachment {
          * The corresponding interface (dbus) is what we give the clients.
          */
         dbusbo = new ProxyBusObject(this, "org.freedesktop.DBus", "/org/freedesktop/DBus", SESSION_ID_ANY,
-                                    new Class[] { DBusProxyObj.class });
+                                    new Class<?>[] { DBusProxyObj.class });
         dbus = dbusbo.getInterface(DBusProxyObj.class);
         executor = Executors.newSingleThreadExecutor();
     }

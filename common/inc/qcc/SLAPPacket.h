@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -28,7 +28,7 @@
 #include <Status.h>
 
 
-#define SLAP_HDR_LEN 4
+#define SLAP_HDR_LEN 4U
 
 #define SLAP_BOUNDARY_BYTES 2
 #define SLAP_CRC_LEN 2

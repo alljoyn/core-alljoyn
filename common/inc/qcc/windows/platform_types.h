@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011,2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -47,8 +47,6 @@ typedef UINT_PTR UARTFd;        /**< UART file descriptor type. */
 typedef UINT_PTR qcc_SocketFd; /**< Socket file descriptor type. */
 typedef UINT_PTR qcc_UARTFd;   /**< UART file descriptor type. */
 #endif
-
-
 
 /* Some windows header files define min and max as macros */
 #undef min

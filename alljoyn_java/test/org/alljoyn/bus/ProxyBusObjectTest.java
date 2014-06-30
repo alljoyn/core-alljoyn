@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011, 2013 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2013-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -51,7 +51,7 @@ public class ProxyBusObjectTest extends TestCase {
         bus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
         assertEquals(Status.OK, bus.connect());
         while (bus.getDBusProxyObj().NameHasOwner(name)) {
-            Thread.currentThread().sleep(100);
+            Thread.sleep(100);
         }
 
         assertEquals(Status.OK, otherBus.requestName(name, DBusProxyObj.REQUEST_NAME_NO_FLAGS));
@@ -73,7 +73,7 @@ public class ProxyBusObjectTest extends TestCase {
         public String Ping(String str) {
             boolean thrown = false;
             try {
-                Thread.currentThread().sleep(100);
+                Thread.sleep(100);
             } catch (InterruptedException ex) {
                 // we don't expect the sleep to be interrupted. If it is print
                 // the stacktrace to aid with debugging.
@@ -89,7 +89,7 @@ public class ProxyBusObjectTest extends TestCase {
         DelayReply service = new DelayReply();
         assertEquals(Status.OK, otherBus.registerBusObject(service, "/delayreply"));
 
-        proxyObj = bus.getProxyBusObject(name, "/delayreply", BusAttachment.SESSION_ID_ANY, new Class[] { SimpleInterface.class });
+        proxyObj = bus.getProxyBusObject(name, "/delayreply", BusAttachment.SESSION_ID_ANY, new Class<?>[] { SimpleInterface.class });
         proxyObj.setReplyTimeout(10);
 
         boolean thrown = false;
@@ -107,7 +107,7 @@ public class ProxyBusObjectTest extends TestCase {
     }
 
     public void testCreateRelease() throws Exception {
-        proxyObj = bus.getProxyBusObject(name, "/simple", BusAttachment.SESSION_ID_ANY, new Class[] { SimpleInterface.class });
+        proxyObj = bus.getProxyBusObject(name, "/simple", BusAttachment.SESSION_ID_ANY, new Class<?>[] { SimpleInterface.class });
         proxyObj.release();
     }
 
@@ -115,7 +115,7 @@ public class ProxyBusObjectTest extends TestCase {
     public void testMethodCall() throws Exception {
         assertEquals(Status.OK, otherBus.advertiseName(name, SessionOpts.TRANSPORT_ANY));
 
-        proxyObj = bus.getProxyBusObject(name, "/simple", BusAttachment.SESSION_ID_ANY, new Class[] { SimpleInterface.class });
+        proxyObj = bus.getProxyBusObject(name, "/simple", BusAttachment.SESSION_ID_ANY, new Class<?>[] { SimpleInterface.class });
         SimpleInterface proxy = proxyObj.getInterface(SimpleInterface.class);
         for (int i = 0; i < 10; ++i) {
             assertEquals("ping", proxy.Ping("ping"));
@@ -128,8 +128,8 @@ public class ProxyBusObjectTest extends TestCase {
 
     public void testMultipleProxyBusObjects() throws Exception {
         // Connect two proxy objects
-        proxyObj = bus.getProxyBusObject(name, "/simple", BusAttachment.SESSION_ID_ANY, new Class[] { SimpleInterface.class });
-        ProxyBusObject proxyObj2 = bus.getProxyBusObject(name, "/simple", BusAttachment.SESSION_PORT_ANY, new Class[] { SimpleInterface.class });
+        proxyObj = bus.getProxyBusObject(name, "/simple", BusAttachment.SESSION_ID_ANY, new Class<?>[] { SimpleInterface.class });
+        ProxyBusObject proxyObj2 = bus.getProxyBusObject(name, "/simple", BusAttachment.SESSION_PORT_ANY, new Class<?>[] { SimpleInterface.class });
 
         // Verify they're both operating
         assertEquals("ping", proxyObj.getInterface(SimpleInterface.class).Ping("ping"));
@@ -157,7 +157,7 @@ public class ProxyBusObjectTest extends TestCase {
 
         boolean thrown = false;
         try {
-            proxyObj = bus.getProxyBusObject(name, "/emitter", BusAttachment.SESSION_ID_ANY, new Class[] { EmitterInterface.class });
+            proxyObj = bus.getProxyBusObject(name, "/emitter", BusAttachment.SESSION_ID_ANY, new Class<?>[] { EmitterInterface.class });
             proxyObj.getInterface(EmitterInterface.class).Emit("emit");
         } catch (BusException ex) {
             thrown = true;
@@ -181,7 +181,7 @@ public class ProxyBusObjectTest extends TestCase {
         assertEquals(Status.OK, otherBus.registerBusObject(service, "/multimethod"));
 
         proxyObj = bus.getProxyBusObject(name, "/multimethod", BusAttachment.SESSION_ID_ANY,
-                                         new Class[] { MultiMethodInterfaceA.class, MultiMethodInterfaceB.class });
+                                         new Class<?>[] { MultiMethodInterfaceA.class, MultiMethodInterfaceB.class });
 
         try {
             Methods = Methodi = false;
@@ -207,13 +207,13 @@ public class ProxyBusObjectTest extends TestCase {
     }
 
     public void testGetBusName() throws Exception {
-        proxyObj = bus.getProxyBusObject(name, "/simple", BusAttachment.SESSION_ID_ANY, new Class[] { SimpleInterface.class });
+        proxyObj = bus.getProxyBusObject(name, "/simple", BusAttachment.SESSION_ID_ANY, new Class<?>[] { SimpleInterface.class });
         assertEquals(name, proxyObj.getBusName());
         proxyObj.release();
     }
 
     public void testGetObjPath() throws Exception {
-        proxyObj = bus.getProxyBusObject(name, "/simple", BusAttachment.SESSION_ID_ANY, new Class[] { SimpleInterface.class });
+        proxyObj = bus.getProxyBusObject(name, "/simple", BusAttachment.SESSION_ID_ANY, new Class<?>[] { SimpleInterface.class });
         assertEquals("/simple", proxyObj.getObjPath());
         proxyObj.release();
     }

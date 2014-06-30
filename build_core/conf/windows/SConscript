@@ -72,7 +72,9 @@ elif env['OS'] == 'winxp':
 #       by checking if( ptr) This also is a common problem in the language bindings
 #       with things like QCC_BOOL and jboolean being defined as integers. For this
 #       reason we are choosing to suppress this particular warning.
-env.Append(CXXFLAGS=['/wd4244', '/wd4267','/wd4345', '/wd4355', '/wd4800'])
+# C4996 'strdup': The POSIX name for this item is deprecated. Instead, use the ISO
+#       C++ conformant name: _strdup. See online help for details.
+env.Append(CXXFLAGS=['/wd4244', '/wd4267','/wd4345', '/wd4355', '/wd4800', '/wd4996'])
 
 env.Append(CFLAGS=['/nologo', '/vmm', '/vmg'])
 env.Append(CXXFLAGS=['/nologo', '/vmm', '/vmg'])

@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -212,6 +212,7 @@ qcc::String _Message::Description() const
     return outStr;
 }
 
+#ifndef NDEBUG
 static qcc::String FlagBits(uint8_t flags)
 {
     qcc::String f;
@@ -221,6 +222,7 @@ static qcc::String FlagBits(uint8_t flags)
     }
     return f;
 }
+#endif
 
 qcc::String _Message::ToString(const MsgArg* args, size_t numArgs) const
 {
