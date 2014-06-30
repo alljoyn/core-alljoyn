@@ -1275,7 +1275,7 @@ QStatus SessionlessObj::ScheduleWork(RemoteCache& cache, bool addAlarm, bool doI
         GetTimeNow(&cache.firstJoinTime);
     }
     qcc::Timespec startTime;
-    uint32_t delayMs;
+    uint32_t delayMs = 1;
     for (uint32_t i = 0; i <= cache.retries; ++i) {
         if (i == 0) {
             startTime = cache.firstJoinTime;

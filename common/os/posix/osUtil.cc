@@ -199,7 +199,9 @@ QStatus qcc::ExecAs(const char* user, const char* exec, const ExecArgs& args, co
             return ER_FAIL;
         }
 
-        setuid(pwent->pw_uid);
+        if (setuid(pwent->pw_uid) == -1) {
+            return ER_OS_ERROR;
+        }
 
         execve(exec, argv, env); // will never return if successful.
     } else if (pid == -1) {

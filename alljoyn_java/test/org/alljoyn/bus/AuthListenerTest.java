@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -55,9 +55,9 @@ public class AuthListenerTest extends TestCase {
     }
 
     private BusAttachment bus;
-    private WeakReference busRef = new WeakReference<BusAttachment>(bus);
+    private WeakReference<BusAttachment> busRef = new WeakReference<BusAttachment>(bus);
     private BusAttachment serviceBus;
-    private WeakReference serviceBusRef = new WeakReference<BusAttachment>(serviceBus);
+    private WeakReference<BusAttachment> serviceBusRef = new WeakReference<BusAttachment>(serviceBus);
     private SecureService service;
     private SecureInterface proxy;
     private InsecureInterface insecureProxy;
@@ -505,7 +505,7 @@ public class AuthListenerTest extends TestCase {
         ProxyBusObject proxyObj = bus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
                                                         "/secure",
                                                         BusAttachment.SESSION_ID_ANY,
-                                                        new Class[] { SecureInterface.class, InsecureInterface.class });
+                                                        new Class<?>[] { SecureInterface.class, InsecureInterface.class });
         proxy = proxyObj.getInterface(SecureInterface.class);
         insecureProxy = proxyObj.getInterface(InsecureInterface.class);
         abortCount = 3;
@@ -951,7 +951,7 @@ public class AuthListenerTest extends TestCase {
         ProxyBusObject proxyObj = bus.getProxyBusObject("unknown.name",
                                                         "/secure",
                                                         BusAttachment.SESSION_ID_ANY,
-                                                        new Class[] { SecureInterface.class });
+                                                        new Class<?>[] { SecureInterface.class });
         proxy = proxyObj.getInterface(SecureInterface.class);
         boolean thrown = false;
         try {

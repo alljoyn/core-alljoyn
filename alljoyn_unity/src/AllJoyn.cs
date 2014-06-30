@@ -5,7 +5,7 @@
 
 //-----------------------------------------------------------------------
 // <copyright file="AllJoyn.cs" company="AllSeen Alliance.">
-// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2012,2014 AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -116,10 +116,9 @@ namespace AllJoynUnity
 				alljoyn_unity_set_deferred_callback_mainthread_only(1); //FOR ANDROID THIS NEEDS TO BE SET TO 1 INSTEAD OF 0
 				callbackPumpThread = new Thread((object o) =>
 				{
-					int numprocessed = 0;
 					while (isProcessing)
 					{
-						numprocessed = alljoyn_unity_deferred_callbacks_process();
+						alljoyn_unity_deferred_callbacks_process();
 						Thread.Sleep(DEFERED_CALLBACK_WAIT_TIMER);
 					}
 				});

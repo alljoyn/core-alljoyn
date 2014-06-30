@@ -5956,12 +5956,14 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
     // against the connect spec in the message.
     String ifName;
     int32_t ifIndexV4 = -1;
-    for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
-        if (interfaceIndex == m_liveInterfaces[i].m_index) {
-            ifName = m_liveInterfaces[i].m_interfaceName;
-            if (m_liveInterfaces[i].m_address.IsIPv4()) {
-                ifIndexV4 = i;
-                break;
+    if (interfaceIndex != -1) {
+        for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
+            if ((uint32_t)interfaceIndex == m_liveInterfaces[i].m_index) {
+                ifName = m_liveInterfaces[i].m_interfaceName;
+                if (m_liveInterfaces[i].m_address.IsIPv4()) {
+                    ifIndexV4 = i;
+                    break;
+                }
             }
         }
     }
@@ -6510,12 +6512,14 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint
     // against the connect spec in the message.
     String ifName;
     int32_t ifIndexV4 = -1;
-    for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
-        if (interfaceIndex == m_liveInterfaces[i].m_index) {
-            ifName = m_liveInterfaces[i].m_interfaceName;
-            if (m_liveInterfaces[i].m_address.IsIPv4()) {
-                ifIndexV4 = i;
-                break;
+    if (interfaceIndex != -1) {
+        for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
+            if ((uint32_t)interfaceIndex == m_liveInterfaces[i].m_index) {
+                ifName = m_liveInterfaces[i].m_interfaceName;
+                if (m_liveInterfaces[i].m_address.IsIPv4()) {
+                    ifIndexV4 = i;
+                    break;
+                }
             }
         }
     }

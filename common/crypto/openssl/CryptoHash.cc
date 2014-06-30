@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2013,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -78,7 +78,7 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
         return status;
     }
 
-    const EVP_MD* mdAlgorithm;
+    const EVP_MD* mdAlgorithm = NULL;
 
     switch (alg) {
     case qcc::Crypto_Hash::SHA1:

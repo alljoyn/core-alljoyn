@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -34,180 +34,180 @@ public interface MarshalStressInterfaceInvalid {
     }
 
     @BusProperty(signature="y")
-    public Class getPropy() throws BusException;
+    public Class<?> getPropy() throws BusException;
 
     @BusMethod(signature="y")
-    public void Methody(Class m) throws BusException;
+    public void Methody(Class<?> m) throws BusException;
 
     public class Structy {
         @Position(0)
         @Signature("y")
-        public Class m;
+        public Class<?> m;
     }
 
     @BusMethod
     public Structy MethodStructy() throws BusException;
 
     @BusProperty(signature="b")
-    public Class getPropb() throws BusException;
+    public Class<?> getPropb() throws BusException;
 
     @BusMethod(signature="b")
-    public void Methodb(Class m) throws BusException;
+    public void Methodb(Class<?> m) throws BusException;
 
     public class Structb {
         @Position(0)
         @Signature("b")
-        public Class m;
+        public Class<?> m;
     }
 
     @BusMethod
     public Structb MethodStructb() throws BusException;
 
     @BusProperty(signature="n")
-    public Class getPropn() throws BusException;
+    public Class<?> getPropn() throws BusException;
 
     @BusMethod(signature="n")
-    public void Methodn(Class m) throws BusException;
+    public void Methodn(Class<?> m) throws BusException;
 
     public class Structn {
         @Position(0)
         @Signature("n")
-        public Class m;
+        public Class<?> m;
     }
 
     @BusMethod
     public Structn MethodStructn() throws BusException;
 
     @BusProperty(signature="q")
-    public Class getPropq() throws BusException;
+    public Class<?> getPropq() throws BusException;
 
     @BusMethod(signature="q")
-    public void Methodq(Class m) throws BusException;
+    public void Methodq(Class<?> m) throws BusException;
 
     public class Structq {
         @Position(0)
         @Signature("q")
-        public Class m;
+        public Class<?> m;
     }
 
     @BusMethod
     public Structq MethodStructq() throws BusException;
 
     @BusProperty(signature="i")
-    public Class getPropi() throws BusException;
+    public Class<?> getPropi() throws BusException;
 
     @BusMethod(signature="i")
-    public void Methodi(Class m) throws BusException;
+    public void Methodi(Class<?> m) throws BusException;
 
     public class Structi {
         @Position(0)
         @Signature("i")
-        public Class m;
+        public Class<?> m;
     }
 
     @BusMethod
     public Structi MethodStructi() throws BusException;
 
     @BusProperty(signature="u")
-    public Class getPropu() throws BusException;
+    public Class<?> getPropu() throws BusException;
 
     @BusMethod(signature="u")
-    public void Methodu(Class m) throws BusException;
+    public void Methodu(Class<?> m) throws BusException;
 
     public class Structu {
         @Position(0)
         @Signature("u")
-        public Class m;
+        public Class<?> m;
     }
 
     @BusMethod
     public Structu MethodStructu() throws BusException;
 
     @BusProperty(signature="x")
-    public Class getPropx() throws BusException;
+    public Class<?> getPropx() throws BusException;
 
     @BusMethod(signature="x")
-    public void Methodx(Class m) throws BusException;
+    public void Methodx(Class<?> m) throws BusException;
 
     public class Structx {
         @Position(0)
         @Signature("x")
-        public Class m;
+        public Class<?> m;
     }
 
     @BusMethod
     public Structx MethodStructx() throws BusException;
 
     @BusProperty(signature="t")
-    public Class getPropt() throws BusException;
+    public Class<?> getPropt() throws BusException;
 
     @BusMethod(signature="t")
-    public void Methodt(Class m) throws BusException;
+    public void Methodt(Class<?> m) throws BusException;
 
     public class Structt {
         @Position(0)
         @Signature("t")
-        public Class m;
+        public Class<?> m;
     }
 
     @BusMethod
     public Structt MethodStructt() throws BusException;
 
     @BusProperty(signature="d")
-    public Class getPropd() throws BusException;
+    public Class<?> getPropd() throws BusException;
 
     @BusMethod(signature="d")
-    public void Methodd(Class m) throws BusException;
+    public void Methodd(Class<?> m) throws BusException;
 
     public class Structd {
         @Position(0)
         @Signature("d")
-        public Class m;
+        public Class<?> m;
     }
 
     @BusMethod
     public Structd MethodStructd() throws BusException;
 
     @BusProperty(signature="s")
-    public Class getProps() throws BusException;
+    public Class<?> getProps() throws BusException;
 
     @BusMethod(signature="s")
-    public void Methods(Class m) throws BusException;
+    public void Methods(Class<?> m) throws BusException;
 
     public class Structs {
         @Position(0)
         @Signature("s")
-        public Class m;
+        public Class<?> m;
     }
 
     @BusMethod
     public Structs MethodStructs() throws BusException;
 
     @BusProperty(signature="o")
-    public Class getPropo() throws BusException;
+    public Class<?> getPropo() throws BusException;
 
     @BusMethod(signature="o")
-    public void Methodo(Class m) throws BusException;
+    public void Methodo(Class<?> m) throws BusException;
 
     public class Structo {
         @Position(0)
         @Signature("o")
-        public Class m;
+        public Class<?> m;
     }
 
     @BusMethod
     public Structo MethodStructo() throws BusException;
 
     @BusProperty(signature="g")
-    public Class getPropg() throws BusException;
+    public Class<?> getPropg() throws BusException;
 
     @BusMethod(signature="g")
-    public void Methodg(Class m) throws BusException;
+    public void Methodg(Class<?> m) throws BusException;
 
     public class Structg {
         @Position(0)
         @Signature("g")
-        public Class m;
+        public Class<?> m;
     }
 
     @BusMethod

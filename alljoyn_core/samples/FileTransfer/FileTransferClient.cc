@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------
 // <copyright file="FileTransferClient.cc" company="AllSeen Alliance.">
-//     Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+//     Copyright (c) 2012,2014 AllSeen Alliance. All rights reserved.
 //
 //        Permission to use, copy, modify, and/or distribute this software for any
 //        purpose with or without fee is hereby granted, provided that the above
@@ -130,7 +130,7 @@ class FileTransferObject : public BusObject {
             printf("Failed to create interface '%s'\n", INTERFACE_NAME);
         }
 
-        const InterfaceDescription::Member* fileTransferMember;
+        const InterfaceDescription::Member* fileTransferMember = NULL;
 
         if (fileTransferInterface && status == ER_OK) {
             printf("Interface successfully added to the bus.\n");
@@ -142,14 +142,16 @@ class FileTransferObject : public BusObject {
         }
 
         /* register the signal handler for the the 'FileTransfer' signal */
-        status =  s_busAtt->RegisterSignalHandler(this,
-                                                  static_cast<MessageReceiver::SignalHandler>(&FileTransferObject::FileTransferSignalHandler),
-                                                  fileTransferMember,
-                                                  NULL);
-        if (ER_OK == status) {
-            printf("Registered signal handler for %s.FileTransfer\n", SERVICE_NAME);
-        } else {
-            printf("Failed to register signal handler for %s.FileTransfer\n", SERVICE_NAME);
+        if (fileTransferMember) {
+            status =  s_busAtt->RegisterSignalHandler(this,
+                                                      static_cast<MessageReceiver::SignalHandler>(&FileTransferObject::FileTransferSignalHandler),
+                                                      fileTransferMember,
+                                                      NULL);
+            if (ER_OK == status) {
+                printf("Registered signal handler for %s.FileTransfer\n", SERVICE_NAME);
+            } else {
+                printf("Failed to register signal handler for %s.FileTransfer\n", SERVICE_NAME);
+            }
         }
     }
 

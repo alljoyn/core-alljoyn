@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011, 2013 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2013-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -79,7 +79,7 @@ public class SecurityViolationListenerTest extends TestCase {
         ProxyBusObject proxyObj = bus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
                                                         "/secure",
                                                         BusAttachment.SESSION_ID_ANY,
-                                                        new Class[] { SimpleInterface.class });
+                                                        new Class<?>[] { SimpleInterface.class });
         proxy = proxyObj.getInterface(SimpleInterface.class);
     }
 

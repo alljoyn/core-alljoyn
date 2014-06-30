@@ -152,6 +152,3 @@ if not (ajenv['OS'] == 'darwin' and ajenv['CPU'] in ['arm', 'armv7', 'armv7s']):
 
 # Build docs
 installDocs = ajenv.SConscript('docs/SConscript', exports = ['ajenv', 'core_headers'])
-
-#Build Win8 SDK installer
-ajenv.SConscript('win8_sdk/SConscript', exports = ['ajenv'])

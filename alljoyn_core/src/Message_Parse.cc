@@ -992,6 +992,11 @@ QStatus _Message::PullBytes(RemoteEndpoint& endpoint, bool checkSender, bool ped
     case MESSAGE_COMPLETE:
         status = ER_OK;
         break;
+
+    default:
+        status = ER_FAIL;
+        QCC_LogError(status, ("PullBytes invalid readState %d", readState));
+        break;
     }
     return status;
 }

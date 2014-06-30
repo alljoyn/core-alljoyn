@@ -646,7 +646,7 @@ static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
     QCC_DbgTrace(("DisconnectTimerHandler: handle=%p conn=%p", handle, conn));
 
     /* Tricking the compiler */
-    QStatus reason = *reinterpret_cast<QStatus*>(&context);
+    QStatus reason = static_cast<QStatus>(reinterpret_cast<uintptr_t>(context));
     QCC_DbgPrintf(("DisconnectTimerHandler: handle=%p conn=%p reason=%p", handle, conn, QCC_StatusText(reason)));
     SetState(conn, CLOSED);
 
@@ -977,12 +977,11 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
     QCC_DbgTrace(("RetransmitTimerHandler: handle=%p conn=%p context=%p", handle, conn, context));
     ArdpSndBuf* snd = (ArdpSndBuf*) context;
     ArdpTimer* timer = &snd->timer;
-    ArdpHeader*h = (ArdpHeader*) snd->hdr;
 
     assert(snd->inUse && "RetransmitTimerHandler: trying to resend flushed buffer");
 
     if (timer->retry > 1) {
-        QCC_DbgPrintf(("RetransmitTimerHandler: context=snd=%p seq=%u retries=%d", snd, ntohl(h->seq), timer->retry));
+        QCC_DbgPrintf(("RetransmitTimerHandler: context=snd=%p seq=%u retries=%d", snd, ntohl(((ArdpHeader*)snd->hdr)->seq), timer->retry));
         QStatus status = SendMsgData(handle, conn, snd);
 
         if (status == ER_OK) {
@@ -999,7 +998,7 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         }
 
     } else {
-        QCC_DbgHLPrintf(("RetransmitTimerHandler seq=%u retries hit the limit: %d", ntohl(h->seq), handle->config.dataRetries));
+        QCC_DbgHLPrintf(("RetransmitTimerHandler seq=%u retries hit the limit: %d", ntohl(((ArdpHeader*)snd->hdr)->seq), handle->config.dataRetries));
         timer->retry = 0;
         Disconnect(handle, conn, ER_TIMEOUT);
     }
@@ -1586,8 +1585,7 @@ static void FastRetransmit(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
 {
     /* Fast retransmit to fill the gap.*/
     if (snd->fastRT == handle->config.dupackCounter) {
-        ArdpHeader* h = (ArdpHeader* ) snd->hdr;
-        QCC_DbgPrintf(("FastRetransmit(): priority re-send %u", ntohl(h->seq)));
+        QCC_DbgPrintf(("FastRetransmit(): priority re-send %u", ntohl(((ArdpHeader*)snd->hdr)->seq)));
         snd->timer.when = TimeNow(handle->tbase);
     }
     snd->fastRT++;

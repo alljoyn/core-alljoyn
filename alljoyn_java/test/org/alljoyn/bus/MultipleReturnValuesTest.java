@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -66,7 +66,7 @@ public class MultipleReturnValuesTest extends TestCase {
             v.c = new TreeMap<String, String>();
             v.c.put("3", "4");
             @SuppressWarnings(value="unchecked")
-            HashMap<String,String>[] hm = (HashMap<String,String>[]) new HashMap[2];
+            HashMap<String,String>[] hm = (HashMap<String,String>[]) new HashMap<?, ?>[2];
             v.d = hm;
             v.d[0] = new HashMap<String, String>();
             v.d[0].put("5", "6");
@@ -96,7 +96,7 @@ public class MultipleReturnValuesTest extends TestCase {
         ProxyBusObject remoteObj = bus.getProxyBusObject("org.alljoyn.bus.MultipleReturnValuesTest",
                                                          "/service",
                                                          BusAttachment.SESSION_ID_ANY,
-                                                         new Class[] { MultipleReturnValuesInterface.class });
+                                                         new Class<?>[] { MultipleReturnValuesInterface.class });
         MultipleReturnValuesInterface proxy = remoteObj.getInterface(MultipleReturnValuesInterface.class);
         MultipleReturnValuesInterface.Values ret = proxy.Method();
         assertEquals(1, ret.a);
@@ -105,7 +105,7 @@ public class MultipleReturnValuesTest extends TestCase {
         vc.put("3", "4");
         assertEquals(vc, ret.c);
         @SuppressWarnings(value="unchecked")
-        Map<String, String>[] vd = (HashMap<String, String>[]) new HashMap[2];
+        Map<String, String>[] vd = (HashMap<String, String>[]) new HashMap<?, ?>[2];
         vd[0] = new HashMap<String, String>();
         vd[0].put("5", "6");
         vd[1] = new HashMap<String, String>();

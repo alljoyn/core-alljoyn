@@ -522,6 +522,7 @@ static QStatus DoStoreDSAKeys(BusAttachment& bus, uint32_t expiration, ECCPrivat
 static QStatus DoRetrieveDSAKeys(BusAttachment& bus, ECCPrivateKey* privateKey, ECCPublicKey* publicKey, qcc::String& encodedCertChain, bool* found, uint32_t* keyExpiration)
 {
     *found = false;
+    *keyExpiration = 0;
     CredentialAccessor ca(bus);
     GUID128 guid;
     KeyBlob kb;

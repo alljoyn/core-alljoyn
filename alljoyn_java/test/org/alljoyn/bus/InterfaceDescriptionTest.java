@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -81,7 +81,7 @@ public class InterfaceDescriptionTest extends TestCase {
             SimpleInterfaceB proxy = bus.getProxyBusObject("org.alljoyn.bus.InterfaceDescriptionTest",
                 "/service",
                 BusAttachment.SESSION_ID_ANY,
-                new Class[] { SimpleInterfaceB.class }).getInterface(SimpleInterfaceB.class);
+                new Class<?>[] { SimpleInterfaceB.class }).getInterface(SimpleInterfaceB.class);
             proxy.Ping(1);
         } catch (BusException ex) {
             thrown = true;
@@ -100,7 +100,7 @@ public class InterfaceDescriptionTest extends TestCase {
         try {
             SimpleInterface proxy = bus.getProxyBusObject("org.alljoyn.bus.InterfaceDescriptionTest", "/service",
                 BusAttachment.SESSION_ID_ANY,
-                new Class[] { SimpleInterface.class }).getInterface(SimpleInterface.class);
+                new Class<?>[] { SimpleInterface.class }).getInterface(SimpleInterface.class);
             proxy.Ping("str");
         } catch (BusException ex) {
             thrown = true;
@@ -120,7 +120,7 @@ public class InterfaceDescriptionTest extends TestCase {
             SimpleInterfaceC proxy = bus.getProxyBusObject("org.alljoyn.bus.InterfaceDescriptionTest",
                 "/service",
                 BusAttachment.SESSION_ID_ANY,
-                new Class[] { SimpleInterfaceC.class }).getInterface(SimpleInterfaceC.class);
+                new Class<?>[] { SimpleInterfaceC.class }).getInterface(SimpleInterfaceC.class);
             proxy.Ping("str");
         } catch (BusException ex) {
             thrown = true;

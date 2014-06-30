@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -50,7 +50,6 @@ using namespace qcc;
 using namespace ajn;
 
 /** Sample constants */
-static const char* INTERFACE_NAME = "org.alljoyn.raw_test";
 static const SessionPort SESSION_PORT = 33;
 
 /** Static data */
@@ -210,7 +209,7 @@ int main(int argc, char** argv)
     if (ER_OK == status) {
         status = g_msgBus->FindAdvertisedName(g_wellKnownName.c_str());
         if (status != ER_OK) {
-            QCC_LogError(status, ("%s.FindAdvertisedName failed", INTERFACE_NAME));
+            QCC_LogError(status, ("org.alljoyn.raw_test.FindAdvertisedName failed"));
         }
     }
 
