@@ -24,6 +24,7 @@
 #include <map>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/about/PropertyStore.h>
+#include <qcc/Mutex.h>
 
 namespace ajn {
 namespace services {
@@ -125,9 +126,13 @@ class AboutService : public ajn::BusObject {
      */
     int m_AnnouncePort;
     /**
-     *	map that holds interfaces that will be announced
+     * map that holds interfaces that will be announced
      */
     std::map<qcc::String, std::vector<qcc::String> > m_AnnounceObjectsMap;
+    /**
+     * Mutex for protecting the m_AnnounceObjectsMap
+     */
+    qcc::Mutex m_announceObjectsLock;
 
 };
 
