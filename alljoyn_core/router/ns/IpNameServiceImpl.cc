@@ -1724,10 +1724,10 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
         nspacket->AddQuestion(whoHas);
 
         m_mutex.Lock();
-        bool found = false;
-        //Search for the same name in the burstQueue. If present, just reset the scheduleCount for it.
+        // Search for the same name in the burstQueue.
+        // If present, remove the entry to preserve the ordering of outgoing packets.
         std::list<BurstResponseHeader>::iterator it = m_burstQueue.begin();
-        while (it != m_burstQueue.end() && !found) {
+        while (it != m_burstQueue.end()) {
             uint32_t nsVersion;
             uint32_t msgVersion;
 
@@ -1735,20 +1735,14 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
             if (nsVersion == 0 && msgVersion == 0) {
                 NSPacket temp = NSPacket::cast((*it).packet);
                 if (temp->GetQuestion(0).GetName(0) == name->second) {
-                    (*it).scheduleCount = 0;
-                    found = true;
-                    break;
+                    m_burstQueue.erase(it++);
+                    continue;
                 }
             }
             it++;
         }
         m_mutex.Unlock();
-        if (found) {
-
-            m_packetScheduler.Alert();
-        } else {
-            TriggerTransmission(Packet::cast(nspacket));
-        }
+        TriggerTransmission(Packet::cast(nspacket));
     }
     //
     // Do it again for version one.
@@ -1770,10 +1764,10 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
         nspacket->AddQuestion(whoHas);
 
         m_mutex.Lock();
-        //Search for the same name in the burstQueue. If present, just reset the scheduleCount for it.
-        bool found = false;
+        // Search for the same name in the burstQueue.
+        // If present, remove the entry to preserve the ordering of outgoing packets.
         std::list<BurstResponseHeader>::iterator it = m_burstQueue.begin();
-        while (it != m_burstQueue.end() && !found) {
+        while (it != m_burstQueue.end()) {
             uint32_t nsVersion;
             uint32_t msgVersion;
 
@@ -1781,19 +1775,14 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
             if (nsVersion == 1 && msgVersion == 1) {
                 NSPacket temp = NSPacket::cast((*it).packet);
                 if (temp->GetQuestion(0).GetName(0) == name->second) {
-                    (*it).scheduleCount = 0;
-                    found = true;
-                    break;
+                    m_burstQueue.erase(it++);
+                    continue;
                 }
             }
             it++;
         }
         m_mutex.Unlock();
-        if (found) {
-            m_packetScheduler.Alert();
-        } else {
-            TriggerTransmission(Packet::cast(nspacket));
-        }
+        TriggerTransmission(Packet::cast(nspacket));
     }
 
 
@@ -2683,10 +2672,10 @@ QStatus IpNameServiceImpl::Query(TransportMask completeTransportMask, MDNSPacket
     } else {
 
         m_mutex.Lock();
-        bool found = false;
-        //Search for the same name in the burstQueue. If present, just reset the scheduleCount for it.
+        // Search for the same name in the burstQueue.
+        // If present, remove the entry to preserve the ordering of outgoing packets.
         std::list<BurstResponseHeader>::iterator it = m_burstQueue.begin();
-        while (it != m_burstQueue.end() && !found) {
+        while (it != m_burstQueue.end()) {
             uint32_t nsVersion;
             uint32_t msgVersion;
 
@@ -2706,8 +2695,8 @@ QStatus IpNameServiceImpl::Query(TransportMask completeTransportMask, MDNSPacket
 
                         if (tmpSearchRData->GetNumSearchCriteria() == 1) {
                             if (searchRData->GetSearchCriterion(0) == tmpSearchRData->GetSearchCriterion(0)) {
-                                (*it).scheduleCount = 0;
-                                found = true;
+                                m_burstQueue.erase(it++);
+                                continue;
                             }
                         }
                     }
@@ -2716,11 +2705,7 @@ QStatus IpNameServiceImpl::Query(TransportMask completeTransportMask, MDNSPacket
             it++;
         }
         m_mutex.Unlock();
-        if (found) {
-            m_packetScheduler.Alert();
-        } else {
-            TriggerTransmission(Packet::cast(mdnsPacket));
-        }
+        TriggerTransmission(Packet::cast(mdnsPacket));
     }
 
     return ER_OK;
@@ -2826,16 +2811,16 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
         if (mdnsPacket->DestinationSet()) {
             QueueProtocolMessage(Packet::cast(mdnsPacket));
         } else {
-            bool found = false;
             MDNSResourceRecord* advRecord;
 
             if (mdnsPacket->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &advRecord)) {
                 MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
 
                 m_mutex.Lock();
-                //Search for a packet with the same names in the same order. If present, just reset its scheduleCount.
+                // Search for the same name in the burstQueue.
+                // If present, remove the entry to preserve the ordering of outgoing packets.
                 std::list<BurstResponseHeader>::iterator it = m_burstQueue.begin();
-                while (it != m_burstQueue.end() && !found) {
+                while (it != m_burstQueue.end()) {
                     uint32_t nsVersion;
                     uint32_t msgVersion;
 
@@ -2856,8 +2841,8 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
                                             }
                                         }
                                         if (matching) {
-                                            found = true;
-                                            (*it).scheduleCount = 0;
+                                            m_burstQueue.erase(it++);
+                                            continue;
                                         }
                                     }
                                 }
@@ -2869,11 +2854,7 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
                 m_mutex.Unlock();
 
             }
-            if (found) {
-                m_packetScheduler.Alert();
-            } else {
-                TriggerTransmission(Packet::cast(mdnsPacket));
-            }
+            TriggerTransmission(Packet::cast(mdnsPacket));
         }
     } else {
         QCC_LogError(ER_PACKET_TOO_LARGE, ("IpNameServiceImpl::AdvertiseName(): Resulting NS message too large"));
@@ -6751,6 +6732,7 @@ bool IpNameServiceImpl::HandleAdvertiseResponse(MDNSPacket mdnsPacket, uint16_t 
         return true;
     }
     uint32_t ttl = advRecord->GetRRttl();
+
     //
     // We need to populate our structure that keeps track of unicast ports of
     // services so that they can be polled for presence
