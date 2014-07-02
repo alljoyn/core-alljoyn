@@ -34,7 +34,9 @@ AboutService::AboutService(ajn::BusAttachment& bus, PropertyStore& store) :
     QCC_DbgTrace(("AboutService::%s", __FUNCTION__));
     std::vector<qcc::String> v;
     v.push_back(ABOUT_INTERFACE_NAME);
+    m_announceObjectsLock.Lock(MUTEX_CONTEXT);
     m_AnnounceObjectsMap.insert(std::pair<qcc::String, std::vector<qcc::String> >("/About", v));
+    m_announceObjectsLock.Unlock(MUTEX_CONTEXT);
 }
 
 QStatus AboutService::Register(int port) {
@@ -99,18 +101,21 @@ void AboutService::Unregister() {
 QStatus AboutService::AddObjectDescription(qcc::String const& path, std::vector<qcc::String> const& interfaceNames) {
     QCC_DbgTrace(("AboutService::%s", __FUNCTION__));
     QStatus status = ER_OK;
+    m_announceObjectsLock.Lock(MUTEX_CONTEXT);
     std::map<qcc::String, std::vector<qcc::String> >::iterator it = m_AnnounceObjectsMap.find(path);
     if (it != m_AnnounceObjectsMap.end()) {
         it->second.insert(it->second.end(), interfaceNames.begin(), interfaceNames.end());
     } else {
         m_AnnounceObjectsMap.insert(std::pair<qcc::String, std::vector<qcc::String> >(path, interfaceNames));
     }
+    m_announceObjectsLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus AboutService::RemoveObjectDescription(qcc::String const& path, std::vector<qcc::String> const& interfaceNames) {
     QCC_DbgTrace(("AboutService::%s", __FUNCTION__));
     QStatus status = ER_OK;
+    m_announceObjectsLock.Lock(MUTEX_CONTEXT);
     std::map<qcc::String, std::vector<qcc::String> >::iterator it = m_AnnounceObjectsMap.find(path);
     if (it != m_AnnounceObjectsMap.end()) {
         for (std::vector<qcc::String>::const_iterator itv = interfaceNames.begin(); itv != interfaceNames.end(); ++itv) {
@@ -119,7 +124,11 @@ QStatus AboutService::RemoveObjectDescription(qcc::String const& path, std::vect
                 it->second.erase(findIterator);
             }
         }
+        if (it->second.empty()) {
+            m_AnnounceObjectsMap.erase(it);
+        }
     }
+    m_announceObjectsLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
