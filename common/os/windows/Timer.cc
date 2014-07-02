@@ -785,6 +785,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                     QCC_DbgPrintf(("TimerThread::Run(): ******** AlarmTriggered()"));
                     (top->listener->AlarmTriggered)(top, ER_OK);
                     if (hasTimerLock) {
+                        hasTimerLock = false;
                         timer->reentrancyLock.Unlock();
                     }
                     timer->lock.Lock();
@@ -808,6 +809,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                     }
                 } else {
                     if (hasTimerLock) {
+                        hasTimerLock = false;
                         timer->reentrancyLock.Unlock();
                     }
                 }
@@ -920,6 +922,7 @@ void Timer::ThreadExit(Thread* thread)
             }
             alarm->listener->AlarmTriggered(alarm, ER_TIMER_EXITING);
             if (tt->hasTimerLock) {
+                tt->hasTimerLock = false;
                 reentrancyLock.Unlock();
             }
             lock.Lock();
@@ -932,15 +935,25 @@ void Timer::ThreadExit(Thread* thread)
 
 void Timer::EnableReentrancy()
 {
+
     Thread* thread = Thread::GetThread();
-    if (nameStr == thread->GetName()) {
+    lock.Lock();
+    bool allowed = false;
+    for (uint32_t i = 0; i < timerThreads.size(); ++i) {
+        if ((timerThreads[i] != NULL) && (static_cast<Thread*>(timerThreads[i]) == thread)) {
+            allowed = true;
+            break;
+        }
+    }
+    lock.Unlock();
+    if (allowed) {
         TimerThread* tt = static_cast<TimerThread*>(thread);
         if (tt->hasTimerLock) {
             tt->hasTimerLock = false;
             reentrancyLock.Unlock();
         }
     } else {
-        QCC_DbgPrintf(("Invalid call to Timer::EnableReentrancy from thread %s; only allowed from %s", Thread::GetThreadName(), nameStr.c_str()));
+        QCC_LogError(ER_TIMER_NOT_ALLOWED, ("Invalid call to Timer::EnableReentrancy from thread %s", Thread::GetThreadName()));
     }
 }
 
