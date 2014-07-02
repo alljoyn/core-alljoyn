@@ -196,18 +196,13 @@ QStatus Timer::Stop()
     QStatus status = ER_OK;
     lock.Lock();
     isRunning = false;
-    lock.Unlock();
     for (size_t i = 0; i < timerThreads.size(); ++i) {
-        lock.Lock();
         if (timerThreads[i] != NULL) {
             QStatus tStatus = timerThreads[i]->Stop();
             status = (status == ER_OK) ? tStatus : status;
         }
-        lock.Unlock();
-
     }
 
-    lock.Lock();
     deque<Thread*>::iterator it = addWaitQueue.begin();
     while (it != addWaitQueue.end()) {
         (*it++)->Alert(TIMER_IS_DEAD_ALERTCODE);
@@ -453,6 +448,7 @@ bool Timer::RemoveAlarm(const AlarmListener& listener, Alarm& alarm)
     if (isRunning) {
         for (set<Alarm>::iterator it = alarms.begin(); it != alarms.end(); ++it) {
             if ((*it)->listener == &listener) {
+                alarm = *it;
                 alarms.erase(it);
                 removedOne = true;
                 break;
