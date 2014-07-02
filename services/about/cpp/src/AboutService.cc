@@ -147,6 +147,8 @@ QStatus AboutService::Announce() {
     if (status != ER_OK) {
         return status;
     }
+
+    m_announceObjectsLock.Lock(MUTEX_CONTEXT);
     std::vector<MsgArg> announceObjectsArg(m_AnnounceObjectsMap.size());
     int objIndex = 0;
     for (std::map<qcc::String, std::vector<qcc::String> >::const_iterator it = m_AnnounceObjectsMap.begin();
@@ -167,6 +169,7 @@ QStatus AboutService::Announce() {
         }
         objIndex++;
     }
+    m_announceObjectsLock.Unlock(MUTEX_CONTEXT);
     status = announceArgs[2].Set("a(oas)", objIndex, (announceObjectsArg.empty()) ? NULL : &announceObjectsArg.front());
     if (status != ER_OK) {
         return status;
@@ -221,6 +224,7 @@ void AboutService::GetObjectDescription(const ajn::InterfaceDescription::Member*
     msg->GetArgs(numArgs, args);
     if (numArgs == 0) {
         ajn::MsgArg retargs[1];
+        m_announceObjectsLock.Lock(MUTEX_CONTEXT);
         std::vector<MsgArg> objectArg(m_AnnounceObjectsMap.size());
         int objIndex = 0;
         for (std::map<qcc::String, std::vector<qcc::String> >::const_iterator it = m_AnnounceObjectsMap.begin();
@@ -237,6 +241,7 @@ void AboutService::GetObjectDescription(const ajn::InterfaceDescription::Member*
             objectArg[objIndex].Set("(oas)", key.c_str(), interfacesVec.size(), (interfacesVec.empty()) ? NULL : &interfacesVec.front());
             objIndex++;
         }
+        m_announceObjectsLock.Unlock(MUTEX_CONTEXT);
         retargs[0].Set("a(oas)", objectArg.size(), (objectArg.empty()) ? NULL : &objectArg.front());
         MethodReply(msg, retargs, 1);
     } else {
