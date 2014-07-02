@@ -432,7 +432,7 @@ QStatus IfConfigIPv4(std::vector<IfConfigEntry>& entries)
  * network events and checks if there are any events we are interested in.
  * We limit processing of events to a batch of up to 100 events at a time.
  */
-static NetworkEventType NetworkEventRecv(qcc::SocketFd sockFd, char* buffer, int buflen)
+static NetworkEventType NetworkEventRecv(qcc::SocketFd sockFd, char* buffer, int buflen, std::set<uint32_t>& networkRefreshSet)
 {
     uint32_t nBytes = 0;
     struct ifa_msghdr* networkEvent =  reinterpret_cast<struct ifa_msghdr*>(buffer);
@@ -454,6 +454,9 @@ static NetworkEventType NetworkEventRecv(qcc::SocketFd sockFd, char* buffer, int
                 newEventType = QCC_RTM_DELADDR;
             } else if (networkEvent->ifam_type == RTM_NEWADDR) {
                 newEventType = QCC_RTM_NEWADDR;
+                uint32_t indexFamily = 0;
+                indexFamily |= (networkEvent->ifam_index << 2);
+                networkRefreshSet.insert(indexFamily);
             } else {
                 newEventType = QCC_RTM_IGNORED;
             }
@@ -491,12 +494,12 @@ SocketFd NetworkEventSocket()
     return NetworkChangeEventSocket();
 }
 
-NetworkEventType NetworkEventReceive(qcc::SocketFd sockFd)
+NetworkEventType NetworkEventReceive(qcc::SocketFd sockFd, std::set<uint32_t>& networkRefreshSet)
 {
     const uint32_t BUFSIZE = 65536;
     char* buffer = new char[BUFSIZE];
 
-    return NetworkEventRecv(sockFd, buffer, BUFSIZE);
+    return NetworkEventRecv(sockFd, buffer, BUFSIZE, networkRefreshSet);
 }
 
 } // namespace ajn
