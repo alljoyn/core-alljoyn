@@ -91,5 +91,6 @@ Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
   <status name="ER_SLAP_CRC_ERROR" value="0x1029" comment="SLAP packet CRC error."/>
   <status name="ER_SLAP_ERROR" value="0x102A" comment="Generic SLAP error."/>
   <status name="ER_SLAP_OTHER_END_CLOSED" value="0x102B" comment="Other end closed the SLAP connection"/>
+  <status name="ER_TIMER_NOT_ALLOWED" value="0x102C" comment="Timer EnableReentrancy call not allowed"/>
   <status name="ER_NONE" value="0xffff" comment="No error code to report"/>
 </status_block>
