@@ -29,7 +29,6 @@ if test_env['OS'] != 'win8':
         test_env.Program('bastress2',     ['bastress2.cc']),
         test_env.Program('bignum',        ['bignum.cc']),
         test_env.Program('socktest',      ['socktest.cc']),
-        test_env.Program('autochat',      ['autochat.cc']),
         test_env.Program('remarshal',     ['remarshal.cc']),
         test_env.Program('unpack',        ['unpack.cc']),
         test_env.Program('rsa',           ['rsa.cc']),
