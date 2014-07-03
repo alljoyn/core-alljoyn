@@ -86,8 +86,8 @@ uint64_t qcc::GetTimestamp64(void)
         s_clockOffset = ts.tv_sec;
     }
 
-    ret_val = ((uint32_t)(ts.tv_sec - s_clockOffset)) * 1000;
-    ret_val += (uint32_t)ts.tv_nsec / 1000000;
+    ret_val = ((uint64_t)(ts.tv_sec - s_clockOffset)) * 1000;
+    ret_val += (uint64_t)ts.tv_nsec / 1000000;
 
     return ret_val;
 }

@@ -2785,12 +2785,9 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
     msg->GetArgs(numArgs, args);
     QStatus status = MsgArg::Get(args, numArgs, "sq", &advertiseName, &transports);
     QCC_DbgTrace(("AllJoynObj::AdvertiseName(%s, %x)", (status == ER_OK) ? advertiseName : "", transports));
-
-
-
     if (ER_OK != status) {
         QCC_LogError(status, ("Fail to parse msg parameters"));
-        replyCode = ALLJOYN_FINDADVERTISEDNAME_REPLY_FAILED;
+        replyCode = ALLJOYN_ADVERTISENAME_REPLY_FAILED;
     }
 
     /* Get the sender name */
