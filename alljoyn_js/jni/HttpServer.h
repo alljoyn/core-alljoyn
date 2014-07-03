@@ -32,7 +32,7 @@ struct less {
     }
 };
 typedef std::map<qcc::String, qcc::String, less> Headers;
-};
+}
 
 /*
  * Some care needs to be taken to ensure that a rogue entity cannot intercept the raw session data.

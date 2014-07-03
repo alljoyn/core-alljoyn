@@ -47,7 +47,7 @@ _Packet::_Packet()
 
 _Packet::~_Packet()
 {
-};
+}
 StringData::StringData()
     : m_size(0)
 {

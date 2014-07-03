@@ -39,6 +39,6 @@ namespace ajn {
 const char* GetVersion();        /**< Gives the version of AllJoyn Library */
 const char* GetBuildInfo();      /**< Gives build information of AllJoyn Library */
 uint32_t GetNumericVersion();  /**< Gives the version of AllJoyn Library as a single number */
-};
+}
 
 #endif

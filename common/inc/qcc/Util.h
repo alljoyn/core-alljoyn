@@ -265,5 +265,5 @@ void CRC16_Compute(const uint8_t* buffer, size_t bufLen, uint16_t*runningCrc);
  */
 QStatus ResolveHostName(qcc::String hostname, uint8_t addr[], size_t addrSize, size_t & addrLen, uint32_t timeoutMs);
 
-};
+}
 #endif

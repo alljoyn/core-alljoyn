@@ -268,4 +268,4 @@ NP_EXPORT(NPError) OSCALL NP_GetValue(void* future, NPPVariable variable, void* 
     return ret;
 }
 
-};
+}
