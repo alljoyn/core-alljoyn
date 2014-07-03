@@ -65,6 +65,7 @@ vars.Add(EnumVariable('WS', 'Whitespace Policy Checker', 'check', allowed_values
 vars.Add(PathVariable('GTEST_DIR', 'The path to Google Test (gTest) source code',  os.environ.get('GTEST_DIR'), PathVariable.PathIsDir))
 vars.Add(PathVariable('BULLSEYE_BIN', 'The path to Bullseye Code Coverage',  os.environ.get('BULLSEYE_BIN'), PathVariable.PathIsDir))
 vars.Add(EnumVariable('NDEBUG', 'Override NDEBUG default for release variant', 'defined', allowed_values=('defined', 'undefined')))
+vars.Add('CXX', 'C++ compiler to use')
 
 
 if default_msvc_version:
@@ -178,7 +179,6 @@ env.Append(CPPPATH = ["$DISTDIR/cpp/inc",
 # "Standard" C/C++ library paths for all projects.
 env.Append(LIBPATH = ["$DISTDIR/cpp/lib",
                       "$DISTDIR/c/lib"])
-
 
 # Setup additional builders
 if os.path.exists('tools/scons/doxygen.py'):
