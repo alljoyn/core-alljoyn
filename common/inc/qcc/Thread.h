@@ -143,7 +143,6 @@ class Thread {
      *
      * @param arg        The one and only parameter that 'func' will be called with
      *                   (defaults to NULL).
-     *
      * @param listener   Listener to be informed of Thread events (defaults to NULL).
      *
      * @return  Indication of whether creation of the thread succeeded or not.

@@ -31,6 +31,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <iphlpapi.h>
+#include <cstdint>
+#include <climits>
 #endif
 
 #include <qcc/Debug.h>
@@ -4563,7 +4565,7 @@ void* IpNameServiceImpl::Run(void* arg)
                 QCC_DbgHLPrintf(("IpNameServiceImpl::Run(): Got IPNS message from \"%s\"", remoteAddress.ToString().c_str()));
 
                 // Find out the destination port and interface index for this message.
-                uint16_t recvPort = -1;
+                uint16_t recvPort = std::numeric_limits<uint16_t>::max();
                 int32_t ifIndex = -1;
                 bool destIsIPv4Local = false;
                 bool destIsIPv6Local = false;
@@ -4597,7 +4599,7 @@ void* IpNameServiceImpl::Run(void* arg)
                     }
                 }
 
-                if (recvPort != -1 && ifIndex != -1) {
+                if (recvPort != std::numeric_limits<uint16_t>::max() && ifIndex != -1) {
                     QCC_DbgHLPrintf(("Processing packet on interface index %d that was received on index %d from %s:%u to %s:%u",
                                      ifIndex, localInterfaceIndex, remoteAddress.ToString().c_str(), remotePort, localAddress.ToString().c_str(), recvPort));
                 }
@@ -4608,7 +4610,7 @@ void* IpNameServiceImpl::Run(void* arg)
                 //
                 // We got a message over the multicast channel.  Deal with it.
                 //
-                if (recvPort != -1 && ifIndex != -1) {
+                if (recvPort != std::numeric_limits<uint16_t>::max() && ifIndex != -1) {
                     qcc::IPEndpoint endpoint(remoteAddress, remotePort);
                     HandleProtocolMessage(buffer, nbytes, endpoint, recvPort, ifIndex, localAddress);
                 }
@@ -7611,7 +7613,7 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                     uint32_t msgVersion;
 
                     packet->GetVersion(nsVersion, msgVersion);
-                    if ((msgVersion == 2)) {
+                    if (msgVersion == 2) {
                         m_impl.QueueProtocolMessage(*i);
                     }
 

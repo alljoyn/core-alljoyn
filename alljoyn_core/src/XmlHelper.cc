@@ -322,7 +322,7 @@ QStatus XmlHelper::ParseNode(const XmlElement* root, ProxyBusObject* obj)
                             obj->AddChild(newChild);
                         }
                     }
-                    if (ER_OK != ER_OK) {
+                    if (status != ER_OK) {
                         QCC_LogError(status, ("Failed to parse child object %s in introspection data for %s", childObjPath.c_str(), ident));
                     }
                 } else {

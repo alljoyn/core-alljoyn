@@ -21,14 +21,13 @@
 
 #include "alljoyn/version.h"
 
-static const char product[] = "AllJoyn Library";
 static const unsigned int architecture = 14;
 static const unsigned int apiLevel = 6;
 static const unsigned int release = 0;
 
 
 static const char version[] = "##VERSION_STRING##";
-static const char build[] = "##BUILD_STRING##";
+static const char build[] = "AllJoyn Library ##BUILD_STRING##";
 
 const char * ajn::GetVersion()
 {
