@@ -91,6 +91,9 @@ void Rule::EventHandler(const ajn::InterfaceDescription::Member* member, const c
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
         QStatus status = mBus->JoinSessionAsync(mAction->mUniqueName.c_str(),
                                                 mAction->mPort, this, opts, this, this);
+        if (ER_OK != status) {
+            LOGTHIS("Failed to JoinSession");
+        }
     } else {
         //Have a session so call the method to execute the action
         LOGTHIS("Already in session %s/%d/%d", mAction->mUniqueName.c_str(), mAction->mPort, mSessionId);

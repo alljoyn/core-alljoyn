@@ -76,9 +76,21 @@ static bool IsCompatibleVersion(uint32_t version)
     if ((authV < MIN_AUTH_VERSION) || (authV > MAX_AUTH_VERSION)) {
         return false;
     }
+    //The llvm clang compiler will complain about the code `keyV < MIN_KEYGEN_VERSION`
+    // will always return false.  Which is true as long as MIN_KEYGEN_VERSION is
+    // zero however we don't want to remove this check because the MIN_KEYGEN_VERSION
+    // may be changed in the future. If it is changed we want this check to still
+    // be in the code.
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wtautological-compare"
+#endif
     if ((keyV < MIN_KEYGEN_VERSION) || (keyV > MAX_KEYGEN_VERSION)) {
         return false;
     }
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
     return (version & 0xFF00) == 0;
 }
 

@@ -436,12 +436,7 @@ using namespace qcc;
  * like a connection starting or stopping or a connection timing out.  This is
  * basically a watchdog to to keep the pump primed.
  */
-const uint32_t UDP_ENDPOINT_ARDP_TIMER = 1000;
 const uint32_t UDP_ENDPOINT_MANAGEMENT_TIMER = 1000;
-
-const uint32_t UDP_LINK_TIMEOUT_PROBE_ATTEMPTS       = 1;
-const uint32_t UDP_LINK_TIMEOUT_PROBE_RESPONSE_DELAY = 10;
-const uint32_t UDP_LINK_TIMEOUT_MIN_LINK_TIMEOUT     = 40;
 
 const uint32_t UDP_CONNECT_TIMEOUT = 3000;  /**< How long before we expect a connection to complete */
 const uint32_t UDP_CONNECT_RETRIES = 3;     /**< How many times do we retry a connection before giving up */
@@ -2927,7 +2922,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
     ArdpHandle* m_handle;             /**< The handle to the underlying protocol */
     ArdpConnRecord* m_conn;           /**< The connection record for the underlying protocol */
     uint32_t m_id;                    /**< The ID of the connection record for the underlying protocol */
-    bool incoming;                    /**< If true, passive connection; if false, we initiated via Connect() */
     qcc::IPAddress m_ipAddr;          /**< Remote IP address. */
     uint16_t m_ipPort;                /**< Remote port. */
     bool m_suddenDisconnect;          /**< If true, assumption is that any disconnect will be/was unexpected */
