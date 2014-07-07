@@ -85,6 +85,7 @@ extern int capset(cap_user_header_t hdrp, const cap_user_data_t datap);
 #define DAEMON_EXIT_FORK_ERROR    4
 #define DAEMON_EXIT_IO_ERROR      5
 #define DAEMON_EXIT_SESSION_ERROR 6
+#define DAEMON_EXIT_CHDIR_ERROR   7
 
 using namespace ajn;
 using namespace qcc;
@@ -768,8 +769,13 @@ int main(int argc, char** argv, char** env)
             setpwent();
             while ((pwent = getpwent())) {
                 if (user.compare(pwent->pw_name) == 0) {
-                    Log(LOG_INFO, "Dropping root privileges (running as %s)\n", pwent->pw_name);
-                    setuid(pwent->pw_uid);
+                    if (setuid(pwent->pw_uid) == 0) {
+                        Log(LOG_INFO, "Dropping root privileges (running as %s)\n", pwent->pw_name);
+                    } else {
+                        Log(LOG_ERR, "Failed to drop root privileges - set userid failed: %s\n", user.c_str());
+                        endpwent();
+                        return DAEMON_EXIT_CONFIG_ERROR;
+                    }
                     break;
                 }
             }
@@ -814,7 +820,10 @@ int main(int argc, char** argv, char** env)
                 Log(LOG_ERR, "Failed to set session ID: %s\n", strerror(errno));
                 return DAEMON_EXIT_SESSION_ERROR;
             }
-            chdir("/tmp");
+            if (chdir("/tmp") == -1) {
+                Log(LOG_ERR, "Failed to change directory: %s\n", strerror(errno));
+                return DAEMON_EXIT_CHDIR_ERROR;
+            }
             forked = true;
         }
     }

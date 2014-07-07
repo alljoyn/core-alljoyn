@@ -84,9 +84,9 @@ final class MsgArg {
      *                      determined
      */
     @SuppressWarnings("unchecked")
-    private static Enum getEnumObject(Type type, int value) throws BusException {
+    private static Enum<?> getEnumObject(Type type, int value) throws BusException {
         if (type instanceof Class) {
-            Class c = (Class) type;
+            Class<?> c = (Class) type;
             if (c.isEnum()) {
                 try {
                     Object[] values = (Object[]) c.getMethod("values").invoke(null);
@@ -116,7 +116,7 @@ final class MsgArg {
     @SuppressWarnings("unchecked")
     private static int getEnumValue(Object obj) throws BusException {
         if (obj != null) {
-            Class c = obj.getClass();
+            Class<?> c = obj.getClass();
             if (c.isEnum()) {
                 try {
                     Object[] values = (Object[]) c.getMethod("values").invoke(null);

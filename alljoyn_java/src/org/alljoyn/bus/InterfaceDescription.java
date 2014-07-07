@@ -262,7 +262,7 @@ class InterfaceDescription {
                 //not a problem since most Translators will need to live forever anyway
                 Translator dt = translatorCache.get(ifcNote.descriptionTranslator());
                 if(null == dt) {
-                    Class c = Class.forName(ifcNote.descriptionTranslator());
+                    Class<?> c = Class.forName(ifcNote.descriptionTranslator());
                     dt = (Translator)c.newInstance();
                     translatorCache.put(ifcNote.descriptionTranslator(), dt);
                 }

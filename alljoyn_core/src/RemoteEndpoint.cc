@@ -985,7 +985,7 @@ void _RemoteEndpoint::IncrementRef()
 {
     int refs = IncrementAndFetch(&internal->refCount);
     QCC_DbgPrintf(("_RemoteEndpoint::IncrementRef(%s) refs=%d\n", GetUniqueName().c_str(), refs));
-
+    QCC_UNUSED(refs); /* avoid unused variable warning in release build */
 }
 
 void _RemoteEndpoint::DecrementRef()

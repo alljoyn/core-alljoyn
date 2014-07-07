@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -51,7 +51,7 @@ public class IntrospectableTest extends TestCase {
         ProxyBusObject remoteObj = bus.getProxyBusObject("org.freedesktop.DBus",
                                                          "/org/freedesktop/DBus",
                                                          BusAttachment.SESSION_ID_ANY,
-                                                         new Class[] { Introspectable.class });
+                                                         new Class<?>[] { Introspectable.class });
         Introspectable introspectable = remoteObj.getInterface(Introspectable.class);
         String data = introspectable.Introspect();
     }

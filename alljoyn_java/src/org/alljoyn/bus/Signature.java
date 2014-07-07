@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -48,7 +48,7 @@ final class Signature {
         return args;
     }
 
-    public static Field[] structFields(Class cls) throws BusException {
+    public static Field[] structFields(Class<?> cls) throws BusException {
         Field[] fields = cls.getFields();
         Field[] orderedFields = new Field[fields.length];
         for (Field field : fields) {
@@ -62,7 +62,7 @@ final class Signature {
         return orderedFields;
     }
 
-    public static Type[] structTypes(Class cls) throws AnnotationBusException {
+    public static Type[] structTypes(Class<?> cls) throws AnnotationBusException {
         Field[] fields = cls.getFields();
         Type[] types = new Type[fields.length];
         for (Field field : fields) {
@@ -76,7 +76,7 @@ final class Signature {
         return types;
     }
 
-    public static String structSig(Class cls) throws AnnotationBusException {
+    public static String structSig(Class<?> cls) throws AnnotationBusException {
         Field[] fields = cls.getFields();
         String[] sig = new String[fields.length];
         for (Field field : fields) {
@@ -124,7 +124,7 @@ final class Signature {
 
     private static String parameterizedTypeSig(ParameterizedType type, String signature)
             throws AnnotationBusException {
-        Class cls = (Class) type.getRawType();
+        Class<?> cls = (Class) type.getRawType();
         if (Map.class.isAssignableFrom(cls)) {
             String sig = "";
             Type[] actuals = type.getActualTypeArguments();
@@ -137,11 +137,11 @@ final class Signature {
             }
             return "a{" + sig + "}";
         } else {
-            throw new AnnotationBusException("unsupported parameterized type " + type);
+            return classTypeSig(cls, signature);
         }
     }
 
-    private static String classTypeSig(Class cls, String signature) throws AnnotationBusException {
+    private static String classTypeSig(Class<?> cls, String signature) throws AnnotationBusException {
         if (Void.class.isAssignableFrom(cls) || void.class.isAssignableFrom(cls)) {
             return "";
         } else if (Byte.class.isAssignableFrom(cls) || byte.class.isAssignableFrom(cls)) {

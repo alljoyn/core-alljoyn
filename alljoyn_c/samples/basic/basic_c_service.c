@@ -191,6 +191,9 @@ int main(int argc, char** argv, char** envArg)
 
     foundMember = alljoyn_interfacedescription_getmember(exampleIntf, "cat", &cat_member);
     assert(foundMember == QCC_TRUE);
+    if (!foundMember) {
+        printf("Failed to get cat member of interface\n");
+    }
 
     status = alljoyn_busobject_addmethodhandlers(testObj, methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
     if (ER_OK != status) {

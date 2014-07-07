@@ -87,9 +87,9 @@ public class BusAttachmentTest extends TestCase {
     }
 
     private BusAttachment bus;
-    private WeakReference busRef = new WeakReference<BusAttachment>(bus);
+    private WeakReference<BusAttachment> busRef = new WeakReference<BusAttachment>(bus);
     private BusAttachment otherBus;
-    private WeakReference otherBusRef = new WeakReference<BusAttachment>(otherBus);
+    private WeakReference<BusAttachment> otherBusRef = new WeakReference<BusAttachment>(otherBus);
     private int handledSignals1;
     private int handledSignals2;
     private int handledSignals3;
@@ -444,7 +444,7 @@ public class BusAttachmentTest extends TestCase {
         ProxyBusObject proxyObj = bus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
                 "/simple",
                 BusAttachment.SESSION_ID_ANY,
-                new Class[] { SimpleInterface.class });
+                new Class<?>[] { SimpleInterface.class });
         SimpleInterface proxy = proxyObj.getInterface(SimpleInterface.class);
         proxy.Ping("hello");
     }
@@ -507,7 +507,7 @@ public class BusAttachmentTest extends TestCase {
         ProxyBusObject proxyObj = otherBus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
                 "/secure",
                 BusAttachment.SESSION_ID_ANY,
-                new Class[] { SecureInterface.class });
+                new Class<?>[] { SecureInterface.class });
         SecureInterface proxy = proxyObj.getInterface(SecureInterface.class);
         pinRequested = false;
         proxy.Ping("hello");
@@ -539,7 +539,7 @@ public class BusAttachmentTest extends TestCase {
         ProxyBusObject proxyObj = bus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
                 "/annotation",
                 BusAttachment.SESSION_ID_ANY,
-                new Class[] { Introspectable.class });
+                new Class<?>[] { Introspectable.class });
 
         Introspectable introspectable = proxyObj.getInterface(Introspectable.class);
         String actual = introspectable.Introspect();
@@ -600,7 +600,7 @@ public class BusAttachmentTest extends TestCase {
         ProxyBusObject proxyObj = bus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
                 "/annotation",
                 BusAttachment.SESSION_ID_ANY,
-                new Class[] { AnnotationInterface.class });
+                new Class<?>[] { AnnotationInterface.class });
         AnnotationInterface proxy = proxyObj.getInterface(AnnotationInterface.class);
         proxy.NoReplyMethod("noreply");
         /* No assert here, the test is to make sure the above call doesn't throw an exception. */
@@ -619,7 +619,7 @@ public class BusAttachmentTest extends TestCase {
         ProxyBusObject proxyObj = bus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
                 "/exception",
                 BusAttachment.SESSION_ID_ANY,
-                new Class[] { SimpleInterface.class });
+                new Class<?>[] { SimpleInterface.class });
         SimpleInterface proxy = proxyObj.getInterface(SimpleInterface.class);
 
         boolean thrown = false;

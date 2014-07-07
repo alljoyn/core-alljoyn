@@ -335,12 +335,18 @@ int main(int argc, char** argv)
             char foreign_port[10];
             char foreign_address[20];
             printf("Enter the foreign port.. \n");
-            scanf("%s", foreign_port);
-            printf("Enter the foreign address.. \n");
-            scanf("%s", foreign_address);
-            status = ARDP_Connect(handle, sock, qcc::IPAddress(foreign_address), atoi(foreign_port), ARDP_SEGMAX, ARDP_SEGBMAX, &conn, (uint8_t*)g_ajnConnString, strlen(g_ajnConnString) + 1, NULL);
-            if (status != ER_OK) {
-                printf("Error while calling ARDP_Connect..  %s \n", QCC_StatusText(status));
+            if (scanf("%s", foreign_port) != 1) {
+                printf("Error reading foreign port\n");
+            } else {
+                printf("Enter the foreign address.. \n");
+                if (scanf("%s", foreign_address) != 1) {
+                    printf("Error reading foreign address\n");
+                } else {
+                    status = ARDP_Connect(handle, sock, qcc::IPAddress(foreign_address), atoi(foreign_port), ARDP_SEGMAX, ARDP_SEGBMAX, &conn, (uint8_t*)g_ajnConnString, strlen(g_ajnConnString) + 1, NULL);
+                    if (status != ER_OK) {
+                        printf("Error while calling ARDP_Connect..  %s \n", QCC_StatusText(status));
+                    }
+                }
             }
         }
 

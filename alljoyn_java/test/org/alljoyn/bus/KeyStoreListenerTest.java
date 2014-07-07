@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -138,7 +138,7 @@ public class KeyStoreListenerTest extends TestCase {
         ProxyBusObject proxyObj = otherBus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
                                                              "/secure",
                                                              BusAttachment.SESSION_ID_ANY,
-                                                             new Class[] { SecureInterface.class });
+                                                             new Class<?>[] { SecureInterface.class });
         proxy = proxyObj.getInterface(SecureInterface.class);
     }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -160,7 +160,7 @@ public class MarshalStressTest extends TestCase {
 
         ProxyBusObject remoteObj = bus.getProxyBusObject("org.alljoyn.bus.MarshalStressTest", "/service",
                                                          BusAttachment.SESSION_ID_ANY,
-                                                         new Class[] { MarshalStressInterfaceInvalid.class });
+                                                         new Class<?>[] { MarshalStressInterfaceInvalid.class });
         proxy = remoteObj.getInterface(MarshalStressInterfaceInvalid.class);
     }
 
@@ -667,7 +667,7 @@ public class MarshalStressTest extends TestCase {
     public void testInvalidMethoday() throws Exception {
         boolean thrown = false;
         try {
-            proxy.Methoday(new Class[] { this.getClass() });
+            proxy.Methoday(new Class<?>[] { this.getClass() });
         } catch (BusException ex) {
             thrown = true;
         } catch (Throwable ex) {
@@ -706,7 +706,7 @@ public class MarshalStressTest extends TestCase {
     public void testInvalidMethodab() throws Exception {
         boolean thrown = false;
         try {
-            proxy.Methodab(new Class[] { this.getClass() });
+            proxy.Methodab(new Class<?>[] { this.getClass() });
         } catch (BusException ex) {
             thrown = true;
         } catch (Throwable ex) {
@@ -745,7 +745,7 @@ public class MarshalStressTest extends TestCase {
     public void testInvalidMethodan() throws Exception {
         boolean thrown = false;
         try {
-            proxy.Methodan(new Class[] { this.getClass() });
+            proxy.Methodan(new Class<?>[] { this.getClass() });
         } catch (BusException ex) {
             thrown = true;
         } catch (Throwable ex) {
@@ -784,7 +784,7 @@ public class MarshalStressTest extends TestCase {
     public void testInvalidMethodaq() throws Exception {
         boolean thrown = false;
         try {
-            proxy.Methodaq(new Class[] { this.getClass() });
+            proxy.Methodaq(new Class<?>[] { this.getClass() });
         } catch (BusException ex) {
             thrown = true;
         } catch (Throwable ex) {
@@ -823,7 +823,7 @@ public class MarshalStressTest extends TestCase {
     public void testInvalidMethodai() throws Exception {
         boolean thrown = false;
         try {
-            proxy.Methodai(new Class[] { this.getClass() });
+            proxy.Methodai(new Class<?>[] { this.getClass() });
         } catch (BusException ex) {
             thrown = true;
         } catch (Throwable ex) {
@@ -862,7 +862,7 @@ public class MarshalStressTest extends TestCase {
     public void testInvalidMethodau() throws Exception {
         boolean thrown = false;
         try {
-            proxy.Methodau(new Class[] { this.getClass() });
+            proxy.Methodau(new Class<?>[] { this.getClass() });
         } catch (BusException ex) {
             thrown = true;
         } catch (Throwable ex) {
@@ -901,7 +901,7 @@ public class MarshalStressTest extends TestCase {
     public void testInvalidMethodax() throws Exception {
         boolean thrown = false;
         try {
-            proxy.Methodax(new Class[] { this.getClass() });
+            proxy.Methodax(new Class<?>[] { this.getClass() });
         } catch (BusException ex) {
             thrown = true;
         } catch (Throwable ex) {
@@ -940,7 +940,7 @@ public class MarshalStressTest extends TestCase {
     public void testInvalidMethodat() throws Exception {
         boolean thrown = false;
         try {
-            proxy.Methodat(new Class[] { this.getClass() });
+            proxy.Methodat(new Class<?>[] { this.getClass() });
         } catch (BusException ex) {
             thrown = true;
         } catch (Throwable ex) {
@@ -979,7 +979,7 @@ public class MarshalStressTest extends TestCase {
     public void testInvalidMethodad() throws Exception {
         boolean thrown = false;
         try {
-            proxy.Methodad(new Class[] { this.getClass() });
+            proxy.Methodad(new Class<?>[] { this.getClass() });
         } catch (BusException ex) {
             thrown = true;
         } catch (Throwable ex) {

@@ -160,7 +160,7 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
         free(context);
     }
 
-    void LostAdvertisedName(const char* name, const TransportMask transport, const char* prefix)
+    void LostAdvertisedName(const char* name, TransportMask transport, const char* prefix)
     {
         printf("LostAdvertisedName(name=%s, transport=0x%x,  prefix=%s)\n", name, transport, prefix);
     }
@@ -362,7 +362,7 @@ int main(int argc, char** argv)
         delete g_msgBus;
     }
 
-    printf("Elapsed time is %ld seconds\n", (GetTimestamp64() - startTime) / 1000);
+    printf("Elapsed time is %" PRIi64 " seconds\n", (GetTimestamp64() - startTime) / 1000);
 
     return (int) status;
 }

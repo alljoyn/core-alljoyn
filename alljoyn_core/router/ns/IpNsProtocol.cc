@@ -418,6 +418,8 @@ size_t IsAt::GetSerializedSize(void) const
 
     default:
         assert(false && "IsAt::GetSerializedSize(): Unexpected version");
+        QCC_LogError(ER_WARNING, ("IsAt::GetSerializedSize(): Unexpected version %d", m_version & 0xf));
+        size = 0;
         break;
     }
 

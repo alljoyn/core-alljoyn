@@ -359,7 +359,7 @@ public abstract class ClientBaseImpl implements ClientBase
 
     /**
      * Creates the {@link SessionOpts} object
-     * @return
+     * @return the opts
      */
     protected SessionOpts createSessionOpts() {
         SessionOpts sessionOpts   = new SessionOpts();

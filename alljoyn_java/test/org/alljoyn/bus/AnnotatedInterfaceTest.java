@@ -82,7 +82,7 @@ public class AnnotatedInterfaceTest extends TestCase {
         ProxyBusObject proxyObj = bus.getProxyBusObject("org.alljoyn.bus.AnnotatedInterfaceTest",
                 "/annotation",
                 BusAttachment.SESSION_ID_ANY,
-                new Class[] { Introspectable.class });
+                new Class<?>[] { Introspectable.class });
 
         Introspectable introspectable = proxyObj.getInterface(Introspectable.class);
         String actual = introspectable.Introspect();

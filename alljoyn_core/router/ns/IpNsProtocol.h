@@ -1597,7 +1597,7 @@ class _Packet : public ProtocolElement {
      */
     void SetDestination(qcc::IPEndpoint destination) { m_destination = destination; m_destinationSet = true; }
 
-    void SetInterfaceIndex(int32_t interfaceIndex) { m_interfaceIndex = interfaceIndex; m_interfaceIndexSet = true; }
+    void SetInterfaceIndex(uint32_t interfaceIndex) { m_interfaceIndex = interfaceIndex; m_interfaceIndexSet = true; }
 
     void SetAddressFamily(qcc::AddressFamily addressFamily) { m_addressFamily = addressFamily; m_addressFamilySet = true; }
 
@@ -1613,7 +1613,7 @@ class _Packet : public ProtocolElement {
      */
     qcc::IPEndpoint GetDestination(void) { return m_destination; }
 
-    int32_t GetInterfaceIndex(void) { return m_interfaceIndex; }
+    uint32_t GetInterfaceIndex(void) { return m_interfaceIndex; }
 
     int32_t GetAddressFamily(void) { return m_addressFamily; }
     /**
@@ -1639,7 +1639,7 @@ class _Packet : public ProtocolElement {
      */
     void ClearDestination() { m_destinationSet = false; }
 
-    void ClearInterfaceIndex() { m_interfaceIndex = -1; m_interfaceIndexSet = false; }
+    void ClearInterfaceIndex() { m_interfaceIndexSet = false; }
 
     void ClearAddressFamily() { m_addressFamily = qcc::QCC_AF_UNSPEC; m_addressFamilySet = false; }
     /**
@@ -1811,7 +1811,7 @@ class _Packet : public ProtocolElement {
     uint8_t m_timer;
     qcc::IPEndpoint m_destination;
     bool m_destinationSet;
-    int32_t m_interfaceIndex;
+    uint32_t m_interfaceIndex;
     bool m_interfaceIndexSet;
     qcc::AddressFamily m_addressFamily;
     bool m_addressFamilySet;

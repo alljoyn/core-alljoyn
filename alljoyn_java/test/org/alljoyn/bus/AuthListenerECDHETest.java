@@ -29,9 +29,9 @@ public class AuthListenerECDHETest extends TestCase {
     }
 
     private BusAttachment bus;
-    private WeakReference busRef = new WeakReference<BusAttachment>(bus);
+    private WeakReference<BusAttachment> busRef = new WeakReference<BusAttachment>(bus);
     private BusAttachment serviceBus;
-    private WeakReference serviceBusRef = new WeakReference<BusAttachment>(serviceBus);
+    private WeakReference<BusAttachment> serviceBusRef = new WeakReference<BusAttachment>(serviceBus);
     private SecureService service;
     private SecureInterface proxy;
     private InsecureInterface insecureProxy;
@@ -99,7 +99,7 @@ public class AuthListenerECDHETest extends TestCase {
         ProxyBusObject proxyObj = bus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
                                                         "/secure",
                                                         BusAttachment.SESSION_ID_ANY,
-                                                        new Class[] { SecureInterface.class, InsecureInterface.class });
+                                                        new Class<?>[] { SecureInterface.class, InsecureInterface.class });
         proxy = proxyObj.getInterface(SecureInterface.class);
         insecureProxy = proxyObj.getInterface(InsecureInterface.class);
     }

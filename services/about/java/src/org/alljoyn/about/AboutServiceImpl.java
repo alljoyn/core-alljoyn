@@ -118,7 +118,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
     }
 
     /**
-     * @deprecated use {@link addAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)} instead.
+     * @deprecated use {@link org.alljoyn.about.AboutService#addAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)} instead.
      *
      * This function has been deprecated please change your code
      * to use the new addAnnouncementHandler where you specify the
@@ -170,7 +170,7 @@ public class AboutServiceImpl extends ServiceCommonImpl implements AboutService
 
 
     /**
-     * @deprecated use {@link removeAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)} instead.
+     * @deprecated use {@link org.alljoyn.about.AboutService#removeAnnouncementHandler(AnnouncementHandler handler, String[] interfaces)} instead.
      *
      * @see org.alljoyn.about.AboutService#addAnnouncementHandler(org.alljoyn.services.common.AnnouncementHandler, String[] interfaces)
      */

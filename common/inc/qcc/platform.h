@@ -8,7 +8,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -79,6 +79,8 @@
 #define QCC_DEPRECATED(func); /**< mark a function as deprecated. */
 
 #endif /* Compiler type */
+
+#define QCC_UNUSED(x) (void)(x)
 
 /** Boolean type for C */
 typedef int32_t QCC_BOOL;
