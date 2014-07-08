@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -197,9 +197,13 @@ class IODispatch : public Thread, public AlarmListener {
     /**
      * Start the IODispatch and timer.
      *
+     * @param arg        The one and only parameter that 'func' will be called with
+     *                   (defaults to NULL).
+     * @param listener   Listener to be informed of Thread events (defaults to NULL).
+     *
      * @return  ER_OK if successful.
      */
-    QStatus Start();
+    QStatus Start(void* arg = NULL, ThreadListener* listener = NULL);
 
     /**
      * Stop the IODispatch and associated timer.

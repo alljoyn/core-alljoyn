@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -178,6 +178,13 @@ class DaemonSLAPTransport : public Transport, public _RemoteEndpoint::EndpointLi
      */
     void UntrustedClientExit() { };
   private:
+    /**
+     * Empty private overloaded virtual function for Thread::Start
+     * this avoids the overloaded-virtual warning. For the Thread::Start
+     * function.
+     */
+    QStatus Start(void* arg, qcc::ThreadListener* listener) { return Thread::Start(arg, listener); }
+
     BusAttachment& m_bus;                          /**< The message bus for this transport */
     bool stopping;                                 /**< True if Stop() has been called but endpoints still exist */
 

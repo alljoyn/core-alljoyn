@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -47,7 +47,7 @@ IODispatch::~IODispatch()
      */
     assert(dispatchEntries.size() == 0);
 }
-QStatus IODispatch::Start()
+QStatus IODispatch::Start(void* arg, ThreadListener* listener)
 {
     /* Start the timer thread */
     QStatus status = timer.Start();
@@ -59,7 +59,7 @@ QStatus IODispatch::Start()
     } else {
         isRunning = true;
         /* Start the main thread */
-        return Thread::Start();
+        return Thread::Start(arg, listener);
     }
 }
 

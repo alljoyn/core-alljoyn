@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -156,6 +156,13 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
     void EndpointExit(RemoteEndpoint& endpoint);
 
   private:
+    /**
+     * Empty private overloaded virtual function for Thread::Start
+     * this avoids the overloaded-virtual warning. For the Thread::Start
+     * function.
+     */
+    QStatus Start(void* arg, qcc::ThreadListener* listener) { return Thread::Start(arg, listener); }
+
     BusAttachment& bus;                       /**< The message bus for this transport */
     bool stopping;                            /**< True if Stop() has been called but endpoints still exist */
     std::list<RemoteEndpoint> endpointList;   /**< List of active endpoints */

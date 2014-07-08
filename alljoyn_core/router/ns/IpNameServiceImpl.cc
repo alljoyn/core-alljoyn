@@ -7145,14 +7145,14 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
     return true;
 }
 
-QStatus IpNameServiceImpl::Start()
+QStatus IpNameServiceImpl::Start(void* arg, qcc::ThreadListener* listener)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::Start()"));
     m_mutex.Lock();
     assert(IsRunning() == false);
     m_state = IMPL_RUNNING;
     QCC_DbgPrintf(("IpNameServiceImpl::Start(): Starting thread"));
-    QStatus status = Thread::Start(this);
+    QStatus status = Thread::Start(this, listener);
     QCC_DbgPrintf(("IpNameServiceImpl::Start(): Started"));
     m_mutex.Unlock();
     m_packetScheduler.Start();

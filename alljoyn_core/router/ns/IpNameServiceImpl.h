@@ -258,8 +258,13 @@ class IpNameServiceImpl : public qcc::Thread {
 
     /**
      * @brief Start any required name service threads.
+     *
+     * @param arg        Parameter not used (defaults to NULL).
+     * @param listener   Listener to be informed of Thread events (defaults to NULL).
+     *
+     * @return  Indication of whether creation of the thread succeeded or not.
      */
-    QStatus Start();
+    QStatus Start(void* arg = NULL, qcc::ThreadListener* listener = NULL);
 
     /**
      * @brief return true if name service threads are running
