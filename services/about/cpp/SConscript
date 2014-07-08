@@ -23,7 +23,7 @@ if not about_env.has_key('_ALLJOYNCORE_'):
         about_env.AppendUnique(LIBS = [ 'stdc++', 'pthread' ])
 
 # Make about dist a sub-directory of the alljoyn dist.  This avoids any conflicts with alljoyn dist targets.
-about_env['ABOUT_DISTDIR'] = about_env['DISTDIR'] + '/about'
+about_env['ABOUT_DISTDIR'] = about_env['DISTDIR'] + '/cpp'
 
 about_env.Install('$ABOUT_DISTDIR/inc/alljoyn/about', about_env.Glob('inc/alljoyn/about/*.h'))
 
