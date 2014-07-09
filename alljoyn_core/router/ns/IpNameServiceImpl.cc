@@ -1627,12 +1627,18 @@ void IpNameServiceImpl::TriggerTransmission(Packet packet)
     packet->GetVersion(nsVersion, msgVersion);
     assert(m_enableV1 || (msgVersion != 0 && msgVersion != 1));
 
+    //Queue one instance of the packet, the rest will be taken care of by the PacketScheduler thread
+    QueueProtocolMessage(packet);
     m_mutex.Lock();
     while (m_burstQueue.size() >= MAX_IPNS_MESSAGES) {
         m_mutex.Unlock();
         qcc::Sleep(10);
         m_mutex.Lock();
     }
+    Timespec now;
+    GetTimeNow(&now);
+
+    brh.nextScheduleTime = now + BURST_RESPONSE_INTERVAL;
     m_burstQueue.push_back(brh);
 
     m_packetScheduler.Alert();
@@ -2678,10 +2684,8 @@ QStatus IpNameServiceImpl::Query(TransportMask completeTransportMask, MDNSPacket
         mdnsPacket->AddQuestion(mdnsQuestion);
     }
     MDNSSenderRData* refRData =  new MDNSSenderRData();
-    if (mdnsPacket->DestinationSet()) {
+    refRData->SetSearchID(id);
 
-        refRData->SetSearchID(id);
-    }
     MDNSResourceRecord refRecord("sender-info." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, refRData);
     mdnsPacket->AddAdditionalRecord(refRecord);
     delete refRData;
@@ -2798,9 +2802,7 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
     }
 
     MDNSSenderRData* refRData =  new MDNSSenderRData();
-    if (mdnsPacket->DestinationSet()) {
-        refRData->SetSearchID(id);
-    }
+    refRData->SetSearchID(id);
     MDNSResourceRecord refRecord("sender-info." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, ttl, refRData);
     mdnsPacket->AddAdditionalRecord(refRecord);
     delete refRData;
@@ -4250,16 +4252,6 @@ void IpNameServiceImpl::SendOutboundMessages(void)
         // make sense, so we can discard it and loop back for another.
         //
         m_outbound.pop_front();
-
-        // This is to limit the number of name service messages that
-        // can be sent out on the network for any given amount of time; which
-        // is good for preventing our users from trying to advertise zillions
-        // of names and flooding the net.
-        //
-        m_mutex.Unlock();
-        qcc::Sleep(rand() % 128);
-        m_mutex.Lock();
-
     }
 }
 
@@ -7369,15 +7361,15 @@ set<String> IpNameServiceImpl::GetAdvertisingQuietly(TransportMask transportMask
 
 }
 
-bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket)
+bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateSid)
 {
     MDNSResourceRecord* refRecord;
     mdnspacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord);
     MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
     int32_t id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
-
-    refRData->SetSearchID(id);
-
+    if (updateSid) {
+        refRData->SetSearchID(id);
+    }
     if (mdnspacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
         MDNSResourceRecord* searchRecord;
         mdnspacket->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &searchRecord);
@@ -7502,8 +7494,10 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
         GetTimeNow(&now);
         uint32_t timeToSleep = -1;
         //Step 1: Collect all packets
-        std::list<Packet> packets;
-        packets.clear();
+        std::list<Packet> subsequentBurstpackets;
+        std::list<Packet> initialBurstPackets;
+        subsequentBurstpackets.clear();
+        initialBurstPackets.clear();
 
         //Collect network change burst packets
         if ((m_impl.m_networkChangeScheduleCount <= m_impl.m_retries) && ((m_impl.m_networkChangeScheduleCount == 0) || ((m_impl.m_networkChangeTimeStamp - now) < PACKET_TIME_ACCURACY_MS))) {
@@ -7556,7 +7550,8 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
         std::list<BurstResponseHeader>::iterator it = m_impl.m_burstQueue.begin();
         it = m_impl.m_burstQueue.begin();
         while (it != m_impl.m_burstQueue.end()) {
-            if ((*it).scheduleCount == 0 || (((*it).nextScheduleTime - now) < PACKET_TIME_ACCURACY_MS)) {
+
+            if (((*it).nextScheduleTime - now) < PACKET_TIME_ACCURACY_MS) {
                 uint32_t nsVersion;
                 uint32_t msgVersion;
                 (*it).packet->GetVersion(nsVersion, msgVersion);
@@ -7564,19 +7559,21 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                     MDNSPacket mdnspacket = MDNSPacket::cast((*it).packet);
                     //PurgeAndUpdatePacket will remove any names that have changed - not being advertised/discovered
                     // and also update the burst ID in the packet.
-                    if (!m_impl.PurgeAndUpdatePacket(mdnspacket)) {
+                    if (!m_impl.PurgeAndUpdatePacket(mdnspacket, (*it).scheduleCount != 0)) {
                         //No names found, remove this packet
                         m_impl.m_burstQueue.erase(it++);
                         continue;
                     }
                 }
 
-                packets.push_back((*it).packet);
 
                 if ((*it).scheduleCount == 0) {
-                    (*it).nextScheduleTime = now + RETRY_INTERVALS[0] * 1000 - BURST_RESPONSE_RETRIES * BURST_RESPONSE_INTERVAL;
+                    initialBurstPackets.push_back((*it).packet);
+                    (*it).nextScheduleTime += RETRY_INTERVALS[(*it).scheduleCount] * 1000 - (BURST_RESPONSE_RETRIES + 1) * BURST_RESPONSE_INTERVAL;
                 } else {
+                    subsequentBurstpackets.push_back((*it).packet);
                     (*it).nextScheduleTime += RETRY_INTERVALS[(*it).scheduleCount] * 1000;
+
                 }
 
 
@@ -7604,8 +7601,24 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
         m_impl.m_mutex.Unlock();
         //Step 2: Burst the packets
         uint32_t burstIndex  = 0;
-        while (burstIndex < BURST_RESPONSE_RETRIES && !packets.empty() && !IsStopping()) {
-            for (std::list<Packet>::const_iterator i = packets.begin(); i != packets.end(); i++) {
+        while (burstIndex < BURST_RESPONSE_RETRIES && (!subsequentBurstpackets.empty() || !initialBurstPackets.empty()) && !IsStopping()) {
+
+            //If this is the first burst in the schedule, queue one less packet, first one is queued by TriggerTransmission
+            if (burstIndex != BURST_RESPONSE_RETRIES - 1) {
+                for (std::list<Packet>::const_iterator i = initialBurstPackets.begin(); i != initialBurstPackets.end(); i++) {
+                    Packet packet = *i;
+                    uint32_t nsVersion;
+                    uint32_t msgVersion;
+
+                    packet->GetVersion(nsVersion, msgVersion);
+                    if ((msgVersion == 2)) {
+                        m_impl.QueueProtocolMessage(*i);
+                    }
+
+                }
+            }
+
+            for (std::list<Packet>::const_iterator i = subsequentBurstpackets.begin(); i != subsequentBurstpackets.end(); i++) {
                 Packet packet = *i;
                 uint32_t nsVersion;
                 uint32_t msgVersion;
@@ -7616,14 +7629,12 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                 }
 
             }
-
             // Wait for burst interval = BURST_RESPONSE_INTERVAL
             Event::Wait(Event::neverSet, BURST_RESPONSE_INTERVAL);
             GetStopEvent().ResetEvent();
             burstIndex++;
         }
         m_impl.m_mutex.Lock();
-
         //Step 3: Wait for a specific amount of time
         if (!IsStopping()) {
             m_impl.m_mutex.Unlock();
