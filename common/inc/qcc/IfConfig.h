@@ -26,6 +26,7 @@
 #error Only include IfConfig.h in C++ code.
 #endif
 
+#include <set>
 #include <vector>
 #include <Status.h>
 #include <qcc/String.h>
@@ -67,6 +68,10 @@ typedef enum {
     QCC_RTM_DELADDR = 0,
     QCC_RTM_NEWADDR = 1
 } NetworkEventType;
+
+const uint32_t QCC_AF_UNSPEC_INDEX = 0x0;
+const uint32_t QCC_AF_INET_INDEX = 0x1;
+const uint32_t QCC_AF_INET6_INDEX = 0x2;
 
 /**
  * @brief Get information regarding the network interfaces on the
@@ -122,7 +127,7 @@ SocketFd NetworkEventSocket();
  * @brief Process network event notifications.
  *
  */
-NetworkEventType NetworkEventReceive(SocketFd sockFd);
+NetworkEventType NetworkEventReceive(SocketFd sockFd, std::set<uint32_t>& networkRefreshSet);
 
 } // namespace ajn
 

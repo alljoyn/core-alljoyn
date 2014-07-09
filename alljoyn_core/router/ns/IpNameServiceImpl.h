@@ -299,6 +299,8 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     QStatus CreateVirtualInterface(const qcc::IfConfigEntry& entry);
 
+    QStatus CreateUnicastSocket(qcc::AddressFamily family);
+
     /**
      * @brief Delete a virtual network interface. In normal cases WiFi-Direct
      * creates a soft-AP for a temporary network. Once the P2P keep-alive connection is
@@ -956,11 +958,9 @@ class IpNameServiceImpl : public qcc::Thread {
         uint32_t m_prefixlen;       /**< The address prefix (cf netmask) of the interface we are talking to */
 
         qcc::SocketFd m_multicastsockFd;     /**< The multicast socket we are using to talk over */
-        qcc::SocketFd m_unicastsockFd;       /**< The unicast socket we are using to talk over */
         qcc::SocketFd m_multicastMDNSsockFd; /**< The multicast MDNS socket we are using to talk over */
 
         qcc::Event* m_multicastevent;      /**< The event for the multicast socket we use to get read notifications over */
-        qcc::Event* m_unicastevent;        /**< The event for the unicast socket we use to get read notifications over */
         qcc::Event* m_multicastMDNSevent;  /**< The event for the multicast MDNS socket we use to get read notifications over */
 
         uint32_t m_mtu;             /**< The MTU of the protocol/device we are using */
@@ -1023,7 +1023,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * Send outbound name service messages over multicast, out the list of live
      * interfaces implied by the transport masks in the message.
      */
-    void SendOutboundMessageActively(Packet packet, const qcc::IPAddress localAddress = qcc::IPAddress("0.0.0.0"));
+    void SendOutboundMessageActively(Packet packet, const qcc::IPAddress& localAddress = qcc::IPAddress("0.0.0.0"));
 
     /**
      * Main thread entry point.
@@ -1076,7 +1076,7 @@ class IpNameServiceImpl : public qcc::Thread {
         bool sockFdIsIPv4,
         Packet packet,
         uint32_t interfaceIndex,
-        const qcc::IPAddress localAddress =  qcc::IPAddress("0.0.0.0"));
+        const qcc::IPAddress& localAddress =  qcc::IPAddress("0.0.0.0"));
 
 
     /**
@@ -1317,11 +1317,11 @@ class IpNameServiceImpl : public qcc::Thread {
      * @internal
      * @brief Retransmit exported advertisements.
      */
-    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask transportMask, int32_t interfaceIndex = -1, qcc::AddressFamily family = qcc::QCC_AF_UNSPEC, const qcc::IPAddress localAddress =  qcc::IPAddress("0.0.0.0"));
+    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask transportMask, const int32_t interfaceIndex = -1, const qcc::AddressFamily family = qcc::QCC_AF_UNSPEC, const qcc::IPAddress& localAddress =  qcc::IPAddress("0.0.0.0"));
 
-    void GetResponsePackets(std::list<Packet>& packets, bool quietly = false, const qcc::IPEndpoint destination = qcc::IPEndpoint("0.0.0.0", 0), uint8_t type = TRANSMIT_V2, TransportMask transportMask = (TRANSPORT_TCP | TRANSPORT_UDP));
+    void GetResponsePackets(std::list<Packet>& packets, bool quietly = false, const qcc::IPEndpoint destination = qcc::IPEndpoint("0.0.0.0", 0), uint8_t type = TRANSMIT_V2, TransportMask transportMask = (TRANSPORT_TCP | TRANSPORT_UDP), const int32_t interfaceIndex = -1, const qcc::AddressFamily family = qcc::QCC_AF_UNSPEC);
 
-    void GetQueryPackets(std::list<Packet>& packets, const uint8_t type = TRANSMIT_V0_V1 | TRANSMIT_V2);
+    void GetQueryPackets(std::list<Packet>& packets, const uint8_t type = TRANSMIT_V0_V1 | TRANSMIT_V2, const int32_t interfaceIndex = -1, const qcc::AddressFamily family = qcc::QCC_AF_UNSPEC);
     /**
      * @internal
      * @brief Retry locate requests.
@@ -1429,7 +1429,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @brief Make sure that we have socket open to talk and listen to as many
      * of our desired interfaces as possible.
      */
-    void LazyUpdateInterfaces(void);
+    void LazyUpdateInterfaces(const std::set<uint32_t>& networkRefreshSet = std::set<uint32_t>());
 
     /**
      * @internal
@@ -1511,6 +1511,9 @@ class IpNameServiceImpl : public qcc::Thread {
     qcc::SocketFd m_ipv4QuietSockFd;
     qcc::SocketFd m_ipv6QuietSockFd;
 
+    qcc::SocketFd m_ipv4UnicastSockFd;
+    qcc::SocketFd m_ipv6UnicastSockFd;
+
     std::list<BurstResponseHeader> m_burstQueue;
     /**
      * Hash functor
@@ -1579,6 +1582,7 @@ class IpNameServiceImpl : public qcc::Thread {
     PacketScheduler m_packetScheduler;
 
     uint32_t m_networkChangeScheduleCount;
+    std::set<uint32_t> m_networkChangeRefreshSet;
     qcc::Timespec m_networkChangeTimeStamp;
     bool PurgeAndUpdatePacket(MDNSPacket mdnspacket);
 };
