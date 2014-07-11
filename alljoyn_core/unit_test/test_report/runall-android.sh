@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2012 - 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2012 - 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -22,15 +22,21 @@ Runs GTest executables created by scons in alljoyn_core and common, on an Androi
 
 Usage: $(basename -- "$0") [ -s -d alljoyn_dist ] [ -t alljoyn_test ] [-c configfile ] -- \"adb device\" [ ajtest ] [ cmtest ] ...
 where
-	-s		# start and stop our own AllJoyn-Daemon (default internal transport address, --no-bt)
-	-d alljoyn_dist	# path to the build/.../dist tree, used to find cpp/bin/alljoyn-daemon exe, if used
-	-t alljoyn_test	# path to the build/.../test tree, used to find cpp/bin/cmtest exe, ajtest exe, ...
-			# Note: do not include the 'cpp/bin' subdirectory in alljoyn_dist or alljoyn_test
-	-c configfile	# name of config file(s) (an embedded wildcard is replaced by the gtest test name)
-			#	default '*.conf'
-	\"adb device\"    # string needed by adb to contact the device, like \"-s XXXXXXX\" (use quotes if necessary)
-	ajtest, cmtest	# simple file name(s) of the gtest exe(s) to be run (gtest exe files expected in -t path/cpp/bin)
-			#	default runs ajtest and cmtest
+    -s              # start and stop our own AllJoyn-Daemon (default internal transport address, --no-bt)
+
+    -d alljoyn_dist # path to the build/.../dist tree, used to find cpp/bin/alljoyn-daemon exe, if used
+
+    -t alljoyn_test # path to the build/.../test tree, used to find cpp/bin/cmtest exe, ajtest exe, ...
+                    # Note: do not include the 'cpp/bin' subpath in alljoyn_dist or alljoyn_test
+
+    -c configfile   # name of config file(s) (an embedded wildcard is replaced by the gtest test name)
+                    #  default '*.conf'
+
+    \"adb device\"  # string needed by adb to contact the device, like \"-s XXXXXXX\" (use quotes if necessary)
+
+    ajtest, cmtest, and/or abouttest
+                    # simple file name(s) of the gtest exe(s) to be run (found in -t path/cpp/bin)
+                    #  default runs ajtest and cmtest
 "
 	exit 2
 }
