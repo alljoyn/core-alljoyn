@@ -165,6 +165,7 @@ QStatus AboutService::Announce() {
 
         status = announceObjectsArg[objIndex].Set("(oas)", objectPath.c_str(), interfacesVector.size(), (interfacesVector.empty()) ? NULL : &interfacesVector.front());
         if (status != ER_OK) {
+            m_announceObjectsLock.Unlock(MUTEX_CONTEXT);
             return status;
         }
         objIndex++;
