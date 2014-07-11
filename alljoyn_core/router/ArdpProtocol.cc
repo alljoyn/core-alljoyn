@@ -2394,7 +2394,8 @@ QStatus ARDP_Disconnect(ArdpHandle* handle, ArdpConnRecord* conn)
 
 QStatus ARDP_RecvReady(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv)
 {
-    QCC_DbgTrace(("ARDP_RecvReady(handle=%p, conn=%p, rcv=%p, cnt=%d)", handle, conn, rcv));
+    QCC_DbgTrace(("ARDP_RecvReady(handle=%p, conn=%p, rcv=%p)", handle, conn, rcv));
+    assert(rcv != NULL);
     if (!IsConnValid(handle, conn)) {
         return ER_ARDP_INVALID_CONNECTION;
     }
