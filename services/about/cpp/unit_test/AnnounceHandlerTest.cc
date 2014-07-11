@@ -97,9 +97,25 @@ class AnnounceHandlerTestPropertyStoreImpl {
         delete appId;
         delete deviceId;
     }
+    AnnounceHandlerTestPropertyStoreImpl(const AnnounceHandlerTestPropertyStoreImpl& src) {
+        appId = new qcc::GUID128();
+        *appId = *src.appId;
+        deviceId = new qcc::GUID128();
+        *deviceId = *src.deviceId;
+    }
+    AnnounceHandlerTestPropertyStoreImpl& operator=(const AnnounceHandlerTestPropertyStoreImpl& src) {
+        if (&src == this) {
+            return *this;
+        }
+        *appId = *src.appId;
+        *deviceId = *src.deviceId;
+        return *this;
+    }
     AboutPropertyStoreImpl propertyStore;
     qcc::GUID128* appId;
     qcc::GUID128* deviceId;
+  private:
+
 
 };
 
@@ -136,9 +152,9 @@ class AnnounceHandlerTest : public testing::Test {
 
     virtual void TearDown() {
         AboutServiceApi::DestroyInstance();
-        serviceBus->Stop();
-        serviceBus->Join();
         if (serviceBus) {
+            serviceBus->Stop();
+            serviceBus->Join();
             BusAttachment* deleteMe = serviceBus;
             serviceBus = NULL;
             delete deleteMe;

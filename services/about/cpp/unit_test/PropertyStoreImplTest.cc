@@ -166,6 +166,7 @@ TEST(PropertyStoreImplTest, setAppName)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     psp = ps.getProperty(APP_NAME, "en");
+    ASSERT_TRUE(psp != NULL);
 
     EXPECT_TRUE(psp->getIsPublic());
     EXPECT_FALSE(psp->getIsWritable());
@@ -271,6 +272,7 @@ TEST(PropertyStoreImplTest, setDescription)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     psp = ps.getProperty(DESCRIPTION, "en");
+    ASSERT_TRUE(psp != NULL);
 
     EXPECT_TRUE(psp->getIsPublic());
     EXPECT_FALSE(psp->getIsWritable());
@@ -308,6 +310,7 @@ TEST(PropertyStoreImplTest, setManufacturer)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     psp = ps.getProperty(MANUFACTURER, "en");
+    ASSERT_TRUE(psp != NULL);
 
     EXPECT_TRUE(psp->getIsPublic());
     EXPECT_FALSE(psp->getIsWritable());
