@@ -1029,9 +1029,9 @@ static void ProbeTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* co
     ArdpTimer* timer = &conn->probeTimer;
     uint32_t now = TimeNow(handle->tbase);
     uint32_t elapsed = now - conn->lastSeen;
-    uint32_t RTO = GetRTO(handle, conn);
+    uint32_t delta = MAX(GetRTO(handle, conn), handle->config.probeTimeout);
     /* Connection timeout */
-    uint32_t linkTimeout = MAX(RTO, handle->config.probeTimeout) * handle->config.probeRetries;
+    uint32_t linkTimeout = delta * handle->config.probeRetries;
 
     /*
      * Relevant only if there are no pending retransmissions.
@@ -1046,7 +1046,7 @@ static void ProbeTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* co
         } else if (elapsed >= handle->config.probeTimeout) {
             QCC_DbgPrintf(("ProbeTimerHandler: send ping (NUL packet)"));
             Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER | ARDP_FLAG_NUL, conn->SND.NXT, conn->RCV.CUR, conn->RCV.LCS);
-            timer->delta = RTO;
+            timer->delta = delta;
         }
     }
 }
