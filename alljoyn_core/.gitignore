@@ -6,6 +6,7 @@ build
 *.pdb
 .*.swp
 .cproject
+.project
 *.ncb
 *.log
 *.suo
