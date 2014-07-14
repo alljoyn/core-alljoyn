@@ -446,19 +446,19 @@ public class DescriptionTest extends TestCase {
     }
 
     class SimpleDescriptionService implements SimpleDescriptionInterface, BusObject {
-        public String Ping(String inStr) {
+        public String ping(String inStr) {
             return inStr;
         }
     }
 
     class SimpleDescriptionNoTranslateService implements SimpleDescriptionNoTranslateInterface, BusObject {
-        public String Ping(String inStr) {
+        public String ping(String inStr) {
             return inStr;
         }
     }
 
     class SimpleNoDescriptionService implements SimpleNoDescriptionInterface, BusObject {
-        public String Ping(String inStr) {
+        public String ping(String inStr) {
             return inStr;
         }
     }

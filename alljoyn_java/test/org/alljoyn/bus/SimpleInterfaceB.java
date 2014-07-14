@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -26,7 +26,7 @@ import org.alljoyn.bus.annotation.BusMethod;
 @BusInterface(name="org.alljoyn.bus.SimpleInterface")
 public interface SimpleInterfaceB {
 
-    @BusMethod(signature="i", replySignature="i")
-    public int Ping(int inInt) throws BusException;
+    @BusMethod(name="Ping", signature="i", replySignature="i")
+    public int ping(int inInt) throws BusException;
 }
 

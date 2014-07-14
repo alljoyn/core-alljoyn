@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -62,8 +62,8 @@ public class GameTest extends TestCase {
             playerState = emitter.getInterface(PlayerState.class);
         }
 
-        public void PlayerPosition(int x, int y, int rotation) throws BusException {
-            playerState.PlayerPosition(x, y, rotation);
+        public void playerPosition(int x, int y, int rotation) throws BusException {
+            playerState.playerPosition(x, y, rotation);
         }
     }
 
@@ -72,7 +72,7 @@ public class GameTest extends TestCase {
     private boolean signalled;
 
     @BusSignalHandler(iface="org.alljoyn.bus.PlayerState", signal="PlayerPosition")
-    public void PlayerPosition(int x, int y, int rotation) {
+    public void playerPosition(int x, int y, int rotation) {
         this.x = x;
         this.y = y;
         this.rotation = rotation;
@@ -110,7 +110,7 @@ public class GameTest extends TestCase {
         /* Periodically broadcast this player's state information */
         synchronized (this) {
             while (!signalled) {
-                game.PlayerPosition(100, 200, 180);
+                game.playerPosition(100, 200, 180);
                 wait(50);
             }
         }

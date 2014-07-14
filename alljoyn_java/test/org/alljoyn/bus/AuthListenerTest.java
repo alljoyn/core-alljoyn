@@ -83,11 +83,11 @@ public class AuthListenerTest extends TestCase {
     }
 
     public class SecureService implements SecureInterface, InsecureInterface, BusObject {
-        public String Ping(String str) {
+        public String ping(String str) {
             assertTrue(bus.getMessageContext().authMechanism.length() > 0);
             return str;
         }
-        public String InsecurePing(String str) {
+        public String insecurePing(String str) {
             return str;
         }
     }
@@ -548,7 +548,7 @@ public class AuthListenerTest extends TestCase {
         assertEquals(Status.OK, bus.registerAuthListener(mechanism, authListener));
         BusException ex = null;
         try {
-            proxy.Ping("hello");
+            proxy.ping("hello");
         } catch (BusException e) {
             ex = e;
         }
@@ -556,7 +556,7 @@ public class AuthListenerTest extends TestCase {
          * Make insecure second call to ensure that all the authentication transactions have run
          * their course on both sides.
          */
-        insecureProxy.InsecurePing("goodbye");
+        insecureProxy.insecurePing("goodbye");
         if (ex != null) {
             throw ex;
         }
@@ -926,7 +926,7 @@ public class AuthListenerTest extends TestCase {
         assertEquals(Status.OK, bus.registerAuthListener(authMechanisms, authListener));
         boolean thrown = false;
         try {
-            proxy.Ping("hello");
+            proxy.ping("hello");
         } catch (BusException ex) {
             /*
              * We don't expect to see a BusExpection for this test if the bus
@@ -955,7 +955,7 @@ public class AuthListenerTest extends TestCase {
         proxy = proxyObj.getInterface(SecureInterface.class);
         boolean thrown = false;
         try {
-           proxy.Ping("hello");
+           proxy.ping("hello");
         } catch (BusException ex) {
             thrown = true;
         }
@@ -1124,7 +1124,7 @@ public class AuthListenerTest extends TestCase {
             "-----END CERTIFICATE-----");
         assertEquals(Status.OK, serviceBus.registerAuthListener("ALLJOYN_RSA_KEYX", serviceAuthListener));
         assertEquals(Status.OK, bus.registerAuthListener("ALLJOYN_RSA_KEYX", authListener));
-        proxy.Ping("hello");
+        proxy.ping("hello");
         assertEquals("user2", authListener.verified);
         assertEquals("user1", serviceAuthListener.verified);
     }
@@ -1270,7 +1270,7 @@ public class AuthListenerTest extends TestCase {
         assertEquals(Status.OK, bus.registerAuthListener("ALLJOYN_RSA_KEYX", authListener));
         boolean thrown = false;
         try {
-            proxy.Ping("hello");
+            proxy.ping("hello");
         } catch (BusException ex) {
             /*
              * we expect a BusException cause by org.alljoyn.Bus.ErStatus

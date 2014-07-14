@@ -26,7 +26,15 @@ import org.alljoyn.bus.annotation.Position;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.Arrays;
-
+/*
+ * As a general rule AllJoyn interfaces use methods that have capital letters
+ * Since this interface is about inferred types we will let the code infer the
+ * method name.  For this interface we will break with AllJoyn convention an
+ * use Java convention of lower case letters for method names. That will be
+ * inferred from the Java method name not from the annotation name value. Except
+ * for instances where the tests previously specified a method name using the
+ * name annotation. Or the lower case name conflicts with a Java data type.
+ */
 @BusInterface
 public interface InferredTypesInterface {
 
@@ -102,305 +110,305 @@ public interface InferredTypesInterface {
         }
     }
 
-    @BusMethod
-    public void Void() throws BusException;
+    @BusMethod(name="Void")
+    public void voidMethod() throws BusException;
+
+    @BusMethod(name="Byte")
+    public byte byteMethod(byte y) throws BusException;
+
+    @BusMethod(name="Boolean")
+    public boolean booleanMethod(boolean b) throws BusException;
 
     @BusMethod
-    public byte Byte(byte y) throws BusException;
+    public short int16(short n) throws BusException;
 
     @BusMethod
-    public boolean Boolean(boolean b) throws BusException;
+    public int int32(int i) throws BusException;
 
     @BusMethod
-    public short Int16(short n) throws BusException;
+    public long int64(long x) throws BusException;
+
+    @BusMethod(name="Double")
+    public double doubleMethod(double d) throws BusException;
 
     @BusMethod
-    public int Int32(int i) throws BusException;
+    public String string(String s) throws BusException;
 
     @BusMethod
-    public long Int64(long x) throws BusException;
+    public byte[] byteArray(byte[] ay) throws BusException;
 
     @BusMethod
-    public double Double(double d) throws BusException;
+    public boolean[] booleanArray(boolean[] ab) throws BusException;
 
     @BusMethod
-    public String String(String s) throws BusException;
+    public Boolean[] capitalBooleanArray(Boolean[] aB) throws BusException;
 
     @BusMethod
-    public byte[] ByteArray(byte[] ay) throws BusException;
+    public short[] int16Array(short[] an) throws BusException;
 
     @BusMethod
-    public boolean[] BooleanArray(boolean[] ab) throws BusException;
+    public int[] int32Array(int[] ai) throws BusException;
 
     @BusMethod
-    public Boolean[] CapitalBooleanArray(Boolean[] aB) throws BusException;
+    public long[] int64Array(long[] ax) throws BusException;
 
     @BusMethod
-    public short[] Int16Array(short[] an) throws BusException;
+    public double[] doubleArray(double[] ad) throws BusException;
 
     @BusMethod
-    public int[] Int32Array(int[] ai) throws BusException;
+    public String[] stringArray(String[] as) throws BusException;
 
     @BusMethod
-    public long[] Int64Array(long[] ax) throws BusException;
-
-    @BusMethod
-    public double[] DoubleArray(double[] ad) throws BusException;
-
-    @BusMethod
-    public String[] StringArray(String[] as) throws BusException;
-
-    @BusMethod
-    public byte[][] ArrayArray(byte[][] aay) throws BusException;
+    public byte[][] arrayArray(byte[][] aay) throws BusException;
 
     @BusMethod(name="StructArray")
-    public InnerStruct[] InferredStructArray(InnerStruct[] ar) throws BusException;
+    public InnerStruct[] inferredStructArray(InnerStruct[] ar) throws BusException;
 
     @BusMethod
-    public Variant[] VariantArray(Variant[] av) throws BusException;
+    public Variant[] variantArray(Variant[] av) throws BusException;
 
     @BusMethod
-    public Map<String, String>[] DictionaryArray(Map<String, String>[] aaess) throws BusException;
+    public Map<String, String>[] dictionaryArray(Map<String, String>[] aaess) throws BusException;
 
     @BusMethod(name="Struct")
-    public Struct InferredStruct(Struct r) throws BusException;
+    public Struct inferredStruct(Struct r) throws BusException;
 
     @BusMethod
-    public Variant Variant(Variant v) throws BusException;
+    public Variant variant(Variant v) throws BusException;
 
     @BusMethod
-    public Map<Byte, Byte> DictionaryYY(Map<Byte, Byte> aeyy) throws BusException;
+    public Map<Byte, Byte> dictionaryYY(Map<Byte, Byte> aeyy) throws BusException;
 
     @BusMethod
-    public Map<Byte, Boolean> DictionaryYB(Map<Byte, Boolean> aeyb) throws BusException;
+    public Map<Byte, Boolean> dictionaryYB(Map<Byte, Boolean> aeyb) throws BusException;
 
     @BusMethod
-    public Map<Byte, Short> DictionaryYN(Map<Byte, Short> aeyn) throws BusException;
+    public Map<Byte, Short> dictionaryYN(Map<Byte, Short> aeyn) throws BusException;
 
     @BusMethod
-    public Map<Byte, Integer> DictionaryYI(Map<Byte, Integer> aeyi) throws BusException;
+    public Map<Byte, Integer> dictionaryYI(Map<Byte, Integer> aeyi) throws BusException;
 
     @BusMethod
-    public Map<Byte, Long> DictionaryYX(Map<Byte, Long> aeyx) throws BusException;
+    public Map<Byte, Long> dictionaryYX(Map<Byte, Long> aeyx) throws BusException;
 
     @BusMethod
-    public Map<Byte, Double> DictionaryYD(Map<Byte, Double> aeyd) throws BusException;
+    public Map<Byte, Double> dictionaryYD(Map<Byte, Double> aeyd) throws BusException;
 
     @BusMethod
-    public Map<Byte, String> DictionaryYS(Map<Byte, String> aeys) throws BusException;
+    public Map<Byte, String> dictionaryYS(Map<Byte, String> aeys) throws BusException;
 
     @BusMethod
-    public Map<Byte, byte[]> DictionaryYAY(Map<Byte, byte[]> aeyay) throws BusException;
+    public Map<Byte, byte[]> dictionaryYAY(Map<Byte, byte[]> aeyay) throws BusException;
 
     @BusMethod(name="DictionaryYR")
-    public Map<Byte, InferredTypesInterface.InnerStruct> InferredDictionaryYR(Map<Byte, InferredTypesInterface.InnerStruct> aeyr) throws BusException;
+    public Map<Byte, InferredTypesInterface.InnerStruct> inferredDictionaryYR(Map<Byte, InferredTypesInterface.InnerStruct> aeyr) throws BusException;
 
     @BusMethod
-    public Map<Byte, Variant> DictionaryYV(Map<Byte, Variant> aeyv) throws BusException;
+    public Map<Byte, Variant> dictionaryYV(Map<Byte, Variant> aeyv) throws BusException;
 
     @BusMethod
-    public Map<Byte, Map<String, String>> DictionaryYAESS(Map<Byte, Map<String, String>> aeyaess) throws BusException;
+    public Map<Byte, Map<String, String>> dictionaryYAESS(Map<Byte, Map<String, String>> aeyaess) throws BusException;
 
     @BusMethod
-    public Map<Boolean, Byte> DictionaryBY(Map<Boolean, Byte> aeby) throws BusException;
+    public Map<Boolean, Byte> dictionaryBY(Map<Boolean, Byte> aeby) throws BusException;
 
     @BusMethod
-    public Map<Boolean, Boolean> DictionaryBB(Map<Boolean, Boolean> aebb) throws BusException;
+    public Map<Boolean, Boolean> dictionaryBB(Map<Boolean, Boolean> aebb) throws BusException;
 
     @BusMethod
-    public Map<Boolean, Short> DictionaryBN(Map<Boolean, Short> aebn) throws BusException;
+    public Map<Boolean, Short> dictionaryBN(Map<Boolean, Short> aebn) throws BusException;
 
     @BusMethod
-    public Map<Boolean, Integer> DictionaryBI(Map<Boolean, Integer> aebi) throws BusException;
+    public Map<Boolean, Integer> dictionaryBI(Map<Boolean, Integer> aebi) throws BusException;
 
     @BusMethod
-    public Map<Boolean, Long> DictionaryBX(Map<Boolean, Long> aebx) throws BusException;
+    public Map<Boolean, Long> dictionaryBX(Map<Boolean, Long> aebx) throws BusException;
 
     @BusMethod
-    public Map<Boolean, Double> DictionaryBD(Map<Boolean, Double> aebd) throws BusException;
+    public Map<Boolean, Double> dictionaryBD(Map<Boolean, Double> aebd) throws BusException;
 
     @BusMethod
-    public Map<Boolean, String> DictionaryBS(Map<Boolean, String> aebs) throws BusException;
+    public Map<Boolean, String> dictionaryBS(Map<Boolean, String> aebs) throws BusException;
 
     @BusMethod
-    public Map<Boolean, byte[]> DictionaryBAY(Map<Boolean, byte[]> aebay) throws BusException;
+    public Map<Boolean, byte[]> dictionaryBAY(Map<Boolean, byte[]> aebay) throws BusException;
 
     @BusMethod(name="DictionaryBR")
-    public Map<Boolean, InferredTypesInterface.InnerStruct> InferredDictionaryBR(Map<Boolean, InferredTypesInterface.InnerStruct> aebr) throws BusException;
+    public Map<Boolean, InferredTypesInterface.InnerStruct> inferredDictionaryBR(Map<Boolean, InferredTypesInterface.InnerStruct> aebr) throws BusException;
 
     @BusMethod
-    public Map<Boolean, Variant> DictionaryBV(Map<Boolean, Variant> aebv) throws BusException;
+    public Map<Boolean, Variant> dictionaryBV(Map<Boolean, Variant> aebv) throws BusException;
 
     @BusMethod
-    public Map<Boolean, Map<String, String>> DictionaryBAESS(Map<Boolean, Map<String, String>> aebaess) throws BusException;
+    public Map<Boolean, Map<String, String>> dictionaryBAESS(Map<Boolean, Map<String, String>> aebaess) throws BusException;
 
     @BusMethod
-    public Map<Short, Byte> DictionaryNY(Map<Short, Byte> aeny) throws BusException;
+    public Map<Short, Byte> dictionaryNY(Map<Short, Byte> aeny) throws BusException;
 
     @BusMethod
-    public Map<Short, Boolean> DictionaryNB(Map<Short, Boolean> aenb) throws BusException;
+    public Map<Short, Boolean> dictionaryNB(Map<Short, Boolean> aenb) throws BusException;
 
     @BusMethod
-    public Map<Short, Short> DictionaryNN(Map<Short, Short> aenn) throws BusException;
+    public Map<Short, Short> dictionaryNN(Map<Short, Short> aenn) throws BusException;
 
     @BusMethod
-    public Map<Short, Integer> DictionaryNI(Map<Short, Integer> aeni) throws BusException;
+    public Map<Short, Integer> dictionaryNI(Map<Short, Integer> aeni) throws BusException;
 
     @BusMethod
-    public Map<Short, Long> DictionaryNX(Map<Short, Long> aenx) throws BusException;
+    public Map<Short, Long> dictionaryNX(Map<Short, Long> aenx) throws BusException;
 
     @BusMethod
-    public Map<Short, Double> DictionaryND(Map<Short, Double> aend) throws BusException;
+    public Map<Short, Double> dictionaryND(Map<Short, Double> aend) throws BusException;
 
     @BusMethod
-    public Map<Short, String> DictionaryNS(Map<Short, String> aens) throws BusException;
+    public Map<Short, String> dictionaryNS(Map<Short, String> aens) throws BusException;
 
     @BusMethod
-    public Map<Short, byte[]> DictionaryNAY(Map<Short, byte[]> aenay) throws BusException;
+    public Map<Short, byte[]> dictionaryNAY(Map<Short, byte[]> aenay) throws BusException;
 
     @BusMethod(name="DictionaryNR")
-    public Map<Short, InferredTypesInterface.InnerStruct> InferredDictionaryNR(Map<Short, InferredTypesInterface.InnerStruct> aenr) throws BusException;
+    public Map<Short, InferredTypesInterface.InnerStruct> inferredDictionaryNR(Map<Short, InferredTypesInterface.InnerStruct> aenr) throws BusException;
 
     @BusMethod
-    public Map<Short, Variant> DictionaryNV(Map<Short, Variant> aenv) throws BusException;
+    public Map<Short, Variant> dictionaryNV(Map<Short, Variant> aenv) throws BusException;
 
     @BusMethod
-    public Map<Short, Map<String, String>> DictionaryNAESS(Map<Short, Map<String, String>> aenaess) throws BusException;
+    public Map<Short, Map<String, String>> dictionaryNAESS(Map<Short, Map<String, String>> aenaess) throws BusException;
 
     @BusMethod
-    public Map<Integer, Byte> DictionaryIY(Map<Integer, Byte> aeiy) throws BusException;
+    public Map<Integer, Byte> dictionaryIY(Map<Integer, Byte> aeiy) throws BusException;
 
     @BusMethod
-    public Map<Integer, Boolean> DictionaryIB(Map<Integer, Boolean> aeib) throws BusException;
+    public Map<Integer, Boolean> dictionaryIB(Map<Integer, Boolean> aeib) throws BusException;
 
     @BusMethod
-    public Map<Integer, Short> DictionaryIN(Map<Integer, Short> aein) throws BusException;
+    public Map<Integer, Short> dictionaryIN(Map<Integer, Short> aein) throws BusException;
 
     @BusMethod
-    public Map<Integer, Integer> DictionaryII(Map<Integer, Integer> aeii) throws BusException;
+    public Map<Integer, Integer> dictionaryII(Map<Integer, Integer> aeii) throws BusException;
 
     @BusMethod
-    public Map<Integer, Long> DictionaryIX(Map<Integer, Long> aeix) throws BusException;
+    public Map<Integer, Long> dictionaryIX(Map<Integer, Long> aeix) throws BusException;
 
     @BusMethod
-    public Map<Integer, Double> DictionaryID(Map<Integer, Double> aeid) throws BusException;
+    public Map<Integer, Double> dictionaryID(Map<Integer, Double> aeid) throws BusException;
 
     @BusMethod
-    public Map<Integer, String> DictionaryIS(Map<Integer, String> aeis) throws BusException;
+    public Map<Integer, String> dictionaryIS(Map<Integer, String> aeis) throws BusException;
 
     @BusMethod
-    public Map<Integer, byte[]> DictionaryIAY(Map<Integer, byte[]> aeiay) throws BusException;
+    public Map<Integer, byte[]> dictionaryIAY(Map<Integer, byte[]> aeiay) throws BusException;
 
     @BusMethod(name="DictionaryIR")
-    public Map<Integer, InferredTypesInterface.InnerStruct> InferredDictionaryIR(Map<Integer, InferredTypesInterface.InnerStruct> aeir) throws BusException;
+    public Map<Integer, InferredTypesInterface.InnerStruct> inferredDictionaryIR(Map<Integer, InferredTypesInterface.InnerStruct> aeir) throws BusException;
 
     @BusMethod
-    public Map<Integer, Variant> DictionaryIV(Map<Integer, Variant> aeiv) throws BusException;
+    public Map<Integer, Variant> dictionaryIV(Map<Integer, Variant> aeiv) throws BusException;
 
     @BusMethod
-    public Map<Integer, Map<String, String>> DictionaryIAESS(Map<Integer, Map<String, String>> aeiaess) throws BusException;
+    public Map<Integer, Map<String, String>> dictionaryIAESS(Map<Integer, Map<String, String>> aeiaess) throws BusException;
 
     @BusMethod
-    public Map<Long, Byte> DictionaryXY(Map<Long, Byte> aexy) throws BusException;
+    public Map<Long, Byte> dictionaryXY(Map<Long, Byte> aexy) throws BusException;
 
     @BusMethod
-    public Map<Long, Boolean> DictionaryXB(Map<Long, Boolean> aexb) throws BusException;
+    public Map<Long, Boolean> dictionaryXB(Map<Long, Boolean> aexb) throws BusException;
 
     @BusMethod
-    public Map<Long, Short> DictionaryXN(Map<Long, Short> aexn) throws BusException;
+    public Map<Long, Short> dictionaryXN(Map<Long, Short> aexn) throws BusException;
 
     @BusMethod
-    public Map<Long, Integer> DictionaryXI(Map<Long, Integer> aexi) throws BusException;
+    public Map<Long, Integer> dictionaryXI(Map<Long, Integer> aexi) throws BusException;
 
     @BusMethod
-    public Map<Long, Long> DictionaryXX(Map<Long, Long> aexx) throws BusException;
+    public Map<Long, Long> dictionaryXX(Map<Long, Long> aexx) throws BusException;
 
     @BusMethod
-    public Map<Long, Double> DictionaryXD(Map<Long, Double> aexd) throws BusException;
+    public Map<Long, Double> dictionaryXD(Map<Long, Double> aexd) throws BusException;
 
     @BusMethod
-    public Map<Long, String> DictionaryXS(Map<Long, String> aexs) throws BusException;
+    public Map<Long, String> dictionaryXS(Map<Long, String> aexs) throws BusException;
 
     @BusMethod
-    public Map<Long, byte[]> DictionaryXAY(Map<Long, byte[]> aexay) throws BusException;
+    public Map<Long, byte[]> dictionaryXAY(Map<Long, byte[]> aexay) throws BusException;
 
     @BusMethod(name="DictionaryXR")
-    public Map<Long, InferredTypesInterface.InnerStruct> InferredDictionaryXR(Map<Long, InferredTypesInterface.InnerStruct> aexr) throws BusException;
+    public Map<Long, InferredTypesInterface.InnerStruct> inferredDictionaryXR(Map<Long, InferredTypesInterface.InnerStruct> aexr) throws BusException;
 
     @BusMethod
-    public Map<Long, Variant> DictionaryXV(Map<Long, Variant> aexv) throws BusException;
+    public Map<Long, Variant> dictionaryXV(Map<Long, Variant> aexv) throws BusException;
 
     @BusMethod
-    public Map<Long, Map<String, String>> DictionaryXAESS(Map<Long, Map<String, String>> aexaess) throws BusException;
+    public Map<Long, Map<String, String>> dictionaryXAESS(Map<Long, Map<String, String>> aexaess) throws BusException;
 
     @BusMethod
-    public Map<Double, Byte> DictionaryDY(Map<Double, Byte> aedy) throws BusException;
+    public Map<Double, Byte> dictionaryDY(Map<Double, Byte> aedy) throws BusException;
 
     @BusMethod
-    public Map<Double, Boolean> DictionaryDB(Map<Double, Boolean> aedb) throws BusException;
+    public Map<Double, Boolean> dictionaryDB(Map<Double, Boolean> aedb) throws BusException;
 
     @BusMethod
-    public Map<Double, Short> DictionaryDN(Map<Double, Short> aedn) throws BusException;
+    public Map<Double, Short> dictionaryDN(Map<Double, Short> aedn) throws BusException;
 
     @BusMethod
-    public Map<Double, Integer> DictionaryDI(Map<Double, Integer> aedi) throws BusException;
+    public Map<Double, Integer> dictionaryDI(Map<Double, Integer> aedi) throws BusException;
 
     @BusMethod
-    public Map<Double, Long> DictionaryDX(Map<Double, Long> aedx) throws BusException;
+    public Map<Double, Long> dictionaryDX(Map<Double, Long> aedx) throws BusException;
 
     @BusMethod
-    public Map<Double, Double> DictionaryDD(Map<Double, Double> aedd) throws BusException;
+    public Map<Double, Double> dictionaryDD(Map<Double, Double> aedd) throws BusException;
 
     @BusMethod
-    public Map<Double, String> DictionaryDS(Map<Double, String> aeds) throws BusException;
+    public Map<Double, String> dictionaryDS(Map<Double, String> aeds) throws BusException;
 
     @BusMethod
-    public Map<Double, byte[]> DictionaryDAY(Map<Double, byte[]> aeday) throws BusException;
+    public Map<Double, byte[]> dictionaryDAY(Map<Double, byte[]> aeday) throws BusException;
 
     @BusMethod(name="DictionaryDR")
-    public Map<Double, InferredTypesInterface.InnerStruct> InferredDictionaryDR(Map<Double, InferredTypesInterface.InnerStruct> aedr) throws BusException;
+    public Map<Double, InferredTypesInterface.InnerStruct> inferredDictionaryDR(Map<Double, InferredTypesInterface.InnerStruct> aedr) throws BusException;
 
     @BusMethod
-    public Map<Double, Variant> DictionaryDV(Map<Double, Variant> aedv) throws BusException;
+    public Map<Double, Variant> dictionaryDV(Map<Double, Variant> aedv) throws BusException;
 
     @BusMethod
-    public Map<Double, Map<String, String>> DictionaryDAESS(Map<Double, Map<String, String>> aedaess) throws BusException;
+    public Map<Double, Map<String, String>> dictionaryDAESS(Map<Double, Map<String, String>> aedaess) throws BusException;
 
     @BusMethod
-    public Map<String, Byte> DictionarySY(Map<String, Byte> aesy) throws BusException;
+    public Map<String, Byte> dictionarySY(Map<String, Byte> aesy) throws BusException;
 
     @BusMethod
-    public Map<String, Boolean> DictionarySB(Map<String, Boolean> aesb) throws BusException;
+    public Map<String, Boolean> dictionarySB(Map<String, Boolean> aesb) throws BusException;
 
     @BusMethod
-    public Map<String, Short> DictionarySN(Map<String, Short> aesn) throws BusException;
+    public Map<String, Short> dictionarySN(Map<String, Short> aesn) throws BusException;
 
     @BusMethod
-    public Map<String, Integer> DictionarySI(Map<String, Integer> aesi) throws BusException;
+    public Map<String, Integer> dictionarySI(Map<String, Integer> aesi) throws BusException;
 
     @BusMethod
-    public Map<String, Long> DictionarySX(Map<String, Long> aesx) throws BusException;
+    public Map<String, Long> dictionarySX(Map<String, Long> aesx) throws BusException;
 
     @BusMethod
-    public Map<String, Double> DictionarySD(Map<String, Double> aesd) throws BusException;
+    public Map<String, Double> dictionarySD(Map<String, Double> aesd) throws BusException;
 
     @BusMethod
-    public Map<String, String> DictionarySS(Map<String, String> aess) throws BusException;
+    public Map<String, String> dictionarySS(Map<String, String> aess) throws BusException;
 
     @BusMethod
-    public Map<String, byte[]> DictionarySAY(Map<String, byte[]> aesay) throws BusException;
+    public Map<String, byte[]> dictionarySAY(Map<String, byte[]> aesay) throws BusException;
 
     @BusMethod(name="DictionarySR")
-    public Map<String, InferredTypesInterface.InnerStruct> InferredDictionarySR(Map<String, InferredTypesInterface.InnerStruct> aesr) throws BusException;
+    public Map<String, InferredTypesInterface.InnerStruct> inferredDictionarySR(Map<String, InferredTypesInterface.InnerStruct> aesr) throws BusException;
 
     @BusMethod
-    public Map<String, Variant> DictionarySV(Map<String, Variant> aesv) throws BusException;
+    public Map<String, Variant> dictionarySV(Map<String, Variant> aesv) throws BusException;
 
     @BusMethod
-    public Map<String, Map<String, String>> DictionarySAESS(Map<String, Map<String, String>> aesaess) throws BusException;
+    public Map<String, Map<String, String>> dictionarySAESS(Map<String, Map<String, String>> aesaess) throws BusException;
 
     @BusMethod
-    public TreeMap<String, String>[] TreeDictionaryArray(TreeMap<String, String>[] aaess) throws BusException;
+    public TreeMap<String, String>[] treeDictionaryArray(TreeMap<String, String>[] aaess) throws BusException;
 
     @BusProperty
     public Map<String, String> getDictionarySS() throws BusException;
@@ -414,5 +422,5 @@ public interface InferredTypesInterface {
     }
 
     @BusMethod
-    public TwoByteArrays TwoByteArrays(TwoByteArrays rayay) throws BusException;
+    public TwoByteArrays twoByteArrays(TwoByteArrays rayay) throws BusException;
 }

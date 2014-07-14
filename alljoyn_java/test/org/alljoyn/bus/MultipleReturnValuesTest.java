@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -59,7 +59,7 @@ public class MultipleReturnValuesTest extends TestCase {
         public Service() {
         }
 
-        public Values Method() throws BusException {
+        public Values method() throws BusException {
             Values v = new Values();
             v.a = 1;
             v.b = 2;
@@ -98,7 +98,7 @@ public class MultipleReturnValuesTest extends TestCase {
                                                          BusAttachment.SESSION_ID_ANY,
                                                          new Class<?>[] { MultipleReturnValuesInterface.class });
         MultipleReturnValuesInterface proxy = remoteObj.getInterface(MultipleReturnValuesInterface.class);
-        MultipleReturnValuesInterface.Values ret = proxy.Method();
+        MultipleReturnValuesInterface.Values ret = proxy.method();
         assertEquals(1, ret.a);
         assertEquals(2, ret.b);
         Map<String, String> vc = new TreeMap<String, String>();

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -49,7 +49,7 @@ public class KeyStoreListenerTest extends TestCase {
     }
 
     public class SecureService implements SecureInterface, BusObject {
-        public String Ping(String str) { return str; }
+        public String ping(String str) { return str; }
     }
 
     public class BusAuthListener implements AuthListener {
@@ -162,7 +162,7 @@ public class KeyStoreListenerTest extends TestCase {
         otherBus.registerKeyStoreListener(otherKeyStoreListener);
         setUp2();
 
-        proxy.Ping("hello");
+        proxy.ping("hello");
         assertEquals("ALLJOYN_SRP_KEYX", authListener.authMechanismRequested);
         assertEquals("ALLJOYN_SRP_KEYX", otherAuthListener.authMechanismRequested);
 
@@ -172,7 +172,7 @@ public class KeyStoreListenerTest extends TestCase {
         otherBus.registerKeyStoreListener(otherKeyStoreListener);
         setUp2();
 
-        proxy.Ping("hello");
+        proxy.ping("hello");
         assertEquals(null, authListener.authMechanismRequested);
         assertEquals(null, otherAuthListener.authMechanismRequested);
     }
@@ -184,9 +184,9 @@ public class KeyStoreListenerTest extends TestCase {
          * whether the default key store has been configured already.  But the
          * second request should not result in a request.
          */
-        proxy.Ping("hello");
+        proxy.ping("hello");
         authListener.authMechanismRequested = null;
-        proxy.Ping("hello");
+        proxy.ping("hello");
         assertEquals(null, authListener.authMechanismRequested);
     }
 
@@ -197,7 +197,7 @@ public class KeyStoreListenerTest extends TestCase {
         otherBus.registerKeyStoreListener(otherKeyStoreListener);
         setUp2();
 
-        proxy.Ping("hello");
+        proxy.ping("hello");
         assertEquals("ALLJOYN_SRP_KEYX", authListener.authMechanismRequested);
         assertEquals("ALLJOYN_SRP_KEYX", otherAuthListener.authMechanismRequested);
 
@@ -209,7 +209,7 @@ public class KeyStoreListenerTest extends TestCase {
         bus.clearKeyStore();
         otherBus.registerKeyStoreListener(otherKeyStoreListener);
         otherBus.clearKeyStore();
-        proxy.Ping("hello");
+        proxy.ping("hello");
         assertEquals("ALLJOYN_SRP_KEYX", authListener.authMechanismRequested);
         assertEquals("ALLJOYN_SRP_KEYX", otherAuthListener.authMechanismRequested);
     }
@@ -221,7 +221,7 @@ public class KeyStoreListenerTest extends TestCase {
         otherBus.registerKeyStoreListener(otherKeyStoreListener);
         setUp2();
 
-        proxy.Ping("hello");
+        proxy.ping("hello");
         assertEquals("ALLJOYN_SRP_KEYX", authListener.authMechanismRequested);
         assertEquals("ALLJOYN_SRP_KEYX", otherAuthListener.authMechanismRequested);
 
