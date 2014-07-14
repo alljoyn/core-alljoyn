@@ -584,6 +584,8 @@ static std::list<AddrEntry> NetlinkGetAddresses(uint32_t family)
 // allows us to get link layer information and network layer information from
 // the kernel using two different message types.  The network layer information
 // can be further classified according to address family (IPv4 or IPv6).
+// Note that Linux will default to AF_UNSPEC if the address family requested
+// is not supported on the device. For details see net/core/rtnetlink.c.
 //
 // Thus, we need to make three Netlink sockets calls here:  One to get the list
 // of network interfaces from the link layer, and two calls to get the address
@@ -611,7 +613,7 @@ QStatus IfConfig(std::vector<IfConfigEntry>& entries)
         // Are there any IPV4 addresses assigned to the currently described interface
         //
         for (std::list<AddrEntry>::const_iterator j = entriesIpv4.begin(); j != entriesIpv4.end(); ++j) {
-            if ((*j).m_index == (*i).m_index) {
+            if ((*j).m_index == (*i).m_index && (*j).m_family == AF_INET) {
                 IfConfigEntry entry;
                 entry.m_name = (*i).m_name.c_str();
                 entry.m_flags = TranslateFlags((*i).m_flags);
@@ -630,7 +632,7 @@ QStatus IfConfig(std::vector<IfConfigEntry>& entries)
         // Are there any IPV6 addresses assigned to the currently described interface
         //
         for (std::list<AddrEntry>::const_iterator j = entriesIpv6.begin(); j != entriesIpv6.end(); ++j) {
-            if ((*j).m_index == (*i).m_index) {
+            if ((*j).m_index == (*i).m_index && (*j).m_family == AF_INET6) {
                 IfConfigEntry entry;
                 entry.m_name = (*i).m_name.c_str();
                 entry.m_flags = TranslateFlags((*i).m_flags);
