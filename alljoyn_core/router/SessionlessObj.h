@@ -530,7 +530,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     QStatus ScheduleWork(RemoteCache& cache, bool addAlarm = true, bool doInitialBackoff = true);
 
     bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
-                      const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6);
+                      const qcc::IPEndpoint& ns4);
     bool SendResponseIfMatch(TransportMask transport, const qcc::IPEndpoint& ns4, const qcc::String& ruleStr);
     bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort);
 

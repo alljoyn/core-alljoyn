@@ -44,7 +44,7 @@ class IpNameServiceListener {
   public:
     virtual ~IpNameServiceListener() { }
     virtual bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
-                              const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6) { return false; }
+                              const qcc::IPEndpoint& ns4) { return false; }
     virtual bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort) { return false; }
 };
 
