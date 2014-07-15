@@ -63,13 +63,22 @@ using namespace ajn;
 static const char bundledConfig[] =
     "<busconfig>"
     "  <type>alljoyn_bundled</type>"
-    "  <listen>tcp:r4addr=0.0.0.0,r4port=0</listen>"
-    "  <listen>udp:u4addr=0.0.0.0,u4port=0</listen>"
     "  <limit name=\"auth_timeout\">5000</limit>"
     "  <limit name=\"max_incomplete_connections\">4</limit>"
     "  <limit name=\"max_completed_connections\">16</limit>"
     "  <limit name=\"max_untrusted_clients\">8</limit>"
     "  <flag name=\"restrict_untrusted_clients\">false</flag>"
+    "</busconfig>";
+
+static const char internalConfig[] =
+    "<busconfig>"
+    "  <type>alljoyn</type>"
+    "  <listen>unix:abstract=alljoyn</listen>"
+#if defined(QCC_OS_DARWIN)
+    "  <listen>launchd:env=DBUS_LAUNCHD_SESSION_BUS_SOCKET</listen>"
+#endif
+    "  <listen>tcp:r4addr=0.0.0.0,r4port=9955</listen>"
+    "  <listen>udp:u4addr=0.0.0.0,u4port=9955</listen>"
     "  <property name=\"ns_interfaces\">*</property>"
     "</busconfig>";
 
@@ -208,6 +217,7 @@ BundledRouter::BundledRouter() : transportsInitialized(false), stopping(false), 
     /*
      * Setup the config
      */
+    String configStr = internalConfig;
 #ifndef NDEBUG
 #if defined(QCC_OS_ANDROID)
     qcc::String configFile = "/mnt/sdcard/.alljoyn/config.xml";
@@ -216,10 +226,12 @@ BundledRouter::BundledRouter() : transportsInitialized(false), stopping(false), 
 #endif
     if (!ExistFile(configFile.c_str())) {
         configFile = "";
+        configStr += bundledConfig;
     }
-    config = new ConfigDB(bundledConfig, configFile);
+    config = new ConfigDB(configStr, configFile);
 #else
-    config = new ConfigDB(bundledConfig);
+    configStr += bundledConfig;
+    config = new ConfigDB(configStr);
 #endif
 }
 
