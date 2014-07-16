@@ -7,7 +7,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -62,10 +62,6 @@ class ProtectedKeyStoreListener : public KeyStoreListener {
             qcc::Sleep(10);
             lock.Lock(MUTEX_CONTEXT);
         }
-        /*
-         * Now set the new listener
-         */
-        this->listener = listener;
         lock.Unlock(MUTEX_CONTEXT);
     }
 

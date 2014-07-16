@@ -284,6 +284,13 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     static const char* TransportName;
 
   private:
+    /**
+     * Empty private overloaded virtual function for Thread::Start
+     * this avoids the overloaded-virtual warning. For the Thread::Start
+     * function.
+     */
+    QStatus Start(void* arg, qcc::ThreadListener* listener) { return Thread::Start(arg, listener); }
+
     TCPTransport(const TCPTransport& other);
     TCPTransport& operator =(const TCPTransport& other);
 

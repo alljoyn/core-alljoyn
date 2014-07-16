@@ -3342,6 +3342,7 @@ void _MDNSPacket::RemoveAdditionalRecord(qcc::String str, MDNSResourceRecord::RR
     while (it1 != m_additional.end()) {
         if (((*it1).GetDomainName() == str) && ((*it1).GetRRType() == type)) {
             m_additional.erase(it1++);
+            m_header.SetARCount(m_additional.size());
             return;
         }
         it1++;

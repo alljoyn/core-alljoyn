@@ -295,6 +295,13 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     };
 
   private:
+    /**
+     * Empty private overloaded virtual function for Thread::Start
+     * this avoids the overloaded-virtual warning. For the Thread::Start
+     * function.
+     */
+    QStatus Start(void* arg, qcc::ThreadListener* listener) { return Thread::Start(arg, listener); }
+
     UDPTransport(const UDPTransport& other);
     UDPTransport& operator =(const UDPTransport& other);
 

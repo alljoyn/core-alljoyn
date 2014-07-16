@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -43,9 +43,9 @@ StreamPump::StreamPump(Stream* streamA, Stream* streamB, size_t chunkSize, const
     }
 }
 
-QStatus StreamPump::Start()
+QStatus StreamPump::Start(void* arg, ThreadListener* listener)
 {
-    QStatus status = Thread::Start();
+    QStatus status = Thread::Start(arg, listener);
     if ((status != ER_OK) && isManaged) {
         ManagedObj<StreamPump>::wrap(this).DecRef();
     }
