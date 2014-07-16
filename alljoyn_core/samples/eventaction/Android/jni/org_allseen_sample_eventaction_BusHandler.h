@@ -48,7 +48,8 @@ JNIEXPORT void JNICALL Java_org_allseen_sample_eventaction_BusHandler_addRule
     (JNIEnv *, jobject, jstring, jstring, jstring, jstring, jstring, jstring, jstring, jstring, jstring, jstring, jboolean);
 
 JNIEXPORT void JNICALL Java_org_allseen_sample_eventaction_BusHandler_addSavedRule
-    (JNIEnv *, jobject, jstring, jstring, jstring, jstring, jstring, jstring, jstring, jstring, jstring, jstring, jstring, jstring, jshort);
+    (JNIEnv *, jobject, jstring, jstring, jstring, jstring, jstring, jstring, jstring, jshort,
+    jstring, jstring, jstring, jstring, jstring, jstring, jstring, jshort);
 
 JNIEXPORT void JNICALL Java_org_allseen_sample_eventaction_BusHandler_deleteAllRules
     (JNIEnv *, jobject);

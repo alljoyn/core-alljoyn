@@ -23,16 +23,15 @@
 #include <alljoyn/Session.h>
 #include <qcc/String.h>
 #include "RuleInfo.h"
-#include "EventInfo.h"
-#include "ActionInfo.h"
+#include <qcc/Mutex.h>
 
-class Rule : public ajn::BusAttachment::JoinSessionAsyncCB, public ajn::SessionListener, public ajn::MessageReceiver {
+class Rule : public ajn::SessionListener, public ajn::MessageReceiver {
   public:
-    Rule(ajn::BusAttachment* bus, EventInfo* event, ActionInfo* action)
-        : eventMember(NULL), mSessionId(0), actionObject(NULL), mBus(bus), mEvent(event), mAction(action)
+    Rule(ajn::BusAttachment* bus, RuleInfo* event, RuleInfo* action)
+        : mBus(bus), mEvent(event), mAction(action), eventMember(NULL), mSessionId(0), actionObject(NULL), mLock()
     { };
 
-    virtual ~Rule() { if (actionObject) { delete actionObject; actionObject = NULL; } };
+    virtual ~Rule();
 
     QStatus enable();
     QStatus disable();
@@ -50,25 +49,31 @@ class Rule : public ajn::BusAttachment::JoinSessionAsyncCB, public ajn::SessionL
     }
 
     uint8_t eventReady() {
-        return !mEvent->mDeviceId.empty();
+        return mEvent->mPort != 0;
     }
 
     const char* getActionSessionName() { return mAction->mUniqueName.c_str(); }
     const char* getEventSessionName() { return mEvent->mUniqueName.c_str(); }
 
     uint8_t isEventMatch(qcc::String deviceId, qcc::String appId) {
-        return mEvent->mDeviceId == deviceId && mEvent->mAppId == appId;
+        return mEvent->mDeviceId.compare(deviceId) == 0 && mEvent->mAppId.compare(appId) == 0;
+    }
+
+    uint8_t isActionMatch(qcc::String deviceId, qcc::String appId) {
+        return mAction->mDeviceId.compare(deviceId) == 0 && mAction->mAppId.compare(appId) == 0;
     }
 
     void setActionPort(short port) { mAction->mPort = port; }
+    void setEventPort(short port) { mEvent->mPort = port; }
 
     void addToEvent(qcc::String deviceId, qcc::String appId) { mEvent->setSenderInfo(deviceId, appId); }
-    void modifyEventSessionName(const char*sessionName) { mEvent->mUniqueName = sessionName; }
+    void addToAction(qcc::String deviceId, qcc::String appId) { mAction->setSenderInfo(deviceId, appId); }
+
+    void modifyEventSessionName(const char*sessionName);
+    void modifyActionSessionName(const char*sessionName);
+
 
   private:
-
-    /** JoinSessionAsync callback */
-    virtual void JoinSessionCB(QStatus status, ajn::SessionId sessionId, const ajn::SessionOpts& opts, void* context);
 
     /* From SessionListener */
     virtual void SessionLost(ajn::SessionId sessionId);
@@ -88,8 +93,9 @@ class Rule : public ajn::BusAttachment::JoinSessionAsyncCB, public ajn::SessionL
 
     ajn::BusAttachment*mBus;
 
-    EventInfo* mEvent;
-    ActionInfo* mAction;
+    RuleInfo* mEvent;
+    RuleInfo* mAction;
+    qcc::Mutex mLock;
 };
 
 #endif //_RULE_

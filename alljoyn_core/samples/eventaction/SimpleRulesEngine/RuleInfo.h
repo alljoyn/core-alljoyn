@@ -24,10 +24,21 @@ class RuleInfo {
     RuleInfo(const char* uniqueName, const char* path, const char* iface,
              const char* member, const char* sig)
         : mUniqueName(uniqueName), mPath(path), mIfaceName(iface),
-        mMember(member), mSignature(sig)
+        mMember(member), mSignature(sig), mDeviceId(qcc::String::Empty), mAppId(qcc::String::Empty), mPort(0)
+    { };
+
+    RuleInfo(const char* uniqueName, const char* path, const char* iface,
+             const char* member, const char* sig, const char* deviceId, const char* appId, short port)
+        : mUniqueName(uniqueName), mPath(path), mIfaceName(iface),
+        mMember(member), mSignature(sig), mDeviceId(deviceId), mAppId(appId), mPort(port)
     { };
 
     virtual ~RuleInfo() { };
+
+    void setSenderInfo(qcc::String deviceId, qcc::String appId) {
+        mDeviceId = deviceId;
+        mAppId = appId;
+    }
 
     virtual qcc::String toString() {
         qcc::String ret = "";
@@ -40,6 +51,14 @@ class RuleInfo {
         ret.append(mMember);
         ret.append(",");
         ret.append(mSignature);
+        ret.append(",");
+        ret.append(mDeviceId);
+        ret.append(",");
+        ret.append(mAppId);
+        ret.append(",");
+        char temp[16];
+        sprintf(temp, "%d", mPort);
+        ret.append(temp);
         return ret;
     }
 
@@ -49,6 +68,9 @@ class RuleInfo {
     qcc::String mIfaceName;
     qcc::String mMember;
     qcc::String mSignature;
+    qcc::String mDeviceId;
+    qcc::String mAppId;
+    short mPort;
 };
 
 #endif //_RULE_INFO_

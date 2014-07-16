@@ -21,5 +21,7 @@ public interface EventActionListener {
 	
 	public void onActionsFound(Device info);
 	
+	public void onEventActionLost(int sessionId);
+	
 	public void onRuleEngineFound(String sessionName, String friendlyName);
 }

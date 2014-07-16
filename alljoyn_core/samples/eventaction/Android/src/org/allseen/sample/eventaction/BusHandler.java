@@ -79,10 +79,11 @@ public class BusHandler extends Handler {
     private native void addSavedRule(//event
 								  String jEUniqueName, String jEPath,
 								  String jEIface, String jEMember, String jESig,
-								  String jEDeviceId, String jEAppId,
+								  String jEDeviceId, String jEAppId, short Eport,
 								//action
 								  String jAUniqueName, String jAPath,
-								  String jAIface, String jAMember, String jASig, short port);
+								  String jAIface, String jAMember, String jASig,
+								  String jADeviceId, String jAAppId, short Aport);
     
     /** clear out the saved rules in local memory and persistent memory */
     private native void deleteAllRules();
@@ -115,6 +116,15 @@ public class BusHandler extends Handler {
 		msg.setData(data);
 		msg.arg1 = sessionId;
 		this.sendMessage(msg);
+	}
+
+    /**
+     * Callback from jni code invoked when a device goes away
+     * @param sessionId		sessionId that was lost
+     */
+	public void lostEventActionApplication(int sessionId) {
+		Log.d(TAG, "Lost applicatoin with session id: "+sessionId);
+		listener.onEventActionLost(sessionId);
 	}
 	
 	/**
@@ -183,30 +193,37 @@ public class BusHandler extends Handler {
 	 * Helper method to parse the saved rule that was persisted
 	 */
 	public void parseSavedRuleAndAdd(String rule) {
-		Bundle b = new Bundle();
-		String parts[] = rule.split("[|]");
-		String event[] = parts[0].split("[,]");
-		String action[] = parts[1].split("[,]");
-		//event
-		b.putString("eUniqueName", event[0]);
-		b.putString("ePath", event[1]);
-		b.putString("eIface", event[2]);
-		b.putString("eMember", event[3]);
-		b.putString("eSig", event.length > 4 ? event[4] : "");
-		b.putString("eDeviceId", event.length > 5 ? event[5] : "");
-		b.putString("eAppId", event.length > 6 ? event[6] : "");
-		//action
-		b.putString("aUniqueName", action[0]);
-		b.putString("aPath", action[1]);
-		b.putString("aIface", action[2]);
-		b.putString("aMember", action[3]);
-		b.putString("aSig", action.length > 4 ? action[4] : "");
-		b.putShort("aPort", action.length > 5 && action[5].trim().length() != 0 ? Short.parseShort(action[5]) : 0);
-		
-		Message msg = this.obtainMessage(ADD_SAVED_RULE);
-		msg.setData(b);
-		msg.arg1 = 0;
-		this.sendMessage(msg);
+		try{
+			Bundle b = new Bundle();
+			String parts[] = rule.split("[|]");
+			String event[] = parts[0].split("[,]");
+			String action[] = parts[1].split("[,]");
+			//event
+			b.putString("eUniqueName", event[0]);
+			b.putString("ePath", event[1]);
+			b.putString("eIface", event[2]);
+			b.putString("eMember", event[3]);
+			b.putString("eSig", event.length > 4 ? event[4] : "");
+			b.putString("eDeviceId", event.length > 5 ? event[5] : "");
+			b.putString("eAppId", event.length > 6 ? event[6] : "");
+			b.putShort("ePort", event.length > 7 && event[7].trim().length() != 0 ? Short.parseShort(event[7]) : 0);
+			//action
+			b.putString("aUniqueName", action[0]);
+			b.putString("aPath", action[1]);
+			b.putString("aIface", action[2]);
+			b.putString("aMember", action[3]);
+			b.putString("aSig", action.length > 4 ? action[4] : "");
+			b.putString("aDeviceId", event.length > 5 ? event[5] : "");
+			b.putString("aAppId", event.length > 6 ? event[6] : "");
+			b.putShort("aPort", event.length > 7 && event[7].trim().length() != 0 ? Short.parseShort(event[7]) : 0);
+			
+			Message msg = this.obtainMessage(ADD_SAVED_RULE);
+			msg.setData(b);
+			msg.arg1 = 0;
+			this.sendMessage(msg);
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	/**
@@ -311,12 +328,15 @@ public class BusHandler extends Handler {
 				b.getString("eSig"),
 				b.getString("eDeviceId"),
 				b.getString("eAppId"),
+				b.getShort("ePort"),
 				//action
 				b.getString("aUniqueName"),
 				b.getString("aPath"),
 				b.getString("aIface"),
 				b.getString("aMember"),
 				b.getString("aSig"),
+				b.getString("aDeviceId"),
+				b.getString("aAppId"),
 				b.getShort("aPort"));
     }
     

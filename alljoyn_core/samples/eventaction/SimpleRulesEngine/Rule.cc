@@ -32,6 +32,19 @@ using namespace qcc;
 #endif
 #endif
 
+#define DELETE_IF(x) { if (x) { delete x; x = NULL; } }
+
+Rule::~Rule() {
+    mLock.Lock(MUTEX_CONTEXT);
+    DELETE_IF(actionObject);
+    DELETE_IF(mAction);
+    DELETE_IF(mEvent);
+    if (eventMember) {
+        eventMember = NULL;
+    }
+    mLock.Unlock(MUTEX_CONTEXT);
+}
+
 QStatus Rule::enable()
 {
     QStatus status = ER_OK;
@@ -45,19 +58,42 @@ QStatus Rule::enable()
     matchRule.append("',member='");
     matchRule.append(mEvent->mMember);
     matchRule.append("'");
+
     LOGTHIS("Going to setup a rule for the event: %s to to invoke action %s(%s)",
             matchRule.c_str(), mAction->mMember.c_str(), mAction->mSignature.c_str());
 
-    InterfaceDescription* tempIntf;
-    status = mBus->CreateInterface(mEvent->mIfaceName.c_str(), tempIntf);
-    if (status == ER_OK && tempIntf) {
-        tempIntf->AddSignal(mEvent->mMember.c_str(), mEvent->mSignature.c_str(), mEvent->mSignature.c_str(), 0);
-        eventMember = tempIntf->GetMember(mEvent->mMember.c_str());
-    } else if (status == ER_BUS_IFACE_ALREADY_EXISTS) {
-        LOGTHIS("Interface already exists, getting it from the BusAttachment");
-        const InterfaceDescription* existingIntf = mBus->GetInterface(mEvent->mIfaceName.c_str());
+    mLock.Lock(MUTEX_CONTEXT);
+
+    const InterfaceDescription* existingIntf = mBus->GetInterface(mEvent->mIfaceName.c_str());
+    if (existingIntf) {
         eventMember = existingIntf->GetMember(mEvent->mMember.c_str());
+    } else {
+        //introspect to collect interface
+        SessionId sessionId;
+        SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+        mBus->EnableConcurrentCallbacks();
+        status = mBus->JoinSession(mEvent->mUniqueName.c_str(), mEvent->mPort, this,  mSessionId, opts);
+        if ((ER_OK == status || ER_ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED == status) && !actionObject) {
+            LOGTHIS("Init: Creating ProxyBusObject with SessionId: %d", mSessionId);
+            ProxyBusObject* tempObj = new ProxyBusObject(*mBus, mEvent->mUniqueName.c_str(), mEvent->mPath.c_str(), mSessionId);
+            if (tempObj != NULL) {
+                status = tempObj->IntrospectRemoteObject();
+                LOGTHIS("Init:Introspect Object called, status(%d)", status);
+            } else {
+                LOGTHIS("Init:Failed to create ProxyBusObject");
+            }
+            DELETE_IF(tempObj);
+        }
+        if (ER_OK == status) {
+            status = mBus->LeaveSession(mSessionId);
+        }
+        const InterfaceDescription* existingIntfAgain = mBus->GetInterface(mEvent->mIfaceName.c_str());
+        if (existingIntfAgain) {
+            eventMember = existingIntfAgain->GetMember(mEvent->mMember.c_str());
+        }
     }
+
+    mLock.Unlock(MUTEX_CONTEXT);
 
     if (eventMember) {
         status =  mBus->RegisterSignalHandler(this,
@@ -82,55 +118,51 @@ QStatus Rule::enable()
 
 void Rule::EventHandler(const ajn::InterfaceDescription::Member* member, const char* srcPath, ajn::Message& msg)
 {
-    if (!mAction || !mEvent || mEvent->mUniqueName.compare(msg->GetSender())) {
+    QStatus status = ER_OK;
+    if (!mAction || !mEvent) {
         return;
     }
     LOGTHIS("Received the event (%s) from %s", mEvent->mMember.c_str(), mEvent->mUniqueName.c_str());
+    if (mEvent->mUniqueName.compare(msg->GetSender())) {
+        LOGTHIS("Ignore since not the sender we are interested in");
+        return;
+    }
+    mLock.Lock(MUTEX_CONTEXT);
     if (mSessionId == 0) {
-        LOGTHIS("Going to join async session/port %s/%d", mAction->mUniqueName.c_str(), mAction->mPort);
+        LOGTHIS("Going to join session/port %s/%d", mAction->mUniqueName.c_str(), mAction->mPort);
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-        QStatus status = mBus->JoinSessionAsync(mAction->mUniqueName.c_str(),
-                                                mAction->mPort, this, opts, this, this);
-        if (ER_OK != status) {
-            LOGTHIS("Failed to JoinSession");
+        mBus->EnableConcurrentCallbacks();
+        status = mBus->JoinSession(mAction->mUniqueName.c_str(), mAction->mPort, this,  mSessionId, opts);
+        LOGTHIS("JoinSession status: %s(%x)", QCC_StatusText(status), status);
+    }
+    if ((ER_OK == status || ER_ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED == status) && !actionObject) {
+        LOGTHIS("Creating ProxyBusObject with SessionId: %d", mSessionId);
+        actionObject = new ProxyBusObject(*mBus, mAction->mUniqueName.c_str(), mAction->mPath.c_str(), mSessionId);
+        const InterfaceDescription* actionIntf = mBus->GetInterface(mAction->mIfaceName.c_str());
+        if (actionIntf) {
+            actionObject->AddInterface(*actionIntf);
+        } else {
+            //Only introspect if we do not have the interface for the Action
+            mBus->EnableConcurrentCallbacks();
+            status = actionObject->IntrospectRemoteObject();
+            LOGTHIS("Introspect Object called, %s(%x)", QCC_StatusText(status), status);
         }
-    } else {
-        //Have a session so call the method to execute the action
-        LOGTHIS("Already in session %s/%d/%d", mAction->mUniqueName.c_str(), mAction->mPort, mSessionId);
-        callAction();
     }
-}
-
-void Rule::JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context) {
-    Rule* rule = (Rule*)context;
-    LOGTHIS("Joined session %s/%d status: %s(%x)", rule->mAction->mUniqueName.c_str(), sessionId, QCC_StatusText(status), status);
-    if (status == ER_OK || status == ER_ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED) {
-        rule->mSessionId = sessionId;
-        rule->callAction();
-    }
+    mLock.Unlock(MUTEX_CONTEXT);
+    //Have a session so call the method to execute the action
+    LOGTHIS("Calling action %s/%d/%d", mAction->mUniqueName.c_str(), mAction->mPort, mSessionId);
+    callAction();
 }
 
 void Rule::callAction() {
     QStatus status = ER_OK;
-    if (!actionObject || !actionObject->ImplementsInterface(mAction->mIfaceName.c_str())) {
-        LOGTHIS("Creating ProxyBusObject with SessionId: %d", mSessionId);
-        actionObject = new ProxyBusObject(*mBus, mAction->mUniqueName.c_str(), mAction->mPath.c_str(), mSessionId);
-        if (actionObject != NULL) {
-            mBus->EnableConcurrentCallbacks();
-            status = actionObject->IntrospectRemoteObject();
-        } else {
-            LOGTHIS("Failed to create ProxyBusObject");
-        }
-    }
-    if (ER_OK == status && actionObject) {
-        MsgArg args;
+    if (actionObject) {
         LOGTHIS("Calling device(%s) action %s::%s(%s)",
                 mAction->mUniqueName.c_str(), mAction->mIfaceName.c_str(),
                 mAction->mMember.c_str(), mAction->mSignature.c_str());
-        //TODO: set args to action->mSignature & fill in dummy values if they exist
         status = actionObject->MethodCallAsync(mAction->mIfaceName.c_str(), mAction->mMember.c_str(),
                                                this, static_cast<MessageReceiver::ReplyHandler>(&Rule::AsyncCallReplyHandler),
-                                               &args, 0, NULL, 10000);
+                                               NULL, 0, NULL, 10000);
         LOGTHIS("MethodCall status: %s(%x)", QCC_StatusText(status), status);
     } else {
         LOGTHIS("Failed MethodCall status: %s(%x)", QCC_StatusText(status), status);
@@ -157,17 +189,26 @@ QStatus Rule::disable()
     matchRule.append("',member='");
     matchRule.append(mEvent->mMember);
     matchRule.append("'");
+    mLock.Lock(MUTEX_CONTEXT);
     if (eventMember) {
-        status = mBus->RemoveMatch(matchRule.c_str());
-        LOGTHIS("Removed match status: %d", status);
+        status = mBus->UnregisterSignalHandler(this,
+                                               static_cast<MessageReceiver::SignalHandler>(&Rule::EventHandler),
+                                               eventMember,
+                                               NULL);
+        LOGTHIS("Unregister Signal Handler status: %d", status);
         if (status == ER_OK) {
-            status = mBus->UnregisterSignalHandler(this,
-                                                   static_cast<MessageReceiver::SignalHandler>(&Rule::EventHandler),
-                                                   eventMember,
-                                                   NULL);
+            status = mBus->RemoveMatch(matchRule.c_str());
+            LOGTHIS("Removed match status: %d", status);
+        }
+        if (mSessionId != 0) {
+            status = mBus->LeaveSession(mSessionId);
+            LOGTHIS("Leave Session status: %d", status);
+            mSessionId = 0;
         }
     }
+    mLock.Unlock(MUTEX_CONTEXT);
     eventMember = NULL;
+    DELETE_IF(actionObject);
 
     LOGTHIS("Unregistered a rule for the event: %s to to invoke action %s(%s)",
             matchRule.c_str(), mAction->mMember.c_str(), mAction->mSignature.c_str());
@@ -175,14 +216,27 @@ QStatus Rule::disable()
     return status;
 }
 
+void Rule::modifyEventSessionName(const char*sessionName)
+{
+    mBus->EnableConcurrentCallbacks();
+    disable();
+    mEvent->mUniqueName = sessionName;
+    enable();
+}
+
+void Rule::modifyActionSessionName(const char*sessionName)
+{
+    mBus->EnableConcurrentCallbacks();
+    disable();
+    mAction->mUniqueName = sessionName;
+    enable();
+}
+
+
 /* From SessionListener */
 void Rule::SessionLost(ajn::SessionId sessionId)
 {
     LOGTHIS("Unable to communicate with action device, lost the session.");
-    if (actionObject) {
-        delete actionObject;
-        actionObject = NULL;
-    }
     mSessionId = 0;
 }
 

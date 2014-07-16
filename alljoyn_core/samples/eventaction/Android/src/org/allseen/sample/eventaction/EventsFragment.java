@@ -25,6 +25,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -59,6 +60,11 @@ public class EventsFragment extends Fragment {
 		eventAdapter.add(info);
 		notifyChanged();
 	}
+	
+	public void removeDevice(int sessionId) {
+		eventAdapter.remove(sessionId);
+		notifyChanged();
+	}
 
 	public void unsetAllChecks() {
 		for(int i = 0; i < eventAdapter.checkboxDirtyFlags.size(); i++) {
@@ -89,12 +95,31 @@ public class EventsFragment extends Fragment {
 		}
 		
 		public void add(Device info) {
-			data.add(info);
+			int loc = 0;
+			for(; loc < data.size(); loc++) {
+				Device d = data.get(loc);
+				if(d.getSessionName().compareTo(info.getSessionName()) == 0) {
+					data.remove(loc);
+					checkboxDirtyFlags.remove(loc);
+					break;
+				}
+			}
+			data.add(loc,info);
 			Vector<Boolean> dirtyFlags = new Vector<Boolean>();
 			for(int i = 0; i < info.getActions().size(); i++) {
 				dirtyFlags.add(true);
 			}
-			checkboxDirtyFlags.add(dirtyFlags);
+			checkboxDirtyFlags.add(loc,dirtyFlags);
+		}
+		
+		public void remove(int sessionId) {
+			for(int i = 0; i < data.size(); i++) {
+				Device d = data.get(i);
+				if(d.getSessionId() == sessionId) {
+					data.remove(i);
+					checkboxDirtyFlags.remove(i);
+				}
+			}
 		}
 
 		@Override

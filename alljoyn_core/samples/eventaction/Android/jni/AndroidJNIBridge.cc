@@ -102,14 +102,14 @@ JNIEXPORT void JNICALL Java_org_allseen_sample_eventaction_BusHandler_addRule(JN
     const char* eIface = env->GetStringUTFChars(jEIface, &iscopy);
     const char* eMember = env->GetStringUTFChars(jEMember, &iscopy);
     const char* eSig = env->GetStringUTFChars(jESig, &iscopy);
-    EventInfo* event = new EventInfo(eUniqueName, ePath, eIface, eMember, eSig);
+    RuleInfo* event = new RuleInfo(eUniqueName, ePath, eIface, eMember, eSig);
 
     const char* aUniqueName = env->GetStringUTFChars(jAUniqueName, &iscopy);
     const char* aPath = env->GetStringUTFChars(jAPath, &iscopy);
     const char* aIface = env->GetStringUTFChars(jAIface, &iscopy);
     const char* aMember = env->GetStringUTFChars(jAMember, &iscopy);
     const char* aSig = env->GetStringUTFChars(jASig, &iscopy);
-    ActionInfo* action = new ActionInfo(aUniqueName, aPath, aIface, aMember, aSig);
+    RuleInfo* action = new RuleInfo(aUniqueName, aPath, aIface, aMember, aSig);
 
     LOGTHIS("Adding a new rule: %s to %s", eUniqueName, aUniqueName);
     myAllJoynCode->addRule(event, action, persist);
@@ -131,11 +131,11 @@ JNIEXPORT void JNICALL Java_org_allseen_sample_eventaction_BusHandler_addSavedRu
                                                                                    //event
                                                                                    jstring jEUniqueName, jstring jEPath,
                                                                                    jstring jEIface, jstring jEMember, jstring jESig,
-                                                                                   jstring jDeviceId, jstring jAppId,
+                                                                                   jstring jEDeviceId, jstring jEAppId, jshort Eport,
                                                                                    //action
                                                                                    jstring jAUniqueName, jstring jAPath,
                                                                                    jstring jAIface, jstring jAMember, jstring jASig,
-                                                                                   jshort port)
+                                                                                   jstring jADeviceId, jstring jAAppId, jshort Aport)
 {
     jboolean iscopy;
     const char* eUniqueName = env->GetStringUTFChars(jEUniqueName, &iscopy);
@@ -143,16 +143,18 @@ JNIEXPORT void JNICALL Java_org_allseen_sample_eventaction_BusHandler_addSavedRu
     const char* eIface = env->GetStringUTFChars(jEIface, &iscopy);
     const char* eMember = env->GetStringUTFChars(jEMember, &iscopy);
     const char* eSig = env->GetStringUTFChars(jESig, &iscopy);
-    const char* eDeviceId = env->GetStringUTFChars(jDeviceId, &iscopy);
-    const char* eAppId = env->GetStringUTFChars(jAppId, &iscopy);
-    EventInfo* event = new EventInfo(eUniqueName, ePath, eIface, eMember, eSig, eDeviceId, eAppId);
+    const char* eDeviceId = env->GetStringUTFChars(jEDeviceId, &iscopy);
+    const char* eAppId = env->GetStringUTFChars(jEAppId, &iscopy);
+    RuleInfo* event = new RuleInfo(eUniqueName, ePath, eIface, eMember, eSig, eDeviceId, eAppId, Eport);
 
     const char* aUniqueName = env->GetStringUTFChars(jAUniqueName, &iscopy);
     const char* aPath = env->GetStringUTFChars(jAPath, &iscopy);
     const char* aIface = env->GetStringUTFChars(jAIface, &iscopy);
     const char* aMember = env->GetStringUTFChars(jAMember, &iscopy);
     const char* aSig = env->GetStringUTFChars(jASig, &iscopy);
-    ActionInfo* action = new ActionInfo(aUniqueName, aPath, aIface, aMember, aSig, port);
+    const char* aDeviceId = env->GetStringUTFChars(jADeviceId, &iscopy);
+    const char* aAppId = env->GetStringUTFChars(jAAppId, &iscopy);
+    RuleInfo* action = new RuleInfo(aUniqueName, aPath, aIface, aMember, aSig, aDeviceId, aAppId, Aport);
 
     LOGTHIS("Adding a saved rule: %s to %s", eUniqueName, aUniqueName);
     myAllJoynCode->addRule(event, action, false);
@@ -162,12 +164,16 @@ JNIEXPORT void JNICALL Java_org_allseen_sample_eventaction_BusHandler_addSavedRu
     env->ReleaseStringUTFChars(jEIface, eIface);
     env->ReleaseStringUTFChars(jEMember, eMember);
     env->ReleaseStringUTFChars(jESig, eSig);
+    env->ReleaseStringUTFChars(jEDeviceId, eDeviceId);
+    env->ReleaseStringUTFChars(jEAppId, eAppId);
 
     env->ReleaseStringUTFChars(jAUniqueName, aUniqueName);
     env->ReleaseStringUTFChars(jAPath, aPath);
     env->ReleaseStringUTFChars(jAIface, aIface);
     env->ReleaseStringUTFChars(jAMember, aMember);
     env->ReleaseStringUTFChars(jASig, aSig);
+    env->ReleaseStringUTFChars(jADeviceId, aDeviceId);
+    env->ReleaseStringUTFChars(jAAppId, aAppId);
 }
 
 JNIEXPORT void JNICALL Java_org_allseen_sample_eventaction_BusHandler_deleteAllRules(JNIEnv*env, jobject jobj) {

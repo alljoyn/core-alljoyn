@@ -50,8 +50,7 @@ class MyAllJoynCode :
      *
      */
     MyAllJoynCode()
-        : AnnounceHandler(), mBusFriendlyMap(), propertyStoreImpl(NULL),
-        mBusAttachment(NULL), aboutService(NULL), ruleEngine(), ruleBusObject(NULL)
+        : mBusAttachment(NULL), AnnounceHandler(), ruleEngine(), ruleBusObject(NULL), aboutService(NULL)
     { };
 
     /**

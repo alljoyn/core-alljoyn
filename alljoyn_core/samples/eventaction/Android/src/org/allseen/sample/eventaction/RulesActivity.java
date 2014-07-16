@@ -177,6 +177,12 @@ public class RulesActivity extends FragmentActivity implements EventActionListen
 	}
 	
 	@Override
+	public void onEventActionLost(int sessionId) {
+		eventsFragment.removeDevice(sessionId);
+		actionsFragment.removeDevice(sessionId);
+	}
+	
+	@Override
 	public void onRuleEngineFound(final String sessionName, final String friendlyName) {
 		runOnUiThread(new Runnable() {
 			public void run() {
