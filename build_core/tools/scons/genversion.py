@@ -21,7 +21,6 @@ import sys
 from subprocess import *
 
 ver_re = re.compile('int\s+(?P<REL>architecture|apiLevel|release)\s*=\s*(?P<VAL>\d+)\s*;\s*$')
-prod_re = re.compile('char(\s+const)?\s*(\sproduct\[\]|\*\s*product)\s*=\s*"(?P<STR>.*)"\s*;\s*$')
 
 def GetBuildInfo(env, source, stderr=PIPE ):
     branches = []
@@ -89,7 +88,6 @@ def GetBuildInfo(env, source, stderr=PIPE ):
 
 
 def ParseSource(source):
-    prod = '<none>'
     arch = 0
     api = 0
     rel = 0
@@ -107,24 +105,19 @@ def ParseSource(source):
                 api = int(d['VAL'])
             elif d['REL'] == 'release':
                 rel = int(d['VAL'])
-        else:
-            m = prod_re.search(l)
-            if m:
-                prod = m.groupdict()['STR']
-    return (prod, arch, api, rel, lines)
+    return (arch, api, rel, lines)
 
 
 def GenVersionAction(source, target, env):
     import time
-    product, architecture, api_level, release, lines = ParseSource(str(source[0]))
+    architecture, api_level, release, lines = ParseSource(str(source[0]))
     fpath = os.path.abspath(os.path.dirname(str(source[0])))
     bld_info = GetBuildInfo(env, fpath)
     date = time.strftime('%a %b %d %H:%M:%S UTC %Y', time.gmtime())
     version_str = 'v%(arch)d.%(api)d.%(rel)d' % ({ 'arch': architecture,
                                                    'api': api_level,
                                                    'rel': release })
-    build_str = '%(prod)s %(ver)s (Built %(date)s by %(user)s%(bld)s)' % ({
-        'prod': product,
+    build_str = '%(ver)s (Built %(date)s by %(user)s%(bld)s)' % ({
         'ver': version_str,
         'date': date,
         'user': getpass.getuser(),

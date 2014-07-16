@@ -65,8 +65,6 @@ QStatus SimpleRuleEngine::removeAllRules()
 
 Rule* SimpleRuleEngine::getRules(size_t& len)
 {
-    QStatus status = ER_OK;
-
     return NULL;
 }
 
@@ -81,7 +79,6 @@ void SimpleRuleEngine::Announce(unsigned short version, unsigned short port, con
                                 const ajn::services::AboutClient::ObjectDescriptions& objectDescs,
                                 const ajn::services::AboutClient::AboutData& aboutData)
 {
-    char* friendlyName = NULL;
     NearbyAppInfo* nearbyAppInfo = new NearbyAppInfo();
     for (AboutClient::AboutData::const_iterator it = aboutData.begin(); it != aboutData.end(); ++it) {
         qcc::String key = it->first;

@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -113,12 +113,13 @@ void SimpleBusListener::FoundAdvertisedName(const char* name, TransportMask tran
     }
 }
 
-void SimpleBusListener::LostAdvertisedName(const char* name, const char* namePrefix)
+void SimpleBusListener::LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
 {
     if (enabled & BUS_EVENT_LOST_ADVERTISED_NAME) {
         BusEvent busEvent;
         busEvent.eventType = BUS_EVENT_LOST_ADVERTISED_NAME;
         busEvent.lostAdvertisedName.name = name;
+        busEvent.lostAdvertisedName.transport = transport;
         busEvent.lostAdvertisedName.namePrefix = namePrefix;
         internal.QueueEvent(busEvent);
     }

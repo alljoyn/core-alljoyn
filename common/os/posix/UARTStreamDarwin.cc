@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -55,8 +55,7 @@ UARTStream::~UARTStream()
     delete sourceEvent;
     delete sinkEvent;
 }
-#define RX_BUFSIZE  640
-static uint8_t RxBuffer[RX_BUFSIZE];
+
 QStatus UARTStream::PullBytes(void* buf, size_t numBytes, size_t& actualBytes, uint32_t timeout) {
     return ER_NOT_IMPLEMENTED;
 }

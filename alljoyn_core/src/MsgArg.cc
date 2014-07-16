@@ -963,7 +963,7 @@ QStatus MsgArg::VBuildArgs(const char*& signature, size_t sigLen, MsgArg* arg, s
                 if (inArg->typeId == ALLJOYN_ARRAY) {
                     status = arg->v_array.SetElements(inArg->v_array.elemSig, inArg->v_array.numElements, inArg->v_array.elements);
                 } else {
-                    memcpy(arg, inArg, sizeof(MsgArg));
+                    *arg = *inArg;
                 }
                 arg->flags = 0;
             }

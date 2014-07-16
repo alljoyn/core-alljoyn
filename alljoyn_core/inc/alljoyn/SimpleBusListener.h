@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -89,6 +89,7 @@ class SimpleBusListener : public BusListener {
             } foundAdvertisedName;
             struct {
                 const char* name;       ///< A well known name that the remote bus is advertising that is of interest to this attachment.
+                TransportMask transport;        ///< Transport that received the advertisement.
                 const char* namePrefix; ///< The well-known name prefix that was used in a call to FindAdvertisedName that triggered this callback.
             } lostAdvertisedName;
             struct {
@@ -164,7 +165,7 @@ class SimpleBusListener : public BusListener {
     void BusStopping();
 
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix);
-    void LostAdvertisedName(const char* name, const char* namePrefix);
+    void LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix);
     void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner);
 
     /**

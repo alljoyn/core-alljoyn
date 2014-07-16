@@ -249,12 +249,15 @@ QStatus _Message::ParseArray(MsgArg* arg,
                     if (numElements == capacity) {
                         capacity *= 2;
                         MsgArg* bigger = new MsgArg[capacity];
-                        memcpy(bigger, elements, numElements * sizeof(MsgArg));
-                        /*
-                         * Clear the flags to prevent the destructor from freeing anything other
-                         * than the MsgArgs.
-                         */
                         for (size_t i = 0; i < numElements; i++) {
+                            // copy all of the elements into the larger container
+                            bigger[i] = elements[i];
+                            // make sure the flags match assignment operator may
+                            // not no copy the ownership flags since only one
+                            // object can own the data and args.
+                            bigger[i].flags = elements[i].flags;
+                            // clear the flags to prevent the destructor from
+                            // freeing anything other than the MsgArg
                             elements[i].flags = 0;
                         }
                         delete [] elements;
