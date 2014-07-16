@@ -42,7 +42,7 @@ QStatus AnnouncementRegistrar::RegisterAnnounceHandler(ajn::BusAttachment& bus, 
     // we only need to register the internalAnnounceHandler once that it is
     // responsible for forwarding each Announce signal to the users AnnounceHandeler
     if (internalAnnounceHandler == NULL) {
-        internalAnnounceHandler = new InternalAnnounceHandler();
+        internalAnnounceHandler = new InternalAnnounceHandler(bus);
 
         const InterfaceDescription* getIface = NULL;
         // check to see if the org.alljoyn.About interface is already registered with
@@ -100,17 +100,6 @@ QStatus AnnouncementRegistrar::RegisterAnnounceHandler(ajn::BusAttachment& bus, 
         return status;
     }
 
-    qcc::String matchRule = "type='signal',interface='org.alljoyn.About',member='Announce',sessionless='t'";
-    for (size_t i = 0; i < numberInterfaces; ++i) {
-        matchRule += qcc::String(",implements='") + implementsInterfaces[i] + qcc::String("'");
-    }
-
-    status = bus.AddMatch(matchRule.c_str());
-    if (status != ER_OK) {
-        return status;
-    }
-
-
     QCC_DbgPrintf(("AnnouncementRegistrar::%s result %s", __FUNCTION__, QCC_StatusText(status)));
     return status;
 }
@@ -157,6 +146,10 @@ QStatus AnnouncementRegistrar::UnRegisterAllAnnounceHandlers(ajn::BusAttachment&
 
     QStatus status = bus.UnregisterSignalHandler(internalAnnounceHandler, static_cast<MessageReceiver::SignalHandler>(&InternalAnnounceHandler::AnnounceSignalHandler),
                                                  internalAnnounceHandler->announceSignalMember, NULL);
+    if (status != ER_OK) {
+        return status;
+    }
+    status = internalAnnounceHandler->RemoveAllHandlers();
     if (status != ER_OK) {
         return status;
     }
