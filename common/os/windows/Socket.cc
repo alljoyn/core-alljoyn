@@ -954,6 +954,21 @@ QStatus SetBlocking(SocketFd sockfd, bool blocking)
     return status;
 }
 
+QStatus SetLinger(SocketFd sockfd, bool onoff, uint32_t linger)
+{
+    QStatus status = ER_OK;
+    struct linger l;
+    l.l_onoff = onoff;
+    l.l_linger = linger;
+
+    int r = setsockopt(sockfd, SOL_SOCKET, SO_LINGER, (char*)&l, sizeof(l));
+    if (r != 0) {
+        status = ER_OS_ERROR;
+        QCC_LogError(status, ("Setting SO_LINGER failed: (%d) %s", errno, strerror(errno)));
+    }
+    return status;
+}
+
 QStatus SetNagle(SocketFd sockfd, bool useNagle)
 {
     QStatus status = ER_OK;
