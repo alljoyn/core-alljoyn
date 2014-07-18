@@ -50,7 +50,7 @@ class InternalAnnounceHandler : public ajn::MessageReceiver {
     /**
      * Construct an AnnounceHandler.
      */
-    InternalAnnounceHandler();
+    InternalAnnounceHandler(ajn::BusAttachment& bus);
 
     /**
      * Destruct AnnounceHandler
@@ -63,10 +63,14 @@ class InternalAnnounceHandler : public ajn::MessageReceiver {
     QStatus AddHandler(AnnounceHandler& handler, const char** implementsInterfaces, size_t numberInterfaces);
 
     /**
-     * Remove the announce handler from the map of handelers
+     * Remove the announce handler from the map of handlers
      */
     QStatus RemoveHandler(AnnounceHandler& handler, const char** implementsInterfaces, size_t numberInterfaces);
 
+    /**
+     * Remove all announce handlers from the map of handlers
+     */
+    QStatus RemoveAllHandlers();
   private:
     /**
      * AnnounceHandler is a callback registered to receive AllJoyn Signal.
@@ -78,6 +82,10 @@ class InternalAnnounceHandler : public ajn::MessageReceiver {
 
     bool ContainsInterface(const ObjectDescriptions& objectDescriptions, const qcc::String interface) const;
 
+    /**
+     * reference to the BusAttachment used by this InternalAnnounceHandler
+     */
+    ajn::BusAttachment& bus;
     /**
      *  pointer to InterfaceDescription::Member
      */
@@ -113,6 +121,11 @@ class InternalAnnounceHandler : public ajn::MessageReceiver {
      * should be implemented if you are going to get a callback on that handler.
      */
     AnnounceMap announceMap;
+
+    /**
+     * default matchrule without any `implements` rules added to it.
+     */
+    qcc::String emptyMatchRule;
 
 };
 

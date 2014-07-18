@@ -355,8 +355,9 @@ TEST_F(AnnounceHandlerTest, ReAnnounceAnnouncement)
 
 static bool announceHandler1Flag = false;
 static bool announceHandler2Flag = false;
+static bool announceHandler3Flag = false;
 
-class AnnounceHandler1 : public ajn::services::AnnounceHandler {
+class AnnounceHandlerTestAnnounceHandler1 : public ajn::services::AnnounceHandler {
 
   public:
 
@@ -366,13 +367,23 @@ class AnnounceHandler1 : public ajn::services::AnnounceHandler {
     }
 };
 
-class AnnounceHandler2 : public ajn::services::AnnounceHandler {
+class AnnounceHandlerTestAnnounceHandler2 : public ajn::services::AnnounceHandler {
 
   public:
 
     virtual void Announce(unsigned short version, unsigned short port, const char* busName, const ObjectDescriptions& objectDescs,
                           const AboutData& aboutData) {
         announceHandler2Flag = true;
+    }
+};
+
+class AnnounceHandlerTestAnnounceHandler3 : public ajn::services::AnnounceHandler {
+
+  public:
+
+    virtual void Announce(unsigned short version, unsigned short port, const char* busName, const ObjectDescriptions& objectDescs,
+                          const AboutData& aboutData) {
+        announceHandler3Flag = true;
     }
 };
 
@@ -398,7 +409,7 @@ TEST_F(AnnounceHandlerTest, MultipleAnnounceHandlers)
     status = clientBus.Connect();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    AnnounceHandler1 announceHandler1;
+    AnnounceHandlerTestAnnounceHandler1 announceHandler1;
 
     const char* interfaces[1];
     interfaces[0] = ifaceName.c_str();
@@ -406,7 +417,7 @@ TEST_F(AnnounceHandlerTest, MultipleAnnounceHandlers)
     AnnouncementRegistrar::RegisterAnnounceHandler(clientBus, announceHandler1,
                                                    interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
 
-    AnnounceHandler2 announceHandler2;
+    AnnounceHandlerTestAnnounceHandler2 announceHandler2;
 
     AnnouncementRegistrar::RegisterAnnounceHandler(clientBus, announceHandler2,
                                                    interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
@@ -468,14 +479,14 @@ TEST_F(AnnounceHandlerTest, MultipleAnnounceHandlersUnregister)
     status = clientBus.Connect();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    AnnounceHandler1 announceHandler1;
+    AnnounceHandlerTestAnnounceHandler1 announceHandler1;
 
     const char* interfaces[1];
     interfaces[0] = ifaceName.c_str();
     AnnouncementRegistrar::RegisterAnnounceHandler(clientBus, announceHandler1,
                                                    interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
 
-    AnnounceHandler2 announceHandler2;
+    AnnounceHandlerTestAnnounceHandler2 announceHandler2;
 
     AnnouncementRegistrar::RegisterAnnounceHandler(clientBus, announceHandler2,
                                                    interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
@@ -502,6 +513,9 @@ TEST_F(AnnounceHandlerTest, MultipleAnnounceHandlersUnregister)
     ASSERT_TRUE(announceHandler1Flag);
     ASSERT_TRUE(announceHandler2Flag);
 
+    announceHandler1Flag = false;
+    announceHandler2Flag = false;
+
     AnnouncementRegistrar::UnRegisterAnnounceHandler(clientBus, announceHandler1,
                                                      interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
 
@@ -516,10 +530,118 @@ TEST_F(AnnounceHandlerTest, MultipleAnnounceHandlersUnregister)
         qcc::Sleep(WAIT_TIME);
     }
 
+    ASSERT_FALSE(announceHandler1Flag);
     ASSERT_TRUE(announceHandler2Flag);
 
     AnnouncementRegistrar::UnRegisterAnnounceHandler(clientBus, announceHandler2,
                                                      interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+
+    status = clientBus.Stop();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Join();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+}
+
+TEST_F(AnnounceHandlerTest, MultipleAnnounceHandlersUnregisterAll)
+{
+    QStatus status;
+    announceHandler1Flag = false;
+    announceHandler2Flag = false;
+    announceHandler3Flag = false;
+
+    qcc::GUID128 guid;
+    qcc::String ifaceName = "o" + guid.ToShortString() + ".test.AnnounceHandlerTest";
+
+    std::vector<qcc::String> object_interfaces;
+    object_interfaces.push_back(ifaceName);
+    status = AboutServiceApi::getInstance()->AddObjectDescription("/org/alljoyn/test", object_interfaces);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    // receive
+    BusAttachment clientBus("Receive Announcement client Test", true);
+    status = clientBus.Start();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Connect();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AnnounceHandlerTestAnnounceHandler1 announceHandler1;
+
+    const char* interfaces[1];
+    interfaces[0] = ifaceName.c_str();
+    AnnouncementRegistrar::RegisterAnnounceHandler(clientBus, announceHandler1,
+                                                   interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+
+    AnnounceHandlerTestAnnounceHandler2 announceHandler2;
+
+    AnnouncementRegistrar::RegisterAnnounceHandler(clientBus, announceHandler2,
+                                                   interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+
+    AnnounceHandlerTestAnnounceHandler3 announceHandler3;
+
+    AnnouncementRegistrar::RegisterAnnounceHandler(clientBus, announceHandler3,
+                                                   interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+
+    status = AboutServiceApi::getInstance()->Announce();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    //Wait for a maximum of 10 sec for first Announce Signal
+    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+        if (announceHandler1Flag) {
+            break;
+        }
+        qcc::Sleep(WAIT_TIME);
+    }
+
+    //Wait for a maximum of 5 additional sec for second Announce Signal
+    for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
+        if (announceHandler2Flag) {
+            break;
+        }
+        qcc::Sleep(WAIT_TIME);
+    }
+
+    //Wait for a maximum of 5 additional sec for third Announce Signal
+    for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
+        if (announceHandler3Flag) {
+            break;
+        }
+        qcc::Sleep(WAIT_TIME);
+    }
+
+    ASSERT_TRUE(announceHandler1Flag);
+    ASSERT_TRUE(announceHandler2Flag);
+    ASSERT_TRUE(announceHandler3Flag);
+
+    announceHandler1Flag = false;
+    announceHandler2Flag = false;
+    announceHandler3Flag = false;
+
+    // Unregister all of the AnnounceHandlers
+    AnnouncementRegistrar::UnRegisterAllAnnounceHandlers(clientBus);
+
+    // Reregister the second announceHandler using this so we can verify that the
+    // AnnounceHandlers are still called
+    AnnouncementRegistrar::RegisterAnnounceHandler(clientBus, announceHandler2,
+                                                   interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+
+    status = AboutServiceApi::getInstance()->Announce();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    //Wait for a maximum of 10 sec for second Announce Signal
+    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+        if (announceHandler2Flag) {
+            break;
+        }
+        qcc::Sleep(WAIT_TIME);
+    }
+
+    ASSERT_FALSE(announceHandler1Flag);
+    ASSERT_TRUE(announceHandler2Flag);
+    ASSERT_FALSE(announceHandler3Flag);
+
+    AnnouncementRegistrar::UnRegisterAllAnnounceHandlers(clientBus);
 
     status = clientBus.Stop();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
