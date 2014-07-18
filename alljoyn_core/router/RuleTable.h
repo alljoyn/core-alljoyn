@@ -70,13 +70,13 @@ struct Rule {
     std::set<qcc::String> implements;
 
     /** Map of argument matches */
-    // @@ TODO
+    std::map<uint32_t, qcc::String> args;
 
     /** Equality comparison */
     bool operator==(const Rule& o) const {
         return (type == o.type) && (sender == o.sender) && (iface == o.iface) &&
                (member == o.member) && (path == o.path) && (destination == o.destination) &&
-               (implements == o.implements);
+               (implements == o.implements) && (args == o.args);
     }
 
     /** Constructor */
