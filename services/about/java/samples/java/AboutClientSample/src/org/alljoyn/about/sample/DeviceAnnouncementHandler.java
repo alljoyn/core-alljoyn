@@ -106,7 +106,7 @@ public class DeviceAnnouncementHandler implements AnnouncementHandler
 
             System.out.println("BusAttachment with name " + serviceName + " is no longer present or is older than v14.06.");
             System.out.println("Attempting to JoinSession just incase " + serviceName + " is running an older version of AllJoyn.");
-            new JoinSessionThread(serviceName, port, announceData).run();
+            new JoinSessionThread(serviceName, port, announceData).start();
         }
     }
 
@@ -250,11 +250,12 @@ public class DeviceAnnouncementHandler implements AnnouncementHandler
             if(aboutData.containsKey(AboutKeys.ABOUT_SUPPORTED_LANGUAGES)) {
                 Variant variant = aboutData.get(AboutKeys.ABOUT_SUPPORTED_LANGUAGES);
                 String[] supportedLangs = variant.getObject(String[].class);
-                String languagesStr = "";
+                StringBuffer languagesStr = new StringBuffer();
                 for (String l : supportedLangs){
-                    languagesStr += " " + l;
+                    languagesStr.append(" ");
+                    languagesStr.append(l);
                 }
-                System.out.println("\tKey = " + AboutKeys.ABOUT_SUPPORTED_LANGUAGES + " Value =" + languagesStr);
+                System.out.println("\tKey = " + AboutKeys.ABOUT_SUPPORTED_LANGUAGES + " Value =" + languagesStr.toString());
             } else {
                 System.err.println("\t**** Missing Required field "+ AboutKeys.ABOUT_SUPPORTED_LANGUAGES + "****");
             }

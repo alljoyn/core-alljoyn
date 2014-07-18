@@ -2448,6 +2448,24 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
     }
 
     //
+    // Do it once for version two.
+    //
+    if (!((transportMask == TRANSPORT_FIRST_OF_PAIR) && ((completeTransportMask & TRANSPORT_SECOND_OF_PAIR) == TRANSPORT_SECOND_OF_PAIR))) {
+        MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
+        advRData->SetTransport(completeTransportMask & (TRANSPORT_TCP | TRANSPORT_UDP));
+        for (uint32_t i = 0; i < wkn.size(); ++i) {
+            advRData->SetValue("name", wkn[i]);
+        }
+        MDNSResourceRecord advRecord("advertise." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 0, advRData);
+
+        MDNSPacket mdnsPacket;
+        mdnsPacket->AddAdditionalRecord(advRecord);
+        mdnsPacket->SetVersion(2, 2);
+        Response(completeTransportMask, 0, mdnsPacket);
+        delete advRData;
+    }
+
+    //
     // We are now at version one of the protocol.  There is a significant
     // difference between version zero and version one messages, so down-version
     // (version zero) clients will not know what to do with version one
@@ -2629,27 +2647,6 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
         QueueProtocolMessage(Packet::cast(nspacket));
     }
 
-    if ((transportMask == TRANSPORT_FIRST_OF_PAIR) && ((completeTransportMask & TRANSPORT_SECOND_OF_PAIR) == TRANSPORT_SECOND_OF_PAIR)) {
-        return ER_OK;
-    }
-
-    //
-    // Do it once for version two.
-    //
-    {
-        MDNSAdvertiseRData* advRData = new MDNSAdvertiseRData();
-        advRData->SetTransport(completeTransportMask & (TRANSPORT_TCP | TRANSPORT_UDP));
-        for (uint32_t i = 0; i < wkn.size(); ++i) {
-            advRData->SetValue("name", wkn[i]);
-        }
-        MDNSResourceRecord advRecord("advertise." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 0, advRData);
-
-        MDNSPacket mdnsPacket;
-        mdnsPacket->AddAdditionalRecord(advRecord);
-        mdnsPacket->SetVersion(2, 2);
-        Response(completeTransportMask, 0, mdnsPacket);
-        delete advRData;
-    }
 
     return ER_OK;
 }
