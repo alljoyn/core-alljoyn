@@ -31,8 +31,7 @@ about_env.Install('$ABOUT_DISTDIR/inc/alljoyn/about', about_env.Glob('inc/alljoy
 about_env.Install('$ABOUT_DISTDIR/lib', about_env.SConscript('src/SConscript', exports = ['about_env']))
 
 # Sample programs
-if about_env['BUILD_SERVICES_SAMPLES'] == 'on':
-    about_env.Install('$ABOUT_DISTDIR/bin', about_env.SConscript('samples/SConscript', exports = ['about_env']))
+about_env.Install('$ABOUT_DISTDIR/bin', about_env.SConscript('samples/SConscript', exports = ['about_env']))
 
 # only include command line samples, unit test, test programs if we are not 
 # building for iOS. No support on iOS for command line applications.

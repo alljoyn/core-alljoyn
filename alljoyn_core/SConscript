@@ -115,6 +115,17 @@ else:
 env['brobj'] = bundled_router_obj
 env['ajrlib'] = router_lib
 
+# Always build C++ version of AboutService
+# brobj and ajrlib must be set before calling the SConscripts responsible for
+# building the AboutService. As well as adding the about headers and libs to
+# the default CPPPATH and LIBPATH.
+# Make about library and header file paths available to the global environment.
+env.Append(LIBPATH = '$DISTDIR/about/lib');
+env.Append(CPPPATH = '$DISTDIR/about/inc');
+
+about_env = env.Clone()
+about_env.VariantDir('$OBJDIR/services/about/cpp', '../services/about/cpp', duplicate = 0)
+about_env.SConscript('$OBJDIR/services/about/cpp/SConscript', exports = ['about_env'])
 
 # only include command line samples, unit test, test programs if we are not 
 # building for iOS. No support on iOS for command line applications.

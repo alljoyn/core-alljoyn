@@ -88,6 +88,11 @@ javaenv.Install('$JAVA_DISTDIR/lib', libs)
 javaenv.Install('bin/libs', libs)
 javaenv.Install('bin/jar', alljoyn_jar)
 
+# Always build Java version of the AboutService
+about_env = javaenv.Clone()
+about_env.VariantDir('$OBJDIR/services/about/java', '../services/about/java', duplicate = 0)
+about_env.SConscript('$OBJDIR/services/about/java/SConscript', exports = ['about_env'])
+
 # AllJoyn Java binding tests
 javaenv.SConscript('test/SConscript', exports = {'env':javaenv})
 

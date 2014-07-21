@@ -21,7 +21,7 @@ env = SConscript(['build_core/SConscript'])
 vars = Variables()
 
 vars.Add('BINDINGS', 'Bindings to build (comma separated list): cpp, c, java, js, unity', 'cpp,c,java,js,unity')
-vars.Add('SERVICES', 'AllJoyn services libraries to build (comma separated list): about,config,controlpanel,notification,onboarding,audio','about')
+vars.Add('SERVICES', 'AllJoyn services libraries to build (comma separated list): config,controlpanel,notification,onboarding,audio', '')
 vars.Add(EnumVariable('BUILD_SERVICES_SAMPLES', 'Build the services samples that require libxml2 and json libraries.', 'on', allowed_values = ['on', 'off']))
 vars.Update(env)
 Help(vars.GenerateHelpText(env))
@@ -31,7 +31,7 @@ bindings = set([ b.strip()
                  if b.strip() == 'cpp' or os.path.exists('alljoyn_%s/SConscript' % b.strip()) ])
 services = set([ s.strip()
                  for s in env['SERVICES'].split(',')
-                 if s.strip() == 'about' or os.path.exists('../../services/base/%s/SConscript' % s.strip())])
+                 if os.path.exists('../../services/base/%s/SConscript' % s.strip())])
 
 print 'Building bindings: %s' % ', '.join(bindings)
 print 'Building services: %s' % ', '.join(services)
@@ -55,9 +55,8 @@ if 'java' in bindings:
 if 'js' in bindings:
     env.SConscript(['alljoyn_js/SConscript'])
 
-# All services depend on About.
-if len(services) > 0:
-    env.SConscript(['services/about/SConscript'])
+# Always build AboutService.
+env.SConscript(['services/about/SConscript'])
 
 if services.intersection(['config', 'controlpanel', 'notification', 'onboarding', 'audio']):
     env['APP_COMMON_DIR'] = env.Dir('../../services/base/sample_apps')

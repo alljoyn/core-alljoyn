@@ -23,7 +23,8 @@ else:
 
 jars = []
 jars += about_env.SConscript('src/SConscript', exports = ['about_env']),
-if about_env['BUILD_SERVICES_SAMPLES'] == 'on':
-    jars += about_env.SConscript('samples/SConscript', exports = ['about_env'])
+
+# Sample programs
+jars += about_env.SConscript('samples/SConscript', exports = ['about_env'])
 
 about_env.Install('$DISTDIR/about/jar', jars)

@@ -17,7 +17,7 @@ import os
 env = SConscript('../../build_core/SConscript')
 
 vars = Variables()
-vars.Add('BINDINGS', 'Bindings to build (comma separated list): cpp, java', 'cpp,java')
+vars.Add('BINDINGS', 'Bindings to build (comma separated list): java', 'java')
 vars.Add(EnumVariable('BUILD_SERVICES_SAMPLES',
                       'Build the services samples.',
                       'on',
