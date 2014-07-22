@@ -46,7 +46,7 @@
 
 uint32_t qcc::GetPid()
 {
-    return static_cast<uint32_t>(_getpid());
+    return static_cast<uint32_t>(GetCurrentProcessId());
 }
 
 static uint32_t ComputeId(const char* buf, size_t len)
@@ -132,7 +132,7 @@ QStatus qcc::ExecAs(const char* user, const char* exec, const ExecArgs& args, co
 
 class ResolverThread : public qcc::Thread, public qcc::ThreadListener {
   public:
-    ResolverThread(qcc::String& hostname, uint8_t*addr, size_t* addrLen);
+    ResolverThread(qcc::String& hostname, uint8_t* addr, size_t* addrLen);
     virtual ~ResolverThread() { }
     QStatus Get(uint32_t timeoutMs);
 

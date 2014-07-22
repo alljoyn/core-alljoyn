@@ -57,6 +57,8 @@
  * strcasecmp(const char *s1, const char *s2) will compile in windows.
  */
 #define strcasecmp _stricmp
+
+#if _MSC_VER < 1700   /* MSVC 2012 or higher */
 /**
  * Map fpclassify to _fpclass
  *
@@ -69,4 +71,8 @@
 #define FP_ZERO (_FPCLASS_NZ | _FPCLASS_PZ)
 #define FP_INFINITE (_FPCLASS_NINF | _FPCLASS_PINF)
 /// @endcond
+#else
+#include <algorithm>
+#endif
+
 #endif

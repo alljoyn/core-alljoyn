@@ -370,7 +370,14 @@ void DebugContext::Vprintf(const char* fmt, va_list ap)
 
     if (ER_OK == stdoutLock->Lock()) {
         if (msgLen < sizeof(msg)) {
+
+// vsnprintf has been deprecated in the Windows API. Switching Windows to the _s version but
+// leaving other platforms with the standard version of the API until compatibility can be confirmed
+#if defined(QCC_OS_GROUP_WINDOWS) || defined(QCC_OS_GROUP_WINRT)
+            mlen = _vsnprintf_s(msg + msgLen, sizeof(msg) - msgLen, _TRUNCATE, fmt, ap);
+#else
             mlen = vsnprintf(msg + msgLen, sizeof(msg) - msgLen, fmt, ap);
+#endif
 
             if (mlen > 0) {
                 msgLen += mlen;
