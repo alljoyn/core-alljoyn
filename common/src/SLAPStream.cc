@@ -351,6 +351,7 @@ void SLAPStream::ReadEventTriggered(uint8_t* buffer, size_t bytes)
                 break;
 
             case RELIABLE_DATA_PACKET:
+                ProcessAckNum(m_rxCurrent->GetAckNum());
 
                 /*
                  * If a reliable packet does not have the expected sequence number, then
@@ -387,6 +388,7 @@ void SLAPStream::ReadEventTriggered(uint8_t* buffer, size_t bytes)
                         QCC_DbgPrintf(("Ignoring packet - expected = %d, got %d", m_expectedSeq, seq));
                     }
                 }
+                break;
 
             case ACK_PACKET:
                 ProcessAckNum(m_rxCurrent->GetAckNum());
