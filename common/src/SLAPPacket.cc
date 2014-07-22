@@ -62,7 +62,7 @@ SLAPReadPacket::SLAPReadPacket(size_t packetSize) :
     m_ackNum(0), m_sequenceNum(0)
 {
     memset(m_configField, '\0', 3);
-};
+}
 
 SLAPReadPacket::~SLAPReadPacket()
 {

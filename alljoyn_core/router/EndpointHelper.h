@@ -69,6 +69,6 @@ inline bool operator !=(const LocalEndpoint& lep, const BusEndpoint& ep)   {
     return !ep.iden(lep);
 }
 
-};
+}
 
 #endif

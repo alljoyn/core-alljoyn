@@ -78,7 +78,7 @@ SimpleBusListener::BusEvent& SimpleBusListener::BusEvent::operator=(const BusEve
         break;
     }
     return *this;
-};
+}
 
 class SimpleBusListener::Internal {
   public:
