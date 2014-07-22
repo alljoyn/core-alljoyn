@@ -38,7 +38,7 @@ elif platform.system() == 'Windows':
         default_target_cpu = 'x86'
     allowed_target_cpus = ('x86', 'x86_64', 'arm')
 
-    default_msvc_version = '11.0'
+    default_msvc_version = '12.0'
 
 elif platform.system() == 'Darwin':
     default_target_os = 'darwin'
@@ -61,7 +61,7 @@ vars.Add(EnumVariable('BR', 'Have bundled router built-in for C++ test samples',
 vars.Add(EnumVariable('DOCS', '''Output doc type. Setting the doc type to "dev" will produce HTML 
     output that includes all developer files not just the public API.
     ''', 'none', allowed_values=('none', 'pdf', 'html', 'dev', 'chm', 'sandcastle')))
-vars.Add(EnumVariable('WS', 'Whitespace Policy Checker', 'check', allowed_values=('check', 'detail', 'fix', 'off')))
+vars.Add(EnumVariable('WS', 'Whitespace Policy Checker', 'off', allowed_values=('check', 'detail', 'fix', 'off')))
 vars.Add(PathVariable('GTEST_DIR', 'The path to Google Test (gTest) source code',  os.environ.get('GTEST_DIR'), PathVariable.PathIsDir))
 vars.Add(PathVariable('BULLSEYE_BIN', 'The path to Bullseye Code Coverage',  os.environ.get('BULLSEYE_BIN'), PathVariable.PathIsDir))
 vars.Add(EnumVariable('NDEBUG', 'Override NDEBUG default for release variant', 'defined', allowed_values=('defined', 'undefined')))
@@ -69,7 +69,7 @@ vars.Add('CXX', 'C++ compiler to use')
 
 
 if default_msvc_version:
-    vars.Add(EnumVariable('MSVC_VERSION', 'MSVC compiler version - Windows', default_msvc_version, allowed_values=('9.0', '10.0', '11.0', '11.0Exp')))
+    vars.Add(EnumVariable('MSVC_VERSION', 'MSVC compiler version - Windows', default_msvc_version, allowed_values=('9.0', '10.0', '11.0', '11.0Exp', '12.0')))
 
 
 # Standard variant directories
