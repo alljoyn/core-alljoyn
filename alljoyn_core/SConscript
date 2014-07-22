@@ -117,11 +117,7 @@ env['ajrlib'] = router_lib
 
 # Always build C++ version of AboutService
 # brobj and ajrlib must be set before calling the SConscripts responsible for
-# building the AboutService. As well as adding the about headers and libs to
-# the default CPPPATH and LIBPATH.
-# Make about library and header file paths available to the global environment.
-env.Append(LIBPATH = '$DISTDIR/about/lib');
-env.Append(CPPPATH = '$DISTDIR/about/inc');
+# building the AboutService.
 
 about_env = env.Clone()
 about_env.VariantDir('$OBJDIR/services/about/cpp', '../services/about/cpp', duplicate = 0)
