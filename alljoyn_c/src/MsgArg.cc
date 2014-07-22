@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -500,17 +500,17 @@ QStatus alljoyn_msgarg_get_double(const alljoyn_msgarg arg, double* d)
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "d", d);
 }
-QStatus alljoyn_msgarg_get_string(const alljoyn_msgarg arg, char* s)
+QStatus alljoyn_msgarg_get_string(const alljoyn_msgarg arg, char** s)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "s", s);
 }
-QStatus alljoyn_msgarg_get_objectpath(const alljoyn_msgarg arg, char* o)
+QStatus alljoyn_msgarg_get_objectpath(const alljoyn_msgarg arg, char** o)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "o", o);
 }
-QStatus alljoyn_msgarg_get_signature(const alljoyn_msgarg arg, char* g)
+QStatus alljoyn_msgarg_get_signature(const alljoyn_msgarg arg, char** g)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "g", g);
