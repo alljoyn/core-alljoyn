@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -55,12 +55,36 @@ Mutex* Thread::threadListLock = NULL;
 map<ThreadHandle, Thread*>* Thread::threadList = NULL;
 
 static int threadListCounter = 0;
+static DWORD cleanExternalThreadKey;
+
+void Thread::CleanExternalThread(void* t)
+{
+    if (!t) {
+        return;
+    }
+
+    Thread* thread = reinterpret_cast<Thread*>(t);
+    threadListLock->Lock();
+    map<ThreadHandle, Thread*>::iterator it = threadList->find((ThreadHandle)thread->threadId);
+    if (it != threadList->end()) {
+        if (it->second->isExternal) {
+            delete it->second;
+            threadList->erase(it);
+        }
+    }
+    threadListLock->Unlock();
+}
 
 ThreadListInitializer::ThreadListInitializer()
 {
     if (0 == threadListCounter++) {
         Thread::threadListLock = new Mutex();
         Thread::threadList = new map<ThreadHandle, Thread*>();
+        cleanExternalThreadKey = FlsAlloc(Thread::CleanExternalThread);
+        if (cleanExternalThreadKey == FLS_OUT_OF_INDEXES) {
+            QCC_LogError(ER_OS_ERROR, ("Creating TLS key: %d", GetLastError()));
+        }
+        assert(cleanExternalThreadKey != FLS_OUT_OF_INDEXES);
     }
 }
 
@@ -95,7 +119,6 @@ Thread* Thread::GetThread()
     if (NULL == ret) {
         char name[32];
         snprintf(name, sizeof(name), "external%d", id);
-        /* TODO @@ Memory leak */
         ret = new Thread(name, NULL, true);
     }
 
@@ -165,6 +188,13 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
     if (isExternal) {
         threadListLock->Lock();
         (*threadList)[(ThreadHandle)threadId] = this;
+        if (FlsGetValue(cleanExternalThreadKey) == NULL) {
+            BOOL ret = FlsSetValue(cleanExternalThreadKey, this);
+            if (ret == 0) {
+                QCC_LogError(ER_OS_ERROR, ("Setting TLS key: %s", GetLastError()));
+            }
+            assert(ret != 0);
+        }
         threadListLock->Unlock();
     }
     QCC_DbgHLPrintf(("Thread::Thread() [%s,%x]", funcName, this));
