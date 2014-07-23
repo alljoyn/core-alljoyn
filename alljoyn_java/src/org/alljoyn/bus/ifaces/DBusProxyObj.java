@@ -327,14 +327,4 @@ public interface DBusProxyObj {
      */
     @BusSignal(signature = "s")
     void NameAcquired(String name) throws BusException;
-
-    /**
-     * Signal sent when one or more properties change on an object.
-     *
-     * @param name the interface name
-     * @param changed the changed properties with their new values
-     * @param invalidated the changed properties without their new values
-     */
-    @BusSignal(signature = "sa{sv}as")
-    void PropertiesChanged(String name, Map<String, Variant> changed, String[] invalidated) throws BusException;
 }

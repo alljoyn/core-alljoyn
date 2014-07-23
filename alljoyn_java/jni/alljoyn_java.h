@@ -645,7 +645,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addMemberAnn
  * Signature: (Ljava/lang/String;Ljava/lang/String;I)Lorg/alljoyn/bus/Status;
  */
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addProperty
-  (JNIEnv *, jobject, jstring, jstring, jint);
+  (JNIEnv *, jobject, jstring, jstring, jint, jint);
 
 /*
  * Class:     org_alljoyn_bus_InterfaceDescription

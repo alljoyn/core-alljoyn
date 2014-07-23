@@ -60,6 +60,16 @@ using namespace std;
 
 namespace ajn {
 
+template <typename _cbType> struct CBContext {
+    CBContext(ProxyBusObject* obj, ProxyBusObject::Listener* listener, _cbType callback, void* context)
+        : obj(obj), listener(listener), callback(callback), context(context) { }
+
+    ProxyBusObject* obj;
+    ProxyBusObject::Listener* listener;
+    _cbType callback;
+    void* context;
+};
+
 struct ProxyBusObject::Components {
 
     /** The interfaces this object implements */
@@ -70,16 +80,9 @@ struct ProxyBusObject::Components {
 
     /** List of threads that are waiting in sync method calls */
     vector<Thread*> waitingThreads;
-};
 
-template <typename _cbType> struct CBContext {
-    CBContext(ProxyBusObject* obj, ProxyBusObject::Listener* listener, _cbType callback, void* context)
-        : obj(obj), listener(listener), callback(callback), context(context) { }
-
-    ProxyBusObject* obj;
-    ProxyBusObject::Listener* listener;
-    _cbType callback;
-    void* context;
+    /** Property changed handlers */
+    map<StringMapKey, CBContext<ProxyBusObject::Listener::PropertyChanged>*> propertyChangedCBs;
 };
 
 static inline bool SecurityApplies(const ProxyBusObject* obj, const InterfaceDescription* ifc)
@@ -339,6 +342,132 @@ void ProxyBusObject::SetPropMethodCB(Message& message, void* context)
     delete ctx;
 }
 
+
+QStatus ProxyBusObject::RegisterPropertyChangedHandler(const char* iface,
+                                                       const char* property,
+                                                       ProxyBusObject::Listener* listener,
+                                                       ProxyBusObject::Listener::PropertyChanged callback,
+                                                       void* context)
+{
+    QStatus status;
+    const InterfaceDescription* ifc = bus->GetInterface(iface);
+    if (!ifc) {
+        status = ER_BUS_OBJECT_NO_SUCH_INTERFACE;
+    } else if (!ifc->HasProperty(property)) {
+        status = ER_BUS_NO_SUCH_PROPERTY;
+    } else {
+        String key = iface;
+        key += ".";
+        key += property;
+        CBContext<ProxyBusObject::Listener::PropertyChanged>* ctx = new CBContext<ProxyBusObject::Listener::PropertyChanged>(this, listener, callback, context);
+        pair<StringMapKey, CBContext<ProxyBusObject::Listener::PropertyChanged>*> item(key, ctx);
+        components->propertyChangedCBs.insert(item);
+        status = ER_OK;
+    }
+    return status;
+}
+
+QStatus ProxyBusObject::UnregisterPropertyChangedHandler(const char* iface,
+                                                         const char* property,
+                                                         ProxyBusObject::Listener* listener,
+                                                         ProxyBusObject::Listener::PropertyChanged callback)
+{
+    QStatus status;
+    const InterfaceDescription* ifc = bus->GetInterface(iface);
+    if (!ifc) {
+        status = ER_BUS_OBJECT_NO_SUCH_INTERFACE;
+    } else if (!ifc->HasProperty(property)) {
+        status = ER_BUS_NO_SUCH_PROPERTY;
+    } else {
+        String key = iface;
+        key += ".";
+        key += property;
+
+        lock->Lock(MUTEX_CONTEXT);
+        map<StringMapKey, CBContext<ProxyBusObject::Listener::PropertyChanged>*>::iterator it;
+        it = components->propertyChangedCBs.find(key);
+        if (it != components->propertyChangedCBs.end()) {
+            CBContext<Listener::PropertyChanged>* ctx = it->second;
+            components->propertyChangedCBs.erase(it);
+            delete ctx;
+        }
+        status = ER_OK;
+        lock->Unlock(MUTEX_CONTEXT);
+    }
+    return status;
+}
+
+
+void* ProxyBusObject::GetPropertyChangedHandlerContext(const char* iface, const char* property)
+{
+    void* context = NULL;
+    String key = iface;
+    key += ".";
+    key += property;
+
+    lock->Lock(MUTEX_CONTEXT);
+    map<StringMapKey, CBContext<ProxyBusObject::Listener::PropertyChanged>*>::const_iterator it;
+    it = components->propertyChangedCBs.find(key);
+    if (it != components->propertyChangedCBs.end()) {
+        CBContext<Listener::PropertyChanged>* ctx = it->second;
+        context = ctx->context;
+    }
+    lock->Unlock(MUTEX_CONTEXT);
+    return context;
+}
+
+
+void ProxyBusObject::PropertiesChangedHandler(const InterfaceDescription::Member* member, const char* srcPath, Message& message)
+{
+    const char* ifaceName;
+    MsgArg* changedProps;
+    size_t numChangedProps;
+    MsgArg* invalidProps;
+    size_t numInvalidProps;
+    size_t i;
+
+    message->GetArgs("sa{sv}as", &ifaceName, &numChangedProps, &changedProps, &numInvalidProps, &invalidProps);
+
+    for (i = 0; i < numChangedProps; ++i) {
+        const char* propName;
+        MsgArg* propValue;
+        changedProps[i].Get("{sv}", &propName, &propValue);
+        String key = ifaceName;
+        key += ".";
+        key += propName;
+
+        lock->Lock(MUTEX_CONTEXT);
+        map<StringMapKey, CBContext<ProxyBusObject::Listener::PropertyChanged>*>::const_iterator it;
+        it = components->propertyChangedCBs.find(key);
+        if (it != components->propertyChangedCBs.end()) {
+            CBContext<Listener::PropertyChanged>* ctx = it->second;
+            lock->Unlock(MUTEX_CONTEXT);
+            (ctx->listener->*ctx->callback)(ctx->obj, ifaceName, propName, propValue, ctx->context);
+        } else {
+            lock->Unlock(MUTEX_CONTEXT);
+        }
+    }
+
+    for (i = 0; i < numInvalidProps; ++i) {
+        const char* propName;
+        invalidProps[i].Get("s", &propName);
+        String key = ifaceName;
+        key += ".";
+        key += propName;
+
+        lock->Lock(MUTEX_CONTEXT);
+        map<StringMapKey, CBContext<ProxyBusObject::Listener::PropertyChanged>*>::const_iterator it;
+        it = components->propertyChangedCBs.find(key);
+        if (it != components->propertyChangedCBs.end()) {
+            CBContext<Listener::PropertyChanged>* ctx = it->second;
+            lock->Unlock(MUTEX_CONTEXT);
+            (ctx->listener->*ctx->callback)(ctx->obj, ifaceName, propName, NULL, ctx->context);
+        } else {
+            lock->Unlock(MUTEX_CONTEXT);
+        }
+    }
+}
+
 QStatus ProxyBusObject::SetPropertyAsync(const char* iface,
                                          const char* property,
                                          MsgArg& value,
@@ -412,23 +541,21 @@ QStatus ProxyBusObject::AddInterface(const InterfaceDescription& iface) {
     StringMapKey key = iface.GetName();
     pair<StringMapKey, const InterfaceDescription*> item(key, &iface);
     lock->Lock(MUTEX_CONTEXT);
-    const InterfaceDescription* propIntf = bus->GetInterface(::ajn::org::freedesktop::DBus::Properties::InterfaceName);
-    if (!hasProperties && propIntf && iface == *propIntf) {
-        hasProperties = true;
-    }
+
     pair<map<StringMapKey, const InterfaceDescription*>::const_iterator, bool> ret = components->ifaces.insert(item);
     QStatus status = ret.second ? ER_OK : ER_BUS_IFACE_ALREADY_EXISTS;
 
-    /* Add org.freedesktop.DBus.Properties interface implicitly if iface specified properties */
-    if ((status == ER_OK) && !hasProperties && (iface.GetProperties() > 0)) {
-        if (propIntf) {
+    if ((status == ER_OK) && !hasProperties) {
+        const InterfaceDescription* propIntf = bus->GetInterface(::ajn::org::freedesktop::DBus::Properties::InterfaceName);
+        assert(propIntf);
+        if (iface == *propIntf) {
             hasProperties = true;
-            StringMapKey propKey = ::ajn::org::freedesktop::DBus::Properties::InterfaceName;
-            pair<StringMapKey, const InterfaceDescription*> propItem(propKey, propIntf);
-            pair<map<StringMapKey, const InterfaceDescription*>::const_iterator, bool> ret = components->ifaces.insert(propItem);
-            status = ret.second ? ER_OK : ER_BUS_IFACE_ALREADY_EXISTS;
-        } else {
-            status = ER_BUS_NO_SUCH_INTERFACE;
+            bus->RegisterSignalHandler(this,
+                                       static_cast<MessageReceiver::SignalHandler>(&ProxyBusObject::PropertiesChangedHandler),
+                                       propIntf->GetMember("PropertiesChanged"),
+                                       path.c_str());
+        } else if (iface.GetProperties() > 0) {
+            AddInterface(*propIntf);
         }
     }
     lock->Unlock(MUTEX_CONTEXT);
@@ -1072,6 +1199,16 @@ ProxyBusObject::~ProxyBusObject()
 
 void ProxyBusObject::DestructComponents()
 {
+    if (bus) {
+        const InterfaceDescription* iface = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
+        if (iface) {
+            bus->UnregisterSignalHandler(this,
+                                         static_cast<MessageReceiver::SignalHandler>(&ProxyBusObject::PropertiesChangedHandler),
+                                         iface->GetMember("PropertiesChanged"),
+                                         path.c_str());
+        }
+    }
+
     if (lock && components) {
         lock->Lock(MUTEX_CONTEXT);
         isExiting = true;

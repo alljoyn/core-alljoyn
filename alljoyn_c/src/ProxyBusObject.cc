@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -192,6 +192,35 @@ QStatus alljoyn_proxybusobject_setpropertyasync(alljoyn_proxybusobject proxyObj,
                                                               static_cast<ajn::ProxyBusObject::Listener::SetPropertyCB>(&ajn::ProxyBusObjectListenerC::SetPropertyCB),
                                                               (void*) new ajn::SetPropertyCallbackContext(callback, context),
                                                               timeout);
+}
+
+QStatus alljoyn_proxybusobject_registerpropertychangedhandler(alljoyn_proxybusobject proxyObj,
+                                                              const char* iface,
+                                                              const char* property,
+                                                              alljoyn_proxybusobject_listener_propertychanged_ptr callback,
+                                                              void* context)
+{
+    return ((ajn::ProxyBusObject*)proxyObj)->RegisterPropertyChangedHandler(iface,
+                                                                            property,
+                                                                            &proxyObjListener,
+                                                                            static_cast<ajn::ProxyBusObject::Listener::PropertyChanged>(&ajn::ProxyBusObjectListenerC::PropertyChanged),
+                                                                            (void*) new ajn::PropertyChangedCallbackContext(callback, context));
+}
+
+QStatus alljoyn_proxybusobject_unregisterpropertychangedhandler(alljoyn_proxybusobject proxyObj,
+                                                                const char* iface,
+                                                                const char* property,
+                                                                alljoyn_proxybusobject_listener_propertychanged_ptr callback)
+{
+    ajn::PropertyChangedCallbackContext* context = (ajn::PropertyChangedCallbackContext*)((ajn::ProxyBusObject*)proxyObj)->GetPropertyChangedHandlerContext(iface, property);
+    QStatus status = ((ajn::ProxyBusObject*)proxyObj)->UnregisterPropertyChangedHandler(iface,
+                                                                                        property,
+                                                                                        &proxyObjListener,
+                                                                                        static_cast<ajn::ProxyBusObject::Listener::PropertyChanged>(&ajn::ProxyBusObjectListenerC::PropertyChanged));
+    if (context) {
+        delete context;
+    }
+    return status;
 }
 
 QStatus alljoyn_proxybusobject_methodcall(alljoyn_proxybusobject obj,

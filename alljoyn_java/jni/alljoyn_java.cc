@@ -1442,7 +1442,6 @@ class JBusListener : public BusListener {
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix);
     void LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix);
     void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner);
-    void PropertyChanged(const char* propName, const MsgArg* propValue);
     void BusStopping();
     void BusDisconnected();
 
@@ -1456,7 +1455,6 @@ class JBusListener : public BusListener {
     jmethodID MID_foundAdvertisedName;
     jmethodID MID_lostAdvertisedName;
     jmethodID MID_nameOwnerChanged;
-    jmethodID MID_propertyChanged;
     jmethodID MID_busStopping;
     jmethodID MID_busDisconnected;
     jweak jbusAttachment;
@@ -2177,6 +2175,20 @@ class JProxyBusObject : public ProxyBusObject {
     JProxyBusObject& operator =(const JProxyBusObject& other);
 };
 
+class JPropertyChangedListener : public ProxyBusObject::Listener {
+  public:
+    JPropertyChangedListener(jobject jlistener);
+    void PropertyChangedHandler(JProxyBusObject* obj, const char* ifaceName, const char* propName, const MsgArg* value, void* context);
+
+    jweak jlistener;
+
+  private:
+    JPropertyChangedListener();
+    JPropertyChangedListener(const JPropertyChangedListener& other);
+    JPropertyChangedListener& operator =(const JPropertyChangedListener& other);
+};
+
+
 class JSignalHandler : public MessageReceiver {
   public:
     JSignalHandler(jobject jobj, jobject jmethod);
@@ -2583,11 +2595,6 @@ JBusListener::JBusListener(jobject jlistener)
         QCC_DbgPrintf(("JBusListener::JBusListener(): Can't find nameOwnerChanged() in jbusListener"));
     }
 
-    MID_propertyChanged = env->GetMethodID(clazz, "propertyChanged", "(Ljava/lang/String;Lorg/alljoyn/bus/Variant;)V");
-    if (!MID_propertyChanged) {
-        QCC_DbgPrintf(("JBusListener::JBusListener(): Can't find propertyChanged() in jbusListener"));
-    }
-
     MID_busStopping = env->GetMethodID(clazz, "busStopping", "()V");
     if (!MID_busStopping) {
         QCC_DbgPrintf(("JBusListener::JBusListener(): Can't find busStopping() in jbusListener"));
@@ -2925,43 +2932,6 @@ void JBusListener::NameOwnerChanged(const char* busName, const char* previousOwn
     QCC_DbgPrintf(("JBusListener::NameOwnerChanged(): Return"));
 }
 
-void JBusListener::PropertyChanged(const char* propName, const MsgArg* propValue)
-{
-    QCC_DbgPrintf(("JBusListener::PropertyChanged()"));
-
-    JScopedEnv env;
-    JLocalRef<jstring> jpropName = env->NewStringUTF(propName);
-    if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("JBusListener::PropertyChanged(): Exception"));
-        return;
-    }
-
-    // The weak global reference jbusListener cannot be directly used.  We have to get
-    // a "hard" reference to it and then use that.  If you try to use a weak reference
-    // directly you will crash and burn.
-    jobject jo = env->NewLocalRef(jbusListener);
-    if (!jo) {
-        QCC_LogError(ER_FAIL, ("JBusListener::PropertyChanged(): Can't get new local reference to BusListener"));
-        return;
-    }
-
-    JLocalRef<jobject> obj = NULL;
-    if (propValue != NULL) {
-        obj = Unmarshal(propValue, CLS_Variant);
-    }
-
-    // This call out to PropertyChanged implies that the Java method must be
-    // MT-safe.  This is implied by the definition of the listener.
-    QCC_DbgPrintf(("JBusListener::PropertyChanged(): Call out to listener object and method"));
-    env->CallVoidMethod(jo, MID_propertyChanged, (jstring) jpropName, (jobject) obj);
-
-    if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("JBusListener::propertyChanged(): Exception"));
-        return;
-    }
-
-    QCC_DbgPrintf(("JBusListener::PropertyChanged(): Return"));
-}
 
 /**
  * Handle the C++ BusStopping callback from the AllJoyn system.
@@ -9885,7 +9855,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addMemberAnn
 
 
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addProperty(JNIEnv* env, jobject thiz, jstring jname,
-                                                                                jstring jsignature, jint access)
+                                                                                jstring jsignature, jint access, jint annotation)
 {
     QCC_DbgPrintf(("InterfaceDescription_addProperty()"));
 
@@ -9919,7 +9889,28 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addProperty(
             (name.c_str() && prop->name == name.c_str()) &&
             (signature.c_str() && prop->signature == signature.c_str()) &&
             (prop->access == access)) {
-            status = ER_OK;
+
+            // for reverse compatibility:
+            // two annotations can be represented in the int variable 'annotation': EMIT_CHANGED_SIGNAL and EMIT_CHANGED_SIGNAL_INVALIDATES
+            // make sure these int values matches with what's in the full annotations map
+            bool annotations_match = true;
+            if (annotation & PROP_ANNOTATE_EMIT_CHANGED_SIGNAL) {
+                qcc::String val;
+                if (!prop->GetAnnotation(org::freedesktop::DBus::AnnotateEmitsChanged, val) || val != "true") {
+                    annotations_match = false;
+                }
+            }
+
+            if (annotation & PROP_ANNOTATE_EMIT_CHANGED_SIGNAL_INVALIDATES) {
+                qcc::String val;
+                if (!prop->GetAnnotation(org::freedesktop::DBus::AnnotateEmitsChanged, val) || val != "invalidates") {
+                    annotations_match = false;
+                }
+            }
+
+            if (annotations_match) {
+                status = ER_OK;
+            }
         }
     }
     return JStatus(status);
@@ -10168,6 +10159,78 @@ JProxyBusObject::~JProxyBusObject()
     QCC_DbgPrintf(("JProxyBusObject::~JProxyBusObject(): Refcount on busPtr at destruction is %d", busPtr->GetRef()));
 }
 
+JPropertyChangedListener::JPropertyChangedListener(jobject jobj)
+    : jlistener(NULL)
+{
+    JNIEnv* env = GetEnv();
+    jlistener = env->NewWeakGlobalRef(jobj);
+}
+
+void JPropertyChangedListener::PropertyChangedHandler(JProxyBusObject* obj, const char* ifaceName, const char* propName, const MsgArg* value, void* context)
+{
+    QCC_DbgPrintf(("JPropertyChangedListener::PropertyChangedHandler()"));
+
+    /*
+     * JScopedEnv will automagically attach the JVM to the current native
+     * thread.
+     */
+    JScopedEnv env;
+
+    /*
+     * Translate the C++ formal parameters into their JNI counterparts.
+     */
+    JLocalRef<jstring> jifaceName = env->NewStringUTF(ifaceName);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("JPropertyChangedListener::PropertyChangedHandler(): Exception"));
+        return;
+    }
+
+    JLocalRef<jstring> jpropName = env->NewStringUTF(propName);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("JPropertyChangedListener::PropertyChangedHandler(): Exception"));
+        return;
+    }
+
+    jobject jvalue = Unmarshal(value, CLS_Variant);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("JPropertyChangedListener::PropertyChangedHandler(): Exception"));
+        return;
+    }
+
+    /*
+     * The weak global reference jbusListener cannot be directly used.  We have to get
+     * a "hard" reference to it and then use that.  If you try to use a weak reference
+     * directly you will crash and burn.
+     */
+    jobject jo = env->NewLocalRef(jlistener);
+    if (!jo) {
+        QCC_LogError(ER_FAIL, ("JPropertyChangedListener::PropertyChangedHandler(): Can't get new local reference to ProxyBusObjectListener"));
+        return;
+    }
+
+
+    JLocalRef<jclass> clazz = env->GetObjectClass(jo);
+    jmethodID mid = env->GetMethodID(clazz, "propertyChanged",
+                                     "(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;");
+    if (!mid) {
+        QCC_LogError(ER_FAIL, ("JPropertyChangedListener::PropertyChangedHandler(): Can't get new local reference to ProxyBusObjectListener property changed handler method"));
+        return;
+    }
+
+    /*
+     * This call out to the property changed handler implies that the Java method must be
+     * MT-safe.  This is implied by the definition of the listener.
+     */
+    QCC_DbgPrintf(("JPropertyChangedListener::PropertyChangedHandler(): Call out to listener object and method"));
+    env->CallVoidMethod(jo, mid, (jstring)jifaceName, (jstring)jpropName, (jobject)jvalue);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("JPropertyChangedListener::PropertyChangedHandler(): Exception"));
+        return;
+    }
+
+    QCC_DbgPrintf(("JPropertyChangedListener::PropertyChangedHandler(): Return"));
+}
+
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_create(JNIEnv* env, jobject thiz, jobject jbus,
                                                                   jstring jbusName, jstring jobjPath,
                                                                   jint sessionId, jboolean secure)
@@ -10252,6 +10315,112 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_destroy(JNIEnv* env, 
     SetHandle(thiz, NULL);
 }
 
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerPropertyChangedHandler(JNIEnv* env, jobject thiz, jstring jifaceName, jstring jproperty, jobject jpropertyChangedListener)
+{
+    QCC_DbgPrintf(("ProxyBusObject_registerPropertyChangedHandler()"));
+
+    JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
+    if (env->ExceptionCheck()) {
+        return NULL;
+    }
+
+    JString ifaceName(jifaceName);
+    if (env->ExceptionCheck()) {
+        return NULL;
+    }
+
+    JString property(jproperty);
+    if (env->ExceptionCheck()) {
+        return NULL;
+    }
+
+    JPropertyChangedListener* listener = GetHandle<JPropertyChangedListener*>(jpropertyChangedListener);
+    if (env->ExceptionCheck()) {
+        return NULL;
+    }
+
+    QStatus status = proxyBusObj->RegisterPropertyChangedHandler(ifaceName.c_str(),
+                                                                 property.c_str(),
+                                                                 listener,
+                                                                 reinterpret_cast<ProxyBusObject::Listener::PropertyChanged>(&JPropertyChangedListener::PropertyChangedHandler),
+                                                                 NULL);
+
+    return JStatus(status);
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_unregisterPropertyChangedHandler(JNIEnv* env, jobject thiz, jstring jifaceName, jstring jproperty, jobject jpropertyChangedListener)
+{
+    QCC_DbgPrintf(("ProxyBusObject_unregisterPropertyChangedHandler()"));
+
+    JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
+    if (env->ExceptionCheck()) {
+        return NULL;
+    }
+
+    JString ifaceName(jifaceName);
+    if (env->ExceptionCheck()) {
+        return NULL;
+    }
+
+    JString property(jproperty);
+    if (env->ExceptionCheck()) {
+        return NULL;
+    }
+
+    JPropertyChangedListener* listener = GetHandle<JPropertyChangedListener*>(jpropertyChangedListener);
+    if (env->ExceptionCheck()) {
+        return NULL;
+    }
+
+    QStatus status = proxyBusObj->UnregisterPropertyChangedHandler(ifaceName.c_str(),
+                                                                   property.c_str(),
+                                                                   listener,
+                                                                   reinterpret_cast<ProxyBusObject::Listener::PropertyChanged>(&JPropertyChangedListener::PropertyChangedHandler));
+
+    return JStatus(status);
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertyChangedListener_create(JNIEnv* env, jobject thiz)
+{
+    QCC_DbgPrintf(("PropertyChangedListener_create()"));
+
+    assert(GetHandle<JPropertyChangedListener*>(thiz) == NULL);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("PropertyChangedListener_create(): Exception"));
+        return;
+    }
+
+    QCC_DbgPrintf(("PropertyChangedListener_create(): Create backing object"));
+    JPropertyChangedListener* jojcl = new JPropertyChangedListener(thiz);
+    if (jojcl == NULL) {
+        Throw("java/lang/OutOfMemoryError", NULL);
+        return;
+    }
+
+    QCC_DbgPrintf(("PropertyChangedListener_create(): Set handle to %p", jojcl));
+    SetHandle(thiz, jojcl);
+    if (env->ExceptionCheck()) {
+        delete jojcl;
+    }
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertyChangedListener_destroy(JNIEnv* env, jobject thiz)
+{
+    QCC_DbgPrintf(("PropertyChangedListener_destroy()"));
+
+    JPropertyChangedListener* jojcl = GetHandle<JPropertyChangedListener*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("PropertyChangedListener_destroy(): Exception"));
+        return;
+    }
+
+    assert(jojcl);
+    delete jojcl;
+
+    SetHandle(thiz, NULL);
+    return;
+}
+
 static void AddInterface(jobject thiz, jobject jbus, jstring jinterfaceName)
 {
     JNIEnv* env = GetEnv();
@@ -10283,7 +10452,7 @@ static void AddInterface(jobject thiz, jobject jbus, jstring jinterfaceName)
     }
 
     if (ER_OK != status) {
-        QCC_LogError(ER_FAIL, ("AddInterface(): Exception"));
+        QCC_LogError(status, ("AddInterface(): Exception"));
         env->ThrowNew(CLS_BusException, QCC_StatusText(status));
         return;
     }

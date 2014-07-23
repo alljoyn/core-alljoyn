@@ -217,16 +217,20 @@ void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg
 
 void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgArg& val, SessionId id)
 {
+    QCC_DbgTrace(("BusObject::EmitPropChanged(ifcName = \"%s\", propName = \"%s\", val = %s, id = %u)",
+                  ifcName, propName, val.ToString().c_str(), id));
     assert(bus);
     const InterfaceDescription* ifc = bus->GetInterface(ifcName);
 
     qcc::String emitsChanged;
     if (ifc && ifc->GetPropertyAnnotation(propName, org::freedesktop::DBus::AnnotateEmitsChanged, emitsChanged)) {
+        QCC_DbgPrintf(("emitsChanged = %s", emitsChanged.c_str()));
         if (emitsChanged == "true") {
-            const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::InterfaceName);
+            const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
             const InterfaceDescription::Member* propChanged = (bus_ifc ? bus_ifc->GetMember("PropertiesChanged") : NULL);
 
-            if (NULL != propChanged) {
+            QCC_DbgPrintf(("propChanged = %s", propChanged ? propChanged->name.c_str() : NULL));
+            if (propChanged != NULL) {
                 MsgArg args[3];
                 args[0].Set("s", ifcName);
                 MsgArg str("{sv}", propName, &val);

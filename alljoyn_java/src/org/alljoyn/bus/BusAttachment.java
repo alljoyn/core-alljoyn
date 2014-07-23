@@ -51,6 +51,7 @@ import org.alljoyn.bus.ifaces.DBusProxyObj;
 public class BusAttachment {
 
     /**
+     * @deprecated
      * Emit PropertiesChanged to signal the bus that this property has been updated
      *
      * @param busObject The BusObject that is the source of this signal
@@ -59,6 +60,7 @@ public class BusAttachment {
      * @param val       The new value of the property
      * @param sessionId Id of the session we broadcast to (0 for all)
      */
+    @Deprecated
     public native void emitChangedSignal(BusObject busObject, String ifcName, String propName, Object val, int sessionId);
 
 
