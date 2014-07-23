@@ -59,6 +59,7 @@ typedef struct {
  * This is expected to be sent in "network byte order" AKA big endian.  Use the
  * usual htonl(), ntohl() functions.
  */
+#pragma pack(push, 1)
 typedef struct {
     uint8_t flags;      /**< See Control flag definitions above */
     uint8_t hlen;       /**< Length of the header in units of two octets (number of uint16_t) */
@@ -73,6 +74,7 @@ typedef struct {
     uint32_t som;       /**< Start sequence number for fragmented message */
     uint16_t fcnt;      /**< Number of segments comprising fragmented message */
 } ArdpHeader;
+#pragma pack(pop)
 
 /* Maximum header length, implied by the fact that hlen filed is 8 bits */
 static const uint16_t ARDP_MAX_HEADER_LEN = 255;
