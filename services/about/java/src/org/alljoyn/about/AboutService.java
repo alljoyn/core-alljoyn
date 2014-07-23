@@ -86,42 +86,58 @@ public interface AboutService extends ServiceCommon
     public void stopAboutClient() throws Exception;
 
     /**
-     * Registers a handler to receive announcements.
-     * <p>
-     * The handler is only called if all the interfaces are implemented.
+     * <p>Registers a handler to receive announcements.</p>
+     *
+     * <p>The handler is only called if all the interfaces are implemented.
      * For example, if the handler should be called if both "com.example.Audio"
-     * <i>and</i> "com.example.Video" are implemented then call
-     * addAnnouncementHandler once:
+     * <i>and</i> "com.example.Video" are implemented then call</p>
+     * addAnnouncementHandler once:<br/>
      * <pre>
      * {@code
      * addAnnouncementHandler(handler, new String[] {"com.example.Audio", "com.example.Video"});
      * }</pre>
-     * <p>
-     * If the handler should be called if "com.example.Audio" <i>or</i>
-     * "com.example.Video" is implemented then call
-     * addAnnouncementHandler multiple times:
+     *
+     * <p>If the handler should be called if "com.example.Audio" <i>or</i>
+     * "com.example.Video" is implemented then call</p>
+     * addAnnouncementHandler multiple times:<br/>
      * <pre>
      * {@code
      * addAnnouncementHandler(handler, new String[] {"com.example.Audio"});
      * addAnnouncementHandler(handler, new String[] {"com.example.Video"});
      * }</pre>
-     * <p>
-     * The interface name may be a prefix followed by a <code>*</code>.  Using
-     * this, the example above could be written as:
+     * 
+     * <p>The interface name may be a prefix followed by a <code>*</code>.  Using
+     * this, the example above could be written as:</p>
      * <pre>
      * {@code
      * addAnnouncementHandler(handler, new String[] {"com.example.*"});
      * }</pre>
-     * The handler will receive any announcement that implements an interface
-     * beginning with the "com.example." name.
-     * <p>
-     * If the same handler is used for for multiple interfaces then it is the
-     * handlers responsibility to parse through the reported interfaces to
-     * figure out what should be done in response to the Announce signal.
+     * <p>The handler will receive any announcement that implements an interface
+     * beginning with the "com.example." name.</p>
      *
-     * Note: specifying null for the interfaces parameter could have
+     * <p>If RegisterAnnounceHandler is called with lists of interfaces that overlap
+     * then multiple Announcements will occur.</p>
+     * For example given the following:<br/>
+     *
+     * <pre>
+     * {@code
+     * addAnnouncementHandler(handler, new String[] {"com.example.Audio"});
+     * addAnnouncementHandler(handler, new String[] {"com.example.Audio", "com.example.Video"});
+     * }</pre>
+     *
+     * <p>If a BusAttachment is found that implements both `com.example.Audio`  and
+     * interface `com.example.Video` the announce handler will be called twice.
+     * Once for the first added AnnouncementHandler for `com.example.Audio` and
+     * again for the second added AnnouncementHandler that is looking for both
+     * audio and video interfaces.</p>
+     *
+     * <p>If the same handler is used for for multiple interfaces then it is the
+     * handlers responsibility to parse through the reported interfaces to
+     * figure out what should be done in response to the Announce signal.</p>
+     *
+     * <p><em>Note:</em> specifying null for the interfaces parameter could have
      * significant impact on network performance and should be avoided unless
-     * all announcements are needed.
+     * all announcements are needed.</p>
      *
      * @param handler the AnnouncementHandler that will be receiving the
      *                announcement.

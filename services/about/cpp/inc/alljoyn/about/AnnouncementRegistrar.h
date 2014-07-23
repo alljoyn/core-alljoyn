@@ -64,7 +64,7 @@ class AnnouncementRegistrar {
      *                         sizeof(videoInterface) / sizeof(videoInterface[0]));
      * @endcode
      *
-     * The interface name may be a prefix followed by a *.  Using
+     * The interface name may be a prefix followed by a `*`.  Using
      * this, the example above could be written as:
      * @code
      * const char* exampleInterface[] = {"com.example.*"};
@@ -74,6 +74,25 @@ class AnnouncementRegistrar {
      *
      * The handler will receive any announcement that implements an interface
      * beginning with the "com.example." name.
+     *
+     * If RegisterAnnounceHandler is called with lists of interfaces that overlap
+     * then multiple Announcements will be occur.
+     * For example given the following
+     *
+     * * @code
+     * const char* audioInterface[] = {"com.example.Audio"};
+     * RegisterAnnounceHandler(busAttachment, handler, audioInterface,
+     *                         sizeof(audioInterface) / sizeof(audioInterface[0]));
+     * const char* audioVideoInterface[] = {"com.example.Audio", "com.example.Video"};
+     * RegisterAnnounceHandler(busAttachment, handler, audioVideoInterface,
+     *                         sizeof(audioVideoInterface) / sizeof(audioVideoInterface[0]));
+     * @endcode
+     *
+     * If a BusAttachment is found that implements both `com.example.Audio`  and
+     * interface `com.example.Video` the announce handler will be called twice.
+     * Once for the first registration that is looking for `com.example.Audio` and
+     * again for the second registration that is looking for both audio and video
+     * interfaces.
      *
      * If the same handler is used for for multiple interfaces then it is the
      * handlers responsibility to parse through the reported interfaces to
