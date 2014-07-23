@@ -1326,7 +1326,7 @@ bool SessionlessObj::IsMatch(RemoteCache& cache, uint32_t fromRulesId, uint32_t 
 }
 
 bool SessionlessObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
-                                  const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6)
+                                  const qcc::IPEndpoint& ns4)
 {
     MDNSResourceRecord* searchRecord;
     if (!query->GetAdditionalRecord("search.*", MDNSResourceRecord::TXT, &searchRecord)) {

@@ -2972,26 +2972,6 @@ void MDNSSenderRData::SetIPV4ResponseAddr(qcc::String ipv4Addr)
     MDNSTextRData::SetValue("ipv4", ipv4Addr);
 }
 
-uint16_t MDNSSenderRData::GetIPV6ResponsePort()
-{
-    return MDNSTextRData::GetU16Value("upcv6");
-}
-
-void MDNSSenderRData::SetIPV6ResponsePort(uint16_t ipv6Port)
-{
-    MDNSTextRData::SetValue("upcv6", ipv6Port);
-}
-
-qcc::String MDNSSenderRData::GetIPV6ResponseAddr()
-{
-    return MDNSTextRData::GetValue("ipv6");
-}
-
-void MDNSSenderRData::SetIPV6ResponseAddr(qcc::String ipv6Addr)
-{
-    MDNSTextRData::SetValue("ipv6", ipv6Addr);
-}
-
 //MDNSHeader
 MDNSHeader::MDNSHeader() :
     m_queryId(0),
