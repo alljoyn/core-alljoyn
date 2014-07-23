@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -198,14 +198,6 @@ ThreadInternalReturn STDCALL Thread::RunInternal(void* threadArg)
         return 0;
     }
 
-    ++started;
-
-    /* Add this Thread to list of running threads */
-    threadListLock->Lock();
-    (*threadList)[(ThreadHandle)thread->threadId] = thread;
-    thread->state = RUNNING;
-    threadListLock->Unlock();
-
     if (NULL == thread->handle) {
         QCC_DbgPrintf(("Starting thread had NULL thread handle, exiting..."));
     }
@@ -214,9 +206,18 @@ ThreadInternalReturn STDCALL Thread::RunInternal(void* threadArg)
      * Typically, this should be initialized by 1ms.
      */
     int count = 0;
-    while (!thread->isStopping && (thread->handle == reinterpret_cast<HANDLE>(-1)) && (count++ < 50)) {
+    while (!thread->isStopping && ((thread->handle == reinterpret_cast<HANDLE>(-1) || thread->threadId == 0)) && (count++ < 50)) {
         qcc::Sleep(2);
     }
+
+    ++started;
+
+    /* Add this Thread to list of running threads */
+    threadListLock->Lock();
+    (*threadList)[(ThreadHandle)thread->threadId] = thread;
+    thread->state = RUNNING;
+    threadListLock->Unlock();
+
     /* Start the thread if it hasn't been stopped and is fully initialized */
     if (!thread->isStopping && NULL != thread->handle) {
         QCC_DbgPrintf(("Starting thread: %s", thread->funcName));
