@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -95,6 +95,17 @@ typedef void (*alljoyn_proxybusobject_listener_getallpropertiescb_ptr)(QStatus s
  * @param context   Caller provided context passed in to alljoyn_proxybusobject_setpropertyasync()
  */
 typedef void (*alljoyn_proxybusobject_listener_setpropertycb_ptr)(QStatus status, alljoyn_proxybusobject obj, void* context);
+
+/**
+ * Callback to receive property changed events.
+ *
+ * @param obj       Remote bus object that owns the property that changed.
+ * @param ifaceName Name of the interface that defines the property.
+ * @param propName  Name of the property that changed.
+ * @param value     New value of the property. (NULL = invalidated property)
+ * @param context   Caller provided context passed in to RegisterPropertyChangedHandler
+ */
+typedef void (*alljoyn_proxybusobject_listener_propertychanged_ptr)(alljoyn_proxybusobject obj, const char* ifaceName, const char* propName, const alljoyn_msgarg value, void* context);
 
 /**
  * Create an empty proxy bus object that refers to an object at given remote service name. Note
@@ -370,6 +381,44 @@ extern AJ_API QStatus  alljoyn_proxybusobject_getallpropertiesasync(alljoyn_prox
  *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  */
 extern AJ_API QStatus alljoyn_proxybusobject_setproperty(alljoyn_proxybusobject proxyObj, const char* iface, const char* property, alljoyn_msgarg value);
+
+
+
+
+/**
+ * Function to register a handler for property change events.
+ *
+ * @param iface     Remote object's interface on which the property is defined.
+ * @param property  The name of the property to monitor.
+ * @param callback  Method on listener that will be called.
+ * @param context   User defined context which will be passed as-is to callback.
+ *
+ * @return
+ *      - #ER_OK if the handler was registered successfully
+ *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+ *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+ */
+extern AJ_API QStatus alljoyn_proxybusobject_registerpropertychangedhandler(const char* iface,
+                                                                            const char* property,
+                                                                            alljoyn_proxybusobject_listener_propertychanged_ptr callback,
+                                                                            void* context);
+
+/**
+ * Function to unregister a handler for property change events.
+ *
+ * @param iface     Remote object's interface on which the property is defined.
+ * @param property  The name of the property to stop monitoring.
+ * @param callback  Method on listener that used to be called.
+ *
+ * @return
+ *      - #ER_OK if the handler was registered successfully
+ *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+ *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+ */
+extern AJ_API QStatus alljoyn_proxybusobject_unregisterpropertychangedhandler(const char* iface,
+                                                                              const char* property,
+                                                                              alljoyn_proxybusobject_listener_propertychanged_ptr callback);
+
 
 /**
  * Make an asynchronous request to set a property on an interface on the remote object.

@@ -21,6 +21,7 @@ import org.alljoyn.bus.annotation.BusAnnotations;
 import org.alljoyn.bus.annotation.BusInterface;
 import org.alljoyn.bus.annotation.BusMethod;
 import org.alljoyn.bus.annotation.BusSignal;
+import org.alljoyn.bus.annotation.BusProperty;
 
 @BusInterface(name="org.alljoyn.bus.InterfaceWithAnnotations")
 @BusAnnotations({@BusAnnotation(name="org.freedesktop.DBus.Deprecated", value="true")})
@@ -43,4 +44,22 @@ public interface InterfaceWithAnnotations {
     @BusSignal(name="Signal")
     @BusAnnotations({@BusAnnotation(name="org.freedesktop.DBus.Deprecated", value="true")})
     public void signal() throws BusException;
+
+
+    @BusProperty
+    @BusAnnotations({@BusAnnotation(name="org.freedesktop.DBus.Property.EmitsChangedSignal", value="true")})
+    public String getProp1() throws BusException;
+
+    @BusProperty
+    @BusAnnotations({@BusAnnotation(name="org.freedesktop.DBus.Property.EmitsChangedSignal", value="true")})
+    public void setProp1(String s) throws BusException;
+
+
+    @BusProperty
+    @BusAnnotations({@BusAnnotation(name="org.freedesktop.DBus.Property.EmitsChangedSignal", value="invalidates")})
+    public String getProp2() throws BusException;
+
+    @BusProperty
+    @BusAnnotations({@BusAnnotation(name="org.freedesktop.DBus.Property.EmitsChangedSignal", value="invalidates")})
+    public void setProp2(String s) throws BusException;
 }

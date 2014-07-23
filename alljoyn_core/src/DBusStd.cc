@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2013 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2013-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -91,7 +91,6 @@ QStatus org::freedesktop::DBus::CreateInterfaces(BusAttachment& bus) {
     intf->AddSignal("NameOwnerChanged",                    "sss",   NULL,               0);
     intf->AddSignal("NameLost",                            "s",     NULL,               0);
     intf->AddSignal("NameAcquired",                        "s",     NULL,               0);
-    intf->AddSignal("PropertiesChanged",                   "sa{sv}as",    NULL,               0);
 
     intf->Activate();
 
@@ -136,6 +135,9 @@ QStatus org::freedesktop::DBus::CreateInterfaces(BusAttachment& bus) {
     propsIntf->AddMethod("Get",    "ss",  "v",    "interface,propname,value", 0);
     propsIntf->AddMethod("Set",    "ssv", NULL,   "interface,propname,value", 0);
     propsIntf->AddMethod("GetAll", "s",  "a{sv}", "interface,props",          0);
+
+    propsIntf->AddSignal("PropertiesChanged", "sa{sv}as", "interface,changed_props,invalidated_props", 0);
+
     propsIntf->Activate();
 
     return status;

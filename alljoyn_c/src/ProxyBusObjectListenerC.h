@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2010-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -63,6 +63,15 @@ class SetPropertyCallbackContext {
     void* context;
 };
 
+class PropertyChangedCallbackContext {
+  public:
+    PropertyChangedCallbackContext(alljoyn_proxybusobject_listener_propertychanged_ptr signalhandler_ptr, void* context) :
+        signalhandler_ptr(signalhandler_ptr), context(context) { }
+
+    alljoyn_proxybusobject_listener_propertychanged_ptr signalhandler_ptr;
+    void* context;
+};
+
 class ProxyBusObjectListenerC : public ajn::ProxyBusObject::Listener {
   public:
     void IntrospectCB(QStatus status, ajn::ProxyBusObject* obj, void* context)
@@ -104,7 +113,11 @@ class ProxyBusObjectListenerC : public ajn::ProxyBusObject::Listener {
         delete in;
     }
 
-
+    void PropertyChanged(ProxyBusObject* obj, const char* ifaceName, const char* propName, const MsgArg* value, void* context)
+    {
+        PropertyChangedCallbackContext* pc = (PropertyChangedCallbackContext*)context;
+        pc->signalhandler_ptr((alljoyn_proxybusobject)obj, ifaceName, propName, (alljoyn_msgarg)value, pc->context);
+    }
 };
 }
 #endif

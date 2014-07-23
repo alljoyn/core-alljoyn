@@ -116,16 +116,15 @@ void InterfaceDescription::AppendDescriptionXml(qcc::String& xml, const char* la
     xml += indent + "  <description>" + d + "</description>\n";
 }
 
-InterfaceDescription::Member::Member(
-    const InterfaceDescription* iface,
-    AllJoynMessageType type,
-    const char* name,
-    const char* signature,
-    const char* returnSignature,
-    const char* argNames,
-    uint8_t annotation,
-    const char* accessPerms)
-    : iface(iface),
+InterfaceDescription::Member::Member(const InterfaceDescription* iface,
+                                     AllJoynMessageType type,
+                                     const char* name,
+                                     const char* signature,
+                                     const char* returnSignature,
+                                     const char* argNames,
+                                     uint8_t annotation,
+                                     const char* accessPerms) :
+    iface(iface),
     memberType(type),
     name(name),
     signature(signature ? signature : ""),
@@ -200,10 +199,28 @@ bool InterfaceDescription::Member::operator==(const Member& o) const {
 }
 
 
-InterfaceDescription::Property::Property(const char* name, const char* signature, uint8_t access)
-    : name(name), signature(signature ? signature : ""), access(access), annotations(new AnnotationsMap()),
+InterfaceDescription::Property::Property(const char* name, const char* signature, uint8_t access) :
+    name(name),
+    signature(signature ? signature : ""),
+    access(access),
+    annotations(new AnnotationsMap()),
     description()
 {
+}
+
+
+InterfaceDescription::Property::Property(const char* name, const char* signature, uint8_t access, uint8_t annotation) :
+    name(name),
+    signature(signature ? signature : ""),
+    access(access),
+    annotations(new AnnotationsMap())
+{
+    if (annotation & PROP_ANNOTATE_EMIT_CHANGED_SIGNAL) {
+        (*annotations)[org::freedesktop::DBus::AnnotateEmitsChanged] = "true";
+    }
+    if (annotation & PROP_ANNOTATE_EMIT_CHANGED_SIGNAL_INVALIDATES) {
+        (*annotations)[org::freedesktop::DBus::AnnotateEmitsChanged] = "invalidates";
+    }
 }
 
 InterfaceDescription::Property::Property(const Property& other)
