@@ -6966,13 +6966,13 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
         IPAddress currentAddress;
         status = currentAddress.SetAddress(currentInterface, false);
         if (status == ER_OK) {
-            status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, currentAddress);
+            status = IpNameService::Instance().OpenInterface(TRANSPORT_UDP, currentAddress);
         } else {
-            status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, currentInterface);
+            status = IpNameService::Instance().OpenInterface(TRANSPORT_UDP, currentInterface);
         }
 
         if (status != ER_OK) {
-            QCC_LogError(status, ("TCPTransport::DoStartListen(): OpenInterface() failed for %s", currentInterface.c_str()));
+            QCC_LogError(status, ("UDPTransport::DoStartListen(): OpenInterface() failed for %s", currentInterface.c_str()));
         }
     }
 
