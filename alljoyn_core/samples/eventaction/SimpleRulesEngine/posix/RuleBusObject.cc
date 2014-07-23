@@ -30,7 +30,7 @@ RuleBusObject::RuleBusObject(BusAttachment* busAttachment, const char* path, Sim
         status = mBusAttachment->CreateInterface("org.allseen.sample.rule.engine", ruleEngineIntf);
 
         //Add BusMethods
-        ruleEngineIntf->AddMethod("addRule", "(sssssss)(sssssq)b", "", "event,action,persist", 0);
+        ruleEngineIntf->AddMethod("addRule", "(sssssssq)(sssssssq)b", "", "event,action,persist", 0);
         ruleEngineIntf->AddMethod("deleteAllRules", "", "", "", 0);
 
         if (ER_OK == status) {
@@ -52,8 +52,6 @@ RuleBusObject::RuleBusObject(BusAttachment* busAttachment, const char* path, Sim
 
 void RuleBusObject::addRule(const InterfaceDescription::Member* member, Message& msg)
 {
-    //EventInfo* event, ActionInfo* action, bool persist
-
     const ajn::MsgArg* args = 0;
     size_t numArgs = 0;
     msg->GetArgs(numArgs, args);
@@ -65,17 +63,20 @@ void RuleBusObject::addRule(const InterfaceDescription::Member* member, Message&
         char* eSig;
         char* eDeviceId;
         char* eAppId;
-        args[0].Get("(sssssss)", &eUniqueName, &ePath, &eIface, &eMember, &eSig, &eDeviceId, &eAppId);
-        EventInfo* event = new EventInfo(eUniqueName, ePath, eIface, eMember, eSig, eDeviceId, eAppId);
+        uint16_t ePort;
+        args[0].Get("(sssssssq)", &eUniqueName, &ePath, &eIface, &eMember, &eSig, &eDeviceId, &eAppId, &ePort);
+        RuleInfo* event = new RuleInfo(eUniqueName, ePath, eIface, eMember, eSig, eDeviceId, eAppId, ePort);
 
         char* aUniqueName;
         char* aPath;
         char* aIface;
         char* aMember;
         char* aSig;
-        uint16_t port;
-        args[1].Get("(sssssq)", &aUniqueName, &aPath, &aIface, &aMember, &aSig, &port);
-        ActionInfo* action = new ActionInfo(aUniqueName, aPath, aIface, aMember, aSig);
+        char* aDeviceId;
+        char* aAppId;
+        uint16_t aPort;
+        args[1].Get("(sssssssq)", &aUniqueName, &aPath, &aIface, &aMember, &aSig, &aDeviceId, &aAppId, &aPort);
+        RuleInfo* action = new RuleInfo(aUniqueName, aPath, aIface, aMember, aSig, aDeviceId, aAppId, aPort);
 
         Rule* rule = new Rule(mBusAttachment, event, action);
         mBusAttachment->EnableConcurrentCallbacks();

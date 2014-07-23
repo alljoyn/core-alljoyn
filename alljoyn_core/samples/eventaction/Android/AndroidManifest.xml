@@ -17,7 +17,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.allseen.sample.eventaction"
     android:versionCode="1"
-    android:versionName="1.6">
+    android:versionName="1.7">
 
     <uses-sdk
         android:minSdkVersion="10"

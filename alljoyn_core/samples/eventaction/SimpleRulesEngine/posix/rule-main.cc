@@ -56,6 +56,8 @@ int main(int argc, char** argv, char** envArg)
     /* Install SIGINT handler. */
     signal(SIGINT, SigIntHandler);
 
+    QStatus status = ER_OK;
+
     /* Set AllJoyn logging */
     QCC_SetLogLevels("ALLJOYN=7;ALL=1");
     QCC_UseOSLogging(true);

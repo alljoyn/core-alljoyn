@@ -99,7 +99,7 @@ class MyAllJoynCode :
 
     void setEngine(const char* engineName);
 
-    void addRule(EventInfo* event, ActionInfo* action, bool persist);
+    void addRule(RuleInfo* event, RuleInfo* action, bool persist);
 
     void deleteAllRules();
 

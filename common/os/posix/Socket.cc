@@ -930,7 +930,7 @@ QStatus MulticastGroupOpInternal(SocketFd sockFd, AddressFamily family, String m
      * We assume that No external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
-    assert(sockFd);
+    assert(sockFd >= 0);
     assert(family == AF_INET || family == AF_INET6);
     assert(multicastGroup.size());
     assert(iface.size());
@@ -1021,7 +1021,7 @@ QStatus SetMulticastInterface(SocketFd sockFd, AddressFamily family, qcc::String
      * We assume that No external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
-    assert(sockFd);
+    assert(sockFd >= 0);
     assert(family == AF_INET || family == AF_INET6);
     assert(iface.size());
 
@@ -1080,7 +1080,7 @@ QStatus SetMulticastHops(SocketFd sockFd, AddressFamily family, uint32_t hops)
      * We assume that No external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
-    assert(sockFd);
+    assert(sockFd >= 0);
     assert(family == AF_INET || family == AF_INET6);
 
     /*
@@ -1120,7 +1120,7 @@ QStatus SetRecvPktAncillaryData(SocketFd sockfd, AddressFamily addrFamily, bool 
      * We assume that No external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
-    assert(sockfd);
+    assert(sockfd >= 0);
     assert(addrFamily == AF_INET || addrFamily == AF_INET6);
 
     QStatus status = ER_OK;

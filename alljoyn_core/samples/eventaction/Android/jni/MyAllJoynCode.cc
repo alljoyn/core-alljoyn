@@ -61,7 +61,7 @@ void MyAllJoynCode::initialize(const char* packageName) {
             status = mBusAttachment->CreateInterface("org.allseen.sample.rule.engine", ruleEngineIntf);
 
             /* Add BusMethods */
-            ruleEngineIntf->AddMethod("addRule", "(sssssss)(sssssq)b", "", "event,action,persist", 0);
+            ruleEngineIntf->AddMethod("addRule", "(sssssssq)(sssssssq)b", "", "event,action,persist", 0);
             ruleEngineIntf->AddMethod("deleteAllRules", "", "", "", 0);
 
             if (ER_OK == status) {
@@ -208,6 +208,10 @@ char* MyAllJoynCode::introspectWithDescriptions(const char* sessionName, const c
         LOGTHIS("Introspection error: %d", status);
         return NULL;
     }
+
+    //Go ahead and tell AllJoyn to set the interfaces now and save us an Introspection request later
+    remoteObj.ParseXml(reply->GetArg(0)->v_string.str);
+
     return ::strdup(reply->GetArg(0)->v_string.str);
 }
 
@@ -223,7 +227,7 @@ void MyAllJoynCode::setEngine(const char* engineName) {
     }
 }
 
-void MyAllJoynCode::addRule(EventInfo* event, ActionInfo* action, bool persist)
+void MyAllJoynCode::addRule(RuleInfo* event, RuleInfo* action, bool persist)
 {
     if (connectedEngineName != NULL) {
         ProxyBusObject remoteObj(*mBusAttachment, connectedEngineName, "/ruleengine", mBusSessionMap[connectedEngineName]);
@@ -243,8 +247,12 @@ void MyAllJoynCode::addRule(EventInfo* event, ActionInfo* action, bool persist)
 
         Message reply(*mBusAttachment);
         MsgArg inputs[3];
-        inputs[0].Set("(sssssss)", event->mUniqueName.c_str(), event->mPath.c_str(), event->mIfaceName.c_str(), event->mMember.c_str(), event->mSignature.c_str(), event->mDeviceId.c_str(), event->mAppId.c_str());
-        inputs[1].Set("(sssssq)", action->mUniqueName.c_str(), action->mPath.c_str(), action->mIfaceName.c_str(), action->mMember.c_str(), action->mSignature.c_str(), action->mPort);
+        inputs[0].Set("(sssssssq)", event->mUniqueName.c_str(), event->mPath.c_str(),
+                      event->mIfaceName.c_str(), event->mMember.c_str(), event->mSignature.c_str(),
+                      event->mDeviceId.c_str(), event->mAppId.c_str(), event->mPort);
+        inputs[1].Set("(sssssssq)", action->mUniqueName.c_str(), action->mPath.c_str(),
+                      action->mIfaceName.c_str(), action->mMember.c_str(), action->mSignature.c_str(),
+                      action->mDeviceId.c_str(), action->mAppId.c_str(), action->mPort);
         inputs[2].Set("b", persist);
         QStatus status = remoteObj.MethodCall(*member, inputs, 3, reply);
         if (ER_OK != status) {
@@ -312,7 +320,22 @@ void MyAllJoynCode::shutdown()
 /* From SessionListener */
 void MyAllJoynCode::SessionLost(ajn::SessionId sessionId)
 {
-    /* Placeholder, not used by this application */
+    JNIEnv* env;
+    jint jret = vm->GetEnv((void**)&env, JNI_VERSION_1_2);
+    if (JNI_EDETACHED == jret) {
+        vm->AttachCurrentThread(&env, NULL);
+    }
+
+    jclass jcls = env->GetObjectClass(jobj);
+    jmethodID mid = env->GetMethodID(jcls, "lostEventActionApplication", "(I)V");
+    if (mid == 0) {
+        LOGTHIS("Failed to get Java lostEventActionApplication");
+    } else {
+        env->CallVoidMethod(jobj, mid, sessionId);
+    }
+    if (JNI_EDETACHED == jret) {
+        vm->DetachCurrentThread();
+    }
 }
 
 void MyAllJoynCode::SessionMemberAdded(ajn::SessionId sessionId, const char*uniqueName)

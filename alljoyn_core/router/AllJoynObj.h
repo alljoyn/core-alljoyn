@@ -995,7 +995,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     void PingReplyTransportHandler(Message& reply, void* context);
 
     bool QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
-                      const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6);
+                      const qcc::IPEndpoint& ns4);
     bool ResponseHandler(TransportMask transport, MDNSPacket response, uint16_t recvPort);
     void PingResponse(TransportMask transport, const qcc::IPEndpoint& ns4, const qcc::String& name, uint32_t replyCode);
 

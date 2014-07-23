@@ -4843,7 +4843,7 @@ void AllJoynObj::PingReplyMethodHandlerUsingCode(Message& msg, uint32_t replyCod
 
 /* From IpNameServiceListener */
 bool AllJoynObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_t recvPort,
-                              const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6)
+                              const qcc::IPEndpoint& ns4)
 {
     MDNSResourceRecord* pingRecord;
     if ((recvPort == IpNameService::MULTICAST_MDNS_PORT) ||

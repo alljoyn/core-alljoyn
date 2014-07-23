@@ -33,10 +33,14 @@ QStatus SimpleRuleEngine::addRule(Rule* rule, bool persist)
     QStatus status = ER_OK;
     if (rule->actionReady() == 0) {
         rule->setActionPort(mNearbyAppMap[rule->getActionSessionName()]->port);
+        rule->addToAction(mNearbyAppMap[rule->getActionSessionName()]->deviceId, mNearbyAppMap[rule->getActionSessionName()]->appId);
     }
-    //TODO: re-investigate if needed
-//	if(!rule->eventReady() == 0)
-//		rule->addToEvent(mNearbyAppMap[rule->getEventSessionName()]->deviceId, mNearbyAppMap[rule->getEventSessionName()]->appId);
+    if (rule->eventReady() == 0) {
+        if (mNearbyAppMap[rule->getEventSessionName()] != NULL) {
+            rule->setEventPort(mNearbyAppMap[rule->getEventSessionName()]->port);
+            rule->addToEvent(mNearbyAppMap[rule->getEventSessionName()]->deviceId, mNearbyAppMap[rule->getEventSessionName()]->appId);
+        }
+    }
     rule->enable();
     mRules.push_back(rule);
     if (persist) {
@@ -57,6 +61,7 @@ QStatus SimpleRuleEngine::removeAllRules()
     QStatus status = ER_OK;
     for (std::vector<Rule*>::iterator it = mRules.begin(); it != mRules.end(); ++it) {
         (*it)->disable();
+        delete (*it);
     }
     mRules.clear();
     mRulePersister.clearRules();
@@ -65,6 +70,8 @@ QStatus SimpleRuleEngine::removeAllRules()
 
 Rule* SimpleRuleEngine::getRules(size_t& len)
 {
+    QStatus status = ER_OK;
+
     return NULL;
 }
 
@@ -79,17 +86,31 @@ void SimpleRuleEngine::Announce(unsigned short version, unsigned short port, con
                                 const ajn::services::AboutClient::ObjectDescriptions& objectDescs,
                                 const ajn::services::AboutClient::AboutData& aboutData)
 {
+    char* friendlyName = NULL;
     NearbyAppInfo* nearbyAppInfo = new NearbyAppInfo();
     for (AboutClient::AboutData::const_iterator it = aboutData.begin(); it != aboutData.end(); ++it) {
         qcc::String key = it->first;
         ajn::MsgArg value = it->second;
         if (value.typeId == ALLJOYN_STRING) {
-            if (key.compare("DeviceName")) {
+            LOGTHIS("Key: %s, Val: %s", key.c_str(), value.v_string.str);
+            if (key.compare("DeviceName") == 0) {
                 nearbyAppInfo->friendlyName = value.v_string.str;
-            } else if (key.compare("DeviceId")) {
+            } else if (key.compare("DeviceId") == 0) {
                 nearbyAppInfo->deviceId = value.v_string.str;
-            } else if (key.compare("AppId")) {
-                nearbyAppInfo->appId = value.v_string.str;
+            }
+        } else if (value.typeId == ALLJOYN_BYTE_ARRAY) {
+            LOGTHIS("Key: %s, Val: %s", key.c_str(), "BYTE_ARRAY");
+            if (key.compare("AppId") == 0) {
+                uint8_t* AppIdBuffer;
+                size_t numElements;
+                value.Get("ay", &numElements, &AppIdBuffer);
+                char temp[(numElements + 1) * 2];               //*2 due to hex format
+                for (int i = 0; i < numElements; i++) {
+                    sprintf(temp + (i * 2), "%02x", AppIdBuffer[i]);
+                }
+                temp[numElements * 2] = '\0';
+                nearbyAppInfo->appId = temp;
+                LOGTHIS("Key: %s, Val: %s", key.c_str(), temp);
             }
         }
     }
@@ -100,6 +121,9 @@ void SimpleRuleEngine::Announce(unsigned short version, unsigned short port, con
     for (std::vector<Rule*>::iterator it = mRules.begin(); it != mRules.end(); ++it) {
         if ((*it)->isEventMatch(nearbyAppInfo->deviceId, nearbyAppInfo->appId)) {
             (*it)->modifyEventSessionName(busName);
+        }
+        if ((*it)->isActionMatch(nearbyAppInfo->deviceId, nearbyAppInfo->appId)) {
+            (*it)->modifyActionSessionName(busName);
         }
     }
 }

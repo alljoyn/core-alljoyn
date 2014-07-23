@@ -366,8 +366,8 @@ IpNameServiceImpl::IpNameServiceImpl()
     m_loopback(false), m_enableIPv4(false), m_enableIPv6(false), m_enableV1(false),
     m_wakeEvent(), m_forceLazyUpdate(false), m_refreshAdvertisements(false),
     m_enabled(false), m_doEnable(false), m_doDisable(false),
-    m_ipv4QuietSockFd(-1), m_ipv6QuietSockFd(-1),
-    m_ipv4UnicastSockFd(-1), m_ipv6UnicastSockFd(-1),
+    m_ipv4QuietSockFd(qcc::INVALID_SOCKET_FD), m_ipv6QuietSockFd(qcc::INVALID_SOCKET_FD),
+    m_ipv4UnicastSockFd(qcc::INVALID_SOCKET_FD), m_ipv6UnicastSockFd(qcc::INVALID_SOCKET_FD),
     m_protectListeners(false), m_packetScheduler(*this),
     m_networkChangeScheduleCount(m_retries + 1)
 {
@@ -500,24 +500,24 @@ IpNameServiceImpl::~IpNameServiceImpl()
     // If we opened a socket to send quiet responses (unicast, not over the
     // multicast channel) we need to close it.
     //
-    if (m_ipv4QuietSockFd != -1) {
+    if (m_ipv4QuietSockFd != qcc::INVALID_SOCKET_FD) {
         qcc::Close(m_ipv4QuietSockFd);
-        m_ipv4QuietSockFd = -1;
+        m_ipv4QuietSockFd = qcc::INVALID_SOCKET_FD;
     }
 
-    if (m_ipv6QuietSockFd != -1) {
+    if (m_ipv6QuietSockFd != qcc::INVALID_SOCKET_FD) {
         qcc::Close(m_ipv6QuietSockFd);
-        m_ipv6QuietSockFd = -1;
+        m_ipv6QuietSockFd = qcc::INVALID_SOCKET_FD;
     }
 
-    if (m_ipv4UnicastSockFd != -1) {
+    if (m_ipv4UnicastSockFd != qcc::INVALID_SOCKET_FD) {
         qcc::Close(m_ipv4UnicastSockFd);
-        m_ipv4UnicastSockFd = -1;
+        m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
     }
 
-    if (m_ipv6UnicastSockFd != -1) {
+    if (m_ipv6UnicastSockFd != qcc::INVALID_SOCKET_FD) {
         qcc::Close(m_ipv6UnicastSockFd);
-        m_ipv6UnicastSockFd = -1;
+        m_ipv6UnicastSockFd = qcc::INVALID_SOCKET_FD;
     }
 
     //
@@ -829,7 +829,7 @@ void IpNameServiceImpl::ClearLiveInterfaces(void)
     m_mutex.Lock();
 
     for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
-        if (m_liveInterfaces[i].m_multicastMDNSsockFd != -1 || m_liveInterfaces[i].m_multicastsockFd != -1) {
+        if (m_liveInterfaces[i].m_multicastMDNSsockFd != qcc::INVALID_SOCKET_FD || m_liveInterfaces[i].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
 
             QCC_DbgPrintf(("IpNameServiceImpl::ClearLiveInterfaces(): clear interface %d", i));
 
@@ -850,21 +850,21 @@ void IpNameServiceImpl::ClearLiveInterfaces(void)
                 m_liveInterfaces[i].m_flags & qcc::IfConfigEntry::LOOPBACK) {
                 if (m_liveInterfaces[i].m_address.IsIPv4()) {
 #if 1
-                    if (m_liveInterfaces[i].m_multicastMDNSsockFd != -1) {
+                    if (m_liveInterfaces[i].m_multicastMDNSsockFd != qcc::INVALID_SOCKET_FD) {
                         qcc::LeaveMulticastGroup(m_liveInterfaces[i].m_multicastMDNSsockFd, qcc::QCC_AF_INET, IPV4_MDNS_MULTICAST_GROUP,
                                                  m_liveInterfaces[i].m_interfaceName);
                     }
-                    if (m_liveInterfaces[i].m_multicastsockFd != -1) {
+                    if (m_liveInterfaces[i].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
                         qcc::LeaveMulticastGroup(m_liveInterfaces[i].m_multicastsockFd, qcc::QCC_AF_INET, IPV4_ALLJOYN_MULTICAST_GROUP,
                                                  m_liveInterfaces[i].m_interfaceName);
                     }
 #endif
                 } else if (m_liveInterfaces[i].m_address.IsIPv6()) {
-                    if (m_liveInterfaces[i].m_multicastMDNSsockFd != -1) {
+                    if (m_liveInterfaces[i].m_multicastMDNSsockFd != qcc::INVALID_SOCKET_FD) {
                         qcc::LeaveMulticastGroup(m_liveInterfaces[i].m_multicastMDNSsockFd, qcc::QCC_AF_INET6, IPV6_MDNS_MULTICAST_GROUP,
                                                  m_liveInterfaces[i].m_interfaceName);
                     }
-                    if (m_liveInterfaces[i].m_multicastsockFd != -1) {
+                    if (m_liveInterfaces[i].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
                         qcc::LeaveMulticastGroup(m_liveInterfaces[i].m_multicastsockFd, qcc::QCC_AF_INET6, IPV6_ALLJOYN_MULTICAST_GROUP,
                                                  m_liveInterfaces[i].m_interfaceName);
                     }
@@ -879,18 +879,18 @@ void IpNameServiceImpl::ClearLiveInterfaces(void)
             // can end up monitoring the wrong socket and interfere with the correct
             // operation of other unrelated event/socket pairs.
             //
-            if (m_liveInterfaces[i].m_multicastMDNSsockFd != -1) {
+            if (m_liveInterfaces[i].m_multicastMDNSsockFd != qcc::INVALID_SOCKET_FD) {
                 delete m_liveInterfaces[i].m_multicastMDNSevent;
                 m_liveInterfaces[i].m_multicastMDNSevent = NULL;
                 qcc::Close(m_liveInterfaces[i].m_multicastMDNSsockFd);
-                m_liveInterfaces[i].m_multicastMDNSsockFd = -1;
+                m_liveInterfaces[i].m_multicastMDNSsockFd = qcc::INVALID_SOCKET_FD;
             }
 
-            if (m_liveInterfaces[i].m_multicastsockFd != -1) {
+            if (m_liveInterfaces[i].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
                 delete m_liveInterfaces[i].m_multicastevent;
                 m_liveInterfaces[i].m_multicastevent = NULL;
                 qcc::Close(m_liveInterfaces[i].m_multicastsockFd);
-                m_liveInterfaces[i].m_multicastsockFd = -1;
+                m_liveInterfaces[i].m_multicastsockFd = qcc::INVALID_SOCKET_FD;
             }
         }
     }
@@ -906,12 +906,12 @@ void IpNameServiceImpl::ClearLiveInterfaces(void)
 QStatus IpNameServiceImpl::CreateUnicastSocket(AddressFamily family)
 {
     if (family == qcc::QCC_AF_INET) {
-        if (m_ipv4UnicastSockFd == -1) {
+        if (m_ipv4UnicastSockFd == qcc::INVALID_SOCKET_FD) {
             QStatus status = qcc::Socket(family, qcc::QCC_SOCK_DGRAM, m_ipv4UnicastSockFd);
             if (status != ER_OK) {
                 QCC_LogError(status, ("CreateUnicastSocket: qcc::Socket(%d) failed: %d - %s", family,
                                       qcc::GetLastError(), qcc::GetLastErrorString().c_str()));
-                m_ipv4UnicastSockFd = -1;
+                m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
                 return status;
             }
             status = qcc::SetRecvPktAncillaryData(m_ipv4UnicastSockFd, family, true);
@@ -919,7 +919,7 @@ QStatus IpNameServiceImpl::CreateUnicastSocket(AddressFamily family)
                 QCC_LogError(status, ("CreateUnicastSocket: enable recv ancillary data"
                                       " failed for sockFd %d", m_ipv4UnicastSockFd));
                 qcc::Close(m_ipv4UnicastSockFd);
-                m_ipv4UnicastSockFd = -1;
+                m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
                 return status;
             }
             //
@@ -932,7 +932,7 @@ QStatus IpNameServiceImpl::CreateUnicastSocket(AddressFamily family)
             if (status != ER_OK && status != ER_NOT_IMPLEMENTED) {
                 QCC_LogError(status, ("CreateUnicastSocket(): SetReusePort() failed"));
                 qcc::Close(m_ipv4UnicastSockFd);
-                m_ipv4UnicastSockFd = -1;
+                m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
                 return status;
             }
             //
@@ -942,17 +942,17 @@ QStatus IpNameServiceImpl::CreateUnicastSocket(AddressFamily family)
             if (status != ER_OK) {
                 QCC_LogError(status, ("CreateUnicastSocket(): bind failed"));
                 qcc::Close(m_ipv4UnicastSockFd);
-                m_ipv4UnicastSockFd = -1;
+                m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
                 return status;
             }
         }
     } else if (family == qcc::QCC_AF_INET6) {
-        if (m_ipv6UnicastSockFd == -1) {
+        if (m_ipv6UnicastSockFd == qcc::INVALID_SOCKET_FD) {
             QStatus status = qcc::Socket(family, qcc::QCC_SOCK_DGRAM, m_ipv6UnicastSockFd);
             if (status != ER_OK) {
                 QCC_LogError(status, ("CreateUnicastSocket: qcc::Socket(%d) failed: %d - %s", family,
                                       qcc::GetLastError(), qcc::GetLastErrorString().c_str()));
-                m_ipv6UnicastSockFd = -1;
+                m_ipv6UnicastSockFd = qcc::INVALID_SOCKET_FD;
                 return status;
             }
             status = qcc::SetRecvPktAncillaryData(m_ipv6UnicastSockFd, family, true);
@@ -960,21 +960,21 @@ QStatus IpNameServiceImpl::CreateUnicastSocket(AddressFamily family)
                 QCC_LogError(status, ("CreateUnicastSocket: enable recv ancillary data"
                                       " failed for sockFd %d", m_ipv6UnicastSockFd));
                 qcc::Close(m_ipv6UnicastSockFd);
-                m_ipv6UnicastSockFd = -1;
+                m_ipv6UnicastSockFd = qcc::INVALID_SOCKET_FD;
                 return status;
             }
             status = qcc::SetReusePort(m_ipv6UnicastSockFd, true);
             if (status != ER_OK && status != ER_NOT_IMPLEMENTED) {
                 QCC_LogError(status, ("CreateUnicastSocket(): SetReusePort() failed"));
                 qcc::Close(m_ipv6UnicastSockFd);
-                m_ipv6UnicastSockFd = -1;
+                m_ipv6UnicastSockFd = qcc::INVALID_SOCKET_FD;
                 return status;
             }
             status = qcc::Bind(m_ipv6UnicastSockFd, qcc::IPAddress("::"), 0);
             if (status != ER_OK) {
                 QCC_LogError(status, ("CreateUnicastSocket(): bind failed"));
                 qcc::Close(m_ipv6UnicastSockFd);
-                m_ipv6UnicastSockFd = -1;
+                m_ipv6UnicastSockFd = qcc::INVALID_SOCKET_FD;
                 return status;
             }
         }
@@ -1395,9 +1395,9 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const std::set<uint32_t>& networkRe
         // We set up 3 sockets - one to listen for Multicast NS packets, one for MDNS packets
         // and 1 for unicast MDNS packets.
         //
-        qcc::SocketFd multicastMDNSsockFd = -1;
-        qcc::SocketFd multicastsockFd = -1;
-        qcc::SocketFd unicastsockFd = -1;
+        qcc::SocketFd multicastMDNSsockFd = qcc::INVALID_SOCKET_FD;
+        qcc::SocketFd multicastsockFd = qcc::INVALID_SOCKET_FD;
+        qcc::SocketFd unicastsockFd = qcc::INVALID_SOCKET_FD;
 
         if (entries[i].m_family != qcc::QCC_AF_INET && entries[i].m_family != qcc::QCC_AF_INET6) {
             assert(!"IpNameServiceImpl::LazyUpdateInterfaces(): Unexpected value in m_family (not AF_INET or AF_INET6");
@@ -1444,15 +1444,19 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const std::set<uint32_t>& networkRe
 
         IPAddress listenAddr;
         uint16_t listenPort;
-        qcc::GetLocalAddress(unicastsockFd, listenAddr, listenPort);
-        live.m_unicastPort = listenPort;
+        if (unicastsockFd != qcc::INVALID_SOCKET_FD) {
+            qcc::GetLocalAddress(unicastsockFd, listenAddr, listenPort);
+            live.m_unicastPort = listenPort;
+        } else {
+            live.m_unicastPort = 0;
+        }
         live.m_multicastPort = MULTICAST_PORT;
         live.m_multicastMDNSPort = MULTICAST_MDNS_PORT;
 
-        if (multicastsockFd != -1) {
+        if (multicastsockFd != qcc::INVALID_SOCKET_FD) {
             live.m_multicastevent = new qcc::Event(multicastsockFd, qcc::Event::IO_READ, false);
         }
-        if (multicastMDNSsockFd != -1) {
+        if (multicastMDNSsockFd != qcc::INVALID_SOCKET_FD) {
             live.m_multicastMDNSevent = new qcc::Event(multicastMDNSsockFd, qcc::Event::IO_READ, false);
         }
 
@@ -1848,11 +1852,15 @@ QStatus IpNameServiceImpl::CancelFindAdvertisement(TransportMask transportMask, 
     m_mutex.Unlock();
     return ER_OK;
 }
-#define MIN_THRESHOLD_CACHE_REFRESH_MS 1000
+const uint32_t MIN_THRESHOLD_CACHE_REFRESH_MS = 1000;
+
+// Purge entries from PeerInfo map that havent recieved a response
+// for 3 Cache refresh cycles i.e. 3 * 120 seconds.
+const uint32_t PEER_INFO_MAP_PURGE_TIMEOUT = 3 * 120 * 1000;
 QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::String& guid, const qcc::String& matchingStr, LocatePolicy policy, bool ping) {
     QCC_DbgHLPrintf(("IpNameServiceImpl::RefreshCache(0x%x, \"%s\", %d)", transportMask, matchingStr.c_str(), policy));
     QCC_DbgPrintf(("IpNameServiceImpl::RefreshCache %s", matchingStr.c_str()));
-
+    String longGuid;
     MatchMap matching;
     ParseMatchRule(matchingStr, matching);
     //
@@ -1860,41 +1868,44 @@ QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::
     // MDNS packet that we will be sending out over unicast to this guid
     //
     m_mutex.Lock();
-    std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.end();
+    std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.end();
     if (!ping) {
         it = m_peerInfoMap.find(guid);
+        longGuid = guid;
     } else {
-        for (std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator i = m_peerInfoMap.begin();
+        for (std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal>::iterator i = m_peerInfoMap.begin();
              i != m_peerInfoMap.end(); ++i) {
             if (qcc::GUID128(i->first).ToShortString() == guid) {
                 it = i;
+                longGuid = it->first;
                 break;
             }
         }
     }
-    std::list<PeerInfo> peerList;
-    if (it != m_peerInfoMap.end()) {
-        peerList = it->second;
-    }
-    m_mutex.Unlock();
-
-    std::list<PeerInfo>::iterator pit = peerList.begin();
-    if (!peerList.empty()) {
+    std::set<PeerInfo>::iterator pit = it->second.begin();
+    PrintPeerInfoMap();
+    if (!it->second.empty()) {
         Timespec now;
         GetTimeNow(&now);
         QCC_DbgPrintf(("Entry found in Peer Info Map. Setting unicast destination"));
 
-        while (pit != peerList.end()) {
+        while (pit != it->second.end()) {
+            PeerInfo peerInfo = *pit;
             if (!ping && ((now - (*pit).lastQueryTimeStamp) < MIN_THRESHOLD_CACHE_REFRESH_MS)) {
                 ++pit;
                 continue;
             }
             if (!ping) {
+                // Purge entries from PeerInfo map that havent recieved a response for 3 Cache refresh cycles
+                if ((now - (*pit).lastResponseTimeStamp) >= PEER_INFO_MAP_PURGE_TIMEOUT) {
+                    it->second.erase(pit++);
+                    continue;
+                }
                 (*pit).lastQueryTimeStamp = now;
             }
 
             MDNSPacket query;
-            query->SetDestination((*pit).unicastIPV4Info);
+            query->SetDestination((*pit).unicastInfo);
             MDNSSearchRData* searchRData = new MDNSSearchRData();
             for (MatchMap::iterator it1 = matching.begin(); it1 != matching.end(); ++it1) {
                 searchRData->SetValue(it1->first, it1->second);
@@ -1913,16 +1924,23 @@ QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::
             MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
             query->AddAdditionalRecord(searchRecord);
             delete searchRData;
+            m_mutex.Unlock();
             Query(transportMask, query);
-
-            ++pit;
+            m_mutex.Lock();
+            it = m_peerInfoMap.find(longGuid);
+            if (it == m_peerInfoMap.end()) {
+                break;
+            }
+            pit = it->second.upper_bound(peerInfo);
         }
     } else {
         if (ping) {
+            m_mutex.Unlock();
             return ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED;
         }
         QCC_DbgPrintf((" IpNameServiceImpl::RefreshCache(): Entry not found in PeerInfoMap"));
     }
+    m_mutex.Unlock();
 
     return ER_OK;
 }
@@ -3106,11 +3124,11 @@ void IpNameServiceImpl::SendProtocolMessage(
         qcc::IPEndpoint destination = packet->GetDestination();
         qcc::AddressFamily family = destination.addr.IsIPv4() ? qcc::QCC_AF_INET : qcc::QCC_AF_INET6;
 
-        if (family == qcc::QCC_AF_INET && m_ipv4QuietSockFd == -1) {
+        if (family == qcc::QCC_AF_INET && m_ipv4QuietSockFd == qcc::INVALID_SOCKET_FD) {
             status = qcc::Socket(family, qcc::QCC_SOCK_DGRAM, m_ipv4QuietSockFd);
         }
 
-        if (family == qcc::QCC_AF_INET6 && m_ipv6QuietSockFd == -1) {
+        if (family == qcc::QCC_AF_INET6 && m_ipv6QuietSockFd == qcc::INVALID_SOCKET_FD) {
             status = qcc::Socket(family, qcc::QCC_SOCK_DGRAM, m_ipv6QuietSockFd);
         }
 
@@ -3230,16 +3248,13 @@ void IpNameServiceImpl::SendProtocolMessage(
                 qcc::IPAddress ipv4Broadcast(addr);
                 QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
                                  ipv4Broadcast.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
-                QStatus status;
-                if (msgVersion == 2) {
-                    status = qcc::SendTo(sockFd, ipv4Broadcast, BROADCAST_MDNS_PORT, buffer, size, sent);
-                } else if (m_enableV1 && (localAddress == qcc::IPAddress("0.0.0.0") || localAddress == ipv4Broadcast)) {
-                    status = qcc::SendTo(sockFd, ipv4Broadcast, BROADCAST_PORT, buffer, size, sent);
-                } else {
-                    status = ER_OK;
-                }
-                if (status != ER_OK) {
-                    QCC_LogError(ER_FAIL, ("IpNameServiceImpl::SendProtocolMessage():  Error sending to IPv4 (broadcast)"));
+
+                if (msgVersion != 2 && m_enableV1 && (localAddress == qcc::IPAddress("0.0.0.0") || localAddress == ipv4Broadcast)) {
+                    QStatus status = qcc::SendTo(sockFd, ipv4Broadcast, BROADCAST_PORT, buffer, size, sent);
+
+                    if (status != ER_OK) {
+                        QCC_LogError(ER_FAIL, ("IpNameServiceImpl::SendProtocolMessage():  Error sending to IPv4 (broadcast)"));
+                    }
                 }
             } else {
                 QCC_DbgPrintf(("IpNameServiceImpl::SendProtocolMessage():  Subnet directed broadcasts are disabled"));
@@ -3339,7 +3354,7 @@ void IpNameServiceImpl::RewriteVersionSpecific(
     Packet packet,
     bool haveIPv4address, qcc::IPAddress ipv4address,
     bool haveIPv6address, qcc::IPAddress ipv6address,
-    uint16_t unicastIpv4Port, uint16_t unicastIpv6Port)
+    uint16_t unicastIpv4Port)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::RewriteVersionSpecific()"));
 
@@ -3466,13 +3481,6 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                     refRData->RemoveEntry("ipv4");
                     refRData->RemoveEntry("upcv4");
                 }
-                if (haveIPv6address && (unicastIpv6Port != 0)) {
-                    refRData->SetIPV6ResponseAddr(ipv6address.ToString());
-                    refRData->SetIPV6ResponsePort(unicastIpv6Port);
-                } else {
-                    refRData->RemoveEntry("ipv6");
-                    refRData->RemoveEntry("upcv6");
-                }
             } else {
 
                 //Response packet
@@ -3483,7 +3491,6 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                     MDNSResourceRecord* resourceRecord;
                     MDNSARData* addrRData;
                     MDNSTextRData* txtRData;
-                    MDNSAAAARData* aaaaRData;
                     MDNSSrvRData* srvRData;
 
                     switch (answerRecord->GetRRType()) {
@@ -3513,26 +3520,6 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                 refRData->RemoveEntry("upcv4");
                             }
 
-                            if (haveIPv6address) {
-                                if (!mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord)) {
-                                    // Add an IPV6 address record
-                                    aaaaRData = new MDNSAAAARData();
-                                    mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::AAAA, MDNSResourceRecord::INTERNET, 120, aaaaRData));
-                                    mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord);
-                                    delete aaaaRData;
-                                }
-                                aaaaRData = static_cast<MDNSAAAARData*>(resourceRecord->GetRData());
-                                if (aaaaRData) {
-                                    aaaaRData->SetAddr(ipv6address.ToString());
-                                    refRData->SetIPV6ResponsePort(unicastIpv6Port);
-                                }
-                            } else {
-                                mdnspacket->RemoveAdditionalRecord(m_guid + ".local.", MDNSResourceRecord::AAAA);
-                                refRData->RemoveEntry("ipv6");
-                                refRData->RemoveEntry("upcv6");
-                            }
-
-
                         } else if (answerRecord->GetDomainName().find("._udp.") != String::npos) {
                             srvRData = static_cast<MDNSSrvRData*>(answerRecord->GetRData());
                             if (haveIPv4address) {
@@ -3557,27 +3544,6 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                                 refRData->RemoveEntry("upcv4");
                             }
 
-                            if (haveIPv6address) {
-                                if (!mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord)) {
-                                    // Add an IPV6 address record
-                                    aaaaRData = new MDNSAAAARData();
-                                    mdnspacket->AddAdditionalRecord(MDNSResourceRecord(m_guid + ".local.", MDNSResourceRecord::AAAA, MDNSResourceRecord::INTERNET, 120, aaaaRData));
-                                    delete aaaaRData;
-                                    mdnspacket->GetAdditionalRecord(srvRData->GetTarget(), MDNSResourceRecord::AAAA, &resourceRecord);
-                                }
-                                aaaaRData = static_cast<MDNSAAAARData*>(resourceRecord->GetRData());
-                                if (aaaaRData) {
-                                    aaaaRData->SetAddr(ipv6address.ToString());
-                                    if (unicastIpv6Port != 0) {
-
-                                        refRData->SetIPV6ResponsePort(unicastIpv6Port);
-                                    }
-                                }
-                            } else {
-                                mdnspacket->RemoveAdditionalRecord(m_guid + ".local.", MDNSResourceRecord::AAAA);
-                                refRData->RemoveEntry("ipv6");
-                                refRData->RemoveEntry("upcv6");
-                            }
                         }
 
 
@@ -3780,7 +3746,7 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
         // socket (unless we're in a transient state) and so we shouldn't send
         // it out that interface.
         //
-        if (m_liveInterfaces[i].m_multicastMDNSsockFd == -1) {
+        if (m_liveInterfaces[i].m_multicastMDNSsockFd == qcc::INVALID_SOCKET_FD) {
             QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): Interface %d. is not live", i));
             continue;
         }
@@ -3830,7 +3796,6 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
             // now is that it matches the destination.
             //
             uint16_t unicastPortv4 = 0;
-            uint16_t unicastPortv6 = 0;
             qcc::IPAddress ipv4address;
             bool haveIPv4address = m_liveInterfaces[i].m_address.IsIPv4();
             if (haveIPv4address) {
@@ -3846,7 +3811,6 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
             if (haveIPv6address) {
                 QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): Interface %d. is IPv6", i));
                 ipv6address = m_liveInterfaces[i].m_address;
-                unicastPortv6 = m_liveInterfaces[i].m_unicastPort;
             }
 
             //
@@ -3865,7 +3829,7 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
             // we for an IPv4 address.
             //
             for (uint32_t j = 0; j < m_liveInterfaces.size(); ++j) {
-                if (m_liveInterfaces[i].m_multicastMDNSsockFd == -1 ||
+                if (m_liveInterfaces[i].m_multicastMDNSsockFd == qcc::INVALID_SOCKET_FD ||
                     m_liveInterfaces[j].m_interfaceName != m_liveInterfaces[i].m_interfaceName) {
                     continue;
                 }
@@ -3881,9 +3845,13 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
                     QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): Interface %d. has IPv6 counterpart %d.", i, j));
                     haveIPv6address = true;
                     ipv6address = m_liveInterfaces[j].m_address;
-                    unicastPortv6 = m_liveInterfaces[j].m_unicastPort;
                     break;
                 }
+            }
+
+            if (!haveIPv4address) {
+                QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): Interface %d does not have an IPv4 address.", i));
+                continue;
             }
 
             //
@@ -3891,7 +3859,7 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
             //
             QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly(): Rewrite NS/MDNS packet %p", &(*packet)));
             RewriteVersionSpecific(msgVersion, packet, haveIPv4address, ipv4address, haveIPv6address, ipv6address,
-                                   unicastPortv4, unicastPortv6);
+                                   unicastPortv4);
 
             //
             // Send the protocol message described by the header, with its contained
@@ -3902,7 +3870,7 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
             if (msgVersion == 2) {
                 SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
                                     flags, interfaceIsIPv4, packet, i);
-            } else if (m_liveInterfaces[i].m_multicastsockFd != -1) {
+            } else if (m_liveInterfaces[i].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
                 SendProtocolMessage(m_liveInterfaces[i].m_multicastsockFd, ipv4address, interfaceAddressPrefixLen,
                                     flags, interfaceIsIPv4, packet, i);
             }
@@ -3949,7 +3917,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
         // we wouldn't be able to send anyway.
         //
 
-        if (m_liveInterfaces[i].m_multicastMDNSsockFd == -1) {
+        if (m_liveInterfaces[i].m_multicastMDNSsockFd == qcc::INVALID_SOCKET_FD) {
             QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively(): Interface %d. is not live", i));
             continue;
         }
@@ -4124,7 +4092,6 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
         //
         qcc::IPAddress ipv4address;
         uint16_t unicastPortv4 = 0;
-        uint16_t unicastPortv6 = 0;
         bool haveIPv4address = m_liveInterfaces[i].m_address.IsIPv4();
         if (haveIPv4address) {
             ipv4address = m_liveInterfaces[i].m_address;
@@ -4137,7 +4104,6 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
         bool haveIPv6address = m_liveInterfaces[i].m_address.IsIPv6();
         if (haveIPv6address) {
             ipv6address = m_liveInterfaces[i].m_address;
-            unicastPortv6 = m_liveInterfaces[i].m_unicastPort;
             QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively(): Interface %d. is IPv6", i));
         }
 
@@ -4167,7 +4133,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
         // we for an IPv4 address.
         //
         for (uint32_t j = 0; j < m_liveInterfaces.size(); ++j) {
-            if (m_liveInterfaces[i].m_multicastMDNSsockFd == -1 ||
+            if (m_liveInterfaces[i].m_multicastMDNSsockFd == qcc::INVALID_SOCKET_FD ||
                 m_liveInterfaces[j].m_interfaceName != m_liveInterfaces[i].m_interfaceName) {
                 continue;
             }
@@ -4183,11 +4149,14 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                 QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively(): Interface %d. has IPv6 counterpart %d.", i, j));
                 haveIPv6address = true;
                 ipv6address = m_liveInterfaces[j].m_address;
-                unicastPortv6 = m_liveInterfaces[j].m_unicastPort;
                 break;
             }
         }
 
+        if (!haveIPv4address) {
+            QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively(): Interface %d does not have an IPv4 address.", i));
+            continue;
+        }
         //
         // At this point, we are ready to multicast out an interface and we know
         // both of our IPv4 and IPv6 addresses if they exist.  Now, we have to
@@ -4200,7 +4169,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
         //
         // Do the version-specific rewriting of the addresses in this NS/MDNS packet.
         //
-        RewriteVersionSpecific(msgVersion, packet, haveIPv4address, ipv4address, haveIPv6address, ipv6address, unicastPortv4, unicastPortv6);
+        RewriteVersionSpecific(msgVersion, packet, haveIPv4address, ipv4address, haveIPv6address, ipv6address, unicastPortv4);
 
         //
         // Send the protocol message described by the header, with its contained
@@ -4210,7 +4179,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
         if (msgVersion == 2) {
             SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
                                 flags, interfaceIsIPv4, packet, i, localAddress);
-        } else if (m_liveInterfaces[i].m_multicastsockFd != -1) {
+        } else if (m_liveInterfaces[i].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
             SendProtocolMessage(m_liveInterfaces[i].m_multicastsockFd, ipv4address, interfaceAddressPrefixLen,
                                 flags, interfaceIsIPv4, packet, i, localAddress);
         }
@@ -4293,11 +4262,9 @@ void* IpNameServiceImpl::Run(void* arg)
 
     std::set<uint32_t> networkRefreshSet;
     CreateUnicastSocket(qcc::QCC_AF_INET);
-    CreateUnicastSocket(qcc::QCC_AF_INET6);
     qcc::Event unicastIPv4Event(m_ipv4UnicastSockFd, qcc::Event::IO_READ, false);
-    qcc::Event unicastIPv6Event(m_ipv6UnicastSockFd, qcc::Event::IO_READ, false);
 
-    qcc::SocketFd networkEventFd = -1;
+    qcc::SocketFd networkEventFd = qcc::INVALID_SOCKET_FD;
 #ifndef QCC_OS_GROUP_WINDOWS
     networkEventFd = qcc::NetworkEventSocket();
     qcc::Event networkEvent(networkEventFd, qcc::Event::IO_READ, false);
@@ -4406,7 +4373,6 @@ void* IpNameServiceImpl::Run(void* arg)
         checkEvents.push_back(&m_wakeEvent);
         checkEvents.push_back(&networkEvent);
         checkEvents.push_back(&unicastIPv4Event);
-        checkEvents.push_back(&unicastIPv6Event);
 
         //
         // We also need to wait on events from all of the sockets that
@@ -4414,10 +4380,10 @@ void* IpNameServiceImpl::Run(void* arg)
         // multicast messages on.
         //
         for (uint32_t i = 0; i < m_liveInterfaces.size(); ++i) {
-            if (m_liveInterfaces[i].m_multicastMDNSsockFd != -1) {
+            if (m_liveInterfaces[i].m_multicastMDNSsockFd != qcc::INVALID_SOCKET_FD) {
                 checkEvents.push_back(m_liveInterfaces[i].m_multicastMDNSevent);
             }
-            if (m_liveInterfaces[i].m_multicastsockFd != -1) {
+            if (m_liveInterfaces[i].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
                 checkEvents.push_back(m_liveInterfaces[i].m_multicastevent);
             }
         }
@@ -4623,7 +4589,7 @@ void* IpNameServiceImpl::Run(void* arg)
     // Clear live interfaces and exit.
     ClearLiveInterfaces();
 
-    if (networkEventFd != -1) {
+    if (networkEventFd != qcc::INVALID_SOCKET_FD) {
         qcc::Close(networkEventFd);
     }
 
@@ -6512,46 +6478,51 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
     }
 }
 
-qcc::String IpNameServiceImpl::PeerInfo::ToString(const qcc::String& guid)
+qcc::String IpNameServiceImpl::PeerInfo::ToString(const qcc::String& guid) const
 {
     String s;
     s += "guid=" + guid + "/" + GUID128(guid).ToShortString();
-    s += ",ipv4=" + unicastIPV4Info.ToString();
-    s += ",ipv6=" + unicastIPV6Info.ToString();
+    s += ",ip=" + unicastInfo.ToString();
     return s;
 }
 
 void IpNameServiceImpl::PrintPeerInfoMap()
 {
-    for (std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.begin();
+    for (std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.begin();
          it != m_peerInfoMap.end(); ++it) {
-        for (std::list<PeerInfo>::iterator pit = it->second.begin(); pit != it->second.end(); ++pit) {
+        for (std::set<PeerInfo>::iterator pit = it->second.begin(); pit != it->second.end(); ++pit) {
             QCC_DbgHLPrintf(("  %s", pit->ToString(it->first).c_str()));
         }
     }
 }
 
-bool IpNameServiceImpl::AddToPeerInfoMap(const qcc::String& guid, const qcc::IPEndpoint& ipv4, const qcc::IPEndpoint& ipv6, uint32_t ttl)
+bool IpNameServiceImpl::AddToPeerInfoMap(const qcc::String& guid, const qcc::IPEndpoint& ipEndpoint)
 {
+    if (ipEndpoint.GetPort() == 0 || ipEndpoint.GetAddress() == IPAddress()) {
+        return false;
+    }
     m_mutex.Lock();
-    std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.find(guid);
+    std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.find(guid);
     if (it != m_peerInfoMap.end()) {
         bool foundEntry = false;
-        for (std::list<PeerInfo>::iterator pit = it->second.begin(); !foundEntry && pit != it->second.end(); ++pit) {
-            if ((pit->unicastIPV4Info == ipv4) && (pit->unicastIPV6Info == ipv6)) {
+        for (std::set<PeerInfo>::iterator pit = it->second.begin(); !foundEntry && pit != it->second.end(); ++pit) {
+            if (pit->unicastInfo == ipEndpoint) {
                 foundEntry = true;
+                Timespec now;
+                GetTimeNow(&now);
+                (*pit).lastResponseTimeStamp = now;
             }
         }
         if (!foundEntry) {
-            PeerInfo peerInfo(ipv4, ipv6);
-            it->second.push_back(peerInfo);
+            PeerInfo peerInfo(ipEndpoint);
+            it->second.insert(peerInfo);
             QCC_DbgHLPrintf(("Add to peer info map: %s", peerInfo.ToString(it->first).c_str()));
         }
     } else {
-        PeerInfo peerInfo(ipv4, ipv6);
-        std::list<PeerInfo> peerInfoList;
-        peerInfoList.push_back(peerInfo);
-        m_peerInfoMap.insert(std::pair<qcc::String, std::list<PeerInfo> >(guid, peerInfoList));
+        PeerInfo peerInfo(ipEndpoint);
+        std::set<PeerInfo> peerInfoList;
+        peerInfoList.insert(peerInfo);
+        m_peerInfoMap.insert(std::pair<qcc::String, std::set<PeerInfo> >(guid, peerInfoList));
         QCC_DbgHLPrintf(("Add to peer info map: %s", peerInfo.ToString(guid).c_str()));
     }
     m_mutex.Unlock();
@@ -6561,9 +6532,9 @@ bool IpNameServiceImpl::AddToPeerInfoMap(const qcc::String& guid, const qcc::IPE
 bool IpNameServiceImpl::RemoveFromPeerInfoMap(const qcc::String& guid)
 {
     m_mutex.Lock();
-    std::unordered_map<qcc::String, std::list<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.find(guid);
+    std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.find(guid);
     if (it != m_peerInfoMap.end()) {
-        for (std::list<PeerInfo>::iterator pit = it->second.begin(); pit != it->second.end(); ++pit) {
+        for (std::set<PeerInfo>::iterator pit = it->second.begin(); pit != it->second.end(); ++pit) {
             QCC_DbgHLPrintf(("Remove from peer info map: %s", pit->ToString(guid).c_str()));
         }
         QCC_DbgHLPrintf(("Erase from peer info map: guid=%s", guid.c_str()));
@@ -6668,8 +6639,6 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint
     IPEndpoint u4, u6;
     IPEndpoint ns4;
     ns4.port = refRData->GetIPV4ResponsePort();
-    IPEndpoint ns6;
-    ns6.port = refRData->GetIPV6ResponsePort();
 
     if (transportMask & TRANSPORT_TCP) {
         MDNSPtrRData* ptrRDataTcp = static_cast<MDNSPtrRData*>(answerTcp->GetRData());
@@ -6716,7 +6685,6 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint
                 return;
             }
             r6.addr = aaaaRData->GetAddr();
-            ns6.addr = aaaaRData->GetAddr();
         }
     }
 
@@ -6765,7 +6733,6 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint
                 return;
             }
             u6.addr = aaaaRData->GetAddr();
-            ns6.addr = aaaaRData->GetAddr();
         }
     }
 
@@ -6781,7 +6748,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint
     //
     if (recvPort == MULTICAST_MDNS_PORT) {
         // We need to check if this packet is from a burst which we have seen before in which case we will ignore it
-        if (!UpdateMDNSPacketTracker(guid, endpoint, refRData->GetSearchID())) {
+        if (!UpdateMDNSPacketTracker(guid, ns4, refRData->GetSearchID())) {
             QCC_DbgPrintf(("Ignoring response with duplicate burst ID"));
             m_mutex.Unlock();
             return;
@@ -6811,7 +6778,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint
     // handlers triggers an action that requires the name to be in the name
     // table (e.g. JoinSession).
     //
-    HandleAdvertiseResponse(mdnsPacket, recvPort, guid, ns4, ns6, r4, r6, u4, u6);
+    HandleAdvertiseResponse(mdnsPacket, recvPort, guid, ns4, r4, r6, u4, u6);
 
     m_protectListeners = true;
     m_mutex.Unlock();
@@ -6826,7 +6793,7 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint
 }
 
 bool IpNameServiceImpl::HandleAdvertiseResponse(MDNSPacket mdnsPacket, uint16_t recvPort,
-                                                const qcc::String& guid, const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6,
+                                                const qcc::String& guid, const qcc::IPEndpoint& ns4,
                                                 const qcc::IPEndpoint& r4, const qcc::IPEndpoint& r6, const qcc::IPEndpoint& u4, const qcc::IPEndpoint& u6)
 {
     MDNSResourceRecord* advRecord;
@@ -6846,7 +6813,7 @@ bool IpNameServiceImpl::HandleAdvertiseResponse(MDNSPacket mdnsPacket, uint16_t 
     // services so that they can be polled for presence
     //
     if (ttl != 0) {
-        AddToPeerInfoMap(guid, ns4, ns6, ttl);
+        AddToPeerInfoMap(guid, ns4);
     }
 
     vector<qcc::String> namesTcp;
@@ -6988,7 +6955,6 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, IPEndpoint en
     }
 
     IPEndpoint ns4(refRData->GetIPV4ResponseAddr(), refRData->GetIPV4ResponsePort());
-    IPEndpoint ns6(refRData->GetIPV6ResponseAddr(), refRData->GetIPV6ResponsePort());
 
     String guid = refRecord->GetDomainName().substr(sizeof("sender-info.") - 1, 32);
     if (guid == m_guid) {
@@ -7007,7 +6973,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, IPEndpoint en
     //
     if (recvPort == MULTICAST_MDNS_PORT) {
         // We need to check if this packet is from a burst which we have seen before in which case we will ignore it
-        if (!UpdateMDNSPacketTracker(guid, endpoint, refRData->GetSearchID())) {
+        if (!UpdateMDNSPacketTracker(guid, ns4, refRData->GetSearchID())) {
             QCC_DbgPrintf(("Ignoring query with duplicate burst ID"));
             m_mutex.Unlock();
             return;
@@ -7017,7 +6983,7 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, IPEndpoint en
     m_mutex.Unlock();
     bool handled = false;
     for (list<IpNameServiceListener*>::iterator it = m_listeners.begin(); !handled && it != m_listeners.end(); ++it) {
-        handled = (*it)->QueryHandler(completeTransportMask, mdnsPacket, recvPort, ns4, ns6);
+        handled = (*it)->QueryHandler(completeTransportMask, mdnsPacket, recvPort, ns4);
     }
     m_mutex.Lock();
     m_protectListeners = false;
@@ -7025,13 +6991,13 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, IPEndpoint en
         m_mutex.Unlock();
         return;
     }
-    HandleSearchQuery(completeTransportMask, mdnsPacket, recvPort, guid, ns4, ns6, endpoint);
+    HandleSearchQuery(completeTransportMask, mdnsPacket, recvPort, guid, ns4);
 
     m_mutex.Unlock();
 }
 
 bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, MDNSPacket mdnsPacket, uint16_t recvPort,
-                                          const qcc::String& guid, const qcc::IPEndpoint& ns4, const qcc::IPEndpoint& ns6, const qcc::IPEndpoint& endpoint)
+                                          const qcc::String& guid, const qcc::IPEndpoint& ns4)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::HandleSearchQuery"));
     MDNSResourceRecord* searchRecord;
@@ -7133,11 +7099,8 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
         //
         if (respond) {
             m_mutex.Unlock();
-            if (endpoint.GetAddress().IsIPv4()) {
+            if (ns4.GetAddress().IsIPv4()) {
                 Retransmit(index, false, true, ns4, TRANSMIT_V2, completeTransportMask);
-            }
-            if (endpoint.GetAddress().IsIPv6()) {
-                Retransmit(index, false, true, ns6, TRANSMIT_V2, completeTransportMask);
             }
             m_mutex.Lock();
         }
