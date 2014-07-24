@@ -147,6 +147,9 @@ struct IODispatchEntry {
     bool writeEnable;       /* Whether write is currently enabled for this stream */
     bool readInProgress;    /* Whether read is currently in progress for this stream */
     bool writeInProgress;   /* Whether write is currently in progress for this stream */
+    bool mainAddingRead;    /* Whether the main thread will re-add a read alarm for this stream */
+    bool mainAddingWrite;   /* Whether the main thread will re-add a write alarm for this stream */
+
     StoppingState stopping_state;          /* Whether this stream is in the process of being stopped*/
 
     /**
@@ -162,6 +165,8 @@ struct IODispatchEntry {
         writeEnable(false),
         readInProgress(false),
         writeInProgress(false),
+        mainAddingRead(false),
+        mainAddingWrite(false),
         stopping_state(IO_RUNNING) { }
 
     /**
@@ -185,6 +190,8 @@ struct IODispatchEntry {
         writeEnable(writeEnable),
         readInProgress(readInProgress),
         writeInProgress(writeInProgress),
+        mainAddingRead(false),
+        mainAddingWrite(false),
         stopping_state(IO_RUNNING)
     { }
 };
