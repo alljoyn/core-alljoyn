@@ -186,6 +186,7 @@ enum ArdpState {
 /**
  * The format of a SYN segment on the wire.
  */
+#pragma pack(push, 1)
 typedef struct {
     uint8_t flags;      /* See Control flag definitions above */
     uint8_t hlen;       /* Length of the header in units of two octets (number of uint16_t) */
@@ -194,12 +195,11 @@ typedef struct {
     uint16_t dlen;      /* The length of the data in the current segment.  Does not include the header size. */
     uint32_t seq;       /* The sequence number of the current segment. */
     uint32_t ack;       /* The number of the segment that the sender of this segment last received correctly and in sequence. */
-    uint32_t ttl;       /* Time-to-live */
-    uint16_t window;    /* The current receive window */
     uint16_t segmax;    /* The maximum number of outstanding segments the other side can send without acknowledgement. */
     uint16_t segbmax;   /* The maximum segment size we are willing to receive.  (the RBUF.MAX specified by the user calling open). */
     uint16_t options;   /* Options for the connection.  Always Sequenced Delivery Mode (SDM). */
 } ArdpSynSegment;
+#pragma pack(pop)
 
 typedef struct {
     ArdpSynSegment ss;
@@ -875,6 +875,7 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
 static QStatus Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t flags, uint32_t seq, uint32_t ack, uint32_t lcs)
 {
     ArdpHeader h;
+    memset(&h, 0, sizeof (h));
 
     QCC_DbgTrace(("Send(handle=%p, conn=%p, flags=0x%02x, seq=%u, ack=%u, lcs=%u)", handle, conn, flags, seq, ack, lcs));
 
@@ -882,7 +883,6 @@ static QStatus Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t flags, uin
     h.hlen = conn->sndHdrLen / 2;
     h.src = htons(conn->local);
     h.dst = htons(conn->foreign);;
-    h.dlen = 0;
     h.seq = htonl(seq);
     h.ack = htonl(ack);
     h.lcs = htonl(lcs);
