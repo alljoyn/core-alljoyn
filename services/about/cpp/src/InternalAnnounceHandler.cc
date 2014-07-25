@@ -88,6 +88,8 @@ QStatus InternalAnnounceHandler::RemoveHandler(AnnounceHandler& handler, const c
     std::pair <AnnounceMap::iterator, AnnounceMap::iterator> handlers;
     announceMapLock.Lock(MUTEX_CONTEXT);
     std::vector<AnnounceMap::iterator> toRemove;
+    std::vector<qcc::String> ruleToRemove;
+
     handlers = announceMap.equal_range(&handler);
     for (AnnounceMap::iterator it = handlers.first; it != handlers.second; ++it) {
         if (implementsInterfaces == NULL) {
@@ -113,17 +115,19 @@ QStatus InternalAnnounceHandler::RemoveHandler(AnnounceHandler& handler, const c
     }
 
     for (std::vector<AnnounceMap::iterator>::iterator trit = toRemove.begin(); trit != toRemove.end(); ++trit) {
+        //call remove match for the interface
+        qcc::String matchRule = emptyMatchRule;
+        for (std::set<qcc::String>::iterator it = (*trit)->second.begin(); it != (*trit)->second.end(); ++it) {
+            matchRule += qcc::String(",implements='") + *it + qcc::String("'");
+        }
+        // The MatchRule can not be removed while the announceMapLock is
+        // held since it could result in a deadlock.  So we build a list
+        // of all the match rules that should be removed and then remove
+        // them after the announceMapLock is released.
+        ruleToRemove.push_back(matchRule);
+
         bool erased = false;
         while (!erased) {
-            //call remove match for the interface
-            qcc::String matchRule = emptyMatchRule;
-            for (std::set<qcc::String>::iterator it = (*trit)->second.begin(); it != (*trit)->second.end(); ++it) {
-                matchRule += qcc::String(",implements='") + *it + qcc::String("'");
-            }
-
-            QCC_DbgTrace(("Calling RemoveMatch(\"%s\")", matchRule.c_str()));
-            status = bus.RemoveMatch(matchRule.c_str());
-
             //remove the announce handler from the announceMap;
             announceHandlerLock.Lock(MUTEX_CONTEXT);
             if (announceHandlerList.empty()) {
@@ -137,6 +141,11 @@ QStatus InternalAnnounceHandler::RemoveHandler(AnnounceHandler& handler, const c
         }
     }
     announceMapLock.Unlock(MUTEX_CONTEXT);
+
+    for (uint32_t i = 0; i < ruleToRemove.size(); ++i) {
+        QCC_DbgTrace(("Calling RemoveMatch(\"%s\")", ruleToRemove[i].c_str()));
+        status = bus.RemoveMatch(ruleToRemove[i].c_str());
+    }
     return status;
 }
 
@@ -145,7 +154,11 @@ QStatus InternalAnnounceHandler::RemoveAllHandlers() {
     QCC_DbgTrace(("InternalAnnounceHandler::%s", __FUNCTION__));
     QStatus status = ER_OK;
     announceMapLock.Lock(MUTEX_CONTEXT);
-    for (AnnounceMap::iterator amit = announceMap.begin(); amit != announceMap.end(); ++amit) {
+    AnnounceMap tmpAnnounceMap = announceMap;
+    announceMap.clear();
+    announceMapLock.Unlock(MUTEX_CONTEXT);
+
+    for (AnnounceMap::iterator amit = tmpAnnounceMap.begin(); amit != tmpAnnounceMap.end(); ++amit) {
         //call remove match for each interface
         qcc::String matchRule = emptyMatchRule;
         for (std::set<qcc::String>::iterator it = amit->second.begin(); it != amit->second.end(); ++it) {
@@ -156,8 +169,6 @@ QStatus InternalAnnounceHandler::RemoveAllHandlers() {
         status = bus.RemoveMatch(matchRule.c_str());
     }
     //now that all the match rules are removed clear the announceMap
-    announceMap.clear();
-    announceMapLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
