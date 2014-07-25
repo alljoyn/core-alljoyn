@@ -316,6 +316,15 @@ QStatus SetBlocking(SocketFd sockfd, bool blocking);
 /**
  * Set TCP based socket to use or not use Nagle algorithm (TCP_NODELAY)
  *
+ * @param sockfd  Socket descriptor.
+ * @param onoff   Turn linger on if true.
+ * @param linger  Time to linger if onoff is true.
+ */
+QStatus SetLinger(SocketFd sockfd, bool onoff, uint32_t linger);
+
+/**
+ * Set TCP based socket to use or not use Nagle algorithm (TCP_NODELAY)
+ *
  * @param sockfd    Socket descriptor.
  * @param useNagle  Set to true to Nagle algorithm. Set to false to disable Nagle.
  */

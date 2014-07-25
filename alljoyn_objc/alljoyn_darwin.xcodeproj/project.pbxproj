@@ -33,7 +33,7 @@
 /* Begin PBXLegacyTarget section */
 		A441CDF7161F6479008A4779 /* alljoyn_unity_osx */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u OS=darwin CPU=x86 DOCS=html BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildArgumentsString = "$(SCONSFLAGS) -u OS=darwin CPU=x86 DOCS=html BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
 			buildConfigurationList = A441CDFA161F6479008A4779 /* Build configuration list for PBXLegacyTarget "alljoyn_unity_osx" */;
 			buildPhases = (
 			);
@@ -47,7 +47,7 @@
 		};
 		AC0DC84C151A46F0000E302F /* alljoyn_core_ios */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u OS=darwin CPU=arm BR=on BINDINGS=\"cpp\" SERVICES=\"\"  WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildArgumentsString = "$(SCONSFLAGS) -u OS=darwin CPU=arm BR=on BINDINGS=\"cpp\" SERVICES=\"\"  WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
 			buildConfigurationList = AC0DC84D151A46F0000E302F /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios" */;
 			buildPhases = (
 			);
@@ -61,7 +61,7 @@
 		};
 		AC8D8CFE161376FE00361742 /* alljoyn_c_ios */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u OS=darwin CPU=arm BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildArgumentsString = "$(SCONSFLAGS) -u OS=darwin CPU=arm BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
 			buildConfigurationList = AC8D8CFF161376FE00361742 /* Build configuration list for PBXLegacyTarget "alljoyn_c_ios" */;
 			buildPhases = (
 			);
@@ -75,7 +75,7 @@
 		};
 		AC9C2C6E15FA9B4C00C60607 /* alljoyn_c_osx */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u OS=darwin CPU=x86 DOCS=html BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildArgumentsString = "$(SCONSFLAGS) -u OS=darwin CPU=x86 DOCS=html BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
 			buildConfigurationList = AC9C2C7115FA9B4C00C60607 /* Build configuration list for PBXLegacyTarget "alljoyn_c_osx" */;
 			buildPhases = (
 			);
@@ -89,7 +89,7 @@
 		};
 		ACA3BC341587FC5E0010F1C5 /* alljoyn_streaming_osx */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u OS=darwin CPU=x86 DOCS=html BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildArgumentsString = "$(SCONSFLAGS) -u OS=darwin CPU=x86 DOCS=html BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
 			buildConfigurationList = ACA3BC371587FC5E0010F1C5 /* Build configuration list for PBXLegacyTarget "alljoyn_streaming_osx" */;
 			buildPhases = (
 			);
@@ -103,7 +103,7 @@
 		};
 		ACA3BC391587FDBC0010F1C5 /* alljoyn_streaming_ios */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u OS=darwin CPU=arm BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildArgumentsString = "$(SCONSFLAGS) -u OS=darwin CPU=arm BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
 			buildConfigurationList = ACA3BC3A1587FDBC0010F1C5 /* Build configuration list for PBXLegacyTarget "alljoyn_streaming_ios" */;
 			buildPhases = (
 			);
@@ -117,7 +117,7 @@
 		};
 		ACB2C746160B8D9900D7E3A6 /* alljoyn_core_ios_armv7s */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u OS=darwin CPU=armv7s BR=on BINDINGS=\"cpp\" SERVICES=\"\" WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildArgumentsString = "$(SCONSFLAGS) -u OS=darwin CPU=armv7s BR=on BINDINGS=\"cpp\" SERVICES=\"\" WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
 			buildConfigurationList = ACB2C747160B8D9900D7E3A6 /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios_armv7s" */;
 			buildPhases = (
 			);
@@ -131,7 +131,7 @@
 		};
 		ACB2C74B160B8EFF00D7E3A6 /* alljoyn_core_ios_armv7 */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u OS=darwin CPU=armv7 BR=on BINDINGS=\"cpp\" SERVICES=\"\" WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildArgumentsString = "$(SCONSFLAGS) -u OS=darwin CPU=armv7 BR=on BINDINGS=\"cpp\" SERVICES=\"\" WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
 			buildConfigurationList = ACB2C74C160B8EFF00D7E3A6 /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios_armv7" */;
 			buildPhases = (
 			);
@@ -145,7 +145,7 @@
 		};
 		ACB4AFB6150E631F0054D964 /* alljoyn_core_osx */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u OS=darwin CPU=x86 DOCS=html BR=on BINDINGS=\"cpp\" WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildArgumentsString = "$(SCONSFLAGS) -u OS=darwin CPU=x86 DOCS=html BR=on BINDINGS=\"cpp\" WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
 			buildConfigurationList = ACB4AFB9150E631F0054D964 /* Build configuration list for PBXLegacyTarget "alljoyn_core_osx" */;
 			buildPhases = (
 			);
@@ -159,7 +159,7 @@
 		};
 		ACFED7B21624CE2900697423 /* alljoyn_unity_ios */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u OS=darwin CPU=arm BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
+			buildArgumentsString = "$(SCONSFLAGS) -u OS=darwin CPU=arm BR=on WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
 			buildConfigurationList = ACFED7B31624CE2900697423 /* Build configuration list for PBXLegacyTarget "alljoyn_unity_ios" */;
 			buildPhases = (
 			);
