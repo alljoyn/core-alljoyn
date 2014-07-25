@@ -602,7 +602,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                     }
 
                 }
-                if (status == ER_TIMEOUT) {
+                if ((status == ER_TIMEOUT) && (delay > 0)) {
                     timer->lock.Unlock();
                     Event evt(static_cast<uint32_t>(delay), 0);
                     Event::Wait(evt);
