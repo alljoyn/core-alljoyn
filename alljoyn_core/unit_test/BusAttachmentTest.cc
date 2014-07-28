@@ -562,6 +562,15 @@ TEST_F(BusAttachmentTest, Ping_self) {
     ASSERT_EQ(ER_OK, bus.Ping(bus.GetUniqueName().c_str(), 1000));
 }
 
+TEST_F(BusAttachmentTest, Ping_bad_wellknownName) {
+    QStatus status = bus.Ping(":1badNaME.2", 500);
+    ASSERT_EQ(ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME, status) << "  Actual Status: " << QCC_StatusText(status);
+}
+
+TEST_F(BusAttachmentTest, Ping_null_ptr) {
+    ASSERT_EQ(ER_BUS_BAD_BUS_NAME, bus.Ping(NULL, 500));
+}
+
 TEST_F(BusAttachmentTest, Ping_other_on_same_bus) {
     BusAttachment otherBus("BusAttachment OtherBus", false);
 
