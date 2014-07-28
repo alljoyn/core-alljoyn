@@ -107,7 +107,6 @@ QStatus IODispatch::Join()
 QStatus IODispatch::StartStream(Stream* stream, IOReadListener* readListener, IOWriteListener* writeListener, IOExitListener* exitListener, bool readEnable, bool writeEnable)
 {
     QCC_DbgTrace(("StartStream %p", stream));
-
     lock.Lock();
     /* Dont attempt to register a stream if the IODispatch is shutting down */
     if (!isRunning) {
@@ -474,10 +473,13 @@ ThreadReturn STDCALL IODispatch::Run(void* arg) {
                                 Alarm prevAlarm = it->second.readAlarm;
                                 Alarm readAlarm = Alarm(when, listener, it->second.readCtxt);
                                 it->second.readInProgress = true;
+                                it->second.mainAddingRead = true;
                                 lock.Unlock();
                                 /* Remove the read timeout alarm if any first */
                                 timer.RemoveAlarm(prevAlarm, true);
                                 lock.Lock();
+                                it->second.mainAddingRead = false;
+
                                 QStatus status = ER_TIMER_FULL;
                                 it = dispatchEntries.find(stream);
 
@@ -512,10 +514,14 @@ ThreadReturn STDCALL IODispatch::Run(void* arg) {
 
                                 Alarm writeAlarm = Alarm(when, listener, it->second.writeCtxt);
                                 it->second.writeInProgress = true;
+                                it->second.mainAddingWrite = true;
+
                                 lock.Unlock();
                                 /* Remove the write timeout alarm if any first */
                                 timer.RemoveAlarm(prevAlarm, true);
                                 lock.Lock();
+                                it->second.mainAddingWrite = false;
+
                                 QStatus status = ER_TIMER_FULL;
 
                                 map<Stream*, IODispatchEntry>::iterator it = dispatchEntries.find(stream);
@@ -576,7 +582,10 @@ QStatus IODispatch::EnableReadCallback(const Source* source, uint32_t timeout)
     }
 
     it->second.readEnable = true;
-
+    if (it->second.mainAddingRead) {
+        lock.Unlock();
+        return ER_OK;
+    }
     if (timeout != 0) {
         /* If timeout is non-zero, add a timeout alarm */
         uint32_t temp = timeout * 1000;
@@ -640,7 +649,7 @@ QStatus IODispatch::EnableTimeoutCallback(const Source* source, uint32_t timeout
     /* If a read is in progress, the ReadCallback will take care of adding the
      * timeout callback for this stream.
      */
-    if (it->second.readInProgress) {
+    if (it->second.readInProgress || it->second.mainAddingRead) {
         lock.Unlock();
         return ER_OK;
     }
@@ -727,7 +736,7 @@ QStatus IODispatch::EnableWriteCallbackNow(Sink* sink)
         lock.Unlock();
         return ER_INVALID_STREAM;
     }
-    if (it->second.writeEnable) {
+    if (it->second.writeEnable || it->second.mainAddingWrite) {
         lock.Unlock();
         return ER_OK;
     }
@@ -770,6 +779,10 @@ QStatus IODispatch::EnableWriteCallback(Sink* sink, uint32_t timeout)
     }
 
     it->second.writeEnable = true;
+    if (it->second.mainAddingWrite) {
+        lock.Unlock();
+        return ER_OK;
+    }
 
     if (timeout != 0) {
         int32_t when = timeout * 1000;
