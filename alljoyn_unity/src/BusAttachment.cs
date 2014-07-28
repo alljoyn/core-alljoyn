@@ -1325,16 +1325,21 @@ namespace AllJoynUnity
 			 * @param name The unique or well-known name to ping
 			 * @param timeout Timeout specified in milliseconds to wait for reply
 			 * @return
-			 *   - QStatus.OK on success
-			 *   - QStatus.ALLJOYN_PING_FAILED Ping failed
-			 *   - QStatus.ALLJOYN_PING_REPLY_TIMEOUT Ping call timed out
-			 *   - QStatus.ALLJOYN_PING_REPLY_UNKNOWN_NAME name not found currently or not part of any known session
-			 *   - QStatus.ALLJOYN_PING_REPLY_UNIMPLEMENTED the remote routing node does not implement Ping
-			 *   - QStatus.ALLJOYN_PING_REPLY_UNREACHABLE the name pinged is unreachable
-			 *   - QStatus.BUS_UNEXPECTED_DISPOSITION An unexpected disposition was returned and has been treated as an error
-			 *   - QStatus.BUS_NOT_CONNECTED the BusAttachment is not connected to the bus
-			 *   - QStatus.BUS_BAD_BUS_NAME the name parameter is not a valid bus name
-			 *   - An error status otherwise
+                         *   - QStatus.OK the name is present and responding
+                         *   - QStatus.ALLJOYN_PING_REPLY_UNREACHABLE the name is no longer present
+                         *   <br>
+                         *   The following return values indicate that the router cannot determine if the 
+                         *   remote name is present and responding:
+                         *   - QStatus.ALLJOYN_PING_REPLY_TIMEOUT Ping call timed out
+                         *   - QStatus.ALLJOYN_PING_REPLY_UNKNOWN_NAME name not found currently or not part of any known session
+                         *   - QStatus.ALLJOYN_PING_REPLY_INCOMPATIBLE_REMOTE_ROUTING_NODE the remote routing node does not implement Ping
+                         *   <br>
+                         *   The following return values indicate an error with the ping call itself:
+                         *   - QStatus.ALLJOYN_PING_FAILED Ping failed
+                         *   - QStatus.BUS_UNEXPECTED_DISPOSITION An unexpected disposition was returned and has been treated as an error
+                         *   - QStatus.BUS_NOT_CONNECTED the BusAttachment is not connected to the bus
+                         *   - QStatus.BUS_BAD_BUS_NAME the name parameter is not a valid bus name
+                         *   - An error status otherwise
 			 */
 			public QStatus Ping(string name, uint timeout)
 			{

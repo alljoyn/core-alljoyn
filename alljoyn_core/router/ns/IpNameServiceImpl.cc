@@ -1882,61 +1882,66 @@ QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::
             }
         }
     }
-    std::set<PeerInfo>::iterator pit = it->second.begin();
-    PrintPeerInfoMap();
-    if (!it->second.empty()) {
-        Timespec now;
-        GetTimeNow(&now);
-        QCC_DbgPrintf(("Entry found in Peer Info Map. Setting unicast destination"));
+    // the guid was not found in the m_peerInfoMap the name is unknown.
+    if (it != m_peerInfoMap.end()) {
+        std::set<PeerInfo>::iterator pit = it->second.begin();
+        PrintPeerInfoMap();
+        // The check here is because we could be in a session with a name and there could be no valid peer info for it
+        // The name will be removed by layer above when we are no longer in a session with that name and it is no longer advertised
+        if (!it->second.empty()) {
+            Timespec now;
+            GetTimeNow(&now);
+            QCC_DbgPrintf(("Entry found in Peer Info Map. Setting unicast destination"));
 
-        while (pit != it->second.end()) {
-            PeerInfo peerInfo = *pit;
-            if (!ping && ((now - (*pit).lastQueryTimeStamp) < MIN_THRESHOLD_CACHE_REFRESH_MS)) {
-                ++pit;
-                continue;
-            }
-            if (!ping) {
-                // Purge entries from PeerInfo map that havent recieved a response for 3 Cache refresh cycles
-                if ((now - (*pit).lastResponseTimeStamp) >= PEER_INFO_MAP_PURGE_TIMEOUT) {
-                    it->second.erase(pit++);
+            while (pit != it->second.end()) {
+                PeerInfo peerInfo = *pit;
+                if (!ping && ((now - (*pit).lastQueryTimeStamp) < MIN_THRESHOLD_CACHE_REFRESH_MS)) {
+                    ++pit;
                     continue;
                 }
-                (*pit).lastQueryTimeStamp = now;
-            }
-
-            MDNSPacket query;
-            query->SetDestination((*pit).unicastInfo);
-            MDNSSearchRData* searchRData = new MDNSSearchRData();
-            for (MatchMap::iterator it1 = matching.begin(); it1 != matching.end(); ++it1) {
-                searchRData->SetValue(it1->first, it1->second);
-            }
-
-            if (ping) {
-                MDNSPingRData* pingRData = new MDNSPingRData();
-                for (MatchMap::iterator it1 = matching.begin(); it1 != matching.end(); ++it1) {
-                    pingRData->SetValue("n", it1->second);
+                if (!ping) {
+                    // Purge entries from PeerInfo map that havent recieved a response for 3 Cache refresh cycles
+                    if ((now - (*pit).lastResponseTimeStamp) >= PEER_INFO_MAP_PURGE_TIMEOUT) {
+                        it->second.erase(pit++);
+                        continue;
+                    }
+                    (*pit).lastQueryTimeStamp = now;
                 }
-                MDNSResourceRecord pingRecord("ping." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingRData);
-                query->AddAdditionalRecord(pingRecord);
-                delete pingRData;
-            }
 
-            MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
-            query->AddAdditionalRecord(searchRecord);
-            delete searchRData;
-            m_mutex.Unlock();
-            Query(transportMask, query);
-            m_mutex.Lock();
-            it = m_peerInfoMap.find(longGuid);
-            if (it == m_peerInfoMap.end()) {
-                break;
+                MDNSPacket query;
+                query->SetDestination((*pit).unicastInfo);
+                MDNSSearchRData* searchRData = new MDNSSearchRData();
+                for (MatchMap::iterator it1 = matching.begin(); it1 != matching.end(); ++it1) {
+                    searchRData->SetValue(it1->first, it1->second);
+                }
+
+                if (ping) {
+                    MDNSPingRData* pingRData = new MDNSPingRData();
+                    for (MatchMap::iterator it1 = matching.begin(); it1 != matching.end(); ++it1) {
+                        pingRData->SetValue("n", it1->second);
+                    }
+                    MDNSResourceRecord pingRecord("ping." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingRData);
+                    query->AddAdditionalRecord(pingRecord);
+                    delete pingRData;
+                }
+
+                MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
+                query->AddAdditionalRecord(searchRecord);
+                delete searchRData;
+                m_mutex.Unlock();
+                Query(transportMask, query);
+                m_mutex.Lock();
+                it = m_peerInfoMap.find(longGuid);
+                if (it == m_peerInfoMap.end()) {
+                    break;
+                }
+                pit = it->second.upper_bound(peerInfo);
             }
-            pit = it->second.upper_bound(peerInfo);
         }
     } else {
         if (ping) {
             m_mutex.Unlock();
-            return ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED;
+            return ER_ALLJOYN_PING_REPLY_INCOMPATIBLE_REMOTE_ROUTING_NODE;
         }
         QCC_DbgPrintf((" IpNameServiceImpl::RefreshCache(): Entry not found in PeerInfoMap"));
     }

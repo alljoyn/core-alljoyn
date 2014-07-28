@@ -2307,8 +2307,8 @@ QStatus BusAttachment::Ping(const char* name, uint32_t timeout)
                 status = ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME;
                 break;
 
-            case ALLJOYN_PING_REPLY_UNIMPLEMENTED:
-                status = ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED;
+            case ALLJOYN_PING_REPLY_INCOMPATIBLE_REMOTE_ROUTING_NODE:
+                status = ER_ALLJOYN_PING_REPLY_INCOMPATIBLE_REMOTE_ROUTING_NODE;
                 break;
 
             case ALLJOYN_PING_REPLY_UNREACHABLE:
@@ -2324,7 +2324,12 @@ QStatus BusAttachment::Ping(const char* name, uint32_t timeout)
                 break;
             }
         }
-    } else {
+    } else if (reply->GetType() == MESSAGE_ERROR) {
+        if (!strcmp(reply->GetErrorDescription().c_str(), "org.alljoyn.Bus.Timeout")) {
+            status = ER_ALLJOYN_PING_REPLY_TIMEOUT;
+        } else {
+            status = ER_BUS_REPLY_IS_ERROR_MESSAGE;
+        }
         QCC_LogError(status, ("%s.Ping returned ERROR_MESSAGE (error=%s)", org::alljoyn::Bus::InterfaceName, reply->GetErrorDescription().c_str()));
     }
     return status;
@@ -2390,8 +2395,8 @@ void BusAttachment::Internal::PingAsyncCB(Message& reply, void* context)
                 status = ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME;
                 break;
 
-            case ALLJOYN_PING_REPLY_UNIMPLEMENTED:
-                status = ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED;
+            case ALLJOYN_PING_REPLY_INCOMPATIBLE_REMOTE_ROUTING_NODE:
+                status = ER_ALLJOYN_PING_REPLY_INCOMPATIBLE_REMOTE_ROUTING_NODE;
                 break;
 
             case ALLJOYN_PING_REPLY_UNREACHABLE:
@@ -2408,7 +2413,11 @@ void BusAttachment::Internal::PingAsyncCB(Message& reply, void* context)
             }
         }
     } else if (reply->GetType() == MESSAGE_ERROR) {
-        status = ER_BUS_REPLY_IS_ERROR_MESSAGE;
+        if (!strcmp(reply->GetErrorDescription().c_str(), "org.alljoyn.Bus.Timeout")) {
+            status = ER_ALLJOYN_PING_REPLY_TIMEOUT;
+        } else {
+            status = ER_BUS_REPLY_IS_ERROR_MESSAGE;
+        }
         QCC_LogError(status, ("%s.Ping returned ERROR_MESSAGE (error=%s)", org::alljoyn::Bus::InterfaceName, reply->GetErrorDescription().c_str()));
     }
 
