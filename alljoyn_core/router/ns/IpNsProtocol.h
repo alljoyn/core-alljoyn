@@ -3938,6 +3938,32 @@ class _MDNSPacket : public _Packet {
      */
     bool GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRType type, uint16_t version, MDNSResourceRecord** additional);
 
+    /**
+     * @internal
+     * @brief Get the additional record with a particular name, type, rdata version and particular index.
+     *
+     * @param str The desired name.
+     * @param type The desired RRtype.
+     * @param version The desired version
+     * @param index The index to obtain in case of multiple matches
+     * @param additional[out] The MDNSResourceRecord into which the additional record will be filled.
+     *
+     * @return true if the name and type were found, false otherwise.
+     */
+    bool GetAdditionalRecordAt(qcc::String str, MDNSResourceRecord::RRType type, uint16_t version, uint32_t index, MDNSResourceRecord** additional);
+
+    /**
+     * @internal
+     * @brief Get number additional records matching a particular name, type, and rdata version.
+     *
+     * @param str The desired name.
+     * @param type The desired RRtype.
+     * @param version The desired version
+     *
+     * @return number of matches.
+     */
+    uint32_t GetNumMatches(qcc::String str, MDNSResourceRecord::RRType type, uint16_t version);
+
     TransportMask GetTransportMask();
     /**
      * @internal
