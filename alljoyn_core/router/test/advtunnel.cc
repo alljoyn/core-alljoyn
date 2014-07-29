@@ -92,7 +92,7 @@ class AdvTunnel {
 
     QStatus RelayAdv();
 
-    void Found(const qcc::String& busAddr, const qcc::String& guid, std::vector<qcc::String>& nameList, uint8_t timer);
+    void Found(const qcc::String& busAddr, const qcc::String& guid, std::vector<qcc::String>& nameList, uint32_t timer);
 
     QStatus PullString(qcc::String& str)
     {
@@ -350,7 +350,7 @@ QStatus AdvTunnel::RelayAdv()
     return status;
 }
 
-void AdvTunnel::Found(const qcc::String& busAddr, const qcc::String& guid, std::vector<qcc::String>& nameList, uint8_t timer)
+void AdvTunnel::Found(const qcc::String& busAddr, const qcc::String& guid, std::vector<qcc::String>& nameList, uint32_t timer)
 {
     QStatus status;
 
@@ -463,7 +463,7 @@ int main(int argc, char** argv)
     g_ns = &ns;
 
     ns.SetCallback(TRANSPORT_TCP,
-                   new CallbackImpl<AdvTunnel, void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint8_t>
+                   new CallbackImpl<AdvTunnel, void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint32_t>
                        (&tunnel, &AdvTunnel::Found));
 
     ns.Enable(TRANSPORT_TCP, port, 0, 0, 0, true, false, false, false);

@@ -2885,7 +2885,7 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
     if ((replyCode == ALLJOYN_ADVERTISENAME_REPLY_SUCCESS) && (transports & TRANSPORT_LOCAL)) {
         vector<String> names;
         names.push_back(advNameStr);
-        FoundNames("local:", bus.GetGlobalGUIDString(), TRANSPORT_LOCAL, &names, numeric_limits<uint8_t>::max());
+        FoundNames("local:", bus.GetGlobalGUIDString(), TRANSPORT_LOCAL, &names, numeric_limits<uint32_t>::max());
     }
 
     /* Log error if reply could not be sent */
@@ -4096,7 +4096,7 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
                             const qcc::String& guid,
                             TransportMask transport,
                             const vector<qcc::String>* names,
-                            uint8_t ttl)
+                            uint32_t ttl)
 {
     QCC_DbgTrace(("AllJoynObj::FoundNames(busAddr = \"%s\", guid = \"%s\", names = %s, ttl = %d)",
                   busAddr.c_str(), guid.c_str(), StringVectorToString(names, ",").c_str(), ttl));
@@ -4157,11 +4157,11 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
                     NameMapType::iterator it = nameMap.insert(NameMapType::value_type(*nit, NameMapEntry(busAddr,
                                                                                                          guid,
                                                                                                          transport,
-                                                                                                         (ttl == numeric_limits<uint8_t>::max()) ? numeric_limits<uint64_t>::max() : (1000LL * ttl),
+                                                                                                         (ttl == numeric_limits<uint32_t>::max()) ? numeric_limits<uint64_t>::max() : (1000LL * ttl),
                                                                                                          this)));
                     QCC_DbgPrintf(("TTL set to %ld", it->second.ttl));
                     /* Don't schedule an alarm which will never expire or multiple timers for the same set */
-                    if (ttl != numeric_limits<uint8_t>::max()) {
+                    if (ttl != numeric_limits<uint32_t>::max()) {
                         NameMapEntry& nme = it->second;
                         // We need the alarm to be triggered off at 80% time to enable cache refresh
                         const uint32_t timeout = ttl * 1000 * 80 / 100;

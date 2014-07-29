@@ -386,7 +386,7 @@ class P2PConManImpl {
     bool m_foundAdvertisedNameFired;       /**< Indicates that we found IP addressing information corresponding to searchedGuid */
 
     void FoundAdvertisedName(const qcc::String& busAddr, const qcc::String& guid,
-                             std::vector<qcc::String>& nameList, uint8_t timer);
+                             std::vector<qcc::String>& nameList, uint32_t timer);
 
     Callback<void, P2PConMan::LinkState, const qcc::String&>* m_stateCallback;
     Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint8_t>* m_nameCallback;

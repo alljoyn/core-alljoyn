@@ -141,7 +141,7 @@ class TransportList : public TransportListener {
      * This method is for internal use only.
      * @see TransportListener::FoundNames()
      */
-    void FoundNames(const qcc::String& busAddr, const qcc::String& guid, TransportMask transport, const std::vector<qcc::String>* names, uint8_t ttl);
+    void FoundNames(const qcc::String& busAddr, const qcc::String& guid, TransportMask transport, const std::vector<qcc::String>* names, uint32_t ttl);
 
     /**
      * Called when a transport gets a surprise disconnect from a remote bus.

@@ -268,7 +268,7 @@ QStatus IpNameService::Init(const qcc::String& guid, bool loopback)
 }
 
 void IpNameService::SetCallback(TransportMask transportMask,
-                                Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint8_t>* cb)
+                                Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint32_t>* cb)
 {
     //
     // If the entry gate has been closed, we do not allow a SetCallback to actually

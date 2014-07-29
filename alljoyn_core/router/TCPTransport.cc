@@ -961,7 +961,7 @@ QStatus TCPTransport::Start()
      * we hear about a new well-known bus name.
      */
     IpNameService::Instance().SetCallback(TRANSPORT_TCP,
-                                          new CallbackImpl<FoundCallback, void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint8_t>
+                                          new CallbackImpl<FoundCallback, void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint32_t>
                                               (&m_foundCallback, &FoundCallback::Found));
 
     /*
@@ -3903,7 +3903,7 @@ void TCPTransport::QueueDisableAdvertisement(const qcc::String& advertiseName, T
 }
 
 void TCPTransport::FoundCallback::Found(const qcc::String& busAddr, const qcc::String& guid,
-                                        std::vector<qcc::String>& nameList, uint8_t timer)
+                                        std::vector<qcc::String>& nameList, uint32_t timer)
 {
     QCC_DbgPrintf(("TCPTransport::FoundCallback::Found(): busAddr = \"%s\"", busAddr.c_str()));
 
