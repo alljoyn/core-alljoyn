@@ -112,7 +112,7 @@ const uint32_t g_numberLongnames = sizeof(g_longnames) / sizeof(char const*);
 class Finder {
   public:
 
-    void Callback(const qcc::String& busAddr, const qcc::String& guid, std::vector<qcc::String>& wkn, uint8_t timer)
+    void Callback(const qcc::String& busAddr, const qcc::String& guid, std::vector<qcc::String>& wkn, uint32_t timer)
     {
         printf("Callback %s with guid %s and timer %d: ", busAddr.c_str(), guid.c_str(), timer);
         for (uint32_t i = 0; i < wkn.size(); ++i) {
@@ -339,7 +339,7 @@ int main(int argc, char** argv)
     Finder finder;
 
     ns.SetCallback(TRANSPORT_TCP, new CallbackImpl<Finder, void, const qcc::String&, const qcc::String&,
-                                                   std::vector<qcc::String>&, uint8_t>(&finder, &Finder::Callback));
+                                                   std::vector<qcc::String>&, uint32_t>(&finder, &Finder::Callback));
 
     if (wildcard) {
         //

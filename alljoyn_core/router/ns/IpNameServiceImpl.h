@@ -629,7 +629,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * The method signature for the Callback method must be:
      *
      * @code
-     *     void Found(const qcc::String &, const qcc::String &, std::vector<qcc::String> &, uint8_t);
+     *     void Found(const qcc::String &, const qcc::String &, std::vector<qcc::String> &, uint32_t);
      * @endcode
      *
      * The first parameter is the address and port of the found service,
@@ -654,7 +654,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @code
      *     class MyClass:
      *     public:
-     *         void Found(const qcc::String &s, const qcc::String &g, std::vector<qcc::String>& wkn, uint8_t timer) {}
+     *         void Found(const qcc::String &s, const qcc::String &g, std::vector<qcc::String>& wkn, uint32_t timer) {}
      *     }
      *
      *     ...
@@ -668,7 +668,7 @@ class IpNameServiceImpl : public qcc::Thread {
      *
      * @code
      *    nameService.SetCallback(new CallbackImpl<MyClass, void,
-     *         const qcc::String &, const qcc::String &, std::vector<qcc::string>, uint8_t>(MyClass, myclass));
+     *         const qcc::String &, const qcc::String &, std::vector<qcc::string>, uint32_t>(MyClass, myclass));
      * @endcode
      *
      * From this point forward, all changes to services specified by the
@@ -691,7 +691,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @return Status of the operation.  Returns ER_OK on success.
      */
     QStatus SetCallback(TransportMask transportMask,
-                        Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint8_t>* cb);
+                        Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint32_t>* cb);
 
     /**
      * @brief Clear the callbacks for all transports.
@@ -1184,7 +1184,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * One possible callback for each of the corresponding transport masks in a
      * sixteen-bit word.
      */
-    Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint8_t>* m_callback[N_TRANSPORTS];
+    Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint32_t>* m_callback[N_TRANSPORTS];
 
     /**
      * @internal @brief A vector of list of all of the names that the various

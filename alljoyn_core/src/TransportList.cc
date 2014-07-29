@@ -231,7 +231,7 @@ void TransportList::FoundNames(const qcc::String& busAddr,
                                const qcc::String& guid,
                                TransportMask transport,
                                const vector<qcc::String>* names,
-                               uint8_t ttl)
+                               uint32_t ttl)
 {
     if (isStarted) {
         for (size_t i = 0; i < listeners.size(); ++i) {

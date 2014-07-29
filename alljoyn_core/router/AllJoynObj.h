@@ -539,9 +539,9 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param   transport Transport that received the advertisement.
      * @param   names     Vector of bus names advertised by the discovered bus.
      * @param   ttl       Number of seconds before this advertisement expires
-     *                    (0 means expire immediately, numeric_limits<uint8_t>::max() means never expire)
+     *                    (0 means expire immediately, numeric_limits<uint32_t>::max() means never expire)
      */
-    void FoundNames(const qcc::String& busAddr, const qcc::String& guid, TransportMask transport, const std::vector<qcc::String>* names, uint8_t ttl);
+    void FoundNames(const qcc::String& busAddr, const qcc::String& guid, TransportMask transport, const std::vector<qcc::String>* names, uint32_t ttl);
 
     /**
      * Called when a transport gets a surprise disconnect from a remote bus.
