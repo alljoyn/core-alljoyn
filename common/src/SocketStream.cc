@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -152,7 +152,8 @@ void SocketStream::Close()
 {
     isConnected = false;
     if (!isDetached) {
-        Shutdown(sock);
+        qcc::SetLinger(sock, true, 0);
+        qcc::Shutdown(sock);
     }
 }
 
