@@ -4401,6 +4401,11 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                                                      NULL, 0,
                                                      ctx);
             if (status != ER_OK) {
+                /*
+                 * UNREACHABLE may not be the correct reply code here, a failure
+                 * status indicates only that setting up the async method call
+                 * failed.
+                 */
                 SendIPNSResponse(ctx->name, ALLJOYN_PING_REPLY_UNREACHABLE);
                 delete ctx;
             }
@@ -4672,13 +4677,15 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
             const InterfaceDescription* intf = bus.GetInterface(org::freedesktop::DBus::Peer::InterfaceName);
             assert(intf);
             peerObj.AddInterface(*intf);
+            Message* ctx = new Message(msg);
             status = peerObj.MethodCallAsync(org::freedesktop::DBus::Peer::InterfaceName,
                                              "Ping",
                                              this, static_cast<MessageReceiver::ReplyHandler>(&AllJoynObj::PingReplyMethodHandler),
                                              NULL, 0,
-                                             new Message(msg));
+                                             ctx);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Send Ping failed"));
+                delete ctx;
                 replyCode = ALLJOYN_PING_REPLY_UNREACHABLE;
             }
 
@@ -4883,9 +4890,21 @@ bool AllJoynObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_
 void AllJoynObj::PingReplyTransportHandler(Message& reply, void* context)
 {
     PingAlarmContext* ctx = static_cast<PingAlarmContext*>(context);
-    uint32_t replyCode = (ajn::MESSAGE_ERROR == reply->GetType()) ? ALLJOYN_PING_REPLY_UNREACHABLE : ALLJOYN_PING_REPLY_SUCCESS;
-    SendIPNSResponse(ctx->name, replyCode);
-
+    if (ajn::MESSAGE_ERROR == reply->GetType()) {
+        const char* errorName = reply->GetErrorName();
+        if (0 == strcmp(errorName, "org.alljoyn.Bus.Timeout")) {
+            /*
+             * There may be multiple ping callers with different timeouts being
+             * serviced by a single DBus Ping, so don't send a response here,
+             * let the caller timeout on their own schedule.
+             */
+        } else {
+            /* Likely error name is "org.freedesktop.DBus.Error.ServiceUnknown */
+            SendIPNSResponse(ctx->name, ALLJOYN_PING_REPLY_UNREACHABLE);
+        }
+    } else {
+        SendIPNSResponse(ctx->name, ALLJOYN_PING_REPLY_SUCCESS);
+    }
     delete ctx;
 }
 
