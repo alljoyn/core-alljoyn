@@ -3305,7 +3305,7 @@ QStatus UDPTransport::Start()
      */
     QCC_DbgPrintf(("UDPTransport::Start(): Set NS callback"));
     IpNameService::Instance().SetCallback(TRANSPORT_UDP,
-                                          new CallbackImpl<FoundCallback, void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint8_t>
+                                          new CallbackImpl<FoundCallback, void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint32_t>
                                               (&m_foundCallback, &FoundCallback::Found));
 
     QCC_DbgPrintf(("UDPTransport::Start(): Spin up message dispatcher thread"));
@@ -7554,7 +7554,7 @@ void UDPTransport::QueueDisableAdvertisement(const qcc::String& advertiseName, T
 }
 
 void UDPTransport::FoundCallback::Found(const qcc::String& busAddr, const qcc::String& guid,
-                                        std::vector<qcc::String>& nameList, uint8_t timer)
+                                        std::vector<qcc::String>& nameList, uint32_t timer)
 {
 //  Makes lots of noise!
     //QCC_DbgTrace(("UDPTransport::FoundCallback::Found(): busAddr = \"%s\" nameList %d", busAddr.c_str(), nameList.size()));

@@ -834,7 +834,7 @@ QStatus P2PConManImpl::CreateConnectSpec(const qcc::String& device, const qcc::S
     // it hears from a remote daemon.
     //
     IpNameService::Instance().SetCallback(TRANSPORT_WFD,
-                                          new CallbackImpl<P2PConManImpl, void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint8_t>
+                                          new CallbackImpl<P2PConManImpl, void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint32_t>
                                               (this, &P2PConManImpl::FoundAdvertisedName));
 
     //
@@ -1437,7 +1437,7 @@ void P2PConManImpl::HandleGetInterfaceNameFromHandleReply(qcc::String& interface
 }
 
 void P2PConManImpl::FoundAdvertisedName(const qcc::String& busAddr, const qcc::String& guid,
-                                        std::vector<qcc::String>& nameList, uint8_t timer)
+                                        std::vector<qcc::String>& nameList, uint32_t timer)
 {
     QCC_DbgPrintf(("P2PConManImpl::FoundAdvertisedName(): busAddr = \"%s\", guid = \"%s\"", busAddr.c_str(), guid.c_str()));
 

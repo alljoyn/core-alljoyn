@@ -474,7 +474,7 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     class FoundCallback {
       public:
         FoundCallback(TransportListener*& listener) : m_listener(listener) { }
-        void Found(const qcc::String& busAddr, const qcc::String& guid, std::vector<qcc::String>& nameList, uint8_t timer);
+        void Found(const qcc::String& busAddr, const qcc::String& guid, std::vector<qcc::String>& nameList, uint32_t timer);
       private:
         TransportListener*& m_listener;
     };

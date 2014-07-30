@@ -160,7 +160,7 @@ class IpNameService {
      *     a transport about found and lost well-known names.
      */
     void SetCallback(TransportMask transportMask,
-                     Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint8_t>* cb);
+                     Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint32_t>* cb);
 
     void RegisterListener(IpNameServiceListener& listener);
 

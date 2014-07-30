@@ -1499,7 +1499,7 @@ QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
     }
 
     uint32_t i = IndexFromBit(transportMask);
-    assert(i < 16 && "IpNameServiceImpl::SetCallback(): Bad callback index");
+    assert(i < 16 && "IpNameServiceImpl::Enable(): Bad callback index");
 
     if (i >= 16) {
         return ER_BAD_TRANSPORT_MASK;
@@ -1609,7 +1609,7 @@ QStatus IpNameServiceImpl::Enabled(TransportMask transportMask,
     }
 
     uint32_t i = IndexFromBit(transportMask);
-    assert(i < 16 && "IpNameServiceImpl::SetCallback(): Bad callback index");
+    assert(i < 16 && "IpNameServiceImpl::Enabled(): Bad callback index");
 
     if (i >= 16) {
         return ER_BAD_TRANSPORT_MASK;
@@ -1960,7 +1960,7 @@ void IpNameServiceImpl::SetCriticalParameters(
 }
 
 QStatus IpNameServiceImpl::SetCallback(TransportMask transportMask,
-                                       Callback<void, const qcc::String&, const qcc::String&, vector<qcc::String>&, uint8_t>* cb)
+                                       Callback<void, const qcc::String&, const qcc::String&, vector<qcc::String>&, uint32_t>* cb)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::SetCallback()"));
 
@@ -1987,7 +1987,7 @@ QStatus IpNameServiceImpl::SetCallback(TransportMask transportMask,
         m_mutex.Lock();
     }
 
-    Callback<void, const qcc::String&, const qcc::String&, vector<qcc::String>&, uint8_t>*  goner = m_callback[i];
+    Callback<void, const qcc::String&, const qcc::String&, vector<qcc::String>&, uint32_t>*  goner = m_callback[i];
     m_callback[i] = NULL;
     delete goner;
     m_callback[i] = cb;
@@ -2013,7 +2013,7 @@ void IpNameServiceImpl::ClearCallbacks(void)
     // Delete any callbacks that any users of this class may have set.
     //
     for (uint32_t i = 0; i < N_TRANSPORTS; ++i) {
-        Callback<void, const qcc::String&, const qcc::String&, vector<qcc::String>&, uint8_t>*  goner = m_callback[i];
+        Callback<void, const qcc::String&, const qcc::String&, vector<qcc::String>&, uint32_t>*  goner = m_callback[i];
         m_callback[i] = NULL;
         delete goner;
     }

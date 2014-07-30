@@ -64,7 +64,7 @@ class TransportListener {
                             const qcc::String& guid,
                             TransportMask transport,
                             const std::vector<qcc::String>* names,
-                            uint8_t timer) = 0;
+                            uint32_t timer) = 0;
 
     /**
      * Called when a transport gets a surprise disconnect from a remote bus.
