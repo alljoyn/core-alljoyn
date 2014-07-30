@@ -32,6 +32,7 @@
 #include <stdarg.h>
 
 #include <qcc/Debug.h>
+#include <qcc/Logger.h>
 #include <qcc/Environ.h>
 #include <qcc/Mutex.h>
 #include <qcc/String.h>
@@ -70,6 +71,19 @@ int QCC_SyncPrintf(const char* fmt, ...)
     return ret;
 }
 
+static void Output(DbgMsgType type, const char* module, const char* msg, void* context)
+{
+    const static int priorityMap[] = {
+        LOG_ERR,        // Local error messages
+        LOG_WARNING,    // Remote error messages
+        LOG_NOTICE,     // High level debug messages
+        LOG_INFO,       // Normal debug messages
+        LOG_DEBUG,      // API trace messages
+        LOG_DEBUG,      // Remote data messages
+        LOG_DEBUG       // Local data messages
+    };
+    Log(priorityMap[type], "%s", msg);
+}
 
 static void WriteMsg(DbgMsgType type, const char* module, const char* msg, void* context)
 {
@@ -86,7 +100,7 @@ static void WriteMsg(DbgMsgType type, const char* module, const char* msg, void*
 class DebugControl {
   public:
 
-    DebugControl(void) : cb(WriteMsg), context(stderr), allLevel(0), printThread(true)
+    DebugControl(void) : cb(Output), context(stderr), allLevel(0), printThread(true)
     {
         Init();
     }
@@ -528,7 +542,7 @@ void QCC_UseOSLogging(bool useOSLog)
     void* context = stderr;
     QCC_DbgMsgCallback cb = QCC_GetOSLogger(useOSLog);
     if (!cb) {
-        cb = WriteMsg;
+        cb = Output;
     }
     QCC_RegisterOutputCallback(cb, context);
 }
