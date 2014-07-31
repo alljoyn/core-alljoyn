@@ -308,7 +308,7 @@ class AboutClientPingAsyncCB : public BusAttachment::PingAsyncCB {
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
 
         AboutClientSessionListener* aboutClientSessionListener = new AboutClientSessionListener(busName);
-        AboutClientSessionJoiner* joincb = new AboutClientSessionJoiner(busName, sessionJoinedCallback);
+        AboutClientSessionJoiner* joincb = new AboutClientSessionJoiner(*busAttachment, busName, sessionJoinedCallback);
         printf("Calling JoinSession BusName = %s port = %d\n", busName.c_str(), port);
         QStatus status = busAttachment->JoinSessionAsync(busName.c_str(), port, aboutClientSessionListener,
                                                          opts, joincb, aboutClientSessionListener);
