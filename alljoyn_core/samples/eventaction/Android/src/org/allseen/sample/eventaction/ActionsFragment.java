@@ -225,9 +225,15 @@ public class ActionsFragment extends Fragment {
 			if(convertView == null) {
 				convertView = inflater.inflate(R.layout.action_item, null);
 			}
-			Device info = (Device) getGroup(groupPosition);
+			
 			TextView tv = (TextView)convertView.findViewById(R.id.device_name);
-			tv.setText(info.getFriendlyName());
+			try{
+				Device info = (Device) getGroup(groupPosition);
+				tv.setText(info.getFriendlyName());
+			} catch(Exception e) {
+				tv.setText("Error, restart application");
+			}		
+
 			return convertView;
 		}
 
