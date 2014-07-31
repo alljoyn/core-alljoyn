@@ -551,7 +551,12 @@ TEST(BusObjectTest, Make_methodcall_after_unregister_bus_object)
     //Make a method call and it should fail gracefully as the service side bus object is unregistsred.
     status = clientProxyObject.MethodCall(*pastaMethod, &pingArgs, 1, reply, 5000);
     EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status) << "  Actual Status: " << QCC_StatusText(status);
+#if defined(NDEBUG)
+    EXPECT_STREQ("0x901c", reply->GetArg(0)->v_string.str);
+#else
     EXPECT_STREQ("ER_BUS_NO_SUCH_OBJECT", reply->GetArg(0)->v_string.str);
+#endif
+
 
 
     //Clean up
