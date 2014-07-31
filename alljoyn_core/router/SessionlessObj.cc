@@ -326,14 +326,14 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
         uint32_t toChangeId = curChangeId + 1;
         uint32_t toRulesId = nextRulesId;
 
-        lock.Unlock();
-        router.UnlockNameTable();
-
         /* Retrieve from our own cache */
         HandleRangeRequest(epName.c_str(), 0, fromChangeId, toChangeId, fromRulesId, toRulesId);
 
         bus.EnableConcurrentCallbacks();
         FindAdvertisedNames();
+
+        lock.Unlock();
+        router.UnlockNameTable();
     }
 }
 
@@ -1428,6 +1428,8 @@ bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket respons
      * Next step is to see if the response matches any of our rules.  If it
      * does, then report the name as found.
      */
+    router.LockNameTable();
+    lock.Lock();
     for (RuleIterator rit = rules.begin(); rit != rules.end(); ++rit) {
         Rule& rule = rit->second;
         if (rule.iface != "org.alljoyn.About") {
@@ -1458,6 +1460,8 @@ bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket respons
             FoundAdvertisedNameHandler(name.c_str(), transport, name.c_str(), unsolicited);
         }
     }
+    lock.Unlock();
+    router.UnlockNameTable();
 
     /* Always return false since we're just sniffing for org.alljoyn.About.sl. advertisements */
     return false;
