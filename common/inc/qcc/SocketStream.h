@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -183,13 +183,6 @@ class SocketStream : public Stream {
      * @param sendTimeout    Send timeout in ms or WAIT_FOREVER for infinite
      */
     void SetSendTimeout(uint32_t sendTimeout) { this->sendTimeout = sendTimeout; }
-
-    /**
-     * Set TCP based socket to use or not use Nagle algorithm (TCP_NODELAY)
-     *
-     * @param useNagle  Set to true to Nagle algorithm. Set to false to disable Nagle.
-     */
-    QStatus SetNagle(bool reuse);
 
   private:
 

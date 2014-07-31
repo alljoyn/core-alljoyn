@@ -410,7 +410,6 @@ const char* const TCPTransport::ALLJOYN_DEFAULT_ROUTER_ADVERTISEMENT_PREFIX = "o
  */
 class _TCPEndpoint : public _RemoteEndpoint {
   public:
-    friend class TCPTransport;
     /**
      * There are three threads that can be running around in this data
      * structure.  An auth thread is run before the endpoint is started in order
@@ -483,23 +482,6 @@ class _TCPEndpoint : public _RemoteEndpoint {
         m_port(port),
         m_wasSuddenDisconnect(!incoming) { }
 
-    _TCPEndpoint(TCPTransport* transport,
-                 BusAttachment& bus,
-                 bool incoming,
-                 const qcc::String connectSpec,  const AddressFamily family, const SocketType type,
-                 const qcc::IPAddress& ipAddr,
-                 uint16_t port) :
-        _RemoteEndpoint(bus, incoming, connectSpec, &m_stream, "tcp"),
-        m_transport(transport),
-        m_sideState(SIDE_INITIALIZED),
-        m_authState(AUTH_INITIALIZED),
-        m_epState(EP_INITIALIZED),
-        m_tStart(qcc::Timespec(0)),
-        m_authThread(this),
-        m_stream(family, type),
-        m_ipAddr(ipAddr),
-        m_port(port),
-        m_wasSuddenDisconnect(!incoming) { }
     virtual ~_TCPEndpoint() { }
 
     QStatus GetLocalIp(qcc::String& ipAddrStr) {
@@ -2809,148 +2791,193 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         }
     }
 
-
-
-    static const bool falsiness = false;
-    TCPTransport* ptr = this;
-    AddressFamily family = QCC_AF_INET;
-    SocketType type = QCC_SOCK_STREAM;
-
-    TCPEndpoint tcpEp = TCPEndpoint(ptr, m_bus, falsiness, normSpec, family, type, ipAddr, port);
     /*
-     * Before starting the underlying transport mechanism, we need to create
-     * a TCPEndpoint object that will orchestrate the movement of data
-     * across the transport.
+     * This is a new not previously satisfied connection request, so attempt
+     * to connect to the remote TCP address and port specified in the connectSpec.
      */
-
-    /*
-     * On the active side of a connection, we don't need an authentication
-     * thread to run since we have the caller thread to fill that role.
-     */
-    tcpEp->SetActive();
-
-    /*
-     * Initialize the "features" for this endpoint
-     */
-    tcpEp->GetFeatures().isBusToBus = true;
-    tcpEp->GetFeatures().allowRemote = m_bus.GetInternal().AllowRemoteMessages();
-    tcpEp->GetFeatures().handlePassing = false;
-    tcpEp->GetFeatures().nameTransfer = opts.nameTransfer;
-
-    qcc::String authName;
-    qcc::String redirection;
-
-    /*
-     * This is a little tricky.  We usually manage endpoints in one place
-     * using the main server accept loop thread.  Endpoints read and write data
-     * by using a callback mechanism implemented using IODispatch and these
-     * callbacks are expected to be made regularly until the EndpointExit function
-     * is called when the endpoints are stopped.  The general endpoint management uses these
-     * mechanisms.  However, we are about to get into a state where we are
-     * off trying to start an endpoint, but we are using another thread
-     * which has called into TCPTransport::Connect().  We are about to do
-     * blocking I/O in the authentication establishment dance, but we can't
-     * just kill off this thread since it isn't ours for the whacking.  If
-     * the transport is stopped, we do however need a way to stop an
-     * in-process establishment.  It's not reliable to just close a socket
-     * out from uder a thread, so we really need to Alert() the thread
-     * making the blocking calls.  So we keep a separate list of Thread*
-     * that may need to be Alert()ed and run through that list when the
-     * transport is stopping.  This will cause the I/O calls in Establish()
-     * to return and we can then allow the "external" threads to return
-     * and avoid nasty deadlocks.
-     */
-    Thread* thread = GetThread();
-    m_endpointListLock.Lock(MUTEX_CONTEXT);
-    m_activeEndpointsThreadList.insert(thread);
-    m_endpointListLock.Unlock(MUTEX_CONTEXT);
-
-    /*
-     * Go ahead and do the authentication in the context of this thread.  Even
-     * though we don't have the server accept loop thread watching this endpoint
-     * we keep we keep the states consistent since the endpoint will eventually
-     * to there.
-     */
-    DaemonRouter& router = reinterpret_cast<DaemonRouter&>(m_bus.GetInternal().GetRouter());
-    AuthListener* authListener = router.GetBusController()->GetAuthListener();
-    m_endpointListLock.Lock();
-    QCC_DbgPrintf(("TCPTransport::Connect(): maxAuth == %d", maxAuth));
-    QCC_DbgPrintf(("TCPTransport::Connect(): maxConn == %d", maxConn));
-    QCC_DbgPrintf(("TCPTransport::Connect(): mAuthList.size() == %d", m_authList.size()));
-    QCC_DbgPrintf(("TCPTransport::Connect(): mEndpointList.size() == %d", m_endpointList.size()));
-
-    /* Ensure that the connection limits for TCPEndpoints have not been hit. */
-    if ((m_authList.size() < maxAuth) && (m_authList.size() + m_endpointList.size() < maxConn)) {
-        m_authList.insert(tcpEp);
-        status = ER_OK;
+    SocketFd sockFd = -1;
+    status = Socket(QCC_AF_INET, QCC_SOCK_STREAM, sockFd);
+    if (status == ER_OK) {
+        /* Turn off Nagle */
+        status = SetNagle(sockFd, false);
     } else {
-        status = ER_AUTH_FAIL;
-        QCC_LogError(status, ("TCPTransport::Connect(): No slot for new connection"));
+        QCC_LogError(status, ("TCPTransport::Connect(): qcc::Socket() failed"));
     }
-    m_endpointListLock.Unlock();
-    status = tcpEp->m_stream.SetNagle(false);
 
     if (status == ER_OK) {
+        static const bool falsiness = false;
+        TCPTransport* ptr = this;
+        TCPEndpoint tcpEp = TCPEndpoint(ptr, m_bus, falsiness, normSpec, sockFd, ipAddr, port);
         /*
-         * We got a socket, created an endpoint and inserted it into the m_authList,
-         * now tell TCP to connect to the remote address and
-         * port.
+         * Before starting the underlying transport mechanism, we need to create
+         * a TCPEndpoint object that will orchestrate the movement of data
+         * across the transport.
          */
-        String addrStr = ipAddr.ToString();
-        status = tcpEp->m_stream.Connect(addrStr, port);
+
+        /*
+         * On the active side of a connection, we don't need an authentication
+         * thread to run since we have the caller thread to fill that role.
+         */
+        tcpEp->SetActive();
+
+        /*
+         * Initialize the "features" for this endpoint
+         */
+        tcpEp->GetFeatures().isBusToBus = true;
+        tcpEp->GetFeatures().allowRemote = m_bus.GetInternal().AllowRemoteMessages();
+        tcpEp->GetFeatures().handlePassing = false;
+        tcpEp->GetFeatures().nameTransfer = opts.nameTransfer;
+
+        qcc::String authName;
+        qcc::String redirection;
+
+        /*
+         * This is a little tricky.  We usually manage endpoints in one place
+         * using the main server accept loop thread.  Endpoints read and write data
+         * by using a callback mechanism implemented using IODispatch and these
+         * callbacks are expected to be made regularly until the EndpointExit function
+         * is called when the endpoints are stopped.  The general endpoint management uses these
+         * mechanisms.  However, we are about to get into a state where we are
+         * off trying to start an endpoint, but we are using another thread
+         * which has called into TCPTransport::Connect().  We are about to do
+         * blocking I/O in the authentication establishment dance, but we can't
+         * just kill off this thread since it isn't ours for the whacking.  If
+         * the transport is stopped, we do however need a way to stop an
+         * in-process establishment.  It's not reliable to just close a socket
+         * out from uder a thread, so we really need to Alert() the thread
+         * making the blocking calls.  So we keep a separate list of Thread*
+         * that may need to be Alert()ed and run through that list when the
+         * transport is stopping.  This will cause the I/O calls in Establish()
+         * to return and we can then allow the "external" threads to return
+         * and avoid nasty deadlocks.
+         */
+        Thread* thread = GetThread();
+        m_endpointListLock.Lock(MUTEX_CONTEXT);
+        m_activeEndpointsThreadList.insert(thread);
+        m_endpointListLock.Unlock(MUTEX_CONTEXT);
+
+        /*
+         * Go ahead and do the authentication in the context of this thread.  Even
+         * though we don't have the server accept loop thread watching this endpoint
+         * we keep we keep the states consistent since the endpoint will eventually
+         * to there.
+         */
+        DaemonRouter& router = reinterpret_cast<DaemonRouter&>(m_bus.GetInternal().GetRouter());
+        AuthListener* authListener = router.GetBusController()->GetAuthListener();
+        m_endpointListLock.Lock();
+        QCC_DbgPrintf(("TCPTransport::Connect(): maxAuth == %d", maxAuth));
+        QCC_DbgPrintf(("TCPTransport::Connect(): maxConn == %d", maxConn));
+        QCC_DbgPrintf(("TCPTransport::Connect(): mAuthList.size() == %d", m_authList.size()));
+        QCC_DbgPrintf(("TCPTransport::Connect(): mEndpointList.size() == %d", m_endpointList.size()));
+
+        /* Ensure that the connection limits for TCPEndpoints have not been hit. */
+        if ((m_authList.size() < maxAuth) && (m_authList.size() + m_endpointList.size() < maxConn)) {
+            m_authList.insert(tcpEp);
+            status = ER_OK;
+        } else {
+            status = ER_AUTH_FAIL;
+            QCC_LogError(status, ("TCPTransport::Connect(): No slot for new connection"));
+        }
+        m_endpointListLock.Unlock();
+
         if (status == ER_OK) {
             /*
-             * We now have a TCP connection established, but DBus (the wire
-             * protocol which we are using) requires that every connection,
-             * irrespective of transport, start with a single zero byte.  This
-             * is so that the Unix-domain socket transport used by DBus can pass
-             * SCM_RIGHTS out-of-band when that byte is sent.
+             * We got a socket, created an endpoint and inserted it into the m_authList,
+             * now tell TCP to connect to the remote address and
+             * port.
              */
-            uint8_t nul = 0;
-            size_t sent;
-
-            status = tcpEp->m_stream.PushBytes(&nul, 1, sent);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("TCPTransport::Connect(): Failed to send initial NUL byte"));
-            }
-            isConnected = true;
-        } else {
-            QCC_LogError(status, ("TCPTransport::Connect(): Failed"));
-        }
-    }
-    if (status == ER_OK) {
-        status = tcpEp->Establish("ANONYMOUS", authName, redirection, authListener);
-        if (status == ER_OK) {
-            tcpEp->SetListener(this);
-            tcpEp->SetEpStarting();
-            status = tcpEp->Start();
+            status = qcc::Connect(sockFd, ipAddr, port);
             if (status == ER_OK) {
-                tcpEp->SetEpStarted();
-                tcpEp->SetAuthDone();
+                /*
+                 * We now have a TCP connection established, but DBus (the wire
+                 * protocol which we are using) requires that every connection,
+                 * irrespective of transport, start with a single zero byte.  This
+                 * is so that the Unix-domain socket transport used by DBus can pass
+                 * SCM_RIGHTS out-of-band when that byte is sent.
+                 */
+                uint8_t nul = 0;
+                size_t sent;
+
+                status = Send(sockFd, &nul, 1, sent);
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("TCPTransport::Connect(): Failed to send initial NUL byte"));
+                }
+                isConnected = true;
             } else {
-                tcpEp->SetEpFailed();
-                tcpEp->SetAuthDone();
+                QCC_LogError(status, ("TCPTransport::Connect(): Failed"));
             }
         }
-        /*
-         * If we have a successful authentication, we pass the connection off to the
-         * server accept loop to manage.
-         */
         if (status == ER_OK) {
+            status = tcpEp->Establish("ANONYMOUS", authName, redirection, authListener);
+            if (status == ER_OK) {
+                tcpEp->SetListener(this);
+                tcpEp->SetEpStarting();
+                status = tcpEp->Start();
+                if (status == ER_OK) {
+                    tcpEp->SetEpStarted();
+                    tcpEp->SetAuthDone();
+                } else {
+                    tcpEp->SetEpFailed();
+                    tcpEp->SetAuthDone();
+                }
+            }
+            /*
+             * If we have a successful authentication, we pass the connection off to the
+             * server accept loop to manage.
+             */
+            if (status == ER_OK) {
+                m_endpointListLock.Lock(MUTEX_CONTEXT);
+                m_authList.erase(tcpEp);
+                m_endpointList.insert(tcpEp);
+                m_endpointListLock.Unlock(MUTEX_CONTEXT);
+                newEp = BusEndpoint::cast(tcpEp);
+            } else {
+                QCC_LogError(status, ("TCPTransport::Connect(): Starting the TCPEndpoint failed"));
+                m_endpointListLock.Lock(MUTEX_CONTEXT);
+                m_authList.erase(tcpEp);
+                m_endpointListLock.Unlock(MUTEX_CONTEXT);
+                /*
+                 * Although the destructor of a remote endpoint includes a Stop and Join
+                 * call, there are no running threads since Start() failed.
+                 */
+            }
+        } else {
+            if (isConnected) {
+                qcc::SetLinger(sockFd, true, 0);
+                qcc::Shutdown(sockFd);
+            }
             m_endpointListLock.Lock(MUTEX_CONTEXT);
             m_authList.erase(tcpEp);
-            m_endpointList.insert(tcpEp);
-            m_endpointListLock.Unlock(MUTEX_CONTEXT);
-            newEp = BusEndpoint::cast(tcpEp);
+            m_endpointListLock.Unlock();
         }
-    }
-    if (status != ER_OK) {
-        if (isConnected) {
-            tcpEp->m_stream.Close();
-        }
+        /*
+         * In any case, we are done with blocking I/O on the current thread, so
+         * we need to remove its pointer from the list we kept around to break it
+         * out of blocking I/O.  If we were successful, the TCPEndpoint was passed
+         * to the m_endpointList, where the main server accept loop will deal with
+         * it using its Read and WriteCallback-based mechanisms.  If we were unsuccessful
+         * the TCPEndpoint was destroyed and we will return an error below after
+         * cleaning up the underlying socket.
+         */
         m_endpointListLock.Lock(MUTEX_CONTEXT);
-        m_authList.erase(tcpEp);
-        m_endpointListLock.Unlock();
+        set<Thread*>::iterator i = find(m_activeEndpointsThreadList.begin(), m_activeEndpointsThreadList.end(), thread);
+        assert(i != m_activeEndpointsThreadList.end() && "TCPTransport::Connect(): Thread* not on m_activeEndpointsThreadList");
+        m_activeEndpointsThreadList.erase(i);
+        m_endpointListLock.Unlock(MUTEX_CONTEXT);
+    } else {
+        /*
+         * If we got an error, and have not created an endpoint, we need to cleanup
+         * the socket. If an endpoint was created, the endpoint will be responsible
+         * for the cleanup.
+         */
+
+        if (sockFd >= 0) {
+            qcc::Close(sockFd);
+        }
+
+    }
+
+    if (status != ER_OK) {
         /* If we got this connection and its endpoint up without
          * a problem, we return a pointer to the new endpoint.  We aren't going to
          * clean it up since it is an active connection, so we can safely pass the
@@ -2959,20 +2986,6 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
          */
         newEp->Invalidate();
     }
-    /*
-     * In any case, we are done with blocking I/O on the current thread, so
-     * we need to remove its pointer from the list we kept around to break it
-     * out of blocking I/O.  If we were successful, the TCPEndpoint was passed
-     * to the m_endpointList, where the main server accept loop will deal with
-     * it using its Read and WriteCallback-based mechanisms.  If we were unsuccessful
-     * the TCPEndpoint was destroyed and we will return an error below after
-     * cleaning up the underlying socket.
-     */
-    m_endpointListLock.Lock(MUTEX_CONTEXT);
-    set<Thread*>::iterator i = find(m_activeEndpointsThreadList.begin(), m_activeEndpointsThreadList.end(), thread);
-    assert(i != m_activeEndpointsThreadList.end() && "TCPTransport::Connect(): Thread* not on m_activeEndpointsThreadList");
-    m_activeEndpointsThreadList.erase(i);
-    m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
     return status;
 }

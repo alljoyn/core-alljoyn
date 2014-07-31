@@ -72,7 +72,6 @@ SocketStream::SocketStream(AddressFamily family, SocketType type) :
     isDetached(false),
     sendTimeout(Event::WAIT_FOREVER)
 {
-
 }
 
 SocketStream::SocketStream(const SocketStream& other) :
@@ -278,9 +277,4 @@ QStatus SocketStream::PushBytesAndFds(const void* buf, size_t numBytes, size_t& 
         }
     }
     return status;
-}
-
-QStatus SocketStream::SetNagle(bool reuse)
-{
-    return qcc::SetNagle(sock, reuse);
 }
