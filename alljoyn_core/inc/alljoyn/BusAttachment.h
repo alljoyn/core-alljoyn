@@ -100,12 +100,17 @@ class BusAttachment : public MessageReceiver {
          * Called when PingAsync() completes.
          *
          * @param status
-         *   - #ER_OK on success
-         *   - #ER_ALLJOYN_PING_FAILED Ping failed
+         *   - #ER_OK the name is present and responding
+         *   - #ER_ALLJOYN_PING_REPLY_UNREACHABLE the name is no longer present
+         *   <br>
+         *   The following status values indicate that the router cannot determine if the
+         *   remote name is present and responding:
          *   - #ER_ALLJOYN_PING_REPLY_TIMEOUT Ping call timed out
          *   - #ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME name not found currently or not part of any known session
-         *   - #ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED the remote routing node does not implement Ping
-         *   - #ER_ALLJOYN_PING_REPLY_UNREACHABLE the name pinged is unreachable
+         *   - #ER_ALLJOYN_PING_REPLY_INCOMPATIBLE_REMOTE_ROUTING_NODE the remote routing node does not implement Ping
+         *   <br>
+         *   The following status values indicate an error with the ping call itself:
+         *   - #ER_ALLJOYN_PING_FAILED Ping failed
          *   - #ER_BUS_UNEXPECTED_DISPOSITION An unexpected disposition was returned and has been treated as an error
          * @param context      User defined context which will be passed as-is to callback.
          */
@@ -1196,16 +1201,20 @@ class BusAttachment : public MessageReceiver {
      * @param timeout Timeout specified in milliseconds to wait for reply
      *
      * @return
-     *   - #ER_OK on success
-     *   - #ER_ALLJOYN_PING_FAILED Ping failed
+     *   - #ER_OK the name is present and responding
+     *   - #ER_ALLJOYN_PING_REPLY_UNREACHABLE the name is no longer present
+     *   <br>
+     *   The following return values indicate that the router cannot determine if the
+     *   remote name is present and responding:
      *   - #ER_ALLJOYN_PING_REPLY_TIMEOUT Ping call timed out
      *   - #ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME name not found currently or not part of any known session
-     *   - #ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED the remote routing node does not implement Ping
-     *   - #ER_ALLJOYN_PING_REPLY_UNREACHABLE the name pinged is unreachable
+     *   - #ER_ALLJOYN_PING_REPLY_INCOMPATIBLE_REMOTE_ROUTING_NODE the remote routing node does not implement Ping
+     *   <br>
+     *   The following return values indicate an error with the ping call itself:
+     *   - #ER_ALLJOYN_PING_FAILED Ping failed
      *   - #ER_BUS_UNEXPECTED_DISPOSITION An unexpected disposition was returned and has been treated as an error
      *   - #ER_BUS_NOT_CONNECTED the BusAttachment is not connected to the bus
      *   - #ER_BUS_BAD_BUS_NAME the name parameter is not a valid bus name
-     *   - #ER_BAD_ARG_1 a NULL pointer was passed in for the name
      *   - An error status otherwise
      */
     QStatus Ping(const char* name, uint32_t timeout);
@@ -1225,10 +1234,9 @@ class BusAttachment : public MessageReceiver {
      * @see PingAsyncCB
      *
      * @return
-     *     - #ER_OK if ping was successful.
+     *     - #ER_OK iff method call to local router response was successful.
      *     - #ER_BUS_NOT_CONNECTED the BusAttachment is not connected to the bus
      *     - #ER_BUS_BAD_BUS_NAME the name parameter is not a valid bus name
-     *     - #ER_BAD_ARG_1 a NULL pointer was passed in for the name
      *     - Other error status codes indicating a failure.
      */
     QStatus PingAsync(const char* name, uint32_t timeout, BusAttachment::PingAsyncCB* callback, void* context);

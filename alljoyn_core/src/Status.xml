@@ -253,7 +253,7 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_UDP_EARLY_EXIT" value="0x9111" comment="UDP Transport connection aborted during setup"/>
   <status name="ER_UDP_LOCAL_DISCONNECT_FAIL" value="0x9112" comment="UDP Transport local connection disconnect failure"/>
   <status name="ER_ARDP_DISCONNECTING" value="0x9113" comment="ARDP connection is being shut down"/>
-  <status name="ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED" value="0x9114" comment="Remote routing node does not implement Ping"/>
+  <status name="ER_ALLJOYN_PING_REPLY_INCOMPATIBLE_REMOTE_ROUTING_NODE" value="0x9114" comment="Remote routing node does not implement Ping"/>
   <status name="ER_ALLJOYN_PING_REPLY_TIMEOUT" value="0x9115" comment="Ping call timeout"/>
   <status name="ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME" value="0x9116" comment="Name not found currently or part of any known session"/>
   <status name="ER_ALLJOYN_PING_REPLY_FAILED" value="0x9117" comment="Generic Ping call error"/>
