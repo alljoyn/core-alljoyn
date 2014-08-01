@@ -1207,6 +1207,10 @@ QStatus BusAttachment::AdvertiseName(const char* name, TransportMask transports)
                 status = ER_ALLJOYN_ADVERTISENAME_REPLY_FAILED;
                 break;
 
+            case ALLJOYN_ADVERTISENAME_REPLY_TRANSPORT_NOT_AVAILABLE:
+                status = ER_ALLJOYN_ADVERTISENAME_REPLY_TRANSPORT_NOT_AVAILABLE;
+                break;
+
             default:
                 status = ER_BUS_UNEXPECTED_DISPOSITION;
                 break;

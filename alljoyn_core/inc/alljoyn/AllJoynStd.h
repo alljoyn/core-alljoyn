@@ -201,6 +201,7 @@ extern const char* InterfaceName;                 /**< Interface name */
 #define ALLJOYN_ADVERTISENAME_REPLY_SUCCESS               1   /**< AdvertiseName reply: Success */
 #define ALLJOYN_ADVERTISENAME_REPLY_ALREADY_ADVERTISING   2   /**< AdvertiseName reply: This endpoint has already requested advertising this name */
 #define ALLJOYN_ADVERTISENAME_REPLY_FAILED                3   /**< AdvertiseName reply: Advertise failed */
+#define ALLJOYN_ADVERTISENAME_REPLY_TRANSPORT_NOT_AVAILABLE 4 /**< AdvertiseName reply: The specified transport is unavailable for advertising */
 // @}
 
 /**
