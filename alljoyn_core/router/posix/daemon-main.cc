@@ -50,6 +50,7 @@
 #include "Transport.h"
 #include "TCPTransport.h"
 #include "UDPTransport.h"
+#include "DaemonBLETransport.h"
 #include "DaemonTransport.h"
 #if defined(QCC_OS_LINUX)
 #include "DaemonSLAPTransport.h"
@@ -124,6 +125,7 @@ static const char internalConfig[] =
 #if defined(QCC_OS_DARWIN)
     "  <listen>launchd:env=DBUS_LAUNCHD_SESSION_BUS_SOCKET</listen>"
 #endif
+    "  <listen>ble:</listen>"
     "  <listen>tcp:iface=*,port=9955</listen>"
     "  <listen>udp:iface=*,port=9955</listen>"
     "</busconfig>";
@@ -165,6 +167,7 @@ class OptParse {
         noSLAP(false),
         noTCP(false),
         noUDP(false),
+        noBLE(false),
 #if defined(QCC_OS_ANDROID)
         noWFD(false),
 #endif
@@ -197,6 +200,9 @@ class OptParse {
     }
     bool GetNoUDP() const {
         return noUDP;
+    }
+    bool GetNoBLE() const {
+        return noBLE;
     }
 #if defined(QCC_OS_ANDROID)
     bool GetNoWFD() const {
@@ -237,6 +243,7 @@ class OptParse {
     bool noSLAP;
     bool noTCP;
     bool noUDP;
+    bool noBLE;
 #if defined(QCC_OS_ANDROID)
     bool noWFD;
 #endif
@@ -441,6 +448,8 @@ OptParse::ParseResultCode OptParse::ParseResult()
             noTCP = true;
         } else if (arg.compare("--no-udp") == 0) {
             noUDP = true;
+        } else if (arg.compare("--no-ble") == 0) {
+            noBLE = true;
 #if defined(QCC_OS_ANDROID)
         } else if (arg.compare("--no-wfd") == 0) {
             noWFD = true;
@@ -539,6 +548,8 @@ int daemon(OptParse& opts, bool forked) {
             skip = opts.GetNoTCP();
         } else if (addrStr.compare(0, sizeof("udp:") - 1, "udp:") == 0) {
             skip = opts.GetNoUDP();
+        } else if (addrStr.compare(0, sizeof("ble:") - 1, "ble:") == 0) {
+            skip = opts.GetNoBLE();
 
 #if defined(QCC_OS_ANDROID)
         } else if (addrStr.compare(0, sizeof("wfd:") - 1, "wfd:") == 0) {
@@ -575,6 +586,7 @@ int daemon(OptParse& opts, bool forked) {
     cntr.Add(new TransportFactory<DaemonTransport>(DaemonTransport::TransportName, false));
     cntr.Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
     cntr.Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
+    cntr.Add(new TransportFactory<DaemonBLETransport>(DaemonBLETransport::TransportName, false));
 #if defined(QCC_OS_LINUX)
     cntr.Add(new TransportFactory<DaemonSLAPTransport>(DaemonSLAPTransport::TransportName, false));
 #endif

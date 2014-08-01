@@ -8,7 +8,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -50,20 +50,20 @@ using namespace qcc;
 /**
  * controls rate at which we send CONN packets when the link is down in milliseconds
  */
-const uint32_t CONN_TIMEOUT = 200;
+const uint32_t CONN_TIMEOUT = 5000;
 
 /**
  * controls rate at which we send NEGO packets when the link is being established in milliseconds
  */
-const uint32_t NEGO_TIMEOUT = 200;
+const uint32_t NEGO_TIMEOUT = 5000;
 
 /**
  * controls rate at which we send DISCONN packets when the link is down in milliseconds
  */
 const uint32_t DISCONN_TIMEOUT = 200;
 
-SLAPStream::SLAPStream(Stream* rawStream, Timer& timer, uint16_t maxPacketSize, uint16_t maxWindowSize, uint32_t baudrate) :
-    m_rawStream(rawStream),
+SLAPStream::SLAPStream(StreamController* streamController, Timer& timer, uint16_t maxPacketSize, uint16_t maxWindowSize, uint32_t baudrate) :
+    m_streamController(streamController),
     m_linkState(LINK_UNINITIALIZED),
     m_sendTimeout(Event::WAIT_FOREVER),
     m_sendDataCtxt(new CallbackContext(SEND_DATA_ALARM)),
@@ -617,7 +617,7 @@ void SLAPStream::TransmitToLink()
             }
             m_getNextPacket = false;
         }
-        status = m_txCurrent->Deliver(m_rawStream);
+        status = m_txCurrent->Deliver(m_streamController);
         if (status == ER_OK) {
             /*
              * If the packet we just sent was a data packet, we add it to the

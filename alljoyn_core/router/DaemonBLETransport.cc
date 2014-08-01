@@ -1,6 +1,6 @@
 /**
  * @file
- * Implementation of DaemonSLAPTransport.
+ * Implementation of DaemonBLETransport.
  */
 
 /******************************************************************************
@@ -25,30 +25,52 @@
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
 #include <qcc/Util.h>
-#include <qcc/UARTStream.h>
+#include <qcc/BLEStream.h>
 #include <qcc/SLAPStream.h>
+#include <qcc/Thread.h>
 
 #include "DaemonRouter.h"
 #include "BusInternal.h"
 #include "RemoteEndpoint.h"
 #include "Router.h"
-#include "DaemonSLAPTransport.h"
+#include "DaemonBLETransport.h"
 #include "BusController.h"
+#include "BTController.h"
 
-#define QCC_MODULE "DAEMON_SLAP"
+#if defined QCC_OS_GROUP_POSIX
+#if defined(QCC_OS_DARWIN)
+#warning Darwin support for bluetooth to be implemented
+#else
+#include "bt_bluez/BLEAccessor.h"
+#endif
+#elif defined QCC_OS_GROUP_WINDOWS
+#include "bt_windows/BTAccessor.h"
+#endif
+
+#define QCC_MODULE "DAEMON_BLE"
 
 using namespace std;
 using namespace qcc;
+using namespace ajn;
+
+#if !defined QCC_OS_GROUP_WINDOWS
+using namespace ajn::bluez;
+#endif
+
 
 namespace ajn {
 
-const char* DaemonSLAPTransport::TransportName = "slap";
+const char* DaemonBLETransport::TransportName = "ble";
+
+#define BUS_NAME_TTL numeric_limits<uint8_t>::max()
 
 /*
  * An endpoint class to handle the details of authenticating a connection over the SLAP transport.
  */
-class _DaemonSLAPEndpoint : public _RemoteEndpoint {
+class _DaemonBLEEndpoint :
+    public _RemoteEndpoint {
 
+    friend class DaemonBLETransport;
   public:
     enum EndpointState {
         EP_ILLEGAL = 0,
@@ -69,18 +91,18 @@ class _DaemonSLAPEndpoint : public _RemoteEndpoint {
         AUTH_DONE,           /**< The auth thread has been successfully shut down and joined */
     };
 
-    _DaemonSLAPEndpoint(DaemonSLAPTransport* transport, BusAttachment& bus, bool incoming, const qcc::String connectSpec, UARTFd fd, uint32_t packetSize, uint32_t baudrate) :
-        _RemoteEndpoint(bus, incoming, connectSpec, &m_stream, DaemonSLAPTransport::TransportName),
-        m_transport(transport), m_authThread(this), m_fd(fd), m_authState(AUTH_INITIALIZED), m_epState(EP_INITIALIZED),
+    _DaemonBLEEndpoint(DaemonBLETransport* transport, BusAttachment& bus, BLEStreamAccessor* accessor, bool incoming, const qcc::String connectSpec, const char*remDev, uint32_t packetSize) :
+        _RemoteEndpoint(bus, incoming, connectSpec, &m_stream, DaemonBLETransport::TransportName),
+        m_transport(transport), m_authThread(this), m_remObj(remDev), m_authState(AUTH_INITIALIZED), m_epState(EP_INITIALIZED),
         m_timer("SLAPEp", true, 1, false, 10),
-        m_rawStream(fd),
-        m_stream(&m_uartController, m_timer, packetSize, 4, baudrate),
-        m_uartController(&m_rawStream, bus.GetInternal().GetIODispatch(), &m_stream)
+        m_rawStream(accessor, m_remObj),
+        m_stream(&m_bleController, m_timer, packetSize, 2, 15000),
+        m_bleController(&m_rawStream, &m_stream)
     {
     }
 
     EndpointState GetEpState(void) { return m_epState; }
-    ~_DaemonSLAPEndpoint() { }
+    ~_DaemonBLEEndpoint() { }
 
     QStatus Authenticate(void);
     void AuthStop(void);
@@ -114,7 +136,7 @@ class _DaemonSLAPEndpoint : public _RemoteEndpoint {
     }
     AuthState GetAuthState(void) { return m_authState; }
 
-    UARTFd GetFd() { return m_fd; }
+    qcc::String GetRemObj() { return m_remObj; }
 
     QStatus Stop();
     QStatus Join();
@@ -124,25 +146,25 @@ class _DaemonSLAPEndpoint : public _RemoteEndpoint {
   private:
     class AuthThread : public qcc::Thread {
       public:
-        AuthThread(_DaemonSLAPEndpoint* ep) : Thread("auth"), m_endpoint(ep)  { }
+        AuthThread(_DaemonBLEEndpoint* ep) : Thread("auth"), m_endpoint(ep)  { }
       private:
         virtual qcc::ThreadReturn STDCALL Run(void* arg);
 
-        _DaemonSLAPEndpoint* m_endpoint;
+        _DaemonBLEEndpoint* m_endpoint;
     };
-    DaemonSLAPTransport* m_transport;        /**< The server holding the connection */
+    DaemonBLETransport* m_transport;        /**< The server holding the connection */
     AuthThread m_authThread;          /**< Thread used to do blocking calls during startup */
 
-    UARTFd m_fd;                      /**< The file descriptor for UART */
+    qcc::String m_remObj;             /**< The Remote Object for BLE */
     volatile AuthState m_authState;   /**< The state of the endpoint authentication process */
     volatile EndpointState m_epState; /**< The state of the endpoint authentication process */
     Timer m_timer;                    /**< Multipurpose timer for sending/resend/acks */
-    UARTStream m_rawStream;           /**< The raw UART stream */
+    BLEStream m_rawStream;           /**< The raw BLE stream */
     SLAPStream m_stream;              /**< The SLAP stream used for Alljoyn communication */
-    UARTController m_uartController;  /**< Controller responsible for reading from UART */
+    BLEController m_bleController;  /**< Controller responsible for reading from BLE */
 };
 
-void _DaemonSLAPEndpoint::ThreadExit(qcc::Thread* thread)
+void _DaemonBLEEndpoint::ThreadExit(qcc::Thread* thread)
 {
     if (thread == &m_authThread) {
         if (m_authState == AUTH_INITIALIZED) {
@@ -153,12 +175,10 @@ void _DaemonSLAPEndpoint::ThreadExit(qcc::Thread* thread)
     _RemoteEndpoint::ThreadExit(thread);
 }
 
-QStatus _DaemonSLAPEndpoint::Authenticate(void)
+QStatus _DaemonBLEEndpoint::Authenticate(void)
 {
-    QCC_DbgTrace(("DaemonSLAPEndpoint::Authenticate()"));
+    QCC_DbgTrace(("DaemonBLEEndpoint::Authenticate()"));
     m_timer.Start();
-
-    m_uartController.Start();
 
     QStatus status = m_stream.ScheduleLinkControlPacket();
     /*
@@ -168,7 +188,7 @@ QStatus _DaemonSLAPEndpoint::Authenticate(void)
         status = m_authThread.Start(this, this);
     }
     if (status != ER_OK) {
-        QCC_DbgPrintf(("DaemonSLAPEndpoint::Authenticate() Failed to authenticate endpoint"));
+        QCC_DbgPrintf(("DaemonBLEEndpoint::Authenticate() Failed to authenticate endpoint"));
         m_authState = AUTH_FAILED;
         /* Alert the Run() thread to refresh the list of com ports to listen on. */
         m_transport->Alert();
@@ -176,14 +196,13 @@ QStatus _DaemonSLAPEndpoint::Authenticate(void)
     return status;
 }
 
-void _DaemonSLAPEndpoint::AuthStop(void)
+void _DaemonBLEEndpoint::AuthStop(void)
 {
-    QCC_DbgTrace(("DaemonSLAPEndpoint::AuthStop()"));
+    QCC_DbgTrace(("DaemonBLEEndpoint::AuthStop()"));
 
     /* Stop the controller only if Authentication failed */
     if (m_authState != AUTH_SUCCEEDED) {
         m_timer.Stop();
-        m_uartController.Stop();
     }
     /*
      * Ask the auth thread to stop executing.  The only ways out of the thread
@@ -198,13 +217,12 @@ void _DaemonSLAPEndpoint::AuthStop(void)
     m_authThread.Stop();
 }
 
-void _DaemonSLAPEndpoint::AuthJoin(void)
+void _DaemonBLEEndpoint::AuthJoin(void)
 {
-    QCC_DbgTrace(("DaemonSLAPEndpoint::AuthJoin()"));
+    QCC_DbgTrace(("DaemonBLEEndpoint::AuthJoin()"));
     /* Join the controller only if Authentication failed */
     if (m_authState != AUTH_SUCCEEDED) {
         m_timer.Join();
-        m_uartController.Join();
     }
 
     /*
@@ -215,28 +233,26 @@ void _DaemonSLAPEndpoint::AuthJoin(void)
      */
     m_authThread.Join();
 }
-QStatus _DaemonSLAPEndpoint::Stop(void)
+QStatus _DaemonBLEEndpoint::Stop(void)
 {
-    QCC_DbgTrace(("DaemonSLAPEndpoint::Stop()"));
+    QCC_DbgTrace(("DaemonBLEEndpoint::Stop()"));
     m_timer.Stop();
-    m_uartController.Stop();
     QStatus status = _RemoteEndpoint::Stop();
 
     return status;
 }
 
-QStatus _DaemonSLAPEndpoint::Join(void)
+QStatus _DaemonBLEEndpoint::Join(void)
 {
-    QCC_DbgTrace(("DaemonSLAPEndpoint::Join()"));
+    QCC_DbgTrace(("DaemonBLEEndpoint::Join()"));
     m_timer.Join();
-    m_uartController.Join();
     QStatus status = _RemoteEndpoint::Join();
     return status;
 }
 
-void* _DaemonSLAPEndpoint::AuthThread::Run(void* arg)
+void* _DaemonBLEEndpoint::AuthThread::Run(void* arg)
 {
-    QCC_DbgPrintf(("DaemonSLAPEndpoint::AuthThread::Run()"));
+    QCC_DbgPrintf(("DaemonBLEEndpoint::AuthThread::Run()"));
 
     m_endpoint->m_authState = AUTH_AUTHENTICATING;
 
@@ -251,7 +267,7 @@ void* _DaemonSLAPEndpoint::AuthThread::Run(void* arg)
      */
     uint8_t byte;
     size_t nbytes;
-    QCC_DbgPrintf(("DaemonSLAPEndpoint::AuthThread::Run() calling pullbytes"));
+    QCC_DbgPrintf(("DaemonBLEEndpoint::AuthThread::Run() calling pullbytes"));
     /*
      * Eat the first byte of the stream.  This is required to be zero by the
      * DBus protocol.  It is used in the Unix socket implementation to carry
@@ -292,7 +308,7 @@ void* _DaemonSLAPEndpoint::AuthThread::Run(void* arg)
     qcc::String redirection;
     DaemonRouter& router = reinterpret_cast<DaemonRouter&>(m_endpoint->m_transport->m_bus.GetInternal().GetRouter());
     AuthListener* authListener = router.GetBusController()->GetAuthListener();
-    /* Since the DaemonSLAPTransport allows untrusted clients, it must implement UntrustedClientStart and
+    /* Since the DaemonBLETransport allows untrusted clients, it must implement UntrustedClientStart and
      * UntrustedClientExit.
      * As a part of Establish, the endpoint can call the Transport's UntrustedClientStart method if
      * it is an untrusted client, so the transport MUST call m_endpoint->SetListener before calling Establish
@@ -333,10 +349,10 @@ void* _DaemonSLAPEndpoint::AuthThread::Run(void* arg)
      * Tell the transport that the authentication has succeeded and that it can
      * now bring the connection up.
      */
-    DaemonSLAPEndpoint dEp = DaemonSLAPEndpoint::wrap(m_endpoint);
+    DaemonBLEEndpoint dEp = DaemonBLEEndpoint::wrap(m_endpoint);
     m_endpoint->m_transport->Authenticated(dEp);
 
-    QCC_DbgPrintf(("DaemonSLAPEndpoint::AuthThread::Run(): Returning"));
+    QCC_DbgPrintf(("DaemonBLEEndpoint::AuthThread::Run(): Returning"));
 
     /*
      * We are now done with the authentication process.  We have succeeded doing
@@ -358,54 +374,77 @@ void* _DaemonSLAPEndpoint::AuthThread::Run(void* arg)
     return (void*)status;
 }
 
-DaemonSLAPTransport::DaemonSLAPTransport(BusAttachment& bus)
+DaemonBLETransport::DaemonBLETransport(BusAttachment& bus)
     : m_bus(bus), stopping(false)
 {
     /*
      * We know we are daemon code, so we'd better be running with a daemon
      * router.  This is assumed elsewhere.
      */
-    assert(bus.GetInternal().GetRouter().IsDaemon());
+    btController = new BTController(bus, *this);
+    QStatus status = btController->Init();
+    if (status == ER_OK) {
+        bleAccessor = new BLEAccessor(this, bus.GetGlobalGUIDString());
+        btmActive = true;
+    }
 }
 
 
-DaemonSLAPTransport::~DaemonSLAPTransport()
+DaemonBLETransport::~DaemonBLETransport()
 {
     Stop();
     Join();
+    delete btController;
+    btController = NULL;
+    if (btmActive) {
+        delete bleAccessor;
+    }
 }
 
-QStatus DaemonSLAPTransport::Start()
+QStatus DaemonBLETransport::Start()
 {
+    QStatus status;
+
+    QCC_DbgTrace(("BLETransport::Start()"));
     stopping = false;
-    return Thread::Start();
+    status = bleAccessor->Start();
+    if (status == ER_OK) {
+        return Thread::Start();
+    }
+
+    return status;
 }
 
-QStatus DaemonSLAPTransport::Stop()
+QStatus DaemonBLETransport::Stop()
 {
     stopping = true;
+
+    if (IsStopping()) {
+        bleAccessor->Stop();
+    }
+
     /*
-     * Tell the DaemonSLAPTransport::Run thread to shut down.
+     * Tell the DaemonBLETransport::Run thread to shut down.
      */
     QStatus status = Thread::Stop();
     if (status != ER_OK) {
-        QCC_LogError(status, ("DaemonSLAPTransport::Stop(): Failed to Stop() main thread"));
+        QCC_LogError(status, ("DaemonBLETransport::Stop(): Failed to Stop() main thread"));
     }
 
     m_lock.Lock(MUTEX_CONTEXT);
     /*
      * Ask any authenticating endpoints to shut down and exit their threads.
      */
-    for (set<DaemonSLAPEndpoint>::iterator i = m_authList.begin(); i != m_authList.end(); ++i) {
-        DaemonSLAPEndpoint ep = *i;
+    for (set<DaemonBLEEndpoint>::iterator i = m_authList.begin(); i != m_authList.end(); ++i) {
+        DaemonBLEEndpoint ep = *i;
         ep->AuthStop();
     }
 
     /*
      * Ask any running endpoints to shut down and exit their threads.
      */
-    for (set<DaemonSLAPEndpoint>::iterator i = m_endpointList.begin(); i != m_endpointList.end(); ++i) {
-        DaemonSLAPEndpoint ep = *i;
+    for (set<DaemonBLEEndpoint>::iterator i = m_endpointList.begin(); i != m_endpointList.end(); ++i) {
+        DaemonBLEEndpoint ep = *i;
         ep->Stop();
     }
 
@@ -415,14 +454,14 @@ QStatus DaemonSLAPTransport::Stop()
 
 }
 
-QStatus DaemonSLAPTransport::Join()
+QStatus DaemonBLETransport::Join()
 {
     /*
-     * Wait for the DaemonSLAPTransport::Run thread to exit.
+     * Wait for the DaemonBLETransport::Run thread to exit.
      */
     QStatus status = Thread::Join();
     if (status != ER_OK) {
-        QCC_LogError(status, ("DaemonSLAPTransport::Join(): Failed to Join() main thread"));
+        QCC_LogError(status, ("DaemonBLETransport::Join(): Failed to Join() main thread"));
         return status;
     }
 
@@ -432,9 +471,9 @@ QStatus DaemonSLAPTransport::Join()
      * authentication threads in a previously required Stop().  We need to
      * Join() all of these auth threads here.
      */
-    set<DaemonSLAPEndpoint>::iterator it = m_authList.begin();
+    set<DaemonBLEEndpoint>::iterator it = m_authList.begin();
     while (it != m_authList.end()) {
-        DaemonSLAPEndpoint ep = *it;
+        DaemonBLEEndpoint ep = *it;
         m_authList.erase(it);
         m_lock.Unlock(MUTEX_CONTEXT);
         ep->AuthJoin();
@@ -451,7 +490,7 @@ QStatus DaemonSLAPTransport::Join()
      */
     it = m_endpointList.begin();
     while (it != m_endpointList.end()) {
-        DaemonSLAPEndpoint ep = *it;
+        DaemonBLEEndpoint ep = *it;
         m_endpointList.erase(it);
         m_lock.Unlock(MUTEX_CONTEXT);
         ep->Join();
@@ -466,53 +505,31 @@ QStatus DaemonSLAPTransport::Join()
 
 }
 
-QStatus DaemonSLAPTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, std::map<qcc::String, qcc::String>& argMap) const
+QStatus DaemonBLETransport::NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, std::map<qcc::String, qcc::String>& argMap) const
 {
-    QStatus status = ParseArguments(DaemonSLAPTransport::TransportName, inSpec, argMap);
-    qcc::String type = Trim(argMap["type"]);
-    qcc::String dev = Trim(argMap["dev"]);
-    qcc::String baud = Trim(argMap["baud"]);
-    /*
-     * databits, parity, and stopbits are optional.  They default to 8, none, and 1.
-     */
-    qcc::String databits = Trim(argMap["databits"]);
-    if (databits.empty()) {
-        argMap["databits"] = databits = "8";
-    }
-    qcc::String parity = Trim(argMap["parity"]);
-    if (parity.empty()) {
-        argMap["parity"] = parity = "none";
-    }
-    qcc::String stopbits = Trim(argMap["stopbits"]);
-    if (stopbits.empty()) {
-        argMap["stopbits"] = stopbits = "1";
-    }
+    QStatus status = ParseArguments(DaemonBLETransport::TransportName, inSpec, argMap);
 
     if (status == ER_OK) {
+        map<qcc::String, qcc::String>::iterator it;
         /*
          * Include only the type and dev in the outSpec.  The outSpec
          * is intended to be unique per device (i.e. you can't have two
          * connections to the same device with different parameters).
          */
-        outSpec = "slap:";
-        if (!type.empty()) {
-            outSpec.append("type=");
-            outSpec.append(type);
+        outSpec = "ble:";
+        it = argMap.find("addr");
+        if (it == argMap.end()) {
+            QCC_LogError(status, ("'addr=' must be specified for 'bluetooth:'"));
         } else {
-            status = ER_BUS_BAD_TRANSPORT_ARGS;
-        }
-        if (!dev.empty()) {
-            outSpec.append(",dev=");
-            outSpec.append(dev);
-        } else {
-            status = ER_BUS_BAD_TRANSPORT_ARGS;
+            outSpec.append("addr=");
+            outSpec += it->second;
         }
     }
 
     return status;
 }
 
-QStatus DaemonSLAPTransport::StartListen(const char* listenSpec)
+QStatus DaemonBLETransport::StartListen(const char* listenSpec)
 {
     if (stopping == true) {
         return ER_BUS_TRANSPORT_NOT_STARTED;
@@ -536,9 +553,7 @@ QStatus DaemonSLAPTransport::StartListen(const char* listenSpec)
         }
     }
     /* Ignore incorrect listen spec i.e. other than uart */
-    if (serverArgs["type"] == "uart") {
-        m_listenList.push_back(ListenEntry(normSpec, serverArgs));
-    }
+    m_listenList.push_back(ListenEntry(normSpec, serverArgs));
     m_lock.Unlock(MUTEX_CONTEXT);
     Thread::Alert();
 
@@ -546,12 +561,23 @@ QStatus DaemonSLAPTransport::StartListen(const char* listenSpec)
 
 }
 
-QStatus DaemonSLAPTransport::StopListen(const char* listenSpec)
+QStatus DaemonBLETransport::StopListen(const char* listenSpec)
 {
     return ER_OK;
 }
 
-void DaemonSLAPTransport::EndpointExit(RemoteEndpoint& ep)
+void DaemonBLETransport::BLEDeviceAvailable(bool avail)
+{
+    if (btController) {
+        btController->BLEDeviceAvailable(avail);
+    }
+}
+
+void DaemonBLETransport::DisconnectAll()
+{
+}
+
+void DaemonBLETransport::EndpointExit(DaemonBLEEndpoint& dEp)
 {
     /*
      * This is a callback driven from the remote endpoint thread exit function.
@@ -559,19 +585,46 @@ void DaemonSLAPTransport::EndpointExit(RemoteEndpoint& ep)
      * either of the threads (transmit or receive) of one of our endpoints exits
      * for some reason, we get called back here.
      */
-    QCC_DbgPrintf(("DaemonSLAPTransport::EndpointExit()"));
-    DaemonSLAPEndpoint dEp = DaemonSLAPEndpoint::cast(ep);
+    QCC_DbgPrintf(("DaemonBLETransport::EndpointExit()"));
     /* Remove the dead endpoint from the live endpoint list */
     m_lock.Lock(MUTEX_CONTEXT);
-    QCC_DbgPrintf(("DaemonSLAPTransport::EndpointExit()setting stopping"));
+    QCC_DbgPrintf(("DaemonBLETransport::EndpointExit()setting stopping"));
     dEp->SetEpStopping();
     Thread::Alert();
     m_lock.Unlock(MUTEX_CONTEXT);
+}
+
+void DaemonBLETransport::EndpointExit(RemoteEndpoint& ep)
+{
+    DaemonBLEEndpoint dEp = DaemonBLEEndpoint::cast(ep);
+    EndpointExit(dEp);
     ep->Invalidate();
 }
 
-void* DaemonSLAPTransport::Run(void* arg)
+BLEController* DaemonBLETransport::NewDeviceFound(const char* remoteDevice)
 {
+    DaemonBLETransport* ptr = this;
+    uint32_t packetSize = SLAP_DEFAULT_PACKET_SIZE;
+    static const bool truthiness = true;
+    QStatus status;
+    DaemonBLEEndpoint conn(ptr, m_bus, bleAccessor, truthiness, "slap", remoteDevice, packetSize);
+
+    status = conn->Authenticate();
+    if (status == ER_OK) {
+        m_EPset.insert(conn);
+        return &conn->m_bleController;
+    }
+
+    return NULL;
+
+}
+
+void* DaemonBLETransport::Run(void* arg)
+{
+
+    if (!btmActive) {
+        return (void*)ER_BUS_TRANSPORT_NOT_AVAILABLE;
+    }
 
     QStatus status = ER_OK;
     m_lock.Lock(MUTEX_CONTEXT);
@@ -585,25 +638,27 @@ void* DaemonSLAPTransport::Run(void* arg)
          * re-evaluate the list of SocketFds.
          * Set reload to true to indicate that the set of events has been reloaded.
          */
-        QCC_DbgPrintf(("DaemonSLAPTransport::Run()"));
+        QCC_DbgPrintf(("DaemonBLETransport::Run()"));
 
-        UARTFd uartFd = -1;
-        set<DaemonSLAPEndpoint>::iterator i = m_authList.begin();
+        qcc::BDAddress remObj;
+
+        /* gix Loop through authorizing ports (Remote Devices) */
+        set<DaemonBLEEndpoint>::iterator i = m_authList.begin();
         while (i != m_authList.end()) {
-            uartFd = -1;
-            DaemonSLAPEndpoint ep = *i;
-            _DaemonSLAPEndpoint::AuthState authState = ep->GetAuthState();
+            remObj.SetRaw(0);
+            DaemonBLEEndpoint ep = *i;
+            _DaemonBLEEndpoint::AuthState authState = ep->GetAuthState();
 
-            if (authState == _DaemonSLAPEndpoint::AUTH_FAILED) {
+            if (authState == _DaemonBLEEndpoint::AUTH_FAILED) {
                 /*
                  * The endpoint has failed authentication and the auth thread is
                  * gone or is going away.  Since it has failed there is no way this
                  * endpoint is going to be started so we can get rid of it as soon
                  * as we Join() the (failed) authentication thread.
                  */
-                QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Scavenging failed authenticator"));
+                QCC_DbgPrintf(("DaemonBLETransport::Run(): Scavenging failed authenticator"));
                 m_authList.erase(i);
-                uartFd = ep->GetFd();
+                remObj = ep->GetRemObj();
                 m_lock.Unlock(MUTEX_CONTEXT);
                 ep->AuthStop();
                 ep->AuthJoin();
@@ -611,9 +666,9 @@ void* DaemonSLAPTransport::Run(void* arg)
                 i = m_authList.upper_bound(ep);
                 for (list<ListenEntry>::iterator it = m_listenList.begin(); it != m_listenList.end(); it++) {
 
-                    if (it->listenFd == uartFd) {
-                        QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Reenabling %s in the listenEvents", it->args["port"].c_str()));
-                        it->listenFd = -1;
+                    if (it->listenRemObj == remObj) {
+                        QCC_DbgPrintf(("DaemonBLETransport::Run(): Reenabling %s in the listenEvents", it->args["port"].c_str()));
+                        it->listenRemObj.SetRaw(0);
                         it->endpointStarted = false;
                         Thread::Alert();
                     }
@@ -622,12 +677,14 @@ void* DaemonSLAPTransport::Run(void* arg)
                 i++;
             }
         }
+
+        /* gix Loop through Fully Instanciated Remote Devices */
         i = m_endpointList.begin();
         while (i != m_endpointList.end()) {
-            uartFd = -1;
-            DaemonSLAPEndpoint ep = *i;
+            remObj.SetRaw(0);
+            DaemonBLEEndpoint ep = *i;
 
-            _DaemonSLAPEndpoint::EndpointState endpointState = ep->GetEpState();
+            _DaemonBLEEndpoint::EndpointState endpointState = ep->GetEpState();
             /*
              * There are two possibilities for the disposition of the RX and
              * TX threads.  First, they were never successfully started.  In
@@ -636,11 +693,11 @@ void* DaemonSLAPTransport::Run(void* arg)
              * it.  Since the threads were never started, they must not be
              * joined.
              */
-            if (endpointState == _DaemonSLAPEndpoint::EP_FAILED) {
+            if (endpointState == _DaemonBLEEndpoint::EP_FAILED) {
                 m_endpointList.erase(i);
-                uartFd = ep->GetFd();
+                remObj = ep->GetRemObj();
                 i = m_endpointList.upper_bound(ep);
-            } else if (endpointState == _DaemonSLAPEndpoint::EP_STOPPING) {
+            } else if (endpointState == _DaemonBLEEndpoint::EP_STOPPING) {
                 /*
                  * The second possibility for the disposition of the RX and
                  * TX threads is that they were successfully started but
@@ -654,7 +711,7 @@ void* DaemonSLAPTransport::Run(void* arg)
                  * the endpoint AuthJoin() to join the auth thread.
                  */
                 m_endpointList.erase(i);
-                uartFd = ep->GetFd();
+                remObj = ep->GetRemObj();
                 m_lock.Unlock(MUTEX_CONTEXT);
                 ep->Stop();
                 ep->Join();
@@ -663,12 +720,12 @@ void* DaemonSLAPTransport::Run(void* arg)
             } else {
                 i++;
             }
-            if (uartFd != -1) {
+            if (remObj.GetRaw() != 0) {
                 for (list<ListenEntry>::iterator it = m_listenList.begin(); it != m_listenList.end(); it++) {
 
-                    if (it->listenFd == uartFd) {
-                        QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Reenabling back %s in the listenEvents", it->args["port"].c_str()));
-                        it->listenFd = -1;
+                    if (it->listenRemObj == remObj) {
+                        QCC_DbgPrintf(("DaemonBLETransport::Run(): Reenabling back %s in the listenEvents", it->args["port"].c_str()));
+                        it->listenRemObj.SetRaw(0);
                         it->endpointStarted = false;
                         break;
                     }
@@ -679,31 +736,10 @@ void* DaemonSLAPTransport::Run(void* arg)
         checkEvents.clear();
         checkEvents.push_back(&stopEvent);
 
-        for (list<ListenEntry>::iterator i = m_listenList.begin(); i != m_listenList.end(); i++) {
-
-            if (i->listenFd == -1) {
-                /* open the port and set listen fd */
-                UARTFd listenFd;
-                QStatus uartStatus = UART(i->args["dev"], StringToU32(i->args["baud"]), StringToU32(i->args["databits"]),
-                                          i->args["parity"], StringToU32(i->args["stopbits"]), listenFd);
-
-                if (uartStatus == ER_OK && listenFd != -1) {
-                    i->listenFd = listenFd;
-                    checkEvents.push_back(new Event(i->listenFd, Event::IO_READ));
-                    QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Adding checkevent for %s to list of events", i->args["dev"].c_str()));
-                } else {
-                    QCC_LogError(uartStatus, ("DaemonSLAPTransport::Run(): Failed to open for %s", i->args["dev"].c_str()));
-                    m_listenList.erase(i++);
-                }
-            } else if (!i->endpointStarted) {
-                checkEvents.push_back(new Event(i->listenFd, Event::IO_READ));
-                QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Adding checkevent for %s to list of events", i->args["dev"].c_str()));
-            }
-        }
-
         m_lock.Unlock(MUTEX_CONTEXT);
         status = Event::Wait(checkEvents, signaledEvents);
         if (ER_OK != status) {
+            QCC_LogError(status, ("Event::Wait failed"));
             break;
         }
         m_lock.Lock(MUTEX_CONTEXT);
@@ -716,21 +752,31 @@ void* DaemonSLAPTransport::Run(void* arg)
                 continue;
             } else {
                 Event* e = *i;
-                QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Accepting connection "));
+                QCC_DbgPrintf(("DaemonBLETransport::Run(): Accepting connection "));
                 for (list<ListenEntry>::iterator i = m_listenList.begin(); i != m_listenList.end(); i++) {
-                    if (i->listenFd == e->GetFD()) {
+                    if (!i->endpointStarted) {
                         i->endpointStarted = true;
-                        static const bool truthiness = true;
-                        DaemonSLAPTransport* ptr = this;
-                        uint32_t packetSize = SLAP_DEFAULT_PACKET_SIZE;
-                        uint32_t baudrate = StringToU32(i->args["baud"]);
-                        QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Creating endpoint for %s",  i->args["dev"].c_str()));
-                        DaemonSLAPEndpoint conn(ptr, m_bus, truthiness, "slap", i->listenFd, packetSize, baudrate);
-                        QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Authenticating endpoint for %s",  i->args["dev"].c_str()));
+                        qcc::String unused;
+                        /* Accept a new connection */
+                        qcc::String authName;
+                        QCC_DbgPrintf(("DaemonBLETransport::Run(): Creating endpoint for %s",  i->listenRemObj.ToString().c_str()));
+                        RemoteEndpoint conn(bleAccessor->Accept(m_bus, e));
 
-                        status = conn->Authenticate();
-                        if (status == ER_OK) {
-                            m_authList.insert(conn);
+
+                        if (!conn->IsValid()) {
+                            continue;
+                        }
+                        /* Initialized the features for this endpoint */
+                        conn->GetFeatures().isBusToBus = false;
+                        conn->GetFeatures().allowRemote = false;
+                        conn->GetFeatures().handlePassing = false;
+
+                        QCC_DbgPrintf(("BLETransport::Run: Calling conn->Establish() [for accepted connection]"));
+                        status = conn->Establish("ANONYMOUS", authName, unused);
+                        if (ER_OK == status) {
+                            QCC_DbgPrintf(("Starting endpoint [for accepted connection]"));
+                            conn->SetListener(this);
+                            status = conn->Start();
                         }
                         break;
                     }
@@ -746,12 +792,12 @@ void* DaemonSLAPTransport::Run(void* arg)
         }
     }
     m_lock.Unlock(MUTEX_CONTEXT);
-    QCC_DbgPrintf(("DaemonSLAPTransport::Run() is exiting. status = %s", QCC_StatusText(status)));
+    QCC_DbgPrintf(("DaemonBLETransport::Run() is exiting. status = %s", QCC_StatusText(status)));
     return (void*) status;
 }
-void DaemonSLAPTransport::Authenticated(DaemonSLAPEndpoint& conn)
+void DaemonBLETransport::Authenticated(DaemonBLEEndpoint& conn)
 {
-    QCC_DbgPrintf(("DaemonSLAPTransport::Authenticated()"));
+    QCC_DbgPrintf(("DaemonBLETransport::Authenticated()"));
     /*
      * If the transport is stopping, dont start the Tx and RxThreads.
      */
@@ -771,15 +817,18 @@ void DaemonSLAPTransport::Authenticated(DaemonSLAPEndpoint& conn)
      */
     m_lock.Lock(MUTEX_CONTEXT);
 
-    set<DaemonSLAPEndpoint>::iterator i = find(m_authList.begin(), m_authList.end(), conn);
-    assert(i != m_authList.end() && "DaemonSLAPTransport::Authenticated(): Conn not on m_authList");
+    set<DaemonBLEEndpoint>::iterator i = find(m_authList.begin(), m_authList.end(), conn);
 
-    /*
-     * Note here that we have not yet marked the authState as AUTH_SUCCEEDED so
-     * this is a point in time where the authState can be AUTH_AUTHENTICATING
-     * and the endpoint can be on the endpointList and not the authList.
-     */
-    m_authList.erase(i);
+    if (i !=  m_authList.end()) {
+        assert(i != m_authList.end() && "DaemonBLETransport::Authenticated(): Conn not on m_authList");
+
+        /*
+         * Note here that we have not yet marked the authState as AUTH_SUCCEEDED so
+         * this is a point in time where the authState can be AUTH_AUTHENTICATING
+         * and the endpoint can be on the endpointList and not the authList.
+         */
+        m_authList.erase(i);
+    }
     m_endpointList.insert(conn);
 
     m_lock.Unlock(MUTEX_CONTEXT);
@@ -790,7 +839,7 @@ void DaemonSLAPTransport::Authenticated(DaemonSLAPEndpoint& conn)
 
     QStatus status = conn->Start();
     if (status != ER_OK) {
-        QCC_LogError(status, ("DaemonSLAPTransport::Authenticated(): Failed to start DaemonSLAPEndpoint"));
+        QCC_LogError(status, ("DaemonBLETransport::Authenticated(): Failed to start DaemonBLEEndpoint"));
         /*
          * We were unable to start up the endpoint for some reason.  As soon as
          * we set this state to EP_FAILED, we are telling the server accept loop
@@ -814,9 +863,101 @@ void DaemonSLAPTransport::Authenticated(DaemonSLAPEndpoint& conn)
         conn->SetEpStarted();
     }
 }
-QStatus DaemonSLAPTransport::UntrustedClientStart() {
+QStatus DaemonBLETransport::UntrustedClientStart() {
     /** Since UART implies physical security, always allow clients with ANONYMOUS authentication to connect. */
     return ER_OK;
 }
 
+QStatus DaemonBLETransport::Disconnect(const String& busName)
+{
+    QCC_DbgTrace(("DaemonBLETransport::Disconnect(busName = %s)", busName.c_str()));
+    QStatus status(ER_BUS_BAD_TRANSPORT_ARGS);
+
+    m_lock.Lock(MUTEX_CONTEXT);
+    for (set<DaemonBLEEndpoint>::iterator i = m_endpointList.begin(); i != m_endpointList.end(); ++i) {
+        DaemonBLEEndpoint r = *i;
+        if (r->GetUniqueName() == busName) {
+            status = r->Stop();
+        }
+    }
+    m_lock.Unlock(MUTEX_CONTEXT);
+    return status;
 }
+
+
+RemoteEndpoint DaemonBLETransport::LookupEndpoint(const qcc::String& busName)
+{
+    RemoteEndpoint ep;
+    m_lock.Lock(MUTEX_CONTEXT);
+    for (set<DaemonBLEEndpoint>::iterator i = m_endpointList.begin(); i != m_endpointList.end(); ++i) {
+        DaemonBLEEndpoint r = *i;
+        if (r->GetRemoteName() == busName) {
+            ep = RemoteEndpoint::cast(r);
+        }
+    }
+    m_lock.Unlock(MUTEX_CONTEXT);
+    return ep;
+}
+
+
+void DaemonBLETransport::ReturnEndpoint(RemoteEndpoint& r) {
+    DaemonBLEEndpoint ep = DaemonBLEEndpoint::cast(r);
+    if (m_endpointList.find(ep) != m_endpointList.end()) {
+        m_lock.Unlock(MUTEX_CONTEXT);
+    }
+}
+
+
+QStatus DaemonBLETransport::StartFind(const BDAddressSet& ignoreAddrs, uint32_t duration)
+{
+    return bleAccessor->StartDiscovery(ignoreAddrs, duration);
+}
+
+
+QStatus DaemonBLETransport::StopFind()
+{
+    return bleAccessor->StopDiscovery();
+}
+
+
+QStatus DaemonBLETransport::StartListen()
+{
+    if (!btmActive) {
+        return ER_BUS_TRANSPORT_NOT_AVAILABLE;
+    }
+
+    QStatus status;
+    status = bleAccessor->StartConnectable();
+    if (status == ER_OK) {
+        QCC_DbgHLPrintf(("Listening"));
+        Thread::Start();
+    }
+    return status;
+}
+
+
+void DaemonBLETransport::StopListen()
+{
+    Thread::Stop();
+    Thread::Join();
+    bleAccessor->StopConnectable();
+    QCC_DbgHLPrintf(("Stopped listening"));
+}
+
+void DaemonBLETransport::FoundNamesChange(const qcc::String& guid,
+                                          const vector<String>& names,
+                                          const BDAddress& bdAddr,
+                                          uint16_t psm,
+                                          bool lost)
+{
+    if (listener) {
+        qcc::String busAddr("bluetooth:addr=" + bdAddr.ToString() +
+                            ",psm=0x" + U32ToString(psm, 16));
+
+        listener->FoundNames(busAddr, guid, TRANSPORT_LOCAL, &names, lost ? 0 : BUS_NAME_TTL);
+    }
+}
+
+}
+
+

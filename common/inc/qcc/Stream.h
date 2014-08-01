@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -201,6 +201,31 @@ class NonBlockingStream : public Stream {
 
     /* Close the stream */
     virtual void Close() { }
+};
+
+class StreamReadListener {
+  public:
+    virtual ~StreamReadListener() { };
+    virtual void ReadEventTriggered(uint8_t* buf, size_t numBytes) = 0;
+};
+
+class StreamController {
+  public:
+    StreamController(StreamReadListener* readListener) : m_readListener(readListener) { };
+    /** Destructor */
+    virtual ~StreamController() { };
+
+    /**
+     * Push zero or more bytes into the sink with infinite ttl.
+     *
+     * @param buf          Buffer to store pulled bytes
+     * @param numBytes     Number of bytes from buf to send to sink.
+     * @param numSent      Number of bytes actually consumed by sink.
+     * @return   ER_OK if successful.
+     */
+    virtual QStatus PushBytes(const void* buf, size_t numBytes, size_t& actualBytes) = 0;
+  protected:
+    StreamReadListener* m_readListener;   /**< The Read listener to call back after reading data */
 };
 }  /* namespace */
 

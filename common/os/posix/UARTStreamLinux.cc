@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -319,8 +319,9 @@ QStatus UARTStream::PushBytes(const void* buf, size_t numBytes, size_t& actualBy
     return status;
 }
 
-UARTController::UARTController(UARTStream* uartStream, IODispatch& iodispatch, UARTReadListener* readListener) :
-    m_uartStream(uartStream), m_iodispatch(iodispatch), m_readListener(readListener), exitCount(0)
+UARTController::UARTController(UARTStream* uartStream, IODispatch& iodispatch, StreamReadListener* readListener) :
+    StreamController(readListener),
+    m_uartStream(uartStream), m_iodispatch(iodispatch), exitCount(0)
 {
 }
 
@@ -356,6 +357,11 @@ void UARTController::ExitCallback()
 {
     m_uartStream->Close();
     exitCount = 1;
+}
+
+QStatus UARTController::PushBytes(const void* buf, size_t numBytes, size_t& actualBytes)
+{
+    return m_uartStream->PushBytes(buf, numBytes, actualBytes);
 }
 
 #endif
