@@ -1039,6 +1039,9 @@ QStatus _LocalEndpoint::HandleMethodReply(Message& message)
             if ((message->GetType() == MESSAGE_METHOD_RET) || (GetUniqueName() != message->GetSender())) {
                 status = ER_BUS_MESSAGE_NOT_ENCRYPTED;
             }
+            if ((message->GetType() == MESSAGE_ERROR)) {
+                message->UnmarshalArgs("*");
+            }
         } else {
             QCC_DbgPrintf(("Matched reply for serial #%d", message->GetReplySerial()));
             if (message->GetType() == MESSAGE_METHOD_RET) {
