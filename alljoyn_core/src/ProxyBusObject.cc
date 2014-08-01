@@ -885,7 +885,7 @@ MethodCallExit:
     if (status == ER_OK) {
         if (replyMsg->GetType() == MESSAGE_ERROR) {
             status = ER_BUS_REPLY_IS_ERROR_MESSAGE;
-        } else if (replyMsg->GetType() == MESSAGE_INVALID) {
+        } else if (replyMsg->GetType() == MESSAGE_INVALID && !(flags & ALLJOYN_FLAG_NO_REPLY_EXPECTED)) {
             status = ER_FAIL;
         }
     } else {
