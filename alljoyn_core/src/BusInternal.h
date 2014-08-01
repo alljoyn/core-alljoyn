@@ -37,6 +37,7 @@
 #include <alljoyn/InterfaceDescription.h>
 
 #include "AuthManager.h"
+#include "AboutListenerInternal.h"
 #include "ClientRouter.h"
 #include "KeyStore.h"
 #include "PeerState.h"
@@ -317,6 +318,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     std::map<qcc::Thread*, JoinContext> joinThreads;  /* List of threads waiting to join */
     qcc::Mutex joinLock;                              /* Mutex that protects joinThreads */
     KeyStoreKeyEventListener ksKeyEventListener;
+    AboutListenerInternal internalAboutListener;              /* Listener to handle the About Announced signal */
 };
 }
 

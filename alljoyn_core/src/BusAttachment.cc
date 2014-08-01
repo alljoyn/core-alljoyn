@@ -39,6 +39,7 @@
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/InterfaceDescription.h>
+#include "AboutListenerInternal.h"
 #include "AuthMechanism.h"
 #include "AuthMechAnonymous.h"
 #include "AuthMechDBusCookieSHA1.h"
@@ -130,7 +131,8 @@ BusAttachment::Internal::Internal(const char* appName,
     allowRemoteMessages(allowRemoteMessages),
     listenAddresses(listenAddresses ? listenAddresses : ""),
     stopLock(),
-    stopCount(0)
+    stopCount(0),
+    internalAboutListener(bus)
 {
     /*
      * Bus needs a pointer to this internal object.
@@ -2032,6 +2034,22 @@ void BusAttachment::Internal::AllJoynSignalHandler(const InterfaceDescription::M
 uint32_t BusAttachment::GetTimestamp()
 {
     return qcc::GetTimestamp();
+}
+
+QStatus BusAttachment::RegisterAboutListener(AboutListener& aboutListener, const char** implementsInterfaces, size_t numberInterfaces)
+{
+    // Add the user handler to the internal AnnounceHandler.
+    return busInternal->internalAboutListener.AddHandler(aboutListener, implementsInterfaces, numberInterfaces);
+}
+
+QStatus BusAttachment::UnregisterAboutListener(AboutListener& aboutListener, const char** implementsInterfaces, size_t numberInterfaces)
+{
+    return busInternal->internalAboutListener.RemoveHandler(aboutListener, implementsInterfaces, numberInterfaces);
+}
+
+QStatus BusAttachment::UnregisterAllAboutListeners()
+{
+    return busInternal->internalAboutListener.RemoveAllHandlers();
 }
 
 QStatus BusAttachment::SetSessionListener(SessionId id, SessionListener* listener)

@@ -30,6 +30,7 @@
 #include <qcc/String.h>
 #include <alljoyn/KeyStoreListener.h>
 #include <alljoyn/AuthListener.h>
+#include <alljoyn/AboutListener.h>
 #include <alljoyn/BusListener.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/ProxyBusObject.h>
@@ -1249,6 +1250,78 @@ class BusAttachment : public MessageReceiver {
      * @return This BusAttachment's Translator
      */
     Translator* GetDescriptionTranslator();
+
+    /**
+     * Registers a handler to receive the org.alljoyn.about Announce signal.
+     *
+     * The handler is only called if all the interfaces are implemented.
+     * For example, if the handler should be called if both "com.example.Audio"
+     * <em>and</em> "com.example.Video" are implemented then call
+     * RegisterAboutListener once:
+     * @code
+     * const char* interfaces[] = {"com.example.Audio", "com.example.Video"};
+     * RegisterAboutListener(aboutListener, interfaces,
+     *                       sizeof(interfaces) / sizeof(interfaces[0]));
+     * @endcode
+     *
+     * If the handler should be called if "com.example.Audio" <em>or</em>
+     * "com.example.Video" is implemented then call
+     * RegisterAboutListener multiple times:
+     * @code
+     * const char* audioInterface[] = {"com.example.Audio"};
+     * RegisterAboutListener(aboutListener, audioInterface,
+     *                       sizeof(audioInterface) / sizeof(audioInterface[0]));
+     * const char* videoInterface[] = {"com.example.Video"};
+     * RegisterAboutListener(aboutListener, videoInterface,
+     *                       sizeof(videoInterface) / sizeof(videoInterface[0]));
+     * @endcode
+     *
+     * The interface name may be a prefix followed by a *.  Using
+     * this, the example above could be written as:
+     * @code
+     * const char* exampleInterface[] = {"com.example.*"};
+     * RegisterAboutListener(aboutListener, exampleInterface,
+     *                       sizeof(exampleInterface) / sizeof(exampleInterface[0]));
+     * @endcode
+     *
+     * The AboutListener will receive any announcement that implements an interface
+     * beginning with the "com.example." name.
+     *
+     * If the same AboutListener is used for for multiple interfaces then it is
+     * the listeners responsibility to parse through the reported interfaces to
+     * figure out what should be done in response to the Announce signal.
+     *
+     * Note: specifying NULL for the implementsInterfaces parameter could have
+     * significant impact on network performance and should be avoided unless
+     * its known that all announcements are needed.
+     *
+     * @param[in] aboutListener reference to AnnounceListener
+     * @param[in] implementsInterfaces a list of interfaces that the Announce
+     *               signal reports as implemented. NULL to receive all Announce
+     *               signals regardless of interfaces
+     * @param[in] numberInterfaces the number of interfaces in the
+     *               implementsInterfaces list
+     * @return status
+     */
+    QStatus RegisterAboutListener(AboutListener& aboutListener, const char** implementsInterfaces, size_t numberInterfaces);
+
+    /**
+     * Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
+     *
+     * @param[in] aboutListener reference to AboutListener to unregister
+     * @param[in] implementsInterfaces a list of interfaces that was used when
+     *               registering the AboutListener
+     * @param[in] numberInterfaces the number of interfaces in the
+     *               implementsInterfaces list
+     * @return status
+     */
+    QStatus UnregisterAboutListener(AboutListener& aboutListener, const char** implementsInterfaces, size_t numberInterfaces);
+
+    /**
+     * Unregisters all AboutListeners from receiving any org.alljoyn.about Announce signal
+     * @return status
+     */
+    QStatus UnregisterAllAboutListeners();
 
     /// @cond ALLJOYN_DEV
     /**
