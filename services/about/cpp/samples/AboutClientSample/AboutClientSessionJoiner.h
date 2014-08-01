@@ -35,7 +35,7 @@ class AboutClientSessionJoiner : public ajn::BusAttachment::JoinSessionAsyncCB {
 
   public:
 
-    AboutClientSessionJoiner(qcc::String name, SessionJoinedCallback callback = 0);
+    AboutClientSessionJoiner(ajn::BusAttachment& bus, const qcc::String& busName, SessionJoinedCallback callback = 0);
 
     virtual ~AboutClientSessionJoiner();
 
@@ -43,7 +43,9 @@ class AboutClientSessionJoiner : public ajn::BusAttachment::JoinSessionAsyncCB {
 
   private:
 
-    qcc::String m_Busname;
+    ajn::BusAttachment& bus;
+
+    qcc::String m_BusName;
 
     SessionJoinedCallback m_Callback;
 };

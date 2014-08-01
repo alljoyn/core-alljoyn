@@ -20,8 +20,8 @@
 
 using namespace ajn;
 
-AboutClientSessionJoiner::AboutClientSessionJoiner(qcc::String name, SessionJoinedCallback callback) :
-    m_Busname(name), m_Callback(callback) {
+AboutClientSessionJoiner::AboutClientSessionJoiner(BusAttachment& bus, const qcc::String& busName, SessionJoinedCallback callback) :
+    bus(bus), m_BusName(busName), m_Callback(callback) {
 }
 
 AboutClientSessionJoiner::~AboutClientSessionJoiner()
@@ -32,14 +32,17 @@ AboutClientSessionJoiner::~AboutClientSessionJoiner()
 void AboutClientSessionJoiner::JoinSessionCB(QStatus status, SessionId id, const SessionOpts& opts, void* context)
 {
     if (status == ER_OK) {
-        std::cout << "JoinSessionCB(" << m_Busname.c_str() << ") succeeded with id: " << id << std::endl;
+        std::cout << "JoinSessionCB(" << m_BusName << ") succeeded with id: " << id << std::endl;
         if (m_Callback) {
             std::cout << "Calling SessionJoiner Callback" << std::endl;
-            m_Callback(m_Busname, id);
+            m_Callback(bus.GetUniqueName(), id);
         }
     } else {
-        std::cout << "JoinSessionCB(" << m_Busname.c_str() << ") failed with status: " << QCC_StatusText(status) << std::endl;
+        std::cout << "JoinSessionCB(" << m_BusName << ") failed with status: " << QCC_StatusText(status) << std::endl;
     }
+
+
+    bus.SetSessionListener(id, NULL);
 
     AboutClientSessionListener* t = (AboutClientSessionListener*) context;
     delete t;
