@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -25,34 +25,58 @@
 #define BAUDRATE                115200
 #define RANDOM_BYTES_MAX        5000
 using namespace qcc;
+class Ep {
+  public:
+    Ep(UARTFd fd, IODispatch& iodisp, int packetSize, int windowSize) :
+        m_timer("SLAPEp", true, 1, false, 10),
+        m_rawStream(fd),
+        m_stream(&m_uartController, m_timer, packetSize, windowSize, BAUDRATE),
+        m_uartController(&m_rawStream, iodisp, &m_stream)
+    {
+        m_timer.Start();
+        m_uartController.Start();
+    }
+    ~Ep() {
+        Stop();
+        Join();
+        m_stream.Close();
+    }
+    QStatus Stop() {
+        QStatus status = m_timer.Stop();
+        QStatus status1 = m_uartController.Stop();
+        return (status != ER_OK) ? status : status1;
 
-TEST(UARTTest, DISABLED_uart_large_buffer_test)
+    }
+
+    QStatus Join() {
+        QStatus status = m_timer.Join();
+        QStatus status1 = m_uartController.Join();
+        return (status != ER_OK) ? status : status1;
+    }
+    Timer m_timer;                    /**< Multipurpose timer for sending/resend/acks */
+    UARTStream m_rawStream;           /**< The raw UART stream */
+    SLAPStream m_stream;              /**< The SLAP stream used for Alljoyn communication */
+    UARTController m_uartController;  /**< Controller responsible for reading from UART */
+};
+
+TEST(UARTTest, DISABLED_EPTest)
 {
-    Timer timer0("SLAPtimer0", true, 1, false, 10);
-    timer0.Start();
-    Timer timer1("SLAPtimer1", true, 1, false, 10);
-    timer1.Start();
-    UARTFd fd0;
-    UARTFd fd1;
-    QStatus status = UART("/tmp/COM0", BAUDRATE, fd0);
-    ASSERT_EQ(status, ER_OK);
 
-    status = UART("/tmp/COM1", BAUDRATE, fd1);
-    ASSERT_EQ(status, ER_OK);
-
-    UARTStream* s = new UARTStream(fd0);
-    UARTStream* s1 = new UARTStream(fd1);
-    SLAPStream h(s, timer0, PACKET_SIZE, WINDOW_SIZE, BAUDRATE);
-    SLAPStream h1(s1, timer1, PACKET_SIZE, WINDOW_SIZE, BAUDRATE);
-    h.ScheduleLinkControlPacket();
-    h1.ScheduleLinkControlPacket();
     IODispatch iodisp("iodisp", 4);
     iodisp.Start();
+    UARTFd fd0;
+    UARTFd fd1;
+    QStatus status = UART("/dev/pts/4", BAUDRATE, fd0);
+    ASSERT_EQ(status, ER_OK);
 
-    UARTController uc(s, iodisp, &h);
-    UARTController uc1(s1, iodisp, &h1);
-    uc.Start();
-    uc1.Start();
+    status = UART("/dev/pts/5", BAUDRATE, fd1);
+    ASSERT_EQ(status, ER_OK);
+    Ep ep0(fd0, iodisp, PACKET_SIZE, WINDOW_SIZE);
+    Ep ep1(fd1, iodisp, PACKET_SIZE, WINDOW_SIZE);
+    ep0.m_stream.ScheduleLinkControlPacket();
+    ep1.m_stream.ScheduleLinkControlPacket();
+
+
     uint8_t rxBuffer[400];
     memset(&rxBuffer, 'R', sizeof(rxBuffer));
 
@@ -66,61 +90,88 @@ TEST(UARTTest, DISABLED_uart_large_buffer_test)
 
     size_t actual;
 
-    h.PushBytes(txBuffer, 400, actual);
+    ep0.m_stream.PushBytes(txBuffer, 400, actual);
     EXPECT_EQ(actual, 400U);
 
 
-    h1.PullBytes(rxBuffer, 400, actual);
+    ep1.m_stream.PullBytes(rxBuffer, 400, actual);
     EXPECT_EQ(actual, 400U);
 
     for (int x = 0; x < 400; x++) {
         EXPECT_EQ(txBuffer[x], rxBuffer[x]);
     }
 
-    timer0.Stop();
-    timer1.Stop();
-    uc.Stop();
-    uc1.Stop();
+    ep1.Stop();
     iodisp.Stop();
 
-    timer0.Join();
-    timer1.Join();
-    uc.Join();
-    uc1.Join();
+    ep1.Join();
     iodisp.Join();
+}
+TEST(UARTTest, DISABLED_uart_large_buffer_test)
+{
+    IODispatch iodisp("iodisp", 4);
+    iodisp.Start();
+    UARTFd fd0;
+    UARTFd fd1;
+    QStatus status = UART("/dev/pts/4", BAUDRATE, fd0);
+    ASSERT_EQ(status, ER_OK);
 
-    h.Close();
-    h1.Close();
-    delete s;
-    delete s1;
+    status = UART("/dev/pts/5", BAUDRATE, fd1);
+    ASSERT_EQ(status, ER_OK);
+    Ep ep0(fd0, iodisp, PACKET_SIZE, WINDOW_SIZE);
+    Ep ep1(fd1, iodisp, PACKET_SIZE, WINDOW_SIZE);
+    ep0.m_stream.ScheduleLinkControlPacket();
+    ep1.m_stream.ScheduleLinkControlPacket();
+
+    uint8_t rxBuffer[400];
+    memset(&rxBuffer, 'R', sizeof(rxBuffer));
+
+    uint8_t txBuffer[400];
+    memset(&txBuffer, 'T', sizeof(txBuffer));
+
+    int blocksize = 20;
+    for (int blocks = 0; blocks < 20; blocks++) {
+        memset(txBuffer + (blocks * blocksize), 'A' + (uint8_t)blocks, blocksize);
+    }
+
+    size_t actual;
+
+    ep0.m_stream.PushBytes(txBuffer, 400, actual);
+    EXPECT_EQ(actual, 400U);
+
+
+    ep1.m_stream.PullBytes(rxBuffer, 400, actual);
+    EXPECT_EQ(actual, 400U);
+
+    for (int x = 0; x < 400; x++) {
+        EXPECT_EQ(txBuffer[x], rxBuffer[x]);
+    }
+
+    ep0.Stop();
+    ep1.Stop();
+    iodisp.Stop();
+
+    ep0.Join();
+    ep1.Join();
+    iodisp.Join();
 }
 TEST(UARTTest, DISABLED_uart_codisco_test)
 {
-    Timer timer0("SLAPtimer0", true, 1, false, 10);
-    timer0.Start();
-    Timer timer1("SLAPtimer1", true, 1, false, 10);
-    timer1.Start();
-    UARTFd fd0;
-    UARTFd fd1;
-    QStatus status = UART("/tmp/COM0", BAUDRATE, fd0);
-    ASSERT_EQ(status, ER_OK);
-
-    status = UART("/tmp/COM1", BAUDRATE, fd1);
-    ASSERT_EQ(status, ER_OK);
-
-    UARTStream* s = new UARTStream(fd0);
-    UARTStream* s1 = new UARTStream(fd1);
-    SLAPStream h(s, timer0, PACKET_SIZE, WINDOW_SIZE, BAUDRATE);
-    SLAPStream h1(s1, timer1, PACKET_SIZE, WINDOW_SIZE, BAUDRATE);
-    h.ScheduleLinkControlPacket();
-    h1.ScheduleLinkControlPacket();
     IODispatch iodisp("iodisp", 4);
     iodisp.Start();
+    UARTFd fd0;
+    UARTFd fd1;
+    QStatus status = UART("/dev/pts/4", BAUDRATE, fd0);
+    ASSERT_EQ(status, ER_OK);
 
-    UARTController uc(s, iodisp, &h);
-    UARTController uc1(s1, iodisp, &h1);
-    uc.Start();
-    uc1.Start();
+    status = UART("/dev/pts/5", BAUDRATE, fd1);
+    ASSERT_EQ(status, ER_OK);
+
+    Ep ep0(fd0, iodisp, PACKET_SIZE, WINDOW_SIZE);
+    Ep ep1(fd1, iodisp, PACKET_SIZE, WINDOW_SIZE);
+    ep0.m_stream.ScheduleLinkControlPacket();
+    ep1.m_stream.ScheduleLinkControlPacket();
+
     uint8_t rxBuffer[400];
     memset(&rxBuffer, 'R', sizeof(rxBuffer));
 
@@ -135,56 +186,36 @@ TEST(UARTTest, DISABLED_uart_codisco_test)
     size_t actual;
     /* Wait for link to become Active */
     qcc::Sleep(1000);
-    h.Close();
+    ep0.m_stream.Close();
 
-    status = h1.PullBytes(rxBuffer, 400, actual);
+    status = ep1.m_stream.PullBytes(rxBuffer, 400, actual);
     EXPECT_EQ(status, ER_SLAP_OTHER_END_CLOSED);
 
-    timer0.Stop();
-    timer1.Stop();
-    uc.Stop();
-    uc1.Stop();
+    ep0.Stop();
+    ep1.Stop();
     iodisp.Stop();
 
-    timer0.Join();
-    timer1.Join();
-    uc.Join();
-    uc1.Join();
+    ep0.Join();
+    ep1.Join();
     iodisp.Join();
-
-    h1.Close();
-    delete s;
-    delete s1;
 }
 TEST(UARTTest, DISABLED_uart_small_buffer_test)
 {
-    Timer timer0("SLAPtimer0", true, 1, false, 10);
-    timer0.Start();
-    Timer timer1("SLAPtimer1", true, 1, false, 10);
-    timer1.Start();
-    UARTFd fd0;
-    UARTFd fd1;
-    QStatus status = UART("/tmp/COM0", BAUDRATE, fd0);
-    ASSERT_EQ(status, ER_OK);
-
-    status = UART("/tmp/COM1", BAUDRATE, fd1);
-    ASSERT_EQ(status, ER_OK);
-
-    UARTStream* s = new UARTStream(fd0);
-    UARTStream* s1 = new UARTStream(fd1);
-    /* Test different packet size and window size values */
-    SLAPStream h(s, timer0, 1000, WINDOW_SIZE, BAUDRATE);
-    SLAPStream h1(s1, timer1, PACKET_SIZE, 2, BAUDRATE);
-    h.ScheduleLinkControlPacket();
-    h1.ScheduleLinkControlPacket();
-
     IODispatch iodisp("iodisp", 4);
     iodisp.Start();
 
-    UARTController uc(s, iodisp, &h);
-    UARTController uc1(s1, iodisp, &h1);
-    uc.Start();
-    uc1.Start();
+    UARTFd fd0;
+    UARTFd fd1;
+    QStatus status = UART("/dev/pts/4", BAUDRATE, fd0);
+    ASSERT_EQ(status, ER_OK);
+
+    status = UART("/dev/pts/5", BAUDRATE, fd1);
+    ASSERT_EQ(status, ER_OK);
+
+    Ep ep0(fd0, iodisp, 1000, WINDOW_SIZE);
+    Ep ep1(fd1, iodisp, PACKET_SIZE, 2);
+    ep0.m_stream.ScheduleLinkControlPacket();
+    ep1.m_stream.ScheduleLinkControlPacket();
 
     char buf[16] = "AAAAA";
     char buf1[16] = "BBBBB";
@@ -193,72 +224,64 @@ TEST(UARTTest, DISABLED_uart_small_buffer_test)
     char buf3[16] = "DDDDD";
     char buf4[16] = "EEEEE";
 
-    status = h.PushBytes(&buf, 5, x);
+    status = ep0.m_stream.PushBytes(&buf, 5, x);
     EXPECT_EQ(status, ER_OK);
     EXPECT_EQ(x, 5U);
-    status = h.PushBytes(&buf1, 5, x);
-    EXPECT_EQ(status, ER_OK);
-    EXPECT_EQ(x, 5U);
-
-    status = h.PushBytes(&buf2, 5, x);
+    status = ep0.m_stream.PushBytes(&buf1, 5, x);
     EXPECT_EQ(status, ER_OK);
     EXPECT_EQ(x, 5U);
 
-    status = h.PushBytes(&buf3, 5, x);
+    status = ep0.m_stream.PushBytes(&buf2, 5, x);
+    EXPECT_EQ(status, ER_OK);
+    EXPECT_EQ(x, 5U);
+
+    status = ep0.m_stream.PushBytes(&buf3, 5, x);
     EXPECT_EQ(status, ER_OK);
     EXPECT_EQ(x, 5U);
 
     size_t act;
 
-    status = h1.PullBytes(&buf, 12, act);
+    status = ep1.m_stream.PullBytes(&buf, 12, act);
     EXPECT_EQ(status, ER_OK);
     EXPECT_EQ(act, 12U);
 
-    status = h1.PullBytes(&buf, 8, act);
+    status = ep1.m_stream.PullBytes(&buf, 8, act);
     EXPECT_EQ(status, ER_OK);
     EXPECT_EQ(act, 8U);
 
 
-    status = h.PushBytes(&buf4, 5, x);
+    status = ep0.m_stream.PushBytes(&buf4, 5, x);
     EXPECT_EQ(status, ER_OK);
     EXPECT_EQ(x, 5U);
 
-    status = h.PushBytes(&buf, 5, x);
+    status = ep0.m_stream.PushBytes(&buf, 5, x);
     EXPECT_EQ(status, ER_OK);
     EXPECT_EQ(x, 5U);
 
-    status = h.PushBytes(&buf1, 5, x);
+    status = ep0.m_stream.PushBytes(&buf1, 5, x);
     EXPECT_EQ(status, ER_OK);
     EXPECT_EQ(x, 5U);
 
 
-    status = h1.PullBytes(&buf, 15, act);
+    status = ep1.m_stream.PullBytes(&buf, 15, act);
     EXPECT_EQ(status, ER_OK);
     EXPECT_EQ(act, 15U);
 
-    timer0.Stop();
-    timer1.Stop();
-    uc.Stop();
-    uc1.Stop();
+    ep0.Stop();
+    ep1.Stop();
     iodisp.Stop();
 
-    timer0.Join();
-    timer1.Join();
-    uc.Join();
-    uc1.Join();
+    ep0.Join();
+    ep1.Join();
     iodisp.Join();
-
-    h.Close();
-    h1.Close();
-    delete s;
-    delete s1;
 }
 /* The following two tests are written using the Gtest framework but arent really unit tests.
  * The tests are to be run side by side and both ends send and receive data.
  */
 TEST(UARTTest, DISABLED_serial_testrecv) {
-    Timer timer("SLAPtimer", true, 1, false, 10);
-    timer.Start();
+    IODispatch iodisp("iodisp", 4);
+    iodisp.Start();
+
     uint8_t rxBuffer[1600];
     memset(&rxBuffer, '\0', sizeof(rxBuffer));
     uint8_t txBuffer[1600];
@@ -272,59 +295,53 @@ TEST(UARTTest, DISABLED_serial_testrecv) {
     QStatus status = UART("/tmp/COM0", BAUDRATE, fd0);
     ASSERT_EQ(status, ER_OK);
 
-    UARTStream* s = new UARTStream(fd0);
-    SLAPStream h(s, timer, PACKET_SIZE, WINDOW_SIZE, BAUDRATE);
-    h.ScheduleLinkControlPacket();
+    Ep ep0(fd0, iodisp, PACKET_SIZE, WINDOW_SIZE);
+    ep0.m_stream.ScheduleLinkControlPacket();
 
-    IODispatch iodisp("iodisp", 4);
-    iodisp.Start();
-
-    UARTController uc(s, iodisp, &h);
-    uc.Start();
     size_t act;
     for (int iter = 0; iter < 10; iter++) {
         printf("iteration %d", iter);
-        h.PullBytes(rxBuffer, 200, act);
+        ep0.m_stream.PullBytes(rxBuffer, 200, act);
         EXPECT_EQ(act, 200U);
         qcc::Sleep(500);
         printf(".");
 
-        h.PullBytes(rxBuffer + 200, 200, act);
+        ep0.m_stream.PullBytes(rxBuffer + 200, 200, act);
         EXPECT_EQ(act, 200U);
         qcc::Sleep(500);
         printf(".");
 
-        h.PullBytes(rxBuffer + 400, 200, act);
+        ep0.m_stream.PullBytes(rxBuffer + 400, 200, act);
         EXPECT_EQ(act, 200U);
         qcc::Sleep(500);
         printf(".");
 
-        h.PullBytes(rxBuffer + 600, 200, act);
+        ep0.m_stream.PullBytes(rxBuffer + 600, 200, act);
         EXPECT_EQ(act, 200U);
         qcc::Sleep(500);
         printf(".");
 
-        h.PullBytes(rxBuffer + 800, 200, act);
+        ep0.m_stream.PullBytes(rxBuffer + 800, 200, act);
         EXPECT_EQ(act, 200U);
         qcc::Sleep(500);
         printf(".");
 
-        h.PullBytes(rxBuffer + 1000, 200, act);
+        ep0.m_stream.PullBytes(rxBuffer + 1000, 200, act);
         EXPECT_EQ(act, 200U);
         qcc::Sleep(500);
         printf(".");
 
-        h.PullBytes(rxBuffer + 1200, 200, act);
+        ep0.m_stream.PullBytes(rxBuffer + 1200, 200, act);
         EXPECT_EQ(act, 200U);
         qcc::Sleep(500);
         printf(".");
 
-        h.PullBytes(rxBuffer + 1400, 200, act);
+        ep0.m_stream.PullBytes(rxBuffer + 1400, 200, act);
         EXPECT_EQ(act, 200U);
         for (int i = 0; i < 1600; i++) {
             EXPECT_EQ(txBuffer[i], rxBuffer[i]);
         }
-        h.PushBytes(txBuffer, sizeof(txBuffer), act);
+        ep0.m_stream.PushBytes(txBuffer, sizeof(txBuffer), act);
         EXPECT_EQ(act, 1600U);
         printf("\n");
 
@@ -333,21 +350,17 @@ TEST(UARTTest, DISABLED_serial_testrecv) {
     /* Wait for retransmission to finish */
     qcc::Sleep(4000);
 
-    timer.Stop();
-    uc.Stop();
+    ep0.Stop();
     iodisp.Stop();
 
-    timer.Join();
-    uc.Join();
+    ep0.Join();
     iodisp.Join();
-
-    h.Close();
-    delete s;
 }
 
 TEST(UARTTest, DISABLED_serial_testsend) {
-    Timer timer("SLAPtimer", true, 1, false, 10);
-    timer.Start();
+    IODispatch iodisp("iodisp", 4);
+    iodisp.Start();
+
     uint8_t rxBuffer[1600];
     memset(&rxBuffer, 'R', sizeof(rxBuffer));
 
@@ -359,26 +372,19 @@ TEST(UARTTest, DISABLED_serial_testsend) {
         memset(txBuffer + (blocks * blocksize), 0x41 + (uint8_t)blocks, blocksize);
     }
     size_t x;
-    UARTFd fd1;
-    QStatus status = UART("/tmp/COM1", BAUDRATE, fd1);
+    UARTFd fd0;
+    QStatus status = UART("/tmp/COM1", BAUDRATE, fd0);
     ASSERT_EQ(status, ER_OK);
 
-    UARTStream* s1 = new UARTStream(fd1);
-    SLAPStream h1(s1, timer, PACKET_SIZE, WINDOW_SIZE, BAUDRATE);
-    h1.ScheduleLinkControlPacket();
-
-    IODispatch iodisp("iodisp", 4);
-    iodisp.Start();
-
-    UARTController uc(s1, iodisp, &h1);
-    uc.Start();
+    Ep ep0(fd0, iodisp, PACKET_SIZE, WINDOW_SIZE);
+    ep0.m_stream.ScheduleLinkControlPacket();
 
     for (int iter = 0; iter < 10; iter++) {
         printf("iteration %d", iter);
-        h1.PushBytes(txBuffer, sizeof(txBuffer), x);
+        ep0.m_stream.PushBytes(txBuffer, sizeof(txBuffer), x);
         EXPECT_EQ(x, 1600U);
         printf(".");
-        h1.PullBytes(rxBuffer, 1600, x);
+        ep0.m_stream.PullBytes(rxBuffer, 1600, x);
         EXPECT_EQ(x, 1600U);
         printf(".");
         for (int i = 0; i < 1600; i++) {
@@ -390,22 +396,17 @@ TEST(UARTTest, DISABLED_serial_testsend) {
     /* Wait for retransmission to finish */
     qcc::Sleep(4000);
 
-    timer.Stop();
-    uc.Stop();
+    ep0.Stop();
     iodisp.Stop();
 
-    timer.Join();
-    uc.Join();
+    ep0.Join();
     iodisp.Join();
-
-    h1.Close();
-    delete s1;
 }
 
 TEST(UARTTest, DISABLED_serial_testrecv_ajtcl) {
 
-    Timer timer("SLAPtimer", true, 1, false, 10);
-    timer.Start();
+    IODispatch iodisp("iodisp", 4);
+    iodisp.Start();
 
     uint8_t rxBuffer[1600];
     memset(&rxBuffer, '\0', sizeof(rxBuffer));
@@ -423,20 +424,12 @@ TEST(UARTTest, DISABLED_serial_testrecv_ajtcl) {
     QStatus status = UART("/tmp/COM0", BAUDRATE, fd0);
     ASSERT_EQ(status, ER_OK);
 
-    UARTStream* s = new UARTStream(fd0);
-    SLAPStream h(s, timer, PACKET_SIZE, WINDOW_SIZE, BAUDRATE);
-    h.ScheduleLinkControlPacket();
-
-    IODispatch iodisp("iodisp", 4);
-    iodisp.Start();
-
-    UARTController uc(s, iodisp, &h);
-    uc.Start();
-
+    Ep ep0(fd0, iodisp, PACKET_SIZE, WINDOW_SIZE);
+    ep0.m_stream.ScheduleLinkControlPacket();
 
     size_t act;
 
-    h.PullBytes(rxBuffer, 1600, act);
+    ep0.m_stream.PullBytes(rxBuffer, 1600, act);
     EXPECT_EQ(act, 1600U);
 
     for (int i = 0; i < 1600; i++) {
@@ -444,23 +437,18 @@ TEST(UARTTest, DISABLED_serial_testrecv_ajtcl) {
     }
     printf("\n");
 
-    timer.Stop();
-    uc.Stop();
+    ep0.Stop();
     iodisp.Stop();
 
-    timer.Join();
-    uc.Join();
+    ep0.Join();
     iodisp.Join();
-
-    h.Close();
-    delete s;
 }
 
 TEST(UARTTest, DISABLED_serial_testsend_ajtcl)
 {
 
-    Timer timer("SLAPtimer", true, 1, false, 10);
-    timer.Start();
+    IODispatch iodisp("iodisp", 4);
+    iodisp.Start();
 
     uint8_t rxBuffer[1600];
     memset(&rxBuffer, 'R', sizeof(rxBuffer));
@@ -476,61 +464,44 @@ TEST(UARTTest, DISABLED_serial_testsend_ajtcl)
 
     size_t x;
 
-    UARTFd fd1;
-    QStatus status = UART("/tmp/COM1", BAUDRATE, fd1);
+    UARTFd fd0;
+    QStatus status = UART("/tmp/COM1", BAUDRATE, fd0);
     ASSERT_EQ(status, ER_OK);
 
-    UARTStream* s1 = new UARTStream(fd1);
-    SLAPStream h1(s1, timer, PACKET_SIZE, WINDOW_SIZE, BAUDRATE);
-    h1.ScheduleLinkControlPacket();
-    IODispatch iodisp("iodisp", 4);
-    iodisp.Start();
+    Ep ep0(fd0, iodisp, PACKET_SIZE, WINDOW_SIZE);
+    ep0.m_stream.ScheduleLinkControlPacket();
 
-    UARTController uc1(s1, iodisp, &h1);
-    uc1.Start();
-
-
-    h1.PushBytes(txBuffer, sizeof(txBuffer), x);
+    ep0.m_stream.PushBytes(txBuffer, sizeof(txBuffer), x);
     EXPECT_EQ(x, 1600U);
 
     /* Wait for retransmission to finish */
     qcc::Sleep(4000);
-    timer.Stop();
-    uc1.Stop();
+    ep0.Stop();
     iodisp.Stop();
 
-    timer.Join();
-    uc1.Join();
+    ep0.Join();
     iodisp.Join();
-
-    h1.Close();
-    delete s1;
 }
 TEST(UARTTest, DISABLED_serial_testrandomecho) {
-    Timer timer("SLAPtimer", true, 1, false, 10);
-    timer.Start();
+    IODispatch iodisp("iodisp", 4);
+    iodisp.Start();
+
     uint8_t rxBuffer[RANDOM_BYTES_MAX];
     memset(&rxBuffer, '\0', sizeof(rxBuffer));
 
     size_t x;
-    UARTFd fd1;
-    QStatus status = UART("/tmp/COM0", BAUDRATE, fd1);
+    UARTFd fd0;
+    QStatus status = UART("/tmp/COM0", BAUDRATE, fd0);
     ASSERT_EQ(status, ER_OK);
 
-    UARTStream* s1 = new UARTStream(fd1);
-    SLAPStream h1(s1, timer, PACKET_SIZE, WINDOW_SIZE, BAUDRATE);
-    h1.ScheduleLinkControlPacket();
+    Ep ep0(fd0, iodisp, PACKET_SIZE, WINDOW_SIZE);
+    ep0.m_stream.ScheduleLinkControlPacket();
 
-    IODispatch iodisp("iodisp", 4);
-    iodisp.Start();
-
-    UARTController uc(s1, iodisp, &h1);
-    uc.Start();
     int iter = 0;
     size_t actual;
     while (1) {
         printf("iteration %d\n", iter);
-        status = h1.PullBytes(rxBuffer, RANDOM_BYTES_MAX, x, 5000);
+        status = ep0.m_stream.PullBytes(rxBuffer, RANDOM_BYTES_MAX, x, 5000);
         if (status == ER_TIMEOUT) {
             continue;
         }
@@ -540,7 +511,7 @@ TEST(UARTTest, DISABLED_serial_testrandomecho) {
         }
         iter++;
         /* Echo same bytes back to sender */
-        h1.PushBytes(rxBuffer, x, actual);
+        ep0.m_stream.PushBytes(rxBuffer, x, actual);
         EXPECT_EQ(x, actual);
 
         printf("\n");
@@ -549,20 +520,16 @@ TEST(UARTTest, DISABLED_serial_testrandomecho) {
     /* Wait for retransmission to finish */
     qcc::Sleep(4000);
 
-    timer.Stop();
-    uc.Stop();
+    ep0.Stop();
     iodisp.Stop();
 
-    timer.Join();
-    uc.Join();
+    ep0.Join();
     iodisp.Join();
-
-    h1.Close();
-    delete s1;
 }
 TEST(UARTTest, DISABLED_serial_testsendrecv) {
-    Timer timer("SLAPtimer", true, 1, false, 10);
-    timer.Start();
+    IODispatch iodisp("iodisp", 4);
+    iodisp.Start();
+
     uint8_t rxBuffer[RANDOM_BYTES_MAX];
     memset(&rxBuffer, 'R', sizeof(rxBuffer));
 
@@ -574,19 +541,13 @@ TEST(UARTTest, DISABLED_serial_testsendrecv) {
         memset(txBuffer + (blocks * blocksize), 0x41 + (uint8_t)blocks, blocksize);
     }
     size_t x;
-    UARTFd fd1;
-    QStatus status = UART("/tmp/COM1", BAUDRATE, fd1);
+    UARTFd fd0;
+    QStatus status = UART("/tmp/COM1", BAUDRATE, fd0);
     ASSERT_EQ(status, ER_OK);
 
-    UARTStream* s1 = new UARTStream(fd1);
-    SLAPStream h1(s1, timer, PACKET_SIZE, WINDOW_SIZE, BAUDRATE);
-    h1.ScheduleLinkControlPacket();
+    Ep ep0(fd0, iodisp, PACKET_SIZE, WINDOW_SIZE);
+    ep0.m_stream.ScheduleLinkControlPacket();
 
-    IODispatch iodisp("iodisp", 4);
-    iodisp.Start();
-
-    UARTController uc(s1, iodisp, &h1);
-    uc.Start();
     int iter = 0;
     size_t txlen;
     while (1) {
@@ -597,11 +558,11 @@ TEST(UARTTest, DISABLED_serial_testsendrecv) {
             txBuffer[i] = rand() % 256;
         }
         /* Send bytes */
-        h1.PushBytes(txBuffer, txlen, x);
+        ep0.m_stream.PushBytes(txBuffer, txlen, x);
         EXPECT_EQ(x, txlen);
 
         /* Read bytes back */
-        status = h1.PullBytes(rxBuffer, txlen, x);
+        status = ep0.m_stream.PullBytes(rxBuffer, txlen, x);
         EXPECT_EQ(x, txlen);
         EXPECT_EQ(memcmp(txBuffer, rxBuffer, txlen), 0);
 
@@ -609,16 +570,11 @@ TEST(UARTTest, DISABLED_serial_testsendrecv) {
     /* Wait for retransmission to finish */
     qcc::Sleep(4000);
 
-    timer.Stop();
-    uc.Stop();
+    ep0.Stop();
     iodisp.Stop();
 
-    timer.Join();
-    uc.Join();
+    ep0.Join();
     iodisp.Join();
-
-    h1.Close();
-    delete s1;
 }
 
 TEST(UARTTest, DISABLED_valid_parameters)

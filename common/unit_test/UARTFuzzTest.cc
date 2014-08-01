@@ -547,15 +547,45 @@ class MyUARTStream : public UARTStream {
 
 };
 
+class Ep {
+  public:
+    Ep(UARTFd fd, IODispatch& iodisp, int packetSize, uint8_t recoverable_errors) :
+        m_timer("SLAPEp", true, 1, false, 10),
+        m_rawStream(fd, recoverable_errors),
+        m_stream(&m_uartController, m_timer, packetSize, WINDOW_SIZE, BAUDRATE),
+        m_uartController(&m_rawStream, iodisp, &m_stream)
+    {
+        m_timer.Start();
+        m_uartController.Start();
+    }
+    ~Ep() {
+        Stop();
+        Join();
+        m_stream.Close();
+    }
+    QStatus Stop() {
+        QStatus status = m_timer.Stop();
+        QStatus status1 = m_uartController.Stop();
+        return (status != ER_OK) ? status : status1;
+
+    }
+
+    QStatus Join() {
+        QStatus status = m_timer.Join();
+        QStatus status1 = m_uartController.Join();
+        return (status != ER_OK) ? status : status1;
+    }
+    Timer m_timer;                    /**< Multipurpose timer for sending/resend/acks */
+    MyUARTStream m_rawStream;         /**< The raw UART stream */
+    SLAPStream m_stream;              /**< The SLAP stream used for Alljoyn communication */
+    UARTController m_uartController;  /**< Controller responsible for reading from UART */
+};
+
 TEST(UARTFuzzTest, DISABLED_uart_fuzz_test_recoverable)
 {
+    IODispatch iodisp("iodisp", 4);
+    iodisp.Start();
     //This test introduces some recoverable fuzzing errors in the sent packets.
-    Timer timer0("SLAPtimer0", true, 1, false, 10);
-    timer0.Start();
-
-    Timer timer1("SLAPtimer1", true, 1, false, 10);
-    timer1.Start();
-
     uint8_t rxBuffer[1600];
     memset(&rxBuffer, 'R', sizeof(rxBuffer));
 
@@ -577,26 +607,16 @@ TEST(UARTFuzzTest, DISABLED_uart_fuzz_test_recoverable)
     status = UART("/tmp/COM1", BAUDRATE, fd1);
     EXPECT_EQ(status, ER_OK);
 
-    MyUARTStream* s0 = new MyUARTStream(fd0, RECOVERABLE_ERRORS);
-    SLAPStream h0(s0, timer0, 800, WINDOW_SIZE, BAUDRATE);
-    h0.ScheduleLinkControlPacket();
+    Ep ep0(fd0, iodisp, 800, RECOVERABLE_ERRORS);
+    Ep ep1(fd1, iodisp, 1000, RECOVERABLE_ERRORS);
+    ep0.m_stream.ScheduleLinkControlPacket();
+    ep1.m_stream.ScheduleLinkControlPacket();
 
-    MyUARTStream* s1 = new MyUARTStream(fd1, RECOVERABLE_ERRORS);
-    SLAPStream h1(s1, timer1, 1000, WINDOW_SIZE, BAUDRATE);
-    h1.ScheduleLinkControlPacket();
-    IODispatch iodisp("iodisp", 4);
-    iodisp.Start();
-
-    UARTController uc0(s0, iodisp, &h0);
-    uc0.Start();
-
-    UARTController uc1(s1, iodisp, &h1);
-    uc1.Start();
     for (int iter = 0; iter < 2000; iter++) {
         printf("Iteration %d\n", iter);
-        h1.PushBytes(txBuffer, sizeof(txBuffer), x);
+        ep1.m_stream.PushBytes(txBuffer, sizeof(txBuffer), x);
         EXPECT_EQ(1600U, x);
-        h0.PullBytes(rxBuffer, sizeof(rxBuffer), x);
+        ep0.m_stream.PullBytes(rxBuffer, sizeof(rxBuffer), x);
         ASSERT_EQ(1600U, x);
         if (memcmp(txBuffer, rxBuffer, sizeof(txBuffer)) != 0) {
             printf("Failed Iteration %d\n", iter);
@@ -611,32 +631,21 @@ TEST(UARTFuzzTest, DISABLED_uart_fuzz_test_recoverable)
     }
     /* Wait for retransmission to finish */
     qcc::Sleep(4000);
-    timer0.Stop();
-    timer1.Stop();
-    uc0.Stop();
-    uc1.Stop();
+    ep0.Stop();
+    ep1.Stop();
     iodisp.Stop();
 
-    timer0.Join();
-    timer1.Join();
-    uc0.Join();
-    uc1.Join();
+    ep0.Join();
+    ep1.Join();
     iodisp.Join();
-
-    h0.Close();
-    h1.Close();
-    delete s0;
-    delete s1;
 }
 
 TEST(UARTFuzzTest, DISABLED_uart_fuzz_test_unrecoverable)
 {
+    IODispatch iodisp("iodisp", 4);
+    iodisp.Start();
     //This test introduces some unrecoverable fuzzing errors in the sent packets.
     //This is just to make sure that the program doesnt crash.
-    Timer timer0("SLAPtimer0", true, 1, false, 10);
-    timer0.Start();
-    Timer timer1("SLAPtimer1", true, 1, false, 10);
-    timer1.Start();
 
     uint8_t rxBuffer[1600];
     memset(&rxBuffer, 'R', sizeof(rxBuffer));
@@ -659,48 +668,25 @@ TEST(UARTFuzzTest, DISABLED_uart_fuzz_test_unrecoverable)
     status = UART("/tmp/COM1", BAUDRATE, fd1);
     EXPECT_EQ(status, ER_OK);
 
-
-    MyUARTStream* s0 = new MyUARTStream(fd0, UNRECOVERABLE_ERRORS);
-    SLAPStream h0(s0, timer0, 1600, WINDOW_SIZE, BAUDRATE);
-    h0.ScheduleLinkControlPacket();
-
-    MyUARTStream* s1 = new MyUARTStream(fd1, UNRECOVERABLE_ERRORS);
-    SLAPStream h1(s1, timer1, 1600, WINDOW_SIZE, BAUDRATE);
-    h1.ScheduleLinkControlPacket();
-
-
-    IODispatch iodisp("iodisp", 4);
-    iodisp.Start();
-
-    UARTController uc0(s0, iodisp, &h0);
-    uc0.Start();
-
-    UARTController uc1(s1, iodisp, &h1);
-    uc1.Start();
+    Ep ep0(fd0, iodisp, 1600, UNRECOVERABLE_ERRORS);
+    Ep ep1(fd1, iodisp, 1600, UNRECOVERABLE_ERRORS);
+    ep0.m_stream.ScheduleLinkControlPacket();
+    ep1.m_stream.ScheduleLinkControlPacket();
 
     for (int iter = 0; iter < 1000; iter++) {
         printf("Iteration %d\n", iter);
-        h1.PushBytes(txBuffer, sizeof(txBuffer), x);
-        h0.PullBytes(rxBuffer, sizeof(rxBuffer), x, 5000);
+        ep1.m_stream.PushBytes(txBuffer, sizeof(txBuffer), x);
+        ep0.m_stream.PullBytes(rxBuffer, sizeof(rxBuffer), x, 5000);
     }
     /* Wait for retransmission to finish */
     qcc::Sleep(4000);
-    timer0.Stop();
-    timer1.Stop();
-    uc0.Stop();
-    uc1.Stop();
+    ep0.Stop();
+    ep1.Stop();
     iodisp.Stop();
 
-    timer0.Join();
-    timer1.Join();
-    uc0.Join();
-    uc1.Join();
+    ep0.Join();
+    ep1.Join();
     iodisp.Join();
-
-    h0.Close();
-    h1.Close();
-    delete s0;
-    delete s1;
 }
 
 

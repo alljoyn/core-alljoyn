@@ -50,6 +50,11 @@ router_objs = router_env.Object(srcs)
 router_objs.extend(router_env.SConscript('ns/SConscript', exports = ['router_env']))
 
 # Add in P2P Helper support for Android only
+if router_env['OS'] == "linux" or router_env['OS'] == "openwrt":
+    router_objs.extend(router_env.SConscript('bt_bluez/SConscript', exports = ['router_env']))
+
+
+# Add in P2P Helper support for Android only
 if router_env['OS'] == "android":
     router_objs.extend(router_env.SConscript('android/SConscript', exports = ['router_env']))
 

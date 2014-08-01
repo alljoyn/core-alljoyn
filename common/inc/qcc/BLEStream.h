@@ -1,7 +1,7 @@
 /**
  * @file
  *
- * This file defines a UART based physical link for communication.
+ * This file defines a BLE based physical link for communication.
  */
 
 /******************************************************************************
@@ -22,49 +22,34 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef _QCC_UARTSTREAM_H
-#define _QCC_UARTSTREAM_H
+#ifndef _QCC_BLESTREAM_H
+#define _QCC_BLESTREAM_H
 
 #include <qcc/platform.h>
 #include <qcc/Stream.h>
-#include <qcc/IODispatch.h>
 #include <qcc/Thread.h>
+#include <qcc/BLEStreamAccessor.h>
 
 namespace qcc {
-
-/**
- * Opens a serial device with the specified parameters and returns the
- * file descriptor.
- *
- * @param devName       name of the device to open
- * @param baud          the baud rate to set for the device.
- * @param databits      the number of data bits: 5, 6, 7, or 8
- * @param parity        the parity check: "none", "even", "odd", "mark", or "space"
- * @param stopbits      the number of stop bits: 1 or 2
- * @param[out] fd	the file descriptor value.
- *
- * @return ER_OK - port opened sucessfully, error otherwise.
- */
-QStatus UART(const qcc::String& devName, uint32_t baud, uint8_t databits, const qcc::String& parity, uint8_t stopbits, qcc::UARTFd& fd);
 
 /**
  * Opens a serial device at the specified baud rate, 8-N-1, and
  * returns the file descriptor.
  *
- * @param devName       name of the device to open
- * @param baud          the baud rate to set for the device.
- * @param[out] fd	the file descriptor value.
+ * @param adapterName       name of the device to open (optional)
+ * @param[out] remObj	the remote Object string.
  *
  * @return ER_OK - port opened sucessfully, error otherwise.
  */
-QStatus UART(const qcc::String& devName, uint32_t baud, qcc::UARTFd& fd);
+QStatus BLE(qcc::String& remObj);
+QStatus BLE(const qcc::String& adapterName, qcc::String& remObj);
 
-class UARTStream : public NonBlockingStream {
+class BLEStream : public NonBlockingStream {
   public:
 
-    UARTStream(UARTFd fd);
+    BLEStream(BLEStreamAccessor* accessor, qcc::String remObj);
 
-    virtual ~UARTStream();
+    virtual ~BLEStream();
 
     /* Close the fd */
     virtual void Close();
@@ -106,36 +91,37 @@ class UARTStream : public NonBlockingStream {
      */
     virtual Event& GetSinkEvent() { return *sinkEvent; }
 
-    UARTFd GetFD() { return fd; }
+    qcc::String GetRemObj() { return remObj; }
   private:
 
     /** Private default constructor - does nothing */
-    UARTStream();
+    BLEStream();
 
     /**
      * Private Copy-constructor - does nothing
      *
-     * @param other  UARTStream to copy from.
+     * @param other  BLEStream to copy from.
      */
-    UARTStream(const UARTStream& other);
+    BLEStream(const BLEStream& other);
 
     /**
      * Private Assignment operator - does nothing.
      *
-     * @param other  UARTStream to assign from.
+     * @param other  BLEStream to assign from.
      */
-    UARTStream operator=(const UARTStream& other) { return *this; };
+    BLEStream operator=(const BLEStream& other) { return *this; };
 
-    int fd;             /**< File descriptor associated with the device */
+    qcc::String remObj; /**< File descriptor associated with the device */
+    BLEStreamAccessor* locAcc; /**< BLE Stream Accessor */
     Event* sourceEvent; /**< Event signaled when data is available */
     Event* sinkEvent;   /**< Event signaled when sink can accept data */
 };
 
-class UARTController : public StreamController, public IOReadListener, public IOExitListener {
+class BLEController : public StreamController {
   public:
 
-    UARTController(UARTStream* uartStream, IODispatch& iodispatch, StreamReadListener* readListener);
-    ~UARTController() { };
+    BLEController(BLEStream* bleStream, StreamReadListener* readListener);
+    ~BLEController() { };
     QStatus Start();
     QStatus Stop();
     QStatus Join();
@@ -149,22 +135,20 @@ class UARTController : public StreamController, public IOReadListener, public IO
      * @return   ER_OK if successful.
      */
     virtual QStatus PushBytes(const void* buf, size_t numBytes, size_t& actualBytes);
-/**
- * Read callback for the stream.
- * @param source             The stream that this entry is associated with.
- * @param isTimedOut         false - if the source event has fired.
- *                           true - if no source event has fired in the specified timeout.
- * @return  ER_OK if successful.
- */
-    virtual QStatus ReadCallback(Source& source, bool isTimedOut);
     /**
-     * Write callback for the stream.
-     * Indicates that the stream needs to shutdown.
+     * Read callback for the stream.
+     * @param buffer        buffer containing read bytes
+     * @param bytes         number of bytes in buffer
+     * @return  ER_OK if successful.
      */
-    virtual void ExitCallback();
-    UARTStream* m_uartStream;           /**< The UART stream that this controller reads from */
-    IODispatch& m_iodispatch;           /**< The IODispatch used to trigger read callbacks */
-    int exitCount;                      /**< Count indicating whether the uart stream has exited successfully. */
+    virtual QStatus ReadCallback(const uint8_t* buffer, size_t bytes);
+    BLEStream* m_bleStream;           /**< The BLE stream that this controller reads from */
+    int exitCount;                    /**< Count indicating whether the ble stream has exited successfully. */
+
+    void SetConnected(bool connected) { m_connected = connected; }
+    bool IsConnected() { return m_connected; }
+  private:
+    bool m_connected;
 };
 }
 #endif

@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -455,10 +455,10 @@ QStatus SLAPWritePacket::PrependHeader()
     m_bufEOD = &m_buffer[m_endPos];
     return ER_OK;
 }
-QStatus SLAPWritePacket::Deliver(Stream* link)
+QStatus SLAPWritePacket::Deliver(StreamController* controller)
 {
     size_t actual;
-    QStatus status = link->PushBytes(m_writePtr, m_bufEOD - m_writePtr + 1, actual);
+    QStatus status = controller->PushBytes(m_writePtr, m_bufEOD - m_writePtr + 1, actual);
     m_writePtr += actual;
     return status;
 }

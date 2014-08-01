@@ -8,7 +8,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -28,13 +28,12 @@
 
 #include <qcc/platform.h>
 #include <qcc/Stream.h>
-#include <qcc/UARTStream.h>
 #include <qcc/Timer.h>
 #include <qcc/SLAPPacket.h>
 #include <list>
 
 namespace qcc {
-class SLAPStream : public Stream, public UARTReadListener, public AlarmListener {
+class SLAPStream : public Stream, public StreamReadListener, public AlarmListener {
   public:
 
     /**
@@ -45,7 +44,7 @@ class SLAPStream : public Stream, public UARTReadListener, public AlarmListener 
      * @param maxPacketSize     The maximum packet size to be supported by the stream.
      * @param maxWindowSize     The maximum window size to be supported by the stream.
      */
-    SLAPStream(Stream* rawStream, Timer& timer, uint16_t maxPacketSize, uint16_t maxWindowSize, uint32_t baudrate);
+    SLAPStream(StreamController* streamController, Timer& timer, uint16_t maxPacketSize, uint16_t maxWindowSize, uint32_t baudrate);
 
     /** Destructor */
     ~SLAPStream();
@@ -127,7 +126,7 @@ class SLAPStream : public Stream, public UARTReadListener, public AlarmListener 
     void ProcessAckNum(uint8_t ack);
     void RefreshSleepTimer();
 
-    Stream* m_rawStream;                 /**< The underlying physical link abstraction to send/receive data */
+    StreamController* m_streamController;                 /**< The underlying Stream Controller abstraction to send/receive data */
 
     struct LinkParams {
         uint16_t packetSize;

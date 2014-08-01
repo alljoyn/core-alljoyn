@@ -42,6 +42,7 @@
 #include "Transport.h"
 #include "TCPTransport.h"
 #include "UDPTransport.h"
+#include "DaemonBLETransport.h"
 
 #include "NullTransport.h"
 #include "PasswordManager.h"
@@ -59,6 +60,7 @@ using namespace ajn;
 static const char bundledConfig[] =
     "<busconfig>"
     "  <type>alljoyn_bundled</type>"
+    "  <listen>ble:</listen>"
     "  <limit name=\"auth_timeout\">5000</limit>"
     "  <limit name=\"max_incomplete_connections\">4</limit>"
     "  <limit name=\"max_completed_connections\">16</limit>"
@@ -73,6 +75,7 @@ static const char internalConfig[] =
 #if defined(QCC_OS_DARWIN)
     "  <listen>launchd:env=DBUS_LAUNCHD_SESSION_BUS_SOCKET</listen>"
 #endif
+    "  <listen>ble:</listen>"
     "  <listen>tcp:iface=*,port=0</listen>"
     "  <listen>udp:iface=*,port=0</listen>"
     "</busconfig>";
@@ -291,6 +294,7 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
         if (!transportsInitialized) {
             Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
             Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
+            Add(new TransportFactory<DaemonBLETransport>(DaemonBLETransport::TransportName, false));
 
 #if defined(QCC_OS_ANDROID)
 //            QCC_DbgPrintf(("adding WFD transport"));

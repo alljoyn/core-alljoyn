@@ -479,7 +479,7 @@ int main(int argc, char** argv)
      * or may not support bluetooth if desired.
      */
     serverArgs = env->Find("BUS_SERVER_ADDRESSES",
-                           "unix:abstract=alljoyn;tcp:;udp:u4addr=0.0.0.0,u4port=9955");
+                           "unix:abstract=alljoyn;tcp:;ble:;udp:u4addr=0.0.0.0,u4port=9955");
 
 
 #endif /* !defined(QCC_OS_GROUP_WINDOWS) && !defined(QCC_OS_ANDROID) && !defined(QCC_OS_DARWIN) */

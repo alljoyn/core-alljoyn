@@ -6,7 +6,6 @@
 
 /******************************************************************************
  *
- *
  * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
@@ -219,10 +218,10 @@ class SLAPWritePacket {
     QStatus PrependHeader();
 
     /**
-     * Deliver this packet to a link.
-     * @param link	The link to deliver this packet to.
+     * Deliver this packet to a controller.
+     * @param controller	The controller to deliver this packet to.
      */
-    QStatus Deliver(Stream* link);
+    QStatus Deliver(StreamController* controller);
 
     /**
      * Set the sequence number in this packet
