@@ -1882,61 +1882,66 @@ QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::
             }
         }
     }
-    std::set<PeerInfo>::iterator pit = it->second.begin();
-    PrintPeerInfoMap();
-    if (!it->second.empty()) {
-        Timespec now;
-        GetTimeNow(&now);
-        QCC_DbgPrintf(("Entry found in Peer Info Map. Setting unicast destination"));
+    // the guid was not found in the m_peerInfoMap the name is unknown.
+    if (it != m_peerInfoMap.end()) {
+        std::set<PeerInfo>::iterator pit = it->second.begin();
+        PrintPeerInfoMap();
+        // The check here is because we could be in a session with a name and there could be no valid peer info for it
+        // The name will be removed by layer above when we are no longer in a session with that name and it is no longer advertised
+        if (!it->second.empty()) {
+            Timespec now;
+            GetTimeNow(&now);
+            QCC_DbgPrintf(("Entry found in Peer Info Map. Setting unicast destination"));
 
-        while (pit != it->second.end()) {
-            PeerInfo peerInfo = *pit;
-            if (!ping && ((now - (*pit).lastQueryTimeStamp) < MIN_THRESHOLD_CACHE_REFRESH_MS)) {
-                ++pit;
-                continue;
-            }
-            if (!ping) {
-                // Purge entries from PeerInfo map that havent recieved a response for 3 Cache refresh cycles
-                if ((now - (*pit).lastResponseTimeStamp) >= PEER_INFO_MAP_PURGE_TIMEOUT) {
-                    it->second.erase(pit++);
+            while (pit != it->second.end()) {
+                PeerInfo peerInfo = *pit;
+                if (!ping && ((now - (*pit).lastQueryTimeStamp) < MIN_THRESHOLD_CACHE_REFRESH_MS)) {
+                    ++pit;
                     continue;
                 }
-                (*pit).lastQueryTimeStamp = now;
-            }
-
-            MDNSPacket query;
-            query->SetDestination((*pit).unicastInfo);
-            MDNSSearchRData* searchRData = new MDNSSearchRData();
-            for (MatchMap::iterator it1 = matching.begin(); it1 != matching.end(); ++it1) {
-                searchRData->SetValue(it1->first, it1->second);
-            }
-
-            if (ping) {
-                MDNSPingRData* pingRData = new MDNSPingRData();
-                for (MatchMap::iterator it1 = matching.begin(); it1 != matching.end(); ++it1) {
-                    pingRData->SetValue("n", it1->second);
+                if (!ping) {
+                    // Purge entries from PeerInfo map that havent recieved a response for 3 Cache refresh cycles
+                    if ((now - (*pit).lastResponseTimeStamp) >= PEER_INFO_MAP_PURGE_TIMEOUT) {
+                        it->second.erase(pit++);
+                        continue;
+                    }
+                    (*pit).lastQueryTimeStamp = now;
                 }
-                MDNSResourceRecord pingRecord("ping." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingRData);
-                query->AddAdditionalRecord(pingRecord);
-                delete pingRData;
-            }
 
-            MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
-            query->AddAdditionalRecord(searchRecord);
-            delete searchRData;
-            m_mutex.Unlock();
-            Query(transportMask, query);
-            m_mutex.Lock();
-            it = m_peerInfoMap.find(longGuid);
-            if (it == m_peerInfoMap.end()) {
-                break;
+                MDNSPacket query;
+                query->SetDestination((*pit).unicastInfo);
+                MDNSSearchRData* searchRData = new MDNSSearchRData();
+                for (MatchMap::iterator it1 = matching.begin(); it1 != matching.end(); ++it1) {
+                    searchRData->SetValue(it1->first, it1->second);
+                }
+
+                if (ping) {
+                    MDNSPingRData* pingRData = new MDNSPingRData();
+                    for (MatchMap::iterator it1 = matching.begin(); it1 != matching.end(); ++it1) {
+                        pingRData->SetValue("n", it1->second);
+                    }
+                    MDNSResourceRecord pingRecord("ping." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, pingRData);
+                    query->AddAdditionalRecord(pingRecord);
+                    delete pingRData;
+                }
+
+                MDNSResourceRecord searchRecord("search." + m_guid + ".local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, searchRData);
+                query->AddAdditionalRecord(searchRecord);
+                delete searchRData;
+                m_mutex.Unlock();
+                Query(transportMask, query);
+                m_mutex.Lock();
+                it = m_peerInfoMap.find(longGuid);
+                if (it == m_peerInfoMap.end()) {
+                    break;
+                }
+                pit = it->second.upper_bound(peerInfo);
             }
-            pit = it->second.upper_bound(peerInfo);
         }
     } else {
         if (ping) {
             m_mutex.Unlock();
-            return ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED;
+            return ER_ALLJOYN_PING_REPLY_INCOMPATIBLE_REMOTE_ROUTING_NODE;
         }
         QCC_DbgPrintf((" IpNameServiceImpl::RefreshCache(): Entry not found in PeerInfoMap"));
     }
@@ -6796,131 +6801,133 @@ bool IpNameServiceImpl::HandleAdvertiseResponse(MDNSPacket mdnsPacket, uint16_t 
                                                 const qcc::String& guid, const qcc::IPEndpoint& ns4,
                                                 const qcc::IPEndpoint& r4, const qcc::IPEndpoint& r6, const qcc::IPEndpoint& u4, const qcc::IPEndpoint& u6)
 {
-    MDNSResourceRecord* advRecord;
-    if (!mdnsPacket->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &advRecord)) {
-        return false;
-    }
-
-    MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
-    if (!advRData) {
-        QCC_DbgPrintf(("Ignoring response with invalid advertisement info"));
-        return true;
-    }
-    uint32_t ttl = advRecord->GetRRttl();
-
-    //
-    // We need to populate our structure that keeps track of unicast ports of
-    // services so that they can be polled for presence
-    //
-    if (ttl != 0) {
-        AddToPeerInfoMap(guid, ns4);
-    }
-
-    vector<qcc::String> namesTcp;
-    vector<qcc::String> namesUdp;
-
-    for (uint8_t i = 0; i < advRData->GetNumNames(TRANSPORT_TCP | TRANSPORT_UDP); ++i) {
-        String temp = advRData->GetNameAt(TRANSPORT_TCP | TRANSPORT_UDP, i);
-        namesTcp.push_back(temp);
-        namesUdp.push_back(temp);
-    }
-    for (uint8_t i = 0; i < advRData->GetNumNames(TRANSPORT_TCP); ++i) {
-        String temp = advRData->GetNameAt(TRANSPORT_TCP, i);
-        namesTcp.push_back(temp);
-    }
-
-    for (uint8_t i = 0; i < advRData->GetNumNames(TRANSPORT_UDP); ++i) {
-        String temp = advRData->GetNameAt(TRANSPORT_UDP, i);
-        namesUdp.push_back(temp);
-    }
-
-    //
-    // Life is easier if we keep these things sorted.  Don't rely on the source
-    // (even though it is really us) to do so.
-    //
-    sort(namesTcp.begin(), namesTcp.end());
-    sort(namesUdp.begin(), namesUdp.end());
-
-    //
-    // In the version two protocol, the maximum size static buffer for the
-    // longest bus address we can generate corresponds to two fully occupied
-    // IPv4 addresses and two fully occupied IPV6 addresses.  So, we figure
-    // that we need 2 X 35 == 70 bytes for the IPv4 endpoint information,
-    // 2 X 59 == 118 bytes for the IPv6 endpoint information and three extra
-    // commas:
-    //
-    //     "r4addr=192.168.100.101,r4port=65535,"
-    //     "u4ddr=192.168.100.101,u4port=65535,"
-    //     "r6addr=ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff,r6port=65535,"
-    //     "u6addr=ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff,u6port=65535"
-    //
-    // Adding a byte for the trailing '\0' we come up with 192 bytes of bus
-    // address. C++ purists will object to using the C stdio routines but
-    // they are simpler and faster since there are no memory allocations or
-    // reallocations.
-    //
-    // Note that we do not prepend the bus address with the transport name,
-    // i.e. "tcp:" since we assume that the transport knows its own name.
-    //
-    char busAddressTcp[192];
-    char busAddressUdp[192];
-    busAddressTcp[0] = '\0';
-    busAddressUdp[0] = '\0';
-
-    char addr6buf[60];
-    addr6buf[0] = '\0';
-
-    bool needComma = false;
-
-
-    if (r4.port != 0 && r4.addr != IPAddress()) {
-        snprintf(busAddressTcp, sizeof(busAddressTcp), "r4addr=%s,r4port=%d", r4.addr.ToString().c_str(), r4.port);
-        needComma = true;
-    }
-    if (r6.port != 0 && r6.addr != IPAddress()) {
-        if (needComma) {
-            snprintf(addr6buf, sizeof(addr6buf), ",r6addr=%s,r6port=%d", r6.addr.ToString().c_str(), r6.port);
-        } else {
-
-            snprintf(addr6buf, sizeof(addr6buf), "r6addr=%s,r6port=%d", r6.addr.ToString().c_str(), r6.port);
+    uint32_t numMatches = mdnsPacket->GetNumMatches("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS);
+    for (uint32_t match = 0; match < numMatches; match++) {
+        MDNSResourceRecord* advRecord;
+        if (!mdnsPacket->GetAdditionalRecordAt("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, match, &advRecord)) {
+            return false;
         }
-        strncat(busAddressTcp, &addr6buf[0], sizeof(addr6buf));
 
-    }
-    needComma = false;
-    if (u4.port != 0 && u4.addr != IPAddress()) {
-
-        snprintf(busAddressUdp, sizeof(busAddressUdp), "u4addr=%s,u4port=%d", u4.addr.ToString().c_str(), u4.port);
-        needComma = true;
-    }
-
-    if (u6.port != 0 && u6.addr != IPAddress()) {
-        if (needComma) {
-            snprintf(addr6buf, sizeof(addr6buf), ",u6addr=%s,u6port=%d", u6.addr.ToString().c_str(), u6.port);
-        } else {
-
-            snprintf(addr6buf, sizeof(addr6buf), "u6addr=%s,u6port=%d", u6.addr.ToString().c_str(), u6.port);
+        MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
+        if (!advRData) {
+            QCC_DbgPrintf(("Ignoring response with invalid advertisement info"));
+            return true;
         }
-        strncat(busAddressUdp, &addr6buf[0], sizeof(addr6buf));
+        uint32_t ttl = advRecord->GetRRttl();
 
+        //
+        // We need to populate our structure that keeps track of unicast ports of
+        // services so that they can be polled for presence
+        //
+        if (ttl != 0) {
+            AddToPeerInfoMap(guid, ns4);
+        }
+
+        vector<qcc::String> namesTcp;
+        vector<qcc::String> namesUdp;
+
+        for (uint8_t i = 0; i < advRData->GetNumNames(TRANSPORT_TCP | TRANSPORT_UDP); ++i) {
+            String temp = advRData->GetNameAt(TRANSPORT_TCP | TRANSPORT_UDP, i);
+            namesTcp.push_back(temp);
+            namesUdp.push_back(temp);
+        }
+        for (uint8_t i = 0; i < advRData->GetNumNames(TRANSPORT_TCP); ++i) {
+            String temp = advRData->GetNameAt(TRANSPORT_TCP, i);
+            namesTcp.push_back(temp);
+        }
+
+        for (uint8_t i = 0; i < advRData->GetNumNames(TRANSPORT_UDP); ++i) {
+            String temp = advRData->GetNameAt(TRANSPORT_UDP, i);
+            namesUdp.push_back(temp);
+        }
+
+        //
+        // Life is easier if we keep these things sorted.  Don't rely on the source
+        // (even though it is really us) to do so.
+        //
+        sort(namesTcp.begin(), namesTcp.end());
+        sort(namesUdp.begin(), namesUdp.end());
+
+        //
+        // In the version two protocol, the maximum size static buffer for the
+        // longest bus address we can generate corresponds to two fully occupied
+        // IPv4 addresses and two fully occupied IPV6 addresses.  So, we figure
+        // that we need 2 X 35 == 70 bytes for the IPv4 endpoint information,
+        // 2 X 59 == 118 bytes for the IPv6 endpoint information and three extra
+        // commas:
+        //
+        //     "r4addr=192.168.100.101,r4port=65535,"
+        //     "u4ddr=192.168.100.101,u4port=65535,"
+        //     "r6addr=ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff,r6port=65535,"
+        //     "u6addr=ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff,u6port=65535"
+        //
+        // Adding a byte for the trailing '\0' we come up with 192 bytes of bus
+        // address. C++ purists will object to using the C stdio routines but
+        // they are simpler and faster since there are no memory allocations or
+        // reallocations.
+        //
+        // Note that we do not prepend the bus address with the transport name,
+        // i.e. "tcp:" since we assume that the transport knows its own name.
+        //
+        char busAddressTcp[192];
+        char busAddressUdp[192];
+        busAddressTcp[0] = '\0';
+        busAddressUdp[0] = '\0';
+
+        char addr6buf[60];
+        addr6buf[0] = '\0';
+
+        bool needComma = false;
+
+
+        if (r4.port != 0 && r4.addr != IPAddress()) {
+            snprintf(busAddressTcp, sizeof(busAddressTcp), "r4addr=%s,r4port=%d", r4.addr.ToString().c_str(), r4.port);
+            needComma = true;
+        }
+        if (r6.port != 0 && r6.addr != IPAddress()) {
+            if (needComma) {
+                snprintf(addr6buf, sizeof(addr6buf), ",r6addr=%s,r6port=%d", r6.addr.ToString().c_str(), r6.port);
+            } else {
+
+                snprintf(addr6buf, sizeof(addr6buf), "r6addr=%s,r6port=%d", r6.addr.ToString().c_str(), r6.port);
+            }
+            strncat(busAddressTcp, &addr6buf[0], sizeof(addr6buf));
+
+        }
+        needComma = false;
+        if (u4.port != 0 && u4.addr != IPAddress()) {
+
+            snprintf(busAddressUdp, sizeof(busAddressUdp), "u4addr=%s,u4port=%d", u4.addr.ToString().c_str(), u4.port);
+            needComma = true;
+        }
+
+        if (u6.port != 0 && u6.addr != IPAddress()) {
+            if (needComma) {
+                snprintf(addr6buf, sizeof(addr6buf), ",u6addr=%s,u6port=%d", u6.addr.ToString().c_str(), u6.port);
+            } else {
+
+                snprintf(addr6buf, sizeof(addr6buf), "u6addr=%s,u6port=%d", u6.addr.ToString().c_str(), u6.port);
+            }
+            strncat(busAddressUdp, &addr6buf[0], sizeof(addr6buf));
+
+        }
+
+        if ((namesUdp.size() > 0) && m_callback[TRANSPORT_INDEX_UDP]) {
+            m_protect_callback = true;
+            m_mutex.Unlock();
+            (*m_callback[TRANSPORT_INDEX_UDP])(busAddressUdp, guid, namesUdp, ttl);
+            m_mutex.Lock();
+            m_protect_callback = false;
+        }
+
+        if ((namesTcp.size() > 0) && m_callback[TRANSPORT_INDEX_TCP]) {
+            m_protect_callback = true;
+            m_mutex.Unlock();
+            (*m_callback[TRANSPORT_INDEX_TCP])(busAddressTcp, guid, namesTcp, ttl);
+            m_mutex.Lock();
+            m_protect_callback = false;
+        }
     }
-
-    if ((namesUdp.size() > 0) && m_callback[TRANSPORT_INDEX_UDP]) {
-        m_protect_callback = true;
-        m_mutex.Unlock();
-        (*m_callback[TRANSPORT_INDEX_UDP])(busAddressUdp, guid, namesUdp, ttl);
-        m_mutex.Lock();
-        m_protect_callback = false;
-    }
-
-    if ((namesTcp.size() > 0) && m_callback[TRANSPORT_INDEX_TCP]) {
-        m_protect_callback = true;
-        m_mutex.Unlock();
-        (*m_callback[TRANSPORT_INDEX_TCP])(busAddressTcp, guid, namesTcp, ttl);
-        m_mutex.Lock();
-        m_protect_callback = false;
-    }
-
     return true;
 }
 

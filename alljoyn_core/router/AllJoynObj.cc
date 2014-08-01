@@ -3452,7 +3452,7 @@ void AllJoynObj::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
     //
     // Check if guid for this name is eligible for removal from PeerInfoMap in NameService
     //
-    if (CanRemoveFromPeerInfoMap(guidToBeChecked)) {
+    if (!IsGuidLongStringKnown(guidToBeChecked)) {
         IpNameService::Instance().RemoveFromPeerInfoMap(guidToBeChecked);
     }
 
@@ -4227,7 +4227,7 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
                     //
                     // Check if guid for this name is eligible for removal from PeerInfoMap in Name service
                     //
-                    if (CanRemoveFromPeerInfoMap(guidToBeChecked)) {
+                    if (!IsGuidLongStringKnown(guidToBeChecked)) {
                         QCC_DbgPrintf(("TTl=0. Removing GUID %s", guidToBeChecked.c_str()));
                         IpNameService::Instance().RemoveFromPeerInfoMap(guidToBeChecked);
                     }
@@ -4258,7 +4258,38 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
     }
 }
 
-bool AllJoynObj::CanRemoveFromPeerInfoMap(qcc::String& guid)
+bool AllJoynObj::IsGuidShortStringKnown(qcc::String& guid)
+{
+    //
+    //Check if there any other name in the NameMap from this guid
+    //
+    AcquireLocks();
+    std::multimap<qcc::String, NameMapEntry>::iterator it = nameMap.begin();
+    while (it != nameMap.end()) {
+        if (qcc::GUID128(it->second.guid).ToShortString() == guid) {
+            ReleaseLocks();
+            return true;
+        }
+        ++it;
+    }
+    //
+    //Check if there is any active session with this guid
+    //
+    BusEndpoint bep = router.FindEndpoint(":" + guid + ".1");
+    if (bep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
+        QCC_DbgPrintf(("Session found for %s", guid.c_str()));
+        ReleaseLocks();
+        return true;
+    } else {
+        QCC_DbgPrintf(("EndpoinType = %d,  Session not found for %s", bep->GetEndpointType(), guid.c_str()));
+    }
+
+    ReleaseLocks();
+    return false;
+}
+
+
+bool AllJoynObj::IsGuidLongStringKnown(qcc::String& guid)
 {
     //
     //Check if there any other name in the NameMap from this guid
@@ -4268,7 +4299,7 @@ bool AllJoynObj::CanRemoveFromPeerInfoMap(qcc::String& guid)
     while (it != nameMap.end()) {
         if (it->second.guid == guid) {
             ReleaseLocks();
-            return false;
+            return true;
         }
         ++it;
     }
@@ -4281,13 +4312,13 @@ bool AllJoynObj::CanRemoveFromPeerInfoMap(qcc::String& guid)
     if (bep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
         QCC_DbgPrintf(("Session found ", wellFormedBusName.ToShortString().c_str()));
         ReleaseLocks();
-        return false;
+        return true;
     } else {
         QCC_DbgPrintf(("EndpoinType = %d,  Session not found for %s", bep->GetEndpointType(), wellFormedBusName.ToShortString().c_str()));
     }
 
     ReleaseLocks();
-    return true;
+    return false;
 }
 
 void AllJoynObj::CleanAdvAliasMap(const String& name, const TransportMask mask)
@@ -4401,6 +4432,11 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                                                      NULL, 0,
                                                      ctx);
             if (status != ER_OK) {
+                /*
+                 * UNREACHABLE may not be the correct reply code here, a failure
+                 * status indicates only that setting up the async method call
+                 * failed.
+                 */
                 SendIPNSResponse(ctx->name, ALLJOYN_PING_REPLY_UNREACHABLE);
                 delete ctx;
             }
@@ -4543,7 +4579,7 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                     //
                     // Check if guid for this name is eligible for removal from PeerInfoMap in Name service
                     //
-                    if (CanRemoveFromPeerInfoMap(guidToBeChecked)) {
+                    if (!IsGuidLongStringKnown(guidToBeChecked)) {
                         IpNameService::Instance().RemoveFromPeerInfoMap(guidToBeChecked);
                     }
                 } else {
@@ -4672,13 +4708,15 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
             const InterfaceDescription* intf = bus.GetInterface(org::freedesktop::DBus::Peer::InterfaceName);
             assert(intf);
             peerObj.AddInterface(*intf);
+            Message* ctx = new Message(msg);
             status = peerObj.MethodCallAsync(org::freedesktop::DBus::Peer::InterfaceName,
                                              "Ping",
                                              this, static_cast<MessageReceiver::ReplyHandler>(&AllJoynObj::PingReplyMethodHandler),
                                              NULL, 0,
-                                             new Message(msg));
+                                             ctx);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Send Ping failed"));
+                delete ctx;
                 replyCode = ALLJOYN_PING_REPLY_UNREACHABLE;
             }
 
@@ -4703,13 +4741,18 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                     break;
                 }
             }
+            //
             // Check for unique name. Get the long GUID since the name passed will be short
+            // The unique name passed in should either be discovered or part of a session
+            //
             if (guid.empty() && (name[0] == ':')) {
                 String guidStr = String(name).substr(1, GUID128::SHORT_SIZE);
-                guid = guidStr;
-                foundEntry = true;
+                if (IsGuidShortStringKnown(guidStr)) {
+                    guid = guidStr;
+                    foundEntry = true;
+                }
             }
-            // Check if the well known name is in a session. If yes get the long GUID of remote routing node
+            // Check if the well known name is in a session. If yes get the short GUID of remote routing node
             if (guid.empty() && (name[0] != ':')) {
                 BusEndpoint bep = router.FindEndpoint(name);
                 if (bep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
@@ -4740,7 +4783,7 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                         AcquireLocks();
                         multimap<pair<String, String>, OutgoingPingInfo>::iterator it = outgoingPingMap.find(key);
                         if (it != outgoingPingMap.end()) {
-                            replyCode = (status == ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED) ? ALLJOYN_PING_REPLY_UNIMPLEMENTED : ALLJOYN_PING_REPLY_FAILED;
+                            replyCode = (status == ER_ALLJOYN_PING_REPLY_INCOMPATIBLE_REMOTE_ROUTING_NODE) ? ALLJOYN_PING_REPLY_INCOMPATIBLE_REMOTE_ROUTING_NODE : ALLJOYN_PING_REPLY_FAILED;
                             outgoingPingMap.erase(it);
                         }
                         if (timer.RemoveAlarm(alarm, false)) {
@@ -4881,9 +4924,21 @@ bool AllJoynObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_
 void AllJoynObj::PingReplyTransportHandler(Message& reply, void* context)
 {
     PingAlarmContext* ctx = static_cast<PingAlarmContext*>(context);
-    uint32_t replyCode = (ajn::MESSAGE_ERROR == reply->GetType()) ? ALLJOYN_PING_REPLY_UNREACHABLE : ALLJOYN_PING_REPLY_SUCCESS;
-    SendIPNSResponse(ctx->name, replyCode);
-
+    if (ajn::MESSAGE_ERROR == reply->GetType()) {
+        const char* errorName = reply->GetErrorName();
+        if (0 == strcmp(errorName, "org.alljoyn.Bus.Timeout")) {
+            /*
+             * There may be multiple ping callers with different timeouts being
+             * serviced by a single DBus Ping, so don't send a response here,
+             * let the caller timeout on their own schedule.
+             */
+        } else {
+            /* Likely error name is "org.freedesktop.DBus.Error.ServiceUnknown */
+            SendIPNSResponse(ctx->name, ALLJOYN_PING_REPLY_UNREACHABLE);
+        }
+    } else {
+        SendIPNSResponse(ctx->name, ALLJOYN_PING_REPLY_SUCCESS);
+    }
     delete ctx;
 }
 

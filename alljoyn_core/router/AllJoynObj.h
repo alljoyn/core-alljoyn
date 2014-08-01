@@ -982,11 +982,18 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     void CleanAdvAliasMap(const qcc::String& name, TransportMask mask);
 
     /**
-     * Check if this guid has no names or we are not in a session with this guid
-     * @param guid    Guid which needs to be checked
-     * @return true if there are no names in namemap from this guid and there are no active sessions to it
+     * Check if this guid has advertised names or we are in a session with this guid
+     * @param guid    Long Guid string which needs to be checked
+     * @return true if there are names in namemap from this guid or there is at least one active session to it
      */
-    bool CanRemoveFromPeerInfoMap(qcc::String& guid);
+    bool IsGuidLongStringKnown(qcc::String& guid);
+
+    /**
+     * Check if this guid has advertised names or we are in a session with this guid
+     * @param guid    Short Guid string which needs to be checked
+     * @return true if there are names in namemap from this guid or there is at least one active session to it
+     */
+    bool IsGuidShortStringKnown(qcc::String& guid);
 
 
     /* TODO document */

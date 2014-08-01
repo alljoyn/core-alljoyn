@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2012, 2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -31,7 +31,7 @@ static NSString * const kBusAttachmentTestsInterfaceXML = @"<interface name=\"or
 const NSTimeInterval kBusAttachmentTestsWaitTimeBeforeFailure = 5.0;
 const NSInteger kBusAttachmentTestsServicePort = 999;
 
-@interface BusAttachmentTests() <AJNBusListener, AJNSessionListener, AJNSessionPortListener, AJNSessionDelegate>
+@interface BusAttachmentTests() <AJNBusListener, AJNSessionListener, AJNSessionPortListener, AJNSessionDelegate, AJNPingPeerDelegate>
 
 @property (nonatomic, strong) AJNBusAttachment *bus;
 @property (nonatomic) BOOL listenerDidRegisterWithBusCompleted;
@@ -51,6 +51,7 @@ const NSInteger kBusAttachmentTestsServicePort = 999;
 @property (nonatomic) BOOL clientConnectionCompleted;
 @property (nonatomic) BOOL isAsyncTestClientBlock;
 @property (nonatomic) BOOL isAsyncTestClientDelegate;
+@property (nonatomic) BOOL isPingAsyncComplete;
 
 - (BOOL)waitForBusToStop:(NSTimeInterval)timeoutSeconds;
 - (BOOL)waitForCompletion:(NSTimeInterval)timeoutSeconds onFlag:(BOOL*)flag;
@@ -77,6 +78,7 @@ const NSInteger kBusAttachmentTestsServicePort = 999;
 @synthesize isAsyncTestClientBlock = _isAsyncTestClientBlock;
 @synthesize isAsyncTestClientDelegate = _isAsyncTestClientDelegate;
 @synthesize clientConnectionCompleted = _clientConnectionCompleted;
+@synthesize isPingAsyncComplete = _isPingAsyncComplete;
 
 - (void)setUp
 {
@@ -103,6 +105,7 @@ const NSInteger kBusAttachmentTestsServicePort = 999;
     self.isAsyncTestClientBlock = NO;
     self.isAsyncTestClientDelegate = NO;
     self.clientConnectionCompleted = NO;
+    self.isPingAsyncComplete = NO;
 }
 
 - (void)tearDown
@@ -126,6 +129,7 @@ const NSInteger kBusAttachmentTestsServicePort = 999;
     self.isAsyncTestClientBlock = NO;
     self.isAsyncTestClientDelegate = NO;
     self.clientConnectionCompleted = NO;
+    self.isPingAsyncComplete = NO;
     
     self.bus = nil;    
     
@@ -654,7 +658,6 @@ const NSInteger kBusAttachmentTestsServicePort = 999;
     STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
     STAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
     STAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
-    
     status = [client.bus disconnectWithArguments:@"null:"];
     STAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
     status = [self.bus disconnectWithArguments:@"null:"];
@@ -675,6 +678,140 @@ const NSInteger kBusAttachmentTestsServicePort = 999;
     
     [client tearDown];
 }
+
+
+- (void)testShouldAllowPeerToBeAsynchronouslyPingedByAClientUsingDelegate
+{
+    BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
+    [client setUp];
+    
+    client.isAsyncTestClientDelegate = YES;
+    
+    [self.bus registerBusListener:self];
+    [client.bus registerBusListener:client];
+    
+    QStatus status = [self.bus start];
+    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    status = [client.bus start];
+    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    
+    status = [self.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    status = [client.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    
+    status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
+    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    
+    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
+    
+    status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
+    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    
+    status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
+    STAssertTrue(status == ER_OK, @"Advertise name failed.");
+    
+    status = [client.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
+    STAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
+    
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
+    STAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
+    STAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
+    
+    STAssertTrue(ER_OK == [self.bus pingPeerAsync:kBusAttachmentTestsAdvertisedName withTimeout:5 completionDelegate:self context:nil], @"PingPeerAsync Failed");
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_isPingAsyncComplete], @"The service could not be pinged");
+    
+    status = [client.bus disconnectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
+    status = [self.bus disconnectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    
+    status = [client.bus stop];
+    STAssertTrue(status == ER_OK, @"Client bus failed to stop.");
+    status = [self.bus stop];
+    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    
+    STAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
+    STAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The client bus listener should have been notified that the bus is stopping.");
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");
+    
+    [client.bus unregisterBusListener:client];
+    [self.bus unregisterBusListener:self];
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
+    
+    [client tearDown];
+}
+
+- (void)testShouldAllowPeerToBeAsynchronouslyPingedByAClientUsingBlock
+{
+    BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
+    [client setUp];
+    
+    client.isAsyncTestClientBlock = YES;
+    
+    [self.bus registerBusListener:self];
+    [client.bus registerBusListener:client];
+    
+    QStatus status = [self.bus start];
+    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    status = [client.bus start];
+    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    
+    status = [self.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    status = [client.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    
+    status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
+    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    
+    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
+    
+    status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
+    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    
+    status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
+    STAssertTrue(status == ER_OK, @"Advertise name failed.");
+    
+    status = [client.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
+    STAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
+    
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
+    STAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
+    STAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
+    
+    STAssertTrue(ER_OK == [self.bus pingPeerAsync:kBusAttachmentTestsAdvertisedName withTimeout:5
+                                  completionBlock:^(QStatus status, void *context) {
+                                      NSLog(@"Ping Peer Async callback");
+                                      STAssertTrue(status == ER_OK, @"Ping Peer Async failed");
+                                      self.isPingAsyncComplete = YES;
+                                  }context:nil], @"PingPeerAsync Failed");
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_isPingAsyncComplete], @"The service could not be pinged");
+    
+    status = [client.bus disconnectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
+    status = [self.bus disconnectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    
+    status = [client.bus stop];
+    STAssertTrue(status == ER_OK, @"Client bus failed to stop.");
+    status = [self.bus stop];
+    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    
+    STAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
+    STAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The client bus listener should have been notified that the bus is stopping.");
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_busDidDisconnectCompleted], @"The bus listener should have been notified that the bus was disconnected.");
+    
+    [client.bus unregisterBusListener:client];
+    [self.bus unregisterBusListener:self];
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
+    
+    [client tearDown];
+}
+
+
 
 #pragma mark - Asynchronous test case support
 
@@ -750,6 +887,13 @@ const NSInteger kBusAttachmentTestsServicePort = 999;
             [self.bus joinSessionAsyncWithName:name onPort:kBusAttachmentTestsServicePort withDelegate:self options:sessionOptions joinCompletedDelegate:self context:nil];            
         }
     }
+}
+
+- (void) pingPeerHasStatus:(QStatus)status context:(void *)context
+{
+    NSLog(@"Ping Peer Async callback");
+    STAssertTrue(status == ER_OK, @"Ping Peer Async failed");
+    self.isPingAsyncComplete = YES;
 }
 
 - (void)didLoseAdvertisedName:(NSString*)name withTransportMask:(AJNTransportMask)transport namePrefix:(NSString*)namePrefix
