@@ -7493,10 +7493,10 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
             m_impl.GetQueryPackets(subsequentBurstpackets);
 #endif
             if (m_impl.m_networkChangeScheduleCount == 0) {
-                m_impl.m_networkChangeTimeStamp = now + RETRY_INTERVALS[0] * 1000 - BURST_RESPONSE_RETRIES * BURST_RESPONSE_INTERVAL;
+                m_impl.m_networkChangeTimeStamp = now + RETRY_INTERVALS[0] * 1000;
             } else {
                 //adjust m_networkChangeTimeStamp
-                m_impl.m_networkChangeTimeStamp += RETRY_INTERVALS[m_impl.m_networkChangeScheduleCount] * 1000;
+                m_impl.m_networkChangeTimeStamp += RETRY_INTERVALS[m_impl.m_networkChangeScheduleCount] * 1000 + (BURST_RESPONSE_RETRIES) *BURST_RESPONSE_INTERVAL;
 
             }
             if (now < m_impl.m_networkChangeTimeStamp) {
@@ -7539,10 +7539,10 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
 
                 if ((*it).scheduleCount == 0) {
                     initialBurstPackets.push_back((*it).packet);
-                    (*it).nextScheduleTime += RETRY_INTERVALS[(*it).scheduleCount] * 1000 - (BURST_RESPONSE_RETRIES + 1) * BURST_RESPONSE_INTERVAL;
+                    (*it).nextScheduleTime += RETRY_INTERVALS[(*it).scheduleCount] * 1000 - BURST_RESPONSE_INTERVAL;
                 } else {
                     subsequentBurstpackets.push_back((*it).packet);
-                    (*it).nextScheduleTime += RETRY_INTERVALS[(*it).scheduleCount] * 1000;
+                    (*it).nextScheduleTime += RETRY_INTERVALS[(*it).scheduleCount] * 1000 + (BURST_RESPONSE_RETRIES) *BURST_RESPONSE_INTERVAL;
 
                 }
 
