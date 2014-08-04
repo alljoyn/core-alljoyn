@@ -6544,6 +6544,14 @@ bool IpNameServiceImpl::RemoveFromPeerInfoMap(const qcc::String& guid)
         }
         QCC_DbgHLPrintf(("Erase from peer info map: guid=%s", guid.c_str()));
         m_peerInfoMap.erase(guid);
+        unordered_map<pair<String, IPEndpoint>, uint16_t, HashPacketTracker, EqualPacketTracker>::iterator it1 = m_mdnsPacketTracker.begin();
+        while (it1 != m_mdnsPacketTracker.end()) {
+            if (it1->first.first == guid) {
+                m_mdnsPacketTracker.erase(it1++);
+            } else {
+                it1++;
+            }
+        }
         m_mutex.Unlock();
         return true;
     }
