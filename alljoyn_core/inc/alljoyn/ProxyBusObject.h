@@ -477,9 +477,11 @@ class ProxyBusObject : public MessageReceiver {
     /**
      * Get a path descendant ProxyBusObject (child) by its absolute or relative path name.
      *
-     * For example, if this ProxyBusObject's path is @c "/foo/bar", then you can
-     * retrieve the ProxyBusObject for @c "/foo/bar/bat/baz" by calling
-     * @c GetChild("/foo/bar/bat/baz") or @c GetChild("bat/baz").
+     * For example, if this ProxyBusObject's path is @c "/foo/bar", then you
+     * can retrieve the ProxyBusObject for @c "/foo/bar/bat/baz" by calling
+     * @c GetChild("/foo/bar/bat/baz") or @c GetChild("/bat/baz").  The pointer
+     * that is returned is owned by the parent instance of ProxyBusObject and
+     * will be deleted when the parent is destroyed.
      *
      * @param path the absolute or relative path for the child.
      *
