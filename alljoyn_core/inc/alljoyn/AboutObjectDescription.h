@@ -104,6 +104,15 @@ class AboutObjectDescription {
     QStatus Remove(qcc::String const& path, const char** interfaceNames, size_t numInterfaces);
 
     /**
+     * Returns true if the given path is found
+     *
+     * @param[in] path BusObject path
+     *
+     * @return true if the path is found
+     */
+    bool HasPath(qcc::String const& path);
+
+    /**
      * Returns true if the given interface name is found in any path
      *
      * @param[in] interfaceName the name of the interface you are looking for
@@ -114,7 +123,7 @@ class AboutObjectDescription {
 
     /**
      * Returns true if the given interface name is found at the given path
-     * @param[in] path of tht interface
+     * @param[in] path of the interface
      * @param[in] interfaceName the name of the interface you are looking for
      *
      * @return true if the interface is found at the given path

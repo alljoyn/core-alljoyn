@@ -2042,9 +2042,27 @@ QStatus BusAttachment::RegisterAboutListener(AboutListener& aboutListener, const
     return busInternal->internalAboutListener.AddHandler(aboutListener, implementsInterfaces, numberInterfaces);
 }
 
+QStatus BusAttachment::RegisterAboutListener(AboutListener& aboutListener, const char* interface)
+{
+    if (interface == NULL) {
+        return ER_BAD_ARG_2;
+    }
+    const char** interfacePtr = &interface;
+    return busInternal->internalAboutListener.AddHandler(aboutListener, interfacePtr, 1);
+}
+
 QStatus BusAttachment::UnregisterAboutListener(AboutListener& aboutListener, const char** implementsInterfaces, size_t numberInterfaces)
 {
     return busInternal->internalAboutListener.RemoveHandler(aboutListener, implementsInterfaces, numberInterfaces);
+}
+
+QStatus BusAttachment::UnregisterAboutListener(AboutListener& aboutListener, const char* interface)
+{
+    if (interface == NULL) {
+        return ER_BAD_ARG_2;
+    }
+    const char** interfacePtr = &interface;
+    return busInternal->internalAboutListener.RemoveHandler(aboutListener, interfacePtr, 1);
 }
 
 QStatus BusAttachment::UnregisterAllAboutListeners()

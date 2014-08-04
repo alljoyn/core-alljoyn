@@ -144,6 +144,11 @@ QStatus AboutObjectDescription::Remove(qcc::String const& path, const char** int
     return status;
 }
 
+bool AboutObjectDescription::HasPath(qcc::String const& path)
+{
+    return (m_AnnounceObjectsMap.find(path) != m_AnnounceObjectsMap.end());
+}
+
 bool AboutObjectDescription::HasInterface(qcc::String const& interfaceName)
 {
     std::map<qcc::String, std::set<qcc::String> >::iterator it;
@@ -163,10 +168,21 @@ bool AboutObjectDescription::HasInterface(qcc::String const& path, qcc::String c
         return false;
     }
 
-    if (it->second.find(interfaceName) == it->second.end()) {
-        return false;
+    size_t n = interfaceName.find_first_of('*');
+    std::set<qcc::String>::iterator ifac_it = it->second.begin();
+    for (ifac_it = it->second.begin(); ifac_it != it->second.end(); ++ifac_it) {
+        if (n == qcc::String::npos && interfaceName == *ifac_it) {
+            return true;
+        } else if (n != qcc::String::npos && interfaceName.compare(0, n, ifac_it->substr(0, n)) == 0) {
+            return true;
+        }
     }
-    return true;
+    return false;
+//    if (it->second.find(interfaceName) == it->second.end()) {
+//        //return false;
+//
+//    }
+//    return true;
 }
 
 QStatus AboutObjectDescription::GetMsgArg(MsgArg* msgArg)

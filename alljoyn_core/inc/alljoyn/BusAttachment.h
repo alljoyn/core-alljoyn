@@ -1295,7 +1295,7 @@ class BusAttachment : public MessageReceiver {
      * significant impact on network performance and should be avoided unless
      * its known that all announcements are needed.
      *
-     * @param[in] aboutListener reference to AnnounceListener
+     * @param[in] aboutListener reference to AboutListener
      * @param[in] implementsInterfaces a list of interfaces that the Announce
      *               signal reports as implemented. NULL to receive all Announce
      *               signals regardless of interfaces
@@ -1304,6 +1304,22 @@ class BusAttachment : public MessageReceiver {
      * @return status
      */
     QStatus RegisterAboutListener(AboutListener& aboutListener, const char** implementsInterfaces, size_t numberInterfaces);
+
+    /**
+     * Registers a listener to receive the org.alljoyn.about Announce signal.
+     *
+     * This is t=identical to RegisterAboutListener(AboutListener&, const char**, size_t)
+     * except this is specialized for a single interface not several interfaces.
+     *
+     * @see RegisterAboutListener(AboutListener&, const char**, size_t)
+     * @param[in] aboutListener reference to an AboutListener.
+     * @param[in] interface     interface that the remove user must implement to
+     *                          receive the announce signal.
+     *
+     * return
+     *    - #ER_OK on success
+     */
+    QStatus RegisterAboutListener(AboutListener& aboutListener, const char* interface);
 
     /**
      * Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
@@ -1316,6 +1332,17 @@ class BusAttachment : public MessageReceiver {
      * @return status
      */
     QStatus UnregisterAboutListener(AboutListener& aboutListener, const char** implementsInterfaces, size_t numberInterfaces);
+
+    /**
+     * unregister a listener for a single interface
+     *
+     * @see UnregisterAboutListener(AboutListener&, const char**, size_t)
+     * @param[in] aboutListener reference to an AboutListener.
+     * @param[in] interface     interface that the remove user must implement to
+     *                          receive the announce signal.
+     * @return status
+     */
+    QStatus UnregisterAboutListener(AboutListener& aboutListener, const char* interface);
 
     /**
      * Unregisters all AboutListeners from receiving any org.alljoyn.about Announce signal
