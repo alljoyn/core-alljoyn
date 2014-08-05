@@ -161,6 +161,7 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
     function(isExternal ? NULL : func),
     handle(isExternal ? pthread_self() : 0),
     exitValue(NULL),
+    arg(NULL),
     listener(NULL),
     isExternal(isExternal),
     platformContext(NULL),
