@@ -1438,17 +1438,6 @@ class IpNameServiceImpl : public qcc::Thread {
 
     /**
      * @internal
-     * @brief Quick check that the cached ipv4address is still correct.
-     *
-     * The cached value may get stale between calls to LazyUpdateInterfaces if
-     * we're switching networks.  Also, this is much lighter weight than
-     * LazyUpdateInterfaces, so it's appropriate to call it on each outbound
-     * message.
-     */
-    bool LiveInterfacesNeedsUpdate(void);
-
-    /**
-     * @internal
      * @brief Count the number of bits that are sent in the provided integer.
      * Methods to count the number of set bits in a data word are used to in the
      * process of calculating the Hamming Distance between two binary strings.
