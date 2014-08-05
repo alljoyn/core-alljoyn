@@ -231,7 +231,7 @@ QStatus AdvTunnel::Listen(uint16_t port)
         qcc::IPAddress addr;
         status = qcc::Accept(listenSock, addr, port, sock);
         if (status == ER_WOULDBLOCK) {
-            qcc::Event ev(listenSock, qcc::Event::IO_READ, false);
+            qcc::Event ev(listenSock, qcc::Event::IO_READ);
             status = qcc::Event::Wait(ev, qcc::Event::WAIT_FOREVER);
             if (ER_OK == status) {
                 status = qcc::Accept(listenSock, addr, port, sock);

@@ -5262,7 +5262,7 @@ void* UDPTransport::Run(void* arg)
             QCC_DbgPrintf(("UDPTransport::Run(): Not STATE_RELOADED. Creating socket events"));
             for (list<pair<qcc::String, SocketFd> >::const_iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
                 QCC_DbgPrintf(("UDPTransport::Run(): Not STATE_RELOADED. Creating event for socket %d", i->second));
-                checkEvents.push_back(new Event(i->second, Event::IO_READ, false));
+                checkEvents.push_back(new Event(i->second, Event::IO_READ));
             }
 
             m_reload = STATE_RELOADED;
@@ -5348,7 +5348,7 @@ void* UDPTransport::Run(void* arg)
             bool socketReady = (*i != &ardpTimerEvent && *i != &maintenanceTimerEvent && *i != &stopEvent);
             uint32_t ms;
             m_ardpLock.Lock();
-            ARDP_Run(m_handle, socketReady ? (*i)->GetFD() : -1, socketReady, &ms);
+            ARDP_Run(m_handle, socketReady ? (*i)->GetFD() : qcc::INVALID_SOCKET_FD, socketReady, &ms);
             m_ardpLock.Unlock();
 
             /*
@@ -6974,7 +6974,7 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
      * to wait for four minutes to relaunch the daemon if it crashes.
      */
     QCC_DbgPrintf(("UDPTransport::DoStartListen(): Setting up socket"));
-    SocketFd listenFd = -1;
+    SocketFd listenFd = qcc::INVALID_SOCKET_FD;
     status = Socket(QCC_AF_INET, QCC_SOCK_DGRAM, listenFd);
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::DoStartListen(): Socket() failed"));
@@ -7242,7 +7242,7 @@ void UDPTransport::DoStopListen(qcc::String& normSpec)
      */
     QCC_DbgPrintf(("UDPTransport::DoStopListen(): Looking for listen FD with normspec \"%s\"", normSpec.c_str()));
     m_listenFdsLock.Lock(MUTEX_CONTEXT);
-    qcc::SocketFd stopFd = -1;
+    qcc::SocketFd stopFd = qcc::INVALID_SOCKET_FD;
     bool found = false;
     for (list<pair<qcc::String, SocketFd> >::iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
         if (i->first == normSpec) {

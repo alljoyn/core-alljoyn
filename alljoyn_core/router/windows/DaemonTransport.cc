@@ -78,7 +78,7 @@ void* DaemonTransport::Run(void* arg)
     SocketFd listenFd = SocketFd(arg);
     QStatus status = ER_OK;
 
-    Event* listenEvent = new Event(listenFd, Event::IO_READ, false);
+    Event* listenEvent = new Event(listenFd, Event::IO_READ);
 
     while (!IsStopping()) {
 
@@ -228,12 +228,12 @@ QStatus DaemonTransport::StartListen(const char* listenSpec)
         QCC_LogError(status, ("DaemonTransport::StartListen(): Invalid localhost listen spec \"%s\"", listenSpec));
         return status;
     }
-    SocketFd listenFd = -1;
+    SocketFd listenFd = qcc::INVALID_SOCKET_FD;
     status = ListenFd(serverArgs, listenFd);
     if (status == ER_OK) {
         status = Thread::Start((void*)listenFd);
     }
-    if ((listenFd != -1) && (status != ER_OK)) {
+    if ((listenFd != qcc::INVALID_SOCKET_FD) && (status != ER_OK)) {
         qcc::Close(listenFd);
     }
     return status;

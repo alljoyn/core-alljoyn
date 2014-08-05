@@ -202,7 +202,7 @@ QStatus SocketPair(qcc::SocketFd* socks, uint16_t port)
     IPAddress addr;
 
     addr.SetAddress("127.0.0.1");
-    qcc::SocketFd listenFd = -1;
+    qcc::SocketFd listenFd = qcc::INVALID_SOCKET_FD;
 
     status = qcc::Socket(QCC_AF_INET, QCC_SOCK_STREAM, listenFd);
     if (status != ER_OK) {
@@ -239,7 +239,7 @@ QStatus SocketPair(qcc::SocketFd* socks, uint16_t port)
 
 Exit:
 
-    if (listenFd != -1) {
+    if (listenFd != qcc::INVALID_SOCKET_FD) {
         qcc::Close(listenFd);
     }
     return status;

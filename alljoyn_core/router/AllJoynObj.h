@@ -626,7 +626,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
             id(0),
             sessionPort(0),
             opts(),
-            fd(-1),
+            fd(qcc::INVALID_SOCKET_FD),
             isInitializing(false),
             isRawReady(false) { }
     };
