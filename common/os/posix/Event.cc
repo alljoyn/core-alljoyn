@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -31,6 +31,19 @@
 
 #include <qcc/Debug.h>
 #include <qcc/Event.h>
+
+#if defined(MECHANISM_EVENTFD) && defined(MECHANISM_PIPE)
+#error "Specifiy either MECHANISM_EVENTFD or MECHANISM_PIPE"
+#endif
+
+#if !defined(MECHANISM_EVENTFD) && !defined(MECHANISM_PIPE)
+#error "Specifiy either MECHANISM_EVENTFD or MECHANISM_PIPE"
+#endif
+
+#if defined(MECHANISM_EVENTFD)
+#include <sys/eventfd.h>
+#endif
+
 #include <qcc/Mutex.h>
 #include <qcc/Stream.h>
 #include <qcc/Thread.h>
@@ -42,9 +55,11 @@ using namespace qcc;
 /** @internal */
 #define QCC_MODULE "EVENT"
 
+#if defined(MECHANISM_PIPE)
 static Mutex* pipeLock = NULL;
 static vector<pair<int, int> >* freePipeList;
 static vector<pair<int, int> >* usedPipeList;
+#endif
 
 Event Event::alwaysSet(0, 0);
 
@@ -227,7 +242,9 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
     }
 }
 
-static void createPipe(int* rdFd, int* wrFd)
+#if defined(MECHANISM_PIPE)
+
+static void CreateMechanism(int* rdFd, int* wrFd)
 {
 #ifdef DEBUG_EVENT_LEAKS
     int fds[2];
@@ -268,7 +285,7 @@ static void createPipe(int* rdFd, int* wrFd)
 #endif
 }
 
-static void destroyPipe(int rdFd, int wrFd)
+static void DestroyMechanism(int rdFd, int wrFd)
 {
 #ifdef DEBUG_EVENT_LEAKS
     close(rdFd);
@@ -332,16 +349,158 @@ static void destroyPipe(int rdFd, int wrFd)
 #endif
 }
 
+/*
+ * The semantics of the general purpose event is that we only set and reset the
+ * event.  We use select to decide if the event has become signalled via a call
+ * to SetMechanism.  There are no P() or V() operations, so the event just
+ * remains signalled until a ResetMechanism is done.  In order to signal an
+ * event, we write something into the underlying pipe which makes the read side
+ * appear signalled.  In order to reset it we simply read from the pipe to
+ * remove the data.  As long as there are bits in the pipe, a select will find
+ * the readFd readable and we consider the event signaled.
+ */
+static QStatus SetMechanism(int signalFd)
+{
+    char val = 's';
+    /*
+     * In order to signal our event, we write a byte into the pipe, which then
+     * becomes ready and the event becomes signaled.
+     */
+    int ret = write(signalFd, &val, sizeof(val));
+    return ret >= 0 ? ER_OK : ER_FAIL;
+}
+
+static QStatus ResetMechanism(int fd)
+{
+    char buf[32];
+    int ret = sizeof(buf);
+
+    /*
+     * In order to reset our event, we read from the pipe until there are no
+     * longer any bytes in it which then makes the associated fd not ready and
+     * the event becomes signaled.
+     */
+    while (sizeof(buf) == ret) {
+        ret = read(fd, buf, sizeof(buf));
+    }
+
+    /*
+     * If we successfully read, the eventfd is reset, which is okay.
+     */
+    if (ret >= 0) {
+        return ER_OK;
+    }
+
+    /*
+     * If we get EAGAIN or EWOULDBLOCK, the eventfd was already reset, which is
+     * okay.
+     */
+    if (ret < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        return ER_OK;
+    }
+
+    /*
+     * This is a real error;
+     */
+    return ER_FAIL;
+}
+
+#endif // defined(MECHANISM_PIPE)
+
+#if defined(MECHANISM_EVENTFD)
+
+/*
+ * Create an underlying mechanism for events if using the eventfd event
+ * notification mechanism.
+ */
+static void CreateMechanism(int* readFd, int* writeFd)
+{
+    QCC_DbgTrace(("CreateMechanism()"));
+    int efd = eventfd(0, EFD_NONBLOCK);
+    if (efd < 0) {
+        QCC_LogError(ER_FAIL, ("CreateMechanism(): Unable to create eventfd (%d:\"%s\")", errno, strerror(errno)));
+    }
+    *readFd = *writeFd = efd;
+}
+
+/*
+ * Destroy an existing underlying mechanism for events using the eventfd event
+ * notification mechanism.
+ */
+static void DestroyMechanism(int readFd, int writeFd)
+{
+    QCC_DbgTrace(("DestroyMechanism()"));
+    assert(readFd == writeFd && "destroyMechanism(): expect readFd == writeFd for eventfd mechanism");
+    close(readFd);
+}
+
+/*
+ * The semantics of the general purpose event is that we only set and reset the
+ * event.  We use select to decide if the event has become signalled via a call
+ * to SetMechanism.  There are no P() or V() operations, so the event just
+ * remains signalled until a ResetMechanism is done.  In order to signal an
+ * event, we write a positive 64-bit integer to the FD.  In order to reset it,
+ * we write a zero.  As long as the contents of the FD are non-zero, a select
+ * will find the eventfd readable and we consider the event signaled.
+ */
+static QStatus SetMechanism(int efd)
+{
+    QCC_DbgTrace(("SetMechanism()"));
+
+    /*
+     * You signal an eventfd simply by writing a positive value which is added
+     * to its internal count.  If that value does not overflow, it goes to
+     * signaled.
+     */
+    uint64_t val = 1;
+    ssize_t ret = write(efd, &val, sizeof(val));
+    return ret >= 0 ? ER_OK : ER_FAIL;
+}
+
+static QStatus ResetMechanism(int efd)
+{
+    QCC_DbgTrace(("ResetMechanism()"));
+    uint64_t val;
+
+    /*
+     * You reset an eventfd simply by reading from it, which will reset its
+     * associated count to zero and make it not signaled.
+     */
+    ssize_t ret = read(efd, &val, sizeof(val));
+
+    /*
+     * If we successfully read, the eventfd is reset, which is okay.
+     */
+    if (ret >= 0) {
+        return ER_OK;
+    }
+
+    /*
+     * If we get EAGAIN or EWOULDBLOCK, the eventfd was already reset, which is
+     * okay.
+     */
+    if (ret < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        return ER_OK;
+    }
+
+    /*
+     * This is a real error;
+     */
+    return ER_FAIL;
+}
+
+#endif // defined(MECHANISM_EVENTFD)
+
 Event::Event() : fd(-1), signalFd(-1), ioFd(-1), eventType(GEN_PURPOSE), numThreads(0)
 {
-    createPipe(&fd, &signalFd);
+    CreateMechanism(&fd, &signalFd);
 }
 
 Event::Event(int ioFd, EventType eventType, bool genPurpose)
     : fd(-1), signalFd(-1), ioFd(ioFd), eventType(eventType), timestamp(0), period(0), numThreads(0)
 {
     if (genPurpose) {
-        createPipe(&fd, &signalFd);
+        CreateMechanism(&fd, &signalFd);
     }
 }
 
@@ -349,7 +508,7 @@ Event::Event(Event& event, EventType eventType, bool genPurpose)
     : fd(-1), signalFd(-1), ioFd(event.ioFd), eventType(eventType), timestamp(0), period(0), numThreads(0)
 {
     if (genPurpose) {
-        createPipe(&fd, &signalFd);
+        CreateMechanism(&fd, &signalFd);
     }
 }
 
@@ -373,7 +532,7 @@ Event::~Event()
 
     /* Destroy eventfd if one was created */
     if (GEN_PURPOSE == eventType) {
-        destroyPipe(fd, signalFd);
+        DestroyMechanism(fd, signalFd);
     }
 }
 
@@ -382,7 +541,6 @@ QStatus Event::SetEvent()
     QStatus status;
 
     if (GEN_PURPOSE == eventType) {
-        char val = 's';
         fd_set rdSet;
         struct timeval tv;
         tv.tv_sec = tv.tv_usec = 0;
@@ -390,9 +548,10 @@ QStatus Event::SetEvent()
         FD_SET(fd, &rdSet);
         int ret = select(fd + 1, &rdSet, NULL, NULL, &tv);
         if (ret == 0) {
-            ret = write(signalFd, &val, sizeof(val));
+            status = SetMechanism(signalFd);
+        } else {
+            status = ER_FAIL;
         }
-        status = (ret == 1) ? ER_OK : ER_FAIL;
     } else if (TIMED == eventType) {
         uint32_t now = GetTimestamp();
         if (now < timestamp) {
@@ -416,12 +575,7 @@ QStatus Event::ResetEvent()
     QStatus status = ER_OK;
 
     if (GEN_PURPOSE == eventType) {
-        char buf[32];
-        int ret = sizeof(buf);
-        while (sizeof(buf) == ret) {
-            ret = read(fd, buf, sizeof(buf));
-        }
-        status = ((0 < ret) || ((-1 == ret) && (EAGAIN == errno))) ? ER_OK : ER_FAIL;
+        status = ResetMechanism(fd);
         if (ER_OK != status) {
             QCC_LogError(status, ("pipe read failed with %d (%s)", errno, strerror(errno)));
         }

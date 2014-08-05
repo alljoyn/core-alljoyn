@@ -34,6 +34,13 @@
 
 #include <Status.h>
 
+/*
+ * Choose either pipes (MECHANISM_PIPE) or eventfd (MECHANISM_EVENTFD) as the
+ * underlying OS mechanism for events.  We prefer eventfd as it is more
+ * efficient.
+ */
+// #define MECHANISM_PIPE
+#define MECHANISM_EVENTFD
 
 /** @internal */
 namespace qcc {
