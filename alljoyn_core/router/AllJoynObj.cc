@@ -4941,7 +4941,7 @@ void AllJoynObj::PingReplyTransportHandler(Message& reply, void* context)
     PingAlarmContext* ctx = static_cast<PingAlarmContext*>(context);
     if (ajn::MESSAGE_ERROR == reply->GetType()) {
         const char* errorName = reply->GetErrorName();
-        if (0 == strcmp(errorName, "org.alljoyn.Bus.Timeout")) {
+        if (errorName && (0 == strcmp(errorName, "org.alljoyn.Bus.Timeout"))) {
             /*
              * There may be multiple ping callers with different timeouts being
              * serviced by a single DBus Ping, so don't send a response here,
