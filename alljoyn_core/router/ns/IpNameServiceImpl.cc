@@ -425,7 +425,7 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
     //
     // We don't enable v0 and v1 traffic unless explicitly configured to do so.
     //
-    m_enableV1 = config->GetFlag("ns_enable_v1", true);
+    m_enableV1 = config->GetFlag("ns_enable_v1", false);
 
     //
     // Set the broadcast bit to true for WinRT. For all other platforms,
@@ -1417,14 +1417,12 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const std::set<uint32_t>& networkRe
             continue;
         }
 
-        if (m_enableV1) {
-            status = CreateMulticastSocket(entries[i], IPV4_ALLJOYN_MULTICAST_GROUP, IPV6_ALLJOYN_MULTICAST_GROUP, MULTICAST_PORT,
-                                           m_broadcast, multicastsockFd);
-            if (status != ER_OK) {
-                QCC_DbgPrintf(("Failed to create multicast socket for NS packets."));
-                qcc::Close(multicastMDNSsockFd);
-                continue;
-            }
+        status = CreateMulticastSocket(entries[i], IPV4_ALLJOYN_MULTICAST_GROUP, IPV6_ALLJOYN_MULTICAST_GROUP, MULTICAST_PORT,
+                                       m_broadcast, multicastsockFd);
+        if (status != ER_OK) {
+            QCC_DbgPrintf(("Failed to create multicast socket for NS packets."));
+            qcc::Close(multicastMDNSsockFd);
+            continue;
         }
 
         //
@@ -3083,7 +3081,6 @@ void IpNameServiceImpl::SendProtocolMessage(
 
     uint32_t nsVersion, msgVersion;
     packet->GetVersion(nsVersion, msgVersion);
-    assert(m_enableV1 || (msgVersion != 0 && msgVersion != 1));
 
     size_t size = packet->GetSerializedSize();
     if (size > NS_MESSAGE_MAX) {
@@ -5141,11 +5138,17 @@ void IpNameServiceImpl::GetQueryPackets(std::list<Packet>& packets, const uint8_
 
 void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask completeTransportMask, const int32_t interfaceIndex, const qcc::AddressFamily family, const qcc::IPAddress& localAddress)
 {
+    //
     // Type can be one of the following 3 values:
-    // TRANSMIT_V0_V1: transmit version zero and version one messages.
-    // TRANSMIT_V2: transmit version two messages.
-    // TRANSMIT_V0_V1 | TRANSMIT_V2: transmit version zero, version one and version two messages.
-    if (!m_enableV1) {
+    // - TRANSMIT_V0_V1: transmit version zero and version one messages.
+    // - TRANSMIT_V2: transmit version two messages.
+    // - TRANSMIT_V0_V1 | TRANSMIT_V2: transmit version zero, version one and
+    //                                 version two messages.
+    //
+    // If V1 is not enabled we only respond to queries for quiet names from V1
+    // to support legacy thin core leaf nodes looking for router nodes.
+    //
+    if (!m_enableV1 && !quietly) {
         type &= ~TRANSMIT_V0_V1;
     }
 
@@ -5957,9 +5960,14 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
             }
 
             //
-            // check to see if this name on the list of names we actively advertise.
+            // Check to see if this name on the list of names we actively
+            // advertise.
             //
-            for (set<qcc::String>::iterator j = m_advertised[index].begin(); j != m_advertised[index].end(); ++j) {
+            // If V1 is not enabled we only respond to queries for quiet names
+            // from V1 to support legacy thin core leaf nodes looking for router
+            // nodes.
+            //
+            for (set<qcc::String>::iterator j = m_advertised[index].begin(); m_enableV1 && (j != m_advertised[index].end()); ++j) {
 
                 //
                 // The requested name comes in from the WhoHas message and we
@@ -6432,9 +6440,6 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
             QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolMessage(): Unknown version: Error"));
             return;
         }
-        if (!m_enableV1) {
-            return;
-        }
 
         //
         // If the received packet contains questions, see if we can answer them.
@@ -6447,6 +6452,14 @@ void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nb
             HandleProtocolQuestion(nsPacket->GetQuestion(i), endpoint, interfaceIndex, localAddress);
         }
 
+        //
+        // Only questions are handled if V1 is not enabled since we are only
+        // responding to queries for quiet names from V1 to support legacy thin
+        // core leaf nodes looking for router nodes.
+        //
+        if (!m_enableV1) {
+            return;
+        }
         //
         // If the received packet contains answers, see if they are answers to
         // questions we think are interesting.  Make sure we are not talking to
