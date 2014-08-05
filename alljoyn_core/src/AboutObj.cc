@@ -32,62 +32,30 @@ AboutObj::AboutObj(ajn::BusAttachment& bus) :
     BusObject(org::alljoyn::About::ObjectPath),
     m_busAttachment(&bus)
 {
-
-}
-
-QStatus AboutObj::Init(ajn::AboutObjectDescription& objectDescription, ajn::AboutData& aboutData)
-{
-    QCC_DbgTrace(("AboutService::%s", __FUNCTION__));
-    assert(m_busAttachment);
-    m_objectDescription = &objectDescription;
-    m_aboutData = &aboutData;
-
-    QStatus status;
-
     const InterfaceDescription* p_InterfaceDescription = NULL;
 
     p_InterfaceDescription = m_busAttachment->GetInterface(org::alljoyn::About::InterfaceName);
+    assert(p_InterfaceDescription);
 
-    if (!p_InterfaceDescription) {
-        return ER_BUS_CANNOT_ADD_INTERFACE;
-    }
 
-    status = AddInterface(*p_InterfaceDescription);
+    QStatus status = AddInterface(*p_InterfaceDescription);
     QCC_DbgPrintf(("Add About interface %s\n", QCC_StatusText(status)));
 
     if (status == ER_OK) {
-        status = AddMethodHandler(p_InterfaceDescription->GetMember("GetAboutData"),
-                                  static_cast<MessageReceiver::MethodHandler>(&AboutObj::GetAboutData));
-        if (status != ER_OK) {
-            return status;
-        }
-        status = AddMethodHandler(p_InterfaceDescription->GetMember("GetObjectDescription"),
-                                  static_cast<MessageReceiver::MethodHandler>(&AboutObj::GetObjectDescription));
-        if (status != ER_OK) {
-            return status;
-        }
+        AddMethodHandler(p_InterfaceDescription->GetMember("GetAboutData"),
+                         static_cast<MessageReceiver::MethodHandler>(&AboutObj::GetAboutData));
+        AddMethodHandler(p_InterfaceDescription->GetMember("GetObjectDescription"),
+                         static_cast<MessageReceiver::MethodHandler>(&AboutObj::GetObjectDescription));
     }
 
     status = m_busAttachment->RegisterBusObject(*this);
-    QCC_DbgHLPrintf(("AboutObj::Init %s", QCC_StatusText(status)));
-
-    return (status == ER_BUS_IFACE_ALREADY_EXISTS) ? ER_OK : status;
-}
-QStatus AboutObj::UpdateObjectDescription(ajn::AboutObjectDescription& objectDescription)
-{
-    // TODO
-    return ER_FAIL;
+    QCC_DbgHLPrintf(("AboutObj RegisterBusOBject %s", QCC_StatusText(status)));
 }
 
-
-QStatus AboutObj::UpdateAboutData(ajn::AboutData& aboutData)
+QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutObjectDescription& objectDescription, ajn::AboutData& aboutData)
 {
-    // TODO
-    return ER_FAIL;
-}
-
-QStatus AboutObj::Announce(SessionPort sessionPort)
-{
+    m_objectDescription = &objectDescription;
+    m_aboutData = &aboutData;
     const InterfaceDescription* p_InterfaceDescription = m_busAttachment->GetInterface(org::alljoyn::About::InterfaceName);
 
     if (!p_InterfaceDescription) {

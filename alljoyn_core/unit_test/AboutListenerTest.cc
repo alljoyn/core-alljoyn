@@ -130,7 +130,6 @@ TEST_F(AboutListenerTest, ReceiverAnnouncement) {
     AboutObjectDescription aod;
     aod.Add("/org/test/about", ifaceName);
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Init(aod, aboutData);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
@@ -145,7 +144,7 @@ TEST_F(AboutListenerTest, ReceiverAnnouncement) {
     status = clientBus.RegisterAboutListener(aboutListener, ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -196,9 +195,8 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementRegisterThenAddInterface)
     AboutObjectDescription aod;
     aod.Add("/org/test/about", ifaceName);
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Init(aod, aboutData);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -231,7 +229,6 @@ TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
     aod.Add("/org/test/about", ifaceName);
 
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Init(aod, aboutData);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
@@ -246,7 +243,7 @@ TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
     status = clientBus.RegisterAboutListener(aboutListener, ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -260,7 +257,7 @@ TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
 
     announceListenerFlag = false;
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -315,7 +312,6 @@ TEST_F(AboutListenerTest, MultipleAnnounceHandlers) {
     AboutObjectDescription aod;
     aod.Add("/org/test/about", ifaceName);
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Init(aod, aboutData);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
@@ -335,7 +331,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceHandlers) {
     status = clientBus.RegisterAboutListener(aboutListener2, ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -379,7 +375,6 @@ TEST_F(AboutListenerTest, MultipleAnnounceHandlersUnregister) {
     AboutObjectDescription aod;
     aod.Add("/org/test/about", ifaceName);
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Init(aod, aboutData);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
@@ -399,7 +394,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceHandlersUnregister) {
     status = clientBus.RegisterAboutListener(aboutListener2, ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -426,7 +421,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceHandlersUnregister) {
     status = clientBus.UnregisterAboutListener(aboutListener1, ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 5 sec for the second Announce Signal.
     for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
@@ -460,7 +455,6 @@ TEST_F(AboutListenerTest, MultipleAnnounceHandlersUnregisterAll) {
     AboutObjectDescription aod;
     aod.Add("/org/test/about", ifaceName);
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Init(aod, aboutData);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
@@ -485,7 +479,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceHandlersUnregisterAll) {
     status = clientBus.RegisterAboutListener(aboutListener3, ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -564,7 +558,6 @@ TEST_F(AboutListenerTest, MatchMultipleInterfaces) {
 
     aod.Add("/org/test/about", ifaces, 3);
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Init(aod, aboutData);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
@@ -579,7 +572,7 @@ TEST_F(AboutListenerTest, MatchMultipleInterfaces) {
     status = clientBus.RegisterAboutListener(aboutListener, ifaces, 3);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -622,7 +615,6 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesSubSet) {
 
     aod.Add("/org/test/about", ifaces, 6);
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Init(aod, aboutData);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
@@ -641,7 +633,7 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesSubSet) {
     status = clientBus.RegisterAboutListener(aboutListener, ifacesSubSet, 2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -684,7 +676,6 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesRegisterInDifferentOrder) {
 
     aod.Add("/org/test/about", ifaces, 6);
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Init(aod, aboutData);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
@@ -708,7 +699,7 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesRegisterInDifferentOrder) {
     status = clientBus.RegisterAboutListener(aboutListener, ifaceslist, 6);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -757,7 +748,6 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching) {
 
     aod.Add("/org/test/about", ifaces, 3);
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Init(aod, aboutData);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
@@ -773,7 +763,7 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching) {
     status = clientBus.RegisterAboutListener(aboutListener, wildCard.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -816,7 +806,6 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching2) {
 
     aod.Add("/org/test/about", ifaces, 3);
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Init(aod, aboutData);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
@@ -832,7 +821,7 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching2) {
     status = clientBus.RegisterAboutListener(aboutListener, wildCard.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -871,7 +860,6 @@ TEST_F(AboutListenerTest, MultipleWildCardInterfaceMatching) {
 
     aod.Add("/org/test/about", ifaces, 3);
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Init(aod, aboutData);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
@@ -891,7 +879,7 @@ TEST_F(AboutListenerTest, MultipleWildCardInterfaceMatching) {
     status = clientBus.RegisterAboutListener(aboutListener, interfacelist, 2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -930,7 +918,6 @@ TEST_F(AboutListenerTest, MixedWildCardNonWildCardInterfaceMatching) {
 
     aod.Add("/org/test/about", ifaces, 3);
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Init(aod, aboutData);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
@@ -949,7 +936,7 @@ TEST_F(AboutListenerTest, MixedWildCardNonWildCardInterfaceMatching) {
     status = clientBus.RegisterAboutListener(aboutListener, interfacelist, 2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -1002,7 +989,6 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
     aod.Add("/org/test/about/b", ifaceNames[1]);
 
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Init(aod, aboutData);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
@@ -1017,7 +1003,7 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
     status = clientBus.RegisterAboutListener(aboutListener, ifaceNames[0].c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -1031,7 +1017,7 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
 
     aod.Remove("/org/test/about/b", ifaceNames[1]);
 
-    aboutObj.Announce(port);
+    aboutObj.Announce(port, aod, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {

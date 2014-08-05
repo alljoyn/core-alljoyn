@@ -55,36 +55,6 @@ class AboutObj : public BusObject {
     AboutObj(ajn::BusAttachment& bus);
 
     virtual ~AboutObj() { }
-    /**
-     * Add the objectDescription and AboutData to the About class.
-     * This method call is only needed if calling the Announce Method.
-     *
-     * @param objectDescription the list of interfaces and paths that are accessible
-     * @param aboutData The AboutData is a colection of fields that provide information
-     *                  about the device or the application.
-     *
-     * @return ER_OK on success
-     */
-    QStatus Init(ajn::AboutObjectDescription& objectDescription, ajn::AboutData& aboutData);
-
-    /**
-     * unknown if this is needed
-     *
-     * TODO
-     * @param[in] objectDescription an updated ObjectDescription
-     *
-     * @return ER_OK on success
-     */
-    QStatus UpdateObjectDescription(ajn::AboutObjectDescription& objectDescription);
-
-    /**
-     * unknown if this is needed
-     * TODO
-     * @param [in] aboutData an updated AboutData
-     *
-     * @return ER_OK on success
-     */
-    QStatus UpdateAboutData(ajn::AboutData& aboutData);
 
     /**
      * This signal is used to announce the list of all interfaces available at given oject paths as
@@ -94,7 +64,7 @@ class AboutObj : public BusObject {
      *
      * @return ER_OK on success
      */
-    QStatus Announce(SessionPort sessionPort);
+    QStatus Announce(SessionPort sessionPort, ajn::AboutObjectDescription& objectDescription, ajn::AboutData& aboutData);
 
   private:
     /**

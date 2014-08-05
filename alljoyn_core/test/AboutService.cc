@@ -118,14 +118,7 @@ int main(int argc, char** argv)
 
     // Announce about signal
     AboutObj aboutObj(bus);
-    status = aboutObj.Init(aod, aboutData);
-    if (ER_OK == status) {
-        printf("AboutObj Register Succeeded.\n");
-    } else {
-        printf("AboutObj Register failed (%s)\n", QCC_StatusText(status));
-    }
-
-    status = aboutObj.Announce(ASSIGNED_SESSION_PORT);
+    status = aboutObj.Announce(ASSIGNED_SESSION_PORT, aod, aboutData);
     if (ER_OK == status) {
         printf("AboutObj Announce Succeeded.\n");
     } else {
