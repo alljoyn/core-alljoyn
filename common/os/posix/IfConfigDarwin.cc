@@ -381,53 +381,6 @@ QStatus IfConfig(std::vector<IfConfigEntry>& entries)
 }
 
 /*
- * This is essentially the same code as above, except that it returns only a
- * subset of entry information for IPv4 entries.
- *
- * Shaving off the extra syscall for the mtu saves a few milliseconds.
- */
-QStatus IfConfigIPv4(std::vector<IfConfigEntry>& entries)
-{
-    int sockFd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockFd < 0) {
-        QCC_LogError(ER_OS_ERROR, ("IfconfigIPv4(): Error opening socket: %s", strerror(errno)));
-        return ER_OS_ERROR;
-    }
-
-    struct ifaddrs* iflist = NULL;
-    if (getifaddrs(&iflist) < 0) {
-        QCC_LogError(ER_OS_ERROR, ("IfconfigIPv4(): getifaddrs() failed: %s", strerror(errno)));
-        close(sockFd);
-        return ER_OS_ERROR;
-    }
-
-    for (struct ifaddrs* if_addr = iflist; if_addr != NULL; if_addr = if_addr->ifa_next) {
-        if (if_addr->ifa_addr->sa_family != AF_INET) {
-            continue;
-        }
-        IfConfigEntry entry;
-        entry.m_name = qcc::String(if_addr->ifa_name);
-        entry.m_family = TranslateFamily(if_addr->ifa_addr->sa_family);
-        char buf[INET6_ADDRSTRLEN];
-        buf[0] = '\0';
-        char const* pBuf = NULL;
-        if (if_addr->ifa_addr->sa_family == AF_INET) {
-            struct in_addr* p =  &((struct sockaddr_in*)if_addr->ifa_addr)->sin_addr;
-            pBuf = inet_ntop(AF_INET, p, buf, sizeof(buf));
-        }
-        if (pBuf == buf) {
-            entry.m_addr = qcc::String(buf);
-        }
-        entries.push_back(entry);
-    }
-
-    close(sockFd);
-    freeifaddrs(iflist);
-
-    return ER_OK;
-}
-
-/*
  * This is the high-level function that processes data received on
  * network events and checks if there are any events we are interested in.
  * We limit processing of events to a batch of up to 100 events at a time.

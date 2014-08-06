@@ -7270,29 +7270,6 @@ TransportMask IpNameServiceImpl::MaskFromIndex(uint32_t index)
     return result;
 }
 
-bool IpNameServiceImpl::LiveInterfacesNeedsUpdate()
-{
-    std::vector<qcc::IfConfigEntry> entries;
-    QStatus status = IfConfigIPv4(entries);
-    if (ER_OK != status) {
-        return false;
-    }
-    for (size_t i = 0; i < m_liveInterfaces.size(); ++i) {
-        if (!m_liveInterfaces[i].m_address.IsIPv4()) {
-            continue;
-        }
-        for (size_t j = 0; j < entries.size(); ++j) {
-            if ((m_liveInterfaces[i].m_interfaceName == entries[j].m_name) &&
-                (m_liveInterfaces[i].m_interfaceAddr != entries[j].m_addr)) {
-                QCC_DbgPrintf(("%s IPv4 address has changed from %s to %s", m_liveInterfaces[i].m_interfaceName.c_str(),
-                               m_liveInterfaces[i].m_interfaceAddr.ToString().c_str(), entries[j].m_addr.c_str()));
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 set<String> IpNameServiceImpl::GetAdvertising(TransportMask transportMask) {
     set<String> set_common, set_return;
     std::set<String> empty;

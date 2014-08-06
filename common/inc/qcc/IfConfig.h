@@ -105,19 +105,6 @@ const uint32_t QCC_AF_INET6_INDEX = 0x2;
 QStatus IfConfig(std::vector<IfConfigEntry>& entries);
 
 /**
- * @brief Lightweight version of IfConfig that reports only entries
- * with an IPv4 address assigned.
- *
- * The running time of this is much lower than IfConfig().  (An order
- * of magnitude less on the Linux implementation, for example).
- *
- * @param entries A vector of IfConfigEntry that will be filled out
- *     with information on the found network interfaces.  This
- *     information will only include m_name, m_addr, and m_family.
- */
-QStatus IfConfigIPv4(std::vector<IfConfigEntry>& entries);
-
-/**
  * @brief Watch for network event notifications.
  *
  */
