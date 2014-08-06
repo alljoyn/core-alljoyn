@@ -86,6 +86,64 @@ class AboutObjectDescription {
     QStatus Add(qcc::String const& path, const char** interfaceNames, size_t numInterfaces);
 
     /**
+     * Merge the contents of the supplied AboutObjectDescription into this
+     * AboutObjectDescription the supplied AboutObjectDescription will not
+     * be modified.
+     *
+     * If paths or interfaces are listed in both AboutObjectDescriptions
+     * the resulting AboutObjectDescription will only list them once.
+     *
+     * @param aboutObjectDescription the AboutObjectDescription that will be
+     * merged with this AboutObjectDescription
+     *
+     * @return ER_OK on success
+     */
+    QStatus Merge(AboutObjectDescription& aboutObjectDescription);
+
+    /**
+     * Get a list of the paths that are added to this AboutObjectDescription.
+     *
+     * usage example
+     * @code
+     * size_t numPaths = aboutObjectDescription.GetPaths(NULL, 0);
+     * const char** paths = new const char*[numPaths];
+     * aboutObjectDescription.GetPaths(paths, numPaths);
+     * @endcode
+     *
+     * @param[in] paths an char* array pointer
+     * @param[in] numPaths the size of the char* array
+     *
+     * @return
+     *    The total number of paths found in the AboutObjectDescription.  If this
+     *    number is larger than `numPaths` then only `numPaths` of paths will be
+     *    returned in the `paths` array.
+     *
+     */
+    size_t GetPaths(const char** paths, size_t numPaths);
+
+    /**
+     * Get a list of interfaces advertised at the given path that are part of
+     * this AboutObjectDescription.
+     *
+     * usage example
+     * @code
+     * size_t numInterfaces = aboutObjectDescription.GetInterfaces(NULL, 0);
+     * const char** interfaces = new const char*[numInterfaces];
+     * aboutObjectDescription.GetInterfaces("/example", interfaces, numInterfaces);
+     * @endcode
+     *
+     * @param[in] interfaces an char* array pointer
+     * @param[in] numInterfaces the size of the char* array
+     *
+     * @return
+     *    The total number of interfaces found in the AboutObjectDescription for
+     *    the specified path.  If this number is larger than `numInterfaces`
+     *    then only `numInterfaces` of interfaces will be returned in the
+     *    `interfaces` array.
+     */
+    size_t GetInterfaces(qcc::String const& path, const char** interfaces, size_t numInterfaces);
+
+    /**
      * Remove an interface from the object description for the AboutService
      * @param[in] path of the interface
      * @param[in] interfaceName name of the interface
@@ -103,6 +161,12 @@ class AboutObjectDescription {
      */
     QStatus Remove(qcc::String const& path, const char** interfaceNames, size_t numInterfaces);
 
+    /**
+     * Clear all the contents of this AboutObjectDescription
+     *
+     * @return ER_OK
+     */
+    void Clear();
     /**
      * Returns true if the given path is found
      *

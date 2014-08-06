@@ -188,6 +188,130 @@ TEST(AboutObjectDescriptionTest, Initilize)
     //printf("******************\n%s\n*****************\n", arg1.ToString().c_str());
 }
 
+TEST(AboutObjectDescriptionTest, GetPaths) {
+    QStatus status = ER_FAIL;
+    AboutObjectDescription aod;
+    status = aod.Add("/About/DeviceIcon", "org.alljoyn.Icon");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    const char* interfaces2[] = { "org.alljoyn.test", "org.alljoyn.game", "org.alljoyn.mediaplayer" };
+    status = aod.Add("/org/alljoyn/test", interfaces2, 3);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    size_t numPaths = aod.GetPaths(NULL, 0);
+    ASSERT_EQ(2, numPaths);
+    const char** paths = new const char*[numPaths];
+    aod.GetPaths(paths, numPaths);
+    // We don't know what order the paths will be returned
+    EXPECT_TRUE(strcmp(paths[0], "/About/DeviceIcon") == 0 || strcmp(paths[0], "/org/alljoyn/test") == 0) << paths[0];
+    EXPECT_TRUE(strcmp(paths[1], "/About/DeviceIcon") == 0 || strcmp(paths[1], "/org/alljoyn/test") == 0) << paths[1];
+    delete [] paths;
+}
+
+TEST(AboutObjectDescriptionTest, GetInterfaces) {
+    QStatus status = ER_FAIL;
+    AboutObjectDescription aod;
+    status = aod.Add("/About/DeviceIcon", "org.alljoyn.Icon");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    const char* interfaces2[] = { "org.alljoyn.test", "org.alljoyn.game", "org.alljoyn.mediaplayer" };
+    status = aod.Add("/org/alljoyn/test", interfaces2, 3);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    size_t numPaths = aod.GetPaths(NULL, 0);
+    ASSERT_EQ(2, numPaths);
+
+    size_t numInterfaces = aod.GetInterfaces("/About/DeviceIcon", NULL, 0);
+    ASSERT_EQ(1, numInterfaces);
+    const char** interfaces = new const char*[numInterfaces];
+    aod.GetInterfaces("/About/DeviceIcon", interfaces, numInterfaces);
+    EXPECT_STREQ("org.alljoyn.Icon", interfaces[0]);
+    delete [] interfaces;
+
+    numInterfaces = aod.GetInterfaces("/org/alljoyn/test", NULL, 0);
+    ASSERT_EQ(3, numInterfaces);
+    interfaces = new const char*[numInterfaces];
+    aod.GetInterfaces("/org/alljoyn/test", interfaces, numInterfaces);
+    // We don't konw what order the interfaces will be returned
+    EXPECT_TRUE(strcmp(interfaces[0], "org.alljoyn.test") == 0 ||
+                strcmp(interfaces[0], "org.alljoyn.game") == 0 ||
+                strcmp(interfaces[0], "org.alljoyn.mediaplayer") == 0) << interfaces[0];
+    EXPECT_TRUE(strcmp(interfaces[1], "org.alljoyn.test") == 0 ||
+                strcmp(interfaces[1], "org.alljoyn.game") == 0 ||
+                strcmp(interfaces[1], "org.alljoyn.mediaplayer") == 0) << interfaces[1];
+    EXPECT_TRUE(strcmp(interfaces[2], "org.alljoyn.test") == 0 ||
+                strcmp(interfaces[2], "org.alljoyn.game") == 0 ||
+                strcmp(interfaces[2], "org.alljoyn.mediaplayer") == 0) << interfaces[2];
+    delete [] interfaces;
+}
+
+TEST(AboutObjectDescriptionTest, Merge)
+{
+    QStatus status = ER_FAIL;
+    AboutObjectDescription aod;
+    AboutObjectDescription aod2;
+    const char* interfaces2[] = { "org.alljoyn.test", "org.alljoyn.game", "org.alljoyn.mediaplayer" };
+    status = aod.Add("/org/alljoyn/test", interfaces2, 3);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = aod2.Add("/About/DeviceIcon", "org.alljoyn.Icon");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.test"));
+    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.game"));
+    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.mediaplayer"));
+
+    EXPECT_FALSE(aod.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
+
+    EXPECT_FALSE(aod2.HasInterface("/org/alljoyn/test", "org.alljoyn.test"));
+    EXPECT_FALSE(aod2.HasInterface("/org/alljoyn/test", "org.alljoyn.game"));
+    EXPECT_FALSE(aod2.HasInterface("/org/alljoyn/test", "org.alljoyn.mediaplayer"));
+
+    EXPECT_TRUE(aod2.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
+
+    aod2.Merge(aod);
+
+    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.test"));
+    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.game"));
+    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.mediaplayer"));
+
+    EXPECT_FALSE(aod.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
+
+    EXPECT_TRUE(aod2.HasInterface("/org/alljoyn/test", "org.alljoyn.test"));
+    EXPECT_TRUE(aod2.HasInterface("/org/alljoyn/test", "org.alljoyn.game"));
+    EXPECT_TRUE(aod2.HasInterface("/org/alljoyn/test", "org.alljoyn.mediaplayer"));
+
+    EXPECT_TRUE(aod2.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
+
+}
+
+TEST(AboutObjectDescriptionTest, Clear)
+{
+    QStatus status = ER_FAIL;
+    AboutObjectDescription aod;
+
+    status = aod.Add("/About/DeviceIcon", "org.alljoyn.Icon");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    const char* interfaces2[] = { "org.alljoyn.test", "org.alljoyn.game", "org.alljoyn.mediaplayer" };
+    status = aod.Add("/org/alljoyn/test", interfaces2, 3);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    EXPECT_TRUE(aod.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
+
+    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.test"));
+    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.game"));
+    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.mediaplayer"));
+
+    aod.Clear();
+
+    EXPECT_FALSE(aod.HasPath("/About/DeviceIcon"));
+    EXPECT_FALSE(aod.HasPath("/org/alljoyn/test"));
+
+    EXPECT_FALSE(aod.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
+
+    EXPECT_FALSE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.test"));
+    EXPECT_FALSE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.game"));
+    EXPECT_FALSE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.mediaplayer"));
+}
+
 class AboutObjectDescriptionTestBusObject1 : public BusObject {
   public:
     AboutObjectDescriptionTestBusObject1(BusAttachment& bus, const char* path)
