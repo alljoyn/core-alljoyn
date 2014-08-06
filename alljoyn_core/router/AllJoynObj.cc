@@ -2841,27 +2841,42 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
             }
 
             if (ALLJOYN_ADVERTISENAME_REPLY_SUCCESS == replyCode) {
+                bool transportsProcessed = false;
+                TransportList& transList = bus.GetInternal().GetTransportList();
+                for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
+                    Transport* trans = transList.GetTransport(i);
+                    if (trans && trans->IsBusToBus() && (trans->GetTransportMask() & transports)) {
+                        transportsProcessed = true;
+                    } else if (!trans) {
+                        QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
+                    }
+                }
                 /* Add to advertise map */
-                if (!foundEntry) {
-                    advertiseMap.insert(pair<qcc::String, pair<TransportMask, qcc::String> >(advertiseNameStr, pair<TransportMask, String>(transports, sender)));
+                if (transportsProcessed || (transports & TRANSPORT_LOCAL)) {
+                    if (!foundEntry) {
+                        advertiseMap.insert(pair<qcc::String, pair<TransportMask, qcc::String> >(advertiseNameStr, pair<TransportMask, String>(transports, sender)));
+                    } else {
+                        it->second.first |= transports;
+                    }
                 } else {
-                    it->second.first |= transports;
+                    replyCode = ALLJOYN_ADVERTISENAME_REPLY_TRANSPORT_NOT_AVAILABLE;
                 }
                 stateLock.Lock(MUTEX_CONTEXT);
                 ReleaseLocks();
 
                 /* Advertise on transports specified */
-                TransportList& transList = bus.GetInternal().GetTransportList();
-                status = ER_BUS_BAD_SESSION_OPTS;
-                for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
-                    Transport* trans = transList.GetTransport(i);
-                    if (trans && trans->IsBusToBus() && (trans->GetTransportMask() & transports)) {
-                        status = trans->EnableAdvertisement(advertiseNameStr, quietly, transports & GetCompleteTransportMaskFilter());
-                        if ((status != ER_OK) && (status != ER_NOT_IMPLEMENTED)) {
-                            QCC_LogError(status, ("EnableAdvertisment failed for transport %s - mask=0x%x", trans->GetTransportName(), transports));
+                if (transportsProcessed) {
+                    status = ER_BUS_BAD_SESSION_OPTS;
+                    for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
+                        Transport* trans = transList.GetTransport(i);
+                        if (trans && trans->IsBusToBus() && (trans->GetTransportMask() & transports)) {
+                            status = trans->EnableAdvertisement(advertiseNameStr, quietly, transports & GetCompleteTransportMaskFilter());
+                            if ((status != ER_OK) && (status != ER_NOT_IMPLEMENTED)) {
+                                QCC_LogError(status, ("EnableAdvertisment failed for transport %s - mask=0x%x", trans->GetTransportName(), transports));
+                            }
+                        } else if (!trans) {
+                            QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
                         }
-                    } else if (!trans) {
-                        QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
                     }
                 }
                 stateLock.Unlock(MUTEX_CONTEXT);
