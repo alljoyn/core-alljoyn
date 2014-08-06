@@ -63,16 +63,11 @@ QStatus AboutObjectDescription::Initialize(const MsgArg& arg)
             if (status != ER_OK) {
                 return status;
             }
-            //interfaceNames.insert(intfName);
             status = Add(objectPath, intfName);
             if (status != ER_OK) {
                 return status;
             }
         }
-//        status = Add(objectPath, interfaceNames);
-//        if (status != ER_OK) {
-//            return status;
-//        }
     }
 
     return status;
@@ -178,11 +173,6 @@ bool AboutObjectDescription::HasInterface(qcc::String const& path, qcc::String c
         }
     }
     return false;
-//    if (it->second.find(interfaceName) == it->second.end()) {
-//        //return false;
-//
-//    }
-//    return true;
 }
 
 QStatus AboutObjectDescription::GetMsgArg(MsgArg* msgArg)

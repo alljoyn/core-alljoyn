@@ -197,6 +197,27 @@ class BusObject : public MessageReceiver {
      */
     void SetDescriptionTranslator(Translator* translator);
 
+    /**
+     * Get a list of the interfaces that are added to this BusObject that will
+     * be announced.
+     *
+     * usage example
+     * @code
+     * size_t numInterfaces = busObject.GetAnnouncedInterfaces(NULL, 0);
+     * const char** interfaces = new const char*[numInterfaces];
+     * busObject.GetAnnouncedInterfaces(interfaces, numInterfaces);
+     * @endcode
+     *
+     * @param[in] interfaces an char* array pointer
+     * @param[in] numInterfaces the size of the char* array
+     *
+     * @return
+     *    The total number of interfaces found that are announced.  If this number
+     *    is larger than `numInterfaces` then only `numInterfaces` will be returned.
+     *
+     */
+    size_t GetAnnouncedInterfaces(const char** interfaces, size_t numInterfaces);
+
   protected:
 
     /**
@@ -260,14 +281,15 @@ class BusObject : public MessageReceiver {
      * Once an object is registered, it should not add any additional interfaces. Doing so would
      * confuse remote objects that may have already introspected this object.
      *
-     * @param iface  The interface to add
+     * @param iface       The interface to add
+     * @param isAnnounced This interface should be part of the Announce signal
      *
      * @return
      *      - #ER_OK if the interface was successfully added.
      *      - #ER_BUS_IFACE_ALREADY_EXISTS if the interface already exists.
      *      - An error status otherwise
      */
-    QStatus AddInterface(const InterfaceDescription& iface);
+    QStatus AddInterface(const InterfaceDescription& iface, bool isAnnounced = false);
 
     /**
      * Add a method handler to this object. The interface for the method handler must have already

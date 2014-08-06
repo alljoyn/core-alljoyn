@@ -31,6 +31,7 @@
 #include <alljoyn/KeyStoreListener.h>
 #include <alljoyn/AuthListener.h>
 #include <alljoyn/AboutListener.h>
+#include <alljoyn/AboutObjectDescription.h>
 #include <alljoyn/BusListener.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/ProxyBusObject.h>
@@ -1349,6 +1350,16 @@ class BusAttachment : public MessageReceiver {
      * @return status
      */
     QStatus UnregisterAllAboutListeners();
+
+    /**
+     * Get the AboutObjectDescritpion for the BusObjects currently registered with
+     * the BusAttachment.
+     *
+     * @param[out] aboutObjectDescription reference to an about objectDescription that will
+     *             be filled in.
+     * @return ER_OK on success
+     */
+    QStatus GetAboutObjectDescription(AboutObjectDescription& aboutObjectDescription);
 
     /// @cond ALLJOYN_DEV
     /**

@@ -35,6 +35,7 @@
 #include <qcc/Timer.h>
 #include <qcc/Util.h>
 
+#include <alljoyn/AboutObjectDescription.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/Message.h>
 #include <alljoyn/MessageReceiver.h>
@@ -258,6 +259,16 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      * @param obj  Object to be unregistered.
      */
     void UnregisterBusObject(BusObject& obj);
+
+    /**
+     * Get the AboutObjectDescritpion for the BusObjects currently registered with
+     * the BusAttachment.
+     *
+     * @param[out] aboutObjectDescription reference to an about objectDescription that will
+     *             be filled in.
+     * @return ER_OK on success
+     */
+    QStatus GetAboutObjectDescription(AboutObjectDescription& aboutObjectDescription);
 
     /**
      * Find a local object.

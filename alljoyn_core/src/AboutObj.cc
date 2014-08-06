@@ -79,28 +79,6 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutObjectDescription&
     if (status != ER_OK) {
         return status;
     }
-//    std::vector<MsgArg> announceObjectsArg(m_AnnounceObjectsMap.size());
-//    int objIndex = 0;
-//    for (std::map<qcc::String, std::vector<qcc::String> >::const_iterator it = m_AnnounceObjectsMap.begin();
-//         it != m_AnnounceObjectsMap.end(); ++it) {
-//
-//        qcc::String objectPath = it->first;
-//        std::vector<const char*> interfacesVector(it->second.size());
-//        std::vector<qcc::String>::const_iterator interfaceIt;
-//        int interfaceIndex = 0;
-//
-//        for (interfaceIt = it->second.begin(); interfaceIt != it->second.end(); ++interfaceIt) {
-//            interfacesVector[interfaceIndex++] = interfaceIt->c_str();
-//        }
-//
-//        CHECK_RETURN(announceObjectsArg[objIndex].Set("(oas)", objectPath.c_str(), interfacesVector.size(), interfacesVector.data()))
-//        objIndex++;
-//    }
-//    status = announceArgs[2].Set("a(oas)", objIndex, announceObjectsArg.data());
-//    if (status != ER_OK) {
-//        return status;
-//    }
-//    CHECK_RETURN(m_PropertyStore->ReadAll(NULL, PropertyStore::ANNOUNCE, announceArgs[3]))
     m_objectDescription->GetMsgArg(&announceArgs[2]);
     m_aboutData->GetMsgArgAnnounce(&announceArgs[3]);
     Message msg(*m_busAttachment);
@@ -150,23 +128,6 @@ void AboutObj::GetObjectDescription(const ajn::InterfaceDescription::Member* mem
     msg->GetArgs(numArgs, args);
     if (numArgs == 0) {
         ajn::MsgArg retargs[1];
-//        std::vector<MsgArg> objectArg(m_AnnounceObjectsMap.size());
-//        int objIndex = 0;
-//        for (std::map<qcc::String, std::vector<qcc::String> >::const_iterator it = m_AnnounceObjectsMap.begin();
-//             it != m_AnnounceObjectsMap.end(); ++it) {
-//            const qcc::String& key = it->first;
-//            std::vector<const char*> interfacesVec(it->second.size());
-//            std::vector<qcc::String>::const_iterator interfaceIt;
-//            int interfaceIndex = 0;
-//
-//            for (interfaceIt = it->second.begin(); interfaceIt != it->second.end(); ++interfaceIt) {
-//                interfacesVec[interfaceIndex] = interfaceIt->c_str();
-//            }
-//
-//            objectArg[objIndex].Set("(oas)", key.c_str(), interfacesVec.size(), interfacesVec.data());
-//            objIndex++;
-//        }
-//        retargs[0].Set("a(oas)", objectArg.size(), objectArg.data());
         m_objectDescription->GetMsgArg(retargs);
         MethodReply(msg, retargs, 1);
     } else {

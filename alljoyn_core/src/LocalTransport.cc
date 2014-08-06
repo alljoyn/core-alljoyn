@@ -642,6 +642,22 @@ BusObject* _LocalEndpoint::FindLocalObject(const char* objectPath) {
     return ret;
 }
 
+QStatus _LocalEndpoint::GetAboutObjectDescription(AboutObjectDescription& aboutObjectDescription) {
+    QStatus status = ER_OK;
+    objectsLock.Lock(MUTEX_CONTEXT);
+    for (std::unordered_map<const char*, BusObject*, Hash, PathEq>::iterator it = localObjects.begin(); it != localObjects.end(); ++it) {
+        size_t numInterfaces = it->second->GetAnnouncedInterfaces(NULL, 0);
+        const char** interfaces = new const char*[numInterfaces];
+        it->second->GetAnnouncedInterfaces(interfaces, numInterfaces);
+        for (size_t i = 0; i < numInterfaces; ++i) {
+            aboutObjectDescription.Add(it->first, interfaces[i]);
+        }
+        delete [] interfaces;
+    }
+    objectsLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
 void _LocalEndpoint::UpdateSerialNumber(Message& msg)
 {
     uint32_t serial = msg->msgHeader.serialNum;

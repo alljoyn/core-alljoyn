@@ -16,11 +16,13 @@
 
 
 #include <alljoyn/AboutObjectDescription.h>
+#include <alljoyn/BusAttachment.h>
 #include <alljoyn/version.h>
 
 #include <alljoyn/MsgArg.h>
 #include <gtest/gtest.h>
 #include <qcc/String.h>
+#include <qcc/Thread.h>
 
 using namespace ajn;
 using namespace qcc;
@@ -184,4 +186,142 @@ TEST(AboutObjectDescriptionTest, Initilize)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     //printf("******************\n%s\n*****************\n", arg1.ToString().c_str());
+}
+
+class AboutObjectDescriptionTestBusObject1 : public BusObject {
+  public:
+    AboutObjectDescriptionTestBusObject1(BusAttachment& bus, const char* path)
+        : BusObject(path) {
+        AddInterface(*bus.GetInterface("test.about.objectdescription.interface1"), true);
+    }
+};
+
+class AboutObjectDescriptionTestBusObject2 : public BusObject {
+  public:
+    AboutObjectDescriptionTestBusObject2(BusAttachment& bus, const char* path)
+        : BusObject(path) {
+        AddInterface(*bus.GetInterface("test.about.objectdescription.interface2"), true);
+    }
+};
+
+
+TEST(AboutObjectDescriptionTest, PopulateAutomaticallyFromBusObject) {
+    QStatus status = ER_FAIL;
+    static const char* interface = "<interface name='test.about.objectdescription.interface1'>"
+                                   "  <method name='Ping'>"
+                                   "    <arg name='out_arg' type='s' direction='in' />"
+                                   "    <arg name='return_arg' type='s' direction='out' />"
+                                   "  </method>"
+                                   "  <signal name='Chirp'>"
+                                   "    <arg name='sound' type='s' />"
+                                   "  </signal>"
+                                   "  <property name='volume' type='i' access='readwrite'/>"
+                                   "</interface>";
+    BusAttachment bus("AboutObjectDescriptionTest");
+    status = bus.CreateInterfacesFromXml(interface);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    AboutObjectDescriptionTestBusObject1 busObject1(bus, "/test/path1");
+    status = bus.RegisterBusObject(busObject1);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObjectDescription aod;
+    status = bus.GetAboutObjectDescription(aod);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    EXPECT_TRUE(aod.HasInterface("test.about.objectdescription.interface1"));
+    EXPECT_TRUE(aod.HasPath("/test/path1"));
+    EXPECT_TRUE(aod.HasInterface("/test/path1", "test.about.objectdescription.interface1"));
+}
+
+TEST(AboutObjectDescriptionTest, PopulateAutomaticallyFromMultipleBusObjects) {
+    QStatus status = ER_FAIL;
+    static const char* interface1 = "<interface name='test.about.objectdescription.interface1'>"
+                                    "  <method name='Ping'>"
+                                    "    <arg name='out_arg' type='s' direction='in' />"
+                                    "    <arg name='return_arg' type='s' direction='out' />"
+                                    "  </method>"
+                                    "</interface>";
+    static const char* interface2 = "<interface name='test.about.objectdescription.interface2'>"
+                                    "  <method name='Ping'>"
+                                    "    <arg name='out_arg' type='s' direction='in' />"
+                                    "    <arg name='return_arg' type='s' direction='out' />"
+                                    "  </method>"
+                                    "</interface>";
+    BusAttachment bus("AboutObjectDescriptionTest");
+    status = bus.CreateInterfacesFromXml(interface1);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = bus.CreateInterfacesFromXml(interface2);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    AboutObjectDescriptionTestBusObject1 busObject1(bus, "/test/path1");
+    AboutObjectDescriptionTestBusObject2 busObject2(bus, "/test/path2");
+    status = bus.RegisterBusObject(busObject1);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = bus.RegisterBusObject(busObject2);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObjectDescription aod;
+    status = bus.GetAboutObjectDescription(aod);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    EXPECT_TRUE(aod.HasInterface("test.about.objectdescription.interface1"));
+    EXPECT_TRUE(aod.HasPath("/test/path1"));
+    EXPECT_TRUE(aod.HasInterface("/test/path1", "test.about.objectdescription.interface1"));
+
+    EXPECT_TRUE(aod.HasInterface("test.about.objectdescription.interface2"));
+    EXPECT_TRUE(aod.HasPath("/test/path2"));
+    EXPECT_TRUE(aod.HasInterface("/test/path2", "test.about.objectdescription.interface2"));
+}
+
+TEST(AboutObjectDescriptionTest, PopulateAutomaticallyRemoveBusObject) {
+    QStatus status = ER_FAIL;
+    static const char* interface1 = "<interface name='test.about.objectdescription.interface1'>"
+                                    "  <method name='Ping'>"
+                                    "    <arg name='out_arg' type='s' direction='in' />"
+                                    "    <arg name='return_arg' type='s' direction='out' />"
+                                    "  </method>"
+                                    "</interface>";
+    static const char* interface2 = "<interface name='test.about.objectdescription.interface2'>"
+                                    "  <method name='Ping'>"
+                                    "    <arg name='out_arg' type='s' direction='in' />"
+                                    "    <arg name='return_arg' type='s' direction='out' />"
+                                    "  </method>"
+                                    "</interface>";
+    BusAttachment bus("AboutObjectDescriptionTest");
+    status = bus.CreateInterfacesFromXml(interface1);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = bus.CreateInterfacesFromXml(interface2);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    AboutObjectDescriptionTestBusObject1 busObject1(bus, "/test/path1");
+    AboutObjectDescriptionTestBusObject2 busObject2(bus, "/test/path2");
+    status = bus.RegisterBusObject(busObject1);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = bus.RegisterBusObject(busObject2);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObjectDescription aod;
+    status = bus.GetAboutObjectDescription(aod);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    EXPECT_TRUE(aod.HasInterface("test.about.objectdescription.interface1"));
+    EXPECT_TRUE(aod.HasPath("/test/path1"));
+    EXPECT_TRUE(aod.HasInterface("/test/path1", "test.about.objectdescription.interface1"));
+
+    EXPECT_TRUE(aod.HasInterface("test.about.objectdescription.interface2"));
+    EXPECT_TRUE(aod.HasPath("/test/path2"));
+    EXPECT_TRUE(aod.HasInterface("/test/path2", "test.about.objectdescription.interface2"));
+
+    bus.UnregisterBusObject(busObject1);
+
+    // TODO need to do more updates on AboutObjectDescription to make it so
+    // calling GetAboutObjectDescription can reuse the same object.
+    AboutObjectDescription aod2;
+    status = bus.GetAboutObjectDescription(aod2);
+
+    EXPECT_FALSE(aod2.HasInterface("test.about.objectdescription.interface1"));
+    EXPECT_FALSE(aod2.HasPath("/test/path1"));
+    EXPECT_FALSE(aod2.HasInterface("/test/path1", "test.about.objectdescription.interface1"));
+
+    EXPECT_TRUE(aod2.HasInterface("test.about.objectdescription.interface2"));
+    EXPECT_TRUE(aod2.HasPath("/test/path2"));
+    EXPECT_TRUE(aod.HasInterface("/test/path2", "test.about.objectdescription.interface2"));
 }

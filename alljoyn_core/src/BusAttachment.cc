@@ -2070,6 +2070,10 @@ QStatus BusAttachment::UnregisterAllAboutListeners()
     return busInternal->internalAboutListener.RemoveAllHandlers();
 }
 
+QStatus BusAttachment::GetAboutObjectDescription(AboutObjectDescription& aboutObjectDescription) {
+    return busInternal->localEndpoint->GetAboutObjectDescription(aboutObjectDescription);
+}
+
 QStatus BusAttachment::SetSessionListener(SessionId id, SessionListener* listener)
 {
     return busInternal->SetSessionListener(id, listener);
