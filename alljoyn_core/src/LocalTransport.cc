@@ -644,6 +644,7 @@ BusObject* _LocalEndpoint::FindLocalObject(const char* objectPath) {
 
 QStatus _LocalEndpoint::GetAboutObjectDescription(AboutObjectDescription& aboutObjectDescription) {
     QStatus status = ER_OK;
+    aboutObjectDescription.Clear();
     objectsLock.Lock(MUTEX_CONTEXT);
     for (std::unordered_map<const char*, BusObject*, Hash, PathEq>::iterator it = localObjects.begin(); it != localObjects.end(); ++it) {
         size_t numInterfaces = it->second->GetAnnouncedInterfaces(NULL, 0);

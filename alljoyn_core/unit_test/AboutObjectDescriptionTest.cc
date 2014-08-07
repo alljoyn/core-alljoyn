@@ -436,16 +436,13 @@ TEST(AboutObjectDescriptionTest, PopulateAutomaticallyRemoveBusObject) {
 
     bus.UnregisterBusObject(busObject1);
 
-    // TODO need to do more updates on AboutObjectDescription to make it so
-    // calling GetAboutObjectDescription can reuse the same object.
-    AboutObjectDescription aod2;
-    status = bus.GetAboutObjectDescription(aod2);
+    status = bus.GetAboutObjectDescription(aod);
 
-    EXPECT_FALSE(aod2.HasInterface("test.about.objectdescription.interface1"));
-    EXPECT_FALSE(aod2.HasPath("/test/path1"));
-    EXPECT_FALSE(aod2.HasInterface("/test/path1", "test.about.objectdescription.interface1"));
+    EXPECT_FALSE(aod.HasInterface("test.about.objectdescription.interface1"));
+    EXPECT_FALSE(aod.HasPath("/test/path1"));
+    EXPECT_FALSE(aod.HasInterface("/test/path1", "test.about.objectdescription.interface1"));
 
-    EXPECT_TRUE(aod2.HasInterface("test.about.objectdescription.interface2"));
-    EXPECT_TRUE(aod2.HasPath("/test/path2"));
+    EXPECT_TRUE(aod.HasInterface("test.about.objectdescription.interface2"));
+    EXPECT_TRUE(aod.HasPath("/test/path2"));
     EXPECT_TRUE(aod.HasInterface("/test/path2", "test.about.objectdescription.interface2"));
 }

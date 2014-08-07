@@ -197,7 +197,7 @@ QStatus MakeMethodCall(void)
     inputs[0].Set("s", "Hello ");
     inputs[1].Set("s", "World!");
 
-    QStatus status = remoteObj.MethodCall(SERVICE_NAME, "cat", inputs, 2, reply, 5000);
+    QStatus status = remoteObj.MethodCall(INTERFACE_NAME, "cat", inputs, 2, reply, 5000);
 
     if (ER_OK == status) {
         printf("'%s.%s' (path='%s') returned '%s'.\n", SERVICE_NAME, "cat",

@@ -57,14 +57,47 @@ class AboutObj : public BusObject {
     virtual ~AboutObj() { }
 
     /**
-     * This signal is used to announce the list of all interfaces available at given oject paths as
-     * well as the announced fields from the AboutData.
+     * This is used to send the Announce signal.  It announces the list of all
+     * interfaces available at given object paths as well as the announced
+     * fields from the AboutData.
+     *
+     * This method will automatically obtain the AboutObjectDescription from the
+     * BusAttachment member function GetAboutObjectDescription. Only BusObjects that have
+     * marked there interfaces as announced and are registered with the
+     * BusAttachmentwill be announced.
+     *
+     * @see AboutObjectDescription
+     * @see BusAttachment::GetAboutObjectDescription
+     * @see BusAttachment::RegisterBusObject
+     * @see BusObject::AddInterface
      *
      * @param sessionPort the session port the interfaces can be connected with
      *
      * @return ER_OK on success
      */
-    QStatus Announce(SessionPort sessionPort, ajn::AboutObjectDescription& objectDescription, ajn::AboutData& aboutData);
+    QStatus Announce(SessionPort sessionPort, AboutData& aboutData);
+
+    /**
+     * This is used to send the Announce signal.  It announces the list of all
+     * interfaces available at given object paths as well as the announced
+     * fields from the AboutData.
+     *
+     * This method will automatically obtain the AboutObjectDescription from the
+     * BusAttachment member function GetAboutObjectDescription. It will then merge
+     * the interfaces provided in `objectDescription` with that AboutObjectDescription.
+     * The resulting Announce signal will contain interfaces from RegisteredBusObjects
+     * and interfaces specified in the user provided AboutObjectDescription.
+     *
+     * @see AboutObjectDescription::Merge
+     * @see BusAttachment::GetAboutObjectDescription
+     * @see BusAttachment::RegisterBusObject
+     * @see BusObject::AddInterface
+     *
+     * @param sessionPort the session port the interfaces can be connected with
+     *
+     * @return ER_OK on success
+     */
+    QStatus Announce(SessionPort sessionPort, AboutObjectDescription& objectDescription, AboutData& aboutData);
 
   private:
     /**
@@ -95,8 +128,8 @@ class AboutObj : public BusObject {
      */
     BusAttachment* m_busAttachment;
 
-    ajn::AboutObjectDescription* m_objectDescription;
-    ajn::AboutData* m_aboutData;
+    ajn::AboutObjectDescription m_objectDescription;
+    ajn::AboutData m_aboutData;
 };
 }
 #endif

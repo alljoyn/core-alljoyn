@@ -302,7 +302,7 @@ class AboutTestAboutListener3 : public AboutListener {
     }
 };
 
-TEST_F(AboutListenerTest, MultipleAnnounceHandlers) {
+TEST_F(AboutListenerTest, MultipleAnnounceListeners) {
     QStatus status;
     announceListenerFlag1 = false;
     announceListenerFlag2 = false;
@@ -365,7 +365,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceHandlers) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
 
-TEST_F(AboutListenerTest, MultipleAnnounceHandlersUnregister) {
+TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
     QStatus status;
     announceListenerFlag1 = false;
     announceListenerFlag2 = false;
@@ -444,7 +444,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceHandlersUnregister) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
 
-TEST_F(AboutListenerTest, MultipleAnnounceHandlersUnregisterAll) {
+TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
     QStatus status;
     announceListenerFlag1 = false;
     announceListenerFlag2 = false;
