@@ -17,12 +17,10 @@
 package org.alljoyn.bus.ifaces;
 
 import org.alljoyn.bus.BusAttachment;
-import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.ProxyBusObject;
 import org.alljoyn.bus.Status;
 import org.alljoyn.bus.ifaces.Introspectable;
 
-import static junit.framework.Assert.*;
 import junit.framework.TestCase;
 
 public class IntrospectableTest extends TestCase {
@@ -54,5 +52,10 @@ public class IntrospectableTest extends TestCase {
                                                          new Class<?>[] { Introspectable.class });
         Introspectable introspectable = remoteObj.getInterface(Introspectable.class);
         String data = introspectable.Introspect();
+        // This test returns the xml definition of the org.freedesktop.DBus interface
+        // rather than check the xml output we are only checking that the returned
+        // string is not empty and contains the tag <interface name="org.freedesktop.DBus">
+        assertFalse(data.equals(""));
+        assertTrue(data.contains("<interface name=\"org.freedesktop.DBus\">"));
     }
 }

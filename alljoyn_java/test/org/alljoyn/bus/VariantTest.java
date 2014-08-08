@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -18,7 +18,6 @@ package org.alljoyn.bus;
 
 import org.alljoyn.bus.Variant;
 
-import static junit.framework.Assert.*;
 import junit.framework.TestCase;
 
 public class VariantTest extends TestCase {
@@ -35,6 +34,7 @@ public class VariantTest extends TestCase {
         try {
             Variant v = new Variant(1);
             String s = v.getObject(String.class);
+            fail("call to Variant.getObject returned " + s + " expected ClassCastException.");
         } catch (ClassCastException ex) {
             thrown = true;
         } finally {

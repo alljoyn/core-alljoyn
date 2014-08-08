@@ -114,7 +114,7 @@ final class Signature {
         if (type instanceof ParameterizedType) {
             return parameterizedTypeSig((ParameterizedType) type, signature);
         } else if (type instanceof Class) {
-            return classTypeSig((Class) type, signature);
+            return classTypeSig((Class<?>) type, signature);
         } else if (type instanceof GenericArrayType) {
             return genericArrayTypeSig((GenericArrayType) type, signature);
         } else {
@@ -124,7 +124,7 @@ final class Signature {
 
     private static String parameterizedTypeSig(ParameterizedType type, String signature)
             throws AnnotationBusException {
-        Class<?> cls = (Class) type.getRawType();
+        Class<?> cls = (Class<?>) type.getRawType();
         if (Map.class.isAssignableFrom(cls)) {
             String sig = "";
             Type[] actuals = type.getActualTypeArguments();
