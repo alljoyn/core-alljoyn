@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -26,7 +26,6 @@ import org.alljoyn.bus.ifaces.DBusProxyObj;
 import org.alljoyn.bus.ifaces.Properties;
 
 import java.util.Map;
-import static junit.framework.Assert.*;
 import junit.framework.TestCase;
 
 public class PropertiesTest extends TestCase {
@@ -120,6 +119,7 @@ public class PropertiesTest extends TestCase {
                                                              new Class<?>[] { Properties.class });
             Properties properties = remoteObj.getInterface(Properties.class);
             Map<String, Variant> map = properties.GetAll("unknownInterface");
+            assertNotNull(map);
         } catch (BusException ex) {
             thrown = true;
         } finally {

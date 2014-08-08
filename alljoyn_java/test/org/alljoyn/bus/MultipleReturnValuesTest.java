@@ -19,7 +19,6 @@ package org.alljoyn.bus;
 import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.BusObject;
-import org.alljoyn.bus.SignalEmitter;
 import org.alljoyn.bus.Status;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 import static org.alljoyn.bus.Assert.*;
@@ -28,7 +27,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static junit.framework.Assert.*;
 import junit.framework.TestCase;
 
 public class MultipleReturnValuesTest extends TestCase {

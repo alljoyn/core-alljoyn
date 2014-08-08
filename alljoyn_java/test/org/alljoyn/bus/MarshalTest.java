@@ -28,13 +28,6 @@ import static org.alljoyn.bus.Assert.*;
 
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.HashMap;
-import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
-import java.lang.reflect.WildcardType;
-import static junit.framework.Assert.*;
 import junit.framework.TestCase;
 
 public class MarshalTest extends TestCase {
@@ -1080,7 +1073,7 @@ public class MarshalTest extends TestCase {
                                                                 DBusProxyObj.REQUEST_NAME_NO_FLAGS);
         assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, res);
 
-        Class[] ifaces = { InferredTypesInterface.class, AnnotatedTypesInterface.class };
+        Class<?>[] ifaces = { InferredTypesInterface.class, AnnotatedTypesInterface.class };
         remoteObj = bus.getProxyBusObject("org.alljoyn.bus.MarshalTest", "/testobject", BusAttachment.SESSION_ID_ANY, ifaces);
         remoteNullReturnsObj = bus.getProxyBusObject("org.alljoyn.bus.MarshalTest", "/testnullobject",
                                                      BusAttachment.SESSION_ID_ANY, ifaces);
@@ -3289,6 +3282,7 @@ public class MarshalTest extends TestCase {
         try {
             v = new Variant(new boolean[] { true });
             Variant v2 = proxy.variant(v);
+            fail("Variant assignement for " + v2.toString() + " expected BusException.");
         } catch (BusException ex) {
             thrown = true;
         }

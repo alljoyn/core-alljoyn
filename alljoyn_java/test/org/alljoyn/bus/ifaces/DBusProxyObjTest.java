@@ -16,17 +16,15 @@
 
 package org.alljoyn.bus.ifaces;
 
+import java.util.Arrays;
+
 import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.ErrorReplyBusException;
-import org.alljoyn.bus.BusObject;
-import org.alljoyn.bus.ProxyBusObject;
 import org.alljoyn.bus.Status;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 import org.alljoyn.bus.annotation.BusSignalHandler;
 
-import java.util.Map;
-import static junit.framework.Assert.*;
 import junit.framework.TestCase;
 
 public class DBusProxyObjTest extends TestCase {
@@ -59,10 +57,16 @@ public class DBusProxyObjTest extends TestCase {
 
     public void testListNames() throws Exception {
         String[] names = dbus.ListNames();
+        // all DBus proxyBojects should have the org.freeDesktop.DBus name
+        // and org.alljoyn.Bus name as well as org.alljoyn.Daemon and org.alljoyn.sl
+        // we only check for the first two.
+        assertTrue(Arrays.asList(names).contains("org.freedesktop.DBus"));
+        assertTrue(Arrays.asList(names).contains("org.alljoyn.Bus"));
     }
 
     public void testListActivatableNames() throws Exception {
         String[] names = dbus.ListActivatableNames();
+        assertNotNull(names);
     }
 
     public void testRequestReleaseName() throws Exception {
@@ -86,13 +90,15 @@ public class DBusProxyObjTest extends TestCase {
     }
 
     public void testNameHasOwner() throws Exception {
-        boolean res = dbus.NameHasOwner("org.alljoyn.bus.ifaces.DBusProxyObjTest");
+         assertFalse(dbus.NameHasOwner("org.alljoyn.bus.ifaces.DBusProxyObjTest"));
+         assertTrue(dbus.NameHasOwner("org.alljoyn.Bus"));
     }
 
     public void testStartServiceByName() throws Exception {
         boolean thrown = false;
         try {
             DBusProxyObj.StartServiceByNameResult res = dbus.StartServiceByName("UNKNOWN_SERVICE", 0);
+            fail("StartServiceByName returned " + res.name() + " expected ErrorReplyBusException");
         } catch (ErrorReplyBusException ex) {
             thrown = true;
         } finally {
@@ -104,6 +110,7 @@ public class DBusProxyObjTest extends TestCase {
         boolean thrown = false;
         try {
             String owner = dbus.GetNameOwner("name");
+            fail("Call to GetNameOwner returned " + owner + " expected ErrorReplyBusException.");
         } catch (ErrorReplyBusException ex) {
             thrown = true;
         } finally {
@@ -124,6 +131,7 @@ public class DBusProxyObjTest extends TestCase {
             boolean thrown = false;
             try {
                 int uid = dbus.GetConnectionUnixUser(name);
+                fail("Got ConnectionUnixUser " + uid + " Expected ErrorReplyBusExcpetion.");
             } catch (ErrorReplyBusException ex) {
                 thrown=true;
             } finally {
@@ -138,6 +146,7 @@ public class DBusProxyObjTest extends TestCase {
             assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, res1);
 
             int uid = dbus.GetConnectionUnixUser(name);
+            assertTrue(uid > 0);
 
             DBusProxyObj.ReleaseNameResult res2 = dbus.ReleaseName(name);
             assertEquals(DBusProxyObj.ReleaseNameResult.Released, res2);
@@ -148,6 +157,7 @@ public class DBusProxyObjTest extends TestCase {
         boolean thrown = false;
         try {
             int uid = dbus.GetConnectionUnixUser("name");
+            fail("Got ConnectionUnixUser " + uid + " Expected ErrorReplyBusExcpetion.");
         } catch (ErrorReplyBusException ex) {
             thrown = true;
         } finally {
@@ -168,6 +178,7 @@ public class DBusProxyObjTest extends TestCase {
             boolean thrown = false;
             try {
                 int pid = dbus.GetConnectionUnixProcessID(name);
+                fail("Got ConnectionUnixProcessID " + pid + " Expected ErrorReplyBusExcpetion.");
             } catch (ErrorReplyBusException ex) {
                 thrown = true;
             } finally {
@@ -182,6 +193,7 @@ public class DBusProxyObjTest extends TestCase {
             assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner, res1);
 
             int pid = dbus.GetConnectionUnixProcessID(name);
+            assertTrue(pid > 0);
 
             DBusProxyObj.ReleaseNameResult res2 = dbus.ReleaseName(name);
             assertEquals(DBusProxyObj.ReleaseNameResult.Released, res2);
@@ -192,6 +204,7 @@ public class DBusProxyObjTest extends TestCase {
         boolean thrown = false;
         try {
             int pid = dbus.GetConnectionUnixProcessID("name");
+            fail("Got ConnectionUnitProcessID " + pid + " expected ErrorReplyBusException");
         } catch (ErrorReplyBusException ex) {
             thrown = true;
         } finally {
@@ -227,6 +240,14 @@ public class DBusProxyObjTest extends TestCase {
 
     public void testGetId() throws Exception {
         String id = dbus.GetId();
+        // since the id is always a random GUID string of type 
+        // fe438dc401d2834ecd4f65cf7857196e we have no way of knowing what that
+        // string will be until runtime.  We will check that the string is not
+        // empty and that it contains more than 4 letters. I don't know if the
+        // length is always the same for that reason I am checking the length is
+        // at least 4.
+        assertFalse(id.equals(""));
+        assertTrue(id.length() > 4);
     }
 
     private String newOwner;

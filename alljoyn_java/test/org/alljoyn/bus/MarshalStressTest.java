@@ -22,9 +22,6 @@ import org.alljoyn.bus.BusObject;
 import org.alljoyn.bus.Status;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 
-import static junit.framework.Assert.*;
-
-import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.TreeMap;
 import junit.framework.TestCase;

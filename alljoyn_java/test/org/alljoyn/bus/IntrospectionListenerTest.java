@@ -17,7 +17,6 @@
 package org.alljoyn.bus;
 
 import org.alljoyn.bus.BusAttachment;
-import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.IntrospectionListener;
 import org.alljoyn.bus.IntrospectionWithDescriptionListener;
 import org.alljoyn.bus.ProxyBusObject;
