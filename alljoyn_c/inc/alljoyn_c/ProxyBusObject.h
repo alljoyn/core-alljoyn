@@ -398,7 +398,8 @@ extern AJ_API QStatus alljoyn_proxybusobject_setproperty(alljoyn_proxybusobject 
  *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
  *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  */
-extern AJ_API QStatus alljoyn_proxybusobject_registerpropertychangedhandler(const char* iface,
+extern AJ_API QStatus alljoyn_proxybusobject_registerpropertychangedhandler(alljoyn_proxybusobject proxyObj,
+                                                                            const char* iface,
                                                                             const char* property,
                                                                             alljoyn_proxybusobject_listener_propertychanged_ptr callback,
                                                                             void* context);

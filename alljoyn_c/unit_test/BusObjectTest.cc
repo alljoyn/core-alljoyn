@@ -91,7 +91,7 @@ static void name_owner_changed(const void* context, const char* busName, const c
 }
 
 /* Property changed callback */
-static void bus_prop_changed(const void* context, const char* prop_name, alljoyn_msgarg prop_value) {
+static void obj_prop_changed(alljoyn_proxybusobject obj, const char* iface_name, const char* prop_name, alljoyn_msgarg prop_value, void* context) {
     uint32_t prop3_value;
     QStatus status = ER_FAIL; //default state is failure
     if (0 == strcmp("prop2", prop_name)) {
@@ -413,7 +413,7 @@ TEST_F(BusObjectTest, property_changed_signal)
         &name_owner_changed,
         NULL,
         NULL,
-        &bus_prop_changed
+        NULL
     };
     buslistener = alljoyn_buslistener_create(&buslistenerCbs, NULL);
     alljoyn_busattachment_registerbuslistener(servicebus, buslistener);
@@ -460,8 +460,11 @@ TEST_F(BusObjectTest, property_changed_signal)
     EXPECT_TRUE(proxyObj);
     status = alljoyn_proxybusobject_introspectremoteobject(proxyObj);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    alljoyn_msgarg value;
 
+    status = alljoyn_proxybusobject_registerpropertychangedhandler(proxyObj, INTERFACE_NAME, "prop2", obj_prop_changed, NULL);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_msgarg value;
     prop_changed_flag = QCC_FALSE;
     value = alljoyn_msgarg_create_and_set("i", -888);
     status = alljoyn_proxybusobject_setproperty(proxyObj, INTERFACE_NAME, "prop2", value);
