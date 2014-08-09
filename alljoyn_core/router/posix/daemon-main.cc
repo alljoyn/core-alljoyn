@@ -701,7 +701,7 @@ int main(int argc, char** argv, char** env)
     environ = env;
 #endif
 
-    LoggerSetting* loggerSettings = LoggerSetting::GetLoggerSetting(argv[0]);
+    LoggerSetting* loggerSettings = LoggerSetting::GetLoggerSetting(argv[0], LOG_WARNING, true, NULL);
 
     OptParse opts(argc, argv);
     OptParse::ParseResultCode parseCode = opts.ParseResult();
