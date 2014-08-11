@@ -158,6 +158,24 @@ size_t AboutObjectDescription::GetInterfaces(qcc::String const& path, const char
     return aom_it->second.size();
 }
 
+size_t AboutObjectDescription::GetInterfacePaths(qcc::String const& interface, const char** paths, size_t numPaths)
+{
+    std::map<qcc::String, std::set<qcc::String> >::iterator it;
+    size_t count = 0;
+    m_AnnounceObjectsMapLock.Lock(MUTEX_CONTEXT);
+    for (it = m_AnnounceObjectsMap.begin(); it != m_AnnounceObjectsMap.end(); ++it) {
+        std::set<qcc::String>::iterator it2 = it->second.find(interface);
+        if (it2 != it->second.end()) {
+            if (count < numPaths) {
+                paths[count] = it->first.c_str();
+            }
+            ++count;
+        }
+    }
+    m_AnnounceObjectsMapLock.Unlock(MUTEX_CONTEXT);
+    return count;
+}
+
 QStatus AboutObjectDescription::Remove(qcc::String const& path, qcc::String const& interfaceName)
 {
     QStatus status = ER_OK;

@@ -93,7 +93,7 @@ class AboutObjectDescription {
      * If paths or interfaces are listed in both AboutObjectDescriptions
      * the resulting AboutObjectDescription will only list them once.
      *
-     * @param aboutObjectDescription the AboutObjectDescription that will be
+     * @param[in] aboutObjectDescription the AboutObjectDescription that will be
      * merged with this AboutObjectDescription
      *
      * @return ER_OK on success
@@ -110,8 +110,8 @@ class AboutObjectDescription {
      * aboutObjectDescription.GetPaths(paths, numPaths);
      * @endcode
      *
-     * @param[in] paths an char* array pointer
-     * @param[in] numPaths the size of the char* array
+     * @param[out] paths an char* array pointer
+     * @param[in]  numPaths the size of the char* array
      *
      * @return
      *    The total number of paths found in the AboutObjectDescription.  If this
@@ -132,8 +132,9 @@ class AboutObjectDescription {
      * aboutObjectDescription.GetInterfaces("/example", interfaces, numInterfaces);
      * @endcode
      *
-     * @param[in] interfaces an char* array pointer
-     * @param[in] numInterfaces the size of the char* array
+     * @param[in]  path the path we want to get a list of interfaces for
+     * @param[out] interfaces a char* array pointer
+     * @param[in]  numInterfaces the size of the char* array
      *
      * @return
      *    The total number of interfaces found in the AboutObjectDescription for
@@ -142,6 +143,30 @@ class AboutObjectDescription {
      *    `interfaces` array.
      */
     size_t GetInterfaces(qcc::String const& path, const char** interfaces, size_t numInterfaces);
+
+    /**
+     * Get a list of the paths for a given interface. Its possible to have the
+     * same interface listed under multiple paths.
+     *
+     * Usage example
+     * @code
+     * size_t numPaths = GetInterfacePaths("com.example.interface", NULL, 0);
+     * const char** paths = new const char*[numPaths];
+     * GetInterfacePaths("com.example.interface", paths, numPaths);
+     * @endcode
+     *
+     * @param[in]  interface the interface we want to get a list of paths for
+     * @param[out] paths a char* array pointer
+     * @param[in]  numPaths the size of the char* array
+     *
+     * @return
+     *    The total number of paths found in the AboutObjectDescription for
+     *    the specified path.  If this number it larger than the `numPaths`
+     *    then only `numPaths` of interfaces will be returned in the `paths`
+     *    array
+     *
+     */
+    size_t GetInterfacePaths(qcc::String const& interface, const char** paths, size_t numPaths);
 
     /**
      * Remove an interface from the object description for the AboutService

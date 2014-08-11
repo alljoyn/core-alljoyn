@@ -446,3 +446,69 @@ TEST(AboutObjectDescriptionTest, PopulateAutomaticallyRemoveBusObject) {
     EXPECT_TRUE(aod.HasPath("/test/path2"));
     EXPECT_TRUE(aod.HasInterface("/test/path2", "test.about.objectdescription.interface2"));
 }
+
+TEST(AboutObjectDescriptionTest, GetInterfacePaths) {
+    QStatus status = ER_FAIL;
+    static const char* interface1 = "<interface name='test.about.objectdescription.interface1'>"
+                                    "  <method name='Ping'>"
+                                    "    <arg name='out_arg' type='s' direction='in' />"
+                                    "    <arg name='return_arg' type='s' direction='out' />"
+                                    "  </method>"
+                                    "</interface>";
+    BusAttachment bus("AboutObjectDescriptionTest");
+    status = bus.CreateInterfacesFromXml(interface1);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObjectDescriptionTestBusObject1 busObject1(bus, "/test/path1");
+    AboutObjectDescriptionTestBusObject1 busObject2(bus, "/test/path2");
+    AboutObjectDescriptionTestBusObject1 busObject3(bus, "/test/path3");
+    AboutObjectDescriptionTestBusObject1 busObject4(bus, "/test/path4");
+    AboutObjectDescriptionTestBusObject1 busObject5(bus, "/test/path5");
+    AboutObjectDescriptionTestBusObject1 busObject6(bus, "/test/path6");
+
+    status = bus.RegisterBusObject(busObject1);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObjectDescription aod;
+    status = bus.GetAboutObjectDescription(aod);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    size_t pathNum = aod.GetInterfacePaths("test.about.objectdescription.interface1", NULL, 0);
+    EXPECT_EQ((size_t)1, pathNum);
+    const char** paths = new const char*[pathNum];
+    aod.GetInterfacePaths("test.about.objectdescription.interface1", paths, pathNum);
+    EXPECT_STREQ("/test/path1", paths[0]);
+    delete [] paths;
+    paths = NULL;
+
+    status = bus.RegisterBusObject(busObject2);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = bus.RegisterBusObject(busObject3);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = bus.RegisterBusObject(busObject4);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = bus.RegisterBusObject(busObject5);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = bus.RegisterBusObject(busObject6);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    // now that we have added the interface 5 more times renew the AboutObjectDescription
+    status = bus.GetAboutObjectDescription(aod);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    pathNum = aod.GetInterfacePaths("test.about.objectdescription.interface1", NULL, 0);
+    EXPECT_EQ((size_t)6, pathNum);
+    paths = new const char*[pathNum];
+    aod.GetInterfacePaths("test.about.objectdescription.interface1", paths, pathNum);
+    // This test may need to be modified there is nothing guaranteeing the return
+    // order of the object paths. However, since the objects are added in numerical
+    // order they will most likely be returned in numerical order.
+    EXPECT_STREQ("/test/path1", paths[0]);
+    EXPECT_STREQ("/test/path2", paths[1]);
+    EXPECT_STREQ("/test/path3", paths[2]);
+    EXPECT_STREQ("/test/path4", paths[3]);
+    EXPECT_STREQ("/test/path5", paths[4]);
+    EXPECT_STREQ("/test/path6", paths[5]);
+    delete [] paths;
+    paths = NULL;
+}
