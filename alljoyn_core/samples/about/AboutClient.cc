@@ -25,9 +25,18 @@
 #include <signal.h>
 #include <stdio.h>
 
+/*
+ * Note the removal of almost all Error handling to make the sample code more
+ * straight forward to read.  This is only used here for demonstration actual
+ * programs should check the return values of all method calls.
+ */
 using namespace ajn;
 
 static volatile sig_atomic_t s_interrupt = false;
+
+// The interface name should be the only thing required to find and form a
+// connection between the service and the client using the about feature.
+static const char* INTERFACE_NAME = "com.example.about.feature.interface.sample";
 
 static void SigIntHandler(int sig) {
     s_interrupt = true;
@@ -35,10 +44,16 @@ static void SigIntHandler(int sig) {
 
 BusAttachment* g_bus;
 
+class MySessionListener : public SessionListener {
+    void SessionLost(SessionId sessionId, SessionLostReason reason) {
+        printf("SessionLost sessionId = %u, Reason = %d\n", sessionId, reason);
+    }
+};
+
 class MyAboutListener : public AboutListener {
     void Announced(const char* busName, uint16_t version, SessionPort port, AboutObjectDescription& objectDescription, AboutData& aboutData) {
         printf("*********************************************************************************\n");
-        printf("Anounce signal discovered\n");
+        printf("Announce signal discovered\n");
         printf("\tFrom bus %s\n", busName);
         printf("\tAbout version %hu\n", version);
         printf("\tSessionPort %hu\n", port);
@@ -47,7 +62,6 @@ class MyAboutListener : public AboutListener {
         QStatus status;
 
         if (g_bus != NULL) {
-            SessionListener sessionListener;
             SessionId sessionId;
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
             g_bus->EnableConcurrentCallbacks();
@@ -77,11 +91,34 @@ class MyAboutListener : public AboutListener {
                 printf("*********************************************************************************\n");
                 printf("AboutProxy.GetVersion %hd\n", ver);
                 printf("*********************************************************************************\n");
+
+                const char* path;
+                objectDescription.GetInterfacePaths(INTERFACE_NAME, &path, 1);
+                printf("Calling %s/%s\n", path, INTERFACE_NAME);
+                ProxyBusObject proxyObject(*g_bus, busName, path, sessionId);
+                status = proxyObject.IntrospectRemoteObject();
+                if (status != ER_OK) {
+                    printf("Failed to introspect remote object.\n");
+                }
+                MsgArg arg("s", "ECHO Echo echo...\n");
+                Message replyMsg(*g_bus);
+                status = proxyObject.MethodCall(INTERFACE_NAME, "Echo", &arg, 1, replyMsg);
+                if (status != ER_OK) {
+                    printf("Failed to call Echo method.\n");
+                    return;
+                }
+                char* echoReply;
+                status = replyMsg->GetArg(0)->Get("s", &echoReply);
+                if (status != ER_OK) {
+                    printf("Failed to read Echo method reply.\n");
+                }
+                printf("Echo method reply: %s\n", echoReply);
             }
         } else {
             printf("BusAttachment is NULL\n");
         }
     }
+    MySessionListener sessionListener;
 };
 
 int main(int argc, char** argv)
@@ -114,7 +151,7 @@ int main(int argc, char** argv)
 
     MyAboutListener aboutListener;
 
-    const char* interfaces[] = { "org.alljoyn.test" };
+    const char* interfaces[] = { INTERFACE_NAME };
 
     status = bus.RegisterAboutListener(aboutListener, interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
 
