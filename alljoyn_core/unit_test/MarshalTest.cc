@@ -352,6 +352,27 @@ static const char* ao[] = { "/org/one", "/org/two", "/org/three", "/org/four" };
 /* Array of SIGNATURE */
 static const char* ag[] = { "s", "sss", "as", "a(iiiiuu)" };
 
+/* Arrays of more than 8 elements */
+/* Array of BYTE */
+static uint8_t aly[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 30, 46 };
+/* Array of INT16 */
+static int16_t aln[] = { -9, -99, 999, 9999, -1, -6, 10, -2, 13, 20, 29 };
+/* Array of INT32 */
+static int32_t ali[] = { -8, -88, 888, 8888, -8, -88, 888, 8888, -8, -88, 888, 8888, -8, -88, 888, 8888, -8, -88, 888, 8888, -8, -88, 888, 8888, -8, -88, 888, 8888 };
+/* Array of bool */
+static bool alb[] = { true, false, true, true, true, false, true, true, false, true, true, true, false, true };
+/* Array of INT64 */
+static int64_t alx[] = { -8, -88, 888, 8888, -8, -88, 888, 8888, -8, -88, 888, 8888 };
+/* Array of UINT64 */
+static uint64_t alt[] = { 8, 88, 888, 8888, 8, 88, 888, 8888, 8, 88, 888, 8888 };
+/* Array of DOUBLE */
+static double ald[] = { 0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0 };
+/* Array of STRING */
+static const char* als[] = { "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve" };
+/* Array of OBJECT_PATH */
+static const char* alo[] = { "/org/one", "/org/two", "/org/three", "/org/four", "/org/five", "/org/six", "/org/seven", "/org/eight", "/org/nine", "/org/ten", "/org/eleven", "/org/twelve", "/org/thirteen" };
+/* Array of SIGNATURE */
+static const char* alg[] = { "s", "sss", "as", "a(iiiiuu)", "s", "sss", "as", "a(iiiiuu)", "s", "sss", "as", "a(iiiiuu)" };
 
 void Randfuzzing(void* buf, size_t len, uint8_t percent)
 {
@@ -1134,10 +1155,26 @@ QStatus MarshalTests()
     } else {
         EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
     }
+
     if (fuzzing || (status == ER_OK)) {
         MsgArg hello("s", "hello");
         MsgArg world("(si)", "world", 999);
         MsgArg arg("(**)", &hello, &world);
+        if (status == ER_OK) {
+            status = TestMarshal(&arg, 1);
+        }
+    }
+    if (!fuzzing) {
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    } else {
+        EXPECT_TRUE(foundExpectedFuzzingStatus(status)) << "Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    }
+
+    if (fuzzing || (status == ER_OK)) {
+        MsgArg argList;
+        status = argList.Set("as", ArraySize(als), als);
+        MsgArg arg;
+        status = arg.Set("*", &argList);
         if (status == ER_OK) {
             status = TestMarshal(&arg, 1);
         }
@@ -1437,7 +1474,130 @@ TEST(MarshalTest, fuzzing) {
     fuzzingBus = NULL;
 
 }
+TEST(MarshalTest, TestBigArrays) {
+    /* Marshal unmarshal arrays bigger than 8 elements */
+    fuzzingBus = new BusAttachment("TestMsgUnPack", false);
+    fuzzingBus->Start();
+    fuzzing = false;
+    nobig = true;
+    quiet = true;
 
+    MsgArg argList;
+    QStatus status = argList.Set("(ayad)", ArraySize(aly), aly, ArraySize(ald), ald);
+    if (status == ER_OK) {
+        status = TestMarshal(argList.v_struct.members, argList.v_struct.numMembers);
+    }
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+
+    status = argList.Set("(anax)", ArraySize(aln), aln, ArraySize(alx), alx);
+    if (status == ER_OK) {
+        status = TestMarshal(argList.v_struct.members, argList.v_struct.numMembers);
+    }
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+
+    status = argList.Set("(aias)", ArraySize(ali), ali, ArraySize(als), als);
+    if (status == ER_OK) {
+        status = TestMarshal(argList.v_struct.members, argList.v_struct.numMembers);
+    }
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+
+    MsgArg inner[2];
+    inner[0].Set("ai", ArraySize(ali), ali, ArraySize(ali) - 2, ali);
+    inner[1].Set("ai", ArraySize(ali) - 2, ali);
+    MsgArg arg;
+    status = arg.Set("aai", ArraySize(inner), inner);
+    if (status == ER_OK) {
+        status = TestMarshal(&arg, 1);
+    }
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    MsgArg arry;
+    arry.Set("ai", ArraySize(ali), ali);
+
+    status = arg.Set("v", &arry);
+    if (status == ER_OK) {
+        status = TestMarshal(&arg, 1);
+    }
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+
+    status = arg.Set("((iuiu)(yd)atab)", i, u, i, u, y, d, ArraySize(alt), alt, ArraySize(alb), alb);
+    if (status == ER_OK) {
+        status = TestMarshal(&arg, 1);
+    }
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+
+    status = arg.Set("ad", ArraySize(ald), ald);
+    if (status == ER_OK) {
+        status = TestMarshal(&arg, 1);
+    }
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+
+    status = argList.Set("(aias)", ArraySize(ali), ali, ArraySize(als), als);
+    if (status == ER_OK) {
+        status = TestMarshal(argList.v_struct.members, argList.v_struct.numMembers);
+    }
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+
+    status = argList.Set("(agao)", ArraySize(alg), alg, ArraySize(alo), alo);
+    if (status == ER_OK) {
+        status = TestMarshal(argList.v_struct.members, argList.v_struct.numMembers);
+    }
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+
+    MsgArg var1("s", "hello1");
+    MsgArg var2("s", "hello2");
+    MsgArg var3("s", "hello3");
+    MsgArg var4("s", "hello4");
+    MsgArg var5("s", "hello5");
+    MsgArg var6("s", "hello6");
+    MsgArg var7("s", "hello7");
+    MsgArg var8("s", "hello8");
+    MsgArg var9("s", "hello9");
+    MsgArg var10("s", "hello10");
+
+
+    MsgArg struc[10];
+    struc[0].Set("(yv)", 1, &var1);
+    struc[1].Set("(yv)", 2, &var2);
+    struc[2].Set("(yv)", 3, &var3);
+    struc[3].Set("(yv)", 4, &var4);
+    struc[4].Set("(yv)", 5, &var5);
+    struc[5].Set("(yv)", 6, &var6);
+    struc[6].Set("(yv)", 7, &var7);
+    struc[7].Set("(yv)", 8, &var8);
+    struc[8].Set("(yv)", 9, &var9);
+    struc[9].Set("(yv)", 10, &var10);
+
+    status = arg.Set("a(yv)", (size_t)10, &struc[0]);
+    if (status == ER_OK) {
+        status = TestMarshal(&arg, 1);
+    }
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+    const char* breeds[] = { "labrador", "poodle", "mutt", "pomeranian", "porcelaine", "pug", "talbot", "german-shepard", "chihuahua" };
+    MsgArg dogs[10];
+    dogs[0].Set("(sas)", "dogs0", ArraySize(breeds), breeds);
+    dogs[1].Set("(sas)", "dogs1", ArraySize(breeds), breeds);
+    dogs[2].Set("(sas)", "dogs2", ArraySize(breeds), breeds);
+    dogs[3].Set("(sas)", "dogs3", ArraySize(breeds), breeds);
+    dogs[4].Set("(sas)", "dogs4", ArraySize(breeds), breeds);
+    dogs[5].Set("(sas)", "dogs5", ArraySize(breeds), breeds);
+    dogs[6].Set("(sas)", "dogs6", ArraySize(breeds), breeds);
+    dogs[7].Set("(sas)", "dogs7", ArraySize(breeds), breeds);
+    dogs[8].Set("(sas)", "dogs8", ArraySize(breeds), breeds);
+    dogs[9].Set("(sas)", "dogs9", ArraySize(breeds), breeds);
+
+    status = arg.Set("a(sas)", (size_t)10, &dogs);
+    if (status == ER_OK) {
+        status = TestMarshal(&arg, 1);
+    }
+
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status) << errString.c_str();
+
+    fuzzingBus->Stop();
+    fuzzingBus->Join();
+    delete fuzzingBus;
+    fuzzingBus = NULL;
+
+}
 /*--------------------------FUZZING TEST CODE---------------------------------*/
 
 
