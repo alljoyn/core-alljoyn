@@ -252,13 +252,8 @@ QStatus _Message::ParseArray(MsgArg* arg,
                         for (size_t i = 0; i < numElements; i++) {
                             // copy all of the elements into the larger container
                             bigger[i] = elements[i];
-                            // make sure the flags match assignment operator may
-                            // not no copy the ownership flags since only one
-                            // object can own the data and args.
-                            bigger[i].flags = elements[i].flags;
-                            // clear the flags to prevent the destructor from
-                            // freeing anything other than the MsgArg
-                            elements[i].flags = 0;
+                            // Since the copy constructor above makes a Clone i.e. deep copy,
+                            // it is ok to leave the flags for elements[i] as it is here.
                         }
                         delete [] elements;
                         elements = bigger;
