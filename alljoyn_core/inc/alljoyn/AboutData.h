@@ -171,7 +171,7 @@ class AboutData {
      *
      * @return ER_OK on success
      */
-    QStatus AddAppId(const uint8_t* appId, const size_t num);
+    QStatus SetAppId(const uint8_t* appId, const size_t num);
 
     /**
      * Get the AppId from the AboutData
@@ -191,7 +191,7 @@ class AboutData {
      * This language is automatically added to the SupportedLanguage list
      * Required, announced
      */
-    QStatus AddDefaultLanguage(char* defaultLanguage);
+    QStatus SetDefaultLanguage(char* defaultLanguage);
 
     /**
      * This language is automatically added to the SupportedLanguage list
@@ -199,7 +199,7 @@ class AboutData {
      */
     QStatus GetDefaultLanguage(char** defaultLanguage);
     /**
-     * Add the DeviceName to the AboutData
+     * Set the DeviceName to the AboutData
      *
      * DeviceName is not required
      * DeviceName is part of the announced signal
@@ -207,11 +207,11 @@ class AboutData {
      *
      * @param[in] deviceName the deviceName (UTF8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the DeviceName will be added for the default language.
+     *            if language is NULL the DeviceName will be set for the default language.
      *
      * @return ER_OK on success
      */
-    QStatus AddDeviceName(const char* deviceName, const char* language = NULL);
+    QStatus SetDeviceName(const char* deviceName, const char* language = NULL);
 
     /**
      * Get the DeviceName from the About data
@@ -229,7 +229,7 @@ class AboutData {
     QStatus GetDeviceName(char** deviceName, const char* language = NULL);
 
     /**
-     * Add the DeviceId from the AboutData
+     * Set the DeviceId from the AboutData
      *
      * DeviceId IS required
      * DeviceId IS part of the announce signal
@@ -239,7 +239,7 @@ class AboutData {
      *
      * @return ER_OK on success
      */
-    QStatus AddDeviceId(const char* deviceId);
+    QStatus SetDeviceId(const char* deviceId);
     /**
      * Get the DeviceId from the AboutData
      *
@@ -253,7 +253,7 @@ class AboutData {
      */
     QStatus GetDeviceId(char** deviceId);
     /**
-     * Add the AppName to the AboutData
+     * Set the AppName to the AboutData
      *
      * AppName is required
      * AppName is part of the announce signal
@@ -261,11 +261,11 @@ class AboutData {
      *
      * @param[in] appName the AppName (UTF8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the AppName will be added for the default language.
+     *            if language is NULL the AppName will be set for the default language.
      *
      * @return ER_OK on success
      */
-    QStatus AddAppName(const char* appName, const char* language = NULL);
+    QStatus SetAppName(const char* appName, const char* language = NULL);
 
     /**
      * Get the AppName from the About data
@@ -283,7 +283,7 @@ class AboutData {
     QStatus GetAppName(char** appName, const char* language = NULL);
 
     /**
-     * Add the Manufacture to the AboutData
+     * Set the Manufacture to the AboutData
      *
      * Manufacture is required
      * Manufacture is part of the announce signal
@@ -291,11 +291,11 @@ class AboutData {
      *
      * @param[in] manufacture the Manufacture (UTF8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the Manufacture will be added for the default language.
+     *            if language is NULL the Manufacture will be set for the default language.
      *
      * @return ER_OK on success
      */
-    QStatus AddManufacture(const char* manufacture, const char* language = NULL);
+    QStatus SetManufacture(const char* manufacture, const char* language = NULL);
 
     /**
      * Get the Manufacture from the About data
@@ -313,7 +313,7 @@ class AboutData {
     QStatus GetManufacture(char** manufacture, const char* language = NULL);
 
     /**
-     * Add the ModelNumber to the AboutData
+     * Set the ModelNumber to the AboutData
      *
      * ModelNumber is required
      * ModelNumber is part of the announce signal
@@ -323,7 +323,7 @@ class AboutData {
      *
      * @return ER_OK on success
      */
-    QStatus AddModelNumber(const char* modelNumber);
+    QStatus SetModelNumber(const char* modelNumber);
 
     /**
      * Get the ModelNumber from the AboutData
@@ -339,7 +339,7 @@ class AboutData {
     QStatus GetModelNumber(char** modelNumber);
 
     /**
-     * Add a supported language.
+     * Set a supported language.
      * This is a string representing the a single language. The language is
      * specified using IETF language tags specified by the RFC 5646.
      *
@@ -347,7 +347,7 @@ class AboutData {
      *
      * @return ER_OK on success
      */
-    QStatus AddSupportedLanguage(const char* language);
+    QStatus SetSupportedLanguage(const char* language);
 
     /**
      * Get and array of supported languages
@@ -360,7 +360,7 @@ class AboutData {
      */
     QStatus GetSupportedLanguages(qcc::String** languageTags, size_t* num);
     /**
-     * Add the Description to the AboutData
+     * Set the Description to the AboutData
      *
      * Description IS required
      * Description IS NOT part of the announce signal
@@ -368,11 +368,11 @@ class AboutData {
      *
      * @param[in] descritption the Description (UTF8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the Description will be added for the default language.
+     *            if language is NULL the Description will be set for the default language.
      *
      * @return ER_OK on success
      */
-    QStatus AddDescription(const char* descritption, const char* language = NULL);
+    QStatus SetDescription(const char* descritption, const char* language = NULL);
 
     /**
      * Get the Description from the About data
@@ -390,7 +390,7 @@ class AboutData {
     QStatus GetDescription(char** description, const char* language = NULL);
 
     /**
-     * Add the DatOfManufacture to the AboutData
+     * Set the DatOfManufacture to the AboutData
      *
      * The date of manufacture using the format YYYY-MM-DD.  Known as XML
      * DateTime format.
@@ -403,7 +403,7 @@ class AboutData {
      *
      * @return ER_OK on success
      */
-    QStatus AddDateOfManufacture(const char* dateOfManufacture);
+    QStatus SetDateOfManufacture(const char* dateOfManufacture);
 
     /**
      * Get the DatOfManufacture from the AboutData
@@ -422,7 +422,7 @@ class AboutData {
     QStatus GetDateOfManufacture(char** dateOfManufacture);
 
     /**
-     * Add the SoftwareVersion to the AboutData
+     * Set the SoftwareVersion to the AboutData
      *
      * SoftwareVersion IS required
      * SoftwareVersion IS NOT part of the announce signal
@@ -432,7 +432,7 @@ class AboutData {
      *
      * @return ER_OK on success
      */
-    QStatus AddSoftwareVersion(const char* softwareVersion);
+    QStatus SetSoftwareVersion(const char* softwareVersion);
 
     /**
      * Get the SoftwareVersion from the AboutData
@@ -450,8 +450,8 @@ class AboutData {
     /**
      * Get the AJSoftwareVersion from the AboutData
      *
-     * The AJSoftwareVersion is automatically added to the AboutData when it is
-     * created or when it is read from remote device.
+     * The AJSoftwareVersion is automatically set when the AboutData is created
+     * or when it is read from remote device.
      *
      * ModelNumber IS required
      * ModelNumber IS NOT part of the announce signal
@@ -465,7 +465,7 @@ class AboutData {
     QStatus GetAJSoftwareVersion(char** ajSoftwareVersion);
 
     /**
-     * Add the HardwareVersion to the AboutData
+     * Set the HardwareVersion to the AboutData
      *
      * HardwareVersion IS NOT required
      * HardwareVersion IS NOT part of the announce signal
@@ -475,7 +475,7 @@ class AboutData {
      *
      * @return ER_OK on success
      */
-    QStatus AddHardwareVersion(const char* hardwareVersion);
+    QStatus SetHardwareVersion(const char* hardwareVersion);
 
     /**
      * Get the HardwareVersion from the AboutData
@@ -490,7 +490,7 @@ class AboutData {
      */
     QStatus GetHardwareVersion(char** hardwareVersion);
     /**
-     * Add the SupportUrl to the AboutData
+     * Set the SupportUrl to the AboutData
      *
      * SupportUrl IS NOT required
      * SupportUrl IS NOT part of the announce signal
@@ -500,7 +500,7 @@ class AboutData {
      *
      * @return ER_OK on success
      */
-    QStatus AddSupportUrl(const char* supportUrl);
+    QStatus SetSupportUrl(const char* supportUrl);
 
     /**
      * Get the SupportUrl from the AboutData
@@ -516,26 +516,26 @@ class AboutData {
     QStatus GetSupportUrl(char** supportUrl);
 
     /**
-     * generic way to add new field.  Everything could be done this way.
+     * generic way to Set new field.  Everything could be done this way.
      *
      * Unless the generic field is one of the pre-defined fields when they are
-     * added to they will
+     * set they will have the following specifications
      *   NOT required
      *   NOT part of the announce signal
      *   CAN be localized
      *
      * Since every field can be localized even if the field is not localized it
-     * must be added for every language.
+     * must be set for every language.
      *
-     * @param[in] name the name of the field to add
-     * @param[in] value a MsgArg that contains the value that is added for the field
+     * @param[in] name the name of the field to set
+     * @param[in] value a MsgArg that contains the value that is set for the field
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the field will be added for the default language
+     *            if language is NULL the field will be set for the default language
      *            will be used.
      *
      * @return ER_OK on success
      */
-    QStatus AddField(const char* name, ajn::MsgArg value, const char* language = NULL);
+    QStatus SetField(const char* name, ajn::MsgArg value, const char* language = NULL);
     /**
      * generic way to get field.
      *
@@ -621,7 +621,7 @@ class AboutData {
      * signal or must be read using the GetAboutData method. Specify if the value is
      * a localizable value or not.
      *
-     * @param[in] fieldName the Field Name being added
+     * @param[in] fieldName the Field Name being set
      * @param[in] isRequried is this field required befor the AboutData can be announced
      * @param[in] isAnnounced is this field part of the Announce signal
      * @param[in] isLocalized can this field be localized
@@ -630,7 +630,7 @@ class AboutData {
      *     - #ER_OK on success
      *     - #ER_ABOUT_FIELD_ALREADY_SPECIFIED if that field has already been specified
      */
-    QStatus AddNewFieldDetails(qcc::String fieldName, bool isRequired, bool isAnnounced, bool isLocalized, qcc::String signature);
+    QStatus SetNewFieldDetails(qcc::String fieldName, bool isRequired, bool isAnnounced, bool isLocalized, qcc::String signature);
 
     typedef struct FieldDetails {
         FieldDetails() { }

@@ -61,9 +61,9 @@ AboutData::AboutData() {
     MsgArg arg;
     // The AllJoyn software version should always be set by default.
     arg.Set(m_aboutFields[AJ_SOFTWARE_VERSION].signature.c_str(), GetVersion());
-    AddField(AJ_SOFTWARE_VERSION, arg);
+    SetField(AJ_SOFTWARE_VERSION, arg);
 
-    //TODO should the constructor also add the DeviceID as well?
+    //TODO should the constructor also set the DeviceID as well?
 }
 
 AboutData::AboutData(const char* defaultLanguage) {
@@ -86,14 +86,14 @@ AboutData::AboutData(const char* defaultLanguage) {
     // The user must specify a default language when creating the AboutData class
     MsgArg arg;
     arg.Set(m_aboutFields[DEFAULT_LANGUAGE].signature.c_str(), defaultLanguage);
-    AddField(DEFAULT_LANGUAGE, arg);
+    SetField(DEFAULT_LANGUAGE, arg);
     // The default language should automatically be added to the list of supported languages
-    AddSupportedLanguage(defaultLanguage);
+    SetSupportedLanguage(defaultLanguage);
     // The AllJoyn software version should always be set by default.
     arg.Set(m_aboutFields[AJ_SOFTWARE_VERSION].signature.c_str(), GetVersion());
-    AddField(AJ_SOFTWARE_VERSION, arg);
+    SetField(AJ_SOFTWARE_VERSION, arg);
 
-    //TODO should the constructor also add the DeviceID as well?
+    //TODO should the constructor also set the DeviceID as well?
 }
 
 AboutData::~AboutData()
@@ -148,9 +148,9 @@ QStatus AboutData::CreateFromXml(qcc::String aboutDataXml)
 
     /*
      * This will iterate through the list of known fields in the about data.  If
-     * the field is not localized add that field. We grab the non-localized values
-     * first because we need the DefaultLanguage to to add localized value to the
-     * list
+     * the field is not localized set that field. We grab the non-localized values
+     * first because we need the DefaultLanguage to to set a localized value where
+     * the language tag is not given.
      */
     typedef std::map<qcc::String, FieldDetails>::iterator it_aboutFields;
     MsgArg arg;
@@ -166,7 +166,7 @@ QStatus AboutData::CreateFromXml(qcc::String aboutDataXml)
                         for (size_t i = 0; i < strSize / 2; ++i) {
                             appId_bites[i] = (CharToNibble(root->GetChild(it->first)->GetContent()[2 * i]) << 4) |
                                              CharToNibble(root->GetChild(it->first)->GetContent()[2 * i + 1]);
-                            status = AddAppId(appId_bites, strSize / 2);
+                            status = SetAppId(appId_bites, strSize / 2);
                             if (status != ER_OK) {
                                 return status;
                             }
@@ -179,14 +179,10 @@ QStatus AboutData::CreateFromXml(qcc::String aboutDataXml)
                 } else {
                     assert(m_aboutFields[it->first].signature == "s");
                     arg.Set("s", root->GetChild(it->first)->GetContent().c_str());
-                    status = AddField(it->first.c_str(), arg);
+                    status = SetField(it->first.c_str(), arg);
                     if (status != ER_OK) {
                         return status;
                     }
-                    //TODO this may not be needed
-                    //if(it->first == DEFAULT_LANGUAGE) {
-                    //    AddSupportedLanguage(root->GetChild(it->first)->GetContent().c_str());
-                    //}
                 }
             } else {
                 // The SupportedLanguages tag should be the only tag that is not
@@ -198,14 +194,14 @@ QStatus AboutData::CreateFromXml(qcc::String aboutDataXml)
                     std::vector<qcc::XmlElement*>::iterator lang_it;
                     int elementCnt = 0;
                     for (std::vector<qcc::XmlElement*>::iterator lang_it = languageElements.begin(); lang_it != languageElements.end(); ++lang_it) {
-                        AddSupportedLanguage((*lang_it)->GetContent().c_str());
+                        SetSupportedLanguage((*lang_it)->GetContent().c_str());
                     }
                 }
             }
         }
     }
 
-    //TODO add check for default language here return error if not set
+    //TODO check for default language here return error if not set
     /*
      * Now that we have iterated through all of the tags that are not localized
      * we are going to iterate through them all again. Except this time we will
@@ -218,10 +214,10 @@ QStatus AboutData::CreateFromXml(qcc::String aboutDataXml)
     std::vector<qcc::XmlElement*>::iterator it;
     for (std::vector<qcc::XmlElement*>::iterator it = elements.begin(); it != elements.end(); ++it) {
         if (m_aboutFields[(*it)->GetName()].localized || m_aboutFields.find((*it)->GetName().c_str()) == m_aboutFields.end()) {
-            //printf("Adding field: name=%s, value=%s, lang=%s\n", (*it)->GetName().c_str(), (*it)->GetContent().c_str(), (*it)->GetAttribute("lang").c_str());
+            //printf("Setting field: name=%s, value=%s, lang=%s\n", (*it)->GetName().c_str(), (*it)->GetContent().c_str(), (*it)->GetAttribute("lang").c_str());
             //assert(m_aboutFields[it->first].dataType == "s");
             arg.Set("s", (*it)->GetContent().c_str());
-            status = AddField((*it)->GetName().c_str(), arg, (*it)->GetAttribute("lang").c_str());
+            status = SetField((*it)->GetName().c_str(), arg, (*it)->GetAttribute("lang").c_str());
             if (status != ER_OK) {
                 return status;
             }
@@ -248,9 +244,9 @@ bool AboutData::IsValid(const char* language)
      */
     /*
      * This will iterate through the list of known fields in the about data.  If
-     * the field is required check to see if the field has been added to the About
-     * data. When checking localizing will be taken into account. If the language
-     * is not specified the default language is assumed.
+     * the field is required check to see if the field has been set. When
+     * checking localizing will be taken into account. If the language is not
+     * specified the default language is assumed.
      */
     typedef std::map<qcc::String, FieldDetails>::iterator it_aboutFields;
     for (it_aboutFields it = m_aboutFields.begin(); it != m_aboutFields.end(); ++it) {
@@ -335,7 +331,7 @@ QStatus AboutData::Initialize(const MsgArg& arg, const char* language)
     return status;
 }
 
-QStatus AboutData::AddAppId(const uint8_t* appId, const size_t num)
+QStatus AboutData::SetAppId(const uint8_t* appId, const size_t num)
 {
     QStatus status = ER_OK;
     MsgArg arg;
@@ -343,7 +339,7 @@ QStatus AboutData::AddAppId(const uint8_t* appId, const size_t num)
     if (status != ER_OK) {
         return status;
     }
-    status = AddField(APP_ID, arg);
+    status = SetField(APP_ID, arg);
     return status;
 }
 QStatus AboutData::GetAppId(uint8_t** appId, size_t* num)
@@ -358,7 +354,7 @@ QStatus AboutData::GetAppId(uint8_t** appId, size_t* num)
     return status;
 }
 
-QStatus AboutData::AddDefaultLanguage(char* defaultLanguage)
+QStatus AboutData::SetDefaultLanguage(char* defaultLanguage)
 {
     QStatus status = ER_OK;
     MsgArg arg;
@@ -366,9 +362,9 @@ QStatus AboutData::AddDefaultLanguage(char* defaultLanguage)
     if (status != ER_OK) {
         return status;
     }
-    status = AddField(DEFAULT_LANGUAGE, arg);
+    status = SetField(DEFAULT_LANGUAGE, arg);
     //The default language should automatically be added to the supported languages
-    AddSupportedLanguage(defaultLanguage);
+    SetSupportedLanguage(defaultLanguage);
     return status;
 }
 
@@ -384,7 +380,7 @@ QStatus AboutData::GetDefaultLanguage(char** defaultLanguage)
     return status;
 }
 
-QStatus AboutData::AddDeviceName(const char* deviceName, const char* language)
+QStatus AboutData::SetDeviceName(const char* deviceName, const char* language)
 {
     QStatus status = ER_OK;
     MsgArg arg;
@@ -392,7 +388,7 @@ QStatus AboutData::AddDeviceName(const char* deviceName, const char* language)
     if (status != ER_OK) {
         return status;
     }
-    status = AddField(DEVICE_NAME, arg, language);
+    status = SetField(DEVICE_NAME, arg, language);
     return status;
 }
 
@@ -408,7 +404,7 @@ QStatus AboutData::GetDeviceName(char** deviceName, const char* language)
     return status;
 }
 
-QStatus AboutData::AddDeviceId(const char* deviceId)
+QStatus AboutData::SetDeviceId(const char* deviceId)
 {
     QStatus status = ER_OK;
     MsgArg arg;
@@ -416,7 +412,7 @@ QStatus AboutData::AddDeviceId(const char* deviceId)
     if (status != ER_OK) {
         return status;
     }
-    status = AddField(DEVICE_ID, arg);
+    status = SetField(DEVICE_ID, arg);
     return status;
 }
 QStatus AboutData::GetDeviceId(char** deviceId)
@@ -431,7 +427,7 @@ QStatus AboutData::GetDeviceId(char** deviceId)
     return status;
 }
 
-QStatus AboutData::AddAppName(const char* appName, const char* language)
+QStatus AboutData::SetAppName(const char* appName, const char* language)
 {
     QStatus status = ER_OK;
     MsgArg arg;
@@ -439,7 +435,7 @@ QStatus AboutData::AddAppName(const char* appName, const char* language)
     if (status != ER_OK) {
         return status;
     }
-    status = AddField(APP_NAME, arg, language);
+    status = SetField(APP_NAME, arg, language);
     return status;
 }
 
@@ -455,7 +451,7 @@ QStatus AboutData::GetAppName(char** appName, const char* language)
     return status;
 }
 
-QStatus AboutData::AddManufacture(const char* manufacture, const char* language)
+QStatus AboutData::SetManufacture(const char* manufacture, const char* language)
 {
     QStatus status = ER_OK;
     MsgArg arg;
@@ -463,7 +459,7 @@ QStatus AboutData::AddManufacture(const char* manufacture, const char* language)
     if (status != ER_OK) {
         return status;
     }
-    status = AddField(MANUFACTURER, arg, language);
+    status = SetField(MANUFACTURER, arg, language);
     return status;
 }
 QStatus AboutData::GetManufacture(char** manufacture, const char* language)
@@ -478,7 +474,7 @@ QStatus AboutData::GetManufacture(char** manufacture, const char* language)
     return status;
 }
 
-QStatus AboutData::AddModelNumber(const char* modelNumber)
+QStatus AboutData::SetModelNumber(const char* modelNumber)
 {
     QStatus status = ER_OK;
     MsgArg arg;
@@ -486,7 +482,7 @@ QStatus AboutData::AddModelNumber(const char* modelNumber)
     if (status != ER_OK) {
         return status;
     }
-    status = AddField(MODEL_NUMBER, arg);
+    status = SetField(MODEL_NUMBER, arg);
     return status;
 }
 QStatus AboutData::GetModelNumber(char** modelNumber)
@@ -501,10 +497,10 @@ QStatus AboutData::GetModelNumber(char** modelNumber)
     return status;
 }
 
-QStatus AboutData::AddSupportedLanguage(const char* language)
+QStatus AboutData::SetSupportedLanguage(const char* language)
 {
-    //TODO add supported languages does nothing to prevent double adding a
-    //     language tag. Adding a language tag twice should not be allowed.
+    //TODO Set supported languages does nothing to prevent double adding a
+    //     language tag. Setting a language tag twice should not be allowed.
 
     //TODO add in logic to check information about the tag all of the tags must
     //     conform to the RFC5646 there is currently nothing to make sure the
@@ -524,7 +520,7 @@ QStatus AboutData::AddSupportedLanguage(const char* language)
     if (status != ER_OK) {
         return status;
     }
-    status = AddField(SUPPORTED_LANGUAGES, arg);
+    status = SetField(SUPPORTED_LANGUAGES, arg);
     delete [] supportedLangs;
     return status;
 }
@@ -536,7 +532,7 @@ QStatus AboutData::GetSupportedLanguages(qcc::String** supportedLanguages, size_
     return ER_OK;
 }
 
-QStatus AboutData::AddDescription(const char* descritption, const char* language)
+QStatus AboutData::SetDescription(const char* descritption, const char* language)
 {
     QStatus status = ER_OK;
     MsgArg arg;
@@ -544,7 +540,7 @@ QStatus AboutData::AddDescription(const char* descritption, const char* language
     if (status != ER_OK) {
         return status;
     }
-    status = AddField(DESCRIPTION, arg, language);
+    status = SetField(DESCRIPTION, arg, language);
     return status;
 }
 QStatus AboutData::GetDescription(char** description, const char* language)
@@ -559,7 +555,7 @@ QStatus AboutData::GetDescription(char** description, const char* language)
     return status;
 }
 
-QStatus AboutData::AddDateOfManufacture(const char* dateOfManufacture)
+QStatus AboutData::SetDateOfManufacture(const char* dateOfManufacture)
 {
     //TODO check that the dateOfManufacture string is of the correct format YYYY-MM-DD
     QStatus status = ER_OK;
@@ -568,7 +564,7 @@ QStatus AboutData::AddDateOfManufacture(const char* dateOfManufacture)
     if (status != ER_OK) {
         return status;
     }
-    status = AddField(DATE_OF_MANUFACTURE, arg);
+    status = SetField(DATE_OF_MANUFACTURE, arg);
     return status;
 }
 QStatus AboutData::GetDateOfManufacture(char** dateOfManufacture)
@@ -583,7 +579,7 @@ QStatus AboutData::GetDateOfManufacture(char** dateOfManufacture)
     return status;
 }
 
-QStatus AboutData::AddSoftwareVersion(const char* softwareVersion)
+QStatus AboutData::SetSoftwareVersion(const char* softwareVersion)
 {
     QStatus status = ER_OK;
     MsgArg arg;
@@ -591,7 +587,7 @@ QStatus AboutData::AddSoftwareVersion(const char* softwareVersion)
     if (status != ER_OK) {
         return status;
     }
-    status = AddField(SOFTWARE_VERSION, arg);
+    status = SetField(SOFTWARE_VERSION, arg);
     return status;
 }
 QStatus AboutData::GetSoftwareVersion(char** softwareVersion)
@@ -618,7 +614,7 @@ QStatus AboutData::GetAJSoftwareVersion(char** ajSoftwareVersion)
     return status;
 }
 
-QStatus AboutData::AddHardwareVersion(const char* hardwareVersion)
+QStatus AboutData::SetHardwareVersion(const char* hardwareVersion)
 {
     QStatus status = ER_OK;
     MsgArg arg;
@@ -626,7 +622,7 @@ QStatus AboutData::AddHardwareVersion(const char* hardwareVersion)
     if (status != ER_OK) {
         return status;
     }
-    status = AddField(HARDWARE_VERSION, arg);
+    status = SetField(HARDWARE_VERSION, arg);
     return status;
 }
 
@@ -642,7 +638,7 @@ QStatus AboutData::GetHardwareVersion(char** hardwareVersion)
     return status;
 }
 
-QStatus AboutData::AddSupportUrl(const char* supportUrl)
+QStatus AboutData::SetSupportUrl(const char* supportUrl)
 {
     QStatus status = ER_OK;
     MsgArg arg;
@@ -650,7 +646,7 @@ QStatus AboutData::AddSupportUrl(const char* supportUrl)
     if (status != ER_OK) {
         return status;
     }
-    status = AddField(SUPPORT_URL, arg);
+    status = SetField(SUPPORT_URL, arg);
     return status;
 }
 QStatus AboutData::GetSupportUrl(char** supportUrl)
@@ -665,7 +661,7 @@ QStatus AboutData::GetSupportUrl(char** supportUrl)
     return status;
 }
 
-QStatus AboutData::AddField(const char* name, ajn::MsgArg value, const char* language) {
+QStatus AboutData::SetField(const char* name, ajn::MsgArg value, const char* language) {
     QStatus status = ER_OK;
     // The user is adding an OEM specific field.
     // At this time OEM specific fields are added as
@@ -852,7 +848,7 @@ QStatus AboutData::GetMsgArgAnnounce(MsgArg* msgArg)
     return status;
 }
 
-QStatus AboutData::AddNewFieldDetails(qcc::String fieldName, bool isRequired, bool isAnnounced, bool isLocalized, qcc::String signature)
+QStatus AboutData::SetNewFieldDetails(qcc::String fieldName, bool isRequired, bool isAnnounced, bool isLocalized, qcc::String signature)
 {
     if (m_aboutFields.find(fieldName) == m_aboutFields.end()) {
         m_aboutFields[fieldName] = FieldDetails(isRequired, isAnnounced, isLocalized, signature);

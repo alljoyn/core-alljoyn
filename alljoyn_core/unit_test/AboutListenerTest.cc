@@ -63,28 +63,28 @@ class AboutListenerTest : public testing::Test {
 
         // Setup the about data
         qcc::GUID128 appId;
-        status = aboutData.AddAppId(appId.GetBytes(), qcc::GUID128::SIZE);
+        status = aboutData.SetAppId(appId.GetBytes(), qcc::GUID128::SIZE);
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = aboutData.AddDeviceName("My Device Name");
+        status = aboutData.SetDeviceName("My Device Name");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         qcc::GUID128 deviceId;
-        status = aboutData.AddDeviceId(deviceId.ToString().c_str());
+        status = aboutData.SetDeviceId(deviceId.ToString().c_str());
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = aboutData.AddAppName("Application");
+        status = aboutData.SetAppName("Application");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = aboutData.AddManufacture("Manufacture");
+        status = aboutData.SetManufacture("Manufacture");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = aboutData.AddModelNumber("123456");
+        status = aboutData.SetModelNumber("123456");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = aboutData.AddDescription("A poetic description of this application");
+        status = aboutData.SetDescription("A poetic description of this application");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = aboutData.AddDateOfManufacture("2014-03-24");
+        status = aboutData.SetDateOfManufacture("2014-03-24");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = aboutData.AddSoftwareVersion("0.1.2");
+        status = aboutData.SetSoftwareVersion("0.1.2");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = aboutData.AddHardwareVersion("0.0.1");
+        status = aboutData.SetHardwareVersion("0.0.1");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = aboutData.AddSupportUrl("http://www.alljoyn.org");
+        status = aboutData.SetSupportUrl("http://www.alljoyn.org");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         if (!aboutData.IsValid()) {
             printf("failed to setup about data.\n");
