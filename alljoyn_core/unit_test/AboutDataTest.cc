@@ -51,12 +51,12 @@ TEST(AboutData, Constructor) {
     EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersion);
 }
 
-TEST(AboutData, AddAppId) {
+TEST(AboutData, SetAppId) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
     uint8_t originalAppId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-    status = aboutData.AddAppId(originalAppId, 16u);
+    status = aboutData.SetAppId(originalAppId, 16u);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     uint8_t* appId;
@@ -68,7 +68,7 @@ TEST(AboutData, AddAppId) {
         EXPECT_EQ(originalAppId[i], appId[i]);
     }
 }
-TEST(AboutData, AddDeviceName) {
+TEST(AboutData, SetDeviceName) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
     char* language;
@@ -80,7 +80,7 @@ TEST(AboutData, AddDeviceName) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersion);
 
-    status = aboutData.AddDeviceName(qcc::String("Device").c_str());
+    status = aboutData.SetDeviceName(qcc::String("Device").c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     char* deviceName;
@@ -88,7 +88,7 @@ TEST(AboutData, AddDeviceName) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Device", deviceName);
 
-    status = aboutData.AddDeviceName("dispositivo", "es");
+    status = aboutData.SetDeviceName("dispositivo", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = aboutData.GetDeviceName(&deviceName, "es");
@@ -96,11 +96,11 @@ TEST(AboutData, AddDeviceName) {
     EXPECT_STREQ("dispositivo", deviceName);
 }
 
-TEST(AboutData, AddDeviceId) {
+TEST(AboutData, SetDeviceId) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    status = aboutData.AddDeviceId("avec-awe1213-1234559xvc123");
+    status = aboutData.SetDeviceId("avec-awe1213-1234559xvc123");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     char* deviceId;
@@ -109,11 +109,11 @@ TEST(AboutData, AddDeviceId) {
     EXPECT_STREQ("avec-awe1213-1234559xvc123", deviceId);
 }
 
-TEST(AboutData, AddAppName) {
+TEST(AboutData, SetAppName) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    status = aboutData.AddAppName("Application");
+    status = aboutData.SetAppName("Application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     char* appName;
@@ -121,7 +121,7 @@ TEST(AboutData, AddAppName) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Application", appName);
 
-    status = aboutData.AddAppName("aplicacion", "es");
+    status = aboutData.SetAppName("aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = aboutData.GetAppName(&appName, "es");
@@ -129,11 +129,11 @@ TEST(AboutData, AddAppName) {
     EXPECT_STREQ("aplicacion", appName);
 }
 
-TEST(AboutData, AddManufacture) {
+TEST(AboutData, SetManufacture) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    status = aboutData.AddManufacture("Manufacture");
+    status = aboutData.SetManufacture("Manufacture");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     char* manufacture;
@@ -141,7 +141,7 @@ TEST(AboutData, AddManufacture) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Manufacture", manufacture);
 
-    status = aboutData.AddManufacture("manufactura", "es");
+    status = aboutData.SetManufacture("manufactura", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = aboutData.GetManufacture(&manufacture, "es");
@@ -149,11 +149,11 @@ TEST(AboutData, AddManufacture) {
     EXPECT_STREQ("manufactura", manufacture);
 }
 
-TEST(AboutData, AddModelNumber) {
+TEST(AboutData, SetModelNumber) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    status = aboutData.AddModelNumber("xBnc345");
+    status = aboutData.SetModelNumber("xBnc345");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     char* modelNumber;
@@ -162,7 +162,7 @@ TEST(AboutData, AddModelNumber) {
     EXPECT_STREQ("xBnc345", modelNumber);
 }
 
-TEST(AboutData, AddSupportedLanguage)
+TEST(AboutData, SetSupportedLanguage)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -175,7 +175,7 @@ TEST(AboutData, AddSupportedLanguage)
     EXPECT_EQ(1u, numLanguages);
     EXPECT_STREQ("en", languages[0].c_str());
 
-    status = aboutData.AddSupportedLanguage("es");
+    status = aboutData.SetSupportedLanguage("es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.GetSupportedLanguages(&languages, &numLanguages);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -184,11 +184,11 @@ TEST(AboutData, AddSupportedLanguage)
     EXPECT_STREQ("es", languages[1].c_str());
 }
 
-TEST(AboutData, AddDescription) {
+TEST(AboutData, SetDescription) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    status = aboutData.AddDescription("A poetic description of this application");
+    status = aboutData.SetDescription("A poetic description of this application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     char* description;
@@ -196,7 +196,7 @@ TEST(AboutData, AddDescription) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("A poetic description of this application", description);
 
-    status = aboutData.AddDescription("Una descripcion poetica de esta aplicacion", "es");
+    status = aboutData.SetDescription("Una descripcion poetica de esta aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = aboutData.GetDescription(&description, "es");
@@ -204,11 +204,11 @@ TEST(AboutData, AddDescription) {
     EXPECT_STREQ("Una descripcion poetica de esta aplicacion", description);
 }
 
-TEST(AboutData, AddDateOfManufacture) {
+TEST(AboutData, SetDateOfManufacture) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    status = aboutData.AddDateOfManufacture("2014-01-20");
+    status = aboutData.SetDateOfManufacture("2014-01-20");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     char* dateOfManufacture;
@@ -217,11 +217,11 @@ TEST(AboutData, AddDateOfManufacture) {
     EXPECT_STREQ("2014-01-20", dateOfManufacture);
 }
 
-TEST(AboutData, AddSoftwareVersion) {
+TEST(AboutData, SetSoftwareVersion) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    status = aboutData.AddSoftwareVersion("0.1.2");
+    status = aboutData.SetSoftwareVersion("0.1.2");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     char* softwareVersion;
@@ -230,11 +230,11 @@ TEST(AboutData, AddSoftwareVersion) {
     EXPECT_STREQ("0.1.2", softwareVersion);
 }
 
-TEST(AboutData, AddHardwareVersion) {
+TEST(AboutData, SetHardwareVersion) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    status = aboutData.AddHardwareVersion("3.2.1");
+    status = aboutData.SetHardwareVersion("3.2.1");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     char* hardwareVersion;
@@ -243,11 +243,11 @@ TEST(AboutData, AddHardwareVersion) {
     EXPECT_STREQ("3.2.1", hardwareVersion);
 }
 
-TEST(AboutData, AddSupportUrl) {
+TEST(AboutData, SetSupportUrl) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    status = aboutData.AddSupportUrl("www.example.com");
+    status = aboutData.SetSupportUrl("www.example.com");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     char* supportUrl;
@@ -263,31 +263,31 @@ TEST(AboutData, IsValid)
 
     EXPECT_FALSE(aboutData.IsValid());
     uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.AddAppId(appId, 6);
+    status = aboutData.SetAppId(appId, 6);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDeviceId("fakeID");
+    status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddAppName("Application");
+    status = aboutData.SetAppName("Application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddManufacture("Manufacture");
+    status = aboutData.SetManufacture("Manufacture");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddModelNumber("123456");
+    status = aboutData.SetModelNumber("123456");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDescription("A poetic description of this application");
+    status = aboutData.SetDescription("A poetic description of this application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddSoftwareVersion("0.1.2");
+    status = aboutData.SetSoftwareVersion("0.1.2");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(aboutData.IsValid());
 
     EXPECT_FALSE(aboutData.IsValid("es"));
 
-    status = aboutData.AddSupportedLanguage("es");
+    status = aboutData.SetSupportedLanguage("es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddAppName("aplicacion", "es");
+    status = aboutData.SetAppName("aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddManufacture("manufactura", "es");
+    status = aboutData.SetManufacture("manufactura", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDescription("Una descripcion poetica de esta aplicacion", "es");
+    status = aboutData.SetDescription("Una descripcion poetica de esta aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(aboutData.IsValid("es"));
 }
@@ -298,29 +298,29 @@ TEST(AboutData, GetMsgArg)
     AboutData aboutData("en");
 
     uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.AddAppId(appId, 6);
+    status = aboutData.SetAppId(appId, 6);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDeviceId("fakeID");
+    status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddAppName("Application");
+    status = aboutData.SetAppName("Application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddManufacture("Manufacture");
+    status = aboutData.SetManufacture("Manufacture");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddModelNumber("123456");
+    status = aboutData.SetModelNumber("123456");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDescription("A poetic description of this application");
+    status = aboutData.SetDescription("A poetic description of this application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddSoftwareVersion("0.1.2");
+    status = aboutData.SetSoftwareVersion("0.1.2");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(aboutData.IsValid());
 
-    status = aboutData.AddSupportedLanguage("es");
+    status = aboutData.SetSupportedLanguage("es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddAppName("aplicacion", "es");
+    status = aboutData.SetAppName("aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddManufacture("manufactura", "es");
+    status = aboutData.SetManufacture("manufactura", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDescription("Una descripcion poetica de esta aplicacion", "es");
+    status = aboutData.SetDescription("Una descripcion poetica de esta aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(aboutData.IsValid("es"));
 
@@ -372,19 +372,19 @@ TEST(AboutData, GetMsgArgAnnounce)
     AboutData aboutData("en");
 
     uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.AddAppId(appId, 6);
+    status = aboutData.SetAppId(appId, 6);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDeviceId("fakeID");
+    status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddAppName("Application");
+    status = aboutData.SetAppName("Application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddManufacture("Manufacture");
+    status = aboutData.SetManufacture("Manufacture");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddModelNumber("123456");
+    status = aboutData.SetModelNumber("123456");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDescription("A poetic description of this application");
+    status = aboutData.SetDescription("A poetic description of this application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddSoftwareVersion("0.1.2");
+    status = aboutData.SetSoftwareVersion("0.1.2");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(aboutData.IsValid());
 
@@ -429,7 +429,7 @@ TEST(AboutData, GetMsgArgAnnounce)
     EXPECT_STREQ("123456", modelNumber);
 }
 
-TEST(AboutData, AddOEMSpecificField)
+TEST(AboutData, SetOEMSpecificField)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -438,13 +438,13 @@ TEST(AboutData, AddOEMSpecificField)
     status = arg.Set("s", "888-555-1234");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = aboutData.AddField("SupportNumber", arg);
+    status = aboutData.SetField("SupportNumber", arg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = arg.Set("s", "800-555-4321");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = aboutData.AddField("SupportNumber", arg, "es");
+    status = aboutData.SetField("SupportNumber", arg, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     MsgArg* value;
@@ -471,29 +471,29 @@ TEST(AboutData, GetMsgArgWithOEMSpecificField)
     AboutData aboutData("en");
 
     uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.AddAppId(appId, 6);
+    status = aboutData.SetAppId(appId, 6);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDeviceId("fakeID");
+    status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddAppName("Application");
+    status = aboutData.SetAppName("Application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddManufacture("Manufacture");
+    status = aboutData.SetManufacture("Manufacture");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddModelNumber("123456");
+    status = aboutData.SetModelNumber("123456");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDescription("A poetic description of this application");
+    status = aboutData.SetDescription("A poetic description of this application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddSoftwareVersion("0.1.2");
+    status = aboutData.SetSoftwareVersion("0.1.2");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(aboutData.IsValid());
 
-    status = aboutData.AddSupportedLanguage("es");
+    status = aboutData.SetSupportedLanguage("es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddAppName("aplicacion", "es");
+    status = aboutData.SetAppName("aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddManufacture("manufactura", "es");
+    status = aboutData.SetManufacture("manufactura", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDescription("Una descripcion poetica de esta aplicacion", "es");
+    status = aboutData.SetDescription("Una descripcion poetica de esta aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(aboutData.IsValid("es"));
 
@@ -501,13 +501,13 @@ TEST(AboutData, GetMsgArgWithOEMSpecificField)
     status = arg.Set("s", "888-555-1234");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = aboutData.AddField("SupportNumber", arg);
+    status = aboutData.SetField("SupportNumber", arg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = arg.Set("s", "800-555-4321");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = aboutData.AddField("SupportNumber", arg, "es");
+    status = aboutData.SetField("SupportNumber", arg, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     MsgArg aboutArg;
@@ -572,29 +572,29 @@ TEST(AboutData, InitUsingMsgArg)
     AboutData aboutData("en");
 
     uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.AddAppId(appId, 6);
+    status = aboutData.SetAppId(appId, 6);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDeviceId("fakeID");
+    status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddAppName("Application");
+    status = aboutData.SetAppName("Application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddManufacture("Manufacture");
+    status = aboutData.SetManufacture("Manufacture");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddModelNumber("123456");
+    status = aboutData.SetModelNumber("123456");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDescription("A poetic description of this application");
+    status = aboutData.SetDescription("A poetic description of this application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddSoftwareVersion("0.1.2");
+    status = aboutData.SetSoftwareVersion("0.1.2");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(aboutData.IsValid());
 
-    status = aboutData.AddSupportedLanguage("es");
+    status = aboutData.SetSupportedLanguage("es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddAppName("aplicacion", "es");
+    status = aboutData.SetAppName("aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddManufacture("manufactura", "es");
+    status = aboutData.SetManufacture("manufactura", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDescription("Una descripcion poetica de esta aplicacion", "es");
+    status = aboutData.SetDescription("Una descripcion poetica de esta aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(aboutData.IsValid("es"));
 
@@ -602,13 +602,13 @@ TEST(AboutData, InitUsingMsgArg)
     status = arg.Set("s", "888-555-1234");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = aboutData.AddField("SupportNumber", arg);
+    status = aboutData.SetField("SupportNumber", arg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = arg.Set("s", "800-555-4321");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = aboutData.AddField("SupportNumber", arg, "es");
+    status = aboutData.SetField("SupportNumber", arg, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     MsgArg aboutArg;
@@ -673,7 +673,7 @@ TEST(AboutData, UTF8_test)
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    status = aboutData.AddAppName(str, "ru");
+    status = aboutData.SetAppName(str, "ru");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     char* ruOut;
@@ -708,8 +708,8 @@ TEST(AboutData, CreateFromXml) {
         "  <AJSoftwareVersion>" + static_cast<qcc::String>(ajn::GetVersion()) + "</AJSoftwareVersion>"
         "  <HardwareVersion>1.0.0</HardwareVersion>"
         "  <SupportUrl>www.example.com</SupportUrl>"
-        "  <UserDefinedTag>Can only accept strings anything other than strings must be done using the AboutData Class AddField method</UserDefinedTag>"
-        "  <UserDefinedTag lang='es'>Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método AboutData Clase AddField</UserDefinedTag>"
+        "  <UserDefinedTag>Can only accept strings anything other than strings must be done using the AboutData Class SetField method</UserDefinedTag>"
+        "  <UserDefinedTag lang='es'>Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método AboutData Clase SetField</UserDefinedTag>"
         "</AboutData>";
     status = aboutData.CreateFromXml(xml);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -818,7 +818,7 @@ TEST(AboutData, CreateFromXml) {
 //    const char* userDefined;
 //    status = value->Get("s", &userDefined);
 //    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-//    EXPECT_STREQ("Can only accept strings anything other than strings must be done using the AboutData Class AddField method", userDefined);
+//    EXPECT_STREQ("Can only accept strings anything other than strings must be done using the AboutData Class SetField method", userDefined);
 //
 //    status = aboutData.GetField("UserDefinedTag", value, "es");
 //    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -826,7 +826,7 @@ TEST(AboutData, CreateFromXml) {
 //    EXPECT_STREQ("s", value->Signature().c_str());
 //    status = value->Get("s", &userDefined);
 //    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-//    EXPECT_STREQ("Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método AboutData Clase AddField", userDefined);
+//    EXPECT_STREQ("Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método AboutData Clase SetField", userDefined);
 }
 
 class AboutDataTestAboutData : public AboutData {
@@ -835,13 +835,13 @@ class AboutDataTestAboutData : public AboutData {
 
     AboutDataTestAboutData() : AboutData() {
         // test field abc is required, is announced, not localized
-        AddNewFieldDetails(TEST_FIELDABC, true, true, false, "s");
+        SetNewFieldDetails(TEST_FIELDABC, true, true, false, "s");
     }
     AboutDataTestAboutData(const char* defaultLanguage) : AboutData(defaultLanguage) {
-        AddNewFieldDetails(TEST_FIELDABC, true, true, false, "s");
+        SetNewFieldDetails(TEST_FIELDABC, true, true, false, "s");
     }
 
-    QStatus AddTestFieldABC(char* testFieldABC)
+    QStatus SetTestFieldABC(char* testFieldABC)
     {
         QStatus status = ER_OK;
         MsgArg arg;
@@ -849,7 +849,7 @@ class AboutDataTestAboutData : public AboutData {
         if (status != ER_OK) {
             return status;
         }
-        status = AddField(TEST_FIELDABC, arg);
+        status = SetField(TEST_FIELDABC, arg);
         return status;
     }
 
@@ -868,27 +868,27 @@ class AboutDataTestAboutData : public AboutData {
 
 const char* AboutDataTestAboutData::TEST_FIELDABC = "TestFieldABC";
 
-TEST(AboutData, AddNewField) {
+TEST(AboutData, SetNewField) {
     QStatus status = ER_FAIL;
     AboutDataTestAboutData aboutData("en");
 
     uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.AddAppId(appId, 6);
+    status = aboutData.SetAppId(appId, 6);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDeviceId("fakeID");
+    status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddAppName("Application");
+    status = aboutData.SetAppName("Application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddManufacture("Manufacture");
+    status = aboutData.SetManufacture("Manufacture");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddModelNumber("123456");
+    status = aboutData.SetModelNumber("123456");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddDescription("A poetic description of this application");
+    status = aboutData.SetDescription("A poetic description of this application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.AddSoftwareVersion("0.1.2");
+    status = aboutData.SetSoftwareVersion("0.1.2");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_FALSE(aboutData.IsValid());
-    status = aboutData.AddTestFieldABC("Mary had a little lamb.");
+    status = aboutData.SetTestFieldABC("Mary had a little lamb.");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(aboutData.IsValid());
 
@@ -938,7 +938,7 @@ TEST(AboutData, AddNewField) {
     EXPECT_STREQ("Mary had a little lamb.", testFieldabc);
 }
 
-//TEST(AboutData, AddSupportUrlEmpty) {
+//TEST(AboutData, SetSupportUrlEmpty) {
 //    QStatus status = ER_FAIL;
 //    AboutData aboutData("en");
 //

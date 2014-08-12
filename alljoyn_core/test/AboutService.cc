@@ -94,17 +94,17 @@ int main(int argc, char** argv)
     AboutData aboutData("en");
 
     uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.AddAppId(appId, 6);
-    status = aboutData.AddDeviceName("My Device Name");
-    status = aboutData.AddDeviceId("fakeID");
-    status = aboutData.AddAppName("Application");
-    status = aboutData.AddManufacture("Manufacture");
-    status = aboutData.AddModelNumber("123456");
-    status = aboutData.AddDescription("A poetic description of this application");
-    status = aboutData.AddDateOfManufacture("2014-03-24");
-    status = aboutData.AddSoftwareVersion("0.1.2");
-    status = aboutData.AddHardwareVersion("0.0.1");
-    status = aboutData.AddSupportUrl("http://www.alljoyn.org");
+    status = aboutData.SetAppId(appId, 6);
+    status = aboutData.SetDeviceName("My Device Name");
+    status = aboutData.SetDeviceId("fakeID");
+    status = aboutData.SetAppName("Application");
+    status = aboutData.SetManufacture("Manufacture");
+    status = aboutData.SetModelNumber("123456");
+    status = aboutData.SetDescription("A poetic description of this application");
+    status = aboutData.SetDateOfManufacture("2014-03-24");
+    status = aboutData.SetSoftwareVersion("0.1.2");
+    status = aboutData.SetHardwareVersion("0.0.1");
+    status = aboutData.SetSupportUrl("http://www.alljoyn.org");
     if (!aboutData.IsValid()) {
         printf("failed to setup about data.\n");
     }
