@@ -43,7 +43,7 @@ QStatus UART(const qcc::String& devName, uint32_t baud, uint8_t databits, const 
 }
 UARTStream::UARTStream(UARTFd fd) :
     fd(fd),
-    sourceEvent(new Event(fd, Event::IO_READ, false)),
+    sourceEvent(new Event(fd, Event::IO_READ)),
     sinkEvent(new Event(*sourceEvent, Event::IO_WRITE, false))
 {
 

@@ -1605,7 +1605,7 @@ void* TCPTransport::Run(void* arg)
         vector<Event*> checkEvents, signaledEvents;
         checkEvents.push_back(&stopEvent);
         for (list<pair<qcc::String, SocketFd> >::const_iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
-            checkEvents.push_back(new Event(i->second, Event::IO_READ, false));
+            checkEvents.push_back(new Event(i->second, Event::IO_READ));
         }
         m_listenFdsLock.Unlock(MUTEX_CONTEXT);
 
@@ -2790,7 +2790,7 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * This is a new not previously satisfied connection request, so attempt
      * to connect to the remote TCP address and port specified in the connectSpec.
      */
-    SocketFd sockFd = -1;
+    SocketFd sockFd = qcc::INVALID_SOCKET_FD;
     status = Socket(QCC_AF_INET, QCC_SOCK_STREAM, sockFd);
     if (status == ER_OK) {
         /* Turn off Nagle */
@@ -3354,7 +3354,7 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
      * TCP listener sockets and set SO_REUSEADDR/SO_REUSEPORT so we don't have
      * to wait for four minutes to relaunch the daemon if it crashes.
      */
-    SocketFd listenFd = -1;
+    SocketFd listenFd = qcc::INVALID_SOCKET_FD;
     status = Socket(QCC_AF_INET, QCC_SOCK_STREAM, listenFd);
     if (status != ER_OK) {
         m_listenFdsLock.Unlock(MUTEX_CONTEXT);
@@ -3625,7 +3625,7 @@ void TCPTransport::DoStopListen(qcc::String& normSpec)
      * used by the server accept loop (run thread).
      */
     m_listenFdsLock.Lock(MUTEX_CONTEXT);
-    qcc::SocketFd stopFd = -1;
+    qcc::SocketFd stopFd = qcc::INVALID_SOCKET_FD;
     bool found = false;
     for (list<pair<qcc::String, SocketFd> >::iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
         if (i->first == normSpec) {

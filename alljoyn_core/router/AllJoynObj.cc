@@ -427,7 +427,7 @@ void AllJoynObj::BindSessionPort(const InterfaceDescription::Member* member, Mes
             entry.sessionHost = sender;
             entry.sessionPort = sessionPort;
             entry.endpointName = sender;
-            entry.fd = -1;
+            entry.fd = qcc::INVALID_SOCKET_FD;
             entry.opts = opts;
             entry.id = 0;
             SessionMapInsert(entry);
@@ -1244,7 +1244,7 @@ void AllJoynObj::LeaveSession(const InterfaceDescription::Member* member, Messag
         }
 
         /* Close any open fd for this session */
-        if (smEntry->fd != -1) {
+        if (smEntry->fd != qcc::INVALID_SOCKET_FD) {
             qcc::Shutdown(smEntry->fd);
             qcc::Close(smEntry->fd);
         }
@@ -2036,7 +2036,7 @@ void AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
                     }
                 }
                 /* Session is lost when members + sessionHost together contain only one entry */
-                if ((it->second.fd == -1) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
+                if ((it->second.fd == qcc::INVALID_SOCKET_FD) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
                     SessionMapEntry tsme = it->second;
                     pair<String, SessionId> key = it->first;
                     if (!it->second.isInitializing) {
@@ -2137,7 +2137,7 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
                     }
                 }
                 /* A session with only one member and no sessionHost or only a sessionHost are "lost" */
-                if ((it->second.fd == -1) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
+                if ((it->second.fd == qcc::INVALID_SOCKET_FD) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
                     SessionMapEntry tsme = it->second;
                     pair<String, SessionId> key = it->first;
                     if (!it->second.isInitializing) {
@@ -2494,15 +2494,15 @@ QStatus AllJoynObj::ShutdownEndpoint(RemoteEndpoint& b2bEp, SocketFd& sockFd)
             status = b2bEp->Join();
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to join RemoteEndpoint used for streaming"));
-                sockFd = -1;
+                sockFd = qcc::INVALID_SOCKET_FD;
             }
         } else {
             QCC_LogError(status, ("Failed to stop RemoteEndpoint used for streaming"));
-            sockFd = -1;
+            sockFd = qcc::INVALID_SOCKET_FD;
         }
     } else {
         QCC_LogError(status, ("Failed to dup remote endpoint's socket"));
-        sockFd = -1;
+        sockFd = qcc::INVALID_SOCKET_FD;
     }
     return status;
 }
@@ -2539,7 +2539,7 @@ void AllJoynObj::GetSessionFd(const InterfaceDescription::Member* member, Messag
     msg->GetArgs(numArgs, args);
     SessionId id = args[0].v_uint32;
     QStatus status;
-    SocketFd sockFd = -1;
+    SocketFd sockFd = qcc::INVALID_SOCKET_FD;
 
     QCC_DbgTrace(("AllJoynObj::GetSessionFd(%u)", id));
 
@@ -2562,7 +2562,7 @@ void AllJoynObj::GetSessionFd(const InterfaceDescription::Member* member, Messag
     }
     ReleaseLocks();
 
-    if (sockFd != -1) {
+    if (sockFd != qcc::INVALID_SOCKET_FD) {
         /* Send the fd and transfer ownership */
         MsgArg replyArg;
         replyArg.Set("h", sockFd);
@@ -3947,7 +3947,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias, const qcc::String* o
                 /*
                  * as long as the file descriptor is -1 this is not a raw session
                  */
-                bool noRawSession = (it->second.fd == -1);
+                bool noRawSession = (it->second.fd == qcc::INVALID_SOCKET_FD);
                 if ((noMemberSingleHost || singleMemberNoHost) && noRawSession) {
                     SessionMapEntry tsme = it->second;
                     pair<String, SessionId> key = it->first;
