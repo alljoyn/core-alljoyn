@@ -107,12 +107,11 @@ typedef struct ARDP_RCV_BUFFER {
     uint32_t datalen;      /**< Data payload size */
     uint8_t* data;         /**< Pointer to data payload */
     ARDP_RCV_BUFFER* next; /**< Pointer to the next buffer */
-    bool inUse;            /**< Flag indicating that the buffer is occupied, but not delivered to the upper layer (fragment) */
-    bool isDelivered;      /**< Flag indicating that the buffer is not delivered to the upper layer */
-    uint32_t som;
-    uint16_t fcnt;
+    uint32_t som;          /**< Sequence number of first segment in fragmented message */
     uint32_t ttl;          /**< Remaining time to live of the AllJoyn message */
     uint32_t tRecv;        /**< Local time at which the segment was received (used for TTL calcs) */
+    uint16_t fcnt;         /**< Number of segments comprising fragmented message */
+    uint8_t flags;         /**< Buffer state flags */
 } ArdpRcvBuf;
 
 typedef void (*ARDP_CONNECT_CB)(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status);
