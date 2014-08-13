@@ -495,6 +495,15 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     FoundCallback m_foundCallback;  /**< Called by IpNameService when new busses are discovered */
 
+    class NetworkEventCallback {
+      public:
+        NetworkEventCallback(UDPTransport& transport) : m_transport(transport) { }
+        void Handler(const std::map<qcc::String, qcc::IPAddress>&);
+      private:
+        UDPTransport& m_transport;
+    };
+
+    NetworkEventCallback m_networkEventCallback;  /**< Called by IpNameService when new network interfaces come up */
     /**
      * @brief The default timeout for in-process authentications.
      *
@@ -698,10 +707,23 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     ManageState m_manage;       /**< Flag used for synchronization of ManageEndpoints() */
 
-    uint16_t m_listenPort;     /**< If m_isListening, is the port on which we are listening */
+    std::map<qcc::String, uint16_t> m_listenPortMap; /**< If m_isListening, a map of the ports on which we are listening on different interfaces/addresses */
+
+    std::map<qcc::String, qcc::IPEndpoint> m_requestedInterfaces; /**< A map of requested interfaces and corresponding IP addresses/ports or defaults */
+
+    std::map<qcc::String, qcc::String> m_requestedAddresses; /**< A map of requested IP addresses to interfaces or defaults */
+
+    std::map<qcc::String, uint16_t> m_requestedAddressPortMap; /**< A map of requested IP addresses to ports */
+
+    std::list<ListenRequest> m_pendingAdvertisements; /**< A list of advertisement requests that came in while no interfaces were yet IFF_UP */
+
+    std::list<ListenRequest> m_pendingDiscoveries; /**< A list of discovery requests that came in while no interfaces were yet IFF_UP */
 
     int32_t m_nsReleaseCount; /**< the number of times we have released the name service singleton */
 
+    bool m_wildcardIfaceProcessed; /**< flag to avoid processing network events if we have a wildcard interface request */
+
+    bool m_wildcardAddressProcessed;
 
     /**< The router advertisement prefix set in the configuration file appended with the BusController's unique name */
     qcc::String m_routerName;
