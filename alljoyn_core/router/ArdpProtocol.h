@@ -82,11 +82,12 @@ static const uint16_t ARDP_MAX_HEADER_LEN = 255;
 /* Length of fixed part of the header (sans EACKs), see below ArdpHeader structure */
 static const uint16_t ARDP_FIXED_HEADER_LEN = sizeof(ArdpHeader);
 
-/* Max size of  EACK mask (in 32-bit units) */
-const uint8_t ARDP_MAX_EACK_MASK_SZ = (ARDP_MAX_HEADER_LEN - ARDP_FIXED_HEADER_LEN) >> 2;
-
-/* Max number (times 32) of outstanding unacked segments the protocol allows per connection. */
-const uint32_t ARDP_MAX_EACK = ARDP_MAX_EACK_MASK_SZ * 32;
+/**
+ * Max window size (segments in flight). Limited by :
+ * a) header filed size (8 bit)
+ * b) presence of EACK mask that has to be in 32-bit chunks and depends on window size.
+ */
+const uint16_t ARDP_MAX_WINDOW_SIZE =  ((ARDP_MAX_HEADER_LEN * 2 - sizeof(ArdpHeader)) >> 5) << 5;
 
 const uint16_t ARDP_USRBMAX = (uint16_t)(ARDP_SEGBMAX - sizeof(ArdpHeader)); /**< Maximum size of an ARDP user datagram */
 

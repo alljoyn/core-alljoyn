@@ -113,7 +113,6 @@ typedef struct {
     ArdpSndBuf* buf;      /* Dynamically allocated array of unacked sent buffers */
     uint16_t maxDlen;     /* Maximum data payload size that can be sent without partitioning */
     uint16_t pending;     /* Number of unacknowledged sent buffers */
-    uint16_t hlen;        /* Length of send ARDP header on this connection */
 } ArdpSnd;
 
 /**
@@ -121,8 +120,8 @@ typedef struct {
  * Contains EACK bitmask to be sent to the remote side.
  */
 typedef struct {
-    uint32_t mask[ARDP_MAX_EACK_MASK_SZ];     /* mask in host order */
-    uint32_t htnMask[ARDP_MAX_EACK_MASK_SZ];  /* mask in network order */
+    uint32_t mask[ARDP_MAX_WINDOW_SIZE >> 5];     /* mask in host order */
+    uint32_t htnMask[ARDP_MAX_WINDOW_SIZE >> 5];  /* mask in network order */
     uint16_t sz;
     uint16_t fixedSz;
 } ArdpEack;
@@ -141,8 +140,6 @@ typedef struct {
     uint32_t last;       /* Sequence number of the last pending segment */
     ArdpRcvBuf* buf;     /* Array holding received buffers not consumed by the app */
     ArdpEack eack;       /* Tracking of received out-of-order segments */
-    uint16_t hlen;       /* Length of receive ARDP header on this connection */
-    uint16_t window;     /* Receive Window */
     uint16_t ackPending; /* Number of segments pending acknowledgement */
 } ArdpRcv;
 
@@ -637,13 +634,20 @@ static QStatus SendMsgHeader(ArdpHandle* handle, ArdpConnRecord* conn, ArdpHeade
     size_t sent;
 
     QCC_DbgTrace(("SendMsgHeader(): handle=0x%p, conn=0x%p, hdr=0x%p", handle, conn, h));
-    if (conn->rcv.eack.sz != 0) {
-        h->flags |= ARDP_FLAG_EACK;
-        QCC_DbgPrintf(("SendMsgHeader: have EACKs flags = %2x", h->flags));
-    }
 
     msgSG.AddBuffer(h, ARDP_FIXED_HEADER_LEN);
-    msgSG.AddBuffer(conn->rcv.eack.htnMask, conn->rcv.eack.fixedSz * sizeof(uint32_t));
+
+    if (conn->rcv.eack.sz != 0) {
+        QCC_DbgPrintf(("SendMsgHeader: have EACKs"));
+        h->flags |= ARDP_FLAG_EACK;
+        h->hlen = (ARDP_FIXED_HEADER_LEN + conn->rcv.eack.fixedSz) >> 1;
+        msgSG.AddBuffer(conn->rcv.eack.htnMask, conn->rcv.eack.fixedSz);
+        QCC_LogError(ER_OK, ("SendMsgHeader: EACK hlen = %d", h->hlen));
+    } else {
+        h->hlen = ARDP_FIXED_HEADER_LEN >> 1;
+        QCC_LogError(ER_OK, ("SendMsgHeader: normal hlen = %d", h->hlen));
+    }
+
     return qcc::SendToSG(conn->sock, conn->ipAddr, conn->ipPort, msgSG, sent);
 }
 
@@ -655,7 +659,6 @@ static QStatus Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t flags, uin
     QCC_DbgTrace(("Send(handle=%p, conn=%p, flags=0x%02x, seq=%u, ack=%u)", handle, conn, flags, seq, ack));
 
     h.flags = flags;
-    h.hlen = conn->snd.hlen / 2;
     h.src = htons(conn->local);
     h.dst = htons(conn->foreign);;
     h.seq = htonl(seq);
@@ -666,6 +669,7 @@ static QStatus Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t flags, uin
     if (h.dst == 0) {
         QCC_DbgPrintf(("Send(): destination = 0"));
     }
+
 
     return SendMsgHeader(handle, conn, &h);
 }
@@ -787,21 +791,24 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
                   handle, conn, sBuf->hdr, sBuf->data, sBuf->datalen, sBuf->ttl, sBuf->tStart));
 
     msgSG.AddBuffer(sBuf->hdr, ARDP_FIXED_HEADER_LEN);
-    msgSG.AddBuffer(conn->rcv.eack.htnMask, conn->rcv.eack.fixedSz * sizeof(uint32_t));
-    msgSG.AddBuffer(sBuf->data, sBuf->datalen);
 
     h->ack = htonl(conn->rcv.CUR);
     h->lcs = htonl(conn->rcv.LCS);
     h->acknxt = htonl(conn->snd.UNA);
+    h->flags = ARDP_FLAG_ACK | ARDP_FLAG_VER;
 
     QCC_DbgPrintf(("SendMsgData(): seq = %u, ack=%u, lcs = %u", ntohl(h->seq), conn->rcv.CUR, conn->rcv.LCS));
 
     if (conn->rcv.eack.sz == 0) {
-        h->flags &= (~ARDP_FLAG_EACK);
+        h->hlen = ARDP_FIXED_HEADER_LEN >> 1;
     } else {
+        QCC_DbgPrintf(("SendMsgData(): have EACKs"));
         h->flags |= ARDP_FLAG_EACK;
-        QCC_DbgPrintf(("SendMsgData(): have EACKs flags = %2x", h->flags));
+        h->hlen = (ARDP_FIXED_HEADER_LEN + conn->rcv.eack.fixedSz) >> 1;
+        msgSG.AddBuffer(conn->rcv.eack.htnMask, conn->rcv.eack.fixedSz);
     }
+
+    msgSG.AddBuffer(sBuf->data, sBuf->datalen);
 
     /*
      * the ttl found in the sBuf has the same meaning as the ttl in the
@@ -1281,8 +1288,6 @@ static QStatus InitConnRecord(ArdpHandle* handle, ArdpConnRecord* conn, qcc::Soc
     conn->rttMean = handle->config.dataTimeout;
     conn->rttMeanVar = 0;
 
-    conn->snd.hlen = ARDP_FIXED_HEADER_LEN;
-    conn->rcv.hlen = ARDP_FIXED_HEADER_LEN;
     conn->backoff = 0;
 
     return ER_OK;
@@ -1362,9 +1367,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
         QCC_DbgPrintf(("SendData: Segment %d, snd.NXT=%u, snd.UNA=%u", i, conn->snd.NXT, conn->snd.UNA));
         assert((conn->snd.NXT - conn->snd.UNA) < conn->snd.SEGMAX);
 
-        h->flags = ARDP_FLAG_ACK | ARDP_FLAG_VER;
         h->som = som;
-        h->hlen = conn->snd.hlen / 2;
         h->fcnt = htons(fcnt);
         h->src = htons(conn->local);
         h->dst = htons(conn->foreign);;
@@ -1478,7 +1481,7 @@ static QStatus SendRst(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ip
 
     ArdpHeader h;
     h.flags = ARDP_FLAG_RST | ARDP_FLAG_VER;
-    h.hlen = ARDP_FIXED_HEADER_LEN / 2;
+    h.hlen = ARDP_FIXED_HEADER_LEN >> 1;
     h.src = htons(local);
     h.dst = htons(foreign);
     h.dlen = 0;
@@ -1581,6 +1584,8 @@ static void CancelEackedSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint3
      * on EACKed segments.
      */
     start = start + 1;
+
+    /* Iterate over 32-bit bins */
     for (uint32_t i = 0; i < conn->remoteMskSz; i++) {
         uint32_t mask32 = ntohl(bitMask[i]);
         uint32_t bitCheck = 1 << 31;
@@ -1653,7 +1658,7 @@ static void AddRcvMsk(ArdpConnRecord* conn, uint32_t delta)
     uint32_t bin32 = (delta - 1) / 32;
     uint32_t offset = (uint32_t)32 - (delta - (bin32 << 5));
 
-    assert(bin32 < conn->rcv.eack.fixedSz);
+    assert(bin32 < (conn->rcv.eack.fixedSz >> 2));
     conn->rcv.eack.mask[bin32] = conn->rcv.eack.mask[bin32] | ((uint32_t)1 << offset);
     QCC_DbgPrintf(("AddRcvMsk: bin = %d, offset=%d, mask = 0x%f", bin32, offset, conn->rcv.eack.mask[bin32]));
     if (conn->rcv.eack.sz < bin32 + 1) {
@@ -1845,19 +1850,14 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
 {
     uint16_t index = seg->SEQ % conn->rcv.SEGMAX;
     ArdpRcvBuf* current = &conn->rcv.buf[index];
-    uint16_t hlen = conn->rcv.hlen;
 
     QCC_DbgTrace(("AddRcvBuffer(handle=%p, conn=%p, seg=%p, buf=%p, len=%d, ordered=%s", handle, conn, seg, buf, len, (ordered ? "true" : "false")));
 
     QCC_DbgPrintf(("AddRcvBuffer: seg->SEQ = %u, first=%u, last= %u", seg->SEQ, conn->rcv.LCS + 1, conn->rcv.last));
-    /* Sanity check */
-    if (hlen != (len - seg->DLEN)) {
-        QCC_DbgHLPrintf(("AddRcvBuffer: hlen=%d does not match (len-DLEN)=%d", hlen, len - seg->DLEN));
-        return ER_FAIL;
-    }
 
-    if (seg->DLEN > conn->rcv.SEGBMAX) {
-        QCC_DbgHLPrintf(("AddRcvBuffer: data len %d exceeds SEGBMAX %d", seg->DLEN, conn->rcv.SEGBMAX));
+    /* Sanity check */
+    if ((seg->DLEN + (seg->HLEN * 2)) != len) {
+        QCC_DbgHLPrintf(("AddRcvBuffer: header length (%d) + data length (%d) !=  %d", seg->HLEN * 2, seg->DLEN, len));
         return ER_FAIL;
     }
     assert(buf != NULL && len != 0);
@@ -1890,7 +1890,7 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
     current->seq = seg->SEQ;
     current->datalen = seg->DLEN;
     current->flags = ARDP_BUFFER_IN_USE;
-    memcpy(current->data, buf + hlen, seg->DLEN);
+    memcpy(current->data, buf + (seg->HLEN * 2), seg->DLEN);
 
     current->fcnt = seg->FCNT;
     current->som = seg->SOM;
@@ -1912,7 +1912,7 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
     }
 
 #ifndef NDEBUG
-    DumpBitMask(conn, conn->rcv.eack.mask, conn->rcv.eack.fixedSz, false);
+    DumpBitMask(conn, conn->rcv.eack.mask, conn->rcv.eack.fixedSz >> 2, false);
 #endif
     return ER_OK;
 }
@@ -1927,12 +1927,8 @@ static QStatus InitSnd(ArdpHandle* handle, ArdpConnRecord* conn)
     uint32_t ackMaskSize = (conn->rcv.SEGMAX + 31) >> 5;
 
     QCC_DbgPrintf(("InitSnd(conn=%p)", conn));
-    /* Fixed header size on send side. Should correspond to header size on remote's receive size. */
     hlen = ARDP_FIXED_HEADER_LEN + ackMaskSize * sizeof(uint32_t);
-    conn->snd.hlen = hlen;
-    conn->rcv.eack.fixedSz = ackMaskSize;
-    QCC_DbgPrintf(("InitSnd(): max header len %d actual send header len %d", ARDP_MAX_HEADER_LEN, hlen));
-
+    conn->rcv.eack.fixedSz = ackMaskSize * sizeof(uint32_t);
     conn->snd.maxDlen = conn->snd.SEGBMAX - overhead - hlen;
     QCC_DbgPrintf(("InitSnd(): actual max payload len %d", conn->snd.maxDlen));
 
@@ -1949,21 +1945,21 @@ static QStatus InitSnd(ArdpHandle* handle, ArdpConnRecord* conn)
     memset(conn->snd.buf, 0, conn->snd.SEGMAX * sizeof(ArdpSndBuf));
 
     /* Allocate contiguous space for sent data segment headers */
-    buffer = (uint8_t*) malloc(conn->snd.SEGMAX * hlen);
+    buffer = (uint8_t*) malloc(conn->snd.SEGMAX * ARDP_FIXED_HEADER_LEN);
 
     if (buffer == NULL) {
         QCC_DbgPrintf(("InitSnd(): Failed to allocate send buffer headers"));
         free(conn->snd.buf);
         return ER_OUT_OF_MEMORY;
     }
-    memset(buffer, 0, conn->snd.SEGMAX * hlen);
+    memset(buffer, 0, conn->snd.SEGMAX * ARDP_FIXED_HEADER_LEN);
 
     /* Array of pointers to headers of unAcked sent data buffers */
     for (uint32_t i = 0; i < conn->snd.SEGMAX; i++) {
         InitTimer(handle, conn, &conn->snd.buf[i].timer, RetransmitTimerHandler, &conn->snd.buf[i], handle->config.dataTimeout, 0);
         conn->snd.buf[i].next = &conn->snd.buf[(i + 1) % conn->snd.SEGMAX];
         conn->snd.buf[i].hdr = buffer;
-        buffer += hlen;
+        buffer += ARDP_FIXED_HEADER_LEN;
     }
 
     /* Calculate the minimum send window necessary to accomodate the largest message */
@@ -2032,9 +2028,6 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
                 /* Fixed size of EACK bitmask */
                 conn->remoteMskSz = ((conn->snd.SEGMAX + 31) >> 5);
-                conn->rcv.hlen = ARDP_FIXED_HEADER_LEN + conn->remoteMskSz * sizeof(uint32_t);
-                QCC_DbgPrintf(("ArdpMachine(): LISTEN: SYN received: rcv.hlen=%d", conn->rcv.hlen));
-
                 QCC_DbgPrintf(("ArdpMachine(): LISTEN: SYN received: the other side can receive max %d bytes", conn->snd.SEGBMAX));
                 if (handle->cb.AcceptCb != NULL) {
                     uint8_t* data = buf + sizeof(ArdpSynSegment);
@@ -2065,8 +2058,6 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN received"));
                 conn->snd.SEGMAX = ntohs(ss->segmax);
                 conn->remoteMskSz = ((conn->snd.SEGMAX + 31) >> 5);
-                conn->rcv.hlen = ARDP_FIXED_HEADER_LEN + conn->remoteMskSz * sizeof(uint32_t);
-                QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN received: rcv.hlen=%d, remoteMskSz=%d", conn->rcv.hlen, conn->remoteMskSz));
                 conn->window = conn->snd.SEGMAX;
                 conn->foreign = seg->SRC;
 
@@ -2080,38 +2071,43 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 assert(status == ER_OK && "ArdpMachine():SYN_SENT: Failed to initialize Send queue");
 
                 if (seg->FLG & ARDP_FLAG_ACK) {
-                    QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN | ACK received. state -> OPEN"));
-                    conn->snd.UNA = seg->ACK + 1;
-                    PostInitRcv(conn);
-                    SetState(conn, OPEN);
+                    if (seg->ACK == conn->snd.ISS) {
+                        QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN | ACK received. state -> OPEN"));
+                        conn->snd.UNA = seg->ACK + 1;
+                        PostInitRcv(conn);
+                        SetState(conn, OPEN);
 
-                    /* Stop connect retry timer */
-                    conn->connectTimer.retry = 0;
+                        /* Stop connect retry timer */
+                        conn->connectTimer.retry = 0;
 
-                    /* Initialize and kick off link timeout timer */
-                    conn->lastSeen = TimeNow(handle->tbase);
-                    InitTimer(handle, conn, &conn->probeTimer, ProbeTimerHandler, NULL, handle->config.probeTimeout, handle->config.probeRetries);
+                        /* Initialize and kick off link timeout timer */
+                        conn->lastSeen = TimeNow(handle->tbase);
+                        InitTimer(handle, conn, &conn->probeTimer, ProbeTimerHandler, NULL, handle->config.probeTimeout, handle->config.probeRetries);
 
-                    /* Initialize persist (dead window) timer */
-                    InitTimer(handle, conn, &conn->persistTimer, PersistTimerHandler, NULL, handle->config.persistTimeout, 0);
+                        /* Initialize persist (dead window) timer */
+                        InitTimer(handle, conn, &conn->persistTimer, PersistTimerHandler, NULL, handle->config.persistTimeout, 0);
 
-                    /* Initialize delayed ACK timer */
-                    InitTimer(handle, conn, &conn->ackTimer, AckTimerHandler, NULL, ARDP_ACK_TIMEOUT, 0);
+                        /* Initialize delayed ACK timer */
+                        InitTimer(handle, conn, &conn->ackTimer, AckTimerHandler, NULL, ARDP_ACK_TIMEOUT, 0);
 
-                    /*
-                     * <SEQ=snd.NXT><ACK=RCV.CUR><ACK>
-                     */
-                    Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->snd.NXT, conn->rcv.CUR);
+                        /*
+                         * <SEQ=snd.NXT><ACK=RCV.CUR><ACK>
+                         */
+                        Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->snd.NXT, conn->rcv.CUR);
 
-                    if (handle->cb.ConnectCb) {
-                        QCC_DbgPrintf(("ArdpMachine(): SYN_SENT->OPEN: ConnectCb(handle=%p, conn=%p", handle, conn));
-                        assert(!conn->passive);
-                        uint8_t* data = buf + (seg->HLEN * 2);
-                        handle->cb.ConnectCb(handle, conn, false, data, seg->DLEN, ER_OK);
-                        if (conn->synData.buf != NULL) {
-                            free(conn->synData.buf);
-                            conn->synData.buf = NULL;
+                        if (handle->cb.ConnectCb) {
+                            QCC_DbgPrintf(("ArdpMachine(): SYN_SENT->OPEN: ConnectCb(handle=%p, conn=%p", handle, conn));
+                            assert(!conn->passive);
+                            uint8_t* data = buf + (seg->HLEN * 2);
+                            handle->cb.ConnectCb(handle, conn, false, data, seg->DLEN, ER_OK);
+                            if (conn->synData.buf != NULL) {
+                                free(conn->synData.buf);
+                                conn->synData.buf = NULL;
+                            }
                         }
+                    } else {
+                        QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: ACK does not ASK ISS"));
+                        Disconnect(handle, conn, ER_ARDP_INVALID_RESPONSE);
                     }
                 } else {
                     QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN with no ACK implies simulateous connection attempt: state -> SYN_RCVD"));
@@ -2119,15 +2115,6 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                     if (handle->cb.AcceptCb != NULL) {
                         handle->cb.AcceptCb(handle, conn->ipAddr, conn->ipPort, conn, data, seg->DLEN, ER_OK);
                     }
-                }
-                break;
-            }
-
-            if (seg->FLG & ARDP_FLAG_ACK) {
-                if (seg->ACK != conn->snd.ISS) {
-                    QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: ACK does not ASK ISS"));
-                    Disconnect(handle, conn, ER_ARDP_INVALID_RESPONSE);
-                    break;
                 }
             }
 
@@ -2172,6 +2159,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 if (seg->ACK == conn->snd.ISS) {
 
                     QCC_DbgPrintf(("ArdpMachine(): SYN_RCVD: Got ACK with correct acknowledge.  state -> OPEN"));
+                    conn->snd.UNA = seg->ACK + 1;
                     PostInitRcv(conn);
                     SetState(conn, OPEN);
 
@@ -2458,8 +2446,8 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, u
     ArdpSeg SEG;
     SEG.FLG = header->flags;        /* The flags of the current segment */
     SEG.HLEN = header->hlen;        /* The header len */
-    if (!(SEG.FLG & ARDP_FLAG_SYN) && ((SEG.HLEN * 2) != conn->rcv.hlen)) {
-        QCC_DbgHLPrintf(("Receive: seg.len = %d, expected = %d", (SEG.HLEN * 2), conn->rcv.hlen));
+    if (!(SEG.FLG & ARDP_FLAG_SYN) && ((SEG.HLEN * 2) < ARDP_FIXED_HEADER_LEN)) {
+        QCC_DbgHLPrintf(("Receive: seg.hlen = %d, expected at least = %d", (SEG.HLEN * 2), ARDP_FIXED_HEADER_LEN));
         return ER_ARDP_INVALID_RESPONSE;
     }
     SEG.SRC = ntohs(header->src);       /* The source ARDP port */
