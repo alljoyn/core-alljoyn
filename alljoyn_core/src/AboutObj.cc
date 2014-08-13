@@ -28,6 +28,8 @@
 
 namespace ajn {
 
+const uint16_t AboutObj::VERSION = 1;
+
 AboutObj::AboutObj(ajn::BusAttachment& bus) :
     BusObject(org::alljoyn::About::ObjectPath),
     m_busAttachment(&bus),

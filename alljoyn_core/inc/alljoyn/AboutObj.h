@@ -38,7 +38,7 @@ class AboutObj : public BusObject {
     /**
      * version of the org.alljoyn.About interface
      */
-    static const uint8_t VERSION = 1;
+    static const uint16_t VERSION;
 
     /**
      * create a new About class
