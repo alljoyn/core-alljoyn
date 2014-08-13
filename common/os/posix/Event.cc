@@ -33,11 +33,11 @@
 #include <qcc/Event.h>
 
 #if defined(MECHANISM_EVENTFD) && defined(MECHANISM_PIPE)
-#error "Specifiy either MECHANISM_EVENTFD or MECHANISM_PIPE"
+#error "Cannot specifiy both MECHANISM_EVENTFD and MECHANISM_PIPE"
 #endif
 
 #if !defined(MECHANISM_EVENTFD) && !defined(MECHANISM_PIPE)
-#error "Specifiy either MECHANISM_EVENTFD or MECHANISM_PIPE"
+#error "Must specify MECHANISM_EVENTFD or MECHANISM_PIPE"
 #endif
 
 #if defined(MECHANISM_EVENTFD)
@@ -364,7 +364,10 @@ static QStatus SetMechanism(int signalFd)
     char val = 's';
     /*
      * In order to signal our event, we write a byte into the pipe, which then
-     * becomes ready and the event becomes signaled.
+     * becomes ready and the event becomes signaled.  Multiple writes into the
+     * pipe are possible if multiple calls to SetEvent() are made.  We don't
+     * attempt to put together a thread-safe way to limit writes to exactly one
+     * so ResetMechanism() will have to read until the pipe becomes empty.
      */
     int ret = write(signalFd, &val, sizeof(val));
     return ret >= 0 ? ER_OK : ER_FAIL;
@@ -378,7 +381,9 @@ static QStatus ResetMechanism(int fd)
     /*
      * In order to reset our event, we read from the pipe until there are no
      * longer any bytes in it which then makes the associated fd not ready and
-     * the event becomes signaled.
+     * the event becomes signaled.  Since SetMechanism() doesn't guarantee only
+     * one write to the pipe, we have to read all of the bytes that may be
+     * there.
      */
     while (sizeof(buf) == ret) {
         ret = read(fd, buf, sizeof(buf));
@@ -541,17 +546,7 @@ QStatus Event::SetEvent()
     QStatus status;
 
     if (GEN_PURPOSE == eventType) {
-        fd_set rdSet;
-        struct timeval tv;
-        tv.tv_sec = tv.tv_usec = 0;
-        FD_ZERO(&rdSet);
-        FD_SET(fd, &rdSet);
-        int ret = select(fd + 1, &rdSet, NULL, NULL, &tv);
-        if (ret == 0) {
-            status = SetMechanism(signalFd);
-        } else {
-            status = ER_FAIL;
-        }
+        status = SetMechanism(signalFd);
     } else if (TIMED == eventType) {
         uint32_t now = GetTimestamp();
         if (now < timestamp) {
