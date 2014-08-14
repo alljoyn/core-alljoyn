@@ -760,7 +760,10 @@ NetworkEventType NetworkEventReceive(qcc::SocketFd sockFd, std::set<uint32_t>& n
     const uint32_t BUFSIZE = 65536;
     char* buffer = new char[BUFSIZE];
 
-    return NetworkEventRecv(sockFd, buffer, BUFSIZE, networkRefreshSet);
+    NetworkEventType ret = NetworkEventRecv(sockFd, buffer, BUFSIZE, networkRefreshSet);
+
+    delete[] buffer;
+    return ret;
 }
 
 } // namespace ajn
