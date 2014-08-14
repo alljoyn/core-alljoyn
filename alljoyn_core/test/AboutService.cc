@@ -98,7 +98,7 @@ int main(int argc, char** argv)
     status = aboutData.SetDeviceName("My Device Name");
     status = aboutData.SetDeviceId("fakeID");
     status = aboutData.SetAppName("Application");
-    status = aboutData.SetManufacture("Manufacture");
+    status = aboutData.SetManufacturer("Manufacturer");
     status = aboutData.SetModelNumber("123456");
     status = aboutData.SetDescription("A poetic description of this application");
     status = aboutData.SetDateOfManufacture("2014-03-24");

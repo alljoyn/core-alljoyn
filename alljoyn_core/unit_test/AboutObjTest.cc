@@ -72,7 +72,7 @@ class AboutObjTest : public testing::Test {
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = aboutData.SetAppName("Application");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = aboutData.SetManufacture("Manufacture");
+        status = aboutData.SetManufacturer("Manufacturer");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = aboutData.SetModelNumber("123456");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);

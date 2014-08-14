@@ -124,7 +124,7 @@ int main(int argc, char** argv)
     //DeviceId is a string encoded 128bit UUID
     status = aboutData.SetDeviceId("93c06771-c725-48c2-b1ff-6a2a59d445b8");
     status = aboutData.SetAppName("Application");
-    status = aboutData.SetManufacture("Manufacture");
+    status = aboutData.SetManufacturer("Manufacturer");
     status = aboutData.SetModelNumber("123456");
     status = aboutData.SetDescription("A poetic description of this application");
     status = aboutData.SetDateOfManufacture("2014-03-24");

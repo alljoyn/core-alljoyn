@@ -91,8 +91,6 @@ QStatus AboutProxy::GetAboutData(const char* languageTag, AboutData& data)
         status = ER_FAIL;
     }
     return status;
-
-    return status;
 }
 
 QStatus AboutProxy::GetVersion(uint16_t& version)

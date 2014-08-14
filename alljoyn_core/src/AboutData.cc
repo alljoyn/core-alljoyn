@@ -192,7 +192,6 @@ QStatus AboutData::CreateFromXml(qcc::String aboutDataXml)
                 if (it->first == SUPPORTED_LANGUAGES) {
                     std::vector<qcc::XmlElement*> languageElements = root->GetChild(it->first)->GetChildren();
                     std::vector<qcc::XmlElement*>::iterator lang_it;
-                    int elementCnt = 0;
                     for (std::vector<qcc::XmlElement*>::iterator lang_it = languageElements.begin(); lang_it != languageElements.end(); ++lang_it) {
                         SetSupportedLanguage((*lang_it)->GetContent().c_str());
                     }
@@ -451,18 +450,18 @@ QStatus AboutData::GetAppName(char** appName, const char* language)
     return status;
 }
 
-QStatus AboutData::SetManufacture(const char* manufacture, const char* language)
+QStatus AboutData::SetManufacturer(const char* manufacturer, const char* language)
 {
     QStatus status = ER_OK;
     MsgArg arg;
-    status = arg.Set(m_aboutFields[MANUFACTURER].signature.c_str(), manufacture);
+    status = arg.Set(m_aboutFields[MANUFACTURER].signature.c_str(), manufacturer);
     if (status != ER_OK) {
         return status;
     }
     status = SetField(MANUFACTURER, arg, language);
     return status;
 }
-QStatus AboutData::GetManufacture(char** manufacture, const char* language)
+QStatus AboutData::GetManufacturer(char** manufacturer, const char* language)
 {
     QStatus status;
     MsgArg* arg;
@@ -470,7 +469,7 @@ QStatus AboutData::GetManufacture(char** manufacture, const char* language)
     if (status != ER_OK) {
         return status;
     }
-    status = arg->Get(m_aboutFields[MANUFACTURER].signature.c_str(), manufacture);
+    status = arg->Get(m_aboutFields[MANUFACTURER].signature.c_str(), manufacturer);
     return status;
 }
 

@@ -25,8 +25,8 @@ if test_env['BR'] == 'on':
 if test_env['OS'] != 'win8':
     # Test Programs
     progs = [
-    	test_env.Program('aclient',   ['AboutClient.cc']),
-    	test_env.Program('aservice',  ['AboutService.cc']),
+        test_env.Program('aclient',   ['AboutClient.cc']),
+        test_env.Program('aservice',  ['AboutService.cc']),
         test_env.Program('bastress',      ['bastress.cc']),
         test_env.Program('bastress2',     ['bastress2.cc']),
         test_env.Program('bignum',        ['bignum.cc']),

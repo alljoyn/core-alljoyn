@@ -289,28 +289,28 @@ class AboutData {
      * Manufacture is part of the announce signal
      * Manufacture can be localized for other languages
      *
-     * @param[in] manufacture the Manufacture (UTF8 encoded string)
+     * @param[in] manufacturer the Manufacturer (UTF8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
      *            if language is NULL the Manufacture will be set for the default language.
      *
      * @return ER_OK on success
      */
-    QStatus SetManufacture(const char* manufacture, const char* language = NULL);
+    QStatus SetManufacturer(const char* manufacturer, const char* language = NULL);
 
     /**
-     * Get the Manufacture from the About data
+     * Get the Manufacturer from the About data
      *
      * Manufacture is required
      * Manufacture is part of the announce signal
      * Manufacture can be localized for other languages
      *
-     * @param[out] manufacture the Manufacture found in the AboutData (UTF8 encoded string)
+     * @param[out] manufacturer the Manufacturer found in the AboutData (UTF8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the Manufacture for the default language will be returned.
+     *            if language is NULL the Manufacturer for the default language will be returned.
      *
      * @return ER_OK on success
      */
-    QStatus GetManufacture(char** manufacture, const char* language = NULL);
+    QStatus GetManufacturer(char** manufacturer, const char* language = NULL);
 
     /**
      * Set the ModelNumber to the AboutData

@@ -129,24 +129,24 @@ TEST(AboutData, SetAppName) {
     EXPECT_STREQ("aplicacion", appName);
 }
 
-TEST(AboutData, SetManufacture) {
+TEST(AboutData, SetManufacturer) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    status = aboutData.SetManufacture("Manufacture");
+    status = aboutData.SetManufacturer("Manufacturer");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    char* manufacture;
-    status = aboutData.GetManufacture(&manufacture);
+    char* manufacturer;
+    status = aboutData.GetManufacturer(&manufacturer);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("Manufacture", manufacture);
+    EXPECT_STREQ("Manufacturer", manufacturer);
 
-    status = aboutData.SetManufacture("manufactura", "es");
+    status = aboutData.SetManufacturer("manufactura", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = aboutData.GetManufacture(&manufacture, "es");
+    status = aboutData.GetManufacturer(&manufacturer, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("manufactura", manufacture);
+    EXPECT_STREQ("manufactura", manufacturer);
 }
 
 TEST(AboutData, SetModelNumber) {
@@ -269,7 +269,7 @@ TEST(AboutData, IsValid)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetAppName("Application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.SetManufacture("Manufacture");
+    status = aboutData.SetManufacturer("Manufacturer");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetModelNumber("123456");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -285,7 +285,7 @@ TEST(AboutData, IsValid)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetAppName("aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.SetManufacture("manufactura", "es");
+    status = aboutData.SetManufacturer("manufactura", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetDescription("Una descripcion poetica de esta aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -304,7 +304,7 @@ TEST(AboutData, GetMsgArg)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetAppName("Application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.SetManufacture("Manufacture");
+    status = aboutData.SetManufacturer("Manufacture");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetModelNumber("123456");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -318,7 +318,7 @@ TEST(AboutData, GetMsgArg)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetAppName("aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.SetManufacture("manufactura", "es");
+    status = aboutData.SetManufacturer("manufactura", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetDescription("Una descripcion poetica de esta aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -378,7 +378,7 @@ TEST(AboutData, GetMsgArgAnnounce)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetAppName("Application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.SetManufacture("Manufacture");
+    status = aboutData.SetManufacturer("Manufacture");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetModelNumber("123456");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -477,7 +477,7 @@ TEST(AboutData, GetMsgArgWithOEMSpecificField)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetAppName("Application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.SetManufacture("Manufacture");
+    status = aboutData.SetManufacturer("Manufacturer");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetModelNumber("123456");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -491,7 +491,7 @@ TEST(AboutData, GetMsgArgWithOEMSpecificField)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetAppName("aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.SetManufacture("manufactura", "es");
+    status = aboutData.SetManufacturer("manufactura", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetDescription("Una descripcion poetica de esta aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -544,7 +544,7 @@ TEST(AboutData, GetMsgArgWithOEMSpecificField)
     aboutArg.GetElement("{sv}", AboutData::MANUFACTURER, &args);
     char* manufacturer;
     args->Get("s", &manufacturer);
-    EXPECT_STREQ("Manufacture", manufacturer);
+    EXPECT_STREQ("Manufacturer", manufacturer);
 
     aboutArg.GetElement("{sv}", AboutData::MODEL_NUMBER, &args);
     char* modelNumber;
@@ -578,7 +578,7 @@ TEST(AboutData, InitUsingMsgArg)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetAppName("Application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.SetManufacture("Manufacture");
+    status = aboutData.SetManufacturer("Manufacturer");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetModelNumber("123456");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -592,7 +592,7 @@ TEST(AboutData, InitUsingMsgArg)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetAppName("aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.SetManufacture("manufactura", "es");
+    status = aboutData.SetManufacturer("manufactura", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetDescription("Una descripcion poetica de esta aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -639,10 +639,10 @@ TEST(AboutData, InitUsingMsgArg)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Application", appName);
 
-    char* manufacture;
-    status = aboutDataInit.GetManufacture(&manufacture);
+    char* manufacturer;
+    status = aboutDataInit.GetManufacturer(&manufacturer);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("Manufacture", manufacture);
+    EXPECT_STREQ("Manufacturer", manufacturer);
 
     char* modelNumber;
     status = aboutDataInit.GetModelNumber(&modelNumber);
@@ -753,14 +753,14 @@ TEST(AboutData, CreateFromXml) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Mi Nombre de la aplicación", appName);
 
-    char* manufacture;
-    status = aboutData.GetManufacture(&manufacture);
+    char* manufacturer;
+    status = aboutData.GetManufacturer(&manufacturer);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("Company", manufacture);
+    EXPECT_STREQ("Company", manufacturer);
 
-    status = aboutData.GetManufacture(&manufacture, "es");
+    status = aboutData.GetManufacturer(&manufacturer, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_STREQ("Empresa", manufacture);
+    EXPECT_STREQ("Empresa", manufacturer);
 
     qcc::String* languages;
     size_t numLanguages;
@@ -879,7 +879,7 @@ TEST(AboutData, SetNewField) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetAppName("Application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.SetManufacture("Manufacture");
+    status = aboutData.SetManufacturer("Manufacturer");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetModelNumber("123456");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -925,7 +925,7 @@ TEST(AboutData, SetNewField) {
     announceArg.GetElement("{sv}", AboutDataTestAboutData::MANUFACTURER, &args);
     char* manufacturer;
     args->Get("s", &manufacturer);
-    EXPECT_STREQ("Manufacture", manufacturer);
+    EXPECT_STREQ("Manufacturer", manufacturer);
 
     announceArg.GetElement("{sv}", AboutDataTestAboutData::MODEL_NUMBER, &args);
     char* modelNumber;
