@@ -834,7 +834,9 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
         uint32_t msElapsed = TimeNow(handle->tbase) - sBuf->tStart;
 
         /* Factor in mean RTT to account for time on the wire */
-        msElapsed += (conn->rttMean >> 1);
+        if (conn->rttInit) {
+            msElapsed += (conn->rttMean >> 1);
+        }
 
         /*
          * If the message has never been on the wire, it is trivial to drop.
