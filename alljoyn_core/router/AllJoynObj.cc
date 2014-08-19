@@ -3126,6 +3126,7 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
         status = TransportPermission::FilterTransports(srcEp, sender, transports, "AllJoynObj::FindAdvertisedName");
     }
 
+    MatchMap::const_iterator namePrefix = matching.find("name");
     if (ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS == replyCode) {
         /* Check to see if this endpoint is already discovering this prefix */
         bool foundEntry = false;
@@ -3145,7 +3146,11 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
         }
 
         if (!foundEntry) {
-            discoverMap.insert(std::make_pair(matchingStr, DiscoverMapEntry(transports, sender, matching)));
+            /* This is the fix for multiple found names issue.
+             * If this is a name-based query, set initComplete to false and set it to true after
+             * the calls to the transports are complete.
+             */
+            discoverMap.insert(std::make_pair(matchingStr, DiscoverMapEntry(transports, sender, matching, namePrefix == matching.end())));
         }
     }
     /* Find out the transports on which discovery needs to be enabled for this name.
@@ -3179,7 +3184,6 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
     }
 
     /* Send FoundAdvertisedName signals if there are existing matches for matching */
-    MatchMap::const_iterator namePrefix = matching.find("name");
     if ((ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS == replyCode) && (namePrefix != matching.end())) {
         AcquireLocks();
         String prefix = namePrefix->second.substr(0, namePrefix->second.find_last_of('*'));
@@ -3194,9 +3198,6 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
             if (sentSet.find(sentSetEntry) == sentSet.end()) {
                 String foundName = it->first;
                 NameMapEntry nme = it->second;
-                ReleaseLocks();
-                status = SendFoundAdvertisedName(sender, foundName, nme.transport, namePrefix->second);
-                AcquireLocks();
                 it = nameMap.lower_bound(prefix);
                 sentSet.insert(sentSetEntry);
                 if (ER_OK != status) {
@@ -3206,7 +3207,23 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
                 ++it;
             }
         }
+
+
+        //Set initComplete to true
+        DiscoverMapType::iterator dit = discoverMap.lower_bound(matchingStr);
+        while ((dit != discoverMap.end()) && (dit->first == matchingStr)) {
+            if (dit->second.sender == sender) {
+                dit->second.initComplete = true;
+                break;
+            }
+            ++dit;
+        }
         ReleaseLocks();
+        set<pair<String, TransportMask> >::iterator sit = sentSet.begin();
+        while (sit != sentSet.end()) {
+            status = SendFoundAdvertisedName(sender, sit->first, sit->second, namePrefix->second);
+            sit++;
+        }
     }
 }
 
@@ -4196,6 +4213,11 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
                                 if (namePrefix == dit->second.matching.end()) {
                                     continue;
                                 }
+
+                                if (!dit->second.initComplete) {
+                                    continue;
+                                }
+
                                 if (!WildcardMatch(*nit, namePrefix->second) && (transport & dit->second.transportMask)) {
                                     foundNameSet.insert(FoundNameEntry(*nit, namePrefix->second, dit->second.sender));
                                 }
