@@ -642,10 +642,8 @@ static QStatus SendMsgHeader(ArdpHandle* handle, ArdpConnRecord* conn, ArdpHeade
         h->flags |= ARDP_FLAG_EACK;
         h->hlen = (ARDP_FIXED_HEADER_LEN + conn->rcv.eack.fixedSz) >> 1;
         msgSG.AddBuffer(conn->rcv.eack.htnMask, conn->rcv.eack.fixedSz);
-        QCC_LogError(ER_OK, ("SendMsgHeader: EACK hlen = %d", h->hlen));
     } else {
         h->hlen = ARDP_FIXED_HEADER_LEN >> 1;
-        QCC_LogError(ER_OK, ("SendMsgHeader: normal hlen = %d", h->hlen));
     }
 
     return qcc::SendToSG(conn->sock, conn->ipAddr, conn->ipPort, msgSG, sent);
@@ -1781,6 +1779,10 @@ static uint32_t AdvanceRcvQueue(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRc
             } else {
                 QCC_DbgPrintf(("ArdpRcvBuffer(): RecvCb(conn=0x%p, buf=%p, seq=%u, fcnt (@ %p)=%d)", conn, startFrag, startFrag->seq, &(startFrag->fcnt), startFrag->fcnt));
                 handle->cb.RecvCb(handle, conn, startFrag, ER_OK);
+                for (uint32_t i = 0; i < current->fcnt; i++) {
+                    fragment->flags |= ARDP_BUFFER_DELIVERED;
+                    fragment = fragment->next;
+                }
             }
         }
 
