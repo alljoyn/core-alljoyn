@@ -59,7 +59,9 @@ static pthread_key_t cleanExternalThreadKey;
 void Thread::CleanExternalThread(void* t)
 {
     /* This function will not be called if value of key is NULL */
-    assert(t);
+    if (!t) {
+        return;
+    }
 
     Thread* thread = reinterpret_cast<Thread*>(t);
     threadListLock->Lock();
@@ -89,6 +91,14 @@ ThreadListInitializer::ThreadListInitializer()
 ThreadListInitializer::~ThreadListInitializer()
 {
     if (0 == --threadListCounter) {
+        void* thread = pthread_getspecific(cleanExternalThreadKey);
+        // pthread_key_delete will not call CleanExternalThread for this thread,
+        // so we manually call it here.
+        Thread::CleanExternalThread(thread);
+        int ret = pthread_key_delete(cleanExternalThreadKey);
+        if (ret != 0) {
+            QCC_LogError(ER_OS_ERROR, ("Deleting TLS key: %s", strerror(ret)));
+        }
         delete Thread::threadList;
         delete Thread::threadListLock;
     }
