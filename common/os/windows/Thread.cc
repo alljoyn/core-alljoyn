@@ -91,6 +91,9 @@ ThreadListInitializer::ThreadListInitializer()
 ThreadListInitializer::~ThreadListInitializer()
 {
     if (0 == --threadListCounter) {
+        // Note that FlsFree will call the callback function for all
+        // fibers with a valid key in the Fls slot.
+        FlsFree(cleanExternalThreadKey);
         delete Thread::threadList;
         delete Thread::threadListLock;
     }
