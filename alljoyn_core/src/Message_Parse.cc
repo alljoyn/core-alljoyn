@@ -1230,7 +1230,8 @@ QStatus _Message::Unmarshal(qcc::String& endpointName, bool handlePassing, bool 
      * session.
      */
     if (senderField->typeId != ALLJOYN_INVALID) {
-        PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(senderField->v_string.str);
+        PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(senderField->v_string.str,
+                                                                                   (msgHeader.flags & ALLJOYN_FLAG_SESSIONLESS) == 0);
         bool unreliable = hdrFields.field[ALLJOYN_HDR_FIELD_TIME_TO_LIVE].typeId != ALLJOYN_INVALID;
         bool secure = (msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED) != 0;
         if ((msgHeader.flags & ALLJOYN_FLAG_SESSIONLESS) == 0) {
