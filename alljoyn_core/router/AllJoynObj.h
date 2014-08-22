@@ -580,11 +580,12 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
         TransportMask transportMask;
         qcc::String sender;
         MatchMap matching;
-
-        DiscoverMapEntry(TransportMask transportMask, const qcc::String& sender, const MatchMap& matching) :
+        bool initComplete;
+        DiscoverMapEntry(TransportMask transportMask, const qcc::String& sender, const MatchMap& matching, bool initComplete = false) :
             transportMask(transportMask),
             sender(sender),
-            matching(matching) { }
+            matching(matching),
+            initComplete(initComplete) { }
     };
     typedef std::multimap<qcc::String, DiscoverMapEntry> DiscoverMapType;
     DiscoverMapType discoverMap;
@@ -626,7 +627,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
             id(0),
             sessionPort(0),
             opts(),
-            fd(-1),
+            fd(qcc::INVALID_SOCKET_FD),
             isInitializing(false),
             isRawReady(false) { }
     };

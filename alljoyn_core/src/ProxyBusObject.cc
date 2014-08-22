@@ -132,7 +132,7 @@ void ProxyBusObject::GetAllPropsMethodCB(Message& message, void* context)
     } else {
         const MsgArg noVal;
         QStatus status = ER_BUS_NO_SUCH_PROPERTY;
-        if (::strcmp(message->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0) {
+        if (message->GetErrorName() != NULL && ::strcmp(message->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0) {
             const char* err;
             uint16_t rawStatus;
             if (message->GetArgs("sq", &err, &rawStatus) == ER_OK) {
@@ -229,7 +229,7 @@ void ProxyBusObject::GetPropMethodCB(Message& message, void* context)
     } else {
         const MsgArg noVal;
         QStatus status = ER_BUS_NO_SUCH_PROPERTY;
-        if (::strcmp(message->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0) {
+        if (message->GetErrorName() != NULL && ::strcmp(message->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0) {
             const char* err;
             uint16_t rawStatus;
             if (message->GetArgs("sq", &err, &rawStatus) == ER_OK) {
@@ -326,7 +326,7 @@ void ProxyBusObject::SetPropMethodCB(Message& message, void* context)
 
     if (message->GetType() != MESSAGE_METHOD_RET) {
         status = ER_BUS_NO_SUCH_PROPERTY;
-        if (::strcmp(message->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0) {
+        if (message->GetErrorName() != NULL && ::strcmp(message->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0) {
             const char* err;
             uint16_t rawStatus;
             if (message->GetArgs("sq", &err, &rawStatus) == ER_OK) {
@@ -1036,7 +1036,7 @@ void ProxyBusObject::IntrospectMethodCB(Message& msg, void* context)
         ident += " : ";
         ident += msg->GetObjectPath();
         status = ParseXml(msg->GetArg(0)->v_string.str, ident.c_str());
-    } else if (::strcmp("org.freedesktop.DBus.Error.ServiceUnknown", msg->GetErrorName()) == 0) {
+    } else if (msg->GetErrorName() != NULL && ::strcmp("org.freedesktop.DBus.Error.ServiceUnknown", msg->GetErrorName()) == 0) {
         status = ER_BUS_NO_SUCH_SERVICE;
     } else {
         status = ER_FAIL;

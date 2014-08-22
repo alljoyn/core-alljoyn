@@ -18,6 +18,7 @@
 #define _RULE_INFO_
 
 #include <qcc/String.h>
+#include <stdio.h>
 
 class RuleInfo {
   public:

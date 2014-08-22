@@ -501,12 +501,9 @@ Event::Event() : fd(-1), signalFd(-1), ioFd(-1), eventType(GEN_PURPOSE), numThre
     CreateMechanism(&fd, &signalFd);
 }
 
-Event::Event(int ioFd, EventType eventType, bool genPurpose)
+Event::Event(SocketFd ioFd, EventType eventType)
     : fd(-1), signalFd(-1), ioFd(ioFd), eventType(eventType), timestamp(0), period(0), numThreads(0)
 {
-    if (genPurpose) {
-        CreateMechanism(&fd, &signalFd);
-    }
 }
 
 Event::Event(Event& event, EventType eventType, bool genPurpose)

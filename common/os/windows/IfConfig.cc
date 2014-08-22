@@ -412,9 +412,4 @@ QStatus IfConfig(std::vector<IfConfigEntry>& entries)
     return ER_OK;
 }
 
-QStatus IfConfigIPv4(std::vector<IfConfigEntry>& entries)
-{
-    return ER_NOT_IMPLEMENTED;
-}
-
 } // namespace qcc

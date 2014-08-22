@@ -299,7 +299,7 @@ QStatus Accept(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort, Soc
             status = ER_OS_ERROR;
             QCC_LogError(status, ("Listening: %s", StrError().c_str()));
         }
-        newSockfd = -1;
+        newSockfd = qcc::INVALID_SOCKET_FD;
     } else {
         if (addr.ss_family == AF_INET) {
             struct sockaddr_in* sa = reinterpret_cast<struct sockaddr_in*>(&addr);
@@ -323,7 +323,7 @@ QStatus Accept(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort, Soc
             status = ER_OS_ERROR;
             QCC_LogError(status, ("Failed to set socket non-blocking %s", StrError().c_str()));
             closesocket(newSockfd);
-            newSockfd = -1;
+            newSockfd = qcc::INVALID_SOCKET_FD;
         } else {
             QCC_DbgHLPrintf(("Accept(sockfd = %d) newSockfd = %d", sockfd, newSockfd));
         }

@@ -427,7 +427,7 @@ void AllJoynObj::BindSessionPort(const InterfaceDescription::Member* member, Mes
             entry.sessionHost = sender;
             entry.sessionPort = sessionPort;
             entry.endpointName = sender;
-            entry.fd = -1;
+            entry.fd = qcc::INVALID_SOCKET_FD;
             entry.opts = opts;
             entry.id = 0;
             SessionMapInsert(entry);
@@ -1244,7 +1244,7 @@ void AllJoynObj::LeaveSession(const InterfaceDescription::Member* member, Messag
         }
 
         /* Close any open fd for this session */
-        if (smEntry->fd != -1) {
+        if (smEntry->fd != qcc::INVALID_SOCKET_FD) {
             qcc::Shutdown(smEntry->fd);
             qcc::Close(smEntry->fd);
         }
@@ -2036,7 +2036,7 @@ void AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
                     }
                 }
                 /* Session is lost when members + sessionHost together contain only one entry */
-                if ((it->second.fd == -1) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
+                if ((it->second.fd == qcc::INVALID_SOCKET_FD) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
                     SessionMapEntry tsme = it->second;
                     pair<String, SessionId> key = it->first;
                     if (!it->second.isInitializing) {
@@ -2137,7 +2137,7 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
                     }
                 }
                 /* A session with only one member and no sessionHost or only a sessionHost are "lost" */
-                if ((it->second.fd == -1) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
+                if ((it->second.fd == qcc::INVALID_SOCKET_FD) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
                     SessionMapEntry tsme = it->second;
                     pair<String, SessionId> key = it->first;
                     if (!it->second.isInitializing) {
@@ -2494,15 +2494,15 @@ QStatus AllJoynObj::ShutdownEndpoint(RemoteEndpoint& b2bEp, SocketFd& sockFd)
             status = b2bEp->Join();
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to join RemoteEndpoint used for streaming"));
-                sockFd = -1;
+                sockFd = qcc::INVALID_SOCKET_FD;
             }
         } else {
             QCC_LogError(status, ("Failed to stop RemoteEndpoint used for streaming"));
-            sockFd = -1;
+            sockFd = qcc::INVALID_SOCKET_FD;
         }
     } else {
         QCC_LogError(status, ("Failed to dup remote endpoint's socket"));
-        sockFd = -1;
+        sockFd = qcc::INVALID_SOCKET_FD;
     }
     return status;
 }
@@ -2539,7 +2539,7 @@ void AllJoynObj::GetSessionFd(const InterfaceDescription::Member* member, Messag
     msg->GetArgs(numArgs, args);
     SessionId id = args[0].v_uint32;
     QStatus status;
-    SocketFd sockFd = -1;
+    SocketFd sockFd = qcc::INVALID_SOCKET_FD;
 
     QCC_DbgTrace(("AllJoynObj::GetSessionFd(%u)", id));
 
@@ -2562,7 +2562,7 @@ void AllJoynObj::GetSessionFd(const InterfaceDescription::Member* member, Messag
     }
     ReleaseLocks();
 
-    if (sockFd != -1) {
+    if (sockFd != qcc::INVALID_SOCKET_FD) {
         /* Send the fd and transfer ownership */
         MsgArg replyArg;
         replyArg.Set("h", sockFd);
@@ -2841,27 +2841,42 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
             }
 
             if (ALLJOYN_ADVERTISENAME_REPLY_SUCCESS == replyCode) {
+                bool transportsProcessed = false;
+                TransportList& transList = bus.GetInternal().GetTransportList();
+                for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
+                    Transport* trans = transList.GetTransport(i);
+                    if (trans && trans->IsBusToBus() && (trans->GetTransportMask() & transports)) {
+                        transportsProcessed = true;
+                    } else if (!trans) {
+                        QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
+                    }
+                }
                 /* Add to advertise map */
-                if (!foundEntry) {
-                    advertiseMap.insert(pair<qcc::String, pair<TransportMask, qcc::String> >(advertiseNameStr, pair<TransportMask, String>(transports, sender)));
+                if (transportsProcessed || (transports & TRANSPORT_LOCAL)) {
+                    if (!foundEntry) {
+                        advertiseMap.insert(pair<qcc::String, pair<TransportMask, qcc::String> >(advertiseNameStr, pair<TransportMask, String>(transports, sender)));
+                    } else {
+                        it->second.first |= transports;
+                    }
                 } else {
-                    it->second.first |= transports;
+                    replyCode = ALLJOYN_ADVERTISENAME_REPLY_TRANSPORT_NOT_AVAILABLE;
                 }
                 stateLock.Lock(MUTEX_CONTEXT);
                 ReleaseLocks();
 
                 /* Advertise on transports specified */
-                TransportList& transList = bus.GetInternal().GetTransportList();
-                status = ER_BUS_BAD_SESSION_OPTS;
-                for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
-                    Transport* trans = transList.GetTransport(i);
-                    if (trans && trans->IsBusToBus() && (trans->GetTransportMask() & transports)) {
-                        status = trans->EnableAdvertisement(advertiseNameStr, quietly, transports & GetCompleteTransportMaskFilter());
-                        if ((status != ER_OK) && (status != ER_NOT_IMPLEMENTED)) {
-                            QCC_LogError(status, ("EnableAdvertisment failed for transport %s - mask=0x%x", trans->GetTransportName(), transports));
+                if (transportsProcessed) {
+                    status = ER_BUS_BAD_SESSION_OPTS;
+                    for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
+                        Transport* trans = transList.GetTransport(i);
+                        if (trans && trans->IsBusToBus() && (trans->GetTransportMask() & transports)) {
+                            status = trans->EnableAdvertisement(advertiseNameStr, quietly, transports & GetCompleteTransportMaskFilter());
+                            if ((status != ER_OK) && (status != ER_NOT_IMPLEMENTED)) {
+                                QCC_LogError(status, ("EnableAdvertisment failed for transport %s - mask=0x%x", trans->GetTransportName(), transports));
+                            }
+                        } else if (!trans) {
+                            QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
                         }
-                    } else if (!trans) {
-                        QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
                     }
                 }
                 stateLock.Unlock(MUTEX_CONTEXT);
@@ -3034,7 +3049,7 @@ void AllJoynObj::FindAdvertisedName(const InterfaceDescription::Member* member, 
         matchingStr = String("name='") + str + "*'";
     }
 
-    ProcFindAdvertisement(status, msg, matchingStr, TRANSPORT_ALL);
+    ProcFindAdvertisement(status, msg, matchingStr, TRANSPORT_ANY);
 }
 
 void AllJoynObj::FindAdvertisedNameByTransport(const InterfaceDescription::Member* member, Message& msg)
@@ -3111,6 +3126,7 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
         status = TransportPermission::FilterTransports(srcEp, sender, transports, "AllJoynObj::FindAdvertisedName");
     }
 
+    MatchMap::const_iterator namePrefix = matching.find("name");
     if (ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS == replyCode) {
         /* Check to see if this endpoint is already discovering this prefix */
         bool foundEntry = false;
@@ -3130,7 +3146,11 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
         }
 
         if (!foundEntry) {
-            discoverMap.insert(std::make_pair(matchingStr, DiscoverMapEntry(transports, sender, matching)));
+            /* This is the fix for multiple found names issue.
+             * If this is a name-based query, set initComplete to false and set it to true after
+             * the calls to the transports are complete.
+             */
+            discoverMap.insert(std::make_pair(matchingStr, DiscoverMapEntry(transports, sender, matching, namePrefix == matching.end())));
         }
     }
     /* Find out the transports on which discovery needs to be enabled for this name.
@@ -3164,7 +3184,6 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
     }
 
     /* Send FoundAdvertisedName signals if there are existing matches for matching */
-    MatchMap::const_iterator namePrefix = matching.find("name");
     if ((ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS == replyCode) && (namePrefix != matching.end())) {
         AcquireLocks();
         String prefix = namePrefix->second.substr(0, namePrefix->second.find_last_of('*'));
@@ -3179,9 +3198,6 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
             if (sentSet.find(sentSetEntry) == sentSet.end()) {
                 String foundName = it->first;
                 NameMapEntry nme = it->second;
-                ReleaseLocks();
-                status = SendFoundAdvertisedName(sender, foundName, nme.transport, namePrefix->second);
-                AcquireLocks();
                 it = nameMap.lower_bound(prefix);
                 sentSet.insert(sentSetEntry);
                 if (ER_OK != status) {
@@ -3191,7 +3207,23 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
                 ++it;
             }
         }
+
+
+        //Set initComplete to true
+        DiscoverMapType::iterator dit = discoverMap.lower_bound(matchingStr);
+        while ((dit != discoverMap.end()) && (dit->first == matchingStr)) {
+            if (dit->second.sender == sender) {
+                dit->second.initComplete = true;
+                break;
+            }
+            ++dit;
+        }
         ReleaseLocks();
+        set<pair<String, TransportMask> >::iterator sit = sentSet.begin();
+        while (sit != sentSet.end()) {
+            status = SendFoundAdvertisedName(sender, sit->first, sit->second, namePrefix->second);
+            sit++;
+        }
     }
 }
 
@@ -3208,7 +3240,7 @@ void AllJoynObj::CancelFindAdvertisedName(const InterfaceDescription::Member* me
         matchingStr = String("name='") + str + "*'";
     }
 
-    HandleCancelFindAdvertisement(status, msg, matchingStr, TRANSPORT_ALL);
+    HandleCancelFindAdvertisement(status, msg, matchingStr, TRANSPORT_ANY);
 }
 
 void AllJoynObj::CancelFindAdvertisedNameByTransport(const InterfaceDescription::Member* member, Message& msg)
@@ -3932,7 +3964,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias, const qcc::String* o
                 /*
                  * as long as the file descriptor is -1 this is not a raw session
                  */
-                bool noRawSession = (it->second.fd == -1);
+                bool noRawSession = (it->second.fd == qcc::INVALID_SOCKET_FD);
                 if ((noMemberSingleHost || singleMemberNoHost) && noRawSession) {
                     SessionMapEntry tsme = it->second;
                     pair<String, SessionId> key = it->first;
@@ -4181,6 +4213,11 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
                                 if (namePrefix == dit->second.matching.end()) {
                                     continue;
                                 }
+
+                                if (!dit->second.initComplete) {
+                                    continue;
+                                }
+
                                 if (!WildcardMatch(*nit, namePrefix->second) && (transport & dit->second.transportMask)) {
                                     foundNameSet.insert(FoundNameEntry(*nit, namePrefix->second, dit->second.sender));
                                 }
@@ -4926,7 +4963,7 @@ void AllJoynObj::PingReplyTransportHandler(Message& reply, void* context)
     PingAlarmContext* ctx = static_cast<PingAlarmContext*>(context);
     if (ajn::MESSAGE_ERROR == reply->GetType()) {
         const char* errorName = reply->GetErrorName();
-        if (0 == strcmp(errorName, "org.alljoyn.Bus.Timeout")) {
+        if (errorName && (0 == strcmp(errorName, "org.alljoyn.Bus.Timeout"))) {
             /*
              * There may be multiple ping callers with different timeouts being
              * serviced by a single DBus Ping, so don't send a response here,

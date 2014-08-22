@@ -203,7 +203,7 @@ void* Test::Run(void* arg)
 
     ARDP_StartPassive(handle);
 
-    qcc::Event* sockEvent = new qcc::Event(sock, qcc::Event::IO_READ, false);
+    qcc::Event* sockEvent = new qcc::Event(sock, qcc::Event::IO_READ);
     qcc::Event timerEvent(1000, 1000);
 
     bool connectSent = false;

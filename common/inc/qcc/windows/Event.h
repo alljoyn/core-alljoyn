@@ -105,14 +105,12 @@ class Event {
     Event(Event& event, EventType eventType, bool genPurpose);
 
     /**
-     * Constructor used by Windows specific I/O sources/sinks
-     * (This constructor should only be used within Windows platform specific code.)
+     * Constructor used by I/O sources/sinks
      *
      * @param fd          Socket descriptor associated with this event.
      * @param eventType   Type of event (IO_READ or IO_WRITE) associated with fd.
-     * @param genPurpose  true if event should act as both an I/O event and a gen purpose event.
      */
-    Event(int fd, EventType eventType, bool genPurpose);
+    Event(SocketFd fd, EventType eventType);
 
     /** Destructor */
     ~Event();
@@ -198,11 +196,11 @@ class Event {
 
     /**
      * Get the underlying file descriptor for I/O backed events.
-     * This returns -1 if there is no underlying file descriptor.
+     * This returns INVALID_SOCKET_FD if there is no underlying file descriptor.
      *
-     * @return  The underlying file descriptor or -1.
+     * @return  The underlying file descriptor or INVALID_SOCKET_FD.
      */
-    int GetFD() const { return ioFd; }
+    SocketFd GetFD() const { return ioFd; }
 
     /**
      * Get the underlying Windows' event handle.  Use of this function is not
@@ -234,7 +232,7 @@ class Event {
     EventType eventType;    /**< Type of event */
     uint32_t timestamp;     /**< time for next triggering of TIMED Event */
     uint32_t period;        /**< Number of milliseconds between periodic timed events */
-    qcc::SocketFd ioFd;     /**< Socket descriptor or -1 if not socket based IO */
+    SocketFd ioFd;          /**< Socket descriptor or INVALID_SOCKET_FD if not socket based IO */
     int32_t numThreads;     /**< Number of threads currently waiting on this event */
     bool networkIfaceEvent;
     HANDLE networkIfaceHandle;

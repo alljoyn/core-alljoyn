@@ -198,8 +198,8 @@ QStatus SslSocket::Connect(const qcc::String hostName, uint16_t port)
     /* Set the events */
     if (ER_OK == status) {
         sock = BIO_get_fd(internal->bio, 0);
-        sourceEvent = new qcc::Event(sock, qcc::Event::IO_READ, false);
-        sinkEvent = new qcc::Event(sock, qcc::Event::IO_WRITE, false);
+        sourceEvent = new qcc::Event(sock, qcc::Event::IO_READ);
+        sinkEvent = new qcc::Event(sock, qcc::Event::IO_WRITE);
     }
 
     /* Cleanup on error */

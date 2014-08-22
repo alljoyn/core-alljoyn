@@ -96,13 +96,11 @@ class Event {
     Event(Event& event, EventType eventType, bool genPurpose);
 
     /**
-     * Constructor used by Linux specific I/O sources/sinks
-     * (This constructor should only be used within Linux platform specific code.)
+     * Constructor used by I/O sources/sinks
      *
      * @param ioFd        I/O file descriptor associated with this event.
-     * @param genPurpose  true if event should act as both an I/O event and a gen purpose event.
      */
-    Event(int ioFd, EventType eventType, bool genPurpose);
+    Event(SocketFd ioFd, EventType eventType);
 
     /** Destructor */
     ~Event();
@@ -187,14 +185,12 @@ class Event {
     void ResetTime(uint32_t delay, uint32_t period);
 
     /**
-     * Get the underlying file descriptor for general purpose and I/O events.
-     * This returns -1 if there is no underlying file descriptor.  Use of this
-     * function is not portable and should only be used in platform specific
-     * code.
+     * Get the underlying file descriptor for I/O events.
+     * This returns INVALID_SOCKET_FD if there is no underlying file descriptor.
      *
-     * @return  The underlying file descriptor or -1.
+     * @return  The underlying file descriptor or INVALID_SOCKET_FD.
      */
-    int GetFD() { return (fd == -1) ? ioFd : fd; }
+    SocketFd GetFD() { return ioFd; }
 
     /**
      * Get the number of threads that are currently blocked waiting for this event
@@ -207,7 +203,7 @@ class Event {
 
     int fd;                 /**< File descriptor linked to general purpose event or -1 */
     int signalFd;           /**< File descriptor used by GEN_PURPOSE events to manually set/reset event */
-    int ioFd;               /**< I/O File descriptor associated with event or -1 */
+    SocketFd ioFd;          /**< I/O File descriptor associated with event or -1 */
     EventType eventType;    /**< Indicates type of event */
     uint32_t timestamp;     /**< time for next triggering of TIMED Event */
     uint32_t period;        /**< Number of milliseconds between periodic timed events */
