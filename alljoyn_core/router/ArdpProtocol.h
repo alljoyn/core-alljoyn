@@ -156,7 +156,7 @@ typedef struct {
     ARDP_DISCONNECT_CB DisconnectCb;  /**< Called when connection goes to CLOSE_WAIT state */
     ARDP_RECV_CB RecvCb;              /**< Called when new data arrives */
     ARDP_SEND_CB SendCb;              /**< Called when the buffer is sent off into the network */
-    ARDP_SEND_WINDOW_CB SendWindowCb; /**< Called when the send window changes for some reason */
+    ARDP_SEND_WINDOW_CB SendWindowCb; /**< Called when the send window changes */
 } ArdpCallbacks;
 
 /**
