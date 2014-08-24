@@ -39,9 +39,15 @@
 #include "RemoteEndpoint.h"
 #include "Router.h"
 #include "DaemonRouter.h"
+
 #include "ArdpProtocol.h"
 #include "ns/IpNameService.h"
 #include "UDPTransport.h"
+
+#if ARDP_TESTHOOKS
+#include "ScatterGatherList.h"
+#endif
+
 
 /*
  * How the transport fits into the system
@@ -2999,6 +3005,16 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     ARDP_SetRecvCb(m_handle, ArdpRecvCb);
     ARDP_SetSendCb(m_handle, ArdpSendCb);
     ARDP_SetSendWindowCb(m_handle, ArdpSendWindowCb);
+
+#if ARDP_TESTHOOKS
+    /*
+     * Initialize some testhooks as an example of how to do this.
+     */
+    ARDP_HookSendToSG(m_handle, ArdpSendToSGHook);
+    ARDP_HookSendTo(m_handle, ArdpSendToHook);
+    ARDP_HookRecvFrom(m_handle, ArdpRecvFromHook);
+#endif
+
     ARDP_StartPassive(m_handle);
     m_ardpLock.Unlock();
 
@@ -4073,6 +4089,28 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
 
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 }
+
+#if ARDP_TESTHOOKS
+
+/**
+ * Provide do-nothing testhooks from the ARDP Protocol as a how-to example.
+ */
+void UDPTransport::ArdpSendToSGHook(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, qcc::ScatterGatherList& msgSG)
+{
+    QCC_DbgTrace(("UDPTransport::ArdpSendToSGHook(handle=%p, conn=%p, source=%d., msgSG=%p)", handle, conn, source, &msgSG));
+}
+
+void UDPTransport::ArdpSendToHook(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, void* buf, uint32_t len)
+{
+    QCC_DbgTrace(("UDPTransport::ArdpSendToHook(handle=%p, conn=%p, source=%d., buf=%p, len=%d.)", handle, conn, buf, len));
+}
+
+void UDPTransport::ArdpRecvFromHook(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, void* buf, uint32_t len)
+{
+    QCC_DbgTrace(("UDPTransport::ArdpSendToSGHook(handle=%p, conn=%p, source=%d., buf=%p, len=%d.)", handle, conn, buf, len));
+}
+
+#endif
 
 /**
  * Callback from the ARDP Protocol.  We just plumb this callback directly into the transport.

@@ -236,6 +236,9 @@ struct ARDP_CONN_RECORD {
 struct ARDP_HANDLE {
     ArdpGlobalConfig config; /* The configurable items that affect this instance of ARDP as a whole */
     ArdpCallbacks cb;        /* The callbacks to allow the protocol to talk back to the client */
+#if ARDP_TESTHOOKS
+    ArdpTesthooks th;        /* Test hooks allowing test programs to examime or change data or behaviors */
+#endif
     bool accepting;          /* If true the ArdpProtocol is accepting inbound connections */
     ListNode conns;          /* List of currently active connections */
     qcc::Timespec tbase;     /* Baseline time */
@@ -646,6 +649,16 @@ static QStatus SendMsgHeader(ArdpHandle* handle, ArdpConnRecord* conn, ArdpHeade
         h->hlen = ARDP_FIXED_HEADER_LEN >> 1;
     }
 
+#if ARDP_TESTHOOKS
+    /*
+     * Call the outbound testhook in case the test team needs to munge the
+     * outbound data.
+     */
+    if (handle->th.SendToSG) {
+        handle->th.SendToSG(handle, conn, SEND_MSG_HEADER, msgSG);
+    }
+#endif
+
     return qcc::SendToSG(conn->sock, conn->ipAddr, conn->ipPort, msgSG, sent);
 }
 
@@ -875,6 +888,16 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
             }
         }
     }
+
+#if ARDP_TESTHOOKS
+    /*
+     * Call the outbound testhook in case the test team needs to munge the
+     * outbound data.
+     */
+    if (handle->th.SendToSG) {
+        handle->th.SendToSG(handle, conn, SEND_MSG_DATA, msgSG);
+    }
+#endif
 
     status = qcc::SendToSG(conn->sock, conn->ipAddr, conn->ipPort, msgSG, sent);
 
@@ -1112,6 +1135,26 @@ void ARDP_SetSendWindowCb(ArdpHandle* handle, ARDP_SEND_WINDOW_CB SendWindowCb)
     QCC_DbgTrace(("ARDP_SetSendWindowCb(handle=%p, SendWindowCb=%p)", handle, SendWindowCb));
     handle->cb.SendWindowCb = SendWindowCb;
 }
+
+#if ARDP_TESTHOOKS
+void ARDP_HookSendToSG(ArdpHandle* handle, ARDP_SENDTOSG_TH SendToSG)
+{
+    QCC_DbgTrace(("ARDP_HookSendToSG(handle=%p, RecvCb=%p)", handle, SendToSG));
+    handle->th.SendToSG = SendToSG;
+}
+
+void ARDP_HookSendTo(ArdpHandle* handle, ARDP_SENDTO_TH SendTo)
+{
+    QCC_DbgTrace(("ARDP_HookSendTo(handle=%p, SendTo=%p)", handle, SendTo));
+    handle->th.SendTo = SendTo;
+}
+
+void ARDP_HookRecvFrom(ArdpHandle* handle, ARDP_RECVFROM_TH RecvFrom)
+{
+    QCC_DbgTrace(("ARDP_HookRecvFrom(handle=%p, RecvFrom=%p)", handle, RecvFrom));
+    handle->th.RecvFrom = RecvFrom;
+}
+#endif
 
 void ARDP_SetHandleContext(ArdpHandle* handle, void* context)
 {
@@ -1451,6 +1494,17 @@ static QStatus DoSendSyn(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf,
 
     msgSG.AddBuffer(&ss, sizeof(ArdpSynSegment));
     msgSG.AddBuffer(conn->synData.buf, conn->synData.len);
+
+#if ARDP_TESTHOOKS
+    /*
+     * Call the outbound testhook in case the test team needs to munge the
+     * outbound data.
+     */
+    if (handle->th.SendToSG) {
+        handle->th.SendToSG(handle, conn, DO_SEND_SYN, msgSG);
+    }
+#endif
+
     return qcc::SendToSG(conn->sock, conn->ipAddr, conn->ipPort, msgSG, sent);
 }
 
@@ -1489,6 +1543,16 @@ static QStatus SendRst(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ip
     h.ack = 0;
 
     QCC_DbgPrintf(("SendRst(): SendTo(sock=%d., ipAddr=\"%s\", port=%d., buf=%p, len=%d", sock, ipAddr.ToString().c_str(), ipPort, &h, ARDP_FIXED_HEADER_LEN));
+
+#if ARDP_TESTHOOKS
+    /*
+     * Call the outbound testhook in case the test team needs to munge the
+     * outbound data.
+     */
+    if (handle->th.SendTo) {
+        handle->th.SendTo(handle, NULL, SEND_RST, &h, ARDP_FIXED_HEADER_LEN);
+    }
+#endif
 
     size_t sent;
     return qcc::SendTo(sock, ipAddr, ipPort, &h, ARDP_FIXED_HEADER_LEN, sent);
@@ -2521,6 +2585,16 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool socketReady, uint3
             QCC_DbgTrace(("ARDP_Run(): qcc::RecvFrom() failed: %s", QCC_StatusText(status)));
             return status;
         }
+
+#if ARDP_TESTHOOKS
+        /*
+         * Call the inbound testhook in case the test team needs to munge the
+         * inbound data.
+         */
+        if (handle->th.RecvFrom) {
+            handle->th.RecvFrom(handle, NULL, ARDP_RUN, buf, nbytes);
+        }
+#endif
 
         if (nbytes > 0 && nbytes < 65536) {
             uint16_t local, foreign;

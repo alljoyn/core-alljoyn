@@ -22,11 +22,19 @@
 #ifndef _ALLJOYN_ARDP_PROTOCOL_H
 #define _ALLJOYN_ARDP_PROTOCOL_H
 
+#ifndef ARDP_TESTHOOKS
+#define ARDP_TESTHOOKS 1  /**< Enabling test hooks defaults to off */
+#endif
+
 #include <alljoyn/Status.h>
 
 #include <qcc/platform.h>
 #include <qcc/IPAddress.h>
 #include <qcc/Socket.h>
+
+#if ARDP_TESTHOOKS
+#include "ScatterGatherList.h"
+#endif
 
 namespace ajn {
 
@@ -115,6 +123,26 @@ typedef struct ARDP_RCV_BUFFER {
     uint8_t flags;         /**< Buffer state flags */
 } ArdpRcvBuf;
 
+#if ARDP_TESTHOOKS
+enum TesthookSource {
+    SEND_MSG_HEADER = 1,
+    SEND_MSG_DATA,
+    DO_SEND_SYN,
+    SEND_RST,
+    ARDP_RUN
+};
+
+typedef void (*ARDP_SENDTOSG_TH)(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, qcc::ScatterGatherList& msgSG);
+typedef void (*ARDP_SENDTO_TH)(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, void* buf, uint32_t len);
+typedef void (*ARDP_RECVFROM_TH)(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, void* buf, uint32_t len);
+
+typedef struct {
+    ARDP_SENDTOSG_TH SendToSG;  /**< Called just before a scatter-gather list is sent to a socket, after ARDP is done with the data */
+    ARDP_SENDTO_TH SendTo;      /**< Called just before a buffer is sent to a socket, after ARDP is done with the data */
+    ARDP_RECVFROM_TH RecvFrom;  /**< Called after a message is received from a socket, before ARDP does anything */
+} ArdpTesthooks;
+#endif
+
 typedef void (*ARDP_CONNECT_CB)(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status);
 typedef void (*ARDP_DISCONNECT_CB)(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status);
 typedef bool (*ARDP_ACCEPT_CB)(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status);
@@ -196,6 +224,12 @@ void ARDP_SetRecvCb(ArdpHandle* handle, ARDP_RECV_CB RecvCb);
 QStatus ARDP_Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, uint32_t ttl);
 void ARDP_SetSendCb(ArdpHandle* handle, ARDP_SEND_CB SendCb);
 void ARDP_SetSendWindowCb(ArdpHandle* handle, ARDP_SEND_WINDOW_CB SendWindowCb);
+
+#if ARDP_TESTHOOKS
+void ARDP_HookSendToSG(ArdpHandle* handle, ARDP_SENDTOSG_TH SendToSG);
+void ARDP_HookSendTo(ArdpHandle* handle, ARDP_SENDTO_TH SendTo);
+void ARDP_HookRecvFrom(ArdpHandle* handle, ARDP_RECVFROM_TH RecvFrom);
+#endif
 
 } // namespace ajn
 

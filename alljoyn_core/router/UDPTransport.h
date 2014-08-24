@@ -44,6 +44,7 @@
 
 #include "Transport.h"
 #include "RemoteEndpoint.h"
+
 #include "ArdpProtocol.h"
 
 #include "ns/IpNameService.h"
@@ -813,6 +814,12 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void DebugPreListCheck(UDPEndpoint uep);
     void DebugAuthListCheck(UDPEndpoint uep);
     void DebugEndpointListCheck(UDPEndpoint uep);
+#endif
+
+#if ARDP_TESTHOOKS
+    static void ArdpSendToSGHook(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, qcc::ScatterGatherList& msgSG);
+    static void ArdpSendToHook(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, void* buf, uint32_t len);
+    static void ArdpRecvFromHook(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, void* buf, uint32_t len);
 #endif
 
     static bool ArdpAcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status);
