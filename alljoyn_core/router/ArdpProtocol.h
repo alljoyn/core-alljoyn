@@ -26,6 +26,10 @@
 #define ARDP_TESTHOOKS 1  /**< Enabling test hooks defaults to off */
 #endif
 
+#ifndef ARDP_STATS
+#define ARDP_STATS 1  /**< Enabling statistics gathering defaults to off */
+#endif
+
 #include <alljoyn/Status.h>
 
 #include <qcc/platform.h>
@@ -229,6 +233,34 @@ void ARDP_SetSendWindowCb(ArdpHandle* handle, ARDP_SEND_WINDOW_CB SendWindowCb);
 void ARDP_HookSendToSG(ArdpHandle* handle, ARDP_SENDTOSG_TH SendToSG);
 void ARDP_HookSendTo(ArdpHandle* handle, ARDP_SENDTO_TH SendTo);
 void ARDP_HookRecvFrom(ArdpHandle* handle, ARDP_RECVFROM_TH RecvFrom);
+#endif
+
+#if ARDP_STATS
+typedef struct {
+    uint32_t acceptCbs;       /**< The number of times the accept callback was fired */
+    uint32_t connectCbs;      /**< The number of times the connect callback was fired */
+    uint32_t disconnectCbs;   /**< The number of times the disconnect callback was fired */
+    uint32_t sendCbs;         /**< The number of times the send callback was fired */
+    uint32_t recvCbs;         /**< The number of times the receive callback was fired */
+    uint32_t outboundDrops;   /**< The total number of outbound messages that have been dropped */
+    uint32_t preflightDrops;  /**< The number of outbound messages that have been dropped before making it to the wire */
+    uint32_t inflightDrops;   /**< The number of outbound messages that have been dropped after making it to the wire */
+    uint32_t inboundDrops;    /**< The total number of inbound messages that have been dropped */
+    uint32_t synSends;        /**< The number of SYN packets we have sent (3-way handshake part one) */
+    uint32_t synRecvs;        /**< The number of SYN packets we have received (3-way handshake part one) */
+    uint32_t synackSends;     /**< The number of SYN-ACK packets we have sent (3-way handshake part two) */
+    uint32_t synackRecvs;     /**< The number of SYN-ACK packets we have received (3-way handshake part two) */
+    uint32_t synackackSends;  /**< The number of SYN-ACK ACK packets we have sent (3-way handshake part three) */
+    uint32_t synackackRecvs;  /**< The number of SYN-ACK ACK packets we have received (3-way handshake part three) */
+    uint32_t rstSends;        /**< The number of RST packets we have sent */
+    uint32_t rstRecvs;        /**< The number of RST packets we have received */
+    uint32_t nulSends;        /**< The number of NUL packets we have sent */
+    uint32_t nulRecvs;        /**< The number of NUL packets we have received */
+} ArdpStats;
+
+ArdpStats* ARDP_GetStats(ArdpHandle* handle);
+void ARDP_ResetStats(ArdpHandle* handle);
+
 #endif
 
 } // namespace ajn
