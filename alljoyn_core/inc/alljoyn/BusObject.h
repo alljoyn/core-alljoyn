@@ -52,7 +52,14 @@ class BusObject : public MessageReceiver {
     friend class _LocalEndpoint;
 
   public:
-
+    /**
+     * flag used to specify if an interface is announced or not here
+     * @see AddInterface
+     */
+    typedef enum {
+        UNANNOUNCED, ///< The interface is not announced
+        ANNOUNCED ///< The interface is announced
+    } AnnounceFlag;
     /**
      * Return the path for the object
      *
@@ -282,13 +289,17 @@ class BusObject : public MessageReceiver {
      *
      * @param iface       The interface to add
      * @param isAnnounced This interface should be part of the Announce signal
+     *                    HUSHED - this interface will not be part of the Announce
+     *                             signal
+     *                    ANNOUNCED - this interface will be part of the Announce
+     *                                signal.
      *
      * @return
      *      - #ER_OK if the interface was successfully added.
      *      - #ER_BUS_IFACE_ALREADY_EXISTS if the interface already exists.
      *      - An error status otherwise
      */
-    QStatus AddInterface(const InterfaceDescription& iface, bool isAnnounced = false);
+    QStatus AddInterface(const InterfaceDescription& iface, AnnounceFlag isAnnounced = UNANNOUNCED);
 
     /**
      * Add a method handler to this object. The interface for the method handler must have already

@@ -42,7 +42,7 @@ AboutIconObj::AboutIconObj(ajn::BusAttachment& bus, qcc::String const& mimetype,
     }
     assert(intf != NULL);
 
-    status = AddInterface(*intf, true);
+    status = AddInterface(*intf, ANNOUNCED);
     QCC_DbgPrintf(("Add AboutIcon interface %s\n", QCC_StatusText(status)));
 
     AddMethodHandler(intf->GetMember("GetUrl"),

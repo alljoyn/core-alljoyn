@@ -121,7 +121,7 @@ class AboutObjTestBusObject : public BusObject {
             printf("The interfaceDescription pointer for %s was NULL when it should not have been.", interfaceName.c_str());
             return;
         }
-        AddInterface(*iface, true);
+        AddInterface(*iface, ANNOUNCED);
 
         /* Register the method handlers with the object */
         const MethodEntry methodEntries[] = {

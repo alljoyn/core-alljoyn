@@ -1310,7 +1310,9 @@ class BusAttachment : public MessageReceiver {
      *               signals regardless of interfaces
      * @param[in] numberInterfaces the number of interfaces in the
      *               implementsInterfaces list
-     * @return status
+     * @return
+     *    - #ER_OK on success
+     *    - An error status otherwise
      */
     QStatus RegisterAboutListener(AboutListener& aboutListener, const char** implementsInterfaces, size_t numberInterfaces);
 
@@ -1325,8 +1327,9 @@ class BusAttachment : public MessageReceiver {
      * @param[in] interface     interface that the remove user must implement to
      *                          receive the announce signal.
      *
-     * return
+     * @return
      *    - #ER_OK on success
+     *    - An error status otherwise
      */
     QStatus RegisterAboutListener(AboutListener& aboutListener, const char* interface);
 

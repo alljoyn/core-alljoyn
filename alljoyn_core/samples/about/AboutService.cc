@@ -56,7 +56,7 @@ class MyBusObject : public BusObject {
         const InterfaceDescription* iface = bus.GetInterface(INTERFACE_NAME);
         // Here the boolean variable `true` tells AllJoyn that this interface
         // should be announced
-        status = AddInterface(*iface, true);
+        status = AddInterface(*iface, ANNOUNCED);
         if (status != ER_OK) {
             printf("Failed to add %s interface to the BusObject\n", INTERFACE_NAME);
         }

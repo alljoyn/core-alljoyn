@@ -316,7 +316,7 @@ class AboutObjectDescriptionTestBusObject1 : public BusObject {
   public:
     AboutObjectDescriptionTestBusObject1(BusAttachment& bus, const char* path)
         : BusObject(path) {
-        AddInterface(*bus.GetInterface("test.about.objectdescription.interface1"), true);
+        AddInterface(*bus.GetInterface("test.about.objectdescription.interface1"), ANNOUNCED);
     }
 };
 
@@ -324,7 +324,7 @@ class AboutObjectDescriptionTestBusObject2 : public BusObject {
   public:
     AboutObjectDescriptionTestBusObject2(BusAttachment& bus, const char* path)
         : BusObject(path) {
-        AddInterface(*bus.GetInterface("test.about.objectdescription.interface2"), true);
+        AddInterface(*bus.GetInterface("test.about.objectdescription.interface2"), ANNOUNCED);
     }
 };
 

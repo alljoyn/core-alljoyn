@@ -195,6 +195,8 @@ class AboutData {
      * DefaultLanguage is part of the Announce signal
      *
      * @param[in] defaultLanguage the IETF language tag
+     *
+     * @return ER_OK on success
      */
     QStatus SetDefaultLanguage(char* defaultLanguage);
 
@@ -630,7 +632,7 @@ class AboutData {
      * a localizable value or not.
      *
      * @param[in] fieldName the Field Name being set
-     * @param[in] isRequried is this field required befor the AboutData can be announced
+     * @param[in] isRequired is this field required befor the AboutData can be announced
      * @param[in] isAnnounced is this field part of the Announce signal
      * @param[in] isLocalized can this field be localized
      * @param[in] signature the data type held by the field this is a MsgArg signature
@@ -640,15 +642,56 @@ class AboutData {
      */
     QStatus SetNewFieldDetails(qcc::String fieldName, bool isRequired, bool isAnnounced, bool isLocalized, qcc::String signature);
 
+    /**
+     * Holds information for each AboutData field.
+     *
+     * Each AboutData field must specify four pieces of information
+     *  - required  This is a boolean field if this is `true` then the field is
+     *              required for the AboutData to be a Valid.
+     *  - announced If this field is marked as `true` then the field will be part
+     *              of the Announce signal
+     *  - localized This field contains a value that can be localized into
+     *              multiple languages/regions
+     *  - signature The signature of the underlying MsgArg dictionary value.
+     *
+     */
     typedef struct FieldDetails {
+        /**
+         * Create an uninitialized FieldDetails struct
+         */
         FieldDetails() { }
+        /**
+         * Create an initialized FieldDetails struct
+         * @param[in] r the value for the required field
+         * @param[in] a the value for the announced field
+         * @param[in] l the value for the localized field
+         * @param[in] s the value for the signature field
+         */
         FieldDetails(bool r, bool a, bool l, qcc::String s) : required(r), announced(a), localized(l), signature(s) { }
+        /**
+         * This is a boolean field if this is `true` then the field is required
+         * for the AboutData to be a Valid.
+         */
         bool required;
+        /**
+         * If this field is marked as `true` then the field will be part of the
+         * Announce signal
+         */
         bool announced;
+        /**
+         * This field contains a value that can be localized into multiple
+         * languages/regions
+         */
         bool localized;
+        /**
+         * The signature of the underlying MsgArg dictionary value.
+         */
         qcc::String signature;
     } FieldDetails;
 
+    /**
+     * A std::map that maps the field name to its FieldDetails.
+     */
     std::map<qcc::String, FieldDetails> m_aboutFields;
   private:
     /**

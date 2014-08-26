@@ -81,7 +81,8 @@ class AboutObjectDescription {
     /**
      * AddObjectDescription adds objects Description for the AboutService announcement.
      * @param[in]  path of the interface.
-     * @param[in]  interfaceNames
+     * @param[in]  interfaceNames an array of interface names to add to the AboutObjectDescription
+     * @param[in]  numInterfaces the number of interfaces in the interfaceNames array
      * @return ER_OK if successful.
      */
     QStatus Add(qcc::String const& path, const char** interfaceNames, size_t numInterfaces);
@@ -180,10 +181,12 @@ class AboutObjectDescription {
 
     /**
      * Remove object Description for the AboutService announcement.
-     * @param[in]  path of the interface.
-     * @param[in]  interfaceNames
-     * @return ER_OK if successful.
      *
+     * @param[in]  path of the interface.
+     * @param[in]  interfaceNames an array of interfaces names to remove from the AboutObjectDescription
+     * @param[in]  numInterfaces the number of interface names in the interfaceNames array
+     *
+     * @return ER_OK if successful.
      */
     QStatus Remove(qcc::String const& path, const char** interfaceNames, size_t numInterfaces);
 

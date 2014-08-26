@@ -418,7 +418,7 @@ void BusObject::InstallMethods(MethodTable& methodTable)
     }
 }
 
-QStatus BusObject::AddInterface(const InterfaceDescription& iface, bool isAnnounced)
+QStatus BusObject::AddInterface(const InterfaceDescription& iface, AnnounceFlag isAnnounced)
 {
     QStatus status = ER_OK;
     if (isRegistered) {
