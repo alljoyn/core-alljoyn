@@ -1317,7 +1317,7 @@ class BusAttachment : public MessageReceiver {
     /**
      * Registers a listener to receive the org.alljoyn.about Announce signal.
      *
-     * This is t=identical to RegisterAboutListener(AboutListener&, const char**, size_t)
+     * This is identical to RegisterAboutListener(AboutListener&, const char**, size_t)
      * except this is specialized for a single interface not several interfaces.
      *
      * @see RegisterAboutListener(AboutListener&, const char**, size_t)

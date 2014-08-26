@@ -1,6 +1,7 @@
 /**
  * @file
- * This contains the AboutObjectDescription class responsible
+ * This contains the AboutObjectDescription class responsible holding a list of
+ * all BusObject interfaces and their paths.
  */
 /******************************************************************************
  * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
@@ -119,7 +120,7 @@ class AboutObjectDescription {
      *    returned in the `paths` array.
      *
      */
-    size_t GetPaths(const char** paths, size_t numPaths);
+    size_t GetPaths(const char** paths, size_t numPaths) const;
 
     /**
      * Get a list of interfaces advertised at the given path that are part of
@@ -142,7 +143,7 @@ class AboutObjectDescription {
      *    then only `numInterfaces` of interfaces will be returned in the
      *    `interfaces` array.
      */
-    size_t GetInterfaces(qcc::String const& path, const char** interfaces, size_t numInterfaces);
+    size_t GetInterfaces(qcc::String const& path, const char** interfaces, size_t numInterfaces) const;
 
     /**
      * Get a list of the paths for a given interface. Its possible to have the
@@ -166,7 +167,7 @@ class AboutObjectDescription {
      *    array
      *
      */
-    size_t GetInterfacePaths(qcc::String const& interface, const char** paths, size_t numPaths);
+    size_t GetInterfacePaths(qcc::String const& interface, const char** paths, size_t numPaths) const;
 
     /**
      * Remove an interface from the object description for the AboutService
@@ -199,7 +200,7 @@ class AboutObjectDescription {
      *
      * @return true if the path is found
      */
-    bool HasPath(qcc::String const& path);
+    bool HasPath(qcc::String const& path) const;
 
     /**
      * Returns true if the given interface name is found in any path
@@ -208,7 +209,7 @@ class AboutObjectDescription {
      *
      * @return true if the interface is found
      */
-    bool HasInterface(qcc::String const& interfaceName);
+    bool HasInterface(qcc::String const& interfaceName) const;
 
     /**
      * Returns true if the given interface name is found at the given path
@@ -217,7 +218,7 @@ class AboutObjectDescription {
      *
      * @return true if the interface is found at the given path
      */
-    bool HasInterface(qcc::String const& path, qcc::String const& interfaceName);
+    bool HasInterface(qcc::String const& path, qcc::String const& interfaceName) const;
     /**
      * @param[out] msgArg containing a signature a(oas)
      *                    an array of object paths and an array of interfaces
@@ -231,8 +232,11 @@ class AboutObjectDescription {
 
     /**
      * Mutex that protects the m_AnnounceObjectsMap
+     *
+     * this is marked a mutable so we can grab the lock to prevent the Objects
+     * map being modified while its being read.
      */
-    qcc::Mutex m_AnnounceObjectsMapLock;
+    mutable qcc::Mutex m_AnnounceObjectsMapLock;
 
     /**
      *  map that holds interfaces that will be announced

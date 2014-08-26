@@ -123,14 +123,14 @@ QStatus AboutObjectDescription::Merge(AboutObjectDescription& aboutObjectDescrip
     return ER_OK;
 }
 
-size_t AboutObjectDescription::GetPaths(const char** paths, size_t numPaths)
+size_t AboutObjectDescription::GetPaths(const char** paths, size_t numPaths) const
 {
     if (paths == NULL) {
         return m_AnnounceObjectsMap.size();
     }
     m_AnnounceObjectsMapLock.Lock(MUTEX_CONTEXT);
     size_t count = 0;
-    for (std::map<qcc::String, std::set<qcc::String> >::iterator it = m_AnnounceObjectsMap.begin();
+    for (std::map<qcc::String, std::set<qcc::String> >::const_iterator it = m_AnnounceObjectsMap.begin();
          it != m_AnnounceObjectsMap.end() && count < numPaths; ++it, ++count) {
         paths[count] = it->first.c_str();
     }
@@ -138,9 +138,9 @@ size_t AboutObjectDescription::GetPaths(const char** paths, size_t numPaths)
     return m_AnnounceObjectsMap.size();
 }
 
-size_t AboutObjectDescription::GetInterfaces(qcc::String const& path, const char** interfaces, size_t numInterfaces)
+size_t AboutObjectDescription::GetInterfaces(qcc::String const& path, const char** interfaces, size_t numInterfaces) const
 {
-    std::map<qcc::String, std::set<qcc::String> >::iterator aom_it = m_AnnounceObjectsMap.find(path);
+    std::map<qcc::String, std::set<qcc::String> >::const_iterator aom_it = m_AnnounceObjectsMap.find(path);
     if (aom_it == m_AnnounceObjectsMap.end()) {
         return static_cast<size_t>(0);
     }
@@ -158,13 +158,13 @@ size_t AboutObjectDescription::GetInterfaces(qcc::String const& path, const char
     return aom_it->second.size();
 }
 
-size_t AboutObjectDescription::GetInterfacePaths(qcc::String const& interface, const char** paths, size_t numPaths)
+size_t AboutObjectDescription::GetInterfacePaths(qcc::String const& interface, const char** paths, size_t numPaths) const
 {
-    std::map<qcc::String, std::set<qcc::String> >::iterator it;
+    std::map<qcc::String, std::set<qcc::String> >::const_iterator it;
     size_t count = 0;
     m_AnnounceObjectsMapLock.Lock(MUTEX_CONTEXT);
     for (it = m_AnnounceObjectsMap.begin(); it != m_AnnounceObjectsMap.end(); ++it) {
-        std::set<qcc::String>::iterator it2 = it->second.find(interface);
+        std::set<qcc::String>::const_iterator it2 = it->second.find(interface);
         if (it2 != it->second.end()) {
             if (count < numPaths) {
                 paths[count] = it->first.c_str();
@@ -215,14 +215,16 @@ void AboutObjectDescription::Clear()
     m_AnnounceObjectsMap.clear();
     m_AnnounceObjectsMapLock.Unlock(MUTEX_CONTEXT);
 }
-bool AboutObjectDescription::HasPath(qcc::String const& path)
+bool AboutObjectDescription::HasPath(qcc::String const& path)  const
 {
-    return (m_AnnounceObjectsMap.find(path) != m_AnnounceObjectsMap.end());
+    std::map<qcc::String, std::set<qcc::String> >::const_iterator find_it = m_AnnounceObjectsMap.find(path);
+    std::map<qcc::String, std::set<qcc::String> >::const_iterator end_it = m_AnnounceObjectsMap.end();
+    return (find_it != end_it);
 }
 
-bool AboutObjectDescription::HasInterface(qcc::String const& interfaceName)
+bool AboutObjectDescription::HasInterface(qcc::String const& interfaceName) const
 {
-    std::map<qcc::String, std::set<qcc::String> >::iterator it;
+    std::map<qcc::String, std::set<qcc::String> >::const_iterator it;
     for (it = m_AnnounceObjectsMap.begin(); it != m_AnnounceObjectsMap.end(); ++it) {
         if (HasInterface(it->first, interfaceName)) {
             return true;
@@ -232,15 +234,15 @@ bool AboutObjectDescription::HasInterface(qcc::String const& interfaceName)
     return false;
 }
 
-bool AboutObjectDescription::HasInterface(qcc::String const& path, qcc::String const& interfaceName)
+bool AboutObjectDescription::HasInterface(qcc::String const& path, qcc::String const& interfaceName) const
 {
-    std::map<qcc::String, std::set<qcc::String> >::iterator it = m_AnnounceObjectsMap.find(path);
+    std::map<qcc::String, std::set<qcc::String> >::const_iterator it = m_AnnounceObjectsMap.find(path);
     if (it == m_AnnounceObjectsMap.end()) {
         return false;
     }
 
     size_t n = interfaceName.find_first_of('*');
-    std::set<qcc::String>::iterator ifac_it = it->second.begin();
+    std::set<qcc::String>::const_iterator ifac_it = it->second.begin();
     for (ifac_it = it->second.begin(); ifac_it != it->second.end(); ++ifac_it) {
         if (n == qcc::String::npos && interfaceName == *ifac_it) {
             return true;

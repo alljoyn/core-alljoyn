@@ -130,7 +130,7 @@ int main(int argc, char** argv)
     status = aboutData.SetDateOfManufacture("2014-03-24");
     status = aboutData.SetSoftwareVersion("0.1.2");
     status = aboutData.SetHardwareVersion("0.0.1");
-    status = aboutData.SetSupportUrl("http://www.alljoyn.org");
+    status = aboutData.SetSupportUrl("http://www.example.org");
 
     // The default language is automatically added to the `SupportedLanguages`
     // Users don't have to specify the AJSoftwareVersion its automatically added

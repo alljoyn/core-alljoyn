@@ -927,7 +927,7 @@ void BusObject::SetDescriptionTranslator(Translator* translator)
     this->translator = translator;
 }
 
-size_t BusObject::GetAnnouncedInterfaces(const char** interfaces, size_t numInterfaces)
+size_t BusObject::GetAnnouncedInterfaceNames(const char** interfaces, size_t numInterfaces)
 {
     size_t retCount = 0;
     for (size_t i = 0; i < components->ifaces.size(); ++i) {

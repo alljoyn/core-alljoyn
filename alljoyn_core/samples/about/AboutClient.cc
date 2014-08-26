@@ -51,7 +51,7 @@ class MySessionListener : public SessionListener {
 };
 
 class MyAboutListener : public AboutListener {
-    void Announced(const char* busName, uint16_t version, SessionPort port, AboutObjectDescription& objectDescription, AboutData& aboutData) {
+    void Announced(const char* busName, uint16_t version, SessionPort port, const AboutObjectDescription& objectDescription, const AboutData& aboutData) {
         printf("*********************************************************************************\n");
         printf("Announce signal discovered\n");
         printf("\tFrom bus %s\n", busName);

@@ -87,9 +87,6 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    status = bus.AdvertiseName(bus.GetUniqueName().c_str(), TRANSPORT_ANY);
-    printf("AdvertiseName %s (%s)\n", bus.GetUniqueName().c_str(), QCC_StatusText(status));
-
     // Setup the about data
     AboutData aboutData("en");
 

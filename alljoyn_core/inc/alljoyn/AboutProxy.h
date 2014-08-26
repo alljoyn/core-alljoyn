@@ -59,7 +59,7 @@ class AboutProxy : public ajn::MessageReceiver {
      * @param[in] busName Unique or well-known name of AllJoyn bus
      * @param[in] sessionId the session received  after joining AllJoyn session
      */
-    AboutProxy(ajn::BusAttachment& bus, const char* busName, ajn::SessionId sessionId = 0);
+    AboutProxy(BusAttachment& bus, const char* busName, SessionId sessionId = 0);
 
     /**
      * Destruct AboutProxy

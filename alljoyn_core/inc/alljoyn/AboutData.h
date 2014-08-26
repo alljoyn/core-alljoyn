@@ -1,7 +1,7 @@
 /**
  * @file
  * This contains the AboutData class responsible for holding the org.alljoyn.About
- * interface Data fields.
+ * interface data fields.
  */
 /******************************************************************************
  * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
@@ -160,13 +160,13 @@ class AboutData {
     QStatus Initialize(const MsgArg& arg, const char* language = NULL);
 
     /**
-     * Get the AppId from the AboutData
+     * Set the AppId for the AboutData
      *
      * AppId IS required
-     * AppId IS part of the announce signal
+     * AppId IS part of the Announce signal
      * AppId CAN NOT be localized for other languages
      *
-     * @param[in] appId the a globally unique array of bites used as an ID for the application
+     * @param[in] appId the a globally unique array of bytes used as an ID for the application
      * @param[in] num   the number of bites in the appId array
      *
      * @return ER_OK on success
@@ -177,7 +177,7 @@ class AboutData {
      * Get the AppId from the AboutData
      *
      * AppId IS required
-     * AppId IS part of the announce signal
+     * AppId IS part of the Announce signal
      * AppId CAN NOT be localized for other languages
      *
      * @param[out] appId a pointer to an array of bites used as a globally unique ID for an application
@@ -188,21 +188,29 @@ class AboutData {
     QStatus GetAppId(uint8_t** appId, size_t* num);
 
     /**
-     * This language is automatically added to the SupportedLanguage list
-     * Required, announced
+     * This language is automatically added to the SupportedLanguage list. The
+     * language tag should be an IETF language tag specified by RFC 5646
+     *
+     * DefaultLanguage is Required
+     * DefaultLanguage is part of the Announce signal
+     *
+     * @param[in] defaultLanguage the IETF language tag
      */
     QStatus SetDefaultLanguage(char* defaultLanguage);
 
     /**
-     * This language is automatically added to the SupportedLanguage list
-     * Required, announced
+     * Get the DefaultLanguage from the AboutData
+     *
+     * @param[out] defaultLanguage a pointer to the default language tag
+     *
+     * @return ER_OK on success
      */
     QStatus GetDefaultLanguage(char** defaultLanguage);
     /**
      * Set the DeviceName to the AboutData
      *
      * DeviceName is not required
-     * DeviceName is part of the announced signal
+     * DeviceName is part of the Announce signal
      * DeviceName can be localized for other languages
      *
      * @param[in] deviceName the deviceName (UTF8 encoded string)
@@ -217,7 +225,7 @@ class AboutData {
      * Get the DeviceName from the About data
      *
      * DeviceName is not required
-     * DeviceName is part of the announce signal
+     * DeviceName is part of the Announce signal
      * DeviceName can be localized for other languages
      *
      * @param[out] deviceName the deviceName found in the AboutData (UTF8 encoded string)
@@ -535,7 +543,7 @@ class AboutData {
      *
      * @return ER_OK on success
      */
-    QStatus SetField(const char* name, ajn::MsgArg value, const char* language = NULL);
+    QStatus SetField(const char* name, MsgArg value, const char* language = NULL);
     /**
      * generic way to get field.
      *
@@ -547,7 +555,7 @@ class AboutData {
      *
      * @return ER_OK on success
      */
-    QStatus GetField(const char* name, ajn::MsgArg*& value, const char* language = NULL);
+    QStatus GetField(const char* name, MsgArg*& value, const char* language = NULL);
 
     /**
      * @param[out] msgArg a the dictionary containing all of the AboutData fields for
@@ -615,7 +623,7 @@ class AboutData {
     // @}
   protected:
     /**
-     * Derived classes have the ability to fully specify there own AboutData including
+     * Derived classes have the ability to fully specify their own AboutData including
      * requirements that can not be changed using the base class.  The derived class
      * can specify if a value is required or optional, the value is part of the announce
      * signal or must be read using the GetAboutData method. Specify if the value is

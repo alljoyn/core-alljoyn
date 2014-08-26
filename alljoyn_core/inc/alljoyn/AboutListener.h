@@ -50,12 +50,14 @@ class AboutListener {
      * handler for the org.alljoyn.About.Anounce sessionless signal
      *
      * @param[in] busName            well know name of the service
-     * @param[in] version            version of the AboutService
-     * @param[in] port               SessionPort used by the AboutService
-     * @param[in] objectDescription  map of ObjectDescriptions using qcc::String as key std::vector<qcc::String>   as value, describing interfaces
+     * @param[in] version            version of the Announce signal from the remote
+     *                               About Object
+     * @param[in] port               SessionPort used by the announcer
+     * @param[in] objectDescription  an ObjectDescriptions class describing interfaces
+     *                               that are announced.
      * @param[in] aboutData          AboutData
      */
-    virtual void Announced(const char* busName, uint16_t version, SessionPort port, AboutObjectDescription& objectDescription, AboutData& aboutData) = 0;
+    virtual void Announced(const char* busName, uint16_t version, SessionPort port, const AboutObjectDescription& objectDescription, const AboutData& aboutData) = 0;
 };
 }
 

@@ -115,7 +115,7 @@ static bool announceListenerFlag = false;
 
 class AboutTestAboutListener : public AboutListener {
     void Announced(const char* busName, uint16_t version, SessionPort port,
-                   AboutObjectDescription& objectDescription, AboutData& aboutData) {
+                   const AboutObjectDescription& objectDescription, const AboutData& aboutData) {
         announceListenerFlag = true;
     }
 };
@@ -283,21 +283,21 @@ static bool announceListenerFlag3 = false;
 
 class AboutTestAboutListener1 : public AboutListener {
     void Announced(const char* busName, uint16_t version, SessionPort port,
-                   AboutObjectDescription& objectDescription, AboutData& aboutData) {
+                   const AboutObjectDescription& objectDescription, const AboutData& aboutData) {
         announceListenerFlag1 = true;
     }
 };
 
 class AboutTestAboutListener2 : public AboutListener {
     void Announced(const char* busName, uint16_t version, SessionPort port,
-                   AboutObjectDescription& objectDescription, AboutData& aboutData) {
+                   const AboutObjectDescription& objectDescription, const AboutData& aboutData) {
         announceListenerFlag2 = true;
     }
 };
 
 class AboutTestAboutListener3 : public AboutListener {
     void Announced(const char* busName, uint16_t version, SessionPort port,
-                   AboutObjectDescription& objectDescription, AboutData& aboutData) {
+                   const AboutObjectDescription& objectDescription, const AboutData& aboutData) {
         announceListenerFlag3 = true;
     }
 };
@@ -725,7 +725,7 @@ class AboutTestWildCardAboutListener : public AboutListener {
   public:
     AboutTestWildCardAboutListener() : announceListenerCount(0) { }
     void Announced(const char* busName, uint16_t version, SessionPort port,
-                   AboutObjectDescription& objectDescription, AboutData& aboutData) {
+                   const AboutObjectDescription& objectDescription, const AboutData& aboutData) {
         announceListenerCount++;
     }
     uint32_t announceListenerCount;
@@ -962,7 +962,7 @@ class AboutTestRemoveObjectDescriptionAboutListener : public AboutListener {
   public:
     AboutTestRemoveObjectDescriptionAboutListener() : announceListenerCount(0) { }
     void Announced(const char* busName, uint16_t version, SessionPort port,
-                   AboutObjectDescription& objectDescription, AboutData& aboutData) {
+                   const AboutObjectDescription& objectDescription, const AboutData& aboutData) {
         if (announceListenerCount == 0) {
             EXPECT_TRUE(objectDescription.HasPath("/org/test/about/a"));
             EXPECT_TRUE(objectDescription.HasPath("/org/test/about/b"));

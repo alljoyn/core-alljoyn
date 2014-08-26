@@ -5,7 +5,6 @@
  *
  * This file defines the base class for message bus objects that
  * are implemented and registered locally.
- *
  */
 
 /******************************************************************************
@@ -216,7 +215,7 @@ class BusObject : public MessageReceiver {
      *    is larger than `numInterfaces` then only `numInterfaces` will be returned.
      *
      */
-    size_t GetAnnouncedInterfaces(const char** interfaces, size_t numInterfaces);
+    size_t GetAnnouncedInterfaceNames(const char** interfaces, size_t numInterfaces);
 
   protected:
 

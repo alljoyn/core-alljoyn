@@ -18,8 +18,8 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef ABOUTICONOBJ_H_
-#define ABOUTICONOBJ_H_
+#ifndef _ALLJOYN_ABOUTICONOBJ_H
+#define _ALLJOYN_ABOUTICONOBJ_H
 
 #include <alljoyn/BusObject.h>
 
@@ -29,7 +29,7 @@ namespace ajn {
  * AboutIconObj is an AllJoyn BusObject that implements the org.alljoyn.Icon standard interface.
  * Applications that provide AllJoyn IoE services to receive info about the Icon of the service.
  */
-class AboutIconObj : public ajn::BusObject {
+class AboutIconObj : public BusObject {
   public:
     /**
      * version of the org.alljoyn.Icon interface
@@ -44,7 +44,7 @@ class AboutIconObj : public ajn::BusObject {
      * @param[in]  data is the content of the icon
      * @param[in]  csize is the size of the content in bytes.
      */
-    AboutIconObj(ajn::BusAttachment& bus, qcc::String const& mimetype, qcc::String const& url, uint8_t* data, size_t csize);
+    AboutIconObj(BusAttachment& bus, qcc::String const& mimetype, qcc::String const& url, uint8_t* data, size_t csize);
     /**
      *  Desctructor of AboutIconObj
      */
@@ -57,14 +57,14 @@ class AboutIconObj : public ajn::BusObject {
      * @param[in]  member
      * @param[in]  msg reference of AllJoyn Message
      */
-    void GetUrl(const ajn::InterfaceDescription::Member* member, ajn::Message& msg);
+    void GetUrl(const InterfaceDescription::Member* member, Message& msg);
 
     /**
      *  Handles  GetContent method
      * @param[in]  member
      * @param[in]  msg reference of AllJoyn Message
      */
-    void GetContent(const ajn::InterfaceDescription::Member* member, ajn::Message& msg);
+    void GetContent(const InterfaceDescription::Member* member, Message& msg);
 
     /**
      * Handles the GetPropery request
@@ -78,7 +78,7 @@ class AboutIconObj : public ajn::BusObject {
     /**
      *  pointer to BusAttachment
      */
-    ajn::BusAttachment* m_busAttachment;
+    BusAttachment* m_busAttachment;
     /**
      *  stores the mime type of the icon.
      */
@@ -102,4 +102,4 @@ class AboutIconObj : public ajn::BusObject {
 
 }
 
-#endif /* ABOUTICONOBJ_H_ */
+#endif /* _ALLJOYN_ABOUTICONOBJ_H */

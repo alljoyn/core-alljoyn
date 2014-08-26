@@ -18,8 +18,8 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#ifndef ABOUTICONPROXY_H_
-#define ABOUTICONPROXY_H_
+#ifndef _ALLJOYN_ABOUTICONPROXY_H
+#define _ALLJOYN_ABOUTICONPROXY_H
 
 #include <alljoyn/BusAttachment.h>
 
@@ -78,7 +78,7 @@ class AboutIconProxy {
      * Construct an AboutIconProxy.
      * @param bus reference to BusAttachment
      */
-    AboutIconProxy(ajn::BusAttachment& bus);
+    AboutIconProxy(BusAttachment& bus);
     /**
      * Destruct AboutIconProxy.
      */
@@ -91,7 +91,7 @@ class AboutIconProxy {
      * @param[in] sessionId the session received  after joining AllJoyn session
      * @return ER_OK if successful
      */
-    QStatus GetUrl(const char* busName, qcc::String& url, ajn::SessionId sessionId = 0);
+    QStatus GetUrl(const char* busName, qcc::String& url, SessionId sessionId = 0);
 
     /**
      * @param[in] busName Unique or well-known name of AllJoyn bus
@@ -99,7 +99,7 @@ class AboutIconProxy {
      * @param[in] sessionId the session received  after joining AllJoyn session
      * @return ER_OK if successful
      */
-    QStatus GetIcon(const char* busName, Icon& icon, ajn::SessionId sessionId = 0);
+    QStatus GetIcon(const char* busName, Icon& icon, SessionId sessionId = 0);
     /**
      *
      * @param[in] busName Unique or well-known name of AllJoyn bus
@@ -107,7 +107,7 @@ class AboutIconProxy {
      * @param[in] sessionId the session received  after joining AllJoyn session
      * @return ER_OK if successful
      */
-    QStatus GetVersion(const char* busName, uint16_t& version, ajn::SessionId sessionId = 0);
+    QStatus GetVersion(const char* busName, uint16_t& version, SessionId sessionId = 0);
 
     /**
      *
@@ -116,7 +116,7 @@ class AboutIconProxy {
      * @param[in] sessionId the session received  after joining AllJoyn session
      * @return ER_OK if successful
      */
-    QStatus GetMimeType(const char* busName, qcc::String& mimeType, ajn::SessionId sessionId = 0);
+    QStatus GetMimeType(const char* busName, qcc::String& mimeType, SessionId sessionId = 0);
 
     /**
      *
@@ -125,16 +125,16 @@ class AboutIconProxy {
      * @param[in] sessionId the session received  after joining AllJoyn session
      * @return ER_OK if successful
      */
-    QStatus GetSize(const char* busName, size_t& size, ajn::SessionId sessionId = 0);
+    QStatus GetSize(const char* busName, size_t& size, SessionId sessionId = 0);
 
   private:
     /**
      * pointer to BusAttachment
      */
-    ajn::BusAttachment* m_BusAttachment;
+    BusAttachment* m_BusAttachment;
 
 };
 
 }
 
-#endif /* ABOUTICONPROXY_H_ */
+#endif /* _ALLJOYN_ABOUTICONPROXY_H */

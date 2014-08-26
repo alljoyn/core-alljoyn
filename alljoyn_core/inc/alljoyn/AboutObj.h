@@ -52,7 +52,7 @@ class AboutObj : public BusObject {
      *
      * @param bus the BusAttachment that will contain the about information
      */
-    AboutObj(ajn::BusAttachment& bus);
+    AboutObj(BusAttachment& bus);
 
     virtual ~AboutObj() { }
 
@@ -105,14 +105,14 @@ class AboutObj : public BusObject {
      * @param[in]  member
      * @param[in]  msg reference of AllJoyn Message
      */
-    void GetAboutData(const ajn::InterfaceDescription::Member* member, ajn::Message& msg);
+    void GetAboutData(const InterfaceDescription::Member* member, Message& msg);
 
     /**
      *  Handles  GetObjectDescription method
      * @param[in]  member
      * @param[in]  msg reference of AllJoyn Message
      */
-    void GetObjectDescription(const ajn::InterfaceDescription::Member* member, ajn::Message& msg);
+    void GetObjectDescription(const InterfaceDescription::Member* member, Message& msg);
 
     /**
      * Handles the GetPropery request
@@ -128,8 +128,8 @@ class AboutObj : public BusObject {
      */
     BusAttachment* m_busAttachment;
 
-    ajn::AboutObjectDescription m_objectDescription;
-    ajn::AboutData m_aboutData;
+    AboutObjectDescription m_objectDescription;
+    AboutData m_aboutData;
 };
 }
 #endif
