@@ -155,6 +155,16 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
      */
     void EndpointExit(RemoteEndpoint& endpoint);
 
+    /**
+    * Callback indicating that an untrusted client is trying to connect to this daemon.
+    */
+    QStatus UntrustedClientStart();
+
+    /**
+    * Callback indicating that an untrusted client has disconnected from this daemon.
+    */
+    void UntrustedClientExit() { };
+
   private:
     /**
      * Empty private overloaded virtual function for Thread::Start

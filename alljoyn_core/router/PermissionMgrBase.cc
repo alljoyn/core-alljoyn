@@ -64,4 +64,4 @@ PermissionMgr::DaemonBusCallPolicy PermissionMgr::GetDaemonBusCallPolicy(BusEndp
     return policy;
 }
 
-} // namespace ajn {
+} // namespace ajn

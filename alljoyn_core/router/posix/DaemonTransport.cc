@@ -383,4 +383,9 @@ QStatus DaemonTransport::StopListen(const char* listenSpec)
     return Thread::Stop();
 }
 
+QStatus DaemonTransport::UntrustedClientStart()
+{
+    return ER_NOT_IMPLEMENTED;
+}
+
 } // namespace ajn

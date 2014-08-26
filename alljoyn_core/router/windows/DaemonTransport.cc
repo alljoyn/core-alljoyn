@@ -118,10 +118,18 @@ void* DaemonTransport::Run(void* arg)
             if ((status != ER_OK) || (nbytes != 1) || (byte != 0)) {
                 status = (status == ER_OK) ? ER_FAIL : status;
             } else {
+                /* Since the Windows DaemonTransport allows untrusted clients,
+                 * it must implement UntrustedClientStart and UntrustedClientExit.
+                 * As a part of Establish, the endpoint can call the Transport's
+                 * UntrustedClientStart method - if it is an untrusted client -
+                 * so the transport MUST call m_endpoint->SetListener before
+                 * calling Establish. Note: This is only required on the accepting
+                 * end i.e. for incoming endpoints.
+                 */
+                conn->SetListener(this);
                 status = conn->Establish("ANONYMOUS", authName, redirection);
             }
             if (status == ER_OK) {
-                conn->SetListener(this);
                 status = conn->Start();
             }
             if (status != ER_OK) {
@@ -244,5 +252,13 @@ QStatus DaemonTransport::StopListen(const char* listenSpec)
     return Thread::Stop();
 }
 
+QStatus DaemonTransport::UntrustedClientStart()
+{
+    /*
+     * Since DaemonTransport accepts connections just on the Localhost interface,
+     * untrusted clients are acceptable.
+     */
+    return ER_OK;
+}
 
 } // namespace ajn
