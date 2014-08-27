@@ -581,24 +581,24 @@ static void DelConnRecord(ArdpHandle* handle, ArdpConnRecord* conn, bool forced)
     delete conn;
 }
 
-static void FlushMessage(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* snd, QStatus status)
+static void FlushMessage(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf, QStatus status)
 {
-    ArdpHeader* h = (ArdpHeader*) snd->hdr;
+    ArdpHeader* h = (ArdpHeader*) sBuf->hdr;
     uint16_t fcnt = ntohs(h->fcnt);
     uint32_t len = 0;
     /* Original sent data buffer */
-    uint8_t* buf = snd->data;
+    uint8_t* buf = sBuf->data;
 
     /* Mark all SND buffers associated with the message as available */
     do {
-        snd->inUse = false;
-        snd->fastRT = 0;
+        sBuf->inUse = false;
+        sBuf->fastRT = 0;
         len += ntohs(h->dlen);
-        snd = snd->next;
+        sBuf = sBuf->next;
         conn->snd.pending--;
         QCC_DbgPrintf(("FlushMessage(fcnt = %d): pending = %d", fcnt, conn->snd.pending));
         assert((conn->snd.pending < conn->snd.SEGMAX) && "Invalid number of pending segments in send queue!");
-        h = (ArdpHeader*) snd->hdr;
+        h = (ArdpHeader*) sBuf->hdr;
         fcnt--;
     } while (fcnt > 0);
 
@@ -616,11 +616,13 @@ static void FlushSendQueue(ArdpHandle* handle, ArdpConnRecord* conn, QStatus sta
      * SendCb() for all pending messages so that the upper layer knows
      * to release the corresponding buffers
      */
+    ArdpSndBuf* sBuf = &conn->snd.buf[(conn->snd.LCS + 1) % conn->snd.SEGMAX];
     for (uint32_t i = 0; i < conn->snd.SEGMAX; i++) {
-        ArdpHeader* h = (ArdpHeader* ) conn->snd.buf[i].hdr;
-        if (conn->snd.buf[i].inUse && (h->seq == h->som)) {
-            FlushMessage(handle, conn, &conn->snd.buf[i], status);
+        ArdpHeader* h = (ArdpHeader* ) sBuf->hdr;
+        if (sBuf->inUse && (h->seq == h->som)) {
+            FlushMessage(handle, conn, sBuf, status);
         }
+        sBuf = sBuf->next;
     }
 }
 
@@ -809,7 +811,7 @@ static void ExpireMessageSnd(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBu
     }
 }
 
-static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf)
+static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf, uint32_t ttl)
 {
 
     ArdpHeader* h = (ArdpHeader*) sBuf->hdr;
@@ -826,8 +828,9 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
     h->lcs = htonl(conn->rcv.LCS);
     h->acknxt = htonl(conn->snd.UNA);
     h->flags = ARDP_FLAG_ACK | ARDP_FLAG_VER;
+    h->ttl = htonl(ttl);
 
-    QCC_DbgPrintf(("SendMsgData(): seq = %u, ack=%u, lcs = %u", ntohl(h->seq), conn->rcv.CUR, conn->rcv.LCS));
+    QCC_DbgPrintf(("SendMsgData(): seq = %u, ack=%u, lcs = %u, ttl=%u", ntohl(h->seq), conn->rcv.CUR, conn->rcv.LCS, ttl));
 
     if (conn->rcv.eack.sz == 0) {
         h->hlen = ARDP_FIXED_HEADER_LEN >> 1;
@@ -839,79 +842,6 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
     }
 
     msgSG.AddBuffer(sBuf->data, sBuf->datalen);
-
-    /*
-     * the ttl found in the sBuf has the same meaning as the ttl in the
-     * AllJoyn Message that the sBuf contains.  AllJoyn attempts to do a
-     * one-way estimation of the clock offset and network delay by comparing a
-     * local timestamp acquired when a message is unmarshaled with a remote
-     * timestamp acquired when the message is marshaled.  AllJoyn therefore
-     * has its own way of deciding when to expire a message from immediately
-     * before we get it on the source side to immediately after we give it up
-     * on the destination.
-     *
-     * Since that estimation is all tangled up with the PeerState object and
-     * internal message timestamps, we have our own version of TTL which we use
-     * that means more like "Time Left Until Expiration while the Message is in
-     * Transit.  In-transit means while ARDP is moving it from one endpoint in
-     * one Routing Node to another endpoint in another Routing Node.
-     *
-     */
-    if (sBuf->ttl != ARDP_TTL_INFINITE) {
-        /*
-         * There is a non-infinite time-to-live on this message
-         */
-        uint32_t msElapsed = TimeNow(handle->tbase) - sBuf->tStart;
-
-        /* Factor in mean RTT to account for time on the wire */
-        if (conn->rttInit) {
-            msElapsed += (conn->rttMean >> 1);
-        }
-
-        if (msElapsed >= sBuf->ttl) {
-#if ARDP_STATS
-            ++handle->stats.outboundDrops;
-#endif
-            /*
-             * If the message has never been on the wire, it is trivial to drop.
-             */
-            if (sBuf->inUse == false) {
-                /*
-                 * This is a brand new segment, we are seeing it for the first time.
-                 */
-                QCC_DbgPrintf(("SendMsgData(): nonzero sBuf->ttl=%d., msElapsed=%d.", sBuf->ttl, msElapsed));
-                QCC_DbgPrintf(("SendMsgData(): Dropping expired message (conn=0x%p, buf=0x%p, len=%d.)",
-                               conn, sBuf->data, sBuf->datalen));
-                /*
-                 * If the message is expired we don't send it, we return an error
-                 * status for ARDP_Send() to give back and that is the end of the
-                 * story.
-                 */
-#if ARDP_STATS
-                ++handle->stats.preflightDrops;
-#endif
-            } else {
-                /*
-                 * This is the more complicated case where we have already sent a
-                 * copy of the message on the wire, but it has not been ACKed yet.
-                 * The implication is that the retransmit timer handler fired.
-                 */
-#if ARDP_STATS
-                ++handle->stats.inflightDrops;
-#endif
-                ExpireMessageSnd(handle, conn, sBuf, msElapsed);
-            }
-            return ER_ARDP_TTL_EXPIRED;
-        }
-
-        /*
-         * Set ttl to the number of milliseconds remaining at the "instant"
-         * before it was transmitted.
-         */
-        h->ttl = htonl(sBuf->ttl - msElapsed);
-    } else {
-        h->ttl = htonl(ARDP_TTL_INFINITE);
-    }
 
 #if ARDP_TESTHOOKS
     /*
@@ -989,10 +919,10 @@ static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reas
  *    new meanRTT = 7/8 * meanRTT + 1/8 * error
  *    new meanVar = 3/4 * meanVar + 1/4 * |error|
  */
-static void AdjustRTT(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* snd)
+static void AdjustRTT(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf)
 {
     uint32_t now = TimeNow(handle->tbase);
-    uint32_t rtt = now - snd->tStart;
+    uint32_t rtt = now - sBuf->tStart;
     int32_t err;
 
     if (!conn->rttInit) {
@@ -1004,7 +934,7 @@ static void AdjustRTT(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* snd)
     err = rtt - conn->rttMean;
 
     QCC_DbgPrintf(("AdjustRtt: mean = %u, var =%u, rtt = %u, now = %u, tStart= %u, error = %d",
-                   conn->rttMean, conn->rttMeanVar, rtt, now, snd->tStart, err));
+                   conn->rttMean, conn->rttMeanVar, rtt, now, sBuf->tStart, err));
     conn->rttMean = (7 * conn->rttMean + rtt) >> 3;
     conn->rttMeanVar = (conn->rttMeanVar * 3 + ABS(err)) >> 2;
 
@@ -1024,18 +954,45 @@ inline static uint32_t GetRTO(ArdpHandle* handle, ArdpConnRecord* conn)
 
 static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
 {
-    ArdpSndBuf* snd = (ArdpSndBuf*) context;
-    ArdpTimer* timer = &snd->timer;
+    ArdpSndBuf* sBuf = (ArdpSndBuf*) context;
+    ArdpTimer* timer = &sBuf->timer;
     QCC_DbgTrace(("RetransmitTimerHandler: handle=%p conn=%p context=%p", handle, conn, context));
 
-    assert(snd->inUse && "RetransmitTimerHandler: trying to resend flushed buffer");
+    assert(sBuf->inUse && "RetransmitTimerHandler: trying to resend flushed buffer");
 
     if (timer->retry > 1) {
-        QCC_DbgPrintf(("RetransmitTimerHandler: context=snd=%p seq=%u retries=%d", snd, ntohl(((ArdpHeader*)snd->hdr)->seq), timer->retry));
-        QStatus status = SendMsgData(handle, conn, snd);
+        QCC_DbgPrintf(("RetransmitTimerHandler: context=sBuf=%p seq=%u retries=%d",
+                       sBuf, ntohl(((ArdpHeader*)sBuf->hdr)->seq), timer->retry));
+        QStatus status;
+        uint32_t msElapsed = TimeNow(handle->tbase) - sBuf->tStart;
+
+        /*
+         * Check TTL of the segment about to be retransmitted. If TTL expired,
+         * do not retransmit and flush the whole message.
+         */
+        if (sBuf->ttl != ARDP_TTL_INFINITE) {
+            /* Factor in mean RTT to account for time on the wire */
+            if (conn->rttInit) {
+                msElapsed += (conn->rttMean >> 1);
+            }
+
+            if (msElapsed >= sBuf->ttl) {
+#if ARDP_STATS
+                ++handle->stats.outboundDrops;
+                ++handle->stats.inflightDrops;
+#endif
+                QCC_DbgPrintf(("RetransmitTimerHandler: segment %u expired", ntohl(((ArdpHeader*)sBuf->hdr)->seq)));
+                ExpireMessageSnd(handle, conn, sBuf, msElapsed);
+                return;
+            }
+        } else {
+            msElapsed = 0;
+        }
+
+        status = SendMsgData(handle, conn, sBuf, sBuf->ttl - msElapsed);
 
         /* Don't schedule fast retransmit for this segment */
-        snd->fastRT = handle->config.dupackCounter + 1;
+        sBuf->fastRT = handle->config.dupackCounter + 1;
 
         if (status == ER_OK) {
             timer->retry--;
@@ -1044,14 +1001,14 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         } else if (status == ER_WOULDBLOCK) {
             timer->delta = 0; /* Try next time around */
             /* Since that won't be a legitimate retransmit,  don't update retries */
-        } else if (status != ER_ARDP_TTL_EXPIRED) {
+        } else {
             QCC_LogError(status, ("RetransmitTimerHandler: Write to Socket went bad. Disconnect."));
             timer->retry = 0;
             Disconnect(handle, conn, status);
         }
 
     } else {
-        QCC_DbgHLPrintf(("RetransmitTimerHandler seq=%u retries hit the limit: %d", ntohl(((ArdpHeader*)snd->hdr)->seq), handle->config.dataRetries));
+        QCC_DbgHLPrintf(("RetransmitTimerHandler seq=%u retries hit the limit: %d", ntohl(((ArdpHeader*)sBuf->hdr)->seq), handle->config.dataRetries));
         timer->retry = 0;
         Disconnect(handle, conn, ER_TIMEOUT);
     }
@@ -1425,13 +1382,10 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
     ArdpSndBuf* sBuf = &conn->snd.buf[index];
     uint32_t now = TimeNow(handle->tbase);
 
-    /*
-     * Note that a ttl of 0 means "forever" and the maximum TTL in the protocol is 65535 ms
-     */
+    QCC_DbgTrace(("SendData(handle=%p, conn=%p, buf=%p, len=%u, ttl=%u)", handle, conn, buf, len, ttl));
+    QCC_DbgPrintf(("SendData(): Sending %u bytes of data from src=0x%x to dst=0x%x", len, conn->local, conn->foreign));
 
-    QCC_DbgTrace(("SendData(handle=%p, conn=%p, buf=%p, len=%d., ttl=%u.)", handle, conn, buf, len, ttl));
-    QCC_DbgPrintf(("SendData(): Sending %d bytes of data from src=%d to dst=%d", len, conn->local, conn->foreign));
-
+    /* Check if message needs to be fragmented */
     if (len <= conn->snd.maxDlen) {
         /* Data fits into one segment */
         fcnt = 1;
@@ -1445,14 +1399,34 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
 
     /* Check if receiver's window is wide enough to accept FCNT number of segments */
     if (fcnt > conn->window) {
-        QCC_DbgPrintf(("SendData(): number of fragments %d exceeds the window size %d", fcnt, conn->window));
+        QCC_DbgPrintf(("SendData(): number of fragments %u exceeds the window size %u", fcnt, conn->window));
         return ER_ARDP_BACKPRESSURE;
     }
 
     /* Check if send queue is deep enough to hold FCNT number of segments */
     if (fcnt > (conn->snd.SEGMAX - conn->snd.pending)) {
-        QCC_DbgPrintf(("SendData(): number of fragments %d exceeds the send queue depth %d", fcnt, conn->snd.SEGMAX - conn->snd.pending));
+        QCC_DbgPrintf(("SendData(): number of fragments %u exceeds the send queue depth %u",
+                       fcnt, conn->snd.SEGMAX - conn->snd.pending));
         return ER_ARDP_BACKPRESSURE;
+    }
+
+    /*
+     * Check if the message's TTL is less than half RTT. If this is the case,
+     * do not bother to sending, retrun error.
+     */
+
+    QCC_DbgPrintf(("SendMsgData(): Dropping expired message (conn=0x%p, buf=0x%p, len=%d.)",
+                   conn, sBuf->data, sBuf->datalen));
+
+    /* Factor in mean RTT to account for time on the wire */
+    if (conn->rttInit && (ttl != ARDP_TTL_INFINITE)) {
+        if (ttl <= (conn->rttMean >> 1)) {
+#if ARDP_STATS
+            ++handle->stats.outboundDrops;
+            ++handle->stats.preflightDrops;
+#endif
+            return ER_ARDP_TTL_EXPIRED;
+        }
     }
 
     for (uint16_t i = 0; i < fcnt; i++) {
@@ -1480,7 +1454,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
 
         QCC_DbgPrintf(("SendData(): updated send queue at index %d", index));
 
-        status = SendMsgData(handle, conn, sBuf);
+        status = SendMsgData(handle, conn, sBuf, ttl);
 
         if (status == ER_WOULDBLOCK) {
             QCC_DbgPrintf(("SendData(): ER_WOULDBLOCK"));
@@ -1501,7 +1475,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
             conn->snd.pending++;
             assert(((conn->snd.pending) <= conn->snd.SEGMAX) && "Number of pending segments in send queue exceeds MAX!");
             conn->snd.NXT++;
-        } else if (status != ER_ARDP_TTL_EXPIRED) {
+        } else {
             /* Something irrevocably bad happened on the socket. Disconnect. */
             Disconnect(handle, conn, status);
             break;
