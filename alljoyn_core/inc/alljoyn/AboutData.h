@@ -21,6 +21,7 @@
 #ifndef _ALLJOYN_ABOUTDATA_H
 #define _ALLJOYN_ABOUTDATA_H
 
+#include <alljoyn/AboutDataListener.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/Status.h>
 
@@ -36,7 +37,7 @@ namespace ajn {
 /**
  * AboutData is responsible for holding the org.alljoyn.about interface Data fields
  */
-class AboutData {
+class AboutData : public AboutDataListener {
   public:
 
     /**
@@ -68,33 +69,6 @@ class AboutData {
      * Destructor
      */
     ~AboutData();
-
-//    /*
-//     * copy constructor
-//     */
-//    /*
-//     * TODO: unknown at this point in time if this is need however since this will have
-//     * dictonary of data its likely it will be needed.
-//     */
-//    AboutData(const AboutData& other);
-//
-//    /*
-//     * assignment operator
-//     *
-//     * unknown at this point in time if this is need however since this will have
-//     * dictonary of data its likely it will be needed.
-//     */
-//    AboutData& operator=(const AboutData& rhs);
-
-//    /**
-//     * this will provide an ID string used to identify the device.  This string
-//     * is required to be unique to the device and should be constant for the specified
-//     * device.
-//     *
-//     * @return the DeviceId
-//     * TODO
-//     */
-//    static const char* GetDeviceID();
 
     /**
      * use xml definition of AboutData to set the about data.
@@ -157,7 +131,7 @@ class AboutData {
      *
      * @return ER_OK on success
      */
-    QStatus Initialize(const MsgArg& arg, const char* language = NULL);
+    QStatus CreatefromMsgArg(const MsgArg& arg, const char* language = NULL);
 
     /**
      * Set the AppId for the AboutData

@@ -20,7 +20,7 @@
 #ifndef _ALLJOYN_ABOUT_H
 #define _ALLJOYN_ABOUT_H
 
-#include <alljoyn/AboutData.h>
+#include <alljoyn/AboutDataListener.h>
 #include <alljoyn/AboutListener.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
@@ -44,13 +44,13 @@ class AboutObj : public BusObject {
      * create a new About class
      *
      * The about class is responsible for transmitting information about the interfaces
-     * that are avalible for other applications to use. It also provides application specific
-     * information that is contained in the AboutData class
+     * that are available for other applications to use. It also provides application specific
+     * information that is contained in the AboutDataListener class
      *
      * It also provides mean for applications to respond to certain requests concerning the
      * interfaces.
      *
-     * @param bus the BusAttachment that will contain the about information
+     * @param[in] bus the BusAttachment that will contain the about information
      */
     AboutObj(BusAttachment& bus);
 
@@ -75,7 +75,7 @@ class AboutObj : public BusObject {
      *
      * @return ER_OK on success
      */
-    QStatus Announce(SessionPort sessionPort, AboutData& aboutData);
+    QStatus Announce(SessionPort sessionPort, AboutDataListener& aboutData);
 
     /**
      * This is used to send the Announce signal.  It announces the list of all
@@ -94,10 +94,12 @@ class AboutObj : public BusObject {
      * @see BusObject::AddInterface
      *
      * @param sessionPort the session port the interfaces can be connected with
+     * @param aboutData   the AboutDataListener that contains the AboutData for
+     *                    this announce signal.
      *
      * @return ER_OK on success
      */
-    QStatus Announce(SessionPort sessionPort, AboutObjectDescription& objectDescription, AboutData& aboutData);
+    QStatus Announce(SessionPort sessionPort, AboutObjectDescription& objectDescription, AboutDataListener& aboutData);
 
   private:
     /**
@@ -129,7 +131,7 @@ class AboutObj : public BusObject {
     BusAttachment* m_busAttachment;
 
     AboutObjectDescription m_objectDescription;
-    AboutData m_aboutData;
+    AboutDataListener* m_aboutDataListener;
 };
 }
 #endif

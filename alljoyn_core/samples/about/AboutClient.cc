@@ -51,7 +51,9 @@ class MySessionListener : public SessionListener {
 };
 
 class MyAboutListener : public AboutListener {
-    void Announced(const char* busName, uint16_t version, SessionPort port, const AboutObjectDescription& objectDescription, const AboutData& aboutData) {
+    void Announced(const char* busName, uint16_t version, SessionPort port, const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
+        AboutObjectDescription objectDescription;
+        objectDescription.CreateFromMsgArg(objectDescriptionArg);
         printf("*********************************************************************************\n");
         printf("Announce signal discovered\n");
         printf("\tFrom bus %s\n", busName);
@@ -70,19 +72,15 @@ class MyAboutListener : public AboutListener {
             if (ER_OK == status && 0 != sessionId) {
                 AboutProxy aboutProxy(*g_bus, busName, sessionId);
 
-                AboutObjectDescription objDescription;
-                aboutProxy.GetObjectDescriptions(objDescription);
-                printf("*********************************************************************************\n");
                 MsgArg objArg;
-                objDescription.GetMsgArg(&objArg);
+                aboutProxy.GetObjectDescriptions(objArg);
+                printf("*********************************************************************************\n");
                 printf("AboutProxy.GetObjectDescriptions:\n%s\n", objArg.ToString().c_str());
                 printf("*********************************************************************************\n");
 
-                AboutData aData("en");
-                aboutProxy.GetAboutData("en", aData);
-                printf("*********************************************************************************\n");
                 MsgArg aArg;
-                aData.GetMsgArg(&aArg, "en");
+                aboutProxy.GetAboutData("en", aArg);
+                printf("*********************************************************************************\n");
                 printf("AboutProxy.GetObjectDescriptions:\n%s\n", aArg.ToString().c_str());
                 printf("*********************************************************************************\n");
 

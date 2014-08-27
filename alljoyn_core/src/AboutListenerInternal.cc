@@ -213,8 +213,6 @@ void AboutListenerInternal::AnnounceSignalHandler(const ajn::InterfaceDescriptio
 #endif
         uint16_t version = 0;
         uint16_t receivedPort = 0;
-        AboutObjectDescription objectDescription;
-        AboutData aboutData;
 
         status = args[0].Get("q", &version);
         if (status != ER_OK) {
@@ -224,17 +222,8 @@ void AboutListenerInternal::AnnounceSignalHandler(const ajn::InterfaceDescriptio
         if (status != ER_OK) {
             return;
         }
-
-        status = objectDescription.Initialize(args[2]);
-        if (status != ER_OK) {
-            return;
-        }
-
-        status = aboutData.Initialize(args[3]);
-        if (status != ER_OK) {
-            return;
-        }
-
+        AboutObjectDescription objectDescription;
+        objectDescription.CreateFromMsgArg(args[2]);
         announceMapLock.Lock(MUTEX_CONTEXT);
         //look through map and send out the Announce if able to match the interfaces
         for (AnnounceMap::iterator it = announceMap.begin();
@@ -242,6 +231,7 @@ void AboutListenerInternal::AnnounceSignalHandler(const ajn::InterfaceDescriptio
             bool matchFound = true;
             //if second.size is zero then the user is trying to match an any interface
             for (std::set<qcc::String>::iterator it2 = it->second.begin(); it2 != it->second.end(); ++it2) {
+                // TODO look through the MsgArg directly without using the AboutObjectDescription
                 matchFound = objectDescription.HasInterface(*it2);
                 // if the interface is not in the objectDescription we can exit
                 // the loop instantly with out checking the other interfaces
@@ -260,7 +250,7 @@ void AboutListenerInternal::AnnounceSignalHandler(const ajn::InterfaceDescriptio
         for (size_t i = 0; i < announceHandlerList.size(); ++i) {
             ProtectedAboutListener l = announceHandlerList[i];
             announceHandlerLock.Unlock(MUTEX_CONTEXT);
-            (*l)->Announced(message->GetSender(), version, static_cast<SessionPort>(receivedPort), objectDescription, aboutData);
+            (*l)->Announced(message->GetSender(), version, static_cast<SessionPort>(receivedPort), args[2], args[3]);
             announceHandlerLock.Lock(MUTEX_CONTEXT);
         }
 

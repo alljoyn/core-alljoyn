@@ -34,7 +34,7 @@ AboutObj::AboutObj(ajn::BusAttachment& bus) :
     BusObject(org::alljoyn::About::ObjectPath),
     m_busAttachment(&bus),
     m_objectDescription(),
-    m_aboutData()
+    m_aboutDataListener()
 {
     const InterfaceDescription* p_InterfaceDescription = NULL;
 
@@ -56,16 +56,16 @@ AboutObj::AboutObj(ajn::BusAttachment& bus) :
     QCC_DbgHLPrintf(("AboutObj RegisterBusOBject %s", QCC_StatusText(status)));
 }
 
-QStatus AboutObj::Announce(SessionPort sessionPort, AboutData& aboutData) {
+QStatus AboutObj::Announce(SessionPort sessionPort, AboutDataListener& aboutData) {
     AboutObjectDescription aod; // empty AboutObjectDescrption
     return Announce(sessionPort, aod, aboutData);
 }
 
-QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutObjectDescription& objectDescription, ajn::AboutData& aboutData)
+QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutObjectDescription& objectDescription, ajn::AboutDataListener& aboutData)
 {
     m_busAttachment->GetAboutObjectDescription(m_objectDescription);
     m_objectDescription.Merge(objectDescription);
-    m_aboutData = aboutData;
+    m_aboutDataListener = &aboutData;
     const InterfaceDescription* p_InterfaceDescription = m_busAttachment->GetInterface(org::alljoyn::About::InterfaceName);
 
     if (!p_InterfaceDescription) {
@@ -90,7 +90,7 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutObjectDescription&
         return status;
     }
     m_objectDescription.GetMsgArg(&announceArgs[2]);
-    m_aboutData.GetMsgArgAnnounce(&announceArgs[3]);
+    m_aboutDataListener->GetMsgArgAnnounce(&announceArgs[3]);
     Message msg(*m_busAttachment);
     uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
 //#if !defined(NDEBUG)
@@ -114,7 +114,7 @@ void AboutObj::GetAboutData(const ajn::InterfaceDescription::Member* member, ajn
         ajn::MsgArg retargs[1];
         //status = m_PropertyStore->ReadAll(args[0].v_string.str, PropertyStore::READ, retargs[0]);
         QCC_DbgPrintf(("GetAboutData for GetMsgArg for lang=%s", args[0].v_string.str));
-        status = m_aboutData.GetMsgArg(retargs, args[0].v_string.str);
+        status = m_aboutDataListener->GetMsgArg(retargs, args[0].v_string.str);
         //QCC_DbgPrintf(("m_pPropertyStore->ReadAll(%s,PropertyStore::READ)  =%s", args[0].v_string.str, QCC_StatusText(status)));
         if (status != ER_OK) {
             if (status == ER_LANGUAGE_NOT_SUPPORTED) {

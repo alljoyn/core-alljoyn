@@ -42,19 +42,9 @@ namespace ajn {
  */
 class AboutProxy : public ajn::MessageReceiver {
   public:
-//    /**
-//     *  map of AboutData using qcc::String as key and ajn::MsgArg as value.
-//     */
-//    typedef std::map<qcc::String, ajn::MsgArg> AboutData;
-//
-//    /**
-//     * map of ObjectDescriptions using qcc::String as key std::vector<qcc::String>   as value, describing interfaces
-//     *
-//     */
-//    typedef std::map<qcc::String, std::vector<qcc::String> > ObjectDescriptions;
-
     /**
      * AboutProxy Constructor
+     *
      * @param  bus reference to BusAttachment
      * @param[in] busName Unique or well-known name of AllJoyn bus
      * @param[in] sessionId the session received  after joining AllJoyn session
@@ -73,7 +63,7 @@ class AboutProxy : public ajn::MessageReceiver {
      *
      * @return ER_OK if successful.
      */
-    QStatus GetObjectDescriptions(AboutObjectDescription& objectDescs);
+    QStatus GetObjectDescriptions(MsgArg& objectDescs);
 
     /**
      * Get the AboutData  for specified bus name.
@@ -83,7 +73,7 @@ class AboutProxy : public ajn::MessageReceiver {
      *
      * @return ER_OK if successful.
      */
-    QStatus GetAboutData(const char* languageTag, AboutData& data);
+    QStatus GetAboutData(const char* languageTag, MsgArg& data);
 
     /**
      * GetVersion get the About version

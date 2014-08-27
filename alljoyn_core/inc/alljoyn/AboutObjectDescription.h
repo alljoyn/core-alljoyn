@@ -39,21 +39,6 @@ namespace ajn {
  */
 class AboutObjectDescription {
   public:
-//    /**
-//     * constructor
-//     */
-//    AboutObjectDescription();
-//
-//    /**
-//     * Construct an AboutObjectDescription using a MsgArg
-//     */
-//    AboutObjectDescription(const MsgArg& arg);
-//
-//    /**
-//     * destructor
-//     */
-//    ~AboutObjectDescription() {};
-
     /**
      * Fill in the ObjectDescription fields using a MsgArg
      *
@@ -65,7 +50,7 @@ class AboutObjectDescription {
      *
      * @return ER_OK on success
      */
-    QStatus Initialize(const MsgArg& arg);
+    QStatus CreateFromMsgArg(const MsgArg& arg);
 
     /**
      * Add an interface to the ObjectDescription. This can be called multiple
@@ -236,7 +221,7 @@ class AboutObjectDescription {
     /**
      * Mutex that protects the m_AnnounceObjectsMap
      *
-     * this is marked a mutable so we can grab the lock to prevent the Objects
+     * this is marked as mutable so we can grab the lock to prevent the Objects
      * map being modified while its being read.
      */
     mutable qcc::Mutex m_AnnounceObjectsMapLock;

@@ -166,7 +166,7 @@ TEST(AboutObjectDescriptionTest, Initilize)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutObjectDescription aod1;
-    status = aod1.Initialize(arg);
+    status = aod1.CreateFromMsgArg(arg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     EXPECT_TRUE(aod1.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));

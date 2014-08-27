@@ -101,27 +101,6 @@ AboutData::~AboutData()
 
 }
 
-/*
- * copy constructor
- */
-//AboutData::AboutData(const AboutData& other)
-//{
-//
-//}
-
-/*
- * assignment operator
- */
-//AboutData& AboutData::operator=(const AboutData& rhs)
-//{
-//
-//}
-
-//static const char* AboutData::GetDeviceID()
-//{
-//    return "This_is_not_a_DeviceID";
-//}
-
 uint8_t CharToNibble(char c) {
     if (c >= '0' && c <= '9') {
         return c - '0';
@@ -279,7 +258,7 @@ bool AboutData::IsValid(const char* language)
     return true;
 }
 
-QStatus AboutData::Initialize(const MsgArg& arg, const char* language)
+QStatus AboutData::CreatefromMsgArg(const MsgArg& arg, const char* language)
 {
     QStatus status = ER_OK;
     char* defaultLanguage;

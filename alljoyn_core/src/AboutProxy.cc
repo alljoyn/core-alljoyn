@@ -44,7 +44,7 @@ AboutProxy::~AboutProxy()
 {
 }
 
-QStatus AboutProxy::GetObjectDescriptions(AboutObjectDescription& objectDescs)
+QStatus AboutProxy::GetObjectDescriptions(MsgArg& objectDescs)
 {
     QCC_DbgTrace(("AboutProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
@@ -58,7 +58,12 @@ QStatus AboutProxy::GetObjectDescriptions(AboutObjectDescription& objectDescs)
     size_t numArgs = 0;
     replyMsg->GetArgs(numArgs, returnArgs);
     if (numArgs == 1) {
-        status = objectDescs.Initialize(returnArgs[0]);
+        objectDescs = returnArgs[0];
+        // Since the returnArgs are const we cannot change its ownership flags
+        // as soon as this function ends the returnArgs will go out of scope and
+        // any information it points to will be freed unless we call Stabilize to
+        // copy that information.
+        objectDescs.Stabilize();
     } else {
         //TODO change to more meaningfull error status
         status = ER_FAIL;
@@ -66,7 +71,7 @@ QStatus AboutProxy::GetObjectDescriptions(AboutObjectDescription& objectDescs)
     return status;
 }
 
-QStatus AboutProxy::GetAboutData(const char* languageTag, AboutData& data)
+QStatus AboutProxy::GetAboutData(const char* languageTag, MsgArg& data)
 {
     QCC_DbgTrace(("AboutClient::%s", __FUNCTION__));
     QStatus status = ER_OK;
@@ -85,7 +90,12 @@ QStatus AboutProxy::GetAboutData(const char* languageTag, AboutData& data)
     size_t numArgs = 0;
     replyMsg->GetArgs(numArgs, returnArgs);
     if (numArgs == 1) {
-        status = data.Initialize(returnArgs[0], languageTag);
+        data = returnArgs[0];
+        // Since the returnArgs are const we cannot change its ownership flags
+        // as soon as this function ends the returnArgs will go out of scope and
+        // any information it points to will be freed unless we call Stabilize to
+        // copy that information.
+        data.Stabilize();
     } else {
         //TODO change to more meaningfull error status
         status = ER_FAIL;

@@ -562,7 +562,7 @@ TEST(AboutData, InitUsingMsgArgBadSignature) {
     AboutData aboutData("en");
     MsgArg notADictionary("s", "incorrect type.");
 
-    status = aboutData.Initialize(notADictionary);
+    status = aboutData.CreatefromMsgArg(notADictionary);
     EXPECT_EQ(ER_BUS_SIGNATURE_MISMATCH, status) << "  Actual Status: " << QCC_StatusText(status);
 }
 
@@ -617,7 +617,7 @@ TEST(AboutData, InitUsingMsgArg)
     //TODO make a constructor for about data that does not require the default
     //     language
     AboutData aboutDataInit("en");
-    status = aboutDataInit.Initialize(aboutArg);
+    status = aboutDataInit.CreatefromMsgArg(aboutArg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     uint8_t* appIdOut;

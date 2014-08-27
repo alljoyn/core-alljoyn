@@ -23,22 +23,7 @@
 
 namespace ajn {
 
-//AboutObjectDescription::AboutObjectDescription()
-//{
-//    //TODO
-//}
-//
-//AboutObjectDescription::AboutObjectDescription(const MsgArg& arg)
-//{
-//    //TODO
-//}
-//
-//AboutObjectDescription::~AboutObjectDescription()
-//{
-//    //TODO
-//}
-
-QStatus AboutObjectDescription::Initialize(const MsgArg& arg)
+QStatus AboutObjectDescription::CreateFromMsgArg(const MsgArg& arg)
 {
     QStatus status = ER_OK;
     MsgArg* structarg;
