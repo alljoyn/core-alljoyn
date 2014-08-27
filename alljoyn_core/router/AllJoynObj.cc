@@ -811,20 +811,23 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 if (busAddrs.empty() && (sessionHost[0] == ':')) {
                     QCC_DbgPrintf(("JoinSessionThread::RunJoin(): look for busaddr in adv alias map"));
                     String rguidStr = String(sessionHost).substr(1, GUID128::SHORT_SIZE);
-                    multimap<String, pair<String, TransportMask> >::iterator ait = ajObj.advAliasMap.lower_bound(rguidStr);
-                    while ((ait != ajObj.advAliasMap.end()) && (ait->first == rguidStr)) {
-                        if ((ait->second.second & optsIn.transports) != 0) {
-                            multimap<String, NameMapEntry>::iterator nmit2 = ajObj.nameMap.lower_bound(ait->second.first);
-                            while (nmit2 != ajObj.nameMap.end() && (nmit2->first == ait->second.first)) {
-                                if ((nmit2->second.transport & ait->second.second & optsIn.transports) != 0) {
-                                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Found busaddr in adv alias map: \"%s\"",
-                                                   nmit2->second.busAddr.c_str()));
-                                    busAddrs.push_back(nmit2->second.busAddr);
+                    map<String, set<AdvAliasEntry> >::iterator ait = ajObj.advAliasMap.find(rguidStr);
+                    if (ait != ajObj.advAliasMap.end()) {
+                        set<AdvAliasEntry>::iterator bit = ait->second.begin();
+                        while ((bit != ait->second.end())) {
+                            if (((*bit).transport & optsIn.transports) != 0) {
+                                multimap<String, NameMapEntry>::iterator nmit2 = ajObj.nameMap.lower_bound((*bit).name);
+                                while (nmit2 != ajObj.nameMap.end() && (nmit2->first == (*bit).name)) {
+                                    if ((nmit2->second.transport & (*bit).transport & optsIn.transports) != 0) {
+                                        QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Found busaddr in adv alias map: \"%s\"",
+                                                       nmit2->second.busAddr.c_str()));
+                                        busAddrs.push_back(nmit2->second.busAddr);
+                                    }
+                                    ++nmit2;
                                 }
-                                ++nmit2;
                             }
+                            ++bit;
                         }
-                        ++ait;
                     }
                 }
                 ajObj.ReleaseLocks();
@@ -1960,12 +1963,21 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
     return 0;
 }
 
-void AllJoynObj::SetAdvNameAlias(const String& guid, const TransportMask mask, const String& advName)
+void AllJoynObj::AddAdvNameAlias(const String& guid, const TransportMask mask, const String& advName)
 {
-    QCC_DbgTrace(("AllJoynObj::SetAdvNameAlias(%s, 0x%x, %s)", guid.c_str(), mask, advName.c_str()));
+    QCC_DbgTrace(("AllJoynObj::AddAdvNameAlias(%s, 0x%x, %s)", guid.c_str(), mask, advName.c_str()));
 
     AcquireLocks();
-    advAliasMap.insert(pair<String, pair<String, TransportMask> >(guid, pair<String, TransportMask>(advName, mask)));
+    std::map<qcc::String, set<AdvAliasEntry> >::iterator it = advAliasMap.find(guid);
+    if (it == advAliasMap.end()) {
+        set<AdvAliasEntry> temp;
+        AdvAliasEntry entry(advName, mask);
+        temp.insert(entry);
+        advAliasMap.insert(pair<String, set<AdvAliasEntry> >(guid, temp));
+    } else {
+        AdvAliasEntry entry(advName, mask);
+        it->second.insert(entry);
+    }
     ReleaseLocks();
 }
 
@@ -4327,9 +4339,17 @@ void AllJoynObj::CleanAdvAliasMap(const String& name, const TransportMask mask)
 
     /* Clean advAliasMap */
     AcquireLocks();
-    multimap<String, pair<String, TransportMask> >::iterator ait = advAliasMap.begin();
+    map<String, set<AdvAliasEntry> >::iterator ait = advAliasMap.begin();
     while (ait != advAliasMap.end()) {
-        if ((ait->second.first == name) && ((ait->second.second & mask) != 0)) {
+        set<AdvAliasEntry>::iterator bit = ait->second.begin();
+        while (bit != ait->second.end()) {
+            if (((*bit).name == name) && (((*bit).transport & mask) != 0)) {
+                ait->second.erase(bit++);
+            } else {
+                ++bit;
+            }
+        }
+        if (ait->second.size() == 0) {
             advAliasMap.erase(ait++);
         } else {
             ++ait;

@@ -579,7 +579,7 @@ void SessionlessObj::FoundAdvertisedNameHandler(const char* name, TransportMask 
                    name, transport, guid.c_str(), version, iface.c_str(), changeId));
 
     /* Add/replace sessionless adv name for remote daemon */
-    busController->GetAllJoynObj().SetAdvNameAlias(guid, transport, name);
+    busController->GetAllJoynObj().AddAdvNameAlias(guid, transport, name);
 
     /* Join session if we need signals from this advertiser and we aren't already getting them */
     lock.Lock();
@@ -1399,6 +1399,12 @@ bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket respons
     if (!response->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, &advRecord)) {
         return false;
     }
+
+    if (advRecord->GetRRttl() == 0) {
+        QCC_DbgPrintf(("Ignoring response with zero ttl"));
+        return false;
+    }
+
     MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
     if (!advRData) {
         QCC_DbgPrintf(("Ignoring response with invalid advertisement info"));
@@ -1444,9 +1450,9 @@ bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket respons
             } else if (field.first == "transport") {
                 transport = StringToU32(field.second, 16);
                 if (!name.empty()) {
-                    QCC_DbgPrintf(("Received %s implements response (name=%s)",
+                    QCC_DbgPrintf(("Received %s implements response (name=%s) ttl %d",
                                    (unsolicited ? "unsolicited" : "solicited"),
-                                   name.c_str()));
+                                   name.c_str(), advRecord->GetRRttl()));
                     FoundAdvertisedNameHandler(name.c_str(), transport, name.c_str(), unsolicited);
                 }
                 name.clear();
@@ -1454,9 +1460,9 @@ bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket respons
         }
 
         if (!name.empty()) {
-            QCC_DbgPrintf(("Received %s implements response (name=%s)",
+            QCC_DbgPrintf(("Received %s implements response (name=%s) ttl %d",
                            (unsolicited ? "unsolicited" : "solicited"),
-                           name.c_str()));
+                           name.c_str(), advRecord->GetRRttl()));
             FoundAdvertisedNameHandler(name.c_str(), transport, name.c_str(), unsolicited);
         }
     }
