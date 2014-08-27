@@ -108,6 +108,10 @@ hdrs = { 'qcc': commonenv.File(['inc/qcc/Log.h',
 if commonenv['OS_GROUP'] == 'windows':
     hdrs['qcc/${OS_GROUP}'] += commonenv.File(['inc/qcc/${OS_GROUP}/mapping.h'])
 
+    if commonenv['OS_GROUP'] == 'posix' and commonenv['OS'] != 'darwin':
+        hdrs['qcc'] += commonenv.File(['inc/qcc/Semaphore.h'])
+        hdrs['qcc/${OS_GROUP}'] += commonenv.File(['inc/qcc/${OS_GROUP}/Semaphore.h'])
+
 
 # under normal build conditions the Status.xml found in alljoyn_core is used to
 # build Status.h and Status.cc.  If we are building the code in common independent
@@ -123,13 +127,16 @@ else:
 
 
 # Build the sources
-status_src = ['Status.cc']
+excluded_src = ['Status.cc']
 
 
 srcs = commonenv.Glob('$OBJDIR_COMMON/*.cc') + commonenv.Glob('$OBJDIR_COMMON/os/*.cc') + commonenv.Glob('$OBJDIR_COMMON/crypto/*.cc')
 
+if commonenv['OS'] == 'darwin':
+    excluded_src.append('Semaphore.cc')
+
 # Make sure Status never gets included from common for contained projects
-srcs = [ f for f in srcs if basename(str(f)) not in status_src ]
+srcs = [ f for f in srcs if basename(str(f)) not in excluded_src ]
 
 static_objs = commonenv.Object(srcs)
 
