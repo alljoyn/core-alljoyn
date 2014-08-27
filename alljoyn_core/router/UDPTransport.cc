@@ -23,6 +23,7 @@
 #include <qcc/IPAddress.h>
 #include <qcc/Socket.h>
 #include <qcc/Thread.h>
+#include <qcc/Condition.h>
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
 #include <qcc/IfConfig.h>
@@ -544,13 +545,12 @@ class ArdpStream : public qcc::Stream {
         m_disc(false),
         m_discSent(false),
         m_discStatus(ER_OK),
-        m_writeEvent(NULL),
-        m_writesOutstanding(0),
+        m_writeCondition(NULL),
         m_writeWaits(0),
         m_buffers()
     {
         QCC_DbgTrace(("ArdpStream::ArdpStream()"));
-        m_writeEvent = new qcc::Event();
+        m_writeCondition = new qcc::Condition();
     }
 
     virtual ~ArdpStream()
@@ -558,8 +558,8 @@ class ArdpStream : public qcc::Stream {
         QCC_DbgTrace(("ArdpStream::~ArdpStream()"));
 
         QCC_DbgPrintf(("ArdpStream::~ArdpStream(): delete events"));
-        delete m_writeEvent;
-        m_writeEvent = NULL;
+        delete m_writeCondition;
+        m_writeCondition = NULL;
     }
 
     /**
@@ -637,16 +637,6 @@ class ArdpStream : public qcc::Stream {
     }
 
     /**
-     * Get the number of outstanding write operations in process on the stream.
-     * connection.
-     */
-    uint32_t GetWritesOutstanding()
-    {
-        QCC_DbgTrace(("ArdpStream::GetWritesOutstanding() => %d.", m_writesOutstanding));
-        return m_writesOutstanding;
-    }
-
-    /**
      * Add the currently running thread to a set of threads that may be
      * currently referencing the internals of the stream.  We need this list to
      * make sure we don't try to delete the stream if there are threads
@@ -685,14 +675,19 @@ class ArdpStream : public qcc::Stream {
         m_lock.Unlock(MUTEX_CONTEXT);
     }
 
+    /**
+     * Wake all of the treads that may be waiting on the condition for a chance
+     * to contend for the resource.  We expect this function to be used to wake
+     * all of the threads in the case that the stream is shutting down.
+     * Presumably they will all wake up and notice that the stream is going away
+     * and exit
+     */
     void WakeThreadSet()
     {
         QCC_DbgTrace(("ArdpStream::WakeThreadSet()"));
-
         m_lock.Lock(MUTEX_CONTEXT);
-        for (set<ThreadEntry>::iterator i = m_threads.begin(); i != m_threads.end(); ++i) {
-            QCC_DbgTrace(("ArdpStream::Alert(): Wake thread %p waiting on stream %p", i->m_thread, i->m_stream));
-            i->m_stream->m_writeEvent->SetEvent();
+        if (m_writeCondition) {
+            m_writeCondition->Broadcast();
         }
         m_lock.Unlock(MUTEX_CONTEXT);
     }
@@ -754,14 +749,16 @@ class ArdpStream : public qcc::Stream {
     }
 
     /**
-     * Set the stream's write event if it exists
+     * Set the stream's write condition if it exists.  This will wake exactly
+     * one waiting thread which will then loop back around and try to do its
+     * work again.
      */
-    void SetWriteEvent()
+    void SignalWriteCondition()
     {
-        QCC_DbgTrace(("ArdpStream::SetWriteEvent()"));
+        QCC_DbgTrace(("ArdpStream::SignalWriteCondition()"));
         m_lock.Lock(MUTEX_CONTEXT);
-        if (m_writeEvent) {
-            m_writeEvent->SetEvent();
+        if (m_writeCondition) {
+            m_writeCondition->Signal();
         }
         m_lock.Unlock(MUTEX_CONTEXT);
     }
@@ -811,6 +808,11 @@ class ArdpStream : public qcc::Stream {
         QCC_DbgTrace(("ArdpStream::PushBytes(buf=%p, numBytes=%d., numSent=%p)", buf, numBytes, &numSent));
         QStatus status;
 
+        /*
+         * Start out by assuming that nothing worked and we have sent nothing.
+         */
+        numSent = 0;
+
         if (m_transport->IsRunning() == false || m_transport->m_stopping == true) {
             status = ER_UDP_STOPPING;
             QCC_LogError(status, ("ArdpStream::PushBytes(): UDP Transport not running or stopping"));
@@ -818,7 +820,14 @@ class ArdpStream : public qcc::Stream {
         }
 
         if (m_disc) {
-            status = m_discStatus;
+            /*
+             * We've been disconnected so that's an error.  If this was a
+             * locally originated disconnect, m_discStatus will be ER_OK, so we
+             * can't just return that or risk confusing the upper layers.  We
+             * have to return a hard error here, so we override m_discStatus in
+             * the case of that local disconnect.
+             */
+            status = m_discStatus == ER_OK ? ER_UDP_DISCONNECT : m_discStatus;
             QCC_LogError(status, ("ArdpStream::PushBytes(): ARDP connection found disconnected"));
             return status;
         }
@@ -867,24 +876,30 @@ class ArdpStream : public qcc::Stream {
         QCC_DbgPrintf(("ArdpStream::PushBytes(): Start time is %d.", tStart));
 
         /*
-         * Now we get down to business.  We are going to enter a loop in which
-         * we retry the write until it succeeds.  The write can either be a soft
-         * failure which means that the protocol is applying backpressure and we
-         * should try again "later" or it can be a hard failure which means the
-         * underlying UDP send has failed.  In that case, we give up since
-         * presumably something bad has happened, like the Wi-Fi has
-         * disassociated or someone has unplugged a cable.
+         * This is the point at which a classic condition vairable wait idiom
+         * comes into play.  Extracted from all of the dependencies here, it
+         * would look something like:
+         *
+         *     mutex.Lock()
+         *     while (condition != met) {
+         *         condition.Wait(mutex);
+         *     }
+         *     mutex.Unlock();
+         *
+         * The mutex in question is the cbLock, which synchronizes this thread
+         * (think a consumer contending for the protected resource) with the
+         * callback thread from ARDP (think producer -- making the ARDP resource
+         * available).  The condition in question is whether or not are done trying
+         * to write to the stream (we can either succeed or error out).
          */
-        while (true) {
+        bool done = false;
+        m_transport->m_cbLock.Lock();
+        while (done != true) {
             if (m_transport->IsRunning() == false || m_transport->m_stopping == true) {
-#ifndef NDEBUG
-                CheckSeal(buffer + numBytes);
-#endif
-                delete[] buffer;
+                QCC_LogError(status, ("ArdpStream::PushBytes(): UDP transport is stopping"));
                 status = ER_UDP_STOPPING;
-                QCC_LogError(status, ("ArdpStream::PushBytes(): UDP Transport not running or stopping"));
-                RemoveCurrentThread();
-                return status;
+                done = true;
+                continue;
             }
 
             Timespec tNow;
@@ -893,14 +908,10 @@ class ArdpStream : public qcc::Stream {
             int32_t tRemaining = tStart + timeout - tNow;
             QCC_DbgPrintf(("ArdpStream::PushBytes(): tRemaining is %d.", tRemaining));
             if (tRemaining <= 0) {
-#ifndef NDEBUG
-                CheckSeal(buffer + numBytes);
-#endif
-                delete[] buffer;
-                status = ER_TIMEOUT;
                 QCC_LogError(status, ("ArdpStream::PushBytes(): Timed out"));
-                RemoveCurrentThread();
-                return status;
+                status = ER_TIMEOUT;
+                done = true;
+                continue;
             }
 
             m_transport->m_ardpLock.Lock();
@@ -924,119 +935,60 @@ class ArdpStream : public qcc::Stream {
              * kernel.
              */
             if (status == ER_OK) {
-                m_transport->m_cbLock.Lock();
+                /*
+                 * The bytes are in flight, so as far as we are concerned they
+                 * were successfully written; so indicate that to the caller.
+                 *
+                 * If we have successfully sent the bytes, the ARDP protocol has
+                 * taken responsibility for them, so the buffer is now gone.  We
+                 * can't ever touch this buffer so we need to rid ourselves of
+                 * the reference to it.
+                 */
+                numSent = numBytes;
 #if SENT_SANITY
                 m_sentSet.insert(buffer);
 #endif
-                ++m_writesOutstanding;
-                QCC_DbgPrintf(("ArdpStream::PushBytes(): ARDP_Send(): Success. m_writesOutstanding=%d.", m_writesOutstanding));
-                m_transport->m_cbLock.Unlock();
-                numSent = numBytes;
-                RemoveCurrentThread();
-                return status;
+                buffer = NULL;
+                done = true;
+                continue;
             }
 
             /*
-             * If the send failed, and the failure was not due to the application
-             * of backpressure by the protocol, we have a hard failure and we need
-             * to give up.  Since the buffer wasn't sent, the callback won't happen
-             * and we need to dispose of it here and now.
+             * If the send failed, and the failure was not due to the
+             * application of backpressure by the protocol, we have a hard
+             * failure and we must give up.  Since the buffer wasn't sent, the
+             * callback won't happen and we need to dispose of it here and now.
              */
             if (status != ER_ARDP_BACKPRESSURE) {
-#ifndef NDEBUG
-                CheckSeal(buffer + numBytes);
-#endif
-                delete[] buffer;
-                QCC_LogError(status, ("ArdpStream::PushBytes(): ARDP_Send(): Hard failure"));
-                RemoveCurrentThread();
-                return status;
+                QCC_LogError(status, ("ArdpStream::PushBytes(): Hard failure"));
+                done = true;
+                continue;
             }
 
             /*
-             * Backpressure has been applied.  We can't send another message on
-             * this connection until the other side ACKs one of the outstanding
-             * datagrams.  It communicates this to us by a send callback which,
-             * in turn, sets an event that wakes us up.
+             * If backpressure has been applied by the ARDP protocol, we can't
+             * send another message on this connection until the other side ACKs
+             * one of the outstanding datagrams.  It communicates this to us by
+             * a send callback which, in turn, signals the condition variable
+             * we'll be waiting on and wakes us up. The Wait here corresponds to
+             * the Wait in the condition idiom outlined above.
              */
             if (status == ER_ARDP_BACKPRESSURE) {
-                QCC_DbgPrintf(("ArdpStream::PushBytes(): ER_ARDP_BACKPRESSURE"));
+                QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure. Condition::Wait()."));
+                assert(m_writeCondition && "ArdpStream::PushBytes(): m_writeCondition must be set");
+                status = m_writeCondition->TimedWait(m_transport->m_cbLock, tRemaining);
 
                 /*
-                 * Multiple threads could conceivably be trying to write at the
-                 * same time another thread fires callbacks, so we have to be
-                 * careful.  If m_writesOutstanding is non-zero, the ARDP
-                 * protocol has a contract with us to call back when writes are
-                 * is complete.  To make sure we are synchronized with the
-                 * callback thread, we release the callback lock during the call
-                 * to Event::Wait().
-                 *
-                 * To make sure only one of the threads does the reset of the
-                 * event (confusing another), we keep track of how many are
-                 * waiting at any one time and only let the first one reset the
-                 * underlying event.  This means that a second waiter could be
-                 * awakened unnecessarily, but it will immediately try agian and
-                 * go back to sleep.
-                 */
-                m_transport->m_cbLock.Lock();
-                QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure. m_writesOutstanding=%d.", m_writesOutstanding));
-
-                /*
-                 * It is possible that between the time we called ARDP_Send and
-                 * the time we just took the callback lock immediately above,
-                 * all (especially if the window is one) of the previous sends
-                 * that caused the rejection of the current send has actually
-                 * completed and relieved the backpressure.  Now that we are in
-                 * firm control of the process with the lock taken, check to see
-                 * if there are any writes outstanding.  If there are not, we
-                 * will never get a callback to wake us up, so we need to loop
-                 * back around and see if we can write again.  Since there are
-                 * no writes outstanding, the answer will be yes.
-                 */
-                if (m_writesOutstanding == 0) {
-                    m_transport->m_cbLock.Unlock();
-                    QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure relieved"));
-                    continue;
-                }
-
-                /*
-                 * Multiple threads could conceivably be trying to write at the
-                 * same time another thread fires callbacks, so we have to be
-                 * careful.  To make sure only one of the writer threads does
-                 * the reset of the event (confusing another), we keep track of
-                 * how many are waiting at any one time and only let the first
-                 * one reset the underlying event.  This means that a second
-                 * waiter could be awakened unnecessarily, but it will
-                 * immediately try again and go back to sleep.  To make sure we
-                 * are synchronized with the callback thread, we release the
-                 * callback lock during the call to Event::Wait().
-                 */
-                QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure. m_writeWaits=%d.", m_writeWaits));
-                if (m_writeWaits == 0) {
-                    QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure. Reset write event"));
-                    m_writeEvent->ResetEvent();
-                }
-                ++m_writeWaits;
-                QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure. Event::Wait(). m_writeWaits=%d.", m_writeWaits));
-                status = qcc::Event::Wait(*m_writeEvent, m_transport->m_cbLock, tRemaining);
-                m_transport->m_cbLock.Lock();
-                QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure. Back from Event::Wait(). m_writeWaits=%d.", m_writeWaits));
-                --m_writeWaits;
-                QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure. Decremented m_writeWaits=%d.", m_writeWaits));
-                m_transport->m_cbLock.Unlock();
-
-                /*
-                 * If the wait fails, then there's nothing we can do but bail.  If we
-                 * never actually started the send sucessfully, the callback will never
-                 * happen and we need to free the buffer we newed here.
+                 * We expect that the wait will return either ER_OK if it
+                 * succeeds, or ER_TIMEOUT.  If the Wait fails in other ways
+                 * then we will stop trying and communicate the failure back to
+                 * the caller since we really don't know what might have
+                 * happened and whether or not this is recoverable.
                  */
                 if (status != ER_OK && status != ER_TIMEOUT) {
-#ifndef NDEBUG
-                    CheckSeal(buffer + numBytes);
-#endif
-                    delete[] buffer;
-                    QCC_LogError(status, ("ArdpStream::PushBytes(): WaitWriteEvent() failed"));
-                    RemoveCurrentThread();
-                    return status;
+                    QCC_LogError(status, ("ArdpStream::PushBytes(): Condition::Wait() returned unexpected error"));
+                    done = true;
+                    continue;
                 }
 
                 /*
@@ -1044,29 +996,50 @@ class ArdpStream : public qcc::Stream {
                  * nothing we can do but return the error.
                  */
                 if (m_disc) {
-#ifndef NDEBUG
-                    CheckSeal(buffer + numBytes);
-#endif
-                    delete[] buffer;
-                    QCC_LogError(m_discStatus, ("ArdpStream::PushBytes(): Disconnected"));
-                    RemoveCurrentThread();
-                    return m_discStatus;
+                    status = ER_UDP_DISCONNECT;
+                    QCC_LogError(status, ("ArdpStream::PushBytes(): Stream disconnected"));
+                    done = true;
+                    continue;
                 }
 
                 QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure loop"));
+                assert(done == false && "ArdpStream::PushBytes(): loop error");
             }
 
             /*
-             * We detected backpressure and waited until a callback indicated
-             * that the backpressure was relieved.  We gave up the cb lock,
-             * so now we loop back around and try the ARDP_Send again, maybe
-             * waiting again.
+             * We are at the end of the while (condition != true) piece of the
+             * condition variable wait idiom.  To get here, we must have tried
+             * to send a message.  That send either did or did not work out.  If
+             * it succeeded, done will have been set to true and we'll break out
+             * of the while loop.  If there was a hard failure, done will have
+             * also been set to true and we'll break out.  If We detected
+             * backpressure, we blocked on the condition variable until it was
+             * set.  This indicates that backpressure may have been relieved.
+             * we need to loop back and try the ARDP_Send again, maybe
+             * encountering backpressure again.
              */
         }
 
-        assert(0 && "ArdpStream::PushBytes(): Impossible condition");
+        /*
+         * If the buffer was successfully sent off to ARDP, then we no longer
+         * have ownership of the buffer and the pointer will have been set to
+         * NULL.  If it is not NULL we own it and must dispose of it.
+         */
+        if (buffer) {
+#ifndef NDEBUG
+            CheckSeal(buffer + numBytes);
+#endif
+            delete[] buffer;
+            buffer = NULL;
+        }
+
+        /*
+         * This is the last unlock in the condition wait idiom outlined above.
+         * We are all done here.
+         */
+        m_transport->m_cbLock.Unlock();
         RemoveCurrentThread();
-        return ER_FAIL;
+        return status;
     }
 
     /*
@@ -1369,11 +1342,9 @@ class ArdpStream : public qcc::Stream {
          * processing the next send will fail with an error; and PushBytes()
          * will manage the outstanding write count.
          */
-        if (m_writeEvent) {
-            QCC_DbgPrintf(("ArdpStream::SendCb(): SetEvent()"));
-            m_transport->m_cbLock.Lock();
-            m_writeEvent->SetEvent();
-            m_transport->m_cbLock.Unlock();
+        if (m_writeCondition) {
+            QCC_DbgPrintf(("ArdpStream::SendCb(): Condition::Signal()"));
+            m_writeCondition->Signal();
         }
     }
 
@@ -1387,21 +1358,21 @@ class ArdpStream : public qcc::Stream {
     ArdpStream(const ArdpStream& other);
     ArdpStream operator=(const ArdpStream& other);
 
-    UDPTransport* m_transport;        /**< The transport that created the endpoint that created the stream */
-    _UDPEndpoint* m_endpoint;         /**< The endpoint that created the stream */
-    ArdpHandle* m_handle;             /**< The handle to the ARDP protocol instance this stream works with */
-    ArdpConnRecord* m_conn;           /**< The ARDP connection associated with this endpoint / stream combination */
-    uint32_t m_dataTimeout;           /**< The timeout that the ARDP protocol will use when retrying sends */
-    uint32_t m_dataRetries;           /**< The number of retries that the ARDP protocol will use when sending */
-    qcc::Mutex m_lock;                /**< Mutex that protects m_threads and disconnect state */
-    bool m_disc;                      /**< Set to true when ARDP fires the DisconnectCb on the associated connection */
-    bool m_discSent;                  /**< Set to true when the endpoint calls ARDP_Disconnect */
-    QStatus m_discStatus;             /**< The status code that was the reason for the last disconnect */
-    qcc::Event* m_writeEvent;         /**< The write event that callers are blocked on to apply backpressure */
-    int32_t m_writesOutstanding;      /**< The number of writes that are outstanding with ARDP */
-    int32_t m_writeWaits;             /**< The number of Threads that are blocked trying to write to an ARDP connection */
+    UDPTransport* m_transport;         /**< The transport that created the endpoint that created the stream */
+    _UDPEndpoint* m_endpoint;          /**< The endpoint that created the stream */
+    ArdpHandle* m_handle;              /**< The handle to the ARDP protocol instance this stream works with */
+    ArdpConnRecord* m_conn;            /**< The ARDP connection associated with this endpoint / stream combination */
+    uint32_t m_dataTimeout;            /**< The timeout that the ARDP protocol will use when retrying sends */
+    uint32_t m_dataRetries;            /**< The number of retries that the ARDP protocol will use when sending */
+    qcc::Mutex m_lock;                 /**< Mutex that protects m_threads and disconnect state */
+    bool m_disc;                       /**< Set to true when ARDP fires the DisconnectCb on the associated connection */
+    bool m_discSent;                   /**< Set to true when the endpoint calls ARDP_Disconnect */
+    QStatus m_discStatus;              /**< The status code that was the reason for the last disconnect */
+    qcc::Condition* m_writeCondition;  /**< The write event that callers are blocked on to apply backpressure */
+    int32_t m_writesOutstanding;       /**< The number of writes that are outstanding with ARDP */
+    int32_t m_writeWaits;              /**< The number of Threads that are blocked trying to write to an ARDP connection */
 
-    std::set<ThreadEntry> m_threads;  /**< Threads that are wandering around in the stream and possibly associated endpoint */
+    std::set<ThreadEntry> m_threads;   /**< Threads that are wandering around in the stream and possibly associated endpoint */
 
 #if SENT_SANITY
     std::set<uint8_t*> m_sentSet;
@@ -1886,7 +1857,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * actually calling Join.
          */
         if (m_stream && m_stream->GetDisconnected() == false) {
-            QCC_LogError(ER_UDP_STOPPING, ("_UDPEndpoint::Join(): Not disconnected"));
+            QCC_LogError(ER_UDP_NOT_DISCONNECTED, ("_UDPEndpoint::Join(): Not disconnected"));
             m_stream->EarlyExit();
         }
 
@@ -2097,8 +2068,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
         QCC_DbgHLPrintf(("_UDPEndpoint::PushMessage(msg=%p)", &msg));
         if (GetEpState() != EP_STARTED) {
-            QStatus status = ER_UDP_STOPPING;
-            QCC_LogError(status, ("_UDPEndpoint::PushBytes(): UDP Transport stopping"));
+            QStatus status = ER_UDP_ENDPOINT_NOT_STARTED;
+            QCC_LogError(status, ("_UDPEndpoint::PushBytes(): UDP endpoint not started"));
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
             return status;
@@ -2119,10 +2090,10 @@ class _UDPEndpoint : public _RemoteEndpoint {
         }
 
         if (found == 0) {
-            QCC_LogError(ER_UDP_STOPPING, ("_UDPEndpoint::PushMessage(): Endpoint is gone"));
+            QCC_LogError(ER_UDP_ENDPOINT_REMOVED, ("_UDPEndpoint::PushMessage(): Endpoint is gone"));
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
-            return ER_UDP_STOPPING;
+            return ER_UDP_ENDPOINT_REMOVED;
         }
 
         /*

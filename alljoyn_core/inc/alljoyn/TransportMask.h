@@ -55,7 +55,7 @@ const TransportMask TRANSPORT_UDP       = 0x0100;   /**< Transport using the All
  * In order to enable discovery and use of the UDP transport an application
  * author must positively act and OR in the TRANSPORT_UDP bit.
  */
-const TransportMask TRANSPORT_ANY       = (0xFFFF & ~TRANSPORT_WFD & ~TRANSPORT_UDP);
+const TransportMask TRANSPORT_ANY       = (0xFFFF & ~TRANSPORT_WFD);
 
 /**
  * A constant indicating that literally any transport is acceptable.  It is
