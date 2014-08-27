@@ -108,6 +108,10 @@ hdrs = { 'qcc': commonenv.File(['inc/qcc/Log.h',
 if commonenv['OS_GROUP'] == 'windows':
     hdrs['qcc/${OS_GROUP}'] += commonenv.File(['inc/qcc/${OS_GROUP}/mapping.h'])
 
+    if commonenv['OS_GROUP'] == 'posix' and commonenv['OS'] != 'darwin':
+        hdrs['qcc'] += commonenv.File(['inc/qcc/Semaphore.h'])
+        hdrs['qcc/${OS_GROUP}'] += commonenv.File(['inc/qcc/${OS_GROUP}/Semaphore.h'])
+
 
 # under normal build conditions the Status.xml found in alljoyn_core is used to
 # build Status.h and Status.cc.  If we are building the code in common independent
