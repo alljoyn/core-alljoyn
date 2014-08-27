@@ -3067,20 +3067,21 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
 
         signaledEvents.clear();
 
-        QStatus status = Event::Wait(checkEvents, signaledEvents);
         /*
-         * This should never happen since we provide a timeout value of
-         * WAIT_FOREVER by default, but it does.  This means that there is a
-         * problem in the Windows implementation of Event::Wait().
+         * We should never have a status returned from Event::Wait other than
+         * ER_OK since we don't set a timeout.  It is, however, the case that
+         * Windows Event implementations may return ER_TIEMOUT even though no
+         * timeout was set, and Posix systems may return ER_TIMER_NOT_ALLOWED.
+         * If we were to exit in the face of such errors, the whole transport
+         * would go down since the dispatcher thread would exit.  All we can do
+         * is to hope that any errors are transient and try again.  In that
+         * case, we will recover if the system does.  We'll log an error, but
+         * there's not really much we can do here.
          */
-        if (status == ER_TIMEOUT) {
-//          QCC_LogError(status, ("UDPTransport::DispatcherThread::Run(): Catching Windows returning ER_TIMEOUT from Event::Wait()"));
-            continue;
-        }
-
-        if (ER_OK != status) {
+        QStatus status = Event::Wait(checkEvents, signaledEvents);
+        if (status != ER_OK) {
             QCC_LogError(status, ("UDPTransport::DispatcherThread::Run(): Event::Wait failed"));
-            break;
+            continue;
         }
 
         for (vector<Event*>::iterator i = signaledEvents.begin(); i != signaledEvents.end(); ++i) {
