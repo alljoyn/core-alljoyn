@@ -41,16 +41,19 @@
 
 using namespace ajn;
 
-const uint32_t UDP_CONNECT_TIMEOUT = 3000;  /**< How long before we expect a connection to complete */
-const uint32_t UDP_CONNECT_RETRIES = 3;     /**< How many times do we retry a connection before giving up */
-const uint32_t UDP_DATA_TIMEOUT = 3000;     /**< How long do we wait before retrying sending data */
-const uint32_t UDP_DATA_RETRIES = 5;        /**< How many times to we try do send data before giving up and terminating a connection */
-const uint32_t UDP_PERSIST_TIMEOUT = 5000;  /**< How long do we wait before pinging the other side due to a zero window */
-const uint32_t UDP_PERSIST_RETRIES = 5;     /**< How many times do we do a zero window ping before giving up and terminating a connection */
-const uint32_t UDP_PROBE_TIMEOUT = 3000;    /**< How long to we wait on an idle link before generating link activity */
-const uint32_t UDP_PROBE_RETRIES = 5;       /**< How many times do we try to probe on an idle link before terminating the connection */
-const uint32_t UDP_DUPACK_COUNTER = 1;      /**< How many duplicate acknowledgements to we need to trigger a data retransmission */
+const uint32_t UDP_CONNECT_TIMEOUT = 1000;  /**< How long before we expect a connection to complete */
+const uint32_t UDP_CONNECT_RETRIES = 10;  /**< How many times do we retry a connection before giving up */
+const uint32_t UDP_INITIAL_DATA_TIMEOUT = 1000;  /**< Initial value for how long do we wait before retrying sending data */
+const uint32_t UDP_TOTAL_DATA_RETRY_TIMEOUT = 5000;  /**< Total amount of time to try and send data before giving up */
+const uint32_t UDP_MIN_DATA_RETRIES = 5;  /**< Minimum number of times to try and send data before giving up */
+const uint32_t UDP_PERSIST_INTERVAL = 1000;  /**< How long do we wait before pinging the other side due to a zero window */
+const uint32_t UDP_TOTAL_APP_TIMEOUT = 30000;  /**< How long to we try to ping for window opening before deciding app is not pulling data */
+const uint32_t UDP_LINK_TIMEOUT = 30000;  /**< How long before we decide a link is down (with no reponses to keepalive probes */
+const uint32_t UDP_KEEPALIVE_RETRIES = 5;  /**< How many times do we try to probe on an idle link before terminating the connection */
+const uint32_t UDP_FAST_RETRANSMIT_ACK_COUNTER = 1; /**< How many duplicate acknowledgements to we need to trigger a data retransmission */
 const uint32_t UDP_TIMEWAIT = 1000;         /**< How long do we stay in TIMWAIT state before releasing the per-connection resources */
+const uint32_t UDP_SEGBMAX = 65507;  /**< Maximum size of an ARDP message (for receive buffer sizing) */
+const uint32_t UDP_SEGMAX = 50;      /**< Maximum number of ARDP messages in-flight (bandwidth-delay product sizing) */
 
 bool g_user = false;
 char const* g_localport = "9954";
@@ -184,14 +187,17 @@ void* Test::Run(void* arg)
     ArdpGlobalConfig config;
     config.connectTimeout = UDP_CONNECT_TIMEOUT;
     config.connectRetries = UDP_CONNECT_RETRIES;
-    config.dataTimeout = UDP_DATA_TIMEOUT;
-    config.dataRetries = UDP_DATA_RETRIES;
-    config.persistTimeout = UDP_PERSIST_TIMEOUT;
-    config.persistRetries = UDP_PERSIST_RETRIES;
-    config.probeTimeout = UDP_PROBE_TIMEOUT;
-    config.probeRetries = UDP_PROBE_RETRIES;
-    config.dupackCounter = UDP_DUPACK_COUNTER;
+    config.initialDataTimeout = UDP_INITIAL_DATA_TIMEOUT;
+    config.totalDataRetryTimeout = UDP_TOTAL_DATA_RETRY_TIMEOUT;
+    config.minDataRetries = UDP_MIN_DATA_RETRIES;
+    config.persistInterval = UDP_PERSIST_INTERVAL;
+    config.totalAppTimeout = UDP_TOTAL_APP_TIMEOUT;
+    config.linkTimeout = UDP_LINK_TIMEOUT;
+    config.keepaliveRetries = UDP_KEEPALIVE_RETRIES;
+    config.fastRetransmitAckCounter = UDP_FAST_RETRANSMIT_ACK_COUNTER;
     config.timewait = UDP_TIMEWAIT;
+    config.segbmax = UDP_SEGBMAX;
+    config.segmax = UDP_SEGMAX;
 
     ArdpHandle* handle = ARDP_AllocHandle(&config);
     ARDP_SetAcceptCb(handle, AcceptCb);
