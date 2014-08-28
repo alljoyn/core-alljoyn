@@ -32,7 +32,7 @@
 #include "BusInternal.h"
 #include "RemoteEndpoint.h"
 #include "Router.h"
-#include "DaemonTransport.h"
+#include "../DaemonTransport.h"
 
 #define QCC_MODULE "DAEMON_TRANSPORT"
 
@@ -42,10 +42,8 @@ using namespace qcc;
 namespace ajn {
 
 const char* DaemonTransport::TransportName = "localhost";
-
 class _DaemonEndpoint;
-
-typedef ManagedObj<_DaemonEndpoint> DaemonEndpoint;
+typedef qcc::ManagedObj<_DaemonEndpoint> DaemonEndpoint;
 
 /*
  * An endpoint class to handle the details of authenticating a connection in
@@ -55,8 +53,8 @@ class _DaemonEndpoint : public _RemoteEndpoint {
 
   public:
 
-    _DaemonEndpoint(BusAttachment& bus, SocketFd sock) :
-        _RemoteEndpoint(bus, true, DaemonTransport::TransportName, &stream, DaemonTransport::TransportName),
+    _DaemonEndpoint(BusAttachment& bus, bool incoming, const qcc::String connectSpec, SocketFd sock) :
+        _RemoteEndpoint(bus, incoming, connectSpec, &stream, DaemonTransport::TransportName),
         stream(sock)
     {
     }
@@ -78,7 +76,7 @@ void* DaemonTransport::Run(void* arg)
     SocketFd listenFd = SocketFd(arg);
     QStatus status = ER_OK;
 
-    Event* listenEvent = new Event(listenFd, Event::IO_READ);
+    Event* listenEvent = new Event(listenFd, Event::IO_READ, false);
 
     while (!IsStopping()) {
 
@@ -96,7 +94,9 @@ void* DaemonTransport::Run(void* arg)
             }
             qcc::String authName;
             qcc::String redirection;
-            DaemonEndpoint conn(bus, newSock);
+            bool truthiness = true;
+            String str = DaemonTransport::TransportName;
+            DaemonEndpoint conn = DaemonEndpoint(bus, truthiness, str, newSock);
 
             QCC_DbgHLPrintf(("DaemonTransport::Run(): Accepting connection newSock=%d", newSock));
 
@@ -125,7 +125,7 @@ void* DaemonTransport::Run(void* arg)
                 status = conn->Start();
             }
             if (status != ER_OK) {
-                QCC_LogError(status, ("Error starting DaemonEndpoint"));
+                QCC_LogError(status, ("Error starting RemoteEndpoint"));
                 endpointListLock.Lock(MUTEX_CONTEXT);
                 list<RemoteEndpoint>::iterator ei = find(endpointList.begin(), endpointList.end(), RemoteEndpoint::cast(conn));
                 if (ei != endpointList.end()) {
@@ -244,5 +244,9 @@ QStatus DaemonTransport::StopListen(const char* listenSpec)
     return Thread::Stop();
 }
 
+QStatus DaemonTransport::UntrustedClientStart()
+{
+    return ER_NOT_IMPLEMENTED;
+}
 
 } // namespace ajn
