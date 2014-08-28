@@ -1383,6 +1383,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
     uint16_t index = conn->snd.NXT % conn->snd.SEGMAX;
     ArdpSndBuf* sBuf = &conn->snd.buf[index];
     uint32_t now = TimeNow(handle->tbase);
+    uint32_t ttlSend = ttl;
 
     QCC_DbgTrace(("SendData(handle=%p, conn=%p, buf=%p, len=%u, ttl=%u)", handle, conn, buf, len, ttl));
     QCC_DbgPrintf(("SendData(): Sending %u bytes of data from src=0x%x to dst=0x%x", len, conn->local, conn->foreign));
@@ -1429,6 +1430,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
 #endif
             return ER_ARDP_TTL_EXPIRED;
         }
+        ttlSend = ttl - (conn->rttMean >> 1);
     }
 
     for (uint16_t i = 0; i < fcnt; i++) {
@@ -1456,7 +1458,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
 
         QCC_DbgPrintf(("SendData(): updated send queue at index %d", index));
 
-        status = SendMsgData(handle, conn, sBuf, ttl);
+        status = SendMsgData(handle, conn, sBuf, ttlSend);
 
         if (status == ER_WOULDBLOCK) {
             QCC_DbgPrintf(("SendData(): ER_WOULDBLOCK"));
@@ -1883,11 +1885,13 @@ static void AdvanceRcvQueue(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf
     do {
         uint32_t tNow = TimeNow(handle->tbase);
         QCC_DbgPrintf(("AdvanceRcvQueue: segment %u (%p)", seq, current));
+        assert((seq - conn->rcv.LCS) <= conn->rcv.SEGMAX);
+
         ShiftRcvMsk(conn);
 
         if (isExpiring) {
             /* Check if last fragment. If this is the case, release the associated buffers */
-            if (seq == startSeq + fcnt - 1) {
+            if (seq == (startSeq + fcnt - 1)) {
                 ReleaseRcvBuffers(handle, conn, startSeq, fcnt, ER_ARDP_TTL_EXPIRED);
                 isExpiring = false;
             }
@@ -1898,25 +1902,27 @@ static void AdvanceRcvQueue(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf
 #if ARDP_STATS
             ++handle->stats.inboundDrops;
 #endif
-            /* If this is the complete message, release the buffers. Else, iterate to the end of message */
-            if (current->fcnt == 1) {
-                current->ttl = ARDP_TTL_EXPIRED;
-                ReleaseRcvBuffers(handle, conn, current->seq, current->fcnt, ER_ARDP_TTL_EXPIRED);
+            startFrag = &conn->rcv.buf[current->som % conn->rcv.SEGMAX];
+            startSeq = current->som;
+            fcnt = current->fcnt;
+            fragment = startFrag;
+            count = 0;
+
+            /* Mark all the fragments in the message as expired. */
+            do {
+                fragment->ttl = ARDP_TTL_EXPIRED;
+                fragment = fragment->next;
+                count++;
+            } while (count < fcnt);
+
+            /*
+             * If this is the complete message, flush the message and release the associated buffers.
+             * Else, iterate till we get to the last fragment.
+             */
+            if (seq == (current->som + current->fcnt - 1)) {
+                ReleaseRcvBuffers(handle, conn, current->som, current->fcnt, ER_ARDP_TTL_EXPIRED);
                 isExpiring = false;
             } else {
-                startFrag = &conn->rcv.buf[current->som % conn->rcv.SEGMAX];
-                startSeq = current->som;
-                fcnt = current->fcnt;
-                fragment = startFrag;
-                count = 0;
-
-                /* Mark all the fragments in the message as expired */
-                do {
-                    fragment->ttl = ARDP_TTL_EXPIRED;
-                    fragment = fragment->next;
-                    count++;
-                } while (count < fcnt);
-
                 isExpiring = true;
             }
 
