@@ -2453,7 +2453,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Unmarshal()"));
         status = msg->Unmarshal(endpointName, false, false, true, 0);
         if (status != ER_OK) {
-            QCC_LogError(status, ("_UDPEndpoint::RecvCb(): Can't Unmarhsal() Message"));
+            QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Can't Unmarhsal() Message.  Probably duplicate signal delivery"));
 
             /*
              * If there's some kind of problem, we have to give the buffer

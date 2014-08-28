@@ -51,9 +51,7 @@ const TransportMask TRANSPORT_UDP       = 0x0100;   /**< Transport using the All
  * surprising results in existing applications that are unaware of the
  * limitations, we do no enable Wi-Fi Direct automatically.
  *
- * Selecting ANY transport really means selecting ANY but Wi-Fi Direct and UDP.
- * In order to enable discovery and use of the UDP transport an application
- * author must positively act and OR in the TRANSPORT_UDP bit.
+ * Selecting ANY transport really means selecting ANY but Wi-Fi Direct.
  */
 const TransportMask TRANSPORT_ANY       = (0xFFFF & ~TRANSPORT_WFD);
 
@@ -67,12 +65,10 @@ const TransportMask TRANSPORT_ALL       = (0xFFFF);
 /**
  * A constant indicating that any IP-based transport is acceptable.  It is left
  * up to the system to decide which of the available transports is best suited
- * to the implied situation.  It is expected that when TRANSPORT_UDP is fully
- * performance tuned, it will be added to the TRANSPORT_IP mask.
+ * to the implied situation.
  */
-const TransportMask TRANSPORT_IP        = TRANSPORT_TCP;
+const TransportMask TRANSPORT_IP        = (TRANSPORT_TCP | TRANSPORT_WFD);
 
 }
-
 
 #endif

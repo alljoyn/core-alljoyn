@@ -26,5 +26,5 @@ const AJNTransportMask kAJNTransportMaskProximity = 0x0040;/**< Transport using 
 const AJNTransportMask kAJNTransportMaskWiFiDirect= 0x0080;/**< Transport using Wi-Fi Direct transport */
 const AJNTransportMask kAJNTransportMaskTCP       = 0x0004;   /**< TCP/IP transport */
 const AJNTransportMask kAJNTransportMaskUDP       = 0x0100;   /**< UDP/IP transport */
-const AJNTransportMask kAJNTransportMaskIP        = 0x0004;   /**< IP transport (system chooses betwen TCP and UDP) */
-const AJNTransportMask kAJNTransportMaskAny       = 0xFE7F;   /**< ANY transport (but Wi-Fi Direct and UDP for now) */
+const AJNTransportMask kAJNTransportMaskIP        = 0x0104;   /**< IP transport (system chooses betwen TCP and UDP) */
+const AJNTransportMask kAJNTransportMaskAny       = 0xFF7F;   /**< ANY transport (but Wi-Fi Direct) */

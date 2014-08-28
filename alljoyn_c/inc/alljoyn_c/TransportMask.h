@@ -37,7 +37,7 @@ typedef uint16_t alljoyn_transportmask;
 #define ALLJOYN_TRANSPORT_WFD       (alljoyn_transportmask)0x0080   /**< Transport using Wi-Fi Direct transport */
 #define ALLJOYN_TRANSPORT_TCP       (alljoyn_transportmask)0x0004   /**< TCP/IP transport */
 #define ALLJOYN_TRANSPORT_UDP       (alljoyn_transportmask)0x0100   /**< UDP/IP transport */
-#define ALLJOYN_TRANSPORT_IP        (alljoyn_transportmask)0x0004   /**< IP transport (system chooses actual IP-based transport) */
-#define ALLJOYN_TRANSPORT_ANY       (alljoyn_transportmask)(0xFFFF & ~ALLJOYN_TRANSPORT_WFD & ~ALLJOYN_TRANSPORT_UDP) /**< ANY non-experimental transport */
+#define ALLJOYN_TRANSPORT_IP        (alljoyn_transportmask)0x0104   /**< IP transport (system chooses actual IP-based transport) */
+#define ALLJOYN_TRANSPORT_ANY       (alljoyn_transportmask)(0xFFFF & ~ALLJOYN_TRANSPORT_WFD) /**< ANY non-experimental transport */
 
 #endif
