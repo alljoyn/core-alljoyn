@@ -35,7 +35,8 @@
 
 namespace ajn {
 
-#define ARDP_DISCONNECT_RETRY 1  /* Not configurable, no retries */
+#define ARDP_DISCONNECT_RETRY 1  /* Not configurable */
+#define ARDP_DISCONNECT_RETRY_TIMEOUT 1000  /* Not configurable */
 
 /**< Reserved TTL value to indicate that data associated with the message has expired */
 #define ARDP_TTL_EXPIRED    0xffffffff
@@ -725,6 +726,7 @@ static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         /* Reschedule connection removal */
         QCC_DbgPrintf(("DisconnectTimerHandler: waiting for receive Q to drain handle=%p, con=%p",
                        handle, conn));
+        UpdateTimer(handle, conn, &conn->connectTimer, ARDP_DISCONNECT_RETRY_TIMEOUT, ARDP_DISCONNECT_RETRY);
     }
 
 }
