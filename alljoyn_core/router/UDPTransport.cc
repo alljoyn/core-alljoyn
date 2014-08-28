@@ -445,16 +445,19 @@ using namespace qcc;
  */
 const uint32_t UDP_ENDPOINT_MANAGEMENT_TIMER = 1000;
 
-const uint32_t UDP_CONNECT_TIMEOUT = 3000;  /**< How long before we expect a connection to complete */
-const uint32_t UDP_CONNECT_RETRIES = 3;     /**< How many times do we retry a connection before giving up */
-const uint32_t UDP_DATA_TIMEOUT = 3000;     /**< How long do we wait before retrying sending data */
-const uint32_t UDP_DATA_RETRIES = 5;        /**< How many times to we try do send data before giving up and terminating a connection */
-const uint32_t UDP_PERSIST_TIMEOUT = 5000;  /**< How long do we wait before pinging the other side due to a zero window */
-const uint32_t UDP_PERSIST_RETRIES = 5;     /**< How many times do we do a zero window ping before giving up and terminating a connection */
-const uint32_t UDP_PROBE_TIMEOUT = 10000;   /**< How long to we wait on an idle link before generating link activity */
-const uint32_t UDP_PROBE_RETRIES = 5;       /**< How many times do we try to probe on an idle link before terminating the connection */
-const uint32_t UDP_DUPACK_COUNTER = 1;      /**< How many duplicate acknowledgements to we need to trigger a data retransmission */
+const uint32_t UDP_CONNECT_TIMEOUT = 1000;  /**< How long before we expect a connection to complete */
+const uint32_t UDP_CONNECT_RETRIES = 10;  /**< How many times do we retry a connection before giving up */
+const uint32_t UDP_INITIAL_DATA_TIMEOUT = 1000;  /**< Initial value for how long do we wait before retrying sending data */
+const uint32_t UDP_TOTAL_DATA_RETRY_TIMEOUT = 5000;  /**< Total amount of time to try and send data before giving up */
+const uint32_t UDP_MIN_DATA_RETRIES = 5;  /**< Minimum number of times to try and send data before giving up */
+const uint32_t UDP_PERSIST_INTERVAL = 1000;  /**< How long do we wait before pinging the other side due to a zero window */
+const uint32_t UDP_TOTAL_APP_TIMEOUT = 30000;  /**< How long to we try to ping for window opening before deciding app is not pulling data */
+const uint32_t UDP_LINK_TIMEOUT = 30000;  /**< How long before we decide a link is down (with no reponses to keepalive probes */
+const uint32_t UDP_KEEPALIVE_RETRIES = 5;  /**< How many times do we try to probe on an idle link before terminating the connection */
+const uint32_t UDP_FAST_RETRANSMIT_ACK_COUNTER = 1; /**< How many duplicate acknowledgements to we need to trigger a data retransmission */
 const uint32_t UDP_TIMEWAIT = 1000;         /**< How long do we stay in TIMWAIT state before releasing the per-connection resources */
+const uint32_t UDP_SEGBMAX = 65507;  /**< Maximum size of an ARDP message (for receive buffer sizing) */
+const uint32_t UDP_SEGMAX = 50;      /**< Maximum number of ARDP messages in-flight (bandwidth-delay product sizing) */
 
 namespace ajn {
 
@@ -2946,14 +2949,17 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     ArdpGlobalConfig ardpConfig;
     ardpConfig.connectTimeout = config->GetLimit("udp_connect_timeout", UDP_CONNECT_TIMEOUT);
     ardpConfig.connectRetries = config->GetLimit("udp_connect_retries", UDP_CONNECT_RETRIES);
-    ardpConfig.dataTimeout = config->GetLimit("udp_data_timeout", UDP_DATA_TIMEOUT);
-    ardpConfig.dataRetries = config->GetLimit("udp_data_retries", UDP_DATA_RETRIES);
-    ardpConfig.persistTimeout = config->GetLimit("udp_persist_timeout", UDP_PERSIST_TIMEOUT);
-    ardpConfig.persistRetries = config->GetLimit("udp_persist_retries", UDP_PERSIST_RETRIES);
-    ardpConfig.probeTimeout = config->GetLimit("udp_probe_timeout", UDP_PROBE_TIMEOUT);
-    ardpConfig.probeRetries = config->GetLimit("udp_probe_retries", UDP_PROBE_RETRIES);
-    ardpConfig.dupackCounter = config->GetLimit("udp_dupack_counter", UDP_DUPACK_COUNTER);
+    ardpConfig.initialDataTimeout = config->GetLimit("udp_initial_data_timeout", UDP_INITIAL_DATA_TIMEOUT);
+    ardpConfig.totalDataRetryTimeout = config->GetLimit("udp_total_data_retry_timeout", UDP_TOTAL_DATA_RETRY_TIMEOUT);
+    ardpConfig.minDataRetries = config->GetLimit("udp_min_data_retries", UDP_MIN_DATA_RETRIES);
+    ardpConfig.persistInterval = config->GetLimit("udp_persist_interval", UDP_PERSIST_INTERVAL);
+    ardpConfig.totalAppTimeout = config->GetLimit("udp_total_app_timeout", UDP_TOTAL_APP_TIMEOUT);
+    ardpConfig.linkTimeout = config->GetLimit("udp_link_timeout", UDP_LINK_TIMEOUT);
+    ardpConfig.keepaliveRetries = config->GetLimit("udp_keepalive_retries", UDP_KEEPALIVE_RETRIES);
+    ardpConfig.fastRetransmitAckCounter = config->GetLimit("udp_fast_retransmit_ack_counter", UDP_FAST_RETRANSMIT_ACK_COUNTER);
     ardpConfig.timewait = config->GetLimit("udp_timewait", UDP_TIMEWAIT);
+    ardpConfig.segbmax = config->GetLimit("udp_segbmax", UDP_SEGBMAX);
+    ardpConfig.segmax = config->GetLimit("udp_segmax", UDP_SEGMAX);
     memcpy(&m_ardpConfig, &ardpConfig, sizeof(ArdpGlobalConfig));
 
     /*
@@ -4375,7 +4381,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     udpEp->SetPassive();
     udpEp->SetIpAddr(ipAddr);
     udpEp->SetIpPort(ipPort);
-    udpEp->CreateStream(handle, conn, m_ardpConfig.dataTimeout, m_ardpConfig.dataRetries);
+    udpEp->CreateStream(handle, conn, m_ardpConfig.initialDataTimeout, m_ardpConfig.totalDataRetryTimeout / m_ardpConfig.initialDataTimeout);
     udpEp->SetHandle(handle);
     udpEp->SetConn(conn);
 
@@ -4879,7 +4885,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
         udpEp->SetActive();
         udpEp->SetIpAddr(ipAddr);
         udpEp->SetIpPort(ipPort);
-        udpEp->CreateStream(handle, conn, m_ardpConfig.dataTimeout, m_ardpConfig.dataRetries);
+        udpEp->CreateStream(handle, conn, m_ardpConfig.initialDataTimeout, m_ardpConfig.totalDataRetryTimeout / m_ardpConfig.initialDataTimeout);
         udpEp->SetHandle(handle);
         udpEp->SetConn(conn);
 

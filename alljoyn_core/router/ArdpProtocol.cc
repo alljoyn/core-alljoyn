@@ -994,11 +994,11 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         status = SendMsgData(handle, conn, sBuf, sBuf->ttl - msElapsed);
 
         /* Don't schedule fast retransmit for this segment */
-        sBuf->fastRT = handle->config.dupackCounter + 1;
+        sBuf->fastRT = handle->config.fastRetransmitAckCounter + 1;
 
         if (status == ER_OK) {
             timer->retry--;
-            conn->backoff = MAX(conn->backoff, (handle->config.dataRetries + 1) - timer->retry);
+            conn->backoff = MAX(conn->backoff, ((handle->config.totalDataRetryTimeout / handle->config.initialDataTimeout) + 1) - timer->retry);
             timer->delta = GetRTO(handle, conn);
         } else if (status == ER_WOULDBLOCK) {
             timer->delta = 0; /* Try next time around */
@@ -1010,7 +1010,7 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         }
 
     } else {
-        QCC_DbgHLPrintf(("RetransmitTimerHandler seq=%u retries hit the limit: %d", ntohl(((ArdpHeader*)sBuf->hdr)->seq), handle->config.dataRetries));
+        QCC_DbgHLPrintf(("RetransmitTimerHandler seq=%u retries hit the limit: %d", ntohl(((ArdpHeader*)sBuf->hdr)->seq), handle->config.totalDataRetryTimeout / handle->config.initialDataTimeout));
         timer->retry = 0;
         Disconnect(handle, conn, ER_TIMEOUT);
     }
@@ -1030,7 +1030,7 @@ static void PersistTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* 
 #endif
             Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER | ARDP_FLAG_NUL, conn->snd.NXT, conn->rcv.CUR);
             timer->retry--;
-            timer->delta = handle->config.persistTimeout << (handle->config.persistRetries - timer->retry);
+            timer->delta = handle->config.persistInterval << ((handle->config.totalAppTimeout / handle->config.persistInterval) - timer->retry);
         } else {
             QCC_DbgHLPrintf(("PersistTimerHandler: Persist Timeout (frozen window %d, need %d)",
                              conn->window, conn->minSendWindow));
@@ -1044,9 +1044,9 @@ static void ProbeTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* co
     ArdpTimer* timer = &conn->probeTimer;
     uint32_t now = TimeNow(handle->tbase);
     uint32_t elapsed = now - conn->lastSeen;
-    uint32_t delta = MAX(GetRTO(handle, conn), handle->config.probeTimeout);
+    uint32_t delta = MAX(GetRTO(handle, conn), handle->config.linkTimeout / handle->config.keepaliveRetries);
     /* Connection timeout */
-    uint32_t linkTimeout = delta * handle->config.probeRetries;
+    uint32_t linkTimeout = delta * handle->config.linkTimeout / handle->config.keepaliveRetries;
 
     /*
      * Relevant only if there are no pending retransmissions.
@@ -1058,7 +1058,7 @@ static void ProbeTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* co
         if (elapsed >= linkTimeout) {
             QCC_DbgHLPrintf(("ProbeTimerHandler: Probe Timeout: now =%u, lastSeen = %u, elapsed=%u(vs limit of %u)", now, conn->lastSeen, elapsed, linkTimeout));
             Disconnect(handle, conn, ER_ARDP_PROBE_TIMEOUT);
-        } else if (elapsed >= handle->config.probeTimeout) {
+        } else if (elapsed >= (handle->config.linkTimeout / handle->config.keepaliveRetries)) {
             QCC_DbgPrintf(("ProbeTimerHandler: send ping (NUL packet)"));
 #if ARDP_STATS
             ++handle->stats.nulSends;
@@ -1341,7 +1341,7 @@ static QStatus InitConnRecord(ArdpHandle* handle, ArdpConnRecord* conn, qcc::Soc
     SetEmpty(&conn->dataTimers);
 
     conn->rttInit = false;
-    conn->rttMean = handle->config.dataTimeout;
+    conn->rttMean = handle->config.initialDataTimeout;
     conn->rttMeanVar = 0;
 
     conn->backoff = 0;
@@ -1437,7 +1437,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
 
         ArdpHeader* h = (ArdpHeader*) sBuf->hdr;
         uint16_t segLen = (i == (fcnt - 1)) ? lastLen : conn->snd.maxDlen;
-        uint16_t retries = handle->config.dataRetries + 1;
+        uint16_t retries = (handle->config.totalDataRetryTimeout / handle->config.initialDataTimeout) + 1;
 
         QCC_DbgPrintf(("SendData: Segment %d, snd.NXT=%u, snd.UNA=%u", i, conn->snd.NXT, conn->snd.UNA));
         assert((conn->snd.NXT - conn->snd.UNA) < conn->snd.SEGMAX);
@@ -1613,7 +1613,7 @@ static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t
      * Count only "good" roundrips to ajust RTT values.
      * Note, that we decrement retries with each retransmit.
      */
-    if (sBuf->timer.retry == (handle->config.dataRetries + 1)) {
+    if (sBuf->timer.retry == ((handle->config.totalDataRetryTimeout / handle->config.initialDataTimeout) + 1)) {
         AdjustRTT(handle, conn, sBuf);
     }
 
@@ -1675,7 +1675,7 @@ static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t
 static void FastRetransmit(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf)
 {
     /* Fast retransmit to fill the gap.*/
-    if (sBuf->fastRT == handle->config.dupackCounter) {
+    if (sBuf->fastRT == handle->config.fastRetransmitAckCounter) {
         QCC_DbgPrintf(("FastRetransmit(): priority re-send %u", ntohl(((ArdpHeader*)sBuf->hdr)->seq)));
         sBuf->timer.when = TimeNow(handle->tbase);
     }
@@ -2133,7 +2133,7 @@ static QStatus InitSnd(ArdpHandle* handle, ArdpConnRecord* conn)
 
     /* Array of pointers to headers of unAcked sent data buffers */
     for (uint32_t i = 0; i < conn->snd.SEGMAX; i++) {
-        InitTimer(handle, conn, &conn->snd.buf[i].timer, RetransmitTimerHandler, &conn->snd.buf[i], handle->config.dataTimeout, 0);
+        InitTimer(handle, conn, &conn->snd.buf[i].timer, RetransmitTimerHandler, &conn->snd.buf[i], handle->config.initialDataTimeout, 0);
         conn->snd.buf[i].next = &conn->snd.buf[(i + 1) % conn->snd.SEGMAX];
         conn->snd.buf[i].hdr = buffer;
         buffer += ARDP_FIXED_HEADER_LEN;
@@ -2305,10 +2305,11 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
                         /* Initialize and kick off link timeout timer */
                         conn->lastSeen = TimeNow(handle->tbase);
-                        InitTimer(handle, conn, &conn->probeTimer, ProbeTimerHandler, NULL, handle->config.probeTimeout, handle->config.probeRetries);
+                        InitTimer(handle, conn, &conn->probeTimer, ProbeTimerHandler, NULL,
+                                  handle->config.linkTimeout / handle->config.keepaliveRetries, handle->config.keepaliveRetries);
 
                         /* Initialize persist (dead window) timer */
-                        InitTimer(handle, conn, &conn->persistTimer, PersistTimerHandler, NULL, handle->config.persistTimeout, 0);
+                        InitTimer(handle, conn, &conn->persistTimer, PersistTimerHandler, NULL, handle->config.persistInterval, 0);
 
                         /* Initialize delayed ACK timer */
                         InitTimer(handle, conn, &conn->ackTimer, AckTimerHandler, NULL, ARDP_ACK_TIMEOUT, 0);
@@ -2411,10 +2412,12 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
                     /* Initialize and kick off link timeout timer */
                     conn->lastSeen = TimeNow(handle->tbase);
-                    InitTimer(handle, conn, &conn->probeTimer, ProbeTimerHandler, NULL, handle->config.probeTimeout, handle->config.probeRetries);
+                    InitTimer(handle, conn, &conn->probeTimer, ProbeTimerHandler, NULL,
+                              handle->config.linkTimeout / handle->config.keepaliveRetries,
+                              handle->config.keepaliveRetries);
 
                     /* Initialize persist (dead window) timer */
-                    InitTimer(handle, conn, &conn->persistTimer, PersistTimerHandler, NULL, handle->config.persistTimeout, 0);
+                    InitTimer(handle, conn, &conn->persistTimer, PersistTimerHandler, NULL, handle->config.persistInterval, 0);
 
 
                     /* Initialize delayed ACK timer */
@@ -2559,7 +2562,8 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 /* Schedule persist timer only if there are no pending retransmits */
                 if (IsEmpty((ListNode*) &conn->dataTimers) && (seg->WINDOW < conn->minSendWindow) && (conn->persistTimer.retry == 0)) {
                     /* Start Persist Timer */
-                    UpdateTimer(handle, conn, &conn->persistTimer, handle->config.persistTimeout, handle->config.persistRetries + 1);
+                    UpdateTimer(handle, conn, &conn->persistTimer, handle->config.persistInterval,
+                                handle->config.totalAppTimeout / handle->config.persistInterval + 1);
                 } else if ((conn->persistTimer.retry != 0) && (seg->WINDOW >= conn->minSendWindow || !IsEmpty((ListNode*) &conn->dataTimers))) {
                     /* Cancel Persist Timer */
                     conn->persistTimer.retry = 0;

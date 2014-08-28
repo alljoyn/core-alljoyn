@@ -53,16 +53,25 @@ const uint32_t ARDP_CONN_ID_INVALID = 0xffffffff; /* To indicate invalid connect
  * @brief Per-protocol-instance (global) configuration variables.
  */
 typedef struct {
-    uint32_t connectTimeout;  /**< udp_connect_timeout configuration variable */
-    uint32_t connectRetries;  /**< udp_connect_retries configuration variable */
-    uint32_t dataTimeout;     /**< udp_data_timeout configuration variable */
-    uint32_t dataRetries;     /**< udp_data_retries configuration variable */
-    uint32_t persistTimeout;  /**< udp_persist_timeout configuration variable */
-    uint32_t persistRetries;  /**< udp_persist_retries configuration variable */
-    uint32_t probeTimeout;    /**< udp_probe_timeout configuration variable */
-    uint32_t probeRetries;    /**< udp_probe_retries configuration variable */
-    uint32_t dupackCounter;   /**< udp_dupack_counter configuration variable */
-    uint32_t timewait;        /**< udp_timewait configuration variable */
+    uint32_t connectTimeout;            /**< udp_connect_timeout configuration variable */
+    uint32_t connectRetries;            /**< udp_connect_retries configuration variable */
+    uint32_t initialDataTimeout;        /**< udp_initial_data_timeout configuration variable */
+//  uint32_t dataRetries;  was a number of retries.  becomes an interval over which variable number of retries are done
+    uint32_t totalDataRetryTimeout;     /**< udp_total_data_retry_timeout configuration variable */
+    uint32_t minDataRetries;            /**< udp_min_data_retries configuration variable */
+//  uint32_t persistTimeout;  becomes persistInterval which is the interval between zero-window pings
+    uint32_t persistInterval;           /**< udp_persist_interval configuration variable */
+//  uint32_t persistRetries;  was number of retries.  becomes totalAppTimeout which is interval after which we decide app is no longer responding
+    uint32_t totalAppTimeout;           /**< udp_total_app_timeout configuration variable */
+//  uint32_t probeTimeout; was a time to start firing probes.  Becomes linkTimeout time until we decice a link is down due to inactivity.
+    uint32_t linkTimeout;               /**< udp_link_timeout configuration variable */
+//  uint32_t probeRetries; becomes keepaliveRetries
+    uint32_t keepaliveRetries;          /**< udp_keepalive_retries configuration variable */
+//  uint32_t dupackCounter; becomes fastRetransmitAckCounter
+    uint32_t fastRetransmitAckCounter;  /**< udp_fast_retransmit_ack_counter configuration variable */
+    uint32_t timewait;                  /**< udp_timewait configuration variable */
+    uint32_t segbmax;                   /**< udp_segbmax configuration variable */
+    uint32_t segmax;                    /**< udp_segmax configuration variable */
 } ArdpGlobalConfig;
 
 /**
