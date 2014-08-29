@@ -4220,6 +4220,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     if (currAuth > m_maxAuth || currAuth + currConn > m_maxConn + 1) {
         QCC_LogError(ER_BUS_CONNECTION_REJECTED, ("UDPTransport::AcceptCb(): No slot for new connection"));
         DecrementAndFetch(&m_currAuth);
+        DecrementAndFetch(&m_currConn);
         DecrementAndFetch(&m_refCount);
         return false;
     }
@@ -4228,7 +4229,11 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
      * The connection is not actually complete yet and there is no corresponding
      * endpoint on the the endpoint list so we can't claim it as existing yet.
      * We do consider the not yet existing endpoint as existing since we need a
-     * placeholder for it.  We just have to be careful about the accounting.
+     * placeholder for it.  In this UDP Transport the placeholder is an
+     * additional count in m_currAuth.  There is no actual authentication going
+     * on, but we borrow the concept since it fits almost exactly since it is a
+     * transient condition leading up to a complete connestion.  We just have to
+     * be careful about the accounting.
      */
     DecrementAndFetch(&m_currConn);
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): Inbound connection accepted"));
