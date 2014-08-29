@@ -260,4 +260,10 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_ALLJOYN_PING_REPLY_FAILED" value="0x9117" comment="Generic Ping call error"/>
   <status name="ER_TCP_MAX_UNTRUSTED" value="0x9118" comment="The maximum configured number of Thin Library connections has been reached"/>
   <status name="ER_ALLJOYN_PING_REPLY_IN_PROGRESS" value="0x9119" comment="A ping request for same name is already in progress"/>
+  <status name="ER_LANGUAGE_NOT_SUPPORTED" value ="0x911a" comment="The language requested is not supported"/>
+  <status name="ER_ABOUT_FIELD_ALREADY_SPECIFIED" value = "0x911b" comment = "A field using the same name is already specified."/>
+  <status name="ER_UDP_NOT_DISCONNECTED" value="0x911c" comment="A UDP stream was found to be connected during teardown"/>
+  <status name="ER_UDP_ENDPOINT_NOT_STARTED" value="0x911d" comment="Attempt to send on a UDP endpoint that is not started"/>
+  <status name="ER_UDP_ENDPOINT_REMOVED" value="0x911e" comment="Attempt to send on a UDP endpoint that has been removed"/>
+  <status name="ER_ARDP_VERSION_NOT_SUPPORTED" value="0x911f" comment="Specified version of ARDP Protocol is not supported"/>
 </status_block>
