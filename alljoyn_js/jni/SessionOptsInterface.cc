@@ -42,9 +42,9 @@ std::map<qcc::String, int32_t>& _SessionOptsInterface::Constants()
 
         CONSTANT("TRANSPORT_TCP",       0x0004);
         CONSTANT("TRANSPORT_UDP",       0x0100);
-        CONSTANT("TRANSPORT_IP",        0x0004);
+        CONSTANT("TRANSPORT_IP",        0x0104);
 
-        CONSTANT("TRANSPORT_ANY",       0xFE7F);
+        CONSTANT("TRANSPORT_ANY",       0xFF7F);
     }
     return constants;
 }
