@@ -35,6 +35,7 @@
 
 namespace ajn {
 
+#define ARDP_VERSION_BITS 0xC0   /* Bits 6-7 of FLAGS byte in ARDP segment header*/
 #define ARDP_DISCONNECT_RETRY 1  /* Not configurable */
 #define ARDP_DISCONNECT_RETRY_TIMEOUT 1000  /* Not configurable */
 
@@ -705,7 +706,9 @@ static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
      * DisconnectCb(). For all the other cases the DisconnectCb was issued inside Disconnect().
      */
     if (reason == ER_OK) {
-        FlushSendQueue(handle, conn, ER_ARDP_DISCONNECTING);
+        if (conn->snd.pending != 0) {
+            FlushSendQueue(handle, conn, ER_ARDP_DISCONNECTING);
+        }
         QCC_DbgPrintf(("DisconnectTimerHandler: DisconnectCb(handle=%p conn=%p reason = %s)", handle, conn, QCC_StatusText(reason)));
 #if ARDP_STATS
         ++handle->stats.disconnectCbs;
@@ -883,7 +886,7 @@ static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reas
         return ER_ARDP_INVALID_CONNECTION;
     }
 
-    /* Is there a nice macro that would nicely wrap integer into pointer? Just to avoid nasty surprises... */
+    /* Is there a nice macro that would wrap integer into pointer? Just to avoid nasty surprises... */
     assert(sizeof(QStatus) <=  sizeof(void*));
 
     SetState(conn, CLOSE_WAIT);
@@ -901,7 +904,9 @@ static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reas
 
     /* If this disconnect is not a result of ARDP_Disconnect(), inform the upper layer that we are disconnecting */
     if (reason != ER_OK) {
-        FlushSendQueue(handle, conn, ER_ARDP_DISCONNECTING);
+        if (conn->snd.pending != 0) {
+            FlushSendQueue(handle, conn, ER_ARDP_DISCONNECTING);
+        }
         timeout = handle->config.timewait;
         QCC_DbgPrintf(("Disconnect: Call DisconnectCb() on conn %p, state %s reason %s ",
                        conn, State2Text(conn->STATE), QCC_StatusText(reason)));
@@ -2290,7 +2295,18 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 assert(status == ER_OK && "ArdpMachine():SYN_SENT: Failed to initialize Send queue");
 
                 if (seg->FLG & ARDP_FLAG_ACK) {
-                    if (seg->ACK == conn->snd.ISS) {
+                    if ((seg->FLG  & ARDP_VERSION_BITS) != ARDP_FLAG_VER) {
+
+                        QCC_DbgHLPrintf(("ArdpMachine(): SYN_SENT: Unsupported protocol version 0x%x",
+                                         seg->FLG & ARDP_VERSION_BITS));
+                        status = ER_ARDP_VERSION_NOT_SUPPORTED;
+
+                    } else if (seg->ACK != conn->snd.ISS) {
+
+                        QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: ACK does not ASK ISS"));
+                        status = ER_ARDP_INVALID_RESPONSE;
+
+                    } else {
                         QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN | ACK received. state -> OPEN"));
 #if ARDP_STATS
                         ++handle->stats.synackRecvs;
@@ -2320,7 +2336,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                         /*
                          * <SEQ=snd.NXT><ACK=RCV.CUR><ACK>
                          */
-                        Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->snd.NXT, conn->rcv.CUR);
+                        status = Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->snd.NXT, conn->rcv.CUR);
 
                         if (handle->cb.ConnectCb) {
                             QCC_DbgPrintf(("ArdpMachine(): SYN_SENT->OPEN: ConnectCb(handle=%p, conn=%p", handle, conn));
@@ -2335,9 +2351,9 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                                 conn->synData.buf = NULL;
                             }
                         }
-                    } else {
-                        QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: ACK does not ASK ISS"));
-                        Disconnect(handle, conn, ER_ARDP_INVALID_RESPONSE);
+                    }
+                    if (status != ER_OK && status != ER_WOULDBLOCK) {
+                        Disconnect(handle, conn, status);
                     }
                 } else {
                     QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN with no ACK implies simulateous connection attempt: state -> SYN_RCVD"));
@@ -2369,13 +2385,8 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 #if ARDP_STATS
                 ++handle->stats.rstRecvs;
 #endif
-                if (conn->passive) {
-                    QCC_DbgPrintf(("ArdpMachine(): SYN_RCVD: Got RST during passive open.  state -> LISTEN"));
-                    SetState(conn, LISTEN);
-                } else {
-                    QCC_DbgPrintf(("ArdpMachine(): SYN_RCVD: Got RST during active open.  state -> CLOSED"));
-                    Disconnect(handle, conn, ER_ARDP_REMOTE_CONNECTION_RESET);
-                }
+                QCC_DbgPrintf(("ArdpMachine(): SYN_RCVD: Got RST during passive open"));
+                Disconnect(handle, conn, ER_ARDP_REMOTE_CONNECTION_RESET);
                 break;
             }
 
@@ -2740,8 +2751,14 @@ QStatus Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint16_t 
     assert(conn->STATE == CLOSED && "Accept(): ConnRecord in invalid state");
 
     ArdpSynSegment* syn = (ArdpSynSegment*)buf;
-    if (syn->flags != (ARDP_FLAG_SYN | ARDP_FLAG_VER)) {
-        return ER_FAIL;
+    if (!(syn->flags & ARDP_FLAG_SYN)) {
+        return ER_ARDP_INVALID_CONNECTION;
+    }
+
+    if ((syn->flags & ARDP_VERSION_BITS) != ARDP_FLAG_VER) {
+        QCC_DbgHLPrintf(("Accept(): SYN_SENT: Unsupported protocol version 0x%x",
+                         syn->flags & ARDP_VERSION_BITS));
+        return ER_ARDP_VERSION_NOT_SUPPORTED;
     }
 
     ArdpSeg SEG;
@@ -2807,7 +2824,10 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool socketReady, uint3
                         status = Accept(handle, conn, buf, nbytes);
                     }
                 } else {
-                    status = SendRst(handle, sock, address, port, local, foreign);
+                    status = ER_ARDP_INVALID_STATE;
+                }
+                if (status != ER_OK) {
+                    SendRst(handle, sock, address, port, local, foreign);
                 }
             } else {
                 /* Is there an open connection? */
