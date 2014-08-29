@@ -1,0 +1,5 @@
+LIBRARY alljoyn_c
+EXPORTS
+
+; Exports are defined using __declspec(dllexport), so no EXPORT entries are needed here
+

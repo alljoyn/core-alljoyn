@@ -346,7 +346,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     void AliasUnixUser(const InterfaceDescription::Member* member, Message& msg);
 
     /**
-     * Set (add or replace) an advertised name alias for remote daemon guid.
+     * Add an advertised name alias for remote daemon guid.
      *
      * This method is used by SessionlessObj to tell AllJoynObj that JoinSession requests
      * for unique names containing the given GUID / transport mask should be aliased with the
@@ -356,7 +356,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param mask       Transport used by remote daemon to advertise advName.
      * @param advName    Well-known name advertised by remote daemon.
      */
-    void SetAdvNameAlias(const qcc::String& guid, const TransportMask mask, const qcc::String& advName);
+    void AddAdvNameAlias(const qcc::String& guid, const TransportMask mask, const qcc::String& advName);
 
     /**
      * Handle event that the application/process is suspending on OS like WinRT.
@@ -670,7 +670,18 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
 
     std::map<qcc::StringMapKey, RemoteEndpoint> b2bEndpoints;  /**< Map of bus-to-bus endpoints that are connected to external daemons */
 
-    std::multimap<qcc::String, std::pair<qcc::String, TransportMask> > advAliasMap;  /**< Map remote daemon guid/transport to advertised name alias */
+    struct AdvAliasEntry {
+        qcc::String name;
+        TransportMask transport;
+        AdvAliasEntry(qcc::String name, TransportMask transport) : name(name), transport(transport) { }
+        bool operator<(const AdvAliasEntry& other) const {
+            return (name < other.name) || ((name == other.name) && (transport < other.transport));
+        }
+        bool operator==(const AdvAliasEntry& other) const {
+            return name == other.name && transport == other.transport;
+        }
+    };
+    std::map<qcc::String, std::set<AdvAliasEntry> > advAliasMap;  /**< Map remote daemon guid/transport to advertised name alias */
 
     qcc::Timer timer;           /**< Timer object for reaping expired names */
 
