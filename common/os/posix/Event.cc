@@ -421,7 +421,7 @@ static QStatus ResetMechanism(int fd)
 static void CreateMechanism(int* readFd, int* writeFd)
 {
     QCC_DbgTrace(("CreateMechanism()"));
-    int efd = eventfd(0, EFD_NONBLOCK);
+    int efd = eventfd(0, O_NONBLOCK); // EFD_NONBLOCK poorly defined in openWRT, so go right to the source
     if (efd < 0) {
         QCC_LogError(ER_FAIL, ("CreateMechanism(): Unable to create eventfd (%d:\"%s\")", errno, strerror(errno)));
     }
