@@ -56,19 +56,14 @@ typedef struct {
     uint32_t connectTimeout;            /**< udp_connect_timeout configuration variable */
     uint32_t connectRetries;            /**< udp_connect_retries configuration variable */
     uint32_t initialDataTimeout;        /**< udp_initial_data_timeout configuration variable */
-//  uint32_t dataRetries;  was a number of retries.  becomes an interval over which variable number of retries are done
     uint32_t totalDataRetryTimeout;     /**< udp_total_data_retry_timeout configuration variable */
     uint32_t minDataRetries;            /**< udp_min_data_retries configuration variable */
-//  uint32_t persistTimeout;  becomes persistInterval which is the interval between zero-window pings
     uint32_t persistInterval;           /**< udp_persist_interval configuration variable */
-//  uint32_t persistRetries;  was number of retries.  becomes totalAppTimeout which is interval after which we decide app is no longer responding
     uint32_t totalAppTimeout;           /**< udp_total_app_timeout configuration variable */
-//  uint32_t probeTimeout; was a time to start firing probes.  Becomes linkTimeout time until we decice a link is down due to inactivity.
     uint32_t linkTimeout;               /**< udp_link_timeout configuration variable */
-//  uint32_t probeRetries; becomes keepaliveRetries
     uint32_t keepaliveRetries;          /**< udp_keepalive_retries configuration variable */
-//  uint32_t dupackCounter; becomes fastRetransmitAckCounter
     uint32_t fastRetransmitAckCounter;  /**< udp_fast_retransmit_ack_counter configuration variable */
+    uint32_t delayedAckTimeout;         /**< udp_delayed_ack_timeout configuration variable */
     uint32_t timewait;                  /**< udp_timewait configuration variable */
     uint32_t segbmax;                   /**< udp_segbmax configuration variable */
     uint32_t segmax;                    /**< udp_segmax configuration variable */
@@ -120,7 +115,7 @@ typedef struct ARDP_CONN_RECORD ArdpConnRecord;
 #define ARDP_FLAG_RST  0x08    /**< Control flag. Reset this connection. Must be separate segment. */
 #define ARDP_FLAG_NUL  0x10    /**< Control flag. Null (zero-length) segment.  Must have zero data length but may share ACK and EACK info. */
 #define ARDP_FLAG_VER  0x40    /**< Control flag. Bits 6-7 of flags byte.  Current version is (1) */
-#define ARDP_FLAG_SDM  0x0001  /*<< Sequenced delivery mode option. Indicates in-order sequence delivery is in force. */
+#define ARDP_FLAG_SDM  0x0001  /**< Sequenced delivery mode option. Indicates in-order sequence delivery is in force. */
 
 typedef struct ARDP_HANDLE ArdpHandle;
 

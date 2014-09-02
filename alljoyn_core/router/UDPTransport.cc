@@ -455,6 +455,7 @@ const uint32_t UDP_TOTAL_APP_TIMEOUT = 30000;  /**< How long to we try to ping f
 const uint32_t UDP_LINK_TIMEOUT = 30000;  /**< How long before we decide a link is down (with no reponses to keepalive probes */
 const uint32_t UDP_KEEPALIVE_RETRIES = 5;  /**< How many times do we try to probe on an idle link before terminating the connection */
 const uint32_t UDP_FAST_RETRANSMIT_ACK_COUNTER = 1; /**< How many duplicate acknowledgements to we need to trigger a data retransmission */
+const uint32_t UDP_DELAYED_ACK_TIMEOUT = 100; /**< How long do we wait until acknowledging received segments */
 const uint32_t UDP_TIMEWAIT = 1000;         /**< How long do we stay in TIMWAIT state before releasing the per-connection resources */
 const uint32_t UDP_SEGBMAX = 65507;  /**< Maximum size of an ARDP message (for receive buffer sizing) */
 const uint32_t UDP_SEGMAX = 50;      /**< Maximum number of ARDP messages in-flight (bandwidth-delay product sizing) */
@@ -2957,6 +2958,7 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     ardpConfig.linkTimeout = config->GetLimit("udp_link_timeout", UDP_LINK_TIMEOUT);
     ardpConfig.keepaliveRetries = config->GetLimit("udp_keepalive_retries", UDP_KEEPALIVE_RETRIES);
     ardpConfig.fastRetransmitAckCounter = config->GetLimit("udp_fast_retransmit_ack_counter", UDP_FAST_RETRANSMIT_ACK_COUNTER);
+    ardpConfig.delayedAckTimeout = config->GetLimit("udp_delayed_ack_timeout", UDP_DELAYED_ACK_TIMEOUT);
     ardpConfig.timewait = config->GetLimit("udp_timewait", UDP_TIMEWAIT);
     ardpConfig.segbmax = config->GetLimit("udp_segbmax", UDP_SEGBMAX);
     ardpConfig.segmax = config->GetLimit("udp_segmax", UDP_SEGMAX);

@@ -56,9 +56,6 @@ namespace ajn {
 /* Maximum Retransmit Timeout */
 #define ARDP_MAX_RTO 64000
 
-/* Delayed ACK timeout */
-#define ARDP_ACK_TIMEOUT 100
-
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define ABS(a) ((a) >= 0 ? (a) : -(a))
@@ -862,7 +859,7 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
 
     if (status == ER_OK) {
         if (conn->ackTimer.retry != 0) {
-            UpdateTimer(handle, conn, &conn->ackTimer, ARDP_ACK_TIMEOUT, 1);
+            UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
         }
     }
 
@@ -1871,7 +1868,7 @@ static QStatus ReleaseRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, uint3
     } else if (conn->ackTimer.retry == 0) {
         QCC_DbgHLPrintf(("ReleaseRcvBuffers: Schedule ACK timer to inform about new values of rcv.CUR %u and rcv.LCS %u",
                          conn->rcv.CUR, conn->rcv.LCS));
-        UpdateTimer(handle, conn, &conn->ackTimer, ARDP_ACK_TIMEOUT, 1);
+        UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
     }
 
     return ER_OK;
@@ -2027,7 +2024,7 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
     if (conn->ackTimer.retry == 0) {
         QCC_DbgHLPrintf(("FlushExpiredRcvMessages:: Schedule ACK timer to inform about new value of rcv.CUR %u",
                          conn->rcv.CUR));
-        UpdateTimer(handle, conn, &conn->ackTimer, ARDP_ACK_TIMEOUT, 1);
+        UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
     }
 
     QCC_DbgPrintf(("FlushExpiredRcvMessages(UPDATE rcv.CUR = %u, acknxt = %u", conn->rcv.CUR, acknxt));
@@ -2328,7 +2325,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                         InitTimer(handle, conn, &conn->persistTimer, PersistTimerHandler, NULL, handle->config.persistInterval, 0);
 
                         /* Initialize delayed ACK timer */
-                        InitTimer(handle, conn, &conn->ackTimer, AckTimerHandler, NULL, ARDP_ACK_TIMEOUT, 0);
+                        InitTimer(handle, conn, &conn->ackTimer, AckTimerHandler, NULL, handle->config.delayedAckTimeout, 0);
 
 #if ARDP_STATS
                         ++handle->stats.synackackSends;
@@ -2432,7 +2429,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
 
                     /* Initialize delayed ACK timer */
-                    InitTimer(handle, conn, &conn->ackTimer, AckTimerHandler, NULL, ARDP_ACK_TIMEOUT, 0);
+                    InitTimer(handle, conn, &conn->ackTimer, AckTimerHandler, NULL, handle->config.delayedAckTimeout, 0);
 
                     if (seg->FLG & ARDP_FLAG_NUL) {
 #if ARDP_STATS
@@ -2517,7 +2514,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 #endif
                 status = Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->snd.NXT, conn->rcv.CUR);
                 if (status == ER_OK && conn->ackTimer.retry != 0) {
-                    UpdateTimer(handle, conn, &conn->ackTimer, ARDP_ACK_TIMEOUT, 1);
+                    UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
                     conn->rcv.ackPending = 0;
                 } else if (status != ER_OK) {
                     UpdateTimer(handle, conn, &conn->ackTimer, 0, 1);
@@ -2558,11 +2555,10 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
                 /*
                  * ACKS can be scheduled based on timeout value or number of received segments
-                 * pending acknowledgement.
-                 * In future, make the above parameters (i.e., timeout & pending acks) configurable.
+                 * pending acknowledgement (receive window more than half-full).
                  */
                 if (conn->ackTimer.retry == 0) {
-                    UpdateTimer(handle, conn, &conn->ackTimer, ARDP_ACK_TIMEOUT, 1);
+                    UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
                 } else if (conn->rcv.ackPending >= ((conn->rcv.SEGMAX >> 1) + 1)) {
                     UpdateTimer(handle, conn, &conn->ackTimer, 0, 1);
                 }
