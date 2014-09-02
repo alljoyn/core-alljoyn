@@ -51,7 +51,6 @@ namespace ajn {
 
 class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncCB {
     friend class BusAttachment;
-
   public:
 
     /**
@@ -142,6 +141,18 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      * Override the compressions rules for this bus attachment.
      */
     void OverrideCompressionRules(CompressionRules& newRules) { compressionRules = newRules; }
+
+    /**
+     * Get the AboutObjectDescritpion for the BusObjects currently registered with
+     * the BusAttachment.
+     *
+     * This will clear any previous contents of the of the AboutObjectDescription provided
+     *
+     * @param[out] aboutObjectDescription reference to an about objectDescription that will
+     *             be filled in.
+     * @return ER_OK on success
+     */
+    QStatus GetAboutObjectDescription(AboutObjectDescription& aboutObjectDescription);
 
     /**
      * Constructor called by BusAttachment.

@@ -1362,18 +1362,6 @@ class BusAttachment : public MessageReceiver {
      */
     QStatus UnregisterAllAboutListeners();
 
-    /**
-     * Get the AboutObjectDescritpion for the BusObjects currently registered with
-     * the BusAttachment.
-     *
-     * This will clear any previous contents of the of the AboutObjectDescription provided
-     *
-     * @param[out] aboutObjectDescription reference to an about objectDescription that will
-     *             be filled in.
-     * @return ER_OK on success
-     */
-    QStatus GetAboutObjectDescription(AboutObjectDescription& aboutObjectDescription);
-
     /// @cond ALLJOYN_DEV
     /**
      * @internal

@@ -23,6 +23,7 @@
 #include <alljoyn/MsgArg.h>
 
 #include <qcc/Debug.h>
+#include "BusInternal.h"
 
 #define QCC_MODULE "ALLJOYN_ABOUT"
 
@@ -63,7 +64,7 @@ QStatus AboutObj::Announce(SessionPort sessionPort, AboutDataListener& aboutData
 
 QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutObjectDescription& objectDescription, ajn::AboutDataListener& aboutData)
 {
-    m_busAttachment->GetAboutObjectDescription(m_objectDescription);
+    m_busAttachment->GetInternal().GetAboutObjectDescription(m_objectDescription);
     m_objectDescription.Merge(objectDescription);
     m_aboutDataListener = &aboutData;
     const InterfaceDescription* p_InterfaceDescription = m_busAttachment->GetInterface(org::alljoyn::About::InterfaceName);

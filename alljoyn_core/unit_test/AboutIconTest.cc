@@ -18,7 +18,7 @@
 #include <alljoyn/AboutIconObj.h>
 #include <alljoyn/AboutIconProxy.h>
 #include <alljoyn/BusAttachment.h>
-
+#include <BusInternal.h>
 using namespace ajn;
 
 TEST(AboutIconTest, isAnnounced) {
@@ -30,7 +30,7 @@ TEST(AboutIconTest, isAnnounced) {
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     AboutIconObj aboutIcon(busAttachment, "", "http://www.test.com", NULL, (size_t)0);
     AboutObjectDescription aod;
-    status = busAttachment.GetAboutObjectDescription(aod);
+    status = busAttachment.GetInternal().GetAboutObjectDescription(aod);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(aod.HasPath("/About/DeviceIcon"));
     EXPECT_TRUE(aod.HasInterface("org.alljoyn.Icon"));
