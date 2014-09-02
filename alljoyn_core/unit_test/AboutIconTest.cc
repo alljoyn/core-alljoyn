@@ -29,8 +29,12 @@ TEST(AboutIconTest, isAnnounced) {
     status = busAttachment.Connect();
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     AboutIconObj aboutIcon(busAttachment, "", "http://www.test.com", NULL, (size_t)0);
+
+    MsgArg aodArg;
+    status = busAttachment.GetInternal().GetAnnouncedObjectDescription(aodArg);
     AboutObjectDescription aod;
-    status = busAttachment.GetInternal().GetAboutObjectDescription(aod);
+    aod.CreateFromMsgArg(aodArg);
+
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(aod.HasPath("/About/DeviceIcon"));
     EXPECT_TRUE(aod.HasInterface("org.alljoyn.Icon"));

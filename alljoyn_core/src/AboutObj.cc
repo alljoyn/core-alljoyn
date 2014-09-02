@@ -64,8 +64,10 @@ QStatus AboutObj::Announce(SessionPort sessionPort, AboutDataListener& aboutData
 
 QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutObjectDescription& objectDescription, ajn::AboutDataListener& aboutData)
 {
-    m_busAttachment->GetInternal().GetAboutObjectDescription(m_objectDescription);
-    m_objectDescription.Merge(objectDescription);
+    m_busAttachment->GetInternal().GetAnnouncedObjectDescription(m_objectDescription);
+    AboutObjectDescription aod;
+    aod.CreateFromMsgArg(m_objectDescription);
+    aod.Merge(objectDescription);
     m_aboutDataListener = &aboutData;
     const InterfaceDescription* p_InterfaceDescription = m_busAttachment->GetInterface(org::alljoyn::About::InterfaceName);
 
@@ -90,7 +92,7 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutObjectDescription&
     if (status != ER_OK) {
         return status;
     }
-    m_objectDescription.GetMsgArg(&announceArgs[2]);
+    aod.GetMsgArg(&announceArgs[2]);
     m_aboutDataListener->GetMsgArgAnnounce(&announceArgs[3]);
     Message msg(*m_busAttachment);
     uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
@@ -138,9 +140,7 @@ void AboutObj::GetObjectDescription(const ajn::InterfaceDescription::Member* mem
     size_t numArgs = 0;
     msg->GetArgs(numArgs, args);
     if (numArgs == 0) {
-        ajn::MsgArg retargs[1];
-        m_objectDescription.GetMsgArg(retargs);
-        MethodReply(msg, retargs, 1);
+        MethodReply(msg, &m_objectDescription, 1);
     } else {
         MethodReply(msg, ER_INVALID_DATA);
     }

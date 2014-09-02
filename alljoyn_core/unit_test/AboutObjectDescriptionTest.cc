@@ -350,8 +350,11 @@ TEST(AboutObjectDescriptionTest, PopulateAutomaticallyFromBusObject) {
     status = bus.RegisterBusObject(busObject1);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
+    MsgArg aodArg;
+    status = bus.GetInternal().GetAnnouncedObjectDescription(aodArg);
     AboutObjectDescription aod;
-    status = bus.GetInternal().GetAboutObjectDescription(aod);
+    aod.CreateFromMsgArg(aodArg);
+
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     EXPECT_TRUE(aod.HasInterface("test.about.objectdescription.interface1"));
@@ -385,8 +388,10 @@ TEST(AboutObjectDescriptionTest, PopulateAutomaticallyFromMultipleBusObjects) {
     status = bus.RegisterBusObject(busObject2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
+    MsgArg aodArg;
+    status = bus.GetInternal().GetAnnouncedObjectDescription(aodArg);
     AboutObjectDescription aod;
-    status = bus.GetInternal().GetAboutObjectDescription(aod);
+    aod.CreateFromMsgArg(aodArg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     EXPECT_TRUE(aod.HasInterface("test.about.objectdescription.interface1"));
@@ -424,8 +429,11 @@ TEST(AboutObjectDescriptionTest, PopulateAutomaticallyRemoveBusObject) {
     status = bus.RegisterBusObject(busObject2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
+    MsgArg aodArg;
+    status = bus.GetInternal().GetAnnouncedObjectDescription(aodArg);
     AboutObjectDescription aod;
-    status = bus.GetInternal().GetAboutObjectDescription(aod);
+    aod.CreateFromMsgArg(aodArg);
+
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     EXPECT_TRUE(aod.HasInterface("test.about.objectdescription.interface1"));
@@ -438,7 +446,9 @@ TEST(AboutObjectDescriptionTest, PopulateAutomaticallyRemoveBusObject) {
 
     bus.UnregisterBusObject(busObject1);
 
-    status = bus.GetInternal().GetAboutObjectDescription(aod);
+    status = bus.GetInternal().GetAnnouncedObjectDescription(aodArg);
+    aod.Clear();
+    aod.CreateFromMsgArg(aodArg);
 
     EXPECT_FALSE(aod.HasInterface("test.about.objectdescription.interface1"));
     EXPECT_FALSE(aod.HasPath("/test/path1"));
@@ -471,8 +481,10 @@ TEST(AboutObjectDescriptionTest, GetInterfacePaths) {
     status = bus.RegisterBusObject(busObject1);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
+    MsgArg aodArg;
+    status = bus.GetInternal().GetAnnouncedObjectDescription(aodArg);
     AboutObjectDescription aod;
-    status = bus.GetInternal().GetAboutObjectDescription(aod);
+    aod.CreateFromMsgArg(aodArg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     size_t pathNum = aod.GetInterfacePaths("test.about.objectdescription.interface1", NULL, 0);
@@ -495,7 +507,9 @@ TEST(AboutObjectDescriptionTest, GetInterfacePaths) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     // now that we have added the interface 5 more times renew the AboutObjectDescription
-    status = bus.GetInternal().GetAboutObjectDescription(aod);
+
+    status = bus.GetInternal().GetAnnouncedObjectDescription(aodArg);
+    aod.CreateFromMsgArg(aodArg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     pathNum = aod.GetInterfacePaths("test.about.objectdescription.interface1", NULL, 0);

@@ -261,16 +261,20 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     void UnregisterBusObject(BusObject& obj);
 
     /**
-     * Get the AboutObjectDescritpion for the BusObjects currently registered with
-     * the BusAttachment.
+     * Get the Announced Object Description for the BusObjects registered on
+     * the BusAttachment with interfaces marked as announced.
      *
-     * This will clear any previous contents of the of the AboutObjectDescription provided
+     * This will clear any previous contents of the of the MsgArg provided. The
+     * resulting MsgArg will have a signature a(oas) and will contain an array
+     * of object paths. For each object path an array of announced interfaces found
+     * at that object path will be listed.
      *
-     * @param[out] aboutObjectDescription reference to an about objectDescription that will
+     * @param[out] aboutObjectDescriptionArg reference to a MsgArg that will
      *             be filled in.
+     *
      * @return ER_OK on success
      */
-    QStatus GetAboutObjectDescription(AboutObjectDescription& aboutObjectDescription);
+    QStatus GetAnnouncedObjectDescription(MsgArg& objectDescriptionArg);
 
     /**
      * Find a local object.

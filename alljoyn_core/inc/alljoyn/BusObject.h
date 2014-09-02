@@ -222,7 +222,7 @@ class BusObject : public MessageReceiver {
      *    is larger than `numInterfaces` then only `numInterfaces` will be returned.
      *
      */
-    size_t GetAnnouncedInterfaceNames(const char** interfaces, size_t numInterfaces);
+    size_t GetAnnouncedInterfaceNames(const char** interfaces = NULL, size_t numInterfaces = 0);
 
   protected:
 

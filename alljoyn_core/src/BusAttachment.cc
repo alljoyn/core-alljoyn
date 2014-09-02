@@ -2074,8 +2074,8 @@ QStatus BusAttachment::UnregisterAllAboutListeners()
     return busInternal->internalAboutListener.RemoveAllHandlers();
 }
 
-QStatus BusAttachment::Internal::GetAboutObjectDescription(AboutObjectDescription& aboutObjectDescription) {
-    return localEndpoint->GetAboutObjectDescription(aboutObjectDescription);
+QStatus BusAttachment::Internal::GetAnnouncedObjectDescription(MsgArg& objectDescriptionArg) {
+    return localEndpoint->GetAnnouncedObjectDescription(objectDescriptionArg);
 }
 
 QStatus BusAttachment::SetSessionListener(SessionId id, SessionListener* listener)

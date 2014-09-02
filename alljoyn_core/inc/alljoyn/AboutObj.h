@@ -130,7 +130,7 @@ class AboutObj : public BusObject {
      */
     BusAttachment* m_busAttachment;
 
-    AboutObjectDescription m_objectDescription;
+    MsgArg m_objectDescription;
     AboutDataListener* m_aboutDataListener;
 };
 }
