@@ -41,7 +41,7 @@ namespace qcc {
 // Cache of open algorithm handles
 static BCRYPT_ALG_HANDLE algHandles[3][2] = { 0 };
 
-struct Crypto_Hash::Context {
+class Crypto_Hash::Context {
   public:
 
     Context(size_t digestSize) : digestSize(digestSize), handle(0), hashObj(NULL) { }

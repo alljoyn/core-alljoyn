@@ -167,7 +167,7 @@ static QStatus GetSocketCreds(SocketFd sockFd, uid_t* uid, gid_t* gid, pid_t* pi
             ret = recvmsg(sockFd, &msg, 0);
             if (ret == -1) {
                 if (errno == EWOULDBLOCK) {
-                    qcc::Event event(sockFd, qcc::Event::IO_READ, false);
+                    qcc::Event event(sockFd, qcc::Event::IO_READ);
                     status = Event::Wait(event, CRED_TIMEOUT);
                     if (status != ER_OK) {
                         QCC_LogError(status, ("Credentials exhange timeout"));
@@ -208,7 +208,7 @@ void* DaemonTransport::Run(void* arg)
     SocketFd listenFd = (SocketFd)(ptrdiff_t)arg;
     QStatus status = ER_OK;
 
-    Event listenEvent(listenFd, Event::IO_READ, false);
+    Event listenEvent(listenFd, Event::IO_READ);
 
     while (!IsStopping()) {
         status = Event::Wait(listenEvent);
@@ -367,12 +367,12 @@ QStatus DaemonTransport::StartListen(const char* listenSpec)
         QCC_LogError(status, ("DaemonTransport::StartListen(): Invalid Unix listen spec \"%s\"", listenSpec));
         return status;
     }
-    SocketFd listenFd = -1;
+    SocketFd listenFd = qcc::INVALID_SOCKET_FD;
     status = ListenFd(serverArgs, listenFd);
     if (status == ER_OK) {
         status = Thread::Start((void*)(intptr_t)listenFd);
     }
-    if ((listenFd != -1) && (status != ER_OK)) {
+    if ((listenFd != qcc::INVALID_SOCKET_FD) && (status != ER_OK)) {
         qcc::Close(listenFd);
     }
     return status;
@@ -381,6 +381,11 @@ QStatus DaemonTransport::StartListen(const char* listenSpec)
 QStatus DaemonTransport::StopListen(const char* listenSpec)
 {
     return Thread::Stop();
+}
+
+QStatus DaemonTransport::UntrustedClientStart()
+{
+    return ER_NOT_IMPLEMENTED;
 }
 
 } // namespace ajn

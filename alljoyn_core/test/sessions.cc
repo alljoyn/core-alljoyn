@@ -684,13 +684,42 @@ static void DoSetLinkTimeoutAsync(SessionId id, uint32_t timeout)
 
 }
 
-static void DoPing(String name)
+static void DoPing(String name, uint32_t timeout)
 {
-    QStatus status = s_bus->Ping(name.c_str(), 30000);
+    QStatus status = s_bus->Ping(name.c_str(), timeout);
     if (status != ER_OK) {
         printf("DoPing(%s) failed with %s (%u)\n", name.c_str(), QCC_StatusText(status), status);
     } else {
         printf("Ping(%s) OK\n", name.c_str());
+    }
+}
+
+struct AsyncPingHandler : public BusAttachment::PingAsyncCB {
+
+    const String name;
+
+    AsyncPingHandler(String& name) : name(name)
+    {   }
+
+    void PingCB(QStatus status, void* context)
+    {
+        if (status != ER_OK) {
+            printf("PingAsync(%s) failed with %s (%u)\n", name.c_str(), QCC_StatusText(status), status);
+        } else {
+            printf("PingAsync(%s) OK\n", name.c_str());
+        }
+
+        delete this;
+    }
+};
+
+static void DoPingAsync(String name, uint32_t timeout)
+{
+    QStatus status = s_bus->PingAsync(name.c_str(), timeout, new AsyncPingHandler(name), NULL);
+    if (status != ER_OK) {
+        printf("DoPingAsync(%s) failed with %s (%u)\n", name.c_str(), QCC_StatusText(status), status);
+    } else {
+        printf("PingAsync(%s) OK\n", name.c_str());
     }
 }
 
@@ -1069,12 +1098,17 @@ int main(int argc, char** argv)
                 continue;
             }
             sessionTestObj.SetTtl(ttl);
-        } else if (cmd == "ping") {
-            String name = NextTok(line);
-            DoPing(name);
         } else if (cmd == "wait") {
             String name = NextTok(line);
             DoWait(name);
+        } else if (cmd == "ping") {
+            String name = NextTok(line);
+            uint32_t timeout = StringToU32(NextTok(line), 0, 30000);
+            DoPing(name, timeout);
+        } else if (cmd == "asyncping") {
+            String name = NextTok(line);
+            uint32_t timeout = StringToU32(NextTok(line), 0, 30000);
+            DoPingAsync(name, timeout);
         } else if (cmd == "exit") {
             break;
         } else if (cmd == "help" || cmd == "?") {
@@ -1103,8 +1137,9 @@ int main(int argc, char** argv)
             printf("addmatch <rule>                                               - Add a DBUS rule\n");
             printf("removematch <rule>                                            - Remove a DBUS rule\n");
             printf("sendttl <ttl>                                                 - Set ttl (in ms) for all chat messages (0 = infinite)\n");
-            printf("ping <name>                                                   - Ping a name\n");
             printf("wait <name>                                                   - Wait until <name> is found\n");
+            printf("ping <name> [timeout]                                         - Ping a name\n");
+            printf("asyncping <name> [timeout]                                    - Ping a name asynchronously\n");
             printf("exit                                                          - Exit this program\n");
             printf("\n");
             printf("SessionIds can be specified by value or by #<idx> where <idx> is the session index printed with \"list\" command\n");

@@ -656,7 +656,7 @@ TEST(MsgArgTest, Comparison) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     a.SetOwnershipFlags(MsgArg::OwnsArgs);
     status = b.Set("v", new MsgArg("s", "AllSeen"));
-    a.SetOwnershipFlags(MsgArg::OwnsArgs);
+    b.SetOwnershipFlags(MsgArg::OwnsArgs);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(a == b) << "VARIANT ERROR:\n" << a.ToString().c_str() << "\n-----\n" << a.ToString().c_str();
 

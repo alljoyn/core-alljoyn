@@ -285,7 +285,7 @@ qcc::ThreadReturn STDCALL _HttpServer::ResponseThread::Run(void* arg)
                 }
             }
         } else if (ER_WOULDBLOCK == sts) {
-            qcc::Event recvEvent(sessionFd, qcc::Event::IO_READ, false);
+            qcc::Event recvEvent(sessionFd, qcc::Event::IO_READ);
             sts = qcc::Event::Wait(recvEvent);
             if (ER_OK != sts) {
                 QCC_LogError(sts, ("Wait failed"));
@@ -519,7 +519,7 @@ qcc::ThreadReturn STDCALL _HttpServer::Run(void* arg)
             if (ER_OK == status) {
                 break;
             } else if (ER_WOULDBLOCK == status) {
-                qcc::Event listenEvent(listenFd, qcc::Event::IO_READ, false);
+                qcc::Event listenEvent(listenFd, qcc::Event::IO_READ);
                 status = qcc::Event::Wait(listenEvent);
             } else {
                 QCC_LogError(status, ("Accept failed"));

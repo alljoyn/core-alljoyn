@@ -256,7 +256,7 @@ error:
 
 UARTStream::UARTStream(UARTFd fd) :
     fd(fd),
-    sourceEvent(new Event(fd, Event::IO_READ, false)),
+    sourceEvent(new Event(fd, Event::IO_READ)),
     sinkEvent(new Event(*sourceEvent, Event::IO_WRITE, false))
 {
 

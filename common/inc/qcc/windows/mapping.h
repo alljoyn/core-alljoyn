@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -57,6 +57,8 @@
  * strcasecmp(const char *s1, const char *s2) will compile in windows.
  */
 #define strcasecmp _stricmp
+
+#if _MSC_VER < 1800   /* MSVC 2013 or higher */
 /**
  * Map fpclassify to _fpclass
  *
@@ -69,4 +71,8 @@
 #define FP_ZERO (_FPCLASS_NZ | _FPCLASS_PZ)
 #define FP_INFINITE (_FPCLASS_NINF | _FPCLASS_PINF)
 /// @endcond
+#else
+#include <algorithm>
+#endif
+
 #endif

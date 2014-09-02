@@ -346,7 +346,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     void AliasUnixUser(const InterfaceDescription::Member* member, Message& msg);
 
     /**
-     * Set (add or replace) an advertised name alias for remote daemon guid.
+     * Add an advertised name alias for remote daemon guid.
      *
      * This method is used by SessionlessObj to tell AllJoynObj that JoinSession requests
      * for unique names containing the given GUID / transport mask should be aliased with the
@@ -356,7 +356,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param mask       Transport used by remote daemon to advertise advName.
      * @param advName    Well-known name advertised by remote daemon.
      */
-    void SetAdvNameAlias(const qcc::String& guid, const TransportMask mask, const qcc::String& advName);
+    void AddAdvNameAlias(const qcc::String& guid, const TransportMask mask, const qcc::String& advName);
 
     /**
      * Handle event that the application/process is suspending on OS like WinRT.
@@ -580,11 +580,12 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
         TransportMask transportMask;
         qcc::String sender;
         MatchMap matching;
-
-        DiscoverMapEntry(TransportMask transportMask, const qcc::String& sender, const MatchMap& matching) :
+        bool initComplete;
+        DiscoverMapEntry(TransportMask transportMask, const qcc::String& sender, const MatchMap& matching, bool initComplete = false) :
             transportMask(transportMask),
             sender(sender),
-            matching(matching) { }
+            matching(matching),
+            initComplete(initComplete) { }
     };
     typedef std::multimap<qcc::String, DiscoverMapEntry> DiscoverMapType;
     DiscoverMapType discoverMap;
@@ -626,7 +627,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
             id(0),
             sessionPort(0),
             opts(),
-            fd(-1),
+            fd(qcc::INVALID_SOCKET_FD),
             isInitializing(false),
             isRawReady(false) { }
     };
@@ -669,7 +670,18 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
 
     std::map<qcc::StringMapKey, RemoteEndpoint> b2bEndpoints;  /**< Map of bus-to-bus endpoints that are connected to external daemons */
 
-    std::multimap<qcc::String, std::pair<qcc::String, TransportMask> > advAliasMap;  /**< Map remote daemon guid/transport to advertised name alias */
+    struct AdvAliasEntry {
+        qcc::String name;
+        TransportMask transport;
+        AdvAliasEntry(qcc::String name, TransportMask transport) : name(name), transport(transport) { }
+        bool operator<(const AdvAliasEntry& other) const {
+            return (name < other.name) || ((name == other.name) && (transport < other.transport));
+        }
+        bool operator==(const AdvAliasEntry& other) const {
+            return name == other.name && transport == other.transport;
+        }
+    };
+    std::map<qcc::String, std::set<AdvAliasEntry> > advAliasMap;  /**< Map remote daemon guid/transport to advertised name alias */
 
     qcc::Timer timer;           /**< Timer object for reaping expired names */
 
@@ -982,11 +994,18 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     void CleanAdvAliasMap(const qcc::String& name, TransportMask mask);
 
     /**
-     * Check if this guid has no names or we are not in a session with this guid
-     * @param guid    Guid which needs to be checked
-     * @return true if there are no names in namemap from this guid and there are no active sessions to it
+     * Check if this guid has advertised names or we are in a session with this guid
+     * @param guid    Long Guid string which needs to be checked
+     * @return true if there are names in namemap from this guid or there is at least one active session to it
      */
-    bool CanRemoveFromPeerInfoMap(qcc::String& guid);
+    bool IsGuidLongStringKnown(qcc::String& guid);
+
+    /**
+     * Check if this guid has advertised names or we are in a session with this guid
+     * @param guid    Short Guid string which needs to be checked
+     * @return true if there are names in namemap from this guid or there is at least one active session to it
+     */
+    bool IsGuidShortStringKnown(qcc::String& guid);
 
 
     /* TODO document */

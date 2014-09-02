@@ -91,6 +91,9 @@ ThreadListInitializer::ThreadListInitializer()
 ThreadListInitializer::~ThreadListInitializer()
 {
     if (0 == --threadListCounter) {
+        // Note that FlsFree will call the callback function for all
+        // fibers with a valid key in the Fls slot.
+        FlsFree(cleanExternalThreadKey);
         delete Thread::threadList;
         delete Thread::threadListLock;
     }
@@ -169,13 +172,13 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
     handle(isExternal ? GetCurrentThread() : 0),
     exitValue(NULL),
     arg(NULL),
-    threadId(isExternal ? GetCurrentThreadId() : 0),
     listener(NULL),
     isExternal(isExternal),
     platformContext(NULL),
     alertCode(0),
     auxListeners(),
-    auxListenersLock()
+    auxListenersLock(),
+    threadId(isExternal ? GetCurrentThreadId() : 0)
 {
     /* qcc::String is not thread safe.  Don't use it here. */
     funcName[0] = '\0';

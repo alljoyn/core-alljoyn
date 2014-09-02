@@ -214,6 +214,8 @@ BundledRouter::BundledRouter() : transportsInitialized(false), stopping(false), 
 {
     NullTransport::RegisterRouterLauncher(this);
 
+    LoggerSetting::GetLoggerSetting("bundled-router");
+
     /*
      * Setup the config
      */
@@ -272,12 +274,6 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
         lock.Lock(MUTEX_CONTEXT);
     }
     if (transports.empty()) {
-#if defined(QCC_OS_ANDROID)
-        LoggerSetting::GetLoggerSetting("bundled-router", LOG_DEBUG, true, NULL);
-#else
-        LoggerSetting::GetLoggerSetting("bundled-router", LOG_DEBUG, false, stdout);
-#endif
-
         if (!config->LoadConfig()) {
             status = ER_BUS_BAD_XML;
             QCC_LogError(status, ("Error parsing configuration"));

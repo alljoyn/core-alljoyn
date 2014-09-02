@@ -1,5 +1,5 @@
-AllJoyn Version 14.06 Beta Release Notes
-========================================
+AllJoyn Version 14.06 Release Notes
+===================================
 
 Platform Support
 ----------------
@@ -14,8 +14,8 @@ Platform Support
  9) OpenWRT (trunk)
 
 
-Features added in Version 14.06 Beta
-------------------------------------
+Features added in Version 14.06
+-------------------------------
 * Next Generation Name Service (NGNS): New version of the Name Service
   protocol that is more efficient and reliable.
 * Security Enhancements: support for ECC based authentication
@@ -31,8 +31,8 @@ Features added in Version 14.06 Beta
   flow, and reduction of resources.
 
 
-Issues Addressed in Version 14.06 Beta
---------------------------------------
+Issues Addressed in Version 14.06
+---------------------------------
 ASACORE-35   delay in update of interfaces causes missed announcement in
              onboarding
 ASACORE-136  A space in the path of a project prevents Java compilation on linux
@@ -56,75 +56,80 @@ ASACORE-264  AllJoynFramework_iOS: add missing files to project
 ASACORE-284  Argument of type array of Boolean fails with Android.
 ASACORE-293  AboutService sometimes crashes when responding to
              GetObjectDescription
-ASACORE-352  Change bus config for bundled router to allow untrusted leaf nodes
-             using AJ thin library
-ASACORE-422  Add object based security APIs to Objective C bindings
-ASACORE-502  Race condition when joining threads can lead to crash
-ASACORE-512  Google Tests cannot compile with VC11
-ASACORE-548  Restrict untrusted Thin Clients in standalone daemon only for
-             Android
-ASACORE-634  Remove or update AllJoyn_API_Changes_cpp and _java files for rel
-             14.06.
-
-
-Known Issues in Version 14.06 Beta
-----------------------------------
-Stability in complex environments, under load and longevity needs to be
-improved.
-
-ASACORE-49   Multipoint session lost on joiner side and not binder side
-             prevents joiner from rejoining.
-ASACORE-51   Implicit PropertiesChanged emit only works for multi-point sessions
-ASACORE-177  policydb: receive_type error rule with other receive attributes is
-             not working
-ASACORE-181  Memory leak on repeated registration/unregistration of the same
-             BusObject: note this is an unusual use case
-ASACORE-189  BusObject::Unregistered callback is not called for busobjects
-             after the BusAttachment is disconnected and stopped from the bus.
-ASACORE-192  Overlapping ADDMATCH rules should not fetch previously received
-             Sessionless signals again.
-ASACORE-276  If a transport is disabled in the routing node and if user tries
-             to use the exact transport for discovery, it should return
-             suitable error.
 ASACORE-341  Incorrect replyCode from AllJoynObj::AdvertiseName: it should
              return ALLJOYN_ADVERTISENAME_REPLY_FAILED
-ASACORE-363  NameService discovery does not work over IPv6 when name service
-             IPv4 property is set to false in config file: IPv6 only discovery
-             doesn't work.
-ASACORE-366  alljoyn-daemon crashes when it loads an improper external
-             configuration file
-ASACORE-367  Router AJ objects that don't call BusController::ObjectRegister()
-             due to a failure will cause the program to lockup in a fast
-             spinning while/sleep loop
-ASACORE-370  AllJoyn does not build with Android 4.4 (KitKat) sources
+ASACORE-352  Change bus config for bundled router to allow untrusted leaf nodes
+             using AJ thin library
 ASACORE-381  Unable to join session with another RN whose ip address has
              changed: if an app has a cached IP address for a routing Node, and
              that routing node's IP address changes, it will not be able to
              connect as the cache entry is invalid
 ASACORE-401  Error advertising quietly over IPv6 multicast on iOS/OS X
+ASACORE-422  Add object based security APIs to Objective C bindings
+ASACORE-502  Race condition when joining threads can lead to crash
+ASACORE-512  Google Tests cannot compile with VC11
+ASACORE-548  Restrict untrusted Thin Clients in standalone daemon only for
+             Android
 ASACORE-605  Truncation in posix version of GetTimestamp64() on 32-bit
              platforms
 ASACORE-621  Objective-C binding needs PingAsync
+ASACORE-634  Remove or update AllJoyn_API_Changes_cpp and _java files for rel
+             14.06.
 ASACORE-636  Unrelated interface down/up causes problems with Ping.
+
+Details can be found at:
+https://jira.allseenalliance.org/issues/?jql=project %3D ASACORE AND status %3D Closed AND resolved >%3D 2014-02-04 AND resolved <%3D 2014-07-31 AND resolution %3D fixed AND (component %3D EMPTY OR component not in ("Thin Core Library"%2C "TCL%3A WSL"%2C "About TC")) ORDER BY key asc
+
+
+Known Issues in Version 14.06
+-----------------------------
+Stability in large complex environments under load needs improvement;
+performance can be greatly impacted.
+
+ASACORE-49   Multipoint session lost on joiner side and not binder side
+             prevents joiner from rejoining.
+ASACORE-51   Implicit PropertiesChanged emit only works for multi-point sessions
+ASACORE-181  Memory leak on repeated registration/unregistration of the same
+             BusObject: note this is an unusual use case
+ASACORE-189  BusObject::Unregistered callback is not called for busobjects
+             after the BusAttachment is disconnected and stopped from the bus.
+ASACORE-276  If a transport is disabled in the routing node and if user tries
+             to use the exact transport for discovery, it should return
+             suitable error.
+ASACORE-367  Router AJ objects that don't call BusController::ObjectRegister()
+             due to a failure will cause the program to lockup in a fast
+             spinning while/sleep loop
+ASACORE-370  AllJoyn does not build with Android 4.4 (KitKat) sources
+ASACORE-656  Notifications related to names appearing and disappearing
+             appear to be out of order
+ASACORE-732  Duplicate About announcements received while running large
+             number of About based applications 
+ASACORE-747  Occasional Crash caused by RegisterAnnounceHandler in AllJoyn
+             Core when ER_DEBUG_ALL is enabled
+ASACORE-748  Dismiss All Notifications Test Doesn't Acheive Receiving 95%
+             Of DismissAll Signals Under 10 Seconds Time Frame
+ASACORE-760  services::AnnouncementRegistrar::RegisterAnnounceHandler
+             results in a seg fault
+ASACORE-785  Duplicate FoundAdvertisedName being received
+
+For a complete list of open issues:
+https://jira.allseenalliance.org/issues/?jql=project %3D ASACORE AND status in (Open%2C "In Progress"%2C Reopened%2C New) AND (component %3D EMPTY OR component not in ("About TC"%2C "Thin Core Library"%2C "TCL%3A WSL")) AND TYPE %3D Bug ORDER BY priority DESC%2C key ASC
 
 
 Compatibility
 -------------
-Version 14.06 Beta changed the format of the router configuration file to enable
+Version 14.06
+Changed the format of the router configuration file to enable
 support for Policy DB.
 
-Version 14.02 renamed libajdaemon.a and BundledDaemon.o to libajrouter.a
+Version 14.02
+Renamed libajdaemon.a and BundledDaemon.o to libajrouter.a
 and BundledRouter.o to match the AllJoyn terminology of leaf and router
 nodes. 
 
 Change history
 --------------
-14.06 Beta - Bug fixes. Removed support for ICE. Added a number of features:
- * Next Generation Name Service (NGNS)
- * Security Enhancements
- * Policy DB
- * Sessionless Signal (SLS) Improvements
- * Events and Actions
- * UDP Transport (experimental)
+14.06 - Stability Bug fixes. Removed support for ICE.
+        Added a number of features listed above.
 14.02 - Bug fixes. Removed support for Windows RT.
 3.4.6 - Bug fixes. Improve CPU and memory usage when using sessionless signals.

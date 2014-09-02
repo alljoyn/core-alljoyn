@@ -689,14 +689,14 @@ void* DaemonSLAPTransport::Run(void* arg)
 
                 if (uartStatus == ER_OK && listenFd != -1) {
                     i->listenFd = listenFd;
-                    checkEvents.push_back(new Event(i->listenFd, Event::IO_READ, false));
+                    checkEvents.push_back(new Event(i->listenFd, Event::IO_READ));
                     QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Adding checkevent for %s to list of events", i->args["dev"].c_str()));
                 } else {
                     QCC_LogError(uartStatus, ("DaemonSLAPTransport::Run(): Failed to open for %s", i->args["dev"].c_str()));
                     m_listenList.erase(i++);
                 }
             } else if (!i->endpointStarted) {
-                checkEvents.push_back(new Event(i->listenFd, Event::IO_READ, false));
+                checkEvents.push_back(new Event(i->listenFd, Event::IO_READ));
                 QCC_DbgPrintf(("DaemonSLAPTransport::Run(): Adding checkevent for %s to list of events", i->args["dev"].c_str()));
             }
         }

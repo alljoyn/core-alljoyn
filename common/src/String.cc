@@ -32,25 +32,17 @@
  */
 static const void* memmem(const void* haystack, size_t haystacklen, const void* needle, size_t needlelen)
 {
-    if (!haystack || !needle) {
-        return haystack;
-    } else {
-        const char* h = (const char*)haystack;
-        const char* n = (const char*)needle;
-        size_t l = needlelen;
-        const char* r = h;
-        while (l && (l <= haystacklen)) {
-            if (*n++ != *h++) {
-                r = h;
-                n = (const char*)needle;
-                l = needlelen;
-            } else {
-                --l;
+    if (haystack && needle) {
+        const char* pos = (const char*)haystack;
+        while (haystacklen >= needlelen) {
+            if (memcmp(pos, needle, needlelen) == 0) {
+                return pos;
             }
+            pos++;
             --haystacklen;
         }
-        return l ? NULL : r;
     }
+    return NULL;
 }
 #endif
 
@@ -584,7 +576,7 @@ void String::DecRef(ManagedCtx* ctx)
     if (ctx != &nullContext) {
         uint32_t refs = DecrementAndFetch(&ctx->refCount);
         if (0 == refs) {
-#if defined(QCC_OS_DARWIN)or defined(__clang__)
+#if defined(QCC_OS_DARWIN) || defined(__clang__)
             ctx->~ManagedCtx();
 #else
             ctx->ManagedCtx::~ManagedCtx();

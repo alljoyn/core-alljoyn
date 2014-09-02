@@ -83,6 +83,33 @@ typedef void (^ AJNLinkTimeoutBlock)(QStatus status, uint32_t timeout, void *con
 
 @end
 
+/**
+ * Block definition for pinging a peer asynchronously
+ */
+typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
+
+/**
+ * Delegate used to receive notifications when we ping a peer asynchronously
+ */
+@protocol AJNPingPeerDelegate <NSObject>
+
+/**
+ * Called when pingAsync completes.
+ *
+ * @param status
+ *   - #ER_OK on success
+ *   - #ER_ALLJOYN_PING_FAILED Ping failed
+ *   - #ER_ALLJOYN_PING_REPLY_TIMEOUT Ping call timed out
+ *   - #ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME name not found currently or not part of any known session
+ *   - #ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED the remote routing node does not implement Ping
+ *   - #ER_ALLJOYN_PING_REPLY_UNREACHABLE the name pinged is unreachable
+ *   - #ER_BUS_UNEXPECTED_DISPOSITION An unexpected disposition was returned and has been treated as an error
+ * @param context      User defined context which will be passed as-is to callback.
+ */
+- (void)pingPeerHasStatus:(QStatus)status context:(void *)context;
+
+@end
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -1174,19 +1201,55 @@ typedef void (^ AJNLinkTimeoutBlock)(QStatus status, uint32_t timeout, void *con
  * @param name The unique or well-known name to ping
  * @param timeout Timeout specified in milliseconds to wait for reply
  * @return
- *   - ER_OK on success
- *   - ER_ALLJOYN_PING_FAILED Ping failed
+ *   - ER_OK the name is present and responding
+ *   - ER_ALLJOYN_PING_REPLY_UNREACHABLE the name is no longer present
+ *
+ *   The following return values indicate that the router cannot determine if the 
+ *   remote name is present and responding:
  *   - ER_ALLJOYN_PING_REPLY_TIMEOUT Ping call timed out
  *   - ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME name not found currently or not part of any known session
- *   - ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED the remote routing node does not implement Ping
- *   - ER_ALLJOYN_PING_REPLY_UNREACHABLE the name pinged is unreachable
+ *   - ER_ALLJOYN_PING_REPLY_INCOMPATIBLE_REMOTE_ROUTING_NODE the remote routing node does not implement Ping
+ *
+ *   The following return values indicate an error with the ping call itself:
+ *   - ER_ALLJOYN_PING_FAILED Ping failed
  *   - ER_BUS_UNEXPECTED_DISPOSITION An unexpected disposition was returned and has been treated as an error
  *   - ER_BUS_NOT_CONNECTED the BusAttachment is not connected to the bus
  *   - ER_BUS_BAD_BUS_NAME the name parameter is not a valid bus name
- *   - ER_BAD_ARG_1 a NULL pointer was passed in for the name
  *   - An error status otherwise
  */
 - (QStatus)pingPeer:(NSString *)name withTimeout:(uint32_t)timeout;
+
+/**
+ * Determine if you are able to find a remote connection based on its BusName.
+ * The BusName can be the Unique or well-known name.
+ * @param name The unique or well-known name to ping
+ * @param timeout Timeout specified in milliseconds to wait for reply
+ * @param delegate Called when pingPeerAsync response is received.
+ * @param context  User defined context which will be passed as-is to callback.
+ * @return
+ *     - #ER_OK if ping was successful.
+ *     - #ER_BUS_NOT_CONNECTED the BusAttachment is not connected to the bus
+ *     - #ER_BUS_BAD_BUS_NAME the name parameter is not a valid bus name
+ *     - #ER_BAD_ARG_1 a NULL pointer was passed in for the name
+ *     - Other error status codes indicating a failure.
+ */
+- (QStatus)pingPeerAsync:(NSString *)name withTimeout:(uint32_t)timeout completionDelegate:(id<AJNPingPeerDelegate>)delegate context:(void *)context;
+
+/**
+ * Determine if you are able to find a remote connection based on its BusName.
+ * The BusName can be the Unique or well-known name.
+ * @param name The unique or well-known name to ping
+ * @param timeout Timeout specified in milliseconds to wait for reply
+ * @param block Called when pingPeerAsync response is received.
+ * @param context  User defined context which will be passed as-is to callback.
+ * @return
+ *     - #ER_OK if ping was successful.
+ *     - #ER_BUS_NOT_CONNECTED the BusAttachment is not connected to the bus
+ *     - #ER_BUS_BAD_BUS_NAME the name parameter is not a valid bus name
+ *     - #ER_BAD_ARG_1 a NULL pointer was passed in for the name
+ *     - Other error status codes indicating a failure.
+ */
+- (QStatus)pingPeerAsync:(NSString *)name withTimeout:(uint32_t)timeout completionBlock:(AJNPingPeerBlock)block context:(void *)context;
 
 /**
  * Returns the current non-absolute real-time clock used internally by AllJoyn. This value can be

@@ -41,6 +41,63 @@ using namespace ajn;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
+//  Asynchronous ping callback implementation
+//
+
+/** Internal class to manage asynchronous ping callbacks
+ */
+class AJNPingPeerAsyncCallbackImpl : public ajn::BusAttachment::PingAsyncCB
+{
+private:
+    /** The objective-c delegate to communicate with whenever PingAsyncCB is called.
+     */
+    __weak id<AJNPingPeerDelegate> m_delegate;
+    
+    /** The objective-c block to call when PingAsyncCB is called.
+     */
+    AJNPingPeerBlock m_block;
+public:
+    /** Constructors */
+    AJNPingPeerAsyncCallbackImpl(id<AJNPingPeerDelegate> delegate) : m_delegate(delegate) { }
+    
+    AJNPingPeerAsyncCallbackImpl(AJNPingPeerBlock block) : m_block(block), m_delegate(nil) { }
+    
+    /** Destructor */
+    virtual ~AJNPingPeerAsyncCallbackImpl()
+    {
+        m_delegate = nil;
+        m_block = nil;
+    }
+    
+    /**
+     * Called whenPingAsync() completes.
+     *
+     * @param status       ER_OK if successful
+     * @param context      User defined context which will be passed as-is to callback.
+     */
+    virtual void PingCB(QStatus status, void* context)
+    {
+        if (m_delegate != nil) {
+            __block id<AJNPingPeerDelegate> theDelegate = m_delegate;
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [theDelegate pingPeerHasStatus:status context:context];
+                delete this;
+            });
+        }
+        else {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                m_block(status, context);
+                delete this;
+            });
+        }
+    }
+    
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
 //  Asynchronous session join callback implementation
 //
 
@@ -791,6 +848,27 @@ public:
     }
     return status;    
 }
+
+- (QStatus)pingPeerAsync:(NSString *)name withTimeout:(uint32_t)timeout completionDelegate:(id<AJNPingPeerDelegate>)delegate context:(void *)context
+{
+    AJNPingPeerAsyncCallbackImpl *callbackImpl = new AJNPingPeerAsyncCallbackImpl(delegate);
+    QStatus status = self.busAttachment->PingAsync([name UTF8String], timeout, callbackImpl, context);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::pingPeerAsync:withTimeout:completionDelegate:context: failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
+}
+
+- (QStatus)pingPeerAsync:(NSString *)name withTimeout:(uint32_t)timeout completionBlock:(AJNPingPeerBlock)block context:(void *)context
+{
+    AJNPingPeerAsyncCallbackImpl *callbackImpl = new AJNPingPeerAsyncCallbackImpl(block);
+    QStatus status = self.busAttachment->PingAsync([name UTF8String], timeout, callbackImpl, context);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::pingPeerAsync:withTimeout:completionBlock:context: failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
+}
+
 
 - (AJNHandle)socketFileDescriptorForSession:(AJNSessionId)sessionId
 {

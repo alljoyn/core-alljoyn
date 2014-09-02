@@ -960,7 +960,16 @@ void Timer::EnableReentrancy()
 bool Timer::ThreadHoldsLock()
 {
     Thread* thread = Thread::GetThread();
-    if (nameStr == thread->GetName()) {
+    lock.Lock();
+    bool allowed = false;
+    for (uint32_t i = 0; i < timerThreads.size(); ++i) {
+        if ((timerThreads[i] != NULL) && (static_cast<Thread*>(timerThreads[i]) == thread)) {
+            allowed = true;
+            break;
+        }
+    }
+    lock.Unlock();
+    if (allowed) {
         TimerThread* tt = static_cast<TimerThread*>(thread);
         return tt->hasTimerLock;
     }

@@ -427,7 +427,7 @@ void AllJoynObj::BindSessionPort(const InterfaceDescription::Member* member, Mes
             entry.sessionHost = sender;
             entry.sessionPort = sessionPort;
             entry.endpointName = sender;
-            entry.fd = -1;
+            entry.fd = qcc::INVALID_SOCKET_FD;
             entry.opts = opts;
             entry.id = 0;
             SessionMapInsert(entry);
@@ -811,20 +811,23 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 if (busAddrs.empty() && (sessionHost[0] == ':')) {
                     QCC_DbgPrintf(("JoinSessionThread::RunJoin(): look for busaddr in adv alias map"));
                     String rguidStr = String(sessionHost).substr(1, GUID128::SHORT_SIZE);
-                    multimap<String, pair<String, TransportMask> >::iterator ait = ajObj.advAliasMap.lower_bound(rguidStr);
-                    while ((ait != ajObj.advAliasMap.end()) && (ait->first == rguidStr)) {
-                        if ((ait->second.second & optsIn.transports) != 0) {
-                            multimap<String, NameMapEntry>::iterator nmit2 = ajObj.nameMap.lower_bound(ait->second.first);
-                            while (nmit2 != ajObj.nameMap.end() && (nmit2->first == ait->second.first)) {
-                                if ((nmit2->second.transport & ait->second.second & optsIn.transports) != 0) {
-                                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Found busaddr in adv alias map: \"%s\"",
-                                                   nmit2->second.busAddr.c_str()));
-                                    busAddrs.push_back(nmit2->second.busAddr);
+                    map<String, set<AdvAliasEntry> >::iterator ait = ajObj.advAliasMap.find(rguidStr);
+                    if (ait != ajObj.advAliasMap.end()) {
+                        set<AdvAliasEntry>::iterator bit = ait->second.begin();
+                        while ((bit != ait->second.end())) {
+                            if (((*bit).transport & optsIn.transports) != 0) {
+                                multimap<String, NameMapEntry>::iterator nmit2 = ajObj.nameMap.lower_bound((*bit).name);
+                                while (nmit2 != ajObj.nameMap.end() && (nmit2->first == (*bit).name)) {
+                                    if ((nmit2->second.transport & (*bit).transport & optsIn.transports) != 0) {
+                                        QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Found busaddr in adv alias map: \"%s\"",
+                                                       nmit2->second.busAddr.c_str()));
+                                        busAddrs.push_back(nmit2->second.busAddr);
+                                    }
+                                    ++nmit2;
                                 }
-                                ++nmit2;
                             }
+                            ++bit;
                         }
-                        ++ait;
                     }
                 }
                 ajObj.ReleaseLocks();
@@ -1244,7 +1247,7 @@ void AllJoynObj::LeaveSession(const InterfaceDescription::Member* member, Messag
         }
 
         /* Close any open fd for this session */
-        if (smEntry->fd != -1) {
+        if (smEntry->fd != qcc::INVALID_SOCKET_FD) {
             qcc::Shutdown(smEntry->fd);
             qcc::Close(smEntry->fd);
         }
@@ -1960,12 +1963,21 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
     return 0;
 }
 
-void AllJoynObj::SetAdvNameAlias(const String& guid, const TransportMask mask, const String& advName)
+void AllJoynObj::AddAdvNameAlias(const String& guid, const TransportMask mask, const String& advName)
 {
-    QCC_DbgTrace(("AllJoynObj::SetAdvNameAlias(%s, 0x%x, %s)", guid.c_str(), mask, advName.c_str()));
+    QCC_DbgTrace(("AllJoynObj::AddAdvNameAlias(%s, 0x%x, %s)", guid.c_str(), mask, advName.c_str()));
 
     AcquireLocks();
-    advAliasMap.insert(pair<String, pair<String, TransportMask> >(guid, pair<String, TransportMask>(advName, mask)));
+    std::map<qcc::String, set<AdvAliasEntry> >::iterator it = advAliasMap.find(guid);
+    if (it == advAliasMap.end()) {
+        set<AdvAliasEntry> temp;
+        AdvAliasEntry entry(advName, mask);
+        temp.insert(entry);
+        advAliasMap.insert(pair<String, set<AdvAliasEntry> >(guid, temp));
+    } else {
+        AdvAliasEntry entry(advName, mask);
+        it->second.insert(entry);
+    }
     ReleaseLocks();
 }
 
@@ -2036,7 +2048,7 @@ void AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
                     }
                 }
                 /* Session is lost when members + sessionHost together contain only one entry */
-                if ((it->second.fd == -1) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
+                if ((it->second.fd == qcc::INVALID_SOCKET_FD) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
                     SessionMapEntry tsme = it->second;
                     pair<String, SessionId> key = it->first;
                     if (!it->second.isInitializing) {
@@ -2137,7 +2149,7 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
                     }
                 }
                 /* A session with only one member and no sessionHost or only a sessionHost are "lost" */
-                if ((it->second.fd == -1) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
+                if ((it->second.fd == qcc::INVALID_SOCKET_FD) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
                     SessionMapEntry tsme = it->second;
                     pair<String, SessionId> key = it->first;
                     if (!it->second.isInitializing) {
@@ -2494,15 +2506,15 @@ QStatus AllJoynObj::ShutdownEndpoint(RemoteEndpoint& b2bEp, SocketFd& sockFd)
             status = b2bEp->Join();
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to join RemoteEndpoint used for streaming"));
-                sockFd = -1;
+                sockFd = qcc::INVALID_SOCKET_FD;
             }
         } else {
             QCC_LogError(status, ("Failed to stop RemoteEndpoint used for streaming"));
-            sockFd = -1;
+            sockFd = qcc::INVALID_SOCKET_FD;
         }
     } else {
         QCC_LogError(status, ("Failed to dup remote endpoint's socket"));
-        sockFd = -1;
+        sockFd = qcc::INVALID_SOCKET_FD;
     }
     return status;
 }
@@ -2539,7 +2551,7 @@ void AllJoynObj::GetSessionFd(const InterfaceDescription::Member* member, Messag
     msg->GetArgs(numArgs, args);
     SessionId id = args[0].v_uint32;
     QStatus status;
-    SocketFd sockFd = -1;
+    SocketFd sockFd = qcc::INVALID_SOCKET_FD;
 
     QCC_DbgTrace(("AllJoynObj::GetSessionFd(%u)", id));
 
@@ -2562,7 +2574,7 @@ void AllJoynObj::GetSessionFd(const InterfaceDescription::Member* member, Messag
     }
     ReleaseLocks();
 
-    if (sockFd != -1) {
+    if (sockFd != qcc::INVALID_SOCKET_FD) {
         /* Send the fd and transfer ownership */
         MsgArg replyArg;
         replyArg.Set("h", sockFd);
@@ -2841,27 +2853,42 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
             }
 
             if (ALLJOYN_ADVERTISENAME_REPLY_SUCCESS == replyCode) {
+                bool transportsProcessed = false;
+                TransportList& transList = bus.GetInternal().GetTransportList();
+                for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
+                    Transport* trans = transList.GetTransport(i);
+                    if (trans && trans->IsBusToBus() && (trans->GetTransportMask() & transports)) {
+                        transportsProcessed = true;
+                    } else if (!trans) {
+                        QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
+                    }
+                }
                 /* Add to advertise map */
-                if (!foundEntry) {
-                    advertiseMap.insert(pair<qcc::String, pair<TransportMask, qcc::String> >(advertiseNameStr, pair<TransportMask, String>(transports, sender)));
+                if (transportsProcessed || (transports & TRANSPORT_LOCAL)) {
+                    if (!foundEntry) {
+                        advertiseMap.insert(pair<qcc::String, pair<TransportMask, qcc::String> >(advertiseNameStr, pair<TransportMask, String>(transports, sender)));
+                    } else {
+                        it->second.first |= transports;
+                    }
                 } else {
-                    it->second.first |= transports;
+                    replyCode = ALLJOYN_ADVERTISENAME_REPLY_TRANSPORT_NOT_AVAILABLE;
                 }
                 stateLock.Lock(MUTEX_CONTEXT);
                 ReleaseLocks();
 
                 /* Advertise on transports specified */
-                TransportList& transList = bus.GetInternal().GetTransportList();
-                status = ER_BUS_BAD_SESSION_OPTS;
-                for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
-                    Transport* trans = transList.GetTransport(i);
-                    if (trans && trans->IsBusToBus() && (trans->GetTransportMask() & transports)) {
-                        status = trans->EnableAdvertisement(advertiseNameStr, quietly, transports & GetCompleteTransportMaskFilter());
-                        if ((status != ER_OK) && (status != ER_NOT_IMPLEMENTED)) {
-                            QCC_LogError(status, ("EnableAdvertisment failed for transport %s - mask=0x%x", trans->GetTransportName(), transports));
+                if (transportsProcessed) {
+                    status = ER_BUS_BAD_SESSION_OPTS;
+                    for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
+                        Transport* trans = transList.GetTransport(i);
+                        if (trans && trans->IsBusToBus() && (trans->GetTransportMask() & transports)) {
+                            status = trans->EnableAdvertisement(advertiseNameStr, quietly, transports & GetCompleteTransportMaskFilter());
+                            if ((status != ER_OK) && (status != ER_NOT_IMPLEMENTED)) {
+                                QCC_LogError(status, ("EnableAdvertisment failed for transport %s - mask=0x%x", trans->GetTransportName(), transports));
+                            }
+                        } else if (!trans) {
+                            QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
                         }
-                    } else if (!trans) {
-                        QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
                     }
                 }
                 stateLock.Unlock(MUTEX_CONTEXT);
@@ -3034,7 +3061,7 @@ void AllJoynObj::FindAdvertisedName(const InterfaceDescription::Member* member, 
         matchingStr = String("name='") + str + "*'";
     }
 
-    ProcFindAdvertisement(status, msg, matchingStr, TRANSPORT_ALL);
+    ProcFindAdvertisement(status, msg, matchingStr, TRANSPORT_ANY);
 }
 
 void AllJoynObj::FindAdvertisedNameByTransport(const InterfaceDescription::Member* member, Message& msg)
@@ -3111,6 +3138,7 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
         status = TransportPermission::FilterTransports(srcEp, sender, transports, "AllJoynObj::FindAdvertisedName");
     }
 
+    MatchMap::const_iterator namePrefix = matching.find("name");
     if (ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS == replyCode) {
         /* Check to see if this endpoint is already discovering this prefix */
         bool foundEntry = false;
@@ -3130,7 +3158,11 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
         }
 
         if (!foundEntry) {
-            discoverMap.insert(std::make_pair(matchingStr, DiscoverMapEntry(transports, sender, matching)));
+            /* This is the fix for multiple found names issue.
+             * If this is a name-based query, set initComplete to false and set it to true after
+             * the calls to the transports are complete.
+             */
+            discoverMap.insert(std::make_pair(matchingStr, DiscoverMapEntry(transports, sender, matching, namePrefix == matching.end())));
         }
     }
     /* Find out the transports on which discovery needs to be enabled for this name.
@@ -3164,7 +3196,6 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
     }
 
     /* Send FoundAdvertisedName signals if there are existing matches for matching */
-    MatchMap::const_iterator namePrefix = matching.find("name");
     if ((ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS == replyCode) && (namePrefix != matching.end())) {
         AcquireLocks();
         String prefix = namePrefix->second.substr(0, namePrefix->second.find_last_of('*'));
@@ -3179,9 +3210,6 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
             if (sentSet.find(sentSetEntry) == sentSet.end()) {
                 String foundName = it->first;
                 NameMapEntry nme = it->second;
-                ReleaseLocks();
-                status = SendFoundAdvertisedName(sender, foundName, nme.transport, namePrefix->second);
-                AcquireLocks();
                 it = nameMap.lower_bound(prefix);
                 sentSet.insert(sentSetEntry);
                 if (ER_OK != status) {
@@ -3191,7 +3219,23 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
                 ++it;
             }
         }
+
+
+        //Set initComplete to true
+        DiscoverMapType::iterator dit = discoverMap.lower_bound(matchingStr);
+        while ((dit != discoverMap.end()) && (dit->first == matchingStr)) {
+            if (dit->second.sender == sender) {
+                dit->second.initComplete = true;
+                break;
+            }
+            ++dit;
+        }
         ReleaseLocks();
+        set<pair<String, TransportMask> >::iterator sit = sentSet.begin();
+        while (sit != sentSet.end()) {
+            status = SendFoundAdvertisedName(sender, sit->first, sit->second, namePrefix->second);
+            sit++;
+        }
     }
 }
 
@@ -3208,7 +3252,7 @@ void AllJoynObj::CancelFindAdvertisedName(const InterfaceDescription::Member* me
         matchingStr = String("name='") + str + "*'";
     }
 
-    HandleCancelFindAdvertisement(status, msg, matchingStr, TRANSPORT_ALL);
+    HandleCancelFindAdvertisement(status, msg, matchingStr, TRANSPORT_ANY);
 }
 
 void AllJoynObj::CancelFindAdvertisedNameByTransport(const InterfaceDescription::Member* member, Message& msg)
@@ -3452,7 +3496,7 @@ void AllJoynObj::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
     //
     // Check if guid for this name is eligible for removal from PeerInfoMap in NameService
     //
-    if (CanRemoveFromPeerInfoMap(guidToBeChecked)) {
+    if (!IsGuidLongStringKnown(guidToBeChecked)) {
         IpNameService::Instance().RemoveFromPeerInfoMap(guidToBeChecked);
     }
 
@@ -3932,7 +3976,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias, const qcc::String* o
                 /*
                  * as long as the file descriptor is -1 this is not a raw session
                  */
-                bool noRawSession = (it->second.fd == -1);
+                bool noRawSession = (it->second.fd == qcc::INVALID_SOCKET_FD);
                 if ((noMemberSingleHost || singleMemberNoHost) && noRawSession) {
                     SessionMapEntry tsme = it->second;
                     pair<String, SessionId> key = it->first;
@@ -4181,6 +4225,11 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
                                 if (namePrefix == dit->second.matching.end()) {
                                     continue;
                                 }
+
+                                if (!dit->second.initComplete) {
+                                    continue;
+                                }
+
                                 if (!WildcardMatch(*nit, namePrefix->second) && (transport & dit->second.transportMask)) {
                                     foundNameSet.insert(FoundNameEntry(*nit, namePrefix->second, dit->second.sender));
                                 }
@@ -4227,7 +4276,7 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
                     //
                     // Check if guid for this name is eligible for removal from PeerInfoMap in Name service
                     //
-                    if (CanRemoveFromPeerInfoMap(guidToBeChecked)) {
+                    if (!IsGuidLongStringKnown(guidToBeChecked)) {
                         QCC_DbgPrintf(("TTl=0. Removing GUID %s", guidToBeChecked.c_str()));
                         IpNameService::Instance().RemoveFromPeerInfoMap(guidToBeChecked);
                     }
@@ -4258,7 +4307,38 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
     }
 }
 
-bool AllJoynObj::CanRemoveFromPeerInfoMap(qcc::String& guid)
+bool AllJoynObj::IsGuidShortStringKnown(qcc::String& guid)
+{
+    //
+    //Check if there any other name in the NameMap from this guid
+    //
+    AcquireLocks();
+    std::multimap<qcc::String, NameMapEntry>::iterator it = nameMap.begin();
+    while (it != nameMap.end()) {
+        if (qcc::GUID128(it->second.guid).ToShortString() == guid) {
+            ReleaseLocks();
+            return true;
+        }
+        ++it;
+    }
+    //
+    //Check if there is any active session with this guid
+    //
+    BusEndpoint bep = router.FindEndpoint(":" + guid + ".1");
+    if (bep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
+        QCC_DbgPrintf(("Session found for %s", guid.c_str()));
+        ReleaseLocks();
+        return true;
+    } else {
+        QCC_DbgPrintf(("EndpoinType = %d,  Session not found for %s", bep->GetEndpointType(), guid.c_str()));
+    }
+
+    ReleaseLocks();
+    return false;
+}
+
+
+bool AllJoynObj::IsGuidLongStringKnown(qcc::String& guid)
 {
     //
     //Check if there any other name in the NameMap from this guid
@@ -4268,7 +4348,7 @@ bool AllJoynObj::CanRemoveFromPeerInfoMap(qcc::String& guid)
     while (it != nameMap.end()) {
         if (it->second.guid == guid) {
             ReleaseLocks();
-            return false;
+            return true;
         }
         ++it;
     }
@@ -4281,13 +4361,13 @@ bool AllJoynObj::CanRemoveFromPeerInfoMap(qcc::String& guid)
     if (bep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
         QCC_DbgPrintf(("Session found ", wellFormedBusName.ToShortString().c_str()));
         ReleaseLocks();
-        return false;
+        return true;
     } else {
         QCC_DbgPrintf(("EndpoinType = %d,  Session not found for %s", bep->GetEndpointType(), wellFormedBusName.ToShortString().c_str()));
     }
 
     ReleaseLocks();
-    return true;
+    return false;
 }
 
 void AllJoynObj::CleanAdvAliasMap(const String& name, const TransportMask mask)
@@ -4296,9 +4376,17 @@ void AllJoynObj::CleanAdvAliasMap(const String& name, const TransportMask mask)
 
     /* Clean advAliasMap */
     AcquireLocks();
-    multimap<String, pair<String, TransportMask> >::iterator ait = advAliasMap.begin();
+    map<String, set<AdvAliasEntry> >::iterator ait = advAliasMap.begin();
     while (ait != advAliasMap.end()) {
-        if ((ait->second.first == name) && ((ait->second.second & mask) != 0)) {
+        set<AdvAliasEntry>::iterator bit = ait->second.begin();
+        while (bit != ait->second.end()) {
+            if (((*bit).name == name) && (((*bit).transport & mask) != 0)) {
+                ait->second.erase(bit++);
+            } else {
+                ++bit;
+            }
+        }
+        if (ait->second.size() == 0) {
             advAliasMap.erase(ait++);
         } else {
             ++ait;
@@ -4401,6 +4489,11 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                                                      NULL, 0,
                                                      ctx);
             if (status != ER_OK) {
+                /*
+                 * UNREACHABLE may not be the correct reply code here, a failure
+                 * status indicates only that setting up the async method call
+                 * failed.
+                 */
                 SendIPNSResponse(ctx->name, ALLJOYN_PING_REPLY_UNREACHABLE);
                 delete ctx;
             }
@@ -4543,7 +4636,7 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                     //
                     // Check if guid for this name is eligible for removal from PeerInfoMap in Name service
                     //
-                    if (CanRemoveFromPeerInfoMap(guidToBeChecked)) {
+                    if (!IsGuidLongStringKnown(guidToBeChecked)) {
                         IpNameService::Instance().RemoveFromPeerInfoMap(guidToBeChecked);
                     }
                 } else {
@@ -4672,13 +4765,15 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
             const InterfaceDescription* intf = bus.GetInterface(org::freedesktop::DBus::Peer::InterfaceName);
             assert(intf);
             peerObj.AddInterface(*intf);
+            Message* ctx = new Message(msg);
             status = peerObj.MethodCallAsync(org::freedesktop::DBus::Peer::InterfaceName,
                                              "Ping",
                                              this, static_cast<MessageReceiver::ReplyHandler>(&AllJoynObj::PingReplyMethodHandler),
                                              NULL, 0,
-                                             new Message(msg));
+                                             ctx);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Send Ping failed"));
+                delete ctx;
                 replyCode = ALLJOYN_PING_REPLY_UNREACHABLE;
             }
 
@@ -4703,13 +4798,18 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                     break;
                 }
             }
+            //
             // Check for unique name. Get the long GUID since the name passed will be short
+            // The unique name passed in should either be discovered or part of a session
+            //
             if (guid.empty() && (name[0] == ':')) {
                 String guidStr = String(name).substr(1, GUID128::SHORT_SIZE);
-                guid = guidStr;
-                foundEntry = true;
+                if (IsGuidShortStringKnown(guidStr)) {
+                    guid = guidStr;
+                    foundEntry = true;
+                }
             }
-            // Check if the well known name is in a session. If yes get the long GUID of remote routing node
+            // Check if the well known name is in a session. If yes get the short GUID of remote routing node
             if (guid.empty() && (name[0] != ':')) {
                 BusEndpoint bep = router.FindEndpoint(name);
                 if (bep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
@@ -4740,7 +4840,7 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                         AcquireLocks();
                         multimap<pair<String, String>, OutgoingPingInfo>::iterator it = outgoingPingMap.find(key);
                         if (it != outgoingPingMap.end()) {
-                            replyCode = (status == ER_ALLJOYN_PING_REPLY_UNIMPLEMENTED) ? ALLJOYN_PING_REPLY_UNIMPLEMENTED : ALLJOYN_PING_REPLY_FAILED;
+                            replyCode = (status == ER_ALLJOYN_PING_REPLY_INCOMPATIBLE_REMOTE_ROUTING_NODE) ? ALLJOYN_PING_REPLY_INCOMPATIBLE_REMOTE_ROUTING_NODE : ALLJOYN_PING_REPLY_FAILED;
                             outgoingPingMap.erase(it);
                         }
                         if (timer.RemoveAlarm(alarm, false)) {
@@ -4881,9 +4981,21 @@ bool AllJoynObj::QueryHandler(TransportMask transport, MDNSPacket query, uint16_
 void AllJoynObj::PingReplyTransportHandler(Message& reply, void* context)
 {
     PingAlarmContext* ctx = static_cast<PingAlarmContext*>(context);
-    uint32_t replyCode = (ajn::MESSAGE_ERROR == reply->GetType()) ? ALLJOYN_PING_REPLY_UNREACHABLE : ALLJOYN_PING_REPLY_SUCCESS;
-    SendIPNSResponse(ctx->name, replyCode);
-
+    if (ajn::MESSAGE_ERROR == reply->GetType()) {
+        const char* errorName = reply->GetErrorName();
+        if (errorName && (0 == strcmp(errorName, "org.alljoyn.Bus.Timeout"))) {
+            /*
+             * There may be multiple ping callers with different timeouts being
+             * serviced by a single DBus Ping, so don't send a response here,
+             * let the caller timeout on their own schedule.
+             */
+        } else {
+            /* Likely error name is "org.freedesktop.DBus.Error.ServiceUnknown */
+            SendIPNSResponse(ctx->name, ALLJOYN_PING_REPLY_UNREACHABLE);
+        }
+    } else {
+        SendIPNSResponse(ctx->name, ALLJOYN_PING_REPLY_SUCCESS);
+    }
     delete ctx;
 }
 
