@@ -109,6 +109,7 @@ typedef struct {
     uint32_t SEGBMAX;     /* The largest possible segment that THEY can receive (our send buffer, specified by the other side during connection) */
     uint32_t ISS;         /* The initial send sequence number. The number that was sent in the SYN segment */
     uint32_t LCS;         /* Sequence number of last consumed segment (we get this form them) */
+    uint32_t DACKT;       /* Delayed ACK timeout from the other side */
     ArdpSndBuf* buf;      /* Dynamically allocated array of unacked sent buffers */
     uint16_t maxDlen;     /* Maximum data payload size that can be sent without partitioning */
     uint16_t pending;     /* Number of unacknowledged sent buffers */
@@ -189,6 +190,7 @@ typedef struct {
     uint32_t ack;       /* The number of the segment that the sender of this segment last received correctly and in sequence. */
     uint16_t segmax;    /* The maximum number of outstanding segments the other side can send without acknowledgement. */
     uint16_t segbmax;   /* The maximum segment size we are willing to receive.  (the RBUF.MAX specified by the user calling open). */
+    uint32_t dackt;     /* Receiver's delayed ACK timeout. Used in TTL estimate prior to sending a message. */
     uint16_t options;   /* Options for the connection.  Always Sequenced Delivery Mode (SDM). */
 } ArdpSynSegment;
 #pragma pack(pop)
@@ -227,7 +229,7 @@ struct ARDP_CONN_RECORD {
     uint32_t backoff;       /* Backoff factor accounting for retransmits on connection, resets to 1 when receive "good ack" */
     ArdpTimer connectTimer; /* Connect/Disconnect timer */
     ArdpTimer probeTimer;   /* Probe (link timeout) timer */
-    ArdpTimer ackTimer;   /* Delayed ACK timer */
+    ArdpTimer ackTimer;     /* Delayed ACK timer */
     ArdpTimer persistTimer; /* Persist (frozen window) timer */
     void* context;          /* A client-defined context pointer */
 };
@@ -980,7 +982,7 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
                 msElapsed += (conn->rttMean >> 1);
             }
 
-            if (msElapsed >= sBuf->ttl) {
+            if (msElapsed >= (sBuf->ttl + conn->snd.DACKT)) {
 #if ARDP_STATS
                 ++handle->stats.outboundDrops;
                 ++handle->stats.inflightDrops;
@@ -1003,8 +1005,11 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
             conn->backoff = MAX(conn->backoff, ((handle->config.totalDataRetryTimeout / handle->config.initialDataTimeout) + 1) - timer->retry);
             timer->delta = GetRTO(handle, conn);
         } else if (status == ER_WOULDBLOCK) {
-            timer->delta = 0; /* Try next time around */
-            /* Since that won't be a legitimate retransmit,  don't update retries */
+            /*
+             * Try next time around.
+             * Since this won't be a legitimate retransmit, don't decrement retries.
+             */
+            timer->delta = 0;
         } else {
             QCC_LogError(status, ("RetransmitTimerHandler: Write to Socket went bad. Disconnect."));
             timer->retry = 0;
@@ -1279,7 +1284,7 @@ static QStatus InitRcv(ArdpConnRecord* conn, uint32_t segmax, uint32_t segbmax)
 {
     QCC_DbgTrace(("InitRcv(conn=%p, segmax=%d, segbmax=%d)", conn, segmax, segbmax));
     conn->rcv.SEGMAX = segmax;     /* The maximum number of outstanding segments that we can buffer (we will tell other side) */
-    conn->rcv.SEGBMAX = segbmax;   /* The largest buffer that can be received on this connection (our buffer size) */
+    conn->rcv.SEGBMAX = segbmax;     /* The largest buffer that can be received on this connection (our buffer size) */
 
     conn->rcv.buf = (ArdpRcvBuf*) malloc(segmax * sizeof(ArdpRcvBuf));
     if (conn->rcv.buf == NULL) {
@@ -1425,7 +1430,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
 
     /* Factor in mean RTT to account for time on the wire */
     if (conn->rttInit && (ttl != ARDP_TTL_INFINITE)) {
-        if (ttl <= (conn->rttMean >> 1)) {
+        if ((ttl + conn->snd.DACKT) <= (conn->rttMean >> 1)) {
 #if ARDP_STATS
             ++handle->stats.outboundDrops;
             ++handle->stats.preflightDrops;
@@ -1464,8 +1469,12 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
 
         if (status == ER_WOULDBLOCK) {
             QCC_DbgPrintf(("SendData(): ER_WOULDBLOCK"));
-            timeout = 0; /* Schedule next time around */
-            retries++;   /* Since that won't be a legitimate retransmit, increase number of retries by 1 */
+            /*
+             * Schedule next time around.
+             * Since this won't be a legitimate retransmit, increase number of retries by 1.
+             */
+            timeout = 0;
+            retries++;
             status = ER_OK;
         } else {
             timeout = GetRTO(handle, conn);
@@ -1516,6 +1525,7 @@ static QStatus DoSendSyn(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf,
     ss.ack = htonl(conn->rcv.CUR);
     ss.segmax = htons(conn->rcv.SEGMAX);
     ss.segbmax = htons(conn->rcv.SEGBMAX);
+    ss.dackt = htonl(handle->config.delayedAckTimeout);
     ss.options = htons(ARDP_FLAG_SDM);
 
     if (ss.dst == 0) {
@@ -2278,6 +2288,10 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 #endif
 
                 conn->snd.SEGMAX = ntohs(ss->segmax);
+                conn->snd.SEGBMAX = ntohs(ss->segbmax);
+                conn->snd.DACKT = ntohl(ss->dackt);
+                QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: the other side can receive max %d bytes", conn->snd.SEGBMAX));
+
                 conn->remoteMskSz = ((conn->snd.SEGMAX + 31) >> 5);
                 conn->window = conn->snd.SEGMAX;
                 conn->foreign = seg->SRC;
@@ -2285,8 +2299,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 conn->rcv.IRS = seg->SEQ;
                 conn->rcv.CUR = seg->SEQ;
                 conn->rcv.LCS = seg->SEQ;
-                conn->snd.SEGBMAX = ntohs(ss->segbmax);
-                QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: the other side can receive max %d bytes", conn->snd.SEGBMAX));
+
                 status = InitSnd(handle, conn);
 
                 assert(status == ER_OK && "ArdpMachine():SYN_SENT: Failed to initialize Send queue");
@@ -2718,24 +2731,24 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, u
     QCC_DbgTrace(("Receive(handle=%p, conn=%p, buf=%p, len=%d)", handle, conn, buf, len));
     ArdpHeader* header = (ArdpHeader*)buf;
     ArdpSeg SEG;
-    SEG.FLG = header->flags;        /* The flags of the current segment */
-    SEG.HLEN = header->hlen;        /* The header len */
+    SEG.FLG = header->flags;                      /* The flags of the current segment */
+    SEG.HLEN = header->hlen;                      /* The header len */
     if (!(SEG.FLG & ARDP_FLAG_SYN) && ((SEG.HLEN * 2) < ARDP_FIXED_HEADER_LEN)) {
         QCC_DbgHLPrintf(("Receive: seg.hlen = %d, expected at least = %d", (SEG.HLEN * 2), ARDP_FIXED_HEADER_LEN));
         return ER_ARDP_INVALID_RESPONSE;
     }
-    SEG.SRC = ntohs(header->src);       /* The source ARDP port */
-    SEG.DST = ntohs(header->dst);       /* The destination ARDP port */
-    SEG.SEQ = ntohl(header->seq);       /* The send sequence of the current segment */
-    SEG.ACK = ntohl(header->ack);       /* The cumulative acknowledgement number to our sends */
-    SEG.DLEN = ntohs(header->dlen);     /* The amount of data in this segment */
-    SEG.LCS = ntohl(header->lcs);       /* The last consumed segment on receiver side (them) */
+    SEG.SRC = ntohs(header->src);                 /* The source ARDP port */
+    SEG.DST = ntohs(header->dst);                 /* The destination ARDP port */
+    SEG.SEQ = ntohl(header->seq);                 /* The send sequence of the current segment */
+    SEG.ACK = ntohl(header->ack);                 /* The cumulative acknowledgement number to our sends */
+    SEG.DLEN = ntohs(header->dlen);               /* The amount of data in this segment */
+    SEG.LCS = ntohl(header->lcs);                 /* The last consumed segment on receiver side (them) */
     SEG.WINDOW = conn->snd.SEGMAX - (conn->snd.NXT - (SEG.LCS + 1)); /* The receivers window */
     QCC_DbgHLPrintf(("Receive() window=%d, ack %u, lcs %u", SEG.WINDOW, SEG.ACK, SEG.LCS));
-    SEG.ACKNXT = ntohl(header->acknxt); /* The first valid segment sender wants to be acknowledged */
-    SEG.TTL = ntohl(header->ttl);       /* TTL associated with this segment */
-    SEG.SOM = ntohl(header->som);       /* Sequence number of the first fragment in message */
-    SEG.FCNT = ntohs(header->fcnt);     /* Number of segments comprising fragmented message */
+    SEG.ACKNXT = ntohl(header->acknxt);           /* The first valid segment sender wants to be acknowledged */
+    SEG.TTL = ntohl(header->ttl);                 /* TTL associated with this segment */
+    SEG.SOM = ntohl(header->som);                 /* Sequence number of the first fragment in message */
+    SEG.FCNT = ntohs(header->fcnt);               /* Number of segments comprising fragmented message */
 
     ArdpMachine(handle, conn, &SEG, buf, len);
     return ER_OK;
@@ -2763,8 +2776,9 @@ QStatus Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint16_t 
     SEG.DST =  ntohs(syn->dst);                /* The destination ARDP port */
     SEG.SEQ =  ntohl(syn->seq);                /* The sequence number from the other side.  In this case the ISS */
     SEG.ACK =  ntohl(syn->ack);                /* The ack number from the other side.  Unspecified */
-    conn->snd.SEGMAX = ntohs(syn->segmax);        /* Max number of unacknowledged packets other side can buffer */
-    conn->snd.SEGBMAX = ntohs(syn->segbmax);      /* Max size segment the other side can handle */
+    conn->snd.SEGMAX = ntohs(syn->segmax);     /* Max number of unacknowledged packets other side can buffer */
+    conn->snd.SEGBMAX = ntohs(syn->segbmax);   /* Max size segment the other side can handle */
+    conn->snd.DACKT = ntohl(syn->dackt);       /* Delayed ACK timeout from the other side.  */
 
     QCC_DbgPrintf(("Accept:SEG.BMAX = conn->snd.SEGBMAX = %d", ntohs(syn->segbmax)));
 
@@ -2851,4 +2865,4 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool socketReady, uint3
     return status;
 }
 
-} // namespace ajn
+}                 // namespace ajn
