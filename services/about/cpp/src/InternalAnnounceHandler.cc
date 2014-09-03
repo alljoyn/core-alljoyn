@@ -141,16 +141,25 @@ QStatus InternalAnnounceHandler::RemoveHandler(AnnounceHandler& handler, const c
         }
     }
     announceMapLock.Unlock(MUTEX_CONTEXT);
-
-    for (uint32_t i = 0; i < ruleToRemove.size(); ++i) {
-        QCC_DbgTrace(("Calling RemoveMatch(\"%s\")", ruleToRemove[i].c_str()));
-        status = bus.RemoveMatch(ruleToRemove[i].c_str());
+    if (ER_OK == status) {
+        for (uint32_t i = 0; i < ruleToRemove.size(); ++i) {
+            QCC_DbgTrace(("Calling RemoveMatch(\"%s\")", ruleToRemove[i].c_str()));
+            QStatus match_status = bus.RemoveMatch(ruleToRemove[i].c_str());
+            // Its possible that the call to RemoveMatch could fail. This would
+            // happen for one of two reasons. The router node is unreachable or
+            // the match rule does not exist to remove. In both cases there is
+            // nothing the user can to to fix the error so we log the error and
+            // swallow the error.
+            if (ER_OK != match_status) {
+                QCC_LogError(match_status, ("Failed to removed match rule %s.", ruleToRemove[i].c_str()));
+            }
+        }
     }
     return status;
 }
 
 
-QStatus InternalAnnounceHandler::RemoveAllHandlers() {
+void InternalAnnounceHandler::RemoveAllHandlers() {
     QCC_DbgTrace(("InternalAnnounceHandler::%s", __FUNCTION__));
     QStatus status = ER_OK;
     announceMapLock.Lock(MUTEX_CONTEXT);
@@ -158,6 +167,10 @@ QStatus InternalAnnounceHandler::RemoveAllHandlers() {
     announceMap.clear();
     announceMapLock.Unlock(MUTEX_CONTEXT);
 
+    // Its possible that the call to RemoveAllHandlers could fail. This would
+    // happen for one of two reasons. The router node is unreachable or the
+    // match rule does not exist to remove. In both cases there is nothing the
+    // user can to do to fix the error so we log an error and swallow the error.
     for (AnnounceMap::iterator amit = tmpAnnounceMap.begin(); amit != tmpAnnounceMap.end(); ++amit) {
         //call remove match for each interface
         qcc::String matchRule = emptyMatchRule;
@@ -167,9 +180,10 @@ QStatus InternalAnnounceHandler::RemoveAllHandlers() {
 
         QCC_DbgTrace(("Calling RemoveMatch(\"%s\")", matchRule.c_str()));
         status = bus.RemoveMatch(matchRule.c_str());
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to removed match rule %s.", matchRule.c_str()));
+        }
     }
-    //now that all the match rules are removed clear the announceMap
-    return status;
 }
 
 bool InternalAnnounceHandler::ContainsInterface(const ObjectDescriptions& objectDescriptions, const qcc::String interface) const {
