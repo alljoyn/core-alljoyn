@@ -2272,15 +2272,12 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
             QCC_DbgPrintf(("ArdpMachine(): conn->STATE = SYN_SENT"));
 
             if (seg->FLG & ARDP_FLAG_RST) {
+                QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: connection refused. state -> CLOSED"));
 #if ARDP_STATS
                 ++handle->stats.rstRecvs;
 #endif
-                QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: connection refused. state -> CLOSED"));
-                Disconnect(handle, conn, ER_ARDP_REMOTE_CONNECTION_RESET);
-                break;
-            }
-
-            if (seg->FLG & ARDP_FLAG_SYN) {
+                status = ER_ARDP_REMOTE_CONNECTION_RESET;
+            } else if (seg->FLG & ARDP_FLAG_SYN) {
                 ArdpSynSegment* ss = (ArdpSynSegment*) buf;
                 QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN received"));
 #if ARDP_STATS
@@ -2362,19 +2359,29 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                             }
                         }
                     }
-                    if (status != ER_OK && status != ER_WOULDBLOCK) {
-                        Disconnect(handle, conn, status);
-                    }
+
                 } else {
                     QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN with no ACK implies simulateous connection attempt: state -> SYN_RCVD"));
                     uint8_t* data = buf + sizeof(ArdpSynSegment);
                     if (handle->cb.AcceptCb != NULL) {
+                        status = ER_OK;
 #if ARDP_STATS
                         ++handle->stats.acceptCbs;
 #endif
                         handle->cb.AcceptCb(handle, conn->ipAddr, conn->ipPort, conn, data, seg->DLEN, ER_OK);
+                    } else {
+                        status = ER_ARDP_INVALID_STATE;
                     }
                 }
+            }
+
+            if (status != ER_OK && status != ER_WOULDBLOCK) {
+                SetState(conn, CLOSED);
+                handle->cb.ConnectCb(handle, conn, false, NULL, 0, status);
+                /*
+                 * Do not delete conection record here:
+                 * The upper layer will detect an error status and call ARDP_ReleaseConnection()
+                 */
             }
 
             break;
@@ -2765,7 +2772,7 @@ QStatus Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint16_t 
     }
 
     if ((syn->flags & ARDP_VERSION_BITS) != ARDP_FLAG_VER) {
-        QCC_DbgHLPrintf(("Accept(): SYN_SENT: Unsupported protocol version 0x%x",
+        QCC_DbgHLPrintf(("Accept(): Unsupported protocol version 0x%x",
                          syn->flags & ARDP_VERSION_BITS));
         return ER_ARDP_VERSION_NOT_SUPPORTED;
     }
