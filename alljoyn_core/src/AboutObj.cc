@@ -31,25 +31,25 @@ namespace ajn {
 
 const uint16_t AboutObj::VERSION = 1;
 
-AboutObj::AboutObj(ajn::BusAttachment& bus) :
+AboutObj::AboutObj(ajn::BusAttachment& bus, AnnounceFlag isAboutIntfAnnounced) :
     BusObject(org::alljoyn::About::ObjectPath),
     m_busAttachment(&bus),
     m_objectDescription(),
     m_aboutDataListener()
 {
-    const InterfaceDescription* p_InterfaceDescription = NULL;
+    const InterfaceDescription* aboutIntf = NULL;
 
-    p_InterfaceDescription = m_busAttachment->GetInterface(org::alljoyn::About::InterfaceName);
-    assert(p_InterfaceDescription);
+    aboutIntf = m_busAttachment->GetInterface(org::alljoyn::About::InterfaceName);
+    assert(aboutIntf);
 
 
-    QStatus status = AddInterface(*p_InterfaceDescription);
+    QStatus status = AddInterface(*aboutIntf, isAboutIntfAnnounced);
     QCC_DbgPrintf(("Add About interface %s\n", QCC_StatusText(status)));
 
     if (status == ER_OK) {
-        AddMethodHandler(p_InterfaceDescription->GetMember("GetAboutData"),
+        AddMethodHandler(aboutIntf->GetMember("GetAboutData"),
                          static_cast<MessageReceiver::MethodHandler>(&AboutObj::GetAboutData));
-        AddMethodHandler(p_InterfaceDescription->GetMember("GetObjectDescription"),
+        AddMethodHandler(aboutIntf->GetMember("GetObjectDescription"),
                          static_cast<MessageReceiver::MethodHandler>(&AboutObj::GetObjectDescription));
     }
 
@@ -61,13 +61,13 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
 {
     m_busAttachment->GetInternal().GetAnnouncedObjectDescription(m_objectDescription);
     m_aboutDataListener = &aboutData;
-    const InterfaceDescription* p_InterfaceDescription = m_busAttachment->GetInterface(org::alljoyn::About::InterfaceName);
+    const InterfaceDescription* aboutIntf = m_busAttachment->GetInterface(org::alljoyn::About::InterfaceName);
 
-    if (!p_InterfaceDescription) {
+    if (!aboutIntf) {
         return ER_BUS_CANNOT_ADD_INTERFACE;
     }
 
-    const ajn::InterfaceDescription::Member* announceSignalMember = p_InterfaceDescription->GetMember("Announce");
+    const ajn::InterfaceDescription::Member* announceSignalMember = aboutIntf->GetMember("Announce");
     assert(announceSignalMember);
 
     QCC_DbgTrace(("AboutService::%s", __FUNCTION__));

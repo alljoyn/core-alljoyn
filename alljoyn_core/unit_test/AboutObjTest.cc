@@ -220,3 +220,58 @@ TEST_F(AboutObjTest, Announce) {
     clientBus.Stop();
     clientBus.Join();
 }
+
+class AboutObjTestAboutListener2 : public AboutListener {
+  public:
+    AboutObjTestAboutListener2() : announceListenerFlag(false),
+        aboutObjectPartOfAnnouncement(false), busName(), port(0) { }
+
+    void Announced(const char* busName, uint16_t version, SessionPort port,
+                   const MsgArg& objectDescription, const MsgArg& aboutData) {
+        EXPECT_FALSE(announceListenerFlag) << "We don't expect the flag to already be true when an AnnouceSignal is received.";
+        this->busName = qcc::String(busName);
+        this->port = port;
+        AboutObjectDescription aod;
+        QStatus status = aod.CreateFromMsgArg(objectDescription);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        aboutObjectPartOfAnnouncement = aod.HasInterface("org.alljoyn.About");
+        announceListenerFlag = true;
+    }
+    bool announceListenerFlag;
+    bool aboutObjectPartOfAnnouncement;
+    qcc::String busName;
+    SessionPort port;
+};
+
+TEST_F(AboutObjTest, AnnounceTheAboutObj) {
+    QStatus status = ER_FAIL;
+
+    BusAttachment clientBus("AboutObjTestClient", true);
+
+    status = clientBus.Start();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Connect();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObjTestAboutListener2 aboutListener;
+    clientBus.RegisterAboutListener(aboutListener, "org.alljoyn.About");
+
+    AboutObj aboutObj(*serviceBus, BusObject::ANNOUNCED);
+    aboutObj.Announce(port, aboutData);
+
+    for (uint32_t msec = 0; msec < 5000; msec += WAIT_TIME) {
+        if (aboutListener.announceListenerFlag == true) {
+            break;
+        }
+        qcc::Sleep(WAIT_TIME);
+    }
+
+    EXPECT_TRUE(aboutListener.announceListenerFlag) << "The announceListenerFlag must be true to continue this test.";
+    EXPECT_TRUE(aboutListener.aboutObjectPartOfAnnouncement) << "The org.alljoyn.About interface was not part of the announced object description.";
+    EXPECT_STREQ(serviceBus->GetUniqueName().c_str(), aboutListener.busName.c_str());
+    EXPECT_EQ(port, aboutListener.port);
+
+    clientBus.Stop();
+    clientBus.Join();
+}
