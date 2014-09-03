@@ -18,6 +18,7 @@
 #include <alljoyn/BusListener.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/AboutObj.h>
+#include <alljoyn/AboutIconObj.h>
 
 #include <signal.h>
 #include <stdio.h>
@@ -50,6 +51,45 @@ class MySessionPortListener : public SessionPortListener {
     }
 };
 
+class AboutServiceSampleBusObject : public BusObject {
+  public:
+    AboutServiceSampleBusObject(BusAttachment& bus, const char* path)
+        : BusObject(path) {
+        const InterfaceDescription* test_iface = bus.GetInterface("org.alljoyn.test");
+        if (test_iface == NULL) {
+            printf("The interfaceDescription pointer for org.alljoyn.test was NULL when it should not have been.\n");
+            return;
+        }
+        AddInterface(*test_iface, ANNOUNCED);
+
+        const InterfaceDescription* game_iface = bus.GetInterface("org.alljoyn.game");
+        if (game_iface == NULL) {
+            printf("The interfaceDescription pointer for org.alljoyn.game was NULL when it should not have been.\n");
+            return;
+        }
+        AddInterface(*game_iface, ANNOUNCED);
+
+        const InterfaceDescription* mediaplayer_iface = bus.GetInterface("org.alljoyn.mediaplayer");
+        if (mediaplayer_iface == NULL) {
+            printf("The interfaceDescription pointer for org.alljoyn.mediaplayer was NULL when it should not have been.\n");
+            return;
+        }
+        AddInterface(*mediaplayer_iface, ANNOUNCED);
+
+        /* Register the method handlers with the object */
+        const MethodEntry methodEntries[] = {
+            test_iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutServiceSampleBusObject::Foo),
+            game_iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutServiceSampleBusObject::Foo),
+            mediaplayer_iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutServiceSampleBusObject::Foo)
+        };
+        AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
+
+    }
+    void Foo(const InterfaceDescription::Member* member, Message& msg) {
+        MethodReply(msg, (const MsgArg*)NULL, (size_t)0);
+    }
+};
+
 /** Main entry point */
 int main(int argc, char** argv)
 {
@@ -75,6 +115,27 @@ int main(int argc, char** argv)
         printf("FAILED to connect to router node (%s)\n", QCC_StatusText(status));
         exit(1);
     }
+
+    const char* interfaces = "<node>"
+                             "<interface name='org.alljoyn.test'>"
+                             "  <method name='Foo'>"
+                             "  </method>"
+                             "</interface>"
+                             "<interface name='org.alljoyn.game'>"
+                             "  <method name='Foo'>"
+                             "  </method>"
+                             "</interface>"
+                             "<interface name='org.alljoyn.mediaplayer'>"
+                             "  <method name='Foo'>"
+                             "  </method>"
+                             "</interface>"
+                             "</node>";
+
+    status = bus.CreateInterfacesFromXml(interfaces);
+
+    AboutServiceSampleBusObject aboutServiceSampleBusObject(bus, "/org/alljoyn/test");
+
+    bus.RegisterBusObject(aboutServiceSampleBusObject);
 
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
     SessionPort sp = ASSIGNED_SESSION_PORT;
@@ -106,16 +167,11 @@ int main(int argc, char** argv)
         printf("failed to setup about data.\n");
     }
 
-    // Setup the AboutObjectDescription
-    AboutObjectDescription aod;
-
-    status = aod.Add("/About/DeviceIcon", qcc::String("org.alljoyn.Icon"));
-    const char* interfacesTest[] = { "org.alljoyn.test", "org.alljoyn.game", "org.alljoyn.mediaplayer" };
-    status = aod.Add("/org/alljoyn/test", interfacesTest, 3);
+    AboutIconObj aboutIconObj(bus, "", "http://www.example.com", NULL, (size_t)0);
 
     // Announce about signal
     AboutObj aboutObj(bus);
-    status = aboutObj.Announce(ASSIGNED_SESSION_PORT, aod, aboutData);
+    status = aboutObj.Announce(ASSIGNED_SESSION_PORT, aboutData);
     if (ER_OK == status) {
         printf("AboutObj Announce Succeeded.\n");
     } else {

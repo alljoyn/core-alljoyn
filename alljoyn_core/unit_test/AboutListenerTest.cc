@@ -120,16 +120,51 @@ class AboutTestAboutListener : public AboutListener {
     }
 };
 
+class AboutListenerTestObject : public BusObject {
+  public:
+    AboutListenerTestObject(BusAttachment& bus, const char* path, const char* ifaceName)
+        : BusObject(path) {
+        const InterfaceDescription* iface = bus.GetInterface(ifaceName);
+        EXPECT_TRUE(iface != NULL) << "NULL InterfaceDescription* for " << ifaceName;
+        if (iface == NULL) {
+            printf("The interfaceDescription pointer for %s was NULL when it should not have been.\n", ifaceName);
+            return;
+        }
+        QStatus status = AddInterface(*iface, ANNOUNCED);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+        /* Register the method handlers with the object */
+        const MethodEntry methodEntries[] = {
+            iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutListenerTestObject::Foo)
+        };
+        status = AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    }
+
+    void Foo(const InterfaceDescription::Member* member, Message& msg) {
+        MethodReply(msg, (const MsgArg*)NULL, (size_t)0);
+    }
+};
 
 TEST_F(AboutListenerTest, ReceiverAnnouncement) {
     QStatus status;
     announceListenerFlag = false;
 
     qcc::GUID128 guid;
-    qcc::String ifaceName = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest";
-    AboutObjectDescription aod;
-    aod.Add("/org/test/about", ifaceName);
+    qcc::String ifaceName = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest";
     AboutObj aboutObj(*serviceBus);
+
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceName + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
+    serviceBus->RegisterBusObject(altObj);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
@@ -144,7 +179,7 @@ TEST_F(AboutListenerTest, ReceiverAnnouncement) {
     status = clientBus.RegisterAboutListener(aboutListener, ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port, aod, aboutData);
+    aboutObj.Announce(port, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -177,7 +212,20 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementRegisterThenAddInterface)
     announceListenerFlag = false;
 
     qcc::GUID128 guid;
-    qcc::String ifaceName = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest";
+    qcc::String ifaceName = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest";
+
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceName + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
+    status = serviceBus->RegisterBusObject(altObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     // receive
     BusAttachment clientBus("Receive Announcement client Test", true);
@@ -192,11 +240,8 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementRegisterThenAddInterface)
     status = clientBus.RegisterAboutListener(aboutListener, ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    AboutObjectDescription aod;
-    aod.Add("/org/test/about", ifaceName);
     AboutObj aboutObj(*serviceBus);
-
-    aboutObj.Announce(port, aod, aboutData);
+    aboutObj.Announce(port, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -223,10 +268,20 @@ TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
     announceListenerFlag = false;
 
     qcc::GUID128 guid;
-    qcc::String ifaceName = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest";
+    qcc::String ifaceName = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest";
 
-    AboutObjectDescription aod;
-    aod.Add("/org/test/about", ifaceName);
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceName + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
+    status = serviceBus->RegisterBusObject(altObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutObj aboutObj(*serviceBus);
 
@@ -243,7 +298,7 @@ TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
     status = clientBus.RegisterAboutListener(aboutListener, ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port, aod, aboutData);
+    aboutObj.Announce(port, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -257,7 +312,7 @@ TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
 
     announceListenerFlag = false;
 
-    aboutObj.Announce(port, aod, aboutData);
+    aboutObj.Announce(port, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -308,9 +363,21 @@ TEST_F(AboutListenerTest, MultipleAnnounceListeners) {
     announceListenerFlag2 = false;
 
     qcc::GUID128 guid;
-    qcc::String ifaceName = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest";
-    AboutObjectDescription aod;
-    aod.Add("/org/test/about", ifaceName);
+    qcc::String ifaceName = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest";
+
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceName + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
+    status = serviceBus->RegisterBusObject(altObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
     AboutObj aboutObj(*serviceBus);
 
     // receive
@@ -331,7 +398,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListeners) {
     status = clientBus.RegisterAboutListener(aboutListener2, ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port, aod, aboutData);
+    aboutObj.Announce(port, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -371,9 +438,20 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
     announceListenerFlag2 = false;
 
     qcc::GUID128 guid;
-    qcc::String ifaceName = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest";
-    AboutObjectDescription aod;
-    aod.Add("/org/test/about", ifaceName);
+    qcc::String ifaceName = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest";
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceName + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
+    status = serviceBus->RegisterBusObject(altObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
     AboutObj aboutObj(*serviceBus);
 
     // receive
@@ -394,7 +472,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
     status = clientBus.RegisterAboutListener(aboutListener2, ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port, aod, aboutData);
+    aboutObj.Announce(port, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -421,7 +499,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
     status = clientBus.UnregisterAboutListener(aboutListener1, ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port, aod, aboutData);
+    aboutObj.Announce(port, aboutData);
 
     //Wait for a maximum of 5 sec for the second Announce Signal.
     for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
@@ -451,9 +529,21 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
     announceListenerFlag3 = false;
 
     qcc::GUID128 guid;
-    qcc::String ifaceName = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest";
-    AboutObjectDescription aod;
-    aod.Add("/org/test/about", ifaceName);
+    qcc::String ifaceName = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest";
+
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceName + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
+    status = serviceBus->RegisterBusObject(altObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
     AboutObj aboutObj(*serviceBus);
 
     // receive
@@ -479,7 +569,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
     status = clientBus.RegisterAboutListener(aboutListener3, ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port, aod, aboutData);
+    aboutObj.Announce(port, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -540,23 +630,65 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
 
+class AboutListenerTestObject2 : public BusObject {
+  public:
+    AboutListenerTestObject2(BusAttachment& bus, const char* path, qcc::String* ifaceName, size_t ifaceNameSize)
+        : BusObject(path) {
+        for (size_t i = 0; i < ifaceNameSize; ++i) {
+            const InterfaceDescription* iface = bus.GetInterface(ifaceName[i].c_str());
+            EXPECT_TRUE(iface != NULL) << "NULL InterfaceDescription* for " << ifaceName;
+            if (iface == NULL) {
+                printf("The interfaceDescription pointer for %s was NULL when it should not have been.\n", ifaceName->c_str());
+                return;
+            }
+            QStatus status = AddInterface(*iface, ANNOUNCED);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+            /* Register the method handlers with the object */
+            const MethodEntry methodEntries[] = {
+                iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutListenerTestObject2::Foo)
+            };
+            status = AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        }
+    }
+
+    void Foo(const InterfaceDescription::Member* member, Message& msg) {
+        MethodReply(msg, (const MsgArg*)NULL, (size_t)0);
+    }
+};
+
 TEST_F(AboutListenerTest, MatchMultipleInterfaces) {
     QStatus status;
     announceListenerFlag = false;
 
     qcc::GUID128 guid;
     qcc::String ifaceNames[3];
-    ifaceNames[0] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.a";
-    ifaceNames[1] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.b";
-    ifaceNames[2] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.c";
+    ifaceNames[0] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.a";
+    ifaceNames[1] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.b";
+    ifaceNames[2] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.c";
 
-    AboutObjectDescription aod;
-    const char* ifaces[3];
-    ifaces[0] = ifaceNames[0].c_str();
-    ifaces[1] = ifaceNames[1].c_str();
-    ifaces[2] = ifaceNames[2].c_str();
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceNames[0] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[1] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[2] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aod.Add("/org/test/about", ifaces, 3);
+    AboutListenerTestObject2 altObj(*serviceBus, "/org/test/about", ifaceNames, 3);
+    status = serviceBus->RegisterBusObject(altObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
     AboutObj aboutObj(*serviceBus);
 
     // receive
@@ -569,10 +701,15 @@ TEST_F(AboutListenerTest, MatchMultipleInterfaces) {
 
     AboutTestAboutListener aboutListener;
 
+    const char* ifaces[3];
+    ifaces[0] = ifaceNames[0].c_str();
+    ifaces[1] = ifaceNames[1].c_str();
+    ifaces[2] = ifaceNames[2].c_str();
+
     status = clientBus.RegisterAboutListener(aboutListener, ifaces, 3);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port, aod, aboutData);
+    aboutObj.Announce(port, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -600,20 +737,46 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesSubSet) {
 
     qcc::GUID128 guid;
     qcc::String ifaceNames[6];
-    ifaceNames[0] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.a";
-    ifaceNames[1] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.b";
-    ifaceNames[2] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.c";
-    ifaceNames[3] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.d";
-    ifaceNames[4] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.e";
-    ifaceNames[5] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.f";
+    ifaceNames[0] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.a";
+    ifaceNames[1] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.b";
+    ifaceNames[2] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.c";
+    ifaceNames[3] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.d";
+    ifaceNames[4] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.e";
+    ifaceNames[5] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.f";
 
-    AboutObjectDescription aod;
-    const char* ifaces[6];
-    for (size_t i = 0; i < 6; ++i) {
-        ifaces[i] = ifaceNames[i].c_str();
-    }
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceNames[0] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[1] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[2] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[3] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[4] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[5] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aod.Add("/org/test/about", ifaces, 6);
+    AboutListenerTestObject2 altObj(*serviceBus, "/org/test/about", ifaceNames, 6);
+    status = serviceBus->RegisterBusObject(altObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
     AboutObj aboutObj(*serviceBus);
 
     // receive
@@ -633,7 +796,7 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesSubSet) {
     status = clientBus.RegisterAboutListener(aboutListener, ifacesSubSet, 2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port, aod, aboutData);
+    aboutObj.Announce(port, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -661,20 +824,46 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesRegisterInDifferentOrder) {
 
     qcc::GUID128 guid;
     qcc::String ifaceNames[6];
-    ifaceNames[0] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.a";
-    ifaceNames[1] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.b";
-    ifaceNames[2] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.c";
-    ifaceNames[3] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.d";
-    ifaceNames[4] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.e";
-    ifaceNames[5] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.f";
+    ifaceNames[0] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.a";
+    ifaceNames[1] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.b";
+    ifaceNames[2] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.c";
+    ifaceNames[3] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.d";
+    ifaceNames[4] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.e";
+    ifaceNames[5] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.f";
 
-    AboutObjectDescription aod;
-    const char* ifaces[6];
-    for (size_t i = 0; i < 6; ++i) {
-        ifaces[i] = ifaceNames[i].c_str();
-    }
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceNames[0] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[1] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[2] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[3] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[4] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[5] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aod.Add("/org/test/about", ifaces, 6);
+    AboutListenerTestObject2 altObj(*serviceBus, "/org/test/about", ifaceNames, 6);
+    status = serviceBus->RegisterBusObject(altObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
     AboutObj aboutObj(*serviceBus);
 
     // receive
@@ -699,7 +888,7 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesRegisterInDifferentOrder) {
     status = clientBus.RegisterAboutListener(aboutListener, ifaceslist, 6);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port, aod, aboutData);
+    aboutObj.Announce(port, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -736,17 +925,31 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching) {
 
     qcc::GUID128 guid;
     qcc::String ifaceNames[3];
-    ifaceNames[0] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.a";
-    ifaceNames[1] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.b";
-    ifaceNames[2] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.c";
+    ifaceNames[0] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.a";
+    ifaceNames[1] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.b";
+    ifaceNames[2] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.c";
 
-    AboutObjectDescription aod;
-    const char* ifaces[3];
-    ifaces[0] = ifaceNames[0].c_str();
-    ifaces[1] = ifaceNames[1].c_str();
-    ifaces[2] = ifaceNames[2].c_str();
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceNames[0] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[1] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[2] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aod.Add("/org/test/about", ifaces, 3);
+    AboutListenerTestObject2 altObj(*serviceBus, "/org/test/about", ifaceNames, 3);
+    status = serviceBus->RegisterBusObject(altObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
     AboutObj aboutObj(*serviceBus);
 
     // receive
@@ -759,11 +962,11 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching) {
 
     AboutTestWildCardAboutListener aboutListener;
 
-    qcc::String wildCard = "org.test.a" + guid.ToShortString() + ".*";
+    qcc::String wildCard = "org.test.a" + guid.ToString() + ".*";
     status = clientBus.RegisterAboutListener(aboutListener, wildCard.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port, aod, aboutData);
+    aboutObj.Announce(port, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -794,17 +997,31 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching2) {
 
     qcc::GUID128 guid;
     qcc::String ifaceNames[3];
-    ifaceNames[0] = "org.test.a" + guid.ToShortString() + ".a.AnnounceHandlerTest";
-    ifaceNames[1] = "org.test.a" + guid.ToShortString() + ".b.AnnounceHandlerTest";
-    ifaceNames[2] = "org.test.a" + guid.ToShortString() + ".c.AnnounceHandlerTest";
+    ifaceNames[0] = "org.test.a" + guid.ToString() + ".a.AnnounceHandlerTest";
+    ifaceNames[1] = "org.test.a" + guid.ToString() + ".b.AnnounceHandlerTest";
+    ifaceNames[2] = "org.test.a" + guid.ToString() + ".c.AnnounceHandlerTest";
 
-    AboutObjectDescription aod;
-    const char* ifaces[3];
-    ifaces[0] = ifaceNames[0].c_str();
-    ifaces[1] = ifaceNames[1].c_str();
-    ifaces[2] = ifaceNames[2].c_str();
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceNames[0] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[1] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[2] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aod.Add("/org/test/about", ifaces, 3);
+    AboutListenerTestObject2 altObj(*serviceBus, "/org/test/about", ifaceNames, 3);
+    status = serviceBus->RegisterBusObject(altObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
     AboutObj aboutObj(*serviceBus);
 
     // receive
@@ -817,11 +1034,11 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching2) {
 
     AboutTestWildCardAboutListener aboutListener;
 
-    qcc::String wildCard = "org.test.a" + guid.ToShortString() + ".*.AnnounceHandlerTest";
+    qcc::String wildCard = "org.test.a" + guid.ToString() + ".*.AnnounceHandlerTest";
     status = clientBus.RegisterAboutListener(aboutListener, wildCard.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port, aod, aboutData);
+    aboutObj.Announce(port, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -848,17 +1065,31 @@ TEST_F(AboutListenerTest, MultipleWildCardInterfaceMatching) {
 
     qcc::GUID128 guid;
     qcc::String ifaceNames[3];
-    ifaceNames[0] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.a";
-    ifaceNames[1] = "org.test.foo.a" + guid.ToShortString() + ".AnnounceHandlerTest.b";
-    ifaceNames[2] = "org.test.foo.a" + guid.ToShortString() + ".AnnounceHandlerTest.c";
+    ifaceNames[0] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.a";
+    ifaceNames[1] = "org.test.foo.a" + guid.ToString() + ".AnnounceHandlerTest.b";
+    ifaceNames[2] = "org.test.foo.a" + guid.ToString() + ".AnnounceHandlerTest.c";
 
-    AboutObjectDescription aod;
-    const char* ifaces[3];
-    ifaces[0] = ifaceNames[0].c_str();
-    ifaces[1] = ifaceNames[1].c_str();
-    ifaces[2] = ifaceNames[2].c_str();
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceNames[0] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[1] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[2] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aod.Add("/org/test/about", ifaces, 3);
+    AboutListenerTestObject2 altObj(*serviceBus, "/org/test/about", ifaceNames, 3);
+    status = serviceBus->RegisterBusObject(altObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
     AboutObj aboutObj(*serviceBus);
 
     // receive
@@ -871,15 +1102,15 @@ TEST_F(AboutListenerTest, MultipleWildCardInterfaceMatching) {
 
     AboutTestWildCardAboutListener aboutListener;
 
-    qcc::String wildCard = "org.test.a" + guid.ToShortString() + ".*";
-    qcc::String wildCard2 = "org.test.foo.a" + guid.ToShortString() + ".*";
+    qcc::String wildCard = "org.test.a" + guid.ToString() + ".*";
+    qcc::String wildCard2 = "org.test.foo.a" + guid.ToString() + ".*";
     const char* interfacelist[2];
     interfacelist[0] = wildCard.c_str();
     interfacelist[1] = wildCard2.c_str();
     status = clientBus.RegisterAboutListener(aboutListener, interfacelist, 2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port, aod, aboutData);
+    aboutObj.Announce(port, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -906,17 +1137,31 @@ TEST_F(AboutListenerTest, MixedWildCardNonWildCardInterfaceMatching) {
 
     qcc::GUID128 guid;
     qcc::String ifaceNames[3];
-    ifaceNames[0] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.a";
-    ifaceNames[1] = "org.test.foo.a" + guid.ToShortString() + ".AnnounceHandlerTest.b";
-    ifaceNames[2] = "org.test.foo.a" + guid.ToShortString() + ".AnnounceHandlerTest.c";
+    ifaceNames[0] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.a";
+    ifaceNames[1] = "org.test.foo.a" + guid.ToString() + ".AnnounceHandlerTest.b";
+    ifaceNames[2] = "org.test.foo.a" + guid.ToString() + ".AnnounceHandlerTest.c";
 
-    AboutObjectDescription aod;
-    const char* ifaces[3];
-    ifaces[0] = ifaceNames[0].c_str();
-    ifaces[1] = ifaceNames[1].c_str();
-    ifaces[2] = ifaceNames[2].c_str();
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceNames[0] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[1] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[2] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aod.Add("/org/test/about", ifaces, 3);
+    AboutListenerTestObject2 altObj(*serviceBus, "/org/test/about", ifaceNames, 3);
+    status = serviceBus->RegisterBusObject(altObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
     AboutObj aboutObj(*serviceBus);
 
     // receive
@@ -929,14 +1174,14 @@ TEST_F(AboutListenerTest, MixedWildCardNonWildCardInterfaceMatching) {
 
     AboutTestWildCardAboutListener aboutListener;
 
-    qcc::String wildCard = "org.test.foo.a" + guid.ToShortString() + ".*";
+    qcc::String wildCard = "org.test.foo.a" + guid.ToString() + ".*";
     const char* interfacelist[2];
     interfacelist[0] = ifaceNames[0].c_str();
     interfacelist[1] = wildCard.c_str();
     status = clientBus.RegisterAboutListener(aboutListener, interfacelist, 2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port, aod, aboutData);
+    aboutObj.Announce(port, aboutData);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -983,12 +1228,32 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
 
     qcc::GUID128 guid;
     qcc::String ifaceNames[2];
-    ifaceNames[0] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.a";
-    ifaceNames[1] = "org.test.a" + guid.ToShortString() + ".AnnounceHandlerTest.b";
+    ifaceNames[0] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.a";
+    ifaceNames[1] = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.b";
 
-    AboutObjectDescription aod;
-    aod.Add("/org/test/about/a", ifaceNames[0]);
-    aod.Add("/org/test/about/b", ifaceNames[1]);
+    const qcc::String interface0 = "<node>"
+                                   "<interface name='" + ifaceNames[0] + "'>"
+                                   "  <method name='Foo'>"
+                                   "  </method>"
+                                   "</interface>"
+                                   "</node>";
+    const qcc::String interface1 = "<node>"
+                                   "<interface name='" + ifaceNames[1] + "'>"
+                                   "  <method name='Foo'>"
+                                   "  </method>"
+                                   "</interface>"
+                                   "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface0.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = serviceBus->CreateInterfacesFromXml(interface1.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutListenerTestObject altObj0(*serviceBus, "/org/test/about/a", ifaceNames[0].c_str());
+    AboutListenerTestObject altObj1(*serviceBus, "/org/test/about/b", ifaceNames[1].c_str());
+    status = serviceBus->RegisterBusObject(altObj0);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = serviceBus->RegisterBusObject(altObj1);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutObj aboutObj(*serviceBus);
 
@@ -1005,7 +1270,8 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
     status = clientBus.RegisterAboutListener(aboutListener, ifaceNames[0].c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    aboutObj.Announce(port, aod, aboutData);
+    status = aboutObj.Announce(port, aboutData);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -1017,9 +1283,10 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
 
     EXPECT_EQ(1, aboutListener.announceListenerCount);
 
-    aod.Remove("/org/test/about/b", ifaceNames[1]);
+    serviceBus->UnregisterBusObject(altObj1);
 
-    aboutObj.Announce(port, aod, aboutData);
+    status = aboutObj.Announce(port, aboutData);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     //Wait for a maximum of 10 sec for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {

@@ -57,17 +57,9 @@ AboutObj::AboutObj(ajn::BusAttachment& bus) :
     QCC_DbgHLPrintf(("AboutObj RegisterBusOBject %s", QCC_StatusText(status)));
 }
 
-QStatus AboutObj::Announce(SessionPort sessionPort, AboutDataListener& aboutData) {
-    AboutObjectDescription aod; // empty AboutObjectDescrption
-    return Announce(sessionPort, aod, aboutData);
-}
-
-QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutObjectDescription& objectDescription, ajn::AboutDataListener& aboutData)
+QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& aboutData)
 {
     m_busAttachment->GetInternal().GetAnnouncedObjectDescription(m_objectDescription);
-    AboutObjectDescription aod;
-    aod.CreateFromMsgArg(m_objectDescription);
-    aod.Merge(objectDescription);
     m_aboutDataListener = &aboutData;
     const InterfaceDescription* p_InterfaceDescription = m_busAttachment->GetInterface(org::alljoyn::About::InterfaceName);
 
@@ -92,15 +84,15 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutObjectDescription&
     if (status != ER_OK) {
         return status;
     }
-    aod.GetMsgArg(&announceArgs[2]);
+    announceArgs[2] = m_objectDescription;
     m_aboutDataListener->GetMsgArgAnnounce(&announceArgs[3]);
     Message msg(*m_busAttachment);
     uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
-//#if !defined(NDEBUG)
-//    for (int i = 0; i < 4; i++) {
-//        QCC_DbgPrintf(("announceArgs[%d]=%s", i, announceArgs[i].ToString().c_str()));
-//    }
-//#endif
+#if !defined(NDEBUG)
+    for (int i = 0; i < 4; i++) {
+        QCC_DbgPrintf(("announceArgs[%d]=%s", i, announceArgs[i].ToString().c_str()));
+    }
+#endif
     status = Signal(NULL, 0, *announceSignalMember, announceArgs, 4, (unsigned char) 0, flags);
 
     QCC_DbgPrintf(("Sent AnnounceSignal from %s  = %s", m_busAttachment->GetUniqueName().c_str(), QCC_StatusText(status)));

@@ -28,7 +28,7 @@ TEST(AboutIconTest, isAnnounced) {
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = busAttachment.Connect();
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    AboutIconObj aboutIcon(busAttachment, "", "http://www.test.com", NULL, (size_t)0);
+    AboutIconObj aboutIcon(busAttachment, "", "http://www.example.com", NULL, (size_t)0);
 
     MsgArg aodArg;
     status = busAttachment.GetInternal().GetAnnouncedObjectDescription(aodArg);
@@ -52,7 +52,7 @@ TEST(AboutIconTest, GetUrl) {
     status = serviceBus.Connect();
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    AboutIconObj aboutIcon(serviceBus, "", "http://www.test.com", NULL, (size_t)0);
+    AboutIconObj aboutIcon(serviceBus, "", "http://www.example.com", NULL, (size_t)0);
 
     BusAttachment clientBus("AboutIconTest Client");
     status = clientBus.Start();
@@ -63,7 +63,7 @@ TEST(AboutIconTest, GetUrl) {
     AboutIconProxy aiProxy(clientBus);
     qcc::String url;
     aiProxy.GetUrl(serviceBus.GetUniqueName().c_str(), url, 0);
-    EXPECT_STREQ("http://www.test.com", url.c_str());
+    EXPECT_STREQ("http://www.example.com", url.c_str());
 }
 
 TEST(AboutIconTest, GetVersion) {
@@ -74,7 +74,7 @@ TEST(AboutIconTest, GetVersion) {
     status = serviceBus.Connect();
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    AboutIconObj aboutIcon(serviceBus, "", "http://www.test.com", NULL, (size_t)0);
+    AboutIconObj aboutIcon(serviceBus, "", "http://www.example.com", NULL, (size_t)0);
 
     BusAttachment clientBus("AboutIconTest Client");
     status = clientBus.Start();
