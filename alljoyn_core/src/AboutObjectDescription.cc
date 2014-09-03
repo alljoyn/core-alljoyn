@@ -23,6 +23,16 @@
 
 namespace ajn {
 
+AboutObjectDescription::AboutObjectDescription()
+{
+    //Empty constructor
+}
+
+AboutObjectDescription::AboutObjectDescription(const MsgArg& arg)
+{
+    CreateFromMsgArg(arg);
+}
+
 QStatus AboutObjectDescription::CreateFromMsgArg(const MsgArg& arg)
 {
     QStatus status = ER_OK;
@@ -71,41 +81,6 @@ QStatus AboutObjectDescription::Add(qcc::String const& path, qcc::String const& 
     }
     m_AnnounceObjectsMapLock.Unlock(MUTEX_CONTEXT);
     return status;
-}
-
-QStatus AboutObjectDescription::Add(qcc::String const& path, const char** interfaceNames, size_t numInterfaces)
-{
-    QStatus status = ER_OK;
-    m_AnnounceObjectsMapLock.Lock(MUTEX_CONTEXT);
-    if (m_AnnounceObjectsMap.find(path) == m_AnnounceObjectsMap.end()) {
-        std::set<qcc::String> newInterfaceNames;
-        for (size_t i = 0; i < numInterfaces; ++i) {
-            newInterfaceNames.insert(interfaceNames[i]);
-        }
-        m_AnnounceObjectsMap[path] = newInterfaceNames;
-    } else {
-        for (size_t i = 0; i < numInterfaces; ++i) {
-            m_AnnounceObjectsMap[path].insert(interfaceNames[i]);
-        }
-    }
-    m_AnnounceObjectsMapLock.Unlock(MUTEX_CONTEXT);
-    return status;
-}
-
-QStatus AboutObjectDescription::Merge(AboutObjectDescription& aboutObjectDescription)
-{
-    size_t numPaths = aboutObjectDescription.GetPaths(NULL, static_cast<size_t>(0));
-    const char** paths = new const char*[numPaths];
-    aboutObjectDescription.GetPaths(paths, numPaths);
-    for (size_t i = 0; i < numPaths; ++i) {
-        size_t numInterfaces = aboutObjectDescription.GetInterfaces(paths[i], NULL, static_cast<size_t>(0));
-        const char** interfaces = new const char*[numInterfaces];
-        aboutObjectDescription.GetInterfaces(paths[i], interfaces, numInterfaces);
-        Add(paths[i], interfaces, numInterfaces);
-        delete [] interfaces;
-    }
-    delete [] paths;
-    return ER_OK;
 }
 
 size_t AboutObjectDescription::GetPaths(const char** paths, size_t numPaths) const
@@ -160,39 +135,6 @@ size_t AboutObjectDescription::GetInterfacePaths(qcc::String const& interface, c
     m_AnnounceObjectsMapLock.Unlock(MUTEX_CONTEXT);
     return count;
 }
-
-QStatus AboutObjectDescription::Remove(qcc::String const& path, qcc::String const& interfaceName)
-{
-    QStatus status = ER_OK;
-    m_AnnounceObjectsMapLock.Lock(MUTEX_CONTEXT);
-    std::map<qcc::String, std::set<qcc::String> >::iterator it = m_AnnounceObjectsMap.find(path);
-    if (it != m_AnnounceObjectsMap.end()) {
-        it->second.erase(interfaceName);
-    }
-    if (it->second.empty()) {
-        m_AnnounceObjectsMap.erase(it);
-    }
-    m_AnnounceObjectsMapLock.Unlock(MUTEX_CONTEXT);
-    return status;
-}
-
-QStatus AboutObjectDescription::Remove(qcc::String const& path, const char** interfaceNames, size_t numInterfaces)
-{
-    QStatus status = ER_OK;
-    m_AnnounceObjectsMapLock.Lock(MUTEX_CONTEXT);
-    std::map<qcc::String, std::set<qcc::String> >::iterator it = m_AnnounceObjectsMap.find(path);
-    if (it != m_AnnounceObjectsMap.end()) {
-        for (size_t i = 0; i < numInterfaces; ++i) {
-            it->second.erase(interfaceNames[i]);
-        }
-    }
-    if (it->second.empty()) {
-        m_AnnounceObjectsMap.erase(it);
-    }
-    m_AnnounceObjectsMapLock.Unlock(MUTEX_CONTEXT);
-    return status;
-}
-
 
 void AboutObjectDescription::Clear()
 {

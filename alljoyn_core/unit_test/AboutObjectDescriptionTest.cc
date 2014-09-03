@@ -16,6 +16,7 @@
 
 
 #include <alljoyn/AboutObjectDescription.h>
+#include <alljoyn/AboutIconObj.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/version.h>
 
@@ -26,19 +27,74 @@
 #include <qcc/String.h>
 #include <qcc/Thread.h>
 
+#include "BusInternal.h"
+
 using namespace ajn;
 using namespace qcc;
+
+class AboutObjectDescriptionTestObject_Add : public BusObject {
+  public:
+    AboutObjectDescriptionTestObject_Add(BusAttachment& bus, const char* path) : BusObject(path) {
+        QStatus status = ER_FAIL;
+        const InterfaceDescription* test_iface = bus.GetInterface("org.alljoyn.test");
+        EXPECT_TRUE(test_iface != NULL) << "NULL InterfaceDescription* for org.alljoyn.test";
+        if (test_iface == NULL) {
+            printf("The interfaceDescription pointer for org.alljoyn.test was NULL when it should not have been.\n");
+            return;
+        }
+        status = AddInterface(*test_iface, ANNOUNCED);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+        const InterfaceDescription* game_iface = bus.GetInterface("org.alljoyn.game");
+        EXPECT_TRUE(game_iface != NULL) << "NULL InterfaceDescription* for org.alljoyn.game";
+        if (game_iface == NULL) {
+            printf("The interfaceDescription pointer for org.alljoyn.game was NULL when it should not have been.\n");
+            return;
+        }
+        status = AddInterface(*game_iface, ANNOUNCED);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        const InterfaceDescription* mediaplayer_iface = bus.GetInterface("org.alljoyn.mediaplayer");
+        EXPECT_TRUE(mediaplayer_iface != NULL) << "NULL InterfaceDescription* for org.alljoyn.mediaplayer";
+        if (mediaplayer_iface == NULL) {
+            printf("The interfaceDescription pointer for org.alljoyn.mediaplayer was NULL when it should not have been.\n");
+            return;
+        }
+        status = AddInterface(*mediaplayer_iface, ANNOUNCED);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    }
+};
 
 TEST(AboutObjectDescriptionTest, Add)
 {
     QStatus status = ER_FAIL;
-    AboutObjectDescription aod;
+    BusAttachment bus("AboutObjectDescritpion test");
+    //add the org.alljoyn.Icon interface
+    AboutIconObj aboutIconObj(bus, "", "http://www.example.com", NULL, (size_t)0);
+    //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
+    const qcc::String interface = "<node>"
+                                  "<interface name='org.alljoyn.test'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='org.alljoyn.game'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='org.alljoyn.mediaplayer'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = bus.CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = aod.Add("/About/DeviceIcon", "org.alljoyn.Icon");
+    AboutObjectDescriptionTestObject_Add busObject(bus, "/org/alljoyn/test");
+    status = bus.RegisterBusObject(busObject);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    const char* interfaces2[] = { "org.alljoyn.test", "org.alljoyn.game", "org.alljoyn.mediaplayer" };
-    status = aod.Add("/org/alljoyn/test", interfaces2, 3);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    MsgArg arg;
+    bus.GetInternal().GetAnnouncedObjectDescription(arg);
+    AboutObjectDescription aod(arg);
 
     EXPECT_TRUE(aod.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
 
@@ -67,49 +123,38 @@ TEST(AboutObjectDescriptionTest, Add)
 //    printf("******************\n%s\n*****************\n", arg.ToString().c_str());
 }
 
-TEST(AboutObjectDescriptionTest, Remove)
-{
-    QStatus status = ER_FAIL;
-    AboutObjectDescription aod;
-
-    status = aod.Add("/About/DeviceIcon", "org.alljoyn.Icon");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    const char* interfaces2[] = { "org.alljoyn.test", "org.alljoyn.game", "org.alljoyn.mediaplayer" };
-    status = aod.Add("/org/alljoyn/test", interfaces2, 3);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
-    EXPECT_TRUE(aod.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
-
-    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.test"));
-    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.game"));
-    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.mediaplayer"));
-
-    const char* remove_interfaces[] = { "org.alljoyn.game", "org.alljoyn.mediaplayer" };
-    status = aod.Remove("/org/alljoyn/test", remove_interfaces, 2);
-
-    EXPECT_TRUE(aod.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
-
-    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.test"));
-    EXPECT_FALSE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.game"));
-    EXPECT_FALSE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.mediaplayer"));
-
-    //MsgArg arg;
-    //status = aod.GetMsgArg(&arg);
-    //EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
-    //printf("******************\n%s\n*****************\n", arg.ToString().c_str());
-}
 
 TEST(AboutObjectDescriptionTest, GetMsgArg)
 {
     QStatus status = ER_FAIL;
-    AboutObjectDescription aod;
+    BusAttachment bus("AboutObjectDescritpion test");
+    //add the org.alljoyn.Icon interface
+    AboutIconObj aboutIconObj(bus, "", "http://www.example.com", NULL, (size_t)0);
+    //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
+    const qcc::String interface = "<node>"
+                                  "<interface name='org.alljoyn.test'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='org.alljoyn.game'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='org.alljoyn.mediaplayer'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = bus.CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = aod.Add("/About/DeviceIcon", "org.alljoyn.Icon");
+    AboutObjectDescriptionTestObject_Add busObject(bus, "/org/alljoyn/test");
+    status = bus.RegisterBusObject(busObject);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    const char* interfaces2[] = { "org.alljoyn.test", "org.alljoyn.game", "org.alljoyn.mediaplayer" };
-    status = aod.Add("/org/alljoyn/test", interfaces2, 3);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    MsgArg argObj;
+    bus.GetInternal().GetAnnouncedObjectDescription(argObj);
+    AboutObjectDescription aod(argObj);
 
     MsgArg arg;
     status = aod.GetMsgArg(&arg);
@@ -153,50 +198,37 @@ TEST(AboutObjectDescriptionTest, GetMsgArg)
     //printf("******************\n%s\n*****************\n", arg.ToString().c_str());
 }
 
-TEST(AboutObjectDescriptionTest, Initilize)
-{
-    QStatus status = ER_FAIL;
-    AboutObjectDescription aod;
-
-    status = aod.Add("/About/DeviceIcon", "org.alljoyn.Icon");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    const char* interfaces2[] = { "org.alljoyn.test", "org.alljoyn.game", "org.alljoyn.mediaplayer" };
-    status = aod.Add("/org/alljoyn/test", interfaces2, 3);
-
-    MsgArg arg;
-    status = aod.GetMsgArg(&arg);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
-    AboutObjectDescription aod1;
-    status = aod1.CreateFromMsgArg(arg);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
-    EXPECT_TRUE(aod1.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
-
-    EXPECT_TRUE(aod1.HasInterface("/org/alljoyn/test", "org.alljoyn.test"));
-    EXPECT_TRUE(aod1.HasInterface("/org/alljoyn/test", "org.alljoyn.game"));
-    EXPECT_TRUE(aod1.HasInterface("/org/alljoyn/test", "org.alljoyn.mediaplayer"));
-
-    EXPECT_FALSE(aod1.HasInterface("/org/alljoyn/test", "org.alljoyn.Icon"));
-
-    EXPECT_FALSE(aod1.HasInterface("/About/DeviceIcon", "org.alljoyn.test"));
-    EXPECT_FALSE(aod1.HasInterface("/About/DeviceIcon", "org.alljoyn.game"));
-    EXPECT_FALSE(aod1.HasInterface("/About/DeviceIcon", "org.alljoyn.mediaplayer"));
-
-    MsgArg arg1;
-    status = aod1.GetMsgArg(&arg1);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
-    //printf("******************\n%s\n*****************\n", arg1.ToString().c_str());
-}
-
 TEST(AboutObjectDescriptionTest, GetPaths) {
     QStatus status = ER_FAIL;
-    AboutObjectDescription aod;
-    status = aod.Add("/About/DeviceIcon", "org.alljoyn.Icon");
+    BusAttachment bus("AboutObjectDescritpion test");
+    //add the org.alljoyn.Icon interface
+    AboutIconObj aboutIconObj(bus, "", "http://www.example.com", NULL, (size_t)0);
+    //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
+    const qcc::String interface = "<node>"
+                                  "<interface name='org.alljoyn.test'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='org.alljoyn.game'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='org.alljoyn.mediaplayer'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = bus.CreateInterfacesFromXml(interface.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    const char* interfaces2[] = { "org.alljoyn.test", "org.alljoyn.game", "org.alljoyn.mediaplayer" };
-    status = aod.Add("/org/alljoyn/test", interfaces2, 3);
+
+    AboutObjectDescriptionTestObject_Add busObject(bus, "/org/alljoyn/test");
+    status = bus.RegisterBusObject(busObject);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    MsgArg argObj;
+    bus.GetInternal().GetAnnouncedObjectDescription(argObj);
+    AboutObjectDescription aod;
+    status = aod.CreateFromMsgArg(argObj);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     size_t numPaths = aod.GetPaths(NULL, 0);
@@ -211,11 +243,35 @@ TEST(AboutObjectDescriptionTest, GetPaths) {
 
 TEST(AboutObjectDescriptionTest, GetInterfaces) {
     QStatus status = ER_FAIL;
-    AboutObjectDescription aod;
-    status = aod.Add("/About/DeviceIcon", "org.alljoyn.Icon");
+    BusAttachment bus("AboutObjectDescritpion test");
+    //add the org.alljoyn.Icon interface
+    AboutIconObj aboutIconObj(bus, "", "http://www.example.com", NULL, (size_t)0);
+    //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
+    const qcc::String interface = "<node>"
+                                  "<interface name='org.alljoyn.test'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='org.alljoyn.game'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='org.alljoyn.mediaplayer'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = bus.CreateInterfacesFromXml(interface.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    const char* interfaces2[] = { "org.alljoyn.test", "org.alljoyn.game", "org.alljoyn.mediaplayer" };
-    status = aod.Add("/org/alljoyn/test", interfaces2, 3);
+
+    AboutObjectDescriptionTestObject_Add busObject(bus, "/org/alljoyn/test");
+    status = bus.RegisterBusObject(busObject);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    MsgArg argObj;
+    bus.GetInternal().GetAnnouncedObjectDescription(argObj);
+    AboutObjectDescription aod;
+    status = aod.CreateFromMsgArg(argObj);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     size_t numPaths = aod.GetPaths(NULL, 0);
@@ -245,56 +301,38 @@ TEST(AboutObjectDescriptionTest, GetInterfaces) {
     delete [] interfaces;
 }
 
-TEST(AboutObjectDescriptionTest, Merge)
-{
-    QStatus status = ER_FAIL;
-    AboutObjectDescription aod;
-    AboutObjectDescription aod2;
-    const char* interfaces2[] = { "org.alljoyn.test", "org.alljoyn.game", "org.alljoyn.mediaplayer" };
-    status = aod.Add("/org/alljoyn/test", interfaces2, 3);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
-    status = aod2.Add("/About/DeviceIcon", "org.alljoyn.Icon");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
-    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.test"));
-    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.game"));
-    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.mediaplayer"));
-
-    EXPECT_FALSE(aod.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
-
-    EXPECT_FALSE(aod2.HasInterface("/org/alljoyn/test", "org.alljoyn.test"));
-    EXPECT_FALSE(aod2.HasInterface("/org/alljoyn/test", "org.alljoyn.game"));
-    EXPECT_FALSE(aod2.HasInterface("/org/alljoyn/test", "org.alljoyn.mediaplayer"));
-
-    EXPECT_TRUE(aod2.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
-
-    aod2.Merge(aod);
-
-    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.test"));
-    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.game"));
-    EXPECT_TRUE(aod.HasInterface("/org/alljoyn/test", "org.alljoyn.mediaplayer"));
-
-    EXPECT_FALSE(aod.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
-
-    EXPECT_TRUE(aod2.HasInterface("/org/alljoyn/test", "org.alljoyn.test"));
-    EXPECT_TRUE(aod2.HasInterface("/org/alljoyn/test", "org.alljoyn.game"));
-    EXPECT_TRUE(aod2.HasInterface("/org/alljoyn/test", "org.alljoyn.mediaplayer"));
-
-    EXPECT_TRUE(aod2.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
-
-}
-
 TEST(AboutObjectDescriptionTest, Clear)
 {
     QStatus status = ER_FAIL;
-    AboutObjectDescription aod;
 
-    status = aod.Add("/About/DeviceIcon", "org.alljoyn.Icon");
+    BusAttachment bus("AboutObjectDescritpion test");
+    //add the org.alljoyn.Icon interface
+    AboutIconObj aboutIconObj(bus, "", "http://www.example.com", NULL, (size_t)0);
+    //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
+    const qcc::String interface = "<node>"
+                                  "<interface name='org.alljoyn.test'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='org.alljoyn.game'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='org.alljoyn.mediaplayer'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = bus.CreateInterfacesFromXml(interface.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    const char* interfaces2[] = { "org.alljoyn.test", "org.alljoyn.game", "org.alljoyn.mediaplayer" };
-    status = aod.Add("/org/alljoyn/test", interfaces2, 3);
+
+    AboutObjectDescriptionTestObject_Add busObject(bus, "/org/alljoyn/test");
+    status = bus.RegisterBusObject(busObject);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    MsgArg arg;
+    bus.GetInternal().GetAnnouncedObjectDescription(arg);
+    AboutObjectDescription aod(arg);
 
     EXPECT_TRUE(aod.HasInterface("/About/DeviceIcon", "org.alljoyn.Icon"));
 

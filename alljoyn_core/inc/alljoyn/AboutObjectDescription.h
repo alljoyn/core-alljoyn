@@ -31,14 +31,38 @@
 
 namespace ajn {
 /**
- * AboutObjectDescription Class is responsible for holding path and interface
- * information for objects registered with the AllJoyn bus.
- *
- * This is intended to be used with the org.alljoy.About interface for announcing
- * supported interfaces.
+ * AboutObjectDescription Class is a helper class for accessing the
+ * ObjectDescription MsgArg that is sent as part of an announce signal.
+ * It contains helper functions for quickly determining an About ObjectDescrption
+ * contains a specified path or interface.
  */
 class AboutObjectDescription {
   public:
+    /**
+     * constructor to create an empty AboutObjectDescrption.
+     * use the CreateFromMsgArg method to fill in the AboutObjectDescription
+     * class.
+     */
+    AboutObjectDescription();
+
+    /**
+     * Fill in the ObjectDescription fields using a MsgArg
+     *
+     * The MsgArg must contain an array of type a(oas) The expected use of this
+     * class is to fill in the ObjectDescription using a MsgArg obtain from the Announce
+     * signal or the GetObjectDescription method from org.alljoyn.About interface.
+     *
+     * If the arg came from the org.alljoyn.About.Announce signal or the
+     * org.alljoyn.AboutGetObjectDescrption method then it can be used to create
+     * the AboutObjectDescription. If the arg came from any other source its best
+     * to create an empty AboutObjectDescrption class and use the CreateFromMsgArg
+     * class to access the MsgArg. Since it can be checked for errors while parsing
+     * the MsgArg.
+     *
+     * @param arg MsgArg contain About ObjectDescription
+     */
+    AboutObjectDescription(const MsgArg& arg);
+
     /**
      * Fill in the ObjectDescription fields using a MsgArg
      *
@@ -51,41 +75,6 @@ class AboutObjectDescription {
      * @return ER_OK on success
      */
     QStatus CreateFromMsgArg(const MsgArg& arg);
-
-    /**
-     * Add an interface to the ObjectDescription. This can be called multiple
-     * times.
-     *
-     * @param[in] path of the interface
-     * @param[in] interfaceName name of the interface
-     *
-     * @return ER_OK is successful
-     */
-    QStatus Add(qcc::String const& path, qcc::String const& interfaceName);
-
-    /**
-     * AddObjectDescription adds objects Description for the AboutService announcement.
-     * @param[in]  path of the interface.
-     * @param[in]  interfaceNames an array of interface names to add to the AboutObjectDescription
-     * @param[in]  numInterfaces the number of interfaces in the interfaceNames array
-     * @return ER_OK if successful.
-     */
-    QStatus Add(qcc::String const& path, const char** interfaceNames, size_t numInterfaces);
-
-    /**
-     * Merge the contents of the supplied AboutObjectDescription into this
-     * AboutObjectDescription the supplied AboutObjectDescription will not
-     * be modified.
-     *
-     * If paths or interfaces are listed in both AboutObjectDescriptions
-     * the resulting AboutObjectDescription will only list them once.
-     *
-     * @param[in] aboutObjectDescription the AboutObjectDescription that will be
-     * merged with this AboutObjectDescription
-     *
-     * @return ER_OK on success
-     */
-    QStatus Merge(AboutObjectDescription& aboutObjectDescription);
 
     /**
      * Get a list of the paths that are added to this AboutObjectDescription.
@@ -156,26 +145,6 @@ class AboutObjectDescription {
     size_t GetInterfacePaths(qcc::String const& interface, const char** paths, size_t numPaths) const;
 
     /**
-     * Remove an interface from the object description for the AboutService
-     * @param[in] path of the interface
-     * @param[in] interfaceName name of the interface
-     *
-     * @return ER_OK is successful
-     */
-    QStatus Remove(qcc::String const& path, qcc::String const& interfaceName);
-
-    /**
-     * Remove object Description for the AboutService announcement.
-     *
-     * @param[in]  path of the interface.
-     * @param[in]  interfaceNames an array of interfaces names to remove from the AboutObjectDescription
-     * @param[in]  numInterfaces the number of interface names in the interfaceNames array
-     *
-     * @return ER_OK if successful.
-     */
-    QStatus Remove(qcc::String const& path, const char** interfaceNames, size_t numInterfaces);
-
-    /**
      * Clear all the contents of this AboutObjectDescription
      *
      * @return ER_OK
@@ -207,6 +176,7 @@ class AboutObjectDescription {
      * @return true if the interface is found at the given path
      */
     bool HasInterface(qcc::String const& path, qcc::String const& interfaceName) const;
+
     /**
      * @param[out] msgArg containing a signature a(oas)
      *                    an array of object paths and an array of interfaces
@@ -217,6 +187,16 @@ class AboutObjectDescription {
     QStatus GetMsgArg(MsgArg* msgArg);
 
   private:
+    /**
+     * Add an interface to the ObjectDescription. This can be called multiple
+     * times.
+     *
+     * @param[in] path of the interface
+     * @param[in] interfaceName name of the interface
+     *
+     * @return ER_OK is successful
+     */
+    QStatus Add(qcc::String const& path, qcc::String const& interfaceName);
 
     /**
      * Mutex that protects the m_AnnounceObjectsMap
