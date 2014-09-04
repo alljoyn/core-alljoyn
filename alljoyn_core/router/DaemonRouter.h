@@ -352,6 +352,14 @@ class DaemonRouter : public Router {
     void RemoveSessionRoutes(const char* uniqueName, SessionId id);
 
     /**
+     * Remove self-join related session-route.
+     *
+     * @param  uniqueName  Unique name.
+     * @param  id          Session id or 0 to indicate "all sessions".
+     *
+     */
+    void RemoveSelfJoinSessionRoute(const char* src, SessionId id);
+    /**
      * Return the routing rule table.
      *
      * @return the routing rule table.
@@ -390,6 +398,34 @@ class DaemonRouter : public Router {
 
         bool operator==(const SessionCastEntry& other) const {
             return (id == other.id)  && (src == other.src) && (b2bEp == other.b2bEp) && (destEp == other.destEp);
+        }
+
+        qcc::String ToString() const {
+            char idbuf[16];
+            char ptrbuf[16];
+            qcc::String str;
+            str.append("id: ");
+            snprintf(idbuf, sizeof(idbuf), "%u", id);
+            str.append(idbuf);
+
+            str.append(",src: ");
+            str.append(src);
+
+            str.append(", remote: ");
+            snprintf(ptrbuf, sizeof(ptrbuf), "%p", b2bEp.unwrap());
+            str.append(ptrbuf);
+            str.append("(");
+            str.append(b2bEp->GetUniqueName());
+            str.append(",");
+            str.append(b2bEp->GetRemoteName());
+            str.append(")");
+
+            str.append(", dest: ");
+            snprintf(ptrbuf, sizeof(ptrbuf), "%p", destEp.unwrap());
+            str.append(ptrbuf);
+            str.append(destEp->GetUniqueName());
+
+            return str;
         }
     };
 

@@ -44,7 +44,8 @@ class SessionListener {
         ALLJOYN_SESSIONLOST_REMOTE_END_CLOSED_ABRUPTLY   = 0x02, /**< Remote end closed abruptly */
         ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER            = 0x03, /**< Session binder removed this endpoint by calling RemoveSessionMember */
         ALLJOYN_SESSIONLOST_LINK_TIMEOUT                 = 0x04, /**< Link was timed-out */
-        ALLJOYN_SESSIONLOST_REASON_OTHER                 = 0x05 /**< Unspecified reason for session loss */
+        ALLJOYN_SESSIONLOST_REASON_OTHER                 = 0x05, /**< Unspecified reason for session loss */
+        ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER_SELF       = 0x06, /**< Session binder removed its joiner part by calling RemoveSessionMember (selfjoin only) */
     } SessionLostReason;
 
     /**
