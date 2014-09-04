@@ -2271,8 +2271,22 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
         {
             QCC_DbgPrintf(("ArdpMachine(): conn->STATE = SYN_SENT"));
 
+            QCC_DbgHLPrintf(("ArdpMachine(): SYN_SENT: connection refused. state -> CLOSED"));
+
             if (seg->FLG & ARDP_FLAG_RST) {
-                QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: connection refused. state -> CLOSED"));
+
+                /*
+                 * If detected that ARDP versions do not match (and are within valid range),
+                 * an educated guess would be that this was the reason for the remote side sending RST.
+                 * In future, when more than one version of ARDP exists, the protocol will
+                 * make an attempt to match the version indicated by the remote provided the version
+                 * is locally supported.
+                 */
+                if ((seg->FLG  & ARDP_VERSION_BITS) != ARDP_FLAG_VER) {
+                    QCC_DbgHLPrintf(("ArdpMachine(): SYN_SENT: Detected unsupported protocol version 0x%x",
+                                     seg->FLG & ARDP_VERSION_BITS));
+                }
+
 #if ARDP_STATS
                 ++handle->stats.rstRecvs;
 #endif
