@@ -45,6 +45,7 @@
 #include "CompressionRules.h"
 
 #include <alljoyn/Status.h>
+#include <set>
 
 namespace ajn {
 
@@ -210,7 +211,16 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      * @param listener   SessionListener to associate with sessionId.
      * @return  ER_OK if successful.
      */
-    QStatus SetSessionListener(SessionId id, SessionListener* listener);
+    QStatus SetSessionListener(SessionId id, SessionListener* listener, SessionSideMask bitset);
+
+    /**
+     * Check whether a session with a particular sessionId exists for host/joiner side 
+     *
+     * @param sessionId  Existing session Id.
+     * @param index      host/joiner
+     * @return  ER_OK if successful.
+     */
+    bool SessionExists(SessionId id, size_t index);
 
     /**
      * Called if the bus attachment become disconnected from the bus.
@@ -301,18 +311,22 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     typedef qcc::ManagedObj<SessionPortListener*> ProtectedSessionPortListener;
     typedef std::map<SessionPort, ProtectedSessionPortListener> SessionPortListenerMap;
     SessionPortListenerMap sessionPortListeners;  /* Lookup SessionPortListener by session port */
+    qcc::Mutex sessionPortListenersLock;       /* Lock protecting sessionPortListeners maps */
 
     typedef qcc::ManagedObj<SessionListener*> ProtectedSessionListener;
     typedef std::map<SessionId, ProtectedSessionListener> SessionListenerMap;
-    SessionListenerMap sessionListeners;   /* Lookup SessionListener by session id */
-
-    qcc::Mutex sessionListenersLock;       /* Lock protecting sessionListners maps */
+    SessionListenerMap sessionListeners[SESSION_SIDE_NUM];   /* Lookup SessionListener by session id (index 0 for hoster, index 1 for joiner)*/
+    qcc::Mutex sessionListenersLock[SESSION_SIDE_NUM];       /* Lock protecting sessionListeners maps */
 
     struct JoinContext {
         QStatus status;
         SessionId sessionId;
         SessionOpts opts;
     };
+
+
+    std::set<SessionId> sessionSet[SESSION_SIDE_NUM];
+    qcc::Mutex sessionSetLock[SESSION_SIDE_NUM];
 
     std::map<qcc::Thread*, JoinContext> joinThreads;  /* List of threads waiting to join */
     qcc::Mutex joinLock;                              /* Mutex that protects joinThreads */

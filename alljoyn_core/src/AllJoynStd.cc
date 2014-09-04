@@ -81,6 +81,8 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("UnbindSessionPort",        "q",                 "u",                 "port,disposition",                           0);
         ifc->AddMethod("JoinSession",              "sq" SESSIONOPTS_SIG, "uu" SESSIONOPTS_SIG, "sessionHost,port,opts,disp,sessionId,opts", 0);
         ifc->AddMethod("LeaveSession",             "u",                 "u",                 "sessionId,disposition",                      0);
+        ifc->AddMethod("LeaveHostedSession",       "u",                 "u",                 "sessionId,disposition",                      0);
+        ifc->AddMethod("LeaveJoinedSession",       "u",                 "u",                 "sessionId,disposition",                      0);
         ifc->AddMethod("AdvertiseName",            "sq",                "u",                 "name,transports,disposition",                0);
         ifc->AddMethod("CancelAdvertiseName",      "sq",                "u",                 "name,transports,disposition",                0);
         ifc->AddMethod("FindAdvertisedName",       "s",                 "u",                 "name,disposition",                           0);
@@ -105,6 +107,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddSignal("SessionLost",              "u",               "sessionId",                                     0);
         ifc->AddSignal("SessionLostWithReason",    "uu",               "sessionId,reason",                             0);
         ifc->AddSignal("MPSessionChanged",         "usb",              "sessionId,name,isAdded",                       0);
+        ifc->AddSignal("MPSessionChangedWithReason",         "usbu",              "sessionId,name,isAdded,reason",                       0);
 
         ifc->Activate();
     }
