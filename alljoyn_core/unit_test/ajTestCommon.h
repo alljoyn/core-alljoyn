@@ -36,7 +36,7 @@ namespace ajn {
  *
  * @return a qcc::String containing the default connection arg
  */
-qcc::String getConnectArg();
+qcc::String getConnectArg(const char*envvar = "BUS_ADDRESS");
 
 }
 #endif //AJTESTCOMMON_H

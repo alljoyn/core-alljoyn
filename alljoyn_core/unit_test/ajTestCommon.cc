@@ -20,11 +20,11 @@
 
 #include <qcc/Environ.h>
 
-qcc::String ajn::getConnectArg() {
+qcc::String ajn::getConnectArg(const char*envvar) {
     qcc::Environ* env = qcc::Environ::GetAppEnviron();
 #if defined(QCC_OS_GROUP_WINDOWS)
-    return env->Find("BUS_ADDRESS", "tcp:addr=127.0.0.1,port=9956");
+    return env->Find(envvar, "tcp:addr=127.0.0.1,port=9956");
 #else
-    return env->Find("BUS_ADDRESS", "unix:abstract=alljoyn");
+    return env->Find(envvar, "unix:abstract=alljoyn");
 #endif
 }
