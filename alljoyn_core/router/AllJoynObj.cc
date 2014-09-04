@@ -561,21 +561,6 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
 
     ajObj.AcquireLocks();
 
-    /* Do not let a session creator join itself */
-    SessionMapType::iterator it = ajObj.SessionMapLowerBound(sender, 0);
-    BusEndpoint hostEp = ajObj.router.FindEndpoint(sessionHost);
-    if (hostEp->IsValid()) {
-        while ((it != ajObj.sessionMap.end()) && (it->first.first == sender) && (it->first.second == 0)) {
-            if (ajObj.router.FindEndpoint(it->second.sessionHost) == hostEp) {
-                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): cannot join your own session"));
-                replyCode = ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED;
-                break;
-            }
-            ++it;
-        }
-    }
-
-
     if (status != ER_OK) {
         if (replyCode != ALLJOYN_JOINSESSION_REPLY_SUCCESS) {
             replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
