@@ -623,13 +623,15 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
         std::vector<qcc::String> memberNames;
         bool isInitializing;
         bool isRawReady;
+        bool isSelfJoin;
         SessionMapEntry() :
             id(0),
             sessionPort(0),
             opts(),
             fd(qcc::INVALID_SOCKET_FD),
             isInitializing(false),
-            isRawReady(false) { }
+            isRawReady(false),
+            isSelfJoin(false) { }
     };
 
     typedef std::multimap<std::pair<qcc::String, SessionId>, SessionMapEntry> SessionMapType;
