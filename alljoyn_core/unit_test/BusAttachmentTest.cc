@@ -87,17 +87,58 @@ TEST_F(BusAttachmentTest, Disconnect)
     }
 }
 
+bool sessionAccepted = false;
+bool sessionJoined = false;
+bool onJoined = false;
+QStatus joinSessionStatus = ER_FAIL;
+int busSessionId = 0;
+int otherBusSessionId = 0;
+bool sessionLost = false;
+SessionListener::SessionLostReason sessionLostReason = SessionListener::ALLJOYN_SESSIONLOST_INVALID;
+
+class JoinSession_SessionPortListener : public SessionPortListener, public SessionListener {
+  public:
+    JoinSession_SessionPortListener(BusAttachment* bus) : bus(bus) { };
+
+    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        if (sessionPort == 42) {
+            sessionAccepted = true;
+            return true;
+        } else {
+            sessionAccepted = false;
+            return false;
+        }
+    }
+
+    void SessionLost(SessionId id, SessionListener::SessionLostReason reason) {
+        sessionLostReason = reason;
+        sessionLost = true;
+    }
+    void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
+        if (sessionPort == 42) {
+            busSessionId = id;
+            sessionJoined = true;
+        } else {
+            sessionJoined = false;
+        }
+        bus->SetSessionListener(id, this);
+    }
+    BusAttachment* bus;
+};
+
+
 TEST_F(BusAttachmentTest, FindName_Join_Self)
 {
-    SessionPortListener sp_listener;
+    JoinSession_SessionPortListener sessionPortListener(&bus);
     SessionOpts opts;
-    SessionPort port = 52;
+    SessionPort port = 42;
+    sessionJoined = false;
 
     QStatus status = ER_OK;
 
     const char* requestedName = "org.alljoyn.bus.BusAttachmentTest.JoinSelf";
 
-    status = bus.BindSessionPort(port, opts, sp_listener);
+    status = bus.BindSessionPort(port, opts, sessionPortListener);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = bus.RequestName(requestedName, DBUS_NAME_FLAG_DO_NOT_QUEUE);
@@ -111,8 +152,12 @@ TEST_F(BusAttachmentTest, FindName_Join_Self)
 
 
     SessionId id;
-    status = bus.JoinSession(requestedName, port, NULL, id, opts);
-    EXPECT_EQ(ER_ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = bus.JoinSession(requestedName, port, &sessionPortListener, id, opts);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    while (sessionJoined == false) {
+        qcc::Sleep(10);
+    }
 }
 
 TEST_F(BusAttachmentTest, FindName_Same_Name)
@@ -395,46 +440,6 @@ class FindNewNameBusListener : public BusListener, public BusAttachmentTest {
         bus.EnableConcurrentCallbacks();
 
     }
-};
-
-bool sessionAccepted = false;
-bool sessionJoined = false;
-bool onJoined = false;
-QStatus joinSessionStatus = ER_FAIL;
-int busSessionId = 0;
-int otherBusSessionId = 0;
-bool sessionLost = false;
-SessionListener::SessionLostReason sessionLostReason = SessionListener::ALLJOYN_SESSIONLOST_INVALID;
-
-class JoinSession_SessionPortListener : public SessionPortListener, SessionListener {
-  public:
-    JoinSession_SessionPortListener(BusAttachment* bus) : bus(bus) { };
-
-    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
-        if (sessionPort == 42) {
-            sessionAccepted = true;
-            bus->EnableConcurrentCallbacks();
-            return true;
-        } else {
-            sessionAccepted = false;
-            return false;
-        }
-    }
-
-    void SessionLost(SessionId id, SessionListener::SessionLostReason reason) {
-        sessionLostReason = reason;
-        sessionLost = true;
-    }
-    void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
-        if (sessionPort == 42) {
-            busSessionId = id;
-            sessionJoined = true;
-        } else {
-            sessionJoined = false;
-        }
-        bus->SetSessionListener(id, this);
-    }
-    BusAttachment* bus;
 };
 
 class JoinSession_BusListener : public BusListener {

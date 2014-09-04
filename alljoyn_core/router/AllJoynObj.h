@@ -35,6 +35,7 @@
 #include <qcc/Timer.h>
 #include <qcc/GUID.h>
 
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/Message.h>
 
@@ -60,6 +61,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     public IpNameServiceListener {
     friend class _RemoteEndpoint;
     struct PingAlarmContext;
+    struct SessionMapEntry;
     class OutgoingPingInfo {
       public:
         qcc::Alarm alarm;
@@ -80,6 +82,11 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
         IncomingPingInfo();
     };
   public:
+    typedef enum {
+        LEAVE_HOSTED_SESSION,
+        LEAVE_JOINED_SESSION,
+        LEAVE_SESSION,
+    } LeaveSessionType;
     /**
      * Constructor
      *
@@ -181,6 +188,10 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param msg     The incoming message.
      */
     void LeaveSession(const InterfaceDescription::Member* member, Message& msg);
+    void LeaveHostedSession(const InterfaceDescription::Member* member, Message& msg);
+    void LeaveJoinedSession(const InterfaceDescription::Member* member, Message& msg);
+    uint32_t CheckLeaveSession(const SessionMapEntry*smEntry, const char*sender, SessionId id, LeaveSessionType lst) const;
+    void LeaveSessionCommon(const InterfaceDescription::Member* member, Message& msg, LeaveSessionType lst);
 
     /**
      * Respond to a bus request to advertise the existence of a remote AllJoyn instance.
@@ -560,6 +571,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     const InterfaceDescription::Member* sessionLostSignal; /**< org.alljoyn.Bus.SessionLost signal */
     const InterfaceDescription::Member* sessionLostWithReasonSignal; /**< org.alljoyn.Bus.SessionLostWithReason signal */
     const InterfaceDescription::Member* mpSessionChangedSignal;  /**< org.alljoyn.Bus.MPSessionChanged signal */
+    const InterfaceDescription::Member* mpSessionChangedWithReasonSignal;  /**< org.alljoyn.Bus.MPSessionChanged signal */
     const InterfaceDescription::Member* mpSessionJoinedSignal;  /**< org.alljoyn.Bus.JoinSession signal */
 
     /** Map of open connectSpecs to local endpoint name(s) that require the connection. */
@@ -616,6 +628,30 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
         std::vector<qcc::String> memberNames;
         bool isInitializing;
         bool isRawReady;
+        bool IsSelfJoin() const {
+            return find(memberNames.begin(), memberNames.end(), sessionHost) != memberNames.end();
+        }
+
+        qcc::String ToString() const {
+            char idbuf[16];
+            qcc::String str;
+            str.append("endpoint: ");
+            str.append(endpointName);
+            str.append(", id: ");
+            snprintf(idbuf, sizeof(idbuf), "%u", id);
+            str.append(idbuf);
+            str.append(", host: ");
+            str.append(sessionHost);
+            str.append(", members: ");
+            for (std::vector<qcc::String>::const_iterator it = memberNames.begin(); it != memberNames.end(); ++it) {
+                str.append(*it);
+                str.append(",");
+            }
+            str.append(" selfjoin: ");
+            str.append(IsSelfJoin() ? "yes" : "no");
+            return str;
+        }
+
         SessionMapEntry() :
             id(0),
             sessionPort(0),
@@ -825,7 +861,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param   isAdd       true iff member added.
      * @param   dest        Local destination for MPSessionChanged.
      */
-    void SendMPSessionChanged(SessionId sessionId, const char* name, bool isAdd, const char* dest);
+    void SendMPSessionChanged(SessionId sessionId, const char* name, bool isAdd, const char* dest, ajn::MPSessionChangedReason reason);
 
     /**
      * Utility method used to invoke GetSessionInfo remote method.
@@ -962,7 +998,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param sendSessionLost   Whether to send a SessionLost to this endpoint.
      *                          Set to true if this endpoint is being forcefully removed from the session by the binder.
      */
-    void RemoveSessionRefs(const char* epName, SessionId id, bool sendSessionLost = false);
+    void RemoveSessionRefs(const char* epName, SessionId id, bool sendSessionLost = false, LeaveSessionType lst = LEAVE_SESSION);
 
     /**
      * Utility function used to clean up the session map when a virtual endpoint with a
@@ -1015,6 +1051,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     std::multimap<qcc::String, IncomingPingInfo> incomingPingMap;
     TransportMask GetCompleteTransportMaskFilter();
     void SendIPNSResponse(qcc::String name, uint32_t replyCode);
+    bool IsSelfJoinSupported(BusEndpoint& joinerEp) const;
 };
 
 }
