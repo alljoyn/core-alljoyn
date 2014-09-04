@@ -32,7 +32,8 @@
 #define QCC_MODULE  "ALLJOYN"
 
 /** Router-to-router protocol version number */
-#define ALLJOYN_PROTOCOL_VERSION  10
+//Protocol version 11 introduces self-join feature
+#define ALLJOYN_PROTOCOL_VERSION  11
 
 namespace ajn {
 
@@ -454,6 +455,23 @@ extern const char* InterfaceName;                 /**< Interface name */
 #define ALLJOYN_PING_REPLY_UNREACHABLE      6   /**< Ping reply: Unreachable */
 #define ALLJOYN_PING_REPLY_IN_PROGRESS      7   /**< Ping reply: Ping already in progress */
 // @}
+
+/** Reason why MPSessionChangedReason is called */
+// @{
+#define ALLJOYN_MPSESSIONCHANGED_LOCAL_MEMBER_ADDED 0 /** You were added to this session (catch up) */
+#define ALLJOYN_MPSESSIONCHANGED_REMOTE_MEMBER_ADDED 1 /** Another member was added to this session */
+#define ALLJOYN_MPSESSIONCHANGED_LOCAL_MEMBER_REMOVED 2 /** You were removed to this session (see all remaining members removed) */
+#define ALLJOYN_MPSESSIONCHANGED_REMOTE_MEMBER_REMOVED 3 /** Another member was removed from this session */
+// @}
+
+
+/** Indication to which side the SessionLost applies */
+// @{
+#define ALLJOYN_SESSIONLOST_DISPOSITION_HOST 0 /** Session was lost for the host side of the leaf node */
+#define ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER 1 /** Session was lost for the joiner side of the leaf node */
+// @}
+
+
 }
 
 #undef QCC_MODULE
