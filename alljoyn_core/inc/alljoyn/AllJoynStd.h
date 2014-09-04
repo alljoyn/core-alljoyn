@@ -32,7 +32,8 @@
 #define QCC_MODULE  "ALLJOYN"
 
 /** Router-to-router protocol version number */
-#define ALLJOYN_PROTOCOL_VERSION  10
+#define ALLJOYN_PROTOCOL_VERSION  11
+//Protocol version 11 introduces self-join feature
 
 namespace ajn {
 
@@ -454,6 +455,18 @@ extern const char* InterfaceName;                 /**< Interface name */
 #define ALLJOYN_PING_REPLY_UNREACHABLE      6   /**< Ping reply: Unreachable */
 #define ALLJOYN_PING_REPLY_IN_PROGRESS      7   /**< Ping reply: Ping already in progress */
 // @}
+
+/** Reason why Session member removed is called */
+typedef enum {
+    ALLJOYN_MPSESSIONCHANGED_REMOTE_MEMBER_ADDED,
+    ALLJOYN_MPSESSIONCHANGED_LOCAL_MEMBER_ADDED,
+    ALLJOYN_MPSESSIONCHANGED_REMOTE_MEMBER_REMOVED,
+    ALLJOYN_MPSESSIONCHANGED_LOCAL_MEMBER_REMOVED
+
+} MPSessionChangedReason;
+
+
+
 }
 
 #undef QCC_MODULE
