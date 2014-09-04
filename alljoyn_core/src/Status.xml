@@ -271,4 +271,5 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_ARDP_WRITE_BLOCKED" value="0x9121" comment="ARDP cannot write to UDP socket (queue is full)"/>
   <status name="ER_PERMISSION_DENIED" value="0x9122" comment="Permission denied"/>
   <status name="ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED" value="0x9123" comment="Default language must be specified before setting a localized field"/>
+  <status name="ER_BUS_REMOVED_BY_BINDER_SELF" value="0x9124" comment="The self-joined session member was removed by the binder"/>
 </status_block>
