@@ -15,6 +15,7 @@
  ******************************************************************************/
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
+#include "BusObjectTestBusObject.h"
 #include <alljoyn/Message.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusListener.h>
@@ -31,40 +32,6 @@ using namespace qcc;
 
 /*constants*/
 static const char* OBJECT_PATH =   "/org/alljoyn/test/BusObjectTest";
-
-class BusObjectTestBusObject : public BusObject {
-  public:
-    BusObjectTestBusObject(BusAttachment& bus, const char* path)
-        : BusObject(path), bus(bus), wasRegistered(false), wasUnregistered(false) {
-
-    }
-
-    virtual ~BusObjectTestBusObject() { }
-
-    void ObjectRegistered(void) {
-        wasRegistered = true;
-    }
-    void ObjectUnregistered(void) {
-        wasUnregistered = true;
-    }
-
-    QStatus SendSignal() {
-        const InterfaceDescription::Member*  signal_member = bus.GetInterface("org.test")->GetMember("my_signal");
-        MsgArg arg("s", "Signal");
-        QStatus status = Signal(NULL, 0, *signal_member, &arg, 1, 0, 0);
-        return status;
-    }
-
-    void Pasta(const InterfaceDescription::Member* member, Message& msg)
-    {
-        const MsgArg* arg((msg->GetArg(0)));
-        QStatus status = MethodReply(msg, arg, 1);
-        EXPECT_EQ(ER_OK, status) << "Pasta: Error sending reply,  Actual Status: " << QCC_StatusText(status);
-    }
-
-    BusAttachment& bus;
-    bool wasRegistered, wasUnregistered;
-};
 
 /* ASACORE-189 */
 TEST(BusObjectTest, ObjectRegisteredUnregistered) {
@@ -311,21 +278,6 @@ TEST(BusObjectTest, DISABLED_Send_Signal_After_BusObject_Unregister)
 
 }
 
-class BusObjectTestSignalReceiver : public MessageReceiver {
-
-  public:
-
-    BusObjectTestSignalReceiver() {
-        signalReceived = false;
-    }
-
-    void SignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg) {
-        signalReceived = true;
-    }
-
-    bool signalReceived;
-};
-
 //Test that signal is received because of register signal handler. Then signal is not received because of unregister signal handler.
 TEST(BusObjectTest, SendSignalAfterUnregistersignalHandler)
 {
@@ -400,9 +352,9 @@ TEST(BusObjectTest, SendSignalAfterUnregistersignalHandler)
             break;
         }
     }
-    EXPECT_TRUE(signalReceiver.signalReceived);
+    EXPECT_EQ(1U, signalReceiver.signalReceived);
 
-    signalReceiver.signalReceived = false;
+    signalReceiver.signalReceived = 0;
     //client side unregisters the signal handler
     status = busClient.UnregisterSignalHandler(&signalReceiver,
                                                static_cast<MessageReceiver::SignalHandler>(&BusObjectTestSignalReceiver::SignalHandler),
@@ -422,7 +374,7 @@ TEST(BusObjectTest, SendSignalAfterUnregistersignalHandler)
             break;
         }
     }
-    EXPECT_FALSE(signalReceiver.signalReceived);
+    EXPECT_EQ(0U, signalReceiver.signalReceived);
 
     status = busService.Disconnect(ajn::getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);

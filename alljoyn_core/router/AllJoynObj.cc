@@ -105,6 +105,7 @@ AllJoynObj::AllJoynObj(Bus& bus, BusController* busController) :
     lostAdvNameSignal(NULL),
     sessionLostSignal(NULL),
     mpSessionChangedSignal(NULL),
+    mpSessionChangedWithReason(NULL),
     mpSessionJoinedSignal(NULL),
     guid(bus.GetInternal().GetGlobalGUID()),
     exchangeNamesSignal(NULL),
@@ -151,6 +152,8 @@ QStatus AllJoynObj::Init()
         { alljoynIntf->GetMember("UnbindSessionPort"),        static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::UnbindSessionPort) },
         { alljoynIntf->GetMember("JoinSession"),              static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::JoinSession) },
         { alljoynIntf->GetMember("LeaveSession"),             static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::LeaveSession) },
+        { alljoynIntf->GetMember("LeaveHostedSession"),       static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::LeaveHostedSession) },
+        { alljoynIntf->GetMember("LeaveJoinedSession"),       static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::LeaveJoinedSession) },
         { alljoynIntf->GetMember("GetSessionFd"),             static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::GetSessionFd) },
         { alljoynIntf->GetMember("SetLinkTimeout"),           static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::SetLinkTimeout) },
         { alljoynIntf->GetMember("AliasUnixUser"),            static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::AliasUnixUser) },
@@ -175,7 +178,9 @@ QStatus AllJoynObj::Init()
     lostAdvNameSignal = alljoynIntf->GetMember("LostAdvertisedName");
     sessionLostSignal = alljoynIntf->GetMember("SessionLost");
     sessionLostWithReasonSignal = alljoynIntf->GetMember("SessionLostWithReason");
+    sessionLostWithReasonAndDispositionSignal = alljoynIntf->GetMember("SessionLostWithReasonAndDisposition");
     mpSessionChangedSignal = alljoynIntf->GetMember("MPSessionChanged");
+    mpSessionChangedWithReason = alljoynIntf->GetMember("MPSessionChangedWithReason");
 
     const InterfaceDescription* busSessionIntf = bus.GetInterface(org::alljoyn::Bus::Peer::Session::InterfaceName);
     if (!busSessionIntf) {
@@ -497,6 +502,23 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::Run(void* arg)
     }
 }
 
+bool AllJoynObj::IsSelfJoinSupported(BusEndpoint& joinerEp) const {
+
+    if (joinerEp->GetEndpointType() == ENDPOINT_TYPE_NULL) {
+        return true;
+    }
+
+    if (joinerEp->GetEndpointType() == ENDPOINT_TYPE_REMOTE) {
+        RemoteEndpoint rep = RemoteEndpoint::cast(joinerEp);
+        /* self-join is only supported from protocol version 11 and higher */
+        if (rep->GetRemoteProtocolVersion() >= 11) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
 {
     QCC_DbgTrace(("JoinSessionThread::RunJoin()"));
@@ -520,6 +542,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
     SessionOpts optsIn;
     QStatus status = MsgArg::Get(args, 2, "sq", &sessionHost, &sessionPort);
     BusEndpoint rSessionEp;
+    bool isSelfJoin = false;
 
     if (status == ER_OK) {
         status = GetSessionOpts(args[2], optsIn);
@@ -561,20 +584,23 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
 
     ajObj.AcquireLocks();
 
-    /* Do not let a session creator join itself */
     SessionMapType::iterator it = ajObj.SessionMapLowerBound(sender, 0);
     BusEndpoint hostEp = ajObj.router.FindEndpoint(sessionHost);
     if (hostEp->IsValid()) {
         while ((it != ajObj.sessionMap.end()) && (it->first.first == sender) && (it->first.second == 0)) {
             if (ajObj.router.FindEndpoint(it->second.sessionHost) == hostEp) {
-                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): cannot join your own session"));
-                replyCode = ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED;
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): self-join!"));
+                isSelfJoin = true;
                 break;
             }
             ++it;
         }
     }
 
+    if (ajObj.IsSelfJoinSupported(joinerEp) == false && isSelfJoin == true) {
+        /* Do not let a session creator join itself */
+        replyCode = ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED;
+    }
 
     if (status != ER_OK) {
         if (replyCode != ALLJOYN_JOINSESSION_REPLY_SUCCESS) {
@@ -587,10 +613,11 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
 
         /* Decide how to proceed based on the session endpoint existence/type */
         VirtualEndpoint vSessionEp;
+        BusEndpoint ep;
 
         if (sessionHost) {
             QCC_DbgPrintf(("JoinSessionThread::RunJoin(): sessionHost=\"%s\"", sessionHost));
-            BusEndpoint ep = ajObj.router.FindEndpoint(sessionHost);
+            ep = ajObj.router.FindEndpoint(sessionHost);
             if (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
                 vSessionEp = VirtualEndpoint::cast(ep);
                 QCC_DbgPrintf(("JoinSessionThread::RunJoin(): vSessionEp=\"%s\"", sessionHost));
@@ -713,11 +740,16 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                                 QCC_LogError(status, ("Failed to find sessionMap entry"));
                             }
                             /* Create a joiner side entry in sessionMap */
-                            SessionMapEntry joinerSme = sme;
-                            joinerSme.endpointName = sender;
-                            joinerSme.id = newSessionId;
-                            ajObj.SessionMapInsert(joinerSme);
-                            id = joinerSme.id;
+                            if (!isSelfJoin) {
+                                SessionMapEntry joinerSme = sme;
+                                joinerSme.endpointName = sender;
+                                joinerSme.id = newSessionId;
+                                ajObj.SessionMapInsert(joinerSme);
+                                id = joinerSme.id;
+                            } else {
+                                id = newSessionId;
+                            }
+
                             optsOut = sme.opts;
                             optsOut.transports &= optsIn.transports;
                             sme.id = newSessionId;
@@ -735,12 +767,16 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                                 smEntry->memberNames.push_back(sender);
 
                                 /* Create a joiner side entry in sessionMap */
-                                SessionMapEntry sme2 = sme;
-                                sme2.memberNames.push_back(sender);
-                                sme2.endpointName = sender;
-                                sme2.fd = fds[1];
-                                ajObj.SessionMapInsert(sme2);
-                                id = sme2.id;
+                                if (!isSelfJoin) {
+                                    SessionMapEntry sme2 = sme;
+                                    sme2.memberNames.push_back(sender);
+                                    sme2.endpointName = sender;
+                                    sme2.fd = fds[1];
+                                    ajObj.SessionMapInsert(sme2);
+                                    id = sme2.id;
+                                } else {
+                                    id = sme.id;
+                                }
                                 optsOut = sme.opts;
                                 optsOut.transports &= optsIn.transports;
                             } else {
@@ -1024,12 +1060,13 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
     }
 
     /* Send AttachSession to all other members of the multicast session */
-    if ((replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) && sme.opts.isMultipoint) {
+    if ((replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) && sme.opts.isMultipoint &&
+        sme.sessionHost != sender /* test if we now just selfjoined */) {
         QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Multicast session joined."));
         for (size_t i = 0; i < sme.memberNames.size(); ++i) {
             const String& member = sme.memberNames[i];
             /* Skip this joiner since it is attached already */
-            if (member == sender) {
+            if (member == sender || member == sme.sessionHost) {
                 continue;
             }
 
@@ -1097,7 +1134,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 if (optsOut.isMultipoint) {
                     QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Local (non-virtual) MPSessionChanged"));
                     ajObj.ReleaseLocks();
-                    ajObj.SendMPSessionChanged(id, sender.c_str(), true, member.c_str());
+                    ajObj.SendMPSessionChanged(id, sender.c_str(), true, member.c_str(), ALLJOYN_MPSESSIONCHANGED_REMOTE_MEMBER_ADDED);
                     ajObj.AcquireLocks();
                 }
             }
@@ -1134,7 +1171,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
         ajObj.SendSessionJoined(sme.sessionPort, sme.id, sender.c_str(), sme.endpointName.c_str());
         /* If session is multipoint, send MPSessionChanged to sessionHost */
         if (sme.opts.isMultipoint) {
-            ajObj.SendMPSessionChanged(sme.id, sender.c_str(), true, sme.endpointName.c_str());
+            ajObj.SendMPSessionChanged(sme.id, sender.c_str(), true, sme.endpointName.c_str(), ALLJOYN_MPSESSIONCHANGED_REMOTE_MEMBER_ADDED);
         }
     }
 
@@ -1145,13 +1182,17 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
         SessionMapEntry* smEntry = ajObj.SessionMapFind(sender, id);
         if (smEntry) {
             String sessionHost = smEntry->sessionHost;
+
             vector<String> memberVector = smEntry->memberNames;
             ajObj.ReleaseLocks();
-            ajObj.SendMPSessionChanged(id, sessionHost.c_str(), true, sender.c_str());
+            /* Already sent MPSessionChanged to session creator, so skip it here if sessionHost (aka session creator) is equal to the sender. */
+            if (!isSelfJoin) {
+                ajObj.SendMPSessionChanged(id, sessionHost.c_str(), true, sender.c_str(), ALLJOYN_MPSESSIONCHANGED_LOCAL_MEMBER_ADDED);
+            }
             vector<String>::const_iterator mit = memberVector.begin();
             while (mit != memberVector.end()) {
-                if (sender != *mit) {
-                    ajObj.SendMPSessionChanged(id, mit->c_str(), true, sender.c_str());
+                if (sender != *mit && sessionHost != *mit) {
+                    ajObj.SendMPSessionChanged(id, mit->c_str(), true, sender.c_str(), ALLJOYN_MPSESSIONCHANGED_LOCAL_MEMBER_ADDED);
                 }
                 mit++;
             }
@@ -1217,12 +1258,75 @@ void AllJoynObj::AttachSession(const InterfaceDescription::Member* member, Messa
     joinSessionThreadsLock.Unlock(MUTEX_CONTEXT);
 }
 
+
+void AllJoynObj::LeaveHostedSession(const InterfaceDescription::Member* member, Message& msg)
+{
+    LeaveSessionCommon(member, msg, LEAVE_HOSTED_SESSION);
+
+}
+
+void AllJoynObj::LeaveJoinedSession(const InterfaceDescription::Member* member, Message& msg)
+{
+    LeaveSessionCommon(member, msg, LEAVE_JOINED_SESSION);
+
+}
+
+
 void AllJoynObj::LeaveSession(const InterfaceDescription::Member* member, Message& msg)
+{
+    LeaveSessionCommon(member, msg, LEAVE_SESSION);
+
+}
+
+uint32_t AllJoynObj::CheckLeaveSession(const SessionMapEntry*smEntry, const char*sender, SessionId id, LeaveSessionType lst, bool& senderWasSelfJoined) const {
+
+    if (!smEntry || (id == 0)) {
+        return ALLJOYN_LEAVESESSION_REPLY_NO_SESSION;
+    }
+
+    String senderstr(sender);
+    senderWasSelfJoined = false;
+
+    switch (lst) {
+    case LEAVE_HOSTED_SESSION:
+        if (smEntry->sessionHost != sender) {
+            QCC_DbgPrintf(("Sender was not the host\n"));
+            return ALLJOYN_LEAVESESSION_REPLY_NO_SESSION;
+        }
+        senderWasSelfJoined = smEntry->IsSelfJoin();
+        break;
+
+    case LEAVE_JOINED_SESSION:
+        if (find(smEntry->memberNames.begin(), smEntry->memberNames.end(), senderstr) == smEntry->memberNames.end()) {
+            QCC_DbgPrintf(("Sender was not a joiner\n"));
+            return ALLJOYN_LEAVESESSION_REPLY_NO_SESSION;
+        }
+        if (smEntry->sessionHost == sender) {
+            senderWasSelfJoined = true;
+            assert(smEntry->IsSelfJoin());
+        }
+        break;
+
+    case LEAVE_SESSION:
+        {
+            if (smEntry->IsSelfJoin() == true && (smEntry->sessionHost == sender)) {
+                QCC_DbgPrintf(("Cannot use LeaveSession() on self-join session: ambiguous\n"));
+                return ALLJOYN_LEAVESESSION_REPLY_NO_SESSION;
+            }
+        }
+        break;
+    }
+
+    return ALLJOYN_LEAVESESSION_REPLY_SUCCESS;
+}
+
+void AllJoynObj::LeaveSessionCommon(const InterfaceDescription::Member* member, Message& msg, LeaveSessionType lst)
 {
     uint32_t replyCode = ALLJOYN_LEAVESESSION_REPLY_SUCCESS;
 
     size_t numArgs;
     const MsgArg* args;
+    bool senderWasSelfJoined;
 
     /* Parse the message args */
     msg->GetArgs(numArgs, args);
@@ -1234,34 +1338,40 @@ void AllJoynObj::LeaveSession(const InterfaceDescription::Member* member, Messag
     /* Find the session with that id */
     AcquireLocks();
     SessionMapEntry* smEntry = SessionMapFind(msg->GetSender(), id);
-    if (!smEntry || (id == 0)) {
-        replyCode = ALLJOYN_LEAVESESSION_REPLY_NO_SESSION;
+    if ((replyCode = CheckLeaveSession(smEntry, msg->GetSender(), id, lst, senderWasSelfJoined)) != ALLJOYN_LEAVESESSION_REPLY_SUCCESS) {
         ReleaseLocks();
     } else {
+
         /* Send DetachSession signal to daemons of all session participants */
-        MsgArg detachSessionArgs[2];
-        detachSessionArgs[0].Set("u", id);
-        detachSessionArgs[1].Set("s", msg->GetSender());
+        if (senderWasSelfJoined == false) {
+            MsgArg detachSessionArgs[2];
+            detachSessionArgs[0].Set("u", id);
+            detachSessionArgs[1].Set("s", msg->GetSender());
 
-        QStatus status = Signal(NULL, 0, *detachSessionSignal, detachSessionArgs, ArraySize(detachSessionArgs), 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
-        if (status != ER_OK) {
-            QCC_LogError(status, ("Error sending org.alljoyn.Daemon.DetachSession signal"));
+            QStatus status = Signal(NULL, 0, *detachSessionSignal, detachSessionArgs, ArraySize(detachSessionArgs), 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
+            if (status != ER_OK) {
+                QCC_LogError(status, ("Error sending org.alljoyn.Daemon.DetachSession signal"));
+            }
+
+            /* Close any open fd for this session */
+            if (smEntry->fd != qcc::INVALID_SOCKET_FD) {
+                qcc::Shutdown(smEntry->fd);
+                qcc::Close(smEntry->fd);
+            }
         }
 
-        /* Close any open fd for this session */
-        if (smEntry->fd != qcc::INVALID_SOCKET_FD) {
-            qcc::Shutdown(smEntry->fd);
-            qcc::Close(smEntry->fd);
-        }
 
         /* Locks must be released before calling RemoveSessionRefs since that method calls out to user (SessionLost) */
         ReleaseLocks();
 
-        /* Remove entries from sessionMap, but dont send a SessionLost back to the caller of this method. */
-        RemoveSessionRefs(msg->GetSender(), id, false);
+        /* Remove entries from sessionMap, but dont send a SessionLost back to the caller of this method */
+        if (RemoveSessionRefs(msg->GetSender(), id, false, lst) == false) {
 
-        /* Remove session routes */
-        router.RemoveSessionRoutes(msg->GetSender(), id);
+            /* Remove session routes */
+            router.RemoveSessionRoutes(msg->GetSender(), id);
+        } else {
+            router.RemoveSelfJoinSessionRoute(msg->GetSender(), id);
+        }
     }
 
     /* Reply to request */
@@ -1287,9 +1397,10 @@ void AllJoynObj::RemoveSessionMember(const InterfaceDescription::Member* member,
 
     SessionId id;
     const char* sessionMemberName;
+    bool sessionMemberSelfJoined = false;
 
     QStatus status = MsgArg::Get(args, numArgs, "us", &id, &sessionMemberName);
-    if (status != ER_OK || (::strcmp(sessionMemberName, msg->GetSender()) == 0)) {
+    if (status != ER_OK) {
         replyCode = ALLJOYN_REMOVESESSIONMEMBER_REPLY_FAILED;
     }
 
@@ -1321,6 +1432,9 @@ void AllJoynObj::RemoveSessionMember(const InterfaceDescription::Member* member,
             if (!found) {
                 replyCode = ALLJOYN_REMOVESESSIONMEMBER_REPLY_NOT_FOUND;
             } else {
+                if (smEntry->sessionHost == srcStr) {
+                    sessionMemberSelfJoined = true;
+                }
                 /* Find the virtual endpoint associated with the remote daemon
                  * for the session member we want to remove.
                  * If a virtual endpoint was not found, the destination is local
@@ -1347,23 +1461,27 @@ void AllJoynObj::RemoveSessionMember(const InterfaceDescription::Member* member,
         /* Send DetachSession signal to daemons of all session participants.
          * Send a detachSessionSignal to be sent with the
          * member name we want to remove and the session ID to remove from. */
-        MsgArg detachSessionArgs[2];
-        detachSessionArgs[0].Set("u", id);
-        detachSessionArgs[1].Set("s", sessionMemberName);
+        if (sessionMemberSelfJoined == false) {
+            MsgArg detachSessionArgs[2];
+            detachSessionArgs[0].Set("u", id);
+            detachSessionArgs[1].Set("s", sessionMemberName);
 
-        QStatus status = Signal(NULL, 0, *detachSessionSignal, detachSessionArgs, ArraySize(detachSessionArgs), 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
-        if (status != ER_OK) {
-            QCC_LogError(status, ("Error sending org.alljoyn.Daemon.DetachSession signal"));
+            QStatus status = Signal(NULL, 0, *detachSessionSignal, detachSessionArgs, ArraySize(detachSessionArgs), 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
+            if (status != ER_OK) {
+                QCC_LogError(status, ("Error sending org.alljoyn.Daemon.DetachSession signal"));
+            }
         }
 
         /* Locks must be released before calling RemoveSessionRefs since that method calls out to user (SessionLost) */
         ReleaseLocks();
 
         /* Remove entries from sessionMap, send a SessionLost to the session member being removed. */
-        RemoveSessionRefs(sessionMemberName, id, true);
-
-        /* Remove session routes */
-        router.RemoveSessionRoutes(sessionMemberName, id);
+        if (RemoveSessionRefs(sessionMemberName, id, true) == false) {
+            /* Remove session routes */
+            router.RemoveSessionRoutes(sessionMemberName, id);
+        } else {
+            router.RemoveSelfJoinSessionRoute(sessionMemberName, id);
+        }
 
     } else {
         ReleaseLocks();
@@ -1670,7 +1788,19 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                             id = smEntry->id;
                             destIsLocal = true;
                             creatorName = creatorEp->GetUniqueName();
-                            replyArgs[3].Set("a$", smEntry->memberNames.size(), &smEntry->memberNames.front());
+                            /* create the list of members for the AttachSession reply.
+                             * Include every member from this session map entry, apart from a self-joined host.
+                             * We can't include that one because it would confuse legacy routers. They'd end up
+                             * creating double session routes and corrupting their session cast set */
+                            vector<String> replyMembers;
+                            for (vector<String>::const_iterator mit = smEntry->memberNames.begin();
+                                 mit != smEntry->memberNames.end(); ++mit) {
+                                if (*mit != smEntry->sessionHost) {
+                                    replyMembers.push_back(*mit);
+                                }
+                            }
+                            replyArgs[3].Set("a$", replyMembers.size(), &replyMembers.front());
+
                         } else {
                             replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
                         }
@@ -1940,7 +2070,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
     /* Send SessionChanged if multipoint */
     if ((replyCode == ALLJOYN_JOINSESSION_REPLY_SUCCESS) && optsOut.isMultipoint && (id != 0) && destIsLocal) {
         QCC_DbgPrintf(("AllJoynObj::RunAttach(): SendMPSessionChanged(id=%d, source=\"%s, true, dest)", id, srcStr.c_str(), destStr.c_str()));
-        ajObj.SendMPSessionChanged(id, srcStr.c_str(), true, destStr.c_str());
+        ajObj.SendMPSessionChanged(id, srcStr.c_str(), true, destStr.c_str(), ALLJOYN_MPSESSIONCHANGED_REMOTE_MEMBER_ADDED);
     }
 
     QCC_DbgPrintf(("AllJoynObj::RunAttach(%d) returned (%d,%u) (status=%s)", sessionPort, replyCode, id, QCC_StatusText(status)));
@@ -1966,7 +2096,7 @@ void AllJoynObj::AddAdvNameAlias(const String& guid, const TransportMask mask, c
     ReleaseLocks();
 }
 
-void AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSessionLost)
+bool AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSessionLost, LeaveSessionType lst)
 {
     QCC_DbgTrace(("AllJoynObj::RemoveSessionRefs(%s, %u, %u)", epName, id, sendSessionLost));
 
@@ -1976,7 +2106,7 @@ void AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
 
     if (!endpoint->IsValid()) {
         ReleaseLocks();
-        return;
+        return false;
     }
 
     String epNameStr = endpoint->GetUniqueName();
@@ -1985,18 +2115,63 @@ void AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
     vector<String> epChangedSessionMembers;
     SessionMapEntry smeRemoved;
     bool foundSME = false;
+    bool epPresentInAnyEntry = false;
+    QStatus sessionLostReason = ER_FAIL;
 
     SessionMapType::iterator it = sessionMap.begin();
     /* Look through sessionMap for entries matching id */
     while (it != sessionMap.end()) {
+        bool toRemove = false;
         if (it->first.second == id) {
             if (it->first.first == epNameStr) {
+                bool selfJoinEntry = false;
                 /* Exact key matches are removed */
+
+                /* special logic in the case this exact match entry was about self-join
+                 * This logic is largely the same as in non exact match branch
+                 */
+                if (it->second.IsSelfJoin() && it->second.sessionHost == epNameStr) {
+                    selfJoinEntry = true;
+                    bool endPointIsMember = false;
+                    if ((lst == LEAVE_SESSION) ||
+                        (lst == LEAVE_JOINED_SESSION)) {
+                        /* Remove matching session members */
+                        vector<String>::iterator mit = it->second.memberNames.begin();
+                        while (mit != it->second.memberNames.end()) {
+                            if (epNameStr == *mit) {
+                                endPointIsMember = true;
+                                mit = it->second.memberNames.erase(mit);
+                                if (it->second.opts.isMultipoint) {
+                                    changedSessionMembers.push_back(it->first);
+                                }
+                            } else {
+                                ++mit;
+                            }
+                        }
+                    }
+
+                    if (((lst == LEAVE_SESSION && endPointIsMember == false) || lst == LEAVE_HOSTED_SESSION)) {
+                        if (endpoint == router.FindEndpoint(it->second.sessionHost)) {
+                            /* Modify entry to remove matching sessionHost */
+                            it->second.sessionHost.clear();
+                            if (it->second.opts.isMultipoint) {
+                                changedSessionMembers.push_back(it->first);
+                            }
+                        }
+                    }
+
+                    /* Session is lost when members + sessionHost together contain only one entry */
+                    if ((it->second.fd == qcc::INVALID_SOCKET_FD) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
+                        SessionMapEntry tsme = it->second;
+                        sessionsLost.push_back(tsme);
+                        toRemove = true;
+                    }
+                } else {
+                    toRemove = true;
+                }
 
                 if (sendSessionLost) {
                     smeRemoved = it->second;
-                    pair<String, SessionId> key = it->first;
-
                     epChangedSessionMembers.push_back(smeRemoved.sessionHost);
                     vector<String>::iterator mit = smeRemoved.memberNames.begin();
                     while (mit != smeRemoved.memberNames.end()) {
@@ -2006,23 +2181,25 @@ void AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
                             ++mit;
                         }
                     }
-                    sessionMap.erase(it++);
-                    foundSME = true;
-                } else {
-                    sessionMap.erase(it++);
                 }
-            } else {
-                if (endpoint == router.FindEndpoint(it->second.sessionHost)) {
-                    /* Modify entry to remove matching sessionHost */
-                    it->second.sessionHost.clear();
-                    if (it->second.opts.isMultipoint) {
-                        changedSessionMembers.push_back(it->first);
-                    }
+
+                if (selfJoinEntry == true) {
+                    sessionLostReason = ER_BUS_REMOVED_BY_BINDER_SELF;
                 } else {
+                    sessionLostReason = ER_BUS_REMOVED_BY_BINDER;
+                }
+
+                foundSME = true;
+            } else {
+                bool endPointIsMember = false;
+
+                if ((lst == LEAVE_SESSION) ||
+                    (lst == LEAVE_JOINED_SESSION)) {
                     /* Remove matching session members */
                     vector<String>::iterator mit = it->second.memberNames.begin();
                     while (mit != it->second.memberNames.end()) {
                         if (epNameStr == *mit) {
+                            endPointIsMember = true;
                             mit = it->second.memberNames.erase(mit);
                             if (it->second.opts.isMultipoint) {
                                 changedSessionMembers.push_back(it->first);
@@ -2032,20 +2209,36 @@ void AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
                         }
                     }
                 }
+
+                if ((lst == LEAVE_SESSION && endPointIsMember == false) || lst == LEAVE_HOSTED_SESSION) {
+                    if (endpoint == router.FindEndpoint(it->second.sessionHost)) {
+                        /* Modify entry to remove matching sessionHost */
+                        it->second.sessionHost.clear();
+                        if (it->second.opts.isMultipoint) {
+                            changedSessionMembers.push_back(it->first);
+                        }
+                    }
+                }
+
                 /* Session is lost when members + sessionHost together contain only one entry */
                 if ((it->second.fd == qcc::INVALID_SOCKET_FD) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
                     SessionMapEntry tsme = it->second;
-                    pair<String, SessionId> key = it->first;
                     if (!it->second.isInitializing) {
-                        sessionMap.erase(it++);
-                    } else {
-                        ++it;
+                        toRemove = true;
                     }
                     sessionsLost.push_back(tsme);
-                } else {
-                    ++it;
                 }
             }
+
+            if (!toRemove && !epPresentInAnyEntry &&
+                ((endpoint == router.FindEndpoint(it->second.sessionHost)) ||
+                 (find(it->second.memberNames.begin(), it->second.memberNames.end(), epNameStr) != it->second.memberNames.end()))) {
+                epPresentInAnyEntry = true;
+            }
+
+        }
+        if (toRemove) {
+            sessionMap.erase(it++);
         } else {
             ++it;
         }
@@ -2055,23 +2248,32 @@ void AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
     /* Send MPSessionChanged for each changed session involving alias */
     vector<pair<String, SessionId> >::const_iterator csit = changedSessionMembers.begin();
     while (csit != changedSessionMembers.end()) {
-        SendMPSessionChanged(csit->second, epNameStr.c_str(), false, csit->first.c_str());
+        /* We should not send the MPSessionChanged if this member was still present (selfjoin case), with the exception of its own leaf */
+        if (epPresentInAnyEntry == false || epNameStr == csit->first) {
+            SendMPSessionChanged(csit->second, epNameStr.c_str(), false, csit->first.c_str(), ALLJOYN_MPSESSIONCHANGED_REMOTE_MEMBER_REMOVED);
+        }
         csit++;
     }
     /* Send MPSessionChanged to the member being removed by the binder */
     vector<String>::const_iterator csitEp = epChangedSessionMembers.begin();
     while (csitEp != epChangedSessionMembers.end()) {
-        SendMPSessionChanged(id, (*csitEp).c_str(), false, epNameStr.c_str());
+        SendMPSessionChanged(id, (*csitEp).c_str(), false, epNameStr.c_str(), ALLJOYN_MPSESSIONCHANGED_LOCAL_MEMBER_REMOVED);
         csitEp++;
     }
     /* Send session lost signals */
     vector<SessionMapEntry>::iterator slit = sessionsLost.begin();
     while (slit != sessionsLost.end()) {
-        SendSessionLost(*slit++, ER_OK);
+        if (slit->memberNames.size() == 1) {
+            SendSessionLost(*slit++, ER_OK, ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER);
+        } else {
+            SendSessionLost(*slit++, ER_OK, ALLJOYN_SESSIONLOST_DISPOSITION_HOST);
+        }
     }
     if (foundSME && sendSessionLost) {
-        SendSessionLost(smeRemoved, ER_BUS_REMOVED_BY_BINDER);
+        SendSessionLost(smeRemoved, sessionLostReason, ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER);
     }
+
+    return epPresentInAnyEntry;
 }
 
 void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpName)
@@ -2156,7 +2358,7 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
     /* Send MPSessionChanged for each changed session involving alias */
     vector<pair<String, SessionId> >::const_iterator csit = changedSessionMembers.begin();
     while (csit != changedSessionMembers.end()) {
-        SendMPSessionChanged(csit->second, vepName.c_str(), false, csit->first.c_str());
+        SendMPSessionChanged(csit->second, vepName.c_str(), false, csit->first.c_str(), ALLJOYN_MPSESSIONCHANGED_REMOTE_MEMBER_REMOVED);
         csit++;
     }
     /* Send session lost signals */
@@ -2355,10 +2557,46 @@ QStatus AllJoynObj::SendAcceptSession(SessionPort sessionPort,
     return status;
 }
 
-void AllJoynObj::SendSessionLost(const SessionMapEntry& sme, QStatus reason)
+SessionListener::SessionLostReason AllJoynObj::ConvertReasonToSessionLostReason(QStatus reason) const {
+
+    SessionListener::SessionLostReason replyCode;
+    switch (reason) {
+    case ER_OK:
+        replyCode = SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION;
+        break;
+
+    case ER_SOCK_OTHER_END_CLOSED:
+    case ER_BUS_ENDPOINT_CLOSING:
+        replyCode = SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_CLOSED_ABRUPTLY;
+        break;
+
+    case ER_BUS_REMOVED_BY_BINDER:
+        replyCode = SessionListener::ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER;
+        break;
+
+    case ER_BUS_REMOVED_BY_BINDER_SELF:
+        replyCode = SessionListener::ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER_SELF;
+        break;
+
+    case ER_TIMEOUT:
+        replyCode = SessionListener::ALLJOYN_SESSIONLOST_LINK_TIMEOUT;
+        break;
+
+    default:
+        replyCode = SessionListener::ALLJOYN_SESSIONLOST_REASON_OTHER;
+        break;
+    }
+
+    return replyCode;
+
+}
+
+void AllJoynObj::SendSessionLost(const SessionMapEntry& sme, QStatus reason, unsigned int disposition)
 {
     /* Send SessionLost to the endpoint mentioned in sme */
     Message sigMsg(bus);
+
+    printf("Sending SessionLost\n");
 
     AcquireLocks();
     BusEndpoint ep = router.FindEndpoint(sme.endpointName);
@@ -2374,36 +2612,12 @@ void AllJoynObj::SendSessionLost(const SessionMapEntry& sme, QStatus reason)
         if (ER_OK != status) {
             QCC_LogError(status, ("Failed to send SessionLost(%d) to %s", sme.id, sme.endpointName.c_str()));
         }
-    } else {
+    } else if (ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE && RemoteEndpoint::cast(ep)->GetRemoteProtocolVersion() < 11) {
         ReleaseLocks();
-        /* For newer clients i.e. protocol version >= 7, emit SessionLostWithReason(uu) signal */
+        /* For newer clients i.e. protocol version [8:10], emit SessionLostWithReason(uu) signal */
         MsgArg args[2];
         args[0].Set("u", sme.id);
-        SessionListener::SessionLostReason replyCode;
-        switch (reason) {
-        case ER_OK:
-            replyCode = SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION;
-            break;
-
-        case ER_SOCK_OTHER_END_CLOSED:
-        case ER_BUS_ENDPOINT_CLOSING:
-            replyCode = SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_CLOSED_ABRUPTLY;
-            break;
-
-        case ER_BUS_REMOVED_BY_BINDER:
-            replyCode = SessionListener::ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER;
-            break;
-
-        case ER_TIMEOUT:
-            replyCode = SessionListener::ALLJOYN_SESSIONLOST_LINK_TIMEOUT;
-            break;
-
-        default:
-            replyCode = SessionListener::ALLJOYN_SESSIONLOST_REASON_OTHER;
-            break;
-        }
-
-        args[1].Set("u", replyCode);
+        args[1].Set("u", ConvertReasonToSessionLostReason(reason));
         QCC_DbgPrintf(("Sending sessionLostWithReason(%u, %s) to %s", sme.id, QCC_StatusText(reason), sme.endpointName.c_str()));
 
         QStatus status = Signal(sme.endpointName.c_str(), sme.id, *sessionLostWithReasonSignal, args, ArraySize(args));
@@ -2411,20 +2625,53 @@ void AllJoynObj::SendSessionLost(const SessionMapEntry& sme, QStatus reason)
         if (ER_OK != status) {
             QCC_LogError(status, ("Failed to send sessionLostWithReason(%u, %s) to %s", sme.id, QCC_StatusText(reason), sme.endpointName.c_str()));
         }
+    } else {
+        ReleaseLocks();
+        /* For newer clients i.e. protocol version >= 11, emit SessionLostWithReason(uub) signal */
+        MsgArg args[3];
+        args[0].Set("u", sme.id);
+        args[1].Set("u", ConvertReasonToSessionLostReason(reason));
+        args[2].Set("u", disposition);
+        QCC_DbgPrintf(("Sending sessionLostWithReasonAndDisposition(%u, %s, %d) to %s", sme.id, QCC_StatusText(reason), sme.endpointName.c_str(), disposition));
+
+        QStatus status = Signal(sme.endpointName.c_str(), sme.id, *sessionLostWithReasonAndDispositionSignal, args, ArraySize(args));
+
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to send sessionLostWithReason(%u, %s) to %s", sme.id, QCC_StatusText(reason), sme.endpointName.c_str()));
+        }
     }
 }
 
-void AllJoynObj::SendMPSessionChanged(SessionId sessionId, const char* name, bool isAdd, const char* dest)
+void AllJoynObj::SendMPSessionChanged(SessionId sessionId, const char* name, bool isAdd, const char* dest, unsigned int reason)
 {
     Message msg(bus);
-    MsgArg args[3];
-    args[0].Set("u", sessionId);
-    args[1].Set("s", name);
-    args[2].Set("b", isAdd);
-    QCC_DbgPrintf(("Sending MPSessionChanged(%u, %s, %s) to %s", sessionId, name, isAdd ? "true" : "false", dest));
-    QStatus status = Signal(dest, sessionId, *mpSessionChangedSignal, args, ArraySize(args));
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Failed to send MPSessionChanged to %s", dest));
+
+    AcquireLocks();
+    BusEndpoint ep = router.FindEndpoint(dest);
+
+    if (ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE && RemoteEndpoint::cast(ep)->GetRemoteProtocolVersion() <= 10) {
+        ReleaseLocks();
+        MsgArg args[3];
+        args[0].Set("u", sessionId);
+        args[1].Set("s", name);
+        args[2].Set("b", isAdd);
+        QCC_DbgPrintf(("Sending MPSessionChanged(%u, %s, %s) to %s", sessionId, name, isAdd ? "true" : "false", dest));
+        QStatus status = Signal(dest, sessionId, *mpSessionChangedSignal, args, ArraySize(args));
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Failed to send MPSessionChanged to %s", dest));
+        }
+    } else {
+        ReleaseLocks();
+        MsgArg args[4];
+        args[0].Set("u", sessionId);
+        args[1].Set("s", name);
+        args[2].Set("b", isAdd);
+        args[3].Set("u", reason);
+        QCC_DbgPrintf(("Sending MPSessionChanged(%u, %s, %s, %u) to %s", sessionId, name, isAdd ? "true" : "false", reason, dest));
+        QStatus status = Signal(dest, sessionId, *mpSessionChangedWithReason, args, ArraySize(args));
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Failed to send MPSessionChangedWithReason to %s", dest));
+        }
     }
 }
 
@@ -2511,6 +2758,7 @@ void AllJoynObj::DetachSessionSignalHandler(const InterfaceDescription::Member* 
 
     /* Parse message args */
     msg->GetArgs(numArgs, args);
+    assert(numArgs == 2);
     SessionId id = args[0].v_uint32;
     const char* src = args[1].v_string.str;
 
@@ -2522,10 +2770,10 @@ void AllJoynObj::DetachSessionSignalHandler(const InterfaceDescription::Member* 
     }
 
     /* Remove session info from sessionmapentry, send a SessionLost to the member being removed. */
-    RemoveSessionRefs(src, id, true);
-
-    /* Remove session info from router */
-    router.RemoveSessionRoutes(src, id);
+    if (RemoveSessionRefs(src, id, true) == false) {
+        /* Remove session info from router */
+        router.RemoveSessionRoutes(src, id);
+    }
 }
 
 void AllJoynObj::GetSessionFd(const InterfaceDescription::Member* member, Message& msg)
@@ -2887,7 +3135,7 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
     }
 
     /* Reply to request */
-    String advNameStr = advertiseName;   /* Needed since advertiseName will be corrupt after MethodReply */
+    String advNameStr = advertiseName;                         /* Needed since advertiseName will be corrupt after MethodReply */
     replyArg.Set("u", replyCode);
     status = MethodReply(msg, &replyArg, 1);
 
@@ -2939,7 +3187,7 @@ void AllJoynObj::CancelAdvertiseName(const InterfaceDescription::Member* member,
     uint32_t replyCode = (ER_OK == status) ? ALLJOYN_CANCELADVERTISENAME_REPLY_SUCCESS : ALLJOYN_CANCELADVERTISENAME_REPLY_FAILED;
 
     /* Reply to request */
-    String advNameStr = advertiseName;   /* Needed since advertiseName will be corrupt after MethodReply */
+    String advNameStr = advertiseName;                         /* Needed since advertiseName will be corrupt after MethodReply */
     MsgArg replyArg("u", replyCode);
     status = MethodReply(msg, &replyArg, 1);
 
@@ -4023,13 +4271,13 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
         /* Send MPSessionChanged for each changed session involving alias */
         vector<pair<String, SessionId> >::const_iterator csit = changedSessionMembers.begin();
         while (csit != changedSessionMembers.end()) {
-            SendMPSessionChanged(csit->second, alias.c_str(), false, csit->first.c_str());
+            SendMPSessionChanged(csit->second, alias.c_str(), false, csit->first.c_str(), ALLJOYN_MPSESSIONCHANGED_REMOTE_MEMBER_REMOVED);
             csit++;
         }
         /* Send session lost signals */
         vector<SessionMapEntry>::iterator slit = sessionsLost.begin();
         while (slit != sessionsLost.end()) {
-            SendSessionLost(*slit++, ER_BUS_ENDPOINT_CLOSING);
+            SendSessionLost(*slit++, ER_BUS_ENDPOINT_CLOSING, ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER);
         }
     }
 
@@ -4151,7 +4399,8 @@ struct FoundNameEntry {
     String name;
     String prefix;
     String dest;
-    FoundNameEntry(const String& name, const String& prefix, const String& dest) : name(name), prefix(prefix), dest(dest) { }
+    FoundNameEntry(const String& name, const String& prefix, const String& dest) : name(name), prefix(prefix), dest(dest) {
+    }
     bool operator<(const FoundNameEntry& other) const {
         return (name < other.name) || ((name == other.name) && ((prefix < other.prefix) || ((prefix == other.prefix) && (dest < other.dest))));
     }
@@ -4807,7 +5056,7 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
              */
 
             // Check if the name is advertised
-            TransportMask transport = TRANSPORT_TCP | TRANSPORT_UDP; // TODO transport hard-coded
+            TransportMask transport = TRANSPORT_TCP | TRANSPORT_UDP;                         // TODO transport hard-coded
             String guid;
             bool foundEntry = false;
             AcquireLocks();
