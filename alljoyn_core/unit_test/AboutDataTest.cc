@@ -167,21 +167,30 @@ TEST(AboutData, SetSupportedLanguage)
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    qcc::String* languages;
-    size_t numLanguages;
+    size_t numLanguages = aboutData.GetSupportedLanguages();
+    qcc::String* languages = new qcc::String[numLanguages];
 
-    status = aboutData.GetSupportedLanguages(&languages, &numLanguages);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    size_t numRetLang = aboutData.GetSupportedLanguages(languages, numLanguages);
+    EXPECT_EQ(numLanguages, numRetLang);
     EXPECT_EQ(1u, numLanguages);
     EXPECT_STREQ("en", languages[0].c_str());
+    delete [] languages;
+    languages = NULL;
 
     status = aboutData.SetSupportedLanguage("es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = aboutData.GetSupportedLanguages(&languages, &numLanguages);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    numLanguages = aboutData.GetSupportedLanguages();
+    languages = new qcc::String[numLanguages];
+
+    numRetLang = aboutData.GetSupportedLanguages(languages, numLanguages);
+    EXPECT_EQ(numLanguages, numRetLang);
     EXPECT_EQ(2u, numLanguages);
     EXPECT_STREQ("en", languages[0].c_str());
     EXPECT_STREQ("es", languages[1].c_str());
+    delete [] languages;
+    languages = NULL;
 }
 
 TEST(AboutData, SetDescription) {
@@ -697,15 +706,10 @@ TEST(AboutData, CreateFromXml) {
         "  <Manufacturer>Company</Manufacturer>"
         "  <Manufacturer lang = 'es'>Empresa</Manufacturer>"
         "  <ModelNumber>Wxfy388i</ModelNumber>"
-        "  <SupportedLanguages>"
-        "    <language>en</language>"
-        "    <language>es</language>"
-        "  </SupportedLanguages>"
         "  <Description>A detailed description provided by the application.</Description>"
         "  <Description lang = 'es'>Una descripción detallada proporcionada por la aplicación.</Description>" /*TODO look into utf8*/
         "  <DateOfManufacture>2014-01-08</DateOfManufacture>"
         "  <SoftwareVersion>1.0.0</SoftwareVersion>"
-        "  <AJSoftwareVersion>" + static_cast<qcc::String>(ajn::GetVersion()) + "</AJSoftwareVersion>"
         "  <HardwareVersion>1.0.0</HardwareVersion>"
         "  <SupportUrl>www.example.com</SupportUrl>"
         "  <UserDefinedTag>Can only accept strings anything other than strings must be done using the AboutData Class SetField method</UserDefinedTag>"
@@ -762,14 +766,16 @@ TEST(AboutData, CreateFromXml) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("Empresa", manufacturer);
 
-    qcc::String* languages;
-    size_t numLanguages;
+    size_t numLanguages = aboutData.GetSupportedLanguages();
+    qcc::String* languages = new qcc::String[numLanguages];
 
-    status = aboutData.GetSupportedLanguages(&languages, &numLanguages);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    size_t numRetLang = aboutData.GetSupportedLanguages(languages, numLanguages);
+    EXPECT_EQ(numLanguages, numRetLang);
     EXPECT_EQ(2u, numLanguages);
     EXPECT_STREQ("en", languages[0].c_str());
     EXPECT_STREQ("es", languages[1].c_str());
+    delete [] languages;
+    languages = NULL;
 
     char* description;
     status = aboutData.GetDescription(&description);
@@ -814,7 +820,7 @@ TEST(AboutData, CreateFromXml) {
 //    status = aboutData.GetField("UserDefinedTag", value);
 //    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 //
-//    EXPECT_STREQ("s", value->Signature().c_str());
+//    EXPECT_STREQ("s", value->Signature().c_str()) << value->ToString();
 //    const char* userDefined;
 //    status = value->Get("s", &userDefined);
 //    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -841,7 +847,7 @@ class AboutDataTestAboutData : public AboutData {
         SetNewFieldDetails(TEST_FIELDABC, true, true, false, "s");
     }
 
-    QStatus SetTestFieldABC(char* testFieldABC)
+    QStatus SetTestFieldABC(const char* testFieldABC)
     {
         QStatus status = ER_OK;
         MsgArg arg;

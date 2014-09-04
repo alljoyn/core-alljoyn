@@ -26,7 +26,7 @@
 #include <alljoyn/Status.h>
 
 #include <map>
-#include <vector>
+#include <set>
 
 #include <qcc/String.h>
 #include <qcc/Mutex.h>
@@ -78,25 +78,26 @@ class AboutData : public AboutDataListener {
        "  <DefaultLanguage>en</DefaultLanguage>"
        "  <DeviceName>My Device Name</DeviceName>"
        "  <DeviceName lang = 'sp'>Nombre de mi dispositivo</DeviceName>"
-       "  <DeviceId>" + About.GetDeviceId() +"</DeviceId>"
+       "  <DeviceId>93c06771-c725-48c2-b1ff-6a2a59d445b8</DeviceId>"
        "  <AppName>My Application Name</AppName>"
        "  <AppName lang = 'sp'>Mi Nombre de la aplicacion</AppName>"
        "  <Manufacturer>Company</Manufacturer>"
        "  <Manufacturer lang = 'sp'>Empresa</Manufacturer>"
        "  <ModelNumber>Wxfy388i</ModelNumber>"
-       "  <SupportedLanguages>"
-       "    <language>en</language>"
-       "    <language>sp</language>"
-       "  </SupportedLanguages>"
        "  <Description>A detailed description provided by the application.</Description>"
        "  <Description lang = 'sp'>Una descripcion detallada proporcionada por la aplicacion.</Description>"
        "  <DateOfManufacture>2014-01-08</DateOfManufacture>"
        "  <SoftwareVersion>1.0.0</SoftwareVersion>"
-       "  <AJSoftwareVersion>"+ GetVersion() + "</AJSoftwareVersion>"
        "  <HardwareVersion>1.0.0</HardwareVersion>"
        "  <SupportUrl>www.example.com</SupportUrl>"
        "</AboutData>"
        @endcode
+     *
+     * Note: AJSoftwareVersion is automatically set to the version of Alljoyn that
+     * is being used. The SupportedLanguages tag is automatically implied from
+     * the DefaultLanguage tag and the lang annotation from tags that are
+     * localizable.
+     *
      * @param[in] aboutDataXml a string that contains an XML representation of
      *                         the AboutData fields.
      * @return ER_OK on success
@@ -336,13 +337,17 @@ class AboutData : public AboutDataListener {
     /**
      * Get and array of supported languages
      *
-     * @param languageTags a pointer to an array of IETF language tags
-     * @param num the number of language tags in the array
+     * @param languageTags A pointer to a languageTags array to receive the
+     *                     language tags. Can be NULL in which case no
+     *                     language tags are returned and the return value gives
+     *                     the number of language tags available.
+     * @param num          the size of the languageTags array.
      *
-     * @return ER_OK on success
-     * TODO
+     * @return The number of languageTags returned or the total number of
+     *         language tags if languageTags is NULL.
      */
-    QStatus GetSupportedLanguages(qcc::String** languageTags, size_t* num);
+    size_t GetSupportedLanguages(qcc::String* languageTags = NULL, size_t num = 0);
+
     /**
      * Set the Description to the AboutData
      *
@@ -356,7 +361,7 @@ class AboutData : public AboutDataListener {
      *
      * @return ER_OK on success
      */
-    QStatus SetDescription(const char* descritption, const char* language = NULL);
+    QStatus SetDescription(const char* description, const char* language = NULL);
 
     /**
      * Get the Description from the About data
@@ -683,8 +688,7 @@ class AboutData : public AboutDataListener {
     /**
      * local member variable for supported languages
      */
-    // TODO should this be a set since we don't want the same language listed twice
-    std::vector<qcc::String> m_supportedLanguages;
+    std::set<qcc::String> m_supportedLanguages;
 
     /**
      * mutex lock to protect the property store.

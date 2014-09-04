@@ -134,10 +134,22 @@ QStatus AboutData::CreateFromXml(qcc::String aboutDataXml)
     typedef std::map<qcc::String, FieldDetails>::iterator it_aboutFields;
     MsgArg arg;
     for (it_aboutFields it = m_aboutFields.begin(); it != m_aboutFields.end(); ++it) {
+        // Supported languages are implicitly added no need to look for a
+        // SupportedLanguages languages tag.
+        if (it->first == SUPPORTED_LANGUAGES) {
+            continue;
+        }
+        // The Alljoyn software version is implicitly added so we don't need to
+        // look for this tag
+        if (it->first == AJ_SOFTWARE_VERSION) {
+            continue;
+        }
         if (!it->second.localized) {
             if (root->GetChild(it->first)->GetContent() != "") {
                 // All non-localized fields in the about data are strings and are
                 // treated like a string except for the AppId and SupportedLanguages
+                // Since Languages are implicitly added we don't look for the
+                // SupportedLanguages tag.
                 if (it->first == APP_ID) {
                     size_t strSize = root->GetChild(it->first)->GetContent().size();
                     if (strSize % 2 == 0) {
@@ -162,17 +174,10 @@ QStatus AboutData::CreateFromXml(qcc::String aboutDataXml)
                     if (status != ER_OK) {
                         return status;
                     }
-                }
-            } else {
-                // The SupportedLanguages tag should be the only tag that is not
-                // localized that will return an empty string when calling GetContent
-                // on that tag. We need to loop through each of the language tags
-                // and add them to the supported languages list.
-                if (it->first == SUPPORTED_LANGUAGES) {
-                    std::vector<qcc::XmlElement*> languageElements = root->GetChild(it->first)->GetChildren();
-                    std::vector<qcc::XmlElement*>::iterator lang_it;
-                    for (std::vector<qcc::XmlElement*>::iterator lang_it = languageElements.begin(); lang_it != languageElements.end(); ++lang_it) {
-                        SetSupportedLanguage((*lang_it)->GetContent().c_str());
+                    // Make sure the DefaultLanguage is added to the list of
+                    // SupportedLanguages.
+                    if (it->first == DEFAULT_LANGUAGE) {
+                        status = SetSupportedLanguage(root->GetChild(it->first)->GetContent().c_str());
                     }
                 }
             }
@@ -191,10 +196,13 @@ QStatus AboutData::CreateFromXml(qcc::String aboutDataXml)
     std::vector<qcc::XmlElement*> elements = root->GetChildren();
     std::vector<qcc::XmlElement*>::iterator it;
     for (std::vector<qcc::XmlElement*>::iterator it = elements.begin(); it != elements.end(); ++it) {
-        if (m_aboutFields[(*it)->GetName()].localized || m_aboutFields.find((*it)->GetName().c_str()) == m_aboutFields.end()) {
+        if (m_aboutFields[(*it)->GetName()].localized || m_aboutFields.find((*it)->GetName()) == m_aboutFields.end()) {
             //printf("Setting field: name=%s, value=%s, lang=%s\n", (*it)->GetName().c_str(), (*it)->GetContent().c_str(), (*it)->GetAttribute("lang").c_str());
             //assert(m_aboutFields[it->first].dataType == "s");
-            arg.Set("s", (*it)->GetContent().c_str());
+            status = arg.Set("s", (*it)->GetContent().c_str());
+            if (status != ER_OK) {
+                return status;
+            }
             status = SetField((*it)->GetName().c_str(), arg, (*it)->GetAttribute("lang").c_str());
             if (status != ER_OK) {
                 return status;
@@ -477,37 +485,44 @@ QStatus AboutData::GetModelNumber(char** modelNumber)
 
 QStatus AboutData::SetSupportedLanguage(const char* language)
 {
-    //TODO Set supported languages does nothing to prevent double adding a
-    //     language tag. Setting a language tag twice should not be allowed.
-
     //TODO add in logic to check information about the tag all of the tags must
     //     conform to the RFC5646 there is currently nothing to make sure the
     //     tags conform to this RFC
-    QStatus status;
+    QStatus status = ER_OK;
 
-    m_supportedLanguages.push_back(language);
-    size_t supportedLangsNum = m_supportedLanguages.size();
-    //char* supportedLangs[supportedLangsNum];
-    const char** supportedLangs = new const char*[supportedLangsNum];
-
-    for (size_t i = 0; i < supportedLangsNum; ++i) {
-        supportedLangs[i] = m_supportedLanguages[i].c_str();
+    std::pair<std::set<qcc::String>::iterator, bool> ret =  m_supportedLanguages.insert(language);
+    // A new language has been added rebuild the MsgArg and update the field.
+    if (true == ret.second) {
+        size_t supportedLangsNum = m_supportedLanguages.size();
+        //char* supportedLangs[supportedLangsNum];
+        const char** supportedLangs = new const char*[supportedLangsNum];
+        size_t count = 0;
+        for (std::set<qcc::String>::iterator it = m_supportedLanguages.begin(); it != m_supportedLanguages.end(); ++it) {
+            supportedLangs[count] = it->c_str();
+            ++count;
+        }
+        MsgArg arg;
+        status = arg.Set(m_aboutFields[SUPPORTED_LANGUAGES].signature.c_str(), supportedLangsNum, supportedLangs);
+        if (status != ER_OK) {
+            return status;
+        }
+        status = SetField(SUPPORTED_LANGUAGES, arg);
+        delete [] supportedLangs;
     }
-    MsgArg arg;
-    status = arg.Set(m_aboutFields[SUPPORTED_LANGUAGES].signature.c_str(), supportedLangsNum, supportedLangs);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = SetField(SUPPORTED_LANGUAGES, arg);
-    delete [] supportedLangs;
     return status;
 }
 
-QStatus AboutData::GetSupportedLanguages(qcc::String** supportedLanguages, size_t* num)
+size_t AboutData::GetSupportedLanguages(qcc::String* supportedLanguages, size_t num)
 {
-    *supportedLanguages = &m_supportedLanguages[0];
-    *num = m_supportedLanguages.size();
-    return ER_OK;
+    if (supportedLanguages == NULL) {
+        return m_supportedLanguages.size();
+    }
+    size_t count = 0;
+    for (std::set<qcc::String>::iterator it = m_supportedLanguages.begin(); it != m_supportedLanguages.end() && count < num; ++it) {
+        supportedLanguages[count] = *it;
+        ++count;
+    }
+    return count;
 }
 
 QStatus AboutData::SetDescription(const char* descritption, const char* language)
@@ -659,6 +674,11 @@ QStatus AboutData::SetField(const char* name, ajn::MsgArg value, const char* lan
             m_localizedPropertyStore[name][static_cast<qcc::String>(defaultLanguage)] = value;
         } else {
             m_localizedPropertyStore[name][language] = value;
+            //implicitly add all language tags to the supported languages
+            status = SetSupportedLanguage(language);
+            if (status != ER_OK) {
+                return status;
+            }
         }
     } else {
         m_propertyStore[name] = value;
