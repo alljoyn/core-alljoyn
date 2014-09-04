@@ -67,7 +67,7 @@ const TransportMask TRANSPORT_ALL       = (0xFFFF);
  * up to the system to decide which of the available transports is best suited
  * to the implied situation.
  */
-const TransportMask TRANSPORT_IP        = (TRANSPORT_TCP | TRANSPORT_WFD);
+const TransportMask TRANSPORT_IP        = (TRANSPORT_TCP | TRANSPORT_UDP);
 
 }
 
