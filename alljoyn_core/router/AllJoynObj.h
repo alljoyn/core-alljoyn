@@ -616,6 +616,9 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
         std::vector<qcc::String> memberNames;
         bool isInitializing;
         bool isRawReady;
+        bool IsSelfJoin() const {
+            return find(memberNames.begin(), memberNames.end(), sessionHost) != memberNames.end();
+        }
         SessionMapEntry() :
             id(0),
             sessionPort(0),
