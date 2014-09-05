@@ -345,13 +345,27 @@ void SessionlessObj::RemoveRule(const qcc::String& epName, Rule& rule)
         router.LockNameTable();
         lock.Lock();
 
+        uint32_t ruleId = nextRulesId;
         std::pair<RuleIterator, RuleIterator> range = rules.equal_range(epName);
         while (range.first != range.second) {
             if (range.first->second == rule) {
+                ruleId = range.first->second.id;
                 rules.erase(range.first);
                 break;
             }
             ++range.first;
+        }
+
+        if (ruleId != nextRulesId) {
+            /* If it exists, remove the implicit rule that belongs to the rule removed above. */
+            range = rules.equal_range(epName);
+            while (range.first != range.second) {
+                if (range.first->second.id == ruleId && (Rule::SESSIONLESS_NOT_SPECIFIED == range.first->second.sessionless)) {
+                    rules.erase(range.first);
+                    break;
+                }
+                ++range.first;
+            }
         }
 
         if (rules.empty()) {
@@ -373,9 +387,16 @@ QStatus SessionlessObj::PushMessage(Message& msg)
         return ER_FAIL;
     }
 
-    /* Put the message in the local cache and kick the worker */
-    SessionlessMessageKey key(msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath());
+    router.LockNameTable();
     lock.Lock();
+
+    /* Match the message against any existing implicit rules */
+    uint32_t fromRulesId = nextRulesId - (numeric_limits<uint32_t>::max() >> 1);
+    uint32_t toRulesId = nextRulesId;
+    SendMatchingThroughEndpoint(0, msg, fromRulesId, toRulesId, true);
+
+    /* Put the message in the local cache */
+    SessionlessMessageKey key(msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath());
     advanceChangeId = true;
     SessionlessMessage val(curChangeId, msg);
     LocalCache::iterator it = localCache.find(key);
@@ -384,12 +405,29 @@ QStatus SessionlessObj::PushMessage(Message& msg)
     } else {
         it->second = val;
     }
+
     lock.Unlock();
+    router.UnlockNameTable();
+
+    /* Kick the worker */
     uint32_t zero = 0;
     SessionlessObj* slObj = this;
     QStatus status = timer.AddAlarm(Alarm(zero, slObj));
+    if (ER_OK != status) {
+        /*
+         * When daemon is closing the daemon will receive multiple error
+         * because the timer is exiting.  print a high level debug message
+         * not a log error since this is expected behaver and should not
+         * be presented to the user if they don't want to see it.
+         */
+        if (ER_TIMER_EXITING == status) {
+            QCC_DbgHLPrintf(("Timer::AddAlarm failed : %s", QCC_StatusText(status)));
+        } else {
+            QCC_LogError(status, ("Timer::AddAlarm failed"));
+        }
+    }
 
-    return status;
+    return ER_OK;
 }
 
 bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
@@ -425,7 +463,8 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
     return true;
 }
 
-void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId)
+void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId,
+                                                 bool onlySendIfImplicit)
 {
     uint32_t rulesRangeLen = toRulesId - fromRulesId;
     RuleIterator rit = rules.begin();
@@ -436,6 +475,32 @@ void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uin
         if (IN_WINDOW(uint32_t, fromRulesId, rulesRangeLen, rit->second.id) && ep->IsValid() && ep->AllowRemoteMessages()) {
             if (rit->second.IsMatch(msg)) {
                 isMatch = true;
+                if (rit->second.iface == "org.alljoyn.About" && rit->second.member == "Announce" && !rit->second.implements.empty()) {
+                    /*
+                     * Add an 'implicit' rule so that we will receive Announce
+                     * signals if the interface of interest is removed from the
+                     * Announce signal.
+                     *
+                     * Implicit match rules do not have the sessionless value
+                     * specified, we use that information later to detect when
+                     * we can remove the rule.
+                     *
+                     * The same rule ID as the implements match rule is used
+                     * here to avoid triggering a refetch.
+                     */
+                    String ruleStr = String("sender='") + msg->GetSender() + "',interface='org.alljoyn.About',member='Announce'";
+                    Rule rule(ruleStr.c_str());
+                    bool isNewRule = true;
+                    for (std::pair<RuleIterator, RuleIterator> range = rules.equal_range(epName); range.first != range.second; ++range.first) {
+                        if (range.first->second == rule) {
+                            isNewRule = false;
+                            break;
+                        }
+                    }
+                    if (isNewRule) {
+                        rules.insert(std::pair<String, TimestampedRule>(epName, TimestampedRule(rule, rit->second.id)));
+                    }
+                }
             } else if (rit->second == legacyRule) {
                 /*
                  * Legacy clients will add the "type='error',sessionless='t'"
@@ -453,9 +518,24 @@ void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uin
             }
         }
         if (isMatch) {
+            /* If we only match this implicit rule, it is safe to remove */
+            bool isImplicit = (Rule::SESSIONLESS_NOT_SPECIFIED == rit->second.sessionless);
+            if (isImplicit) {
+                RuleIterator next = rules.upper_bound(epName);
+                for (RuleIterator it = rit; it != next; ++it) {
+                    if ((Rule::SESSIONLESS_NOT_SPECIFIED != it->second.sessionless) && it->second.IsMatch(msg)) {
+                        isImplicit = false;
+                    }
+                }
+                if (isImplicit) {
+                    rules.erase(rit);
+                }
+            }
             lock.Unlock();
             router.UnlockNameTable();
-            SendThroughEndpoint(msg, ep, sid);
+            if (!onlySendIfImplicit || isImplicit) {
+                SendThroughEndpoint(msg, ep, sid);
+            }
             router.LockNameTable();
             lock.Lock();
             rit = rules.upper_bound(epName);

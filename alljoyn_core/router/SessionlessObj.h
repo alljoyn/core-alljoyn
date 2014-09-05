@@ -437,7 +437,8 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param[in] fromRulesId Beginning of rules ID range (inclusive)
      * @param[in] toRulesId End of rules ID range (exclusive)
      */
-    void SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId);
+    void SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId,
+                                     bool onlySendIfImplicit = false);
 
     /**
      * A match rule that includes a change ID for recording when it was entered
