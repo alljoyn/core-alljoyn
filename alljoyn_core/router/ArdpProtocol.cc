@@ -56,6 +56,9 @@ namespace ajn {
 /* Maximum Retransmit Timeout */
 #define ARDP_MAX_RTO 64000
 
+/* Minimum Delayed ACK Timeout */
+#define ARDP_MIN_DELAYED_ACK_TIMEOUT 10
+
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define ABS(a) ((a) >= 0 ? (a) : -(a))
@@ -137,7 +140,6 @@ typedef struct {
     uint32_t IRS;        /* The initial receive sequence number.  The sequence number of the SYN that established the connection */
     uint32_t LCS;        /* The sequence number of last consumed segment */
     uint32_t acknxt;     /* Sequence number the sender wants us to acknowledge, everything before the number has expired */
-    uint32_t last;       /* Sequence number of the last pending segment */
     ArdpRcvBuf* buf;     /* Array holding received buffers not consumed by the app */
     ArdpEack eack;       /* Tracking of received out-of-order segments */
     uint16_t ackPending; /* Number of segments pending acknowledgement */
@@ -1303,7 +1305,6 @@ static QStatus InitRcv(ArdpConnRecord* conn, uint32_t segmax, uint32_t segbmax)
 static void PostInitRcv(ArdpConnRecord* conn)
 {
     conn->rcv.LCS = conn->rcv.CUR;
-    conn->rcv.last = conn->rcv.CUR + 1;
     for (uint16_t i = 0; i < conn->rcv.SEGMAX; i++) {
         conn->rcv.buf[i].seq = conn->rcv.IRS;
     }
@@ -1816,7 +1817,7 @@ static QStatus ReleaseRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, uint3
     }
 
     if (seq != (conn->rcv.LCS + 1)) {
-        if (reason ==  ER_ARDP_TTL_EXPIRED) {
+        if (reason == ER_ARDP_TTL_EXPIRED) {
             QCC_DbgPrintf(("Expired segment %u is not first in rcv queue (%u)", seq, conn->rcv.LCS + 1));
             return ER_OK;
         } else {
@@ -1860,7 +1861,10 @@ static QStatus ReleaseRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, uint3
 
     /*
      * If we advanced the receive queue  based on expired messages in RCV window,
-     * it's possible that RCV.CUR < RCV.LCS. We need to update left edge of ACK window to match LCS.
+     * it's possible that RCV.CUR < RCV.LCS.
+     * This can happen when a message has been only partially received
+     * and it's TTL has expired before we had a chance to assemble a complete message.
+     * We need to update left edge of ACK window to match LCS.
      */
     if (SEQ32_LT(conn->rcv.CUR, conn->rcv.LCS)) {
         conn->rcv.CUR = conn->rcv.LCS;
@@ -1868,17 +1872,15 @@ static QStatus ReleaseRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, uint3
     }
 
     /*
-     * Schedule "unsolicited" ACK if:
-     * the windows is half-full (timeout set to zero)
-     * or
-     * the ACK timer is not running.
+     * Schedule "unsolicited" ACK if the ACK timer is not running.
+     * If the buffers have been released due to TTL expiration,
+     * schedule ACK with minimum delay.
      */
-    if ((conn->rcv.last - conn->rcv.LCS) > (conn->rcv.SEGMAX >> 1)) {
-        UpdateTimer(handle, conn, &conn->ackTimer, 0, 1);
-    } else if (conn->ackTimer.retry == 0) {
+    if (conn->ackTimer.retry == 0) {
+        uint32_t timeout = (reason == ER_ARDP_TTL_EXPIRED) ? ARDP_MIN_DELAYED_ACK_TIMEOUT : handle->config.delayedAckTimeout;
         QCC_DbgHLPrintf(("ReleaseRcvBuffers: Schedule ACK timer to inform about new values of rcv.CUR %u and rcv.LCS %u",
                          conn->rcv.CUR, conn->rcv.LCS));
-        UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
+        UpdateTimer(handle, conn, &conn->ackTimer, timeout, 1);
     }
 
     return ER_OK;
@@ -2014,8 +2016,7 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
     } while (SEQ32_LT(seq, acknxt));
 
     /*
-     * Update counter for the current ACK counter to ACKNXT - 1. Since this could be in
-     * recursive call, check if the update is valid.
+     * Update counter for the current ACK counter to ACKNXT - 1.
      */
     if (SEQ32_LT(conn->rcv.CUR, acknxt - 1)) {
         conn->rcv.CUR = acknxt - 1;
@@ -2030,13 +2031,6 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
         AdvanceRcvQueue(handle, conn, current);
     }
 
-    /* Send "unsolicited" ACK if the ACK timer is not running */
-    if (conn->ackTimer.retry == 0) {
-        QCC_DbgHLPrintf(("FlushExpiredRcvMessages:: Schedule ACK timer to inform about new value of rcv.CUR %u",
-                         conn->rcv.CUR));
-        UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
-    }
-
     QCC_DbgPrintf(("FlushExpiredRcvMessages(UPDATE rcv.CUR = %u, acknxt = %u", conn->rcv.CUR, acknxt));
 }
 
@@ -2047,7 +2041,7 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
 
     QCC_DbgTrace(("AddRcvBuffer(handle=%p, conn=%p, seg=%p, buf=%p, len=%d, ordered=%s", handle, conn, seg, buf, len, (ordered ? "true" : "false")));
 
-    QCC_DbgPrintf(("AddRcvBuffer: seg->SEQ = %u, first=%u, last= %u", seg->SEQ, conn->rcv.LCS + 1, conn->rcv.last));
+    QCC_DbgPrintf(("AddRcvBuffer: seg->SEQ = %u, first=%u", seg->SEQ, conn->rcv.LCS + 1));
 
     /* Sanity check */
     if ((seg->DLEN + (seg->HLEN * 2)) != len) {
@@ -2074,11 +2068,6 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
     if (current->data == NULL) {
         QCC_LogError(ER_OUT_OF_MEMORY, ("Failed to allocate rcv data buffer"));
         return ER_OUT_OF_MEMORY;
-    }
-
-    if (SEQ32_LT(conn->rcv.last, seg->SEQ)) {
-        assert((seg->SEQ - conn->rcv.last) < conn->rcv.SEGMAX);
-        conn->rcv.last = seg->SEQ;
     }
 
     current->seq = seg->SEQ;
