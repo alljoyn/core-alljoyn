@@ -80,7 +80,7 @@ struct Rule {
     }
 
     /** Constructor */
-    Rule() : type(MESSAGE_INVALID) { }
+    Rule() : type(MESSAGE_INVALID), sessionless(SESSIONLESS_NOT_SPECIFIED) { }
 
     /**
      * Construct a rule from a rule string.
