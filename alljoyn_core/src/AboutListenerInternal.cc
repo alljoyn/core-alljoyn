@@ -232,7 +232,7 @@ void AboutListenerInternal::AnnounceSignalHandler(const ajn::InterfaceDescriptio
             //if second.size is zero then the user is trying to match an any interface
             for (std::set<qcc::String>::iterator it2 = it->second.begin(); it2 != it->second.end(); ++it2) {
                 // TODO look through the MsgArg directly without using the AboutObjectDescription
-                matchFound = objectDescription.HasInterface(*it2);
+                matchFound = objectDescription.HasInterface(it2->c_str());
                 // if the interface is not in the objectDescription we can exit
                 // the loop instantly with out checking the other interfaces
                 if (!matchFound) {

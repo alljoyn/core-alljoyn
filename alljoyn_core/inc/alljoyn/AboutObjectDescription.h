@@ -118,7 +118,7 @@ class AboutObjectDescription {
      *    then only `numInterfaces` of interfaces will be returned in the
      *    `interfaces` array.
      */
-    size_t GetInterfaces(qcc::String const& path, const char** interfaces, size_t numInterfaces) const;
+    size_t GetInterfaces(const char* path, const char** interfaces, size_t numInterfaces) const;
 
     /**
      * Get a list of the paths for a given interface. Its possible to have the
@@ -142,7 +142,7 @@ class AboutObjectDescription {
      *    array
      *
      */
-    size_t GetInterfacePaths(qcc::String const& interface, const char** paths, size_t numPaths) const;
+    size_t GetInterfacePaths(const char* interface, const char** paths, size_t numPaths) const;
 
     /**
      * Clear all the contents of this AboutObjectDescription
@@ -157,7 +157,7 @@ class AboutObjectDescription {
      *
      * @return true if the path is found
      */
-    bool HasPath(qcc::String const& path) const;
+    bool HasPath(const char* path) const;
 
     /**
      * Returns true if the given interface name is found in any path
@@ -166,7 +166,7 @@ class AboutObjectDescription {
      *
      * @return true if the interface is found
      */
-    bool HasInterface(qcc::String const& interfaceName) const;
+    bool HasInterface(const char* interfaceName) const;
 
     /**
      * Returns true if the given interface name is found at the given path
@@ -175,7 +175,7 @@ class AboutObjectDescription {
      *
      * @return true if the interface is found at the given path
      */
-    bool HasInterface(qcc::String const& path, qcc::String const& interfaceName) const;
+    bool HasInterface(const char* path, const char* interfaceName) const;
 
     /**
      * @param[out] msgArg containing a signature a(oas)
@@ -196,7 +196,7 @@ class AboutObjectDescription {
      *
      * @return ER_OK is successful
      */
-    QStatus Add(qcc::String const& path, qcc::String const& interfaceName);
+    QStatus Add(const char* path, const char* interfaceName);
 
     /**
      * Mutex that protects the m_AnnounceObjectsMap
