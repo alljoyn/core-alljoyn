@@ -90,6 +90,15 @@ class AboutObj : public BusObject {
      */
     QStatus Announce(SessionPort sessionPort, AboutDataListener& aboutData);
 
+    /**
+     * Cancel the last announce signal sent. If no signals have been sent this
+     * method call will return.
+     *
+     * @return
+     *     - ER_OK on success
+     *     - annother status indicating failure.
+     */
+    QStatus CancelAnnouncement();
   private:
     /**
      * Handles  GetAboutData method
@@ -121,6 +130,7 @@ class AboutObj : public BusObject {
 
     MsgArg m_objectDescription;
     AboutDataListener* m_aboutDataListener;
+    uint32_t m_announceSerialNumber;
 };
 }
 #endif

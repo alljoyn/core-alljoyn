@@ -258,7 +258,8 @@ TEST_F(AboutObjTest, AnnounceTheAboutObj) {
     clientBus.RegisterAboutListener(aboutListener, "org.alljoyn.About");
 
     AboutObj aboutObj(*serviceBus, BusObject::ANNOUNCED);
-    aboutObj.Announce(port, aboutData);
+    status = aboutObj.Announce(port, aboutData);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     for (uint32_t msec = 0; msec < 5000; msec += WAIT_TIME) {
         if (aboutListener.announceListenerFlag == true) {
@@ -271,6 +272,44 @@ TEST_F(AboutObjTest, AnnounceTheAboutObj) {
     EXPECT_TRUE(aboutListener.aboutObjectPartOfAnnouncement) << "The org.alljoyn.About interface was not part of the announced object description.";
     EXPECT_STREQ(serviceBus->GetUniqueName().c_str(), aboutListener.busName.c_str());
     EXPECT_EQ(port, aboutListener.port);
+
+    clientBus.Stop();
+    clientBus.Join();
+}
+
+
+TEST_F(AboutObjTest, CancelAnnouncement) {
+    QStatus status = ER_FAIL;
+
+    BusAttachment clientBus("AboutObjTestClient", true);
+
+    status = clientBus.Start();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Connect();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObjTestAboutListener2 aboutListener;
+    clientBus.RegisterAboutListener(aboutListener, "org.alljoyn.About");
+
+    AboutObj aboutObj(*serviceBus, BusObject::ANNOUNCED);
+    status = aboutObj.Announce(port, aboutData);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    for (uint32_t msec = 0; msec < 5000; msec += WAIT_TIME) {
+        if (aboutListener.announceListenerFlag == true) {
+            break;
+        }
+        qcc::Sleep(WAIT_TIME);
+    }
+
+    EXPECT_TRUE(aboutListener.announceListenerFlag) << "The announceListenerFlag must be true to continue this test.";
+    EXPECT_TRUE(aboutListener.aboutObjectPartOfAnnouncement) << "The org.alljoyn.About interface was not part of the announced object description.";
+    EXPECT_STREQ(serviceBus->GetUniqueName().c_str(), aboutListener.busName.c_str());
+    EXPECT_EQ(port, aboutListener.port);
+
+    status = aboutObj.CancelAnnouncement();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     clientBus.Stop();
     clientBus.Join();

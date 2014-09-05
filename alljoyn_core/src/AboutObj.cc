@@ -35,7 +35,8 @@ AboutObj::AboutObj(ajn::BusAttachment& bus, AnnounceFlag isAboutIntfAnnounced) :
     BusObject(org::alljoyn::About::ObjectPath),
     m_busAttachment(&bus),
     m_objectDescription(),
-    m_aboutDataListener()
+    m_aboutDataListener(),
+    m_announceSerialNumber(0)
 {
     const InterfaceDescription* aboutIntf = NULL;
 
@@ -93,10 +94,17 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
         QCC_DbgPrintf(("announceArgs[%d]=%s", i, announceArgs[i].ToString().c_str()));
     }
 #endif
-    status = Signal(NULL, 0, *announceSignalMember, announceArgs, 4, (unsigned char) 0, flags);
-
+    status = Signal(NULL, 0, *announceSignalMember, announceArgs, 4, (unsigned char) 0, flags, &msg);
+    m_announceSerialNumber = msg->GetCallSerial();
     QCC_DbgPrintf(("Sent AnnounceSignal from %s  = %s", m_busAttachment->GetUniqueName().c_str(), QCC_StatusText(status)));
     return status;
+}
+
+QStatus AboutObj::CancelAnnouncement() {
+    if (m_announceSerialNumber == 0) {
+        return ER_OK;
+    }
+    return CancelSessionlessMessage(m_announceSerialNumber);
 }
 
 void AboutObj::GetAboutData(const ajn::InterfaceDescription::Member* member, ajn::Message& msg) {
