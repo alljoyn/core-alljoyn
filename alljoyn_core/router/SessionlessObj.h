@@ -362,6 +362,9 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /** Find the remote cache work item with the matching session ID */
     RemoteCaches::iterator FindRemoteCache(SessionId sid);
 
+    /** Erase info associated with the remote cache */
+    void EraseRemoteCache(RemoteCaches::iterator cit);
+
     qcc::Mutex lock;            /**< Mutex that protects this object's data structures */
     uint32_t curChangeId;       /**< Change id assoc with current pushed signal(s) */
     bool isDiscoveryStarted;    /**< True when FindAdvetiseName is ongoing */
@@ -437,7 +440,8 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param[in] fromRulesId Beginning of rules ID range (inclusive)
      * @param[in] toRulesId End of rules ID range (exclusive)
      */
-    void SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId);
+    void SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId,
+                                     bool onlySendIfImplicit = false);
 
     /**
      * A match rule that includes a change ID for recording when it was entered
