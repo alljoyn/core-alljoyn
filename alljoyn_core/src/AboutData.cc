@@ -114,7 +114,7 @@ uint8_t CharToNibble(char c) {
 
     return -1; // Error!
 }
-QStatus AboutData::CreateFromXml(qcc::String aboutDataXml)
+QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
 {
     QStatus status;
     qcc::StringSource source(aboutDataXml);
@@ -298,7 +298,7 @@ QStatus AboutData::CreatefromMsgArg(const MsgArg& arg, const char* language)
         }
         // OEM specific field found add that field to the m_aboutFields
         if (m_aboutFields.find(fieldName) == m_aboutFields.end()) {
-            m_aboutFields[fieldName] = FieldDetails(false, false, true, fieldValue->Signature());
+            m_aboutFields[fieldName] = FieldDetails(false, false, true, fieldValue->Signature().c_str());
         }
         if (fieldValue->Signature() != m_aboutFields[fieldName].signature) {
             return ER_BUS_SIGNATURE_MISMATCH;
@@ -662,7 +662,7 @@ QStatus AboutData::SetField(const char* name, ajn::MsgArg value, const char* lan
     //    not announced
     //    can be localized
     if (m_aboutFields.find(name) == m_aboutFields.end()) {
-        m_aboutFields[name] = FieldDetails(false, false, true, value.Signature());
+        m_aboutFields[name] = FieldDetails(false, false, true, value.Signature().c_str());
     }
     if (m_aboutFields[name].localized) {
         if (language == NULL || strcmp(language, "") == 0) {
@@ -846,7 +846,7 @@ QStatus AboutData::GetMsgArgAnnounce(MsgArg* msgArg)
     return status;
 }
 
-QStatus AboutData::SetNewFieldDetails(qcc::String fieldName, bool isRequired, bool isAnnounced, bool isLocalized, qcc::String signature)
+QStatus AboutData::SetNewFieldDetails(const char* fieldName, bool isRequired, bool isAnnounced, bool isLocalized, const char* signature)
 {
     if (m_aboutFields.find(fieldName) == m_aboutFields.end()) {
         m_aboutFields[fieldName] = FieldDetails(isRequired, isAnnounced, isLocalized, signature);

@@ -101,9 +101,8 @@ class AboutData : public AboutDataListener {
      * @param[in] aboutDataXml a string that contains an XML representation of
      *                         the AboutData fields.
      * @return ER_OK on success
-     * TODO
      */
-    QStatus CreateFromXml(qcc::String aboutDataXml);
+    QStatus CreateFromXml(const qcc::String& aboutDataXml);
 
     /**
      * The AboutData has all of the required fields
@@ -619,7 +618,7 @@ class AboutData : public AboutDataListener {
      *     - #ER_OK on success
      *     - #ER_ABOUT_FIELD_ALREADY_SPECIFIED if that field has already been specified
      */
-    QStatus SetNewFieldDetails(qcc::String fieldName, bool isRequired, bool isAnnounced, bool isLocalized, qcc::String signature);
+    QStatus SetNewFieldDetails(const char* fieldName, bool isRequired, bool isAnnounced, bool isLocalized, const char* signature);
 
     /**
      * Holds information for each AboutData field.
@@ -646,7 +645,7 @@ class AboutData : public AboutDataListener {
          * @param[in] l the value for the localized field
          * @param[in] s the value for the signature field
          */
-        FieldDetails(bool r, bool a, bool l, qcc::String s) : required(r), announced(a), localized(l), signature(s) { }
+        FieldDetails(bool r, bool a, bool l, const char* s) : required(r), announced(a), localized(l), signature(s) { }
         /**
          * This is a boolean field if this is `true` then the field is required
          * for the AboutData to be a Valid.
