@@ -308,13 +308,15 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
 
         uint32_t fromRulesId = nextRulesId;
         bool isNewRule = true;
+        uint32_t ruleId = nextRulesId;
         for (std::pair<RuleIterator, RuleIterator> range = rules.equal_range(epName); range.first != range.second; ++range.first) {
             if (range.first->second == rule) {
                 isNewRule = false;
+                ruleId = range.first->second.id;
                 break;
             }
         }
-        rules.insert(std::pair<String, TimestampedRule>(epName, TimestampedRule(rule, nextRulesId)));
+        rules.insert(std::pair<String, TimestampedRule>(epName, TimestampedRule(rule, ruleId)));
         if (isNewRule) {
             ++nextRulesId;
         }
@@ -339,9 +341,8 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
 
 void SessionlessObj::RemoveRule(const qcc::String& epName, Rule& rule)
 {
-    QCC_DbgTrace(("SessionlessObj::RemoveRule(%s, ...)", epName.c_str()));
-
     if (rule.sessionless == Rule::SESSIONLESS_TRUE) {
+        QCC_DbgPrintf(("RemoveRule(epName=%s,rule=%s)", epName.c_str(), rule.ToString().c_str()));
         router.LockNameTable();
         lock.Lock();
 
@@ -352,6 +353,19 @@ void SessionlessObj::RemoveRule(const qcc::String& epName, Rule& rule)
                 break;
             }
             ++range.first;
+        }
+
+        /* If this is the last explicit rule from epName, remove any associated implicit rules */
+        bool eraseImplicitRules = true;
+        range = rules.equal_range(epName);
+        for (RuleIterator rit = range.first; rit != range.second; ++rit) {
+            if (Rule::SESSIONLESS_NOT_SPECIFIED != rit->second.sessionless) {
+                eraseImplicitRules = false;
+                break;
+            }
+        }
+        if (eraseImplicitRules) {
+            rules.erase(range.first, range.second);
         }
 
         if (rules.empty()) {
@@ -373,9 +387,16 @@ QStatus SessionlessObj::PushMessage(Message& msg)
         return ER_FAIL;
     }
 
-    /* Put the message in the local cache and kick the worker */
-    SessionlessMessageKey key(msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath());
+    router.LockNameTable();
     lock.Lock();
+
+    /* Match the message against any existing implicit rules */
+    uint32_t fromRulesId = nextRulesId - (numeric_limits<uint32_t>::max() >> 1);
+    uint32_t toRulesId = nextRulesId;
+    SendMatchingThroughEndpoint(0, msg, fromRulesId, toRulesId, true);
+
+    /* Put the message in the local cache */
+    SessionlessMessageKey key(msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath());
     advanceChangeId = true;
     SessionlessMessage val(curChangeId, msg);
     LocalCache::iterator it = localCache.find(key);
@@ -384,12 +405,29 @@ QStatus SessionlessObj::PushMessage(Message& msg)
     } else {
         it->second = val;
     }
+
     lock.Unlock();
+    router.UnlockNameTable();
+
+    /* Kick the worker */
     uint32_t zero = 0;
     SessionlessObj* slObj = this;
     QStatus status = timer.AddAlarm(Alarm(zero, slObj));
+    if (ER_OK != status) {
+        /*
+         * When daemon is closing the daemon will receive multiple error
+         * because the timer is exiting.  print a high level debug message
+         * not a log error since this is expected behaver and should not
+         * be presented to the user if they don't want to see it.
+         */
+        if (ER_TIMER_EXITING == status) {
+            QCC_DbgHLPrintf(("Timer::AddAlarm failed : %s", QCC_StatusText(status)));
+        } else {
+            QCC_LogError(status, ("Timer::AddAlarm failed"));
+        }
+    }
 
-    return status;
+    return ER_OK;
 }
 
 bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
@@ -425,7 +463,8 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
     return true;
 }
 
-void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId)
+void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId,
+                                                 bool onlySendIfImplicit)
 {
     uint32_t rulesRangeLen = toRulesId - fromRulesId;
     RuleIterator rit = rules.begin();
@@ -436,6 +475,32 @@ void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uin
         if (IN_WINDOW(uint32_t, fromRulesId, rulesRangeLen, rit->second.id) && ep->IsValid() && ep->AllowRemoteMessages()) {
             if (rit->second.IsMatch(msg)) {
                 isMatch = true;
+                if (rit->second.iface == "org.alljoyn.About" && rit->second.member == "Announce" && !rit->second.implements.empty()) {
+                    /*
+                     * Add an 'implicit' rule so that we will receive Announce
+                     * signals if the interface of interest is removed from the
+                     * Announce signal.
+                     *
+                     * Implicit match rules do not have the sessionless value
+                     * specified, we use that information later to detect when
+                     * we can remove the rule.
+                     *
+                     * The same rule ID as the implements match rule is used
+                     * here to avoid triggering a refetch.
+                     */
+                    String ruleStr = String("sender='") + msg->GetSender() + "',interface='org.alljoyn.About',member='Announce'";
+                    Rule rule(ruleStr.c_str());
+                    bool isNewRule = true;
+                    for (std::pair<RuleIterator, RuleIterator> range = rules.equal_range(epName); range.first != range.second; ++range.first) {
+                        if (range.first->second == rule) {
+                            isNewRule = false;
+                            break;
+                        }
+                    }
+                    if (isNewRule) {
+                        rules.insert(std::pair<String, TimestampedRule>(epName, TimestampedRule(rule, rit->second.id)));
+                    }
+                }
             } else if (rit->second == legacyRule) {
                 /*
                  * Legacy clients will add the "type='error',sessionless='t'"
@@ -453,9 +518,24 @@ void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uin
             }
         }
         if (isMatch) {
+            /* If we only match this implicit rule, it is safe to remove */
+            bool isImplicit = (Rule::SESSIONLESS_NOT_SPECIFIED == rit->second.sessionless);
+            if (isImplicit) {
+                RuleIterator next = rules.upper_bound(epName);
+                for (RuleIterator it = rit; it != next; ++it) {
+                    if ((Rule::SESSIONLESS_NOT_SPECIFIED != it->second.sessionless) && it->second.IsMatch(msg)) {
+                        isImplicit = false;
+                    }
+                }
+                if (isImplicit) {
+                    rules.erase(rit);
+                }
+            }
             lock.Unlock();
             router.UnlockNameTable();
-            SendThroughEndpoint(msg, ep, sid);
+            if (!onlySendIfImplicit || isImplicit) {
+                SendThroughEndpoint(msg, ep, sid);
+            }
             router.LockNameTable();
             lock.Lock();
             rit = rules.upper_bound(epName);
@@ -655,7 +735,7 @@ void SessionlessObj::DoSessionLost(SessionId sid, SessionLostReason reason)
             /* An error occurred while getting the signals, so retry */
             if (ScheduleWork(cache) != ER_OK) {
                 /* Retries exhausted. Clear state and wait for new advertisment */
-                remoteCaches.erase(cit);
+                EraseRemoteCache(cit);
             }
         }
     }
@@ -883,7 +963,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                 } else {
                     QCC_LogError(ER_FAIL, ("Exhausted JoinSession retries to %s", cache.guid.c_str()));
                     String guid = cache.guid;
-                    remoteCaches.erase(cit);
+                    EraseRemoteCache(cit);
                     cit = remoteCaches.upper_bound(guid);
                 }
             } else {
@@ -953,7 +1033,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
 
             if (ScheduleWork(cache) != ER_OK) {
                 /* Retries exhausted. Clear state and wait for new advertisment */
-                remoteCaches.erase(cit);
+                EraseRemoteCache(cit);
             }
         }
         lock.Unlock();
@@ -987,7 +1067,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
 
                     if (ScheduleWork(cache) != ER_OK) {
                         /* Retries exhausted. Clear state and wait for new advertisment */
-                        remoteCaches.erase(cit);
+                        EraseRemoteCache(cit);
                     }
                 }
                 lock.Unlock();
@@ -1247,7 +1327,7 @@ void SessionlessObj::ScheduleWork(bool doInitialBackoff)
         String guid = cache.guid;
         if (PendingWork(cache) && ScheduleWork(cache, true, doInitialBackoff) != ER_OK) {
             /* Retries exhausted. Clear state and wait for new advertisment */
-            remoteCaches.erase(cit);
+            EraseRemoteCache(cit);
             cit = remoteCaches.upper_bound(guid);
         } else {
             ++cit;
@@ -1541,6 +1621,25 @@ QStatus SessionlessObj::CancelFindAdvertisementByTransport(const char* matching,
         QCC_LogError(status, ("%s.CancelFindAdvertisement returned ERROR_MESSAGE (error=%s)", org::alljoyn::Bus::InterfaceName, reply->GetErrorDescription().c_str()));
     }
     return status;
+}
+
+void SessionlessObj::EraseRemoteCache(RemoteCaches::iterator cit)
+{
+    /* Remove any implicit rules that match this GUID */
+    String guid = cit->second.guid;
+    RuleIterator next = rules.begin();
+    while (next != rules.end()) {
+        RuleIterator rit = next;
+        ++next;
+        if ((Rule::SESSIONLESS_NOT_SPECIFIED == rit->second.sessionless) && !rit->second.sender.empty()) {
+            String sender = rit->second.sender;
+            if (sender.substr(1, sender.find_last_of('.') - 1) == guid) {
+                rules.erase(rit);
+            }
+        }
+    }
+
+    remoteCaches.erase(cit);
 }
 
 }
