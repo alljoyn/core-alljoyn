@@ -691,6 +691,11 @@ void BusAttachment::WaitStopInternal()
 
 QStatus BusAttachment::CreateInterface(const char* name, InterfaceDescription*& iface, InterfaceSecurityPolicy secPolicy)
 {
+    if (!IsLegalInterfaceName(name)) {
+        iface = NULL;
+        return ER_BAD_ARG_1;
+    }
+
     if (NULL != GetInterface(name)) {
         iface = NULL;
         return ER_BUS_IFACE_ALREADY_EXISTS;
