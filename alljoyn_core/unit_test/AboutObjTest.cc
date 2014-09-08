@@ -183,7 +183,10 @@ TEST_F(AboutObjTest, Announce) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutObjTestAboutListener aboutListener;
-    clientBus.RegisterAboutListener(aboutListener, ifaceName.c_str());
+    clientBus.RegisterAboutListener(aboutListener);
+
+    status = clientBus.WhoImplements(ifaceName.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutObj aboutObj(*serviceBus);
     aboutObj.Announce(port, aboutData);
@@ -255,7 +258,10 @@ TEST_F(AboutObjTest, AnnounceTheAboutObj) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutObjTestAboutListener2 aboutListener;
-    clientBus.RegisterAboutListener(aboutListener, "org.alljoyn.About");
+    clientBus.RegisterAboutListener(aboutListener);
+
+    status = clientBus.WhoImplements("org.alljoyn.About");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutObj aboutObj(*serviceBus, BusObject::ANNOUNCED);
     status = aboutObj.Announce(port, aboutData);
@@ -290,7 +296,10 @@ TEST_F(AboutObjTest, CancelAnnouncement) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutObjTestAboutListener2 aboutListener;
-    clientBus.RegisterAboutListener(aboutListener, "org.alljoyn.About");
+    clientBus.RegisterAboutListener(aboutListener);
+
+    status = clientBus.WhoImplements("org.alljoyn.About");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutObj aboutObj(*serviceBus, BusObject::ANNOUNCED);
     status = aboutObj.Announce(port, aboutData);

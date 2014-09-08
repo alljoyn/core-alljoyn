@@ -37,7 +37,6 @@
 #include <alljoyn/InterfaceDescription.h>
 
 #include "AuthManager.h"
-#include "AboutListenerInternal.h"
 #include "ClientRouter.h"
 #include "KeyStore.h"
 #include "PeerState.h"
@@ -323,6 +322,12 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
 
     qcc::Mutex sessionListenersLock;       /* Lock protecting sessionListners maps */
 
+    typedef qcc::ManagedObj<AboutListener*> ProtectedAboutListener;
+    typedef std::set<ProtectedAboutListener> AboutListenerSet;
+    AboutListenerSet aboutListeners; /* About Signals are recieved out of Sessions so a set is all that is needed */
+
+    qcc::Mutex aboutListenersLock;   /* Lock protecting the aboutListeners set */
+
     struct JoinContext {
         QStatus status;
         SessionId sessionId;
@@ -332,7 +337,6 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     std::map<qcc::Thread*, JoinContext> joinThreads;  /* List of threads waiting to join */
     qcc::Mutex joinLock;                              /* Mutex that protects joinThreads */
     KeyStoreKeyEventListener ksKeyEventListener;
-    AboutListenerInternal internalAboutListener;              /* Listener to handle the About Announced signal */
 };
 }
 

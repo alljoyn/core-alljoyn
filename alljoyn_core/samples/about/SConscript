@@ -18,7 +18,7 @@ clientDistDir = '$CPP_DISTDIR/samples/about'
 # Sample Programs
 progs = [
     env.Program('AboutService',  ['AboutService.cc']),
-    env.Program('AboutClient',   ['AboutClient.cc']),
+    env.Program('AboutClient',   ['AboutClient.cc'])
     ]
 
 if env['OS'] in ['linux', 'darwin']:

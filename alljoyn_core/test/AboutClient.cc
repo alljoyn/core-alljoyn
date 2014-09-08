@@ -109,15 +109,14 @@ int main(int argc, char** argv)
     }
 
     MyAboutListener aboutListener;
+    bus.RegisterAboutListener(aboutListener);
 
     const char* interfaces[] = { "org.alljoyn.test" };
-
-    status = bus.RegisterAboutListener(aboutListener, interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
-
+    status = bus.WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
     if (ER_OK == status) {
-        printf("AboutListener registered.\n");
+        printf("WhoImplements called.\n");
     } else {
-        printf("FAILED to registered the AboutListener (%s)\n", QCC_StatusText(status));
+        printf("WhoImplements call FAILED with status %s\n", QCC_StatusText(status));
         exit(1);
     }
     /* Perform the service asynchronously until the user signals for an exit. */

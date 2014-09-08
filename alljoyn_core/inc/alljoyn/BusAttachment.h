@@ -1263,34 +1263,61 @@ class BusAttachment : public MessageReceiver {
     /**
      * Registers a handler to receive the org.alljoyn.about Announce signal.
      *
-     * The handler is only called if all the interfaces are implemented.
-     * For example, if the handler should be called if both "com.example.Audio"
-     * <em>and</em> "com.example.Video" are implemented then call
+     * The handler is only called if a call to WhoImplements has been has been
+     * called.
+     *
+     * Important the AboutListener should be registered before calling WhoImplments
+     *
+     * @param[in] aboutListener reference to AboutListener
+     */
+    void RegisterAboutListener(AboutListener& aboutListener);
+
+    /**
+     * Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
+     *
+     * @param[in] aboutListener reference to AboutListener to unregister
+     */
+    void UnregisterAboutListener(AboutListener& aboutListener);
+
+    /**
+     * Unregisters all AboutListeners from receiving any org.alljoyn.about Announce signal
+     */
+    void UnregisterAllAboutListeners();
+
+    /**
+     * List the interfaces your application is interested in.  If a remote device
+     * is announcing that interface then the all Registered AnnounceListeners will
+     * be called.
+     *
+     * For example, if you need both "com.example.Audio" <em>and</em>
+     * "com.example.Video" interfaces then do the following.
      * RegisterAboutListener once:
      * @code
      * const char* interfaces[] = {"com.example.Audio", "com.example.Video"};
-     * RegisterAboutListener(aboutListener, interfaces,
-     *                       sizeof(interfaces) / sizeof(interfaces[0]));
+     * RegisterAboutListener(aboutListener);
+     * WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
      * @endcode
      *
      * If the handler should be called if "com.example.Audio" <em>or</em>
-     * "com.example.Video" is implemented then call
+     * "com.example.Video" interfaces are implemented then call
      * RegisterAboutListener multiple times:
      * @code
+     *
+     * RegisterAboutListener(aboutListener);
      * const char* audioInterface[] = {"com.example.Audio"};
-     * RegisterAboutListener(aboutListener, audioInterface,
-     *                       sizeof(audioInterface) / sizeof(audioInterface[0]));
+     * WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+     * WhoImplements(audioInterface, sizeof(audioInterface) / sizeof(audioInterface[0]));
      * const char* videoInterface[] = {"com.example.Video"};
-     * RegisterAboutListener(aboutListener, videoInterface,
-     *                       sizeof(videoInterface) / sizeof(videoInterface[0]));
+     * WhoImplements(videoInterface, sizeof(videoInterface) / sizeof(videoInterface[0]));
      * @endcode
      *
      * The interface name may be a prefix followed by a *.  Using
-     * this, the example above could be written as:
+     * this, the example where we are interested in "com.example.Audio" <em>or</em>
+     * "com.example.Video" interfaces could be written as:
      * @code
      * const char* exampleInterface[] = {"com.example.*"};
-     * RegisterAboutListener(aboutListener, exampleInterface,
-     *                       sizeof(exampleInterface) / sizeof(exampleInterface[0]));
+     * RegisterAboutListener(aboutListener);
+     * WhoImplements(exampleInterface, sizeof(exampleInterface) / sizeof(exampleInterface[0]));
      * @endcode
      *
      * The AboutListener will receive any announcement that implements an interface
@@ -1304,7 +1331,39 @@ class BusAttachment : public MessageReceiver {
      * significant impact on network performance and should be avoided unless
      * its known that all announcements are needed.
      *
-     * @param[in] aboutListener reference to AboutListener
+     * @param[in] implementsInterfaces a list of interfaces that the Announce
+     *               signal reports as implemented. NULL to receive all Announce
+     *               signals regardless of interfaces
+     * @param[in] numberInterfaces the number of interfaces in the
+     *               implementsInterfaces list
+     * @return status
+     */
+    QStatus WhoImplements(const char** implementsInterfaces, size_t numberInterfaces);
+
+    /**
+     * List an interface your application is interested in.  If a remote device
+     * is announcing that interface then the all Registered AnnounceListeners will
+     * be called.
+     *
+     * This is identical to WhoImplements(const char**, size_t)
+     * except this is specialized for a single interface not several interfaces.
+     *
+     * @see WhoImplements(const char**, size_t)
+     * @param[in] interface     interface that the remove user must implement to
+     *                          receive the announce signal.
+     *
+     * @return
+     *    - #ER_OK on success
+     *    - An error status otherwise
+     */
+    QStatus WhoImplements(const char* interface);
+    /**
+     * Stop showing interest in the listed interfaces. Stop recieving announce
+     * signals from the devices with the listed interfaces.
+     *
+     * Note if WhoImplements has been called multiple times the announce signal
+     * will still be received for any interfaces that still remain.
+     *
      * @param[in] implementsInterfaces a list of interfaces that the Announce
      *               signal reports as implemented. NULL to receive all Announce
      *               signals regardless of interfaces
@@ -1314,16 +1373,16 @@ class BusAttachment : public MessageReceiver {
      *    - #ER_OK on success
      *    - An error status otherwise
      */
-    QStatus RegisterAboutListener(AboutListener& aboutListener, const char** implementsInterfaces, size_t numberInterfaces);
+    QStatus CancelWhoImplements(const char** implementsInterfaces, size_t numberInterfaces);
 
     /**
-     * Registers a listener to receive the org.alljoyn.about Announce signal.
+     * Stop showing interest in the listed interfaces. Stop recieving announce
+     * signals from the devices with the listed interfaces.
      *
-     * This is identical to RegisterAboutListener(AboutListener&, const char**, size_t)
+     * This is identical to CancelWhoImplements(const char**, size_t)
      * except this is specialized for a single interface not several interfaces.
      *
-     * @see RegisterAboutListener(AboutListener&, const char**, size_t)
-     * @param[in] aboutListener reference to an AboutListener.
+     * @see CancelWhoImplements(const char**, size_t)
      * @param[in] interface     interface that the remove user must implement to
      *                          receive the announce signal.
      *
@@ -1331,36 +1390,7 @@ class BusAttachment : public MessageReceiver {
      *    - #ER_OK on success
      *    - An error status otherwise
      */
-    QStatus RegisterAboutListener(AboutListener& aboutListener, const char* interface);
-
-    /**
-     * Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
-     *
-     * @param[in] aboutListener reference to AboutListener to unregister
-     * @param[in] implementsInterfaces a list of interfaces that was used when
-     *               registering the AboutListener
-     * @param[in] numberInterfaces the number of interfaces in the
-     *               implementsInterfaces list
-     * @return status
-     */
-    QStatus UnregisterAboutListener(AboutListener& aboutListener, const char** implementsInterfaces, size_t numberInterfaces);
-
-    /**
-     * unregister a listener for a single interface
-     *
-     * @see UnregisterAboutListener(AboutListener&, const char**, size_t)
-     * @param[in] aboutListener reference to an AboutListener.
-     * @param[in] interface     interface that the remove user must implement to
-     *                          receive the announce signal.
-     * @return status
-     */
-    QStatus UnregisterAboutListener(AboutListener& aboutListener, const char* interface);
-
-    /**
-     * Unregisters all AboutListeners from receiving any org.alljoyn.about Announce signal
-     * @return status
-     */
-    QStatus UnregisterAllAboutListeners();
+    QStatus CancelWhoImplements(const char* interface);
 
     /// @cond ALLJOYN_DEV
     /**

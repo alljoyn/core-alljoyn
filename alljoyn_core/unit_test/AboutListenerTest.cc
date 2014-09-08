@@ -176,7 +176,9 @@ TEST_F(AboutListenerTest, ReceiverAnnouncement) {
 
     AboutTestAboutListener aboutListener;
 
-    status = clientBus.RegisterAboutListener(aboutListener, ifaceName.c_str());
+    clientBus.RegisterAboutListener(aboutListener);
+
+    status = clientBus.WhoImplements(ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     aboutObj.Announce(port, aboutData);
@@ -191,8 +193,9 @@ TEST_F(AboutListenerTest, ReceiverAnnouncement) {
 
     ASSERT_TRUE(announceListenerFlag);
 
-    status = clientBus.UnregisterAboutListener(aboutListener, ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = clientBus.CancelWhoImplements(ifaceName.c_str());
+
+    clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -237,7 +240,9 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementRegisterThenAddInterface)
 
     AboutTestAboutListener aboutListener;
 
-    status = clientBus.RegisterAboutListener(aboutListener, ifaceName.c_str());
+    clientBus.RegisterAboutListener(aboutListener);
+
+    status = clientBus.WhoImplements(ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutObj aboutObj(*serviceBus);
@@ -253,8 +258,10 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementRegisterThenAddInterface)
 
     ASSERT_TRUE(announceListenerFlag);
 
-    status = clientBus.UnregisterAboutListener(aboutListener, ifaceName.c_str());
+    status = clientBus.CancelWhoImplements(ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -295,7 +302,9 @@ TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
 
     AboutTestAboutListener aboutListener;
 
-    status = clientBus.RegisterAboutListener(aboutListener, ifaceName.c_str());
+    clientBus.RegisterAboutListener(aboutListener);
+
+    status = clientBus.WhoImplements(ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     aboutObj.Announce(port, aboutData);
@@ -322,8 +331,10 @@ TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
         qcc::Sleep(WAIT_TIME);
     }
 
-    status = clientBus.UnregisterAboutListener(aboutListener, ifaceName.c_str());
+    status = clientBus.CancelWhoImplements(ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -390,12 +401,13 @@ TEST_F(AboutListenerTest, MultipleAnnounceListeners) {
 
     AboutTestAboutListener1 aboutListener1;
 
-    status = clientBus.RegisterAboutListener(aboutListener1, ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    clientBus.RegisterAboutListener(aboutListener1);
 
     AboutTestAboutListener2 aboutListener2;
 
-    status = clientBus.RegisterAboutListener(aboutListener2, ifaceName.c_str());
+    clientBus.RegisterAboutListener(aboutListener2);
+
+    status = clientBus.WhoImplements(ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     aboutObj.Announce(port, aboutData);
@@ -419,11 +431,11 @@ TEST_F(AboutListenerTest, MultipleAnnounceListeners) {
     ASSERT_TRUE(announceListenerFlag1);
     ASSERT_TRUE(announceListenerFlag2);
 
-    status = clientBus.UnregisterAboutListener(aboutListener1, ifaceName.c_str());
+    status = clientBus.CancelWhoImplements(ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = clientBus.UnregisterAboutListener(aboutListener2, ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    clientBus.UnregisterAboutListener(aboutListener1);
+    clientBus.UnregisterAboutListener(aboutListener2);
 
     status = clientBus.Stop();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -463,13 +475,12 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutTestAboutListener1 aboutListener1;
-
-    status = clientBus.RegisterAboutListener(aboutListener1, ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    clientBus.RegisterAboutListener(aboutListener1);
 
     AboutTestAboutListener2 aboutListener2;
+    clientBus.RegisterAboutListener(aboutListener2);
 
-    status = clientBus.RegisterAboutListener(aboutListener2, ifaceName.c_str());
+    status = clientBus.WhoImplements(ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     aboutObj.Announce(port, aboutData);
@@ -496,8 +507,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
     announceListenerFlag1 = false;
     announceListenerFlag2 = false;
 
-    status = clientBus.UnregisterAboutListener(aboutListener1, ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    clientBus.UnregisterAboutListener(aboutListener1);
 
     aboutObj.Announce(port, aboutData);
 
@@ -512,8 +522,9 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
     ASSERT_FALSE(announceListenerFlag1);
     ASSERT_TRUE(announceListenerFlag2);
 
-    status = clientBus.UnregisterAboutListener(aboutListener2, ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    clientBus.CancelWhoImplements(ifaceName.c_str());
+
+    clientBus.UnregisterAboutListener(aboutListener2);
 
     status = clientBus.Stop();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -555,18 +566,15 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutTestAboutListener1 aboutListener1;
-
-    status = clientBus.RegisterAboutListener(aboutListener1, ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    clientBus.RegisterAboutListener(aboutListener1);
 
     AboutTestAboutListener2 aboutListener2;
-
-    status = clientBus.RegisterAboutListener(aboutListener2, ifaceName.c_str());
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    clientBus.RegisterAboutListener(aboutListener2);
 
     AboutTestAboutListener3 aboutListener3;
+    clientBus.RegisterAboutListener(aboutListener3);
 
-    status = clientBus.RegisterAboutListener(aboutListener3, ifaceName.c_str());
+    status = clientBus.WhoImplements(ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     aboutObj.Announce(port, aboutData);
@@ -599,13 +607,18 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
     ASSERT_TRUE(announceListenerFlag2);
     ASSERT_TRUE(announceListenerFlag3);
 
-    status = clientBus.UnregisterAllAboutListeners();
+    status = clientBus.CancelWhoImplements(ifaceName.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    clientBus.UnregisterAllAboutListeners();
 
     announceListenerFlag1 = false;
     announceListenerFlag2 = false;
     announceListenerFlag3 = false;
 
-    status = clientBus.RegisterAboutListener(aboutListener2, ifaceName.c_str());
+    clientBus.RegisterAboutListener(aboutListener2);
+
+    status = clientBus.WhoImplements(ifaceName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     //Wait for a maximum of 5 sec for the second Announce Signal.
@@ -620,8 +633,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
     ASSERT_TRUE(announceListenerFlag2);
     ASSERT_FALSE(announceListenerFlag3);
 
-    status = clientBus.UnregisterAllAboutListeners();
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    clientBus.UnregisterAllAboutListeners();
 
     status = clientBus.Stop();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -706,7 +718,9 @@ TEST_F(AboutListenerTest, MatchMultipleInterfaces) {
     ifaces[1] = ifaceNames[1].c_str();
     ifaces[2] = ifaceNames[2].c_str();
 
-    status = clientBus.RegisterAboutListener(aboutListener, ifaces, 3);
+    clientBus.RegisterAboutListener(aboutListener);
+
+    status = clientBus.WhoImplements(ifaces, 3);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     aboutObj.Announce(port, aboutData);
@@ -721,8 +735,10 @@ TEST_F(AboutListenerTest, MatchMultipleInterfaces) {
 
     ASSERT_TRUE(announceListenerFlag);
 
-    status = clientBus.UnregisterAboutListener(aboutListener, ifaces, 3);
+    status = clientBus.CancelWhoImplements(ifaces, 3);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -793,7 +809,9 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesSubSet) {
     const char* ifacesSubSet[2];
     ifacesSubSet[0] = ifaceNames[1].c_str();
     ifacesSubSet[1] = ifaceNames[2].c_str();
-    status = clientBus.RegisterAboutListener(aboutListener, ifacesSubSet, 2);
+    clientBus.RegisterAboutListener(aboutListener);
+
+    status = clientBus.WhoImplements(ifacesSubSet, 2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     aboutObj.Announce(port, aboutData);
@@ -808,8 +826,10 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesSubSet) {
 
     ASSERT_TRUE(announceListenerFlag);
 
-    status = clientBus.UnregisterAboutListener(aboutListener, ifacesSubSet, 2);
+    status = clientBus.CancelWhoImplements(ifacesSubSet, 2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -885,7 +905,9 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesRegisterInDifferentOrder) {
     ifaceslist[4] = ifaceNames[1].c_str();
     ifaceslist[5] = ifaceNames[4].c_str();
 
-    status = clientBus.RegisterAboutListener(aboutListener, ifaceslist, 6);
+    clientBus.RegisterAboutListener(aboutListener);
+
+    status = clientBus.WhoImplements(ifaceslist, 6);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     aboutObj.Announce(port, aboutData);
@@ -900,8 +922,10 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesRegisterInDifferentOrder) {
 
     ASSERT_TRUE(announceListenerFlag);
 
-    status = clientBus.UnregisterAboutListener(aboutListener, ifaceslist, 6);
+    status = clientBus.CancelWhoImplements(ifaceslist, 6);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -963,7 +987,9 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching) {
     AboutTestWildCardAboutListener aboutListener;
 
     qcc::String wildCard = "org.test.a" + guid.ToString() + ".*";
-    status = clientBus.RegisterAboutListener(aboutListener, wildCard.c_str());
+    clientBus.RegisterAboutListener(aboutListener);
+
+    status = clientBus.WhoImplements(wildCard.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     aboutObj.Announce(port, aboutData);
@@ -976,10 +1002,12 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching) {
         qcc::Sleep(WAIT_TIME);
     }
 
-    ASSERT_EQ(1, aboutListener.announceListenerCount);;
+    ASSERT_EQ(1, aboutListener.announceListenerCount);
 
-    status = clientBus.UnregisterAboutListener(aboutListener, wildCard.c_str());
+    status = clientBus.CancelWhoImplements(wildCard.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -1033,9 +1061,10 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching2) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutTestWildCardAboutListener aboutListener;
+    clientBus.RegisterAboutListener(aboutListener);
 
     qcc::String wildCard = "org.test.a" + guid.ToString() + ".*.AnnounceHandlerTest";
-    status = clientBus.RegisterAboutListener(aboutListener, wildCard.c_str());
+    status = clientBus.WhoImplements(wildCard.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     aboutObj.Announce(port, aboutData);
@@ -1048,10 +1077,12 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching2) {
         qcc::Sleep(WAIT_TIME);
     }
 
-    ASSERT_EQ(1, aboutListener.announceListenerCount);;
+    ASSERT_EQ(1, aboutListener.announceListenerCount);
 
-    status = clientBus.UnregisterAboutListener(aboutListener, wildCard.c_str());
+    status = clientBus.CancelWhoImplements(wildCard.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -1101,13 +1132,14 @@ TEST_F(AboutListenerTest, MultipleWildCardInterfaceMatching) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutTestWildCardAboutListener aboutListener;
+    clientBus.RegisterAboutListener(aboutListener);
 
     qcc::String wildCard = "org.test.a" + guid.ToString() + ".*";
     qcc::String wildCard2 = "org.test.foo.a" + guid.ToString() + ".*";
     const char* interfacelist[2];
     interfacelist[0] = wildCard.c_str();
     interfacelist[1] = wildCard2.c_str();
-    status = clientBus.RegisterAboutListener(aboutListener, interfacelist, 2);
+    status = clientBus.WhoImplements(interfacelist, 2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     aboutObj.Announce(port, aboutData);
@@ -1122,8 +1154,10 @@ TEST_F(AboutListenerTest, MultipleWildCardInterfaceMatching) {
 
     ASSERT_EQ(1, aboutListener.announceListenerCount);;
 
-    status = clientBus.UnregisterAboutListener(aboutListener, interfacelist, 2);
+    status = clientBus.CancelWhoImplements(interfacelist, 2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -1173,12 +1207,13 @@ TEST_F(AboutListenerTest, MixedWildCardNonWildCardInterfaceMatching) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutTestWildCardAboutListener aboutListener;
+    clientBus.RegisterAboutListener(aboutListener);
 
     qcc::String wildCard = "org.test.foo.a" + guid.ToString() + ".*";
     const char* interfacelist[2];
     interfacelist[0] = ifaceNames[0].c_str();
     interfacelist[1] = wildCard.c_str();
-    status = clientBus.RegisterAboutListener(aboutListener, interfacelist, 2);
+    status = clientBus.WhoImplements(interfacelist, 2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     aboutObj.Announce(port, aboutData);
@@ -1193,8 +1228,10 @@ TEST_F(AboutListenerTest, MixedWildCardNonWildCardInterfaceMatching) {
 
     ASSERT_EQ(1, aboutListener.announceListenerCount);;
 
-    status = clientBus.UnregisterAboutListener(aboutListener, interfacelist, 2);
+    status = clientBus.CancelWhoImplements(interfacelist, 2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -1266,8 +1303,9 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutTestRemoveObjectDescriptionAboutListener aboutListener;
+    clientBus.RegisterAboutListener(aboutListener);
 
-    status = clientBus.RegisterAboutListener(aboutListener, ifaceNames[0].c_str());
+    status = clientBus.WhoImplements(ifaceNames[0].c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = aboutObj.Announce(port, aboutData);
@@ -1298,8 +1336,10 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
 
     EXPECT_EQ(2, aboutListener.announceListenerCount);
 
-    status = clientBus.UnregisterAboutListener(aboutListener, ifaceNames[0].c_str());
+    status = clientBus.CancelWhoImplements(ifaceNames[0].c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    clientBus.UnregisterAboutListener(aboutListener);
 
     status = clientBus.Stop();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);

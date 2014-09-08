@@ -39,7 +39,6 @@
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/InterfaceDescription.h>
-#include "AboutListenerInternal.h"
 #include "AuthMechanism.h"
 #include "AuthMechAnonymous.h"
 #include "AuthMechDBusCookieSHA1.h"
@@ -131,8 +130,7 @@ BusAttachment::Internal::Internal(const char* appName,
     allowRemoteMessages(allowRemoteMessages),
     listenAddresses(listenAddresses ? listenAddresses : ""),
     stopLock(),
-    stopCount(0),
-    internalAboutListener(bus)
+    stopCount(0)
 {
     /*
      * Bus needs a pointer to this internal object.
@@ -494,6 +492,16 @@ QStatus BusAttachment::Connect(const char* connectSpec)
                                                iface->GetMember("PropertiesChanged"),
                                                NULL);
             }
+            const InterfaceDescription* aboutIface = GetInterface(org::alljoyn::About::InterfaceName);
+            if (ER_OK == status) {
+                assert(aboutIface);
+                const ajn::InterfaceDescription::Member* announceSignalMember = aboutIface->GetMember("Announce");
+                assert(announceSignalMember);
+                status = RegisterSignalHandler(busInternal,
+                                               static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                               announceSignalMember,
+                                               NULL);
+            }
             if (ER_OK == status) {
                 Message reply(*this);
                 MsgArg arg("s", "type='signal',interface='org.alljoyn.Bus'");
@@ -581,6 +589,15 @@ QStatus BusAttachment::Disconnect(const char* connectSpec)
                 UnregisterSignalHandler(busInternal,
                                         static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
                                         dbusIface->GetMember("PropertiesChanged"),
+                                        NULL);
+            }
+            const InterfaceDescription* aboutIface = GetInterface(org::alljoyn::About::InterfaceName);
+            if (aboutIface) {
+                const ajn::InterfaceDescription::Member* announceSignalMember = aboutIface->GetMember("Announce");
+                assert(announceSignalMember);
+                UnregisterSignalHandler(busInternal,
+                                        static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                        announceSignalMember,
                                         NULL);
             }
         }
@@ -1921,7 +1938,26 @@ void BusAttachment::Internal::AllJoynSignalHandler(const InterfaceDescription::M
     msg->GetArgs(numArgs, args);
 
     if (msg->GetType() == MESSAGE_SIGNAL) {
-        if (0 == strcmp("FoundAdvertisedName", msg->GetMemberName())) {
+        if (0 == strcmp("Announce", msg->GetMemberName())) {
+            if (numArgs == 4) {
+#if !defined(NDEBUG)
+                for (int i = 0; i < 4; i++) {
+                    QCC_DbgPrintf(("args[%d]=%s", i, args[i].ToString().c_str()));
+                }
+#endif
+                /* Call aboutListener */
+                aboutListenersLock.Lock(MUTEX_CONTEXT);
+                AboutListenerSet::iterator it = aboutListeners.begin();
+                while (it != aboutListeners.end()) {
+                    ProtectedAboutListener listener = *it;
+                    aboutListenersLock.Unlock(MUTEX_CONTEXT);
+                    (*listener)->Announced(msg->GetSender(), args[0].v_uint16, static_cast<SessionPort>(args[1].v_uint16), args[2], args[3]);
+                    aboutListenersLock.Lock(MUTEX_CONTEXT);
+                    it = aboutListeners.upper_bound(listener);
+                }
+                aboutListenersLock.Unlock(MUTEX_CONTEXT);
+            }
+        } else if (0 == strcmp("FoundAdvertisedName", msg->GetMemberName())) {
             listenersLock.Lock(MUTEX_CONTEXT);
             ListenerSet::iterator it = listeners.begin();
             while (it != listeners.end()) {
@@ -2040,38 +2076,118 @@ uint32_t BusAttachment::GetTimestamp()
     return qcc::GetTimestamp();
 }
 
-QStatus BusAttachment::RegisterAboutListener(AboutListener& aboutListener, const char** implementsInterfaces, size_t numberInterfaces)
+void BusAttachment::RegisterAboutListener(AboutListener& aboutListener)
 {
-    // Add the user handler to the internal AnnounceHandler.
-    return busInternal->internalAboutListener.AddHandler(aboutListener, implementsInterfaces, numberInterfaces);
+    busInternal->aboutListenersLock.Lock(MUTEX_CONTEXT);
+    AboutListener* pListener = &aboutListener;
+    Internal::ProtectedAboutListener protectedListener(pListener);
+    busInternal->aboutListeners.insert(pListener);
+    busInternal->aboutListenersLock.Unlock(MUTEX_CONTEXT);
 }
 
-QStatus BusAttachment::RegisterAboutListener(AboutListener& aboutListener, const char* interface)
+void BusAttachment::UnregisterAboutListener(AboutListener& aboutListener)
+{
+    busInternal->aboutListenersLock.Lock(MUTEX_CONTEXT);
+
+    /* Look for listener on ListenerSet */
+    Internal::AboutListenerSet::iterator it = busInternal->aboutListeners.begin();
+    while (it != busInternal->aboutListeners.end()) {
+        if (**it == &aboutListener) {
+            break;
+        }
+        ++it;
+    }
+
+    /* Wait for all refs to ProtectedBusListener to exit */
+    while ((it != busInternal->aboutListeners.end()) && (it->GetRefCount() > 1)) {
+        Internal::ProtectedAboutListener l = *it;
+        busInternal->aboutListenersLock.Unlock(MUTEX_CONTEXT);
+        qcc::Sleep(5);
+        busInternal->aboutListenersLock.Lock(MUTEX_CONTEXT);
+        it = busInternal->aboutListeners.find(l);
+    }
+
+    /* Delete the listeners entry and call user's callback (unlocked) */
+    if (it != busInternal->aboutListeners.end()) {
+        Internal::ProtectedAboutListener l = *it;
+        busInternal->aboutListeners.erase(it);
+    }
+    busInternal->aboutListenersLock.Unlock(MUTEX_CONTEXT);
+}
+
+void BusAttachment::UnregisterAllAboutListeners()
+{
+    busInternal->aboutListenersLock.Lock(MUTEX_CONTEXT);
+
+    /* Look for listener on ListenerSet */
+    Internal::AboutListenerSet::iterator it = busInternal->aboutListeners.begin();
+    while (it != busInternal->aboutListeners.end()) {
+        /* Wait for all refs to ProtectedBusListener to exit */
+        while ((it != busInternal->aboutListeners.end()) && (it->GetRefCount() > 1)) {
+            Internal::ProtectedAboutListener l = *it;
+            busInternal->aboutListenersLock.Unlock(MUTEX_CONTEXT);
+            qcc::Sleep(5);
+            busInternal->aboutListenersLock.Lock(MUTEX_CONTEXT);
+            it = busInternal->aboutListeners.find(l);
+        }
+
+        /* Delete the listeners entry and call user's callback (unlocked) */
+        if (it != busInternal->aboutListeners.end()) {
+            Internal::ProtectedAboutListener l = *it;
+            busInternal->aboutListeners.erase(it);
+        }
+        it = busInternal->aboutListeners.begin();
+    }
+    busInternal->aboutListenersLock.Unlock(MUTEX_CONTEXT);
+}
+
+QStatus BusAttachment::WhoImplements(const char** implementsInterfaces, size_t numberInterfaces)
+{
+    std::set<qcc::String> interfaces;
+    for (size_t i = 0; i < numberInterfaces; ++i) {
+        interfaces.insert(implementsInterfaces[i]);
+    }
+
+    qcc::String matchRule = "type='signal',interface='org.alljoyn.About',member='Announce',sessionless='t'";
+    for (std::set<qcc::String>::iterator it = interfaces.begin(); it != interfaces.end(); ++it) {
+        matchRule += qcc::String(",implements='") + *it + qcc::String("'");
+    }
+
+    QCC_DbgTrace(("Calling AddMatch(\"%s\")", matchRule.c_str()));
+    return AddMatch(matchRule.c_str());
+}
+
+QStatus BusAttachment::WhoImplements(const char* interface)
 {
     if (interface == NULL) {
-        return ER_BAD_ARG_2;
+        return ER_BAD_ARG_1;
     }
-    const char** interfacePtr = &interface;
-    return busInternal->internalAboutListener.AddHandler(aboutListener, interfacePtr, 1);
+    const char** tmp = &interface;
+    return WhoImplements(tmp, size_t(1));
 }
-
-QStatus BusAttachment::UnregisterAboutListener(AboutListener& aboutListener, const char** implementsInterfaces, size_t numberInterfaces)
+QStatus BusAttachment::CancelWhoImplements(const char** implementsInterfaces, size_t numberInterfaces)
 {
-    return busInternal->internalAboutListener.RemoveHandler(aboutListener, implementsInterfaces, numberInterfaces);
+    std::set<qcc::String> interfaces;
+    for (size_t i = 0; i < numberInterfaces; ++i) {
+        interfaces.insert(implementsInterfaces[i]);
+    }
+
+    qcc::String matchRule = "type='signal',interface='org.alljoyn.About',member='Announce',sessionless='t'";
+    for (std::set<qcc::String>::iterator it = interfaces.begin(); it != interfaces.end(); ++it) {
+        matchRule += qcc::String(",implements='") + *it + qcc::String("'");
+    }
+
+    QCC_DbgTrace(("Calling AddMatch(\"%s\")", matchRule.c_str()));
+    return RemoveMatch(matchRule.c_str());
 }
 
-QStatus BusAttachment::UnregisterAboutListener(AboutListener& aboutListener, const char* interface)
+QStatus BusAttachment::CancelWhoImplements(const char* interface)
 {
     if (interface == NULL) {
-        return ER_BAD_ARG_2;
+        return ER_BAD_ARG_1;
     }
-    const char** interfacePtr = &interface;
-    return busInternal->internalAboutListener.RemoveHandler(aboutListener, interfacePtr, 1);
-}
-
-QStatus BusAttachment::UnregisterAllAboutListeners()
-{
-    return busInternal->internalAboutListener.RemoveAllHandlers();
+    const char** tmp = &interface;
+    return CancelWhoImplements(tmp, 1);
 }
 
 QStatus BusAttachment::Internal::GetAnnouncedObjectDescription(MsgArg& objectDescriptionArg) {
@@ -2159,7 +2275,6 @@ QStatus BusAttachment::Internal::SetSessionListener(SessionId id, SessionListene
     sessionListenersLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
-
 
 QStatus BusAttachment::GetPeerGUID(const char* name, qcc::String& guid)
 {
