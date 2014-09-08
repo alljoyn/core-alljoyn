@@ -415,12 +415,10 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
                 if ((evlist[n].filter & EVFILT_READ) && ((evt->eventType == IO_READ) || (evt->eventType == GEN_PURPOSE))) {
                     if (((0 <= evt->fd) && evlist[n].ident == evt->fd) || ((0 <= evt->ioFd)  && evlist[n].ident == evt->ioFd)) {
                         signaledEvents.push_back(evt);
-                        break;
                     }
                 } else if ((evlist[n].filter & EVFILT_WRITE) && (evt->eventType == IO_WRITE)) {
                     if (((0 <= evt->fd) && evlist[n].ident == evt->fd) || ((0 <= evt->ioFd) && evlist[n].ident == evt->ioFd)) {
                         signaledEvents.push_back(evt);
-                        break;
                     }
                 }
             }
@@ -460,7 +458,7 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
         pTval = &tval;
     }
 
-    vector<Event*>::const_iterator it;
+    vector<Event*>::const_iterator it, jit;
     uint32_t size = checkEvents.empty() ? 1 : checkEvents.size();
 
 #if defined(QCC_OS_LINUX)
@@ -481,6 +479,13 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
         if ((evt->eventType == IO_READ) || (evt->eventType == GEN_PURPOSE)) {
             if (0 <= evt->fd) {
                 ev.events = EPOLLIN;
+                for (jit = checkEvents.begin(); jit != checkEvents.end(); ++jit) {
+                    Event* event = *jit;
+                    if ((event->fd == evt->fd || event->ioFd == evt->fd) && event->eventType == IO_WRITE) {
+                        ev.events |= EPOLLOUT;
+                        break;
+                    }
+                }
                 ev.data.fd = evt->fd;
                 if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt->fd, &ev) == -1) {
                     if (errno == EEXIST) {
@@ -493,6 +498,13 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
                 }
             } else if (0 <= evt->ioFd) {
                 ev.events = EPOLLIN;
+                for (jit = checkEvents.begin(); jit != checkEvents.end(); ++jit) {
+                    Event* event = *jit;
+                    if ((event->fd == evt->ioFd || event->ioFd == evt->ioFd) && event->eventType == IO_WRITE) {
+                        ev.events |= EPOLLOUT;
+                        break;
+                    }
+                }
                 ev.data.fd = evt->ioFd;
                 if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt->ioFd, &ev) == -1) {
                     if (errno == EEXIST) {
@@ -507,6 +519,13 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
         } else if (evt->eventType == IO_WRITE) {
             if (0 <= evt->fd) {
                 ev.events = EPOLLOUT;
+                for (jit = checkEvents.begin(); jit != checkEvents.end(); ++jit) {
+                    Event* event = *jit;
+                    if ((event->fd == evt->fd || event->ioFd == evt->fd) && ((event->eventType == IO_READ) || (event->eventType == GEN_PURPOSE))) {
+                        ev.events |= EPOLLIN;
+                        break;
+                    }
+                }
                 ev.data.fd = evt->fd;
                 if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt->fd, &ev) == -1) {
                     if (errno == EEXIST) {
@@ -519,6 +538,13 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
                 }
             } else if (0 <= evt->ioFd) {
                 ev.events = EPOLLOUT;
+                for (jit = checkEvents.begin(); jit != checkEvents.end(); ++jit) {
+                    Event* event = *jit;
+                    if ((event->fd == evt->ioFd || event->ioFd == evt->ioFd) && ((event->eventType == IO_READ) || (event->eventType == GEN_PURPOSE))) {
+                        ev.events |= EPOLLIN;
+                        break;
+                    }
+                }
                 ev.data.fd = evt->ioFd;
                 if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt->ioFd, &ev) == -1) {
                     if (errno == EEXIST) {
@@ -574,12 +600,10 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
                 if ((events[n].events & EPOLLIN) && ((evt->eventType == IO_READ) || (evt->eventType == GEN_PURPOSE))) {
                     if (((0 <= evt->fd) && events[n].data.fd == evt->fd) || ((0 <= evt->ioFd)  && events[n].data.fd == evt->ioFd)) {
                         signaledEvents.push_back(evt);
-                        break;
                     }
                 } else if ((events[n].events & EPOLLOUT) && (evt->eventType == IO_WRITE)) {
                     if (((0 <= evt->fd) && events[n].data.fd == evt->fd) || ((0 <= evt->ioFd) && events[n].data.fd == evt->ioFd)) {
                         signaledEvents.push_back(evt);
-                        break;
                     }
                 }
             }
