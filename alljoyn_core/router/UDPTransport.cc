@@ -4245,7 +4245,15 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     uint32_t currAuth = IncrementAndFetch(&m_currAuth);
     uint32_t currConn = IncrementAndFetch(&m_currConn);
 
-    if (currAuth > m_maxAuth || currAuth + currConn > m_maxConn + 1) {
+    /*
+     * If the number of currently authenticating connections is greater than the
+     * limit on authenticating connections, we can't accommodate this request.
+     * We have already bumped the current number of connections which will
+     * reflect the number of connections if this authentication is carried out.
+     * If this number is greater than the limit on complete connections we can't
+     * accommodate this request.
+     */
+    if (currAuth > m_maxAuth || currConn > m_maxConn) {
         QCC_LogError(ER_BUS_CONNECTION_REJECTED, ("UDPTransport::AcceptCb(): No slot for new connection"));
         DecrementAndFetch(&m_currAuth);
         DecrementAndFetch(&m_currConn);
@@ -6580,12 +6588,57 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         return status;
     }
 
+    /*
+     * We've done the basic homework to see if this is a reasonable request.
+     * Now we need to make sure that we have the resources to allow the connect
+     * to succeed.  Specifically, we need to check to see if the connection
+     * limits will be violated if we proceed.
+     */
+
+    uint32_t currAuth = IncrementAndFetch(&m_currAuth);
+    uint32_t currConn = IncrementAndFetch(&m_currConn);
+
+    /*
+     * If the number of currently authenticating connections is greater than the
+     * limit on authenticating connections, we can't accommodate this request.
+     * We have already bumped the current number of connections which will
+     * reflect the number of connections if this authentication is carried out.
+     * If this number is greater than the limit on complete connections we can't
+     * accommodate this request.
+     */
+    if (currAuth > m_maxAuth || currConn > m_maxConn) {
+        status = ER_BUS_CONNECTION_REJECTED;;
+        QCC_LogError(status, ("UDPTransport::Connect(): No slot for new connection"));
+        DecrementAndFetch(&m_currAuth);
+        DecrementAndFetch(&m_currConn);
+        DecrementAndFetch(&m_refCount);
+        return status;
+    }
+
+    /*
+     * The connection is not actually complete yet and there is no corresponding
+     * endpoint on the the endpoint list so we can't claim it as existing yet.
+     * The DoConnectCb() method will bump m_currConn when it actually puts the
+     * endpoint on the endpoint list.
+     *
+     * We do consider the not yet existing endpoint as existing since we need a
+     * placeholder for it, though.  In this UDP Transport the placeholder is an
+     * additional count in m_currAuth (the count of currently authenticating
+     * connections).  There is no actual authentication going on, just a hello
+     * exchange, but we borrow the concept since it fits almost exactly (it is a
+     * transient condition leading up to a complete connection).  We just have
+     * to be careful about the accounting and make sure to decrement the auth
+     * count when the endpoint becomes up.
+     */
+    DecrementAndFetch(&m_currConn);
+
     QCC_DbgPrintf(("UDPTransport::Connect(): Compose BusHello"));
     Message hello(m_bus);
     status = hello->HelloMessage(true, m_bus.GetInternal().AllowRemoteMessages(), opts.nameTransfer);
     if (status != ER_OK) {
         status = ER_UDP_BUSHELLO;
         QCC_LogError(status, ("UDPTransport::Connect(): Can't make a BusHello Message"));
+        DecrementAndFetch(&m_currAuth);
         DecrementAndFetch(&m_refCount);
         return status;
     }
@@ -6651,6 +6704,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         QCC_LogError(status, ("UDPTransport::Connect(): ARDP_Connect() failed"));
         m_ardpLock.Unlock();
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
+        DecrementAndFetch(&m_currAuth);
         DecrementAndFetch(&m_refCount);
         return status;
     }
@@ -6725,6 +6779,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::Connect(): Event::Wait() failed"));
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
+        DecrementAndFetch(&m_currAuth);
         DecrementAndFetch(&m_refCount);
         return status;
     }
@@ -6757,6 +6812,18 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         }
     }
 
+    /*
+     * No matter if the connection succeeded or not, we are no longer trying to
+     * make the connecton and m_currAuth needs to be decremented.  If the
+     * connection succeeded, m_currConn will have been bumped by DoConnectCb()
+     * and the endpoint will be registered, so decrementing m_currAuth will mean
+     * an authenticating endpoint has turned into an existing (current)
+     * endpoint.  If the connection failed, m_currConn will not have been
+     * incremented and decrementing m_currAuth will mean that the connection
+     * failed altoghether (neither m_currAuth nor m_currConn will have been
+     * bumped as a result of this call).
+     */
+    DecrementAndFetch(&m_currAuth);
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
     DecrementAndFetch(&m_refCount);
     return status;
