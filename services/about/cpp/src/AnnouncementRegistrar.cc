@@ -122,7 +122,9 @@ QStatus AnnouncementRegistrar::UnRegisterAnnounceHandler(ajn::BusAttachment& bus
             status = bus.UnregisterSignalHandler(internalAnnounceHandler, static_cast<MessageReceiver::SignalHandler>(&InternalAnnounceHandler::AnnounceSignalHandler),
                                                  internalAnnounceHandler->announceSignalMember, NULL);
             if (status != ER_OK) {
-                return status;
+                // if we fail to unregister the announce signal handler log the error
+                // but continue to delete the internalAnnounceHandler.
+                QCC_LogError(status, ("Failed to unregister the announce signal handler"));
             }
             QCC_DbgPrintf(("AnnouncementRegistrar::%s Internal signalHandler is empty. Free memory.", __FUNCTION__));
             delete internalAnnounceHandler;
@@ -131,7 +133,7 @@ QStatus AnnouncementRegistrar::UnRegisterAnnounceHandler(ajn::BusAttachment& bus
     }
 
     QCC_DbgPrintf(("AnnouncementRegistrar::%s result %s", __FUNCTION__, QCC_StatusText(status)));
-    return status;
+    return ER_OK;
 }
 
 QStatus AnnouncementRegistrar::UnRegisterAnnounceHandler(ajn::BusAttachment& bus, AnnounceHandler& handler) {
@@ -147,14 +149,13 @@ QStatus AnnouncementRegistrar::UnRegisterAllAnnounceHandlers(ajn::BusAttachment&
     QStatus status = bus.UnregisterSignalHandler(internalAnnounceHandler, static_cast<MessageReceiver::SignalHandler>(&InternalAnnounceHandler::AnnounceSignalHandler),
                                                  internalAnnounceHandler->announceSignalMember, NULL);
     if (status != ER_OK) {
-        return status;
+        // if we fail to unregister the announce signal handler log the error
+        // but continue to delete the internalAnnounceHandler.
+        QCC_LogError(status, ("Failed to unregister the announce signal handler"));
     }
-    status = internalAnnounceHandler->RemoveAllHandlers();
-    if (status != ER_OK) {
-        return status;
-    }
+    internalAnnounceHandler->RemoveAllHandlers();
     delete internalAnnounceHandler;
     internalAnnounceHandler = NULL;
     QCC_DbgPrintf(("AnnouncementRegistrar::%s Unregistered All Announce Handlers", __FUNCTION__));
-    return status;
+    return ER_OK;
 }
