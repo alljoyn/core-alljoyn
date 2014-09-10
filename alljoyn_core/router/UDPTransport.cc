@@ -4254,7 +4254,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
      * accommodate this request.
      */
     if (currAuth > m_maxAuth || currConn > m_maxConn) {
-        QCC_LogError(ER_BUS_CONNECTION_REJECTED, ("UDPTransport::AcceptCb(): No slot for new connection"));
+        QCC_LogError(ER_CONNECTION_LIMIT_EXCEEDED, ("UDPTransport::AcceptCb(): No slot for new connection"));
         DecrementAndFetch(&m_currAuth);
         DecrementAndFetch(&m_currConn);
         DecrementAndFetch(&m_refCount);
@@ -6607,7 +6607,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * accommodate this request.
      */
     if (currAuth > m_maxAuth || currConn > m_maxConn) {
-        status = ER_BUS_CONNECTION_REJECTED;;
+        status = ER_CONNECTION_LIMIT_EXCEEDED;
         QCC_LogError(status, ("UDPTransport::Connect(): No slot for new connection"));
         DecrementAndFetch(&m_currAuth);
         DecrementAndFetch(&m_currConn);

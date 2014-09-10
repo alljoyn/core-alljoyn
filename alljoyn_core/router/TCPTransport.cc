@@ -1715,7 +1715,7 @@ void* TCPTransport::Run(void* arg)
                     qcc::SetLinger(newSock, true, 0);
                     qcc::Shutdown(newSock);
                     qcc::Close(newSock);
-                    status = ER_AUTH_FAIL;
+                    status = ER_CONNECTION_LIMIT_EXCEEDED;
                     QCC_LogError(status, ("TCPTransport::Run(): No slot for new connection"));
                 }
             }
@@ -2896,7 +2896,7 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
             m_authList.insert(tcpEp);
             status = ER_OK;
         } else {
-            status = ER_AUTH_FAIL;
+            status = ER_CONNECTION_LIMIT_EXCEEDED;
             QCC_LogError(status, ("TCPTransport::Connect(): No slot for new connection"));
         }
         m_endpointListLock.Unlock();
