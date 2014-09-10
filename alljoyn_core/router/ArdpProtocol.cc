@@ -444,15 +444,15 @@ static uint32_t CheckConnTimers(ArdpHandle* handle, ArdpConnRecord* conn, uint32
         return next;
     }
 
-    /* Check probe timer */
-    if (conn->probeTimer.retry != 0 && conn->probeTimer.when <= now) {
+    /* Check probe timer, it's always turned on */
+    if (conn->probeTimer.when <= now) {
         QCC_DbgPrintf(("CheckConnTimers: Fire probe( %p ) timer %p at %u (now=%u)",
                        conn, conn->probeTimer, conn->probeTimer.when, now));
-        (conn->probeTimer.handler)(handle, conn, conn->probeTimer.context);
+        (conn->probeTimer.handler)(handle, conn, &now);
         conn->probeTimer.when = now + conn->probeTimer.delta;
     }
 
-    if (conn->probeTimer.when < next && conn->probeTimer.retry != 0) {
+    if (conn->probeTimer.when < next) {
         /* Update "call-me-next-ms" value */
         next = conn->probeTimer.when;
     }
@@ -1051,29 +1051,25 @@ static void PersistTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* 
 static void ProbeTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
 {
     ArdpTimer* timer = &conn->probeTimer;
-    uint32_t now = TimeNow(handle->tbase);
+    uint32_t now = *((uint32_t* ) context);
     uint32_t elapsed = now - conn->lastSeen;
-    uint32_t delta = MAX(GetRTO(handle, conn), handle->config.linkTimeout / handle->config.keepaliveRetries);
-    /* Connection timeout */
-    uint32_t linkTimeout = delta * handle->config.linkTimeout / handle->config.keepaliveRetries;
 
-    /*
-     * Relevant only if there are no pending retransmissions.
-     * We will disconnect on retransmission attempts if we hit the limit there.
-     */
-    if (IsEmpty(&conn->dataTimers)) {
-        QCC_DbgTrace(("ProbeTimerHandler: handle=%p conn=%p context=%p delta %u now %u lastSeen = %u elapsed %u",
-                      handle, conn, context, timer->delta, now, conn->lastSeen, elapsed));
-        if (elapsed >= linkTimeout) {
-            QCC_DbgHLPrintf(("ProbeTimerHandler: Probe Timeout: now =%u, lastSeen = %u, elapsed=%u(vs limit of %u)", now, conn->lastSeen, elapsed, linkTimeout));
+    QCC_DbgHLPrintf(("ProbeTimerHandler: handle=%p conn=%p delta %u now %u lastSeen = %u elapsed %u",
+                     handle, conn, timer->delta, now, conn->lastSeen, elapsed));
+
+    if (elapsed < timer->delta) {
+        timer->retry = handle->config.keepaliveRetries;
+    } else {
+        if (timer->retry == 0) {
+            QCC_DbgHLPrintf(("ProbeTimerHandler: Probe Timeout: now =%u, lastSeen = %u, (limit of %u)", now, conn->lastSeen, handle->config.linkTimeout));
             Disconnect(handle, conn, ER_ARDP_PROBE_TIMEOUT);
-        } else if (elapsed >= (handle->config.linkTimeout / handle->config.keepaliveRetries)) {
-            QCC_DbgPrintf(("ProbeTimerHandler: send ping (NUL packet)"));
+        } else {
+            QCC_DbgHLPrintf(("ProbeTimerHandler: send ping (NUL packet)"));
+            timer->retry--;
 #if ARDP_STATS
             ++handle->stats.nulSends;
 #endif
             Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER | ARDP_FLAG_NUL, conn->snd.NXT, conn->rcv.CUR);
-            timer->delta = delta;
         }
     }
 }
@@ -2331,7 +2327,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
                         /* Initialize and kick off link timeout timer */
                         conn->lastSeen = TimeNow(handle->tbase);
-                        InitTimer(handle, conn, &conn->probeTimer, ProbeTimerHandler, NULL,
+                        InitTimer(handle, conn, &conn->probeTimer, ProbeTimerHandler, &conn->lastSeen,
                                   handle->config.linkTimeout / handle->config.keepaliveRetries, handle->config.keepaliveRetries);
 
                         /* Initialize persist (dead window) timer */
@@ -2443,7 +2439,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
                     /* Initialize and kick off link timeout timer */
                     conn->lastSeen = TimeNow(handle->tbase);
-                    InitTimer(handle, conn, &conn->probeTimer, ProbeTimerHandler, NULL,
+                    InitTimer(handle, conn, &conn->probeTimer, ProbeTimerHandler, &conn->lastSeen,
                               handle->config.linkTimeout / handle->config.keepaliveRetries,
                               handle->config.keepaliveRetries);
 
@@ -2875,7 +2871,7 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool socketReady, uint3
     }
 
     *ms = handle->msnext;
-    //QCC_DbgTrace(("ARDP_Run %u", *ms));
+    //QCC_DbgPrintf(("ARDP_Run %u", *ms));
 
     return status;
 }
