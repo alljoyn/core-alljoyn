@@ -2547,18 +2547,23 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
             if (seg->FLG & ARDP_FLAG_ACK) {
                 QCC_DbgPrintf(("ArdpMachine(): OPEN: Got ACK %u LCS %u Window %u", seg->ACK, seg->LCS, seg->WINDOW));
+                bool needUpdate = false;
+
                 if ((IN_RANGE(uint32_t, conn->snd.UNA, ((conn->snd.NXT - conn->snd.UNA) + 1), seg->ACK) == true) ||
                     (conn->snd.LCS != seg->LCS)) {
                     conn->snd.UNA = seg->ACK + 1;
+                    needUpdate = true;
+                }
 
-                    if (seg->FLG & ARDP_FLAG_EACK) {
-                        /*
-                         * Flush the segments using EACK
-                         */
-                        QCC_DbgPrintf(("ArdpMachine(): OPEN: EACK is set"));
-                        CancelEackedSegments(handle, conn, (uint32_t* ) (buf + ARDP_FIXED_HEADER_LEN));
-                    }
+                if (seg->FLG & ARDP_FLAG_EACK) {
+                    /*
+                     * Flush the segments using EACK
+                     */
+                    QCC_DbgPrintf(("ArdpMachine(): OPEN: EACK is set"));
+                    CancelEackedSegments(handle, conn, (uint32_t* ) (buf + ARDP_FIXED_HEADER_LEN));
+                }
 
+                if (needUpdate) {
                     UpdateSndSegments(handle, conn, seg->ACK, seg->LCS);
                 }
             }
