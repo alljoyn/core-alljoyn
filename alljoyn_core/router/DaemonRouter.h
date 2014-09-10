@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -318,6 +318,16 @@ class DaemonRouter : public Router {
     }
 
     /**
+     * Update propagation info of names associated with a virtual endpoint.
+     *
+     * @param uniqueName  UniqueName of virtual endpoint whose propagation info is to be updated.
+     */
+    void UpdateVirtualAliases(const qcc::String& uniqueName)
+    {
+        nameTable.UpdateVirtualAliases(uniqueName);
+    }
+
+    /**
      * Add a session route.
      *
      * @param  id          Session Id.
@@ -330,16 +340,6 @@ class DaemonRouter : public Router {
      */
     QStatus AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp,
                             RemoteEndpoint& destB2bEp, SessionOpts* optsHint = NULL);
-
-    /**
-     * Remove a (single) session route.
-     *
-     * @param  id      Session Id.
-     * @param  srcEp   BusEndpoint of route source.
-     * @param  destEp  BusEndpoint of route destination.
-     * @return  ER_OK if successful.
-     */
-    QStatus RemoveSessionRoute(SessionId id, BusEndpoint& srcEp, BusEndpoint& destEp);
 
     /**
      * Remove existing session routes.

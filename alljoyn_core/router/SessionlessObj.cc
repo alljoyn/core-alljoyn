@@ -499,10 +499,15 @@ QStatus SessionlessObj::CancelMessage(const qcc::String& sender, uint32_t serial
 }
 
 void SessionlessObj::NameOwnerChanged(const String& name,
-                                      const String* oldOwner,
-                                      const String* newOwner)
+                                      const String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
+                                      const String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer)
 {
     QCC_DbgTrace(("SessionlessObj::NameOwnerChanged(%s, %s, %s)", name.c_str(), oldOwner ? oldOwner->c_str() : "(null)", newOwner ? newOwner->c_str() : "(null)"));
+
+    /* When newOwner and oldOwner are the same, only the name transfer changed. */
+    if (newOwner == oldOwner) {
+        return;
+    }
 
     /* Remove entries from rules for names exiting from the bus */
     if (oldOwner && !newOwner) {
