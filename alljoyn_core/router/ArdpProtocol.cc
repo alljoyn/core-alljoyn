@@ -1200,6 +1200,12 @@ void* ARDP_GetHandleContext(ArdpHandle* handle)
     return handle->context;
 }
 
+bool ARDP_IsConnValid(ArdpHandle* handle, ArdpConnRecord* conn)
+{
+    QCC_DbgTrace(("ARDP_IsConnValid(handle=%p, conn=%p)", handle, conn));
+    return IsConnValid(handle, conn);
+}
+
 QStatus ARDP_SetConnContext(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
 {
     QCC_DbgTrace(("ARDP_SetConnContext(handle=%p, conn=%p, context=%p)", handle, conn, context));

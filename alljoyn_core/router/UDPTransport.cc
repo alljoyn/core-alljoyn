@@ -1993,7 +1993,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     void CreateStream(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t dataTimeout, uint32_t dataRetries)
     {
         IncrementAndFetch(&m_refCount);
-        QCC_DbgHLPrintf(("_UDPEndpoint::CreateStream(handle=0x%0, conn=%p)", handle, conn));
+        QCC_DbgHLPrintf(("_UDPEndpoint::CreateStream(handle=%p, conn=%p)", handle, conn));
 
         m_transport->m_ardpLock.Lock();
         assert(m_stream == NULL && "_UDPEndpoint::CreateStream(): stream already exists");
@@ -2135,10 +2135,24 @@ class _UDPEndpoint : public _RemoteEndpoint {
     }
 
     /**
-     * Callback (indirectly) from the ARDP implementation letting us know that
-     * our connection has been disconnected for some reason.
+     * Callback letting us know that our connection has been disconnected for
+     * some reason.
+     *
+     * For deadlock avoidance purposes, this callback always comes from the
+     * transport dispatcher thread.
+     *
+     * It is important to realize that this callback is not called in the
+     * context of the ARDP thread, it is dispatched from that callback on
+     * another thread.  Therefore it is possible that during the dispatch time,
+     * the connection may have beome invalid.  In order to remove ourselves from
+     * this possibility, we plumb through the connection ID that was given to us
+     * in the original callback.  Since the dispatcher used that ID to look us
+     * up via our saved connection ID they should be the same and we can treat
+     * this as a unique identifier for the purposes of aligning, looking up and
+     * releasing resources even if the underlying connection that corresponded
+     * to this ID may have dropped out from under us.
      */
-    void DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status)
+    void DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId, QStatus status)
     {
         IncrementAndFetch(&m_refCount);
         QCC_DbgHLPrintf(("_UDPEndpoint::DisconnectCb(handle=%p, conn=%p)", handle, conn));
@@ -2162,6 +2176,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         for (set<UDPEndpoint>::iterator i = m_transport->m_endpointList.begin(); i != m_transport->m_endpointList.end(); ++i) {
             UDPEndpoint ep = *i;
             if (GetConnId() == ep->GetConnId()) {
+                assert(connId == GetConnId() && "_UDPEndpoint::DisconnectCb(): Inconsistent connId");
                 QCC_DbgPrintf(("_UDPEndpoint::DisconnectCb(): found endpoint with conn ID == %d. on m_endpointList", GetConnId()));
                 ++found;
             }
@@ -2246,10 +2261,21 @@ class _UDPEndpoint : public _RemoteEndpoint {
      * Callback letting us know that we received data over our connection.  We
      * are passed responsibility for the buffer in this callback.
      *
-     * for deadlock avoidance purposes, this callback always comes from the
+     * For deadlock avoidance purposes, this callback always comes from the
      * transport dispatcher thread.
+     *
+     * It is important to realize that this callback is not called in the
+     * context of the ARDP thread, it is dispatched from that callback on
+     * another thread.  Therefore it is possible that during the dispatch time,
+     * the connection may have beome invalid.  In order to remove ourselves from
+     * this possibility, we plumb through the connection ID that was given to us
+     * in the original callback.  Since the dispatcher used that ID to look us
+     * up via our saved connection ID they should be the same and we can treat
+     * this as a unique identifier for the purposes of aligning, looking up and
+     * releasing resources even if the underlying connection that corresponded
+     * to this ID may have dropped out from under us.
      */
-    void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status)
+    void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId, ArdpRcvBuf* rcv, QStatus status)
     {
         IncrementAndFetch(&m_refCount);
         QCC_DbgHLPrintf(("_UDPEndpoint::RecvCb(handle=%p, conn=%p, rcv=%p, status=%s)",
@@ -2280,6 +2306,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         for (set<UDPEndpoint>::iterator i = m_transport->m_endpointList.begin(); i != m_transport->m_endpointList.end(); ++i) {
             UDPEndpoint ep = *i;
             if (GetConnId() == ep->GetConnId()) {
+                assert(connId == GetConnId() && "_UDPEndpoint::RecvCb(): Inconsistent connId");
                 QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): found endpoint with conn ID == %d. on m_endpointList", GetConnId()));
                 ++found;
             }
@@ -2292,7 +2319,38 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
             QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady()"));
             m_transport->m_ardpLock.Lock();
+
+            /*
+             * We got a receive callback that includes data destined for an
+             * endpoint that is no longer accepting messages.  Most likely it is
+             * shutting down.  The details of shutting down the endpoint and
+             * discussing those details with ARDP is handled elsewhere, so all
+             * we need to do is to return the buffer that we are ingoring.
+             *
+             * We're in a receive callback, but the callback function is
+             * dispatched on another thread that is unrelated to the thread on
+             * which the original ARDP callback was fired.  This is important
+             * since if we are in the ARDP callback thread the conn is
+             * guaranteed to be valid since the function is beign called from
+             * ARDP.  In a thread that may be dispatched later this is no longer
+             * the case.  The conn may have been torn down between the time the
+             * original callback was fired and when the dipatcher has actually
+             * run.  If this is the case, we can only trust that ARDP has done
+             * the right thing and cleaned up its buffers.  ARDP owns the
+             * disposition of the buffers and we did our best -- we called back.
+             * If an error is returned, pretty much all we can do is just log or
+             * print an error message.  Since we aren't in charge at all, we
+             * just print a message if in debug mode.
+             */
+#ifndef NDEBUG
+            QStatus alternateStatus =
+#endif
             ARDP_RecvReady(handle, conn, rcv);
+#ifndef NDEBUG
+            if (alternateStatus != ER_OK) {
+                QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady() returns status==\"%s\"", QCC_StatusText(status)));
+            }
+#endif
             m_transport->m_ardpLock.Unlock();
 
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
@@ -2305,10 +2363,15 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
             QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady()"));
             m_transport->m_ardpLock.Lock();
+            /*
+             * We got a bogus fragment count and so we will assert this is a
+             * bogus condition below.  Don't bother printing an error if ARDP
+             * also doesn't take the bogus buffers back.
+             */
             ARDP_RecvReady(handle, conn, rcv);
             m_transport->m_ardpLock.Unlock();
-
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
+
             DecrementAndFetch(&m_refCount);
             assert(false && "_UDPEndpoint::RecvCb(): unexpected rcv->fcnt");
             return;
@@ -2337,6 +2400,11 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
                     QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady()"));
                     m_transport->m_ardpLock.Lock();
+                    /*
+                     * We got a bogus fragment count and so we will assert this
+                     * is a bogus condition below.  Don't bother printing an
+                     * error if ARDP also doesn't take the bogus buffers back.
+                     */
                     ARDP_RecvReady(handle, conn, rcv);
                     m_transport->m_ardpLock.Unlock();
 
@@ -2411,7 +2479,16 @@ class _UDPEndpoint : public _RemoteEndpoint {
              * back to the protocol now.
              */
             m_transport->m_ardpLock.Lock();
+
+#ifndef NDEBUG
+            QStatus alternateStatus =
+#endif
             ARDP_RecvReady(handle, conn, rcv);
+#ifndef NDEBUG
+            if (alternateStatus != ER_OK) {
+                QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady() returns status==\"%s\"", QCC_StatusText(alternateStatus)));
+            }
+#endif
             m_transport->m_ardpLock.Unlock();
 
             /*
@@ -2461,7 +2538,17 @@ class _UDPEndpoint : public _RemoteEndpoint {
              * back to the protocol now.
              */
             m_transport->m_ardpLock.Lock();
+
+#ifndef NDEBUG
+            QStatus alternateStatus =
+#endif
             ARDP_RecvReady(handle, conn, rcv);
+#ifndef NDEBUG
+            if (alternateStatus != ER_OK) {
+                QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady() returns status==\"%s\"", QCC_StatusText(alternateStatus)));
+            }
+#endif
+
             m_transport->m_ardpLock.Unlock();
 
             /*
@@ -2501,7 +2588,16 @@ class _UDPEndpoint : public _RemoteEndpoint {
          */
         QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady()"));
         m_transport->m_ardpLock.Lock();
+
+#ifndef NDEBUG
+        QStatus alternateStatus =
+#endif
         ARDP_RecvReady(handle, conn, rcv);
+#ifndef NDEBUG
+        if (alternateStatus != ER_OK) {
+            QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady() returns status==\"%s\"", QCC_StatusText(alternateStatus)));
+        }
+#endif
         m_transport->m_ardpLock.Unlock();
 
         /*
@@ -2514,10 +2610,24 @@ class _UDPEndpoint : public _RemoteEndpoint {
     }
 
     /**
-     * Callback from the ARDP implementation letting us know that the remote side
-     * has acknowledged reception of our data and the buffer can be recycled/freed
+     * Callback letting us know that the remote side has acknowledged reception
+     * of our data and the buffer can be recycled/freed
+     *
+     * For deadlock avoidance purposes, this callback always comes from the
+     * transport dispatcher thread.
+     *
+     * It is important to realize that this callback is not called in the
+     * context of the ARDP thread, it is dispatched from that callback on
+     * another thread.  Therefore it is possible that during the dispatch time,
+     * the connection may have beome invalid.  In order to remove ourselves from
+     * this possibility, we plumb through the connection ID that was given to us
+     * in the original callback.  Since the dispatcher used that ID to look us
+     * up via our saved connection ID they should be the same and we can treat
+     * this as a unique identifier for the purposes of aligning, looking up and
+     * releasing resources even if the underlying connection that corresponded
+     * to this ID may have dropped out from under us.
      */
-    void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
+    void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId, uint8_t* buf, uint32_t len, QStatus status)
     {
         IncrementAndFetch(&m_refCount);
         QCC_DbgHLPrintf(("_UDPEndpoint::SendCb(handle=%p, conn=%p, buf=%p, len=%d.)", handle, conn, buf, len));
@@ -2541,6 +2651,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         for (set<UDPEndpoint>::iterator i = m_transport->m_endpointList.begin(); i != m_transport->m_endpointList.end(); ++i) {
             UDPEndpoint ep = *i;
             if (GetConnId() == ep->GetConnId()) {
+                assert(connId == GetConnId() && "_UDPEndpoint::SendCb(): Inconsistent connId");
                 QCC_DbgPrintf(("_UDPEndpoint::SendCb(): found endpoint with conn ID == %d. on m_endpointList", GetConnId()));
                 ++found;
             }
@@ -2615,7 +2726,15 @@ class _UDPEndpoint : public _RemoteEndpoint {
         QCC_DbgTrace(("_UDPEndpoint::SetConn(conn=%p)", conn));
         m_conn = conn;
         m_transport->m_ardpLock.Lock();
-        SetConnId(ARDP_GetConnId(m_handle, conn));
+        uint32_t cid = ARDP_GetConnId(m_handle, conn);
+
+#ifndef NDEBUG
+        if (cid == ARDP_CONN_ID_INVALID) {
+            QCC_DbgPrintf(("_UDPEndpoint::SetConn(conn=%p): conn is invalid!", conn));
+        }
+#endif
+
+        SetConnId(cid);
         m_transport->m_ardpLock.Unlock();
     }
 
@@ -2975,7 +3094,8 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     }
 
     /*
-     * Initialize the hooks to and from the ARDP protocol
+     * Initialize the hooks to and from the ARDP protocol.  Note that
+     * ARDP_AllocHandle is expected to "never fail."
      */
     m_ardpLock.Lock();
     m_handle = ARDP_AllocHandle(&ardpConfig);
@@ -2996,9 +3116,23 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     ARDP_HookRecvFrom(m_handle, ArdpRecvFromHook);
 #endif
 
+    /*
+     * Call into ARDP and ask it to start accepting connections passively.
+     * Since we are running in a constructor, there's not much we can do if it
+     * fails.
+     */
+#ifndef NDEBUG
+    QStatus status =
+#endif
     ARDP_StartPassive(m_handle);
-    m_ardpLock.Unlock();
 
+#ifndef NDEBUG
+    if (status != ER_OK) {
+        QCC_DbgPrintf(("UDPTransport::UDPTransport(): ARDP_StartPassive() returns status==\"%s\"", QCC_StatusText(status)));
+    }
+#endif
+
+    m_ardpLock.Unlock();
 }
 
 /**
@@ -3115,7 +3249,7 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
                      * taken.
                      */
                     QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): CONNECT_CB: DoConnectCb()"));
-                    m_transport->DoConnectCb(entry.m_handle, entry.m_conn, entry.m_passive, entry.m_buf, entry.m_len, entry.m_status);
+                    m_transport->DoConnectCb(entry.m_handle, entry.m_conn, entry.m_connId, entry.m_passive, entry.m_buf, entry.m_len, entry.m_status);
                 } else {
                     bool haveLock = true;
                     m_transport->m_endpointListLock.Lock(MUTEX_CONTEXT);
@@ -3178,21 +3312,21 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
                             case WorkerCommandQueueEntry::SEND_CB:
                                 {
                                     QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): SEND_CB: SendCb()"));
-                                    ep->SendCb(entry.m_handle, entry.m_conn, entry.m_buf, entry.m_len, entry.m_status);
+                                    ep->SendCb(entry.m_handle, entry.m_conn, entry.m_connId, entry.m_buf, entry.m_len, entry.m_status);
                                     break;
                                 }
 
                             case WorkerCommandQueueEntry::RECV_CB:
                                 {
                                     QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): RECV_CB: RecvCb()"));
-                                    ep->RecvCb(entry.m_handle, entry.m_conn, entry.m_rcv, entry.m_status);
+                                    ep->RecvCb(entry.m_handle, entry.m_conn, entry.m_connId, entry.m_rcv, entry.m_status);
                                     break;
                                 }
 
                             case WorkerCommandQueueEntry::DISCONNECT_CB:
                                 {
                                     QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): DISCONNECT_CB: DisconnectCb()"));
-                                    ep->DisconnectCb(entry.m_handle, entry.m_conn, entry.m_status);
+                                    ep->DisconnectCb(entry.m_handle, entry.m_conn, entry.m_connId, entry.m_status);
                                     break;
                                 }
 
@@ -3234,9 +3368,35 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
                         switch (entry.m_command) {
                         case WorkerCommandQueueEntry::RECV_CB:
                             {
+                                /*
+                                 * If we get here, we have a receive callback
+                                 * from ARDP but we don't have an endpoint to
+                                 * route the message to.  This is expected if
+                                 * the endpoint has gone down but there are
+                                 * messages queued up to be delivered to it.
+                                 * Since there's nowhere to send such messages,
+                                 * we just have to drop them.  It is also
+                                 * possible that ARDP has closed down the
+                                 * connection under the sheets, so it may
+                                 * consider the connection invalid.  In that
+                                 * case, we try to give it back, but if ARDP
+                                 * doesn't take it back, we have to assume that
+                                 * it has disposed of the buffers on its own.
+                                 * We'll print a message if we are in debug mode
+                                 * if that happens.
+                                 */
                                 QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): Orphaned RECV_CB: ARDP_RecvReady()"));
                                 m_transport->m_ardpLock.Lock();
+
+#ifndef NDEBUG
+                                QStatus alternateStatus =
+#endif
                                 ARDP_RecvReady(entry.m_handle, entry.m_conn, entry.m_rcv);
+#ifndef NDEBUG
+                                if (alternateStatus != ER_OK) {
+                                    QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): ARDP_RecvReady() returns status==\"%s\"", QCC_StatusText(alternateStatus)));
+                                }
+#endif
                                 m_transport->m_ardpLock.Unlock();
                                 break;
                             }
@@ -3439,7 +3599,16 @@ QStatus UDPTransport::Join(void)
          */
         if (entry.m_command == WorkerCommandQueueEntry::RECV_CB) {
             m_ardpLock.Lock();
+
+#ifndef NDEBUG
+            QStatus alternateStatus =
+#endif
             ARDP_RecvReady(entry.m_handle, entry.m_conn, entry.m_rcv);
+#ifndef NDEBUG
+            if (alternateStatus != ER_OK) {
+                QCC_DbgPrintf(("UDPTransport::Join(): ARDP_RecvReady() returns status==\"%s\"", QCC_StatusText(alternateStatus)));
+            }
+#endif
             m_ardpLock.Unlock();
 
             /*
@@ -4099,6 +4268,10 @@ void UDPTransport::ArdpRecvFromHook(ArdpHandle* handle, ArdpConnRecord* conn, Te
  * the transport.  Note we don't take the ARDP re-entrancy protection lock since
  * we are already executing in the context of a thread that has called ARDP_Run
  * and must already have taken the lock.
+ *
+ * Since we are called directly from ARDP here, we assume that the handle and
+ * connection must be valid since ARDP wouldn't have called us with them set to
+ * an invalid value.
  */
 bool UDPTransport::ArdpAcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status)
 {
@@ -4113,6 +4286,10 @@ bool UDPTransport::ArdpAcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint1
  * the transport.  Note we don't take the ARDP re-entrancy protection lock when
  * we call back out into ARDP since we are already executing in the context of a
  * thread that has called ARDP_Run and must already have taken the lock.
+ *
+ * Since we are called directly from ARDP here, we assume that the handle and
+ * connection must be valid since ARDP wouldn't have called us with them set to
+ * an invalid value.
  */
 void UDPTransport::ArdpConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status)
 {
@@ -4127,6 +4304,10 @@ void UDPTransport::ArdpConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool 
  * the transport.  Note we don't take the ARDP re-entrancy protection lock when
  * we call back out into ARDP since we are already executing in the context of a
  * thread that has called ARDP_Run and must already have taken the lock.
+ *
+ * Since we are called directly from ARDP here, we assume that the handle and
+ * connection must be valid since ARDP wouldn't have called us with them set to
+ * an invalid value.
  */
 void UDPTransport::ArdpDisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status)
 {
@@ -4140,6 +4321,10 @@ void UDPTransport::ArdpDisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QS
  * the transport.  Note we don't take the ARDP re-entrancy protection lock when
  * we call back out into ARDP since we are already executing in the context of a
  * thread that has called ARDP_Run and must already have taken the lock.
+ *
+ * Since we are called directly from ARDP here, we assume that the handle and
+ * connection must be valid since ARDP wouldn't have called us with them set to
+ * an invalid value.
  */
 void UDPTransport::ArdpRecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status)
 {
@@ -4154,6 +4339,10 @@ void UDPTransport::ArdpRecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvB
  * the transport.  Note we don't take the ARDP re-entrancy protection lock when
  * we call back out into ARDP since we are already executing in the context of a
  * thread that has called ARDP_Run and must already have taken the lock.
+ *
+ * Since we are called directly from ARDP here, we assume that the handle and
+ * connection must be valid since ARDP wouldn't have called us with them set to
+ * an invalid value.
  */
 void UDPTransport::ArdpSendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
 {
@@ -4167,6 +4356,10 @@ void UDPTransport::ArdpSendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t*
  * the transport.  Note we don't take the ARDP re-entrancy protection lock when
  * we call back out into ARDP since we are already executing in the context of a
  * thread that has called ARDP_Run and must already have taken the lock.
+ *
+ * Since we are called directly from ARDP here, we assume that the handle and
+ * connection must be valid since ARDP wouldn't have called us with them set to
+ * an invalid value.
  */
 void UDPTransport::ArdpSendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t window, QStatus status)
 {
@@ -4176,7 +4369,16 @@ void UDPTransport::ArdpSendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, ui
 }
 
 /*
- * See the note on connection establishment to really make sense of this.
+ * ARDP, being C, calls into the static member function ArdpAcceptCb().  That
+ * function finds the transport "this" pointer in the handle and uses that to
+ * call here, into the UDPTransport member method.
+ *
+ * Since we are called in the same thread context as ARDP here, we assume that
+ * the handle and connection must be valid since ARDP wouldn't have called us
+ * with them set to an invalid value.
+ *
+ * See "A note on connection establishment" earlier in this file to really make
+ * sense of the following.
  *
  * This callback indicates that we are receiving a passive open request.  We are
  * in LISTEN state and are responding to another side that has done an
@@ -4206,10 +4408,10 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     }
 
     /*
-     * Here's the diffulty.  It is very common for external threads to call into
-     * the UDP transport and take the endpoint list lock to locate an endpoint
-     * and then take the ARDP lock to do do something with the network protocol
-     * based on the stream in that endpoint.  The lock order here is
+     * Here's the difficulty.  It is very common for external threads to call
+     * into the UDP transport and take the endpoint list lock to locate an
+     * endpoint and then take the ARDP lock to do do something with the network
+     * protocol based on the stream in that endpoint.  The lock order here is
      * endpointListLock, then ardpLock.  It is also equally common for the main
      * thread to take the ardpLock and then call into ARDP_Run(), which can call
      * out into a callback.  Those callbacks then want to take the
@@ -4499,7 +4701,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
      * we get status back from ARDP_Accept.
      */
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): ARDP_Accept()"));
-    status = ARDP_Accept(handle, conn, ARDP_SEGMAX, ARDP_SEGBMAX, helloReplyBuf, helloReplyBufLen);
+    status = ARDP_Accept(handle, conn, m_ardpConfig.segmax, m_ardpConfig.segbmax, helloReplyBuf, helloReplyBufLen);
     if (status != ER_OK) {
         /*
          * If ARDP_Accept returns an error, most likely it is becuase the underlying
@@ -4583,19 +4785,33 @@ void UDPTransport::DebugEndpointListCheck(UDPEndpoint uep)
 #endif
 
 /*
- * See the note on connection establishment in the start of this file to make
- * sense of this.
+ * ARDP, being C, calls into the static member function ArdpConnectCb().  That
+ * function finds the transport "this" pointer in the handle and uses that to
+ * call here, into the UDPTransport member method ConnectCb().  Since we need to
+ * call out to the daemon code in order to plumb in a new connection, we cannot
+ * just call out from the ARDP callback.  We have to arrange for the connection
+ * to really be handled in another thread.  The result of that process is that
+ * we are called here.
+ *
+ * Since we are not called in the same thread context as ARDP here, we cannot
+ * assume that the handle and connection are valid since ARDP has since run off
+ * and possibly done many other things before we get scheduled and run.  What
+ * this means to us is that we cannot make any assumptions about the connection
+ * referred to being valid.  We have to admit the possibility that the "conn"
+ * has gone away for some reason.
+ *
+ * See "A note on connection establishment" earlier in this file to really make
+ * sense of the following.
  *
  * If passive is true, and status = ER_OK, this callback indicates that we are
- * getting the final callback as a result of the ARDP_Acknowledge which drove
- * the ACK back from the active opener as the final part of the three-way
- * handshake.  We should see a BusHello reply from the active side to our
- * passive Hello in the data provided.
+ * getting the final callback as a result of the final part of the three-way
+ * handshake.  The passive connection was started with a SYN (+ BusHello),
+ * replied with a SYN + ACK (+ BusHello) and is now getting the final ACK back.
  *
  * If passive is false, and status = ER_OK, this callback indicates that the
- * passive side has accepted the connection and has returned the SYN + ACK.  We
- * should see a BusHello message and a BusHello reply from the passive side in
- * the data provided.
+ * passive (other) side has accepted the connection and has returned the SYN +
+ * ACK.  We should see a BusHello message and a BusHello reply from the (other)
+ * passive side in the data provided.
  *
  * If status != ER_OK, the status should be ER_TIMEOUT indicating that for some
  * reason the three-way handshake did not complete in the expected time/retries.
@@ -4604,7 +4820,7 @@ void UDPTransport::DebugEndpointListCheck(UDPEndpoint uep)
  * into ARDP since we are executing in the context of a dispatcher thread and
  * not the callback directly.
  */
-void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status)
+void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId, bool passive, uint8_t* buf, uint16_t len, QStatus status)
 {
     IncrementAndFetch(&m_refCount);
     QCC_DbgHLPrintf(("UDPTransport::DoConnectCb(handle=%p, conn=%p)", handle, conn));
@@ -4641,15 +4857,19 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
     /*
-     * The current connection ID is useful to have laying around for debug
-     * prints.
+     * The current connection ID is useful to have laying around in case we need
+     * it for UDPTransport purposes.  The transport uses the connection ID as a
+     * sort of unique number to tie things together; so it will work for us even
+     * though the underlying ARDP connection from which we get it goes down.
+     * The tricky part is taht since we are dispatched and not called in the
+     * context of an ARDP connect callback, the underlying conn may actually be
+     * gone and the connId might be ARDP_CONN_ID_INVALID right now.  Because of
+     * this, we pass the connection ID (connId) given in the original callback
+     * and don't try to get it now.
+     *
+     * Now we need to determine if this callback is a result of an active
+     * (outgoing) connection request or a passive (incoming) request.
      */
-#ifndef NDEBUG
-    m_ardpLock.Lock();
-    uint32_t connId = ARDP_GetConnId(handle, conn);
-    m_ardpLock.Unlock();
-#endif
-
     if (passive) {
         /*
          * On the passive side, when we get a ConnectCb, we're done with the
@@ -4670,16 +4890,71 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): passive connection callback with conn ID == %d.", connId));
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Finding endpoint with conn ID == %d. in m_authList", connId));
 
+        /*
+         * We need to locate the endpoint that the provided conn parameter
+         * refers to.  Since this is a passive connection, we must have
+         * accepted the connection, created an endpoint, and placed that
+         * endpoint on the list of currently authenticating endpoints
+         * (m_authList).
+         *
+         * We loop through the endpoints on the auth list, looking for
+         * a match in the connection ID between the provided connection
+         * and the connection ID provided in the conn.
+         *
+         * In a perfect world, the connection we got from ARDP is still
+         * valid, and the connection stored in the endpoint is still valid.
+         * Unfortunatly, this is not guaranteed to be the case since time
+         * has passed since the endpoint was created and time has also passed
+         * since we got the callback from ARDP that drove the process to get
+         * us here.
+         *
+         * If either of the following calls returns ARDP_CONN_ID_INVALID it
+         * means that ARDP has decided to remove the connection.  In that case
+         * we can no longer make any decision based on the conn ID.  If the
+         * connection ID in the endpoint is no longer valid, it will never
+         * receive a callback to indicate the connection it is waiting for has
+         * completed.  That is okay, since it probably means a timeout has
+         * happened.  We just ignore the endpoints with invalid connections and
+         * let the endpoint manager time them out and clean them up.  If the
+         * connection provided by ARDP is invalid it means that ARDP has removed
+         * the connection between the time the precipitating ConnectCb() was
+         * called and when we actually got run out of the dispatcher thread.  In
+         * this case, there may be an endpoint waiting to hear the connect
+         * result, but since ARDP changed its mind, it never will.  We just
+         * ignore the callback with the (now) invalid connection and let the
+         * endpoint manager time out the endpoint that may still be waiting for
+         * the result and clean it up.  Long explanation, but simple
+         * implementation.  Here, If cidFromConn is ARDP_CONN_ID_INVALID just
+         * return since it is pointless to continue to bring up something that
+         * will be unusable.
+         */
+        m_ardpLock.Lock();
+        uint32_t cidFromConn = ARDP_GetConnId(m_handle, conn);
+        m_ardpLock.Unlock();
+        if (cidFromConn == ARDP_CONN_ID_INVALID) {
+            DecrementAndFetch(&m_refCount);
+            return;
+        }
+
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Taking endpoint list lock"));
         m_endpointListLock.Lock(MUTEX_CONTEXT);
         bool haveLock = true;
         set<UDPEndpoint>::iterator i;
         for (i = m_authList.begin(); i != m_authList.end(); ++i) {
             UDPEndpoint ep = *i;
+
+            /*
+             * If cidFromEp is ARDP_CONN_ID_INVALID there's nothing we can do fo
+             * this endpoint.  Ignore it.  If it was the one referred to by the
+             * now defunct conn, it will time out on its own.
+             */
             m_ardpLock.Lock();
             uint32_t cidFromEp = ARDP_GetConnId(m_handle, ep->GetConn());
-            uint32_t cidFromConn = ARDP_GetConnId(m_handle, conn);
             m_ardpLock.Unlock();
+            if (cidFromEp == ARDP_CONN_ID_INVALID) {
+                continue;
+            }
+
             if (ep->GetConn() == conn && cidFromEp == cidFromConn) {
                 QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Moving endpoint with conn ID == %d to m_endpointList", connId));
                 m_authList.erase(i);
@@ -4709,12 +4984,21 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
                     ep->SetListener(this);
                     ep->Start();
                 } else {
+                    /*
+                     * If the passive connection fails, it means that the
+                     * three-way handshake did not complete successfully.  In
+                     * this case, the contract is that ARDP will call us back
+                     * and tell us; and we are supposed to acknowledge that fact
+                     * by releasing the connection and promising not to use it
+                     * again.
+                     */
                     ArdpStream* stream = ep->GetStream();
                     assert(stream && "UDPTransport::DoConnectCb(): must have a stream at this point");
                     stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
                     ep->Stop();
                     m_endpointListLock.Unlock(MUTEX_CONTEXT);
                     haveLock = false;
+
                     m_ardpLock.Lock();
                     ARDP_ReleaseConnection(handle, conn);
                     m_ardpLock.Unlock();
@@ -4743,7 +5027,13 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
          *
          * Since this is an active connection, we expect there to be a thread
          * driving the connection and it will be waiting for something to happen
-         * good or bad so we need to remember to wake it up.
+         * good or bad so we need to remember to wake it up if we can.
+         *
+         * We can only wake up the thread if we have a valid connection, from
+         * which we can extract a context in which we stashed a qcc::Event* that
+         * we use to bug the thread.  If ARDP reports the connection as valid
+         * then we expect the event we find in the connection context to be
+         * valid.
          *
          * An event used to wake the thread up is provided in the connection,
          * but we also need to make sure that the thread hasn't timed out or
@@ -4752,8 +5042,36 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
          */
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): active connection callback with conn ID == %d.", connId));
         m_ardpLock.Lock();
+        bool connValid = ARDP_IsConnValid(m_handle, conn);
         qcc::Event* event = static_cast<qcc::Event*>(ARDP_GetConnContext(m_handle, conn));
         m_ardpLock.Unlock();
+
+        /*
+         * If the connection is no longer valid, there's nothing we can do in
+         * terms of waking any connecting thread up.  The thread that started
+         * all of this may or may not be there waiting.  If it is there, we
+         * can't wake it up.  If it not there we are too late and even if we
+         * proceed, that thread will not be satisfied and will be off trying to
+         * figure out how to deal with the error.  We will assume the worst and
+         * let that thread continue its ruminations in the case that it is gone.
+         * If it is still there, we and just let it time out.  In either case,
+         * we have it easy -- we just bail.
+         */
+        if (connValid == false) {
+            QCC_LogError(status, ("UDPTransport::DoConnectCb(): Provided connection no longer valid"));
+            m_endpointListLock.Unlock(MUTEX_CONTEXT);
+            m_ardpLock.Lock();
+            ARDP_ReleaseConnection(handle, conn);
+            m_ardpLock.Unlock();
+            DecrementAndFetch(&m_refCount);
+            return;
+        }
+
+        /*
+         * If the connection was valid, we expect to have an event still there
+         * in its context.  Since we put it there, we assert that it is still
+         * there.
+         */
         assert(event && "UDPTransport::DoConnectCb(): Connection context did not provide an event");
 
         /*
@@ -4767,10 +5085,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
 
         bool eventValid = false;
         for (set<ConnectEntry>::iterator j = m_connectThreads.begin(); j != m_connectThreads.end(); ++j) {
-            m_ardpLock.Lock();
-            uint32_t cid = ARDP_GetConnId(m_handle, conn);
-            m_ardpLock.Unlock();
-            if (j->m_conn == conn && j->m_connId == cid) {
+            if (j->m_connId == connId) {
                 assert(j->m_event == event && "UDPTransport::DoConnectCb(): event != j->m_event");
                 eventValid = true;
                 break;
@@ -4778,10 +5093,14 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
         }
 
         /*
-         * There is no thread waiting for the connect to complete.  It must be
-         * gone if it has removed its ConnectEntry.  It must have done so with
-         * the endpoint list lock taken, so we know it is there if this test
-         * passes; and we know it is not there if it does not.
+         * If there is no valid event, there is no thread waiting for the
+         * connect to complete.  It must be gone if it has removed its
+         * ConnectEntry; or there is a very unlikely chance that the connection
+         * is down now, and was down when the thread created its entry and it
+         * therefore used ARDP_CONN_ID_INVALID as its ID.  In that case, it will
+         * just have to time out.  If the thread removed its valid ConnectEntry
+         * it must have done so with the endpoint list lock taken, so we know it
+         * is there if this test passes.
          */
         if (eventValid == false) {
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): No thread waiting for Connect() to complete"));
@@ -4794,7 +5113,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
         }
 
         /*
-         * If the connection failed, wake up the thread waiting for completion
+         * If the connect failed, wake up the thread waiting for completion
          * without creating an endpoint for it.
          */
         if (status != ER_OK) {
@@ -4908,9 +5227,9 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
 
         /*
          * We expect three arguments in the message: the unique name of the
-         * remote side, the remoteGUID and a protocol version.  The high order two bits of the protocol version are the
-         * nameTransfer bits that will tell the allJoyn obj how many names to
-         * exchange during ExchangeNames.
+         * remote side, the remoteGUID and a protocol version.  The high order
+         * two bits of the protocol version are the nameTransfer bits that will
+         * tell the allJoyn obj how many names to exchange during ExchangeNames.
          */
         size_t numArgs;
         const MsgArg* args;
@@ -5013,30 +5332,46 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Start()ing endpoint with conn ID == %d.", connId));
         udpEp->SetListener(this);
         udpEp->Start();
-
-        /*
-         * There is a thread waiting for this process to finish, so we need to
-         * wake it up.  The moment we gave up the m_endpointListLock, though,
-         * the endpoint management thread can decide to tear down the endpoint
-         * and invalidate all of our work.  That means that the event can
-         * be torn down out from underneath us.  So we have got to make sure
-         * that the endpoint is still there in order to ensure the event is
-         * still valid.
-         */
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Taking endpoint list lock"));
         m_endpointListLock.Lock(MUTEX_CONTEXT);
 
         /*
-         * We know the endpoint is still there since we hold a managed object
-         * reference to it.  What might be missing is the thread that started
-         * this whole long and involved process.
+         * There may be a thread waiting for this process to finish, so we need
+         * to wake it up or understand what its disposition was or will be.  The
+         * moment we gave up the m_endpointListLock above in order to keep from
+         * holding it though some possibly lengthy daemon operations, the
+         * endpoint management thread could have decided to tear down the
+         * endpoint and invalidate all of our work.  The connection we so
+         * carefully considered above could have been torn down by ARDP if the
+         * other side decided to close the connection or RST it for some unknown
+         * (to us) reason.
+         *
+         * At this point, we don't need to talk to ARDP, so the connection
+         * identifier is all we really care about there.  We are using it to tie
+         * our stuff together so the one we remembered at the start of this
+         * method is fine to use in order to find the waiting thread.  If we got
+         * to this piont, we have pulled an event out of a connection context
+         * previously.  This is a pointer to an event, but it points to an event
+         * that was allocated on the heap by the thread that may or may not be
+         * still waiting for use to wake it.  We know the endpoint that was
+         * formed as a result of this work is still there since we hold a
+         * managed object reference to it.
+         *
+         * So, what we need to do is to find the thread that started this whole
+         * long and involved process in order to make sure that the event is
+         * still valid and bug that event.
          */
         eventValid = false;
         for (set<ConnectEntry>::iterator j = m_connectThreads.begin(); j != m_connectThreads.end(); ++j) {
-            m_ardpLock.Lock();
-            uint32_t cid = ARDP_GetConnId(m_handle, conn);
-            m_ardpLock.Unlock();
-            if (j->m_conn == conn && j->m_connId == cid) {
+            if (j->m_connId == connId) {
+                /*
+                 * We believe that looking at the connection ID is sufficient to
+                 * idenfity the thread.  Double check this assumption by
+                 * asserting that the pointer to the event the thread is waiting
+                 * on is the same as the pointer to the event we discovered
+                 * through the connection.  If it is not, our assumption that
+                 * the connection ID is sufficient is broken.
+                 */
                 assert(j->m_event == event && "UDPTransport::DoConnectCb(): event != j->m_event");
                 eventValid = true;
                 break;
@@ -5045,8 +5380,9 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pa
 
         /*
          * We're all done cranking up the endpoint.  If there's someone waiting,
-         * wake them up.  If there's nobody there, stop the endpoint since
-         * someone changed their mind.
+         * we found them, so wake them up.  If there's nobody there, stop the
+         * endpoint since someone changed their mind and we need to begin the
+         * process of taking it down (and undoing all of that work we just did).
          */
         if (eventValid) {
             QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Waking thread waiting for endpoint"));
@@ -5097,6 +5433,14 @@ void UDPTransport::ExitEndpoint(uint32_t connId)
 }
 
 /*
+ * ARDP, being C, calls into the static member function ArdpConnectCb().  That
+ * function finds the transport "this" pointer in the handle and uses that to
+ * call here, into the UDPTransport member method.
+ *
+ * Since we are called in the same thread context as ARDP here, we assume that
+ * the handle and connection must be valid since ARDP wouldn't have called us
+ * with them set to an invalid value.
+ *
  * This is the indication from the ARDP protocol that a connection is in the
  * process of being formed.  We want to spend as little time as possible here
  * (and avoid deadlocks as much as possible here) so we just immediately ask the
@@ -5150,6 +5494,14 @@ void UDPTransport::ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool pass
 }
 
 /*
+ * ARDP, being C, calls into the static member function ArdpDisconnectCb().
+ * That function finds the transport "this" pointer in the handle and uses that
+ * to call here, into the UDPTransport member method.
+ *
+ * Since we are called in the same thread context as ARDP here, we assume that
+ * the handle and connection must be valid since ARDP wouldn't have called us
+ * with them set to an invalid value.
+ *
  * This is the indication from the ARDP protocol that a connection has been
  * disconnected.  We want to spend as little time as possible here (and avoid
  * deadlocks as much as possible here) so we just immediately ask the transport
@@ -5192,6 +5544,14 @@ void UDPTransport::DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatu
 }
 
 /*
+ * ARDP, being C, calls into the static member function ArdpRecvCb().  That
+ * function finds the transport "this" pointer in the handle and uses that to
+ * call here, into the UDPTransport member method.
+ *
+ * Since we are called in the same thread context as ARDP here, we assume that
+ * the handle and connection must be valid since ARDP wouldn't have called us
+ * with them set to an invalid value.
+ *
  * This is the indication from the ARDP protocol that we have received bytes.
  * We want to spend as little time as possible here (and avoid deadlocks as much
  * as possible here) so we just immediately ask the transport dispatcher to do
@@ -5243,6 +5603,14 @@ void UDPTransport::RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* 
 }
 
 /*
+ * ARDP, being C, calls into the static member function ArdpSendCb().  That
+ * function finds the transport "this" pointer in the handle and uses that to
+ * call here, into the UDPTransport member method.
+ *
+ * Since we are called in the same thread context as ARDP here, we assume that
+ * the handle and connection must be valid since ARDP wouldn't have called us
+ * with them set to an invalid value.
+ *
  * This is the indication from the ARDP protocol that we have (usually)
  * successfully sent bytes.  We want to spend as little time as possible here
  * (and avoid deadlocks as much as possible here) so we just immediately ask the
@@ -5289,6 +5657,14 @@ void UDPTransport::SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf
 }
 
 /**
+ * ARDP, being C, calls into the static member function ArdpSendWindowCb().
+ * That function finds the transport "this" pointer in the handle and uses that
+ * to call here, into the UDPTransport member method.
+ *
+ * Since we are called in the same thread context as ARDP here, we assume that
+ * the handle and connection must be valid since ARDP wouldn't have called us
+ * with them set to an invalid value.
+ *
  * This is an indication from the ARDP Procotol that the send window has
  * changed.
  *
@@ -6712,12 +7088,35 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     Thread* thread = GetThread();
     QCC_DbgPrintf(("UDPTransport::Connect(): Add thread=%p to m_connectThreads", thread));
     assert(thread && "UDPTransport::Connect(): GetThread() returns NULL");
-    ConnectEntry entry(thread, conn, ARDP_GetConnId(m_handle, conn), &event);
+    uint32_t cid = ARDP_GetConnId(m_handle, conn);
+    ConnectEntry entry(thread, conn, cid, &event);
 
     /*
-     * Now, we can safely insert the entry into the set.  We're danger close to
-     * a horrible fate unless we get it off that list before <event> goes out of
-     * scope.
+     * It looks like we just did a connect and so if it succeeded, we must have
+     * a valid connection and connection ID.  Time has passed between the time
+     * we did the ARDP_Connect() and now, though.  We must consider what might
+     * happen if it turns out that ARDP has decided to invalidate the connection
+     * now that it is off trying to connect.  It guarantees that it will call
+     * back with that connection when it is done trying to connect.  What if
+     * that already happened and we haven't had a chance to get our thread onto
+     * the list of waiting threads.  Admittedly, the chances of that happening
+     * are extrememly low, but we can't get the conn until we do the connect and
+     * the connection (actually ID) is all we have to tie the threads to the
+     * connection process.  Since this is such a wildly unlikely event, we don't
+     * do anything to catch it, just describe why it will not hurt.
+     *
+     * If we are delayed inserting our thread on the list of waiting threads
+     * until after the callback happens, the callback will have not been able to
+     * find our thread and will have exited without doing anything, or at worst
+     * it may have created an endpoint and then stopped it.  No harm no foul.
+     * This endpoint will be cleaned up by the endpoint manager.  If the
+     * connection is invalid by the time we create the ConnectEntry above, we
+     * will create an entry with the connection ID set to ARDP_CONN_ID_INVALID.
+     * In this case, we will insert an entry on the list which can never be
+     * found.  We will time out below.  We'll remove the entry by finding what
+     * we put in, which includes the inavlid conn ID.  No harm no foul.  There
+     * is an extremely unlikely chance that we may do some work that could
+     * strictly have been avoided if we went to some lengths here.
      */
     m_connectThreads.insert(entry);
 
@@ -6788,17 +7187,58 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * The way we figure out if the connect succeded is by looking for an
      * endpoint with a connection ID that is the same as the one returned to us
      * by the original call to ARDP_Connect().
+     *
+     * The conn pointer and its associated ID will be plumbed from the call to
+     * connect through to the creation of the endpoint in the connect callback;
+     * so if an endpoint was created as a result of the call to ARDP_Connect()
+     * that returned us a valid conn so long ago.  That doesn't mean that the
+     * connection must still be up and running now that we get around to looking
+     * for it.  It could actually be the case that ARDP has acutally
+     * disconnected the connection and notified us through a disconnect callback
+     * that has been queued up for processing.  In that (again, unlikely but
+     * real) case, the conn we have could now be invalid even though we haven't
+     * heard about it yet since that fact is queued behind us in the dispatcher.
+     *
+     * All we want to do is to find an endpoint with the connection ID we got at
+     * the start.  If everything worked according to the textbooks, we got a
+     * valid connection when we did the ARDP_Connect(), got a valid connection
+     * ID from that connection, put a valid connection ID into the thread set
+     * entry, a valid connection ID was put into the endpoint when it was
+     * created in a connect callback, the connect callback found our thread
+     * entry with the correct ID and woke us up.  Now we look to make sure that
+     * an endpoint was created by looking for one with the correct ID and all of
+     * those IDs will match now.
+     *
+     * How can they not match?  The process works from the ARDP_Connect()
+     * through the ConnectCb().  The conn and ID are guaranteed by ARDP to match
+     * during that time.  Because we have to call out to the daemon, we need to
+     * dispatch DoConnectCb() and any work there can refer to a defunct
+     * connection.  We are careful to pass the valid connection ID to
+     * DoConnectCb() so it can refer back to use even though a connection may
+     * have gone down.  The upshot is that if we don't find an endpoint, it is
+     * because our connection ID is ARDP_CONN_ID_INVALID and we missed the boat,
+     * or the endpoint was never made.
+     *
+     * The case to worry about is if the endoint was made successfully and we
+     * have connection ID ARDP_CONN_ID_INVALID.  This could allow an unuseable
+     * endpoint to hang around until the transport is shut down.  For this to
+     * happen, the connect would have to have been successful and an endpoint be
+     * created and almost immediately receive a disconnect.  ARDP would have to
+     * notify via DisconnectCb() and this would have to happen before the call
+     * to ARDP_GetConnId() that happens immediately after ARDP_Connect().  The
+     * DisconnectCb() plumbs the original connection ID through to the callback
+     * dispatcher, though, and so the DisconnnectCb() will start the process of
+     * invalidating and releasing the endpoint even though we never saw any of
+     * that happen here.  We are okay even though we might have a connection ID
+     * of ID ARDP_CONN_ID_INVALID -- the connect will fail because we can't find
+     * an endpoint, but it already failed as evidenced by the disconnect event
+     * we were worried about.
      */
-#ifndef NDEBUG
-    m_ardpLock.Lock();
-    uint32_t cid = ARDP_GetConnId(m_handle, conn);
-    m_ardpLock.Unlock();
     QCC_DbgPrintf(("UDPTransport::Connect(): Finding endpoint with conn ID = %d. in m_endpointList", cid));
-#endif
     set<UDPEndpoint>::iterator i;
     for (i = m_endpointList.begin(); i != m_endpointList.end(); ++i) {
         UDPEndpoint ep = *i;
-        if (ep->GetConn() == conn) {
+        if (ep->GetConnId() == cid) {
             QCC_DbgPrintf(("UDPTransport::Connect(): Success."));
             /*
              * We know that we found an endpoint on the endpoint list so it has

@@ -210,6 +210,7 @@ ArdpHandle* ARDP_AllocHandle(ArdpGlobalConfig* config);
 void ARDP_FreeHandle(ArdpHandle* handle);
 void ARDP_SetHandleContext(ArdpHandle* handle, void* context);
 void* ARDP_GetHandleContext(ArdpHandle* handle);
+bool ARDP_IsConnValid(ArdpHandle* handle, ArdpConnRecord* conn);
 void ARDP_ReleaseConn(ArdpHandle* handle, ArdpConnRecord* conn);
 QStatus ARDP_SetConnContext(ArdpHandle* handle, ArdpConnRecord* conn, void* context);
 void* ARDP_GetConnContext(ArdpHandle* handle, ArdpConnRecord* conn);
