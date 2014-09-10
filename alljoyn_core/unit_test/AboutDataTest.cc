@@ -193,6 +193,16 @@ TEST(AboutData, SetSupportedLanguage)
     languages = NULL;
 }
 
+//ASACORE-907
+TEST(AboutData, GetSupportedLanguages)
+{
+    AboutData aboutData("en");
+
+    size_t numLanguages;
+    numLanguages = aboutData.GetSupportedLanguages();
+    EXPECT_EQ(1u, numLanguages);
+}
+
 TEST(AboutData, SetDescription) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -224,6 +234,26 @@ TEST(AboutData, SetDateOfManufacture) {
     status = aboutData.GetDateOfManufacture(&dateOfManufacture);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("2014-01-20", dateOfManufacture);
+
+}
+
+// ASACORE-906
+TEST(AboutData, DISABLED_SetDateOfManufacture_Negative) {
+    QStatus status = ER_FAIL;
+    AboutData aboutData("en");
+
+    // Invalid date should fail
+    status = aboutData.SetDateOfManufacture("2014-41-20");
+    EXPECT_NE(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = aboutData.SetDateOfManufacture("201a-02-20");
+    EXPECT_NE(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = aboutData.SetDateOfManufacture("2013-02-29");
+    EXPECT_NE(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = aboutData.SetDateOfManufacture("04/31/2014");
+    EXPECT_NE(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
 
 TEST(AboutData, SetSoftwareVersion) {
