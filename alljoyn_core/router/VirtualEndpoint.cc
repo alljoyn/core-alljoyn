@@ -105,6 +105,14 @@ RemoteEndpoint _VirtualEndpoint::GetBusToBusEndpoint(SessionId sessionId, int* b
     return ret;
 }
 
+std::multimap<SessionId, RemoteEndpoint> _VirtualEndpoint::GetBusToBusEndpoints() const
+{
+    m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
+    std::multimap<SessionId, RemoteEndpoint> b2bEndpoints = m_b2bEndpoints;
+    m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
+    return b2bEndpoints;
+}
+
 bool _VirtualEndpoint::AddBusToBusEndpoint(RemoteEndpoint& endpoint)
 {
     QCC_DbgTrace(("_VirtualEndpoint::AddBusToBusEndpoint(this=%s, b2b=%s)", GetUniqueName().c_str(), endpoint->GetUniqueName().c_str()));

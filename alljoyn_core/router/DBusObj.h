@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -84,14 +84,9 @@ class DBusObj : public BusObject, public NameListener {
      */
     void ObjectRegistered(void);
 
-    /**
-     * Callback called whenever something changes in the well-known name table.
-     *
-     * @param alias     Well-known bus name now owned by listener.
-     * @param oldOwner  Unique name of old owner of alias.
-     * @param newOwner  Unique name of new owner of alias.
-     */
-    void NameOwnerChanged(const qcc::String& alias, const qcc::String* oldOwner, const qcc::String* newOwner);
+    void NameOwnerChanged(const qcc::String& alias,
+                          const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
+                          const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer);
 
     /**
      * Respond to a bus request for the list of registered bus names (both unique and well-known).

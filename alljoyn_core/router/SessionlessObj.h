@@ -136,16 +136,9 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      */
     QStatus CancelMessage(const qcc::String& sender, uint32_t serialNum);
 
-    /**
-     * NameListener implementation called when a bus name changes ownership.
-     *
-     * @param busName   Unique or well-known bus name.
-     * @param oldOwner  Unique name of old owner of name or NULL if none existed.
-     * @param newOwner  Unique name of new owner of name or NULL if none (now) exists.
-     */
     void NameOwnerChanged(const qcc::String& busName,
-                          const qcc::String* oldOwner,
-                          const qcc::String* newOwner);
+                          const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
+                          const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer);
 
     /**
      * Receive FoundAdvertisedName signals.

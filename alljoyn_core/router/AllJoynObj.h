@@ -519,16 +519,9 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      */
     void DetachSessionSignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg);
 
-    /**
-     * NameListener implementation called when a bus name changes ownership.
-     *
-     * @param alias     Well-known bus name now owned by listener.
-     * @param oldOwner  Unique name of old owner of alias or NULL if none existed.
-     * @param newOwner  Unique name of new owner of alias or NULL if none (now) exists.
-     */
     void NameOwnerChanged(const qcc::String& alias,
-                          const qcc::String* oldOwner,
-                          const qcc::String* newOwner);
+                          const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
+                          const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer);
 
     /**
      * Receive notification of a new bus instance via TransportListener.
