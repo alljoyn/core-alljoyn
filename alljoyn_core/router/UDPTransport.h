@@ -831,7 +831,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     bool AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status);
     void ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status);
-    void DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status);
+    void DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId, bool passive, uint8_t* buf, uint16_t len, QStatus status);
     void DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status);
     void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status);
     void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status);
