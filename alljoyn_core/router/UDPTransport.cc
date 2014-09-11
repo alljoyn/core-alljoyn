@@ -4144,7 +4144,13 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
          * in the thread that is driving ARDP.
          */
         if (endpointState == _UDPEndpoint::EP_STOPPING || endpointState == _UDPEndpoint::EP_JOINED) {
-            QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d is EP_STOPPING or EP_JOINED", ep->GetConnId()));
+#ifndef NDEBUG
+            if (endpointState == _UDPEndpoint::EP_STOPPING) {
+                QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d is EP_STOPPING", ep->GetConnId()));
+            } else {
+                QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d is EP_JOINED", ep->GetConnId()));
+            }
+#endif
 
             /*
              * If we are in state EP_STOPPING, not surprisingly Stop() must have
@@ -4157,7 +4163,7 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
              * leave and the disconnect to complete before doing the Join().
              */
             ArdpStream* stream = ep->GetStream();
-            assert(stream && "UDPTransport::ManageEndpoints(): stream must exist in state EP_STOPPING");
+            assert(stream && "UDPTransport::ManageEndpoints(): stream must exist in states EP_STOPPING and EP_JOINED");
 
             /*
              * Wait for the threads blocked on the endpoint for writing to exit,
@@ -4167,6 +4173,7 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
             bool threadSetEmpty = stream->ThreadSetEmpty();
             bool disconnected = stream->GetDisconnected();
 
+#ifndef NDEBUG
             /*
              * We keep an eye on endpoints that seem to be stalled waiting to
              * have the expected things happen.  There's not much we can do if
@@ -4186,7 +4193,6 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
 
                 if (disconnected == false) {
                     QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled not disconnected"));
-#ifndef NDEBUG
                     ArdpStream* stream = ep->GetStream();
                     if (stream) {
                         bool disc = stream->GetDisconnected();
@@ -4197,9 +4203,13 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                     } else {
                         QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled not disconnected. No stream"));
                     }
-#endif
+                }
+
+                if (threadSetEmpty == false && disconnected == false) {
+                    QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled with threadSetEmpty and disconnected"));
                 }
             }
+#endif
 
             if (threadSetEmpty && disconnected) {
                 QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Join()ing stopping endpoint with conn ID == %d.", ep->GetConnId()));
@@ -4209,26 +4219,60 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                  * wait for anything.
                  */
                 if (endpointState != _UDPEndpoint::EP_JOINED) {
+                    QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Join() endpoint with conn ID == %d.", ep->GetConnId()));
                     ep->Join();
                     changeMade = true;
                 }
 
                 /*
-                 * Now, schedule the endpoint exit function to be run if it has
-                 * not been run before.  This will ensure that the endpoint is
-                 * detached (unregistered) from the daemon (running in another
-                 * thread to avoid deadlocks).  At this point we have stopped
-                 * and joined the endpoint, but we must wait until the detach
-                 * happens, as indicated by EndpointExited() returning true,
-                 * before removing our (last) reference to the endpoint below.
-                 * When the endpoint Exit() function is actually run by the
-                 * dispatcher, it sets the endpoint state to EP_DONE.
+                 * If the endpoint has been registerd with the daemon router
+                 * we need to schedule an exit function to be run to detach
+                 * (unregister) it.  We need to do that in the context of the
+                 * dispatcher thread for deadlock avoidance.
                  */
-                if (ep->GetRegistered() && ep->GetExitScheduled() == false) {
-                    ep->SetExitScheduled();
-                    ExitEndpoint(ep->GetConnId());
-                    endpointState = ep->GetEpState();
-                    changeMade = true;
+                if (ep->GetRegistered()) {
+                    QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. is registerd", ep->GetConnId()));
+
+                    /*
+                     * Schedule the endpoint exit function to be run if it has
+                     * not been run before.  At this point we have stopped
+                     * and joined the endpoint, but we must wait until the detach
+                     * happens, as indicated by EndpointExited() returning true,
+                     * before removing our (last) reference to the endpoint below.
+                     * When the endpoint Exit() function is actually run by the
+                     * dispatcher, it sets the endpoint state to EP_DONE, which
+                     * we check for below.
+                     */
+                    if (ep->GetExitScheduled() == false) {
+                        QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Schedule Exit() on endpoint with conn ID == %d.", ep->GetConnId()));
+                        ep->SetExitScheduled();
+                        ExitEndpoint(ep->GetConnId());
+                        endpointState = ep->GetEpState();
+                        changeMade = true;
+                    }
+                } else {
+                    /*
+                     * It may be the case that the endpoint was never actually
+                     * registered with the daemon (it's startup never completed)
+                     * or it was unregistered for some other reason.  In case
+                     * the normal sequence of events was never finished, we have
+                     * to manually drop the state to EP_DONE in that case since
+                     * there will be no Exit() to do it for us.
+                     *
+                     * Be careful we don't step in and set the state if the Exit
+                     * is actually in the process of being run (and we happen to
+                     * notice that the endpoint is unregistered while the exit
+                     * routine is in the process of completing), so only step in
+                     * if GetExitScheduled() is false (it cannot be running).
+                     */
+                    if (ep->GetExitScheduled() == false) {
+                        QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Setting EP_DONE on endpoint with conn ID == %d.", ep->GetConnId()));
+                        ep->SetEpDone();
+                        endpointState = ep->GetEpState();
+                        changeMade = true;
+                    } else {
+                        QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Exit() scheduled on endpoint with conn ID == %d.", ep->GetConnId()));
+                    }
                 }
 #ifndef NDEBUG
             } else {
