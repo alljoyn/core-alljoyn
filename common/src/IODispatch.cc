@@ -20,14 +20,16 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include <qcc/IODispatch.h>
+#include <qcc/StringUtil.h>
 #define QCC_MODULE "IODISPATCH"
 
 using namespace qcc;
 using namespace std;
 
+int32_t IODispatch::iodispatchCnt = 0;
 
 IODispatch::IODispatch(const char* name, uint32_t concurrency) :
-    timer(name, true, concurrency, false, 96),
+    timer((String(name) + U32ToString(IncrementAndFetch(&iodispatchCnt)).c_str()), true, concurrency, false, 96),
     reload(false),
     isRunning(false),
     numAlarmsInProgress(0),

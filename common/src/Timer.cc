@@ -24,6 +24,7 @@
 
 #include <qcc/Debug.h>
 #include <qcc/Timer.h>
+#include <qcc/StringUtil.h>
 #include <Status.h>
 #include <algorithm>
 
@@ -134,7 +135,7 @@ bool _Alarm::operator==(const _Alarm& other) const
     return (alarmTime == other.alarmTime) && (id == other.id);
 }
 
-Timer::Timer(const char* name, bool expireOnExit, uint32_t concurency, bool preventReentrancy, uint32_t maxAlarms) :
+Timer::Timer(String name, bool expireOnExit, uint32_t concurency, bool preventReentrancy, uint32_t maxAlarms) :
     OSTimer(this),
     currentAlarm(NULL),
     expireOnExit(expireOnExit),
@@ -168,7 +169,8 @@ QStatus Timer::Start()
         controllerIdx = 0;
         isRunning = true;
         if (timerThreads[0] == NULL) {
-            timerThreads[0] = new TimerThread(nameStr, 0, this);
+            String threadName = nameStr + "_" + U32ToString(0);
+            timerThreads[0] = new TimerThread(threadName, 0, this);
         }
         status = timerThreads[0]->Start(NULL, this);
         isRunning = false;
@@ -723,7 +725,8 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                             /* If <tt> is NULL and we have located an index in the timerThreads vector
                              * that is NULL, allocate memory so we can start this thread
                              */
-                            timer->timerThreads[nullIdx] = new TimerThread(timer->nameStr, nullIdx, timer);
+                            String threadName = timer->nameStr + "_" + U32ToString(nullIdx);
+                            timer->timerThreads[nullIdx] = new TimerThread(threadName, nullIdx, timer);
                             tt = timer->timerThreads[nullIdx];
                             QCC_DbgPrintf(("TimerThread::Run(): Created timer thread %d", nullIdx));
                         }
