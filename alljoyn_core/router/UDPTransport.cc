@@ -432,7 +432,8 @@
 
 #define QCC_MODULE "UDP"
 
-#define SENT_SANITY 1
+#define SENT_SANITY 0   /**< If non-zero make sure ARDP is returning buffers correctly (expensive) */
+#define BYTEDUMPS 0     /**< If non-zero do byte-by-byte debug dumps of sent and received buffers (super-expensive) */
 
 using namespace std;
 using namespace qcc;
@@ -444,6 +445,8 @@ using namespace qcc;
  * basically a watchdog to to keep the pump primed.
  */
 const uint32_t UDP_ENDPOINT_MANAGEMENT_TIMER = 1000;
+
+const uint32_t UDP_WATCHDOG_TIMEOUT = 30000;  /**< How long to wait before printing an error if an endpoint is not going away */
 
 const uint32_t UDP_CONNECT_TIMEOUT = 1000;  /**< How long before we expect a connection to complete */
 const uint32_t UDP_CONNECT_RETRIES = 10;  /**< How many times do we retry a connection before giving up */
@@ -479,6 +482,7 @@ const char* TestConnStr = "ARDP TEST CONNECT REQUEST";
 const char* TestAcceptStr = "ARDP TEST ACCEPT";
 
 #ifndef NDEBUG
+#if BYTEDUMPS
 static void DumpLine(uint8_t* buf, uint32_t len, uint32_t width)
 {
     for (uint32_t i = 0; i < width; ++i) {
@@ -507,8 +511,8 @@ static void DumpBytes(uint8_t* buf, uint32_t len)
         }
     }
 }
+#endif // BYTEDUMPS
 #endif // NDEBUG
-
 
 #ifndef NDEBUG
 #define SEAL_SIZE 4
@@ -845,7 +849,9 @@ class ArdpStream : public qcc::Stream {
         AddCurrentThread();
 
 #ifndef NDEBUG
+#if BYTEDUMPS
         DumpBytes((uint8_t*)buf, numBytes);
+#endif
 #endif
         /*
          * Copy in the bytes to preserve the buffer management approach expected by
@@ -1117,14 +1123,8 @@ class ArdpStream : public qcc::Stream {
      */
     void Disconnect(bool sudden, QStatus status)
     {
-        if (status == ER_OK) {
-            assert(sudden == false);
-        }
-        if (sudden) {
-            assert(status != ER_OK);
-        }
-
         QCC_DbgTrace(("ArdpStream::Disconnect(sudden==%d., status==\"%s\")", sudden, QCC_StatusText(status)));
+
         /*
          * A "sudden" disconnect is an unexpected or unsolicited disconnect
          * initiated from the remote side.  In this case, we will have have
@@ -1145,6 +1145,15 @@ class ArdpStream : public qcc::Stream {
          * to worry about (sudden, m_discSent, and m_disc) and so there are
          * eight possibile conditions/states here.  We just break them all out.
          */
+#ifndef NDEBUG
+        if (status == ER_OK) {
+            assert(sudden == false);
+        }
+        if (sudden) {
+            assert(status != ER_OK);
+        }
+#endif
+
         QCC_DbgPrintf(("ArdpStream::Disconnect(): sudden==%d., m_disc==%d., m_discSent==%d., status==\"%s\"",
                        sudden, m_disc, m_discSent, QCC_StatusText(status)));
         m_lock.Lock(MUTEX_CONTEXT);
@@ -1306,6 +1315,13 @@ class ArdpStream : public qcc::Stream {
                 }
             }
         }
+
+#ifndef NDEBUG
+        if (sudden) {
+            assert(m_disc == true);
+        }
+#endif
+
         m_lock.Unlock(MUTEX_CONTEXT);
     }
 
@@ -1459,7 +1475,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_id(0),
         m_ipAddr(),
         m_ipPort(0),
-        m_suddenDisconnect(incoming),
+        m_suddenDisconnect(false),
         m_registered(false),
         m_sideState(SIDE_INITIALIZED),
         m_epState(EP_INITIALIZED),
@@ -1702,14 +1718,14 @@ class _UDPEndpoint : public _RemoteEndpoint {
         for (set<UDPEndpoint>::iterator i = m_transport->m_authList.begin(); i != m_transport->m_authList.end(); ++i) {
             UDPEndpoint ep = *i;
             if (GetConnId() == ep->GetConnId()) {
-                QCC_DbgPrintf(("_UDPEndpoint::Start(): found endpoint with conn ID == %d. on m_authList", GetConnId()));
+                QCC_DbgPrintf(("_UDPEndpoint::Stop(): found endpoint with conn ID == %d. on m_authList", GetConnId()));
                 ++found;
             }
         }
         for (set<UDPEndpoint>::iterator i = m_transport->m_endpointList.begin(); i != m_transport->m_endpointList.end(); ++i) {
             UDPEndpoint ep = *i;
             if (GetConnId() == ep->GetConnId()) {
-                QCC_DbgPrintf(("_UDPEndpoint::Start(): found endpoint with conn ID == %d. on m_endpointList", GetConnId()));
+                QCC_DbgPrintf(("_UDPEndpoint::Stop(): found endpoint with conn ID == %d. on m_endpointList", GetConnId()));
                 ++found;
             }
         }
@@ -2211,11 +2227,22 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
         /*
          * We believe that the connection must go away here since this is either
-         * an unsolicited remote disconnection which always resutls in the
+         * an unsolicited remote disconnection which always results in the
          * connection going away or a confirmation of a local disconnect that
          * also results in the connection going away.
          */
         m_conn = NULL;
+
+#ifndef NDEBUG
+        /*
+         * If there is no connection, we expect the stream to report that it is
+         * disconnected.  If it does not now, there is no way for it to ever
+         * become "more disconnected."
+         */
+        if (m_stream) {
+            assert(m_stream->GetDisconnected() && "_UDPEndpoint::DisconnectCb(): Stream not playing by the rules of the game");
+        }
+#endif
 
         /*
          * Since we know an instance of this object is on exactly one of our
@@ -2441,7 +2468,9 @@ class _UDPEndpoint : public _RemoteEndpoint {
         uint32_t messageLen = mlen ? mlen : rcv->datalen;
 
 #ifndef NDEBUG
+#if BYTEDUMPS
         DumpBytes(messageBuf, messageLen);
+#endif
 #endif
 
         /*
@@ -3215,6 +3244,9 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
              * queue.
              */
             m_transport->m_workerCommandQueueLock.Lock(MUTEX_CONTEXT);
+
+            QCC_DbgTrace(("UDPTransport::DispatcherThread::Run(): m_workerCommandQueue.size()=%d.", m_transport->m_workerCommandQueue.size()));
+
             if (m_transport->m_workerCommandQueue.empty()) {
                 drained = true;
             } else {
@@ -4183,7 +4215,7 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
             Timespec tNow;
             GetTimeNow(&tNow);
             Timespec tStop = ep->GetStopTime();
-            int32_t tRemaining = tStop + (m_ardpConfig.connectTimeout * m_ardpConfig.connectRetries) - tNow;
+            int32_t tRemaining = tStop + UDP_WATCHDOG_TIMEOUT - tNow;
             if (tRemaining < 0) {
                 QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d stalled", ep->GetConnId()));
 
@@ -5136,7 +5168,6 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
          */
         if (connValid == false) {
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): Provided connection no longer valid"));
-            m_endpointListLock.Unlock(MUTEX_CONTEXT);
             m_ardpLock.Lock();
             ARDP_ReleaseConnection(handle, conn);
             m_ardpLock.Unlock();
