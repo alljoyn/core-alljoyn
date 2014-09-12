@@ -77,7 +77,7 @@ namespace ajn {
 
 #define MarshalBytes(data, len) \
     do { \
-        memcpy(bufPos, data, len); \
+        if (data) { memcpy(bufPos, data, len); } \
         bufPos += len; \
     } while (0)
 
