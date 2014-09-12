@@ -24,16 +24,21 @@ env.Append(CPPFLAGS=['-march=armv6',
 # Use the OpenEmbedded cross-compilation environment
 vars = Variables()
 vars.Add(PathVariable('OE_BASE', 'Base directory of OpenEmbedded build for ARM', os.environ.get('OE_BASE')))
+vars.Add('CROSS_COMPILE', 'Cross compile toolchain prefix', os.environ.get('CROSS_COMPILE'))
 vars.Update(env)
 Help(vars.GenerateHelpText(env))
 
-if '' == env.subst('$OE_BASE'):
-   print 'OE_BASE variable is required for Linux/ARM builds'
+# Use OpenEmbedded tools
+if '' != env.subst('$OE_BASE'):
+    gcc_prefix = '$OE_BASE/bin/arm-angstrom-linux-gnueabi-'
+else: # Use common CROSS_COMPILE prefix
+    gcc_prefix = env['CROSS_COMPILE']
+
+if '' == gcc_prefix:
+   print 'Either OE_BASE or CROSS_COMPILE variable is required for Linux/ARM builds'
    if not GetOption('help'):
       Exit(1)
 
-# Use OpenEmbedded tools
-gcc_prefix  = '$OE_BASE/bin/arm-angstrom-linux-gnueabi-'
 env['CC']   = gcc_prefix + 'gcc'
 env['CXX']  = gcc_prefix + 'g++'
 env['LINK'] = gcc_prefix + 'gcc'
