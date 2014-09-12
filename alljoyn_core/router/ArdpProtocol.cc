@@ -1051,9 +1051,7 @@ static void ProbeTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* co
     QCC_DbgHLPrintf(("ProbeTimerHandler: handle=%p conn=%p delta %u now %u lastSeen = %u elapsed %u",
                      handle, conn, timer->delta, now, conn->lastSeen, elapsed));
 
-    if (elapsed < timer->delta) {
-        timer->retry = handle->config.keepaliveRetries;
-    } else {
+    if (elapsed > timer->delta) {
         if (timer->retry == 0) {
             QCC_DbgHLPrintf(("ProbeTimerHandler: Probe Timeout: now =%u, lastSeen = %u, (limit of %u)", now, conn->lastSeen, handle->config.linkTimeout));
             Disconnect(handle, conn, ER_ARDP_PROBE_TIMEOUT);
@@ -2894,6 +2892,7 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool socketReady, uint3
                 if (conn && (conn->state != CLOSED) && (conn->state != CLOSE_WAIT)) {
                     QCC_DbgHLPrintf(("ARDP_Run conn state %s", State2Text(conn->state)));
                     conn->lastSeen = TimeNow(handle->tbase);
+                    conn->probeTimer.retry = handle->config.keepaliveRetries;
                     status = Receive(handle, conn, buf, nbytes);
                     if (status == ER_ARDP_INVALID_RESPONSE) {
                         Disconnect(handle, conn, status);
