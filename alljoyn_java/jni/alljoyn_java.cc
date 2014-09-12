@@ -2175,17 +2175,17 @@ class JProxyBusObject : public ProxyBusObject {
     JProxyBusObject& operator =(const JProxyBusObject& other);
 };
 
-class JPropertyChangedListener : public ProxyBusObject::Listener {
+class JPropertiesChangedListener : public ProxyBusObject::PropertiesChangedListener {
   public:
-    JPropertyChangedListener(jobject jlistener);
-    void PropertyChangedHandler(JProxyBusObject* obj, const char* ifaceName, const char* propName, const MsgArg* value, void* context);
+    JPropertiesChangedListener(jobject jlistener);
+    void PropertiesChanged(ProxyBusObject* obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context);
 
     jweak jlistener;
 
   private:
-    JPropertyChangedListener();
-    JPropertyChangedListener(const JPropertyChangedListener& other);
-    JPropertyChangedListener& operator =(const JPropertyChangedListener& other);
+    JPropertiesChangedListener();
+    JPropertiesChangedListener(const JPropertiesChangedListener& other);
+    JPropertiesChangedListener& operator =(const JPropertiesChangedListener& other);
 };
 
 
@@ -10159,16 +10159,16 @@ JProxyBusObject::~JProxyBusObject()
     QCC_DbgPrintf(("JProxyBusObject::~JProxyBusObject(): Refcount on busPtr at destruction is %d", busPtr->GetRef()));
 }
 
-JPropertyChangedListener::JPropertyChangedListener(jobject jobj)
+JPropertiesChangedListener::JPropertiesChangedListener(jobject jobj)
     : jlistener(NULL)
 {
     JNIEnv* env = GetEnv();
     jlistener = env->NewWeakGlobalRef(jobj);
 }
 
-void JPropertyChangedListener::PropertyChangedHandler(JProxyBusObject* obj, const char* ifaceName, const char* propName, const MsgArg* value, void* context)
+void JPropertiesChangedListener::PropertiesChanged(ProxyBusObject* obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context)
 {
-    QCC_DbgPrintf(("JPropertyChangedListener::PropertyChangedHandler()"));
+    QCC_DbgPrintf(("JPropertiesChangedListener::PropertiesChanged()"));
 
     /*
      * JScopedEnv will automagically attach the JVM to the current native
@@ -10181,19 +10181,19 @@ void JPropertyChangedListener::PropertyChangedHandler(JProxyBusObject* obj, cons
      */
     JLocalRef<jstring> jifaceName = env->NewStringUTF(ifaceName);
     if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("JPropertyChangedListener::PropertyChangedHandler(): Exception"));
+        QCC_LogError(ER_FAIL, ("JPropertiesChangedListener::PropertiesChanged(): Exception"));
         return;
     }
 
-    JLocalRef<jstring> jpropName = env->NewStringUTF(propName);
+    JLocalRef<jobject> jchanged = Unmarshal(&changed, CLS_MsgArg);
     if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("JPropertyChangedListener::PropertyChangedHandler(): Exception"));
+        QCC_LogError(ER_FAIL, ("JPropertiesChangedListener::PropertiesChanged(): Exception"));
         return;
     }
 
-    jobject jvalue = Unmarshal(value, CLS_Variant);
+    JLocalRef<jobject> jinvalidated = Unmarshal(&invalidated, CLS_MsgArg);
     if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("JPropertyChangedListener::PropertyChangedHandler(): Exception"));
+        QCC_LogError(ER_FAIL, ("JPropertiesChangedListener::PropertiesChanged(): Exception"));
         return;
     }
 
@@ -10204,16 +10204,15 @@ void JPropertyChangedListener::PropertyChangedHandler(JProxyBusObject* obj, cons
      */
     jobject jo = env->NewLocalRef(jlistener);
     if (!jo) {
-        QCC_LogError(ER_FAIL, ("JPropertyChangedListener::PropertyChangedHandler(): Can't get new local reference to ProxyBusObjectListener"));
+        QCC_LogError(ER_FAIL, ("JPropertiesChangedListener::PropertiesChanged(): Can't get new local reference to ProxyBusObjectListener"));
         return;
     }
 
-
     JLocalRef<jclass> clazz = env->GetObjectClass(jo);
-    jmethodID mid = env->GetMethodID(clazz, "propertyChanged",
+    jmethodID mid = env->GetMethodID(clazz, "propertiesChanged",
                                      "(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;");
     if (!mid) {
-        QCC_LogError(ER_FAIL, ("JPropertyChangedListener::PropertyChangedHandler(): Can't get new local reference to ProxyBusObjectListener property changed handler method"));
+        QCC_LogError(ER_FAIL, ("JPropertiesChangedListener::PropertiesChanged(): Can't get new local reference to ProxyBusObjectListener property changed handler method"));
         return;
     }
 
@@ -10221,14 +10220,14 @@ void JPropertyChangedListener::PropertyChangedHandler(JProxyBusObject* obj, cons
      * This call out to the property changed handler implies that the Java method must be
      * MT-safe.  This is implied by the definition of the listener.
      */
-    QCC_DbgPrintf(("JPropertyChangedListener::PropertyChangedHandler(): Call out to listener object and method"));
-    env->CallVoidMethod(jo, mid, (jstring)jifaceName, (jstring)jpropName, (jobject)jvalue);
+    QCC_DbgPrintf(("JPropertiesChangedListener::PropertiesChanged(): Call out to listener object and method"));
+    env->CallVoidMethod(jo, mid, (jstring)jifaceName, (jobject)jchanged, (jobject)jinvalidated);
     if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("JPropertyChangedListener::PropertyChangedHandler(): Exception"));
+        QCC_LogError(ER_FAIL, ("JPropertiesChangedListener::PropertiesChanged(): Exception"));
         return;
     }
 
-    QCC_DbgPrintf(("JPropertyChangedListener::PropertyChangedHandler(): Return"));
+    QCC_DbgPrintf(("JPropertiesChangedListener::PropertiesChanged(): Return"));
 }
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_create(JNIEnv* env, jobject thiz, jobject jbus,
@@ -10315,9 +10314,61 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_destroy(JNIEnv* env, 
     SetHandle(thiz, NULL);
 }
 
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerPropertyChangedHandler(JNIEnv* env, jobject thiz, jstring jifaceName, jstring jproperty, jobject jpropertyChangedListener)
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerPropertiesChangedHandler(JNIEnv* env, jobject thiz, jstring jifaceName, jobjectArray jproperties, jobject jpropertiesChangedListener)
 {
-    QCC_DbgPrintf(("ProxyBusObject_registerPropertyChangedHandler()"));
+    QCC_DbgPrintf(("ProxyBusObject_registerPropertiesChangedHandler()"));
+
+    JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
+    if (env->ExceptionCheck()) {
+        return NULL;
+    }
+
+    JString ifaceName(jifaceName);
+    if (env->ExceptionCheck()) {
+        return NULL;
+    }
+
+    size_t numProps = env->GetArrayLength(jproperties);
+    if (env->ExceptionCheck()) {
+        return NULL;
+    }
+
+    JPropertiesChangedListener* listener = GetHandle<JPropertiesChangedListener*>(jpropertiesChangedListener);
+    if (env->ExceptionCheck() || !listener) {
+        return NULL;
+    }
+
+    QStatus status;
+    jobject jstatus = NULL;
+    const char** properties = new const char*[numProps];
+    for (size_t i = 0; i < numProps; ++i) {
+        jstring jproperty = (jstring)env->GetObjectArrayElement(jproperties, i);
+        if (env->ExceptionCheck()) {
+            goto exit;
+        }
+        JString property(jproperty);
+        if (env->ExceptionCheck()) {
+            goto exit;
+        }
+        properties[i] = property.c_str();
+    }
+
+    status = proxyBusObj->RegisterPropertiesChangedHandler(ifaceName.c_str(),
+                                                           properties,
+                                                           numProps,
+                                                           *listener,
+                                                           NULL);
+
+    jstatus = JStatus(status);
+
+exit:
+    delete [] properties;
+    return jstatus;
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_unregisterPropertiesChangedHandler(JNIEnv* env, jobject thiz, jstring jifaceName, jstring jproperty, jobject jpropertiesChangedListener)
+{
+    QCC_DbgPrintf(("ProxyBusObject_unregisterPropertiesChangedHandler()"));
 
     JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
     if (env->ExceptionCheck()) {
@@ -10334,83 +10385,47 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerPropertyCh
         return NULL;
     }
 
-    JPropertyChangedListener* listener = GetHandle<JPropertyChangedListener*>(jpropertyChangedListener);
-    if (env->ExceptionCheck()) {
+    JPropertiesChangedListener* listener = GetHandle<JPropertiesChangedListener*>(jpropertiesChangedListener);
+    if (env->ExceptionCheck() || !listener) {
         return NULL;
     }
 
-    QStatus status = proxyBusObj->RegisterPropertyChangedHandler(ifaceName.c_str(),
-                                                                 property.c_str(),
-                                                                 listener,
-                                                                 reinterpret_cast<ProxyBusObject::Listener::PropertyChanged>(&JPropertyChangedListener::PropertyChangedHandler),
-                                                                 NULL);
+    QStatus status = proxyBusObj->UnregisterPropertiesChangedHandler(ifaceName.c_str(), *listener);
 
     return JStatus(status);
 }
 
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_unregisterPropertyChangedHandler(JNIEnv* env, jobject thiz, jstring jifaceName, jstring jproperty, jobject jpropertyChangedListener)
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertiesChangedListener_create(JNIEnv* env, jobject thiz)
 {
-    QCC_DbgPrintf(("ProxyBusObject_unregisterPropertyChangedHandler()"));
+    QCC_DbgPrintf(("PropertiesChangedListener_create()"));
 
-    JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
+    assert(GetHandle<JPropertiesChangedListener*>(thiz) == NULL);
     if (env->ExceptionCheck()) {
-        return NULL;
-    }
-
-    JString ifaceName(jifaceName);
-    if (env->ExceptionCheck()) {
-        return NULL;
-    }
-
-    JString property(jproperty);
-    if (env->ExceptionCheck()) {
-        return NULL;
-    }
-
-    JPropertyChangedListener* listener = GetHandle<JPropertyChangedListener*>(jpropertyChangedListener);
-    if (env->ExceptionCheck()) {
-        return NULL;
-    }
-
-    QStatus status = proxyBusObj->UnregisterPropertyChangedHandler(ifaceName.c_str(),
-                                                                   property.c_str(),
-                                                                   listener,
-                                                                   reinterpret_cast<ProxyBusObject::Listener::PropertyChanged>(&JPropertyChangedListener::PropertyChangedHandler));
-
-    return JStatus(status);
-}
-
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertyChangedListener_create(JNIEnv* env, jobject thiz)
-{
-    QCC_DbgPrintf(("PropertyChangedListener_create()"));
-
-    assert(GetHandle<JPropertyChangedListener*>(thiz) == NULL);
-    if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("PropertyChangedListener_create(): Exception"));
+        QCC_LogError(ER_FAIL, ("PropertiesChangedListener_create(): Exception"));
         return;
     }
 
-    QCC_DbgPrintf(("PropertyChangedListener_create(): Create backing object"));
-    JPropertyChangedListener* jojcl = new JPropertyChangedListener(thiz);
+    QCC_DbgPrintf(("PropertiesChangedListener_create(): Create backing object"));
+    JPropertiesChangedListener* jojcl = new JPropertiesChangedListener(thiz);
     if (jojcl == NULL) {
         Throw("java/lang/OutOfMemoryError", NULL);
         return;
     }
 
-    QCC_DbgPrintf(("PropertyChangedListener_create(): Set handle to %p", jojcl));
+    QCC_DbgPrintf(("PropertiesChangedListener_create(): Set handle to %p", jojcl));
     SetHandle(thiz, jojcl);
     if (env->ExceptionCheck()) {
         delete jojcl;
     }
 }
 
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertyChangedListener_destroy(JNIEnv* env, jobject thiz)
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertiesChangedListener_destroy(JNIEnv* env, jobject thiz)
 {
-    QCC_DbgPrintf(("PropertyChangedListener_destroy()"));
+    QCC_DbgPrintf(("PropertiesChangedListener_destroy()"));
 
-    JPropertyChangedListener* jojcl = GetHandle<JPropertyChangedListener*>(thiz);
+    JPropertiesChangedListener* jojcl = GetHandle<JPropertiesChangedListener*>(thiz);
     if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("PropertyChangedListener_destroy(): Exception"));
+        QCC_LogError(ER_FAIL, ("PropertiesChangedListener_destroy(): Exception"));
         return;
     }
 

@@ -63,12 +63,12 @@ class SetPropertyCallbackContext {
     void* context;
 };
 
-class PropertyChangedCallbackContext {
+class PropertieschangedCallbackContext {
   public:
-    PropertyChangedCallbackContext(alljoyn_proxybusobject_listener_propertychanged_ptr signalhandler_ptr, void* context) :
+    PropertieschangedCallbackContext(alljoyn_proxybusobject_listener_propertieschanged_ptr signalhandler_ptr, void* context) :
         signalhandler_ptr(signalhandler_ptr), context(context) { }
 
-    alljoyn_proxybusobject_listener_propertychanged_ptr signalhandler_ptr;
+    alljoyn_proxybusobject_listener_propertieschanged_ptr signalhandler_ptr;
     void* context;
 };
 
@@ -112,12 +112,20 @@ class ProxyBusObjectListenerC : public ajn::ProxyBusObject::Listener {
         in->replyhandler_ptr = NULL;
         delete in;
     }
+};
 
-    void PropertyChanged(ProxyBusObject* obj, const char* ifaceName, const char* propName, const MsgArg* value, void* context)
+class ProxyBusObjectPropertiesChangedListenerC : public ajn::ProxyBusObject::PropertiesChangedListener {
+  public:
+    ProxyBusObjectPropertiesChangedListenerC(alljoyn_proxybusobject_listener_propertieschanged_ptr signalhandler_ptr) : signalhandler_ptr(signalhandler_ptr) { }
+    void PropertiesChanged(ProxyBusObject* obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context)
     {
-        PropertyChangedCallbackContext* pc = (PropertyChangedCallbackContext*)context;
-        pc->signalhandler_ptr((alljoyn_proxybusobject)obj, ifaceName, propName, (alljoyn_msgarg)value, pc->context);
+        signalhandler_ptr((alljoyn_proxybusobject)obj, ifaceName, (alljoyn_msgarg)(&changed), (alljoyn_msgarg)(&invalidated), context);
     }
+
+    const alljoyn_proxybusobject_listener_propertieschanged_ptr GetSignalHandler() const { return signalhandler_ptr; }
+
+  private:
+    alljoyn_proxybusobject_listener_propertieschanged_ptr signalhandler_ptr;
 };
 }
 #endif

@@ -60,11 +60,10 @@ class ProxyBusObject : public MessageReceiver {
     static const uint32_t DefaultCallTimeout = 25000;
 
     /**
-     * Pure virtual base class implemented by classes that wish to receive
-     * ProxyBusObject related messages.
+     * Base class used as a container for callback typedefs
      *
-     * @internal Do not use this pattern for creating public Async versions of the APIs.  See
-     * BusAttachment::JoinSessionAsync() instead.
+     * @internal Do not use this pattern for creating new public Async versions of the APIs.  See
+     * the PropertiesChangedListener class below for an example of how to add new async APIs.
      */
     class Listener {
       public:
@@ -113,17 +112,29 @@ class ProxyBusObject : public MessageReceiver {
          * @param context   Caller provided context passed in to SetPropertyAsync()
          */
         typedef void (ProxyBusObject::Listener::* SetPropertyCB)(QStatus status, ProxyBusObject* obj, void* context);
+    };
+
+    /**
+     * Pure virtual base class for the Properties Changed listener.
+     */
+    class PropertiesChangedListener {
+      public:
+        virtual ~PropertiesChangedListener() { }
 
         /**
          * Callback to receive property changed events.
          *
-         * @param obj       Remote bus object that owns the property that changed.
-         * @param ifaceName Name of the interface that defines the property.
-         * @param propName  Name of the property that changed.
-         * @param value     New value of the property. (NULL = invalidated property)
-         * @param context   Caller provided context passed in to RegisterPropertyChangedHandler
+         * @param obj           Remote bus object that owns the property that changed.
+         * @param ifaceName     Name of the interface that defines the property.
+         * @param changed       Property values that changed as an array of dictionary entries, signature "a{sv}".
+         * @param invalidated   Properties whose values have been invalidated, signature "as".
+         * @param context       Caller provided context passed in to RegisterPropertiesChangedHandler
          */
-        typedef void (ProxyBusObject::Listener::* PropertyChanged)(ProxyBusObject* obj, const char* ifaceName, const char* propName, const MsgArg* value, void* context);
+        virtual void PropertiesChanged(ProxyBusObject* obj,
+                                       const char* ifaceName,
+                                       const MsgArg& changed,
+                                       const MsgArg& invalidated,
+                                       void* context) = 0;
     };
 
     /**
@@ -395,52 +406,39 @@ class ProxyBusObject : public MessageReceiver {
 
     /**
      * Function to register a handler for property change events.
+     * Note that registering the same handler callback for the same
+     * interface will overwrite the previous registration.  The same
+     * handler callback may be registered for several different
+     * interfaces simultaneously.
      *
-     * @param iface     Remote object's interface on which the property is defined.
-     * @param property  The name of the property to monitor.
-     * @param listener  Pointer to the object that will receive the callback.
-     * @param callback  Method on listener that will be called.
-     * @param context   User defined context which will be passed as-is to callback.
+     * @param iface             Remote object's interface on which the property is defined.
+     * @param properties        The name of the properties to monitor (NULL for all).
+     * @param propertiesSize    Number of properties to monitor.
+     * @param listener          Reference to the object that will receive the callback.
+     * @param context           User defined context which will be passed as-is to callback.
      *
      * @return
      *      - #ER_OK if the handler was registered successfully
      *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
      *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
      */
-    QStatus RegisterPropertyChangedHandler(const char* iface,
-                                           const char* property,
-                                           ProxyBusObject::Listener* listener,
-                                           ProxyBusObject::Listener::PropertyChanged callback,
-                                           void* context);
+    QStatus RegisterPropertiesChangedHandler(const char* iface,
+                                             const char** properties,
+                                             size_t propertiesSize,
+                                             ProxyBusObject::PropertiesChangedListener& listener,
+                                             void* context);
 
     /**
      * Function to unregister a handler for property change events.
      *
      * @param iface     Remote object's interface on which the property is defined.
-     * @param property  The name of the property to stop monitoring.
-     * @param listener  Pointer to the object that used to receive the callback.
-     * @param callback  Method on listener that used to be called.
+     * @param listener  Reference to the object that used to receive the callback.
      *
      * @return
      *      - #ER_OK if the handler was registered successfully
      *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
-     *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
      */
-    QStatus UnregisterPropertyChangedHandler(const char* iface,
-                                             const char* property,
-                                             ProxyBusObject::Listener* listener,
-                                             ProxyBusObject::Listener::PropertyChanged callback);
-
-    /**
-     * Function to retrieve the application context pointer associated with a
-     * registered property changed handler.
-     *
-     * @param iface     Remote object's interface on which the property is defined.
-     * @param property  The name of the property to stop monitoring.
-     *
-     * @return Pointer to the application context or NULL if handler not found.
-     */
-    void* GetPropertyChangedHandlerContext(const char* iface, const char* property);
+    QStatus UnregisterPropertiesChangedHandler(const char* iface, ProxyBusObject::PropertiesChangedListener& listener);
 
     /**
      * Returns the interfaces implemented by this object. Note that all proxy bus objects
