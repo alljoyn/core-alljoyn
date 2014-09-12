@@ -297,6 +297,13 @@ QStatus Crypto_ASN1::EncodeV(const char*& syntax, qcc::String& asn, va_list* arg
             asn += *val;
             break;
 
+        case 'T':
+            val = va_arg(argp, qcc::String*);
+            asn.push_back((char)ASN_GEN_TIME);
+            EncodeLen(asn, val->size());
+            asn += *val;
+            break;
+
         case 'p':
             val = va_arg(argp, qcc::String*);
             asn.push_back((char)ASN_PRINTABLE);
@@ -309,6 +316,36 @@ QStatus Crypto_ASN1::EncodeV(const char*& syntax, qcc::String& asn, va_list* arg
             asn.push_back((char)ASN_UTF8);
             EncodeLen(asn, val->size());
             asn += *val;
+            break;
+
+        // This will add a context specific tag in the sequence. This can be used to indicate optional fields
+        // are skipped
+        case 'c':
+            {
+                uint32_t v = va_arg(argp, uint32_t);
+                if (v >= 32 || *syntax++ != '(') {
+                    status = ER_FAIL;
+                } else {
+                    qcc::String seq;
+                    status = EncodeV(syntax, seq, argpIn);
+                    if (*syntax++ != ')') {
+                        status = ER_FAIL;
+                    } else if (status == ER_OK) {
+                        asn.push_back((char) (ASN_CONTEXT_SPECIFIC | v));
+                        EncodeLen(asn, seq.size());
+                        asn += seq;
+                    }
+                }
+            }
+            break;
+
+        case 'z':
+            {
+                uint32_t v = va_arg(argp, uint32_t);
+                asn.push_back((char)ASN_BOOLEAN);
+                EncodeLen(asn, 1);
+                asn.push_back((char) (v ? 0xff : 0));
+            }
             break;
 
         // This is a raw string inserted into the ASN.1 output.
