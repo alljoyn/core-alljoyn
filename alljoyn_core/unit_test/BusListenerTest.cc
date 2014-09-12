@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -32,7 +32,6 @@ static bool listener_unregistered_flag = false;
 static bool found_advertised_name_flag = false;
 static bool lost_advertised_name_flag = false;
 static bool name_owner_changed_flag = false;
-static bool property_changed_flag = false;
 static bool bus_stopping_flag = false;
 static bool bus_disconnected_flag = false;
 
@@ -52,9 +51,6 @@ class TestBusListener : public BusListener {
     }
     virtual void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner) {
         name_owner_changed_flag = true;
-    }
-    virtual void PropertyChanged(const char* propName, const MsgArg* propValue) {
-        property_changed_flag = true;
     }
     virtual void BusStopping() {
         bus_stopping_flag = true;
@@ -83,7 +79,6 @@ class BusListenerTest : public testing::Test {
         found_advertised_name_flag = false;
         lost_advertised_name_flag = false;
         name_owner_changed_flag = false;
-        property_changed_flag = false;
         bus_stopping_flag = false;
         bus_disconnected_flag = false;
     }

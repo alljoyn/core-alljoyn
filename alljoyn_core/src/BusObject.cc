@@ -217,8 +217,8 @@ void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg
 
 void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgArg& val, SessionId id, uint8_t flags)
 {
-    QCC_DbgTrace(("BusObject::EmitPropChanged(ifcName = \"%s\", propName = \"%s\", val = %s, id = %u)",
-                  ifcName, propName, val.ToString().c_str(), id));
+    QCC_DbgTrace(("BusObject::EmitPropChanged(ifcName = \"%s\", propName = \"%s\", val = <>, id = %u)",
+                  ifcName, propName, id));
     assert(bus);
     const InterfaceDescription* ifc = bus->GetInterface(ifcName);
 
@@ -241,7 +241,6 @@ void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgAr
         } else if (emitsChanged == "invalidates") {
             const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
             const InterfaceDescription::Member* propChanged = (bus_ifc ? bus_ifc->GetMember("PropertiesChanged") : NULL);
-
             if (NULL != propChanged) {
                 // EMPTY array, followed by array of strings
                 MsgArg args[3];

@@ -106,6 +106,8 @@ class PropTesterObject : public BusObject, private Thread {
     void Set(uint32_t v);
     void Set(const char* v);
 
+    void ObjectRegistered(void) { if (autoChange) { Start(); } }
+
   private:
 
     const bool autoChange;
@@ -124,7 +126,7 @@ class PropTesterObject : public BusObject, private Thread {
 };
 
 PropTesterObject::PropTesterObject(BusAttachment& bus, const char* path, SessionId id, bool autoChange) :
-    BusObject(bus, path),
+    BusObject(path),
     autoChange(autoChange),
     int32Prop(0),
     uint32Prop(0),
@@ -140,10 +142,6 @@ PropTesterObject::PropTesterObject(BusAttachment& bus, const char* path, Session
     assert(ifc);
 
     AddInterface(*ifc);
-
-    if (autoChange) {
-        Start();
-    }
 }
 
 PropTesterObject::~PropTesterObject()
@@ -272,6 +270,8 @@ class PropTesterObject2 : public BusObject, private Thread {
     void Set(uint32_t v);
     void Set(const char* v);
 
+    void ObjectRegistered(void) { if (autoChange) { Start(); } }
+
   private:
 
     const bool autoChange;
@@ -289,7 +289,7 @@ class PropTesterObject2 : public BusObject, private Thread {
 };
 
 PropTesterObject2::PropTesterObject2(BusAttachment& bus, const char* path, SessionId id, bool autoChange) :
-    BusObject(bus, path),
+    BusObject(path),
     autoChange(autoChange),
     intProp(0),
     stringProp("String: "),
@@ -304,10 +304,6 @@ PropTesterObject2::PropTesterObject2(BusAttachment& bus, const char* path, Sessi
     assert(ifc);
 
     AddInterface(*ifc);
-
-    if (autoChange) {
-        Start();
-    }
 }
 
 PropTesterObject2::~PropTesterObject2()
@@ -369,7 +365,9 @@ ThreadReturn STDCALL PropTesterObject2::Run(void* arg)
 
 
 
-class _PropTesterProxyObject : public ProxyBusObject, private ProxyBusObject::Listener {
+class _PropTesterProxyObject :
+    public ProxyBusObject,
+    private ProxyBusObject::PropertiesChangedListener {
   public:
     _PropTesterProxyObject(BusAttachment& bus, const String& service, const String& path, SessionId sessionId);
     ~_PropTesterProxyObject();
@@ -384,8 +382,11 @@ class _PropTesterProxyObject : public ProxyBusObject, private ProxyBusObject::Li
 
   private:
 
-    void PropertyChangedHandler(ProxyBusObject* obj, const char* ifaceName, const char* propName, const MsgArg* value, void* context);
-
+    void PropertiesChanged(ProxyBusObject& obj,
+                           const char* ifaceName,
+                           const MsgArg& changed,
+                           const MsgArg& invalidated,
+                           void* context);
 };
 
 typedef ManagedObj<_PropTesterProxyObject> PropTesterProxyObject;
@@ -403,27 +404,18 @@ _PropTesterProxyObject::_PropTesterProxyObject(BusAttachment& bus, const String&
     assert(ifc);
 
     AddInterface(*ifc);
+    const char* watchProps[] = {
+        "int32",
+        "uint32",
+        "string"
+    };
 
-    RegisterPropertyChangedHandler("org.alljoyn.Testing.PropertyTester", "int32", this,
-                                   reinterpret_cast<ProxyBusObject::Listener::PropertyChanged>(&_PropTesterProxyObject::PropertyChangedHandler),
-                                   NULL);
-    RegisterPropertyChangedHandler("org.alljoyn.Testing.PropertyTester", "uint32", this,
-                                   reinterpret_cast<ProxyBusObject::Listener::PropertyChanged>(&_PropTesterProxyObject::PropertyChangedHandler),
-                                   NULL);
-    RegisterPropertyChangedHandler("org.alljoyn.Testing.PropertyTester", "string", this,
-                                   reinterpret_cast<ProxyBusObject::Listener::PropertyChanged>(&_PropTesterProxyObject::PropertyChangedHandler),
-                                   NULL);
-
+    RegisterPropertiesChangedHandler("org.alljoyn.Testing.PropertyTester", watchProps, ArraySize(watchProps), *this, NULL);
 }
 
 _PropTesterProxyObject::~_PropTesterProxyObject()
 {
-    UnregisterPropertyChangedHandler("org.alljoyn.Testing.PropertyTester", "int32", this,
-                                     reinterpret_cast<ProxyBusObject::Listener::PropertyChanged>(&_PropTesterProxyObject::PropertyChangedHandler));
-    UnregisterPropertyChangedHandler("org.alljoyn.Testing.PropertyTester", "uint32", this,
-                                     reinterpret_cast<ProxyBusObject::Listener::PropertyChanged>(&_PropTesterProxyObject::PropertyChangedHandler));
-    UnregisterPropertyChangedHandler("org.alljoyn.Testing.PropertyTester", "string", this,
-                                     reinterpret_cast<ProxyBusObject::Listener::PropertyChanged>(&_PropTesterProxyObject::PropertyChangedHandler));
+    UnregisterPropertiesChangedHandler("org.alljoyn.Testing.PropertyTester", *this);
 }
 
 
@@ -472,23 +464,58 @@ QStatus _PropTesterProxyObject::Get(const char*& v)
     return status;
 }
 
-void _PropTesterProxyObject::PropertyChangedHandler(ProxyBusObject* obj, const char* ifaceName, const char* propName, const MsgArg* value, void* context)
+void _PropTesterProxyObject::PropertiesChanged(ProxyBusObject& obj,
+                                               const char* ifaceName,
+                                               const MsgArg& changed,
+                                               const MsgArg& invalidated,
+                                               void* context)
 {
-    String valStr = value->ToString();
+    MsgArg* entries;
+    const char** propNames;
+    size_t numEntries;
+    size_t i;
 
-    QCC_SyncPrintf("Property Changed event: %s = %s (bus name: %s   object path: %s)\n",
-                   propName, valStr.c_str(), obj->GetServiceName().c_str(), obj->GetPath().c_str());
+    QCC_SyncPrintf("PropertiesChanged (bus name:    %s\n"
+                   "                   object path: %s\n"
+                   "                   interface:   %s)\n",
+                   obj.GetServiceName().c_str(), obj.GetPath().c_str(), ifaceName);
+
+    changed.Get("a{sv}", &numEntries, &entries);
+    for (i = 0; i < numEntries; ++i) {
+        const char* propName;
+        MsgArg* propValue;
+        entries[i].Get("{sv}", &propName, &propValue);
+        String valStr = propValue->ToString();
+        QCC_SyncPrintf("    Property Changed: %u/%u %s = %s \n",
+                       (unsigned int)i + 1, (unsigned int)numEntries,
+                       propName, valStr.c_str());
+    }
+
+
+    invalidated.Get("as", &numEntries, &propNames);
+    for (i = 0; i < numEntries; ++i) {
+        QCC_SyncPrintf("    Property Invalidated event: %u/%u %s\n",
+                       (unsigned int)i + 1, (unsigned int)numEntries,
+                       propNames[i]);
+    }
 }
 
 
-class _PropTesterProxyObject2 : public ProxyBusObject, private ProxyBusObject::Listener {
+class _PropTesterProxyObject2 :
+    public ProxyBusObject,
+    private ProxyBusObject::Listener,
+    private ProxyBusObject::PropertiesChangedListener {
   public:
     _PropTesterProxyObject2(BusAttachment& bus, const String& service, const String& path, SessionId sessionId);
     ~_PropTesterProxyObject2();
 
   private:
 
-    void PropertyChangedHandler2(ProxyBusObject* obj, const char* ifaceName, const char* propName, const MsgArg* value, void* context);
+    void PropertiesChanged(ProxyBusObject& obj,
+                           const char* ifaceName,
+                           const MsgArg& changed,
+                           const MsgArg& invalidated,
+                           void* context);
     void PropCB(QStatus status, ProxyBusObject* obj, const MsgArg& value, void* context);
 
     struct PropCtx {
@@ -514,46 +541,77 @@ _PropTesterProxyObject2::_PropTesterProxyObject2(BusAttachment& bus, const Strin
 
     AddInterface(*ifc);
 
-    for (int i = 0; i < propTester2Count; ++i) {
-        assert(ER_OK == RegisterPropertyChangedHandler("org.alljoyn.Testing.PropertyTester2", propTester2Names[i], this,
-                                                       reinterpret_cast<ProxyBusObject::Listener::PropertyChanged>(&_PropTesterProxyObject2::PropertyChangedHandler2),
-                                                       NULL));
-    }
-
+    assert(ER_OK == RegisterPropertiesChangedHandler("org.alljoyn.Testing.PropertyTester2",
+                                                     propTester2Names,
+                                                     propTester2Count,
+                                                     *this,
+                                                     NULL));
 }
 
 _PropTesterProxyObject2::~_PropTesterProxyObject2()
 {
     for (int i = 0; i < propTester2Count; ++i) {
-        UnregisterPropertyChangedHandler("org.alljoyn.Testing.PropertyTester2", propTester2Names[i], this,
-                                         reinterpret_cast<ProxyBusObject::Listener::PropertyChanged>(&_PropTesterProxyObject2::PropertyChangedHandler2));
+        UnregisterPropertiesChangedHandler("org.alljoyn.Testing.PropertyTester2", *this);
     }
 }
 
-void _PropTesterProxyObject2::PropertyChangedHandler2(ProxyBusObject* obj, const char* ifaceName, const char* propName, const MsgArg* value, void* context)
+void _PropTesterProxyObject2::PropertiesChanged(ProxyBusObject& obj,
+                                                const char* ifaceName,
+                                                const MsgArg& changed,
+                                                const MsgArg& invalidated,
+                                                void* context)
 {
-    if (value) {
-        String valStr = value->ToString();
+    MsgArg* entries;
+    size_t numEntries;
+    size_t i;
 
-        QCC_SyncPrintf("Property Changed event: %s = %s (bus name: %s   object path: %s)\n",
-                       propName, valStr.c_str(), obj->GetServiceName().c_str(), obj->GetPath().c_str());
-    } else {
-        QCC_SyncPrintf("Property Invalidated event: %s (bus name: %s   object path: %s)\n",
-                       propName, obj->GetServiceName().c_str(), obj->GetPath().c_str());
+    QCC_SyncPrintf("PropertiesChanged (bus name:    %s\n"
+                   "                   object path: %s\n"
+                   "                   interface:   %s)\n",
+                   obj.GetServiceName().c_str(), obj.GetPath().c_str(), ifaceName);
+
+    changed.Get("a{sv}", &numEntries, &entries);
+    for (i = 0; i < numEntries; ++i) {
+        const char* propName;
+        MsgArg* propValue;
+        entries[i].Get("{sv}", &propName, &propValue);
+        String valStr = propValue->ToString();
+        QCC_SyncPrintf("    Property Changed: %u/%u %s = %s \n",
+                       (unsigned int)i + 1, (unsigned int)numEntries,
+                       propName, valStr.c_str());
+
+        PropCtx* ctx = new PropCtx;
+        ctx->name = String(propName);
+        ctx->value = new MsgArg(*propValue);
+        GetPropertyAsync(ifaceName, propName, this,
+                         static_cast<GetPropertyCB>(&_PropTesterProxyObject2::PropCB),
+                         (void*) ctx);
     }
-    PropCtx* ctx = new PropCtx;
-    ctx->name = String(propName);
-    ctx->value = value;
-    GetPropertyAsync(ifaceName, propName, this, static_cast<GetPropertyCB>(&_PropTesterProxyObject2::PropCB), (void*) ctx);
 
+    invalidated.Get("as", &numEntries, &entries);
+    for (i = 0; i < numEntries; ++i) {
+        const char* propName;
+        entries[i].Get("s", &propName);
+        QCC_SyncPrintf("    Property Invalidated event: %u/%u %s\n",
+                       (unsigned int)i + 1, (unsigned int)numEntries,
+                       propName);
+
+        PropCtx* ctx = new PropCtx;
+        ctx->name = String(propName);
+        ctx->value = NULL;
+        GetPropertyAsync(ifaceName, propName, this,
+                         static_cast<GetPropertyCB>(&_PropTesterProxyObject2::PropCB),
+                         (void*) ctx);
+    }
 }
+
 
 void _PropTesterProxyObject2::PropCB(QStatus status, ProxyBusObject* obj, const MsgArg& value, void* context)
 {
     PropCtx* ctx = (PropCtx*) context;
     if (ctx->name.compare("int1") == 0) {
         int32_t i;
-        value.Get("i", &i);
+        ctx->value->Get("i", &i);
         int32_t i2;
         value.Get("i", &i2);
         QCC_SyncPrintf("Property Get Callback: %s (%d = %d)\n", ctx->name.c_str(), i, i2);
@@ -565,7 +623,7 @@ void _PropTesterProxyObject2::PropCB(QStatus status, ProxyBusObject* obj, const 
         assert(ctx->value == NULL);
     } else if (ctx->name.compare("string1") == 0) {
         const char* s;
-        value.Get("s", &s);
+        ctx->value->Get("s", &s);
         const char* s2;
         value.Get("s", &s2);
         QCC_SyncPrintf("Property Get Callback: %s (%s = %s)\n", ctx->name.c_str(), s, s2);
@@ -578,7 +636,8 @@ void _PropTesterProxyObject2::PropCB(QStatus status, ProxyBusObject* obj, const 
     } else {
         QCC_SyncPrintf("Unknown property\n");
     }
-    delete (ctx);
+    delete ctx->value;
+    delete ctx;
 }
 
 
