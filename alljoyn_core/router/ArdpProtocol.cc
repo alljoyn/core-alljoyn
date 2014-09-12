@@ -1002,16 +1002,10 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         /* Don't schedule fast retransmit for this segment */
         sBuf->fastRT = handle->config.fastRetransmitAckCounter + 1;
 
-        if (status == ER_OK) {
+        if (status == ER_OK || status == ER_WOULDBLOCK) {
             timer->retry--;
             conn->backoff = MAX(conn->backoff, ((handle->config.totalDataRetryTimeout / handle->config.initialDataTimeout) + 1) - timer->retry);
             timer->delta = GetRTO(handle, conn);
-        } else if (status == ER_WOULDBLOCK) {
-            /*
-             * Try next time around.
-             * Since this won't be a legitimate retransmit, don't decrement retries.
-             */
-            timer->delta = 0;
         } else {
             QCC_LogError(status, ("RetransmitTimerHandler: Write to Socket went bad. Disconnect."));
             timer->retry = 0;
@@ -1469,18 +1463,17 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
         QCC_DbgPrintf(("SendData(): updated send queue at index %d", index));
 
         status = SendMsgData(handle, conn, sBuf, ttlSend);
+        timeout = GetRTO(handle, conn);
 
         if (status == ER_WOULDBLOCK) {
             QCC_DbgPrintf(("SendData(): ER_WOULDBLOCK"));
             /*
-             * Schedule next time around.
+             * Schedule retransmit attempt sooner.
              * Since this won't be a legitimate retransmit, increase number of retries by 1.
              */
-            timeout = 0;
+            timeout = timeout >> 2;
             retries++;
             status = ER_OK;
-        } else {
-            timeout = GetRTO(handle, conn);
         }
 
         /* We change update our accounting only if the message has been sent successfully. */
