@@ -31,7 +31,6 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <iphlpapi.h>
-#include <cstdint>
 #include <climits>
 #endif
 
@@ -1452,10 +1451,10 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const std::set<uint32_t>& networkRe
         live.m_multicastMDNSPort = MULTICAST_MDNS_PORT;
 
         if (multicastsockFd != qcc::INVALID_SOCKET_FD) {
-            live.m_multicastevent = new qcc::Event(multicastsockFd, qcc::Event::IO_READ, false);
+            live.m_multicastevent = new qcc::Event(multicastsockFd, qcc::Event::IO_READ);
         }
         if (multicastMDNSsockFd != qcc::INVALID_SOCKET_FD) {
-            live.m_multicastMDNSevent = new qcc::Event(multicastMDNSsockFd, qcc::Event::IO_READ, false);
+            live.m_multicastMDNSevent = new qcc::Event(multicastMDNSsockFd, qcc::Event::IO_READ);
         }
 
         QCC_DbgPrintf(("Pushing back interface %s addr %s", live.m_interfaceName.c_str(), entries[i].m_addr.c_str()));
@@ -4264,12 +4263,12 @@ void* IpNameServiceImpl::Run(void* arg)
 
     std::set<uint32_t> networkRefreshSet;
     CreateUnicastSocket(qcc::QCC_AF_INET);
-    qcc::Event unicastIPv4Event(m_ipv4UnicastSockFd, qcc::Event::IO_READ, false);
+    qcc::Event unicastIPv4Event(m_ipv4UnicastSockFd, qcc::Event::IO_READ);
 
     qcc::SocketFd networkEventFd = qcc::INVALID_SOCKET_FD;
 #ifndef QCC_OS_GROUP_WINDOWS
     networkEventFd = qcc::NetworkEventSocket();
-    qcc::Event networkEvent(networkEventFd, qcc::Event::IO_READ, false);
+    qcc::Event networkEvent(networkEventFd, qcc::Event::IO_READ);
 #else
     qcc::Event networkEvent(true);
 #endif

@@ -32,7 +32,7 @@ if enaEnv['OS'] == 'android':
     enaEnv.Install(clientDistDir + '/Android', enaEnv.Dir('Android/res').srcnode())
 
 # This sample depends on the About Service
-if enaEnv['OS'] in ['linux', 'darwin', 'openwrt'] and 'BINDINGS' in enaEnv and enaEnv['BINDINGS'] in ['cpp', 'core'] and 'services' in enaEnv and os.path.exists('../../../services/about/SConscript'):
+if enaEnv['OS'] in ['linux', 'darwin', 'openwrt']:
     enaEnv.SConscript('../../../services/about/SConscript')
 
     enaEnv.Append(CPPPATH = [ enaEnv.Dir('$CPP_DISTDIR/../about/inc') ])

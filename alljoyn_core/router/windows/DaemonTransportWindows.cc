@@ -32,7 +32,7 @@
 #include "BusInternal.h"
 #include "RemoteEndpoint.h"
 #include "Router.h"
-#include "../DaemonTransport.h"
+#include "DaemonTransport.h"
 
 #define QCC_MODULE "DAEMON_TRANSPORT"
 
@@ -42,8 +42,10 @@ using namespace qcc;
 namespace ajn {
 
 const char* DaemonTransport::TransportName = "localhost";
+
 class _DaemonEndpoint;
-typedef qcc::ManagedObj<_DaemonEndpoint> DaemonEndpoint;
+
+typedef ManagedObj<_DaemonEndpoint> DaemonEndpoint;
 
 /*
  * An endpoint class to handle the details of authenticating a connection in
@@ -53,8 +55,8 @@ class _DaemonEndpoint : public _RemoteEndpoint {
 
   public:
 
-    _DaemonEndpoint(BusAttachment& bus, bool incoming, const qcc::String connectSpec, SocketFd sock) :
-        _RemoteEndpoint(bus, incoming, connectSpec, &stream, DaemonTransport::TransportName),
+    _DaemonEndpoint(BusAttachment& bus, SocketFd sock) :
+        _RemoteEndpoint(bus, true, DaemonTransport::TransportName, &stream, DaemonTransport::TransportName),
         stream(sock)
     {
     }
@@ -76,7 +78,7 @@ void* DaemonTransport::Run(void* arg)
     SocketFd listenFd = SocketFd(arg);
     QStatus status = ER_OK;
 
-    Event* listenEvent = new Event(listenFd, Event::IO_READ, false);
+    Event* listenEvent = new Event(listenFd, Event::IO_READ);
 
     while (!IsStopping()) {
 
@@ -94,9 +96,7 @@ void* DaemonTransport::Run(void* arg)
             }
             qcc::String authName;
             qcc::String redirection;
-            bool truthiness = true;
-            String str = DaemonTransport::TransportName;
-            DaemonEndpoint conn = DaemonEndpoint(bus, truthiness, str, newSock);
+            DaemonEndpoint conn(bus, newSock);
 
             QCC_DbgHLPrintf(("DaemonTransport::Run(): Accepting connection newSock=%d", newSock));
 
@@ -118,14 +118,22 @@ void* DaemonTransport::Run(void* arg)
             if ((status != ER_OK) || (nbytes != 1) || (byte != 0)) {
                 status = (status == ER_OK) ? ER_FAIL : status;
             } else {
+                /* Since the Windows DaemonTransport allows untrusted clients,
+                 * it must implement UntrustedClientStart and UntrustedClientExit.
+                 * As a part of Establish, the endpoint can call the Transport's
+                 * UntrustedClientStart method - if it is an untrusted client -
+                 * so the transport MUST call m_endpoint->SetListener before
+                 * calling Establish. Note: This is only required on the accepting
+                 * end i.e. for incoming endpoints.
+                 */
+                conn->SetListener(this);
                 status = conn->Establish("ANONYMOUS", authName, redirection);
             }
             if (status == ER_OK) {
-                conn->SetListener(this);
                 status = conn->Start();
             }
             if (status != ER_OK) {
-                QCC_LogError(status, ("Error starting RemoteEndpoint"));
+                QCC_LogError(status, ("Error starting DaemonEndpoint"));
                 endpointListLock.Lock(MUTEX_CONTEXT);
                 list<RemoteEndpoint>::iterator ei = find(endpointList.begin(), endpointList.end(), RemoteEndpoint::cast(conn));
                 if (ei != endpointList.end()) {
@@ -228,12 +236,12 @@ QStatus DaemonTransport::StartListen(const char* listenSpec)
         QCC_LogError(status, ("DaemonTransport::StartListen(): Invalid localhost listen spec \"%s\"", listenSpec));
         return status;
     }
-    SocketFd listenFd = -1;
+    SocketFd listenFd = qcc::INVALID_SOCKET_FD;
     status = ListenFd(serverArgs, listenFd);
     if (status == ER_OK) {
         status = Thread::Start((void*)listenFd);
     }
-    if ((listenFd != -1) && (status != ER_OK)) {
+    if ((listenFd != qcc::INVALID_SOCKET_FD) && (status != ER_OK)) {
         qcc::Close(listenFd);
     }
     return status;
@@ -244,5 +252,13 @@ QStatus DaemonTransport::StopListen(const char* listenSpec)
     return Thread::Stop();
 }
 
+QStatus DaemonTransport::UntrustedClientStart()
+{
+    /*
+     * Since DaemonTransport accepts connections just on the Localhost interface,
+     * untrusted clients are acceptable.
+     */
+    return ER_OK;
+}
 
 } // namespace ajn

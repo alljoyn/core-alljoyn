@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2012,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -339,11 +339,12 @@ class PeerStateTable {
     /**
      * Get the peer state for given a bus name.
      *
-     * @param busName   The bus name for a remote connection
+     * @param busName         The bus name for a remote connection
+     * @param createIfUnknown true to create a PeerState if the peer is unknown
      *
      * @return  The peer state.
      */
-    PeerState GetPeerState(const qcc::String& busName);
+    PeerState GetPeerState(const qcc::String& busName, bool createIfUnknown = true);
 
     /**
      * Fnd out if the bus name is for a known peer.

@@ -243,7 +243,7 @@ QStatus ClientTransport::Connect(const char* connectArgs, const SessionOpts& opt
     /*
      * Attempt to connect to the endpoint specified in the connectSpec.
      */
-    SocketFd sockFd = -1;
+    SocketFd sockFd = qcc::INVALID_SOCKET_FD;
     status = Socket(QCC_AF_UNIX, QCC_SOCK_STREAM, sockFd);
     if (status != ER_OK) {
         QCC_LogError(status, ("ClientTransport(): socket Create() failed"));

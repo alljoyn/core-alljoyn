@@ -6,7 +6,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -42,15 +42,16 @@
 #define LOG_NOTICE      5       /**< normal but significant condition */
 #define LOG_INFO        6       /**< informational */
 #define LOG_DEBUG       7       /**< debug-level messages */
+#endif
 
-#define LOGGERSETTING_DEFAULT_SYSLOG false
-#define LOGGERSETTING_DEFAULT_FILE stdout
-
-#else
-
+#if defined(QCC_OS_ANDROID)
+#define LOGGERSETTING_DEFAULT_NAME "alljoyn"
 #define LOGGERSETTING_DEFAULT_SYSLOG true
 #define LOGGERSETTING_DEFAULT_FILE NULL
-
+#else
+#define LOGGERSETTING_DEFAULT_NAME NULL
+#define LOGGERSETTING_DEFAULT_SYSLOG false
+#define LOGGERSETTING_DEFAULT_FILE stderr
 #endif
 
 namespace qcc {
@@ -132,25 +133,13 @@ class LoggerSetting {
 
     /**
      * Convenience function for getting access to the instantiated
-     * LoggerSetting object.
-     *
-     * @return  Pointer to most recently instantiated LoggerSetting object.
-     */
-    static LoggerSetting* GetLoggerSetting() {
-        if (!singleton) {
-            singleton = new LoggerSetting();
-        }
-        return singleton;
-    }
-
-    /**
-     * Convenience function for getting access to the instantiated
      * LoggerSetting object and setting its attributes.  This is normally used
      * when initializing the logging facility.
      *
      * @return  Pointer to most recently instantiated LoggerSetting object.
      */
-    static LoggerSetting* GetLoggerSetting(const char* name, int level = LOG_WARNING,
+    static LoggerSetting* GetLoggerSetting(const char* name = LOGGERSETTING_DEFAULT_NAME,
+                                           int level = LOG_DEBUG,
                                            bool useSyslog = LOGGERSETTING_DEFAULT_SYSLOG,
                                            FILE* file = LOGGERSETTING_DEFAULT_FILE);
 
@@ -163,12 +152,6 @@ class LoggerSetting {
     bool useSyslog;                     ///< Flag controlling use of syslog.
     FILE* file;                         ///< File stream pointer.
     qcc::Mutex lock;                    ///< Synchronization mutex.
-
-    /**
-     * Default constructor.  Using this prevents the use of syslog since the
-     * process name does not get set.
-     */
-    LoggerSetting();
 
     /**
      * Constructor for initializing useful values..

@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -148,7 +148,7 @@ int main(int argc, char** argv, char** env)
     environ = env;
 #endif
 
-    LoggerSetting* loggerSettings(LoggerSetting::GetLoggerSetting(argv[0]));
+    LoggerSetting* loggerSettings(LoggerSetting::GetLoggerSetting(argv[0], LOG_WARNING, true, NULL));
     loggerSettings->SetSyslog(false);
     loggerSettings->SetFile(stdout);
 

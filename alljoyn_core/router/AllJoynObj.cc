@@ -427,7 +427,7 @@ void AllJoynObj::BindSessionPort(const InterfaceDescription::Member* member, Mes
             entry.sessionHost = sender;
             entry.sessionPort = sessionPort;
             entry.endpointName = sender;
-            entry.fd = -1;
+            entry.fd = qcc::INVALID_SOCKET_FD;
             entry.opts = opts;
             entry.id = 0;
             SessionMapInsert(entry);
@@ -811,20 +811,23 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 if (busAddrs.empty() && (sessionHost[0] == ':')) {
                     QCC_DbgPrintf(("JoinSessionThread::RunJoin(): look for busaddr in adv alias map"));
                     String rguidStr = String(sessionHost).substr(1, GUID128::SHORT_SIZE);
-                    multimap<String, pair<String, TransportMask> >::iterator ait = ajObj.advAliasMap.lower_bound(rguidStr);
-                    while ((ait != ajObj.advAliasMap.end()) && (ait->first == rguidStr)) {
-                        if ((ait->second.second & optsIn.transports) != 0) {
-                            multimap<String, NameMapEntry>::iterator nmit2 = ajObj.nameMap.lower_bound(ait->second.first);
-                            while (nmit2 != ajObj.nameMap.end() && (nmit2->first == ait->second.first)) {
-                                if ((nmit2->second.transport & ait->second.second & optsIn.transports) != 0) {
-                                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Found busaddr in adv alias map: \"%s\"",
-                                                   nmit2->second.busAddr.c_str()));
-                                    busAddrs.push_back(nmit2->second.busAddr);
+                    map<String, set<AdvAliasEntry> >::iterator ait = ajObj.advAliasMap.find(rguidStr);
+                    if (ait != ajObj.advAliasMap.end()) {
+                        set<AdvAliasEntry>::iterator bit = ait->second.begin();
+                        while ((bit != ait->second.end())) {
+                            if (((*bit).transport & optsIn.transports) != 0) {
+                                multimap<String, NameMapEntry>::iterator nmit2 = ajObj.nameMap.lower_bound((*bit).name);
+                                while (nmit2 != ajObj.nameMap.end() && (nmit2->first == (*bit).name)) {
+                                    if ((nmit2->second.transport & (*bit).transport & optsIn.transports) != 0) {
+                                        QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Found busaddr in adv alias map: \"%s\"",
+                                                       nmit2->second.busAddr.c_str()));
+                                        busAddrs.push_back(nmit2->second.busAddr);
+                                    }
+                                    ++nmit2;
                                 }
-                                ++nmit2;
                             }
+                            ++bit;
                         }
-                        ++ait;
                     }
                 }
                 ajObj.ReleaseLocks();
@@ -1244,7 +1247,7 @@ void AllJoynObj::LeaveSession(const InterfaceDescription::Member* member, Messag
         }
 
         /* Close any open fd for this session */
-        if (smEntry->fd != -1) {
+        if (smEntry->fd != qcc::INVALID_SOCKET_FD) {
             qcc::Shutdown(smEntry->fd);
             qcc::Close(smEntry->fd);
         }
@@ -1609,11 +1612,6 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                 optsOut = sme.opts;
                 optsOut.transports &= optsIn.transports;
 
-                /* Add virtual endpoint (AddVirtualEndpoint cannot be called with locks) */
-                ajObj.ReleaseLocks();
-                QCC_DbgPrintf(("AllJoynObj::RunAttach(): AddVirtualEndpoint(srcStr=\"%s\", srcB2BStr=\"%s\")", srcStr.c_str(), srcB2BStr.c_str()));
-                ajObj.AddVirtualEndpoint(srcStr, srcB2BStr);
-                ajObj.AcquireLocks();
                 BusEndpoint tempEp = ajObj.router.FindEndpoint(srcStr);
                 VirtualEndpoint srcEp = VirtualEndpoint::cast(tempEp);
                 tempEp = ajObj.router.FindEndpoint(srcB2BStr);
@@ -1648,10 +1646,6 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                             replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
                             QCC_LogError(status, ("SendAcceptSession failed"));
                         }
-                        /* Add the virtual endpoint */
-                        QCC_DbgPrintf(("AllJoynObj::RunAttach(): AddVirtualEndpoint(srcStr=\"%s\", srcB2BStr=\"%s\")",
-                                       srcStr.c_str(), srcB2BStr.c_str()));
-                        ajObj.AddVirtualEndpoint(srcStr, srcB2BStr);
 
                         /* Re-lock and re-acquire */
                         ajObj.AcquireLocks();
@@ -1796,14 +1790,6 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                         }
                     }
 
-                    /* Add virtual endpoint */
-                    ajObj.ReleaseLocks();
-                    QCC_DbgPrintf(("AllJoynObj::RunAttach(): Indirect route. AddVirtualEndpoint(srcStr=\"%s\", srcB2BStr=\"%s\")",
-                                   srcStr.c_str(), srcB2BStr.c_str()));
-                    ajObj.AddVirtualEndpoint(srcStr, srcB2BStr);
-
-                    /* Relock and reacquire */
-                    ajObj.AcquireLocks();
                     BusEndpoint tempEp = ajObj.router.FindEndpoint(srcStr);
                     VirtualEndpoint srcEp = VirtualEndpoint::cast(tempEp);
                     tempEp = ajObj.router.FindEndpoint(srcB2BStr);
@@ -1960,12 +1946,21 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
     return 0;
 }
 
-void AllJoynObj::SetAdvNameAlias(const String& guid, const TransportMask mask, const String& advName)
+void AllJoynObj::AddAdvNameAlias(const String& guid, const TransportMask mask, const String& advName)
 {
-    QCC_DbgTrace(("AllJoynObj::SetAdvNameAlias(%s, 0x%x, %s)", guid.c_str(), mask, advName.c_str()));
+    QCC_DbgTrace(("AllJoynObj::AddAdvNameAlias(%s, 0x%x, %s)", guid.c_str(), mask, advName.c_str()));
 
     AcquireLocks();
-    advAliasMap.insert(pair<String, pair<String, TransportMask> >(guid, pair<String, TransportMask>(advName, mask)));
+    std::map<qcc::String, set<AdvAliasEntry> >::iterator it = advAliasMap.find(guid);
+    if (it == advAliasMap.end()) {
+        set<AdvAliasEntry> temp;
+        AdvAliasEntry entry(advName, mask);
+        temp.insert(entry);
+        advAliasMap.insert(pair<String, set<AdvAliasEntry> >(guid, temp));
+    } else {
+        AdvAliasEntry entry(advName, mask);
+        it->second.insert(entry);
+    }
     ReleaseLocks();
 }
 
@@ -2036,7 +2031,7 @@ void AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
                     }
                 }
                 /* Session is lost when members + sessionHost together contain only one entry */
-                if ((it->second.fd == -1) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
+                if ((it->second.fd == qcc::INVALID_SOCKET_FD) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
                     SessionMapEntry tsme = it->second;
                     pair<String, SessionId> key = it->first;
                     if (!it->second.isInitializing) {
@@ -2137,7 +2132,7 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
                     }
                 }
                 /* A session with only one member and no sessionHost or only a sessionHost are "lost" */
-                if ((it->second.fd == -1) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
+                if ((it->second.fd == qcc::INVALID_SOCKET_FD) && (it->second.memberNames.empty() || ((it->second.memberNames.size() == 1) && it->second.sessionHost.empty()))) {
                     SessionMapEntry tsme = it->second;
                     pair<String, SessionId> key = it->first;
                     if (!it->second.isInitializing) {
@@ -2494,15 +2489,15 @@ QStatus AllJoynObj::ShutdownEndpoint(RemoteEndpoint& b2bEp, SocketFd& sockFd)
             status = b2bEp->Join();
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to join RemoteEndpoint used for streaming"));
-                sockFd = -1;
+                sockFd = qcc::INVALID_SOCKET_FD;
             }
         } else {
             QCC_LogError(status, ("Failed to stop RemoteEndpoint used for streaming"));
-            sockFd = -1;
+            sockFd = qcc::INVALID_SOCKET_FD;
         }
     } else {
         QCC_LogError(status, ("Failed to dup remote endpoint's socket"));
-        sockFd = -1;
+        sockFd = qcc::INVALID_SOCKET_FD;
     }
     return status;
 }
@@ -2539,7 +2534,7 @@ void AllJoynObj::GetSessionFd(const InterfaceDescription::Member* member, Messag
     msg->GetArgs(numArgs, args);
     SessionId id = args[0].v_uint32;
     QStatus status;
-    SocketFd sockFd = -1;
+    SocketFd sockFd = qcc::INVALID_SOCKET_FD;
 
     QCC_DbgTrace(("AllJoynObj::GetSessionFd(%u)", id));
 
@@ -2562,7 +2557,7 @@ void AllJoynObj::GetSessionFd(const InterfaceDescription::Member* member, Messag
     }
     ReleaseLocks();
 
-    if (sockFd != -1) {
+    if (sockFd != qcc::INVALID_SOCKET_FD) {
         /* Send the fd and transfer ownership */
         MsgArg replyArg;
         replyArg.Set("h", sockFd);
@@ -3049,7 +3044,7 @@ void AllJoynObj::FindAdvertisedName(const InterfaceDescription::Member* member, 
         matchingStr = String("name='") + str + "*'";
     }
 
-    ProcFindAdvertisement(status, msg, matchingStr, TRANSPORT_ALL);
+    ProcFindAdvertisement(status, msg, matchingStr, TRANSPORT_ANY);
 }
 
 void AllJoynObj::FindAdvertisedNameByTransport(const InterfaceDescription::Member* member, Message& msg)
@@ -3126,6 +3121,7 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
         status = TransportPermission::FilterTransports(srcEp, sender, transports, "AllJoynObj::FindAdvertisedName");
     }
 
+    MatchMap::const_iterator namePrefix = matching.find("name");
     if (ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS == replyCode) {
         /* Check to see if this endpoint is already discovering this prefix */
         bool foundEntry = false;
@@ -3145,7 +3141,11 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
         }
 
         if (!foundEntry) {
-            discoverMap.insert(std::make_pair(matchingStr, DiscoverMapEntry(transports, sender, matching)));
+            /* This is the fix for multiple found names issue.
+             * If this is a name-based query, set initComplete to false and set it to true after
+             * the calls to the transports are complete.
+             */
+            discoverMap.insert(std::make_pair(matchingStr, DiscoverMapEntry(transports, sender, matching, namePrefix == matching.end())));
         }
     }
     /* Find out the transports on which discovery needs to be enabled for this name.
@@ -3179,7 +3179,6 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
     }
 
     /* Send FoundAdvertisedName signals if there are existing matches for matching */
-    MatchMap::const_iterator namePrefix = matching.find("name");
     if ((ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS == replyCode) && (namePrefix != matching.end())) {
         AcquireLocks();
         String prefix = namePrefix->second.substr(0, namePrefix->second.find_last_of('*'));
@@ -3194,9 +3193,6 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
             if (sentSet.find(sentSetEntry) == sentSet.end()) {
                 String foundName = it->first;
                 NameMapEntry nme = it->second;
-                ReleaseLocks();
-                status = SendFoundAdvertisedName(sender, foundName, nme.transport, namePrefix->second);
-                AcquireLocks();
                 it = nameMap.lower_bound(prefix);
                 sentSet.insert(sentSetEntry);
                 if (ER_OK != status) {
@@ -3206,7 +3202,23 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
                 ++it;
             }
         }
+
+
+        //Set initComplete to true
+        DiscoverMapType::iterator dit = discoverMap.lower_bound(matchingStr);
+        while ((dit != discoverMap.end()) && (dit->first == matchingStr)) {
+            if (dit->second.sender == sender) {
+                dit->second.initComplete = true;
+                break;
+            }
+            ++dit;
+        }
         ReleaseLocks();
+        set<pair<String, TransportMask> >::iterator sit = sentSet.begin();
+        while (sit != sentSet.end()) {
+            status = SendFoundAdvertisedName(sender, sit->first, sit->second, namePrefix->second);
+            sit++;
+        }
     }
 }
 
@@ -3223,7 +3235,7 @@ void AllJoynObj::CancelFindAdvertisedName(const InterfaceDescription::Member* me
         matchingStr = String("name='") + str + "*'";
     }
 
-    HandleCancelFindAdvertisement(status, msg, matchingStr, TRANSPORT_ALL);
+    HandleCancelFindAdvertisement(status, msg, matchingStr, TRANSPORT_ANY);
 }
 
 void AllJoynObj::CancelFindAdvertisedNameByTransport(const InterfaceDescription::Member* member, Message& msg)
@@ -3399,8 +3411,10 @@ void AllJoynObj::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
             continue;
         }
 
-        /* Remove endpoint (b2b) reference from this vep */
-        if (it->second->RemoveBusToBusEndpoint(endpoint)) {
+        /* Remove endpoint (b2b) reference from this vep.
+         * Note: If IsStopping() is true, then there is another thread that is in the process
+         * of deleting this virtual endpoint. In this case, skip this virtual endpoint. */
+        if (!it->second->IsStopping() && it->second->RemoveBusToBusEndpoint(endpoint)) {
             /* The last b2b endpoint was removed from this vep. */
             String exitingEpName = it->second->GetUniqueName();
 
@@ -3718,7 +3732,10 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
                 VirtualEndpoint vep = FindVirtualEndpoint(oldOwner.c_str());
                 if (vep->IsValid()) {
                     madeChanges = vep->CanUseRoute(bit->second);
-                    if (madeChanges && vep->RemoveBusToBusEndpoint(bit->second)) {
+
+                    /* Note: If IsStopping() is true, then there is another thread that is in the process
+                     * of deleting this virtual endpoint. In this case, skip this virtual endpoint. */
+                    if (madeChanges && !vep->IsStopping() && vep->RemoveBusToBusEndpoint(bit->second)) {
                         /* The last b2b endpoint was removed from this vep. */
                         String vepName = vep->GetUniqueName();
                         ReleaseLocks();
@@ -3947,7 +3964,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias, const qcc::String* o
                 /*
                  * as long as the file descriptor is -1 this is not a raw session
                  */
-                bool noRawSession = (it->second.fd == -1);
+                bool noRawSession = (it->second.fd == qcc::INVALID_SOCKET_FD);
                 if ((noMemberSingleHost || singleMemberNoHost) && noRawSession) {
                     SessionMapEntry tsme = it->second;
                     pair<String, SessionId> key = it->first;
@@ -4196,6 +4213,11 @@ void AllJoynObj::FoundNames(const qcc::String& busAddr,
                                 if (namePrefix == dit->second.matching.end()) {
                                     continue;
                                 }
+
+                                if (!dit->second.initComplete) {
+                                    continue;
+                                }
+
                                 if (!WildcardMatch(*nit, namePrefix->second) && (transport & dit->second.transportMask)) {
                                     foundNameSet.insert(FoundNameEntry(*nit, namePrefix->second, dit->second.sender));
                                 }
@@ -4342,9 +4364,17 @@ void AllJoynObj::CleanAdvAliasMap(const String& name, const TransportMask mask)
 
     /* Clean advAliasMap */
     AcquireLocks();
-    multimap<String, pair<String, TransportMask> >::iterator ait = advAliasMap.begin();
+    map<String, set<AdvAliasEntry> >::iterator ait = advAliasMap.begin();
     while (ait != advAliasMap.end()) {
-        if ((ait->second.first == name) && ((ait->second.second & mask) != 0)) {
+        set<AdvAliasEntry>::iterator bit = ait->second.begin();
+        while (bit != ait->second.end()) {
+            if (((*bit).name == name) && (((*bit).transport & mask) != 0)) {
+                ait->second.erase(bit++);
+            } else {
+                ++bit;
+            }
+        }
+        if (ait->second.size() == 0) {
             advAliasMap.erase(ait++);
         } else {
             ++ait;

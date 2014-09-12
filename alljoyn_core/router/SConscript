@@ -27,14 +27,14 @@ Help(vars.GenerateHelpText(router_env))
 
 if router_env['OS'] == "darwin":
     # Darwin has its own version of the daemon transport
-	srcs = [ f for f in router_env.Glob('*.cc') + router_env.Glob('*.c') + [router_env['OS'] + '/DaemonTransport.cc'] ]
+	srcs = [ f for f in router_env.Glob('*.cc') + router_env.Glob('*.c') + [router_env['OS'] + '/DaemonTransport' + router_env['OS'].capitalize() + '.cc'] ]
 else:
-	srcs = [ f for f in router_env.Glob('*.cc') + router_env.Glob('*.c') + [router_env['OS_GROUP'] + '/DaemonTransport.cc']]
+	srcs = [ f for f in router_env.Glob('*.cc') + router_env.Glob('*.c') + [router_env['OS_GROUP'] + '/DaemonTransport' + router_env['OS_GROUP'].capitalize() + '.cc']]
 
 srcs += [router_env['OS_GROUP'] + '/Socket.cc']
 
 if router_env['OS'] != "android":
-    srcs += [router_env['OS_GROUP'] + '/PermissionMgr.cc']
+    srcs += [router_env['OS_GROUP'] + '/PermissionMgr' + router_env['OS_GROUP'].capitalize() + '.cc']
 
 router_env.Append(CPPPATH = [ router_env.Dir('..').srcnode(),
                               router_env.Dir('.').srcnode(),

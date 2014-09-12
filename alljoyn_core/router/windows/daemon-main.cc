@@ -340,7 +340,7 @@ int daemon(OptParse& opts)
 
 DAEMONLIBRARY_API int LoadDaemon(int argc, char** argv)
 {
-    LoggerSetting* loggerSettings(LoggerSetting::GetLoggerSetting(argv[0]));
+    LoggerSetting* loggerSettings(LoggerSetting::GetLoggerSetting(argv[0], LOG_WARNING));
     loggerSettings->SetSyslog(false);
     if (g_isManaged) {
         FILE* pFile = _fsopen(g_logFilePathName, "a+", _SH_DENYNO);

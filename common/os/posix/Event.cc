@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -36,6 +36,13 @@
 #include <qcc/Thread.h>
 #include <qcc/time.h>
 
+#if defined(QCC_OS_DARWIN)
+#include <sys/event.h>
+#include <sys/time.h>
+#else
+#include <sys/epoll.h>
+#endif
+
 using namespace std;
 using namespace qcc;
 
@@ -50,19 +57,145 @@ Event Event::alwaysSet(0, 0);
 
 Event Event::neverSet(WAIT_FOREVER, 0);
 
+#if defined(QCC_OS_DARWIN)
 QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
 {
-    fd_set set;
-    fd_set stopSet;
-    int maxFd = -1;
+    struct timespec tval;
+    struct timespec* pTval = NULL;
+
+    Thread* thread = Thread::GetThread();
+
+    int kq = kqueue();
+    if (kq == -1) {
+        QCC_LogError(ER_OS_ERROR, ("kqueue creation failed with %d (%s)", errno, strerror(errno)));
+        return ER_OS_ERROR;
+    }
+    struct kevent chlist[2];
+    struct kevent evlist[2];
+    uint32_t processed = 0;
+
+    if (maxWaitMs != WAIT_FOREVER) {
+        tval.tv_sec = maxWaitMs / 1000;
+        tval.tv_nsec = (maxWaitMs % 1000) * 1000000;
+        pTval = &tval;
+    }
+
+    if (evt.eventType == TIMED) {
+        uint32_t now = GetTimestamp();
+        if (evt.timestamp <= now) {
+            if (0 < evt.period) {
+                evt.timestamp += (((now - evt.timestamp) / evt.period) + 1) * evt.period;
+            }
+            close(kq);
+            return ER_OK;
+        } else if (!pTval || ((evt.timestamp - now) < (uint32_t) (tval.tv_sec * 1000 + tval.tv_nsec / 1000000))) {
+            tval.tv_sec = (evt.timestamp - now) / 1000;
+            tval.tv_nsec = 1000000 * ((evt.timestamp - now) % 1000);
+            pTval = &tval;
+        }
+    } else {
+        if (0 <= evt.fd) {
+            EV_SET(&chlist[processed], evt.fd, ((evt.eventType == IO_WRITE) ? EVFILT_WRITE : EVFILT_READ), EV_ADD, 0, 0, 0);
+            processed++;
+        } else if (0 <= evt.ioFd) {
+            EV_SET(&chlist[processed], evt.ioFd, ((evt.eventType == IO_WRITE) ? EVFILT_WRITE : EVFILT_READ), EV_ADD, 0, 0, 0);
+            processed++;
+        }
+    }
+
+    int stopFd = -1;
+    if (thread) {
+        stopFd = thread->GetStopEvent().fd;
+        EV_SET(&chlist[processed], stopFd, EVFILT_READ, EV_ADD, 0, 0, 0);
+        processed++;
+    }
+
+    uint32_t startTime = 0;
+    if (pTval) {
+        startTime = GetTimestamp();
+    }
+
+    evt.IncrementNumThreads();
+
+    int ret = kevent(kq, chlist, processed, evlist, processed,  pTval);
+    while (ret < 0 && errno == EINTR) {
+        if (pTval) {
+            uint32_t now = GetTimestamp();
+            if ((now - startTime) < (uint32_t) (tval.tv_sec * 1000 + tval.tv_nsec / 1000000)) {
+                tval.tv_sec -= ((now - startTime) / 1000);
+                tval.tv_nsec -= (1000000 * ((now - startTime) % 1000));
+                pTval = &tval;
+            } else {
+                tval.tv_sec = 0;
+                tval.tv_nsec = 0;
+                pTval = &tval;
+            }
+            startTime = GetTimestamp();
+        }
+        ret = kevent(kq, chlist, processed, evlist, processed,  pTval);
+    }
+
+    evt.DecrementNumThreads();
+
+    if (0 < ret && 0 <= stopFd) {
+        for (int n = 0; n < ret; ++n) {
+            if ((evlist[n].filter & EVFILT_READ) && evlist[n].ident == stopFd) {
+                close(kq);
+                return thread->IsStopping() ? ER_STOPPING_THREAD : ER_ALERTED_THREAD;
+            }
+        }
+    }
+    if (0 <= ret && evt.eventType == TIMED) {
+        uint32_t now = GetTimestamp();
+        if (now >= evt.timestamp) {
+            if (0 < evt.period) {
+                evt.timestamp += (((now - evt.timestamp) / evt.period) + 1) * evt.period;
+            }
+            close(kq);
+            return ER_OK;
+        } else {
+            close(kq);
+            return ER_TIMEOUT;
+        }
+    } else if ((0 < ret) && ((0 <= evt.fd) || (0 <= evt.ioFd))) {
+        for (int n = 0; n < ret; ++n) {
+            if ((evlist[n].filter & EVFILT_WRITE) && (evt.eventType == IO_WRITE) && (evlist[n].ident == evt.fd || evlist[n].ident == evt.ioFd)) {
+                close(kq);
+                return ER_OK;
+            } else if ((evlist[n].filter & EVFILT_READ) && (evt.eventType == IO_READ || evt.eventType == GEN_PURPOSE) && (evlist[n].ident == evt.fd || evlist[n].ident == evt.ioFd)) {
+                close(kq);
+                return ER_OK;
+            }
+        }
+        close(kq);
+        return ER_TIMEOUT;
+    }  else if (0 <= ret) {
+        close(kq);
+        return ER_TIMEOUT;
+    } else {
+        close(kq);
+        return ER_FAIL;
+    }
+}
+#else
+QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
+{
     struct timeval tval;
     struct timeval* pTval = NULL;
 
     Thread* thread = Thread::GetThread();
 
-    FD_ZERO(&set);
-    FD_ZERO(&stopSet);
+#if defined(QCC_OS_LINUX)
+    int epollfd = epoll_create1(0);
+#elif defined (QCC_OS_ANDROID)
+    int epollfd = epoll_create(2);
+#endif
 
+    if (epollfd == -1) {
+        QCC_LogError(ER_OS_ERROR, ("epoll_create failed with %d (%s)", errno, strerror(errno)));
+        return ER_OS_ERROR;
+    }
+    struct epoll_event ev, events[2];
     if (maxWaitMs != WAIT_FOREVER) {
         tval.tv_sec = maxWaitMs / 1000;
         tval.tv_usec = (maxWaitMs % 1000) * 1000;
@@ -75,6 +208,7 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
             if (0 < evt.period) {
                 evt.timestamp += (((now - evt.timestamp) / evt.period) + 1) * evt.period;
             }
+            close(epollfd);
             return ER_OK;
         } else if (!pTval || ((evt.timestamp - now) < (uint32_t) (tval.tv_sec * 1000 + tval.tv_usec / 1000))) {
             tval.tv_sec = (evt.timestamp - now) / 1000;
@@ -83,65 +217,240 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
         }
     } else {
         if (0 <= evt.fd) {
-            FD_SET(evt.fd, &set);
-            maxFd = max(maxFd, evt.fd);
-        }
-        if (0 <= evt.ioFd) {
-            FD_SET(evt.ioFd, &set);
-            maxFd = max(maxFd, evt.ioFd);
+            ev.events = (evt.eventType == IO_WRITE) ? EPOLLOUT : EPOLLIN;
+            ev.data.fd = evt.fd;
+            if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt.fd, &ev) == -1) {
+                if (errno == EEXIST) {
+                    QCC_DbgPrintf(("Duplicate epoll_ctl add for fd %u", evt.fd));
+                } else {
+                    QCC_LogError(ER_OS_ERROR, ("epoll_ctl add failed for fd %u with %d (%s)", evt.fd, errno, strerror(errno)));
+                    close(epollfd);
+                    return ER_OS_ERROR;
+                }
+            }
+        } else if (0 <= evt.ioFd) {
+            ev.events = (evt.eventType == IO_WRITE) ? EPOLLOUT : EPOLLIN;
+            ev.data.fd = evt.ioFd;
+            if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt.ioFd, &ev) == -1) {
+                if (errno == EEXIST) {
+                    QCC_DbgPrintf(("Duplicate epoll_ctl add for fd %u", evt.ioFd));
+                } else {
+                    QCC_LogError(ER_OS_ERROR, ("epoll_ctl add failed for fd %u with %d (%s)", evt.ioFd, errno, strerror(errno)));
+                    close(epollfd);
+                    return ER_OS_ERROR;
+                }
+            }
         }
     }
 
     int stopFd = -1;
     if (thread) {
         stopFd = thread->GetStopEvent().fd;
-        if (evt.eventType == IO_WRITE) {
-            FD_SET(stopFd, &stopSet);
-        } else {
-            FD_SET(stopFd, &set);
+        ev.events = EPOLLIN;
+        ev.data.fd = stopFd;
+        if (epoll_ctl(epollfd, EPOLL_CTL_ADD, stopFd, &ev) == -1) {
+            if (errno == EEXIST) {
+                QCC_DbgPrintf(("Duplicate epoll_ctl add for fd %u", stopFd));
+            } else {
+                QCC_LogError(ER_OS_ERROR, ("epoll_ctl add failed for fd %u with %d (%s)", stopFd, errno, strerror(errno)));
+                close(epollfd);
+                return ER_OS_ERROR;
+            }
         }
-        maxFd = max(maxFd, stopFd);
+    }
+
+    uint32_t startTime = 0;
+    if (pTval) {
+        startTime = GetTimestamp();
     }
 
     evt.IncrementNumThreads();
 
-    int ret = select(maxFd + 1,
-                     (evt.eventType == IO_WRITE) ? &stopSet : &set,
-                     (evt.eventType == IO_WRITE) ? &set : NULL,
-                     NULL,
-                     pTval);
-
+    int ret = epoll_wait(epollfd, events, 2, pTval ? ((pTval->tv_sec * 1000) + (pTval->tv_usec / 1000)) : -1);
+    while (ret < 0 && errno == EINTR) {
+        if (pTval) {
+            uint32_t now = GetTimestamp();
+            if ((now - startTime) < (uint32_t) (tval.tv_sec * 1000 + tval.tv_usec / 1000)) {
+                tval.tv_sec -= ((now - startTime) / 1000);
+                tval.tv_usec -= (1000 * ((now - startTime) % 1000));
+                pTval = &tval;
+            } else {
+                tval.tv_sec = 0;
+                tval.tv_usec = 0;
+                pTval = &tval;
+            }
+            startTime = GetTimestamp();
+        }
+        ret = epoll_wait(epollfd, events, 2, pTval ? ((pTval->tv_sec * 1000) + (pTval->tv_usec / 1000)) : -1);
+    }
     evt.DecrementNumThreads();
 
-    if ((0 <= stopFd) && (FD_ISSET(stopFd, &set) || FD_ISSET(stopFd, &stopSet))) {
-        return thread->IsStopping() ? ER_STOPPING_THREAD : ER_ALERTED_THREAD;
-    } else if (evt.eventType == TIMED) {
+    if (0 < ret && 0 <= stopFd) {
+        for (int n = 0; n < ret; ++n) {
+            if ((events[n].events & EPOLLIN) && events[n].data.fd == stopFd) {
+                close(epollfd);
+                return thread->IsStopping() ? ER_STOPPING_THREAD : ER_ALERTED_THREAD;
+            }
+        }
+    }
+    if (0 <= ret && evt.eventType == TIMED) {
         uint32_t now = GetTimestamp();
         if (now >= evt.timestamp) {
             if (0 < evt.period) {
                 evt.timestamp += (((now - evt.timestamp) / evt.period) + 1) * evt.period;
             }
+            close(epollfd);
             return ER_OK;
         } else {
+            close(epollfd);
             return ER_TIMEOUT;
         }
-    } else if ((0 < ret) && (((0 <= evt.fd) && FD_ISSET(evt.fd, &set)) || ((0 <= evt.ioFd) && FD_ISSET(evt.ioFd, &set)))) {
-        return ER_OK;
+    } else if ((0 < ret) && ((0 <= evt.fd) || (0 <= evt.ioFd))) {
+        for (int n = 0; n < ret; ++n) {
+            if ((events[n].events & EPOLLOUT) && evt.eventType == IO_WRITE && (events[n].data.fd == evt.fd || events[n].data.fd == evt.ioFd)) {
+                close(epollfd);
+                return ER_OK;
+            }
+            if ((events[n].events & EPOLLIN) && (evt.eventType == IO_READ || evt.eventType == GEN_PURPOSE) && (events[n].data.fd == evt.fd || events[n].data.fd == evt.ioFd)) {
+                close(epollfd);
+                return ER_OK;
+            }
+        }
+        close(epollfd);
+        return ER_TIMEOUT;
     } else if (0 <= ret) {
+        close(epollfd);
         return ER_TIMEOUT;
     } else {
+        close(epollfd);
         return ER_FAIL;
     }
 }
+#endif
 
+#if defined(QCC_OS_DARWIN)
 QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledEvents, uint32_t maxWaitMs)
 {
-    fd_set rdset;
-    fd_set wrset;
+    struct timespec tval;
+    struct timespec* pTval = NULL;
+
+    if (maxWaitMs != WAIT_FOREVER) {
+        tval.tv_sec = maxWaitMs / 1000;
+        tval.tv_nsec = (maxWaitMs % 1000) * 1000000;
+        pTval = &tval;
+    }
+
+    vector<Event*>::const_iterator it;
+    uint32_t size = checkEvents.empty() ? 1 : checkEvents.size();
+
+    int kq = kqueue();
+    if (kq == -1) {
+        QCC_LogError(ER_OS_ERROR, ("kqueue creation failed with %d (%s)", errno, strerror(errno)));
+        return ER_OS_ERROR;
+    }
+    struct kevent chlist[size];
+    struct kevent evlist[size];
+    uint32_t processed = 0;
+
+    for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
+        Event* evt = *it;
+        evt->IncrementNumThreads();
+        if ((evt->eventType == IO_READ) || (evt->eventType == GEN_PURPOSE)) {
+            if (0 <= evt->fd) {
+                EV_SET(&chlist[processed], evt->fd, EVFILT_READ, EV_ADD, 0, 0, 0);
+                processed++;
+            } else if (0 <= evt->ioFd) {
+                EV_SET(&chlist[processed], evt->ioFd, EVFILT_READ, EV_ADD, 0, 0, 0);
+                processed++;
+            }
+        } else if (evt->eventType == IO_WRITE) {
+            if (0 <= evt->fd) {
+                EV_SET(&chlist[processed], evt->fd, EVFILT_WRITE, EV_ADD, 0, 0, 0);
+                processed++;
+            } else if (0 <= evt->ioFd) {
+                EV_SET(&chlist[processed], evt->ioFd, EVFILT_WRITE, EV_ADD, 0, 0, 0);
+                processed++;
+            }
+        } else if (evt->eventType == TIMED) {
+            uint32_t now = GetTimestamp();
+            if (evt->timestamp <= now) {
+                tval.tv_sec = 0;
+                tval.tv_nsec = 0;
+                pTval = &tval;
+            } else if (!pTval || ((evt->timestamp - now) < (uint32_t) (tval.tv_sec * 1000 + tval.tv_nsec / 1000000))) {
+                tval.tv_sec = (evt->timestamp - now) / 1000;
+                tval.tv_nsec = 1000000 * ((evt->timestamp - now) % 1000);
+                pTval = &tval;
+            }
+        }
+    }
+
+    uint32_t startTime = 0;
+    if (pTval) {
+        startTime = GetTimestamp();
+    }
+
+    int ret = kevent(kq, chlist, processed, evlist, processed,  pTval);
+    while (ret < 0 && errno == EINTR) {
+        if (pTval) {
+            uint32_t now = GetTimestamp();
+            if ((now - startTime) < (uint32_t) (tval.tv_sec * 1000 + tval.tv_nsec / 1000000)) {
+                tval.tv_sec -= ((now - startTime) / 1000);
+                tval.tv_nsec -= (1000000 * ((now - startTime) % 1000));
+                pTval = &tval;
+            } else {
+                tval.tv_sec = 0;
+                tval.tv_nsec = 0;
+                pTval = &tval;
+            }
+            startTime = GetTimestamp();
+        }
+        ret = kevent(kq, chlist, processed, evlist, processed,  pTval);
+    }
+
+    if (0 <= ret) {
+        for (int n = 0; n < ret; ++n) {
+            for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
+                Event* evt = *it;
+                if ((evlist[n].filter & EVFILT_READ) && ((evt->eventType == IO_READ) || (evt->eventType == GEN_PURPOSE))) {
+                    if (((0 <= evt->fd) && evlist[n].ident == evt->fd) || ((0 <= evt->ioFd)  && evlist[n].ident == evt->ioFd)) {
+                        signaledEvents.push_back(evt);
+                    }
+                } else if ((evlist[n].filter & EVFILT_WRITE) && (evt->eventType == IO_WRITE)) {
+                    if (((0 <= evt->fd) && evlist[n].ident == evt->fd) || ((0 <= evt->ioFd) && evlist[n].ident == evt->ioFd)) {
+                        signaledEvents.push_back(evt);
+                    }
+                }
+            }
+        }
+        for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
+            Event* evt = *it;
+            evt->DecrementNumThreads();
+            if (evt->eventType == TIMED) {
+                uint32_t now = GetTimestamp();
+                if (evt->timestamp <= now) {
+                    signaledEvents.push_back(evt);
+                    if (0 < evt->period) {
+                        evt->timestamp += (((now - evt->timestamp) / evt->period) + 1) * evt->period;
+                    }
+                }
+            }
+        }
+        close(kq);
+        return signaledEvents.empty() ? ER_TIMEOUT : ER_OK;
+    } else {
+        for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
+            (*it)->DecrementNumThreads();
+        }
+        QCC_LogError(ER_OS_ERROR, ("kevent failed with %d (%s)", errno, strerror(errno)));
+        return ER_OS_ERROR;
+    }
+}
+#else
+QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledEvents, uint32_t maxWaitMs)
+{
     struct timeval tval;
     struct timeval* pTval = NULL;
-    bool rdSetEmpty = true;
-    bool wrSetEmpty = true;
 
     if (maxWaitMs != WAIT_FOREVER) {
         tval.tv_sec = maxWaitMs / 1000;
@@ -149,35 +458,103 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
         pTval = &tval;
     }
 
-    FD_ZERO(&rdset);
-    FD_ZERO(&wrset);
-    int maxFd = 0;
-    vector<Event*>::const_iterator it;
+    vector<Event*>::const_iterator it, jit;
+    uint32_t size = checkEvents.empty() ? 1 : checkEvents.size();
+
+#if defined(QCC_OS_LINUX)
+    int epollfd = epoll_create1(0);
+#elif defined (QCC_OS_ANDROID)
+    int epollfd = epoll_create(size);
+#endif
+
+    if (epollfd == -1) {
+        QCC_LogError(ER_OS_ERROR, ("epoll_create failed with %d (%s)", errno, strerror(errno)));
+        return ER_OS_ERROR;
+    }
+    struct epoll_event ev, events[size];
 
     for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
         Event* evt = *it;
         evt->IncrementNumThreads();
         if ((evt->eventType == IO_READ) || (evt->eventType == GEN_PURPOSE)) {
             if (0 <= evt->fd) {
-                FD_SET(evt->fd, &rdset);
-                maxFd = std::max(maxFd, evt->fd);
-                rdSetEmpty = false;
-            }
-            if (0 <= evt->ioFd) {
-                FD_SET(evt->ioFd, &rdset);
-                maxFd = std::max(maxFd, evt->ioFd);
-                rdSetEmpty = false;
+                ev.events = EPOLLIN;
+                for (jit = checkEvents.begin(); jit != checkEvents.end(); ++jit) {
+                    Event* event = *jit;
+                    if ((event->fd == evt->fd || event->ioFd == evt->fd) && event->eventType == IO_WRITE) {
+                        ev.events |= EPOLLOUT;
+                        break;
+                    }
+                }
+                ev.data.fd = evt->fd;
+                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt->fd, &ev) == -1) {
+                    if (errno == EEXIST) {
+                        QCC_DbgPrintf(("Duplicate epoll_ctl add for fd %u", evt->fd));
+                    } else {
+                        QCC_LogError(ER_OS_ERROR, ("epoll_ctl add failed for fd %u with %d (%s)", evt->fd, errno, strerror(errno)));
+                        close(epollfd);
+                        return ER_OS_ERROR;
+                    }
+                }
+            } else if (0 <= evt->ioFd) {
+                ev.events = EPOLLIN;
+                for (jit = checkEvents.begin(); jit != checkEvents.end(); ++jit) {
+                    Event* event = *jit;
+                    if ((event->fd == evt->ioFd || event->ioFd == evt->ioFd) && event->eventType == IO_WRITE) {
+                        ev.events |= EPOLLOUT;
+                        break;
+                    }
+                }
+                ev.data.fd = evt->ioFd;
+                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt->ioFd, &ev) == -1) {
+                    if (errno == EEXIST) {
+                        QCC_DbgPrintf(("Duplicate epoll_ctl add for fd %u", evt->ioFd));
+                    } else {
+                        QCC_LogError(ER_OS_ERROR, ("epoll_ctl add failed for fd %u with %d (%s)", evt->ioFd, errno, strerror(errno)));
+                        close(epollfd);
+                        return ER_OS_ERROR;
+                    }
+                }
             }
         } else if (evt->eventType == IO_WRITE) {
             if (0 <= evt->fd) {
-                FD_SET(evt->fd, &wrset);
-                wrSetEmpty = false;
-                maxFd = std::max(maxFd, evt->fd);
-            }
-            if (0 <= evt->ioFd) {
-                FD_SET(evt->ioFd, &wrset);
-                wrSetEmpty = false;
-                maxFd = std::max(maxFd, evt->ioFd);
+                ev.events = EPOLLOUT;
+                for (jit = checkEvents.begin(); jit != checkEvents.end(); ++jit) {
+                    Event* event = *jit;
+                    if ((event->fd == evt->fd || event->ioFd == evt->fd) && ((event->eventType == IO_READ) || (event->eventType == GEN_PURPOSE))) {
+                        ev.events |= EPOLLIN;
+                        break;
+                    }
+                }
+                ev.data.fd = evt->fd;
+                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt->fd, &ev) == -1) {
+                    if (errno == EEXIST) {
+                        QCC_DbgPrintf(("Duplicate epoll_ctl add for fd %u", evt->fd));
+                    } else {
+                        QCC_LogError(ER_OS_ERROR, ("epoll_ctl add failed for fd %u with %d (%s)", evt->fd, errno, strerror(errno)));
+                        close(epollfd);
+                        return ER_OS_ERROR;
+                    }
+                }
+            } else if (0 <= evt->ioFd) {
+                ev.events = EPOLLOUT;
+                for (jit = checkEvents.begin(); jit != checkEvents.end(); ++jit) {
+                    Event* event = *jit;
+                    if ((event->fd == evt->ioFd || event->ioFd == evt->ioFd) && ((event->eventType == IO_READ) || (event->eventType == GEN_PURPOSE))) {
+                        ev.events |= EPOLLIN;
+                        break;
+                    }
+                }
+                ev.data.fd = evt->ioFd;
+                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, evt->ioFd, &ev) == -1) {
+                    if (errno == EEXIST) {
+                        QCC_DbgPrintf(("Duplicate epoll_ctl add for fd %u", evt->ioFd));
+                    } else {
+                        QCC_LogError(ER_OS_ERROR, ("epoll_ctl add failed for fd %u with %d (%s)", evt->ioFd, errno, strerror(errno)));
+                        close(epollfd);
+                        return ER_OS_ERROR;
+                    }
+                }
             }
         } else if (evt->eventType == TIMED) {
             uint32_t now = GetTimestamp();
@@ -193,21 +570,49 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
         }
     }
 
-    int ret = select(maxFd + 1, rdSetEmpty ? NULL : &rdset, wrSetEmpty ? NULL : &wrset, NULL, pTval);
+    uint32_t startTime = 0;
+    if (pTval) {
+        startTime = GetTimestamp();
+    }
+
+    int ret = epoll_wait(epollfd, events, size, pTval ? ((pTval->tv_sec * 1000) + (pTval->tv_usec / 1000)) : -1);
+    while (ret < 0 && errno == EINTR) {
+        if (pTval) {
+            uint32_t now = GetTimestamp();
+            if ((now - startTime) < (uint32_t) (tval.tv_sec * 1000 + tval.tv_usec / 1000)) {
+                tval.tv_sec -= ((now - startTime) / 1000);
+                tval.tv_usec -= (1000 * ((now - startTime) % 1000));
+                pTval = &tval;
+            } else {
+                tval.tv_sec = 0;
+                tval.tv_usec = 0;
+                pTval = &tval;
+            }
+            startTime = GetTimestamp();
+        }
+        ret = epoll_wait(epollfd, events, size, pTval ? ((pTval->tv_sec * 1000) + (pTval->tv_usec / 1000)) : -1);
+    }
 
     if (0 <= ret) {
+        for (int n = 0; n < ret; ++n) {
+            for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
+                Event* evt = *it;
+                if ((events[n].events & EPOLLIN) && ((evt->eventType == IO_READ) || (evt->eventType == GEN_PURPOSE))) {
+                    if (((0 <= evt->fd) && events[n].data.fd == evt->fd) || ((0 <= evt->ioFd)  && events[n].data.fd == evt->ioFd)) {
+                        signaledEvents.push_back(evt);
+                    }
+                } else if ((events[n].events & EPOLLOUT) && (evt->eventType == IO_WRITE)) {
+                    if (((0 <= evt->fd) && events[n].data.fd == evt->fd) || ((0 <= evt->ioFd) && events[n].data.fd == evt->ioFd)) {
+                        signaledEvents.push_back(evt);
+                    }
+                }
+            }
+        }
+
         for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
             Event* evt = *it;
             evt->DecrementNumThreads();
-            if (!rdSetEmpty && ((evt->eventType == IO_READ) || (evt->eventType == GEN_PURPOSE))) {
-                if (((0 <= evt->fd) && FD_ISSET(evt->fd, &rdset)) || ((0 <= evt->ioFd) && FD_ISSET(evt->ioFd, &rdset))) {
-                    signaledEvents.push_back(evt);
-                }
-            } else if (!wrSetEmpty && (evt->eventType == IO_WRITE)) {
-                if (((0 <= evt->fd) && FD_ISSET(evt->fd, &wrset)) || ((0 <= evt->ioFd) && FD_ISSET(evt->ioFd, &wrset))) {
-                    signaledEvents.push_back(evt);
-                }
-            } else if (evt->eventType == TIMED) {
+            if (evt->eventType == TIMED) {
                 uint32_t now = GetTimestamp();
                 if (evt->timestamp <= now) {
                     signaledEvents.push_back(evt);
@@ -217,15 +622,18 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
                 }
             }
         }
+        close(epollfd);
         return signaledEvents.empty() ? ER_TIMEOUT : ER_OK;
     } else {
         for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
             (*it)->DecrementNumThreads();
         }
-        QCC_LogError(ER_FAIL, ("select failed with %d (%s)", errno, strerror(errno)));
-        return ER_FAIL;
+        QCC_LogError(ER_OS_ERROR, ("epoll_wait failed with %d  (%s)", errno, strerror(errno)));
+        close(epollfd);
+        return ER_OS_ERROR;
     }
 }
+#endif
 
 static void createPipe(int* rdFd, int* wrFd)
 {
@@ -337,12 +745,9 @@ Event::Event() : fd(-1), signalFd(-1), ioFd(-1), eventType(GEN_PURPOSE), numThre
     createPipe(&fd, &signalFd);
 }
 
-Event::Event(int ioFd, EventType eventType, bool genPurpose)
+Event::Event(SocketFd ioFd, EventType eventType)
     : fd(-1), signalFd(-1), ioFd(ioFd), eventType(eventType), timestamp(0), period(0), numThreads(0)
 {
-    if (genPurpose) {
-        createPipe(&fd, &signalFd);
-    }
 }
 
 Event::Event(Event& event, EventType eventType, bool genPurpose)

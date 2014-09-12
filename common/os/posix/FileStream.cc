@@ -47,7 +47,7 @@ QStatus qcc::DeleteFile(qcc::String fileName)
 }
 
 FileSource::FileSource(qcc::String fileName) :
-    fd(open(fileName.c_str(), O_RDONLY)), event(new Event(fd, Event::IO_READ, false)), ownsFd(true), locked(false)
+    fd(open(fileName.c_str(), O_RDONLY)), event(new Event(fd, Event::IO_READ)), ownsFd(true), locked(false)
 {
 #ifndef NDEBUG
     if (0 > fd) {
@@ -57,12 +57,12 @@ FileSource::FileSource(qcc::String fileName) :
 }
 
 FileSource::FileSource() :
-    fd(0), event(new Event(fd, Event::IO_READ, false)), ownsFd(false), locked(false)
+    fd(0), event(new Event(fd, Event::IO_READ)), ownsFd(false), locked(false)
 {
 }
 
 FileSource::FileSource(const FileSource& other) :
-    fd(dup(other.fd)), event(new Event(fd, Event::IO_READ, false)), ownsFd(true), locked(other.locked)
+    fd(dup(other.fd)), event(new Event(fd, Event::IO_READ)), ownsFd(true), locked(other.locked)
 {
 }
 
@@ -73,7 +73,7 @@ FileSource FileSource::operator=(const FileSource& other)
     }
     fd = dup(other.fd);
     delete event;
-    event = new Event(fd, Event::IO_READ, false);
+    event = new Event(fd, Event::IO_READ);
     ownsFd = true;
     locked = other.locked;
     return *this;
@@ -132,7 +132,7 @@ void FileSource::Unlock()
 }
 
 FileSink::FileSink(qcc::String fileName, Mode mode)
-    : fd(-1), event(new Event(fd, Event::IO_WRITE, false)), ownsFd(true), locked(false)
+    : fd(-1), event(new Event(fd, Event::IO_WRITE)), ownsFd(true), locked(false)
 {
 #ifdef QCC_OS_ANDROID
     /* Android uses per-user groups so user and group permissions are the same */
@@ -192,12 +192,12 @@ FileSink::FileSink(qcc::String fileName, Mode mode)
 }
 
 FileSink::FileSink()
-    : fd(1), event(new Event(fd, Event::IO_WRITE, false)), ownsFd(false), locked(false)
+    : fd(1), event(new Event(fd, Event::IO_WRITE)), ownsFd(false), locked(false)
 {
 }
 
 FileSink::FileSink(const FileSink& other) :
-    fd(dup(other.fd)), event(new Event(fd, Event::IO_WRITE, false)), ownsFd(true), locked(other.locked)
+    fd(dup(other.fd)), event(new Event(fd, Event::IO_WRITE)), ownsFd(true), locked(other.locked)
 {
 }
 
@@ -208,7 +208,7 @@ FileSink FileSink::operator=(const FileSink& other)
     }
     fd = dup(other.fd);
     delete event;
-    event = new Event(fd, Event::IO_WRITE, false);
+    event = new Event(fd, Event::IO_WRITE);
     ownsFd = true;
     locked = other.locked;
     return *this;

@@ -31,6 +31,7 @@
 #include <qcc/Mutex.h>
 #include <qcc/Thread.h>
 #include <qcc/time.h>
+#include <qcc/String.h>
 #include <qcc/ManagedObj.h>
 
 #if defined(QCC_OS_GROUP_POSIX)
@@ -177,7 +178,7 @@ class Timer : public OSTimer, public ThreadListener {
      * @param prevenReentrancy   Prevent re-entrant call of AlarmTriggered.
      * @param maxAlarms          Maximum number of outstanding alarms allowed before blocking calls to AddAlarm or 0 for infinite.
      */
-    Timer(const char* name, bool expireOnExit = false, uint32_t concurency = 1, bool preventReentrancy = false, uint32_t maxAlarms = 0);
+    Timer(qcc::String name, bool expireOnExit = false, uint32_t concurency = 1, bool preventReentrancy = false, uint32_t maxAlarms = 0);
 
     /**
      * Destructor.

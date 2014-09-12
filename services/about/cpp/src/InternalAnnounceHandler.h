@@ -70,7 +70,7 @@ class InternalAnnounceHandler : public ajn::MessageReceiver {
     /**
      * Remove all announce handlers from the map of handlers
      */
-    QStatus RemoveAllHandlers();
+    void RemoveAllHandlers();
   private:
     /**
      * AnnounceHandler is a callback registered to receive AllJoyn Signal.

@@ -78,15 +78,15 @@ class IoEventMonitor {
     /*
      * Mapping from socket handles to Event registrations
      */
-    std::map<SOCKET, EventList*> eventMap;
+    std::map<SocketFd, EventList*> eventMap;
 
     void RegisterEvent(Event* event) {
-        SOCKET sock = event->GetFD();
+        SocketFd sock = event->GetFD();
         QCC_DbgHLPrintf(("RegisterEvent %s for fd %d (ioHandle=%d)", event->GetEventType() == Event::IO_READ ? "IO_READ" : "IO_WRITE", sock, event->GetHandle()));
         assert((event->GetEventType() == Event::IO_READ) || (event->GetEventType() == Event::IO_WRITE));
 
         lock.Lock();
-        std::map<SOCKET, EventList*>::iterator iter = eventMap.find(sock);
+        std::map<SocketFd, EventList*>::iterator iter = eventMap.find(sock);
         EventList*eventList;
         if (iter == eventMap.end()) {
             /* new IO */
@@ -119,13 +119,13 @@ class IoEventMonitor {
     }
 
     void DeregisterEvent(Event* event) {
-        SOCKET sock = event->GetFD();
+        SocketFd sock = event->GetFD();
 
         QCC_DbgPrintf(("DeregisterEvent %s for fd %d", event->GetEventType() == Event::IO_READ ? "IO_READ" : "IO_WRITE", sock));
         assert((event->GetEventType() == Event::IO_READ) || (event->GetEventType() == Event::IO_WRITE));
 
         lock.Lock();
-        std::map<SOCKET, EventList*>::iterator iter = eventMap.find(sock);
+        std::map<SocketFd, EventList*>::iterator iter = eventMap.find(sock);
         if (iter != eventMap.end()) {
             EventList*eventList = iter->second;
             /*
@@ -181,9 +181,9 @@ Event::Initializer::~Initializer()
 
 VOID CALLBACK IoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
 {
-    SOCKET sock = (SOCKET)arg;
+    SocketFd sock = (SocketFd)arg;
     IoMonitor->lock.Lock();
-    std::map<SOCKET, IoEventMonitor::EventList*>::iterator iter = IoMonitor->eventMap.find(sock);
+    std::map<SocketFd, IoEventMonitor::EventList*>::iterator iter = IoMonitor->eventMap.find(sock);
     if (iter != IoMonitor->eventMap.end()) {
         IoEventMonitor::EventList*eventList = iter->second;
         WSANETWORKEVENTS ioEvents;
@@ -437,7 +437,7 @@ Event::Event() :
     eventType(GEN_PURPOSE),
     timestamp(0),
     period(0),
-    ioFd(-1),
+    ioFd(INVALID_SOCKET_FD),
     numThreads(0),
     networkIfaceEvent(false),
     networkIfaceHandle(INVALID_HANDLE_VALUE)
@@ -450,7 +450,7 @@ Event::Event(bool networkIfaceEvent) :
     eventType(GEN_PURPOSE),
     timestamp(0),
     period(0),
-    ioFd(-1),
+    ioFd(INVALID_SOCKET_FD),
     numThreads(0),
     networkIfaceEvent(networkIfaceEvent),
     networkIfaceHandle(INVALID_HANDLE_VALUE)
@@ -472,7 +472,7 @@ Event::Event(Event& event, EventType eventType, bool genPurpose) :
     networkIfaceHandle(INVALID_HANDLE_VALUE)
 {
     /* Create an auto reset event for the socket fd */
-    if (ioFd > 0) {
+    if (ioFd != INVALID_SOCKET_FD) {
         assert((eventType == IO_READ) || (eventType == IO_WRITE));
         ioHandle = CreateEvent(NULL, FALSE, FALSE, NULL);
         IoMonitor->RegisterEvent(this);
@@ -482,7 +482,7 @@ Event::Event(Event& event, EventType eventType, bool genPurpose) :
     }
 }
 
-Event::Event(int ioFd, EventType eventType, bool genPurpose) :
+Event::Event(SocketFd ioFd, EventType eventType) :
     handle(INVALID_HANDLE_VALUE),
     ioHandle(INVALID_HANDLE_VALUE),
     eventType(eventType),
@@ -494,13 +494,10 @@ Event::Event(int ioFd, EventType eventType, bool genPurpose) :
     networkIfaceHandle(INVALID_HANDLE_VALUE)
 {
     /* Create an auto reset event for the socket fd */
-    if (ioFd > 0) {
+    if (ioFd != INVALID_SOCKET_FD) {
         assert((eventType == IO_READ) || (eventType == IO_WRITE));
         ioHandle = CreateEvent(NULL, FALSE, FALSE, NULL);
         IoMonitor->RegisterEvent(this);
-    }
-    if (genPurpose) {
-        handle = CreateEvent(NULL, TRUE, FALSE, NULL);
     }
 }
 
@@ -510,7 +507,7 @@ Event::Event(uint32_t timestamp, uint32_t period) :
     eventType(TIMED),
     timestamp(WAIT_FOREVER == timestamp ? WAIT_FOREVER : GetTimestamp() + timestamp),
     period(period),
-    ioFd(-1),
+    ioFd(INVALID_SOCKET_FD),
     numThreads(0),
     networkIfaceEvent(false),
     networkIfaceHandle(INVALID_HANDLE_VALUE)
