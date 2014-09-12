@@ -91,20 +91,50 @@ static void name_owner_changed(const void* context, const char* busName, const c
 }
 
 /* Property changed callback */
-static void obj_prop_changed(alljoyn_proxybusobject obj, const char* iface_name, const char* prop_name, alljoyn_msgarg prop_value, void* context) {
-    uint32_t prop3_value;
+static void obj_prop_changed(alljoyn_proxybusobject obj, const char* iface_name, alljoyn_msgarg changed, alljoyn_msgarg invalidated, void* context) {
+    alljoyn_msgarg argList;
+    size_t argListSize;
     QStatus status = ER_FAIL; //default state is failure
-    if (0 == strcmp("prop2", prop_name)) {
-        // prop2 uses org.freedesktop.DBus.Property.EmitsChangedSignal == invalidates
-        // when EmitsChangedSignal == invalidates prop_value is NULL
-        EXPECT_EQ(NULL, prop_value);
-    } else if (0 == strcmp("prop3", prop_name)) {
-        status = alljoyn_msgarg_get(prop_value, "u", &prop3_value);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        EXPECT_EQ(prop3, prop3_value);
-    } else {
-        EXPECT_FALSE(QCC_TRUE) << "property changed signal should only be from prop2 and prop3";
+
+    ASSERT_TRUE(invalidated);
+    // Invalidated properties
+    status = alljoyn_msgarg_get(invalidated, "as", &argListSize, &argList);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    if (argListSize > 0) {
+        EXPECT_EQ(1, argListSize);
+        ASSERT_TRUE(argList);
+        for (size_t index = 0; index < argListSize; index++) {
+            char* propName;
+            ASSERT_TRUE(alljoyn_msgarg_array_element(argList, index));
+            status = alljoyn_msgarg_get(alljoyn_msgarg_array_element(argList, index), "s", &propName);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            ASSERT_TRUE(propName);
+            EXPECT_STREQ("prop2", propName);
+        }
     }
+
+    ASSERT_TRUE(changed);
+    // Changed properties
+    status = alljoyn_msgarg_get(changed, "a{sv}", &argListSize, &argList);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    if (argListSize > 0) {
+        EXPECT_EQ(1, argListSize);
+        ASSERT_TRUE(argList);
+        for (size_t index = 0; index < argListSize; index++) {
+            char* propName;
+            alljoyn_msgarg valueArg;
+            uint32_t value;
+            ASSERT_TRUE(alljoyn_msgarg_array_element(argList, index));
+            status = alljoyn_msgarg_get(alljoyn_msgarg_array_element(argList, index), "{sv}", &propName, &valueArg);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            ASSERT_TRUE(propName);
+            EXPECT_STREQ("prop3", propName);
+            status = alljoyn_msgarg_get(valueArg, "u", &value);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(prop3, value);
+        }
+    }
+
     prop_changed_flag = QCC_TRUE;
 }
 /************* Method handlers *************/
@@ -456,14 +486,13 @@ TEST_F(BusObjectTest, property_changed_signal)
 
     prop_changed_flag = QCC_FALSE;
 
+    const char* props[] = { "prop2", "prop3" };
     alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create(bus, OBJECT_NAME, OBJECT_PATH, 0);
     EXPECT_TRUE(proxyObj);
     status = alljoyn_proxybusobject_introspectremoteobject(proxyObj);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_proxybusobject_registerpropertychangedhandler(proxyObj, INTERFACE_NAME, "prop2", obj_prop_changed, NULL);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = alljoyn_proxybusobject_registerpropertychangedhandler(proxyObj, INTERFACE_NAME, "prop3", obj_prop_changed, NULL);
+    status = alljoyn_proxybusobject_registerpropertieschangedhandler(proxyObj, INTERFACE_NAME, props, sizeof(props) / sizeof(props[0]), obj_prop_changed, NULL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     alljoyn_msgarg value;
