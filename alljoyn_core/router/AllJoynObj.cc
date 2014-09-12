@@ -1612,11 +1612,6 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                 optsOut = sme.opts;
                 optsOut.transports &= optsIn.transports;
 
-                /* Add virtual endpoint (AddVirtualEndpoint cannot be called with locks) */
-                ajObj.ReleaseLocks();
-                QCC_DbgPrintf(("AllJoynObj::RunAttach(): AddVirtualEndpoint(srcStr=\"%s\", srcB2BStr=\"%s\")", srcStr.c_str(), srcB2BStr.c_str()));
-                ajObj.AddVirtualEndpoint(srcStr, srcB2BStr);
-                ajObj.AcquireLocks();
                 BusEndpoint tempEp = ajObj.router.FindEndpoint(srcStr);
                 VirtualEndpoint srcEp = VirtualEndpoint::cast(tempEp);
                 tempEp = ajObj.router.FindEndpoint(srcB2BStr);
@@ -1651,10 +1646,6 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                             replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
                             QCC_LogError(status, ("SendAcceptSession failed"));
                         }
-                        /* Add the virtual endpoint */
-                        QCC_DbgPrintf(("AllJoynObj::RunAttach(): AddVirtualEndpoint(srcStr=\"%s\", srcB2BStr=\"%s\")",
-                                       srcStr.c_str(), srcB2BStr.c_str()));
-                        ajObj.AddVirtualEndpoint(srcStr, srcB2BStr);
 
                         /* Re-lock and re-acquire */
                         ajObj.AcquireLocks();
@@ -1799,14 +1790,6 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                         }
                     }
 
-                    /* Add virtual endpoint */
-                    ajObj.ReleaseLocks();
-                    QCC_DbgPrintf(("AllJoynObj::RunAttach(): Indirect route. AddVirtualEndpoint(srcStr=\"%s\", srcB2BStr=\"%s\")",
-                                   srcStr.c_str(), srcB2BStr.c_str()));
-                    ajObj.AddVirtualEndpoint(srcStr, srcB2BStr);
-
-                    /* Relock and reacquire */
-                    ajObj.AcquireLocks();
                     BusEndpoint tempEp = ajObj.router.FindEndpoint(srcStr);
                     VirtualEndpoint srcEp = VirtualEndpoint::cast(tempEp);
                     tempEp = ajObj.router.FindEndpoint(srcB2BStr);
@@ -3428,8 +3411,10 @@ void AllJoynObj::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
             continue;
         }
 
-        /* Remove endpoint (b2b) reference from this vep */
-        if (it->second->RemoveBusToBusEndpoint(endpoint)) {
+        /* Remove endpoint (b2b) reference from this vep.
+         * Note: If IsStopping() is true, then there is another thread that is in the process
+         * of deleting this virtual endpoint. In this case, skip this virtual endpoint. */
+        if (!it->second->IsStopping() && it->second->RemoveBusToBusEndpoint(endpoint)) {
             /* The last b2b endpoint was removed from this vep. */
             String exitingEpName = it->second->GetUniqueName();
 
@@ -3747,7 +3732,10 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
                 VirtualEndpoint vep = FindVirtualEndpoint(oldOwner.c_str());
                 if (vep->IsValid()) {
                     madeChanges = vep->CanUseRoute(bit->second);
-                    if (madeChanges && vep->RemoveBusToBusEndpoint(bit->second)) {
+
+                    /* Note: If IsStopping() is true, then there is another thread that is in the process
+                     * of deleting this virtual endpoint. In this case, skip this virtual endpoint. */
+                    if (madeChanges && !vep->IsStopping() && vep->RemoveBusToBusEndpoint(bit->second)) {
                         /* The last b2b endpoint was removed from this vep. */
                         String vepName = vep->GetUniqueName();
                         ReleaseLocks();
