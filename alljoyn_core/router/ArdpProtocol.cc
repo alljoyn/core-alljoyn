@@ -171,11 +171,11 @@ typedef struct {
  */
 enum ArdpState {
     CLOSED = 1,    /* No connection exists and no connection record available */
+    CLOSE_WAIT,     /* Entered if local close or remote RST received.  Delay for connection activity to subside. */
     LISTEN,        /* Entered upon a passive open request.  Connection record is allocated and ARDP waits for a connection from remote */
-    SYN_SENT,      /* Entered after rocessing an active open request.  SYN is sent and ARDP waits here for ACK of open request. */
+    SYN_SENT,      /* Entered after processing an active open request.  SYN is sent and ARDP waits here for ACK of open request. */
     SYN_RCVD,      /* Reached from either LISTEN or SYN_SENT.  Generate ISN and ACK. */
-    OPEN,          /* Successful echange of state information happened,.  Data may be sent and received. */
-    CLOSE_WAIT     /* Entered if local close or remote RST received.  Delay for connection activity to subside. */
+    OPEN           /* Successful echange of state information happened,.  Data may be sent and received. */
 };
 
 /**
@@ -210,7 +210,7 @@ typedef struct {
 struct ARDP_CONN_RECORD {
     ListNode list;          /* Doubly linked list node on which this connection might be */
     uint32_t id;            /* Randomly chosen connection identifier */
-    ArdpState STATE;        /* The current sate of the connection */
+    ArdpState state;        /* The current sate of the connection */
     bool passive;           /* If true, this is a passive open (we've been connected to); if false, we did the connecting */
     ArdpSnd snd;            /* Send-side related state information */
     ArdpRcv rcv;            /* Receive-side related state information */
@@ -366,8 +366,8 @@ static const char* State2Text(ArdpState state)
 
 static inline void SetState(ArdpConnRecord* conn, ArdpState state)
 {
-    QCC_DbgTrace(("SetState: conn=%p %s=>%s", conn, State2Text(conn->STATE), State2Text(state)));
-    conn->STATE = state;
+    QCC_DbgTrace(("SetState: conn=%p %s=>%s", conn, State2Text(conn->state), State2Text(state)));
+    conn->state = state;
 }
 
 static uint32_t TimeNow(qcc::Timespec base)
@@ -551,12 +551,12 @@ static uint32_t CheckTimers(ArdpHandle* handle)
 static void DelConnRecord(ArdpHandle* handle, ArdpConnRecord* conn, bool forced)
 {
     QCC_DbgTrace(("DelConnRecord(handle=%p conn=%p forced=%s state=%s)",
-                  handle, conn, forced ? "true" : "false", State2Text(conn->STATE)));
+                  handle, conn, forced ? "true" : "false", State2Text(conn->state)));
 
-    if (!forced && conn->STATE != CLOSED && conn->STATE != CLOSE_WAIT) {
+    if (!forced && conn->state != CLOSED && conn->state != CLOSE_WAIT) {
         QCC_LogError(ER_ARDP_INVALID_STATE, ("DelConnRecord(): Delete while not CLOSED or CLOSE-WAIT conn %p state %s",
-                                             conn, State2Text(conn->STATE)));
-        assert((conn->STATE == CLOSED || conn->STATE == CLOSE_WAIT)  &&
+                                             conn, State2Text(conn->state)));
+        assert((conn->state == CLOSED || conn->state == CLOSE_WAIT)  &&
                "DelConnRecord(): Delete while not CLOSED or CLOSE-WAIT");
 
     }
@@ -877,9 +877,9 @@ static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reas
 
     QCC_DbgTrace(("Disconnect(handle=%p, conn=%p, reason=%s)", handle, conn, QCC_StatusText(reason)));
 
-    if (conn->STATE == CLOSE_WAIT || conn->STATE == CLOSED) {
+    if (conn->state == CLOSE_WAIT || conn->state == CLOSED) {
         QCC_DbgPrintf(("Disconnect(handle=%p, conn=%p, reason=%s) Already disconnect%s",
-                       handle, conn, QCC_StatusText(reason), conn->STATE == CLOSED ? "ed" : "ing"));
+                       handle, conn, QCC_StatusText(reason), conn->state == CLOSED ? "ed" : "ing"));
         return ER_OK;
     }
 
@@ -910,7 +910,7 @@ static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reas
         }
         timeout = handle->config.timewait;
         QCC_DbgPrintf(("Disconnect: Call DisconnectCb() on conn %p, state %s reason %s ",
-                       conn, State2Text(conn->STATE), QCC_StatusText(reason)));
+                       conn, State2Text(conn->state), QCC_StatusText(reason)));
 #if ARDP_STATS
         ++handle->stats.disconnectCbs;
 #endif
@@ -1313,7 +1313,7 @@ static QStatus InitConnRecord(ArdpHandle* handle, ArdpConnRecord* conn, qcc::Soc
     uint16_t local;
     uint32_t count = 0;
 
-    conn->STATE = CLOSED;                 /* Starting state is always CLOSED */
+    conn->state = CLOSED;                 /* Starting state is always CLOSED */
     local = (qcc::Rand32() % 65534) + 1;  /* Allocate an "ephemeral" source port */
 
     /* Make sure this is a unique combiation of foreign/local */
@@ -1626,6 +1626,7 @@ static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t
     }
 
     assert(SEQ32_LET(lcs, conn->snd.UNA));
+
 
     /* Cycle through the buffers from snd.LCS + 1 to ACK */
     index = (conn->snd.LCS + 1) % conn->snd.SEGMAX;
@@ -2038,11 +2039,6 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
 
     QCC_DbgPrintf(("AddRcvBuffer: seg->SEQ = %u, first=%u", seg->SEQ, conn->rcv.LCS + 1));
 
-    /* Sanity check */
-    if ((seg->DLEN + (seg->HLEN * 2)) != len) {
-        QCC_DbgHLPrintf(("AddRcvBuffer: header length (%d) + data length (%d) !=  %d", seg->HLEN * 2, seg->DLEN, len));
-        return ER_FAIL;
-    }
     assert(buf != NULL && len != 0);
 
     if (current->seq == seg->SEQ) {
@@ -2147,10 +2143,10 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
     QCC_DbgTrace(("ArdpMachine(handle=%p, conn=%p, seg=%p, buf=%p, len=%d)", handle, conn, seg, buf, len));
 
-    switch (conn->STATE) {
+    switch (conn->state) {
     case CLOSED:
         {
-            QCC_DbgPrintf(("ArdpMachine(): conn->STATE = CLOSED"));
+            QCC_DbgPrintf(("ArdpMachine(): conn->state = CLOSED"));
 
             if (seg->FLG & ARDP_FLAG_RST) {
 #if ARDP_STATS
@@ -2190,7 +2186,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
     case LISTEN:
         {
-            QCC_DbgPrintf(("ArdpMachine(): conn->STATE = LISTEN"));
+            QCC_DbgPrintf(("ArdpMachine(): conn->state = LISTEN"));
 
             if (seg->FLG & ARDP_FLAG_RST) {
 #if ARDP_STATS
@@ -2253,7 +2249,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
     case SYN_SENT:
         {
-            QCC_DbgPrintf(("ArdpMachine(): conn->STATE = SYN_SENT"));
+            QCC_DbgPrintf(("ArdpMachine(): conn->state = SYN_SENT"));
 
             QCC_DbgHLPrintf(("ArdpMachine(): SYN_SENT: connection refused. state -> CLOSED"));
 
@@ -2387,7 +2383,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
     case SYN_RCVD:
         {
-            QCC_DbgPrintf(("ArdpMachine(): conn->STATE = SYN_RCVD"));
+            QCC_DbgPrintf(("ArdpMachine(): conn->state = SYN_RCVD"));
 
             if (IN_RANGE(uint32_t, conn->rcv.CUR + 1, conn->rcv.SEGMAX, seg->SEQ) == false) {
                 QCC_DbgPrintf(("ArdpMachine(): SYN_RCVD: unacceptable sequence %u", seg->SEQ));
@@ -2488,7 +2484,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
     case OPEN:
         {
-            QCC_DbgPrintf(("ArdpMachine(): conn->STATE = OPEN"));
+            QCC_DbgPrintf(("ArdpMachine(): conn->state = OPEN"));
 
             if (IN_RANGE(uint32_t, conn->rcv.LCS + 1, conn->rcv.SEGMAX, seg->SEQ) == false) {
                 QCC_DbgPrintf(("ArdpMachine(): OPEN: unacceptable sequence %u, conn->rcv.CUR + 1 = %u, conn->rcv.LCS + 1 = %u, MAX = %d", seg->SEQ, conn->rcv.CUR + 1, conn->rcv.LCS + 1, conn->rcv.SEGMAX));
@@ -2574,6 +2570,11 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 if (SEQ32_LT(conn->rcv.CUR, seg->SEQ)) {
                     status = AddRcvBuffer(handle, conn, seg, buf, len, seg->SEQ == (conn->rcv.CUR + 1));
                     conn->rcv.ackPending++;
+
+                    if (status != ER_OK) {
+                        Disconnect(handle, conn, status);
+                        break;
+                    }
                 }
 
                 /*
@@ -2610,7 +2611,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
     case CLOSE_WAIT:
         {
-            QCC_DbgPrintf(("ArdpMachine(): conn->STATE = CLOSE_WAIT"));
+            QCC_DbgPrintf(("ArdpMachine(): conn->state = CLOSE_WAIT"));
             /*
              * Ignore segment with set RST.
              * The transition to CLOSED is based on delay TIMWAIT only.
@@ -2619,7 +2620,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
         }
 
     default:
-        assert(0 && "ArdpMachine(): unexpected conn->STATE %d");
+        assert(0 && "ArdpMachine(): unexpected conn->state %d");
         break;
     }
 
@@ -2719,7 +2720,7 @@ QStatus ARDP_Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32
         return ER_ARDP_INVALID_CONNECTION;
     }
 
-    if (conn->STATE != OPEN) {
+    if (conn->state != OPEN) {
         return ER_ARDP_INVALID_STATE;
     }
 
@@ -2743,22 +2744,55 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, u
     ArdpSeg SEG;
     SEG.FLG = header->flags;                      /* The flags of the current segment */
     SEG.HLEN = header->hlen;                      /* The header len */
-    if (!(SEG.FLG & ARDP_FLAG_SYN) && ((SEG.HLEN * 2) < ARDP_FIXED_HEADER_LEN)) {
-        QCC_DbgHLPrintf(("Receive: seg.hlen = %d, expected at least = %d", (SEG.HLEN * 2), ARDP_FIXED_HEADER_LEN));
+    SEG.DLEN = ntohs(header->dlen);               /* The amount of data in this segment */
+
+
+    if ((!(SEG.FLG & ARDP_FLAG_SYN)) && (((SEG.HLEN * 2) < ARDP_FIXED_HEADER_LEN) || (len < ARDP_FIXED_HEADER_LEN))) {
+        QCC_DbgHLPrintf(("Receive: len = %u, seg.hlen = %u, expected at least = %u",
+                         len, (SEG.HLEN * 2), ARDP_FIXED_HEADER_LEN));
         return ER_ARDP_INVALID_RESPONSE;
     }
+
+    if ((SEG.HLEN * 2 + SEG.DLEN) != len) {
+        QCC_DbgHLPrintf(("Receive: incorrect segment length seg.hlen = %u, seg.dlen = %u (got len = %u)",
+                         (SEG.HLEN * 2), SEG.DLEN, len));
+        return ER_ARDP_INVALID_RESPONSE;
+    }
+
     SEG.SRC = ntohs(header->src);                 /* The source ARDP port */
     SEG.DST = ntohs(header->dst);                 /* The destination ARDP port */
     SEG.SEQ = ntohl(header->seq);                 /* The send sequence of the current segment */
     SEG.ACK = ntohl(header->ack);                 /* The cumulative acknowledgement number to our sends */
-    SEG.DLEN = ntohs(header->dlen);               /* The amount of data in this segment */
     SEG.LCS = ntohl(header->lcs);                 /* The last consumed segment on receiver side (them) */
     SEG.WINDOW = conn->snd.SEGMAX - (conn->snd.NXT - (SEG.LCS + 1)); /* The receivers window */
-    QCC_DbgHLPrintf(("Receive() window=%d, ack %u, lcs %u", SEG.WINDOW, SEG.ACK, SEG.LCS));
+    QCC_DbgHLPrintf(("Receive() window = %u, ack = %u, lcs = %u", SEG.WINDOW, SEG.ACK, SEG.LCS));
     SEG.ACKNXT = ntohl(header->acknxt);           /* The first valid segment sender wants to be acknowledged */
     SEG.TTL = ntohl(header->ttl);                 /* TTL associated with this segment */
     SEG.SOM = ntohl(header->som);                 /* Sequence number of the first fragment in message */
     SEG.FCNT = ntohs(header->fcnt);               /* Number of segments comprising fragmented message */
+
+    if (!(SEG.FLG & ARDP_FLAG_SYN)) {
+        if ((conn->snd.NXT - SEG.LCS) > conn->snd.SEGMAX) {
+            QCC_DbgHLPrintf(("Receive: lcs %u out of range, nxt = %u, segmax = %u",
+                             SEG.LCS, conn->snd.NXT, conn->snd.SEGMAX));
+        }
+
+        /* SEQ and ACKNXT must fall within receive window */
+        if ((SEG.SEQ - SEG.ACKNXT) >= conn->rcv.SEGMAX) {
+            QCC_DbgHLPrintf(("Receive: incorrect sequence numbers seg.seq = %u, seg.acknxt = %u",
+                             SEG.SEQ - SEG.ACKNXT));
+            return ER_ARDP_INVALID_RESPONSE;
+        }
+
+        /* Additional checks for invalid payload values */
+        if (SEG.DLEN != 0) {
+            if ((SEG.FCNT == 0) || (SEG.FCNT > conn->rcv.SEGMAX) || ((SEG.SEQ - SEG.SOM) >= SEG.FCNT)) {
+                QCC_DbgHLPrintf(("Receive: incorrect data segment seq = %u, som = %u,  fcnt = %u",
+                                 SEG.SEQ, SEG.SOM, SEG.FCNT));
+                return ER_ARDP_INVALID_RESPONSE;
+            }
+        }
+    }
 
     ArdpMachine(handle, conn, &SEG, buf, len);
     return ER_OK;
@@ -2767,7 +2801,7 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, u
 QStatus Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint16_t len)
 {
     QCC_DbgTrace(("Accept(handle=%p, conn=%p, buf=%p, len=%d)", handle, conn, buf, len));
-    assert(conn->STATE == CLOSED && "Accept(): ConnRecord in invalid state");
+    assert(conn->state == CLOSED && "Accept(): ConnRecord in invalid state");
 
     ArdpSynSegment* syn = (ArdpSynSegment*)buf;
     if (!(syn->flags & ARDP_FLAG_SYN)) {
@@ -2793,7 +2827,7 @@ QStatus Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint16_t 
     QCC_DbgPrintf(("Accept:SEG.BMAX = conn->snd.SEGBMAX = %d", ntohs(syn->segbmax)));
 
     SEG.DLEN = ntohs(syn->dlen);               /* The data length included in the packet. */
-    conn->STATE = LISTEN;                      /* The call to Accept() implies a jump to LISTEN */
+    conn->state = LISTEN;                      /* The call to Accept() implies a jump to LISTEN */
     conn->foreign = SEG.SRC;                   /* Now that we have the SYN, we have the foreign address */
     conn->passive = true;                      /* This connection is (will be) the result of a passive open */
 
@@ -2852,18 +2886,20 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool socketReady, uint3
             } else {
                 /* Is there an open connection? */
                 ArdpConnRecord* conn = FindConn(handle, local, foreign);
-                if (conn) {
-                    conn->lastSeen = TimeNow(handle->tbase);
-                    assert(conn->lastSeen != 0);
-                    status = Receive(handle, conn, buf, nbytes);
-                } else {
+                if (!conn) {
                     /* Is there a half open connection? */
                     conn = FindConn(handle, local, 0);
-                    if (conn) {
-                        conn->lastSeen = TimeNow(handle->tbase);
-                        status = Receive(handle, conn, buf, nbytes);
+                }
+
+                if (conn && (conn->state != CLOSED) && (conn->state != CLOSE_WAIT)) {
+                    QCC_DbgHLPrintf(("ARDP_Run conn state %s", State2Text(conn->state)));
+                    conn->lastSeen = TimeNow(handle->tbase);
+                    status = Receive(handle, conn, buf, nbytes);
+                    if (status == ER_ARDP_INVALID_RESPONSE) {
+                        Disconnect(handle, conn, status);
                     }
                 }
+
                 /* Ignore anything else */
             }
         }
