@@ -30,11 +30,11 @@
  * Version
 ******************************************************************************/
 
-#define VER_FILEVERSION             14,6,0,0
-#define VER_FILEVERSION_STR         "14.06.00.00\0"
+#define VER_FILEVERSION             14,6,0,97
+#define VER_FILEVERSION_STR         "14.06.00a\0"
 
-#define VER_PRODUCTVERSION          14,6,0,0
-#define VER_PRODUCTVERSION_STR      "14.06.00.00\0"
+#define VER_PRODUCTVERSION          14,6,0,97
+#define VER_PRODUCTVERSION_STR      "14.06.00a\0"
 
 #define VER_PRIVATEBUILD 0
 #define VER_PRERELEASE 0
