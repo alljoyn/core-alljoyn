@@ -16,13 +16,17 @@
 
 package org.alljoyn.bus;
 
-import org.alljoyn.bus.BusAttachment;
-import org.alljoyn.bus.BusObject;
-import org.alljoyn.bus.SignalEmitter;
+import org.alljoyn.bus.annotation.BusAnnotation;
+import org.alljoyn.bus.annotation.BusAnnotations;
+import org.alljoyn.bus.annotation.BusProperty;
 import org.alljoyn.bus.ifaces.Properties;
 
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
-
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * A helper proxy used by BusObjects to send property change notifications.  A PropertyChangedlEmitter
@@ -30,7 +34,29 @@ import java.util.HashMap;
  */
 public class PropertyChangedEmitter extends SignalEmitter {
 
-    private Properties props;
+    private final Properties props;
+
+    /**
+     * Constructs a PropertyChangedEmitter.
+     *
+     * @param source the source object of any signals sent from this emitter
+     * @param sessionId A unique SessionId for this AllJoyn session instance
+     * @param globalBroadcast whether to forward broadcast signals across bus-to-bus connections
+     */
+    public PropertyChangedEmitter(BusObject source, int sessionId, GlobalBroadcast globalBroadcast) {
+        super(source, null, sessionId, globalBroadcast);
+        props = getInterface(Properties.class);
+    }
+
+    /**
+     * Constructs a PropertyChangedEmitter.
+     *
+     * @param source the source object of any signals sent from this emitter
+     * @param globalBroadcast whether to forward broadcast signals across bus-to-bus connections
+     */
+    public PropertyChangedEmitter(BusObject source, GlobalBroadcast globalBroadcast) {
+        this(source, BusAttachment.SESSION_ID_ANY, globalBroadcast);
+    }
 
     /**
      * Constructs a PropertyChangedEmitter.
@@ -39,8 +65,7 @@ public class PropertyChangedEmitter extends SignalEmitter {
      * @param sessionId A unique SessionId for this AllJoyn session instance
      */
     public PropertyChangedEmitter(BusObject source, int sessionId) {
-        super(source, null, sessionId, GlobalBroadcast.On);
-        props = getInterface(Properties.class);
+        this(source, sessionId, GlobalBroadcast.Off);
     }
 
     /**
@@ -53,11 +78,63 @@ public class PropertyChangedEmitter extends SignalEmitter {
     }
 
     /** Sends the signal. */
-    public void PropertyChanged(String ifaceName, final String propertyName, final Variant newValue) throws BusException {
+    public void PropertyChanged(String ifaceName, final String propertyName, final Variant newValue)
+        throws BusException {
+        Map<String, Variant> propsChanged = new HashMap<String, Variant>();
+        String[] invalidatedProps;
         if (newValue == null) {
-            props.PropertiesChanged(ifaceName, null, new String [] { propertyName });
+            invalidatedProps = new String[] {propertyName};
         } else {
-            props.PropertiesChanged(ifaceName, new HashMap<String, Variant>() {{ put(propertyName, newValue); }}, null);
+            invalidatedProps = new String[] {};
+            propsChanged.put(propertyName, newValue);
         }
+        props.PropertiesChanged(ifaceName, propsChanged, invalidatedProps);
+    }
+
+    public void PropertiesChanged(Class<?> iface, Set<String> properties)
+        throws BusException {
+        String ifaceName = InterfaceDescription.getName(iface);
+        Map<String, Variant> changedProps = new HashMap<String, Variant>();
+        List<String> invalidatedProps = new ArrayList<String>();
+
+        for (String propName : properties) {
+            Method m = null;
+            try {
+                // try to find the get method
+                m = iface.getMethod("get" + propName);
+            } catch (NoSuchMethodException ex) {
+                throw new IllegalArgumentException("Not property with name " + propName + " found");
+            }
+            BusProperty busPropertyAnn = m.getAnnotation(BusProperty.class);
+            if (busPropertyAnn != null) {
+                // need to emit
+                BusAnnotations bas = m.getAnnotation(BusAnnotations.class);
+                if (bas != null) {
+                    for (BusAnnotation ba : bas.value()) {
+                        if (ba.name().equals("org.freedesktop.DBus.Property.EmitsChangedSignal")) {
+                            if (ba.value().equals("true")) {
+                                Object o;
+                                try {
+                                    o = m.invoke(source);
+                                } catch (Exception ex) {
+                                    throw new BusException("can't get value of property " + propName, ex);
+                                }
+                                Variant v;
+                                if (busPropertyAnn.signature() != null && !busPropertyAnn.signature().isEmpty()) {
+                                    v = new Variant(o, busPropertyAnn.signature());
+                                } else {
+                                    v = new Variant(o);
+                                }
+                                changedProps.put(propName, v);
+                            } else if (ba.value().equals("invalidates")) {
+                                invalidatedProps.add(propName);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        props.PropertiesChanged(ifaceName, changedProps, invalidatedProps.toArray(new String[invalidatedProps.size()]));
     }
 }
