@@ -66,6 +66,36 @@ static const char* propTesterInterfaceXML =
     "  </interface>"
     "</node>";
 
+static const char* propTester2InterfaceXML =
+    "<node name=\"/org/alljoyn/Testing/PropertyTester\">"
+    "  <interface name=\"org.alljoyn.Testing.PropertyTester2\">"
+
+
+    "    <property name=\"int1\" type=\"u\" access=\"read\">"
+    "      <annotation name=\"org.freedesktop.DBus.Property.EmitsChangedSignal\" value=\"true\"/>"
+    "    </property>"
+    "    <property name=\"int2\" type=\"u\" access=\"read\">"
+    "      <annotation name=\"org.freedesktop.DBus.Property.EmitsChangedSignal\" value=\"invalidates\"/>"
+    "    </property>"
+    "    <property name=\"int3\" type=\"u\" access=\"read\">"
+    "    </property>"
+    "    <property name=\"string1\" type=\"s\" access=\"read\">"
+    "      <annotation name=\"org.freedesktop.DBus.Property.EmitsChangedSignal\" value=\"true\"/>"
+    "    </property>"
+    "    <property name=\"string2\" type=\"s\" access=\"read\">"
+    "      <annotation name=\"org.freedesktop.DBus.Property.EmitsChangedSignal\" value=\"invalidates\"/>"
+    "    </property>"
+    "    <property name=\"string3\" type=\"s\" access=\"read\">"
+    "    </property>"
+
+    "  </interface>"
+    "</node>";
+
+static const char* propTester2Names[] = { "int1", "int2", "int3", "string1", "string2", "string3" };
+static const int propTester2Count = 6;
+static bool multiProp = true;
+static bool singleProp = true;
+
 
 class PropTesterObject : public BusObject, private Thread {
   public:
@@ -233,6 +263,110 @@ ThreadReturn STDCALL PropTesterObject::Run(void* arg)
 }
 
 
+class PropTesterObject2 : public BusObject, private Thread {
+  public:
+    PropTesterObject2(BusAttachment& bus, const char* path, SessionId id, bool autoChange);
+    ~PropTesterObject2();
+
+    void Set(int32_t v);
+    void Set(uint32_t v);
+    void Set(const char* v);
+
+  private:
+
+    const bool autoChange;
+    uint32_t intProp;
+    String stringProp;
+
+    SessionId id;         // SessionId and RO property
+    bool stop;
+    Mutex lock;
+
+    QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
+
+    // Thread methods
+    ThreadReturn STDCALL Run(void* arg);
+};
+
+PropTesterObject2::PropTesterObject2(BusAttachment& bus, const char* path, SessionId id, bool autoChange) :
+    BusObject(bus, path),
+    autoChange(autoChange),
+    intProp(0),
+    stringProp("String: "),
+    id(id),
+    stop(false)
+{
+    const InterfaceDescription* ifc = bus.GetInterface("org.alljoyn.Testing.PropertyTester2");
+    if (!ifc) {
+        bus.CreateInterfacesFromXml(propTester2InterfaceXML);
+        ifc = bus.GetInterface("org.alljoyn.Testing.PropertyTester2");
+    }
+    assert(ifc);
+
+    AddInterface(*ifc);
+
+    if (autoChange) {
+        Start();
+    }
+}
+
+PropTesterObject2::~PropTesterObject2()
+{
+    lock.Lock();
+    stop = true;
+    lock.Unlock();
+
+    if (autoChange) {
+        Stop();
+        Join();
+    }
+}
+
+QStatus PropTesterObject2::Get(const char* ifcName, const char* propName, MsgArg& val)
+{
+    QStatus status = ER_BUS_NO_SUCH_PROPERTY;
+    if (strcmp(ifcName, "org.alljoyn.Testing.PropertyTester2") == 0) {
+        lock.Lock();
+        if (strcmp(propName, "int1") == 0 || strcmp(propName, "int2") == 0 || strcmp(propName, "int3") == 0) {
+            val.Set("i", intProp);
+            status = ER_OK;
+            QCC_SyncPrintf("Get property %s (%d) at %s\n", propName, intProp, GetPath());
+
+        } else if (strcmp(propName, "string1") == 0 || strcmp(propName, "string2") == 0 || strcmp(propName, "string3") == 0) {
+            val.Set("s", stringProp.c_str());
+            status = ER_OK;
+            QCC_SyncPrintf("Get property %s (%s) at %s\n", propName, stringProp.c_str(), GetPath());
+
+        } else {
+            std::cerr << "Trying to get unknown property on interface " << ifcName << ": " << propName << std::endl;
+        }
+        lock.Unlock();
+    }
+
+    return status;
+}
+
+ThreadReturn STDCALL PropTesterObject2::Run(void* arg)
+{
+    Event dummy;
+    QStatus status;
+    lock.Lock();
+    while (!IsStopping()) {
+        ++intProp;
+        stringProp.append("X");
+        QCC_SyncPrintf("PropTesterObject2::Run : (%d) %d -- %s\n", id, intProp, stringProp.c_str());
+        status = EmitPropChanged("org.alljoyn.Testing.PropertyTester2", propTester2Names, propTester2Count, id);
+        assert(status == ER_OK);
+        lock.Unlock();
+        Event::Wait(dummy, 2000);
+        lock.Lock();
+    }
+    lock.Unlock();
+
+    return 0;
+}
+
+
 
 
 class _PropTesterProxyObject : public ProxyBusObject, private ProxyBusObject::Listener {
@@ -347,6 +481,107 @@ void _PropTesterProxyObject::PropertyChangedHandler(ProxyBusObject* obj, const c
 }
 
 
+class _PropTesterProxyObject2 : public ProxyBusObject, private ProxyBusObject::Listener {
+  public:
+    _PropTesterProxyObject2(BusAttachment& bus, const String& service, const String& path, SessionId sessionId);
+    ~_PropTesterProxyObject2();
+
+  private:
+
+    void PropertyChangedHandler2(ProxyBusObject* obj, const char* ifaceName, const char* propName, const MsgArg* value, void* context);
+    void PropCB(QStatus status, ProxyBusObject* obj, const MsgArg& value, void* context);
+
+    struct PropCtx {
+        String name;
+        const MsgArg* value;
+    };
+
+};
+
+typedef ManagedObj<_PropTesterProxyObject2> PropTesterProxyObject2;
+
+
+
+_PropTesterProxyObject2::_PropTesterProxyObject2(BusAttachment& bus, const String& service, const String& path, SessionId sessionId) :
+    ProxyBusObject(bus, service.c_str(), path.c_str(), sessionId)
+{
+    const InterfaceDescription* ifc = bus.GetInterface("org.alljoyn.Testing.PropertyTester2");
+    if (!ifc) {
+        bus.CreateInterfacesFromXml(propTester2InterfaceXML);
+        ifc = bus.GetInterface("org.alljoyn.Testing.PropertyTester2");
+    }
+    assert(ifc);
+
+    AddInterface(*ifc);
+
+    for (int i = 0; i < propTester2Count; ++i) {
+        assert(ER_OK == RegisterPropertyChangedHandler("org.alljoyn.Testing.PropertyTester2", propTester2Names[i], this,
+                                                       reinterpret_cast<ProxyBusObject::Listener::PropertyChanged>(&_PropTesterProxyObject2::PropertyChangedHandler2),
+                                                       NULL));
+    }
+
+}
+
+_PropTesterProxyObject2::~_PropTesterProxyObject2()
+{
+    for (int i = 0; i < propTester2Count; ++i) {
+        UnregisterPropertyChangedHandler("org.alljoyn.Testing.PropertyTester2", propTester2Names[i], this,
+                                         reinterpret_cast<ProxyBusObject::Listener::PropertyChanged>(&_PropTesterProxyObject2::PropertyChangedHandler2));
+    }
+}
+
+void _PropTesterProxyObject2::PropertyChangedHandler2(ProxyBusObject* obj, const char* ifaceName, const char* propName, const MsgArg* value, void* context)
+{
+    if (value) {
+        String valStr = value->ToString();
+
+        QCC_SyncPrintf("Property Changed event: %s = %s (bus name: %s   object path: %s)\n",
+                       propName, valStr.c_str(), obj->GetServiceName().c_str(), obj->GetPath().c_str());
+    } else {
+        QCC_SyncPrintf("Property Invalidated event: %s (bus name: %s   object path: %s)\n",
+                       propName, obj->GetServiceName().c_str(), obj->GetPath().c_str());
+    }
+    PropCtx* ctx = new PropCtx;
+    ctx->name = String(propName);
+    ctx->value = value;
+    GetPropertyAsync(ifaceName, propName, this, static_cast<GetPropertyCB>(&_PropTesterProxyObject2::PropCB), (void*) ctx);
+
+}
+
+void _PropTesterProxyObject2::PropCB(QStatus status, ProxyBusObject* obj, const MsgArg& value, void* context)
+{
+    PropCtx* ctx = (PropCtx*) context;
+    if (ctx->name.compare("int1") == 0) {
+        int32_t i;
+        value.Get("i", &i);
+        int32_t i2;
+        value.Get("i", &i2);
+        QCC_SyncPrintf("Property Get Callback: %s (%d = %d)\n", ctx->name.c_str(), i, i2);
+        assert(i == i2);
+    } else if (ctx->name.compare("int2") == 0) {
+        int32_t i;
+        value.Get("i", &i);
+        QCC_SyncPrintf("Property Get Callback: %s (%d)\n", ctx->name.c_str(), i);
+        assert(ctx->value == NULL);
+    } else if (ctx->name.compare("string1") == 0) {
+        const char* s;
+        value.Get("s", &s);
+        const char* s2;
+        value.Get("s", &s2);
+        QCC_SyncPrintf("Property Get Callback: %s (%s = %s)\n", ctx->name.c_str(), s, s2);
+        assert(strcmp(s, s2) == 0);
+    } else if (ctx->name.compare("string2") == 0) {
+        const char* s;
+        value.Get("s", &s);
+        QCC_SyncPrintf("Property Get Callback: %s (%s)\n", ctx->name.c_str(), s);
+        assert(ctx->value == NULL);
+    } else {
+        QCC_SyncPrintf("Unknown property\n");
+    }
+    delete (ctx);
+}
+
+
 class App {
   public:
     virtual ~App() { }
@@ -360,7 +595,7 @@ class Service : public App, private SessionPortListener, private SessionListener
 
   private:
     BusAttachment& bus;
-    multimap<SessionId, PropTesterObject*> objects;
+    multimap<SessionId, BusObject*> objects;
     SessionPort port;
 
     void Add(SessionId id, bool autoUpdate);
@@ -397,17 +632,30 @@ Service::~Service()
 
 void Service::Add(SessionId id, bool autoUpdate)
 {
-    String path = "/org/alljoyn/Testing/PropertyTester/";
-    path += U32ToString(id);
-    if (autoUpdate) {
-        path += "/a";
-    } else {
-        path += "/b";
+
+    if (singleProp) {
+        String path = "/org/alljoyn/Testing/PropertyTester/";
+        path += U32ToString(id);
+        if (autoUpdate) {
+            path += "/a";
+        } else {
+            path += "/b";
+        }
+        PropTesterObject* obj = new PropTesterObject(bus, path.c_str(), id, autoUpdate);
+        pair<SessionId, PropTesterObject*> item(id, obj);
+        objects.insert(item);
+        bus.RegisterBusObject(*obj);
     }
-    PropTesterObject* obj = new PropTesterObject(bus, path.c_str(), id, autoUpdate);
-    pair<SessionId, PropTesterObject*> item(id, obj);
-    objects.insert(item);
-    bus.RegisterBusObject(*obj);
+    if (multiProp && autoUpdate) {
+        String path = "/org/alljoyn/Testing/PropertyTester/";
+        path += U32ToString(id);
+        path += "/c";
+        PropTesterObject2* obj = new PropTesterObject2(bus, path.c_str(), id, autoUpdate);
+        pair<SessionId, PropTesterObject2*> item(id, obj);
+        objects.insert(item);
+        bus.RegisterBusObject(*obj);
+    }
+
 }
 
 void Service::SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner)
@@ -419,7 +667,7 @@ void Service::SessionJoined(SessionPort sessionPort, SessionId id, const char* j
 
 void Service::SessionLost(SessionId sessionId)
 {
-    multimap<SessionId, PropTesterObject*>::iterator it;
+    multimap<SessionId, BusObject*>::iterator it;
     it = objects.find(sessionId);
     while (it != objects.end()) {
         bus.UnregisterBusObject(*(it->second));
@@ -439,6 +687,7 @@ class Client : public App, private BusListener, private BusAttachment::JoinSessi
     BusAttachment& bus;
     map<SessionId, PropTesterProxyObject> aObjects;  // auto updated objects
     map<SessionId, PropTesterProxyObject> bObjects;  // get/set test objects
+    map<SessionId, PropTesterProxyObject2> cObjects;  // multi properties test objects
     set<String> foundNames;
     Mutex lock;
     Event newServiceFound;
@@ -472,6 +721,9 @@ Client::~Client()
     while (!bObjects.empty()) {
         bObjects.erase(bObjects.begin());
     }
+    while (!cObjects.empty()) {
+        cObjects.erase(cObjects.begin());
+    }
     Stop();
     Join();
     bus.UnregisterBusListener(*this);
@@ -480,19 +732,30 @@ Client::~Client()
 
 void Client::Add(const String& name, SessionId id, bool aObj)
 {
-    String path = "/org/alljoyn/Testing/PropertyTester/";
-    path += U32ToString(id);
-    if (aObj) {
-        path += "/a";
-    } else {
-        path += "/b";
+
+    if (singleProp) {
+        String path = "/org/alljoyn/Testing/PropertyTester/";
+        path += U32ToString(id);
+        if (aObj) {
+            path += "/a";
+        } else {
+            path += "/b";
+        }
+        PropTesterProxyObject obj(bus, name, path, id);
+        pair<SessionId, PropTesterProxyObject> item(id, obj);
+        if (aObj) {
+            aObjects.insert(item);
+        } else {
+            bObjects.insert(item);
+        }
     }
-    PropTesterProxyObject obj(bus, name, path, id);
-    pair<SessionId, PropTesterProxyObject> item(id, obj);
-    if (aObj) {
-        aObjects.insert(item);
-    } else {
-        bObjects.insert(item);
+    if (multiProp && aObj) {
+        String path = "/org/alljoyn/Testing/PropertyTester/";
+        path += U32ToString(id);
+        path += "/c";
+        PropTesterProxyObject2 obj(bus, name, path, id);
+        pair<SessionId, PropTesterProxyObject2> item(id, obj);
+        cObjects.insert(item);
     }
 }
 
@@ -506,6 +769,7 @@ void Client::FoundAdvertisedName(const char* name, TransportMask transport, cons
     set<String>::iterator it = foundNames.find(nameStr);
     if (it == foundNames.end()) {
         QCC_SyncPrintf("Joining session with %s\n", name);
+        bus.EnableConcurrentCallbacks();
         bus.JoinSessionAsync(name, PORT, NULL, SESSION_OPTS, this, new String(nameStr));
         foundNames.insert(nameStr);
     }
@@ -613,7 +877,9 @@ void Usage()
 {
     printf("proptester: [ -c ] [ -n <NAME> ] [ -s <SECONDS> ]\n"
            "    -c            Run as client (runs as service by default).\n"
-           "    -n <NAME>     Use <NAME> for well known bus name.\n");
+           "    -n <NAME>     Use <NAME> for well known bus name.\n"
+           "    -m            Use EmitPropertiesChanged only for multiple properties at once.\n"
+           "    -s            Use EmitPropertiesChanged only for single property at once.\n");
 }
 
 
@@ -637,6 +903,10 @@ int main(int argc, char** argv)
         } else if (strcmp(argv[i], "-h") == 0) {
             Usage();
             exit(1);
+        } else if (strcmp(argv[i], "-m") == 0) {
+            singleProp = false;
+        } else if (strcmp(argv[i], "-s") == 0) {
+            multiProp = false;
         } else {
             Usage();
             exit(1);

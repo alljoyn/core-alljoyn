@@ -966,6 +966,9 @@ class ProxyBusObject : public MessageReceiver {
     mutable qcc::Mutex* lock;   /**< Lock that protects access to components member */
     bool isExiting;             /**< true iff ProxyBusObject is in the process of begin destroyed */
     bool isSecure;              /**< Indicates if this object is secure or not */
+
+    /** Static variable to keep track of how many property changed listeners there are.*/
+    static int sAddMatchPropertiesChanged;
 };
 
 /**

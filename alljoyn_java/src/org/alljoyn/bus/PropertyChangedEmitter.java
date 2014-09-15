@@ -16,12 +16,17 @@
 
 package org.alljoyn.bus;
 
-import org.alljoyn.bus.BusAttachment;
-import org.alljoyn.bus.BusObject;
-import org.alljoyn.bus.SignalEmitter;
+import org.alljoyn.bus.annotation.BusAnnotation;
+import org.alljoyn.bus.annotation.BusAnnotations;
+import org.alljoyn.bus.annotation.BusProperty;
 import org.alljoyn.bus.ifaces.Properties;
 
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -30,7 +35,7 @@ import java.util.HashMap;
  */
 public class PropertyChangedEmitter extends SignalEmitter {
 
-    private Properties props;
+    private final Properties props;
 
     /**
      * Constructs a PropertyChangedEmitter.
@@ -59,5 +64,57 @@ public class PropertyChangedEmitter extends SignalEmitter {
         } else {
             props.PropertiesChanged(ifaceName, new HashMap<String, Variant>() {{ put(propertyName, newValue); }}, null);
         }
+    }
+
+    public void PropertiesChanged(Class<?> iface, Set<String> properties)
+        throws BusException
+    {
+        String ifaceName = InterfaceDescription.getName(iface);
+        Map<String, Variant> changedProps = new HashMap<String, Variant>();
+        List<String> invalidatedProps = new ArrayList<String>();
+
+        for (String propName : properties) {
+            Method m = null;
+            try {
+                // try to find the get method
+                m = iface.getMethod("get" + propName);
+            }
+            catch (NoSuchMethodException ex) {
+                throw new IllegalArgumentException("Not property with name " + propName + " found");
+            }
+            BusProperty busPropertyAnn = m.getAnnotation(BusProperty.class);
+            if (busPropertyAnn != null) {
+                // need to emit
+                BusAnnotations bas = m.getAnnotation(BusAnnotations.class);
+                if (bas != null) {
+                    for (BusAnnotation ba : bas.value()) {
+                        if (ba.name().equals("org.freedesktop.DBus.Property.EmitsChangedSignal")) {
+                            if (ba.value().equals("true")) {
+                                Object o;
+                                try {
+                                    o = m.invoke(source);
+                                }
+                                catch (Exception ex) {
+                                    throw new BusException("can't get value of property " + propName, ex);
+                                }
+                                Variant v;
+                                if (busPropertyAnn.signature() != null && !busPropertyAnn.signature().isEmpty()) {
+                                    v = new Variant(o, busPropertyAnn.signature());
+                                }
+                                else {
+                                    v = new Variant(o);
+                                }
+                                changedProps.put(propName, v);
+                            }
+                            else if (ba.value().equals("invalidates")) {
+                                invalidatedProps.add(propName);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        props.PropertiesChanged(ifaceName, changedProps, invalidatedProps.toArray(new String[invalidatedProps.size()]));
     }
 }
