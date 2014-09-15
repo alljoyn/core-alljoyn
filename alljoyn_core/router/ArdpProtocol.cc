@@ -2775,8 +2775,12 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, u
                              SEG.LCS, conn->snd.NXT, conn->snd.SEGMAX));
         }
 
-        /* SEQ and ACKNXT must fall within receive window */
-        if ((SEG.SEQ - SEG.ACKNXT) >= conn->rcv.SEGMAX) {
+        /*
+         * SEQ and ACKNXT must fall within receive window. In case of segment with no payload,
+         * allow one extra.
+         */
+        if (((SEG.SEQ - SEG.ACKNXT) > conn->rcv.SEGMAX) ||
+            ((SEG.DLEN != 0) && ((SEG.SEQ - SEG.ACKNXT) == conn->rcv.SEGMAX))) {
             QCC_DbgHLPrintf(("Receive: incorrect sequence numbers seg.seq = %u, seg.acknxt = %u",
                              SEG.SEQ - SEG.ACKNXT));
             return ER_ARDP_INVALID_RESPONSE;
