@@ -1280,7 +1280,7 @@ static QStatus InitRcv(ArdpConnRecord* conn, uint32_t segmax, uint32_t segbmax)
 {
     QCC_DbgTrace(("InitRcv(conn=%p, segmax=%d, segbmax=%d)", conn, segmax, segbmax));
     conn->rcv.SEGMAX = segmax;     /* The maximum number of outstanding segments that we can buffer (we will tell other side) */
-    conn->rcv.SEGBMAX = segbmax;     /* The largest buffer that can be received on this connection (our buffer size) */
+    conn->rcv.SEGBMAX = segbmax;   /* The largest buffer that can be received on this connection (our buffer size) */
 
     conn->rcv.buf = (ArdpRcvBuf*) malloc(segmax * sizeof(ArdpRcvBuf));
     if (conn->rcv.buf == NULL) {
@@ -1417,19 +1417,17 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
 
     /*
      * Check if the message's TTL is less than half RTT. If this is the case,
-     * do not bother to sending, retrun error.
+     * do not bother sending, return error.
      */
-
-    QCC_DbgPrintf(("SendMsgData(): Dropping expired message (conn=0x%p, buf=0x%p, len=%d.)",
-                   conn, sBuf->data, sBuf->datalen));
-
-    /* Factor in mean RTT to account for time on the wire */
     if (conn->rttInit && (ttl != ARDP_TTL_INFINITE)) {
         if ((ttl + conn->snd.DACKT) <= (conn->rttMean >> 1)) {
 #if ARDP_STATS
             ++handle->stats.outboundDrops;
             ++handle->stats.preflightDrops;
 #endif
+            QCC_DbgPrintf(("SendMsgData(): Dropping expired message (conn=0x%p, buf=0x%p, len=%d.)",
+                           conn, sBuf->data, sBuf->datalen));
+
             return ER_ARDP_TTL_EXPIRED;
         }
         ttlSend = ttl - (conn->rttMean >> 1);
