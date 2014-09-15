@@ -362,7 +362,18 @@ QStatus ProxyBusObject::RegisterPropertyChangedHandler(const char* iface,
         CBContext<ProxyBusObject::Listener::PropertyChanged>* ctx = new CBContext<ProxyBusObject::Listener::PropertyChanged>(this, listener, callback, context);
         pair<StringMapKey, CBContext<ProxyBusObject::Listener::PropertyChanged>*> item(key, ctx);
         components->propertyChangedCBs.insert(item);
-        status = ER_OK;
+
+
+
+        String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'");
+        /* a more fine-grained rule could be added by adding arg0=iface when supported */
+        MsgArg arg("s", rule.c_str());
+        const ProxyBusObject& dbusObj = bus->GetDBusProxyObj();
+        status = dbusObj.MethodCallAsync(org::freedesktop::DBus::InterfaceName, "AddMatch",
+                                         const_cast<MessageReceiver*>(static_cast<const MessageReceiver* const>(this)),
+                                         static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::SyncReplyHandler),
+                                         &arg, 1, NULL);
+
     }
     return status;
 }
@@ -1045,17 +1056,19 @@ QStatus ProxyBusObject::MethodCall(const char* ifaceName,
 
 void ProxyBusObject::SyncReplyHandler(Message& msg, void* context)
 {
-    ManagedObj<SyncReplyContext>* ctx = reinterpret_cast<ManagedObj<SyncReplyContext>*> (context);
+    if (context != NULL) {
+        ManagedObj<SyncReplyContext>* ctx = reinterpret_cast<ManagedObj<SyncReplyContext>*> (context);
 
-    /* Set the reply message */
-    (*ctx)->replyMsg = msg;
+        /* Set the reply message */
+        (*ctx)->replyMsg = msg;
 
-    /* Wake up sync method_call thread */
-    QStatus status = (*ctx)->event.SetEvent();
-    if (ER_OK != status) {
-        QCC_LogError(status, ("SetEvent failed"));
+        /* Wake up sync method_call thread */
+        QStatus status = (*ctx)->event.SetEvent();
+        if (ER_OK != status) {
+            QCC_LogError(status, ("SetEvent failed"));
+        }
+        delete ctx;
     }
-    delete ctx;
 }
 
 QStatus ProxyBusObject::SecureConnection(bool forceAuth)
