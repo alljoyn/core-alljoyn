@@ -342,6 +342,7 @@ void ProxyBusObject::SetPropMethodCB(Message& message, void* context)
     delete ctx;
 }
 
+int ProxyBusObject::sAddMatchPropertiesChanged = 0;
 
 QStatus ProxyBusObject::RegisterPropertyChangedHandler(const char* iface,
                                                        const char* property,
@@ -349,7 +350,7 @@ QStatus ProxyBusObject::RegisterPropertyChangedHandler(const char* iface,
                                                        ProxyBusObject::Listener::PropertyChanged callback,
                                                        void* context)
 {
-    QStatus status;
+    QStatus status = ER_OK;
     const InterfaceDescription* ifc = bus->GetInterface(iface);
     if (!ifc) {
         status = ER_BUS_OBJECT_NO_SUCH_INTERFACE;
@@ -359,10 +360,30 @@ QStatus ProxyBusObject::RegisterPropertyChangedHandler(const char* iface,
         String key = iface;
         key += ".";
         key += property;
-        CBContext<ProxyBusObject::Listener::PropertyChanged>* ctx = new CBContext<ProxyBusObject::Listener::PropertyChanged>(this, listener, callback, context);
-        pair<StringMapKey, CBContext<ProxyBusObject::Listener::PropertyChanged>*> item(key, ctx);
-        components->propertyChangedCBs.insert(item);
-        status = ER_OK;
+
+        if (IncrementAndFetch(&sAddMatchPropertiesChanged) == 1) {
+            /* first listener */
+            String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'");
+            /* a more fine-grained rule could be added by adding arg0=iface when supported */
+            MsgArg arg("s", rule.c_str());
+            const ProxyBusObject& dbusObj = bus->GetDBusProxyObj();
+            status = dbusObj.MethodCallAsync(org::freedesktop::DBus::InterfaceName, "AddMatch",
+                                             const_cast<MessageReceiver*>(static_cast<const MessageReceiver* const>(this)),
+                                             static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::SyncReplyHandler),
+                                             &arg, 1, NULL);
+            if (status != ER_OK) {
+                DecrementAndFetch(&sAddMatchPropertiesChanged);
+            }
+        }
+
+        if (status == ER_OK) {
+            lock->Lock(MUTEX_CONTEXT);
+            CBContext<ProxyBusObject::Listener::PropertyChanged>* ctx
+                = new CBContext<ProxyBusObject::Listener::PropertyChanged>(this, listener, callback, context);
+            pair<StringMapKey, CBContext<ProxyBusObject::Listener::PropertyChanged>*> item(key, ctx);
+            components->propertyChangedCBs.insert(item);
+            lock->Unlock(MUTEX_CONTEXT);
+        }
     }
     return status;
 }
@@ -393,6 +414,19 @@ QStatus ProxyBusObject::UnregisterPropertyChangedHandler(const char* iface,
         }
         status = ER_OK;
         lock->Unlock(MUTEX_CONTEXT);
+
+        if (DecrementAndFetch(&sAddMatchPropertiesChanged) == 0) {
+            /* no more property change listeners */
+            String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'");
+            /* a more fine-grained rule could be added by adding arg0=iface when supported */
+            MsgArg arg("s", rule.c_str());
+            const ProxyBusObject& dbusObj = bus->GetDBusProxyObj();
+            status = dbusObj.MethodCallAsync(org::freedesktop::DBus::InterfaceName, "AddMatch",
+                                             const_cast<MessageReceiver*>(static_cast<const MessageReceiver* const>(this)),
+                                             static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::SyncReplyHandler),
+                                             &arg, 1, NULL);
+        }
+
     }
     return status;
 }
@@ -1045,17 +1079,19 @@ QStatus ProxyBusObject::MethodCall(const char* ifaceName,
 
 void ProxyBusObject::SyncReplyHandler(Message& msg, void* context)
 {
-    ManagedObj<SyncReplyContext>* ctx = reinterpret_cast<ManagedObj<SyncReplyContext>*> (context);
+    if (context != NULL) {
+        ManagedObj<SyncReplyContext>* ctx = reinterpret_cast<ManagedObj<SyncReplyContext>*> (context);
 
-    /* Set the reply message */
-    (*ctx)->replyMsg = msg;
+        /* Set the reply message */
+        (*ctx)->replyMsg = msg;
 
-    /* Wake up sync method_call thread */
-    QStatus status = (*ctx)->event.SetEvent();
-    if (ER_OK != status) {
-        QCC_LogError(status, ("SetEvent failed"));
+        /* Wake up sync method_call thread */
+        QStatus status = (*ctx)->event.SetEvent();
+        if (ER_OK != status) {
+            QCC_LogError(status, ("SetEvent failed"));
+        }
+        delete ctx;
     }
-    delete ctx;
 }
 
 QStatus ProxyBusObject::SecureConnection(bool forceAuth)

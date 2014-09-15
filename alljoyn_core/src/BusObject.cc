@@ -215,7 +215,7 @@ void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg
     }
 }
 
-void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgArg& val, SessionId id)
+void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgArg& val, SessionId id, uint8_t flags)
 {
     QCC_DbgTrace(("BusObject::EmitPropChanged(ifcName = \"%s\", propName = \"%s\", val = %s, id = %u)",
                   ifcName, propName, val.ToString().c_str(), id));
@@ -236,7 +236,7 @@ void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgAr
                 MsgArg str("{sv}", propName, &val);
                 args[1].Set("a{sv}", 1, &str);
                 args[2].Set("as", 0, NULL);
-                Signal(NULL, id, *propChanged, args, ArraySize(args));
+                Signal(NULL, id, *propChanged, args, ArraySize(args), 0, (id == 0 ? ALLJOYN_FLAG_GLOBAL_BROADCAST : 0));
             }
         } else if (emitsChanged == "invalidates") {
             const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::InterfaceName);
@@ -248,10 +248,75 @@ void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgAr
                 args[0].Set("s", ifcName);
                 args[1].Set("a{sv}", 0, NULL);
                 args[2].Set("as", 1, &propName);
-                Signal(NULL, id, *propChanged, args, ArraySize(args));
+                Signal(NULL, id, *propChanged, args, ArraySize(args), 0, flags);
             }
         }
     }
+}
+
+QStatus BusObject::EmitPropChanged(const char* ifcName, const char** propNames, size_t numProps, SessionId id, uint8_t flags)
+{
+    assert(bus);
+    qcc::String emitsChanged;
+    QStatus status = ER_OK;
+
+    const InterfaceDescription* ifc = bus->GetInterface(ifcName);
+    if (!ifc) {
+        status = ER_BUS_UNKNOWN_INTERFACE;
+    } else {
+        MsgArg* updatedProp = new MsgArg[numProps];
+        const char** invalidatedProp = new const char*[numProps];
+        size_t updatedPropNum = 0;
+        size_t invalidatedPropNum = 0;
+
+        for (size_t i = 0; i < numProps; ++i) {
+            const char* propName = propNames[i];
+            const InterfaceDescription::Property* prop = ifc->GetProperty(propName);
+            if (!prop) {
+                status = ER_BUS_NO_SUCH_PROPERTY;
+                break;
+            }
+            if ((prop->access & PROP_ACCESS_READ) &&
+                ifc->GetPropertyAnnotation(String(propName), org::freedesktop::DBus::AnnotateEmitsChanged,
+                                           emitsChanged)) {
+                /* property has emitschanged annotation and is readable */
+                if (emitsChanged == "true") {
+                    /* also emit the value */
+                    MsgArg* val = new MsgArg();
+                    status = Get(ifcName, propName, *val);
+                    if (status != ER_OK) {
+                        delete val;
+                        status = ER_BUS_NO_SUCH_PROPERTY;
+                        break;
+                    }
+                    updatedProp[updatedPropNum].Set("{sv}", propName, val);
+                    updatedProp[updatedPropNum].SetOwnershipFlags(MsgArg::OwnsArgs, true /*deep*/);
+                    updatedPropNum++;
+                } else if (emitsChanged == "invalidates") {
+                    /* only emit that it's invalidated */
+                    invalidatedProp[invalidatedPropNum] = propName;
+                    invalidatedPropNum++;
+                }
+            }
+        }
+        if (status == ER_OK) {
+            const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
+            assert(bus_ifc);
+            const InterfaceDescription::Member* propChanged = bus_ifc->GetMember("PropertiesChanged");
+            assert(propChanged);
+
+            MsgArg args[3];
+            args[0].Set("s", ifcName);
+            args[1].Set("a{sv}", updatedPropNum, updatedProp);
+            args[2].Set("as", invalidatedPropNum, invalidatedProp);
+            /* send the signal */
+            status = Signal(NULL, id, *propChanged, args, ArraySize(args), 0, flags);
+        }
+
+        delete[] updatedProp;
+        delete[] invalidatedProp;
+    }
+    return status;
 }
 
 
