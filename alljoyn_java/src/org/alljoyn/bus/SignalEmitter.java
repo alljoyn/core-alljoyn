@@ -30,13 +30,13 @@ public class SignalEmitter {
     private static final int COMPRESSED = 0x40;
     private static final int SESSIONLESS = 0x10;
 
-    private BusObject source;
-    private String destination;
-    private int sessionId;
+    protected BusObject source;
+    private final String destination;
+    private final int sessionId;
     private int timeToLive;
     private int flags;
-    private Object proxy;
-    private MessageContext msgContext;
+    private final Object proxy;
+    private final MessageContext msgContext;
 
     /** Controls behavior of broadcast signals ({@code null} desintation). */
     public enum GlobalBroadcast {
@@ -114,6 +114,7 @@ public class SignalEmitter {
 
     private class Emitter implements InvocationHandler {
 
+        @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws BusException {
             for (Class<?> i : proxy.getClass().getInterfaces()) {
                 for (Method m : i.getMethods()) {
