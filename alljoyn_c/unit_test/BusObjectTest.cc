@@ -463,6 +463,8 @@ TEST_F(BusObjectTest, property_changed_signal)
 
     status = alljoyn_proxybusobject_registerpropertychangedhandler(proxyObj, INTERFACE_NAME, "prop2", obj_prop_changed, NULL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_proxybusobject_registerpropertychangedhandler(proxyObj, INTERFACE_NAME, "prop3", obj_prop_changed, NULL);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     alljoyn_msgarg value;
     prop_changed_flag = QCC_FALSE;
