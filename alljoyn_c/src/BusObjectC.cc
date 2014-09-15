@@ -96,6 +96,12 @@ class BusObjectC : public BusObject {
         this->EmitPropChanged(ifcName, propName, *((ajn::MsgArg*) val), id);
     }
 
+    void EmitPropChangedC(const char* ifcName, const char** propNames, size_t numProps, alljoyn_sessionid id)
+    {
+        QCC_DbgTrace(("%s", __FUNCTION__));
+        this->EmitPropChanged(ifcName, propNames, numProps, id);
+    }
+
     QStatus AddInterfaceC(const alljoyn_interfacedescription iface)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
@@ -264,6 +270,16 @@ void alljoyn_busobject_emitpropertychanged(alljoyn_busobject bus,
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ((ajn::BusObjectC*)bus)->EmitPropChangedC(ifcName, propName, val, id);
+}
+
+void alljoyn_busobject_emitpropertieschanged(alljoyn_busobject bus,
+                                             const char* ifcName,
+                                             const char** propNames,
+                                             size_t numProps,
+                                             alljoyn_sessionid id)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    ((ajn::BusObjectC*)bus)->EmitPropChangedC(ifcName, propNames, numProps, id);
 }
 
 size_t alljoyn_busobject_getname(alljoyn_busobject bus, char* buffer, size_t bufferSz)
