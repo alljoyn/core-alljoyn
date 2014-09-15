@@ -20,7 +20,7 @@ import re
 import sys
 from subprocess import *
 
-ver_re = re.compile('int\s+(?P<REL>architecture|apiLevel|release)\s*=\s*(?P<VAL>\d+)\s*;\s*$')
+ver_re = re.compile('int\s+(?P<REL>year|month|feature|bugfix)\s*=\s*\'?(?P<VAL>\w+)\'?\s*;\s*$')
 
 def GetBuildInfo(env, source, stderr=PIPE ):
     branches = []
@@ -88,9 +88,10 @@ def GetBuildInfo(env, source, stderr=PIPE ):
 
 
 def ParseSource(source):
-    arch = 0
-    api = 0
-    rel = 0
+    year = 0
+    month = 0
+    feature = 0
+    bugfix = 0
     f = open(source, 'r')
     lines = f.readlines()
     f.close();
@@ -99,24 +100,30 @@ def ParseSource(source):
         m = ver_re.search(l)
         if m:
             d = m.groupdict()
-            if d['REL'] == 'architecture':
-                arch = int(d['VAL'])
-            elif d['REL'] == 'apiLevel':
-                api = int(d['VAL'])
-            elif d['REL'] == 'release':
-                rel = int(d['VAL'])
-    return (arch, api, rel, lines)
+            if d['REL'] == 'year':
+                year = int(d['VAL'])
+            elif d['REL'] == 'month':
+                month = int(d['VAL'])
+            elif d['REL'] == 'feature':
+                feature = int(d['VAL'])
+            elif d['REL'] == 'bugfix':
+                if ord(d['VAL']) == ord('0'):
+                    bugfix = ''
+                else:
+                    bugfix = '%c' % ord(d['VAL'])
+    return (year, month, feature, bugfix, lines)
 
 
 def GenVersionAction(source, target, env):
     import time
-    architecture, api_level, release, lines = ParseSource(str(source[0]))
+    year, month, feature, bugfix, lines = ParseSource(str(source[0]))
     fpath = os.path.abspath(os.path.dirname(str(source[0])))
     bld_info = GetBuildInfo(env, fpath)
     date = time.strftime('%a %b %d %H:%M:%S UTC %Y', time.gmtime())
-    version_str = 'v%(arch)d.%(api)d.%(rel)d' % ({ 'arch': architecture,
-                                                   'api': api_level,
-                                                   'rel': release })
+    version_str = 'v%(year)d.%(month)02d.%(feature)02d%(bugfix)s' % ({ 'year': year,
+                                                                       'month': month,
+                                                                       'feature': feature,
+                                                                       'bugfix': bugfix })
     build_str = '%(ver)s (Built %(date)s by %(user)s%(bld)s)' % ({
         'ver': version_str,
         'date': date,
