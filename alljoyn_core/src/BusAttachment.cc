@@ -455,6 +455,13 @@ QStatus BusAttachment::Connect(const char* connectSpec)
                 status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "AddMatch", &arg, 1, reply);
             }
 
+            if (ER_OK == status) {
+                Message reply(*this);
+                MsgArg arg("s", "type='signal',interface='org.freedesktop.DBus.Properties'");
+                const ProxyBusObject& dbusObj = this->GetDBusProxyObj();
+                status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "AddMatch", &arg, 1, reply);
+            }
+
             /* Register org.alljoyn.Bus signal handler */
             const InterfaceDescription* ajIface = GetInterface(org::alljoyn::Bus::InterfaceName);
             if (ER_OK == status) {
