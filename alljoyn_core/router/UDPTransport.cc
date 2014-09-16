@@ -7781,7 +7781,6 @@ void UDPTransport::NetworkEventCallback::Handler(const std::map<qcc::String, qcc
          */
         QCC_DbgPrintf(("UDPTransport::NetworkEventCallback::Handler(): IpNameService::Instance().Enable()"));
         IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_transport.m_listenPortMap, 0, false, false, true, false);
-        m_transport.m_isNsEnabled = true;
 
         /*
          * There is a special case in which we respond to embedded AllJoyn bus
@@ -7810,6 +7809,7 @@ void UDPTransport::NetworkEventCallback::Handler(const std::map<qcc::String, qcc
             m_transport.m_isAdvertising = true;
         }
         m_transport.m_isListening = true;
+        m_transport.m_isNsEnabled = true;
 
         /* If we have a wildcard specified in the configuration database, we want to stop
          * listening on all the non-wildcard addresses/ports we may have previously opened

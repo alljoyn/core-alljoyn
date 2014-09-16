@@ -4177,7 +4177,6 @@ void TCPTransport::NetworkEventCallback::Handler(const std::map<qcc::String, qcc
          * service if listeners come and go.
          */
         IpNameService::Instance().Enable(TRANSPORT_TCP, m_transport.m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), 0, true, false, false, false);
-        m_transport.m_isNsEnabled = true;
 
         /*
          * There is a special case in which we respond to embedded AllJoyn bus
@@ -4205,6 +4204,7 @@ void TCPTransport::NetworkEventCallback::Handler(const std::map<qcc::String, qcc
             m_transport.m_isAdvertising = true;
         }
         m_transport.m_isListening = true;
+        m_transport.m_isNsEnabled = true;
 
         /* If we have a wildcard specified in the configuration database, we want to stop
          * listening on all the non-wildcard addresses/ports we may have previously opened
