@@ -445,8 +445,8 @@ using namespace qcc;
  * basically a watchdog to to keep the pump primed.
  */
 const uint32_t UDP_ENDPOINT_MANAGEMENT_TIMER = 1000;
-
 const uint32_t UDP_WATCHDOG_TIMEOUT = 30000;  /**< How long to wait before printing an error if an endpoint is not going away */
+const uint32_t UDP_MESSAGE_PUMP_TIMEOUT = 10000;  /**< How long to keep a message pump thread running with nothing to do */
 
 const uint32_t UDP_CONNECT_TIMEOUT = 1000;  /**< How long before we expect a connection to complete */
 const uint32_t UDP_CONNECT_RETRIES = 10;  /**< How many times do we retry a connection before giving up */
@@ -1418,8 +1418,283 @@ bool operator<(const ArdpStream::ThreadEntry& lhs, const ArdpStream::ThreadEntry
 }
 
 /*
- * An endpoint class to handle the details of authenticating a connection in a
- * way that avoids denial of service attacks.
+ * A class to encapsulate a queue of messages to be dispatched and an associated
+ * thread to pump the messages.
+ *
+ * Whevever we have an AllJoyn Message that is ready for delivery, ideally we
+ * would just hand it off to the daemon router by calling PushMessage and the
+ * router would just deliver it.  There is a problem though.  What the router
+ * does is to look up the destination endpoint(s) -- there may be more than one
+ * if we have a signal -- and it will stick the messages on the receive queue
+ * for the endpoint(s).  The catch is that if the endpoint receive queue is full
+ * (because the endpoint is not consuming messages fast enough) the router will
+ * block the calling thread.  If we were to allow the UDP Transport message
+ * dispatcher thread itselfto block, it would essentially stop the entire UDP
+ * Transport until the destination endpoint in question got around to doing
+ * something about its messages.  We cannot allow that to happen.
+ *
+ * We want to apply backpressure directly to the source if a message cannot be
+ * delivered.  The way to do that is to avoid calling ARDP_RecvReady() until the
+ * message is delivered.  Backpressure will not be applied at the other side
+ * until the maximum number of in-flight messages are queued.  This means that
+ * we need to be able to accommodate ardpConfig.segmax messages queued up for
+ * each endpoint.
+ *
+ * The phenomenon of the destination queue filling up has been called the "slow
+ * reader problem."  Daemon Router-based solutions are being considered, but we
+ * have to do something now; so we solve the problem by having a thread other
+ * than the message dispatcher thread dispatch the PushMessage to the router.
+ * The RemoteEndpoint has a pool of up to 100 threads available, but they are
+ * deeply wired down into the concept of a stream socket, which we don't use.
+ * So the thread in question lives here.
+ *
+ * It is relatively cheap to spin up a thread, but this behavior is highly
+ * platform dependent so we don't want to do this arbitrarily frequently.  Since
+ * our threads consume at least one qcc::Event which, in turn, consumes one or
+ * two FDs, we need to be careful about leaving lots of them around.  This leads
+ * to a design wjere we associate a thread with an endpoint in an on-demand
+ * basis, with the thread exiting after some relatively short period of non-use,
+ * but hanging around for bursts of messages.
+ */
+class MessagePump {
+  public:
+    MessagePump(_UDPEndpoint* endpoint)
+        : m_endpoint(endpoint), m_lock(), m_activeThread(NULL), m_pastThreads(), m_queue(), m_condition(), m_spawnedThreads(0)
+    {
+        QCC_DbgTrace(("MessagePump::MessagePump()"));
+    }
+
+    virtual ~MessagePump()
+    {
+        QCC_DbgTrace(("MessagePump::~MessagePump()"));
+
+        QCC_DbgTrace(("MessagePump::~MessagePump(): Dealing with threads"));
+        Stop();
+        Join();
+
+        QCC_DbgTrace(("MessagePump::~MessagePump(): Dealing with remaining queued messages"));
+        while (m_queue.empty() == false) {
+            QueueEntry entry = m_queue.front();
+            m_queue.pop();
+            ARDP_RecvReady(entry.m_handle, entry.m_conn, entry.m_rcv);
+        }
+
+        assert(m_queue.empty() && "MessagePump::~MessagePump(): Message queue must be empty here");
+        assert(m_activeThread == NULL && "MessagePump::~MessagePump(): Active thread must be gone here");
+        assert(m_pastThreads.empty() && "MessagePump::~MessagePump(): Past threads must be gone here");
+
+        QCC_DbgTrace(("MessagePump::~MessagePump(): Done"));
+    }
+
+    /*
+     * The Message Pump doesn't inherit from qcc::Thread so it isn't going to
+     * Start(), Stop() and Join() direcly.  It HASA Thread That is Start()ed
+     * on-demand.  We do implement Stop() to allow us to do something when we
+     * need to cause the pump thread to stop.
+     */
+    QStatus Stop()
+    {
+        QCC_DbgTrace(("MessagePump::Stop()"));
+        QStatus status = ER_OK;
+        QCC_DbgTrace(("MessagePump::Stop() => \"%s\"", QCC_StatusText(status)));
+
+        /*
+         * There may be at most one m_activeThread running.  We need to set its
+         * state to STOPPING.  This thread isn't going to be waiting on its stop
+         * event though.  In order to minimize the number of events we create,
+         * it will be waiting on a condition variable and then test for stopping
+         * whenever it wakes up.  So we have to call Stop() to set the state and
+         * then Signal() our condition variable to wake up the thread.
+         */
+        m_lock.Lock();
+        if (m_activeThread) {
+            m_activeThread->Stop();
+            m_condition.Signal();
+        }
+        m_lock.Unlock();
+
+        return ER_FAIL;
+    }
+
+    /*
+     * The Message Pump doesn't inherit from qcc::Thread so it isn't going to
+     * Start(), Stop() and Join() direcly.  It HASA Thread That is Start()ed
+     * on-demand and can be Stop()ped.  It also HASA list of threads that have
+     * decided to shut down.  We implement Join() to allow us to join *all* of
+     * those threads when we need the pump to shut down
+     */
+    QStatus Join()
+    {
+        QCC_DbgTrace(("MessagePump::Join()"));
+        return DoJoin(true);
+    }
+
+    /*
+     * The Message Pump doesn't inherit from qcc::Thread so it isn't going to
+     * Start(), Stop() and Join() direcly.  It HASA Thread That is Start()ed
+     * on-demand and can be Stop()ped.  It also HASA list of threads that have
+     * decided to shut down.  We implement JoinPast() to allow the endpoint
+     * management thread to join those shutdown threads but allow an active
+     * thread to continue running.
+     */
+    QStatus JoinPast()
+    {
+        QCC_DbgTrace(("MessagePump::JoinPast()"));
+        return DoJoin(false);
+    }
+
+    /*
+     * Common internal method implementing both flavors of join.
+     */
+    QStatus DoJoin(bool both)
+    {
+        QCC_DbgTrace(("MessagePump::DoJoin(both=\"%s\")", both ? "true" : "false"));
+
+        /*
+         * There may be at most one m_activeThread running and there may be a
+         * set of past threads that need Join()ing.  We expect that the active
+         * thread will stop and put itself on the past threads queue.  So we
+         * need to join all of the threads on the past threads queue until the
+         * spawned thread count goes to zero.  We also expect that pump threads
+         * will time out and exit if unused and the endpoint manager will have
+         * periodically joined any past threads so this may not happen much in
+         * practice.
+         */
+        m_lock.Lock();
+        while (m_spawnedThreads) {
+            assert((m_activeThread ? 1 : 0) + m_pastThreads.size() == m_spawnedThreads && "MessagePump::Join(): m_spawnedThreads count inconsistent");
+            if (m_pastThreads.size()) {
+                PumpThread* pt = m_pastThreads.front();
+                m_pastThreads.pop();
+                m_lock.Unlock();
+                QStatus status = pt->Join();
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("MessagePump::Join: PumpThread Join() error"));
+                }
+                m_lock.Lock();
+                --m_spawnedThreads;
+            } else {
+                /*
+                 * If there is a spawned thread left and no threads on the
+                 * past threads list, it means that there is an acive thread
+                 * that has not yet stopped.  Since the endpoint manager wants
+                 * to clean up zombies periodically, it needs to be able to
+                 * Join() past threads but not the active thread.  It calls
+                 * JoinPast() to do this, and JoinPast() calls DoJoin(both=false)
+                 * which sets both to false.  The endpoint Join() needs to
+                 * wait for all threads to be joined so it calls Join() which
+                 * calls DoJoin(both=true).
+                 */
+                if (both) {
+                    /*
+                     * We need to wait for the active thread to put itself on
+                     * the past threads queue.
+                     *
+                     * TODO: use condition variable and thread exit routine
+                     * instead of sleeping/polling.
+                     */
+                    m_lock.Unlock();
+                    qcc::Sleep(10);
+                    m_lock.Lock();
+                } else {
+                    /*
+                     * Okay to leave the m_activeThread unJoin()ed.
+                     */
+                    break;
+                }
+            }
+        }
+#ifndef NDEBUG
+        if (both) {
+            assert(m_spawnedThreads == 0 && "MessagePump::Join(): m_spawnedThreads must be 0 after DoJoin(true)");
+        } else {
+            assert(m_spawnedThreads <= 1 && "MessagePump::Join(): m_spawnedThreads must be 0 or 1 after DoJoin(false)");
+        }
+#endif
+        m_lock.Unlock();
+
+        return ER_FAIL;
+    }
+
+    void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId, ArdpRcvBuf* rcv, QStatus status)
+    {
+        QCC_DbgTrace(("MessagePump::RecvCb(handle=%p, conn=%p, connId=%d., rcv=%p, status=%s)", handle, conn, connId, rcv, QCC_StatusText(status)));
+
+        assert(status == ER_OK && "MessagePump::RecvCb(): Asked to dispatch an error!?");
+
+        /*
+         * We always want to pump the message in the callback so create a queue
+         * entry and push it onto the queue.  If we start a thread, the first thing
+         * it will do is to check the condition (queue is not empty) so it will
+         * handle this entry.Bug the condition variable
+         */
+        m_lock.Lock();
+        QueueEntry entry(handle, conn, connId, rcv, status);
+        m_queue.push(entry);
+
+        /*
+         * The thread rules: If there is no pump thread in existence, create one
+         * and start it running.  Put the PumpThread* into m_activeThread.  If
+         * there is a PumpThread* in m_activeThread, it must be running.  If you
+         * want to stop a pump thread you must remove it from m_activeThread
+         * before you do the stop.  If a thread detects it is no longer needed
+         * (the wait times out) it will remove itself as the active thread and
+         * put itself on the past threads list so it can be Join()ed.
+         */
+        if (m_activeThread == NULL) {
+            m_activeThread = new PumpThread(this);
+            m_activeThread->Start(NULL, NULL);
+            ++m_spawnedThreads;
+        }
+
+        assert(m_activeThread && "MessagePump::RecvCb(): Expecting an active thread at this time.");
+        assert(m_activeThread->IsStopping() == false && "MessagePump::RecvCb(): Thread must not be stopping this time.");
+        /*
+         * Signal the condition to wake up an existing thread that may be asleep
+         * waiting for something to do.
+         */
+        m_condition.Signal();
+        m_lock.Unlock();
+    }
+
+  private:
+    class QueueEntry {
+      public:
+        QueueEntry(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId, ArdpRcvBuf* rcv, QStatus status)
+            : m_handle(handle), m_conn(conn), m_connId(connId), m_rcv(rcv), m_status(status) { }
+
+        ArdpHandle* m_handle;
+        ArdpConnRecord* m_conn;
+        uint32_t m_connId;
+        ArdpRcvBuf* m_rcv;
+        QStatus m_status;
+    };
+
+    class PumpThread : public qcc::Thread {
+      public:
+        PumpThread(MessagePump* pump) : qcc::Thread(qcc::String("PumpThread")), m_pump(pump) { }
+        void ThreadExit(Thread* thread);
+
+      protected:
+        qcc::ThreadReturn STDCALL Run(void* arg);
+
+      private:
+        MessagePump* m_pump;
+    };
+
+    _UDPEndpoint* m_endpoint;               /**< The endpoint associated with this pump */
+    qcc::Mutex m_lock;                      /**< Mutex that protects multithread access to the queue */
+    PumpThread* m_activeThread;             /**< Thread doing the actual work */
+    std::queue<PumpThread*> m_pastThreads;  /**< Queue of transient threads have shut down or are shutting and need to be joined */
+    std::queue<QueueEntry> m_queue;         /**< Queue of received messages and associated data to dispatch to the router */
+    qcc::Condition m_condition;             /**< Condition variable coordinating consumption of queue entries by the pump thread */
+    uint32_t m_spawnedThreads;              /**< The number of threads that have been spawned but not joined */
+};
+
+/*
+ * An endpoint class to abstract the notion of an addressible point in the
+ * network.  Endpoints are used by the Routing Node to deal with the details of
+ * moving bits from here to there.
  */
 class _UDPEndpoint : public _RemoteEndpoint {
   public:
@@ -1484,7 +1759,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_exitScheduled(false),
         m_disconnected(false),
         m_refCount(0),
-        m_stateLock()
+        m_stateLock(),
+        m_pump(this)
     {
         QCC_DbgHLPrintf(("_UDPEndpoint::_UDPEndpoint(transport=%p, bus=%p, incoming=%d., connectSpec=\"%s\")",
                          transport, &bus, incoming, connectSpec.c_str()));
@@ -1734,6 +2010,14 @@ class _UDPEndpoint : public _RemoteEndpoint {
 #endif
 
         /*
+         * Each endpoint has a message pump that is used to pump messages out to
+         * the daemon.  This pump may have a running thread and stopped threads.
+         * We need to Stop() the pump to ask that possibly running thread to
+         * exit
+         */
+        m_pump.Stop();
+
+        /*
          * If there was a remote (sudden) disconnect, the disconnect callback
          * will disconnect the stream and call Stop.  This may precipitate a
          * flood of events in the daemon with router endpoints being dereferenced
@@ -1824,16 +2108,22 @@ class _UDPEndpoint : public _RemoteEndpoint {
         }
 
         /*
-         * Now, down to business.  If there were any threads blocked waiting to
-         * get bytes through to a remote host, they should have been woken up in
-         * Stop() and in the normal course of events they should have woken up
-         * and left of their own accord.  ManageEndpoints should have waited
-         * for that to happen before calling Join().  If we happen to get caught
-         * with active endpoints alive when the TRANSPORT is shutting down,
-         * however, we may have to wait for that to happen here.  We can't do
-         * anything until there are no threads wandering around in the endpoint
-         * or risk crashing the daemon.  We just have to trust that they will
-         * cooperate.
+         * Each endpoint has a message pump that is used to pump messages out to
+         * the daemon.  We need to Join() to join the threads that may be there
+         * in the pump.
+         */
+        m_pump.Join();
+
+        /*
+         * If there were any threads blocked waiting to get bytes through to a
+         * remote host, they should have been woken up in Stop() and in the
+         * normal course of events they should have woken up and left of their
+         * own accord.  ManageEndpoints should have waited for that to happen
+         * before calling Join().  If we happen to get caught with active
+         * endpoints alive when the TRANSPORT is shutting down, however, we may
+         * have to wait for that to happen here.  We can't do anything until
+         * there are no threads wandering around in the endpoint or risk
+         * crashing the daemon.  We just have to trust that they will cooperate.
          */
         int32_t timewait = m_transport->m_ardpConfig.timewait;
         while (m_stream && m_stream->ThreadSetEmpty() == false) {
@@ -2305,8 +2595,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
     void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId, ArdpRcvBuf* rcv, QStatus status)
     {
         IncrementAndFetch(&m_refCount);
-        QCC_DbgHLPrintf(("_UDPEndpoint::RecvCb(handle=%p, conn=%p, rcv=%p, status=%s)",
-                         handle, conn, rcv, QCC_StatusText(status)));
+        QCC_DbgHLPrintf(("_UDPEndpoint::RecvCb(handle=%p, conn=%p, connId=%d., rcv=%p, status=%s)",
+                         handle, conn, connId, rcv, QCC_StatusText(status)));
 
         /*
          * Our contract with ARDP says that it will provide us with valid data
@@ -2590,15 +2880,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
             return;
         }
 
-        /*
-         * Now, we have an AllJoyn Message that is ready for delivery.
-         * We just hand it off to the daemon router at this point.  It
-         * will try to find the implied destination endpoint and stick
-         * it on the receive queue for that endpoint.
-         *
-         * TODO: If the PushMessage cannot enqueue the message it blocks!  We
-         * need it to fail, not to block.
-         */
         QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): PushMessage()"));
         status = m_transport->m_bus.GetInternal().GetRouter().PushMessage(msg, bep);
         if (status != ER_OK) {
@@ -2606,14 +2887,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
         }
 
         /*
-         * TODO: If the daemon router cannot deliver the message, we need to
-         * enqueue it on a list and NOT call ARDP_RecvReady().  This opens the
-         * receive window for the protocol, so after we enqueue a receive
-         * window's full of data the protocol will apply backpressure to the
-         * remote side which will stop sending data and further apply
-         * backpressure to the ultimate sender.  We either need to retry
-         * delivery or get a callback from the destination endpoint telling us
-         * to retry.
+         * We're all done with the message we got from ARDP, so we need to let
+         * it know that it can reuse the buffer (and open its receive window).
          */
         QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady()"));
         m_transport->m_ardpLock.Lock();
@@ -3039,6 +3314,12 @@ class _UDPEndpoint : public _RemoteEndpoint {
         return status;
     }
 
+    MessagePump* GetMessagePump()
+    {
+        QCC_DbgTrace(("_UDPEndpoint::GetMessagePump()"));
+        return &m_pump;
+    }
+
   private:
     UDPTransport* m_transport;        /**< The server holding the connection */
     ArdpStream* m_stream;             /**< Convenient pointer to the underlying stream */
@@ -3058,7 +3339,84 @@ class _UDPEndpoint : public _RemoteEndpoint {
     volatile bool m_disconnected;     /**< Indicates an interlocked handling of the ARDP_Disconnect has happened */
     volatile int32_t m_refCount;      /**< Incremented if a thread is wandering through the endpoint, decrememted when it leaves */
     qcc::Mutex m_stateLock;           /**< Mutex protecting the endpoint state against multiple threads attempting changes */
+    MessagePump m_pump;               /**< A thread "pump" to push messages out to the daemon in case it wants to block */
 };
+
+/*
+ * A thread function to dispatch all of the callbacks from the ARDP protocol.
+ */
+ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
+{
+    QCC_DbgTrace(("MessagePump::PumpThread::Run()"));
+    assert(m_pump && "MessagePump::PumpThread::Run(): pointer to enclosing pump must be specified");
+    assert(m_pump->m_endpoint && "MessagePump::PumpThread::Run(): pointer to associated endpoint must be specified");
+
+    /*
+     * We need to implement a classic condition variable idiom.  Here the mutex
+     * is the m_lock mutex member variable and the condition that needs to be
+     * met is "something in the queue."  This is complicated a bit (but not
+     * much) since we need to live inside a while loop and execute until we are
+     * asked to stop or have hung around for some time without something useful
+     * to do (see the class doxygen for more description).
+     */
+    QStatus status = ER_OK;
+    m_pump->m_lock.Lock();
+    while (!IsStopping() && status != ER_TIMEOUT) {
+        QCC_DbgTrace(("MessagePump::PumpThread::Run(): Top."));
+        /*
+         * Note that if the condition returns an unexpected status we loop in
+         * the hope that it is recoverable.
+         */
+        while (m_pump->m_queue.empty() && !IsStopping() && status != ER_TIMEOUT) {
+            QCC_DbgTrace(("MessagePump::PumpThread::Run(): TimedWait for condition"));
+            status = m_pump->m_condition.TimedWait(m_pump->m_lock, UDP_MESSAGE_PUMP_TIMEOUT);
+            QCC_DbgTrace(("MessagePump::PumpThread::Run(): TimedWait returns \"%s\"", QCC_StatusText(status)));
+        }
+
+        QCC_DbgTrace(("MessagePump::PumpThread::Run(): Done with wait."));
+
+        /*
+         * One of three things has happened: 1) the condition has been signaled
+         * because there is something on the queue; 2) the condition has been
+         * signaled because we have been asked to stop; 3) the timed wait has
+         * timed out and we have had nothing to do for that amount of time.  If
+         * we've been asked to stop, or we time out, we just loop back to the
+         * top and break out of the while loop -- we just need to work if the
+         * queue is not empty.
+         */
+        if (m_pump->m_queue.empty() == false) {
+            QCC_DbgTrace(("MessagePump::PumpThread::Run(): Have work."));
+
+            /*
+             * Pull the entry describing the message off the work queue.
+             */
+            QueueEntry entry = m_pump->m_queue.front();
+            m_pump->m_queue.pop();
+
+            /*
+             * And call out to the daemon via the endpoint to process the
+             * received message.
+             */
+            m_pump->m_lock.Unlock();
+            QCC_DbgTrace(("MessagePump::PumpThread::Run(): Call out to endopint %p/\"%s\"",
+                          m_pump->m_endpoint, m_pump->m_endpoint->GetUniqueName().c_str()));
+            m_pump->m_endpoint->RecvCb(entry.m_handle, entry.m_conn, entry.m_connId, entry.m_rcv, entry.m_status);
+            m_pump->m_lock.Lock();
+        }
+    }
+
+    /*
+     * If we are exiting, we must be the active thread.  The rules say we are
+     * the one who must remove our own pointer from the activeThread, zero it out and
+     * add ourselves to the pastThread queue.
+     */
+    PumpThread* i = (PumpThread*)GetThread();
+    assert(m_pump->m_activeThread == i && "MessagePump::PumpThread::Run(): I should be the active thread");
+    m_pump->m_pastThreads.push(i);
+    m_pump->m_activeThread = NULL;
+    m_pump->m_lock.Unlock();
+    return 0;
+}
 
 /**
  * Construct a UDP Transport object.
@@ -3350,8 +3708,8 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
 
                             case WorkerCommandQueueEntry::RECV_CB:
                                 {
-                                    QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): RECV_CB: RecvCb()"));
-                                    ep->RecvCb(entry.m_handle, entry.m_conn, entry.m_connId, entry.m_rcv, entry.m_status);
+                                    QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): RECV_CB: Call RecvCb() on endpoint messsage pump"));
+                                    ep->GetMessagePump()->RecvCb(entry.m_handle, entry.m_conn, entry.m_connId, entry.m_rcv, entry.m_status);
                                     break;
                                 }
 
@@ -4155,6 +4513,15 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
     i = m_endpointList.begin();
     while (i != m_endpointList.end()) {
         UDPEndpoint ep = *i;
+
+        /*
+         * If there is an endpoint, there is a chance that it has had a message
+         * pump thread running, but that pump decided that it needed to stop due to a
+         * lack of traffic.  Something needs to join those defunct pump threads and
+         * that something is us.  Since a thread puts itself on a list of defunct
+         * threads just before it exits, we don't expect this to block (much).
+         */
+        ep->GetMessagePump()->JoinPast();
 
         /*
          * Get the internal (UDP) endpoint state.  We use this to figure out the
