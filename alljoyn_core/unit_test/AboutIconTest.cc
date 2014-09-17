@@ -20,6 +20,7 @@
 #include <alljoyn/AboutIconProxy.h>
 #include <alljoyn/BusAttachment.h>
 #include <BusInternal.h>
+
 using namespace ajn;
 
 TEST(AboutIconTest, isAnnounced) {
@@ -123,7 +124,8 @@ TEST(AboutIconTest, GetIcon) {
                                    0xAE, 0x42, 0x60, 0x82 };
 
     AboutIcon icon;
-    icon.SetContent("image/png", aboutIconContent, sizeof(aboutIconContent) / sizeof(aboutIconContent[0]));
+    status = icon.SetContent("image/png", aboutIconContent, sizeof(aboutIconContent) / sizeof(aboutIconContent[0]));
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     AboutIconObj aboutIcon(serviceBus, icon);
 
     BusAttachment clientBus("AboutIconTest Client");
@@ -144,4 +146,150 @@ TEST(AboutIconTest, GetIcon) {
     }
 
     EXPECT_STREQ(icon.mimetype.c_str(), retIcon.mimetype.c_str());
+}
+
+static const size_t MAX_ICON_SIZE_IN_BYTES = ALLJOYN_MAX_ARRAY_LEN;
+static const uint8_t ICON_BYTE = 0x11;
+
+class LargeIcon {
+  private:
+    uint8_t* iconByteArrayPtr;
+    size_t iconSize;
+
+  public:
+
+    LargeIcon() : iconSize(0)
+    {
+
+        iconByteArrayPtr = new uint8_t[MAX_ICON_SIZE_IN_BYTES];
+        if (iconByteArrayPtr) {
+            for (size_t iconByte = 0; iconByte < MAX_ICON_SIZE_IN_BYTES; iconByte++) {
+                iconByteArrayPtr[iconByte] = ICON_BYTE;
+            }
+            iconSize = MAX_ICON_SIZE_IN_BYTES;
+        }
+    }
+
+    LargeIcon(size_t icon_size) : iconSize(0)
+    {
+
+        iconByteArrayPtr = new uint8_t[icon_size];
+        if (iconByteArrayPtr) {
+            for (size_t iconByte = 0; iconByte < icon_size; iconByte++) {
+                iconByteArrayPtr[iconByte] = ICON_BYTE;
+            }
+            iconSize = icon_size;
+        }
+    }
+
+    ~LargeIcon()
+    {
+        if (iconByteArrayPtr) {
+            delete [] iconByteArrayPtr;
+            iconByteArrayPtr = NULL;
+            iconSize = 0;
+        }
+
+    }
+
+    uint8_t* getLargeIconArray()
+    {
+        return iconByteArrayPtr;
+    }
+
+    size_t getIconSize()
+    {
+        return iconSize;
+    }
+};
+
+TEST(AboutIconTest, GetLargeIcon) {
+    QStatus status = ER_FAIL;
+
+    LargeIcon myIcon;
+
+    uint8_t* aboutIconContent = myIcon.getLargeIconArray();
+    size_t icon_size = myIcon.getIconSize();
+
+    ASSERT_TRUE(NULL != aboutIconContent && icon_size == MAX_ICON_SIZE_IN_BYTES);
+
+    BusAttachment serviceBus("AboutLargeIconTest Service");
+    status = serviceBus.Start();
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = serviceBus.Connect();
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+
+    qcc::String mimeType("image/png");
+
+    AboutIcon icon;
+    status = icon.SetContent(mimeType.c_str(), aboutIconContent, MAX_ICON_SIZE_IN_BYTES);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    AboutIconObj aboutIcon(serviceBus, icon);
+
+    BusAttachment clientBus("AboutLargeIconTest Client");
+    status = clientBus.Start();
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = clientBus.Connect();
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutIconProxy aiProxy(clientBus, serviceBus.GetUniqueName().c_str(), 0);
+
+    AboutIcon iconOut;
+    status = aiProxy.GetIcon(iconOut);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    EXPECT_STREQ("image/png", iconOut.mimetype.c_str());
+    ASSERT_EQ(MAX_ICON_SIZE_IN_BYTES, iconOut.contentSize);
+
+    for (size_t i = 0; i < iconOut.contentSize; ++i) {
+        EXPECT_EQ(aboutIconContent[i], iconOut.content[i]);
+    }
+
+    EXPECT_EQ(MAX_ICON_SIZE_IN_BYTES, iconOut.contentSize);
+
+    EXPECT_STREQ(mimeType.c_str(), iconOut.mimetype.c_str());
+
+}
+//ASACORE-944
+TEST(AboutIconTest, GetLargeIcon_Negative) {
+    QStatus status = ER_FAIL;
+
+    // icon over array limit
+    LargeIcon myIcon((MAX_ICON_SIZE_IN_BYTES + 1));
+
+    uint8_t* aboutIconContent = myIcon.getLargeIconArray();
+    size_t icon_size = myIcon.getIconSize();
+
+    ASSERT_TRUE((NULL != aboutIconContent) && (icon_size == MAX_ICON_SIZE_IN_BYTES + 1));
+
+    BusAttachment serviceBus("AboutLargeIconTest Service");
+    status = serviceBus.Start();
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = serviceBus.Connect();
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    qcc::String mimeType("image/png");
+
+    AboutIcon iconIn;
+    status = iconIn.SetContent(mimeType.c_str(), aboutIconContent, (MAX_ICON_SIZE_IN_BYTES + 1));
+    EXPECT_EQ(ER_BUS_BAD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+    AboutIconObj aboutIcon(serviceBus, iconIn);
+
+    BusAttachment clientBus("AboutLargeIconTest Client");
+    status = clientBus.Start();
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = clientBus.Connect();
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutIconProxy aiProxy(clientBus, serviceBus.GetUniqueName().c_str(), 0);
+
+    AboutIcon iconOut;
+    // Should be an empty icon since the SetContent failed.
+    status = aiProxy.GetIcon(iconOut);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    EXPECT_STREQ("", iconOut.mimetype.c_str());
+
+    ASSERT_EQ(0u, iconOut.contentSize);
 }
