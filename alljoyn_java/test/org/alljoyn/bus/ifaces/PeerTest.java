@@ -17,14 +17,12 @@
 package org.alljoyn.bus.ifaces;
 
 import org.alljoyn.bus.BusAttachment;
-import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.BusObject;
 import org.alljoyn.bus.ProxyBusObject;
 import org.alljoyn.bus.Status;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 import org.alljoyn.bus.ifaces.Peer;
 
-import static junit.framework.Assert.*;
 import junit.framework.TestCase;
 
 public class PeerTest extends TestCase {
@@ -85,5 +83,10 @@ public class PeerTest extends TestCase {
 
     public void testGetMachineId() throws Exception {
         String id = peer.GetMachineId();
+        // the id is a guid of type c2634fd9823215edf03157f2acf07611 and is not
+        //known till runtime. for that.
+        // reason we are only checking it is not an empty string.
+        assertFalse(id.equals(""));
+        assertTrue(id.length() > 4);
     }
 }

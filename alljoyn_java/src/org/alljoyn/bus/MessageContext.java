@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -79,6 +79,7 @@ public final class MessageContext {
      */
     public String authMechanism;
 
+    @SuppressWarnings("unused")
     private MessageContext(boolean isUnreliable, String objectPath, String interfaceName,
                            String memberName, String destination, String sender, int sessionId,
                            String signature, String authMechanism, int serial) {

@@ -58,14 +58,17 @@ static const uint32_t LOCAL_ENDPOINT_CONCURRENCY = 4;
 
 class _LocalEndpoint::Dispatcher : public qcc::Timer, public qcc::AlarmListener {
   public:
-    Dispatcher(_LocalEndpoint* endpoint, uint32_t concurrency = LOCAL_ENDPOINT_CONCURRENCY) : Timer("lepDisp", true, concurrency, true, 10), AlarmListener(), endpoint(endpoint) { }
+    Dispatcher(_LocalEndpoint* endpoint, uint32_t concurrency = LOCAL_ENDPOINT_CONCURRENCY) : Timer("lepDisp" + U32ToString(qcc::IncrementAndFetch(&dispatcherCnt)), true, concurrency, true, 0), AlarmListener(), endpoint(endpoint) { }
     QStatus DispatchMessage(Message& msg);
 
     void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
 
   private:
     _LocalEndpoint* endpoint;
+    static int32_t dispatcherCnt;
 };
+
+int32_t _LocalEndpoint::Dispatcher::dispatcherCnt = 0;
 
 class _LocalEndpoint::DeferredCallbacks : public qcc::AlarmListener {
   public:

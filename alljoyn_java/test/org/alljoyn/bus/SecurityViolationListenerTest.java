@@ -17,13 +17,10 @@
 package org.alljoyn.bus;
 
 import org.alljoyn.bus.BusAttachment;
-import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.BusObject;
-import org.alljoyn.bus.SignalEmitter;
 import org.alljoyn.bus.Status;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 
-import static junit.framework.Assert.*;
 import junit.framework.TestCase;
 
 public class SecurityViolationListenerTest extends TestCase {
@@ -35,7 +32,6 @@ public class SecurityViolationListenerTest extends TestCase {
     private BusAttachment serviceBus;
     private SecureService service;
     private SimpleInterface proxy;
-    private BusAuthListener authListener;
 
     public class SecureService implements SecureInterface, BusObject {
         public String ping(String str) { return str; }

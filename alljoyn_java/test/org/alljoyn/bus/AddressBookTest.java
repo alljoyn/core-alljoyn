@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -115,7 +115,7 @@ public class AddressBookTest extends TestCase {
         }
 
         /* Get a remote object */
-        Class[] ifaces = { AddressBookInterface.class };
+        Class<?>[] ifaces = { AddressBookInterface.class };
         ProxyBusObject remoteObj = bus.getProxyBusObject("org.alljoyn.bus.addressbook",
                 "/addressbook",
                 BusAttachment.SESSION_ID_ANY,

@@ -334,6 +334,7 @@ class IODispatch : public Thread, public AlarmListener {
      * is waiting on it.
      */
     bool crit;
+    static int32_t iodispatchCnt;
 };
 
 

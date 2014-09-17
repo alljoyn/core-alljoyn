@@ -695,6 +695,7 @@ public class BusAttachment {
             this.violationListener = violationListener;
         }
 
+        @SuppressWarnings("unused")
         public Credentials requestCredentials(String authMechanism, String authPeer, int authCount,
                 String userName, int credMask) throws BusException {
             if (authListener == null) {
@@ -732,6 +733,7 @@ public class BusAttachment {
             return null;
         }
 
+        @SuppressWarnings("unused")
         public boolean verifyCredentials(String authMechanism, String peerName, String userName,
                 String cert) throws BusException {
             if (authListener == null) {
@@ -746,12 +748,14 @@ public class BusAttachment {
                     new AuthRequest[] { new VerifyRequest(cert) });
         }
 
+        @SuppressWarnings("unused")
         public void securityViolation(Status status) {
             if (violationListener != null) {
                 violationListener.violated(status);
             }
         }
 
+        @SuppressWarnings("unused")
         public void authenticationComplete(String authMechanism, String peerName,  boolean success) {
             if (authListener != null) {
                 authListener.completed(authMechanism, peerName, success);
@@ -1176,7 +1180,7 @@ public class BusAttachment {
     public ProxyBusObject getProxyBusObject(String busName,
             String objPath,
             int sessionId,
-            Class[] busInterfaces) {
+            Class<?>[] busInterfaces) {
         return new ProxyBusObject(this, busName, objPath, sessionId, busInterfaces);
     }
 
@@ -1208,7 +1212,7 @@ public class BusAttachment {
     public ProxyBusObject getProxyBusObject(String busName,
             String objPath,
             int sessionId,
-            Class[] busInterfaces,
+            Class<?>[] busInterfaces,
             boolean secure) {
         return new ProxyBusObject(this, busName, objPath, sessionId, busInterfaces, secure);
     }

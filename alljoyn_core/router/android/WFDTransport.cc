@@ -1696,7 +1696,9 @@ void WFDTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
                  * information.
                  */
                 P2PNameService::Instance().Enable(TRANSPORT_WFD);
-                IpNameService::Instance().Enable(TRANSPORT_WFD, m_listenPort, 0, 0, 0, true, false, false, false);
+                std::map<qcc::String, uint16_t> listenPortMap;
+                listenPortMap["*"] = m_listenPort;
+                IpNameService::Instance().Enable(TRANSPORT_WFD, listenPortMap, 0, std::map<qcc::String, uint16_t>(), 0, true, false, false, false);
                 m_isNsEnabled = true;
             }
         } else {
@@ -1828,7 +1830,9 @@ void WFDTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
          * enabled ports tells it to disable.
          */
         P2PNameService::Instance().Disable(TRANSPORT_WFD);
-        IpNameService::Instance().Enable(TRANSPORT_WFD, m_listenPort, 0, 0, 0, false, false, false, false);
+        std::map<qcc::String, uint16_t> listenPortMap;
+        listenPortMap["*"] = m_listenPort;
+        IpNameService::Instance().Enable(TRANSPORT_WFD, listenPortMap, 0, std::map<qcc::String, uint16_t>(), 0, false, false, false, false);
 
         m_isNsEnabled = false;
 
@@ -1953,7 +1957,9 @@ void WFDTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
          * service that we have no enabled ports tells it to disable.
          */
         P2PNameService::Instance().Disable(TRANSPORT_WFD);
-        IpNameService::Instance().Enable(TRANSPORT_WFD, m_listenPort, 0, 0, 0, false, false, false, false);
+        std::map<qcc::String, uint16_t> listenPortMap;
+        listenPortMap["*"] = m_listenPort;
+        IpNameService::Instance().Enable(TRANSPORT_WFD, listenPortMap, 0, std::map<qcc::String, uint16_t>(), 0, false, false, false, false);
         m_isNsEnabled = false;
 
         /*
