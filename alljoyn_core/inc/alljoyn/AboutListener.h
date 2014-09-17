@@ -70,9 +70,8 @@ class AboutListener {
      * for these values in the aboutDataArg will always be for the language specified
      * in the DefaultLanguage field.
      *
-     * @param[in] busName              well know name of the service
+     * @param[in] busName              well know name of the remote BusAttachment
      * @param[in] version              version of the Announce signal from the remote About Object
-     *                               About Object
      * @param[in] port                 SessionPort used by the announcer
      * @param[in] objectDescriptionArg  MsgArg the list of object paths and interfaces in the announcement
      * @param[in] aboutDataArg          MsgArg containing a dictionary of Key/Value pairs of the AboutData

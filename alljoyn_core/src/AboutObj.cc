@@ -60,6 +60,7 @@ AboutObj::AboutObj(ajn::BusAttachment& bus, AnnounceFlag isAboutIntfAnnounced) :
 
 QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& aboutData)
 {
+    QCC_DbgTrace(("AboutService::%s", __FUNCTION__));
     m_busAttachment->GetInternal().GetAnnouncedObjectDescription(m_objectDescription);
     m_aboutDataListener = &aboutData;
     const InterfaceDescription* aboutIntf = m_busAttachment->GetInterface(org::alljoyn::About::InterfaceName);
@@ -71,7 +72,7 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
     const ajn::InterfaceDescription::Member* announceSignalMember = aboutIntf->GetMember("Announce");
     assert(announceSignalMember);
 
-    QCC_DbgTrace(("AboutService::%s", __FUNCTION__));
+
     QStatus status = ER_OK;
     if (announceSignalMember == NULL) {
         return ER_FAIL;
@@ -79,10 +80,12 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
     MsgArg announceArgs[4];
     status = announceArgs[0].Set("q", AboutObj::VERSION);
     if (status != ER_OK) {
+        QCC_DbgPrintf(("AboutObj::Announce set version failed %s", QCC_StatusText(status)));
         return status;
     }
     status = announceArgs[1].Set("q", sessionPort);
     if (status != ER_OK) {
+        QCC_DbgPrintf(("AboutObj::Announce set version set sessionport failed %s", QCC_StatusText(status)));
         return status;
     }
     announceArgs[2] = m_objectDescription;
@@ -120,6 +123,7 @@ void AboutObj::GetAboutData(const ajn::InterfaceDescription::Member* member, ajn
         status = m_aboutDataListener->GetMsgArg(retargs, args[0].v_string.str);
         //QCC_DbgPrintf(("m_pPropertyStore->ReadAll(%s,PropertyStore::READ)  =%s", args[0].v_string.str, QCC_StatusText(status)));
         if (status != ER_OK) {
+            QCC_DbgPrintf(("AboutService::%s : Call to GetMsgArg failed with %s", __FUNCTION__, QCC_StatusText(status)));
             if (status == ER_LANGUAGE_NOT_SUPPORTED) {
                 MethodReply(msg, "org.alljoyn.Error.LanguageNotSupported", "The language specified is not supported");
                 return;

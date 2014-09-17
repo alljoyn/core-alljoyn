@@ -1286,7 +1286,7 @@ class BusAttachment : public MessageReceiver {
 
     /**
      * List the interfaces your application is interested in.  If a remote device
-     * is announcing that interface then the all Registered AnnounceListeners will
+     * is announcing that interface then the all Registered AboutListeners will
      * be called.
      *
      * For example, if you need both "com.example.Audio" <em>and</em>
@@ -1357,6 +1357,7 @@ class BusAttachment : public MessageReceiver {
      *    - An error status otherwise
      */
     QStatus WhoImplements(const char* interface);
+
     /**
      * Stop showing interest in the listed interfaces. Stop recieving announce
      * signals from the devices with the listed interfaces.
@@ -1364,9 +1365,9 @@ class BusAttachment : public MessageReceiver {
      * Note if WhoImplements has been called multiple times the announce signal
      * will still be received for any interfaces that still remain.
      *
-     * @param[in] implementsInterfaces a list of interfaces that the Announce
-     *               signal reports as implemented. NULL to receive all Announce
-     *               signals regardless of interfaces
+     * @param[in] implementsInterfaces a list of interfaces. The list must match the
+     *                                 list previously passed to the WhoImplements
+     *                                 member function
      * @param[in] numberInterfaces the number of interfaces in the
      *               implementsInterfaces list
      * @return

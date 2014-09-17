@@ -377,8 +377,23 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setDebugLevel
  * Signature: (Z)V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_useOSLogging
-  (JNIEnv *, jobject,
-   jboolean);
+  (JNIEnv *, jobject, jboolean);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    whoImplements
+ * Signature: ([Ljava/lang/String;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_whoImplements
+  (JNIEnv *, jobject, jobjectArray);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    cancelWhoImplements
+ * Signature: ([Ljava/lang/String;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_cancelWhoImplements
+  (JNIEnv *, jobject, jobjectArray);
 
 /*
  * Class:     org_alljoyn_bus_BusAttachment
@@ -1587,6 +1602,38 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_Translator_create
  * Signature: (Lorg/alljoyn/bus/Translator;)V;
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_Translator_destroy
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_AboutObj
+ * Method:    create
+ * Signature: (Lorg/alljoyn/bus/BusAttachment;Z)V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_AboutObj_create
+  (JNIEnv *, jobject, jobject, jboolean);
+
+/*
+ * Class:     org_alljoyn_bus_AboutObj
+ * Method:    destroy
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_AboutObj_destroy
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_AboutObj
+ * Method:    announce
+ * Signature: (SLorg/alljoyn/bus/AboutDataListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_announce
+  (JNIEnv *, jobject, jshort, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_AboutObj
+ * Method:    cancelAnnouncement
+ * Signature: ()Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_cancelAnnouncement
   (JNIEnv *, jobject);
 
 #ifdef __cplusplus

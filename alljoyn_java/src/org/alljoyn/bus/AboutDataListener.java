@@ -1,8 +1,3 @@
-/*
- * @file
- * Pure Virtual class that contains the interface needed by anyone one wanting
- * to use
- */
 /******************************************************************************
  * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
  *
@@ -19,50 +14,32 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef _ALLJOYN_ABOUTDATALISTENER_H
-#define _ALLJOYN_ABOUTDATALISTENER_H
+package org.alljoyn.bus;
 
-#include <alljoyn/MsgArg.h>
-#include <alljoyn/Status.h>
+import java.util.Map;
 
-namespace ajn {
-class AboutDataListener {
-  public:
+
+public interface AboutDataListener {
     /**
-     * Constructor
-     */
-    AboutDataListener() { };
-
-    /**
-     * Destructor
-     */
-    virtual ~AboutDataListener() { };
-
-    /**
-     * Creating the MsgArg that is returned when a user calls
-     * org.alljoyn.About.GetAboutData. The returned MsgArg must contain the
+     * Get the Dictionary that is returned when a user calls
+     * org.alljoyn.About.GetAboutData. The returned Dictionary must contain the
      * AboutData dictionary for the Language specified.
-     *
-     * The MsgArg will contain the signature `a{sv}`.
      *
      * TODO add more documentation for the Key/Value pair requirements here.
      *
-     * @param[out] msgArg a the dictionary containing all of the AboutData fields for
-     *                    the specified language.  If language is not specified the default
-     *                    language will be returned
-     * @param[in] language IETF language tags specified by RFC 5646 if the string
-     *                     is NULL or an empty string the MsgArg for the default
-     *                     language will be returned
+     * @param language IETF language tags specified by RFC 5646 if the string
+     *                 is null or an empty string the MsgArg for the default
+     *                 language will be returned
      *
      * @return ER_OK on successful
      */
-    virtual QStatus GetMsgArg(MsgArg* msgArg, const char* language) = 0;
+    public Map<String, Variant> getAboutData(String language) throws ErrorReplyBusException;
 
     /**
-     * Return a MsgArg pointer containing dictionary containing the AboutData that
+     * Return a Dictionary containing the AboutData that
      * is announced with the org.alljoyn.About.announce signal.
-     * This will always be the default language and will only contain the fields
-     * that are announced.
+     * The Dictionary will always be the default language and will only contain
+     * the fields that are announced.
      *
      * The fields required to be part of the announced MsgArg are:
      *  - AppId
@@ -76,13 +53,9 @@ class AboutDataListener {
      * If you require other fields or need the localized AboutData
      *   The org.alljoyn.About.GetAboutData method can be used.
      *
-     * Or the GetMsgArg member function.
+     * Or the GetAboutData member function.
      *
-     * @param[out] msgArg a MsgArg dictionary with the a{sv} that contains the Announce
-     *                    data.
-     * @return ER_OK if successful
+     * @return a dictionary that contains the Announce data.
      */
-    virtual QStatus GetMsgArgAnnounce(MsgArg* msgArg) = 0;
-};
+    public Map<String, Variant> getAnnouncedAboutData() throws ErrorReplyBusException;
 }
-#endif /* _ALLJOYN_ABOUTDATALISTENER_H */

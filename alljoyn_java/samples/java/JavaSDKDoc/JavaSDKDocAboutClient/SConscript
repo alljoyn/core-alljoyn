@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2011, 2013-2014, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -12,19 +12,24 @@
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # 
-
-import os
-import string
+import os.path
 Import('env')
+ 
+sdk_methodsClient_sample = env.Java('$OBJDIR_ALLJOYN_JAVA/samples/JavaSDKDoc/JavaSDKDocAboutClient', 'src',
+                                    JAVACLASSPATH=env.GetBuildPath(env.subst('$JARDIR/alljoyn.jar')))
+    
+sdk_methodsClient_sample.append('MANIFEST.MF')
 
-# AllJoyn Java binding
-# enable UTF-8 character in unit tests
-env.Append(JAVACFLAGS = ['-encoding', 'UTF-8'])
-test_classes = env.Java('$OBJDIR_ALLJOYN_JAVA/test/classes', '.', JAVACLASSPATH=os.pathsep.join(
-        [env['JAVACLASSPATH'], env.GetBuildPath(env.subst('$JARDIR/alljoyn.jar'))]))
+env.Jar('$JARDIR/JavaSDKDocAboutClient.jar', sdk_methodsClient_sample)
+env.Requires(sdk_methodsClient_sample, '$JARDIR/alljoyn.jar')
 
+#add the sample to the dist with out adding the build files.
 # The return value is the collection of files installed in the build destination.
-returnValue = env.Jar('$JARDIR/alljoyn_test.jar', test_classes)
-env.Requires(test_classes, '$JARDIR/alljoyn.jar')
+returnValue = env.Install('$JAVA_DISTDIR/samples/JavaSDKDoc/JavaSDKDocAboutClient', ['src', '.classpath', '.project'])
+
+#clean up the created manifest file
+# env.Clean('.', sdk_methodsClient_sample)
+#clean the build folder that remains after cleaning all other files.
+env.Clean('.', 'build')
 
 Return('returnValue')
