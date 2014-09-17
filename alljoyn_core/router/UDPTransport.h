@@ -337,7 +337,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         ENABLE_ADVERTISEMENT_INSTANCE,   /**< An EnableAdvertisement() has happened */
         DISABLE_ADVERTISEMENT_INSTANCE,  /**< A DisableAdvertisement() has happened */
         ENABLE_DISCOVERY_INSTANCE,       /**< An EnableDiscovery() has happened */
-        DISABLE_DISCOVERY_INSTANCE       /**< A DisableDiscovery() has happened */
+        DISABLE_DISCOVERY_INSTANCE,      /**< A DisableDiscovery() has happened */
+        HANDLE_NETWORK_EVENT             /**< A network event has happened */
     };
 
     /**
@@ -352,6 +353,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         qcc::String m_requestParam;
         bool m_requestParamOpt;
         TransportMask m_requestTransportMask;
+        std::map<qcc::String, qcc::IPAddress> ifMap;
     };
 
     qcc::Mutex m_listenRequestsLock;                               /**< Mutex that protects m_listenRequests */
@@ -459,6 +461,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      * @see QueueStopListen
      */
     void DoStopListen(qcc::String& listenSpec);
+
+    void QueueHandleNetworkEvent(const std::map<qcc::String, qcc::IPAddress>&);
 
     /**
      * @internal
@@ -685,6 +689,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void DisableAdvertisementInstance(ListenRequest& listenRequest);
     void EnableDiscoveryInstance(ListenRequest& listenRequest);
     void DisableDiscoveryInstance(ListenRequest& listenRequest);
+    void HandleNetworkEventInstance(ListenRequest& listenRequest);
     void UntrustedClientExit();
     QStatus UntrustedClientStart();
     bool m_isAdvertising;

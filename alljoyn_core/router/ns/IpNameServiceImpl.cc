@@ -1519,7 +1519,9 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
                     if (!transportIfMap.empty()) {
                         m_protect_net_callback = true;
                         QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Invoking network event callback for transport index %u", transportIndex));
+                        m_mutex.Unlock();
                         (*m_networkEventCallback[transportIndex])(ifMap);
+                        m_mutex.Lock();
                         m_protect_net_callback = false;
                     }
                 }
@@ -1530,18 +1532,52 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
     if (m_refreshAdvertisements) {
         QCC_DbgHLPrintf(("Now refreshing advertisements on interface event"));
         m_timer = m_tRetransmit + 1;
-        m_burstQueue.clear();
         m_networkChangeScheduleCount = 0;
         std::map<qcc::String, qcc::IPAddress> ifMap;
+        // For the transport callbacks, we want to include only the
+        // interfaces that have changed their IPv4 addresses or the
+        // loopback interfaces as these retain their IPv4 addresses
+        // on interface down events on Linux.
+        // In addition, we want to include the interfaces with IPv4
+        // addresses that have changed on platforms where we do not
+        // have information about the address family that changed.
+        // We also want to include all interfaces with IPv4 addresses
+        // on platforms where we do not have information about which
+        // interface index/address family has changed.
+#ifndef QCC_OS_GROUP_WINDOWS
         for (std::set<uint32_t>::const_iterator it = networkEvents.begin(); it != networkEvents.end(); it++) {
             m_networkEvents.insert(*it);
             for (uint32_t i = 0; (m_state == IMPL_RUNNING) && (i < m_liveInterfaces.size()); ++i) {
-                if (m_liveInterfaces[i].m_index == NETWORK_EVENT_IF_INDEX(*it) &&  (NETWORK_EVENT_IF_FAMILY(*it) == qcc::QCC_AF_INET_INDEX) && m_liveInterfaces[i].m_address.IsIPv4()) {
+                bool sameInterfaceIndex = (m_liveInterfaces[i].m_index == NETWORK_EVENT_IF_INDEX(*it));
+                bool interfaceAddrIsIPv4 = m_liveInterfaces[i].m_address.IsIPv4();
+                bool ipv4OrUnspecifiedEvent = (NETWORK_EVENT_IF_FAMILY(*it) == qcc::QCC_AF_INET_INDEX || NETWORK_EVENT_IF_FAMILY(*it) == qcc::QCC_AF_UNSPEC_INDEX);
+                bool loopbackInterface = ((m_liveInterfaces[i].m_flags & qcc::IfConfigEntry::LOOPBACK) != 0);
+                if (sameInterfaceIndex && interfaceAddrIsIPv4 && (ipv4OrUnspecifiedEvent || loopbackInterface)) {
                     ifMap[m_liveInterfaces[i].m_interfaceName] = m_liveInterfaces[i].m_address;
+#if defined(QCC_OS_LINUX)
+                    if (loopbackInterface && NETWORK_EVENT_IF_FAMILY(*it) == qcc::QCC_AF_INET6_INDEX) {
+                        // If this is a loopback interface and we have an event for IPv6
+                        // address change, we also add an event for the IPv4 address of
+                        // the loopback interface as we don't get an event for IPv4
+                        // address changes on ifdown/up on loopback interfaces unless
+                        // the IPv4 address is also removed.
+                        NetworkEvent event = *it;
+                        event &= ~(0x3);
+                        event |=  qcc::QCC_AF_INET_INDEX;
+                        m_networkEvents.insert(event);
+                    }
+#endif
                     break;
                 }
             }
         }
+#else
+        for (uint32_t i = 0; (m_state == IMPL_RUNNING) && (i < m_liveInterfaces.size()); ++i) {
+            if (m_liveInterfaces[i].m_address.IsIPv4()) {
+                ifMap[m_liveInterfaces[i].m_interfaceName] = m_liveInterfaces[i].m_address;
+            }
+        }
+#endif
         m_packetScheduler.Alert();
         m_refreshAdvertisements = false;
 
@@ -1566,7 +1602,9 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
                 if (!transportIfMap.empty()) {
                     m_protect_net_callback = true;
                     QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Invoking network event callback for transport index %u", transportIndex));
+                    m_mutex.Unlock();
                     (*m_networkEventCallback[transportIndex])(ifMap);
+                    m_mutex.Lock();
                     m_protect_net_callback = false;
                 }
             }
@@ -1619,6 +1657,7 @@ QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
     //     <enabling> tells us if this operation is to enable or disable some
     //         port.
     //
+    m_mutex.Lock();
     bool somethingWasEnabled = false;
     for (uint32_t j = 0; j < N_TRANSPORTS; ++j) {
         if (m_enabledReliableIPv4[j] || m_enabledUnreliableIPv4[j] || m_enabledReliableIPv6[j] || m_enabledUnreliableIPv6[j]) {
@@ -1715,6 +1754,7 @@ QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
             m_doDisable = true;
         }
     }
+    m_mutex.Unlock();
 
     m_forceLazyUpdate = true;
     m_wakeEvent.SetEvent();
@@ -1744,10 +1784,12 @@ QStatus IpNameServiceImpl::Enabled(TransportMask transportMask,
         return ER_BAD_TRANSPORT_MASK;
     }
 
+    m_mutex.Lock();
     reliableIPv4PortMap = m_reliableIPv4PortMap[i];
     unreliableIPv4PortMap = m_unreliableIPv4PortMap[i];
     reliableIPv6Port = m_reliableIPv6Port[i];
     unreliableIPv6Port = m_unreliableIPv6Port[i];
+    m_mutex.Unlock();
 
     return ER_OK;
 }
@@ -2487,14 +2529,12 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
         //
         // Version one allows us to provide four possible endpoints.  The
         // address will be rewritten on the way out with the address of the
-        // appropriate interface.
+        // appropriate interface. We delay the checks for the listening ports
+        // to the point at which the packet is re-written on  per-interface.
+        // basis.
         //
-        if (!m_reliableIPv4PortMap[transportIndex].empty()) {
-            isAt.SetReliableIPv4("", 0);
-        }
-        if (!m_unreliableIPv4PortMap[transportIndex].empty()) {
-            isAt.SetUnreliableIPv4("", 0);
-        }
+        isAt.SetReliableIPv4("", 0);
+        isAt.SetUnreliableIPv4("", 0);
 
         // This is a trick to make V2 NS ignore V1 packets. We set the IPv6 reliable bit,
         // that tells version two capable NS that a version two message will follow, and
@@ -2803,14 +2843,11 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
         //
         // Version one allows us to provide four possible endpoints.  The
         // address will be rewritten on the way out with the address of the
-        // appropriate interface.
+        // appropriate interface.  We delay the checks for the listening ports
+        // to the point at which the packet is re-written on  per-interface.
         //
-        if (!m_reliableIPv4PortMap[transportIndex].empty()) {
-            isAt.SetReliableIPv4("", 0);
-        }
-        if (!m_unreliableIPv4PortMap[transportIndex].empty()) {
-            isAt.SetUnreliableIPv4("", 0);
-        }
+        isAt.SetReliableIPv4("", 0);
+        isAt.SetUnreliableIPv4("", 0);
         // This is a trick to make V2 NS ignore V1 packets. We set the IPv6 reliable bit,
         // that tells version two capable NS that a version two message will follow, and
         // to ignore the version one messages.
@@ -8209,8 +8246,8 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
         //Collect unsolicited Advertise/CancelAdvertise/FindAdvertisement burst packets
         std::list<BurstResponseHeader>::iterator it = m_impl.m_burstQueue.begin();
         it = m_impl.m_burstQueue.begin();
-        while (it != m_impl.m_burstQueue.end()) {
 
+        while (it != m_impl.m_burstQueue.end()) {
             if (((*it).nextScheduleTime - now) < PACKET_TIME_ACCURACY_MS) {
                 uint32_t nsVersion;
                 uint32_t msgVersion;
