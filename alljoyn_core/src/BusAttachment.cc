@@ -1092,6 +1092,10 @@ QStatus BusAttachment::FindAdvertisedNameByTransport(const char* namePrefix, Tra
                 status = ER_ALLJOYN_FINDADVERTISEDNAME_REPLY_FAILED;
                 break;
 
+            case ALLJOYN_FINDADVERTISEDNAME_REPLY_TRANSPORT_NOT_AVAILABLE:
+                status = ER_ALLJOYN_FINDADVERTISEDNAME_REPLY_TRANSPORT_NOT_AVAILABLE;
+                break;
+
             default:
                 status = ER_BUS_UNEXPECTED_DISPOSITION;
                 break;
