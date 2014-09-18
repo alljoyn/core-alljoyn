@@ -7476,10 +7476,10 @@ void IpNameServiceImpl::HandleProtocolResponse(MDNSPacket mdnsPacket, IPEndpoint
         // a warning.
         //
         if (endpoint.addr.IsIPv4()) {
-            QCC_LogError(ER_WARNING, ("Ignoring advertisement from %s for %s received on %s",
-                                      endpoint.addr.ToString().c_str(),
-                                      r4.addr.ToString().c_str(),
-                                      ifName.c_str()));
+            QCC_DbgPrintf(("Ignoring advertisement from %s for %s received on %s",
+                           endpoint.addr.ToString().c_str(),
+                           r4.addr.ToString().c_str(),
+                           ifName.c_str()));
         }
         m_mutex.Unlock();
         return;
