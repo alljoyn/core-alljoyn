@@ -98,6 +98,7 @@ typedef struct ARDP_SEND_BUF {
     ARDP_SEND_BUF* next;
     ArdpTimer timer;
     uint16_t fastRT;
+    uint16_t retransmits;
     bool inUse;;
 } ArdpSndBuf;
 
@@ -148,7 +149,7 @@ typedef struct {
 /**
  * Information encapsulating the various interesting tidbits we get from the
  * other side when we receive a datagram.  Some of the names are chosen so that they
- * are simiar to the quantities found in RFC-908 when used.
+ * are similar to the quantities found in RFC-908 when used.
  */
 typedef struct {
     uint32_t SEQ;     /* The sequence number in the segment currently being processed. */
@@ -596,6 +597,7 @@ static void FlushMessage(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* s
     do {
         sBuf->inUse = false;
         sBuf->fastRT = 0;
+        sBuf->retransmits = 0;
         len += ntohs(h->dlen);
         sBuf = sBuf->next;
         conn->snd.pending--;
@@ -925,7 +927,10 @@ static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reas
 /*
  *    error = measuredRTT - meanRTT
  *    new meanRTT = 7/8 * meanRTT + 1/8 * error
- *    new meanVar = 3/4 * meanVar + 1/4 * |error|
+ *    if (measuredRTT >= (meanRTT - meanVAR))
+ *        new meanVar = 3/4 * meanVar + 1/4 * |error|
+ *    else
+ *        new meanVar = 31/32 * meanVar + 1/32 * |error|
  */
 static void AdjustRTT(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf)
 {
@@ -941,14 +946,19 @@ static void AdjustRTT(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf
 
     err = rtt - conn->rttMean;
 
-    QCC_DbgPrintf(("AdjustRtt: mean = %u, var =%u, rtt = %u, now = %u, tStart= %u, error = %d",
-                   conn->rttMean, conn->rttMeanVar, rtt, now, sBuf->tStart, err));
+    QCC_DbgHLPrintf(("AdjustRtt: mean = %u, var =%u, rtt = %u, now = %u, tStart= %u, error = %d",
+                     conn->rttMean, conn->rttMeanVar, rtt, now, sBuf->tStart, err));
     conn->rttMean = (7 * conn->rttMean + rtt) >> 3;
-    conn->rttMeanVar = (conn->rttMeanVar * 3 + ABS(err)) >> 2;
+
+    if ((rtt + conn->rttMeanVar) >= conn->rttMean) {
+        conn->rttMeanVar = (conn->rttMeanVar * 3 + ABS(err)) >> 2;
+    } else {
+        conn->rttMeanVar = (conn->rttMeanVar * 31 + ABS(err)) >> 5;
+    }
 
     conn->backoff = 0;
 
-    QCC_DbgPrintf(("AdjustRtt: New mean = %u, var =%u", conn->rttMean, conn->rttMeanVar));
+    QCC_DbgHLPrintf(("AdjustRtt: New mean = %u, var =%u", conn->rttMean, conn->rttMeanVar));
 }
 
 inline static uint32_t GetRTO(ArdpHandle* handle, ArdpConnRecord* conn)
@@ -964,15 +974,24 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
 {
     ArdpSndBuf* sBuf = (ArdpSndBuf*) context;
     ArdpTimer* timer = &sBuf->timer;
+    uint32_t msElapsed = TimeNow(handle->tbase) - sBuf->tStart;
+
     QCC_DbgTrace(("RetransmitTimerHandler: handle=%p conn=%p context=%p", handle, conn, context));
 
     assert(sBuf->inUse && "RetransmitTimerHandler: trying to resend flushed buffer");
 
-    if (timer->retry > 1) {
+    sBuf->retransmits++;
+
+    if ((msElapsed >= handle->config.totalDataRetryTimeout) && (sBuf->retransmits >= handle->config.minDataRetries)) {
+        QCC_DbgHLPrintf(("RetransmitTimerHandler seq=%u hit the time limit %u, retries",
+                         ntohl(((ArdpHeader*)sBuf->hdr)->seq), handle->config.totalDataRetryTimeout, sBuf->retransmits));
+        timer->retry = 0;
+        Disconnect(handle, conn, ER_TIMEOUT);
+    } else {
+        QStatus status;
+
         QCC_DbgPrintf(("RetransmitTimerHandler: context=sBuf=%p seq=%u retries=%d",
                        sBuf, ntohl(((ArdpHeader*)sBuf->hdr)->seq), timer->retry));
-        QStatus status;
-        uint32_t msElapsed = TimeNow(handle->tbase) - sBuf->tStart;
 
         /*
          * Check TTL of the segment about to be retransmitted. If TTL expired,
@@ -984,7 +1003,7 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
                 msElapsed += (conn->rttMean >> 1);
             }
 
-            if (msElapsed >= (sBuf->ttl + conn->snd.DACKT)) {
+            if (msElapsed >= sBuf->ttl) {
 #if ARDP_STATS
                 ++handle->stats.outboundDrops;
                 ++handle->stats.inflightDrops;
@@ -1003,19 +1022,18 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         sBuf->fastRT = handle->config.fastRetransmitAckCounter + 1;
 
         if (status == ER_OK || status == ER_WOULDBLOCK) {
-            timer->retry--;
-            conn->backoff = MAX(conn->backoff, ((handle->config.totalDataRetryTimeout / handle->config.initialDataTimeout) + 1) - timer->retry);
-            timer->delta = GetRTO(handle, conn);
+            conn->backoff = MAX(conn->backoff, sBuf->retransmits);
+            if (conn->rttInit) {
+                timer->delta = GetRTO(handle, conn);
+            } else {
+                timer->delta = handle->config.initialDataTimeout;
+            }
         } else {
             QCC_LogError(status, ("RetransmitTimerHandler: Write to Socket went bad. Disconnect."));
             timer->retry = 0;
             Disconnect(handle, conn, status);
         }
 
-    } else {
-        QCC_DbgHLPrintf(("RetransmitTimerHandler seq=%u retries hit the limit: %d", ntohl(((ArdpHeader*)sBuf->hdr)->seq), handle->config.totalDataRetryTimeout / handle->config.initialDataTimeout));
-        timer->retry = 0;
-        Disconnect(handle, conn, ER_TIMEOUT);
     }
 }
 
@@ -1425,19 +1443,22 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
             ++handle->stats.outboundDrops;
             ++handle->stats.preflightDrops;
 #endif
-            QCC_DbgPrintf(("SendMsgData(): Dropping expired message (conn=0x%p, buf=0x%p, len=%d.)",
-                           conn, sBuf->data, sBuf->datalen));
+            QCC_DbgPrintf(("SendMsgData(): Dropping expired message (conn=0x%p, buf=0x%p, len=%d, ttl=%u, dack=%u, rttMean=%u)",
+                           conn, sBuf->data, sBuf->datalen, ttl, conn->snd.DACKT, conn->rttMean >> 1));
 
             return ER_ARDP_TTL_EXPIRED;
         }
-        ttlSend = ttl - (conn->rttMean >> 1);
+
+        /* If we passed the above "expire" test only due to factoring in DACKT, do not adjust ttl */
+        if (ttl > (conn->rttMean >> 1)) {
+            ttlSend = ttl - (conn->rttMean >> 1);
+        }
     }
 
     for (uint16_t i = 0; i < fcnt; i++) {
 
         ArdpHeader* h = (ArdpHeader*) sBuf->hdr;
         uint16_t segLen = (i == (fcnt - 1)) ? lastLen : conn->snd.maxDlen;
-        uint16_t retries = (handle->config.totalDataRetryTimeout / handle->config.initialDataTimeout) + 1;
 
         QCC_DbgPrintf(("SendData: Segment %d, snd.NXT=%u, snd.UNA=%u", i, conn->snd.NXT, conn->snd.UNA));
         assert((conn->snd.NXT - conn->snd.UNA) < conn->snd.SEGMAX);
@@ -1459,23 +1480,24 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
         QCC_DbgPrintf(("SendData(): updated send queue at index %d", index));
 
         status = SendMsgData(handle, conn, sBuf, ttlSend);
-        timeout = GetRTO(handle, conn);
+        if (conn->rttInit) {
+            timeout = GetRTO(handle, conn);
+        } else {
+            timeout = handle->config.initialDataTimeout;
+        }
 
         if (status == ER_WOULDBLOCK) {
             QCC_DbgPrintf(("SendData(): ER_WOULDBLOCK"));
-            /*
-             * Schedule retransmit attempt sooner.
-             * Since this won't be a legitimate retransmit, increase number of retries by 1.
-             */
+
+            /* Schedule retransmit attempt sooner. */
             timeout = timeout >> 2;
-            retries++;
             status = ER_OK;
         }
 
         /* We change update our accounting only if the message has been sent successfully. */
         if (status == ER_OK) {
             sBuf->inUse = true;
-            UpdateTimer(handle, conn, &sBuf->timer, timeout, retries);
+            UpdateTimer(handle, conn, &sBuf->timer, timeout, handle->config.minDataRetries);
             /* Since we scheduled a retransmit timer, cancel active persist timer */
             conn->persistTimer.retry = 0;
             EnList(conn->dataTimers.bwd, (ListNode*) &sBuf->timer);
@@ -1617,7 +1639,7 @@ static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t
      * Count only "good" roundrips to ajust RTT values.
      * Note, that we decrement retries with each retransmit.
      */
-    if (sBuf->timer.retry == ((handle->config.totalDataRetryTimeout / handle->config.initialDataTimeout) + 1)) {
+    if (sBuf->retransmits == 0) {
         AdjustRTT(handle, conn, sBuf);
     }
 
@@ -1665,13 +1687,12 @@ static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t
         uint32_t seq = ntohl(h->seq);
         conn->snd.UNA = seq + 1;
         sBuf = sBuf->next;
-
-        /* Schedule "unsolicited" ACK if the receiver's window is half full */
-        if ((conn->snd.NXT - lcs) > (conn->snd.SEGMAX >> 1)) {
-            UpdateTimer(handle, conn, &conn->ackTimer, 0, 1);
-        }
     }
 
+    /* Schedule "unsolicited" ACK if the receiver's window is half full */
+    if ((conn->snd.NXT - lcs) > (conn->snd.SEGMAX >> 1)) {
+        UpdateTimer(handle, conn, &conn->ackTimer, 0, 1);
+    }
 
     /* Update the counter on our SND side */
     conn->snd.LCS = lcs;
@@ -1687,9 +1708,10 @@ static void FastRetransmit(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
     sBuf->fastRT++;
 }
 
-static void CancelEackedSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t* bitMask) {
-    QCC_DbgHLPrintf(("CancelEackedSegments(): handle=%p, conn=%p, bitMask=%p, snd.Una %u", handle, conn, bitMask, conn->snd.UNA));
-    uint32_t start = conn->snd.UNA;
+static void CancelEackedSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t ack, uint32_t* bitMask) {
+    QCC_DbgHLPrintf(("CancelEackedSegments(): handle=%p, conn=%p, bitMask=%p, ack=%u (snd.Una %u)",
+                     handle, conn, bitMask, ack, conn->snd.UNA));
+    uint32_t start = ack + 1;
     uint32_t index =  start % conn->snd.SEGMAX;
     ArdpSndBuf* sBuf = &conn->snd.buf[index];
     uint32_t bitCheck = 1 << 31;
@@ -1700,7 +1722,7 @@ static void CancelEackedSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint3
     FastRetransmit(handle, conn, sBuf);
 
     /*
-     * Bitmask starts at snd.UNA + 1. Cycle through the mask and cancel retransmit timers
+     * Bitmask starts at ACK + 1. Cycle through the mask and cancel retransmit timers
      * on EACKed segments.
      */
     start = start + 1;
@@ -2246,11 +2268,10 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
     case SYN_SENT:
         {
             QCC_DbgPrintf(("ArdpMachine(): conn->state = SYN_SENT"));
-
-            QCC_DbgHLPrintf(("ArdpMachine(): SYN_SENT: connection refused. state -> CLOSED"));
+            status = ER_OK;
 
             if (seg->FLG & ARDP_FLAG_RST) {
-
+                QCC_DbgHLPrintf(("ArdpMachine(): SYN_SENT: connection refused. state -> CLOSED"));
                 /*
                  * If detected that ARDP versions do not match (and are within valid range),
                  * an educated guess would be that this was the reason for the remote side sending RST.
@@ -2547,7 +2568,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                      * Flush the segments using EACK
                      */
                     QCC_DbgPrintf(("ArdpMachine(): OPEN: EACK is set"));
-                    CancelEackedSegments(handle, conn, (uint32_t* ) (buf + ARDP_FIXED_HEADER_LEN));
+                    CancelEackedSegments(handle, conn, seg->ACK, (uint32_t* ) (buf + ARDP_FIXED_HEADER_LEN));
                 }
 
                 if (needUpdate) {
@@ -2724,9 +2745,9 @@ QStatus ARDP_Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32
         return ER_INVALID_DATA;
     }
 
-    QCC_DbgPrintf(("NXT=%u, UNA=%u, window=%d", conn->snd.NXT, conn->snd.UNA, conn->window));
+    QCC_DbgPrintf(("NXT=%u, UNA=%u", conn->snd.NXT, conn->snd.UNA));
     if ((conn->window == 0)  || (conn->snd.NXT - conn->snd.UNA) >= conn->snd.SEGMAX) {
-        QCC_DbgPrintf(("NXT - UNA=%u", conn->snd.NXT - conn->snd.UNA));
+        QCC_DbgPrintf(("NXT - UNA=%u, window=%u", conn->snd.NXT - conn->snd.UNA, conn->window));
         return ER_ARDP_BACKPRESSURE;
     } else {
         return SendData(handle, conn, buf, len, ttl);
