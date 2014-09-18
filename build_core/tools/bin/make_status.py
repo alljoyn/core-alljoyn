@@ -383,11 +383,7 @@ def parseAndWriteCPP0xStatusBlock(blockNode):
             if None != CPP0xCodeOut:
                 CPP0xCodeOut.write("        CASE(QStatus::%s);\n" % (node.getAttribute('name')))
             if None != CommentCodeOut:
-                CommentCodeOut.write("#ifdef NDEBUG\n")
-                CommentCodeOut.write("    statusMap[(uint32_t)%s] = TO_TEXT(%s);\n" % (node.getAttribute('name'), node.getAttribute('name')))
-                CommentCodeOut.write("#else\n")
                 CommentCodeOut.write("    statusMap[(uint32_t)%s] = TO_TEXT_AND_CONCAT(%s, \"%s\");\n" % (node.getAttribute('name'), node.getAttribute('name'), node.getAttribute('comment')))
-                CommentCodeOut.write("#endif\n")
             offset += 1
         elif node.localName == 'include' and node.namespaceURI == 'http://www.w3.org/2001/XInclude':
             parseAndWriteCPP0xInclude(node)
@@ -489,15 +485,6 @@ typedef enum {""")
         codeOut.write("const char* QCC_%sStatusText(QStatus status)" % prefix)
         codeOut.write("""
 {
-#if defined(NDEBUG)
-    static char code[8];
-#ifdef _WIN32
-    _snprintf(code, sizeof(code), "0x%04x", status);
-#else
-    snprintf(code, sizeof(code), "0x%04x", status);
-#endif
-    return code;
-#else
     switch (status) {
 """)
 
@@ -541,7 +528,6 @@ def writeFooters():
 #endif
         return code;
     }
-#endif
 }
 """)
     
