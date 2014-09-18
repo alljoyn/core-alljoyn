@@ -57,7 +57,7 @@ class MyAboutListener : public AboutListener {
                 AboutProxy aboutProxy(*g_bus, busName, sessionId);
 
                 MsgArg objArg;
-                aboutProxy.GetObjectDescriptions(objArg);
+                aboutProxy.GetObjectDescription(objArg);
                 printf("*********************************************************************************\n");
                 printf("AboutProxy.GetObjectDescriptions:\n%s\n", objArg.ToString().c_str());
                 printf("*********************************************************************************\n");

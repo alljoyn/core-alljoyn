@@ -44,7 +44,7 @@ AboutProxy::~AboutProxy()
 {
 }
 
-QStatus AboutProxy::GetObjectDescriptions(MsgArg& objectDescs)
+QStatus AboutProxy::GetObjectDescription(MsgArg& objectDesc)
 {
     QCC_DbgTrace(("AboutProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
@@ -58,12 +58,12 @@ QStatus AboutProxy::GetObjectDescriptions(MsgArg& objectDescs)
     size_t numArgs = 0;
     replyMsg->GetArgs(numArgs, returnArgs);
     if (numArgs == 1) {
-        objectDescs = returnArgs[0];
+        objectDesc = returnArgs[0];
         // Since the returnArgs are const we cannot change its ownership flags
         // as soon as this function ends the returnArgs will go out of scope and
         // any information it points to will be freed unless we call Stabilize to
         // copy that information.
-        objectDescs.Stabilize();
+        objectDesc.Stabilize();
     } else {
         //TODO change to more meaningfull error status
         status = ER_FAIL;

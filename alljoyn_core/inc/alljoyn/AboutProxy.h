@@ -63,7 +63,7 @@ class AboutProxy : public ajn::MessageReceiver {
      *
      * @return ER_OK if successful.
      */
-    QStatus GetObjectDescriptions(MsgArg& objectDescs);
+    QStatus GetObjectDescription(MsgArg& objectDesc);
 
     /**
      * Get the AboutData  for specified bus name.
