@@ -3123,6 +3123,17 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
 
     MatchMap::const_iterator namePrefix = matching.find("name");
     if (ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS == replyCode) {
+        bool transportsProcessed = false;
+        TransportList& transList = bus.GetInternal().GetTransportList();
+        for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
+            Transport* trans = transList.GetTransport(i);
+            if (trans && trans->IsBusToBus() && (trans->GetTransportMask() & transports)) {
+                transportsProcessed = true;
+            } else if (!trans) {
+                QCC_LogError(ER_BUS_TRANSPORT_NOT_AVAILABLE, ("NULL transport pointer found in transportList"));
+            }
+        }
+
         /* Check to see if this endpoint is already discovering this prefix */
         bool foundEntry = false;
         DiscoverMapType::iterator it = discoverMap.lower_bound(matchingStr);
@@ -3139,13 +3150,16 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
             }
             ++it;
         }
-
-        if (!foundEntry) {
-            /* This is the fix for multiple found names issue.
-             * If this is a name-based query, set initComplete to false and set it to true after
-             * the calls to the transports are complete.
-             */
-            discoverMap.insert(std::make_pair(matchingStr, DiscoverMapEntry(transports, sender, matching, namePrefix == matching.end())));
+        if (transportsProcessed || (transports & TRANSPORT_LOCAL)) {
+            if (!foundEntry) {
+                /* This is the fix for multiple found names issue.
+                 * If this is a name-based query, set initComplete to false and set it to true after
+                 * the calls to the transports are complete.
+                 */
+                discoverMap.insert(std::make_pair(matchingStr, DiscoverMapEntry(transports, sender, matching, namePrefix == matching.end())));
+            }
+        } else {
+            replyCode = ALLJOYN_FINDADVERTISEDNAME_REPLY_TRANSPORT_NOT_AVAILABLE;
         }
     }
     /* Find out the transports on which discovery needs to be enabled for this name.
