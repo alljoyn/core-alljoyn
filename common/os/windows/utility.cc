@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -45,6 +45,8 @@ void strerror_r(uint32_t errCode, char* ansiBuf, uint16_t ansiBufSize)
         (LPTSTR) &unicodeBuf,
         ansiBufSize - 1, NULL);
     memset(ansiBuf, 0, ansiBufSize);
-    WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)unicodeBuf, -1, ansiBuf, (int)len, NULL, NULL);
-    LocalFree(unicodeBuf);
+    if (len > 0) {
+        WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)unicodeBuf, -1, ansiBuf, ansiBufSize, NULL, NULL);
+        LocalFree(unicodeBuf);
+    }
 }
