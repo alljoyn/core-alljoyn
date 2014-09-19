@@ -366,7 +366,7 @@ IpNameServiceImpl::IpNameServiceImpl()
     m_wakeEvent(), m_forceLazyUpdate(false), m_refreshAdvertisements(false),
     m_enabled(false), m_processTransport(false), m_doEnable(false), m_doDisable(false),
     m_ipv4QuietSockFd(qcc::INVALID_SOCKET_FD), m_ipv6QuietSockFd(qcc::INVALID_SOCKET_FD),
-    m_ipv4UnicastSockFd(qcc::INVALID_SOCKET_FD), m_ipv6UnicastSockFd(qcc::INVALID_SOCKET_FD),
+    m_ipv4UnicastSockFd(qcc::INVALID_SOCKET_FD), m_unicastEvent(NULL),
     m_protectListeners(false), m_packetScheduler(*this),
     m_networkChangeScheduleCount(m_retries + 1)
 {
@@ -516,11 +516,15 @@ IpNameServiceImpl::~IpNameServiceImpl()
         m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
     }
 
-    if (m_ipv6UnicastSockFd != qcc::INVALID_SOCKET_FD) {
-        qcc::Close(m_ipv6UnicastSockFd);
-        m_ipv6UnicastSockFd = qcc::INVALID_SOCKET_FD;
+    if (m_unicastEvent) {
+        delete m_unicastEvent;
+        m_unicastEvent = NULL;
     }
 
+    if (m_ipv4UnicastSockFd != qcc::INVALID_SOCKET_FD) {
+        qcc::Close(m_ipv4UnicastSockFd);
+        m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
+    }
     //
     // All shut down and ready for bed.
     //
@@ -928,80 +932,46 @@ void IpNameServiceImpl::ClearLiveInterfaces(void)
     QCC_DbgPrintf(("IpNameServiceImpl::ClearLiveInterfaces(): Done"));
 }
 
-QStatus IpNameServiceImpl::CreateUnicastSocket(AddressFamily family)
+QStatus IpNameServiceImpl::CreateUnicastSocket()
 {
-    if (family == qcc::QCC_AF_INET) {
-        if (m_ipv4UnicastSockFd == qcc::INVALID_SOCKET_FD) {
-            QStatus status = qcc::Socket(family, qcc::QCC_SOCK_DGRAM, m_ipv4UnicastSockFd);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("CreateUnicastSocket: qcc::Socket(%d) failed: %d - %s", family,
-                                      qcc::GetLastError(), qcc::GetLastErrorString().c_str()));
-                m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
-                return status;
-            }
-            status = qcc::SetRecvPktAncillaryData(m_ipv4UnicastSockFd, family, true);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("CreateUnicastSocket: enable recv ancillary data"
-                                      " failed for sockFd %d", m_ipv4UnicastSockFd));
-                qcc::Close(m_ipv4UnicastSockFd);
-                m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
-                return status;
-            }
-            //
-            // We must be able to reuse the address/port combination so other
-            // AllJoyn daemon instances on the same host can listen in if desired.
-            // This will set the SO_REUSEPORT socket option if available or fall
-            // back onto SO_REUSEADDR if not.
-            //
-            status = qcc::SetReusePort(m_ipv4UnicastSockFd, true);
-            if (status != ER_OK && status != ER_NOT_IMPLEMENTED) {
-                QCC_LogError(status, ("CreateUnicastSocket(): SetReusePort() failed"));
-                qcc::Close(m_ipv4UnicastSockFd);
-                m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
-                return status;
-            }
-            //
-            // We bind to an ephemeral port.
-            //
-            status = qcc::Bind(m_ipv4UnicastSockFd, qcc::IPAddress("0.0.0.0"), 0);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("CreateUnicastSocket(): bind failed"));
-                qcc::Close(m_ipv4UnicastSockFd);
-                m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
-                return status;
-            }
+    if (m_ipv4UnicastSockFd == qcc::INVALID_SOCKET_FD) {
+        QStatus status = qcc::Socket(qcc::QCC_AF_INET, qcc::QCC_SOCK_DGRAM, m_ipv4UnicastSockFd);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("CreateUnicastSocket: qcc::Socket(%d) failed: %d - %s", qcc::QCC_AF_INET,
+                                  qcc::GetLastError(), qcc::GetLastErrorString().c_str()));
+            m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
+            return status;
         }
-    } else if (family == qcc::QCC_AF_INET6) {
-        if (m_ipv6UnicastSockFd == qcc::INVALID_SOCKET_FD) {
-            QStatus status = qcc::Socket(family, qcc::QCC_SOCK_DGRAM, m_ipv6UnicastSockFd);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("CreateUnicastSocket: qcc::Socket(%d) failed: %d - %s", family,
-                                      qcc::GetLastError(), qcc::GetLastErrorString().c_str()));
-                m_ipv6UnicastSockFd = qcc::INVALID_SOCKET_FD;
-                return status;
-            }
-            status = qcc::SetRecvPktAncillaryData(m_ipv6UnicastSockFd, family, true);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("CreateUnicastSocket: enable recv ancillary data"
-                                      " failed for sockFd %d", m_ipv6UnicastSockFd));
-                qcc::Close(m_ipv6UnicastSockFd);
-                m_ipv6UnicastSockFd = qcc::INVALID_SOCKET_FD;
-                return status;
-            }
-            status = qcc::SetReusePort(m_ipv6UnicastSockFd, true);
-            if (status != ER_OK && status != ER_NOT_IMPLEMENTED) {
-                QCC_LogError(status, ("CreateUnicastSocket(): SetReusePort() failed"));
-                qcc::Close(m_ipv6UnicastSockFd);
-                m_ipv6UnicastSockFd = qcc::INVALID_SOCKET_FD;
-                return status;
-            }
-            status = qcc::Bind(m_ipv6UnicastSockFd, qcc::IPAddress("::"), 0);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("CreateUnicastSocket(): bind failed"));
-                qcc::Close(m_ipv6UnicastSockFd);
-                m_ipv6UnicastSockFd = qcc::INVALID_SOCKET_FD;
-                return status;
-            }
+        status = qcc::SetRecvPktAncillaryData(m_ipv4UnicastSockFd, qcc::QCC_AF_INET, true);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("CreateUnicastSocket: enable recv ancillary data"
+                                  " failed for sockFd %d", m_ipv4UnicastSockFd));
+            qcc::Close(m_ipv4UnicastSockFd);
+            m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
+            return status;
+        }
+        //
+        // We must be able to reuse the address/port combination so other
+        // AllJoyn daemon instances on the same host can listen in if desired.
+        // This will set the SO_REUSEPORT socket option if available or fall
+        // back onto SO_REUSEADDR if not.
+        //
+        status = qcc::SetReusePort(m_ipv4UnicastSockFd, true);
+        if (status != ER_OK && status != ER_NOT_IMPLEMENTED) {
+            QCC_LogError(status, ("CreateUnicastSocket(): SetReusePort() failed"));
+            qcc::Close(m_ipv4UnicastSockFd);
+            m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
+            return status;
+        }
+        //
+        // We bind to an ephemeral port.
+        //
+        status = qcc::Bind(m_ipv4UnicastSockFd, qcc::IPAddress("0.0.0.0"), 0);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("CreateUnicastSocket(): bind failed"));
+            qcc::Close(m_ipv4UnicastSockFd);
+            m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
+            return status;
         }
     }
     return ER_OK;
@@ -1202,11 +1172,27 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
     //
     if (m_enabled == false && m_processTransport == false) {
         QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Communication with the outside world is forbidden"));
+        if (m_unicastEvent) {
+            delete m_unicastEvent;
+            m_unicastEvent = NULL;
+        }
+        if (m_ipv4UnicastSockFd != qcc::INVALID_SOCKET_FD) {
+            qcc::Close(m_ipv4UnicastSockFd);
+            m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
+        }
         return;
     }
 
     if (m_isProcSuspending) {
         QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): The process is suspending. Stop communicating with the outside world"));
+        if (m_unicastEvent) {
+            delete m_unicastEvent;
+            m_unicastEvent = NULL;
+        }
+        if (m_ipv4UnicastSockFd != qcc::INVALID_SOCKET_FD) {
+            qcc::Close(m_ipv4UnicastSockFd);
+            m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
+        }
         return;
     }
     //
@@ -1220,6 +1206,14 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
     QStatus status = qcc::IfConfig(entries);
     if (status != ER_OK) {
         QCC_LogError(status, ("LazyUpdateInterfaces: IfConfig() failed"));
+        if (m_unicastEvent) {
+            delete m_unicastEvent;
+            m_unicastEvent = NULL;
+        }
+        if (m_ipv4UnicastSockFd != qcc::INVALID_SOCKET_FD) {
+            qcc::Close(m_ipv4UnicastSockFd);
+            m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
+        }
         return;
     }
 
@@ -1421,17 +1415,10 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
         //
         qcc::SocketFd multicastMDNSsockFd = qcc::INVALID_SOCKET_FD;
         qcc::SocketFd multicastsockFd = qcc::INVALID_SOCKET_FD;
-        qcc::SocketFd unicastsockFd = qcc::INVALID_SOCKET_FD;
 
         if (entries[i].m_family != qcc::QCC_AF_INET && entries[i].m_family != qcc::QCC_AF_INET6) {
             assert(!"IpNameServiceImpl::LazyUpdateInterfaces(): Unexpected value in m_family (not AF_INET or AF_INET6");
             continue;
-        }
-        if (entries[i].m_family == qcc::QCC_AF_INET) {
-            unicastsockFd = m_ipv4UnicastSockFd;
-        }
-        if (entries[i].m_family == qcc::QCC_AF_INET6) {
-            unicastsockFd = m_ipv6UnicastSockFd;
         }
 
         status = CreateMulticastSocket(entries[i], IPV4_MDNS_MULTICAST_GROUP, IPV6_MDNS_MULTICAST_GROUP, MULTICAST_MDNS_PORT,
@@ -1464,14 +1451,6 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
         live.m_multicastsockFd = multicastsockFd;
         live.m_multicastMDNSsockFd = multicastMDNSsockFd;
 
-        IPAddress listenAddr;
-        uint16_t listenPort;
-        if (unicastsockFd != qcc::INVALID_SOCKET_FD) {
-            qcc::GetLocalAddress(unicastsockFd, listenAddr, listenPort);
-            live.m_unicastPort = listenPort;
-        } else {
-            live.m_unicastPort = 0;
-        }
         live.m_multicastPort = MULTICAST_PORT;
         live.m_multicastMDNSPort = MULTICAST_MDNS_PORT;
 
@@ -1488,6 +1467,30 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
         //
         m_liveInterfaces.push_back(live);
     }
+    if (m_liveInterfaces.size() > 0) {
+        if (m_ipv4UnicastSockFd == qcc::INVALID_SOCKET_FD) {
+            CreateUnicastSocket();
+            m_unicastEvent = new qcc::Event(m_ipv4UnicastSockFd, qcc::Event::IO_READ);
+        }
+        IPAddress listenAddr;
+        uint16_t listenPort = 0;
+        if (m_ipv4UnicastSockFd != qcc::INVALID_SOCKET_FD) {
+            qcc::GetLocalAddress(m_ipv4UnicastSockFd, listenAddr, listenPort);
+        }
+        for (uint32_t i = 0; (m_state == IMPL_RUNNING || m_terminal) && (i < m_liveInterfaces.size()); ++i) {
+            m_liveInterfaces[i].m_unicastPort = listenPort;
+        }
+    } else {
+        if (m_unicastEvent) {
+            delete m_unicastEvent;
+            m_unicastEvent = NULL;
+        }
+        if (m_ipv4UnicastSockFd != qcc::INVALID_SOCKET_FD) {
+            qcc::Close(m_ipv4UnicastSockFd);
+            m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
+        }
+    }
+
     // If m_processTransport is true, then one of the transports
     // is waiting for us to supply the list of live interfaces so
     // it can get things started. We only want to provide the
@@ -4995,8 +4998,6 @@ void* IpNameServiceImpl::Run(void* arg)
     qcc::Event timerEvent(MS_PER_SEC, MS_PER_SEC);
 
     qcc::NetworkEventSet networkEvents;
-    CreateUnicastSocket(qcc::QCC_AF_INET);
-    qcc::Event unicastIPv4Event(m_ipv4UnicastSockFd, qcc::Event::IO_READ);
 
     qcc::SocketFd networkEventFd = qcc::INVALID_SOCKET_FD;
 #ifndef QCC_OS_GROUP_WINDOWS
@@ -5106,7 +5107,9 @@ void* IpNameServiceImpl::Run(void* arg)
         checkEvents.push_back(&timerEvent);
         checkEvents.push_back(&m_wakeEvent);
         checkEvents.push_back(&networkEvent);
-        checkEvents.push_back(&unicastIPv4Event);
+        if (m_unicastEvent) {
+            checkEvents.push_back(m_unicastEvent);
+        }
 
         //
         // We also need to wait on events from all of the sockets that
