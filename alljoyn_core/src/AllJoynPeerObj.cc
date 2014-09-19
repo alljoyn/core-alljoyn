@@ -1362,6 +1362,11 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
     size_t idx = 0;
     for (size_t cnt = 0; cnt < requestingAuthCount; cnt++) {
         if ((requestingAuthList[cnt] & currentSuite) != currentSuite) {
+            assert(idx < smallerCount);
+            if (idx >= smallerCount) {
+                delete [] smallerSuites;
+                return ER_AUTH_FAIL;
+            }
             smallerSuites[idx++] = requestingAuthList[cnt];
         }
     }

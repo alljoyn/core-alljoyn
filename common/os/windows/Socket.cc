@@ -77,15 +77,16 @@ qcc::String StrError()
     int errnum = WSAGetLastError();
     char msgbuf[256];
 
-    FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK,
-                   NULL,
-                   errnum,
-                   MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                   (LPSTR) msgbuf,
-                   sizeof(msgbuf),
-                   NULL);
+    if (!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK,
+                        NULL,
+                        errnum,
+                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                        (LPSTR)msgbuf,
+                        sizeof(msgbuf),
+                        NULL)) {
+        msgbuf[0] = '\0';
+    }
     return U32ToString(errnum) + " - " + msgbuf;
-
 }
 
 void MakeSockAddr(const IPAddress& addr,
