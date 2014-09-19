@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+
+   Permission to use, copy, modify, and/or distribute this software for any
+   purpose with or without fee is hereby granted, provided that the above
+   copyright notice and this permission notice appear in all copies.
+
+   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+   WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+   MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+   ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+   WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+   ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+   OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+-->
+<node
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://www.alljoyn.org/schemas/introspect.xsd">
+    <interface name="org.alljoyn.Security.PermissionMgmt">
+        <method name="Claim">
+            <arg name="publicKey" type="ay" direction="in"/>
+            <arg type="ay" direction="out"/>
+        </method>
+	  <method name="AddRootOfTrust">
+            <arg name="publicKey" type="ay" direction="in"/>
+        </method>
+	  <method name="RemoveRootOfTrust">
+            <arg name="publicKey" type="ay" direction="in"/>
+        </method>
+        <method name="InstallPolicy">
+            <arg name="cert" type="ay" direction="in"/>
+            <arg name="authorization" type="ay" direction="in"/>
+        </method>
+        <method name="RemovePolicy">
+        </method>
+        <method name="InstallMembership">
+            <arg name="cert" type="ay" direction="in"/>
+            <arg name="authorization" type="ay" direction="in"/>
+        </method>
+        <method name="RemoveMembership">
+            <arg name="guildID" type="ay" direction="in"/>
+        </method>
+        <method name="InstallIdentity">
+            <arg name="cert" type="ay" direction="in"/>
+            <arg name="identity" type="ay" direction="in"/>
+        </method>
+        <method name="RemoveIdentity">
+        </method>
+        <method name="GetIdentity">
+		<arg name="cert" type="ay" direction="out"/>
+            <arg name="identity" type="ay" direction="out"/>
+        </method>
+        <method name="InstallGuildEquivalence">
+            <arg name="cert" type="ay" direction="in"/>
+        </method>
+        <method name="RemoveGuildEquivalence">
+            <arg name="publicKey" type="ay" direction="in"/>
+        </method>
+</interface>
+</node>
