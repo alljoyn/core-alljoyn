@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -52,7 +52,7 @@ class AuthMechAnonymous : public AuthMechanism {
     /**
      * Returns the name for this authentication method
      *
-     * returns the same result as \b AuthMechAnonymouse::AuthName;
+     * returns the same result as \b AuthMechAnonymous::AuthName;
      *
      * @return the static name for the anonymous authentication mechanism.
      *
@@ -62,7 +62,7 @@ class AuthMechAnonymous : public AuthMechanism {
     /**
      * Function of type AuthMechanismManager::AuthMechFactory
      *
-     * @param keyStore   The key store avaiable to this authentication mechansim.
+     * @param keyStore   The key store available to this authentication mechanism.
      * @param listener   The listener to register (listener is not used by AuthMechAnonymous)
      *
      * @return  An object of class AuthMechAnonymous
