@@ -214,14 +214,14 @@ public interface MarshalStressInterfaceInvalid {
     public Structg MethodStructg() throws BusException;
 
     @BusProperty(signature="ay")
-    public Class[] getPropay() throws BusException;
+    public Class<?>[] getPropay() throws BusException;
 
     @BusMethod(signature="ay")
-    public void Methoday(Class[] m) throws BusException;
+    public void Methoday(Class<?>[] m) throws BusException;
     public class Structay {
         @Position(0)
         @Signature("ay")
-        public Class[] m;
+        public Class<?>[] m;
     }
 
 
@@ -229,14 +229,14 @@ public interface MarshalStressInterfaceInvalid {
     public Structay MethodStructay() throws BusException;
 
     @BusProperty(signature="ab")
-    public Class[] getPropab() throws BusException;
+    public Class<?>[] getPropab() throws BusException;
 
     @BusMethod(signature="ab")
-    public void Methodab(Class[] m) throws BusException;
+    public void Methodab(Class<?>[] m) throws BusException;
     public class Structab {
         @Position(0)
         @Signature("ab")
-        public Class[] m;
+        public Class<?>[] m;
     }
 
 
@@ -244,14 +244,14 @@ public interface MarshalStressInterfaceInvalid {
     public Structab MethodStructab() throws BusException;
 
     @BusProperty(signature="an")
-    public Class[] getPropan() throws BusException;
+    public Class<?>[] getPropan() throws BusException;
 
     @BusMethod(signature="an")
-    public void Methodan(Class[] m) throws BusException;
+    public void Methodan(Class<?>[] m) throws BusException;
     public class Structan {
         @Position(0)
         @Signature("an")
-        public Class[] m;
+        public Class<?>[] m;
     }
 
 
@@ -259,14 +259,14 @@ public interface MarshalStressInterfaceInvalid {
     public Structan MethodStructan() throws BusException;
 
     @BusProperty(signature="aq")
-    public Class[] getPropaq() throws BusException;
+    public Class<?>[] getPropaq() throws BusException;
 
     @BusMethod(signature="aq")
-    public void Methodaq(Class[] m) throws BusException;
+    public void Methodaq(Class<?>[] m) throws BusException;
     public class Structaq {
         @Position(0)
         @Signature("aq")
-        public Class[] m;
+        public Class<?>[] m;
     }
 
 
@@ -274,14 +274,14 @@ public interface MarshalStressInterfaceInvalid {
     public Structaq MethodStructaq() throws BusException;
 
     @BusProperty(signature="ai")
-    public Class[] getPropai() throws BusException;
+    public Class<?>[] getPropai() throws BusException;
 
     @BusMethod(signature="ai")
-    public void Methodai(Class[] m) throws BusException;
+    public void Methodai(Class<?>[] m) throws BusException;
     public class Structai {
         @Position(0)
         @Signature("ai")
-        public Class[] m;
+        public Class<?>[] m;
     }
 
 
@@ -289,14 +289,14 @@ public interface MarshalStressInterfaceInvalid {
     public Structai MethodStructai() throws BusException;
 
     @BusProperty(signature="au")
-    public Class[] getPropau() throws BusException;
+    public Class<?>[] getPropau() throws BusException;
 
     @BusMethod(signature="au")
-    public void Methodau(Class[] m) throws BusException;
+    public void Methodau(Class<?>[] m) throws BusException;
     public class Structau {
         @Position(0)
         @Signature("au")
-        public Class[] m;
+        public Class<?>[] m;
     }
 
 
@@ -304,14 +304,14 @@ public interface MarshalStressInterfaceInvalid {
     public Structau MethodStructau() throws BusException;
 
     @BusProperty(signature="ax")
-    public Class[] getPropax() throws BusException;
+    public Class<?>[] getPropax() throws BusException;
 
     @BusMethod(signature="ax")
-    public void Methodax(Class[] m) throws BusException;
+    public void Methodax(Class<?>[] m) throws BusException;
     public class Structax {
         @Position(0)
         @Signature("ax")
-        public Class[] m;
+        public Class<?>[] m;
     }
 
 
@@ -319,14 +319,14 @@ public interface MarshalStressInterfaceInvalid {
     public Structax MethodStructax() throws BusException;
 
     @BusProperty(signature="at")
-    public Class[] getPropat() throws BusException;
+    public Class<?>[] getPropat() throws BusException;
 
     @BusMethod(signature="at")
-    public void Methodat(Class[] m) throws BusException;
+    public void Methodat(Class<?>[] m) throws BusException;
     public class Structat {
         @Position(0)
         @Signature("at")
-        public Class[] m;
+        public Class<?>[] m;
     }
 
 
@@ -334,14 +334,14 @@ public interface MarshalStressInterfaceInvalid {
     public Structat MethodStructat() throws BusException;
 
     @BusProperty(signature="ad")
-    public Class[] getPropad() throws BusException;
+    public Class<?>[] getPropad() throws BusException;
 
     @BusMethod(signature="ad")
-    public void Methodad(Class[] m) throws BusException;
+    public void Methodad(Class<?>[] m) throws BusException;
     public class Structad {
         @Position(0)
         @Signature("ad")
-        public Class[] m;
+        public Class<?>[] m;
     }
 
 

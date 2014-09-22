@@ -19,34 +19,27 @@ package org.alljoyn.bus;
 import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.BusObject;
-import org.alljoyn.bus.SignalEmitter;
 import org.alljoyn.bus.Status;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 
 import java.io.ByteArrayInputStream;
 import java.io.BufferedInputStream;
 import java.lang.ref.WeakReference;
-import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.CertPath;
 import java.security.cert.CertPathValidator;
-import java.security.cert.CertPathValidatorException;
-import java.security.cert.PKIXCertPathValidatorResult;
 import java.security.cert.PKIXParameters;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
-import static junit.framework.Assert.*;
 import junit.framework.TestCase;
 
 public class AuthListenerTest extends TestCase {

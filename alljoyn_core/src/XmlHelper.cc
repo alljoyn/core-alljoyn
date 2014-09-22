@@ -310,7 +310,7 @@ QStatus XmlHelper::ParseNode(const XmlElement* root, ProxyBusObject* obj)
                     childObjPath += '/';
                 }
                 childObjPath += relativePath;
-                if (!relativePath.empty() & IsLegalObjectPath(childObjPath.c_str())) {
+                if (!relativePath.empty() && IsLegalObjectPath(childObjPath.c_str())) {
                     /* Check for existing child with the same name. Use this child if found, otherwise create a new one */
                     ProxyBusObject* childObj = obj->GetChild(relativePath.c_str());
                     if (childObj) {

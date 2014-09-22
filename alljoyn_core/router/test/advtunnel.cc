@@ -319,7 +319,9 @@ QStatus AdvTunnel::RelayAdv()
         QStatus status = Transport::ParseArguments("tcp", busAddr.c_str(), argMap);
         if (status == ER_OK) {
             uint16_t port = static_cast<uint16_t>(qcc::StringToU32(argMap["r4port"]));
-            status = ns->Enable(TRANSPORT_TCP, (uint16_t)port, 0, 0, 0, true, false, false, false);
+            std::map<qcc::String, uint16_t> portMap;
+            portMap["*"] = (uint16_t)port;
+            status = ns->Enable(TRANSPORT_TCP, portMap, 0, std::map<qcc::String, uint16_t>(), 0, true, false, false, false);
             if (status == ER_OK) {
                 ns->OpenInterface(TRANSPORT_TCP, "*");
             }
@@ -466,7 +468,9 @@ int main(int argc, char** argv)
                    new CallbackImpl<AdvTunnel, void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint32_t>
                        (&tunnel, &AdvTunnel::Found));
 
-    ns.Enable(TRANSPORT_TCP, port, 0, 0, 0, true, false, false, false);
+    std::map<qcc::String, uint16_t> portMap;
+    portMap["*"] = port;
+    ns.Enable(TRANSPORT_TCP, portMap, 0, std::map<qcc::String, uint16_t>(), 0, true, false, false, false);
 
     /*
      * In sniffMode we just report advertisements
