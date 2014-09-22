@@ -2838,21 +2838,28 @@ QStatus Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint16_t 
 
 QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool socketReady, uint32_t* ms)
 {
-    //QCC_DbgTrace(("ARDP_Run(handle=%p, sock=%d., socketReady=%d., ms=%p)", handle, sock, socketReady, ms));
-    uint8_t buf[65536];                   /* UDP packet can be up to 64K long */
+    const size_t bufferSize = 65536;      /* UDP packet can be up to 64K long */
+    uint8_t* buf = new uint8_t[bufferSize];
     qcc::IPAddress address;               /* The IP address of the foreign side */
     uint16_t port;                        /* Will be the UDP port of the foreign side */
     size_t nbytes;                        /* The number of bytes actually received */
     QStatus status = ER_FAIL;
-    /* When to call back (timer expiration) */
+
+    // QCC_DbgTrace(("ARDP_Run(handle=%p, sock=%d., socketReady=%d., ms=%p)", handle, sock, socketReady, ms));
+
+    /*
+     *  Tell the higher levels when to call back next (timer expiration)
+     */
     *ms = handle->msnext = CheckTimers(handle);
     if (socketReady) {
-        status = qcc::RecvFrom(sock, address, port, buf, sizeof(buf), nbytes);
+        status = qcc::RecvFrom(sock, address, port, buf, bufferSize, nbytes);
         if (status == ER_WOULDBLOCK) {
-            //QCC_DbgTrace(("ARDP_Run(): qcc::RecvFrom() ER_WOULDBLOCK"));
+            // QCC_DbgTrace(("ARDP_Run(): qcc::RecvFrom() ER_WOULDBLOCK"));
+            delete[] buf;
             return ER_OK;
         } else if (status != ER_OK) {
-            //QCC_DbgTrace(("ARDP_Run(): qcc::RecvFrom() failed: %s", QCC_StatusText(status)));
+            // QCC_DbgTrace(("ARDP_Run(): qcc::RecvFrom() failed: \"%s\"", QCC_StatusText(status)));
+            delete[] buf;
             return status;
         }
 
@@ -2906,10 +2913,11 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool socketReady, uint3
         }
     }
 
+    delete[] buf;
     *ms = handle->msnext;
-    //QCC_DbgPrintf(("ARDP_Run %u", *ms));
+    // QCC_DbgPrintf(("ARDP_Run(): Call back in %u ms", *ms));
 
     return status;
 }
 
-}                 // namespace ajn
+} // namespace ajn

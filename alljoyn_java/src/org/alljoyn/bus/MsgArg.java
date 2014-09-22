@@ -83,14 +83,13 @@ final class MsgArg {
      *                      object corresponding to the ordinal value cannot be
      *                      determined
      */
-    @SuppressWarnings("unchecked")
     private static Enum<?> getEnumObject(Type type, int value) throws BusException {
         if (type instanceof Class) {
-            Class<?> c = (Class) type;
+            Class<?> c = (Class<?>) type;
             if (c.isEnum()) {
                 try {
                     Object[] values = (Object[]) c.getMethod("values").invoke(null);
-                    return (Enum) values[value];
+                    return (Enum<?>) values[value];
                 } catch (ArrayIndexOutOfBoundsException ex) {
                     throw new BusException("failed to get " + c + " for value " + value, ex);
                 } catch (NoSuchMethodException ex) {
@@ -113,7 +112,6 @@ final class MsgArg {
      * @throws BusException if {@code obj} is an {@code Enum}, but the ordinal
      *                      value cannot be determined
      */
-    @SuppressWarnings("unchecked")
     private static int getEnumValue(Object obj) throws BusException {
         if (obj != null) {
             Class<?> c = obj.getClass();
@@ -229,7 +227,7 @@ final class MsgArg {
                 if (getElemSig(msgArg).charAt(0) == ALLJOYN_DICT_ENTRY_OPEN) {
                     Type rawType = ((ParameterizedType) type).getRawType();
                     rawType = (rawType == Map.class) ? HashMap.class : rawType;
-                    object = ((Class) rawType).newInstance();
+                    object = ((Class<?>) rawType).newInstance();
                     for (int i = 0; i < getNumElements(msgArg); ++i) {
                         long element  = getElement(msgArg, i);
                         Type[] typeArgs = ((ParameterizedType) type).getActualTypeArguments();
@@ -241,7 +239,7 @@ final class MsgArg {
                 } else {
                     Type componentType = (type instanceof GenericArrayType)
                         ? ((GenericArrayType) type).getGenericComponentType()
-                        : ((Class) type).getComponentType();
+                        : ((Class<?>) type).getComponentType();
                     Class<?> componentClass;
                     if (componentType instanceof ParameterizedType) {
                         Type rawType = ((ParameterizedType) componentType).getRawType();
@@ -268,7 +266,7 @@ final class MsgArg {
                 return getBool(msgArg);
             case ALLJOYN_BOOLEAN_ARRAY:
                 boolean[] b = getBoolArray(msgArg);
-                Class<?> componentClass = ((Class) type).getComponentType();
+                Class<?> componentClass = ((Class<?>) type).getComponentType();
                 if (componentClass == Boolean.class) {
                     Boolean[] B = new Boolean[b.length];
                     for (int i = 0; i < b.length; ++i) {
@@ -320,15 +318,15 @@ final class MsgArg {
             case ALLJOYN_STRING:
                 return getString(msgArg);
             case ALLJOYN_STRUCT:
-                Type[] types = Signature.structTypes((Class) type);
+                Type[] types = Signature.structTypes((Class<?>) type);
                 if (types.length != getNumMembers(msgArg)) {
                     throw new MarshalBusException(
                         "cannot marshal '" + getSignature(new long[] { msgArg }) + "' with "
                         + getNumMembers(msgArg) + " members into " + type + " with "
                         + types.length + " fields");
                 }
-                object = ((Class) type).newInstance();
-                Field[] fields = Signature.structFields((Class) type);
+                object = ((Class<?>) type).newInstance();
+                Field[] fields = Signature.structFields((Class<?>) type);
                 for (int i = 0; i < getNumMembers(msgArg); ++i) {
                     Object value = unmarshal(getMember(msgArg, i), types[i]);
                     fields[i].set(object, value);
@@ -459,7 +457,7 @@ final class MsgArg {
                 }
                 char elementTypeId = sig.charAt(1);
                 if (ALLJOYN_DICT_ENTRY_OPEN == elementTypeId) {
-                    arg = ((Map) arg).entrySet().toArray();
+                    arg = ((Map<?, ?>) arg).entrySet().toArray();
                 }
                 switch (elementTypeId) {
                 case ALLJOYN_BYTE:

@@ -19,8 +19,6 @@ package org.alljoyn.bus;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 import java.lang.ref.WeakReference;
 
-
-import static junit.framework.Assert.*;
 import junit.framework.TestCase;
 
 public class AuthListenerECDHETest extends TestCase {
@@ -323,15 +321,7 @@ public class AuthListenerECDHETest extends TestCase {
                 "-----BEGIN PRIVATE KEY-----" +
                 "CkzgQdvZSOQMmqOnddsw0BRneCNZhioNMyUoJwec9rMAAAAA" +
                 "-----END PRIVATE KEY-----";
-        private static final String CLIENT_CERT1_PEM =
-        "-----BEGIN CERTIFICATE-----" +
-        "AAAAAZ1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n" +
-        "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n" +
-        "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n" +
-        "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQABMa7uTLSqjDggO0t6TAgsxKNt\n" +
-        "+Zhu/jc3s242BE0drNFJAiGa/u6AX5qdR+7RFxVuqm251vKPgWjfwN2AesHrAAAA\n" +
-        "ANsNwJl8Z1v5jbqo077qdQIT6aM1jc+pKXdgNMk6loqFAAAAAA==\n" +
-        "-----END CERTIFICATE-----";
+
         private static final String CLIENT_CERT2_PEM =
         "-----BEGIN CERTIFICATE-----" +
         "AAAAAp1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n" +
@@ -354,16 +344,6 @@ public class AuthListenerECDHETest extends TestCase {
         "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3AABMa7uTLSqjDggO0t6TAgsxKNt\n" +
         "+Zhu/jc3s242BE0drPcL4K+FOVJf+tlivskovQ3RfzTQ+zLoBH5ZCzG9ua/dAAAA\n" +
         "ACt5bWBzbcaT0mUqwGOVosbMcU7SmhtE7vWNn/ECvpYFAAAAAA==\n" +
-        "-----END CERTIFICATE-----";
-        private static final String SERVER_CERT2_PEM =
-        "-----BEGIN CERTIFICATE-----" +
-        "AAAAAvUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n" +
-        "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n" +
-        "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n" +
-        "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3ABjeWi1/GbBcdnK0yJvL4X/UF0h\n" +
-        "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOc+WvKloM7m5NFJNSd3qFFGUhfj\n" +
-        "xx/0CCRJlk/jeIWmzQAAAAB8bexqa95eHEKTqdc8+qKFKggZZXlpaj9af/MFocIP\n" +
-        "NQAAAAA=\n" +
         "-----END CERTIFICATE-----";
     }
 

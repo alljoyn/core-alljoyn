@@ -92,7 +92,6 @@ public class BusAttachmentTest extends TestCase {
     private WeakReference<BusAttachment> otherBusRef = new WeakReference<BusAttachment>(otherBus);
     private int handledSignals1;
     private int handledSignals2;
-    private int handledSignals3;
     private int handledSignals4;
     private boolean pinRequested;
     private String name;
@@ -344,8 +343,10 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(Status.OK, status);
     }
 
+    // suppressing the unused signalHandler3 warning this is used in the test
+    // but the compiler does not know.
+    @SuppressWarnings("unused")
     private void signalHandler3(String string) throws BusException {
-        ++handledSignals3;
     }
 
     public void testRegisterPrivateSignalHandler() throws Exception {
@@ -901,7 +902,6 @@ public class BusAttachmentTest extends TestCase {
         public void foundAdvertisedName(String name, short transport, String namePrefix) {
             if (name.equals("name.x")) {
                 foundName1 = true;
-                transport1 |= transport;
             }
             if ( name.equals("name.y")) {
                 foundName2 = true;
@@ -909,7 +909,6 @@ public class BusAttachmentTest extends TestCase {
             }
             if ( name.equals("name.z")) {
                 foundName3 = true;
-                transport3 |= transport;
             }
             // stopWait seems to block sometimes, so enable concurrency.
             bus.enableConcurrentCallbacks();
@@ -923,18 +922,14 @@ public class BusAttachmentTest extends TestCase {
     private boolean foundName1;
     private boolean foundName2;
     private boolean foundName3;
-    private short transport1;
     private short transport2;
-    private short transport3;
     private static final short LOCAL = 0x01;
     private static final short TCP = 0x04;
     public synchronized void testFindNameByTransport() throws Exception {
         foundName1 = false;
         foundName2 = false;
         foundName3 = false;
-        transport1 = 0;
         transport2 = 0;
-        transport3 = 0;
         bus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
 
         BusListener testBusListener = new FindNamesByTransportListener(bus);
@@ -1236,7 +1231,6 @@ public class BusAttachmentTest extends TestCase {
 
     public class LeaveSessionSessionListener extends SessionListener {
         public LeaveSessionSessionListener(BusAttachment bus) {
-            this.bus = bus;
         }
 
         @Override
@@ -1244,9 +1238,8 @@ public class BusAttachmentTest extends TestCase {
             sessionLostReason = reason;
             sessionLost = true;
         }
-
-        private BusAttachment bus;
     }
+
     //TODO figure out how to produce the sessionLost signal
     public synchronized void testLeaveSession() throws Exception {
         found = false;

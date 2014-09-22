@@ -162,6 +162,12 @@ class IpNameService {
     void SetCallback(TransportMask transportMask,
                      Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint32_t>* cb);
 
+    /**
+     * @brief Set the Callback for notification of network interface events.
+     */
+    void SetNetworkEventCallback(TransportMask transportMask,
+                                 Callback<void, const std::map<qcc::String, qcc::IPAddress>&>* cb);
+
     void RegisterListener(IpNameServiceListener& listener);
 
     void UnregisterListener(IpNameServiceListener& listener);
@@ -330,12 +336,12 @@ class IpNameService {
      *
      * @param transportMask A bitmask containing the transport handling the specified
      *     endpoints.
-     * @param reliableIPv4Port Indicates the port number of a server listening for
-     *     connections if enableReliableIPv4 is true
+     * @param reliableIPv4PortMap Indicates a map of interfaces to port numbers
+     *     of a server listening for connections if enableReliableIPv4 is true
      * @param reliableIPv6Port Indicates the port number of a server listening for
      *     connections if enableUnreliableIPv4 is true
-     * @param unreliableIPv4Port Indicates the port number of a server listening for
-     *     connections if enableReliableIPv6 is true
+     * @param unreliableIPv4PortMap Indicates a map of interfaces to port numbers
+     *     of a server listening for connections if enableReliableIPv6 is true
      * @param unreliableIPv6Port Indicates the port number of a server listening for
      *     connections if enableUnreliableIPv6 is true.
      * @param enableReliableIPv4
@@ -352,8 +358,8 @@ class IpNameService {
      *     - false indicates this protocol is not enabled.
      */
     QStatus Enable(TransportMask transportMask,
-                   uint16_t reliableIPv4Port, uint16_t reliableIPv6Port,
-                   uint16_t unreliableIPv4Port, uint16_t unreliableIPv6Port,
+                   const std::map<qcc::String, uint16_t>& reliableIPv4PortMap, uint16_t reliableIPv6Port,
+                   const std::map<qcc::String, uint16_t>& unreliableIPv4PortMap, uint16_t unreliableIPv6PortMap,
                    bool enableReliableIPv4, bool enableReliableIPv6,
                    bool enableUnreliableIPv4, bool enableUnreliableIPv6);
 
@@ -363,18 +369,18 @@ class IpNameService {
      *
      * @param transportMask A bitmask containing the transport handling the specified
      *     endpoints.
-     * @param reliableIPv4Port If zero, indicates this protocol is not enabled.  If
-     *     non-zero, indicates the port number of a server listening for connections.
+     * @param reliableIPv4PortMap If empty, indicates this protocol is not enabled.  If
+     *     not empty, indicates the interfaces/port numbers of a server listening for connections.
      * @param reliableIPv6Port If zero, indicates this protocol is not enabled.  If
      *     non-zero, indicates the port number of a server listening for connections.
-     * @param unreliableIPv4Port If zero, indicates this protocol is not enabled.  If
-     *     non-zero, indicates the port number of a server listening for connections.
+     * @param unreliableIPv4PortMap If empty, indicates this protocol is not enabled.  If
+     *     not empty, indicates the interfaces/port numbers of a server listening for connections.
      * @param unreliableIPv6Port If zero, indicates this protocol is not enabled.  If
      *     non-zero, indicates the port number of a server listening for connections.
      */
     QStatus Enabled(TransportMask transportMask,
-                    uint16_t& reliableIPv4Port, uint16_t& reliableIPv6Port,
-                    uint16_t& unreliableIPv4Port, uint16_t& unreliableIPv6Port);
+                    std::map<qcc::String, uint16_t>& reliableIPv4PortMap, uint16_t& reliableIPv6Port,
+                    std::map<qcc::String, uint16_t>& unreliableIPv4PortMap, uint16_t& unreliableIPv6Port);
 
     /**
      * @brief Discover well-known names starting with the specified prefix over

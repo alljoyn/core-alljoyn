@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -68,7 +68,7 @@ static qcc::String escapeXml(const qcc::String& str) {
                 outStr.append("&lt;");
             } else if (c == '>') {
                 outStr.append("&gt;");
-            } else if (((0x20 <= c) && (0x7e >= c)) || (0x09 == 9) || (0x0a == c) || (0x0d == c)) {
+            } else if (((0x20 <= c) && (0x7e >= c)) || (0x09 == c) || (0x0a == c) || (0x0d == c)) {
                 outStr.push_back(c);
             } else {
                 outStr.append("&#");

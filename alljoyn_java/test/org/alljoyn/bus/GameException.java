@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -27,4 +27,12 @@ public class GameException extends Exception {
     public GameException(String msg) {
         super(msg);
     }
+
+    /**
+     * serialVersionUID is recommended for all serializable classes.
+     *
+     * This class is not expected to be serialized. This is added to address
+     * build warnings.
+     */
+    private static final long serialVersionUID = -2961277719689445461L;
 }

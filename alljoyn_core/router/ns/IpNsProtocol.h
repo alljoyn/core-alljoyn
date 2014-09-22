@@ -3977,6 +3977,8 @@ class _MDNSPacket : public _Packet {
 
     void RemoveAnswer(qcc::String str, MDNSResourceRecord::RRType type);
 
+    void RemoveQuestion(qcc::String str);
+
     /**
      * @internal
      * @brief Get the size of a buffer that will allow the header object and

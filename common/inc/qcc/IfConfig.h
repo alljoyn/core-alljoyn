@@ -73,6 +73,11 @@ const uint32_t QCC_AF_UNSPEC_INDEX = 0x0;
 const uint32_t QCC_AF_INET_INDEX = 0x1;
 const uint32_t QCC_AF_INET6_INDEX = 0x2;
 
+typedef uint32_t NetworkEvent;
+typedef std::set<NetworkEvent> NetworkEventSet;
+#define NETWORK_EVENT_IF_INDEX(x) ((x) >> 2)
+#define NETWORK_EVENT_IF_FAMILY(x) ((x) & 0x3)
+
 /**
  * @brief Get information regarding the network interfaces on the
  * host.
@@ -114,7 +119,7 @@ SocketFd NetworkEventSocket();
  * @brief Process network event notifications.
  *
  */
-NetworkEventType NetworkEventReceive(SocketFd sockFd, std::set<uint32_t>& networkRefreshSet);
+NetworkEventType NetworkEventReceive(SocketFd sockFd, NetworkEventSet& networkEvents);
 
 } // namespace ajn
 

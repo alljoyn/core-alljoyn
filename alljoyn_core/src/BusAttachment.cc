@@ -691,6 +691,11 @@ void BusAttachment::WaitStopInternal()
 
 QStatus BusAttachment::CreateInterface(const char* name, InterfaceDescription*& iface, InterfaceSecurityPolicy secPolicy)
 {
+    if (!IsLegalInterfaceName(name)) {
+        iface = NULL;
+        return ER_BAD_ARG_1;
+    }
+
     if (NULL != GetInterface(name)) {
         iface = NULL;
         return ER_BUS_IFACE_ALREADY_EXISTS;
@@ -1090,6 +1095,10 @@ QStatus BusAttachment::FindAdvertisedNameByTransport(const char* namePrefix, Tra
 
             case ALLJOYN_FINDADVERTISEDNAME_REPLY_FAILED:
                 status = ER_ALLJOYN_FINDADVERTISEDNAME_REPLY_FAILED;
+                break;
+
+            case ALLJOYN_FINDADVERTISEDNAME_REPLY_TRANSPORT_NOT_AVAILABLE:
+                status = ER_ALLJOYN_FINDADVERTISEDNAME_REPLY_TRANSPORT_NOT_AVAILABLE;
                 break;
 
             default:

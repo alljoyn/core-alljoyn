@@ -19,11 +19,9 @@ package org.alljoyn.bus;
 import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.BusObject;
-import org.alljoyn.bus.SignalEmitter;
 import org.alljoyn.bus.Status;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 
-import static junit.framework.Assert.*;
 import junit.framework.TestCase;
 
 public class ProxyBusObjectTest extends TestCase {
