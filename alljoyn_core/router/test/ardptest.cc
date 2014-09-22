@@ -20,9 +20,14 @@
 #include <string.h>
 #include <time.h>
 #include <sys/types.h>
+#ifdef _WIN32
+#include <winsock2.h>
+#define random() rand()
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#endif
 
 #include <vector>
 #include <queue>

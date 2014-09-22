@@ -20,9 +20,14 @@
 #include <string.h>
 #include <time.h>
 #include <sys/types.h>
+#ifdef _WIN32
+#include <winsock2.h>
+#define random() rand()
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#endif
 
 #include <vector>
 
@@ -120,7 +125,7 @@ void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus s
     QCC_DbgTrace(("RecvCb(handle=%p, conn=%p, rcv=%p, status=%s)",
                   handle, conn, rcv, QCC_StatusText(status)));
     /* Consume data buffers */
-    for (uint16_t i; i < cnt; i++) {
+    for (uint16_t i = 0; i < cnt; i++) {
         QCC_DbgPrintf(("RecvCb(): got %d bytes of data", buf->datalen));
         len += buf->datalen;
         buf = buf->next;

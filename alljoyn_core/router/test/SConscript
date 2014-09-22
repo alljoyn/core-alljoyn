@@ -11,7 +11,7 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 Import('router_env', 'router_objs')
 from os.path import basename
@@ -22,16 +22,16 @@ progs = [
     router_env.Program('ns', ['ns.cc'] + router_objs)
    ]
 
-if router_env['OS'] in ['android', 'linux']:
+if router_env['OS'] in ['android', 'linux', 'win7']:
    progs.append(router_env.Program('bbdaemon', ['bbdaemon.cc'] + router_objs))
    progs.append(router_env.Program('ardp',     ['ardp.cc'] +     router_objs))
    progs.append(router_env.Program('ardptest', ['ardptest.cc'] + router_objs))
-   
+
 #if router_env['OS'] == 'win7':
 #   progs.append(router_env.Program('WinBtDiscovery.exe', ['WinBtDiscovery.cc']))
-   
+
 #
-# On Android, build a static library that can be linked into a JNI dynamic 
+# On Android, build a static library that can be linked into a JNI dynamic
 # library to implement the daemon as a Service
 #
 if router_env['OS'] == 'android':
