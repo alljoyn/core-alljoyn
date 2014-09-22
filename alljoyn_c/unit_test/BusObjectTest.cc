@@ -91,7 +91,8 @@ static void name_owner_changed(const void* context, const char* busName, const c
 }
 
 /* Property changed callback */
-static void obj_prop_changed(alljoyn_proxybusobject obj, const char* iface_name, alljoyn_msgarg changed, alljoyn_msgarg invalidated, void* context) {
+static void obj_prop_changed(alljoyn_proxybusobject obj, const char* iface_name, alljoyn_msgarg changed, alljoyn_msgarg invalidated, void* context)
+{
     alljoyn_msgarg argList;
     size_t argListSize;
     QStatus status = ER_FAIL; //default state is failure
@@ -506,7 +507,7 @@ TEST_F(BusObjectTest, property_changed_signal)
         }
         qcc::Sleep(5);
     }
-    EXPECT_TRUE(prop_changed_flag);
+    EXPECT_FALSE(prop_changed_flag);
     EXPECT_EQ(-888, prop2);
     alljoyn_msgarg_destroy(value);
 
@@ -521,11 +522,13 @@ TEST_F(BusObjectTest, property_changed_signal)
         qcc::Sleep(5);
     }
     EXPECT_EQ((uint32_t)98, prop3);
-    EXPECT_TRUE(prop_changed_flag);
+    EXPECT_FALSE(prop_changed_flag);
     alljoyn_msgarg_destroy(value);
 
     prop_changed_flag = QCC_FALSE;
-    alljoyn_busobject_emitpropertychanged(testObj, INTERFACE_NAME, "prop2", NULL, 0);
+    const char* propNames[] = { "prop2", "prop3" };
+    size_t numProps = sizeof(propNames) / sizeof(propNames[0]);
+    alljoyn_busobject_emitpropertieschanged(testObj, INTERFACE_NAME, propNames, numProps, 0);
     for (size_t i = 0; i < 200; ++i) {
         if (prop_changed_flag) {
             break;
@@ -533,19 +536,6 @@ TEST_F(BusObjectTest, property_changed_signal)
         qcc::Sleep(5);
     }
     EXPECT_TRUE(prop_changed_flag);
-
-    prop_changed_flag = QCC_FALSE;
-    prop3 = 121;
-    value = alljoyn_msgarg_create_and_set("u", 121);
-    alljoyn_busobject_emitpropertychanged(testObj, INTERFACE_NAME, "prop3", value, 0);
-    for (size_t i = 0; i < 200; ++i) {
-        if (prop_changed_flag) {
-            break;
-        }
-        qcc::Sleep(5);
-    }
-    EXPECT_TRUE(prop_changed_flag);
-    alljoyn_msgarg_destroy(value);
 
     alljoyn_proxybusobject_destroy(proxyObj);
     TearDownBusObjectTestService();
