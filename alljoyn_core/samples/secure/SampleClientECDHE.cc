@@ -70,7 +70,7 @@ class MyBusListener : public BusListener, public SessionListener {
     {
         printf("FoundAdvertisedName(name=%s, prefix=%s)\n", name, namePrefix);
         if (0 == strcmp(name, SERVICE_NAME)) {
-            /* We found a remote bus that is advertising basic sercice's  well-known name so connect to it */
+            /* We found a remote bus that is advertising basic service's  well-known name so connect to it */
             /* Since we are in a callback we must enable concurrent callbacks before calling a synchronous method. */
             g_msgBus->EnableConcurrentCallbacks();
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
