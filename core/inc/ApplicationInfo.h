@@ -18,6 +18,8 @@
 #define APPLICATIONINFO_H_
 
 #include <ApplicationState.h>
+#include <AuthorizationData.h>
+#include <PublicKey.h>
 #include <alljoyn/about/AnnounceHandler.h>
 #include <alljoyn/about/AboutPropertyStoreImpl.h>
 #include <qcc/String.h>
@@ -27,6 +29,11 @@
 
 namespace ajn {
 namespace securitymgr {
+/*
+ * \brief Represents all information that is known about an application.
+ *        It mixes information from the About signal, the SecInfo signal and the
+ *        data persisted in local storage.
+ */
 struct ApplicationInfo {
   public:
     qcc::String busName; //When online. Does it need to be part of the public API?
@@ -34,10 +41,11 @@ struct ApplicationInfo {
     qcc::String deviceName;
     qcc::String appName;
     qcc::String appID;
-    qcc::String publicKey; /* in human readable format (if available)  */
-    std::vector<qcc::String> rootOfTrustList;
+    PublicKey publicKey;
+    std::vector<PublicKey> rootOfTrustList;
     ApplicationClaimState claimState;
     ApplicationRunningState runningState;
+    AuthorizationData manifest;
 
     bool operator==(const ApplicationInfo& ai) const
     {

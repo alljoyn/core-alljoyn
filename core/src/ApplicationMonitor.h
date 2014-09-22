@@ -22,7 +22,7 @@
 #include <SecurityInfo.h>
 #include <SecurityInfoListener.h>
 #include <alljoyn/BusAttachment.h>
-#include <alljoyn/AutoPinger.h>
+#include <AutoPinger.h>
 #include <alljoyn/MessageReceiver.h>
 #include <qcc/String.h>
 
@@ -45,7 +45,7 @@ class ApplicationMonitor :
   private:
     std::map<qcc::String, SecurityInfo> applications;     /* key=busname of app, value = busName */
     std::vector<SecurityInfoListener*> listeners; /*Ownership lies with the application that asks for listener registration*/
-    std::unique_ptr<ajn::AutoPinger> pinger;
+    ajn::AutoPinger* pinger;
     ajn::BusAttachment* busAttachment;
 
     ApplicationMonitor();

@@ -79,7 +79,6 @@ if [ ! -z "$(which lcov)" ]; then
         EXTRA_ARGS="--no-external"
     fi
         COVDIR="${AJN_SM_PATH}"/build/coverage
-#        mkdir -p ${COVDIR} > /dev/null 2>&1
         for target in "core"
 	    do
             mkdir -p "${COVDIR}"/"$target"src > /dev/null 2>&1
@@ -90,6 +89,18 @@ if [ ! -z "$(which lcov)" ]; then
             genhtml --quiet --output-directory "${COVDIR}"/"$target"src "${COVDIR}"/secmgr_"$target"_src.info 
             genhtml --quiet --output-directory "${COVDIR}"/"$target"inc "${COVDIR}"/secmgr_"$target"_inc.info || true
 	    done
+
+        for target in "storage"
+            do
+            lcov --quiet --capture -b "${AJN_SM_PATH}"/$target/inc --directory "${PLATFORM_ROOT}"/lib/$target $EXTRA_ARGS --output-file "${COVDIR}"/secmgr_"$target"_inc.info
+            genhtml --quiet --output-directory "${COVDIR}"/"$target"inc "${COVDIR}"/secmgr_"$target"_inc.info || true
+
+            for type in "native"
+                do
+                lcov --quiet --capture -b "${AJN_SM_PATH}"/$target/src/$type --directory "${PLATFORM_ROOT}"/lib/$target/$type $EXTRA_ARGS --output-file "${COVDIR}"/secmgr_"$target"_"$type"_src.info
+                genhtml --quiet --output-directory "${COVDIR}"/"$target"src/"$type" "${COVDIR}"/secmgr_"$target"_"$type"_src.info 
+                done
+            done
 fi
 
 exit 0

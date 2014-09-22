@@ -101,6 +101,7 @@ else:
     objs = [ unittest_env.Object(test_src) ]
 
     unittest_env.Append(CPPPATH = ['#/../../core/securitymgr/core/inc'])
+    unittest_env.Append(CPPPATH = ['#/../../core/securitymgr/core/src'])
     unittest_env.Append(CPPPATH = ['#/../../core/securitymgr/storage/inc'])
     unittest_env.Append(CPPPATH = ['#/../../core/securitymgr/stub/inc'])
 

@@ -16,6 +16,7 @@
 
 #include <SecurityManager.h>
 #include <SecurityManagerImpl.h>
+#include <AuthorizationData.h>
 
 #include <qcc/CryptoECC.h>
 #include <qcc/CryptoECC.h>
@@ -47,8 +48,7 @@ SecurityManager::SecurityManager(qcc::String userName,
 
 SecurityManager::~SecurityManager()
 {
-    SecurityManagerImpl* smImpl = securityManagerImpl.release();
-    delete smImpl;
+    delete securityManagerImpl;
 }
 
 QStatus SecurityManager::GetStatus() const
@@ -56,9 +56,9 @@ QStatus SecurityManager::GetStatus() const
     return securityManagerImpl->GetStatus();
 }
 
-QStatus SecurityManager::ClaimApplication(const ApplicationInfo& app)
+QStatus SecurityManager::ClaimApplication(const ApplicationInfo& app, AcceptManifestCB amcb)
 {
-    return securityManagerImpl->ClaimApplication(app);
+    return securityManagerImpl->ClaimApplication(app, amcb);
 }
 
 QStatus SecurityManager::InstallIdentity(const ApplicationInfo& app)
@@ -96,13 +96,47 @@ void SecurityManager::UnregisterApplicationListener(ApplicationListener* al)
     return securityManagerImpl->UnregisterApplicationListener(al);
 }
 
-ApplicationInfo* SecurityManager::GetApplication(qcc::String& busName) const
+QStatus SecurityManager::GetApplication(ApplicationInfo& ai) const
 {
-    return securityManagerImpl->GetApplication(busName);
+    return securityManagerImpl->GetApplication(ai);
+}
+
+QStatus SecurityManager::StoreGuild(const GuildInfo& guildInfo, const bool update)
+{
+    return securityManagerImpl->StoreGuild(guildInfo, update);
+}
+
+QStatus SecurityManager::RemoveGuild(const qcc::String& guildId)
+{
+    return securityManagerImpl->RemoveGuild(guildId);
+}
+
+QStatus SecurityManager::GetGuild(GuildInfo& guildInfo) const
+{
+    return securityManagerImpl->GetGuild(guildInfo);
+}
+
+QStatus SecurityManager::GetManagedGuilds(std::vector<GuildInfo>& guildsInfo) const
+{
+    return securityManagerImpl->GetManagedGuilds(guildsInfo);
+}
+
+QStatus SecurityManager::InstallMembership(const ApplicationInfo& appInfo,
+                                           const GuildInfo& guildInfo,
+                                           const AuthorizationData* authorizationData)
+{
+    return securityManagerImpl->InstallMembership(appInfo, guildInfo, authorizationData);
+}
+
+QStatus SecurityManager::RemoveMembership(const ApplicationInfo& appInfo,
+                                          const GuildInfo& guildInfo)
+{
+    return securityManagerImpl->RemoveMembership(appInfo, guildInfo);
 }
 
 void SecurityManager::FlushStorage()
 {
+    //TODO
 }
 }
 }

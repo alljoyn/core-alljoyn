@@ -33,6 +33,7 @@ void printHelp()
               << ">o : Opens the claim window" << std::endl
               << ">c : Closes the claim window" << std::endl
               << ">i : Lists identity certificates" << std::endl
+              << ">m : Lists membership certificates" << std::endl
               << ">r : Lists RoT's" << std::endl
               << ">s : Send Signal" << std::endl
               << ">q : Quit" << std::endl;
@@ -84,6 +85,22 @@ int main(int arg, char** argv)
                     printf("There are currently no Identity certificates installed \n");
                 } else {
                     printf("Installed Identity Certificate: %s \n", identityCert.c_str());
+                }
+                break;
+            }
+
+        case 'm':
+            {
+                std::map<qcc::String, qcc::String> memberships = stub.GetMembershipCertificates();
+                if (0 != memberships.size()) {
+                    // Printout valid RoT pub key
+                    for (std::map<qcc::String, qcc::String>::const_iterator it = memberships.begin();
+                         it != memberships.end();
+                         ++it) {
+                        printf("Guild ID = '%s'; Certificate\n %s", it->first.c_str(), it->second.c_str());
+                    }
+                } else {
+                    printf("There are currently no Membership certificates installed \n");
                 }
                 break;
             }

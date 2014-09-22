@@ -48,8 +48,7 @@ Stub::Stub(ClaimListener* cl) :
             break;
         }
 
-        std::unique_ptr<PermissionMgmt> pmtmp(new PermissionMgmt(ba, cl, this));
-        pm = std::move(pmtmp);
+        pm = new PermissionMgmt(ba, cl, this);
 
         char guid[33];
         snprintf(guid, sizeof(guid), "A0%X%026X", rand(), rand()); /* yes, i know this is not a real guid - good enough for a stub */
@@ -71,6 +70,7 @@ Stub::~Stub()
         ba.UnregisterBusObject(*AboutServiceApi::getInstance());
         AboutServiceApi::DestroyInstance();
     }
+    delete pm;
 }
 
 /** Create the session, report the result to stdout, and return the status code. */
@@ -246,4 +246,9 @@ QStatus Stub::AdvertiseApplication(const char* guid)
     }
 
     return ER_OK;
+}
+
+std::map<qcc::String, qcc::String> Stub::GetMembershipCertificates() const
+{
+    return pm->GetMembershipCertificates();
 }

@@ -20,7 +20,7 @@ export LD_LIBRARY_PATH="%LIBPATH%"
 
 if [ -z "$1" ]; then
     if [ -z "${NUM_PEERS}" ]; then
-        NUM_PEERS=2
+        NUM_PEERS=10
     fi
     ${DEBUG} "${INSTALL_ROOT}/%TESTAPP%" ${NUM_PEERS}
 

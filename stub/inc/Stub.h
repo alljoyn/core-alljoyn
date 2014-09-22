@@ -48,6 +48,16 @@ class Stub {
         return pm->GetInstalledIdentityCertificate();
     }
 
+    void GetUsedManifest(AuthorizationData& manifest) const
+    {
+        pm->GetUsedManifest(manifest);
+    }
+
+    void SetUsedManifest(const AuthorizationData& manifest)
+    {
+        pm->SetUsedManifest(manifest);
+    }
+
     std::vector<qcc::ECCPublicKey*> GetRoTKeys() const
     {
         return pm->GetRoTKeys();
@@ -59,10 +69,12 @@ class Stub {
         return pm->SendClaimDataSignal();
     }
 
+    std::map<qcc::String, qcc::String> GetMembershipCertificates() const;
+
   private:
     BusAttachment ba;
     MySessionListener ml;
-    std::unique_ptr<PermissionMgmt> pm;
+    PermissionMgmt* pm;
 
     QStatus AdvertiseApplication(const char* guid);
 

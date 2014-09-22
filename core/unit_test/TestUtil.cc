@@ -46,35 +46,35 @@ void TestApplicationListener::OnApplicationStateChange(const ApplicationInfo* ol
     sem_post(&sem);
 }
 
-ClaimTest::ClaimTest()
+BasicTest::BasicTest()
 {
     secMgr = NULL;
 }
 
 static int counter;
 
-void ClaimTest::SetUp()
+void BasicTest::SetUp()
 {
     const char* storage_path = NULL;
     if ((storage_path = getenv("STORAGE_PATH")) == NULL) {
         storage_path = "/tmp/secmgr.db";
     }
     qcc::String path = storage_path;
-    path += counter++;
+    path += std::to_string(counter++).c_str();
     unlink(path.c_str());
     ajn::securitymgr::SecurityManagerFactory& secFac = ajn::securitymgr::SecurityManagerFactory::GetInstance();
     ba = new BusAttachment("test", true);
-    ba->Start();
-    ba->Connect();
+    ASSERT_TRUE(ba != NULL);
+    ASSERT_EQ(ER_OK, ba->Start());
+    ASSERT_EQ(ER_OK, ba->Connect());
 
-    ajn::securitymgr::StorageConfig sc;
     sc.settings["STORAGE_PATH"] = path;
     ASSERT_EQ(sc.settings.at("STORAGE_PATH").compare(path.c_str()), 0);
     secMgr = secFac.GetSecurityManager("hello", "world", sc, NULL, ba);
     ASSERT_TRUE(secMgr != NULL);
 }
 
-void ClaimTest::TearDown()
+void BasicTest::TearDown()
 {
     delete secMgr;
     if (ba) {

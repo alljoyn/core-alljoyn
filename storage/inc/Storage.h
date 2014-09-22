@@ -17,7 +17,7 @@
 #ifndef STORAGE_H_
 #define STORAGE_H_
 
-#include <ClaimedApplicationInfo.h>
+#include <AppGuildInfo.h>
 #include <alljoyn/Status.h>
 #include <qcc/String.h>
 #include <qcc/Certificate.h>
@@ -27,20 +27,12 @@
 
 namespace ajn {
 namespace securitymgr {
-typedef enum {
-    IDENTITY,
-    MEMBERSHIP,
-    POLICY,
-    MEMBERSHIP_EQ,
-    USER_EQ
-}CertificateType;
-
 /**
  * \class Storage
  * \brief An abstract class that is meant to define the interfacing with a persistent storage means.
  *
- *  Initial stage is to allow for tracking claimed applications.
- *  //TODO:: define GUILD management functionality
+ *  Applications and Guilds can be managed persistently through this API.
+ *
  */
 class Storage {
   protected:
@@ -56,24 +48,173 @@ class Storage {
         return status;
     }
 
-    virtual QStatus TrackClaimedApplication(const ClaimedApplicationInfo& claimedApplicationInfo) = 0;
+    /**
+     * \brief Store the information pertaining to a managed application.
+     *
+     * \param[in] managedApplicationInfo the application info
+     * \param[in] update a boolean to allow/deny application overwriting
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus StoreApplication(const ManagedApplicationInfo& managedApplicationInfo,
+                                     const bool update = false) = 0;
 
-    virtual QStatus UnTrackClaimedApplication(const ClaimedApplicationInfo& claimedApplicationInfo) = 0;
+    /**
+     * \brief Remove the information pertaining to a previously managed application.
+     *
+     * \param[in] managedApplicationInfo the application info, ONLY the publicKey is mandatory here
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus RemoveApplication(const ManagedApplicationInfo& managedApplicationInfo) = 0;
 
-    virtual QStatus GetClaimedApplications(std::vector<ClaimedApplicationInfo>* claimedApplications) = 0;
+    /**
+     * \brief Retrieve a list of managed applications.
+     *
+     * \param[in,out] managedApplications a vector of managed applications
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus GetManagedApplications(std::vector<ManagedApplicationInfo>& managedApplications) const = 0;
 
-    virtual QStatus ClaimedApplication(const qcc::ECCPublicKey& appECCPublicKey,
-                                       bool* claimed) = 0;
+    /**
+     * \brief Get a managed application if it already exists.
+     *
+     *
+     * \param[in] managedApplicationInfo the managed application info to be filled in. Only the publicKey field is required
+     * \param[in, out] managed a boolean stating whether the application is managed or not
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus GetManagedApplication(ManagedApplicationInfo& managedApplicationInfo) const = 0;
 
-    virtual QStatus StoreCertificate(const qcc::ECCPublicKey& appECCPublicKey,
-                                     const qcc::Certificate& certificate) = 0;
+    /**
+     * \brief Store a certificate with the option to update it, if it is already present.
+     *
+     * \param[in] certificate a certificate of some type
+     * \param[in] update a boolean to allow/deny certificate overwriting
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus StoreCertificate(const qcc::Certificate& certificate,
+                                     bool update = false) = 0;
 
-    virtual QStatus RemoveCertificate(const qcc::ECCPublicKey& appECCPublicKey,
-                                      const CertificateType certificateType) = 0;
+    /**
+     * \brief Store a given data that is assoiciated with a given certificate.
+     *
+     * \param[in] certificate a certificate of some type that is aware of the associated data size
+     * \param[in] data associated data, e.g., authorization data, vcard
+     * \param[in] update a boolean to allow/deny overwriting
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus StoreAssociatedData(const qcc::Certificate& certificate,
+                                        const qcc::String& data,
+                                        bool update = false) = 0;
 
-    virtual qcc::Certificate GetCertificate(const qcc::ECCPublicKey& appECCPublicKey,
-                                            const CertificateType certificateType) = 0;
+    /**
+     * \brief Remove a given certificate.
+     *
+     * \param[in] certificate a certificate of some type
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus RemoveCertificate(qcc::Certificate& certificate) = 0;
 
+    /**
+     * \brief Remove a given data that is associated with a given certificate.
+     *
+     * \param[in] certificate a certificate of some type that is aware of the associated data ID
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus RemoveAssociatedData(const qcc::Certificate& certificate) = 0;
+
+    /**
+     * \brief Retrieve a certificate of a certain type.
+     *
+     * \param[in, out] certificate a certificate of some type
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus GetCertificate(qcc::Certificate& certificate) = 0;
+
+    /**
+     * \brief Retrieve a given data that is associated with a given certificate.
+     *
+     * \param[in] certificate a certificate of some type that is aware of the associated data size
+     * \param[in, out] data the associated data
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus GetAssociatedData(const qcc::Certificate& certificate,
+                                      qcc::String& data) const = 0;
+
+    /**
+     * \brief Retrieve a new serial number to be assigned to a certificate
+     *
+     * \param[out] a string to contain the new serial number.
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus GetNewSerialNumber(qcc::String& serialNumber) const = 0;
+
+    /**
+     * \brief Add a Guild info to be persistently stored.
+     *
+     * \param[in] guildInfo the info of a given guild that needs to be stored
+     * \param[in] update a flag to specify whether guild info should be updated if the guild already exists
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus StoreGuild(const GuildInfo& guildInfo,
+                               const bool update = false) = 0;
+
+    /**
+     * \brief Remove the stored information pertaining to a given Guild.
+     *
+     * \param[in] guildId the identifier of a given Guild
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus RemoveGuild(const qcc::String& guildId) = 0;
+
+    /**
+     * \brief Get the info stored for a given Guild.
+     *
+     * \param[in, out] guildInfo info of a given Guild. Only the GUID is mandatory for input
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus GetGuild(GuildInfo& guildInfo) const = 0;
+
+    /**
+     * \brief Get the info of all managed Guilds.
+     *
+     * \param[in, out] guildsInfo all info of currently managed Guilds
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus GetManagedGuilds(std::vector<GuildInfo>& guildsInfo) const = 0;
+
+    /**
+     * \brief Reset the storage and delete the database.
+     */
     virtual void Reset() = 0;
 
     virtual ~Storage()

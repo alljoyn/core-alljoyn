@@ -16,6 +16,8 @@
 
 #include "PermissionMgmt.h"
 
+#include "qcc/Crypto.h"
+
 qcc::String PermissionMgmt::PubKeyToString(const qcc::ECCPublicKey* pubKey)
 {
     qcc::String str;
@@ -128,7 +130,7 @@ void PermissionMgmt::InstallIdentity(const ajn::InterfaceDescription::Member* me
 {
     pemIdentityCertificate = qcc::String(msg->GetArg(0)->v_string.str);
 
-    printf("\nReceived Identity certificate (PEM): %s\n", pemIdentityCertificate.c_str());
+    printf("\nReceived Identity certificate (PEM): '%s'\n", pemIdentityCertificate.c_str());
 
     ajn::MsgArg outArg("b", true);
     if (ER_OK != MethodReply(msg, &outArg, 1)) {
@@ -136,6 +138,79 @@ void PermissionMgmt::InstallIdentity(const ajn::InterfaceDescription::Member* me
     }
     if (cl != NULL) {
         cl->OnIdentityInstalled(pemIdentityCertificate);
+    }
+}
+
+#define OID_X509_OUNIT_NAME "2.5.4.11"
+
+void PermissionMgmt::InstallMembership(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
+{
+    qcc::String certificate = qcc::String((const char*)msg->GetArg(0)->v_scalarArray.v_byte, msg->GetArg(
+                                              0)->v_scalarArray.numElements);
+
+    //Quickly parse the certificate and retrieve the guild.
+    size_t first = certificate.find_first_of('\n', 0);
+    size_t second = certificate.find_last_of('\n', certificate.length() - 10);
+    qcc::String base64 = certificate.substr(first + 1, second - first - 1);
+    qcc::String binary;
+    qcc::Crypto_ASN1::DecodeBase64(base64, binary);
+    qcc::String rawOID;
+    qcc::String oid = qcc::String(OID_X509_OUNIT_NAME);
+    qcc::Crypto_ASN1::Encode(rawOID, "o", &oid);
+
+    first = binary.find(rawOID) + rawOID.length();
+    second = binary.find_first_of('0', first);
+    qcc::String asnGuild = binary.substr(first);
+    qcc::String guildID;
+
+    qcc::Crypto_ASN1::Decode(asnGuild, "p", &guildID);
+
+    printf("\nInstalling Membership certificate for guild ID: '%s'\n%s\n", guildID.c_str(), certificate.c_str());
+
+    memberships[guildID] = certificate;
+
+    MethodReply(msg, ER_OK);
+
+    if (cl != NULL) {
+        cl->OnMembershipInstalled(certificate);
+    }
+}
+
+void PermissionMgmt::RemoveMembership(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
+{
+    qcc::String guildID = qcc::String((const char*)msg->GetArg(0)->v_scalarArray.v_byte, msg->GetArg(
+                                          0)->v_scalarArray.numElements);
+
+    printf("\nRemoving Membership for guild ID: '%s'\n", guildID.c_str());
+    memberships.erase(guildID);
+    MethodReply(msg, ER_OK);
+}
+
+void PermissionMgmt::InstallAuthorizationData(const ajn::InterfaceDescription::Member* member,
+                                              ajn::Message& msg)
+{
+    AuthorizationData data = AuthorizationData();
+    const MsgArg* arg = msg->GetArg(0);
+    data.Unmarshal(*arg);
+    qcc::String content;
+    data.Serialize(content);
+    printf("\nInstallAuthorizationData: '%s'\n", content.c_str());
+    if (cl != NULL) {
+        cl->OnAuthData(data);
+    }
+
+    MethodReply(msg, ER_OK);
+}
+
+void PermissionMgmt::GetManifest(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
+{
+    printf("Received GetManifest request\n");
+
+    ajn::MsgArg outArg;
+    manifest.Marshal(outArg);
+
+    if (ER_OK != MethodReply(msg, &outArg, 1)) {
+        printf("GetManifest: Error sending reply.\n");
     }
 }
 
@@ -164,7 +239,16 @@ PermissionMgmt::PermissionMgmt(ajn::BusAttachment& ba,
     const MethodEntry methodEntries[] = {
         { secPermIntf->GetMember("Claim"), static_cast<MessageReceiver::MethodHandler>(&PermissionMgmt::Claim) },
         { secPermIntf->GetMember("InstallIdentity"),
-          static_cast<MessageReceiver::MethodHandler>(&PermissionMgmt::InstallIdentity) }
+          static_cast<MessageReceiver::MethodHandler>(&PermissionMgmt::InstallIdentity) },
+        { secPermIntf->GetMember("InstallMembership"),
+          static_cast<MessageReceiver::MethodHandler>(&PermissionMgmt::InstallMembership) },
+        { secPermIntf->GetMember("RemoveMembership"),
+          static_cast<MessageReceiver::MethodHandler>(&PermissionMgmt::RemoveMembership) },
+
+        { secPermIntf->GetMember("InstallAuthorizationData"),
+          static_cast<MessageReceiver::MethodHandler>(&PermissionMgmt::InstallAuthorizationData) },
+        { secPermIntf->GetMember("GetManifest"),
+          static_cast<MessageReceiver::MethodHandler>(&PermissionMgmt::GetManifest) }
     };
     QStatus status = AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
     if (ER_OK != status) {
@@ -186,6 +270,13 @@ PermissionMgmt::PermissionMgmt(ajn::BusAttachment& ba,
             printf("Claim: Error generating key pair for reply.\n");
         }
     }
+
+    //Dummy manifest
+    qcc::String ifn = "org.allseen.control.TV";
+    qcc::String mbr = "*";
+    Type t = Type::SIGNAL;
+    Action a = Action::PROVIDE;
+    manifest.AddRule(ifn, mbr, t, a);
 }
 
 PermissionMgmt::~PermissionMgmt()
@@ -264,6 +355,10 @@ QStatus PermissionMgmt::CreateInterface(BusAttachment& ba)
         printf("Secure Interface created.\n");
         secIntf->AddMethod("Claim", "ay",  "ay", "rotPublicKey,appPublicKey", 0);
         secIntf->AddMethod("InstallIdentity", "s", "b", "PEMofIdentityCert,result", 0);
+        secIntf->AddMethod("InstallMembership", "ay", NULL, "cert", 0);
+        secIntf->AddMethod("RemoveMembership", "ay", NULL, "guildID", 0);
+        secIntf->AddMethod("GetManifest", NULL, "a{sa{sy}}", "manifest", 0);
+        secIntf->AddMethod("InstallAuthorizationData", "a{sa{sy}}", NULL, "authData", 0);
         secIntf->Activate();
     } else {
         printf("Failed to create Secure PermissionMgmt interface.\n");
@@ -321,4 +416,19 @@ std::vector<qcc::ECCPublicKey*> PermissionMgmt::GetRoTKeys() const
 qcc::String PermissionMgmt::GetInstalledIdentityCertificate() const
 {
     return pemIdentityCertificate;
+}
+
+std::map<qcc::String, qcc::String> PermissionMgmt::GetMembershipCertificates() const
+{
+    return memberships;
+}
+
+void PermissionMgmt::SetUsedManifest(const AuthorizationData& manifest)
+{
+    this->manifest = manifest;
+}
+
+void PermissionMgmt::GetUsedManifest(AuthorizationData& manifest) const
+{
+    manifest  = this->manifest;
 }

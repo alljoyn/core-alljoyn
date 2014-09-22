@@ -21,13 +21,12 @@
 
 #include <Storage.h>
 #include <StorageConfig.h>
-#include <ClaimedApplicationInfo.h>
+#include <AppGuildInfo.h>
 #include <alljoyn/Status.h>
 #include <qcc/String.h>
 #include <qcc/Certificate.h>
 #include <qcc/CertificateECC.h>
 #include <qcc/CryptoECC.h>
-#include <StorageConfig.h>
 
 #include <iostream>
 
@@ -38,9 +37,15 @@
  * \brief A class that is meant to implement the Storage abstract class in order to provide a persistent storage
  *        on a native Linux device.
  **/
+#define INITIAL_SERIAL_NUMBER 1
 
 namespace ajn {
 namespace securitymgr {
+struct Keys {
+    const qcc::ECCPublicKey* appECCPublicKey;
+    qcc::String* guildID;
+};
+
 class NativeStorage :
     public Storage {
   private:
@@ -50,13 +55,17 @@ class NativeStorage :
 
     QStatus Init();
 
-    CertificateType GetCertificateType(const qcc::Certificate& certificate);
+    QStatus BindCertForStorage(const qcc::Certificate& certificate,
+                               const char* sqlStmtText,
+                               sqlite3_stmt** statement);                                                                       //Could be generalized in the future for all cert types
 
-    QStatus BindIdentityCertForStorage(const qcc::Certificate& certificate,
-                                       const char* sqlStmtText,
-                                       sqlite3_stmt** statement);                                                               //Could be generalized in the future for all cert types
+    QStatus StepAndFinalizeSqlStmt(sqlite3_stmt* statement) const;
 
-    QStatus ExecuteGenericSqlStmt(sqlite3_stmt* statement); //Cannot be passed as const
+    int GetBlobSize(const char* table,
+                    const char* columnName,
+                    const Keys* keys) const; //It calculates the size of any blob in a given table.
+
+    QStatus InitSerialNumber();
 
     qcc::String GetStoragePath() const;
 
@@ -68,29 +77,45 @@ class NativeStorage :
         status = Init();
     }
 
-    QStatus TrackClaimedApplication(const ClaimedApplicationInfo& claimedApplicationInfo);
+    QStatus StoreApplication(const ManagedApplicationInfo& managedApplicationInfo,
+                             const bool update = false);
 
-    QStatus UnTrackClaimedApplication(const ClaimedApplicationInfo& claimedApplicationInfo);
+    QStatus RemoveApplication(const ManagedApplicationInfo& managedApplicationInfo);
 
-    QStatus GetClaimedApplications(std::vector<ClaimedApplicationInfo>* claimedApplications);
+    QStatus GetManagedApplications(std::vector<ManagedApplicationInfo>& managedApplications) const;
 
-    QStatus ClaimedApplication(const qcc::ECCPublicKey& appECCPublicKey,
-                               bool* claimed);
+    QStatus GetManagedApplication(ManagedApplicationInfo& managedApplicationInfo) const;
 
-    QStatus StoreCertificate(const qcc::ECCPublicKey& appECCPublicKey,
-                             const qcc::Certificate& certificate);
+    QStatus StoreCertificate(const qcc::Certificate& certificate,
+                             bool update = false);
 
-    QStatus RemoveCertificate(const qcc::ECCPublicKey& appECCPublicKey,
-                              const CertificateType certificateType);
+    QStatus StoreAssociatedData(const qcc::Certificate& certificate,
+                                const qcc::String& data,
+                                bool update = false);
 
-    qcc::Certificate GetCertificate(const qcc::ECCPublicKey& appECCPublicKey,
-                                    const CertificateType certificateType);
+    QStatus RemoveCertificate(qcc::Certificate& certificate);
+
+    QStatus RemoveAssociatedData(const qcc::Certificate& certificate);
+
+    QStatus GetCertificate(qcc::Certificate& certificate);
+
+    QStatus GetAssociatedData(const qcc::Certificate& certificate,
+                              qcc::String& data) const;
+
+    QStatus StoreGuild(const GuildInfo& guildInfo,
+                       const bool update = false);
+
+    QStatus RemoveGuild(const qcc::String& guildId);
+
+    QStatus GetGuild(GuildInfo& guildInfo) const;
+
+    QStatus GetManagedGuilds(std::vector<GuildInfo>& guildsInfo) const;
+
+    QStatus GetNewSerialNumber(qcc::String& serialNumber) const;
 
     void Reset();
 
     virtual ~NativeStorage();
-
-  protected:
 };
 }
 }

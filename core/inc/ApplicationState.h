@@ -23,17 +23,15 @@
 
 namespace ajn {
 namespace securitymgr {
-enum class ApplicationClaimState :
-    std::int8_t {
-    UNKNOWN,
+enum ApplicationClaimState {
+    UNKNOWN_CLAIM_STATE,
     NOT_CLAIMED,
     CLAIMED,
     CLAIMABLE
 };
 
-enum class ApplicationRunningState :
-    std::int8_t {
-    UNKNOWN,
+enum ApplicationRunningState {
+    UNKNOWN_RUNNING_STATE,
     NOT_RUNNING,
     RUNNING
 };

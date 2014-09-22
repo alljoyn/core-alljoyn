@@ -14,30 +14,47 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef SECURITYINFO_H_
-#define SECURITYINFO_H_
+#ifndef APPGUILDINFO_H_
+#define APPGUILDINFO_H_
 
-#include <alljoyn/about/AnnounceHandler.h>
-#include <alljoyn/about/AboutPropertyStoreImpl.h>
 #include <qcc/String.h>
-#include <ApplicationState.h>
-
-#define QCC_MODULE "SEC_MGR"
-
-#include <vector>
+#include <PublicKey.h>
 
 namespace ajn {
 namespace securitymgr {
-struct SecurityInfo {
-  public:
-    //TODO add more fields as more info becomes available
-    qcc::String busName;
-    qcc::String publicKey; /* In human readable format (if available) */
-    std::vector<qcc::String> rotList;
-    enum ApplicationClaimState claimState;
-    enum ApplicationRunningState runningState;
+/*
+ * \brief Represents any application info that is persisted in local storage.
+ */
+struct ManagedApplicationInfo {
+    PublicKey publicKey;
+    qcc::String userDefinedName;
+    qcc::String deviceName;
+    qcc::String appName;
+    qcc::String appID;
+    qcc::String manifest;
+};
+
+struct GuildInfo {
+    qcc::String guid;
+    qcc::String name;
+    qcc::String desc;
+
+    bool operator==(const GuildInfo& gi) const
+    {
+        if (guid != gi.guid) {
+            return false;
+        }
+
+        if (name != gi.name) {
+            return false;
+        }
+
+        if (desc != gi.desc) {
+            return false;
+        }
+        return true;
+    }
 };
 }
 }
-#undef QCC_MODULE
-#endif /* SECURITYINFO_H_ */
+#endif /* APPGUILDINFO_H_ */

@@ -23,13 +23,14 @@
 #include <alljoyn/InterfaceDescription.h>
 #include <cassert>
 #include <qcc/CryptoECC.h>
+#include <AuthorizationData.h>
 
 #define ONLYCLAIMSTATE 0
 
 using namespace ajn;
 
-#define SECINTFNAME "org.alljoyn.Security.PermissionMgmt"
-#define UNSECINTFNAME "org.alljoyn.Security.SecInfo"
+const char SECINTFNAME[] = "org.alljoyn.Security.PermissionMgmt";
+const char UNSECINTFNAME[] = "org.alljoyn.Security.SecInfo";
 
 /* Used to announce the application's claimable state */
 enum ClaimableState { UNCLAIMED, CLAIMED, CLAIMABLE };
@@ -49,6 +50,14 @@ class ClaimListener {
     {
     }
 
+    virtual void OnMembershipInstalled(const qcc::String& pemMembershipCertificate)
+    {
+    }
+
+    virtual void OnAuthData(const AuthorizationData& data)
+    {
+    }
+
     friend class PermissionMgmt;
 
   public:
@@ -60,11 +69,13 @@ class PermissionMgmt :
   private:
     qcc::Crypto_ECC* crypto;
     std::vector<qcc::ECCPublicKey*> pubKeyRoTs;
+    std::map<qcc::String, qcc::String> memberships; //guildId, certificate (in PEM)
     qcc::String pemIdentityCertificate;
     ClaimListener* cl;
     ClaimableState claimableState;
     void* ctx;
     const InterfaceDescription::Member* unsecInfoSignalMember;
+    AuthorizationData manifest;
 
     static qcc::String PubKeyToString(const qcc::ECCPublicKey* pubKey);
 
@@ -73,6 +84,18 @@ class PermissionMgmt :
 
     void InstallIdentity(const ajn::InterfaceDescription::Member* member,
                          ajn::Message& msg);
+
+    void InstallMembership(const ajn::InterfaceDescription::Member* member,
+                           ajn::Message& msg);
+
+    void RemoveMembership(const ajn::InterfaceDescription::Member* member,
+                          ajn::Message& msg);
+
+    void InstallAuthorizationData(const ajn::InterfaceDescription::Member* member,
+                                  ajn::Message& msg);
+
+    void GetManifest(const ajn::InterfaceDescription::Member* member,
+                     ajn::Message& msg);
 
   public:
     PermissionMgmt(ajn::BusAttachment& ba,
@@ -97,6 +120,12 @@ class PermissionMgmt :
     std::vector<qcc::ECCPublicKey*> GetRoTKeys() const;
 
     qcc::String GetInstalledIdentityCertificate() const;
+
+    std::map<qcc::String, qcc::String> GetMembershipCertificates() const;
+
+    void SetUsedManifest(const AuthorizationData& manifest);
+
+    void GetUsedManifest(AuthorizationData& manifest) const;
 };
 
 #endif /* PERMISSIONMGMT_H_ */

@@ -26,6 +26,8 @@
 #include "PermissionMgmt.h"
 #include "Common.h"
 #include "Stub.h"
+#include "AuthorizationData.h"
+#include "AppGuildInfo.h"
 
 using namespace ajn::securitymgr;
 using namespace std;
@@ -47,7 +49,21 @@ class TestClaimListener :
     {
         std::unique_lock<std::mutex> lk(m);
         cv_id.wait(lk, [this] { return pemIdentityCertificate != ""; });
-        cout << "waitforclaimed --> ok" << endl;
+        cout << "waitforidentity --> ok" << endl;
+    }
+
+    void WaitForMembershipCertificate()
+    {
+        std::unique_lock<std::mutex> lk(m);
+        cv_memb.wait(lk, [this] { return pemMembershipCertificates.size() > 0; });
+        cout << "waitformembership --> ok" << endl;
+    }
+
+    void WaitForAuthData()
+    {
+        std::unique_lock<std::mutex> lk(m);
+        cv_auth.wait(lk, [this] { return authData.size() > 0; });
+        cout << "waitforauthdata --> ok" << endl;
     }
 
   private:
@@ -56,11 +72,16 @@ class TestClaimListener :
     std::mutex m;
     std::condition_variable cv_claimed;
     std::condition_variable cv_id;
+    std::condition_variable cv_memb;
+    std::condition_variable cv_auth;
     qcc::String pemIdentityCertificate;
+    std::vector<qcc::String> pemMembershipCertificates;
+    std::vector<AuthorizationData> authData;
 
     bool OnClaimRequest(const qcc::ECCPublicKey* pubKeyRot,
                         void* ctx)
     {
+        assert(pubKeyRot != NULL);
         return claimAnswer;
     }
 
@@ -73,12 +94,30 @@ class TestClaimListener :
         cout << "on claimed " << getpid() << endl;
     }
 
+    virtual void OnAuthData(const AuthorizationData& data)
+    {
+        std::unique_lock<std::mutex> lk(m);
+        authData.push_back(data);
+        cv_auth.notify_one();
+        cout << "on Authorization Data " << getpid() << endl;
+    }
+
     virtual void OnIdentityInstalled(const qcc::String& _pemIdentityCertificate)
     {
         std::unique_lock<std::mutex> lk(m);
+        assert(_pemIdentityCertificate != "");
         pemIdentityCertificate = _pemIdentityCertificate;
         cv_id.notify_one();
-        cout << "on claimed " << getpid() << endl;
+        cout << "on identity installed " << getpid() << endl;
+    }
+
+    virtual void OnMembershipInstalled(const qcc::String& _pemMembershipCertificate)
+    {
+        std::unique_lock<std::mutex> lk(m);
+        assert(_pemMembershipCertificate != "");
+        pemMembershipCertificates.push_back(_pemMembershipCertificate);
+        cv_memb.notify_one();
+        cout << "on membership installed " << getpid() << endl;
     }
 };
 
@@ -110,9 +149,20 @@ static int be_peer()
         tcl.WaitForClaimed();
         cout << "Waiting identity certificate " << getpid() << endl;
         tcl.WaitForIdentityCertificate();
+        cout << "Waiting membership certificate " << getpid() << endl;
+        tcl.WaitForMembershipCertificate();
+        cout << "Waiting for Authorization data " << getpid() << endl;
+        tcl.WaitForAuthData();
 
         if (stub.GetInstalledIdentityCertificate() == "") {
             cerr << "Identity certificate not installed" << endl;
+            retval = false;
+            break;
+        }
+
+        std::map<qcc::String, qcc::String> membershipCertificates = stub.GetMembershipCertificates();
+        if (membershipCertificates.size() != 1) {
+            cerr << "Membership certificate not installed" << endl;
             retval = false;
             break;
         }
@@ -193,6 +243,11 @@ class TestApplicationListener :
     }
 };
 
+static bool AutoAcceptManifest(const AuthorizationData& manifest)
+{
+    return true;
+}
+
 static int be_secmgr(size_t peers)
 {
     QStatus status;
@@ -238,16 +293,21 @@ static int be_secmgr(size_t peers)
             break;
         }
 
-        const vector<ApplicationInfo>& apps = secMgr->GetApplications();
+        vector<ApplicationInfo> apps = secMgr->GetApplications();
+        bool breakhit = false;
         for (ApplicationInfo app : apps) {
             if (app.runningState == ApplicationRunningState::RUNNING && app.claimState ==
                 ApplicationClaimState::CLAIMABLE) {
                 cout << "Trying to claim " << app.busName.c_str() << endl;
-                if (secMgr->ClaimApplication(app) != ER_OK) {
+                if (secMgr->ClaimApplication(app, &AutoAcceptManifest) != ER_OK) {
                     cerr << "Could not claim application " << app.busName.c_str() << endl;
+                    breakhit = true;
                     break;
                 }
             }
+        }
+        if (breakhit) {
+            break;
         }
 
         cout << "Waiting for peers to become claimed " << endl;
@@ -258,6 +318,26 @@ static int be_secmgr(size_t peers)
         if (secMgr->GetApplications(ApplicationClaimState::CLAIMED).size() != peers) {
             cerr << "Expected: " << peers << " claimed applications but only have " <<
             secMgr->GetApplications().size() << endl;
+            break;
+        }
+
+        GuildInfo guild;
+        guild.guid = "test";
+        secMgr->StoreGuild(guild);
+
+        apps = secMgr->GetApplications();
+        for (ApplicationInfo app : apps) {
+            if (app.runningState == ApplicationRunningState::RUNNING && app.claimState ==
+                ApplicationClaimState::CLAIMED) {
+                cout << "Trying to install membership certificate on " << app.busName.c_str() << endl;
+                if (secMgr->InstallMembership(app, guild) != ER_OK) {
+                    cerr << "Could not install membership certificate on " << app.busName.c_str() << endl;
+                    breakhit = true;
+                    break;
+                }
+            }
+        }
+        if (breakhit) {
             break;
         }
 
@@ -293,7 +373,7 @@ int main(int argc, char** argv)
                 return be_secmgr(peers);
             } else {
                 /* TODO: REMOVE THIS WHEN RACE-CONDITION WITH APPLICATIONINFO LISTENER REGISTRATION IS REMOVED */
-                std::chrono::milliseconds dura(400);
+                std::chrono::milliseconds dura(1000);
                 std::this_thread::sleep_for(dura);
                 return be_peer();
             }

@@ -74,12 +74,12 @@ TEST_F(ClaimingNominalTests, SuccessfulClaimingWithoutOOB) {
     ASSERT_EQ(secMgr->GetApplications(ApplicationClaimState::CLAIMED).size(), (size_t)0);
 
     /* make sure we cannot claim yet */
-    ASSERT_NE(secMgr->ClaimApplication(tal._lastAppInfo), ER_OK);
+    ASSERT_NE(secMgr->ClaimApplication(tal._lastAppInfo, &AutoAcceptManifest), ER_OK);
     ASSERT_EQ(tal._lastAppInfo.runningState, ApplicationRunningState::RUNNING);
     ASSERT_EQ(tal._lastAppInfo.claimState, ApplicationClaimState::NOT_CLAIMED);
     ASSERT_EQ(tal._lastAppInfo, secMgr->GetApplications()[0]);
     ASSERT_EQ(secMgr->GetApplications(ApplicationClaimState::CLAIMED).size(), (size_t)0);
-    //ASSERT_EQ(secMgr->GetIdentityForApplication(_lastAppInfo), nullptr);
+    //ASSERT_EQ(secMgr->GetIdentityForApplication(_lastAppInfo), NULL);
     ASSERT_EQ(stub->GetRoTKeys().size(), (size_t)0);
 
     /* Open claim window */
@@ -89,11 +89,11 @@ TEST_F(ClaimingNominalTests, SuccessfulClaimingWithoutOOB) {
     ASSERT_EQ(tal._lastAppInfo.claimState, ApplicationClaimState::CLAIMABLE);
     ASSERT_EQ(tal._lastAppInfo, secMgr->GetApplications()[0]);
     ASSERT_EQ(secMgr->GetApplications(ApplicationClaimState::CLAIMED).size(), (size_t)0);
-    //ASSERT_EQ(secMgr->GetIdentityForApplication(_lastAppInfo), nullptr);
+    //ASSERT_EQ(secMgr->GetIdentityForApplication(_lastAppInfo), NULL);
     ASSERT_EQ(stub->GetRoTKeys().size(), (size_t)0);
 
     /* Claim ! */
-    ASSERT_EQ(secMgr->ClaimApplication(tal._lastAppInfo), ER_OK);
+    ASSERT_EQ(secMgr->ClaimApplication(tal._lastAppInfo, &AutoAcceptManifest), ER_OK);
     sem_wait(&sem);
     ASSERT_EQ(tal._lastAppInfo.runningState, ApplicationRunningState::RUNNING);
     ASSERT_EQ(tal._lastAppInfo.claimState, ApplicationClaimState::CLAIMED);
@@ -101,25 +101,25 @@ TEST_F(ClaimingNominalTests, SuccessfulClaimingWithoutOOB) {
     ASSERT_EQ(tal._lastAppInfo, secMgr->GetApplications(ApplicationClaimState::CLAIMED)[0]);
     ASSERT_EQ(tal._lastAppInfo.rootOfTrustList.size(), (size_t)1);
     qcc::ECCPublicKey pb = secMgr->GetRootOfTrust().GetPublicKey();
-    printf("'%s'\n", tal._lastAppInfo.rootOfTrustList.at(0).c_str());
+    printf("'%s'\n", tal._lastAppInfo.rootOfTrustList.at(0).ToString().c_str());
     char buf[sizeof(pb.data) * 2 + 1];
     char* ptr = &buf[0];
     for (unsigned int i = 0; i < sizeof(pb.data); i++, ptr += 2) {
         sprintf(ptr, "%02x", pb.data[i]);
     }
     printf("'%s'\n", qcc::String(buf).c_str());
-    ASSERT_TRUE(tal._lastAppInfo.rootOfTrustList.at(0) ==  qcc::String(buf));
-    //ASSERT_NE(secMgr->GetIdentityForApplication(_lastAppInfo), nullptr);
+    ASSERT_TRUE(tal._lastAppInfo.rootOfTrustList.at(0).ToString() ==  qcc::String(buf));
+    //ASSERT_NE(secMgr->GetIdentityForApplication(_lastAppInfo), NULL);
     ASSERT_EQ(stub->GetRoTKeys().size(), (size_t)1);
 
     ASSERT_TRUE(0 ==
                 memcmp(stub->GetRoTKeys()[0]->data, secMgr->GetRootOfTrust().GetPublicKey().data,
                        sizeof(secMgr->GetRootOfTrust().GetPublicKey().data)));
 
-    /* make sure we cannot claim again */
-    ASSERT_NE(secMgr->ClaimApplication(tal._lastAppInfo), ER_OK);
+    ASSERT_NE(stub->GetInstalledIdentityCertificate(), "");
 
-    /* TODO: Identity certificate ... */
+    /* make sure we cannot claim again */
+    ASSERT_NE(secMgr->ClaimApplication(tal._lastAppInfo, &AutoAcceptManifest), ER_OK);
 
     /* Stop the stub */
     delete stub;

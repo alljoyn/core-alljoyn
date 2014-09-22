@@ -22,11 +22,13 @@
 #include <alljoyn/AllJoynStd.h>
 #include <RootOfTrust.h>
 #include <ApplicationInfo.h>
+#include <AppGuildInfo.h>
 #include <ApplicationListener.h>
 #include <StorageConfig.h>
 #include <Identity.h>
 #include <Storage.h>
 #include <memory>
+#include <AuthorizationData.h>
 
 #include <qcc/String.h>
 
@@ -46,6 +48,11 @@ class SecurityManagerImpl;
  * A particular user has a SecurityManager object for each RoT he owns
  * In other words: 1 RoT = 1 SecurityManager
  */
+
+/**
+ * Callback function to ask the administrator to accept the manifest.
+ */
+typedef bool (*AcceptManifestCB)(const ajn::AuthorizationData& mnf);
 
 class SecurityManager {
   private:
@@ -84,11 +91,13 @@ class SecurityManager {
      *   -Probably QStatus is not good enough to convey all the information when things go wrong security-wise. Either extend QStatus or come up with a new error.
      *
      * \param[in] app the application info of the application that we need to add the RoT to
+     * \param[in] AcceptMnfCb the callback function for accepting the manifest of the app
      *
      * \retval ER_OK  on success
      * \retval others on failure
      */
-    QStatus ClaimApplication(const ApplicationInfo& app);
+    QStatus ClaimApplication(const ApplicationInfo& app,
+                             AcceptManifestCB amcb);
 
     /**
      * \brief Install a given generated Identity on a specific application.
@@ -143,7 +152,8 @@ class SecurityManager {
      * \retval vector<ApplicationInfo> on success
      * \retval empty-vector otherwise
      */
-    std::vector<ApplicationInfo> GetApplications(ApplicationClaimState acs = ApplicationClaimState::UNKNOWN) const;
+    std::vector<ApplicationInfo> GetApplications(ApplicationClaimState acs =
+                                                     ApplicationClaimState::UNKNOWN_CLAIM_STATE) const;
 
     /**
      * \brief Register a listener that is called-back whenever the application info is changed.
@@ -160,19 +170,88 @@ class SecurityManager {
     void UnregisterApplicationListener(ApplicationListener* al);
 
     /**
-     * \brief Get the application info based on a provided busName.
+     * \brief Get the application info based on a one with a given busName.
      *
-     * \param[in] busName the bus name associated with a specific application
+     * \param[in, out] ai the application info to be filled in. Only the busName field is required
      *
-     * \retval ApplicationInfo* on success
-     * \retval NULL on failure
+     * \retval ER_OK  on success
+     * \retval others on failure
      */
-    ApplicationInfo* GetApplication(qcc::String& busName) const;
+    QStatus GetApplication(ApplicationInfo& ai) const;
+
+    /**
+     * \brief Add a Guild to be managed.
+     *
+     * \param[in] guildInfo the info of a given guild
+     * \param[in] update a boolean to allow/deny guild info overwriting if the guild already exists
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus StoreGuild(const GuildInfo& guildInfo,
+                       const bool update = false);
+
+    /**
+     * \brief Remove a previously managed Guild.
+     *
+     * \param[in] guildId the identifier of a given Guild
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus RemoveGuild(const qcc::String& guildId);
+
+    /**
+     * \brief Get the information pertaining to a managed Guild.
+     *
+     * \param[in, out] guildInfo info of a given Guild. Only the Guild ID (GUID) is mandatory for input
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus GetGuild(GuildInfo& guildInfo) const;
+
+    /**
+     * \brief Get all information pertaining to all managed Guilds.
+     *
+     * \param[in, out] guildsInfo all info about all Guilds
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus GetManagedGuilds(std::vector<GuildInfo>& guildsInfo) const;
+
+    /**
+     * \brief Install a membership certificate on the application, making it a member of a specific guild.
+     *
+     * \param[in] appInfo the application that should become a member of the specific guild.
+     * \param[in] guildInfo the guild to which the application should be added.
+     * \param[in] authorizationData The authorization data for the membership or NULL to use the
+     *  manifest of the application.
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus InstallMembership(const ApplicationInfo& appInfo,
+                              const GuildInfo& guildInfo,
+                              const AuthorizationData* authorizationData = NULL);
+
+    /**
+     * \brief Remove an application from a guild. Revoking its guild membership.
+     *
+     * \param[in] appInfo the application that should be removed from the specified guild.
+     * \param[in] guildInfo the guild from which the application should be removed.
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus RemoveMembership(const ApplicationInfo& appInfo,
+                             const GuildInfo& guildInfo);
 
     ~SecurityManager();
 
   private:
-    std::unique_ptr<SecurityManagerImpl> securityManagerImpl;
+    SecurityManagerImpl* securityManagerImpl;
 };
 }
 }

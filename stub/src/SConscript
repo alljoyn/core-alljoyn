@@ -20,6 +20,9 @@ srcs = Glob('*.cc')
 
 libs = []
 
+lib_env.Append(LIBPATH = ['$DISTDIR/security/lib'])
+lib_env.Append(LIBS = ['ajsecmgr'])
+
 # Header files
 lib_env.Append(CPPPATH = ['.'])
 lib_env.Append(CPPPATH = ['../../../../../../../securitymgr/stub/inc'])

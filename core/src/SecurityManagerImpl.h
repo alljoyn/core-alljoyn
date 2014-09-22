@@ -21,13 +21,17 @@
 #include <alljoyn/Status.h>
 #include <qcc/CryptoECC.h>
 #include <qcc/String.h>
+#include <qcc/Mutex.h>
 
 #include <RootOfTrust.h>
 #include <ApplicationListener.h>
 #include <ApplicationInfo.h>
+#include <AppGuildInfo.h>
 #include <ApplicationMonitor.h>
-#include <CertificateGenerator.h>
-
+#include <X509CertificateGenerator.h>
+#include <AuthorizationData.h>
+#include <SecurityManager.h>
+#include "ProxyObjectManager.h"
 #include <Storage.h>
 #include <StorageConfig.h>
 #include <IdentityData.h>
@@ -49,9 +53,7 @@ class SecurityInfo;
  */
 
 class SecurityManagerImpl :
-    public SessionListener,
     public ajn::services::AnnounceHandler,
-    private ajn::BusAttachment::JoinSessionAsyncCB,
     private SecurityInfoListener {
   public:
 
@@ -65,7 +67,7 @@ class SecurityManagerImpl :
 
     ~SecurityManagerImpl();
 
-    QStatus ClaimApplication(const ApplicationInfo& app);
+    QStatus ClaimApplication(const ApplicationInfo &app, AcceptManifestCB);
 
     QStatus InstallIdentity(const ApplicationInfo& app);
 
@@ -78,17 +80,36 @@ class SecurityManagerImpl :
     const RootOfTrust& GetRootOfTrust() const;
 
     std::vector<ApplicationInfo> GetApplications(
-        ajn::securitymgr::ApplicationClaimState acs = ajn::securitymgr::ApplicationClaimState::UNKNOWN) const;
+        ajn::securitymgr::ApplicationClaimState acs =
+            ajn::securitymgr::ApplicationClaimState::UNKNOWN_CLAIM_STATE) const;
 
     void RegisterApplicationListener(ApplicationListener* al);
 
     void UnregisterApplicationListener(ApplicationListener* al);
 
-    ApplicationInfo* GetApplication(qcc::String& busName) const;
+    QStatus GetApplication(ApplicationInfo& ai) const;
+
+    QStatus StoreGuild(const GuildInfo& guildInfo,
+                       const bool update = false);
+
+    QStatus RemoveGuild(const qcc::String& guildId);
+
+    QStatus GetGuild(GuildInfo& guildInfo) const;
+
+    QStatus GetManagedGuilds(std::vector<GuildInfo>& guildsInfo) const;
+
+    QStatus InstallMembership(const ApplicationInfo& appInfo,
+                              const GuildInfo& guildInfo,
+                              const AuthorizationData* authorizationData);
+
+    QStatus RemoveMembership(const ApplicationInfo& appInfo,
+                             const GuildInfo& guildInfo);
 
     QStatus GetStatus() const;
 
   private:
+
+    typedef std::map<PublicKey, ApplicationInfo> ApplicationInfoMap; /* key= pubkey of app, value = info */
 
     qcc::String GetString(::ajn::services::PropertyStoreKey key, const AboutData &aboutData) const;
 
@@ -101,16 +122,6 @@ class SecurityManagerImpl :
                                 uint8_t* bytes,
                                 size_t size);
 
-    /* ajn::BusAttachment::JoinSessionAsyncCB */
-    virtual void JoinSessionCB(QStatus status,
-                               ajn::SessionId id,
-                               const ajn::SessionOpts& opts,
-                               void* context);
-
-    /* ajn::SessionListener */
-    virtual void SessionLost(ajn::SessionId sessionId,
-                             SessionLostReason reason);
-
     virtual void OnSecurityStateChange(const SecurityInfo* oldSecInfo,
                                        const SecurityInfo* newSecInfo);
 
@@ -120,19 +131,25 @@ class SecurityManagerImpl :
                   const ObjectDescriptions& objectDescs,
                   const AboutData& aboutData);
 
+    ApplicationInfoMap::iterator SafeAppExist(const PublicKey& publicKey, bool& exist);
+
   private:
+    QStatus status;
     IdentityData* id;
     const qcc::ECCPrivateKey privKey;
     const RootOfTrust rot;  // !!! Verify this (added to get compiled)!!
-    std::unique_ptr<Storage> storage;
     StorageConfig storageCfg;
-    std::map<qcc::String, ApplicationInfo> applications; /* key=key of app, value = info */
+    ApplicationInfoMap applications;
     std::map<qcc::String, ApplicationInfo> aboutCache; /* key=busname of app, value = info */
     std::vector<ApplicationListener*> listeners;
-    std::unique_ptr<CertificateGenerator> CertificateGen;
-    QStatus status;
-    std::unique_ptr<ApplicationMonitor> am;
+    X509CertificateGenerator* CertificateGen;
+    ProxyObjectManager* proxyObjMgr;
+    ApplicationMonitor* appMonitor;
     ajn::BusAttachment* busAttachment;
+    Storage* storage;
+    mutable qcc::Mutex appsMutex;
+    mutable qcc::Mutex storageMutex;
+    qcc::Mutex aboutCacheMutex;
 };
 }
 }

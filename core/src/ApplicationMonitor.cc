@@ -36,7 +36,7 @@ using namespace ajn::services;
 using namespace ajn::securitymgr;
 
 ApplicationMonitor::ApplicationMonitor(ajn::BusAttachment* ba) :
-    pinger(ajn::AutoPinger::GetInstance(ba)), busAttachment(ba)
+    pinger(new AutoPinger(*ba)), busAttachment(ba)
 {
     QStatus status = ER_FAIL;
     InterfaceDescription* intf;
@@ -47,11 +47,10 @@ ApplicationMonitor::ApplicationMonitor(ajn::BusAttachment* ba) :
             return;
         }
 
-        if (pinger == nullptr) {
+        if (pinger == NULL) {
             QCC_LogError(status, ("Could not get a pinger !"));
             return;
         }
-        pinger->Start(); //TODO This needs to go and the pinger's constructor should start the timer.
         pinger->AddPingGroup(qcc::String(AUTOPING_GROUPNAME), *this, 5);
 
         status = busAttachment->CreateInterface(INFO_INTF_NAME, intf);
@@ -82,8 +81,7 @@ ApplicationMonitor::ApplicationMonitor(ajn::BusAttachment* ba) :
 
 ApplicationMonitor::~ApplicationMonitor()
 {
-    ajn::AutoPinger* ap = pinger.release();
-    delete ap;
+    delete pinger;
 }
 
 void ApplicationMonitor::StateChangedSignalHandler(const InterfaceDescription::Member* member,
@@ -96,16 +94,18 @@ void ApplicationMonitor::StateChangedSignalHandler(const InterfaceDescription::M
 
     AllJoynArray array = msg->GetArg(2)->v_array;
     size_t rotCount = array.GetNumElements();
-    std::vector<qcc::String> rotList;
+    std::vector<PublicKey> rotList;
     const MsgArg* rots = array.GetElements();
     for (size_t i = 0; i < rotCount; i++) {
-        rotList.push_back(ByteArrayToString(rots[i].v_scalarArray));
+        PublicKey rot;
+        rot.SetData(rots[i].v_scalarArray);
+        rotList.push_back(rot);
     }
 
     if (it != applications.end()) {
         /* we already know this application */
         SecurityInfo old = it->second;
-        it->second.publicKey = ByteArrayToString(msg->GetArg(0)->v_scalarArray);
+        it->second.publicKey.SetData(msg->GetArg(0)->v_scalarArray);
         it->second.runningState = ApplicationRunningState::RUNNING;
         it->second.claimState = ToClaimState(msg->GetArg(1)->v_byte);
         it->second.rotList = rotList;
@@ -116,13 +116,13 @@ void ApplicationMonitor::StateChangedSignalHandler(const InterfaceDescription::M
         SecurityInfo old;
         old.busName = busName;
         old.runningState = ApplicationRunningState::NOT_RUNNING;
-        old.claimState = ApplicationClaimState::UNKNOWN;
+        old.claimState = ApplicationClaimState::UNKNOWN_CLAIM_STATE;
         old.rotList = rotList;
         SecurityInfo info;
         info.busName = busName;
         info.runningState = ApplicationRunningState::RUNNING;
         info.claimState = ToClaimState(msg->GetArg(1)->v_byte);
-        info.publicKey = ByteArrayToString(msg->GetArg(0)->v_scalarArray);
+        info.publicKey.SetData(msg->GetArg(0)->v_scalarArray);
         info.rotList = rotList;
         old.publicKey = info.publicKey;
         applications[busName] = info;
@@ -153,6 +153,11 @@ void ApplicationMonitor::RegisterSecurityInfoListener(SecurityInfoListener* al)
 {
     if (NULL != al) {
         listeners.push_back(al);
+        std::map<qcc::String, SecurityInfo>::const_iterator it = applications.begin();
+        for (; it != applications.end(); ++it) {
+            const SecurityInfo& appInfo = it->second;
+            al->OnSecurityStateChange(&appInfo, &appInfo);
+        }
     }
 }
 

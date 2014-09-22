@@ -26,6 +26,7 @@ lib_env.Prepend(LIBS = ['ajsecstorage'])
 # Header files
 lib_env.Append(CPPPATH = ['.'])
 lib_env.Append(CPPPATH = ['../../../../../../core/inc'])
+lib_env.Append(CPPPATH = ['../../../../../../core/src'])
 lib_env.Append(CPPPATH = ['../../../../../../storage/inc'])
 
 # Static library

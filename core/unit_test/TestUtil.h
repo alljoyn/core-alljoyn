@@ -19,8 +19,8 @@
 
 #include "gtest/gtest.h"
 
-#include "SecurityManagerFactory.h"
-#include "PermissionMgmt.h"
+#include <SecurityManagerFactory.h>
+#include <PermissionMgmt.h>
 #include <qcc/String.h>
 
 #include <semaphore.h>
@@ -28,32 +28,45 @@
 using namespace ajn::securitymgr;
 using namespace std;
 namespace secmgrcoretest_unit_testutil {
-
-class ClaimTest :
+class BasicTest :
     public::testing::Test {
   private:
 
   protected:
 
     virtual void SetUp();
+
     virtual void TearDown();
+
   public:
     ajn::securitymgr::SecurityManager* secMgr;
+    ajn::securitymgr::StorageConfig sc;
     ajn::BusAttachment* ba;
-    ClaimTest();
+    BasicTest();
+};
+
+class ClaimTest :
+    public BasicTest {
+  protected:
+
+    static bool AutoAcceptManifest(const ajn::AuthorizationData& authData)
+    {
+        return true;
+    }
 };
 
 class TestClaimListener :
     public ClaimListener {
   public:
     TestClaimListener(bool& _claimAnswer) :
-        claimAnswer(_claimAnswer) { }
+        claimAnswer(_claimAnswer)
+    {
+    }
 
   private:
     bool& claimAnswer;
 
-    bool OnClaimRequest(const qcc::ECCPublicKey* pubKeyRot,
-                        void* ctx)
+    bool OnClaimRequest(const qcc::ECCPublicKey* pubKeyRot, void* ctx)
     {
         return claimAnswer;
     }

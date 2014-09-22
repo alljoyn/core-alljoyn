@@ -66,8 +66,8 @@ qcc::String PubKeyToString(const qcc::ECCPublicKey* pubKey)
 const char* ToString(const ApplicationClaimState acs)
 {
     switch (acs) {
-    case ApplicationClaimState::UNKNOWN:
-        return "UNKNOWN";
+    case ApplicationClaimState::UNKNOWN_CLAIM_STATE:
+        return "UNKNOWN CLAIM STATE";
 
     case ApplicationClaimState::NOT_CLAIMED:
         return "NOT CLAIMED";
@@ -93,7 +93,7 @@ ApplicationClaimState ToClaimState(const unsigned char byte)
     case 2:
         return ApplicationClaimState::CLAIMABLE;
     }
-    return ApplicationClaimState::UNKNOWN;
+    return ApplicationClaimState::UNKNOWN_CLAIM_STATE;
 }
 
 ;
@@ -101,8 +101,8 @@ ApplicationClaimState ToClaimState(const unsigned char byte)
 const char* ToString(ApplicationRunningState acs)
 {
     switch (acs) {
-    case ApplicationRunningState::UNKNOWN:
-        return "UNKNOWN";
+    case ApplicationRunningState::UNKNOWN_RUNNING_STATE:
+        return "UNKNOWN RUNNING STATE";
 
     case ApplicationRunningState::NOT_RUNNING:
         return "NOT RUNNING";
@@ -124,9 +124,9 @@ ApplicationRunningState ToRunningState(const unsigned char byte)
         return ApplicationRunningState::RUNNING;
 
     case 2:
-        return ApplicationRunningState::UNKNOWN;
+        return ApplicationRunningState::UNKNOWN_RUNNING_STATE;
     }
-    return ApplicationRunningState::UNKNOWN;
+    return ApplicationRunningState::UNKNOWN_RUNNING_STATE;
 }
 
 void PrettyPrintStateChangeSignal(const char* sourcePath, const Message& msg)

@@ -14,21 +14,34 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef CLAIMEDAPPLICATIONINFO_H_
-#define CLAIMEDAPPLICATIONINFO_H_
+#ifndef SECURITYINFO_H_
+#define SECURITYINFO_H_
 
+#include <alljoyn/about/AnnounceHandler.h>
+#include <alljoyn/about/AboutPropertyStoreImpl.h>
 #include <qcc/String.h>
-#include <qcc/CryptoECC.h>
+#include <ApplicationState.h>
+#include <PublicKey.h>
+
+#define QCC_MODULE "SEC_MGR"
+
+#include <vector>
 
 namespace ajn {
 namespace securitymgr {
-struct ClaimedApplicationInfo {
-    qcc::ECCPublicKey publicKey;
-    qcc::String userDefinedName;
-    qcc::String deviceName;
-    qcc::String appName;
-    qcc::String appID;
+/*
+ * \brief Represents the data of a remote SecInfo signal.
+ */
+struct SecurityInfo {
+  public:
+    //TODO add more fields as more info becomes available
+    qcc::String busName;
+    PublicKey publicKey;
+    std::vector<PublicKey> rotList;
+    enum ApplicationClaimState claimState;
+    enum ApplicationRunningState runningState;
 };
 }
 }
-#endif /* CLAIMEDAPPLICATIONINFO_H_ */
+#undef QCC_MODULE
+#endif /* SECURITYINFO_H_ */

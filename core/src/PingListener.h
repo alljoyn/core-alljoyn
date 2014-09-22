@@ -1,3 +1,9 @@
+/**
+ * @file
+ *
+ * PingListener
+ */
+
 /******************************************************************************
  * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
  *
@@ -14,41 +20,47 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef CERTIFICATEGENERATOR_H_
-#define CERTIFICATEGENERATOR_H_
+#ifndef PINGERLISTENER_H_
+#define PINGERLISTENER_H_
+
+#ifndef __cplusplus
+#error Only include PingerListener.h in C++ code.
+#endif
 
 #include <qcc/String.h>
-#include <qcc/Crypto.h>
-#include <qcc/CryptoECC.h>
 #include <qcc/Debug.h>
-#define QCC_MODULE "SEC_MGR"
+
+#define QCC_MODULE "AUTOPINGER"
 
 namespace ajn {
-namespace securitymgr {
-class CertificateGenerator {
-  private:
-    qcc::String name;
-    qcc::Crypto_ECC* keys;
 
-    static QStatus Decoding(qcc::String der);
-
-    QStatus GetPemEncodedCertificate(qcc::String extensions,
-                                     qcc::String subjectGUID,
-                                     qcc::String subjectPublicKeyInfo,
-                                     qcc::String& certificate);
-
+/**
+ * PingListener base class
+ */
+class PingListener {
   public:
-    CertificateGenerator(qcc::String issuerCommonName,
-                         qcc::Crypto_ECC* ca);
-    ~CertificateGenerator();
+    /**
+     * Destructor
+     */
+    virtual ~PingListener() { }
 
-    QStatus GetIdentityCertificate(qcc::String subjGUID,
-                                   qcc::String pubKey,
-                                   qcc::String& certificate);
+    /**
+     * Destination Lost: called when the destination becomes unreachable.
+     * Called once.
+     *
+     * @param  group Pinging group name
+     * @param  destination Destination that was pinged
+     */
+    virtual void DestinationLost(const qcc::String& group, const qcc::String& destination) { }
+
+    /**
+     * Destination Found: called when the destination becomes reachable.
+     * Called once.
+     *
+     * @param  group Pinging group name
+     * @param  destination Destination that was pinged
+     */
+    virtual void DestinationFound(const qcc::String& group, const qcc::String& destination) { }
 };
 }
-}
-
-#undef QCC_MODULE
-
-#endif /* CERTIFICATEGENERATOR_H_ */
+#endif /* PINGERLISTENER_H_ */

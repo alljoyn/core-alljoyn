@@ -68,6 +68,7 @@ buildroot = secenv.subst('build/${OS}/${CPU}/${VARIANT}')
 secenv.Install('$SEC_DISTDIR/security/inc', secenv.Glob('security/inc/*.h'))
 
 secenv.Append(CPPPATH = ['$SEC_DISTDIR/security/inc'])
+secenv.Append(CPPPATH = ['../../../../../../core/inc/'])
 
 secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('storage/src/native/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/storage/native', duplicate=0))
 secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('core/src/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/core', duplicate=0))
