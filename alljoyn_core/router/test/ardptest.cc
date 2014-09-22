@@ -350,7 +350,7 @@ int main(int argc, char** argv)
                 if (scanf("%s", foreign_address) != 1) {
                     printf("Error reading foreign address\n");
                 } else {
-                    status = ARDP_Connect(handle, sock, qcc::IPAddress(foreign_address), atoi(foreign_port), ARDP_SEGMAX, ARDP_SEGBMAX, &conn, (uint8_t*)g_ajnConnString, strlen(g_ajnConnString) + 1, NULL);
+                    status = ARDP_Connect(handle, sock, qcc::IPAddress(foreign_address), atoi(foreign_port), UDP_SEGMAX, UDP_SEGBMAX, &conn, (uint8_t*)g_ajnConnString, strlen(g_ajnConnString) + 1, NULL);
                     if (status != ER_OK) {
                         printf("Error while calling ARDP_Connect..  %s \n", QCC_StatusText(status));
                     }
@@ -410,7 +410,7 @@ int main(int argc, char** argv)
         }
 
         if (strcmp(cmd.c_str(), "accept") == 0) {
-            status = ARDP_Accept(handle, connList[g_conn - 1], ARDP_SEGMAX, ARDP_SEGBMAX, (uint8_t* )g_ajnAcceptString, strlen(g_ajnAcceptString) + 1);
+            status = ARDP_Accept(handle, connList[g_conn - 1], UDP_SEGMAX, UDP_SEGBMAX, (uint8_t* )g_ajnAcceptString, strlen(g_ajnAcceptString) + 1);
             if (status != ER_OK) {
                 printf("Error while ARDP_Accept.. %s \n", QCC_StatusText(status));
             }

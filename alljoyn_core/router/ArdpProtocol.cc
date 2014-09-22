@@ -2658,6 +2658,11 @@ QStatus ARDP_Connect(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ipAd
     ArdpConnRecord* conn = NewConnRecord();
     QStatus status;
 
+    if (segmax > ARDP_MAX_WINDOW_SIZE) {
+        QCC_DbgHLPrintf(("SEGMAX %u exceeds ARDP maximum window size %u", segmax, ARDP_MAX_WINDOW_SIZE));
+        return ER_BAD_ARG_5;
+    }
+
     status = InitConnRecord(handle, conn, sock, ipAddr, ipPort, 0);
     if (status != ER_OK) {
         return status;
@@ -2688,6 +2693,11 @@ QStatus ARDP_Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t segmax, u
     QStatus status;
     if (!IsConnValid(handle, conn)) {
         return ER_ARDP_INVALID_CONNECTION;
+    }
+
+    if (segmax > ARDP_MAX_WINDOW_SIZE) {
+        QCC_DbgHLPrintf(("SEGMAX %u exceeds ARDP maximum window size %u", segmax, ARDP_MAX_WINDOW_SIZE));
+        return ER_BAD_ARG_3;
     }
 
     status = InitRcv(conn, segmax, segbmax); /* Initialize the receiver side of the connection */

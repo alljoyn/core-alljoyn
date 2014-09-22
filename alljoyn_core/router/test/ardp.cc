@@ -76,9 +76,9 @@ bool AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpCo
     QCC_DbgTrace(("AcceptCb(handle=%p, ipAddr=\"%s\", foreign=%d, conn=%p, buf=%p(\"%s\"), len=%d, status=%s)",
                   handle, ipAddr.ToString().c_str(), ipPort, conn, buf, (char*) buf, len, QCC_StatusText(status)));
 
-    uint16_t length = random() % ARDP_USRBMAX;
+    uint16_t length = random() % UDP_SEGBMAX;
     uint8_t* buffer = new uint8_t[length];
-    status = ARDP_Accept(handle, conn, ARDP_SEGMAX, ARDP_SEGBMAX, buffer, length);
+    status = ARDP_Accept(handle, conn, UDP_SEGMAX, UDP_SEGBMAX, buffer, length);
     if (status != ER_OK) {
         QCC_DbgPrintf(("AcceptCb(): ARDP_Accept failed with %s", QCC_StatusText(status)));
     }
@@ -94,7 +94,7 @@ void ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* 
             QCC_DbgPrintf(("ConnectCb: response string \"%s\"", (char*)buf));
         }
 
-        uint16_t length = random() % ARDP_USRBMAX;
+        uint16_t length = random() % UDP_SEGBMAX;
         uint8_t* buffer = new uint8_t[length];
         QCC_DbgPrintf(("ConnectCb(): ARDP_Send(handle=%p, conn=%p, buffer=%p, length=%d)", handle, conn, buffer, length));
 
@@ -135,7 +135,7 @@ void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len
                   handle, conn, buf, len, QCC_StatusText(status)));
     delete buf;
     len = 0;
-    uint16_t length = random() % ARDP_USRBMAX;
+    uint16_t length = random() % UDP_SEGBMAX;
     uint8_t* buffer = new uint8_t[length];
     QCC_DbgTrace(("SendCb(): ARDP_Send(handle=%p, conn=%p, buffer=%p, length=%d.)", handle, conn, buffer, length));
 
@@ -237,7 +237,7 @@ void* Test::Run(void* arg)
                     if (connectSent == false) {
                         connectSent = true;
                         ArdpConnRecord* conn;
-                        ARDP_Connect(handle, sock, qcc::IPAddress(g_address), atoi(g_foreignport), ARDP_SEGMAX, ARDP_SEGBMAX,
+                        ARDP_Connect(handle, sock, qcc::IPAddress(g_address), atoi(g_foreignport), UDP_SEGMAX, UDP_SEGBMAX,
                                      &conn, (uint8_t* )g_ajnConnString, strlen(g_ajnConnString) + 1, NULL);
                         continue;
                     }

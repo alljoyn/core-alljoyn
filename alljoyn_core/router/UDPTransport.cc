@@ -7598,7 +7598,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     m_endpointListLock.Lock(MUTEX_CONTEXT);
     m_ardpLock.Lock();
     QCC_DbgPrintf(("UDPTransport::Connect(): ARDP_Connect()"));
-    status = ARDP_Connect(m_handle, sock, ipAddr, ipPort, ARDP_SEGMAX, ARDP_SEGBMAX, &conn, buf, buflen, &event);
+    status = ARDP_Connect(m_handle, sock, ipAddr, ipPort, m_ardpConfig.segmax, m_ardpConfig.segbmax, &conn, buf, buflen, &event);
     if (status != ER_OK) {
         assert(conn == NULL && "UDPTransport::Connect(): ARDP_Connect() failed but returned ArdpConnRecord");
         QCC_LogError(status, ("UDPTransport::Connect(): ARDP_Connect() failed"));

@@ -44,9 +44,6 @@ namespace ajn {
 
 const uint32_t ARDP_NO_TIMEOUT = 0xffffffff; /**< To indicate that no timed actions are pending */
 
-const uint16_t ARDP_SEGBMAX = 65535 - 20 - 8; /**< Maximum size of a datagram (UDP payload minus IP header size minus UDP header size */
-const uint16_t ARDP_SEGMAX = 16;              /**< Max number of segments in flight. */
-
 const uint32_t ARDP_CONN_ID_INVALID = 0xffffffff; /* To indicate invalid connection */
 
 /**
@@ -104,8 +101,6 @@ static const uint16_t ARDP_FIXED_HEADER_LEN = sizeof(ArdpHeader);
  * b) presence of EACK mask that has to be in 32-bit chunks and depends on window size.
  */
 const uint16_t ARDP_MAX_WINDOW_SIZE =  ((ARDP_MAX_HEADER_LEN * 2 - sizeof(ArdpHeader)) >> 5) << 5;
-
-const uint16_t ARDP_USRBMAX = (uint16_t)(ARDP_SEGBMAX - sizeof(ArdpHeader)); /**< Maximum size of an ARDP user datagram */
 
 typedef struct ARDP_CONN_RECORD ArdpConnRecord;
 
