@@ -7254,7 +7254,7 @@ bool UDPTransport::NewDiscoveryOp(DiscoveryOp op, qcc::String namePrefix, bool& 
 
     if (op == ENABLE_DISCOVERY) {
         QCC_DbgPrintf(("UDPTransport::NewDiscoveryOp(): Registering discovery of namePrefix \"%s\"", namePrefix.c_str()));
-        first = m_advertising.empty();
+        first = m_discovering.empty();
         if (find(m_discovering.begin(), m_discovering.end(), namePrefix) == m_discovering.end()) {
             m_discovering.push_back(namePrefix);
         }
