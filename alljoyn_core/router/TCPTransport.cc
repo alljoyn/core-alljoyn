@@ -2243,6 +2243,7 @@ void TCPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
             qcc::String spec;
             QStatus status = NormalizeListenSpec(i->c_str(), spec, argMap);
             assert(status == ER_OK && "TCPTransport::DisableAdvertisementInstance(): Invalid TCP listen spec");
+            (void)status;  // Suppress unused warning from G++ when building is release mode.
             if (argMap.find("iface") != argMap.end()) {
                 qcc::String interface = argMap["iface"];
                 qcc::String normSpec = "tcp:addr=" + m_requestedInterfaces[interface].GetAddress().ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].GetPort());
@@ -2400,6 +2401,7 @@ void TCPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
             qcc::String spec;
             QStatus status = NormalizeListenSpec(i->c_str(), spec, argMap);
             assert(status == ER_OK && "TCPTransport::DisableDiscoveryInstance(): Invalid TCP listen spec");
+            (void)status;  // Suppress unused warning from G++ when building is release mode.
             if (argMap.find("iface") != argMap.end()) {
                 qcc::String interface = argMap["iface"];
                 qcc::String normSpec = "tcp:addr=" + m_requestedInterfaces[interface].GetAddress().ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].GetPort());

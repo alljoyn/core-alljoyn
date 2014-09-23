@@ -133,7 +133,6 @@ void MyAllJoynCode::Announce(unsigned short version, unsigned short port, const 
         LOGTHIS("Found myself :)");
     }
     //For now lets just assume everything has events and actions and join
-    char* friendlyName = NULL;
     for (AboutClient::AboutData::const_iterator it = aboutData.begin(); it != aboutData.end(); ++it) {
         qcc::String key = it->first;
         ajn::MsgArg value = it->second;

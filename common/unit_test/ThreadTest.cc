@@ -26,6 +26,7 @@ static void* ExternalThread(void*) {
 static unsigned __stdcall ExternalThread(void*) {
 #endif
     Thread* thread = Thread::GetThread();
+    (void)thread;  // Suppress unused warning given by G++.
     return NULL;
 }
 
