@@ -59,7 +59,8 @@ class MyAboutListener : public AboutListener {
         printf("\tFrom bus %s\n", busName);
         printf("\tAbout version %hu\n", version);
         printf("\tSessionPort %hu\n", port);
-
+        printf("\tObjectDescription\n\%s\n", objectDescriptionArg.ToString().c_str());
+        printf("\tAboutData:\n\%s\n", aboutDataArg.ToString().c_str());
         printf("*********************************************************************************\n");
         QStatus status;
 
@@ -81,7 +82,7 @@ class MyAboutListener : public AboutListener {
                 MsgArg aArg;
                 aboutProxy.GetAboutData("en", aArg);
                 printf("*********************************************************************************\n");
-                printf("AboutProxy.GetObjectDescriptions:\n%s\n", aArg.ToString().c_str());
+                printf("AboutProxy.GetAboutData:\n%s\n", aArg.ToString().c_str());
                 printf("*********************************************************************************\n");
 
                 uint16_t ver;
