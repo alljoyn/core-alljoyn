@@ -83,7 +83,7 @@ bool OptParser::IsAllHex(const char* data) {
 
 OptParser::ParseResultCode OptParser::ParseResult() {
     ParseResultCode result = PR_OK;
-    int i;
+    int i = 0;
 
     if (argc == 1) {
         internal = true;

@@ -1831,7 +1831,6 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
 
     /* Move to the start of the message */
     ArdpRcvBuf* start = &conn->RBUF.rcv[current->som % conn->RCV.MAX];
-    uint32_t fcnt = start->fcnt;
     current = start;
     index = current->seq;
     do {
