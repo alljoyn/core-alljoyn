@@ -1636,10 +1636,10 @@ static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t
     }
 
     /*
-     * Count only "good" roundrips to ajust RTT values.
-     * Note, that we decrement retries with each retransmit.
+     * Count only "good" roundrips to adjust RTT values.
+     * Check that there were no retransmits and that this was not a previously EACKed segment.
      */
-    if (sBuf->retransmits == 0) {
+    if ((sBuf->retransmits == 0) && (sBuf->timer.retry != 0)) {
         AdjustRTT(handle, conn, sBuf);
     }
 
