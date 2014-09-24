@@ -770,17 +770,19 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
             MsgArg membersArg;
 
             /* Check for existing multipoint session */
-            if (vSessionEp->IsValid() && optsIn.isMultipoint) {
+            if (vSessionEp->IsValid()) {
                 QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Existing virtual endpoint IsValid() and isMultipoint"));
                 SessionMapType::iterator it = ajObj.sessionMap.begin();
                 while (it != ajObj.sessionMap.end()) {
                     if ((it->second.sessionHost == vSessionEp->GetUniqueName()) && (it->second.sessionPort == sessionPort)) {
                         if (it->second.opts.IsCompatible(optsIn)) {
-                            b2bEp = vSessionEp->GetBusToBusEndpoint(it->second.id);
-                            if (b2bEp->IsValid()) {
-                                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): IncrementRef() on existing mp session"));
-                                b2bEp->IncrementRef();
-                                replyCode = ALLJOYN_JOINSESSION_REPLY_SUCCESS;
+                            if (it->second.opts.isMultipoint) {
+                                b2bEp = vSessionEp->GetBusToBusEndpoint(it->second.id);
+                                if (b2bEp->IsValid()) {
+                                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): IncrementRef() on existing mp session"));
+                                    b2bEp->IncrementRef();
+                                    replyCode = ALLJOYN_JOINSESSION_REPLY_SUCCESS;
+                                }
                             }
                         } else {
                             QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Blocked multiple connections to same dest with same session ID"));
