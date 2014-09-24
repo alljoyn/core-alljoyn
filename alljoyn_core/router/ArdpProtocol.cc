@@ -445,6 +445,11 @@ static uint32_t CheckConnTimers(ArdpHandle* handle, ArdpConnRecord* conn, uint32
         return next;
     }
 
+    /* If connection is not in OPEN state, return */
+    if (conn->state != OPEN) {
+        return next;
+    }
+
     /* Check probe timer, it's always turned on */
     if (conn->probeTimer.when <= now) {
         QCC_DbgPrintf(("CheckConnTimers: Fire probe( %p ) timer %p at %u (now=%u)",
