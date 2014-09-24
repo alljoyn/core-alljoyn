@@ -61,10 +61,19 @@ QStatus Condition::Wait(qcc::Mutex& m)
 
 QStatus Condition::TimedWait(qcc::Mutex& m, uint32_t ms)
 {
-    struct timespec ts;
-    ts.tv_sec = ms / 1000;
-    ts.tv_nsec = (ms % 1000) * 1000000;
-    int ret = pthread_cond_timedwait(&c, &m.mutex, &ts);
+    struct timespec tsTimeout;
+    tsTimeout.tv_sec = ms / 1000;
+    tsTimeout.tv_nsec = (ms % 1000) * 1000000;
+
+    struct timespec tsNow;
+    clock_gettime(CLOCK_REALTIME, &tsNow);
+
+    tsTimeout.tv_nsec += tsNow.tv_nsec;
+    tsTimeout.tv_sec += tsTimeout.tv_nsec / 1000000000;
+    tsTimeout.tv_nsec %= 1000000000;
+    tsTimeout.tv_sec += tsNow.tv_sec;
+
+    int ret = pthread_cond_timedwait(&c, &m.mutex, &tsTimeout);
     if (ret == 0) {
         return ER_OK;
     }

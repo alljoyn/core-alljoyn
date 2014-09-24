@@ -515,6 +515,27 @@ static void DumpBytes(uint8_t* buf, uint32_t len)
 #endif // NDEBUG
 
 #ifndef NDEBUG
+void qdtm(void)
+{
+    printf("******** %u: ", GetTimestamp());
+}
+
+/*
+ * Quick Debug Print for focused printf debugging outside QCC framework Useful
+ * if you want to get your bearings but don't want to see the entire debug spew.
+ * Use just like QCC_DebugPrintf.
+ */
+#define QDP(x)        \
+    do {              \
+        qdtm();       \
+        printf x;     \
+        printf("\n"); \
+    } while (0)
+#else
+#define QDP(x) do { } while (0)
+#endif
+
+#ifndef NDEBUG
 #define SEAL_SIZE 4
 
 void SealBuffer(uint8_t* p)
@@ -982,6 +1003,15 @@ class ArdpStream : public qcc::Stream {
              * a send callback which, in turn, signals the condition variable
              * we'll be waiting on and wakes us up. The Wait here corresponds to
              * the Wait in the condition idiom outlined above.
+             *
+             * What if the backpressure error happens and there are no
+             * outstanding messages?  That is, what if the UDP buffer is full
+             * and we cant' send even the one message.  Since there is no
+             * message in process, there will never be a SendCb to bug the
+             * condition to wake us up and therefore the send will time out.  We
+             * assume that ARDP will allow us to send at least one message
+             * before blocking us due to backpressure; so this is therefore
+             * assumed to be a non-problem.
              */
             if (status == ER_ARDP_BACKPRESSURE) {
                 QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure. Condition::Wait()."));
@@ -1467,7 +1497,6 @@ class MessagePump {
     virtual ~MessagePump()
     {
         QCC_DbgTrace(("MessagePump::~MessagePump()"));
-
         QCC_DbgTrace(("MessagePump::~MessagePump(): Dealing with threads"));
         Stop();
         Join();
@@ -1494,7 +1523,7 @@ class MessagePump {
     {
         QCC_DbgTrace(("MessagePump::IsActive()"));
         bool ret = m_activeThread != NULL;
-        QCC_DbgTrace(("MessagePump::IsActive() => \"%s\"", ret ? "true" : "false"));
+        QCC_DbgPrintf(("MessagePump::IsActive() => \"%s\"", ret ? "true" : "false"));
         return ret;
     }
 
@@ -1582,7 +1611,10 @@ class MessagePump {
          */
         m_lock.Lock();
         while (m_spawnedThreads) {
+            QCC_DbgPrintf(("MessagePump::DoJoin(): m_spawnedThreads=%d.", m_spawnedThreads));
+
             assert((m_activeThread ? 1 : 0) + m_pastThreads.size() == m_spawnedThreads && "MessagePump::DoJoin(): m_spawnedThreads count inconsistent");
+
             if (m_pastThreads.size()) {
                 PumpThread* pt = m_pastThreads.front();
                 m_pastThreads.pop();
@@ -1633,7 +1665,8 @@ class MessagePump {
 #endif
         m_lock.Unlock();
 
-        QCC_DbgTrace(("MessagePump::DoJoin() => \"%s\"", QCC_StatusText(status)));
+        QCC_DbgPrintf(("MessagePump::DoJoin(): m_spawnedThreads=%d. at return", m_spawnedThreads));
+        QCC_DbgPrintf(("MessagePump::DoJoin() => \"%s\"", QCC_StatusText(status)));
         return status;
     }
 
@@ -1663,10 +1696,13 @@ class MessagePump {
          * put itself on the past threads list so it can be Join()ed.
          */
         if (m_activeThread == NULL) {
+            QCC_DbgTrace(("MessagePump::RecvCb(): Spin up new PumpThread"));
             m_activeThread = new PumpThread(this);
             m_activeThread->Start(NULL, NULL);
             ++m_spawnedThreads;
         }
+
+        QCC_DbgTrace(("MessagePump::RecvCb(): m_spawnedThreads=%d.", m_spawnedThreads));
 
         assert(m_activeThread && "MessagePump::RecvCb(): Expecting an active thread at this time.");
         assert(m_activeThread->IsStopping() == false && "MessagePump::RecvCb(): Thread must not be stopping this time.");
@@ -2271,6 +2307,14 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
         DecrementAndFetch(&m_refCount);
         return ER_OK;
+    }
+
+    /**
+     * Get a pointer to the UDP Transport that owns this Endpoint.
+     */
+    UDPTransport* GetTransport()
+    {
+        return m_transport;
     }
 
     /**
@@ -3384,18 +3428,18 @@ ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
     QStatus status = ER_OK;
     m_pump->m_lock.Lock();
     while (!IsStopping() && status != ER_TIMEOUT) {
-        QCC_DbgTrace(("MessagePump::PumpThread::Run(): Top."));
+        QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Top."));
         /*
          * Note that if the condition returns an unexpected status we loop in
          * the hope that it is recoverable.
          */
         while (m_pump->m_queue.empty() && !IsStopping() && status != ER_TIMEOUT) {
-            QCC_DbgTrace(("MessagePump::PumpThread::Run(): TimedWait for condition"));
+            QCC_DbgPrintf(("MessagePump::PumpThread::Run(): TimedWait for condition"));
             status = m_pump->m_condition.TimedWait(m_pump->m_lock, UDP_MESSAGE_PUMP_TIMEOUT);
-            QCC_DbgTrace(("MessagePump::PumpThread::Run(): TimedWait returns \"%s\"", QCC_StatusText(status)));
+            QCC_DbgPrintf(("MessagePump::PumpThread::Run(): TimedWait returns \"%s\"", QCC_StatusText(status)));
         }
 
-        QCC_DbgTrace(("MessagePump::PumpThread::Run(): Done with wait."));
+        QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Done with wait."));
 
         /*
          * One of three things has happened: 1) the condition has been signaled
@@ -3441,6 +3485,19 @@ ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
     m_pump->m_pastThreads.push(i);
     m_pump->m_activeThread = NULL;
     m_pump->m_lock.Unlock();
+    QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Return"));
+
+    /*
+     * The last thing we need to do is to bug the endpoint so its endpoint
+     * managemwent function will run and Join() our thread.  We've pushed our
+     * thread ID onto the list of past threads, and the endpoint will assume
+     * that we have exited and join us if our ID is on pastThreads.  This will
+     * happen even if we get swapped out "between" the Alert() and the return
+     * (especially during the closing printfs in debug mode).
+     */
+    QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Alert()"));
+    m_pump->m_endpoint->GetTransport()->Alert();
+
     QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Return"));
     return 0;
 }
@@ -4554,6 +4611,7 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
          * deadlock here since we are only waiting on past threads and not the
          * active thread.
          */
+        QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): MessagePump::JoinPast() on endpoint with conn ID == %d.", ep->GetConnId()));
         ep->GetMessagePump()->JoinPast();
 
         /*
@@ -4661,6 +4719,13 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
 
             if (threadSetEmpty && disconnected && !pumping) {
                 QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Join()ing stopping endpoint with conn ID == %d.", ep->GetConnId()));
+
+                /*
+                 * We now expect that the MessagePump Join() will complete
+                 * without having to wait for anything.
+                 */
+                QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): MessagePump::Join() on endpoint with conn ID == %d.", ep->GetConnId()));
+                ep->GetMessagePump()->Join();
 
                 /*
                  * We now expect that Join() will complete without having to
@@ -6263,8 +6328,9 @@ void* UDPTransport::Run(void* arg)
          * our time just driving the ARDP protocol and moving bits.  We only
          * redo the list if we notice the state changed from STATE_RELOADED.
          *
-         * Instead of trying to figure out the delta, we just restart the whole
-         * shebang.
+         * Instead of trying to figure out which of the socket FDs that may have
+         * changed between runs, we just reload the whole bunch.  Since this is
+         * rarely done, it is okay.
          */
         m_listenFdsLock.Lock(MUTEX_CONTEXT);
         if (m_reload != STATE_RELOADED) {
@@ -6285,7 +6351,9 @@ void* UDPTransport::Run(void* arg)
             QCC_DbgPrintf(("UDPTransport::Run(): Not STATE_RELOADED. Creating socket events"));
             for (list<pair<qcc::String, SocketFd> >::const_iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
                 QCC_DbgPrintf(("UDPTransport::Run(): Not STATE_RELOADED. Creating event for socket %d", i->second));
-                checkEvents.push_back(new Event(i->second, Event::IO_READ));
+                qcc::Event* eventRd = new Event(i->second, Event::IO_READ);
+                checkEvents.push_back(eventRd);
+                eventRd = NULL;
             }
 
             m_reload = STATE_RELOADED;
@@ -6326,7 +6394,7 @@ void* UDPTransport::Run(void* arg)
 
         status = Event::Wait(checkEvents, signaledEvents);
         if (status == ER_TIMEOUT) {
-//            QCC_LogError(status, ("UDPTransport::Run(): Catching Windows returning ER_TIMEOUT from Event::Wait()"));
+            // QCC_LogError(status, ("UDPTransport::Run(): Catching Windows returning ER_TIMEOUT from Event::Wait()"));
             continue;
         }
 
