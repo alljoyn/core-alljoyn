@@ -60,7 +60,6 @@ static bool sniffMode = false;
  * Name service configuration parameters. These need to match up with the ones used by AllJoyn.
  */
 const char* IPV4_MULTICAST_GROUP = "239.255.37.41";
-const uint16_t MULTICAST_PORT = 9956;
 const char* IPV6_MULTICAST_GROUP = "ff03::efff:2529";
 
 /* Default tunnel port, override with the -p option */

@@ -287,6 +287,7 @@ QStatus XmlHelper::ParseNode(const XmlElement* root, ProxyBusObject* obj)
 {
     QStatus status = ER_OK;
 
+    (void)ident; /* suppress compiler warning */
     assert(root->GetName() == "node");
 
     if (GetSecureAnnotation(root) == "true") {

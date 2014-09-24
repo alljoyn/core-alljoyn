@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -29,7 +29,6 @@
 static const char* INTERFACE_NAME = "org.alljoyn.test.BusObjectTest";
 static const char* OBJECT_NAME = "org.alljoyn.test.BusObjectTest";
 static const char* OBJECT_PATH = "/org/alljoyn/test/BusObjectTest";
-static const alljoyn_sessionport SERVICE_PORT = 25;
 
 /*********** BusObject callback functions **************/
 static QCC_BOOL object_registered_flag = QCC_FALSE;

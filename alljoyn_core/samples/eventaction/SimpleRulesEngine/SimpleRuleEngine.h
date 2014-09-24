@@ -53,7 +53,7 @@ class SimpleRuleEngine {
         JavaVM* vm,
         jobject jobj
         #endif
-        ) : mBus(NULL),
+        ) :
         #if TARGET_ANDROID
         vm(vm), jobj(jobj), mRulePersister(vm, jobj)
         #else
@@ -102,7 +102,6 @@ class SimpleRuleEngine {
     jobject jobj;
 #endif
 
-    ajn::BusAttachment * mBus;
     RulePersister mRulePersister;
 
     struct NearbyAppInfo {

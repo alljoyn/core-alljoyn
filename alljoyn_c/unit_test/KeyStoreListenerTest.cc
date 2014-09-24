@@ -28,7 +28,6 @@
 static const char* INTERFACE_NAME = "org.alljoyn.test.c.keystorelistener";
 static const char* OBJECT_NAME = "org.alljoyn.test.c.keystorelistener";
 static const char* OBJECT_PATH = "/org/alljoyn/test";
-static const alljoyn_sessionport SERVICE_PORT = 42;
 
 static QCC_BOOL name_owner_changed_flag = QCC_FALSE;
 
