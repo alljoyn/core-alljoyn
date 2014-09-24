@@ -13,7 +13,7 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-
+#include <qcc/Thread.h>
 #include <alljoyn/AboutData.h>
 #include <alljoyn/AboutListener.h>
 #include <alljoyn/AboutObjectDescription.h>
@@ -26,6 +26,7 @@
 #include <stdio.h>
 
 using namespace ajn;
+using namespace qcc;
 
 static volatile sig_atomic_t s_interrupt = false;
 
@@ -34,6 +35,91 @@ static void SigIntHandler(int sig) {
 }
 
 BusAttachment* g_bus;
+
+class AboutThread : public Thread, public ThreadListener {
+  public:
+    static AboutThread* Launch(const char* busName, SessionPort port)
+    {
+        AboutThread* bgThread = new AboutThread(busName, port);
+        bgThread->Start();
+
+        return bgThread;
+    }
+
+    AboutThread(const char* busName, SessionPort port)
+        : sender(busName), sessionPort(port) { }
+
+    void ThreadExit(Thread* thread)
+    {
+        printf("Thread exit...\n");
+
+        thread->Join();
+        delete thread;
+    }
+
+  protected:
+
+    ThreadReturn STDCALL Run(void* args)
+    {
+        QStatus status = ER_OK;
+
+        SessionListener sessionListener;
+        SessionId sessionId;
+        SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+
+        printf("Sender%s\n", sender);
+
+        status = g_bus->JoinSession(sender, sessionPort, &sessionListener, sessionId, opts);
+
+        if (ER_OK == status) {
+            AboutProxy aboutProxy(*g_bus, sender, sessionId);
+
+            MsgArg objArg;
+            status = aboutProxy.GetObjectDescription(objArg);
+
+            if (status == ER_OK) {
+                printf("*********************************************************************************\n");
+                printf("AboutProxy.GetObjectDescription:\n%s\n", objArg.ToString().c_str());
+                printf("*********************************************************************************\n");
+
+                MsgArg aArg;
+                status = aboutProxy.GetAboutData("en", aArg);
+
+                if (status == ER_OK) {
+                    printf("*********************************************************************************\n");
+                    printf("AboutProxy.GetAboutData:\n%s\n", aArg.ToString().c_str());
+                    printf("*********************************************************************************\n");
+
+                    uint16_t ver;
+                    status = aboutProxy.GetVersion(ver);
+
+                    if (status == ER_OK) {
+                        printf("*********************************************************************************\n");
+                        printf("AboutProxy.GetVersion %hd\n", ver);
+                        printf("*********************************************************************************\n");
+                    } else {
+                        printf("AboutProxy.GetVersion failed(%s)\n", QCC_StatusText(status));
+                    }
+                } else {
+                    printf("AboutProxy.GetAboutData failed(%s)\n", QCC_StatusText(status));
+                }
+            } else {
+                printf("AboutProxy.GetObjectDescription failed(%s)\n", QCC_StatusText(status));
+            }
+
+            g_bus->LeaveSession(sessionId);
+
+        } else {
+            printf("JoinSession failed(%s)\n", QCC_StatusText(status));
+        }
+        return 0;
+    }
+
+  private:
+    const char* sender;
+    SessionPort sessionPort;
+
+};
 
 class MyAboutListener : public AboutListener {
     void Announced(const char* busName, uint16_t version, SessionPort port, const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
@@ -44,36 +130,10 @@ class MyAboutListener : public AboutListener {
         printf("\tSessionPort %hu\n", port);
 
         printf("*********************************************************************************\n");
-        QStatus status;
 
         if (g_bus != NULL) {
-            SessionListener sessionListener;
-            SessionId sessionId;
-            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-            g_bus->EnableConcurrentCallbacks();
-            status = g_bus->JoinSession(busName, port, &sessionListener, sessionId, opts);
-            printf("SessionJoined sessionId = %u, status = %s\n", sessionId, QCC_StatusText(status));
-            if (ER_OK == status && 0 != sessionId) {
-                AboutProxy aboutProxy(*g_bus, busName, sessionId);
-
-                MsgArg objArg;
-                aboutProxy.GetObjectDescription(objArg);
-                printf("*********************************************************************************\n");
-                printf("AboutProxy.GetObjectDescriptions:\n%s\n", objArg.ToString().c_str());
-                printf("*********************************************************************************\n");
-
-                MsgArg aArg;
-                aboutProxy.GetAboutData("en", aArg);
-                printf("*********************************************************************************\n");
-                printf("AboutProxy.GetObjectDescriptions:\n%s\n", aArg.ToString().c_str());
-                printf("*********************************************************************************\n");
-
-                uint16_t ver;
-                aboutProxy.GetVersion(ver);
-                printf("*********************************************************************************\n");
-                printf("AboutProxy.GetVersion %hd\n", ver);
-                printf("*********************************************************************************\n");
-            }
+            // Start a seperate thread to joinSession and GetAboutData
+            AboutThread::Launch(::strdup(busName), port);
         } else {
             printf("BusAttachment is NULL\n");
         }
@@ -122,11 +182,7 @@ int main(int argc, char** argv)
     /* Perform the service asynchronously until the user signals for an exit. */
     if (ER_OK == status) {
         while (s_interrupt == false) {
-#ifdef _WIN32
-            Sleep(100);
-#else
-            usleep(100 * 1000);
-#endif
+            qcc::Sleep(100);
         }
     }
 }
