@@ -983,7 +983,6 @@ QStatus CreateMulticastSocket(IfConfigEntry entry, const char* ipv4_multicast_gr
     if (status != ER_OK) {
         QCC_LogError(status, ("CreateMulticastSocket: qcc::Socket(%d) failed: %d - %s", entry.m_family,
                               qcc::GetLastError(), qcc::GetLastErrorString().c_str()));
-        qcc::Close(sockFd);
         return status;
     }
 
