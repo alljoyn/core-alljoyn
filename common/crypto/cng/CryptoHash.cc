@@ -31,15 +31,14 @@
 
 #include <Status.h>
 
+#include "CngCache.h"
+
 using namespace std;
 using namespace qcc;
 
 #define QCC_MODULE "CRYPTO"
 
 namespace qcc {
-
-// Cache of open algorithm handles
-static BCRYPT_ALG_HANDLE algHandles[3][2] = { 0 };
 
 class Crypto_Hash::Context {
   public:
@@ -101,8 +100,8 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
     }
 
     // Open algorithm provider if required
-    if (!algHandles[alg][MAC]) {
-        if (BCryptOpenAlgorithmProvider(&algHandles[alg][MAC], algId, MS_PRIMITIVE_PROVIDER, MAC ? BCRYPT_ALG_HANDLE_HMAC_FLAG : 0) < 0) {
+    if (!cngCache.algHandles[alg][MAC]) {
+        if (BCryptOpenAlgorithmProvider(&cngCache.algHandles[alg][MAC], algId, MS_PRIMITIVE_PROVIDER, MAC ? BCRYPT_ALG_HANDLE_HMAC_FLAG : 0) < 0) {
             status = ER_CRYPTO_ERROR;
             QCC_LogError(status, ("Failed to open algorithm provider"));
             delete ctx;
@@ -113,7 +112,7 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
 
     // Get length of hash object and allocate the object
     DWORD got;
-    if (BCryptGetProperty(algHandles[alg][MAC], BCRYPT_OBJECT_LENGTH, (PBYTE)&ctx->hashObjLen, sizeof(DWORD), &got, 0) < 0) {
+    if (BCryptGetProperty(cngCache.algHandles[alg][MAC], BCRYPT_OBJECT_LENGTH, (PBYTE)&ctx->hashObjLen, sizeof(DWORD), &got, 0) < 0) {
         status = ER_CRYPTO_ERROR;
         QCC_LogError(status, ("Failed to get object length property"));
         delete ctx;
@@ -123,7 +122,7 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
 
     ctx->hashObj = new uint8_t[ctx->hashObjLen];
 
-    if (BCryptCreateHash(algHandles[alg][MAC], &ctx->handle, ctx->hashObj, ctx->hashObjLen, (PUCHAR)hmacKey, (ULONG)keyLen, 0) < 0) {
+    if (BCryptCreateHash(cngCache.algHandles[alg][MAC], &ctx->handle, ctx->hashObj, ctx->hashObjLen, (PUCHAR)hmacKey, (ULONG)keyLen, 0) < 0) {
         status = ER_CRYPTO_ERROR;
         QCC_LogError(status, ("Failed to create hash"));
         delete ctx;

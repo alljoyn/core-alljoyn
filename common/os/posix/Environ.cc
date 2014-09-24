@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -45,13 +45,22 @@ extern char** environ;   // For Linux, this is all that's needed to access
                          // environment variables.
 #endif
 
+Environ* Environ::singleton = NULL;
+
 Environ* Environ::GetAppEnviron(void)
 {
-    static Environ* env = NULL;      // Environment variable singleton.
-    if (env == NULL) {
-        env = new Environ();
+    if (singleton == NULL) {
+        singleton = new Environ();
     }
-    return env;
+    return singleton;
+}
+
+void Environ::Cleanup(void)
+{
+    if (singleton != NULL) {
+        delete singleton;
+        singleton = NULL;
+    }
 }
 
 qcc::String Environ::Find(const qcc::String& key, const char* defaultValue)

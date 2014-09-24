@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -42,16 +42,16 @@ class Environ {
     typedef std::map<qcc::String, qcc::String>::const_iterator const_iterator;
 
     /**
-     * Create a new envionment (useful when launching other programs).
-     */
-    Environ(void) { }
-
-    /**
      * Return a pointer to the Environ instance that applies to the running application.
      *
      * @return  Pointer to the environment variable singleton.
      */
     static Environ* GetAppEnviron(void);
+
+    /**
+     * Delete the static singleton object. Must be the last call.
+     */
+    static void Cleanup(void);
 
     /**
      * Return a specific environment variable
@@ -101,8 +101,14 @@ class Environ {
     size_t Size(void) const { return vars.size(); }
 
   private:
+    static Environ* singleton;                  ///< Static pointer to the one and only instance.
     std::map<qcc::String, qcc::String> vars;    ///< Environment variable storage.
     qcc::Mutex lock;                            ///< Mutex to make operations thread-safe.
+
+    /**
+     * Create a new envionment (useful when launching other programs).
+     */
+    Environ(void) { }
 };
 
 }
