@@ -1698,16 +1698,36 @@ class MessagePump {
          * put itself on the past threads list so it can be Join()ed.
          */
         if (m_activeThread == NULL) {
-            QCC_DbgTrace(("MessagePump::RecvCb(): Spin up new PumpThread"));
+            QCC_DbgPrintf(("MessagePump::RecvCb(): Spin up new PumpThread"));
             m_activeThread = new PumpThread(this);
             m_activeThread->Start(NULL, NULL);
             ++m_spawnedThreads;
         }
 
-        QCC_DbgTrace(("MessagePump::RecvCb(): m_spawnedThreads=%d.", m_spawnedThreads));
-
+        QCC_DbgPrintf(("MessagePump::RecvCb(): m_spawnedThreads=%d.", m_spawnedThreads));
         assert(m_activeThread && "MessagePump::RecvCb(): Expecting an active thread at this time.");
-        assert(m_activeThread->IsStopping() == false && "MessagePump::RecvCb(): Thread must not be stopping this time.");
+
+        /*
+         * It may be the case that the active thread is stopping but it has not
+         * yet moved its pointer m_activeThread to the list of past threads.  In
+         * this case, there will be nobody to read and dispatch the queue entry
+         * correcponding to the RecvCb.  We expect that if the thread
+         * IsStopping() it must be because someone has called Stop() on the
+         * message pump, and the place where this is done is in the endpoint
+         * Stop() method.  This means that the endpoint is in the process of
+         * being torn down.  When the message pump is eventually deleted, the
+         * queued messages will be pulled off the queue and returned to ARDP.
+         * The upshot is that it is okay that the thread is stopping.  We return
+         * any queued messages in the order that we received them in the
+         * destructor.  We just print a message that this is happening in debug
+         * mode.
+         */
+#ifndef NDEBUG
+        if (m_activeThread->IsStopping()) {
+            QCC_DbgPrintf(("MessagePump::RecvCb(): Thread stopping."));
+        }
+#endif
+
         /*
          * Signal the condition to wake up an existing thread that may be asleep
          * waiting for something to do.
