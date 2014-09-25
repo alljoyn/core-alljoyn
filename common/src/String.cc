@@ -53,9 +53,9 @@ namespace qcc {
 
 /* Global Data */
 
-static const String* emptyString = new String();
+static const String emptyString;
 
-const String& String::Empty = *emptyString;
+const String& String::Empty = emptyString;
 
 String::ManagedCtx String::nullContext = { 0 };
 
@@ -573,7 +573,7 @@ void String::IncRef()
 void String::DecRef(ManagedCtx* ctx)
 {
     /* Decrement the ref count */
-    if (ctx != &nullContext) {
+    if (ctx->capacity > 0) {
         uint32_t refs = DecrementAndFetch(&ctx->refCount);
         if (0 == refs) {
 #if defined(QCC_OS_DARWIN) || defined(__clang__)
