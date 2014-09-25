@@ -1623,6 +1623,8 @@ class MessagePump {
                 if (status != ER_OK) {
                     QCC_LogError(status, ("MessagePump::DoJoin: PumpThread Join() error"));
                 }
+                delete pt;
+                pt = NULL;
                 m_lock.Lock();
                 --m_spawnedThreads;
             } else {
