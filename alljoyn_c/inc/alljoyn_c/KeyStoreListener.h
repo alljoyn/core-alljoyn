@@ -3,7 +3,7 @@
  * The alljoyn_keystorelistener handles requests to load or store the key store.
  */
 /******************************************************************************
- * Copyright (c) 2010-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -58,7 +58,7 @@ typedef struct _alljoyn_keystorelistener_handle*            alljoyn_keystorelist
  *      - An error status otherwise
  *
  */
-typedef QStatus (*alljoyn_keystorelistener_loadrequest_ptr)(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore);
+typedef QStatus (AJ_CALL * alljoyn_keystorelistener_loadrequest_ptr)(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore);
 
 /**
  * Type for the StoreRequest callback.
@@ -76,7 +76,7 @@ typedef QStatus (*alljoyn_keystorelistener_loadrequest_ptr)(const void* context,
  *      - #ER_OK if the store request was satisfied
  *      - An error status otherwise
  */
-typedef QStatus (*alljoyn_keystorelistener_storerequest_ptr)(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore);
+typedef QStatus (AJ_CALL * alljoyn_keystorelistener_storerequest_ptr)(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore);
 
 /**
  * Structure used during alljoyn_keystorelistener_create to provide callbacks into C.
@@ -103,15 +103,15 @@ typedef struct {
  *
  * @return an allocated alljoyn_keystorelistener
  */
-extern AJ_API alljoyn_keystorelistener alljoyn_keystorelistener_create(const alljoyn_keystorelistener_callbacks* callbacks,
-                                                                       const void* context);
+extern AJ_API alljoyn_keystorelistener AJ_CALL alljoyn_keystorelistener_create(const alljoyn_keystorelistener_callbacks* callbacks,
+                                                                               const void* context);
 
 /**
  * Destroy an alljoyn_keystorelistener
  *
  * @param listener The alljoyn_keystorelistener to destroy.
  */
-extern AJ_API void alljoyn_keystorelistener_destroy(alljoyn_keystorelistener listener);
+extern AJ_API void AJ_CALL alljoyn_keystorelistener_destroy(alljoyn_keystorelistener listener);
 
 /**
  * Put keys into the key store from an encrypted byte string.
@@ -126,8 +126,8 @@ extern AJ_API void alljoyn_keystorelistener_destroy(alljoyn_keystorelistener lis
  *      - An error status otherwise
  *
  */
-extern AJ_API QStatus alljoyn_keystorelistener_putkeys(alljoyn_keystorelistener listener, alljoyn_keystore keyStore,
-                                                       const char* source, const char* password);
+extern AJ_API QStatus AJ_CALL alljoyn_keystorelistener_putkeys(alljoyn_keystorelistener listener, alljoyn_keystore keyStore,
+                                                               const char* source, const char* password);
 
 /**
  * Get the current keys from the key store as an encrypted byte string.
@@ -158,8 +158,8 @@ extern AJ_API QStatus alljoyn_keystorelistener_putkeys(alljoyn_keystorelistener 
  *        to hold the sink
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_keystorelistener_getkeys(alljoyn_keystorelistener listener, alljoyn_keystore keyStore,
-                                                       char* sink, size_t* sink_sz);
+extern AJ_API QStatus AJ_CALL alljoyn_keystorelistener_getkeys(alljoyn_keystorelistener listener, alljoyn_keystore keyStore,
+                                                               char* sink, size_t* sink_sz);
 
 #ifdef __cplusplus
 } /* extern "C" */

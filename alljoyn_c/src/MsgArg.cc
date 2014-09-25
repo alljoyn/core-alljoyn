@@ -47,7 +47,7 @@ alljoyn_msgarg alljoyn_msgarg_create()
     return (alljoyn_msgarg)arg;
 }
 
-alljoyn_msgarg alljoyn_msgarg_create_and_set(const char* signature, ...)
+alljoyn_msgarg AJ_CALL alljoyn_msgarg_create_and_set(const char* signature, ...)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ajn::MsgArgC* arg = new ajn::MsgArgC[1];
@@ -70,7 +70,7 @@ alljoyn_msgarg alljoyn_msgarg_create_and_set(const char* signature, ...)
     return (alljoyn_msgarg)arg;
 }
 
-void alljoyn_msgarg_destroy(alljoyn_msgarg arg)
+void AJ_CALL alljoyn_msgarg_destroy(alljoyn_msgarg arg)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (arg != NULL) {
@@ -78,7 +78,7 @@ void alljoyn_msgarg_destroy(alljoyn_msgarg arg)
     }
 }
 
-alljoyn_msgarg alljoyn_msgarg_array_create(size_t size)
+alljoyn_msgarg AJ_CALL alljoyn_msgarg_array_create(size_t size)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ajn::MsgArgC* args = new ajn::MsgArgC[size];
@@ -88,7 +88,7 @@ alljoyn_msgarg alljoyn_msgarg_array_create(size_t size)
     return (alljoyn_msgarg)args;
 }
 
-alljoyn_msgarg alljoyn_msgarg_array_element(alljoyn_msgarg arg, size_t index)
+alljoyn_msgarg AJ_CALL alljoyn_msgarg_array_element(alljoyn_msgarg arg, size_t index)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!arg) {
@@ -98,7 +98,7 @@ alljoyn_msgarg alljoyn_msgarg_array_element(alljoyn_msgarg arg, size_t index)
     return (alljoyn_msgarg)(&array_arg[index]);
 }
 
-QStatus alljoyn_msgarg_set(alljoyn_msgarg arg, const char* signature, ...)
+QStatus AJ_CALL alljoyn_msgarg_set(alljoyn_msgarg arg, const char* signature, ...)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!arg) {
@@ -122,7 +122,7 @@ QStatus alljoyn_msgarg_set(alljoyn_msgarg arg, const char* signature, ...)
     return status;
 }
 
-QStatus alljoyn_msgarg_get(alljoyn_msgarg arg, const char* signature, ...)
+QStatus AJ_CALL alljoyn_msgarg_get(alljoyn_msgarg arg, const char* signature, ...)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!arg) {
@@ -139,7 +139,7 @@ QStatus alljoyn_msgarg_get(alljoyn_msgarg arg, const char* signature, ...)
     return status;
 }
 
-alljoyn_msgarg alljoyn_msgarg_copy(const alljoyn_msgarg source)
+alljoyn_msgarg AJ_CALL alljoyn_msgarg_copy(const alljoyn_msgarg source)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!source) {
@@ -150,13 +150,13 @@ alljoyn_msgarg alljoyn_msgarg_copy(const alljoyn_msgarg source)
     return (alljoyn_msgarg) ret;
 }
 
-void alljoyn_msgarg_clone(alljoyn_msgarg destination, const alljoyn_msgarg source)
+void AJ_CALL alljoyn_msgarg_clone(alljoyn_msgarg destination, const alljoyn_msgarg source)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     (*(ajn::MsgArgC*)destination) = *(ajn::MsgArgC*)source;
 }
 
-QCC_BOOL alljoyn_msgarg_equal(alljoyn_msgarg lhv, alljoyn_msgarg rhv)
+QCC_BOOL AJ_CALL alljoyn_msgarg_equal(alljoyn_msgarg lhv, alljoyn_msgarg rhv)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!lhv || !rhv) {
@@ -165,7 +165,7 @@ QCC_BOOL alljoyn_msgarg_equal(alljoyn_msgarg lhv, alljoyn_msgarg rhv)
     return (*(ajn::MsgArgC*)lhv) == (*(ajn::MsgArgC*)rhv);
 }
 
-QStatus alljoyn_msgarg_array_set(alljoyn_msgarg args, size_t* numArgs, const char* signature, ...)
+QStatus AJ_CALL alljoyn_msgarg_array_set(alljoyn_msgarg args, size_t* numArgs, const char* signature, ...)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!args) {
@@ -178,7 +178,7 @@ QStatus alljoyn_msgarg_array_set(alljoyn_msgarg args, size_t* numArgs, const cha
     return status;
 }
 
-QStatus alljoyn_msgarg_array_get(const alljoyn_msgarg args, size_t numArgs, const char* signature, ...)
+QStatus AJ_CALL alljoyn_msgarg_array_get(const alljoyn_msgarg args, size_t numArgs, const char* signature, ...)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!args) {
@@ -198,7 +198,7 @@ QStatus alljoyn_msgarg_array_get(const alljoyn_msgarg args, size_t numArgs, cons
     return status;
 }
 
-size_t alljoyn_msgarg_tostring(alljoyn_msgarg arg, char* str, size_t buf, size_t indent)
+size_t AJ_CALL alljoyn_msgarg_tostring(alljoyn_msgarg arg, char* str, size_t buf, size_t indent)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!arg) {
@@ -216,7 +216,7 @@ size_t alljoyn_msgarg_tostring(alljoyn_msgarg arg, char* str, size_t buf, size_t
     return s.size() + 1;
 }
 
-size_t alljoyn_msgarg_array_tostring(const alljoyn_msgarg args, size_t numArgs, char* str, size_t buf, size_t indent)
+size_t AJ_CALL alljoyn_msgarg_array_tostring(const alljoyn_msgarg args, size_t numArgs, char* str, size_t buf, size_t indent)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!args) {
@@ -234,7 +234,7 @@ size_t alljoyn_msgarg_array_tostring(const alljoyn_msgarg args, size_t numArgs, 
     return s.size() + 1;
 }
 
-size_t alljoyn_msgarg_signature(alljoyn_msgarg arg, char* str, size_t buf)
+size_t AJ_CALL alljoyn_msgarg_signature(alljoyn_msgarg arg, char* str, size_t buf)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!arg) {
@@ -252,7 +252,7 @@ size_t alljoyn_msgarg_signature(alljoyn_msgarg arg, char* str, size_t buf)
     return s.size() + 1;
 }
 
-size_t alljoyn_msgarg_array_signature(alljoyn_msgarg values, size_t numValues, char* str, size_t buf)
+size_t AJ_CALL alljoyn_msgarg_array_signature(alljoyn_msgarg values, size_t numValues, char* str, size_t buf)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!values) {
@@ -271,7 +271,7 @@ size_t alljoyn_msgarg_array_signature(alljoyn_msgarg values, size_t numValues, c
 
 }
 
-QCC_BOOL alljoyn_msgarg_hassignature(alljoyn_msgarg arg, const char* signature)
+QCC_BOOL AJ_CALL alljoyn_msgarg_hassignature(alljoyn_msgarg arg, const char* signature)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!arg) {
@@ -280,7 +280,7 @@ QCC_BOOL alljoyn_msgarg_hassignature(alljoyn_msgarg arg, const char* signature)
     return ((ajn::MsgArgC*)arg)->HasSignature(signature);
 }
 
-QStatus alljoyn_msgarg_getdictelement(alljoyn_msgarg arg, const char* elemSig, ...)
+QStatus AJ_CALL alljoyn_msgarg_getdictelement(alljoyn_msgarg arg, const char* elemSig, ...)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!arg) {
@@ -324,7 +324,7 @@ QStatus alljoyn_msgarg_getdictelement(alljoyn_msgarg arg, const char* elemSig, .
     return status;
 }
 
-void alljoyn_msgarg_clear(alljoyn_msgarg arg)
+void AJ_CALL alljoyn_msgarg_clear(alljoyn_msgarg arg)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!arg) {
@@ -333,7 +333,7 @@ void alljoyn_msgarg_clear(alljoyn_msgarg arg)
     ((ajn::MsgArgC*)arg)->Clear();
 }
 
-alljoyn_typeid alljoyn_msgarg_gettype(alljoyn_msgarg arg)
+alljoyn_typeid AJ_CALL alljoyn_msgarg_gettype(alljoyn_msgarg arg)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!arg) {
@@ -342,7 +342,7 @@ alljoyn_typeid alljoyn_msgarg_gettype(alljoyn_msgarg arg)
     return (alljoyn_typeid)((ajn::MsgArgC*)arg)->typeId;
 }
 
-void alljoyn_msgarg_stabilize(alljoyn_msgarg arg)
+void AJ_CALL alljoyn_msgarg_stabilize(alljoyn_msgarg arg)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!arg) {
@@ -359,7 +359,7 @@ void alljoyn_msgarg_stabilize(alljoyn_msgarg arg)
  * AllJoyn Unity Extension. The functions could be changed at any time.
  ******************************************************************************/
 
-QStatus alljoyn_msgarg_array_set_offset(alljoyn_msgarg args, size_t argOffset, size_t* numArgs, const char* signature, ...)
+QStatus AJ_CALL alljoyn_msgarg_array_set_offset(alljoyn_msgarg args, size_t argOffset, size_t* numArgs, const char* signature, ...)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     va_list argp;
@@ -369,7 +369,7 @@ QStatus alljoyn_msgarg_array_set_offset(alljoyn_msgarg args, size_t argOffset, s
     return status;
 }
 
-QStatus alljoyn_msgarg_set_and_stabilize(alljoyn_msgarg arg, const char* signature, ...) {
+QStatus AJ_CALL alljoyn_msgarg_set_and_stabilize(alljoyn_msgarg arg, const char* signature, ...) {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!arg) {
         return ER_BAD_ARG_1;
@@ -393,130 +393,129 @@ QStatus alljoyn_msgarg_set_and_stabilize(alljoyn_msgarg arg, const char* signatu
     return status;
 }
 
-QStatus alljoyn_msgarg_set_uint8(alljoyn_msgarg arg, uint8_t y)
+QStatus AJ_CALL alljoyn_msgarg_set_uint8(alljoyn_msgarg arg, uint8_t y)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "y", y);
 }
-QStatus alljoyn_msgarg_set_bool(alljoyn_msgarg arg, QCC_BOOL b)
+QStatus AJ_CALL alljoyn_msgarg_set_bool(alljoyn_msgarg arg, QCC_BOOL b)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "b", b);
 }
-QStatus alljoyn_msgarg_set_int16(alljoyn_msgarg arg, int16_t n)
+QStatus AJ_CALL alljoyn_msgarg_set_int16(alljoyn_msgarg arg, int16_t n)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "n", n);
 }
-QStatus alljoyn_msgarg_set_uint16(alljoyn_msgarg arg, uint16_t q)
+QStatus AJ_CALL alljoyn_msgarg_set_uint16(alljoyn_msgarg arg, uint16_t q)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "q", q);
 }
-QStatus alljoyn_msgarg_set_int32(alljoyn_msgarg arg, int32_t i)
+QStatus AJ_CALL alljoyn_msgarg_set_int32(alljoyn_msgarg arg, int32_t i)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "i", i);
 }
-QStatus alljoyn_msgarg_set_uint32(alljoyn_msgarg arg, uint32_t u)
+QStatus AJ_CALL alljoyn_msgarg_set_uint32(alljoyn_msgarg arg, uint32_t u)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "u", u);
 }
-QStatus alljoyn_msgarg_set_int64(alljoyn_msgarg arg, int64_t x)
+QStatus AJ_CALL alljoyn_msgarg_set_int64(alljoyn_msgarg arg, int64_t x)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "x", x);
 }
-QStatus alljoyn_msgarg_set_uint64(alljoyn_msgarg arg, uint64_t t)
+QStatus AJ_CALL alljoyn_msgarg_set_uint64(alljoyn_msgarg arg, uint64_t t)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "t", t);
 }
-QStatus alljoyn_msgarg_set_double(alljoyn_msgarg arg, double d)
+QStatus AJ_CALL alljoyn_msgarg_set_double(alljoyn_msgarg arg, double d)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "d", d);
 }
-QStatus alljoyn_msgarg_set_string(alljoyn_msgarg arg, const char* s)
+QStatus AJ_CALL alljoyn_msgarg_set_string(alljoyn_msgarg arg, const char* s)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "s", s);
 }
-QStatus alljoyn_msgarg_set_objectpath(alljoyn_msgarg arg, const char* o)
+QStatus AJ_CALL alljoyn_msgarg_set_objectpath(alljoyn_msgarg arg, const char* o)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "o", o);
 }
-QStatus alljoyn_msgarg_set_signature(alljoyn_msgarg arg, const char* g)
+QStatus AJ_CALL alljoyn_msgarg_set_signature(alljoyn_msgarg arg, const char* g)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "g", g);
 }
 
-
-QStatus alljoyn_msgarg_get_uint8(const alljoyn_msgarg arg, uint8_t* y)
+QStatus AJ_CALL alljoyn_msgarg_get_uint8(const alljoyn_msgarg arg, uint8_t* y)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "y", y);
 }
-QStatus alljoyn_msgarg_get_bool(const alljoyn_msgarg arg, QCC_BOOL* b)
+QStatus AJ_CALL alljoyn_msgarg_get_bool(const alljoyn_msgarg arg, QCC_BOOL* b)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "b", b);
 }
-QStatus alljoyn_msgarg_get_int16(const alljoyn_msgarg arg, int16_t* n)
+QStatus AJ_CALL alljoyn_msgarg_get_int16(const alljoyn_msgarg arg, int16_t* n)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "n", n);
 }
-QStatus alljoyn_msgarg_get_uint16(const alljoyn_msgarg arg, uint16_t* q)
+QStatus AJ_CALL alljoyn_msgarg_get_uint16(const alljoyn_msgarg arg, uint16_t* q)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "q", q);
 }
-QStatus alljoyn_msgarg_get_int32(const alljoyn_msgarg arg, int32_t* i)
+QStatus AJ_CALL alljoyn_msgarg_get_int32(const alljoyn_msgarg arg, int32_t* i)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "i", i);
 }
-QStatus alljoyn_msgarg_get_uint32(const alljoyn_msgarg arg, uint32_t* u)
+QStatus AJ_CALL alljoyn_msgarg_get_uint32(const alljoyn_msgarg arg, uint32_t* u)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "u", u);
 }
-QStatus alljoyn_msgarg_get_int64(const alljoyn_msgarg arg, int64_t* x)
+QStatus AJ_CALL alljoyn_msgarg_get_int64(const alljoyn_msgarg arg, int64_t* x)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "x", x);
 }
-QStatus alljoyn_msgarg_get_uint64(const alljoyn_msgarg arg, uint64_t* t)
+QStatus AJ_CALL alljoyn_msgarg_get_uint64(const alljoyn_msgarg arg, uint64_t* t)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "t", t);
 }
-QStatus alljoyn_msgarg_get_double(const alljoyn_msgarg arg, double* d)
+QStatus AJ_CALL alljoyn_msgarg_get_double(const alljoyn_msgarg arg, double* d)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "d", d);
 }
-QStatus alljoyn_msgarg_get_string(const alljoyn_msgarg arg, char** s)
+QStatus AJ_CALL alljoyn_msgarg_get_string(const alljoyn_msgarg arg, char** s)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "s", s);
 }
-QStatus alljoyn_msgarg_get_objectpath(const alljoyn_msgarg arg, char** o)
+QStatus AJ_CALL alljoyn_msgarg_get_objectpath(const alljoyn_msgarg arg, char** o)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "o", o);
 }
-QStatus alljoyn_msgarg_get_signature(const alljoyn_msgarg arg, char** g)
+QStatus AJ_CALL alljoyn_msgarg_get_signature(const alljoyn_msgarg arg, char** g)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "g", g);
 }
 
-QStatus alljoyn_msgarg_get_variant(const alljoyn_msgarg arg, alljoyn_msgarg v)
+QStatus AJ_CALL alljoyn_msgarg_get_variant(const alljoyn_msgarg arg, alljoyn_msgarg v)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "v", v);
@@ -525,66 +524,66 @@ QStatus alljoyn_msgarg_get_variant(const alljoyn_msgarg arg, alljoyn_msgarg v)
 /*
  * MsgArg set function for arrays of each basic data type
  */
-QStatus alljoyn_msgarg_set_uint8_array(alljoyn_msgarg arg, size_t length, uint8_t* ay)
+QStatus AJ_CALL alljoyn_msgarg_set_uint8_array(alljoyn_msgarg arg, size_t length, uint8_t* ay)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "ay", length, ay);
 }
-QStatus alljoyn_msgarg_set_bool_array(alljoyn_msgarg arg, size_t length, QCC_BOOL* ab)
+QStatus AJ_CALL alljoyn_msgarg_set_bool_array(alljoyn_msgarg arg, size_t length, QCC_BOOL* ab)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "ab", length, ab);
 }
-QStatus alljoyn_msgarg_set_int16_array(alljoyn_msgarg arg, size_t length, int16_t* an)
+QStatus AJ_CALL alljoyn_msgarg_set_int16_array(alljoyn_msgarg arg, size_t length, int16_t* an)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "an", length, an);
 }
-QStatus alljoyn_msgarg_set_uint16_array(alljoyn_msgarg arg, size_t length, uint16_t* aq)
+QStatus AJ_CALL alljoyn_msgarg_set_uint16_array(alljoyn_msgarg arg, size_t length, uint16_t* aq)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "aq", length, aq);
 }
-QStatus alljoyn_msgarg_set_int32_array(const alljoyn_msgarg arg, size_t length, int32_t* ai)
+QStatus AJ_CALL alljoyn_msgarg_set_int32_array(const alljoyn_msgarg arg, size_t length, int32_t* ai)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "ai", length, ai);
 }
-QStatus alljoyn_msgarg_set_uint32_array(alljoyn_msgarg arg, size_t length, uint32_t* au)
+QStatus AJ_CALL alljoyn_msgarg_set_uint32_array(alljoyn_msgarg arg, size_t length, uint32_t* au)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "au", length, au);
 }
-QStatus alljoyn_msgarg_set_int64_array(alljoyn_msgarg arg, size_t length, int64_t* ax)
+QStatus AJ_CALL alljoyn_msgarg_set_int64_array(alljoyn_msgarg arg, size_t length, int64_t* ax)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "ax", length, ax);
 }
-QStatus alljoyn_msgarg_set_uint64_array(alljoyn_msgarg arg, size_t length, uint64_t* at)
+QStatus AJ_CALL alljoyn_msgarg_set_uint64_array(alljoyn_msgarg arg, size_t length, uint64_t* at)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "at", length, at);
 }
-QStatus alljoyn_msgarg_set_double_array(alljoyn_msgarg arg, size_t length, double* ad)
+QStatus AJ_CALL alljoyn_msgarg_set_double_array(alljoyn_msgarg arg, size_t length, double* ad)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_set(arg, "ad", length, ad);
 }
-QStatus alljoyn_msgarg_set_string_array(alljoyn_msgarg arg, size_t length, const char** as)
+QStatus AJ_CALL alljoyn_msgarg_set_string_array(alljoyn_msgarg arg, size_t length, const char** as)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     QStatus status = alljoyn_msgarg_set(arg, "as", length, as);
     alljoyn_msgarg_stabilize(arg);
     return status;
 }
-QStatus alljoyn_msgarg_set_objectpath_array(alljoyn_msgarg arg, size_t length, const char** ao)
+QStatus AJ_CALL alljoyn_msgarg_set_objectpath_array(alljoyn_msgarg arg, size_t length, const char** ao)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     QStatus status = alljoyn_msgarg_set(arg, "ao", length, ao);
     alljoyn_msgarg_stabilize(arg);
     return status;
 }
-QStatus alljoyn_msgarg_set_signature_array(alljoyn_msgarg arg, size_t length, const char** ag)
+QStatus AJ_CALL alljoyn_msgarg_set_signature_array(alljoyn_msgarg arg, size_t length, const char** ag)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     QStatus status = alljoyn_msgarg_set(arg, "ag", length, ag);
@@ -595,67 +594,67 @@ QStatus alljoyn_msgarg_set_signature_array(alljoyn_msgarg arg, size_t length, co
 /*
  * MsgArg get funtion for arrays of each basic data type
  */
-QStatus alljoyn_msgarg_get_uint8_array(const alljoyn_msgarg arg, size_t* length, uint8_t* ay)
+QStatus AJ_CALL alljoyn_msgarg_get_uint8_array(const alljoyn_msgarg arg, size_t* length, uint8_t* ay)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "ay", length, ay);
 }
-QStatus alljoyn_msgarg_get_bool_array(const alljoyn_msgarg arg, size_t* length, QCC_BOOL* ab)
+QStatus AJ_CALL alljoyn_msgarg_get_bool_array(const alljoyn_msgarg arg, size_t* length, QCC_BOOL* ab)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     QStatus status = alljoyn_msgarg_get(arg, "ab", length, ab);
     return status;
 }
-QStatus alljoyn_msgarg_get_int16_array(const alljoyn_msgarg arg, size_t* length, int16_t* an)
+QStatus AJ_CALL alljoyn_msgarg_get_int16_array(const alljoyn_msgarg arg, size_t* length, int16_t* an)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "an", length, an);
 }
-QStatus alljoyn_msgarg_get_uint16_array(const alljoyn_msgarg arg, size_t* length, uint16_t* aq)
+QStatus AJ_CALL alljoyn_msgarg_get_uint16_array(const alljoyn_msgarg arg, size_t* length, uint16_t* aq)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "aq", length, aq);
 }
-QStatus alljoyn_msgarg_get_int32_array(const alljoyn_msgarg arg, size_t* length,  int32_t* ai)
+QStatus AJ_CALL alljoyn_msgarg_get_int32_array(const alljoyn_msgarg arg, size_t* length,  int32_t* ai)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "ai", length, ai);
 }
-QStatus alljoyn_msgarg_get_uint32_array(const alljoyn_msgarg arg, size_t* length, uint32_t* au)
+QStatus AJ_CALL alljoyn_msgarg_get_uint32_array(const alljoyn_msgarg arg, size_t* length, uint32_t* au)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "au", length, au);
 }
-QStatus alljoyn_msgarg_get_int64_array(const alljoyn_msgarg arg, size_t* length, int64_t* ax)
+QStatus AJ_CALL alljoyn_msgarg_get_int64_array(const alljoyn_msgarg arg, size_t* length, int64_t* ax)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "ax", length, ax);
 }
-QStatus alljoyn_msgarg_get_uint64_array(const alljoyn_msgarg arg, size_t* length, uint64_t* at)
+QStatus AJ_CALL alljoyn_msgarg_get_uint64_array(const alljoyn_msgarg arg, size_t* length, uint64_t* at)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "at", length, at);
 }
-QStatus alljoyn_msgarg_get_double_array(const alljoyn_msgarg arg, size_t* length, double* ad)
+QStatus AJ_CALL alljoyn_msgarg_get_double_array(const alljoyn_msgarg arg, size_t* length, double* ad)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, "ad", length, ad);
 }
 
-QStatus alljoyn_msgarg_get_variant_array(const alljoyn_msgarg arg, const char* signature,  size_t* length, alljoyn_msgarg* av)
+QStatus AJ_CALL alljoyn_msgarg_get_variant_array(const alljoyn_msgarg arg, const char* signature,  size_t* length, alljoyn_msgarg* av)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return alljoyn_msgarg_get(arg, signature, length, av);
 }
 
-size_t alljoyn_msgarg_get_array_numberofelements(const alljoyn_msgarg arg)
+size_t AJ_CALL alljoyn_msgarg_get_array_numberofelements(const alljoyn_msgarg arg)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     assert(ALLJOYN_ARRAY == (alljoyn_typeid)((ajn::MsgArgC*)arg)->typeId);
     return ((ajn::MsgArgC*)arg)->v_array.GetNumElements();
 }
 
-void   alljoyn_msgarg_get_array_element(const alljoyn_msgarg arg, size_t index, alljoyn_msgarg* element)
+void AJ_CALL alljoyn_msgarg_get_array_element(const alljoyn_msgarg arg, size_t index, alljoyn_msgarg* element)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     assert(ALLJOYN_ARRAY == (alljoyn_typeid)((ajn::MsgArgC*)arg)->typeId);
@@ -663,21 +662,21 @@ void   alljoyn_msgarg_get_array_element(const alljoyn_msgarg arg, size_t index, 
     *element = (alljoyn_msgarg) & (((ajn::MsgArgC*)arg)->v_array.GetElements()[index]);
 }
 
-const char* alljoyn_msgarg_get_array_elementsignature(const alljoyn_msgarg arg, size_t index)
+const char* AJ_CALL alljoyn_msgarg_get_array_elementsignature(const alljoyn_msgarg arg, size_t index)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     assert(ALLJOYN_ARRAY == (alljoyn_typeid)((ajn::MsgArgC*)arg)->typeId);
     return ((ajn::MsgArgC*)arg)->v_array.GetElemSig();
 }
 
-alljoyn_msgarg alljoyn_msgarg_getkey(alljoyn_msgarg arg)
+alljoyn_msgarg AJ_CALL alljoyn_msgarg_getkey(alljoyn_msgarg arg)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     assert(ALLJOYN_DICT_ENTRY == (alljoyn_typeid)((ajn::MsgArgC*)arg)->typeId);
     return (alljoyn_msgarg)((ajn::MsgArgC*)arg)->v_dictEntry.key;
 }
 
-alljoyn_msgarg alljoyn_msgarg_getvalue(alljoyn_msgarg arg)
+alljoyn_msgarg AJ_CALL alljoyn_msgarg_getvalue(alljoyn_msgarg arg)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     switch ((alljoyn_typeid)((ajn::MsgArgC*)arg)->typeId) {
@@ -693,7 +692,7 @@ alljoyn_msgarg alljoyn_msgarg_getvalue(alljoyn_msgarg arg)
     }
 }
 
-QStatus alljoyn_msgarg_setdictentry(alljoyn_msgarg arg, alljoyn_msgarg key, alljoyn_msgarg value)
+QStatus AJ_CALL alljoyn_msgarg_setdictentry(alljoyn_msgarg arg, alljoyn_msgarg key, alljoyn_msgarg value)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ((ajn::MsgArgC*)arg)->v_dictEntry.key = ((ajn::MsgArgC*)key);
@@ -703,7 +702,7 @@ QStatus alljoyn_msgarg_setdictentry(alljoyn_msgarg arg, alljoyn_msgarg key, allj
     return ER_OK;
 }
 
-QStatus alljoyn_msgarg_setstruct(alljoyn_msgarg arg, alljoyn_msgarg struct_members, size_t num_members)
+QStatus AJ_CALL alljoyn_msgarg_setstruct(alljoyn_msgarg arg, alljoyn_msgarg struct_members, size_t num_members)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ((ajn::MsgArgC*)arg)->v_struct.numMembers = num_members;
@@ -713,13 +712,13 @@ QStatus alljoyn_msgarg_setstruct(alljoyn_msgarg arg, alljoyn_msgarg struct_membe
     return ER_OK;
 }
 
-size_t alljoyn_msgarg_getnummembers(alljoyn_msgarg arg)
+size_t AJ_CALL alljoyn_msgarg_getnummembers(alljoyn_msgarg arg)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::MsgArgC*)arg)->v_struct.numMembers;
 }
 
-alljoyn_msgarg alljoyn_msgarg_getmember(alljoyn_msgarg arg, size_t index)
+alljoyn_msgarg AJ_CALL alljoyn_msgarg_getmember(alljoyn_msgarg arg, size_t index)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (index >= ((ajn::MsgArgC*)arg)->v_struct.numMembers) {

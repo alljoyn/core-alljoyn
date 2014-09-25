@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -24,7 +24,7 @@
 
 #define QCC_MODULE "ALLJOYN_C"
 
-QStatus alljoyn_passwordmanager_setcredentials(const char* authMechanism, const char* password)
+QStatus AJ_CALL alljoyn_passwordmanager_setcredentials(const char* authMechanism, const char* password)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ajn::PasswordManager::SetCredentials(authMechanism, password);
