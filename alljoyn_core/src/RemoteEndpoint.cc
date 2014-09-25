@@ -957,12 +957,16 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
                     break;
                 }
 
+                if (internal->stopping) {
+                    status = ER_BUS_ENDPOINT_CLOSING;
+                    break;
+                }
             }
         }
     }
 
 
-    if (wasEmpty) {
+    if (wasEmpty && (status == ER_OK)) {
         internal->bus.GetInternal().GetIODispatch().EnableWriteCallbackNow(internal->stream);
     }
     internal->lock.Unlock(MUTEX_CONTEXT);
