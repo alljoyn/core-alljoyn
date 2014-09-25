@@ -1,5 +1,5 @@
-AllJoyn Version 14.06 Release Notes
-===================================
+AllJoyn Version 14.06a Release Notes
+====================================
 
 Platform Support
 ----------------
@@ -14,8 +14,8 @@ Platform Support
  9) OpenWRT (trunk)
 
 
-Features added in Version 14.06
--------------------------------
+Features added in Version 14.06a
+--------------------------------
 * Next Generation Name Service (NGNS): New version of the Name Service
   protocol that is more efficient and reliable.
 * Security Enhancements: support for ECC based authentication
@@ -31,8 +31,8 @@ Features added in Version 14.06
   flow, and reduction of resources.
 
 
-Issues Addressed in Version 14.06
----------------------------------
+Issues Addressed in Version 14.06a
+----------------------------------
 ASACORE-35   delay in update of interfaces causes missed announcement in
              onboarding
 ASACORE-136  A space in the path of a project prevents Java compilation on linux
@@ -76,13 +76,32 @@ ASACORE-621  Objective-C binding needs PingAsync
 ASACORE-634  Remove or update AllJoyn_API_Changes_cpp and _java files for rel
              14.06.
 ASACORE-636  Unrelated interface down/up causes problems with Ping.
+ASACORE-713  PeerState leak with sessionless signals
+ASACORE-747  Occasional Crash caused by RegisterAnnounceHandler in AllJoyn
+             Core when ER_DEBUG_ALL is enabled
+ASACORE-760  services::AnnouncementRegistrar::RegisterAnnounceHandler
+             results in a seg fault
+ASACORE-779  Crash in ajn::SessionlessObj::ResponseHandler
+ASACORE-788  valgrind with massif shows increasing growth while running
+             bbservice.
+ASACORE-808  _Message::UnmarshalArgs leaks memory while trying to parse
+             struct or array types
+ASACORE-809  OpenWRT Router-Node memory leak and crash Upon thinClients
+             connection to it
+ASACORE-814  Memory Leak detected on AJ Router node at qsdk target
+ASACORE-858  crash when unregistering and the registering the announce handler
+ASACORE-863  Constant increase in physical memory usage at Alljoyn Router
+             while Lighting Control Service running
+ASACORE-909  Branch RB14.06 needs to Update the certificate chain used by
+             junit Authlistener test
+ASACORE-921  C++ core version requires fourth component
 
 Details can be found at:
-https://jira.allseenalliance.org/issues/?jql=project %3D ASACORE AND status %3D Closed AND resolved >%3D 2014-02-04 AND resolved <%3D 2014-07-31 AND resolution %3D fixed AND (component %3D EMPTY OR component not in ("Thin Core Library"%2C "TCL%3A WSL"%2C "About TC")) ORDER BY key asc
+https://jira.allseenalliance.org/issues/?jql=project %3D ASACORE AND status %3D Closed AND ((resolved >%3D 2014-02-04 AND resolved <%3D 2014-07-31) OR fixVersion in ("14.06", "14.06a")) AND resolution %3D fixed AND (component %3D EMPTY OR component not in ("Thin Core Library"%2C "About TC")) ORDER BY key asc
 
 
-Known Issues in Version 14.06
------------------------------
+Known Issues in Version 14.06a
+------------------------------
 Stability in large complex environments under load needs improvement;
 performance can be greatly impacted.
 
@@ -104,20 +123,19 @@ ASACORE-656  Notifications related to names appearing and disappearing
              appear to be out of order
 ASACORE-732  Duplicate About announcements received while running large
              number of About based applications 
-ASACORE-747  Occasional Crash caused by RegisterAnnounceHandler in AllJoyn
-             Core when ER_DEBUG_ALL is enabled
 ASACORE-748  Dismiss All Notifications Test Doesn't Acheive Receiving 95%
              Of DismissAll Signals Under 10 Seconds Time Frame
-ASACORE-760  services::AnnouncementRegistrar::RegisterAnnounceHandler
-             results in a seg fault
 ASACORE-785  Duplicate FoundAdvertisedName being received
 
 For a complete list of open issues:
-https://jira.allseenalliance.org/issues/?jql=project %3D ASACORE AND status in (Open%2C "In Progress"%2C Reopened%2C New) AND (component %3D EMPTY OR component not in ("About TC"%2C "Thin Core Library"%2C "TCL%3A WSL")) AND TYPE %3D Bug ORDER BY priority DESC%2C key ASC
+https://jira.allseenalliance.org/issues/?jql=project %3D ASACORE AND status in (Open%2C "In Progress"%2C Reopened%2C New) AND (component %3D EMPTY OR component not in ("About TC"%2C "Thin Core Library")) AND TYPE %3D Bug ORDER BY priority DESC%2C key ASC
 
 
 Compatibility
 -------------
+Version 14.06a
+No changes
+
 Version 14.06
 Changed the format of the router configuration file to enable
 support for Policy DB.
@@ -129,7 +147,8 @@ nodes.
 
 Change history
 --------------
-14.06 - Stability Bug fixes. Removed support for ICE.
-        Added a number of features listed above.
-14.02 - Bug fixes. Removed support for Windows RT.
-3.4.6 - Bug fixes. Improve CPU and memory usage when using sessionless signals.
+14.06a - Bug fixes: ASACORE-713 and above.
+14.06  - Stability Bug fixes. Removed support for ICE.
+         Added a number of features listed above.
+14.02  - Bug fixes. Removed support for Windows RT.
+3.4.6  - Bug fixes. Improve CPU and memory usage when using sessionless signals.

@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -112,7 +112,12 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NUL
     // Get length of key object and allocate the object
     DWORD got;
     ULONG keyObjLen;
-    BCryptGetProperty(aesHandle, BCRYPT_OBJECT_LENGTH, (PBYTE)&keyObjLen, sizeof(ULONG), &got, 0);
+    if (BCryptGetProperty(aesHandle, BCRYPT_OBJECT_LENGTH, (PBYTE)&keyObjLen, sizeof(ULONG), &got, 0) < 0) {
+        status = ER_CRYPTO_ERROR;
+        QCC_LogError(status, ("Failed to get AES object length property"));
+        free(kbh);
+        return;
+    }
 
     keyState = new KeyState(keyObjLen);
 
