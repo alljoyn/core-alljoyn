@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -138,39 +138,39 @@ struct _alljoyn_authlistener_handle {
     /* Empty by design, this is just to allow the type restrictions to save coders from themselves */
 };
 
-alljoyn_authlistener alljoyn_authlistener_create(const alljoyn_authlistener_callbacks* callbacks, const void* context)
+alljoyn_authlistener AJ_CALL alljoyn_authlistener_create(const alljoyn_authlistener_callbacks* callbacks, const void* context)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return (alljoyn_authlistener) new ajn::AuthListenerCallbackC(callbacks, context);
 }
 
-void alljoyn_authlistener_destroy(alljoyn_authlistener listener)
+void AJ_CALL alljoyn_authlistener_destroy(alljoyn_authlistener listener)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     assert(listener != NULL && "listener parameter must not be NULL");
     delete (ajn::AuthListenerCallbackC*)listener;
 }
 
-alljoyn_authlistener alljoyn_authlistenerasync_create(const alljoyn_authlistenerasync_callbacks* callbacks, const void* context)
+alljoyn_authlistener AJ_CALL alljoyn_authlistenerasync_create(const alljoyn_authlistenerasync_callbacks* callbacks, const void* context)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return (alljoyn_authlistener) new ajn::AuthListenerAsyncCallbackC(callbacks, context);
 }
 
-void alljoyn_authlistenerasync_destroy(alljoyn_authlistener listener)
+void AJ_CALL alljoyn_authlistenerasync_destroy(alljoyn_authlistener listener)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     assert(listener != NULL && "listener parameter must not be NULL");
     delete (ajn::AuthListenerAsyncCallbackC*)listener;
 }
 
-extern AJ_API QStatus alljoyn_authlistener_requestcredentialsresponse(alljoyn_authlistener listener, void* authContext, QCC_BOOL accept, alljoyn_credentials credentials)
+QStatus AJ_CALL alljoyn_authlistener_requestcredentialsresponse(alljoyn_authlistener listener, void* authContext, QCC_BOOL accept, alljoyn_credentials credentials)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::AuthListenerAsyncCallbackC*)listener)->RequestCredentialsResponse(authContext, (accept == QCC_TRUE) ? true : false, *((ajn::AuthListener::Credentials*)credentials));
 }
 
-QStatus alljoyn_authlistener_verifycredentialsresponse(alljoyn_authlistener listener, void* authContext, QCC_BOOL accept)
+QStatus AJ_CALL alljoyn_authlistener_verifycredentialsresponse(alljoyn_authlistener listener, void* authContext, QCC_BOOL accept)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::AuthListenerAsyncCallbackC*)listener)->VerifyCredentialsResponse(authContext, (accept == QCC_TRUE) ? true : false);
@@ -179,98 +179,98 @@ struct _alljoyn_credentials_handle {
     /* Empty by design, this is just to allow the type restrictions to save coders from themselves */
 };
 
-alljoyn_credentials alljoyn_credentials_create()
+alljoyn_credentials AJ_CALL alljoyn_credentials_create()
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return (alljoyn_credentials) new ajn::AuthListener::Credentials();
 }
 
-void alljoyn_credentials_destroy(alljoyn_credentials cred)
+void AJ_CALL alljoyn_credentials_destroy(alljoyn_credentials cred)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     assert(cred != NULL && "cred parameter must not be NULL");
     delete (ajn::AuthListener::Credentials*)cred;
 }
 
-QCC_BOOL alljoyn_credentials_isset(const alljoyn_credentials cred, uint16_t creds)
+QCC_BOOL AJ_CALL alljoyn_credentials_isset(const alljoyn_credentials cred, uint16_t creds)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::AuthListener::Credentials*)cred)->IsSet(creds) == true ? QCC_TRUE : QCC_FALSE;
 }
 
-void alljoyn_credentials_setpassword(alljoyn_credentials cred, const char* pwd)
+void AJ_CALL alljoyn_credentials_setpassword(alljoyn_credentials cred, const char* pwd)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ((ajn::AuthListener::Credentials*)cred)->SetPassword(pwd);
 }
 
-void alljoyn_credentials_setusername(alljoyn_credentials cred, const char* userName)
+void AJ_CALL alljoyn_credentials_setusername(alljoyn_credentials cred, const char* userName)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ((ajn::AuthListener::Credentials*)cred)->SetUserName(userName);
 }
 
-void alljoyn_credentials_setcertchain(alljoyn_credentials cred, const char* certChain)
+void AJ_CALL alljoyn_credentials_setcertchain(alljoyn_credentials cred, const char* certChain)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ((ajn::AuthListener::Credentials*)cred)->SetCertChain(certChain);
 }
 
-void alljoyn_credentials_setprivatekey(alljoyn_credentials cred, const char* pk)
+void AJ_CALL alljoyn_credentials_setprivatekey(alljoyn_credentials cred, const char* pk)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ((ajn::AuthListener::Credentials*)cred)->SetPrivateKey(pk);
 }
 
-void alljoyn_credentials_setlogonentry(alljoyn_credentials cred, const char* logonEntry)
+void AJ_CALL alljoyn_credentials_setlogonentry(alljoyn_credentials cred, const char* logonEntry)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ((ajn::AuthListener::Credentials*)cred)->SetLogonEntry(logonEntry);
 }
 
-void alljoyn_credentials_setexpiration(alljoyn_credentials cred, uint32_t expiration)
+void AJ_CALL alljoyn_credentials_setexpiration(alljoyn_credentials cred, uint32_t expiration)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ((ajn::AuthListener::Credentials*)cred)->SetExpiration(expiration);
 }
 
-const char* alljoyn_credentials_getpassword(const alljoyn_credentials cred)
+const char* AJ_CALL alljoyn_credentials_getpassword(const alljoyn_credentials cred)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::AuthListener::Credentials*)cred)->GetPassword().c_str();
 }
 
-const char* alljoyn_credentials_getusername(const alljoyn_credentials cred)
+const char* AJ_CALL alljoyn_credentials_getusername(const alljoyn_credentials cred)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::AuthListener::Credentials*)cred)->GetUserName().c_str();
 }
 
-const char* alljoyn_credentials_getcertchain(const alljoyn_credentials cred)
+const char* AJ_CALL alljoyn_credentials_getcertchain(const alljoyn_credentials cred)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::AuthListener::Credentials*)cred)->GetCertChain().c_str();
 }
 
-const char* alljoyn_credentials_getprivateKey(const alljoyn_credentials cred)
+const char* AJ_CALL alljoyn_credentials_getprivateKey(const alljoyn_credentials cred)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::AuthListener::Credentials*)cred)->GetPrivateKey().c_str();
 }
 
-const char* alljoyn_credentials_getlogonentry(const alljoyn_credentials cred)
+const char* AJ_CALL alljoyn_credentials_getlogonentry(const alljoyn_credentials cred)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::AuthListener::Credentials*)cred)->GetLogonEntry().c_str();
 }
 
-uint32_t alljoyn_credentials_getexpiration(const alljoyn_credentials cred)
+uint32_t AJ_CALL alljoyn_credentials_getexpiration(const alljoyn_credentials cred)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::AuthListener::Credentials*)cred)->GetExpiration();
 }
 
-void alljoyn_credentials_clear(alljoyn_credentials cred)
+void AJ_CALL alljoyn_credentials_clear(alljoyn_credentials cred)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ((ajn::AuthListener::Credentials*)cred)->Clear();

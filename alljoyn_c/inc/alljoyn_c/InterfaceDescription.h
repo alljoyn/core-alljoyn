@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -108,7 +108,7 @@ typedef struct {
  *                   annotations count from
  * @return the number of annotations
  */
-extern AJ_API size_t alljoyn_interfacedescription_member_getannotationscount(alljoyn_interfacedescription_member member);
+extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_member_getannotationscount(alljoyn_interfacedescription_member member);
 
 /**
  * Obtain the name and value for the annotation index.
@@ -123,10 +123,10 @@ extern AJ_API size_t alljoyn_interfacedescription_member_getannotationscount(all
  * @param[out] value  the value of the annotation
  * @param[in,out] value_size the size of the value string if value == NULL this will return the size of the value string plus nul character
  */
-extern AJ_API void alljoyn_interfacedescription_member_getannotationatindex(alljoyn_interfacedescription_member member,
-                                                                            size_t index,
-                                                                            char* name, size_t* name_size,
-                                                                            char* value, size_t* value_size);
+extern AJ_API void AJ_CALL alljoyn_interfacedescription_member_getannotationatindex(alljoyn_interfacedescription_member member,
+                                                                                    size_t index,
+                                                                                    char* name, size_t* name_size,
+                                                                                    char* value, size_t* value_size);
 
 /**
  * Get this member's annotation value return the size of the value string if
@@ -138,7 +138,7 @@ extern AJ_API void alljoyn_interfacedescription_member_getannotationatindex(allj
  * @param[in,out] value_size size of the value string if value == NULL it will return the size of the value string plus nul character
  * @return    true iff annotations[name] == value
  */
-extern AJ_API QCC_BOOL alljoyn_interfacedescription_member_getannotation(alljoyn_interfacedescription_member member, const char* name, char* value, size_t* value_size);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_member_getannotation(alljoyn_interfacedescription_member member, const char* name, char* value, size_t* value_size);
 
 /**
  * Structure representing properties of the Interface
@@ -162,7 +162,7 @@ typedef struct {
  *                   annotations count from
  * @return the number of annotations
  */
-extern AJ_API size_t alljoyn_interfacedescription_property_getannotationscount(alljoyn_interfacedescription_property property);
+extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_property_getannotationscount(alljoyn_interfacedescription_property property);
 
 /**
  * Obtain the name and value for the annotation index.
@@ -177,10 +177,10 @@ extern AJ_API size_t alljoyn_interfacedescription_property_getannotationscount(a
  * @param[out] value  the value of the annotation
  * @param[in,out] value_size the size of the value string if value == NULL this will return the size of the value string plus nul character
  */
-extern AJ_API void alljoyn_interfacedescription_property_getannotationatindex(alljoyn_interfacedescription_property property,
-                                                                              size_t index,
-                                                                              char* name, size_t* name_size,
-                                                                              char* value, size_t* value_size);
+extern AJ_API void AJ_CALL alljoyn_interfacedescription_property_getannotationatindex(alljoyn_interfacedescription_property property,
+                                                                                      size_t index,
+                                                                                      char* name, size_t* name_size,
+                                                                                      char* value, size_t* value_size);
 
 /**
  * Get this member's annotation value return the size of the value string if
@@ -192,7 +192,7 @@ extern AJ_API void alljoyn_interfacedescription_property_getannotationatindex(al
  * @param[in,out] value_size size of the value string if value == NULL it will return the size of the value string plus nul character
  * @return    true iff annotations[name] == value
  */
-extern AJ_API QCC_BOOL alljoyn_interfacedescription_property_getannotation(alljoyn_interfacedescription_property property, const char* name, char* value, size_t* value_size);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_property_getannotation(alljoyn_interfacedescription_property property, const char* name, char* value, size_t* value_size);
 
 /**
  * Activate this interface. An interface must be activated before it can be used. Activating an
@@ -200,7 +200,7 @@ extern AJ_API QCC_BOOL alljoyn_interfacedescription_property_getannotation(alljo
  *
  * @param iface alljoyn_interfacedescription to activate.
  */
-extern AJ_API void alljoyn_interfacedescription_activate(alljoyn_interfacedescription iface);
+extern AJ_API void AJ_CALL alljoyn_interfacedescription_activate(alljoyn_interfacedescription iface);
 
 /**
  * Add an annotation to the interface.
@@ -213,7 +213,7 @@ extern AJ_API void alljoyn_interfacedescription_activate(alljoyn_interfacedescri
  *      - #ER_BUS_PROPERTY_ALREADY_EXISTS if the property can not be added
  *                                        because it already exists.
  */
-extern AJ_API QStatus alljoyn_interfacedescription_addannotation(alljoyn_interfacedescription iface, const char* name, const char* value);
+extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_addannotation(alljoyn_interfacedescription iface, const char* name, const char* value);
 
 /**
  * Lookup an interface annotation
@@ -226,7 +226,7 @@ extern AJ_API QStatus alljoyn_interfacedescription_addannotation(alljoyn_interfa
  *
  * @return QC_FALSE if annotation does not exist, QC_TRUE otherwise.
  */
-extern AJ_API QCC_BOOL alljoyn_interfacedescription_getannotation(alljoyn_interfacedescription iface, const char* name, char* value, size_t* value_size);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_getannotation(alljoyn_interfacedescription iface, const char* name, char* value, size_t* value_size);
 
 
 /**
@@ -240,7 +240,7 @@ extern AJ_API QCC_BOOL alljoyn_interfacedescription_getannotation(alljoyn_interf
  *
  * @return the number of annotations
  */
-extern AJ_API size_t alljoyn_interfacedescription_getannotationscount(alljoyn_interfacedescription iface);
+extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getannotationscount(alljoyn_interfacedescription iface);
 
 /**
  * Obtain the name and value for the annotation index.
@@ -255,10 +255,10 @@ extern AJ_API size_t alljoyn_interfacedescription_getannotationscount(alljoyn_in
  * @param[out] value  the value of the annotation
  * @param[in,out] value_size the size of the value string if value == NULL this will return the size of the value string plus nul character
  */
-extern AJ_API void alljoyn_interfacedescription_getannotationatindex(alljoyn_interfacedescription iface,
-                                                                     size_t index,
-                                                                     char* name, size_t* name_size,
-                                                                     char* value, size_t* value_size);
+extern AJ_API void AJ_CALL alljoyn_interfacedescription_getannotationatindex(alljoyn_interfacedescription iface,
+                                                                             size_t index,
+                                                                             char* name, size_t* name_size,
+                                                                             char* value, size_t* value_size);
 
 /**
  * Lookup a member description by name
@@ -269,8 +269,8 @@ extern AJ_API void alljoyn_interfacedescription_getannotationatindex(alljoyn_int
  *
  * @return QCC_FALSE if member does not exist, QCC_TRUE otherwise.
  */
-extern AJ_API QCC_BOOL alljoyn_interfacedescription_getmember(const alljoyn_interfacedescription iface, const char* name,
-                                                              alljoyn_interfacedescription_member* member);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_getmember(const alljoyn_interfacedescription iface, const char* name,
+                                                                      alljoyn_interfacedescription_member* member);
 
 /**
  * Add a member to the interface.
@@ -287,9 +287,9 @@ extern AJ_API QCC_BOOL alljoyn_interfacedescription_getmember(const alljoyn_inte
  *      - #ER_OK if successful
  *      - #ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
  */
-extern AJ_API QStatus alljoyn_interfacedescription_addmember(alljoyn_interfacedescription iface, alljoyn_messagetype type,
-                                                             const char* name, const char* inputSig, const char* outSig,
-                                                             const char* argNames, uint8_t annotation);
+extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_addmember(alljoyn_interfacedescription iface, alljoyn_messagetype type,
+                                                                     const char* name, const char* inputSig, const char* outSig,
+                                                                     const char* argNames, uint8_t annotation);
 
 /**
  * Add an annotation to a member
@@ -303,10 +303,10 @@ extern AJ_API QStatus alljoyn_interfacedescription_addmember(alljoyn_interfacede
  *      - #ER_OK if successful
  *      - #ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
  */
-extern AJ_API QStatus alljoyn_interfacedescription_addmemberannotation(alljoyn_interfacedescription iface,
-                                                                       const char* member,
-                                                                       const char* name,
-                                                                       const char* value);
+extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_addmemberannotation(alljoyn_interfacedescription iface,
+                                                                               const char* member,
+                                                                               const char* name,
+                                                                               const char* value);
 
 /**
  * Add an annotation to a member
@@ -321,11 +321,11 @@ extern AJ_API QStatus alljoyn_interfacedescription_addmemberannotation(alljoyn_i
  *
  * @return QC_FALSE if annotation does not exist, QC_TRUE otherwise.
  */
-QCC_BOOL AJ_API alljoyn_interfacedescription_getmemberannotation(alljoyn_interfacedescription iface,
-                                                                 const char* member,
-                                                                 const char* name,
-                                                                 char* value,
-                                                                 size_t* value_size);
+AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_getmemberannotation(alljoyn_interfacedescription iface,
+                                                                         const char* member,
+                                                                         const char* name,
+                                                                         char* value,
+                                                                         size_t* value_size);
 
 /**
  * Get all the members.
@@ -339,9 +339,9 @@ QCC_BOOL AJ_API alljoyn_interfacedescription_getmemberannotation(alljoyn_interfa
  *
  * @return  The number of members returned or the total number of members if members is NULL.
  */
-extern AJ_API size_t alljoyn_interfacedescription_getmembers(const alljoyn_interfacedescription iface,
-                                                             alljoyn_interfacedescription_member* members,
-                                                             size_t numMembers);
+extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getmembers(const alljoyn_interfacedescription iface,
+                                                                     alljoyn_interfacedescription_member* members,
+                                                                     size_t numMembers);
 
 /**
  * Check for existence of a member. Optionally check the signature also.
@@ -356,9 +356,9 @@ extern AJ_API size_t alljoyn_interfacedescription_getmembers(const alljoyn_inter
  * @param outSig     Output parameter signature of the member to lookup (leave NULL for signals)
  * @return QCC_TRUE if the member name exists.
  */
-extern AJ_API QCC_BOOL alljoyn_interfacedescription_hasmember(alljoyn_interfacedescription iface,
-                                                              const char* name, const char* inSig,
-                                                              const char* outSig);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_hasmember(alljoyn_interfacedescription iface,
+                                                                      const char* name, const char* inSig,
+                                                                      const char* outSig);
 
 /**
  * Add a method call member to the interface.
@@ -375,7 +375,7 @@ extern AJ_API QCC_BOOL alljoyn_interfacedescription_hasmember(alljoyn_interfaced
  *      - #ER_OK if successful
  *      - #ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
  */
-extern AJ_API QStatus alljoyn_interfacedescription_addmethod(alljoyn_interfacedescription iface, const char* name, const char* inputSig, const char* outSig, const char* argNames, uint8_t annotation, const char* accessPerms);
+extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_addmethod(alljoyn_interfacedescription iface, const char* name, const char* inputSig, const char* outSig, const char* argNames, uint8_t annotation, const char* accessPerms);
 
 /**
  * Lookup a member method description by name
@@ -387,7 +387,7 @@ extern AJ_API QStatus alljoyn_interfacedescription_addmethod(alljoyn_interfacede
  *      - Pointer to member.
  *      - NULL if does not exist.
  */
-extern AJ_API QCC_BOOL alljoyn_interfacedescription_getmethod(alljoyn_interfacedescription iface, const char* name, alljoyn_interfacedescription_member* member);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_getmethod(alljoyn_interfacedescription iface, const char* name, alljoyn_interfacedescription_member* member);
 
 /**
  * Add a signal member to the interface.
@@ -403,7 +403,7 @@ extern AJ_API QCC_BOOL alljoyn_interfacedescription_getmethod(alljoyn_interfaced
  *      - #ER_OK if successful
  *      - #ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
  */
-extern AJ_API QStatus alljoyn_interfacedescription_addsignal(alljoyn_interfacedescription iface, const char* name, const char* sig, const char* argNames, uint8_t annotation, const char* accessPerms);
+extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_addsignal(alljoyn_interfacedescription iface, const char* name, const char* sig, const char* argNames, uint8_t annotation, const char* accessPerms);
 
 /**
  * Lookup a member signal description by name
@@ -415,7 +415,7 @@ extern AJ_API QStatus alljoyn_interfacedescription_addsignal(alljoyn_interfacede
  *
  * @return QCC_TRUE is the signal was found QCC_FALSE otherwise
  */
-extern AJ_API QCC_BOOL alljoyn_interfacedescription_getsignal(alljoyn_interfacedescription iface, const char* name, alljoyn_interfacedescription_member* member);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_getsignal(alljoyn_interfacedescription iface, const char* name, alljoyn_interfacedescription_member* member);
 
 /**
  * Lookup a property description by name
@@ -425,8 +425,8 @@ extern AJ_API QCC_BOOL alljoyn_interfacedescription_getsignal(alljoyn_interfaced
  * @param property  The description of the property
  * @return QCC_TRUE if the property was found, QCC_FALSE otherwise
  */
-extern AJ_API QCC_BOOL alljoyn_interfacedescription_getproperty(const alljoyn_interfacedescription iface, const char* name,
-                                                                alljoyn_interfacedescription_property* property);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_getproperty(const alljoyn_interfacedescription iface, const char* name,
+                                                                        alljoyn_interfacedescription_property* property);
 
 /**
  * Get all the properties.
@@ -441,9 +441,9 @@ extern AJ_API QCC_BOOL alljoyn_interfacedescription_getproperty(const alljoyn_in
  *
  * @return  The number of properties returned or the total number of properties if props is NULL.
  */
-extern AJ_API size_t alljoyn_interfacedescription_getproperties(const alljoyn_interfacedescription iface,
-                                                                alljoyn_interfacedescription_property* props,
-                                                                size_t numProps);
+extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getproperties(const alljoyn_interfacedescription iface,
+                                                                        alljoyn_interfacedescription_property* props,
+                                                                        size_t numProps);
 
 /**
  * Add a property to the interface.
@@ -457,8 +457,8 @@ extern AJ_API size_t alljoyn_interfacedescription_getproperties(const alljoyn_in
  *      - #ER_BUS_PROPERTY_ALREADY_EXISTS if the property can not be added
  *                                        because it already exists.
  */
-extern AJ_API QStatus alljoyn_interfacedescription_addproperty(alljoyn_interfacedescription iface, const char* name,
-                                                               const char* signature, uint8_t access);
+extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_addproperty(alljoyn_interfacedescription iface, const char* name,
+                                                                       const char* signature, uint8_t access);
 
 /**
  * Add an annotation to an existing property
@@ -471,10 +471,10 @@ extern AJ_API QStatus alljoyn_interfacedescription_addproperty(alljoyn_interface
  *      - #ER_OK if successful.
  *      - #ER_BUS_PROPERTY_ALREADY_EXISTS if the annotation can not be added to the property because it already exists.
  */
-extern AJ_API QStatus alljoyn_interfacedescription_addpropertyannotation(alljoyn_interfacedescription iface,
-                                                                         const char* property,
-                                                                         const char* name,
-                                                                         const char* value);
+extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_addpropertyannotation(alljoyn_interfacedescription iface,
+                                                                                 const char* property,
+                                                                                 const char* name,
+                                                                                 const char* value);
 /**
  * Get the annotation value for a property
  * @param         iface     Interface on which to add the property.
@@ -496,11 +496,11 @@ extern AJ_API QStatus alljoyn_interfacedescription_addpropertyannotation(alljoyn
  *
  * @return           QCC_TRUE if found, QCC_FALSE if not found
  */
-extern AJ_API QCC_BOOL alljoyn_interfacedescription_getpropertyannotation(alljoyn_interfacedescription iface,
-                                                                          const char* property,
-                                                                          const char* name,
-                                                                          char* value,
-                                                                          size_t* str_size);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_getpropertyannotation(alljoyn_interfacedescription iface,
+                                                                                  const char* property,
+                                                                                  const char* name,
+                                                                                  char* value,
+                                                                                  size_t* str_size);
 
 /**
  * Check for existence of a property.
@@ -509,7 +509,7 @@ extern AJ_API QCC_BOOL alljoyn_interfacedescription_getpropertyannotation(alljoy
  * @param name       Name of the property to lookup
  * @return true if the property exists.
  */
-extern AJ_API QCC_BOOL alljoyn_interfacedescription_hasproperty(const alljoyn_interfacedescription iface, const char* name);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_hasproperty(const alljoyn_interfacedescription iface, const char* name);
 
 /**
  * Check for existence of any properties
@@ -517,7 +517,7 @@ extern AJ_API QCC_BOOL alljoyn_interfacedescription_hasproperty(const alljoyn_in
  * @param iface      Interface to query.
  * @return  true if interface has any properties.
  */
-extern AJ_API QCC_BOOL alljoyn_interfacedescription_hasproperties(const alljoyn_interfacedescription iface);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_hasproperties(const alljoyn_interfacedescription iface);
 
 /**
  * Returns the name of the interface
@@ -525,7 +525,7 @@ extern AJ_API QCC_BOOL alljoyn_interfacedescription_hasproperties(const alljoyn_
  * @param iface      Interface to query.
  * @return the interface name.
  */
-extern AJ_API const char* alljoyn_interfacedescription_getname(const alljoyn_interfacedescription iface);
+extern AJ_API const char* AJ_CALL alljoyn_interfacedescription_getname(const alljoyn_interfacedescription iface);
 
 /**
  * Returns a description of the interface in introspection XML format
@@ -541,7 +541,7 @@ extern AJ_API const char* alljoyn_interfacedescription_getname(const alljoyn_int
  *          available.  Thus returning a value of buf or larger means the output
  *          was truncated.
  */
-extern AJ_API size_t alljoyn_interfacedescription_introspect(const alljoyn_interfacedescription iface, char* str, size_t buf, size_t indent);
+extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_introspect(const alljoyn_interfacedescription iface, char* str, size_t buf, size_t indent);
 
 /**
  * Indicates if this interface is secure. Secure interfaces require end-to-end authentication.
@@ -550,7 +550,7 @@ extern AJ_API size_t alljoyn_interfacedescription_introspect(const alljoyn_inter
  * @param iface      Interface to query.
  * @return true if the interface is secure.
  */
-extern AJ_API QCC_BOOL alljoyn_interfacedescription_issecure(const alljoyn_interfacedescription iface);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_issecure(const alljoyn_interfacedescription iface);
 
 /**
  * Get the security policy that applies to this interface.
@@ -559,7 +559,7 @@ extern AJ_API QCC_BOOL alljoyn_interfacedescription_issecure(const alljoyn_inter
  *
  * @return Returns the security policy for this interface.
  */
-extern AJ_API alljoyn_interfacedescription_securitypolicy alljoyn_interfacedescription_getsecuritypolicy(const alljoyn_interfacedescription iface);
+extern AJ_API alljoyn_interfacedescription_securitypolicy AJ_CALL alljoyn_interfacedescription_getsecuritypolicy(const alljoyn_interfacedescription iface);
 
 /**
  * Equality operation.
@@ -569,8 +569,8 @@ extern AJ_API alljoyn_interfacedescription_securitypolicy alljoyn_interfacedescr
  *
  * @return QCC_TRUE if one == other
  */
-extern AJ_API QCC_BOOL alljoyn_interfacedescription_eql(const alljoyn_interfacedescription one,
-                                                        const alljoyn_interfacedescription other);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_eql(const alljoyn_interfacedescription one,
+                                                                const alljoyn_interfacedescription other);
 
 /**
  * Equality operation.
@@ -580,8 +580,8 @@ extern AJ_API QCC_BOOL alljoyn_interfacedescription_eql(const alljoyn_interfaced
  *
  * @return QCC_TRUE if one == other
  */
-extern AJ_API QCC_BOOL alljoyn_interfacedescription_member_eql(const alljoyn_interfacedescription_member one,
-                                                               const alljoyn_interfacedescription_member other);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_member_eql(const alljoyn_interfacedescription_member one,
+                                                                       const alljoyn_interfacedescription_member other);
 
 /**
  * Equality operation.
@@ -591,8 +591,8 @@ extern AJ_API QCC_BOOL alljoyn_interfacedescription_member_eql(const alljoyn_int
  *
  * @return QCC_TRUE if one == other
  */
-extern AJ_API QCC_BOOL alljoyn_interfacedescription_property_eql(const alljoyn_interfacedescription_property one,
-                                                                 const alljoyn_interfacedescription_property other);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_property_eql(const alljoyn_interfacedescription_property one,
+                                                                         const alljoyn_interfacedescription_property other);
 
 #ifdef __cplusplus
 } /* extern "C" */
