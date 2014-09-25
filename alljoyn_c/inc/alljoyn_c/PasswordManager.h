@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2013, 2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -43,7 +43,7 @@ extern "C" {
  * @return
  *      - #ER_OK  if the credentials was successfully set.
  */
-extern AJ_API QStatus alljoyn_passwordmanager_setcredentials(const char* authMechanism, const char* password);
+extern AJ_API QStatus AJ_CALL alljoyn_passwordmanager_setcredentials(const char* authMechanism, const char* password);
 
 #ifdef __cplusplus
 } /* extern "C" */
