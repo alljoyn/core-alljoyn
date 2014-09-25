@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -84,13 +84,13 @@ struct _alljoyn_sessionportlistener_handle {
     /* Empty by design, this is just to allow the type restrictions to save coders from themselves */
 };
 
-alljoyn_sessionportlistener alljoyn_sessionportlistener_create(const alljoyn_sessionportlistener_callbacks* callbacks, const void* context)
+alljoyn_sessionportlistener AJ_CALL alljoyn_sessionportlistener_create(const alljoyn_sessionportlistener_callbacks* callbacks, const void* context)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return (alljoyn_sessionportlistener) new ajn::SessionPortListenerCallbackC(callbacks, context);
 }
 
-void alljoyn_sessionportlistener_destroy(alljoyn_sessionportlistener listener)
+void AJ_CALL alljoyn_sessionportlistener_destroy(alljoyn_sessionportlistener listener)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     assert(listener != NULL && "listener parameter must not be NULL");

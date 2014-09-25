@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -54,7 +54,7 @@ typedef struct _alljoyn_sessionlistener_handle*             alljoyn_sessionliste
  * @param alljoyn_sessionid     Id of session that was lost.
  * @param reason        The reason for the session being lost
  */
-typedef void (*alljoyn_sessionlistener_sessionlost_ptr)(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason);
+typedef void (AJ_CALL * alljoyn_sessionlistener_sessionlost_ptr)(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason);
 
 /**
  * Type for the SessionMemberAdded callback.
@@ -65,8 +65,8 @@ typedef void (*alljoyn_sessionlistener_sessionlost_ptr)(const void* context, all
  * @param alljoyn_sessionid     Id of session whose member(s) changed.
  * @param uniqueName    Unique name of member who was added.
  */
-typedef void (*alljoyn_sessionlistener_sessionmemberadded_ptr)(const void* context, alljoyn_sessionid sessionId,
-                                                               const char* uniqueName);
+typedef void (AJ_CALL * alljoyn_sessionlistener_sessionmemberadded_ptr)(const void* context, alljoyn_sessionid sessionId,
+                                                                        const char* uniqueName);
 
 /**
  * Type for the SessionMemberRemoved callback.
@@ -77,8 +77,8 @@ typedef void (*alljoyn_sessionlistener_sessionmemberadded_ptr)(const void* conte
  * @param alljoyn_sessionid     Id of session whose member(s) changed.
  * @param uniqueName    Unique name of member who was removed.
  */
-typedef void (*alljoyn_sessionlistener_sessionmemberremoved_ptr)(const void* context, alljoyn_sessionid sessionId,
-                                                                 const char* uniqueName);
+typedef void (AJ_CALL * alljoyn_sessionlistener_sessionmemberremoved_ptr)(const void* context, alljoyn_sessionid sessionId,
+                                                                          const char* uniqueName);
 
 /**
  * Structure used during alljoyn_sessionlistener_create to provide callbacks into C.
@@ -107,15 +107,15 @@ typedef struct {
  *
  * @return Handle to newly allocated alljoyn_sessionlistener.
  */
-extern AJ_API alljoyn_sessionlistener alljoyn_sessionlistener_create(const alljoyn_sessionlistener_callbacks* callbacks,
-                                                                     const void* context);
+extern AJ_API alljoyn_sessionlistener AJ_CALL alljoyn_sessionlistener_create(const alljoyn_sessionlistener_callbacks* callbacks,
+                                                                             const void* context);
 
 /**
  * Destroy an alljoyn_sessionlistener.
  *
  * @param listener alljoyn_sessionlistener to destroy.
  */
-extern AJ_API void alljoyn_sessionlistener_destroy(alljoyn_sessionlistener listener);
+extern AJ_API void AJ_CALL alljoyn_sessionlistener_destroy(alljoyn_sessionlistener listener);
 
 #ifdef __cplusplus
 } /* extern "C" */
