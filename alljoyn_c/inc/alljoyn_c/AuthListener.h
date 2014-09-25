@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -66,7 +66,7 @@ static const uint16_t ALLJOYN_CRED_ONE_TIME_PWD = 0x2001; /**< Indicates the cre
  * whether to allow or reject multiple authentication attempts to the same peer.
  *
  * An implementation must provide an alljoyn_authlistener_callbacks or
- * an alljoyn_authlistenerasync_callbacks but not both..
+ * an alljoyn_authlistenerasync_callbacks but not both.
  *
  * @param context        The context pointer passed into the alljoyn_authlistener_create function
  * @param authMechanism  The name of the authentication mechanism issuing the request.

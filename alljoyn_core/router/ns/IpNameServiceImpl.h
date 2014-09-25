@@ -304,7 +304,7 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     QStatus CreateVirtualInterface(const qcc::IfConfigEntry& entry);
 
-    QStatus CreateUnicastSocket(qcc::AddressFamily family);
+    QStatus CreateUnicastSocket();
 
     /**
      * @brief Delete a virtual network interface. In normal cases WiFi-Direct
@@ -1537,7 +1537,7 @@ class IpNameServiceImpl : public qcc::Thread {
     qcc::SocketFd m_ipv6QuietSockFd;
 
     qcc::SocketFd m_ipv4UnicastSockFd;
-    qcc::SocketFd m_ipv6UnicastSockFd;
+    qcc::Event* m_unicastEvent;
 
     std::list<BurstResponseHeader> m_burstQueue;
     /**
