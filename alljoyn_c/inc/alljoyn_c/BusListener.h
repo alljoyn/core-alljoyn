@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -174,14 +174,14 @@ typedef struct {
  *
  * @return Handle to newly allocated alljoyn_buslistener.
  */
-extern AJ_API alljoyn_buslistener alljoyn_buslistener_create(const alljoyn_buslistener_callbacks* callbacks, const void* context);
+extern AJ_API alljoyn_buslistener AJ_CALL alljoyn_buslistener_create(const alljoyn_buslistener_callbacks* callbacks, const void* context);
 
 /**
  * Destroy an alljoyn_buslistener.
  *
  * @param listener alljoyn_buslistener to destroy.
  */
-extern AJ_API void alljoyn_buslistener_destroy(alljoyn_buslistener listener);
+extern AJ_API void AJ_CALL alljoyn_buslistener_destroy(alljoyn_buslistener listener);
 
 #ifdef __cplusplus
 } /* extern "C" */

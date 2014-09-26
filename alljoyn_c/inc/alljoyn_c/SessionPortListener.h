@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -94,15 +94,15 @@ typedef struct {
  *
  * @return Handle to newly allocated alljoyn_sessionportlistener.
  */
-extern AJ_API alljoyn_sessionportlistener alljoyn_sessionportlistener_create(const alljoyn_sessionportlistener_callbacks* callbacks,
-                                                                             const void* context);
+extern AJ_API alljoyn_sessionportlistener AJ_CALL alljoyn_sessionportlistener_create(const alljoyn_sessionportlistener_callbacks* callbacks,
+                                                                                     const void* context);
 
 /**
  * Destroy an alljoyn_sessionportlistener.
  *
  * @param listener alljoyn_sessionportlistener to destroy.
  */
-extern AJ_API void alljoyn_sessionportlistener_destroy(alljoyn_sessionportlistener listener);
+extern AJ_API void AJ_CALL alljoyn_sessionportlistener_destroy(alljoyn_sessionportlistener listener);
 
 #ifdef __cplusplus
 } /* extern "C" */

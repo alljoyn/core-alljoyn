@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -31,15 +31,15 @@ struct _alljoyn_interfacedescription_handle {
     /* Empty by design, this is just to allow the type restrictions to save coders from themselves */
 };
 
-size_t alljoyn_interfacedescription_member_getannotationscount(alljoyn_interfacedescription_member member) {
+size_t AJ_CALL alljoyn_interfacedescription_member_getannotationscount(alljoyn_interfacedescription_member member) {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::InterfaceDescription::Member*)member.internal_member)->GetAnnotations(NULL, NULL, 0);
 }
 
-void alljoyn_interfacedescription_member_getannotationatindex(alljoyn_interfacedescription_member member,
-                                                              size_t index,
-                                                              char* name, size_t* name_size,
-                                                              char* value, size_t* value_size)
+void AJ_CALL alljoyn_interfacedescription_member_getannotationatindex(alljoyn_interfacedescription_member member,
+                                                                      size_t index,
+                                                                      char* name, size_t* name_size,
+                                                                      char* value, size_t* value_size)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     size_t annotation_size = ((ajn::InterfaceDescription::Member*)member.internal_member)->GetAnnotations(NULL, NULL, 0);
@@ -70,7 +70,7 @@ void alljoyn_interfacedescription_member_getannotationatindex(alljoyn_interfaced
     return;
 }
 
-QCC_BOOL alljoyn_interfacedescription_member_getannotation(alljoyn_interfacedescription_member member, const char* name, char* value, size_t* value_size)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_member_getannotation(alljoyn_interfacedescription_member member, const char* name, char* value, size_t* value_size)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     qcc::String out_val;
@@ -96,16 +96,16 @@ QCC_BOOL alljoyn_interfacedescription_member_getannotation(alljoyn_interfacedesc
     return QCC_FALSE;
 }
 
-size_t alljoyn_interfacedescription_property_getannotationscount(alljoyn_interfacedescription_property property)
+size_t AJ_CALL alljoyn_interfacedescription_property_getannotationscount(alljoyn_interfacedescription_property property)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::InterfaceDescription::Property*)property.internal_property)->GetAnnotations(NULL, NULL, 0);
 }
 
-void alljoyn_interfacedescription_property_getannotationatindex(alljoyn_interfacedescription_property property,
-                                                                size_t index,
-                                                                char* name, size_t* name_size,
-                                                                char* value, size_t* value_size)
+void AJ_CALL alljoyn_interfacedescription_property_getannotationatindex(alljoyn_interfacedescription_property property,
+                                                                        size_t index,
+                                                                        char* name, size_t* name_size,
+                                                                        char* value, size_t* value_size)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     size_t annotation_size = ((ajn::InterfaceDescription::Property*)property.internal_property)->GetAnnotations(NULL, NULL, 0);
@@ -136,7 +136,10 @@ void alljoyn_interfacedescription_property_getannotationatindex(alljoyn_interfac
     return;
 }
 
-QCC_BOOL alljoyn_interfacedescription_property_getannotation(alljoyn_interfacedescription_property property, const char* name, char* value, size_t* value_size)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_property_getannotation(alljoyn_interfacedescription_property property,
+                                                                     const char* name,
+                                                                     char* value,
+                                                                     size_t* value_size)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     qcc::String out_val;
@@ -162,14 +165,14 @@ QCC_BOOL alljoyn_interfacedescription_property_getannotation(alljoyn_interfacede
     return QCC_FALSE;
 }
 
-void alljoyn_interfacedescription_activate(alljoyn_interfacedescription iface)
+void AJ_CALL alljoyn_interfacedescription_activate(alljoyn_interfacedescription iface)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ((ajn::InterfaceDescription*)iface)->Activate();
 }
 
-QCC_BOOL alljoyn_interfacedescription_getmember(const alljoyn_interfacedescription iface, const char* name,
-                                                alljoyn_interfacedescription_member* member)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_getmember(const alljoyn_interfacedescription iface, const char* name,
+                                                        alljoyn_interfacedescription_member* member)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     const ajn::InterfaceDescription::Member* found_member = ((const ajn::InterfaceDescription*)iface)->GetMember(name);
@@ -186,13 +189,13 @@ QCC_BOOL alljoyn_interfacedescription_getmember(const alljoyn_interfacedescripti
     return (found_member == NULL ? QCC_FALSE : QCC_TRUE);
 }
 
-QStatus alljoyn_interfacedescription_addannotation(alljoyn_interfacedescription iface, const char* name, const char* value)
+QStatus AJ_CALL alljoyn_interfacedescription_addannotation(alljoyn_interfacedescription iface, const char* name, const char* value)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::InterfaceDescription*)iface)->AddAnnotation(name, value);
 }
 
-QCC_BOOL alljoyn_interfacedescription_getannotation(alljoyn_interfacedescription iface, const char* name, char* value, size_t* value_size)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_getannotation(alljoyn_interfacedescription iface, const char* name, char* value, size_t* value_size)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     qcc::String out_val;
@@ -218,16 +221,16 @@ QCC_BOOL alljoyn_interfacedescription_getannotation(alljoyn_interfacedescription
     return QCC_FALSE;
 }
 
-size_t alljoyn_interfacedescription_getannotationscount(alljoyn_interfacedescription iface)
+size_t AJ_CALL alljoyn_interfacedescription_getannotationscount(alljoyn_interfacedescription iface)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::InterfaceDescription*)iface)->GetAnnotations(NULL, NULL, 0);
 }
 
-void alljoyn_interfacedescription_getannotationatindex(alljoyn_interfacedescription iface,
-                                                       size_t index,
-                                                       char* name, size_t* name_size,
-                                                       char* value, size_t* value_size)
+void AJ_CALL alljoyn_interfacedescription_getannotationatindex(alljoyn_interfacedescription iface,
+                                                               size_t index,
+                                                               char* name, size_t* name_size,
+                                                               char* value, size_t* value_size)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     size_t annotation_size = ((ajn::InterfaceDescription*)iface)->GetAnnotations(NULL, NULL, 0);
@@ -258,29 +261,29 @@ void alljoyn_interfacedescription_getannotationatindex(alljoyn_interfacedescript
     return;
 }
 
-QStatus alljoyn_interfacedescription_addmember(alljoyn_interfacedescription iface, alljoyn_messagetype type,
-                                               const char* name, const char* inputSig, const char* outSig,
-                                               const char* argNames, uint8_t annotation)
+QStatus AJ_CALL alljoyn_interfacedescription_addmember(alljoyn_interfacedescription iface, alljoyn_messagetype type,
+                                                       const char* name, const char* inputSig, const char* outSig,
+                                                       const char* argNames, uint8_t annotation)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::InterfaceDescription*)iface)->AddMember((ajn::AllJoynMessageType)type, name, inputSig, outSig,
                                                           argNames, annotation);
 }
 
-QStatus alljoyn_interfacedescription_addmemberannotation(alljoyn_interfacedescription iface,
-                                                         const char* member,
-                                                         const char* name,
-                                                         const char* value)
+QStatus AJ_CALL alljoyn_interfacedescription_addmemberannotation(alljoyn_interfacedescription iface,
+                                                                 const char* member,
+                                                                 const char* name,
+                                                                 const char* value)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::InterfaceDescription*)iface)->AddMemberAnnotation(member, name, value);
 }
 
-QCC_BOOL alljoyn_interfacedescription_getmemberannotation(alljoyn_interfacedescription iface,
-                                                          const char* member,
-                                                          const char* name,
-                                                          char* value,
-                                                          size_t* value_size)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_getmemberannotation(alljoyn_interfacedescription iface,
+                                                                  const char* member,
+                                                                  const char* name,
+                                                                  char* value,
+                                                                  size_t* value_size)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     qcc::String out_val;
@@ -306,9 +309,9 @@ QCC_BOOL alljoyn_interfacedescription_getmemberannotation(alljoyn_interfacedescr
     return QCC_FALSE;
 }
 
-size_t alljoyn_interfacedescription_getmembers(const alljoyn_interfacedescription iface,
-                                               alljoyn_interfacedescription_member* members,
-                                               size_t numMembers)
+size_t AJ_CALL alljoyn_interfacedescription_getmembers(const alljoyn_interfacedescription iface,
+                                                       alljoyn_interfacedescription_member* members,
+                                                       size_t numMembers)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     size_t ret = 0;
@@ -338,20 +341,26 @@ size_t alljoyn_interfacedescription_getmembers(const alljoyn_interfacedescriptio
     return ret;
 }
 
-QCC_BOOL alljoyn_interfacedescription_hasmember(alljoyn_interfacedescription iface,
-                                                const char* name, const char* inSig, const char* outSig)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_hasmember(alljoyn_interfacedescription iface,
+                                                        const char* name, const char* inSig, const char* outSig)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return (((ajn::InterfaceDescription*)iface)->HasMember(name, inSig, outSig) == true ? QCC_TRUE : QCC_FALSE);
 }
 
-QStatus alljoyn_interfacedescription_addmethod(alljoyn_interfacedescription iface, const char* name, const char* inputSig, const char* outSig, const char* argNames, uint8_t annotation, const char* accessPerms)
+QStatus AJ_CALL alljoyn_interfacedescription_addmethod(alljoyn_interfacedescription iface,
+                                                       const char* name,
+                                                       const char* inputSig,
+                                                       const char* outSig,
+                                                       const char* argNames,
+                                                       uint8_t annotation,
+                                                       const char* accessPerms)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::InterfaceDescription*)iface)->AddMember(ajn::MESSAGE_METHOD_CALL, name, inputSig, outSig, argNames, annotation, accessPerms);
 }
 
-QCC_BOOL alljoyn_interfacedescription_getmethod(alljoyn_interfacedescription iface, const char* name, alljoyn_interfacedescription_member* member)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_getmethod(alljoyn_interfacedescription iface, const char* name, alljoyn_interfacedescription_member* member)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     const ajn::InterfaceDescription::Member* found_member = ((const ajn::InterfaceDescription*)iface)->GetMember(name);
@@ -374,13 +383,18 @@ QCC_BOOL alljoyn_interfacedescription_getmethod(alljoyn_interfacedescription ifa
     return (found_member == NULL ? QCC_FALSE : QCC_TRUE);
 }
 
-QStatus alljoyn_interfacedescription_addsignal(alljoyn_interfacedescription iface, const char* name, const char* sig, const char* argNames, uint8_t annotation, const char* accessPerms)
+QStatus AJ_CALL alljoyn_interfacedescription_addsignal(alljoyn_interfacedescription iface,
+                                                       const char* name,
+                                                       const char* sig,
+                                                       const char* argNames,
+                                                       uint8_t annotation,
+                                                       const char* accessPerms)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::InterfaceDescription*)iface)->AddMember(ajn::MESSAGE_SIGNAL, name, sig, NULL, argNames, annotation, accessPerms);
 }
 
-QCC_BOOL alljoyn_interfacedescription_getsignal(alljoyn_interfacedescription iface, const char* name, alljoyn_interfacedescription_member* member)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_getsignal(alljoyn_interfacedescription iface, const char* name, alljoyn_interfacedescription_member* member)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     const ajn::InterfaceDescription::Member* found_member = ((const ajn::InterfaceDescription*)iface)->GetMember(name);
@@ -402,8 +416,8 @@ QCC_BOOL alljoyn_interfacedescription_getsignal(alljoyn_interfacedescription ifa
     return (found_member == NULL ? QCC_FALSE : QCC_TRUE);
 }
 
-QCC_BOOL alljoyn_interfacedescription_getproperty(const alljoyn_interfacedescription iface, const char* name,
-                                                  alljoyn_interfacedescription_property* property)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_getproperty(const alljoyn_interfacedescription iface, const char* name,
+                                                          alljoyn_interfacedescription_property* property)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     const ajn::InterfaceDescription::Property* found_prop = ((const ajn::InterfaceDescription*)iface)->GetProperty(name);
@@ -417,9 +431,9 @@ QCC_BOOL alljoyn_interfacedescription_getproperty(const alljoyn_interfacedescrip
     return (found_prop == NULL ? QCC_FALSE : QCC_TRUE);
 }
 
-size_t alljoyn_interfacedescription_getproperties(const alljoyn_interfacedescription iface,
-                                                  alljoyn_interfacedescription_property* props,
-                                                  size_t numProps)
+size_t AJ_CALL alljoyn_interfacedescription_getproperties(const alljoyn_interfacedescription iface,
+                                                          alljoyn_interfacedescription_property* props,
+                                                          size_t numProps)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     size_t ret = 0;
@@ -445,39 +459,39 @@ size_t alljoyn_interfacedescription_getproperties(const alljoyn_interfacedescrip
     return ret;
 }
 
-QStatus alljoyn_interfacedescription_addproperty(alljoyn_interfacedescription iface, const char* name,
-                                                 const char* signature, uint8_t access)
+QStatus AJ_CALL alljoyn_interfacedescription_addproperty(alljoyn_interfacedescription iface, const char* name,
+                                                         const char* signature, uint8_t access)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::InterfaceDescription*)iface)->AddProperty(name, signature, access);
 }
 
-QCC_BOOL alljoyn_interfacedescription_hasproperty(const alljoyn_interfacedescription iface, const char* name)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_hasproperty(const alljoyn_interfacedescription iface, const char* name)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return (((const ajn::InterfaceDescription*)iface)->HasProperty(name) == true ? QCC_TRUE : QCC_FALSE);
 }
 
-QCC_BOOL alljoyn_interfacedescription_hasproperties(const alljoyn_interfacedescription iface)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_hasproperties(const alljoyn_interfacedescription iface)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return (((const ajn::InterfaceDescription*)iface)->HasProperties() == true ? QCC_TRUE : QCC_FALSE);
 }
 
-QStatus alljoyn_interfacedescription_addpropertyannotation(alljoyn_interfacedescription iface,
-                                                           const char* property,
-                                                           const char* name,
-                                                           const char* value)
+QStatus AJ_CALL alljoyn_interfacedescription_addpropertyannotation(alljoyn_interfacedescription iface,
+                                                                   const char* property,
+                                                                   const char* name,
+                                                                   const char* value)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::InterfaceDescription*)iface)->AddPropertyAnnotation(property, name, value);
 }
 
-QCC_BOOL alljoyn_interfacedescription_getpropertyannotation(alljoyn_interfacedescription iface,
-                                                            const char* property,
-                                                            const char* name,
-                                                            char* value,
-                                                            size_t* value_size)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_getpropertyannotation(alljoyn_interfacedescription iface,
+                                                                    const char* property,
+                                                                    const char* name,
+                                                                    char* value,
+                                                                    size_t* value_size)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (iface == NULL) {
@@ -515,13 +529,13 @@ QCC_BOOL alljoyn_interfacedescription_getpropertyannotation(alljoyn_interfacedes
     return QCC_FALSE;
 }
 
-const char* alljoyn_interfacedescription_getname(const alljoyn_interfacedescription iface)
+const char* AJ_CALL alljoyn_interfacedescription_getname(const alljoyn_interfacedescription iface)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((const ajn::InterfaceDescription*)iface)->GetName();
 }
 
-size_t alljoyn_interfacedescription_introspect(const alljoyn_interfacedescription iface, char* str, size_t buf, size_t indent)
+size_t AJ_CALL alljoyn_interfacedescription_introspect(const alljoyn_interfacedescription iface, char* str, size_t buf, size_t indent)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!iface) {
@@ -540,20 +554,20 @@ size_t alljoyn_interfacedescription_introspect(const alljoyn_interfacedescriptio
     return s.size() + 1;
 }
 
-QCC_BOOL alljoyn_interfacedescription_issecure(const alljoyn_interfacedescription iface)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_issecure(const alljoyn_interfacedescription iface)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((const ajn::InterfaceDescription*)iface)->IsSecure();
 }
 
-alljoyn_interfacedescription_securitypolicy alljoyn_interfacedescription_getsecuritypolicy(const alljoyn_interfacedescription iface)
+alljoyn_interfacedescription_securitypolicy AJ_CALL alljoyn_interfacedescription_getsecuritypolicy(const alljoyn_interfacedescription iface)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return (alljoyn_interfacedescription_securitypolicy)((const ajn::InterfaceDescription*)iface)->GetSecurityPolicy();
 }
 
-QCC_BOOL alljoyn_interfacedescription_eql(const alljoyn_interfacedescription one,
-                                          const alljoyn_interfacedescription other)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_eql(const alljoyn_interfacedescription one,
+                                                  const alljoyn_interfacedescription other)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     const ajn::InterfaceDescription& _one = *((const ajn::InterfaceDescription*)one);
@@ -562,8 +576,8 @@ QCC_BOOL alljoyn_interfacedescription_eql(const alljoyn_interfacedescription one
     return (_one == _other ? QCC_TRUE : QCC_FALSE);
 }
 
-QCC_BOOL alljoyn_interfacedescription_member_eql(const alljoyn_interfacedescription_member one,
-                                                 const alljoyn_interfacedescription_member other)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_member_eql(const alljoyn_interfacedescription_member one,
+                                                         const alljoyn_interfacedescription_member other)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     const ajn::InterfaceDescription::Member _one = *((ajn::InterfaceDescription::Member*)one.internal_member);
@@ -572,8 +586,8 @@ QCC_BOOL alljoyn_interfacedescription_member_eql(const alljoyn_interfacedescript
     return (_one == _other ? QCC_TRUE : QCC_FALSE);
 }
 
-QCC_BOOL alljoyn_interfacedescription_property_eql(const alljoyn_interfacedescription_property one,
-                                                   const alljoyn_interfacedescription_property other)
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_property_eql(const alljoyn_interfacedescription_property one,
+                                                           const alljoyn_interfacedescription_property other)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     const ajn::InterfaceDescription::Property _one = *((ajn::InterfaceDescription::Property*)one.internal_property);
