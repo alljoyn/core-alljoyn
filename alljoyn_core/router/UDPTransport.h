@@ -760,13 +760,6 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     uint32_t m_maxAuth;
 
     /**
-     * m_currAuth is the current number of incoming connections that are in the
-     * process of authenticating.  If starting to authenticate a new connection
-     * would mean this number exceeding m_maxAuth, we reject the new connection.
-     */
-    volatile int32_t m_currAuth;
-
-    /**
      * m_maxConn is the maximum number of active connections possible over the
      * UDP transport.  If starting to process a new connection would mean
      * exceeding this number, we reject the new connection.
@@ -774,11 +767,20 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     uint32_t m_maxConn;
 
     /**
+     * m_currAuth is the current number of incoming connections that are in the
+     * process of authenticating.  If starting to authenticate a new connection
+     * would mean this number exceeding m_maxAuth, we reject the new connection.
+     */
+    volatile int32_t m_currAuth;
+
+    /**
      * m_currConn is current number of active connections running over the
      * UDP transport.  If starting to process a new connection would mean
      * this number exceeds m_maxConn, we reject the new connection.
      */
     volatile int32_t m_currConn;
+
+    qcc::Mutex m_connLock;  /**< m_currAuth and m_currConn must be changed atomically, so need to be mutex protected */
 
     /**
      * arcpConfig are the limits from the daemon configuration database relating

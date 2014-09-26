@@ -521,7 +521,7 @@ void qdtm(void)
 }
 
 /*
- * Quick Debug Print for focused printf debugging outside QCC framework Useful
+ * Quick Debug Print for focused printf debugging outside QCC framework.  Useful
  * if you want to get your bearings but don't want to see the entire debug spew.
  * Use just like QCC_DebugPrintf.
  */
@@ -3536,7 +3536,8 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     m_manage(STATE_MANAGE),
     m_nsReleaseCount(0), m_wildcardIfaceProcessed(false),
     m_routerName(), m_maxUntrustedClients(0), m_numUntrustedClients(0),
-    m_authTimeout(0), m_sessionSetupTimeout(0), m_maxAuth(0), m_currAuth(0), m_maxConn(0), m_currConn(0),
+    m_authTimeout(0), m_sessionSetupTimeout(0),
+    m_maxAuth(0), m_maxConn(0), m_currAuth(0), m_currConn(0), m_connLock(),
     m_ardpLock(), m_cbLock(), m_handle(NULL),
     m_dispatcher(NULL), m_workerCommandQueue(), m_workerCommandQueueLock()
 {
@@ -4270,8 +4271,15 @@ QStatus UDPTransport::Join(void)
         QCC_DbgTrace(("UDPTransport::Join(): Erasing endpoint with conn ID == %d. from m_authList", ep->GetConnId()));
 #endif
         m_authList.erase(i);
-        DecrementAndFetch(&m_currAuth);
-
+        /*
+         * If the endpoint is on the auth list, it occupies a slot on the
+         * authentication count and the total connection count.  Update both
+         * counts.
+         */
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
     }
 
     while ((i = m_endpointList.begin()) != m_endpointList.end()) {
@@ -4279,8 +4287,15 @@ QStatus UDPTransport::Join(void)
         UDPEndpoint ep = *i;
         QCC_DbgTrace(("UDPTransport::Join(): Erasing endpoint with conn ID == %d. from m_endpointList", ep->GetConnId()));
 #endif
+
+        /*
+         * If the endpoint is on the endpoint list, it occupies a slot only on
+         * the total connection count.  Update that count.
+         */
+        m_connLock.Lock(MUTEX_CONTEXT);
         m_endpointList.erase(i);
-        DecrementAndFetch(&m_currConn);
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
     }
 
     QCC_DbgPrintf(("UDPTransport::Join(): Giving endpoint list lock"));
@@ -4604,10 +4619,28 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
              */
             if (threadWaiting == false) {
                 QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Moving slow authenticator with conn ID == %d. to m_endpointList", ep->GetConnId()));
+
+                /*
+                 * If the endpoint is on the auth list, it occupies a slot on
+                 * both the authentication count and the total conneciton count.
+                 * If we remove it from the authentication list and put it on
+                 * the endpoint list, we are saying we are done with
+                 * authentication.  Update that count, but leave the endpoint as
+                 * occupying a slot in the total connection count since it is an
+                 * endpoint on a list.
+                 */
+                m_connLock.Lock(MUTEX_CONTEXT);
                 m_authList.erase(i);
-                DecrementAndFetch(&m_currAuth);
                 m_endpointList.insert(ep);
-                IncrementAndFetch(&m_currConn);
+                --m_currAuth;
+                m_connLock.Unlock(MUTEX_CONTEXT);
+
+                /*
+                 * This endpoint is marked as one that needs to be killed since
+                 * it is taking too much time.  Stop the endpoint to convince
+                 * its threads to stop trying to do whatever was taking too much
+                 * time.
+                 */
                 ep->Stop();
                 i = m_authList.upper_bound(ep);
                 changeMade = true;
@@ -4837,8 +4870,17 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                 if (refs == 1) {
                     ep->DecrementRefs();
                     QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. is histoire", ep->GetConnId()));
+
+                    /*
+                     * If the endpoint is on the endpoint list, it occupies a
+                     * slot only on the total connection count.  Update that
+                     * count.
+                     */
+                    m_connLock.Lock(MUTEX_CONTEXT);
                     m_endpointList.erase(i);
-                    DecrementAndFetch(&m_currConn);
+                    --m_currConn;
+                    m_connLock.Unlock(MUTEX_CONTEXT);
+
                     i = m_endpointList.upper_bound(ep);
                     changeMade = true;
                     continue;
@@ -5057,40 +5099,25 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
      * ARDP lock (which is held here since we are in a callback).
      *
      * Bringing up a connection means transiently adding a connection to the
-     * count of currently authenticating connections.  This number is never
-     * allowed to exceed a configured value.  The number of authenticating plus
-     * acive connections may never exceed a configured value.
+     * count of currently authenticating connections, and also to the list of
+     * current connections.  Once the connectton is authenticated (complete) we
+     * drop the currently-authenticating number back down.  Neither of these
+     * numbers are allowed to exceed configured values.
      */
-    uint32_t currAuth = IncrementAndFetch(&m_currAuth);
-    uint32_t currConn = IncrementAndFetch(&m_currConn);
+    m_connLock.Lock(MUTEX_CONTEXT);
 
-    /*
-     * If the number of currently authenticating connections is greater than the
-     * limit on authenticating connections, we can't accommodate this request.
-     * We have already bumped the current number of connections which will
-     * reflect the number of connections if this authentication is carried out.
-     * If this number is greater than the limit on complete connections we can't
-     * accommodate this request.
-     */
-    if (currAuth > m_maxAuth || currConn > m_maxConn) {
+    if (m_currAuth + 1U > m_maxAuth || m_currConn + 1U > m_maxConn) {
         QCC_LogError(ER_CONNECTION_LIMIT_EXCEEDED, ("UDPTransport::AcceptCb(): No slot for new connection"));
-        DecrementAndFetch(&m_currAuth);
-        DecrementAndFetch(&m_currConn);
+        m_connLock.Unlock(MUTEX_CONTEXT);
         DecrementAndFetch(&m_refCount);
         return false;
     }
 
-    /*
-     * The connection is not actually complete yet and there is no corresponding
-     * endpoint on the the endpoint list so we can't claim it as existing yet.
-     * We do consider the not yet existing endpoint as existing since we need a
-     * placeholder for it.  In this UDP Transport the placeholder is an
-     * additional count in m_currAuth.  There is no actual authentication going
-     * on, but we borrow the concept since it fits almost exactly since it is a
-     * transient condition leading up to a complete connestion.  We just have to
-     * be careful about the accounting.
-     */
-    DecrementAndFetch(&m_currConn);
+    ++m_currAuth;
+    ++m_currConn;
+
+    m_connLock.Unlock(MUTEX_CONTEXT);
+
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): Inbound connection accepted"));
 
     /*
@@ -5101,7 +5128,12 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     status = activeHello->LoadBytes(buf, len);
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::AcceptCb(): Can't LoadBytes() BusHello Message"));
-        DecrementAndFetch(&m_currAuth);
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
         DecrementAndFetch(&m_refCount);
         return false;
     }
@@ -5117,7 +5149,12 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     status = activeHello->Unmarshal(endpointName, false, false, true, 0);
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::AcceptCb(): Can't Unmarhsal() BusHello Message"));
-        DecrementAndFetch(&m_currAuth);
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
         DecrementAndFetch(&m_refCount);
         return false;
     }
@@ -5129,7 +5166,12 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         status = ER_BUS_ESTABLISH_FAILED;
         QCC_LogError(status, ("UDPTransport::AcceptCb(): Unexpected interface=\"%s\" in BusHello Message",
                               activeHello->GetInterface()));
-        DecrementAndFetch(&m_currAuth);
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
         DecrementAndFetch(&m_refCount);
         return false;
     }
@@ -5137,7 +5179,12 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     if (activeHello->GetCallSerial() == 0) {
         status = ER_BUS_ESTABLISH_FAILED;
         QCC_LogError(status, ("UDPTransport::AcceptCb(): Unexpected zero serial in BusHello Message"));
-        DecrementAndFetch(&m_currAuth);
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
         DecrementAndFetch(&m_refCount);
         return false;
     }
@@ -5146,7 +5193,12 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         status = ER_BUS_ESTABLISH_FAILED;
         QCC_LogError(status, ("UDPTransport::AcceptCb(): Unexpected destination=\"%s\" in BusHello Message",
                               activeHello->GetDestination()));
-        DecrementAndFetch(&m_currAuth);
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
         DecrementAndFetch(&m_refCount);
         return false;
     }
@@ -5155,7 +5207,12 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         status = ER_BUS_ESTABLISH_FAILED;
         QCC_LogError(status, ("UDPTransport::AcceptCb(): Unexpected object path=\"%s\" in BusHello Message",
                               activeHello->GetObjectPath()));
-        DecrementAndFetch(&m_currAuth);
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
         DecrementAndFetch(&m_refCount);
         return false;
     }
@@ -5164,7 +5221,12 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         status = ER_BUS_ESTABLISH_FAILED;
         QCC_LogError(status, ("UDPTransport::AcceptCb(): Unexpected member name=\"%s\" in BusHello Message",
                               activeHello->GetMemberName()));
-        DecrementAndFetch(&m_currAuth);
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
         DecrementAndFetch(&m_refCount);
         return false;
     }
@@ -5180,7 +5242,12 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     status = activeHello->UnmarshalArgs("su");
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::AcceptCb(): Can't UnmarhsalArgs() BusHello Message"));
-        DecrementAndFetch(&m_currAuth);
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
         DecrementAndFetch(&m_refCount);
         return false;
     }
@@ -5197,7 +5264,12 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     if (numArgs != 2 || args[0].typeId != ALLJOYN_STRING || args[1].typeId != ALLJOYN_UINT32) {
         status = ER_BUS_ESTABLISH_FAILED;
         QCC_LogError(status, ("UDPTransport::AcceptCb(): Unexpected number or type of arguments in BusHello Message"));
-        DecrementAndFetch(&m_currAuth);
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
         DecrementAndFetch(&m_refCount);
         return false;
     }
@@ -5212,7 +5284,12 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     if (remoteGUID == m_bus.GetInternal().GetGlobalGUID().ToString()) {
         status = ER_BUS_SELF_CONNECT;
         QCC_LogError(status, ("UDPTransport::AcceptCb(): BusHello was sent to self"));
-        DecrementAndFetch(&m_currAuth);
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
         DecrementAndFetch(&m_refCount);
         return false;
     }
@@ -5282,7 +5359,12 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     if (status != ER_OK) {
         status = ER_UDP_BUSHELLO;
         QCC_LogError(status, ("UDPTransport::AcceptCb(): Can't make a BusHello Reply Message"));
-        DecrementAndFetch(&m_currAuth);
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
         DecrementAndFetch(&m_refCount);
         return status;
     }
@@ -5335,7 +5417,12 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         delete[] helloReplyBuf;
         helloReplyBuf = NULL;
         QCC_LogError(status, ("UDPTransport::AcceptCb(): ARDP_Accept() failed"));
-        DecrementAndFetch(&m_currAuth);
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
         DecrementAndFetch(&m_refCount);
         return status;
     }
@@ -5347,8 +5434,11 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
      * authenticating endpoints, and we need this to happen without taking the
      * endpointListLock.  What we do is to put it on a "pre" authenticating list
      * that is dealt with especially carefully with respect to locks.
+     *
+     * Once we put the endpoint on a list, it is the responsibility of the code
+     * managing the lists to deal with the authentication slots and total
+     * connection slots.
      */
-
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): Taking pre-auth list lock"));
     m_preListLock.Lock(MUTEX_CONTEXT);
 
@@ -5574,14 +5664,24 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
 
             if (ep->GetConn() == conn && cidFromEp == cidFromConn) {
                 QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Moving endpoint with conn ID == %d to m_endpointList", connId));
-                m_authList.erase(i);
-                DecrementAndFetch(&m_currAuth);
 
+                /*
+                 * If the endpoint is on the auth list, it occupies a slot on
+                 * both the authentication count and the total connection count.
+                 * If we remove it from the authentication list and put it on
+                 * the endpoint list, we are saying we are done with
+                 * authentication, so we update that count, but leave the
+                 * endpoint as occupying a slot in the total connection count
+                 * since it is an endpoint on a list.
+                 */
+                m_connLock.Lock(MUTEX_CONTEXT);
+                m_authList.erase(i);
+                --m_currAuth;
 #ifndef NDEBUG
                 DebugEndpointListCheck(ep);
 #endif
                 m_endpointList.insert(ep);
-                IncrementAndFetch(&m_currConn);
+                m_connLock.Unlock(MUTEX_CONTEXT);
 
                 QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Start()ing endpoint with conn ID == %d.", connId));
                 /*
@@ -5664,6 +5764,14 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
         m_ardpLock.Unlock();
 
         /*
+         * We need to remember in the following code that we have a contract
+         * with Connect() that says we take over ownership of the connection
+         * limit counters after a successful call to ARDP_Connect().  Connect()
+         * will have incremented both m_currAuth and m_currConn.  The
+         * authentication actually happened in the ARDP connect process, so we
+         * need to keep these couters updated as we move things around,
+         * succeeding or failing.
+         *
          * If the connection is no longer valid, there's nothing we can do in
          * terms of waking any connecting thread up.  The thread that started
          * all of this may or may not be there waiting.  If it is there, we
@@ -5679,14 +5787,20 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_ardpLock.Lock();
             ARDP_ReleaseConnection(handle, conn);
             m_ardpLock.Unlock();
+
+            m_connLock.Lock(MUTEX_CONTEXT);
+            --m_currAuth;
+            --m_currConn;
+            m_connLock.Unlock(MUTEX_CONTEXT);
+
             DecrementAndFetch(&m_refCount);
             return;
         }
 
         /*
          * If the connection was valid, we expect to have an event still there
-         * in its context.  Since we put it there, we assert that it is still
-         * there.
+         * in its context.  The thread may not be there, but since we put the
+         * event in, we assert that it (at least) is still there.
          */
         assert(event && "UDPTransport::DoConnectCb(): Connection context did not provide an event");
 
@@ -5724,6 +5838,12 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_ardpLock.Lock();
             ARDP_ReleaseConnection(handle, conn);
             m_ardpLock.Unlock();
+
+            m_connLock.Lock(MUTEX_CONTEXT);
+            --m_currAuth;
+            --m_currConn;
+            m_connLock.Unlock(MUTEX_CONTEXT);
+
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -5739,6 +5859,12 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_ardpLock.Lock();
             ARDP_ReleaseConnection(handle, conn);
             m_ardpLock.Unlock();
+
+            m_connLock.Lock(MUTEX_CONTEXT);
+            --m_currAuth;
+            --m_currConn;
+            m_connLock.Unlock(MUTEX_CONTEXT);
+
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -5754,6 +5880,12 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_ardpLock.Lock();
             ARDP_ReleaseConnection(handle, conn);
             m_ardpLock.Unlock();
+
+            m_connLock.Lock(MUTEX_CONTEXT);
+            --m_currAuth;
+            --m_currConn;
+            m_connLock.Unlock(MUTEX_CONTEXT);
+
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -5770,6 +5902,12 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_ardpLock.Lock();
             ARDP_ReleaseConnection(handle, conn);
             m_ardpLock.Unlock();
+
+            m_connLock.Lock(MUTEX_CONTEXT);
+            --m_currAuth;
+            --m_currConn;
+            m_connLock.Unlock(MUTEX_CONTEXT);
+
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -5802,6 +5940,12 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_ardpLock.Lock();
             ARDP_ReleaseConnection(handle, conn);
             m_ardpLock.Unlock();
+
+            m_connLock.Lock(MUTEX_CONTEXT);
+            --m_currAuth;
+            --m_currConn;
+            m_connLock.Unlock(MUTEX_CONTEXT);
+
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -5817,6 +5961,12 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_ardpLock.Lock();
             ARDP_ReleaseConnection(handle, conn);
             m_ardpLock.Unlock();
+
+            m_connLock.Lock(MUTEX_CONTEXT);
+            --m_currAuth;
+            --m_currConn;
+            m_connLock.Unlock(MUTEX_CONTEXT);
+
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -5837,6 +5987,12 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_ardpLock.Lock();
             ARDP_ReleaseConnection(handle, conn);
             m_ardpLock.Unlock();
+
+            m_connLock.Lock(MUTEX_CONTEXT);
+            --m_currAuth;
+            --m_currConn;
+            m_connLock.Unlock(MUTEX_CONTEXT);
+
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -5858,6 +6014,12 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             m_ardpLock.Lock();
             ARDP_ReleaseConnection(handle, conn);
             m_ardpLock.Unlock();
+
+            m_connLock.Lock(MUTEX_CONTEXT);
+            --m_currAuth;
+            --m_currConn;
+            m_connLock.Unlock(MUTEX_CONTEXT);
+
             DecrementAndFetch(&m_refCount);
             return;
         }
@@ -5924,8 +6086,20 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
 #ifndef NDEBUG
         DebugEndpointListCheck(udpEp);
 #endif
+
+        /*
+         * We have a contract with Connect() that says we take over ownership of
+         * the connection limit counters after a successful call to
+         * ARDP_Connect().  Connect() will have incremented both m_currAuth and
+         * m_currConn.  The authentication actually happened in the ARDP connect
+         * process, so what we need to do here is to decrement m_currAuth, but
+         * leave m_currConn as it is to reflect the now fully authenticated and
+         * active connection.
+         */
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
         m_endpointList.insert(udpEp);
-        IncrementAndFetch(&m_currConn);
+        m_connLock.Unlock(MUTEX_CONTEXT);
 
         /*
          * We cannot call out to the daemon (which Start() will do) with the
@@ -7688,43 +7862,19 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * to succeed.  Specifically, we need to check to see if the connection
      * limits will be violated if we proceed.
      */
+    m_connLock.Lock(MUTEX_CONTEXT);
 
-    uint32_t currAuth = IncrementAndFetch(&m_currAuth);
-    uint32_t currConn = IncrementAndFetch(&m_currConn);
-
-    /*
-     * If the number of currently authenticating connections is greater than the
-     * limit on authenticating connections, we can't accommodate this request.
-     * We have already bumped the current number of connections which will
-     * reflect the number of connections if this authentication is carried out.
-     * If this number is greater than the limit on complete connections we can't
-     * accommodate this request.
-     */
-    if (currAuth > m_maxAuth || currConn > m_maxConn) {
+    if (m_currAuth + 1U > m_maxAuth || m_currConn + 1U > m_maxConn) {
         status = ER_CONNECTION_LIMIT_EXCEEDED;
         QCC_LogError(status, ("UDPTransport::Connect(): No slot for new connection"));
-        DecrementAndFetch(&m_currAuth);
-        DecrementAndFetch(&m_currConn);
+        m_connLock.Unlock(MUTEX_CONTEXT);
         DecrementAndFetch(&m_refCount);
         return status;
     }
 
-    /*
-     * The connection is not actually complete yet and there is no corresponding
-     * endpoint on the the endpoint list so we can't claim it as existing yet.
-     * The DoConnectCb() method will bump m_currConn when it actually puts the
-     * endpoint on the endpoint list.
-     *
-     * We do consider the not yet existing endpoint as existing since we need a
-     * placeholder for it, though.  In this UDP Transport the placeholder is an
-     * additional count in m_currAuth (the count of currently authenticating
-     * connections).  There is no actual authentication going on, just a hello
-     * exchange, but we borrow the concept since it fits almost exactly (it is a
-     * transient condition leading up to a complete connection).  We just have
-     * to be careful about the accounting and make sure to decrement the auth
-     * count when the endpoint becomes up.
-     */
-    DecrementAndFetch(&m_currConn);
+    ++m_currAuth;
+    ++m_currConn;
+    m_connLock.Unlock(MUTEX_CONTEXT);
 
     QCC_DbgPrintf(("UDPTransport::Connect(): Compose BusHello"));
     Message hello(m_bus);
@@ -7732,7 +7882,12 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     if (status != ER_OK) {
         status = ER_UDP_BUSHELLO;
         QCC_LogError(status, ("UDPTransport::Connect(): Can't make a BusHello Message"));
-        DecrementAndFetch(&m_currAuth);
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
         DecrementAndFetch(&m_refCount);
         return status;
     }
@@ -7798,11 +7953,26 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         QCC_LogError(status, ("UDPTransport::Connect(): ARDP_Connect() failed"));
         m_ardpLock.Unlock();
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
-        DecrementAndFetch(&m_currAuth);
+
+        m_connLock.Lock(MUTEX_CONTEXT);
+        --m_currAuth;
+        --m_currConn;
+        m_connLock.Unlock(MUTEX_CONTEXT);
+
         DecrementAndFetch(&m_refCount);
         return status;
     }
 
+    /*
+     * Important note: Once we make a successful call to ARDP_Connect, we are
+     * transferring responsibility for managing the connection limit counters to
+     * the callback.  If ARDP accepts the connection request it guarantees that
+     * it will call back with status, and so we rely on that guarantee to manage
+     * the counters in one place -- the callback.  That means that we are no
+     * longer allowed to touch the counters.  Especially do not decrement them
+     * if a future error is detected.  The slots are occupied until the callback
+     * responds either positively or negatively.
+     */
     Thread* thread = GetThread();
     QCC_DbgPrintf(("UDPTransport::Connect(): Add thread=%p to m_connectThreads", thread));
     assert(thread && "UDPTransport::Connect(): GetThread() returns NULL");
@@ -7896,7 +8066,6 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::Connect(): Event::Wait() failed"));
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
-        DecrementAndFetch(&m_currAuth);
         DecrementAndFetch(&m_refCount);
         return status;
     }
@@ -7970,18 +8139,6 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         }
     }
 
-    /*
-     * No matter if the connection succeeded or not, we are no longer trying to
-     * make the connecton and m_currAuth needs to be decremented.  If the
-     * connection succeeded, m_currConn will have been bumped by DoConnectCb()
-     * and the endpoint will be registered, so decrementing m_currAuth will mean
-     * an authenticating endpoint has turned into an existing (current)
-     * endpoint.  If the connection failed, m_currConn will not have been
-     * incremented and decrementing m_currAuth will mean that the connection
-     * failed altoghether (neither m_currAuth nor m_currConn will have been
-     * bumped as a result of this call).
-     */
-    DecrementAndFetch(&m_currAuth);
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
     DecrementAndFetch(&m_refCount);
     return status;
