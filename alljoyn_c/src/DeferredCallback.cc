@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -28,13 +28,13 @@ qcc::Mutex DeferredCallback::sCallbackListLock;
 
 }
 
-int alljoyn_unity_deferred_callbacks_process()
+int AJ_CALL alljoyn_unity_deferred_callbacks_process()
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ajn::DeferredCallback::TriggerCallbacks();
 }
 
-void alljoyn_unity_set_deferred_callback_mainthread_only(QCC_BOOL mainthread_only)
+void AJ_CALL alljoyn_unity_set_deferred_callback_mainthread_only(QCC_BOOL mainthread_only)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ajn::DeferredCallback::sMainThreadCallbacksOnly = (mainthread_only == QCC_TRUE ? true : false);
