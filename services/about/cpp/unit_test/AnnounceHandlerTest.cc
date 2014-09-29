@@ -1248,7 +1248,7 @@ TEST_F(AnnounceHandlerTest, RemoveLastInterestingObject)
         qcc::Sleep(WAIT_TIME);
     }
 
-    EXPECT_EQ(1, announceHandler.announceHandlerCount);
+    EXPECT_EQ(1U, announceHandler.announceHandlerCount);
 
     status = AboutServiceApi::getInstance()->RemoveObjectDescription("/org/alljoyn/test/a", object_interfaces1);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -1264,7 +1264,7 @@ TEST_F(AnnounceHandlerTest, RemoveLastInterestingObject)
         qcc::Sleep(WAIT_TIME);
     }
 
-    EXPECT_EQ(2, announceHandler.announceHandlerCount);
+    EXPECT_EQ(2U, announceHandler.announceHandlerCount);
 
     AnnouncementRegistrar::UnRegisterAnnounceHandler(clientBus, announceHandler,
                                                      interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
