@@ -308,13 +308,15 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
 
         uint32_t fromRulesId = nextRulesId;
         bool isNewRule = true;
+        uint32_t ruleId = nextRulesId;
         for (std::pair<RuleIterator, RuleIterator> range = rules.equal_range(epName); range.first != range.second; ++range.first) {
             if (range.first->second == rule) {
                 isNewRule = false;
+                ruleId = range.first->second.id;
                 break;
             }
         }
-        rules.insert(std::pair<String, TimestampedRule>(epName, TimestampedRule(rule, nextRulesId)));
+        rules.insert(std::pair<String, TimestampedRule>(epName, TimestampedRule(rule, ruleId)));
         if (isNewRule) {
             ++nextRulesId;
         }
@@ -339,15 +341,15 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
 
 void SessionlessObj::RemoveRule(const qcc::String& epName, Rule& rule)
 {
-    QCC_DbgTrace(("SessionlessObj::RemoveRule(%s, ...)", epName.c_str()));
-
     if (rule.sessionless == Rule::SESSIONLESS_TRUE) {
+        QCC_DbgPrintf(("RemoveRule(epName=%s,rule=%s)", epName.c_str(), rule.ToString().c_str()));
         router.LockNameTable();
         lock.Lock();
 
         std::pair<RuleIterator, RuleIterator> range = rules.equal_range(epName);
         while (range.first != range.second) {
             if (range.first->second == rule) {
+                RemoveImplicitRules(range.first);
                 rules.erase(range.first);
                 break;
             }
@@ -373,9 +375,16 @@ QStatus SessionlessObj::PushMessage(Message& msg)
         return ER_FAIL;
     }
 
-    /* Put the message in the local cache and kick the worker */
-    SessionlessMessageKey key(msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath());
+    router.LockNameTable();
     lock.Lock();
+
+    /* Match the message against any existing implicit rules */
+    uint32_t fromRulesId = nextRulesId - (numeric_limits<uint32_t>::max() >> 1);
+    uint32_t toRulesId = nextRulesId;
+    SendMatchingThroughEndpoint(0, msg, fromRulesId, toRulesId, true);
+
+    /* Put the message in the local cache */
+    SessionlessMessageKey key(msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath());
     advanceChangeId = true;
     SessionlessMessage val(curChangeId, msg);
     LocalCache::iterator it = localCache.find(key);
@@ -384,12 +393,29 @@ QStatus SessionlessObj::PushMessage(Message& msg)
     } else {
         it->second = val;
     }
+
     lock.Unlock();
+    router.UnlockNameTable();
+
+    /* Kick the worker */
     uint32_t zero = 0;
     SessionlessObj* slObj = this;
     QStatus status = timer.AddAlarm(Alarm(zero, slObj));
+    if (ER_OK != status) {
+        /*
+         * When daemon is closing the daemon will receive multiple error
+         * because the timer is exiting.  print a high level debug message
+         * not a log error since this is expected behaver and should not
+         * be presented to the user if they don't want to see it.
+         */
+        if (ER_TIMER_EXITING == status) {
+            QCC_DbgHLPrintf(("Timer::AddAlarm failed : %s", QCC_StatusText(status)));
+        } else {
+            QCC_LogError(status, ("Timer::AddAlarm failed"));
+        }
+    }
 
-    return status;
+    return ER_OK;
 }
 
 bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
@@ -425,42 +451,64 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
     return true;
 }
 
-void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId)
+void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId,
+                                                 bool onlySendIfImplicit)
 {
     uint32_t rulesRangeLen = toRulesId - fromRulesId;
     RuleIterator rit = rules.begin();
+    bool isAnnounce = (0 == strcmp(msg->GetInterface(), "org.alljoyn.About")) && (0 == strcmp(msg->GetMemberName(), "Announce"));
     while (rit != rules.end()) {
-        bool isMatch = false;
+        bool isExplicitMatch = false;
         String epName = rit->first;
         BusEndpoint ep = router.FindEndpoint(epName);
-        if (IN_WINDOW(uint32_t, fromRulesId, rulesRangeLen, rit->second.id) && ep->IsValid() && ep->AllowRemoteMessages()) {
-            if (rit->second.IsMatch(msg)) {
-                isMatch = true;
-            } else if (rit->second == legacyRule) {
-                /*
-                 * Legacy clients will add the "type='error',sessionless='t'"
-                 * rule.  In that case the expected behavior is that incoming
-                 * sessionless signals will route through the daemon router's
-                 * rule table.
-                 */
-                router.GetRuleTable().Lock();
-                for (ajn::RuleIterator drit = router.GetRuleTable().FindRulesForEndpoint(ep);
-                     !isMatch && (drit != router.GetRuleTable().End()) && (drit->first == ep);
-                     ++drit) {
-                    isMatch = drit->second.IsMatch(msg);
+        RuleIterator end = rules.upper_bound(epName);
+        for (; rit != end; ++rit) {
+            if (IN_WINDOW(uint32_t, fromRulesId, rulesRangeLen, rit->second.id) && ep->IsValid() && ep->AllowRemoteMessages()) {
+                if (rit->second.IsMatch(msg)) {
+                    isExplicitMatch = true;
+                    if (isAnnounce && !rit->second.implements.empty()) {
+                        /*
+                         * Add an implicit rule so that we will receive Announce
+                         * signals if the interface of interest is removed from the
+                         * Announce signal.
+                         */
+                        String ruleStr = String("sender='") + msg->GetSender() + "',interface='org.alljoyn.About',member='Announce'";
+                        Rule rule(ruleStr.c_str());
+                        AddImplicitRule(rule, rit);
+                    }
+                } else if (rit->second == legacyRule) {
+                    /*
+                     * Legacy clients will add the "type='error',sessionless='t'"
+                     * rule.  In that case the expected behavior is that incoming
+                     * sessionless signals will route through the daemon router's
+                     * rule table.
+                     */
+                    router.GetRuleTable().Lock();
+                    for (ajn::RuleIterator drit = router.GetRuleTable().FindRulesForEndpoint(ep);
+                         !isExplicitMatch && (drit != router.GetRuleTable().End()) && (drit->first == ep);
+                         ++drit) {
+                        isExplicitMatch = drit->second.IsMatch(msg);
+                    }
+                    router.GetRuleTable().Unlock();
                 }
-                router.GetRuleTable().Unlock();
             }
         }
-        if (isMatch) {
+
+        bool isImplicitMatch = false;
+        if (isAnnounce && !isExplicitMatch && ep->IsValid() && ep->AllowRemoteMessages()) {
+            /* The message did not match any rules for this endpoint.
+             * Check if it matches (only) an implicit rule. */
+            isImplicitMatch = IsOnlyImplicitMatch(epName, msg);
+        }
+
+        if ((onlySendIfImplicit && !isExplicitMatch && isImplicitMatch) ||
+            (!onlySendIfImplicit && (isExplicitMatch || isImplicitMatch))) {
             lock.Unlock();
             router.UnlockNameTable();
             SendThroughEndpoint(msg, ep, sid);
             router.LockNameTable();
             lock.Lock();
             rit = rules.upper_bound(epName);
-        } else {
-            ++rit;
         }
     }
 }
@@ -515,6 +563,7 @@ void SessionlessObj::NameOwnerChanged(const String& name,
         lock.Lock();
         std::pair<RuleIterator, RuleIterator> range = rules.equal_range(name);
         if (range.first != rules.end()) {
+            RemoveImplicitRules(name);
             rules.erase(range.first, range.second);
         }
 
@@ -660,7 +709,7 @@ void SessionlessObj::DoSessionLost(SessionId sid, SessionLostReason reason)
             /* An error occurred while getting the signals, so retry */
             if (ScheduleWork(cache) != ER_OK) {
                 /* Retries exhausted. Clear state and wait for new advertisment */
-                remoteCaches.erase(cit);
+                EraseRemoteCache(cit);
             }
         }
     }
@@ -888,7 +937,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                 } else {
                     QCC_LogError(ER_FAIL, ("Exhausted JoinSession retries to %s", cache.guid.c_str()));
                     String guid = cache.guid;
-                    remoteCaches.erase(cit);
+                    EraseRemoteCache(cit);
                     cit = remoteCaches.upper_bound(guid);
                 }
             } else {
@@ -950,6 +999,12 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
                         matchRules.push_back(rit->second.ToString());
                     }
                 }
+                for (ImplicitRuleIterator irit = implicitRules.begin(); irit != implicitRules.end(); ++irit) {
+                    qcc::String sender = irit->sender;
+                    if (sender.substr(1, sender.find_last_of('.') - 1) == cache.guid) {
+                        matchRules.push_back(irit->ToString());
+                    }
+                }
             }
         } else {
             /* Clear in progress */
@@ -958,7 +1013,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
 
             if (ScheduleWork(cache) != ER_OK) {
                 /* Retries exhausted. Clear state and wait for new advertisment */
-                remoteCaches.erase(cit);
+                EraseRemoteCache(cit);
             }
         }
         lock.Unlock();
@@ -992,7 +1047,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
 
                     if (ScheduleWork(cache) != ER_OK) {
                         /* Retries exhausted. Clear state and wait for new advertisment */
-                        remoteCaches.erase(cit);
+                        EraseRemoteCache(cit);
                     }
                 }
                 lock.Unlock();
@@ -1252,7 +1307,7 @@ void SessionlessObj::ScheduleWork(bool doInitialBackoff)
         String guid = cache.guid;
         if (PendingWork(cache) && ScheduleWork(cache, true, doInitialBackoff) != ER_OK) {
             /* Retries exhausted. Clear state and wait for new advertisment */
-            remoteCaches.erase(cit);
+            EraseRemoteCache(cit);
             cit = remoteCaches.upper_bound(guid);
         } else {
             ++cit;
@@ -1406,7 +1461,6 @@ bool SessionlessObj::ResponseHandler(TransportMask transport, MDNSPacket respons
     }
 
     if (advRecord->GetRRttl() == 0) {
-        QCC_DbgPrintf(("Ignoring response with zero ttl"));
         return false;
     }
 
@@ -1546,6 +1600,128 @@ QStatus SessionlessObj::CancelFindAdvertisementByTransport(const char* matching,
         QCC_LogError(status, ("%s.CancelFindAdvertisement returned ERROR_MESSAGE (error=%s)", org::alljoyn::Bus::InterfaceName, reply->GetErrorDescription().c_str()));
     }
     return status;
+}
+
+void SessionlessObj::EraseRemoteCache(RemoteCaches::iterator cit)
+{
+    RemoveImplicitRules(cit->second);
+    remoteCaches.erase(cit);
+}
+
+void SessionlessObj::AddImplicitRule(const Rule& rule, const RuleIterator& explicitRule) {
+    for (ImplicitRuleIterator irit = implicitRules.begin(); irit != implicitRules.end(); ++irit) {
+        if (*irit == rule) {
+            for (std::vector<RuleIterator>::iterator erit = irit->explicitRules.begin(); erit != irit->explicitRules.end(); ++erit) {
+                if (*erit == explicitRule) {
+                    return;
+                }
+            }
+            irit->explicitRules.push_back(explicitRule);
+            return;
+        }
+    }
+    implicitRules.push_back(ImplicitRule(rule, explicitRule));
+}
+
+void SessionlessObj::RemoveImplicitRules(const qcc::String& epName) {
+    QCC_DbgTrace(("SessionlessObj::RemoveImplicitRules(epName=%s)", epName.c_str()));
+    ImplicitRuleIterator irit = implicitRules.begin();
+    while (irit != implicitRules.end()) {
+        std::vector<RuleIterator>::iterator erit = irit->explicitRules.begin();
+        while (erit != irit->explicitRules.end()) {
+            if ((*erit)->first == epName) {
+                irit->explicitRules.erase(erit);
+                erit = irit->explicitRules.begin();
+            } else {
+                ++erit;
+            }
+        }
+        if (irit->explicitRules.empty()) {
+            implicitRules.erase(irit);
+            irit = implicitRules.begin();
+        } else {
+            ++irit;
+        }
+    }
+}
+
+void SessionlessObj::RemoveImplicitRules(const RuleIterator& explicitRule) {
+    QCC_DbgTrace(("SessionlessObj::RemoveImplicitRules(explicitrule=%s for endpoint %s)", explicitRule->second.ToString().c_str(), explicitRule->first.c_str()));
+    ImplicitRuleIterator irit = implicitRules.begin();
+    while (irit != implicitRules.end()) {
+        bool deleted = false;
+        for (std::vector<RuleIterator>::iterator erit = irit->explicitRules.begin(); erit != irit->explicitRules.end(); ++erit) {
+            if (*erit == explicitRule) {
+                irit->explicitRules.erase(erit);
+                if (irit->explicitRules.empty()) {
+                    implicitRules.erase(irit);
+                    deleted = true;
+                }
+            }
+            break;
+        }
+        if (deleted) {
+            irit = implicitRules.begin();
+        } else {
+            irit++;
+        }
+    }
+}
+
+void SessionlessObj::RemoveImplicitRules(const RemoteCache& cache) {
+    QCC_DbgTrace(("SessionlessObj::RemoveImplicitRules(remotecache=%s)", cache.guid.c_str()));
+    String guid = cache.guid;
+    ImplicitRuleIterator irit = implicitRules.begin();
+    while (irit != implicitRules.end()) {
+        String sender = irit->sender;
+        if (sender.substr(1, sender.find_last_of('.') - 1) == guid) {
+            implicitRules.erase(irit);
+            irit = implicitRules.begin();
+        } else {
+            irit++;
+        }
+    }
+}
+
+bool SessionlessObj::IsOnlyImplicitMatch(const qcc::String& epName, Message& msg)
+{
+    QCC_DbgTrace(("IsOnlyImplicitMatch(epName=%s, msg.sender=%s)", epName.c_str(), msg->GetSender()));
+
+    /* Find the implicit rule that matches the message sender, check all associated
+     * explicit rules that originate from epName. If none of those matches, the match is
+     * purely implicit, and the implicit match rule should be removed for this epName.
+     */
+    for (ImplicitRuleIterator irit = implicitRules.begin(); irit != implicitRules.end(); ++irit) {
+        if (irit->IsMatch(msg)) {
+            bool hasExplicitMatch = false;
+            std::pair<RuleIterator, RuleIterator> range = rules.equal_range(epName);
+            bool hasExplicitRules = (range.first != range.second);
+            for (; range.first != range.second; range.first++) {
+                if (range.first->second.IsMatch(msg)) {
+                    hasExplicitMatch = true;
+                    break;
+                }
+            }
+            if (hasExplicitRules && !hasExplicitMatch) {
+                /* remove all explicit rules related to epName */
+                vector<RuleIterator>::iterator erit = irit->explicitRules.begin();
+                while (erit != irit->explicitRules.end()) {
+                    if ((*erit)->first == epName) {
+                        irit->explicitRules.erase(erit);
+                        erit = irit->explicitRules.begin();
+                    } else {
+                        erit++;
+                    }
+                }
+                if (irit->explicitRules.empty()) {
+                    implicitRules.erase(irit);
+                }
+                return true;
+            }
+            return false;
+        }
+    }
+    return false;
 }
 
 }
