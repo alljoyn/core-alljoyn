@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -27,9 +27,9 @@
 extern "C" {
 #endif
 
-extern AJ_API const char* alljoyn_getversion();        /**< Gives the version of AllJoyn Library */
-extern AJ_API const char* alljoyn_getbuildinfo();      /**< Gives build information of AllJoyn Library */
-extern AJ_API uint32_t alljoyn_getnumericversion();    /**< Gives the version of AllJoyn Library as a single number */
+extern AJ_API const char* AJ_CALL alljoyn_getversion();        /**< Gives the version of AllJoyn Library */
+extern AJ_API const char* AJ_CALL alljoyn_getbuildinfo();      /**< Gives build information of AllJoyn Library */
+extern AJ_API uint32_t AJ_CALL alljoyn_getnumericversion();    /**< Gives the version of AllJoyn Library as a single number */
 
 #ifdef __cplusplus
 } /* extern "C" */
