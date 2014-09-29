@@ -3010,7 +3010,7 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
 
         MDNSTextRData* txtRDataTcp = new MDNSTextRData();
         if (m_reliableIPv6Port[TRANSPORT_INDEX_TCP]) {
-            txtRDataTcp->SetValue("r6port", m_reliableIPv6Port[TRANSPORT_INDEX_TCP]);
+            txtRDataTcp->SetValue("r6port", U32ToString(m_reliableIPv6Port[TRANSPORT_INDEX_TCP]));
         }
 
         MDNSResourceRecord txtRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRDataTcp);
@@ -3035,7 +3035,7 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
 
         MDNSTextRData* txtRDataUdp = new MDNSTextRData();
         if (m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]) {
-            txtRDataUdp->SetValue("u6port", m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]);
+            txtRDataUdp->SetValue("u6port", U32ToString(m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]));
         }
 
         MDNSResourceRecord txtRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRDataUdp);
@@ -3788,12 +3788,12 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                         if (answerRecord->GetDomainName().find("._tcp.") != String::npos) {
 
                             if (m_reliableIPv6Port[TRANSPORT_INDEX_TCP]) {
-                                txtRData->SetValue("r6port",  m_reliableIPv6Port[TRANSPORT_INDEX_TCP]);
+                                txtRData->SetValue("r6port",  U32ToString(m_reliableIPv6Port[TRANSPORT_INDEX_TCP]));
                             }
 
                         } else if (answerRecord->GetDomainName().find("._udp.") != String::npos) {
                             if (m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]) {
-                                txtRData->SetValue("u6port",  m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]);
+                                txtRData->SetValue("u6port",  U32ToString(m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]));
                             }
 
                         }
@@ -5171,8 +5171,9 @@ void* IpNameServiceImpl::Run(void* arg)
                 m_terminal = true;
 
                 for (uint32_t index = 0; index < N_TRANSPORTS; ++index) {
-                    Retransmit(index, true, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V0_V1, MaskFromIndex(index));
-                    Retransmit(index, true, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V2, TRANSPORT_TCP | TRANSPORT_UDP);
+                    vector<String> empty;
+                    Retransmit(index, true, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V0_V1, MaskFromIndex(index), empty);
+                    Retransmit(index, true, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V2, TRANSPORT_TCP | TRANSPORT_UDP, empty);
                 }
                 break;
             } else if (*i == &timerEvent) {
@@ -5373,12 +5374,12 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
             pilotPacket->SetVersion(2, 2);
 
             if (m_reliableIPv6Port[TRANSPORT_INDEX_TCP]) {
-                txtRDataTcp.SetValue("r6port", m_reliableIPv6Port[TRANSPORT_INDEX_TCP]);
+                txtRDataTcp.SetValue("r6port", U32ToString(m_reliableIPv6Port[TRANSPORT_INDEX_TCP]));
             }
             MDNSResourceRecord txtRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataTcp);
 
             if (m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]) {
-                txtRDataUdp.SetValue("u6port", m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]);
+                txtRDataUdp.SetValue("u6port", U32ToString(m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]));
             }
 
             MDNSResourceRecord txtRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataUdp);
@@ -5569,7 +5570,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
 
                             if ((tm & TRANSPORT_TCP) && (!m_reliableIPv4PortMap[TRANSPORT_INDEX_TCP].empty() || m_reliableIPv6Port[TRANSPORT_INDEX_TCP])) {
                                 if (m_reliableIPv6Port[TRANSPORT_INDEX_TCP]) {
-                                    txtRDataTcp.SetValue("r6port", m_reliableIPv6Port[TRANSPORT_INDEX_TCP]);
+                                    txtRDataTcp.SetValue("r6port", U32ToString(m_reliableIPv6Port[TRANSPORT_INDEX_TCP]));
                                 }
                                 MDNSResourceRecord txtRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataTcp);
                                 additionalPacket->AddAnswer(ptrRecordTcp);
@@ -5579,7 +5580,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
 
                             if (tm & TRANSPORT_UDP && (!m_unreliableIPv4PortMap[TRANSPORT_INDEX_UDP].empty() || m_unreliableIPv6Port[TRANSPORT_INDEX_UDP])) {
                                 if (m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]) {
-                                    txtRDataUdp.SetValue("u6port", m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]);
+                                    txtRDataUdp.SetValue("u6port", U32ToString(m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]));
                                 }
                                 MDNSResourceRecord txtRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataUdp);
                                 additionalPacket->AddAnswer(ptrRecordUdp);
@@ -5859,7 +5860,7 @@ void IpNameServiceImpl::GetQueryPackets(std::list<Packet>& packets, const uint8_
     m_mutex.Unlock();
 }
 
-void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask completeTransportMask, const int32_t interfaceIndex, const qcc::AddressFamily family, const qcc::IPAddress& localAddress)
+void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask completeTransportMask, vector<qcc::String>& wkns, const int32_t interfaceIndex, const qcc::AddressFamily family, const qcc::IPAddress& localAddress)
 {
     //
     // Type can be one of the following 3 values:
@@ -5875,6 +5876,10 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         type &= ~TRANSMIT_V0_V1;
     }
 
+    if (type == 0) {
+        //Nothing to transmit
+        return;
+    }
     QCC_DbgPrintf(("IpNameServiceImpl::Retransmit()"));
 
     //
@@ -6192,6 +6197,21 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         // advertisements but she will only be shooting herself in the foot.
         //
         for (set<qcc::String>::iterator i = m_advertised[transportIndex].begin(); i != m_advertised[transportIndex].end(); ++i) {
+
+            //Do not send non-matching names if replying quietly
+            if (quietly) {
+                bool ignore = true;
+                for (vector<String>::iterator itWkn = wkns.begin(); itWkn != wkns.end(); itWkn++) {
+                    //Do not send non-matching names if replying quietly
+                    if (!(WildcardMatch((*i), (*itWkn)))) {
+                        ignore = false;
+                        break;
+                    }
+                }
+                if (ignore) {
+                    continue;
+                }
+            }
             QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Accumulating \"%s\"", (*i).c_str()));
 
             //
@@ -6276,6 +6296,19 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
         if (quietly) {
             for (set<qcc::String>::iterator i = m_advertised_quietly[transportIndex].begin(); i != m_advertised_quietly[transportIndex].end(); ++i) {
+                if (quietly) {
+                    bool ignore = true;
+                    for (vector<String>::iterator itWkn = wkns.begin(); itWkn != wkns.end(); itWkn++) {
+                        //Do not send non-matching names if replying quietly
+                        if (!(WildcardMatch((*i), (*itWkn)))) {
+                            ignore = false;
+                            break;
+                        }
+                    }
+                    if (ignore) {
+                        continue;
+                    }
+                }
                 QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Accumulating (quiet) \"%s\"", (*i).c_str()));
 
                 size_t currentSize = nspacket->GetSerializedSize() + isAt.GetSerializedSize();
@@ -6388,7 +6421,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
             MDNSTextRData* txtRDataTcp = new MDNSTextRData();
             if (m_reliableIPv6Port[TRANSPORT_INDEX_TCP]) {
-                txtRDataTcp->SetValue("r6port", m_reliableIPv6Port[TRANSPORT_INDEX_TCP]);
+                txtRDataTcp->SetValue("r6port", U32ToString(m_reliableIPv6Port[TRANSPORT_INDEX_TCP]));
             }
 
             MDNSResourceRecord txtRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, exiting ? 0 : m_tDuration, txtRDataTcp);
@@ -6412,7 +6445,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
             MDNSTextRData* txtRDataUdp = new MDNSTextRData();
             if (m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]) {
-                txtRDataUdp->SetValue("u6port", m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]);
+                txtRDataUdp->SetValue("u6port", U32ToString(m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]));
             }
 
             MDNSResourceRecord txtRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, exiting ? 0 : m_tDuration, txtRDataUdp);
@@ -6447,6 +6480,22 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                 advRData->SetTransport(tm);
             }
             for (set<qcc::String>::iterator it = advertising.begin(); it != advertising.end(); ++it) {
+
+                //Do not send non-matching names if requestor has set send_matching_only i.e. wkns.size() > 0
+                if (wkns.size() > 0) {
+                    bool ignore = true;
+                    for (vector<String>::iterator itWkn = wkns.begin(); itWkn != wkns.end(); itWkn++) {
+                        //Do not send non-matching names if requestor has set send_matching_only i.e. wkns.size() > 0
+                        if (!(WildcardMatch((*it), (*itWkn)))) {
+                            ignore = false;
+                            break;
+                        }
+                    }
+                    if (ignore) {
+                        continue;
+                    }
+                }
+
                 QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Accumulating \"%s\"", (*it).c_str()));
 
                 //
@@ -6521,6 +6570,20 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
             if (quietly) {
 
                 for (set<qcc::String>::iterator it = advertising_quietly.begin(); it != advertising_quietly.end(); ++it) {
+                    //Do not send non-matching names if requestor has set send_matching_only i.e. wkns.size() > 0
+                    if (wkns.size() > 0) {
+                        bool ignore = true;
+                        for (vector<String>::iterator itWkn = wkns.begin(); itWkn != wkns.end(); itWkn++) {
+                            //Do not send non-matching names if requestor has set send_matching_only i.e. wkns.size() > 0
+                            if (!(WildcardMatch((*it), (*itWkn)))) {
+                                ignore = false;
+                                break;
+                            }
+                        }
+                        if (ignore) {
+                            continue;
+                        }
+                    }
                     QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Accumulating (quiet) \"%s\"", (*it).c_str()));
 
                     size_t currentSize = mdnsPacket->GetSerializedSize();
@@ -6591,10 +6654,8 @@ void IpNameServiceImpl::DoPeriodicMaintenance(void)
         if (m_timer == m_tRetransmit) {
             QCC_DbgPrintf(("IpNameServiceImpl::DoPeriodicMaintenance(): Retransmit()"));
             for (uint32_t index = 0; index < N_TRANSPORTS; ++index) {
-                //
-                //Remove periodic unsolicitated responses for V2
-                //
-                Retransmit(index, false, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V0_V1, MaskFromIndex(index));
+                vector<String> empty;
+                Retransmit(index, false, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V0_V1, MaskFromIndex(index), empty);
             }
             m_timer = m_tDuration;
         }
@@ -6635,7 +6696,7 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
             return;
         }
     }
-
+    vector<String> wkns;
     //
     // The who-has message doesn't specify which transport is doing the asking.
     // This is an oversight and should be fixed in a subsequent version.  The
@@ -6672,8 +6733,9 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
         bool respond = false;
         bool respondQuietly = false;
         for (uint32_t i = 0; i < whoHas.GetNumberNames(); ++i) {
-            qcc::String wkn = whoHas.GetName(i);
 
+            qcc::String wkn = whoHas.GetName(i);
+            wkns.push_back(wkn);
             //
             // Zero length strings are unmatchable.  If you want to do a wildcard
             // match, you've got to send a wildcard character.
@@ -6741,10 +6803,11 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
                 family = QCC_AF_INET6;
             }
             if (nsVersion == 0 && msgVersion == 0) {
-                Retransmit(index, false, respondQuietly, endpoint, TRANSMIT_V0, MaskFromIndex(index), interfaceIndex, family, localAddress);
+                vector<String> empty;
+                Retransmit(index, false, respondQuietly, endpoint, TRANSMIT_V0, MaskFromIndex(index), empty, interfaceIndex, family, localAddress);
             }
             if (nsVersion == 1 && msgVersion == 1) {
-                Retransmit(index, false, respondQuietly, endpoint, TRANSMIT_V1, MaskFromIndex(index), interfaceIndex, family, localAddress);
+                Retransmit(index, false, respondQuietly, endpoint, TRANSMIT_V1, MaskFromIndex(index), wkns, interfaceIndex, family, localAddress);
             }
             m_mutex.Lock();
         }
@@ -7693,7 +7756,6 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, IPEndpoint en
         QCC_DbgPrintf(("Ignoring query with invalid sender info"));
         return;
     }
-
     IPEndpoint ns4(refRData->GetIPV4ResponseAddr(), refRData->GetIPV4ResponsePort());
 
     String guid = refRecord->GetDomainName().substr(sizeof("sender-info.") - 1, 32);
@@ -7750,6 +7812,8 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
         QCC_DbgPrintf(("Ignoring query with invalid search info"));
         return true;
     }
+
+    vector<String> wkns;
     //
     // The who-has message doesn't specify which transport is doing the asking.
     // This is an oversight and should be fixed in a subsequent version.  The
@@ -7786,7 +7850,9 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
         bool respond = false;
         for (int i = 0; i < searchRData->GetNumNames(); ++i) {
             String wkn = searchRData->GetNameAt(i);
-
+            if (searchRData->SendMatchOnly()) {
+                wkns.push_back(wkn);
+            }
             //
             // Zero length strings are unmatchable.  If you want to do a wildcard
             // match, you've got to send a wildcard character.
@@ -7840,7 +7906,7 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
         if (respond) {
             m_mutex.Unlock();
             if (ns4.GetAddress().IsIPv4()) {
-                Retransmit(index, false, true, ns4, TRANSMIT_V2, completeTransportMask);
+                Retransmit(index, false, true, ns4, TRANSMIT_V2, completeTransportMask, wkns);
             }
             m_mutex.Lock();
         }
