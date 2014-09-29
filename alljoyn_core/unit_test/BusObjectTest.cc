@@ -48,10 +48,10 @@ class BusObjectTestBusObject : public BusObject {
         wasUnregistered = true;
     }
 
-    QStatus SendSignal() {
+    QStatus SendSignal(uint8_t flags = 0) {
         const InterfaceDescription::Member*  signal_member = bus.GetInterface("org.test")->GetMember("my_signal");
         MsgArg arg("s", "Signal");
-        QStatus status = Signal(NULL, 0, *signal_member, &arg, 1, 0, 0);
+        QStatus status = Signal(NULL, 0, *signal_member, &arg, 1, 0, flags);
         return status;
     }
 
@@ -326,8 +326,10 @@ class BusObjectTestSignalReceiver : public MessageReceiver {
     bool signalReceived;
 };
 
-//Test that signal is received because of register signal handler. Then signal is not received because of unregister signal handler.
-TEST(BusObjectTest, SendSignalAfterUnregistersignalHandler)
+//Test that local broadcast signal is received because of register signal handler.
+//Then all-session broadcast is not received because not in session.
+//Then local broadcast signal is not received because of unregister signal handler.
+TEST(BusObjectTest, SendSignals)
 {
     BusAttachment busService("test3Service");
     BusAttachment busClient("test3Client");
@@ -402,8 +404,23 @@ TEST(BusObjectTest, SendSignalAfterUnregistersignalHandler)
     }
     EXPECT_TRUE(signalReceiver.signalReceived);
 
+    // send an all-session broadcast signal
+    // the client is not expected to receive this signal as it is not in a session with the service
     signalReceiver.signalReceived = false;
+    status = testObj.SendSignal(ALLJOYN_FLAG_ALLSESSION_BROADCAST);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    //verify that client HAS NOT received the signal
+    for (int i = 0; i < 500; ++i) {
+        qcc::Sleep(10);
+        if (signalReceiver.signalReceived) {
+            break;
+        }
+    }
+    EXPECT_FALSE(signalReceiver.signalReceived);
+
     //client side unregisters the signal handler
+    signalReceiver.signalReceived = false;
     status = busClient.UnregisterSignalHandler(&signalReceiver,
                                                static_cast<MessageReceiver::SignalHandler>(&BusObjectTestSignalReceiver::SignalHandler),
                                                signal_member,

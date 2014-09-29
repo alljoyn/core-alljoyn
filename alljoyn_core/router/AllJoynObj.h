@@ -606,9 +606,9 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
 
     /* Session map */
     struct SessionMapEntry {
-        qcc::String endpointName;
-        SessionId id;
-        qcc::String sessionHost;
+        qcc::String endpointName; // (local) endpoint for which we have the map
+        SessionId id;             // session id or 0 for bound session
+        qcc::String sessionHost;  // unique name of the session host
         SessionPort sessionPort;
         SessionOpts opts;
         qcc::SocketFd fd;

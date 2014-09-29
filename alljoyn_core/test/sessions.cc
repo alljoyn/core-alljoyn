@@ -1061,6 +1061,14 @@ int main(int argc, char** argv)
             } else {
                 printf("Usage: chatecho [on|off]\n");
             }
+        } else if (cmd == "achat") {
+            uint8_t flags = ALLJOYN_FLAG_ALLSESSION_BROADCAST;
+            String chatMsg = Trim(line);
+            if (chatMsg.empty()) {
+                printf("Usage: achat <msg>\n");
+                continue;
+            }
+            sessionTestObj.SendChatSignal(0, chatMsg.c_str(), flags);
         } else if (cmd == "schat") {
             uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
             String chatMsg = Trim(line);
@@ -1128,6 +1136,7 @@ int main(int argc, char** argv)
             printf("leave <sessionId>                                             - Leave a session\n");
             printf("chat <sessionId> <msg>                                        - Send a message over a given session\n");
             printf("cchat <sessionId> <msg>                                       - Send a message over a given session with compression\n");
+            printf("achat <msg>                                                   - Send an all-session broadcast message\n");
             printf("schat <msg>                                                   - Send a sessionless message\n");
             printf("cancelsessionless <serialNum>                                 - Cancel a sessionless message\n");
             printf("autochat <sessionId> [count] [delay] [minSize] [maxSize]      - Send periodic messages of various sizes\n");

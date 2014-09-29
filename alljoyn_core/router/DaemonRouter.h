@@ -339,7 +339,8 @@ class DaemonRouter : public Router {
      * @return  ER_OK if successful.
      */
     QStatus AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp,
-                            RemoteEndpoint& destB2bEp, SessionOpts* optsHint = NULL);
+                            RemoteEndpoint& destB2bEp, SessionOpts* optsHint = NULL,
+                            bool srcIsSessionHost = false, bool destIsSessionHost = false);
 
     /**
      * Remove existing session routes.
@@ -373,12 +374,13 @@ class DaemonRouter : public Router {
         qcc::String src;
         RemoteEndpoint b2bEp;
         BusEndpoint destEp;
+        bool srcIsSessionHost;
 
         SessionCastEntry(SessionId id, const qcc::String& src) :
             id(id), src(src) { }
 
-        SessionCastEntry(SessionId id, const qcc::String& src, RemoteEndpoint& b2bEp, BusEndpoint& destEp) :
-            id(id), src(src), b2bEp(b2bEp), destEp(destEp) { }
+        SessionCastEntry(SessionId id, const qcc::String& src, RemoteEndpoint& b2bEp, BusEndpoint& destEp, bool srcIsHost) :
+            id(id), src(src), b2bEp(b2bEp), destEp(destEp), srcIsSessionHost(srcIsHost) { }
 
         bool operator<(const SessionCastEntry& other) const {
             /* The order of comparison of src and id has been reversed, so that upper_bound can be

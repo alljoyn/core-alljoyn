@@ -64,6 +64,19 @@ static const uint8_t ALLJOYN_FLAG_GLOBAL_BROADCAST   = 0x20;
 static const uint8_t ALLJOYN_FLAG_COMPRESSED         = 0x40;
 /** Body is encrypted */
 static const uint8_t ALLJOYN_FLAG_ENCRYPTED          = 0x80;
+/** All-session broadcast */
+static const uint8_t ALLJOYN_FLAG_ALLSESSION_BROADCAST = (ALLJOYN_FLAG_GLOBAL_BROADCAST | 0x01);
+/* A note about the unusual bit mask to indicate all-session broadcast:
+ * This is a distinct signal delivery behavior, and as such it would merit its
+ * own flag in the message header byte. There are no free bits left, however,
+ * so we've had to improvise. The NO_REPLY_EXPECTED bit is meaningless in the
+ * context of signals, so the reuse of this bit ought to be safe. The
+ * combination with GLOBAL_BROADCAST ensures that older routers do not simply
+ * drop the message, but rather treat it as a GLOBAL_BROADCAST message. That
+ * ensures that, in the presence of legacy routers, the signal gets delivered
+ * _at least_ to all intended recipients, but potentially also to some
+ * unintended receivers.
+ */
 // @}
 
 /** ALLJOYN protocol version */
@@ -215,7 +228,14 @@ class _Message {
      *
      * @return  Return true if this is a global broadcast message.
      */
-    bool IsGlobalBroadcast() const { return IsBroadcastSignal() && (msgHeader.flags & ALLJOYN_FLAG_GLOBAL_BROADCAST); }
+    bool IsGlobalBroadcast() const { return IsBroadcastSignal() && (msgHeader.flags & ALLJOYN_FLAG_GLOBAL_BROADCAST) && !IsAllSessionBroadcast(); }
+
+    /**
+     * Messages broadcast to the joiners of all hosted sessions are all-session broadcast messages.
+     *
+     * @return  Return true if this is an all-session broadcast message.
+     */
+    bool IsAllSessionBroadcast() const { return IsBroadcastSignal() && ((msgHeader.flags & ALLJOYN_FLAG_ALLSESSION_BROADCAST) == ALLJOYN_FLAG_ALLSESSION_BROADCAST); }
 
     /**
      * Determin if message is sessionless.
