@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -25,19 +25,19 @@
 
 #define QCC_MODULE "ALLJOYN_C"
 
-const char* alljoyn_getversion()
+const char* AJ_CALL alljoyn_getversion()
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ajn::GetVersion();
 }
 
-const char* alljoyn_getbuildinfo()
+const char* AJ_CALL alljoyn_getbuildinfo()
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ajn::GetBuildInfo();
 }
 
-uint32_t alljoyn_getnumericversion()
+uint32_t AJ_CALL alljoyn_getnumericversion()
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ajn::GetNumericVersion();
