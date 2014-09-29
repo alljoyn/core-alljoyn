@@ -694,7 +694,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                         QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Join session request accepted"));
                         /* setup the forward and reverse routes through the local daemon */
                         RemoteEndpoint tEp;
-                        status = ajObj.router.AddSessionRoute(newSessionId, joinerEp, NULL, rSessionEp, tEp);
+                        status = ajObj.router.AddSessionRoute(newSessionId, joinerEp, NULL, rSessionEp, tEp, NULL, false, true);
                         if (status != ER_OK) {
                             replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
                             QCC_LogError(status, ("AddSessionRoute(%u, %s, NULL, %s, tEp) failed", newSessionId, sender.c_str(), rSessionEp->GetUniqueName().c_str()));
@@ -955,7 +955,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 if (joinerEp->IsValid()) {
                     BusEndpoint busEndpoint = BusEndpoint::cast(vSessionEp);
                     QCC_DbgPrintf(("JoinSessionThread::RunJoin(): AddSessionRoute() for session ID %d.", id));
-                    status = ajObj.router.AddSessionRoute(id, joinerEp, NULL, busEndpoint, b2bEp, b2bEp->IsValid() ? NULL : &optsOut);
+                    status = ajObj.router.AddSessionRoute(id, joinerEp, NULL, busEndpoint, b2bEp, b2bEp->IsValid() ? NULL : &optsOut, false, true);
                     if (status != ER_OK) {
                         replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
                         QCC_LogError(status, ("AddSessionRoute(%u, %s, NULL, %s, %s, %s) failed", id, sender.c_str(), vSessionEp->GetUniqueName().c_str(), b2bEp->GetUniqueName().c_str(), b2bEp->IsValid() ? "NULL" : "opts"));
@@ -1104,7 +1104,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
             /* Add session routing */
             if (memberEp->IsValid() && joinerEp->IsValid() && (status == ER_OK)) {
                 QCC_DbgPrintf(("JoinSessionThread::RunJoin(): AddSessionRoute()"));
-                status = ajObj.router.AddSessionRoute(id, joinerEp, NULL, memberEp, memberB2BEp);
+                status = ajObj.router.AddSessionRoute(id, joinerEp, NULL, memberEp, memberB2BEp, NULL, false, false);
                 if (status != ER_OK) {
                     QCC_LogError(status, ("AddSessionRoute(%u, %s, NULL, %s, %s) failed", id, sender.c_str(), memberEp->GetUniqueName().c_str(), memberB2BEp->GetUniqueName().c_str()));
                 }
@@ -1680,7 +1680,8 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                             if (optsOut.traffic == SessionOpts::TRAFFIC_MESSAGES) {
                                 BusEndpoint busEndpoint = BusEndpoint::cast(srcEp);
                                 QCC_DbgPrintf(("AllJoynObj::RunAttach(): AddSessionRoute() for id=%d.", id));
-                                status = ajObj.router.AddSessionRoute(id, destEp, NULL, busEndpoint, srcB2BEp);
+                                bool destIsSessionHost = (creatorEp->IsValid() && (destEp == creatorEp));
+                                status = ajObj.router.AddSessionRoute(id, destEp, NULL, busEndpoint, srcB2BEp, NULL, destIsSessionHost, false);
                                 if (ER_OK != status) {
                                     QCC_LogError(status, ("AddSessionRoute(%u, %s, NULL, %s, %s) failed", id, dest, srcEp->GetUniqueName().c_str(), srcB2BEp->GetUniqueName().c_str()));
                                 }
@@ -1802,7 +1803,9 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                         optsOut = tempOpts;
                         BusEndpoint busEndpointDest = BusEndpoint::cast(vDestEp);
                         BusEndpoint busEndpointSrc = BusEndpoint::cast(srcEp);
-                        status = ajObj.router.AddSessionRoute(id, busEndpointDest, &b2bEp, busEndpointSrc, srcB2BEp);
+                        BusEndpoint sessionHostEp = ajObj.router.FindEndpoint(sessionHost);
+                        bool destIsSessionHost = (busEndpointDest == sessionHostEp);
+                        status = ajObj.router.AddSessionRoute(id, busEndpointDest, &b2bEp, busEndpointSrc, srcB2BEp, NULL, destIsSessionHost, false);
                         if (status != ER_OK) {
                             QCC_LogError(status, ("AddSessionRoute(%u, %s, %s, %s) failed",
                                                   id, dest, b2bEp->GetUniqueName().c_str(), srcEp->GetUniqueName().c_str(), srcB2BEp->GetUniqueName().c_str()));

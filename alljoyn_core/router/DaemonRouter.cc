@@ -235,7 +235,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                 }
             }
         }
-    } else if (sessionId == 0) {
+    } else if (sessionId == 0 && !msg->IsAllSessionBroadcast()) {
         /*
          * The message has an empty destination field and no session is specified so this is a
          * regular broadcast message.
@@ -254,10 +254,11 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                  */
 #ifdef ENABLE_POLICYDB
                 if (!((sender->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) && !dest->AllowRemoteMessages()) &&
-                    ((dest == localEndpoint) || policyDB->OKToReceive(nmh, dest))) {
+                    ((dest == localEndpoint) || policyDB->OKToReceive(nmh, dest)))
 #else
-                if (!((sender->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) && !dest->AllowRemoteMessages())) {
+                if (!((sender->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) && !dest->AllowRemoteMessages()))
 #endif
+                {
                     ruleTable.Unlock();
                     nameTable.Unlock();
                     QCC_DbgPrintf(("DaemonRouter::PushMessage(): SendThroughEndpoint()"));
@@ -317,10 +318,9 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
                 if ((ep != origSender) && ((sessionId == 0) || ep->GetSessionId() == sessionId)) {
                     BusEndpoint busEndpoint = BusEndpoint::cast(ep);
 #ifdef ENABLE_POLICYDB
-                    if ((busEndpoint == localEndpoint) || policyDB->OKToReceive(nmh, busEndpoint)) {
-#else
-                    {
+                    if ((busEndpoint == localEndpoint) || policyDB->OKToReceive(nmh, busEndpoint))
 #endif
+                    {
                         m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
                         QCC_DbgPrintf(("DaemonRouter::PushMessage(): SendThroughEndpoint()"));
                         QStatus tStatus = SendThroughEndpoint(msg, busEndpoint, sessionId);
@@ -336,6 +336,94 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
             m_b2bEndpointsLock.Unlock(MUTEX_CONTEXT);
         }
 
+    } else if (sessionId == 0 && msg->IsAllSessionBroadcast()) {
+        /* emit on all sessioncast set entries where the message's sender
+         * is marked as the session host */
+        QCC_DbgPrintf(("DaemonRouter::PushMessage(): All-session multicast message()"));
+        sessionCastSetLock.Lock(MUTEX_CONTEXT);
+
+        SessionCastEntry sce(0, msg->GetSender());
+        set<SessionCastEntry>::iterator sit = sessionCastSet.lower_bound(sce);
+        set<BusEndpoint> delivered_endpoints;
+
+        while (sit != sessionCastSet.end() && sit->src == sce.src) {
+            bool haveUnlocked = false;
+            SessionCastEntry entry = *sit;
+            BusEndpoint ep = sit->destEp;
+
+            if (!sit->srcIsSessionHost) {
+                /* only emit on sessions that are hosted by the sender */
+                QCC_DbgPrintf(("Not sending in session %d because sender is not the session host.", sit->id));
+                ++sit;
+                continue;
+            }
+
+            if (sit->b2bEp->IsValid()) {
+                /* destination lies behind another router */
+                RemoteEndpoint b2bEp = sit->b2bEp;
+                BusEndpoint b2bBusEndpoint = BusEndpoint::cast(b2bEp);
+
+                bool okToReceive = true;
+#ifdef ENABLE_POLICYDB
+                okToReceive = (ep == localEndpoint) || policyDB->OKToReceive(nmh, ep);
+#endif
+                if (okToReceive && delivered_endpoints.count(b2bBusEndpoint) == 0) {
+                    /* deliver to remote endpoint for further redistribution */
+                    delivered_endpoints.insert(b2bBusEndpoint);
+                    sessionCastSetLock.Unlock(MUTEX_CONTEXT);
+                    QCC_DbgPrintf(("DaemonRouter::PushMessage(): SendThroughEndpoint(): ep=\"%s\", sessionId=%d", ep->GetUniqueName().c_str(), sessionId));
+                    QStatus tStatus = SendThroughEndpoint(msg, ep, sessionId);
+                    status = (status == ER_OK) ? tStatus : status;
+                    sessionCastSetLock.Lock(MUTEX_CONTEXT);
+                    haveUnlocked = true;
+                }
+            } else if (delivered_endpoints.count(ep) == 0) {
+                /* destination is locally connected: check match rules before delivery */
+                nameTable.Lock();
+                ruleTable.Lock();
+                bool haveMatch = false;
+                RuleIterator it = ruleTable.FindRulesForEndpoint(ep);
+                for (; it != ruleTable.End() && it->first == ep; ++it) {
+                    if (it->second.IsMatch(msg)) {
+                        haveMatch = true;
+                        break;
+                    }
+                }
+                ruleTable.Unlock();
+                nameTable.Unlock();
+                if (haveMatch) {
+                    QCC_DbgPrintf(("DaemonRouter::PushMessage(): Routing \"%s\" (%d) to \"%s\"", msg->Description().c_str(), msg->GetCallSerial(), ep->GetUniqueName().c_str()));
+                    /*
+                     * If the message originated locally or the destination allows remote messages
+                     * forward the message, otherwise silently ignore it.
+                     */
+                    bool okToReceive = (sender->GetEndpointType() != ENDPOINT_TYPE_BUS2BUS) || ep->AllowRemoteMessages();
+#ifdef ENABLE_POLICYDB
+                    okToReceive = okToReceive && ((ep == localEndpoint) || policyDB->OKToReceive(nmh, ep));
+#endif
+                    if (okToReceive) {
+                        delivered_endpoints.insert(ep);
+                        sessionCastSetLock.Unlock(MUTEX_CONTEXT);
+                        QCC_DbgPrintf(("DaemonRouter::PushMessage(): SendThroughEndpoint()"));
+                        QStatus tStatus = SendThroughEndpoint(msg, ep, sessionId);
+                        status = (status == ER_OK) ? tStatus : status;
+                        sessionCastSetLock.Lock(MUTEX_CONTEXT);
+                        haveUnlocked = true;
+                    }
+                }
+            }
+
+            if (haveUnlocked) {
+                /* The SessionCastSet has been unlocked, so there is a small chance that
+                 * the entry we were processing was removed, and hence sit is now invalid.
+                 * We're playing it safe by using the more costly upper_bound() method to
+                 * find the next SessionCastEntry */
+                sit = sessionCastSet.upper_bound(entry);
+            } else {
+                ++sit;
+            }
+        }
+        sessionCastSetLock.Unlock(MUTEX_CONTEXT);
     } else {
         /*
          * The message has an empty destination field and a session id was specified so this is a
@@ -534,9 +622,9 @@ void DaemonRouter::UnregisterEndpoint(const qcc::String& epName, EndpointType ep
     }
 }
 
-QStatus DaemonRouter::AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp, RemoteEndpoint& destB2bEp, SessionOpts* optsHint)
+QStatus DaemonRouter::AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEndpoint* srcB2bEp, BusEndpoint& destEp, RemoteEndpoint& destB2bEp, SessionOpts* optsHint, bool srcIsSessionHost, bool destIsSessionHost)
 {
-    QCC_DbgTrace(("DaemonRouter::AddSessionRoute(%u, %s, %s, %s, %s, %s)", id, srcEp->GetUniqueName().c_str(), srcB2bEp ? (*srcB2bEp)->GetUniqueName().c_str() : "<none>", destEp->GetUniqueName().c_str(), destB2bEp->GetUniqueName().c_str(), optsHint ? "opts" : "NULL"));
+    QCC_DbgTrace(("DaemonRouter::AddSessionRoute(%u, %s, %s, %s, %s, %s, %s)", id, srcEp->GetUniqueName().c_str(), srcB2bEp ? (*srcB2bEp)->GetUniqueName().c_str() : "<none>", destEp->GetUniqueName().c_str(), destB2bEp->GetUniqueName().c_str(), optsHint ? "opts" : "NULL", srcIsSessionHost ? "srcIsHost" : (destIsSessionHost ? "destIsHost" : "noHost")));
     QStatus status = ER_OK;
     if (id == 0) {
         return ER_BUS_NO_SESSION;
@@ -586,17 +674,17 @@ QStatus DaemonRouter::AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEn
     /* Add sessionCast entries */
     if (status == ER_OK) {
         sessionCastSetLock.Lock(MUTEX_CONTEXT);
-        SessionCastEntry entry(id, srcEp->GetUniqueName(), destB2bEp, destEp);
+        SessionCastEntry entry(id, srcEp->GetUniqueName(), destB2bEp, destEp, srcIsSessionHost);
         sessionCastSet.insert(entry);
         if (srcB2bEp) {
             QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): sessionCastSet.insert(%d., \"%s\", \"%s\", \"%s\")", id, destEp->GetUniqueName().c_str(),
                            (*srcB2bEp)->GetUniqueName().c_str(), srcEp->GetUniqueName().c_str()));
-            sessionCastSet.insert(SessionCastEntry(id, destEp->GetUniqueName(), *srcB2bEp, srcEp));
+            sessionCastSet.insert(SessionCastEntry(id, destEp->GetUniqueName(), *srcB2bEp, srcEp, destIsSessionHost));
         } else {
             RemoteEndpoint none;
             QCC_DbgPrintf(("DaemonRouter::AddSessionRoute(): sessionCastSet.insert(%d., \"%s\", \"none\", \"%s\")", id, destEp->GetUniqueName().c_str(),
                            srcB2bEp ? (*srcB2bEp)->GetUniqueName().c_str() : "none", srcEp->GetUniqueName().c_str()));
-            sessionCastSet.insert(SessionCastEntry(id, destEp->GetUniqueName(), none, srcEp));
+            sessionCastSet.insert(SessionCastEntry(id, destEp->GetUniqueName(), none, srcEp, destIsSessionHost));
         }
         sessionCastSetLock.Unlock(MUTEX_CONTEXT);
     }
