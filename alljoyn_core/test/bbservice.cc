@@ -725,7 +725,6 @@ class LocalTestObject : public BusObject {
 
     map<qcc::String, int32_t> rxCounts;
 
-    unsigned long signalDelay;
     unsigned long reportInterval;
 
     qcc::String prop_str_val;
