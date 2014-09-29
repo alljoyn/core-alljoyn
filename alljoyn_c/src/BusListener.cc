@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -181,13 +181,13 @@ struct _alljoyn_buslistener_handle {
     /* Empty by design, this is just to allow the type restrictions to save coders from themselves */
 };
 
-alljoyn_buslistener alljoyn_buslistener_create(const alljoyn_buslistener_callbacks* callbacks, const void* context)
+alljoyn_buslistener AJ_CALL alljoyn_buslistener_create(const alljoyn_buslistener_callbacks* callbacks, const void* context)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return (alljoyn_buslistener) new ajn::BusListenerCallbackC(callbacks, context);
 }
 
-void alljoyn_buslistener_destroy(alljoyn_buslistener listener)
+void AJ_CALL alljoyn_buslistener_destroy(alljoyn_buslistener listener)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     assert(listener != NULL && "listener parameter must not be NULL");

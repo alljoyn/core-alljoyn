@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -115,8 +115,8 @@ typedef void (*alljoyn_proxybusobject_listener_setpropertycb_ptr)(QStatus status
  *
  * @return the allocated alljoyn_proxybusobject
  */
-extern AJ_API alljoyn_proxybusobject alljoyn_proxybusobject_create(alljoyn_busattachment bus, const char* service,
-                                                                   const char* path, alljoyn_sessionid sessionId);
+extern AJ_API alljoyn_proxybusobject AJ_CALL alljoyn_proxybusobject_create(alljoyn_busattachment bus, const char* service,
+                                                                           const char* path, alljoyn_sessionid sessionId);
 
 /**
  * Create an empty proxy bus object that refers to an object at given remote service name. Note
@@ -140,15 +140,15 @@ extern AJ_API alljoyn_proxybusobject alljoyn_proxybusobject_create(alljoyn_busat
  *
  * @return the allocated alljoyn_proxybusobject
  */
-extern AJ_API alljoyn_proxybusobject alljoyn_proxybusobject_create_secure(alljoyn_busattachment bus, const char* service,
-                                                                          const char* path, alljoyn_sessionid sessionId);
+extern AJ_API alljoyn_proxybusobject AJ_CALL alljoyn_proxybusobject_create_secure(alljoyn_busattachment bus, const char* service,
+                                                                                  const char* path, alljoyn_sessionid sessionId);
 
 /**
  * Destroy a proxy object created using alljoyn_proxybusobject_create.
  *
  * @param proxyObj The proxy bus object to destroy.
  */
-extern AJ_API void alljoyn_proxybusobject_destroy(alljoyn_proxybusobject proxyObj);
+extern AJ_API void AJ_CALL alljoyn_proxybusobject_destroy(alljoyn_proxybusobject proxyObj);
 
 /**
  * Add an interface to this alljoyn_proxybusobject.
@@ -167,7 +167,7 @@ extern AJ_API void alljoyn_proxybusobject_destroy(alljoyn_proxybusobject proxyOb
  *      - #ER_OK if successful.
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_proxybusobject_addinterface(alljoyn_proxybusobject proxyObj, const alljoyn_interfacedescription iface);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_addinterface(alljoyn_proxybusobject proxyObj, const alljoyn_interfacedescription iface);
 
 /**
  * Add an existing interface to this object using the interface's name.
@@ -178,7 +178,7 @@ extern AJ_API QStatus alljoyn_proxybusobject_addinterface(alljoyn_proxybusobject
  *      - #ER_OK if successful.
  *      - An error status otherwise.
  */
-extern AJ_API QStatus alljoyn_proxybusobject_addinterface_by_name(alljoyn_proxybusobject proxyObj, const char* name);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_addinterface_by_name(alljoyn_proxybusobject proxyObj, const char* name);
 
 
 /**
@@ -193,7 +193,7 @@ extern AJ_API QStatus alljoyn_proxybusobject_addinterface_by_name(alljoyn_proxyb
  *
  * @return  The number of children returned or the total number of children if children is NULL.
  */
-extern AJ_API size_t alljoyn_proxybusobject_getchildren(alljoyn_proxybusobject proxyObj, alljoyn_proxybusobject* children, size_t numChildren);
+extern AJ_API size_t AJ_CALL alljoyn_proxybusobject_getchildren(alljoyn_proxybusobject proxyObj, alljoyn_proxybusobject* children, size_t numChildren);
 
 /**
  * Get a path descendant alljoyn_proxybusobject (child) by its relative path name.
@@ -209,7 +209,7 @@ extern AJ_API size_t alljoyn_proxybusobject_getchildren(alljoyn_proxybusobject p
  *      - The (potentially deep) descendant alljoyn_proxybusobject
  *      - NULL if not found.
  */
-extern AJ_API alljoyn_proxybusobject alljoyn_proxybusobject_getchild(alljoyn_proxybusobject proxyObj, const char* path);
+extern AJ_API alljoyn_proxybusobject AJ_CALL alljoyn_proxybusobject_getchild(alljoyn_proxybusobject proxyObj, const char* path);
 
 /**
  * Add a child object (direct or deep object path descendant) to this object.
@@ -228,7 +228,7 @@ extern AJ_API alljoyn_proxybusobject alljoyn_proxybusobject_getchild(alljoyn_pro
  *      - #ER_BUS_BAD_CHILD_PATH if the path is a bad path
  *      - #ER_BUS_OBJ_ALREADY_EXISTS the the object already exists on the alljoyn_proxybusobject
  */
-extern AJ_API QStatus alljoyn_proxybusobject_addchild(alljoyn_proxybusobject proxyObj, const alljoyn_proxybusobject child);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_addchild(alljoyn_proxybusobject proxyObj, const alljoyn_proxybusobject child);
 
 /**
  * Remove a child object and any descendants it may have.
@@ -242,7 +242,7 @@ extern AJ_API QStatus alljoyn_proxybusobject_addchild(alljoyn_proxybusobject pro
  *      - #ER_BUS_OBJ_NOT_FOUND if the Child object was not found
  *      - #ER_FAIL any other unexpected error.
  */
-extern AJ_API QStatus alljoyn_proxybusobject_removechild(alljoyn_proxybusobject proxyObj, const char* path);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_removechild(alljoyn_proxybusobject proxyObj, const char* path);
 
 /**
  * Query the remote object on the bus to determine the interfaces and
@@ -259,7 +259,7 @@ extern AJ_API QStatus alljoyn_proxybusobject_removechild(alljoyn_proxybusobject 
  *      - #ER_OK if successful
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_proxybusobject_introspectremoteobject(alljoyn_proxybusobject proxyObj);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_introspectremoteobject(alljoyn_proxybusobject proxyObj);
 
 /**
  * Query the remote object on the bus to determine the interfaces and
@@ -281,7 +281,7 @@ extern AJ_API QStatus alljoyn_proxybusobject_introspectremoteobject(alljoyn_prox
  *      - #ER_OK if successful.
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_proxybusobject_introspectremoteobjectasync(alljoyn_proxybusobject proxyObj, alljoyn_proxybusobject_listener_introspectcb_ptr callback, void* context);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_introspectremoteobjectasync(alljoyn_proxybusobject proxyObj, alljoyn_proxybusobject_listener_introspectcb_ptr callback, void* context);
 /**
  * Get a property from an interface on the remote object.
  *
@@ -295,7 +295,7 @@ extern AJ_API QStatus alljoyn_proxybusobject_introspectremoteobjectasync(alljoyn
  *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
  *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  */
-extern AJ_API QStatus alljoyn_proxybusobject_getproperty(alljoyn_proxybusobject proxyObj, const char* iface, const char* property, alljoyn_msgarg value);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_getproperty(alljoyn_proxybusobject proxyObj, const char* iface, const char* property, alljoyn_msgarg value);
 
 /**
  * Make an asynchronous request to get a property from an interface on the remote object.
@@ -314,12 +314,12 @@ extern AJ_API QStatus alljoyn_proxybusobject_getproperty(alljoyn_proxybusobject 
  *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_proxybusobject_getpropertyasync(alljoyn_proxybusobject proxyObj,
-                                                              const char* iface,
-                                                              const char* property,
-                                                              alljoyn_proxybusobject_listener_getpropertycb_ptr callback,
-                                                              uint32_t timeout,
-                                                              void* context);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_getpropertyasync(alljoyn_proxybusobject proxyObj,
+                                                                      const char* iface,
+                                                                      const char* property,
+                                                                      alljoyn_proxybusobject_listener_getpropertycb_ptr callback,
+                                                                      uint32_t timeout,
+                                                                      void* context);
 
 /**
  * Get all properties from an interface on the remote object.
@@ -333,7 +333,7 @@ extern AJ_API QStatus alljoyn_proxybusobject_getpropertyasync(alljoyn_proxybusob
  *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
  *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  */
-extern AJ_API QStatus alljoyn_proxybusobject_getallproperties(alljoyn_proxybusobject proxyObj, const char* iface, alljoyn_msgarg values);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_getallproperties(alljoyn_proxybusobject proxyObj, const char* iface, alljoyn_msgarg values);
 
 /**
  * Make an asynchronous request to get all properties from an interface on the remote object.
@@ -350,11 +350,11 @@ extern AJ_API QStatus alljoyn_proxybusobject_getallproperties(alljoyn_proxybusob
  *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
  *      - An error status otherwise
  */
-extern AJ_API QStatus  alljoyn_proxybusobject_getallpropertiesasync(alljoyn_proxybusobject proxyObj,
-                                                                    const char* iface,
-                                                                    alljoyn_proxybusobject_listener_getallpropertiescb_ptr callback,
-                                                                    uint32_t timeout,
-                                                                    void* context);
+extern AJ_API QStatus AJ_CALL  alljoyn_proxybusobject_getallpropertiesasync(alljoyn_proxybusobject proxyObj,
+                                                                            const char* iface,
+                                                                            alljoyn_proxybusobject_listener_getallpropertiescb_ptr callback,
+                                                                            uint32_t timeout,
+                                                                            void* context);
 
 /**
  * Set a property on an interface on the remote object.
@@ -369,7 +369,7 @@ extern AJ_API QStatus  alljoyn_proxybusobject_getallpropertiesasync(alljoyn_prox
  *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
  *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  */
-extern AJ_API QStatus alljoyn_proxybusobject_setproperty(alljoyn_proxybusobject proxyObj, const char* iface, const char* property, alljoyn_msgarg value);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_setproperty(alljoyn_proxybusobject proxyObj, const char* iface, const char* property, alljoyn_msgarg value);
 
 /**
  * Make an asynchronous request to set a property on an interface on the remote object.
@@ -389,13 +389,13 @@ extern AJ_API QStatus alljoyn_proxybusobject_setproperty(alljoyn_proxybusobject 
  *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_proxybusobject_setpropertyasync(alljoyn_proxybusobject proxyObj,
-                                                              const char* iface,
-                                                              const char* property,
-                                                              alljoyn_msgarg value,
-                                                              alljoyn_proxybusobject_listener_setpropertycb_ptr callback,
-                                                              uint32_t timeout,
-                                                              void* context);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_setpropertyasync(alljoyn_proxybusobject proxyObj,
+                                                                      const char* iface,
+                                                                      const char* property,
+                                                                      alljoyn_msgarg value,
+                                                                      alljoyn_proxybusobject_listener_setpropertycb_ptr callback,
+                                                                      uint32_t timeout,
+                                                                      void* context);
 
 
 /**
@@ -417,14 +417,14 @@ extern AJ_API QStatus alljoyn_proxybusobject_setpropertyasync(alljoyn_proxybusob
  *      - #ER_OK if the method call succeeded and the reply message type is #ALLJOYN_MESSAGE_METHOD_RET
  *      - #ER_BUS_REPLY_IS_ERROR_MESSAGE if the reply message type is #ALLJOYN_MESSAGE_ERROR
  */
-extern AJ_API QStatus alljoyn_proxybusobject_methodcall(alljoyn_proxybusobject proxyObj,
-                                                        const char* ifaceName,
-                                                        const char* methodName,
-                                                        const alljoyn_msgarg args,
-                                                        size_t numArgs,
-                                                        alljoyn_message replyMsg,
-                                                        uint32_t timeout,
-                                                        uint8_t flags);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcall(alljoyn_proxybusobject proxyObj,
+                                                                const char* ifaceName,
+                                                                const char* methodName,
+                                                                const alljoyn_msgarg args,
+                                                                size_t numArgs,
+                                                                alljoyn_message replyMsg,
+                                                                uint32_t timeout,
+                                                                uint8_t flags);
 
 /**
  * Make a synchronous method call from this object
@@ -447,13 +447,13 @@ extern AJ_API QStatus alljoyn_proxybusobject_methodcall(alljoyn_proxybusobject p
  *      - #ER_OK if the method call succeeded and the reply message type is #ALLJOYN_MESSAGE_METHOD_RET
  *      - #ER_BUS_REPLY_IS_ERROR_MESSAGE if the reply message type is #ALLJOYN_MESSAGE_ERROR
  */
-extern AJ_API QStatus alljoyn_proxybusobject_methodcall_member(alljoyn_proxybusobject proxyObj,
-                                                               const alljoyn_interfacedescription_member method,
-                                                               const alljoyn_msgarg args,
-                                                               size_t numArgs,
-                                                               alljoyn_message replyMsg,
-                                                               uint32_t timeout,
-                                                               uint8_t flags);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcall_member(alljoyn_proxybusobject proxyObj,
+                                                                       const alljoyn_interfacedescription_member method,
+                                                                       const alljoyn_msgarg args,
+                                                                       size_t numArgs,
+                                                                       alljoyn_message replyMsg,
+                                                                       uint32_t timeout,
+                                                                       uint8_t flags);
 
 /**
  * Make a fire-and-forget method call from this object. The caller will not be able to tell if
@@ -475,12 +475,12 @@ extern AJ_API QStatus alljoyn_proxybusobject_methodcall_member(alljoyn_proxybuso
  * @return
  *      - #ER_OK if the method call succeeded
  */
-extern AJ_API QStatus alljoyn_proxybusobject_methodcall_noreply(alljoyn_proxybusobject proxyObj,
-                                                                const char* ifaceName,
-                                                                const char* methodName,
-                                                                const alljoyn_msgarg args,
-                                                                size_t numArgs,
-                                                                uint8_t flags);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcall_noreply(alljoyn_proxybusobject proxyObj,
+                                                                        const char* ifaceName,
+                                                                        const char* methodName,
+                                                                        const alljoyn_msgarg args,
+                                                                        size_t numArgs,
+                                                                        uint8_t flags);
 
 /**
  * Make a fire-and-forget method call from this object. The caller will not be able to tell if
@@ -501,11 +501,11 @@ extern AJ_API QStatus alljoyn_proxybusobject_methodcall_noreply(alljoyn_proxybus
  * @return
  *      - #ER_OK if the method call succeeded
  */
-extern AJ_API QStatus alljoyn_proxybusobject_methodcall_member_noreply(alljoyn_proxybusobject proxyObj,
-                                                                       const alljoyn_interfacedescription_member method,
-                                                                       const alljoyn_msgarg args,
-                                                                       size_t numArgs,
-                                                                       uint8_t flags);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcall_member_noreply(alljoyn_proxybusobject proxyObj,
+                                                                               const alljoyn_interfacedescription_member method,
+                                                                               const alljoyn_msgarg args,
+                                                                               size_t numArgs,
+                                                                               uint8_t flags);
 
 /**
  * Make an asynchronous method call from this object
@@ -529,15 +529,15 @@ extern AJ_API QStatus alljoyn_proxybusobject_methodcall_member_noreply(alljoyn_p
  *      - ER_OK if successful
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_proxybusobject_methodcallasync(alljoyn_proxybusobject proxyObj,
-                                                             const char* ifaceName,
-                                                             const char* methodName,
-                                                             alljoyn_messagereceiver_replyhandler_ptr replyFunc,
-                                                             const alljoyn_msgarg args,
-                                                             size_t numArgs,
-                                                             void* context,
-                                                             uint32_t timeout,
-                                                             uint8_t flags);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcallasync(alljoyn_proxybusobject proxyObj,
+                                                                     const char* ifaceName,
+                                                                     const char* methodName,
+                                                                     alljoyn_messagereceiver_replyhandler_ptr replyFunc,
+                                                                     const alljoyn_msgarg args,
+                                                                     size_t numArgs,
+                                                                     void* context,
+                                                                     uint32_t timeout,
+                                                                     uint8_t flags);
 
 /**
  * Make an asynchronous method call from this object
@@ -560,14 +560,14 @@ extern AJ_API QStatus alljoyn_proxybusobject_methodcallasync(alljoyn_proxybusobj
  *      - ER_OK if successful
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_proxybusobject_methodcallasync_member(alljoyn_proxybusobject proxyObj,
-                                                                    const alljoyn_interfacedescription_member method,
-                                                                    alljoyn_messagereceiver_replyhandler_ptr replyFunc,
-                                                                    const alljoyn_msgarg args,
-                                                                    size_t numArgs,
-                                                                    void* context,
-                                                                    uint32_t timeout,
-                                                                    uint8_t flags);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_methodcallasync_member(alljoyn_proxybusobject proxyObj,
+                                                                            const alljoyn_interfacedescription_member method,
+                                                                            alljoyn_messagereceiver_replyhandler_ptr replyFunc,
+                                                                            const alljoyn_msgarg args,
+                                                                            size_t numArgs,
+                                                                            void* context,
+                                                                            uint32_t timeout,
+                                                                            uint8_t flags);
 
 /**
  * Initialize this proxy object from an XML string. Calling this function does several things:
@@ -594,7 +594,7 @@ extern AJ_API QStatus alljoyn_proxybusobject_methodcallasync_member(alljoyn_prox
  *      - #ER_OK if parsing is completely successful.
  *      - An error status otherwise.
  */
-extern AJ_API QStatus alljoyn_proxybusobject_parsexml(alljoyn_proxybusobject proxyObj, const char* xml, const char* identifier);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_parsexml(alljoyn_proxybusobject proxyObj, const char* xml, const char* identifier);
 
 /**
  * Explicitly secure the connection to the remote peer for this proxy object. Peer-to-peer
@@ -619,7 +619,7 @@ extern AJ_API QStatus alljoyn_proxybusobject_parsexml(alljoyn_proxybusobject pro
  *          - #ER_AUTH_FAIL if the attempt(s) to authenticate the peer failed.
  *          - Other error status codes indicating a failure.
  */
-extern AJ_API QStatus alljoyn_proxybusobject_secureconnection(alljoyn_proxybusobject proxyObj, QCC_BOOL forceAuth);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_secureconnection(alljoyn_proxybusobject proxyObj, QCC_BOOL forceAuth);
 
 /**
  * Asynchronously secure the connection to the remote peer for this proxy object.
@@ -642,7 +642,7 @@ extern AJ_API QStatus alljoyn_proxybusobject_secureconnection(alljoyn_proxybusob
  *          - #ER_BUS_NO_AUTHENTICATION_MECHANISM if alljoyn_busattachment_enablepeersecurity() has not been called.
  *          - Other error status codes indicating a failure.
  */
-extern AJ_API QStatus alljoyn_proxybusobject_secureconnectionasync(alljoyn_proxybusobject proxyObj, QCC_BOOL forceAuth);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_secureconnectionasync(alljoyn_proxybusobject proxyObj, QCC_BOOL forceAuth);
 
 /**
  * Returns a pointer to an interface description. Returns NULL if the object does not implement
@@ -655,7 +655,7 @@ extern AJ_API QStatus alljoyn_proxybusobject_secureconnectionasync(alljoyn_proxy
  *      - A pointer to the requested interface description.
  *      - NULL if requested interface is not implemented or not found
  */
-extern AJ_API const alljoyn_interfacedescription alljoyn_proxybusobject_getinterface(alljoyn_proxybusobject proxyObj, const char* iface);
+extern AJ_API const alljoyn_interfacedescription AJ_CALL alljoyn_proxybusobject_getinterface(alljoyn_proxybusobject proxyObj, const char* iface);
 
 /**
  * Returns the interfaces implemented by this object. Note that all proxy bus objects
@@ -665,14 +665,14 @@ extern AJ_API const alljoyn_interfacedescription alljoyn_proxybusobject_getinter
  * @param proxyObj The proxy bus object to obtain an interface descriptions from.
  * @param ifaces     A pointer to an InterfaceDescription array to receive the interfaces. Can be NULL in
  *                   which case no interfaces are returned and the return value gives the number
- *                   of interface available.
+ *                   of interfaces available.
  * @param numIfaces  The size of the InterfaceDescription array. If this value is smaller than the total
  *                   number of interfaces only numIfaces will be returned.
  *                   (DEFAULT) if numInterfaces is 0 then an array of all the interfaces will be returned.
  *
  * @return  The number of interfaces returned or the total number of interfaces if ifaces is NULL.
  */
-extern AJ_API size_t alljoyn_proxybusobject_getinterfaces(alljoyn_proxybusobject proxyObj, const alljoyn_interfacedescription* ifaces, size_t numIfaces);
+extern AJ_API size_t AJ_CALL alljoyn_proxybusobject_getinterfaces(alljoyn_proxybusobject proxyObj, const alljoyn_interfacedescription* ifaces, size_t numIfaces);
 
 /**
  * Return the absolute object path for the remote object.
@@ -681,7 +681,7 @@ extern AJ_API size_t alljoyn_proxybusobject_getinterfaces(alljoyn_proxybusobject
  *
  * @return Object path
  */
-extern AJ_API const char* alljoyn_proxybusobject_getpath(alljoyn_proxybusobject proxyObj);
+extern AJ_API const char* AJ_CALL alljoyn_proxybusobject_getpath(alljoyn_proxybusobject proxyObj);
 
 /**
  * Return the remote service name for this object.
@@ -690,7 +690,7 @@ extern AJ_API const char* alljoyn_proxybusobject_getpath(alljoyn_proxybusobject 
  *
  * @return Service name (typically a well-known service name but may be a unique name)
  */
-extern AJ_API const char* alljoyn_proxybusobject_getservicename(alljoyn_proxybusobject proxyObj);
+extern AJ_API const char* AJ_CALL alljoyn_proxybusobject_getservicename(alljoyn_proxybusobject proxyObj);
 
 /**
  * Return the session Id for this object.
@@ -698,7 +698,7 @@ extern AJ_API const char* alljoyn_proxybusobject_getservicename(alljoyn_proxybus
  * @param proxyObj the proxy bus object we wish to obtain the session ID from.
  * @return Session Id
  */
-extern AJ_API alljoyn_sessionid alljoyn_proxybusobject_getsessionid(alljoyn_proxybusobject proxyObj);
+extern AJ_API alljoyn_sessionid AJ_CALL alljoyn_proxybusobject_getsessionid(alljoyn_proxybusobject proxyObj);
 
 /**
  * Tests if this object implements the requested interface.
@@ -708,7 +708,7 @@ extern AJ_API alljoyn_sessionid alljoyn_proxybusobject_getsessionid(alljoyn_prox
  *
  * @return  true if the object implements the requested interface
  */
-extern AJ_API QCC_BOOL alljoyn_proxybusobject_implementsinterface(alljoyn_proxybusobject proxyObj, const char* iface);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_proxybusobject_implementsinterface(alljoyn_proxybusobject proxyObj, const char* iface);
 
 /**
  * create a copy of a proxybusobject.  This will create a new alljoyn_proxybusobject and
@@ -718,7 +718,7 @@ extern AJ_API QCC_BOOL alljoyn_proxybusobject_implementsinterface(alljoyn_proxyb
  *
  * @return copy of the alljoyn_proxybusobject argument is returned
  */
-extern AJ_API alljoyn_proxybusobject alljoyn_proxybusobject_copy(const alljoyn_proxybusobject source);
+extern AJ_API alljoyn_proxybusobject AJ_CALL alljoyn_proxybusobject_copy(const alljoyn_proxybusobject source);
 
 /**
  * Indicates if this is a valid (usable) proxy bus object.
@@ -727,7 +727,7 @@ extern AJ_API alljoyn_proxybusobject alljoyn_proxybusobject_copy(const alljoyn_p
  *
  * @return true if a valid proxy bus object, false otherwise.
  */
-extern AJ_API QCC_BOOL alljoyn_proxybusobject_isvalid(alljoyn_proxybusobject proxyObj);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_proxybusobject_isvalid(alljoyn_proxybusobject proxyObj);
 
 /**
  * Indicates if the remote object for this proxy bus object is secure.
@@ -736,7 +736,7 @@ extern AJ_API QCC_BOOL alljoyn_proxybusobject_isvalid(alljoyn_proxybusobject pro
  *
  * @return  true if the object is secure
  */
-extern AJ_API QCC_BOOL alljoyn_proxybusobject_issecure(alljoyn_proxybusobject proxyObj);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_proxybusobject_issecure(alljoyn_proxybusobject proxyObj);
 
 #ifdef __cplusplus
 } /* extern "C" */

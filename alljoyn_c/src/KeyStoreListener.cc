@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -67,7 +67,7 @@ struct _alljoyn_keystorelistener_handle {
     /* Empty by design, this is just to allow the type restrictions to save coders from themselves */
 };
 
-alljoyn_keystorelistener alljoyn_keystorelistener_create(const alljoyn_keystorelistener_callbacks* callbacks, const void* context)
+alljoyn_keystorelistener AJ_CALL alljoyn_keystorelistener_create(const alljoyn_keystorelistener_callbacks* callbacks, const void* context)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     assert(callbacks->load_request != NULL && "load_request callback required.");
@@ -75,23 +75,23 @@ alljoyn_keystorelistener alljoyn_keystorelistener_create(const alljoyn_keystorel
     return (alljoyn_keystorelistener) new ajn::KeyStoreListenerCallbackC(callbacks, context);
 }
 
-void alljoyn_keystorelistener_destroy(alljoyn_keystorelistener listener)
+void AJ_CALL alljoyn_keystorelistener_destroy(alljoyn_keystorelistener listener)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     assert(listener != NULL && "listener parameter must not be NULL");
     delete (ajn::KeyStoreListenerCallbackC*)listener;
 }
 
-QStatus alljoyn_keystorelistener_putkeys(alljoyn_keystorelistener listener, alljoyn_keystore keyStore,
-                                         const char* source, const char* password)
+QStatus AJ_CALL alljoyn_keystorelistener_putkeys(alljoyn_keystorelistener listener, alljoyn_keystore keyStore,
+                                                 const char* source, const char* password)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ajn::KeyStore& ks = *((ajn::KeyStore*)keyStore);
     return ((ajn::KeyStoreListener*)listener)->PutKeys(ks, source, password);
 }
 
-QStatus alljoyn_keystorelistener_getkeys(alljoyn_keystorelistener listener, alljoyn_keystore keyStore,
-                                         char* sink, size_t* sink_sz)
+QStatus AJ_CALL alljoyn_keystorelistener_getkeys(alljoyn_keystorelistener listener, alljoyn_keystore keyStore,
+                                                 char* sink, size_t* sink_sz)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     qcc::String sinkStr;
