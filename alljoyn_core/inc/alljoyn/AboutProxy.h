@@ -61,7 +61,9 @@ class AboutProxy : public ajn::MessageReceiver {
      *
      * @param[out] objectDescs  objectDescs  Description of busName's remote objects.
      *
-     * @return ER_OK if successful.
+     * @return
+     *   - ER_OK if successful.
+     *   - ER_BUS_REPLY_IS_ERROR_MESSAGE on unknown failure.
      */
     QStatus GetObjectDescription(MsgArg& objectDesc);
 
@@ -71,7 +73,10 @@ class AboutProxy : public ajn::MessageReceiver {
      * @param[in] languageTag is the language used to request the AboutData.
      * @param[out] data is reference of AboutData that is filled by the function
      *
-     * @return ER_OK if successful.
+     * @return
+     *    - ER_OK if successful.
+     *    - ER_LANGUAGE_NOT_SUPPORTED if the language specified is not supported
+     *    - ER_BUS_REPLY_IS_ERROR_MESSAGE on unknown failure
      */
     QStatus GetAboutData(const char* languageTag, MsgArg& data);
 
@@ -83,7 +88,6 @@ class AboutProxy : public ajn::MessageReceiver {
      * @return ER_OK on success
      */
     QStatus GetVersion(uint16_t& version);
-
   private:
 
     /**
@@ -91,7 +95,6 @@ class AboutProxy : public ajn::MessageReceiver {
      */
     ajn::BusAttachment* m_BusAttachment;
     ajn::ProxyBusObject m_aboutProxyObj;
-
 };
 
 }

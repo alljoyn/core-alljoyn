@@ -41,11 +41,17 @@ class AboutData : public AboutDataListener {
   public:
 
     /**
-     * constructor
+     * Create an AboutData class. The default language will will not be set.
+     * Use the constructor that takes a default language tag; or set the
+     * language using the SetDefaultLanguage member function, CreateFromMsgArg
+     * member function or the CreateFromXml member function.
      *
-     * Any tag that requires a language requires that the default language is specified
-     * for that reason you are strongly encouraged to use the constructor that allows
-     * you to set the default language in the constructor.
+     * The default language should be specified before any tag that requires
+     * localization. These tags are.
+     *  - DeviceName
+     *  - AppName
+     *  - Manufacturer
+     *  - Description
      */
     AboutData();
 
@@ -59,11 +65,17 @@ class AboutData : public AboutDataListener {
     /*
      * constructor
      *
-     * Fill in the fields of the AboutData class using a MsgArg.  The provided MsgArg
-     * must contain a dictionary with signature a{sv} with AboutData fields.
-     * @param arg
+     * Fill in the fields of the AboutData class using a MsgArg.  The provided
+     * MsgArg must contain a dictionary with signature a{sv} with AboutData fields.
+     *
+     * If the passed in MsgArg is an ill formed AboutData MsgArg this constructor
+     * will fail silently. If the MsgArg does not come from About Announce signal
+     * it is best to create an empty AboutData class and use the CreatFromMsgArg
+     * member function to fill in the AboutData class.
+     *
+     * @param arg MsgArg with signature a{sv}containing AboutData fields.
      */
-    //AboutData(const MsgArg arg);
+    AboutData(const MsgArg arg);
 
     /**
      * Destructor
@@ -193,7 +205,11 @@ class AboutData : public AboutDataListener {
      * @param[in] language the IETF language tag specified by RFC 5646
      *            if language is NULL the DeviceName will be set for the default language.
      *
-     * @return ER_OK on success
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED if language tag was not specified
+     *                                             and the default language is also
+     *                                             not found.
      */
     QStatus SetDeviceName(const char* deviceName, const char* language = NULL);
 
@@ -247,7 +263,11 @@ class AboutData : public AboutDataListener {
      * @param[in] language the IETF language tag specified by RFC 5646
      *            if language is NULL the AppName will be set for the default language.
      *
-     * @return ER_OK on success
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED if language tag was not specified
+     *                                             and the default language is also
+     *                                             not found.
      */
     QStatus SetAppName(const char* appName, const char* language = NULL);
 
@@ -277,7 +297,11 @@ class AboutData : public AboutDataListener {
      * @param[in] language the IETF language tag specified by RFC 5646
      *            if language is NULL the Manufacture will be set for the default language.
      *
-     * @return ER_OK on success
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED if language tag was not specified
+     *                                             and the default language is also
+     *                                             not found.
      */
     QStatus SetManufacturer(const char* manufacturer, const char* language = NULL);
 
@@ -358,7 +382,11 @@ class AboutData : public AboutDataListener {
      * @param[in] language the IETF language tag specified by RFC 5646
      *            if language is NULL the Description will be set for the default language.
      *
-     * @return ER_OK on success
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED if language tag was not specified
+     *                                             and the default language is also
+     *                                             not found.
      */
     QStatus SetDescription(const char* description, const char* language = NULL);
 
@@ -518,10 +546,14 @@ class AboutData : public AboutDataListener {
      * @param[in] name the name of the field to set
      * @param[in] value a MsgArg that contains the value that is set for the field
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the field will be set for the default language
-     *            will be used.
+     *            if language is NULL the default language will be used.  Only
+     *            used for fields that are marked as localizable.
      *
-     * @return ER_OK on success
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED if language tag was not specified
+     *                                             and the default language is also
+     *                                             not found.
      */
     QStatus SetField(const char* name, MsgArg value, const char* language = NULL);
     /**
