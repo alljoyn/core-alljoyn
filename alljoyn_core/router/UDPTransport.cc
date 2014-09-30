@@ -1489,7 +1489,7 @@ bool operator<(const ArdpStream::ThreadEntry& lhs, const ArdpStream::ThreadEntry
 class MessagePump {
   public:
     MessagePump(_UDPEndpoint* endpoint)
-        : m_endpoint(endpoint), m_lock(), m_activeThread(NULL), m_pastThreads(), m_queue(), m_condition(), m_spawnedThreads(0)
+        : m_endpoint(endpoint), m_lock(), m_activeThread(NULL), m_pastThreads(), m_queue(), m_condition(), m_spawnedThreads(0), m_stopping(false)
     {
         QCC_DbgTrace(("MessagePump::MessagePump()"));
     }
@@ -1547,6 +1547,7 @@ class MessagePump {
          * then Signal() our condition variable to wake up the thread.
          */
         m_lock.Lock();
+        m_stopping = true;
         if (m_activeThread) {
             QCC_DbgPrintf(("MessagePump::Stop(): m_activeThread->Stop()"));
             m_activeThread->Stop();
@@ -1680,13 +1681,26 @@ class MessagePump {
 
         /*
          * We always want to pump the message in the callback so create a queue
-         * entry and push it onto the queue.  If we start a thread, the first thing
-         * it will do is to check the condition (queue is not empty) so it will
-         * handle this entry.Bug the condition variable
+         * entry and push it onto the queue.  If we start a thread, the first
+         * thing it will do is to check the condition (queue is not empty) so it
+         * will handle this entry.  If it turns out that there is a thread that
+         * has stopped we don't want to spin up a new thread, but we can queue
+         * up the message which will be handled when the pump is cleaned up.
          */
         m_lock.Lock();
         QueueEntry entry(handle, conn, connId, rcv, status);
         m_queue.push(entry);
+
+        /*
+         * RecvCb() callbacks can continue to happen after we have stopped the
+         * active thread, so make sure we don't spin up a new thread that might
+         * after we acknowledge a Stop() request.
+         */
+        if (m_stopping) {
+            QCC_DbgPrintf(("MessagePump::RecvCb(): Stopping"));
+            m_lock.Unlock();
+            return;
+        }
 
         /*
          * The thread rules: If there is no pump thread in existence, create one
@@ -1768,6 +1782,7 @@ class MessagePump {
     std::queue<QueueEntry> m_queue;         /**< Queue of received messages and associated data to dispatch to the router */
     qcc::Condition m_condition;             /**< Condition variable coordinating consumption of queue entries by the pump thread */
     uint32_t m_spawnedThreads;              /**< The number of threads that have been spawned but not joined */
+    bool m_stopping;                        /**< True if Stop() has been called and we shouldn't spin up new threads */
 };
 
 /*
@@ -3446,10 +3461,18 @@ ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
      * much) since we need to live inside a while loop and execute until we are
      * asked to stop or have hung around for some time without something useful
      * to do (see the class doxygen for more description).
+     *
+     * Note that IsStopping() is a call to the thread base class that indicates
+     * the underlying thread has received a Stop() request.  The member variable
+     * m_stopping is a boolean we use to synchronize the run thread and any
+     * RecvCb() callbacks we might get from the UDP Transport dispatcher thread.
+     * We don't want to have to understand the details of how and when the
+     * internal stopping member of a thread is set, so we use our own with know
+     * semantics for synchronization up here.
      */
     QStatus status = ER_OK;
     m_pump->m_lock.Lock();
-    while (!IsStopping() && status != ER_TIMEOUT) {
+    while (!m_pump->m_stopping && !IsStopping() && status != ER_TIMEOUT) {
         QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Top."));
         /*
          * Note that if the condition returns an unexpected status we loop in
@@ -3472,7 +3495,7 @@ ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
          * top and break out of the while loop -- we just need to work if the
          * queue is not empty.
          */
-        if (IsStopping() || status == ER_TIMEOUT) {
+        if (m_pump->m_stopping || IsStopping() || status == ER_TIMEOUT) {
             continue;
         } else if (m_pump->m_queue.empty() == false) {
             QCC_DbgTrace(("MessagePump::PumpThread::Run(): Have work."));
@@ -3497,9 +3520,25 @@ ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
     }
 
     /*
+     * If we are exiting, we need to make sure that there are no race conditions
+     * between our decision to exit and a RecvCb() decision to use an existing
+     * active thread.  We also need to recognize that if we are returning because
+     * of an inactivity timeout we need to allow RecvCb() to spin up a new thread.
+     *
+     * We hold the pump lock here, and RecvCb() must also hold the lock thread
+     * when it makes its decisions.  If we know RecvCb() will run after we are
+     * done.  If we are exiting because of a Stop(), then IsStopping() will be
+     * true and our version (m_stopping) will also be true.  RecvCb() will not
+     * spin up a new thread if m_stopping is true.  If we are exiting because of
+     * inactivity at this point IsStopping() and m_stopping may or may not be
+     * true depending on races.  We don't care, since m_stopping is going to
+     * determine what happens after we are gone.  We just exit.
+     *
      * If we are exiting, we must be the active thread.  The rules say we are
-     * the one who must remove our own pointer from the activeThread, zero it out and
-     * add ourselves to the pastThread queue.
+     * the one who must remove our own pointer from the activeThread, zero it
+     * out and add ourselves to the pastThread queue.  If we do this atomically
+     * with the pump lock held, then RecvCb() can do what it needs to do also
+     * atomically.
      */
     QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Exiting"));
     PumpThread* i = (PumpThread*)GetThread();
@@ -3511,7 +3550,7 @@ ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
 
     /*
      * The last thing we need to do is to bug the endpoint so its endpoint
-     * managemwent function will run and Join() our thread.  We've pushed our
+     * management function will run and Join() our thread.  We've pushed our
      * thread ID onto the list of past threads, and the endpoint will assume
      * that we have exited and join us if our ID is on pastThreads.  This will
      * happen even if we get swapped out "between" the Alert() and the return
@@ -4691,7 +4730,7 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
             bool disconnected = stream->GetDisconnected();
 
             /*
-             * Wait for the active thread of the messate pump associated with
+             * Wait for the active thread of the message pump associated with
              * the endpoint to exit.  We assume that since we are in state
              * EP_STOPPING, the message flow in the endpoint has been stopped
              * and a new pump thread will not be spawned if we find no active
