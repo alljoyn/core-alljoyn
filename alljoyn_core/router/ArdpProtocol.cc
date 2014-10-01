@@ -2397,19 +2397,19 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
         {
             QCC_DbgPrintf(("ArdpMachine(): conn->state = SYN_RCVD"));
 
-            if (IN_RANGE(uint32_t, conn->rcv.CUR + 1, conn->rcv.SEGMAX, seg->SEQ) == false) {
-                QCC_DbgPrintf(("ArdpMachine(): SYN_RCVD: unacceptable sequence %u", seg->SEQ));
-                /* <SEQ=snd.NXT><ACK=RCV.CUR><ACK> */
-                Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->snd.NXT, conn->rcv.CUR);
-                break;
-            }
-
             if (seg->FLG & ARDP_FLAG_RST) {
 #if ARDP_STATS
                 ++handle->stats.rstRecvs;
 #endif
                 QCC_DbgPrintf(("ArdpMachine(): SYN_RCVD: Got RST during passive open"));
                 Disconnect(handle, conn, ER_ARDP_REMOTE_CONNECTION_RESET);
+                break;
+            }
+
+            if (IN_RANGE(uint32_t, conn->rcv.CUR + 1, conn->rcv.SEGMAX, seg->SEQ) == false) {
+                QCC_DbgPrintf(("ArdpMachine(): SYN_RCVD: unacceptable sequence %u", seg->SEQ));
+                /* <SEQ=snd.NXT><ACK=RCV.CUR><ACK> */
+                Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->snd.NXT, conn->rcv.CUR);
                 break;
             }
 
@@ -2498,13 +2498,6 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
         {
             QCC_DbgPrintf(("ArdpMachine(): conn->state = OPEN"));
 
-            if (IN_RANGE(uint32_t, conn->rcv.LCS + 1, conn->rcv.SEGMAX, seg->SEQ) == false) {
-                QCC_DbgPrintf(("ArdpMachine(): OPEN: unacceptable sequence %u, conn->rcv.CUR + 1 = %u, conn->rcv.LCS + 1 = %u, MAX = %d", seg->SEQ, conn->rcv.CUR + 1, conn->rcv.LCS + 1, conn->rcv.SEGMAX));
-                if (seg->DLEN != 0) {
-                    break;
-                }
-            }
-
             if (seg->FLG & ARDP_FLAG_RST) {
 #if ARDP_STATS
                 ++handle->stats.rstRecvs;
@@ -2512,6 +2505,13 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 QCC_DbgPrintf(("ArdpMachine(): OPEN: got RST, disconnect"));
                 Disconnect(handle, conn, ER_ARDP_REMOTE_CONNECTION_RESET);
                 break;
+            }
+
+            if (IN_RANGE(uint32_t, conn->rcv.LCS + 1, conn->rcv.SEGMAX, seg->SEQ) == false) {
+                QCC_DbgPrintf(("ArdpMachine(): OPEN: unacceptable sequence %u, conn->rcv.CUR + 1 = %u, conn->rcv.LCS + 1 = %u, MAX = %d", seg->SEQ, conn->rcv.CUR + 1, conn->rcv.LCS + 1, conn->rcv.SEGMAX));
+                if (seg->DLEN != 0) {
+                    break;
+                }
             }
 
             if (seg->FLG & ARDP_FLAG_SYN) {
@@ -2765,6 +2765,11 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, u
     SEG.HLEN = header->hlen;                      /* The header len */
     SEG.DLEN = ntohs(header->dlen);               /* The amount of data in this segment */
 
+    if (SEG.FLG & ARDP_FLAG_RST) {
+        /* This is a disconnect from the remote, no checks are needed */
+        ArdpMachine(handle, conn, &SEG, buf, len);
+        return ER_OK;
+    }
 
     if ((!(SEG.FLG & ARDP_FLAG_SYN)) && (((SEG.HLEN * 2) < ARDP_FIXED_HEADER_LEN) || (len < ARDP_FIXED_HEADER_LEN))) {
         QCC_DbgHLPrintf(("Receive: len = %u, seg.hlen = %u, expected at least = %u",
