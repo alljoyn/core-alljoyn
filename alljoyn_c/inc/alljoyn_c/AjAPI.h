@@ -6,7 +6,7 @@
  * callbacks occur on the same thread that registered for the callback.
  */
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -36,6 +36,15 @@
 #  endif
 #endif
 
+/** This @#define allows for calling convention redefinition on relevant platforms */
+#ifndef AJ_CALL
+#  if defined(QCC_OS_GROUP_WINDOWS)
+#    define AJ_CALL __stdcall
+#  else
+#    define AJ_CALL
+#  endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -45,12 +54,12 @@ extern "C" {
  *
  * @return the number of callbacks processed.
  */
-extern AJ_API int alljoyn_unity_deferred_callbacks_process();
+extern AJ_API int AJ_CALL alljoyn_unity_deferred_callbacks_process();
 
 /**
  * Enable/disable main thread callback behavior.
  */
-extern AJ_API void alljoyn_unity_set_deferred_callback_mainthread_only(QCC_BOOL mainthread_only);
+extern AJ_API void AJ_CALL alljoyn_unity_set_deferred_callback_mainthread_only(QCC_BOOL mainthread_only);
 
 #ifdef __cplusplus
 } /* extern "C" */
