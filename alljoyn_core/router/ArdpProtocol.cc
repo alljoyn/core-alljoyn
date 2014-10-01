@@ -310,16 +310,6 @@ static void DeList(ListNode* node)
 }
 
 #ifndef NDEBUG
-static void DumpBuffer(uint8_t* buf, uint16_t len)
-{
-    QCC_DbgPrintf(("DumpBuffer buf=%p, len=%d", buf, len));
-    for (uint32_t i = 0; i < len; i += 8) {
-        QCC_DbgPrintf(("\t%d\t %2x (%d), %2x (%d), %2x (%d), %2x (%d), %2x (%d), %2x (%d), %2x (%d), %2x (%d),",
-                       i, buf[i], buf[i], buf[i + 1], buf[i + 1], buf[i + 2], buf[i + 2], buf[i + 3], buf[i + 3],
-                       buf[i + 4], buf[i + 4], buf[i + 5], buf[i + 5], buf[i + 6], buf[i + 6], buf[i + 7], buf[i + 7]));
-    }
-}
-
 static void DumpBitMask(ArdpConnRecord* conn, uint32_t* msk, uint16_t sz, bool convert)
 {
     QCC_DbgHLPrintf(("DumpBitMask(conn=%p, msk=%p, sz=%d, convert=%s)",
@@ -2511,9 +2501,6 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
             if (IN_RANGE(uint32_t, conn->rcv.LCS + 1, conn->rcv.SEGMAX, seg->SEQ) == false) {
                 QCC_DbgPrintf(("ArdpMachine(): OPEN: unacceptable sequence %u, conn->rcv.CUR + 1 = %u, conn->rcv.LCS + 1 = %u, MAX = %d", seg->SEQ, conn->rcv.CUR + 1, conn->rcv.LCS + 1, conn->rcv.SEGMAX));
                 if (seg->DLEN != 0) {
-#ifndef NDEBUG
-                    //DumpBuffer(buf, len);
-#endif
                     break;
                 }
             }
