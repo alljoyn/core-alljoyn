@@ -332,8 +332,8 @@ class MyAuthListener : public AuthListener {
         printf("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed");
     }
 
-    void SecurityViolation(const char* error) {
-        printf("Security violation %s\n", error);
+    void SecurityViolation(QStatus status, const Message& msg) {
+        printf("Security violation %s with message:\n%s\n", QCC_StatusText(status), msg->ToString().c_str());
     }
 };
 

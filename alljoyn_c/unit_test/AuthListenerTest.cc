@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -29,7 +29,6 @@
 static const char* INTERFACE_NAME = "org.alljoyn.test.c.authlistener";
 static const char* OBJECT_NAME = "org.alljoyn.test.c.authlistener";
 static const char* OBJECT_PATH = "/org/alljoyn/test";
-static const alljoyn_sessionport SERVICE_PORT = 42;
 
 static QCC_BOOL name_owner_changed_flag = QCC_FALSE;
 

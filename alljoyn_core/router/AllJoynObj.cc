@@ -770,17 +770,19 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
             MsgArg membersArg;
 
             /* Check for existing multipoint session */
-            if (vSessionEp->IsValid() && optsIn.isMultipoint) {
+            if (vSessionEp->IsValid()) {
                 QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Existing virtual endpoint IsValid() and isMultipoint"));
                 SessionMapType::iterator it = ajObj.sessionMap.begin();
                 while (it != ajObj.sessionMap.end()) {
                     if ((it->second.sessionHost == vSessionEp->GetUniqueName()) && (it->second.sessionPort == sessionPort)) {
                         if (it->second.opts.IsCompatible(optsIn)) {
-                            b2bEp = vSessionEp->GetBusToBusEndpoint(it->second.id);
-                            if (b2bEp->IsValid()) {
-                                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): IncrementRef() on existing mp session"));
-                                b2bEp->IncrementRef();
-                                replyCode = ALLJOYN_JOINSESSION_REPLY_SUCCESS;
+                            if (it->second.opts.isMultipoint) {
+                                b2bEp = vSessionEp->GetBusToBusEndpoint(it->second.id);
+                                if (b2bEp->IsValid()) {
+                                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): IncrementRef() on existing mp session"));
+                                    b2bEp->IncrementRef();
+                                    replyCode = ALLJOYN_JOINSESSION_REPLY_SUCCESS;
+                                }
                             }
                         } else {
                             QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Blocked multiple connections to same dest with same session ID"));
@@ -3428,66 +3430,72 @@ void AllJoynObj::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
         /* Remove endpoint (b2b) reference from this vep.
          * Note: If IsStopping() is true, then there is another thread that is in the process
          * of deleting this virtual endpoint. In this case, skip this virtual endpoint. */
-        if (!it->second->IsStopping() && it->second->RemoveBusToBusEndpoint(endpoint)) {
-            /* The last b2b endpoint was removed from this vep. */
-            String exitingEpName = it->second->GetUniqueName();
+        if (!it->second->IsStopping()) {
+            if (it->second->RemoveBusToBusEndpoint(endpoint)) {
+                /* The last b2b endpoint was removed from this vep. */
+                String exitingEpName = it->second->GetUniqueName();
 
-            /* Let directly connected daemons know that this virtual endpoint is gone. */
-            map<qcc::StringMapKey, RemoteEndpoint>::iterator it2 = b2bEndpoints.begin();
-            const qcc::GUID128& otherSideGuid = endpoint->GetRemoteGUID();
-            guidToBeChecked = otherSideGuid.ToString();
-            while ((it2 != b2bEndpoints.end()) && (it != virtualEndpoints.end())) {
-                if ((it2->second != endpoint) && (it2->second->GetRemoteGUID() != otherSideGuid) && (it2->second->GetFeatures().nameTransfer == SessionOpts::ALL_NAMES)) {
-                    Message sigMsg(bus);
-                    MsgArg args[3];
-                    args[0].Set("s", exitingEpName.c_str());
-                    args[1].Set("s", exitingEpName.c_str());
-                    args[2].Set("s", "");
+                /* Let directly connected daemons know that this virtual endpoint is gone. */
+                map<qcc::StringMapKey, RemoteEndpoint>::iterator it2 = b2bEndpoints.begin();
+                const qcc::GUID128& otherSideGuid = endpoint->GetRemoteGUID();
+                guidToBeChecked = otherSideGuid.ToString();
+                while ((it2 != b2bEndpoints.end()) && (it != virtualEndpoints.end())) {
+                    if ((it2->second != endpoint) && (it2->second->GetRemoteGUID() != otherSideGuid) && (it2->second->GetFeatures().nameTransfer == SessionOpts::ALL_NAMES)) {
+                        Message sigMsg(bus);
+                        MsgArg args[3];
+                        args[0].Set("s", exitingEpName.c_str());
+                        args[1].Set("s", exitingEpName.c_str());
+                        args[2].Set("s", "");
 
-                    QStatus status = sigMsg->SignalMsg("sss",
-                                                       org::alljoyn::Daemon::WellKnownName,
-                                                       0,
-                                                       org::alljoyn::Daemon::ObjectPath,
-                                                       org::alljoyn::Daemon::InterfaceName,
-                                                       "NameChanged",
-                                                       args,
-                                                       ArraySize(args),
-                                                       0,
-                                                       0);
-                    if (ER_OK == status) {
-                        String key = it->first;
-                        String key2 = it2->first.c_str();
-                        RemoteEndpoint ep = it2->second;
-                        ReleaseLocks();
-                        status = ep->PushMessage(sigMsg);
-                        if (ER_OK != status) {
-                            QCC_LogError(status, ("Failed to send NameChanged to %s", ep->GetUniqueName().c_str()));
+                        QStatus status = sigMsg->SignalMsg("sss",
+                                                           org::alljoyn::Daemon::WellKnownName,
+                                                           0,
+                                                           org::alljoyn::Daemon::ObjectPath,
+                                                           org::alljoyn::Daemon::InterfaceName,
+                                                           "NameChanged",
+                                                           args,
+                                                           ArraySize(args),
+                                                           0,
+                                                           0);
+                        if (ER_OK == status) {
+                            String key = it->first;
+                            String key2 = it2->first.c_str();
+                            RemoteEndpoint ep = it2->second;
+                            ReleaseLocks();
+                            status = ep->PushMessage(sigMsg);
+                            if (ER_OK != status) {
+                                QCC_LogError(status, ("Failed to send NameChanged to %s", ep->GetUniqueName().c_str()));
+                            }
+                            AcquireLocks();
+                            it2 = b2bEndpoints.lower_bound(key2);
+                            if ((it2 != b2bEndpoints.end()) && (it2->first == key2)) {
+                                ++it2;
+                            }
+                            it = virtualEndpoints.find(key);
+                        } else {
+                            ++it2;;
                         }
-                        AcquireLocks();
-                        it2 = b2bEndpoints.lower_bound(key2);
-                        if ((it2 != b2bEndpoints.end()) && (it2->first == key2)) {
-                            ++it2;
-                        }
-                        it = virtualEndpoints.find(key);
                     } else {
-                        ++it2;;
+                        ++it2;
                     }
-                } else {
-                    ++it2;
                 }
-            }
 
-            /* Remove virtual endpoint with no more b2b eps */
-            if (it != virtualEndpoints.end()) {
-                String vepName = it->first;
+                /* Remove virtual endpoint with no more b2b eps */
+                if (it != virtualEndpoints.end()) {
+                    String vepName = it->first;
+                    ReleaseLocks();
+                    RemoveVirtualEndpoint(vepName);
+                    AcquireLocks();
+                    it = virtualEndpoints.upper_bound(vepName);
+                }
+
+            } else {
+                /* Need to hit NameTable here since name ownership of a vep alias may have changed */
                 ReleaseLocks();
-                RemoveVirtualEndpoint(vepName);
+                router.UpdateVirtualAliases(vepName);
                 AcquireLocks();
                 it = virtualEndpoints.upper_bound(vepName);
             }
-
-        } else {
-            ++it;
         }
     }
 
@@ -3600,74 +3608,60 @@ void AllJoynObj::ExchangeNamesSignalHandler(const InterfaceDescription::Member* 
     if (bit != b2bEndpoints.end()) {
         qcc::GUID128 otherGuid = bit->second->GetRemoteGUID();
         const String& shortOtherGuidStr = otherGuid.ToShortString();
+        StringMapKey key = bit->first;
+        for (size_t i = 0; i < numItems; ++i) {
+            assert(items[i].typeId == ALLJOYN_STRUCT);
+            qcc::String uniqueName = items[i].v_struct.members[0].v_string.str;
+            if (!IsLegalUniqueName(uniqueName.c_str())) {
+                QCC_LogError(ER_FAIL, ("Invalid unique name \"%s\" in ExchangeNames message", uniqueName.c_str()));
+                continue;
+            } else if (0 == ::strncmp(uniqueName.c_str() + 1, shortGuidStr.c_str(), shortGuidStr.size())) {
+                /* Cant accept a request to change a local name */
+                continue;
+            } else if ((bit->second->GetFeatures().nameTransfer != SessionOpts::ALL_NAMES) &&
+                       (0 != ::strncmp(uniqueName.c_str() + 1, shortOtherGuidStr.c_str(), shortOtherGuidStr.size()))) {
+                /* Filter out names from routers that predate the DAEMON_NAMES flag (if not ALL_NAMES) */
+                continue;
+            }
 
-        bit = b2bEndpoints.begin();
-        while (bit != b2bEndpoints.end()) {
-            if (bit->second->GetRemoteGUID() == otherGuid) {
-                StringMapKey key = bit->first;
-                for (size_t i = 0; i < numItems; ++i) {
-                    assert(items[i].typeId == ALLJOYN_STRUCT);
-                    qcc::String uniqueName = items[i].v_struct.members[0].v_string.str;
-                    if (!IsLegalUniqueName(uniqueName.c_str())) {
-                        QCC_LogError(ER_FAIL, ("Invalid unique name \"%s\" in ExchangeNames message", uniqueName.c_str()));
-                        continue;
-                    } else if (0 == ::strncmp(uniqueName.c_str() + 1, shortGuidStr.c_str(), shortGuidStr.size())) {
-                        /* Cant accept a request to change a local name */
-                        continue;
-                    } else if ((bit->second->GetFeatures().nameTransfer != SessionOpts::ALL_NAMES) &&
-                               (0 != ::strncmp(uniqueName.c_str() + 1, shortOtherGuidStr.c_str(), shortOtherGuidStr.size()))) {
-                        /* Filter out names from routers that predate the DAEMON_NAMES flag (if not ALL_NAMES) */
-                        continue;
-                    }
+            /* Add a virtual endpoint */
+            bool madeChange;
+            String b2bName = bit->second->GetUniqueName();
+            ReleaseLocks();
+            AddVirtualEndpoint(uniqueName, b2bName, &madeChange);
 
-                    /* Add a virtual endpoint */
-                    bool madeChange;
-                    String b2bName = bit->second->GetUniqueName();
+            /* Relock and reacquire */
+            AcquireLocks();
+            BusEndpoint tempEp = router.FindEndpoint(uniqueName);
+            VirtualEndpoint vep = VirtualEndpoint::cast(tempEp);
+            bit = b2bEndpoints.find(key);
+            if (bit == b2bEndpoints.end()) {
+                QCC_DbgPrintf(("b2bEp %s disappeared during ExchangeNamesSignalHandler", key.c_str()));
+                break;
+            }
+
+            if (madeChange) {
+                madeChanges = true;
+            }
+
+            /* Add virtual aliases (remote well-known names) */
+            const MsgArg* aliasItems = items[i].v_struct.members[1].v_array.GetElements();
+            const size_t numAliases = items[i].v_struct.members[1].v_array.GetNumElements();
+            for (size_t j = 0; j < numAliases; ++j) {
+                assert(ALLJOYN_STRING == aliasItems[j].typeId);
+                if (vep->IsValid()) {
                     ReleaseLocks();
-                    AddVirtualEndpoint(uniqueName, b2bName, &madeChange);
-
-                    /* Relock and reacquire */
+                    bool madeChange = router.SetVirtualAlias(aliasItems[j].v_string.str, &vep, vep);
                     AcquireLocks();
-                    BusEndpoint tempEp = router.FindEndpoint(uniqueName);
-                    VirtualEndpoint vep = VirtualEndpoint::cast(tempEp);
                     bit = b2bEndpoints.find(key);
                     if (bit == b2bEndpoints.end()) {
                         QCC_DbgPrintf(("b2bEp %s disappeared during ExchangeNamesSignalHandler", key.c_str()));
                         break;
                     }
-
                     if (madeChange) {
                         madeChanges = true;
                     }
-
-                    /* Add virtual aliases (remote well-known names) */
-                    const MsgArg* aliasItems = items[i].v_struct.members[1].v_array.GetElements();
-                    const size_t numAliases = items[i].v_struct.members[1].v_array.GetNumElements();
-                    for (size_t j = 0; j < numAliases; ++j) {
-                        assert(ALLJOYN_STRING == aliasItems[j].typeId);
-                        if (vep->IsValid()) {
-                            ReleaseLocks();
-                            bool madeChange = router.SetVirtualAlias(aliasItems[j].v_string.str, &vep, vep);
-                            AcquireLocks();
-                            bit = b2bEndpoints.find(key);
-                            if (bit == b2bEndpoints.end()) {
-                                QCC_DbgPrintf(("b2bEp %s disappeared during ExchangeNamesSignalHandler", key.c_str()));
-                                break;
-                            }
-                            if (madeChange) {
-                                madeChanges = true;
-                            }
-                        }
-                    }
-                    if (bit == b2bEndpoints.end()) {
-                        QCC_DbgPrintf(("b2bEp %s disappeared during ExchangeNamesSignalHandler", key.c_str()));
-                        break;
-                    }
-
                 }
-                bit = b2bEndpoints.upper_bound(key);
-            } else {
-                ++bit;
             }
         }
     } else {
@@ -3754,14 +3748,20 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
                 VirtualEndpoint vep = FindVirtualEndpoint(oldOwner.c_str());
                 if (vep->IsValid()) {
                     madeChanges = vep->CanUseRoute(bit->second);
-
                     /* Note: If IsStopping() is true, then there is another thread that is in the process
                      * of deleting this virtual endpoint. In this case, skip this virtual endpoint. */
-                    if (madeChanges && !vep->IsStopping() && vep->RemoveBusToBusEndpoint(bit->second)) {
-                        /* The last b2b endpoint was removed from this vep. */
-                        String vepName = vep->GetUniqueName();
-                        ReleaseLocks();
-                        RemoveVirtualEndpoint(vepName);
+                    if (madeChanges && !vep->IsStopping()) {
+                        if (vep->RemoveBusToBusEndpoint(bit->second)) {
+                            /* The last b2b endpoint was removed from this vep. */
+                            String vepName = vep->GetUniqueName();
+                            ReleaseLocks();
+                            RemoveVirtualEndpoint(vepName);
+                        } else {
+                            /* Need to hit NameTable here since name ownership of a vep alias may have changed */
+                            String vepName = vep->GetUniqueName();
+                            ReleaseLocks();
+                            router.UpdateVirtualAliases(vepName);
+                        }
                     } else {
                         ReleaseLocks();
                     }
@@ -3912,10 +3912,17 @@ VirtualEndpoint AllJoynObj::FindVirtualEndpoint(const qcc::String& uniqueName)
     return ret;
 }
 
-void AllJoynObj::NameOwnerChanged(const qcc::String& alias, const qcc::String* oldOwner, const qcc::String* newOwner)
+void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
+                                  const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
+                                  const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer)
 {
     QStatus status;
     const String& shortGuidStr = guid.ToShortString();
+
+    /* When newOwner and oldOwner are the same, only the name transfer changed. */
+    if (newOwner == oldOwner) {
+        return;
+    }
 
     /* Validate that there is either a new owner or an old owner */
     const qcc::String* un = oldOwner ? oldOwner : newOwner;

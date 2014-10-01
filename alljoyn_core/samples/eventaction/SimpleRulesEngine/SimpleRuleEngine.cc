@@ -70,8 +70,6 @@ QStatus SimpleRuleEngine::removeAllRules()
 
 Rule* SimpleRuleEngine::getRules(size_t& len)
 {
-    QStatus status = ER_OK;
-
     return NULL;
 }
 
@@ -86,7 +84,6 @@ void SimpleRuleEngine::Announce(unsigned short version, unsigned short port, con
                                 const ajn::services::AboutClient::ObjectDescriptions& objectDescs,
                                 const ajn::services::AboutClient::AboutData& aboutData)
 {
-    char* friendlyName = NULL;
     NearbyAppInfo* nearbyAppInfo = new NearbyAppInfo();
     for (AboutClient::AboutData::const_iterator it = aboutData.begin(); it != aboutData.end(); ++it) {
         qcc::String key = it->first;
@@ -105,7 +102,7 @@ void SimpleRuleEngine::Announce(unsigned short version, unsigned short port, con
                 size_t numElements;
                 value.Get("ay", &numElements, &AppIdBuffer);
                 char temp[(numElements + 1) * 2];               //*2 due to hex format
-                for (int i = 0; i < numElements; i++) {
+                for (size_t i = 0; i < numElements; i++) {
                     sprintf(temp + (i * 2), "%02x", AppIdBuffer[i]);
                 }
                 temp[numElements * 2] = '\0';

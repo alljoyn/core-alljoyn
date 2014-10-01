@@ -485,17 +485,9 @@ class ConfigDB {
     ConfigDB& operator=(const ConfigDB& other);
 
 #ifdef ENABLE_POLICYDB
-    /**
-     * Name owner changed listener.  This is really just a proxy for calling
-     * the name owner changed methods for the current PolicyDB.
-     *
-     * @param alias     The well known name
-     * @param oldOwner  Unique name of previous owner or NULL if no previous owner
-     * @param newOwner  Unique name of new owner or NULL of no new owner
-     */
     void NameOwnerChanged(const qcc::String& alias,
-                          const qcc::String* oldOwner,
-                          const qcc::String* newOwner);
+                          const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
+                          const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer);
 #endif
 
     const qcc::String defaultXml;   /**< Default configuration. */

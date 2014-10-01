@@ -173,7 +173,7 @@ class OptParse {
 #endif
         noSwitchUser(false),
         printAddressFd(-1), printPidFd(-1),
-        session(false), system(false), internal(false),
+        internal(false),
         configService(false),
         verbosity(LOG_WARNING) {
     }
@@ -246,8 +246,6 @@ class OptParse {
     bool noSwitchUser;
     int printAddressFd;
     int printPidFd;
-    bool session;
-    bool system;
     bool internal;
     bool configService;
     int verbosity;

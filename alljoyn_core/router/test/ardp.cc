@@ -158,11 +158,11 @@ void SendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t window, QSt
 
 class Test : public qcc::Thread {
   public:
-    QStatus Start();
+    QStatus TestStart();
     qcc::ThreadReturn STDCALL Run(void* arg);
 };
 
-QStatus Test::Start()
+QStatus Test::TestStart()
 {
     QCC_DbgTrace(("Test::Start()"));
     return Thread::Start(this);
@@ -288,7 +288,7 @@ int main(int argc, char** argv)
     signal(SIGINT, SigIntHandler);
 
     Test test;
-    test.Start();
+    test.TestStart();
 
     while (g_interrupt == false) {
         qcc::Sleep(100);
