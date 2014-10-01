@@ -54,7 +54,11 @@ namespace ajn {
 class ConnectEntry;
 bool operator<(const ConnectEntry& lhs, const ConnectEntry& rhs);
 
-class _UDPEndpoint;
+class _UDPEndpoint; /**< Forward declaration for a class of endpoints implementing UDP Transport functionality */
+
+class MessagePump; /**< Forward declaration for a class implementing an active message pump to move messages into the router */
+
+#define N_PUMPS 8 /**<  The number of message pumps and possibly concurrent threads we use to move messages */
 
 typedef qcc::ManagedObj<_UDPEndpoint> UDPEndpoint;
 
@@ -62,6 +66,7 @@ typedef qcc::ManagedObj<_UDPEndpoint> UDPEndpoint;
  * @brief A class for UDP Transports used in daemons.
  */
 class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener, public qcc::Thread {
+    friend class MessagePump;
     friend class _UDPEndpoint;
     friend class ArdpStream;
 
@@ -316,6 +321,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     std::set<UDPEndpoint> m_endpointList;                          /**< List of active endpoints */
     std::set<ConnectEntry> m_connectThreads;                       /**< List of threads starting up active endpoints */
     qcc::Mutex m_endpointListLock;                                 /**< Mutex that protects the endpoint and auth lists */
+
+    MessagePump* m_messagePumps[N_PUMPS];                          /**< array of MessagePumps (with possiblly running pump threads) */
 
     std::list<std::pair<qcc::String, qcc::SocketFd> > m_listenFds; /**< File descriptors the transport is listening on */
     qcc::Mutex m_listenFdsLock;                                    /**< Mutex that protects m_listenFds */
