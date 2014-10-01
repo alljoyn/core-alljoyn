@@ -309,6 +309,8 @@ _Message::_Message(BusAttachment& bus) :
     msgBuf(NULL),
     msgArgs(NULL),
     numMsgArgs(0),
+    refMsgArgs(NULL),
+    numRefMsgArgs(0),
     ttl(0),
     handles(NULL),
     numHandles(0),
@@ -330,6 +332,7 @@ _Message::~_Message(void)
         qcc::Close(handles[--numHandles]);
     }
     delete [] handles;
+    delete [] refMsgArgs;
 }
 
 _Message::_Message(const _Message& other) :
@@ -337,6 +340,7 @@ _Message::_Message(const _Message& other) :
     endianSwap(other.endianSwap),
     msgHeader(other.msgHeader),
     numMsgArgs(other.numMsgArgs),
+    numRefMsgArgs(other.numRefMsgArgs),
     bufSize(other.bufSize),
     ttl(other.ttl),
     timestamp(other.timestamp),
@@ -379,6 +383,14 @@ _Message::_Message(const _Message& other) :
     } else {
         msgArgs = NULL;
     }
+    if (numRefMsgArgs > 0) {
+        refMsgArgs =  new MsgArg[numRefMsgArgs];
+        for (size_t i = 0; i < numRefMsgArgs; ++i) {
+            refMsgArgs[i] = other.refMsgArgs[i];
+        }
+    } else {
+        refMsgArgs = NULL;
+    }
     if (numHandles > 0) {
         handles = new qcc::SocketFd[numHandles];
         for (size_t i = 0; i < numHandles; ++i) {
@@ -402,6 +414,9 @@ QStatus _Message::ReMarshal(const char* senderName)
     delete [] msgArgs;
     msgArgs = NULL;
     numMsgArgs = 0;
+    delete [] refMsgArgs;
+    refMsgArgs = NULL;
+    numRefMsgArgs = 0;
 
     /*
      * We delete the current buffer after we have copied the body data
@@ -494,6 +509,9 @@ void _Message::ClearHeader()
         delete [] msgArgs;
         msgArgs = NULL;
         numMsgArgs = 0;
+        delete [] refMsgArgs;
+        refMsgArgs = NULL;
+        numRefMsgArgs = 0;
         ttl = 0;
         msgHeader.msgType = MESSAGE_INVALID;
         while (numHandles) {

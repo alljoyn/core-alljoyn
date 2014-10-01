@@ -26,6 +26,7 @@
 #include <qcc/Debug.h>
 #include <qcc/CryptoECC.h>
 #include <qcc/Crypto.h>
+#include <qcc/KeyInfoECC.h>
 
 #include <Status.h>
 
@@ -1946,6 +1947,26 @@ QStatus Crypto_ECC::DSAVerify(const uint8_t* buf, uint16_t len, const ECCSignatu
 
 Crypto_ECC::~Crypto_ECC()
 {
+}
+
+QStatus KeyInfoNISTP256::Export(ECCPublicKey* pubKey)
+{
+    affine_point_t ap;
+    ap.infinity = 0;
+    binary_to_bigval(x, &ap.x, sizeof(ECCBigVal));
+    binary_to_bigval(y, &ap.y, sizeof(ECCBigVal));
+    U32ArrayToU8BeArray((const uint32_t*) &ap, U32_AFFINEPOINT_SZ, (uint8_t*) pubKey);
+    return ER_OK;
+}
+
+QStatus KeyInfoNISTP256::Import(const ECCPublicKey* pubKey)
+{
+    affine_point_t ap;
+    ap.infinity = 0;
+    U8BeArrayToU32Array((const uint8_t*) pubKey, sizeof(ECCPublicKey), (uint32_t*) &ap);
+    bigval_to_binary(&ap.x, x, sizeof(ECCBigVal));
+    bigval_to_binary(&ap.y, y, sizeof(ECCBigVal));
+    return ER_OK;
 }
 
 } /* namespace qcc */

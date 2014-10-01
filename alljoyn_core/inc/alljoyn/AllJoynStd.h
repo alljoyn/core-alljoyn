@@ -32,7 +32,7 @@
 #define QCC_MODULE  "ALLJOYN"
 
 /** Router-to-router protocol version number */
-#define ALLJOYN_PROTOCOL_VERSION  10
+#define ALLJOYN_PROTOCOL_VERSION  11
 
 namespace ajn {
 
@@ -89,9 +89,22 @@ extern const char* IntrospectDocType;                 /**< Type of extended (wit
 extern const char* InterfaceName;                 /**< Interface name */
 
 }
+namespace Security {
+
+/** Interface definitions for org.allseen.Security.PermissionMgmt */
+namespace PermissionMgmt {
+extern const char* ObjectPath;                    /**< Object path */
+extern const char* InterfaceName;                 /**< Interface name */
+/** Interface definitions for org.allseen.Security.PermissionMgmt.Notification */
+namespace Notification {
+extern const char* InterfaceName;                 /**< Interface name */
+}
+}
 }
 
 }
+}
+
 
 /**
  * @anchor BindSessionPortReplyAnchor

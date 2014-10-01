@@ -40,6 +40,7 @@
 #include "PeerState.h"
 #include "AuthMechanism.h"
 #include "KeyExchanger.h"
+#include "PermissionMgmtObj.h"
 
 namespace ajn {
 
@@ -110,9 +111,10 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      *
      * @param authMechanisms   The names of the authentication mechanisms to set
      * @param listener         Required for authentication mechanisms that require interation with the user
+     * @param bus          Bus to associate with /org/alljoyn/Bus/Peer message handler.
      *                         or application. Can be NULL if not required.
      */
-    void SetupPeerAuthentication(const qcc::String& authMechanisms, AuthListener* listener);
+    void SetupPeerAuthentication(const qcc::String& authMechanisms, AuthListener* listener, BusAttachment& bus);
 
     /**
      * Check if authentication has been enabled.
@@ -475,6 +477,8 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
 
     uint16_t supportedAuthSuitesCount;
     uint32_t* supportedAuthSuites;
+
+    PermissionMgmtObj* permissionMgmtObj;
 };
 
 

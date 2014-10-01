@@ -108,6 +108,7 @@ struct PingAsyncCBContext {
 
 namespace ajn {
 
+
 BusAttachment::Internal::Internal(const char* appName,
                                   BusAttachment& bus,
                                   TransportFactoryContainer& factories,
@@ -130,7 +131,8 @@ BusAttachment::Internal::Internal(const char* appName,
     allowRemoteMessages(allowRemoteMessages),
     listenAddresses(listenAddresses ? listenAddresses : ""),
     stopLock(),
-    stopCount(0)
+    stopCount(0),
+    permissionManager(bus)
 {
     /*
      * Bus needs a pointer to this internal object.
@@ -152,6 +154,7 @@ BusAttachment::Internal::Internal(const char* appName,
     authManager.RegisterMechanism(AuthMechPIN::Factory, AuthMechPIN::AuthName());
     authManager.RegisterMechanism(AuthMechExternal::Factory, AuthMechExternal::AuthName());
     authManager.RegisterMechanism(AuthMechAnonymous::Factory, AuthMechAnonymous::AuthName());
+
 }
 
 BusAttachment::Internal::~Internal()
@@ -859,7 +862,7 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
     if (status == ER_OK) {
         AllJoynPeerObj* peerObj = busInternal->localEndpoint->GetPeerObj();
         if (peerObj) {
-            peerObj->SetupPeerAuthentication(authMechanisms, authMechanisms ? listener : NULL);
+            peerObj->SetupPeerAuthentication(authMechanisms, authMechanisms ? listener : NULL, *this);
         } else {
             return ER_BUS_SECURITY_NOT_ENABLED;
         }

@@ -490,6 +490,12 @@ QStatus KeyStore::Clear()
     return ER_OK;
 }
 
+QStatus KeyStore::ResetMasterGUID(const GUID128& newMasterGUID)
+{
+    thisGuid = newMasterGUID;
+    return Clear();
+}
+
 QStatus KeyStore::Reload()
 {
     QCC_DbgHLPrintf(("KeyStore::Reload"));

@@ -244,6 +244,17 @@ class KeyStore {
     QStatus Reset();
 
     /**
+     * reset the master GUID. The whole key store will be cleared.
+     * @param newMasterGUID the new master GUID
+     * @return
+     *      - ER_OK if successful
+     *      - An error status otherwise
+     *
+     */
+
+    QStatus ResetMasterGUID(const qcc::GUID128& newMasterGUID);
+
+    /**
      * Pull keys into the key store from a source.
      *
      * @param source    The source to read the keys from.

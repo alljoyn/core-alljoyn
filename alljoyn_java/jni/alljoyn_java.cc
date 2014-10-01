@@ -9731,8 +9731,10 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_create(JNIEn
                                  (strcmp(org::allseen::Introspectable::InterfaceName, name.c_str()) == 0);
         }
         if ((status != ER_OK) &&
-            isDBusStandardIfac &&
-            (intf->GetSecurityPolicy() == static_cast<InterfaceSecurityPolicy>(org_alljoyn_bus_InterfaceDescription_AJ_IFC_SECURITY_OFF))) {
+            ((isDBusStandardIfac &&
+              (intf->GetSecurityPolicy() == static_cast<InterfaceSecurityPolicy>(org_alljoyn_bus_InterfaceDescription_AJ_IFC_SECURITY_OFF))) ||
+             (strcmp(org::allseen::Security::PermissionMgmt::InterfaceName, name.c_str()) == 0))
+            ) {
             status = ER_OK;
         }
     }

@@ -64,6 +64,11 @@ const char* org::allseen::Introspectable::IntrospectDocType =
     "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\""
     ">\n";
 
+/** org.allseen.Security.PermissionMgmt interface definitions */
+const char* org::allseen::Security::PermissionMgmt::InterfaceName = "org.allseen.Security.PermissionMgmt";
+const char* org::allseen::Security::PermissionMgmt::Notification::InterfaceName = "org.allseen.Security.PermissionMgmt.Notification";
+const char* org::allseen::Security::PermissionMgmt::ObjectPath = "/org/allseen/Security/PermissionMgmt";
+
 QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
 {
     QStatus status;
@@ -192,6 +197,41 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         introspectIntf->AddMethod("GetDescriptionLanguages",     "",   "as", "languageTags");
         introspectIntf->AddMethod("IntrospectWithDescription",   "s",  "s",  "languageTag,data");
         introspectIntf->Activate();
+    }
+    {
+        /* Create the org.allseen.Security.PermissionMgmt interface */
+        InterfaceDescription* ifc = NULL;
+        status = bus.CreateInterface(org::allseen::Security::PermissionMgmt::InterfaceName, ifc, AJ_IFC_SECURITY_REQUIRED);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to create %s interface", org::allseen::Security::PermissionMgmt::InterfaceName));
+            return status;
+        }
+        ifc->AddMethod("Claim",     "(yv)ay",  "(yv)", "adminPublicKey,GUID,publicKey");
+        ifc->AddMethod("InstallPolicy",     "(yv)",  NULL, "authorization");
+        ifc->AddMethod("InstallEncryptedPolicy",     "ay",  NULL, "encryptedAuthorization");
+        ifc->AddMethod("GetPolicy",     NULL, "(yv)",  "authorization");
+        ifc->AddMethod("RemovePolicy",     NULL, NULL, NULL);
+        ifc->AddMethod("InstallMembership",     "ay",  NULL, "cert");
+        ifc->AddMethod("InstallMembershipPolicy",     "ayayay(yv)",  NULL, "serialNum,subject,guildID,authorization");
+        ifc->AddMethod("RemoveMembership",     "ay", NULL, "guildID");
+        ifc->AddMethod("InstallIdentity",     "ay", NULL, "cert");
+        ifc->AddMethod("RemoveIdentity",     NULL, NULL, NULL);
+        ifc->AddMethod("GetIdentity",     NULL, "ay", "cert");
+        ifc->AddMethod("InstallGuildEquivalence",     "ay", NULL, "cert");
+        ifc->AddMethod("RemoveGuildEquivalence",     "ay", NULL, "publicKey");
+        ifc->AddMethod("GetManifest",     NULL, "yv",  "manifest");
+        ifc->Activate();
+    }
+    {
+        /* Create the org.allseen.Security.PermissionMgmt.Notification interface */
+        InterfaceDescription* ifc = NULL;
+        status = bus.CreateInterface(org::allseen::Security::PermissionMgmt::Notification::InterfaceName, ifc, AJ_IFC_SECURITY_OFF);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to create %s interface", org::allseen::Security::PermissionMgmt::Notification::InterfaceName));
+            return status;
+        }
+        ifc->AddSignal("NotifyConfig", "ayyua(ayay)", "GUID,claimableState,serialNumber,memberships", 0);
+        ifc->Activate();
     }
     return status;
 }

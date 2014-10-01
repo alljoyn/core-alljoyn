@@ -43,6 +43,7 @@
 #include "Transport.h"
 #include "TransportList.h"
 #include "CompressionRules.h"
+#include "PermissionManager.h"
 
 #include <alljoyn/Status.h>
 
@@ -249,6 +250,13 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
         return router->PushMessage(msg, busEndpoint);
     }
 
+    /**
+     * Get a reference to the internal permission manager
+     *
+     * @return A reference to the bus's permmision manager
+     */
+    PermissionManager& GetPermissionManager() { return permissionManager; }
+
   private:
 
     /**
@@ -317,6 +325,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     std::map<qcc::Thread*, JoinContext> joinThreads;  /* List of threads waiting to join */
     qcc::Mutex joinLock;                              /* Mutex that protects joinThreads */
     KeyStoreKeyEventListener ksKeyEventListener;
+    PermissionManager permissionManager;
 };
 }
 

@@ -191,6 +191,7 @@ class _Message {
     friend class AllJoynObj;
     friend class DeferredMsg;
     friend class AllJoynPeerObj;
+    friend class PermissionMgmtObj;
     friend struct Rule;
 
   public:
@@ -280,6 +281,14 @@ class _Message {
      * @param[out] numArgs The number of arguments
      */
     void GetArgs(size_t& numArgs, const MsgArg*& args) { args = msgArgs; numArgs = numMsgArgs; }
+
+    /**
+     * Return the reference arguments for this message.  These arguments are copied when the message is marshalled.
+     *
+     * @param[out] args  Returns the arguments
+     * @param[out] numArgs The number of arguments
+     */
+    void GetRefArgs(size_t& numArgs, const MsgArg*& args) { args = refMsgArgs; numArgs = numRefMsgArgs; }
 
     /**
      * Return a specific argument.
@@ -880,6 +889,8 @@ class _Message {
     MsgArg* msgArgs;             ///< Pointer to the unmarshaled arguments.
     uint8_t numMsgArgs;          ///< Number of message args (signature cannot be longer than 255 chars).
 
+    MsgArg* refMsgArgs;             ///< Pointer to the copy of the marshalled arguments.
+    uint8_t numRefMsgArgs;          ///< size of the copy of the marshalled arguments
     size_t bufSize;              ///< The current allocated size of the msg buffer.
     uint8_t* bufEOD;             ///< End of data currently in buffer.
     uint8_t* bufPos;             ///< Pointer to the position in buffer.

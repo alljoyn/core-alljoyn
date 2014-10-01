@@ -82,12 +82,18 @@ class _PeerState {
         lastDriftAdjustTime(0),
         expectedSerial(0),
         isSecure(false),
-        authEvent(NULL)
+        authEvent(NULL),
+        guilds(NULL),
+        numOfGuilds(0)
     {
         ::memset(window, 0, sizeof(window));
         ::memset(authorizations, 0, sizeof(authorizations));
     }
 
+    ~_PeerState()
+    {
+        delete [] guilds;
+    }
     /**
      * Get the (estimated) timestamp for this remote peer converted to local host time. The estimate
      * is updated based on the timestamp recently received.
@@ -252,6 +258,23 @@ class _PeerState {
         }
     }
 
+
+    void SetGuilds(size_t count, qcc::GUID128* guilds)
+    {
+        delete [] this->guilds;
+        numOfGuilds = count;
+        this->guilds = guilds;
+    }
+
+    size_t GetNumOfGuilds() {
+        return numOfGuilds;
+    }
+
+    qcc::GUID128* GetGuilds()
+    {
+        return guilds;
+    }
+
   private:
 
     /**
@@ -321,6 +344,8 @@ class _PeerState {
      */
     uint32_t window[128];
 
+    qcc::GUID128* guilds;
+    size_t numOfGuilds;
 };
 
 

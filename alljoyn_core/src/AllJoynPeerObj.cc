@@ -165,7 +165,7 @@ static void SetRights(PeerState& peerState, bool mutual, bool challenger)
 AllJoynPeerObj::AllJoynPeerObj(BusAttachment& bus) :
     BusObject(org::alljoyn::Bus::Peer::ObjectPath, false),
     AlarmListener(),
-    dispatcher("PeerObjDispatcher", true, 3), supportedAuthSuitesCount(0), supportedAuthSuites(NULL)
+    dispatcher("PeerObjDispatcher", true, 3), supportedAuthSuitesCount(0), supportedAuthSuites(NULL), permissionMgmtObj(NULL)
 {
     /* Add org.alljoyn.Bus.Peer.HeaderCompression interface */
     {
@@ -202,7 +202,6 @@ AllJoynPeerObj::AllJoynPeerObj(BusAttachment& bus) :
                 NULL);
         }
     }
-
 }
 
 QStatus AllJoynPeerObj::Start()
@@ -246,6 +245,9 @@ AllJoynPeerObj::~AllJoynPeerObj()
 {
     if ((supportedAuthSuitesCount > 0) && supportedAuthSuites) {
         delete [] supportedAuthSuites;
+    }
+    if (permissionMgmtObj) {
+        delete permissionMgmtObj;
     }
 }
 
@@ -490,6 +492,7 @@ void AllJoynPeerObj::ExchangeGuids(const InterfaceDescription::Member* member, M
     assert(bus);
     qcc::GUID128 remotePeerGuid(msg->GetArg(0)->v_string.str);
     uint32_t authVersion = msg->GetArg(1)->v_uint32;
+
     qcc::String localGuidStr = bus->GetInternal().GetKeyStore().GetGuid();
     if (!localGuidStr.empty()) {
         PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetSender());
@@ -509,6 +512,7 @@ void AllJoynPeerObj::ExchangeGuids(const InterfaceDescription::Member* member, M
          * will try a different version or give up if it doesn't like our suggestion.
          */
         peerState->SetGuidAndAuthVersion(remotePeerGuid, authVersion);
+
         /*
          * Associate the remote peer GUID with the sender peer state.
          */
@@ -543,6 +547,15 @@ QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, String seed, qcc::String& v
     status = keyStore.GetKey(peerState->GetGuid(), masterSecret, peerState->authorizations);
     if ((status == ER_OK) && masterSecret.HasExpired()) {
         status = ER_BUS_KEY_EXPIRED;
+    }
+    if (status == ER_OK) {
+        String tag = masterSecret.GetTag();
+        if (tag == "ALLJOYN_ECDHE_NULL") {
+            /* expires the ECDHE_NULL after first use */
+            Timespec now;
+            GetTimeNow(&now);
+            keyStore.SetKeyExpiration(peerState->GetGuid(), now);
+        }
     }
     if (status == ER_OK) {
         size_t keylen = Crypto_AES::AES128_SIZE + VERIFIER_LEN;
@@ -603,6 +616,7 @@ void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, M
         qcc::String verifier;
         status = KeyGen(peerState, msg->GetArg(2)->v_string.str + nonce, verifier, KeyBlob::RESPONDER);
         if (status == ER_OK) {
+            QCC_DbgHLPrintf(("GenSessionKey succeeds for peer %s", msg->GetSender()));
             MsgArg replyArgs[2];
             replyArgs[0].Set("s", nonce.c_str());
             replyArgs[1].Set("s", verifier.c_str());
@@ -868,7 +882,7 @@ void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* mem
         /* the order of precedence is from the server perspective */
         for (size_t cnt = 0; cnt < supportedAuthSuitesCount; cnt++) {
             for (size_t idx = 0; idx < remoteSuitesLen; idx++) {
-                if ((supportedAuthSuites[cnt] & remoteSuites[idx]) == supportedAuthSuites[cnt]) {
+                if (supportedAuthSuites[cnt] == remoteSuites[idx]) {
                     /* add it */
                     effectiveAuthSuites[netCnt++] = supportedAuthSuites[cnt];
                     break;
@@ -1147,6 +1161,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
                  * The response completes the seed string so we can generate the session key.
                  */
                 status = KeyGen(peerState, nonce + replyMsg->GetArg(0)->v_string.str, verifier, KeyBlob::INITIATOR);
+                QCC_DbgHLPrintf(("Initiator KeyGen after receiving response from sender %s", busName.c_str()));
                 if ((status == ER_OK) && (verifier != replyMsg->GetArg(1)->v_string.str)) {
                     status = ER_AUTH_FAIL;
                 }
@@ -1451,7 +1466,14 @@ void AllJoynPeerObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                             bus->GetInternal().GetLocalEndpoint()->ResumeReplyHandlerTimeout(msg);
                         }
                         BusEndpoint busEndpoint = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
-                        bus->GetInternal().GetRouter().PushMessage(msg, busEndpoint);
+                        QStatus pushStatus = bus->GetInternal().GetRouter().PushMessage(msg, busEndpoint);
+                        if (pushStatus == ER_PERMISSION_DENIED) {
+                            if (req->msg->GetType() == MESSAGE_METHOD_CALL) {
+                                Message reply(*bus);
+                                reply->ErrorMsg(status, req->msg->GetCallSerial());
+                                bus->GetInternal().GetLocalEndpoint()->PushMessage(reply);
+                            }
+                        }
                     }
                     iter = msgsPendingAuth.erase(iter);
                 } else {
@@ -1670,9 +1692,14 @@ QStatus KeyExchangerCB::SendKeyAuthentication(MsgArg* variant, Message* replyMsg
  * @param authMechanisms   The names of the authentication mechanisms to set
  * @param listener         Required for authentication mechanisms that require interation with the user
  *                         or application. Can be NULL if not required.
+ * @param bus               Bus attachment
  */
-void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, AuthListener* listener)
+void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, AuthListener* listener, BusAttachment& bus)
 {
+    /* clean up first */
+    delete [] supportedAuthSuites;
+    delete permissionMgmtObj;
+
     peerAuthMechanisms = authMechanisms;
     peerAuthListener.Set(listener);
     /* setup the peer auth mask */
@@ -1751,5 +1778,6 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
             supportedAuthSuites[idx++] = AUTH_SUITE_ECDHE_ECDSA;
         }
     }
+    permissionMgmtObj = new PermissionMgmtObj(bus);
 }
 }

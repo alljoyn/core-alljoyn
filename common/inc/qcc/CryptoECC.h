@@ -55,7 +55,6 @@ static const size_t ECC_SECRET_SZ = ECC_PUBLIC_KEY_SZ;
  */
 static const size_t ECC_SIGNATURE_SZ = 2 * ECC_BIGVAL_SZ * sizeof(uint32_t);
 
-
 /**
  * The ECC private key big endian byte array
  */
@@ -85,6 +84,11 @@ struct ECCSignature {
 class Crypto_ECC {
 
   public:
+
+    /**
+     * The NIST recommended elliptic curve P-256
+     */
+    static const uint8_t ECC_NIST_P256 = 0;
 
     /**
      * Default constructor.
@@ -255,11 +259,6 @@ class Crypto_ECC {
     ~Crypto_ECC();
 
   private:
-
-    /**
-     * The NIST recommended elliptic curve P-256
-     */
-    static const uint8_t ECC_NIST_P256 = 0;
 
     ECCPrivateKey dhPrivateKey;
     ECCPublicKey dhPublicKey;

@@ -317,6 +317,7 @@ QStatus EnableSecurity()
     } else {
         printf("BusAttachment::EnablePeerSecurity failed (%s).\n", QCC_StatusText(status));
     }
+
     return status;
 }
 

@@ -747,6 +747,11 @@ QStatus _Message::EncryptMessage()
         if (!peerState->IsAuthorized((AllJoynMessageType)msgHeader.msgType, _PeerState::ALLOW_SECURE_TX)) {
             status = ER_BUS_NOT_AUTHORIZED;
             encrypt = false;
+        } else {
+            Message msg(*this);
+            bool send = true;   // encrypting a message means sending
+            status = bus->GetInternal().GetPermissionManager().AuthorizeMessage(send, peerState->GetGuid(), msg, peerState->GetNumOfGuilds(), peerState->GetGuilds());
+            QCC_DbgHLPrintf(("_Message::EncryptMessage permission authorization returns status 0x%x\n", status));
         }
     }
     if (status == ER_OK) {
@@ -953,6 +958,7 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
         bodyPtr = NULL;
         goto ExitMarshalMessage;
     }
+
     /*
      * Marshal the message body
      */
@@ -978,6 +984,19 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
      */
     assert((bufPos - bodyPtr) == (ptrdiff_t)argsLen);
     bufEOD = bodyPtr + msgHeader.bodyLen;
+
+    /* track the msgArgs so it can be used to check the ACLs for properties */
+    if ((numArgs > 0) && (strcmp(GetInterface(), "org.freedesktop.DBus.Properties") == 0)) {
+        refMsgArgs = new MsgArg[numArgs];
+        for (int cnt = 0; cnt < numArgs; cnt++) {
+            refMsgArgs[cnt] = args[cnt];
+        }
+        numRefMsgArgs = numArgs;
+    } else {
+        numRefMsgArgs = 0;
+        refMsgArgs = NULL;
+    }
+
     while (numArgs--) {
         QCC_DbgPrintf(("\n%s\n", args->ToString().c_str()));
         ++args;
