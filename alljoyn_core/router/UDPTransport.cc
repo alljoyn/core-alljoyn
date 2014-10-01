@@ -1619,6 +1619,7 @@ class MessagePump {
             if (m_pastThreads.size()) {
                 PumpThread* pt = m_pastThreads.front();
                 m_pastThreads.pop();
+                --m_spawnedThreads;
                 m_lock.Unlock();
                 QStatus status = pt->Join();
                 if (status != ER_OK) {
@@ -1627,7 +1628,6 @@ class MessagePump {
                 delete pt;
                 pt = NULL;
                 m_lock.Lock();
-                --m_spawnedThreads;
             } else {
                 /*
                  * If there is a spawned thread left and no threads on the
