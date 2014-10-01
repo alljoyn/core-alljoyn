@@ -139,7 +139,7 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
 
     if (0 < ret && 0 <= stopFd) {
         for (int n = 0; n < ret; ++n) {
-            if ((evlist[n].filter & EVFILT_READ) && evlist[n].ident == stopFd) {
+            if ((evlist[n].filter == EVFILT_READ) && evlist[n].ident == stopFd) {
                 close(kq);
                 return thread->IsStopping() ? ER_STOPPING_THREAD : ER_ALERTED_THREAD;
             }
@@ -159,10 +159,10 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
         }
     } else if ((0 < ret) && ((0 <= evt.fd) || (0 <= evt.ioFd))) {
         for (int n = 0; n < ret; ++n) {
-            if ((evlist[n].filter & EVFILT_WRITE) && (evt.eventType == IO_WRITE) && (evlist[n].ident == evt.fd || evlist[n].ident == evt.ioFd)) {
+            if ((evlist[n].filter == EVFILT_WRITE) && (evt.eventType == IO_WRITE) && (evlist[n].ident == evt.fd || evlist[n].ident == evt.ioFd)) {
                 close(kq);
                 return ER_OK;
-            } else if ((evlist[n].filter & EVFILT_READ) && (evt.eventType == IO_READ || evt.eventType == GEN_PURPOSE) && (evlist[n].ident == evt.fd || evlist[n].ident == evt.ioFd)) {
+            } else if ((evlist[n].filter == EVFILT_READ) && (evt.eventType == IO_READ || evt.eventType == GEN_PURPOSE) && (evlist[n].ident == evt.fd || evlist[n].ident == evt.ioFd)) {
                 close(kq);
                 return ER_OK;
             }
@@ -412,13 +412,15 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
         for (int n = 0; n < ret; ++n) {
             for (it = checkEvents.begin(); it != checkEvents.end(); ++it) {
                 Event* evt = *it;
-                if ((evlist[n].filter & EVFILT_READ) && ((evt->eventType == IO_READ) || (evt->eventType == GEN_PURPOSE))) {
+                if ((evlist[n].filter == EVFILT_READ) && ((evt->eventType == IO_READ) || (evt->eventType == GEN_PURPOSE))) {
                     if (((0 <= evt->fd) && evlist[n].ident == evt->fd) || ((0 <= evt->ioFd)  && evlist[n].ident == evt->ioFd)) {
                         signaledEvents.push_back(evt);
+                        break;
                     }
-                } else if ((evlist[n].filter & EVFILT_WRITE) && (evt->eventType == IO_WRITE)) {
+                } else if ((evlist[n].filter == EVFILT_WRITE) && (evt->eventType == IO_WRITE)) {
                     if (((0 <= evt->fd) && evlist[n].ident == evt->fd) || ((0 <= evt->ioFd) && evlist[n].ident == evt->ioFd)) {
                         signaledEvents.push_back(evt);
+                        break;
                     }
                 }
             }
