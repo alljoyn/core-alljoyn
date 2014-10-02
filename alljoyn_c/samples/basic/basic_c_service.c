@@ -126,7 +126,7 @@ void cat_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member
 int main(int argc, char** argv, char** envArg)
 {
     QStatus status = ER_OK;
-    char* connectArgs = "unix:abstract=alljoyn";
+    char* connectArgs = NULL;
     alljoyn_interfacedescription testIntf = NULL;
     alljoyn_busobject_callbacks busObjCbs = {
         NULL,
