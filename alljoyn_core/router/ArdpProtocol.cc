@@ -2277,12 +2277,14 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 if ((seg->FLG  & ARDP_VERSION_BITS) != ARDP_FLAG_VER) {
                     QCC_DbgHLPrintf(("ArdpMachine(): SYN_SENT: Detected unsupported protocol version 0x%x",
                                      seg->FLG & ARDP_VERSION_BITS));
+                    status = ER_ARDP_VERSION_NOT_SUPPORTED;
+                } else {
+                    status = ER_ARDP_REMOTE_CONNECTION_RESET;
                 }
-
 #if ARDP_STATS
                 ++handle->stats.rstRecvs;
 #endif
-                status = ER_ARDP_REMOTE_CONNECTION_RESET;
+
             } else if (seg->FLG & ARDP_FLAG_SYN) {
                 ArdpSynSegment* ss = (ArdpSynSegment*) buf;
                 QCC_DbgPrintf(("ArdpMachine(): SYN_SENT: SYN received"));
