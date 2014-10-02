@@ -78,6 +78,8 @@ static bool compress = false;
 static bool encryption = false;
 static bool broacast = false;
 static unsigned long timeToLive = 0;
+static String g_testAboutApplicationName = "bbservice";
+static bool g_useAboutFeatureDiscovery = false;
 
 /** AllJoynListener receives discovery events from AllJoyn */
 class MyBusListener : public BusListener, public SessionListener {
@@ -143,6 +145,50 @@ class MyBusListener : public BusListener, public SessionListener {
 /** Static bus listener */
 static MyBusListener g_busListener;
 
+class MyAboutListener : public AboutListener {
+  public:
+    MyAboutListener() : sessionId(0) { }
+    void Announced(const char* busName, uint16_t version, SessionPort port,
+                   const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
+        AboutData ad;
+        ad.CreatefromMsgArg(aboutDataArg);
+
+        char* appName;
+        ad.GetAppName(&appName);
+
+        if (appName != NULL && strcmp(g_testAboutApplicationName.c_str(), appName) == 0) {
+            QCC_SyncPrintf("Found Announced interface name=%s\n", busName);
+
+            /* We must enable concurrent callbacks since some of the calls below are blocking */
+            g_msgBus->EnableConcurrentCallbacks();
+
+            /* We found a remote bus that is advertising bbservice's well-known name so connect to it */
+            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+
+            QStatus status = g_msgBus->JoinSession(busName, ::org::alljoyn::alljoyn_test::SessionPort, &g_busListener, sessionId, opts);
+            if (ER_OK == status) {
+                if (encryption) {
+                    ProxyBusObject remotePeerObj(*g_msgBus, busName, "/", 0);
+                    status = remotePeerObj.SecureConnection();
+                    if (status != ER_OK) {
+                        QCC_LogError(status, ("Failed to authenticate remote peer (status=%s)", QCC_StatusText(status)));
+                    }
+                }
+                /* Release main thread */
+                g_discoverEvent.SetEvent();
+            } else {
+                QCC_LogError(status, ("JoinSession failed (status=%s)", QCC_StatusText(status)));
+            }
+        }
+    }
+
+    SessionId GetSessionId() const { return sessionId; }
+
+  private:
+    SessionId sessionId;
+};
+
+static MyAboutListener g_aboutListener;
 
 static volatile sig_atomic_t g_interrupt = false;
 
@@ -173,11 +219,19 @@ class LocalTestObject : public BusObject {
             testIntf->AddSignal("my_signal", "a{ys}", NULL, 0);
             testIntf->AddMethod("my_ping", "s", "s", "outStr,inStr", 0);
             testIntf->Activate();
-            AddInterface(*testIntf);
         } else {
             QCC_LogError(status, ("Failed to create interface %s", ::org::alljoyn::alljoyn_test::InterfaceName));
             return;
         }
+
+        if (ER_OK == status) {
+            if (g_useAboutFeatureDiscovery) {
+                AddInterface(*testIntf, ANNOUNCED);
+            } else {
+                AddInterface(*testIntf);
+            }
+        }
+
 
         /* Get my_signal member */
         if (ER_OK == status) {
@@ -217,7 +271,11 @@ class LocalTestObject : public BusObject {
         if (broacast) {
             return Signal(NULL, 0, *my_signal_member, &arg, 1, timeToLive, flags);
         } else {
-            return Signal(NULL, g_busListener.GetSessionId(), *my_signal_member, &arg, 1, timeToLive, flags);
+            if (g_useAboutFeatureDiscovery) {
+                return Signal(NULL, g_aboutListener.GetSessionId(), *my_signal_member, &arg, 1, timeToLive, flags);
+            } else {
+                return Signal(NULL, g_busListener.GetSessionId(), *my_signal_member, &arg, 1, timeToLive, flags);
+            }
         }
     }
 
@@ -478,6 +536,8 @@ static void usage(void)
     printf("   -b                          = Signal is broadcast rather than multicast\n");
     printf("   --ls                        = Call LeaveSession before tearing down the Bus Attachment\n");
     printf("   --self-join                 = Test self-join \n");
+    printf("   -about [name]   = use the about feature for discovery (optional application name to join).\n");
+    printf("\n");
 }
 
 /** Main entry point */
@@ -635,6 +695,14 @@ int main(int argc, char** argv)
         } else if (0 == strcmp("--self-join", argv[i])) {
             g_selfjoin = true;
             g_wellKnownName = g_advertiseName;
+        } else if (0 == strcmp("-about", argv[i])) {
+            g_useAboutFeatureDiscovery = true;
+            if ((i + 1) < argc && argv[i + 1][0] != '-') {
+                ++i;
+                g_testAboutApplicationName = argv[i];
+            } else {
+                g_testAboutApplicationName = "bbservice";
+            }
         } else {
             status = ER_FAIL;
             printf("Unknown option %s\n", argv[i]);
@@ -673,6 +741,10 @@ int main(int argc, char** argv)
         /* Register a bus listener in order to get discovery indications */
         if (discoverRemote || g_selfjoin) {
             g_msgBus->RegisterBusListener(g_busListener);
+        }
+        /* Register an AboutListener in order to get interface discovery indications */
+        if (g_useAboutFeatureDiscovery) {
+            g_msgBus->RegisterAboutListener(g_aboutListener);
         }
 
         /* Register object and start the bus */
@@ -722,13 +794,21 @@ int main(int argc, char** argv)
             if (ER_OK != status) {
                 QCC_LogError(status, ("%s.FindAdvertisedName failed", ::ajn::org::alljoyn::Bus::InterfaceName));
             }
+        } else if (g_useAboutFeatureDiscovery) {
+            /*
+             * Make sure the event is cleared so we don't pick up a stale event from the previous
+             * iteration when running the stress test.
+             */
+            g_discoverEvent.ResetEvent();
+            const char* interfaces[] = { ::org::alljoyn::alljoyn_test::InterfaceName };
+            status = g_msgBus->WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
         }
 
         /*
          * If discovering, wait for the "FoundName" signal that tells us that we are connected to a
          * remote bus that is advertising bbservice's well-known name.
          */
-        if ((discoverRemote  || g_selfjoin) && (ER_OK == status)) {
+        if ((discoverRemote || g_selfjoin || g_useAboutFeatureDiscovery) && (ER_OK == status)) {
             for (bool discovered = false; !discovered;) {
                 /*
                  * We want to wait for the discover event, but we also want to
@@ -800,7 +880,11 @@ int main(int argc, char** argv)
         }
 
         if (ls) {
-            g_msgBus->LeaveSession(g_busListener.GetSessionId());
+            if (g_useAboutFeatureDiscovery) {
+                g_msgBus->LeaveSession(g_aboutListener.GetSessionId());
+            } else {
+                g_msgBus->LeaveSession(g_busListener.GetSessionId());
+            }
         }
 
         /* Clean up msg bus for next stress loop iteration*/
