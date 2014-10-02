@@ -100,7 +100,7 @@ void name_owner_changed(const void* context, const char* busName, const char* pr
 int main(int argc, char** argv, char** envArg)
 {
     QStatus status = ER_OK;
-    char* connectArgs = "unix:abstract=alljoyn";
+    char* connectArgs = NULL;
     alljoyn_interfacedescription testIntf = NULL;
     /* Create a bus listener */
     alljoyn_buslistener_callbacks callbacks = {
