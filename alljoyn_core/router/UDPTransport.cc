@@ -7936,10 +7936,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     /*
      * The Function HelloMessage creates and marshals the BusHello Message for
      * the remote side.  Once it is marshaled, there is a buffer associated with
-     * the message that contains the on-the-wire version of the messsage.  The
-     * ARDP code expects to take responsibility for the buffer since it may need
-     * to retransmit it, so we need to copy out the contents of that (small)
-     * buffer.
+     * the message that contains the on-the-wire version of the messsage.
      */
     size_t buflen = hello->GetBufferSize();
 #ifndef NDEBUG
@@ -7989,6 +7986,20 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     m_ardpLock.Lock();
     QCC_DbgPrintf(("UDPTransport::Connect(): ARDP_Connect()"));
     status = ARDP_Connect(m_handle, sock, ipAddr, ipPort, m_ardpConfig.segmax, m_ardpConfig.segbmax, &conn, buf, buflen, &event);
+
+    /*
+     * The ARDP code takes the hello buffer and copies it into its internal
+     * retry buffer, so we are responsible for disposition of the buffer no
+     * matter if the connect succeeds or fails.
+     */
+    delete buf;
+    buf = NULL;
+
+    /*
+     * If the ARDP_Connect fails, we haven't started the connection process, so
+     * we haven't passed responsibility for the connection counts off to the
+     * callback (see note below).
+     */
     if (status != ER_OK) {
         assert(conn == NULL && "UDPTransport::Connect(): ARDP_Connect() failed but returned ArdpConnRecord");
         QCC_LogError(status, ("UDPTransport::Connect(): ARDP_Connect() failed"));
