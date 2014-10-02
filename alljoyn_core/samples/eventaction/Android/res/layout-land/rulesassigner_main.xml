@@ -25,52 +25,89 @@
     >
     
     <LinearLayout
-        android:id="@+id/rule_buttons"
-	    android:layout_width="wrap_content"
-	    android:layout_height="wrap_content"
-	    android:orientation="horizontal"
-	    android:layout_gravity="center_horizontal"
-	    android:weightSum="2"
-	    >
-	    <Button 
-	        android:layout_weight="1"
-		    android:id="@+id/rule_save"
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:text="@string/save_rule"/>
-	    <Button 
-	        android:layout_weight="1"
-		    android:id="@+id/rule_clear_saved"
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:text="@string/clear_saved"/>
-    </LinearLayout>
-    
-	<LinearLayout
-	    android:layout_width="match_parent"
-	    android:layout_height="wrap_content"
-	    android:weightSum="2"
-	    android:orientation="horizontal"
-	    >
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:weightSum="1" >
+
+		<LinearLayout
+		    android:layout_width="match_parent"
+		    android:layout_height="0dp"
+		    android:layout_weight=".5"
+		    android:orientation="horizontal" >
+		
+		    <fragment
+		        android:id="@+id/rules_events_fragment"
+		        android:name="org.allseen.sample.eventaction.ruleassigner.EventsFragment"
+		        android:layout_width="match_parent"
+		        android:layout_height="wrap_content"
+		        class="org.allseen.sample.eventaction.EventsFragment"
+		        tools:layout="@layout/event_fragment"
+		        android:layout_weight=".5"/>
+		
+		    <fragment
+		        android:id="@+id/rules_actions_fragment"
+		        android:name="org.allseen.sample.eventaction.ruleassigner.ActionsFragment"
+		        android:layout_width="match_parent"
+		        android:layout_height="wrap_content"
+		        android:layout_marginLeft="@dimen/activity_vertical_margin"
+		        class="org.allseen.sample.eventaction.ActionsFragment"
+		        tools:layout="@layout/action_fragment"
+		        android:layout_weight=".5"/>
+		    </LinearLayout>
 	
-	    <fragment
-	        android:id="@+id/rules_events_fragment"
-	        android:name="org.allseen.sample.eventaction.ruleassigner.EventsFragment"
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content"
-	        android:layout_weight="1"
-	        class="org.allseen.sample.eventaction.EventsFragment"
-	        tools:layout="@layout/event_fragment" />
-	
-	    <fragment
-	        android:id="@+id/rules_actions_fragment"
-	        android:name="org.allseen.sample.eventaction.ruleassigner.ActionsFragment"
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content"
-	        android:layout_weight="1"
-	        android:layout_marginLeft="@dimen/activity_vertical_margin"
-	        class="org.allseen.sample.eventaction.ActionsFragment"
-	        tools:layout="@layout/action_fragment" />
-	
+		<LinearLayout
+		    android:layout_width="match_parent"
+		    android:layout_height="0dp"
+		    android:layout_weight=".50"
+		    android:orientation="horizontal"
+		    android:weightSum="5" >
+
+		    <LinearLayout
+		        android:id="@+id/rule_buttons"
+		        android:layout_width="wrap_content"
+		        android:layout_height="match_parent"
+		        android:orientation="vertical" >
+
+			    <Spinner 
+					android:id="@+id/rule_selector"
+					android:layout_width="150dip"
+					android:layout_height="40dip"
+					android:drawSelectorOnTop="true"
+					android:padding="5dip"
+					android:layout_gravity="center_horizontal"
+					android:visibility="gone"
+					/>  
+			    <Button 
+				    android:id="@+id/rule_save"
+				    android:layout_width="wrap_content"
+				    android:layout_height="wrap_content"
+				    android:text="@string/save_rule"/>
+
+			    <Button
+			        android:id="@+id/rule_clear_saved"
+			        android:layout_width="wrap_content"
+			        android:layout_height="wrap_content"
+			        android:text="@string/clear_all_saved" />
+                
+                <Button 
+                    android:id="@+id/rule_clear_selected_rules"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/clear_selected_rules"/>
+                
+		    </LinearLayout>
+
+	        <fragment
+	            android:id="@+id/rules_fragment"
+	            android:name="org.allseen.sample.eventaction.ruleassigner.RulesFragment"
+	            android:layout_width="match_parent"
+	            android:layout_height="match_parent"
+	            android:layout_marginTop="@dimen/activity_vertical_margin"
+	            class="org.allseen.sample.eventaction.RulesFragment"
+	            tools:layout="@layout/rule_fragment" />
+
+        </LinearLayout>
+        
 	</LinearLayout>
 </LinearLayout>

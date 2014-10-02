@@ -14,7 +14,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-package org.allseen.sample.eventaction;
+package org.allseen.sample.event.tester;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -97,17 +97,23 @@ public class DescriptionParser {
 			}
 			else if(qName.equals("method")){
 				if(null == currentNode) throw new SAXException("method not in node");
-				currInfo = new ActionDescription();
-				currInfo.setIface(iface);
-				currInfo.setPath(currentNode.path);
-				currInfo.setMemberName(getNameAttr(attrs));
+				ActionDescription temp = new ActionDescription();
+				temp.setIface(iface);
+				temp.setPath(currentNode.path);
+				temp.setMemberName(getNameAttr(attrs));
+				currInfo = temp;
 			}
 			else if(qName.equals("signal")){
 				if(null == currentNode) throw new SAXException("signal not in node");
-				currInfo = new EventDescription();
-				currInfo.setIface(iface);
-				currInfo.setPath(currentNode.path);
-				currInfo.setMemberName(getNameAttr(attrs));
+				try{
+					EventDescription temp = new EventDescription();
+					temp.setIface(iface);
+					temp.setPath(currentNode.path);
+					temp.setMemberName(getNameAttr(attrs));
+					currInfo = temp;
+				}catch(Exception e) {
+					e.printStackTrace();
+				}
 				try{
 					((EventDescription)currInfo).setSessionless(getIfSessionless(attrs));
 				} catch(Exception e) {
@@ -116,12 +122,10 @@ public class DescriptionParser {
 			}
 			else if(qName.equals("arg")) {
 				String arg = getSignatureAttr(attrs);
-				currInfo.addSignature(arg);
+				if(currInfo instanceof EventDescription)
+					((EventDescription)currInfo).addSignature(arg);
 				//TODO: parse arg description, for now ignore them
 				ignoreArgDescriptions = true;
-			}
-			else if(qName.equals("descirption")) {
-				Log.d(BusHandler.TAG, "Found a description");
 			}
 		}
 
@@ -136,12 +140,13 @@ public class DescriptionParser {
 				}
 			}else if(qName.equals("description")){
 				if(currInfo != null) {
-					currInfo.setDescription(inbetween);
 					if(currInfo instanceof EventDescription) {
-						currentNode.events.add(currInfo);
+						((EventDescription)currInfo).setDescription(inbetween);
+						currentNode.events.add(((EventDescription)currInfo));
 					}
-					else {
-						currentNode.actions.add(currInfo);
+					if(currInfo instanceof ActionDescription) {
+						((ActionDescription)currInfo).setDescription(inbetween);
+						currentNode.actions.add(((ActionDescription)currInfo));
 					}
 				}
 			}
