@@ -17,11 +17,13 @@
 package org.allseen.sample.eventaction;
 
 public interface EventActionListener {
-	public void onEventsFound(Device info);
+	public void onEventFound(Device info);
+	
+	public void onEventLost(int sessionId);
 	
 	public void onActionsFound(Device info);
 	
-	public void onEventActionLost(int sessionId);
+	public void onActionLost(int sessionId);
 	
 	public void onRuleEngineFound(String sessionName, String friendlyName);
 }

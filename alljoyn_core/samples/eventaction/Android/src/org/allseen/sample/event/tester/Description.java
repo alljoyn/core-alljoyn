@@ -14,7 +14,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-package org.allseen.sample.eventaction;
+package org.allseen.sample.event.tester;
 
 
 /**

@@ -13,22 +13,47 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-
 package org.allseen.sample.eventaction;
 
-/*
- * Extends Description to allow the assignment that a signal is designated
- * as not requiring a session.  This is filled in by parsing the
- * introspectionWithDescription xml returned.
- */
-public class EventDescription extends Description {
-	private boolean isSessionless;
+import android.app.Application;
 
-	public boolean isSessionless() {
-	    return isSessionless;
-    }
+public class MyApplication extends Application implements EventActionListener {
+	EventActionListener mChainedListener = null;
+	 public void onCreate() {
+	
+	 }
+	 
+	 public void setChainedListener(EventActionListener listener) {
+		 mChainedListener = listener;
+	 }
+	 
+	 @Override
+	public void onEventFound(Device info) {
+		 if(mChainedListener != null)
+			 mChainedListener.onEventFound(info);
+	}
 
-	public void setSessionless(boolean isSessionless) {
-	    this.isSessionless = isSessionless;
+	@Override
+	public void onActionsFound(Device info) {
+		if(mChainedListener != null)
+			 mChainedListener.onActionsFound(info);
+	}
+	
+	@Override
+	public void onRuleEngineFound(final String sessionName, final String friendlyName) {
+		if(mChainedListener != null)
+			 mChainedListener.onRuleEngineFound(sessionName, friendlyName);
+	}
+
+	@Override
+	public void onEventLost(int sessionId) {
+		if(mChainedListener != null)
+			 mChainedListener.onEventLost(sessionId);
+	}
+
+	@Override
+	public void onActionLost(int sessionId) {
+		if(mChainedListener != null)
+			 mChainedListener.onActionLost(sessionId);
 	}
 }

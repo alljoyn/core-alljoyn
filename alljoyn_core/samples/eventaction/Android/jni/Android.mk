@@ -7,7 +7,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := MyAllJoynCode
 
-TARGET_PLATFORM := android-8
+TARGET_PLATFORM := android-16
 
 LOCAL_C_INCLUDES := \
 	$(ALLJOYN_DIST)/cpp/inc \
@@ -24,12 +24,9 @@ LOCAL_CFLAGS := -Wno-psabi -Wno-write-strings -DANDROID_NDK -DTARGET_ANDROID -DL
 LOCAL_CPP_EXTENSION := .cc 
 
 LOCAL_SRC_FILES := \
-	AndroidJNIBridge.cc \
-	MyAllJoynCode.cc \
-	SimpleRulesEngine/Rule.cc \
-	SimpleRulesEngine/SimpleRuleEngine.cc \
-	SimpleRulesEngine/android/RulePersister.cc
-
+	event/AndroidJNIBridge.cc \
+	event/MyEventCode.cc
+	
 LOCAL_LDLIBS := \
 	-L$(NDK_PLATFORMS_ROOT)/$(TARGET_PLATFORM)/arch-arm/usr/lib \
 	-L$(ALLJOYN_DIST)/cpp/lib \
@@ -37,7 +34,7 @@ LOCAL_LDLIBS := \
     -L$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/libs/armeabi \
     -L$(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi \
     $(ALLJOYN_DIST)/cpp/lib/BundledRouter.o \
-	-lajrouter -lalljoyn -llog -lz -ldl -lssl -lcrypto -lm -lc -lstdc++ -lgcc -lgnustl_shared -lalljoyn_about
+	-lajrouter -lalljoyn -llog -ldl -lssl -lcrypto -lm -lc -lstdc++ -lgcc -lgnustl_shared -lalljoyn_about
 
 LOCAL_ARM_MODE := arm
 
