@@ -24,6 +24,10 @@
 #include <pthread.h>
 #include <errno.h>
 
+#if defined(QCC_OS_DARWIN)
+#include <sys/time.h>
+#endif
+
 #include <qcc/Debug.h>
 #include <qcc/Condition.h>
 
@@ -66,7 +70,14 @@ QStatus Condition::TimedWait(qcc::Mutex& m, uint32_t ms)
     tsTimeout.tv_nsec = (ms % 1000) * 1000000;
 
     struct timespec tsNow;
+
+#if defined(QCC_OS_DARWIN)
+    struct timeval tvNow;
+    gettimeofday(&tvNow, NULL);
+    TIMEVAL_TO_TIMESPEC(&tvNow, &tsNow);
+#else
     clock_gettime(CLOCK_REALTIME, &tsNow);
+#endif
 
     tsTimeout.tv_nsec += tsNow.tv_nsec;
     tsTimeout.tv_sec += tsTimeout.tv_nsec / 1000000000;
