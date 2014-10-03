@@ -42,9 +42,9 @@ class ClientBusListener : public BusListener {
         g_discoverEvent.SetEvent();
     }
 
-    void LostAdvertisedName(const char* name, const char* guid, const char* prefix, const char* busAddress)
+    void LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
-        //QCC_SyncPrintf("LostAdvertisedName(name=%s, guid=%s, prefix=%s, addr=%s)\n", name, guid, prefix, busAddress);
+        //QCC_SyncPrintf("LostAdvertisedName(name=%s, transport=0x%x, namePrefix=%s)\n", name, transport, namePrefix);
     }
 };
 

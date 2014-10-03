@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2011, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2011, 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -23,20 +23,19 @@ env.Append(CPPFLAGS=['-march=armv6',
 
 # Use the OpenEmbedded cross-compilation environment
 vars = Variables()
-vars.Add(PathVariable('OE_BASE', 'Base directory of OpenEmbedded build for ARM', os.environ.get('OE_BASE')))
+vars.Add('CROSS_COMPILE', 'Cross compile toolchain prefix', os.environ.get('CROSS_COMPILE'))
 vars.Update(env)
 Help(vars.GenerateHelpText(env))
 
-if '' == env.subst('$OE_BASE'):
-   print 'OE_BASE variable is required for Linux/ARM builds'
+# Use common CROSS_COMPILE prefix
+if '' == env.subst('$CROSS_COMPILE'):
+   print 'CROSS_COMPILE variable is required for Linux/ARM builds'
    if not GetOption('help'):
       Exit(1)
 
-# Use OpenEmbedded tools
-gcc_prefix  = '$OE_BASE/bin/arm-angstrom-linux-gnueabi-'
-env['CC']   = gcc_prefix + 'gcc'
-env['CXX']  = gcc_prefix + 'g++'
-env['LINK'] = gcc_prefix + 'gcc'
+env['CC']   = env['CROSS_COMPILE'] + 'gcc'
+env['CXX']  = env['CROSS_COMPILE'] + 'g++'
+env['LINK'] = env['CROSS_COMPILE'] + 'gcc'
 
 
 

@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -92,7 +92,7 @@ class MyBusListener : public BusListener, public SessionListener {
     {
         printf("FoundAdvertisedName(name=%s, prefix=%s)\n", name, namePrefix);
         if (0 == strcmp(name, SERVICE_NAME)) {
-            /* We found a remote bus that is advertising basic sercice's  well-known name so connect to it */
+            /* We found a remote bus that is advertising basic service's  well-known name so connect to it */
             /* Since we are in a callback we must enable concurrent callbacks before calling a synchronous method. */
             g_msgBus->EnableConcurrentCallbacks();
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
@@ -180,7 +180,7 @@ QStatus CreateInterface(void)
 {
     /* Add org.alljoyn.Bus.method_sample interface */
     InterfaceDescription* testIntf = NULL;
-    QStatus status = g_msgBus->CreateInterface(INTERFACE_NAME, testIntf, true);
+    QStatus status = g_msgBus->CreateInterface(INTERFACE_NAME, testIntf, AJ_IFC_SECURITY_REQUIRED);
 
     if (status == ER_OK) {
         printf("Interface '%s' created.\n", INTERFACE_NAME);

@@ -82,6 +82,8 @@ class InternalAnnounceHandler : public ajn::MessageReceiver {
 
     bool ContainsInterface(const ObjectDescriptions& objectDescriptions, const qcc::String interface) const;
 
+    qcc::String GetMatchRule(const std::set<qcc::String>& interfaces) const;
+
     /**
      * reference to the BusAttachment used by this InternalAnnounceHandler
      */
@@ -92,9 +94,17 @@ class InternalAnnounceHandler : public ajn::MessageReceiver {
     const ajn::InterfaceDescription::Member* announceSignalMember;
 
     /**
+     * the state of a single AnnounceHandler registration
+     */
+    struct RegisteredHandlerState {
+        std::set<qcc::String> interfaces;
+        std::set<qcc::String> matchingPeers;
+    };
+
+    /**
      * Map of the AnnounceHandler with the interfaces it is listening for.
      */
-    typedef std::multimap<AnnounceHandler*, std::set<qcc::String> > AnnounceMap;
+    typedef std::multimap<AnnounceHandler*, RegisteredHandlerState> AnnounceMap;
 
     /**
      * protected AnnounceHandlers

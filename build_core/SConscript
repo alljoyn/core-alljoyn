@@ -69,7 +69,7 @@ vars.Add('CXX', 'C++ compiler to use')
 
 
 if default_msvc_version:
-    vars.Add(EnumVariable('MSVC_VERSION', 'MSVC compiler version - Windows', default_msvc_version, allowed_values=('9.0', '10.0', '11.0', '11.0Exp')))
+    vars.Add(EnumVariable('MSVC_VERSION', 'MSVC compiler version - Windows', default_msvc_version, allowed_values=('9.0', '10.0', '11.0', '11.0Exp', '12.0', '12.0Exp')))
 
 
 # Standard variant directories

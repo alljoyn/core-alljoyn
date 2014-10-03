@@ -63,7 +63,7 @@ static void SigIntHandler(int sig)
 /*
  *  Implementation of a BusObject
  *  This class contains the implementation of the secure interface.
- *  The Ping method is the code that will be called when the a remode process
+ *  The Ping method is the code that will be called when a remote process
  *  makes a remote method call to Ping.
  *
  *
@@ -143,7 +143,7 @@ static BusAttachment* s_msgBus = NULL;
 static MyBusListener s_busListener;
 
 /*
- * This is the local implementation of the an AuthListener.  SrpKeyXListener is
+ * This is the local implementation of an AuthListener.  SrpKeyXListener is
  * designed to only handle SRP Key Exchange Authentication requests.
  *
  * When a Password request (CRED_PASSWORD) comes in using ALLJOYN_SRP_KEYX the
@@ -186,7 +186,7 @@ QStatus CreateInterface(void)
 {
     /* Add org.alljoyn.bus.samples.secure.SecureInterface interface */
     InterfaceDescription* testIntf = NULL;
-    QStatus status = s_msgBus->CreateInterface(INTERFACE_NAME, testIntf, true);
+    QStatus status = s_msgBus->CreateInterface(INTERFACE_NAME, testIntf, AJ_IFC_SECURITY_REQUIRED);
 
     if (ER_OK == status) {
         status = testIntf->AddMethod("Ping", "s",  "s", "inStr,outStr", 0);

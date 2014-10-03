@@ -762,7 +762,7 @@ class BusAttachment : public MessageReceiver {
      * and interprets the response.
      *
      * @param[in]  requestedName  Well-known name being requested.
-     * @param[in]  flags          Bitmask of DBUS_NAME_FLAG_* defines (see DBusStd.h)
+     * @param[in]  flags          Bitmask of DBUS_NAME_FLAG_* defines (see DBusStdDefines.h)
      *
      * @return
      *      - #ER_OK iff router response was received and request was successful.

@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011,2012 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -113,7 +113,14 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
 
     // Get length of hash object and allocate the object
     DWORD got;
-    BCryptGetProperty(algHandles[alg][MAC], BCRYPT_OBJECT_LENGTH, (PBYTE)&ctx->hashObjLen, sizeof(DWORD), &got, 0);
+    if (BCryptGetProperty(algHandles[alg][MAC], BCRYPT_OBJECT_LENGTH, (PBYTE)&ctx->hashObjLen, sizeof(DWORD), &got, 0) < 0) {
+        status = ER_CRYPTO_ERROR;
+        QCC_LogError(status, ("Failed to get object length property"));
+        delete ctx;
+        ctx = NULL;
+        return status;
+    }
+
     ctx->hashObj = new uint8_t[ctx->hashObjLen];
 
     if (BCryptCreateHash(algHandles[alg][MAC], &ctx->handle, ctx->hashObj, ctx->hashObjLen, (PUCHAR)hmacKey, (ULONG)keyLen, 0) < 0) {

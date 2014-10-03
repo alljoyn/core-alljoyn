@@ -43,6 +43,32 @@ using namespace qcc;
 
 namespace ajn {
 
+SessionOpts::NameTransferType NameTable::GetNameTransfer(const VirtualEndpoint& vep)
+{
+    multimap<SessionId, RemoteEndpoint> b2bEps = vep->GetBusToBusEndpoints();
+    if (b2bEps.empty()) {
+        return SessionOpts::ALL_NAMES;
+    } else {
+        SessionOpts::NameTransferType nameTransfer = SessionOpts::DAEMON_NAMES;
+        for (multimap<SessionId, RemoteEndpoint>::const_iterator it = b2bEps.begin();
+             (nameTransfer != SessionOpts::ALL_NAMES) && (it != b2bEps.end());
+             ++it) {
+            nameTransfer = min(nameTransfer, it->second->GetFeatures().nameTransfer);
+        }
+        return nameTransfer;
+    }
+}
+
+SessionOpts::NameTransferType NameTable::GetNameTransfer(BusEndpoint& ep)
+{
+    if (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
+        VirtualEndpoint vep = VirtualEndpoint::cast(ep);
+        return GetNameTransfer(vep);
+    } else {
+        return SessionOpts::ALL_NAMES;
+    }
+}
+
 qcc::String NameTable::GenerateUniqueName(void)
 {
     return uniquePrefix + U32ToString(IncrementAndFetch((int32_t*)&uniqueId));
@@ -60,14 +86,19 @@ void NameTable::AddUniqueName(BusEndpoint& endpoint)
 {
     QCC_DbgTrace(("NameTable::AddUniqueName(%s)", endpoint->GetUniqueName().c_str()));
 
+    SessionOpts::NameTransferType nameTransfer = GetNameTransfer(endpoint);
+
     const qcc::String& uniqueName = endpoint->GetUniqueName();
     QCC_DbgPrintf(("Add unique name %s", uniqueName.c_str()));
     lock.Lock(MUTEX_CONTEXT);
-    uniqueNames[uniqueName] = endpoint;
+    UniqueNameEntry entry = { endpoint, nameTransfer };
+    uniqueNames[uniqueName] = entry;
     lock.Unlock(MUTEX_CONTEXT);
 
     /* Notify listeners */
-    CallListeners(uniqueName, NULL, &uniqueName);
+    CallListeners(uniqueName,
+                  NULL, SessionOpts::ALL_NAMES,
+                  &uniqueName, nameTransfer);
 }
 
 void NameTable::RemoveUniqueName(const qcc::String& uniqueName)
@@ -76,9 +107,10 @@ void NameTable::RemoveUniqueName(const qcc::String& uniqueName)
 
     /* Erase the unique bus name and any well-known names that use the same endpoint */
     lock.Lock(MUTEX_CONTEXT);
-    unordered_map<qcc::String, BusEndpoint, Hash, Equal>::iterator it = uniqueNames.find(uniqueName);
+    unordered_map<qcc::String, UniqueNameEntry, Hash, Equal>::iterator it = uniqueNames.find(uniqueName);
     if (it != uniqueNames.end()) {
-        BusEndpoint endpoint = it->second;
+        BusEndpoint endpoint = it->second.endpoint;
+        SessionOpts::NameTransferType nameTransfer = it->second.nameTransfer;
 
         /* Remove well-known names asssociated with uniqueName */
         unordered_map<qcc::String, deque<NameQueueEntry>, Hash, Equal>::iterator ait = aliasNames.begin();
@@ -128,7 +160,9 @@ void NameTable::RemoveUniqueName(const qcc::String& uniqueName)
 
         lock.Unlock(MUTEX_CONTEXT);
         /* Notify listeners */
-        CallListeners(uniqueName, &uniqueName, NULL);
+        CallListeners(uniqueName,
+                      &uniqueName, nameTransfer,
+                      NULL, SessionOpts::ALL_NAMES);
     } else {
         lock.Unlock(MUTEX_CONTEXT);
     }
@@ -146,7 +180,7 @@ QStatus NameTable::AddAlias(const qcc::String& aliasName,
     QCC_DbgTrace(("NameTable: AddAlias(%s, %s)", aliasName.c_str(), uniqueName.c_str()));
 
     lock.Lock(MUTEX_CONTEXT);
-    unordered_map<qcc::String, BusEndpoint, Hash, Equal>::const_iterator it = uniqueNames.find(uniqueName);
+    unordered_map<qcc::String, UniqueNameEntry, Hash, Equal>::const_iterator it = uniqueNames.find(uniqueName);
     if (it != uniqueNames.end()) {
         unordered_map<qcc::String, deque<NameQueueEntry>, Hash, Equal>::iterator wasIt = aliasNames.find(aliasName);
         NameQueueEntry entry = { uniqueName, flags };
@@ -155,6 +189,7 @@ QStatus NameTable::AddAlias(const qcc::String& aliasName,
          * just use a pointer here, must make a copy.  newOwner does not have the same problem.
          */
         qcc::String origOwner;
+        SessionOpts::NameTransferType origOwnerNameTransfer = SessionOpts::ALL_NAMES;
         const qcc::String* newOwner = NULL;
 
         if (wasIt != aliasNames.end()) {
@@ -186,9 +221,10 @@ QStatus NameTable::AddAlias(const qcc::String& aliasName,
             newOwner = &uniqueName;
 
             /* Check to see if we are overriding a virtual (remote) name */
-            map<qcc::StringMapKey, VirtualEndpoint>::const_iterator vit = virtualAliasNames.find(aliasName);
+            map<qcc::StringMapKey, VirtualAliasEntry>::const_iterator vit = virtualAliasNames.find(aliasName);
             if (vit != virtualAliasNames.end()) {
-                origOwner = vit->second->GetUniqueName();
+                origOwner = vit->second.endpoint->GetUniqueName();
+                origOwnerNameTransfer = vit->second.nameTransfer;
             }
         }
         lock.Unlock(MUTEX_CONTEXT);
@@ -197,7 +233,9 @@ QStatus NameTable::AddAlias(const qcc::String& aliasName,
             listener->AddAliasComplete(aliasName, disposition, context);
         }
         if (newOwner) {
-            CallListeners(aliasName, origOwner.empty() ? NULL : &origOwner, newOwner);
+            CallListeners(aliasName,
+                          origOwner.empty() ? NULL : &origOwner, origOwnerNameTransfer,
+                          newOwner, SessionOpts::ALL_NAMES);
         }
         status = ER_OK;
     } else {
@@ -215,6 +253,7 @@ void NameTable::RemoveAlias(const qcc::String& aliasName,
 {
     qcc::String oldOwner;
     qcc::String newOwner;
+    SessionOpts::NameTransferType newOwnerNameTransfer = SessionOpts::ALL_NAMES;
     qcc::String aliasNameCopy(aliasName);
 
     QCC_DbgTrace(("NameTable: RemoveAlias(%s, %s)", aliasName.c_str(), ownerName.c_str()));
@@ -238,9 +277,10 @@ void NameTable::RemoveAlias(const qcc::String& aliasName,
             }
             if (newOwner.empty()) {
                 /* Check to see if there is a (now unmasked) remote owner for the alias */
-                map<qcc::StringMapKey, VirtualEndpoint>::const_iterator vit = virtualAliasNames.find(aliasName);
+                map<qcc::StringMapKey, VirtualAliasEntry>::const_iterator vit = virtualAliasNames.find(aliasName);
                 if (vit != virtualAliasNames.end()) {
-                    newOwner = vit->second->GetUniqueName();
+                    newOwner = vit->second.endpoint->GetUniqueName();
+                    newOwnerNameTransfer = vit->second.nameTransfer;
                 }
                 aliasNames.erase(it);
             }
@@ -260,7 +300,9 @@ void NameTable::RemoveAlias(const qcc::String& aliasName,
         listener->RemoveAliasComplete(aliasNameCopy, disposition, context);
     }
     if (!oldOwner.empty()) {
-        CallListeners(aliasNameCopy, &oldOwner, newOwner.empty() ? NULL : &newOwner);
+        CallListeners(aliasNameCopy,
+                      &oldOwner, SessionOpts::ALL_NAMES,
+                      newOwner.empty() ? NULL : &newOwner, newOwnerNameTransfer);
     }
 }
 
@@ -270,9 +312,9 @@ BusEndpoint NameTable::FindEndpoint(const qcc::String& busName) const
 
     lock.Lock(MUTEX_CONTEXT);
     if (busName[0] == ':') {
-        unordered_map<qcc::String, BusEndpoint, Hash, Equal>::const_iterator it = uniqueNames.find(busName);
+        unordered_map<qcc::String, UniqueNameEntry, Hash, Equal>::const_iterator it = uniqueNames.find(busName);
         if (it != uniqueNames.end()) {
-            ep = it->second;
+            ep = it->second.endpoint;
         }
     } else {
         unordered_map<qcc::String, deque<NameQueueEntry>, Hash, Equal>::const_iterator it = aliasNames.find(busName);
@@ -282,9 +324,9 @@ BusEndpoint NameTable::FindEndpoint(const qcc::String& busName) const
         }
         /* Fallback to virtual (remote) aliases if a suitable local one cannot be found */
         if (!ep->IsValid()) {
-            map<qcc::StringMapKey, VirtualEndpoint>::const_iterator vit = virtualAliasNames.find(busName);
+            map<qcc::StringMapKey, VirtualAliasEntry>::const_iterator vit = virtualAliasNames.find(busName);
             if (vit != virtualAliasNames.end()) {
-                VirtualEndpoint vep = vit->second;
+                VirtualEndpoint vep = vit->second.endpoint;
                 ep = BusEndpoint::cast(vep);
             }
         }
@@ -302,7 +344,7 @@ void NameTable::GetBusNames(vector<qcc::String>& names) const
         names.push_back(it->first);
         ++it;
     }
-    unordered_map<qcc::String, BusEndpoint, Hash, Equal>::const_iterator uit = uniqueNames.begin();
+    unordered_map<qcc::String, UniqueNameEntry, Hash, Equal>::const_iterator uit = uniqueNames.begin();
     while (uit != uniqueNames.end()) {
         names.push_back(uit->first);
         ++uit;
@@ -316,9 +358,9 @@ void NameTable::GetUniqueNamesAndAliases(vector<pair<qcc::String, vector<qcc::St
     /* Create a intermediate map to avoid N^2 perf */
     multimap<BusEndpoint, qcc::String> epMap;
     lock.Lock(MUTEX_CONTEXT);
-    unordered_map<qcc::String, BusEndpoint, Hash, Equal>::const_iterator uit = uniqueNames.begin();
+    unordered_map<qcc::String, UniqueNameEntry, Hash, Equal>::const_iterator uit = uniqueNames.begin();
     while (uit != uniqueNames.end()) {
-        epMap.insert(pair<const BusEndpoint, qcc::String>(uit->second, uit->first));
+        epMap.insert(pair<const BusEndpoint, qcc::String>(uit->second.endpoint, uit->first));
         ++uit;
     }
     unordered_map<qcc::String, deque<NameQueueEntry>, Hash, Equal>::const_iterator ait = aliasNames.begin();
@@ -331,9 +373,9 @@ void NameTable::GetUniqueNamesAndAliases(vector<pair<qcc::String, vector<qcc::St
         }
         ++ait;
     }
-    map<StringMapKey, VirtualEndpoint>::const_iterator vit = virtualAliasNames.begin();
+    map<StringMapKey, VirtualAliasEntry>::const_iterator vit = virtualAliasNames.begin();
     while (vit != virtualAliasNames.end()) {
-        VirtualEndpoint vep = vit->second;
+        VirtualEndpoint vep = vit->second.endpoint;
         epMap.insert(pair<BusEndpoint, qcc::String>(BusEndpoint::cast(vep), vit->first.c_str()));
         ++vit;
     }
@@ -381,6 +423,42 @@ void NameTable::GetQueuedNames(const qcc::String& busName, std::vector<qcc::Stri
     }
 }
 
+void NameTable::UpdateVirtualAliases(const qcc::String& epName)
+{
+    lock.Lock(MUTEX_CONTEXT);
+    BusEndpoint tempEp = FindEndpoint(epName);
+    VirtualEndpoint ep = VirtualEndpoint::cast(tempEp);
+
+    QCC_DbgTrace(("NameTable::UpdateVirtualAliases(%s)", ep->IsValid() ? ep->GetUniqueName().c_str() : "<none>"));
+
+    if (ep->IsValid()) {
+        map<qcc::StringMapKey, VirtualAliasEntry>::iterator vit = virtualAliasNames.begin();
+        while (vit != virtualAliasNames.end()) {
+            SessionOpts::NameTransferType oldNameTransfer = SessionOpts::ALL_NAMES;
+            SessionOpts::NameTransferType newNameTransfer = SessionOpts::ALL_NAMES;
+            bool madeChange = false;
+            if (vit->second.endpoint == ep) {
+                oldNameTransfer = vit->second.nameTransfer;
+                newNameTransfer = GetNameTransfer(vit->second.endpoint);
+                madeChange = (oldNameTransfer != newNameTransfer);
+                vit->second.nameTransfer = newNameTransfer;
+            }
+            String alias = vit->first.c_str();
+            if (madeChange && (aliasNames.find(alias) == aliasNames.end())) {
+                lock.Unlock(MUTEX_CONTEXT);
+                CallListeners(alias,
+                              &epName, oldNameTransfer,
+                              &epName, newNameTransfer);
+                lock.Lock(MUTEX_CONTEXT);
+                vit = virtualAliasNames.upper_bound(alias);
+            } else {
+                ++vit;
+            }
+        }
+    }
+    lock.Unlock(MUTEX_CONTEXT);
+}
+
 void NameTable::RemoveVirtualAliases(const qcc::String& epName)
 {
     lock.Lock(MUTEX_CONTEXT);
@@ -390,14 +468,17 @@ void NameTable::RemoveVirtualAliases(const qcc::String& epName)
     QCC_DbgTrace(("NameTable::RemoveVirtualAliases(%s)", ep->IsValid() ? ep->GetUniqueName().c_str() : "<none>"));
 
     if (ep->IsValid()) {
-        map<qcc::StringMapKey, VirtualEndpoint>::iterator vit = virtualAliasNames.begin();
+        map<qcc::StringMapKey, VirtualAliasEntry>::iterator vit = virtualAliasNames.begin();
         while (vit != virtualAliasNames.end()) {
-            if (vit->second == ep) {
+            if (vit->second.endpoint == ep) {
                 String alias = vit->first.c_str();
+                SessionOpts::NameTransferType nameTransfer = vit->second.nameTransfer;
                 virtualAliasNames.erase(vit++);
                 if (aliasNames.find(alias) == aliasNames.end()) {
                     lock.Unlock(MUTEX_CONTEXT);
-                    CallListeners(alias, &epName, NULL);
+                    CallListeners(alias,
+                                  &epName, nameTransfer,
+                                  NULL, SessionOpts::ALL_NAMES);
                     lock.Lock(MUTEX_CONTEXT);
                     vit = virtualAliasNames.upper_bound(alias);
                 }
@@ -413,29 +494,33 @@ bool NameTable::SetVirtualAlias(const qcc::String& alias,
                                 VirtualEndpoint* newOwner,
                                 VirtualEndpoint& requestingEndpoint)
 {
-    QCC_DbgTrace(("NameTable::SetVirtualAlias(%s, %s, %s)", alias.c_str(), newOwner ? (*newOwner)->GetUniqueName().c_str() : "<none>", requestingEndpoint->GetUniqueName().c_str()));
+    QCC_DbgTrace(("NameTable::SetVirtualAlias(%s, %p/%s, %p/%s)",
+                  alias.c_str(),
+                  newOwner ? (*newOwner).unwrap() : NULL, newOwner ? (*newOwner)->GetUniqueName().c_str() : "<none>",
+                  requestingEndpoint.unwrap(), requestingEndpoint->GetUniqueName().c_str()));
 
     lock.Lock(MUTEX_CONTEXT);
 
-    map<qcc::StringMapKey, VirtualEndpoint>::iterator vit = virtualAliasNames.find(alias);
     VirtualEndpoint oldOwner;
-
+    String oldName;
+    SessionOpts::NameTransferType oldOwnerNameTransfer = SessionOpts::ALL_NAMES;
+    map<qcc::StringMapKey, VirtualAliasEntry>::iterator vit = virtualAliasNames.find(alias);
     if (vit != virtualAliasNames.end()) {
-        oldOwner = vit->second;
+        oldOwner = vit->second.endpoint;
     }
-
-    /*
-     * Virtual aliases cannot directly change ownership from one remote daemon to another.
-     * Allowing this would allow a daemon to "take" an existing name from another daemon.
-     * Name changes are allowed within the same remote daemon or when the name is not already
-     * owned.
-     */
     if (oldOwner->IsValid()) {
-        const String& oldOwnerName = oldOwner->GetUniqueName();
+        oldName = oldOwner->GetUniqueName();
+        oldOwnerNameTransfer = vit->second.nameTransfer;
+        /*
+         * Virtual aliases cannot directly change ownership from one remote daemon to another.
+         * Allowing this would allow a daemon to "take" an existing name from another daemon.
+         * Name changes are allowed within the same remote daemon or when the name is not already
+         * owned.
+         */
         const String& reqOwnerName = requestingEndpoint->GetUniqueName();
-        size_t oldPeriodOff = oldOwnerName.find_first_of('.');
+        size_t oldPeriodOff = oldName.find_first_of('.');
         size_t reqPeriodOff = reqOwnerName.find_first_of('.');
-        if ((oldPeriodOff == String::npos) || (0 != oldOwnerName.compare(0, oldPeriodOff, reqOwnerName, 0, reqPeriodOff))) {
+        if ((oldPeriodOff == String::npos) || (0 != oldName.compare(0, oldPeriodOff, reqOwnerName, 0, reqPeriodOff))) {
             lock.Unlock(MUTEX_CONTEXT);
             return false;
         }
@@ -443,25 +528,29 @@ bool NameTable::SetVirtualAlias(const qcc::String& alias,
 
     bool maskingLocalName = (aliasNames.find(alias) != aliasNames.end());
 
-    bool madeChange;
+    String newName;
+    SessionOpts::NameTransferType newOwnerNameTransfer = SessionOpts::ALL_NAMES;
+    bool madeChange = false;
     if (newOwner && (*newOwner)->IsValid()) {
-        madeChange = !newOwner->iden(oldOwner);
-        virtualAliasNames[alias] = *newOwner;
+        newOwnerNameTransfer = GetNameTransfer(*newOwner);
+        VirtualAliasEntry entry = { *newOwner, newOwnerNameTransfer };
+        virtualAliasNames[alias] = entry;
+        madeChange = !newOwner->iden(oldOwner) || (oldOwnerNameTransfer != newOwnerNameTransfer);
     } else {
-        madeChange = true;
         virtualAliasNames.erase(StringMapKey(alias));
+        madeChange = true;
     }
-
-    String oldName = oldOwner->IsValid() ? oldOwner->GetUniqueName() : "";
-    String newName = newOwner ? (*newOwner)->GetUniqueName() : "";
+    if (newOwner && (*newOwner)->IsValid()) {
+        newName = (*newOwner)->GetUniqueName();
+    }
 
     lock.Unlock(MUTEX_CONTEXT);
 
     /* Virtual aliases cannot override locally requested aliases */
     if (madeChange && !maskingLocalName) {
         CallListeners(alias,
-                      oldName.empty() ? NULL : &oldName,
-                      newName.empty() ? NULL : &newName);
+                      oldName.empty() ? NULL : &oldName, oldOwnerNameTransfer,
+                      newName.empty() ? NULL : &newName, newOwnerNameTransfer);
     }
     return madeChange;
 }
@@ -492,14 +581,18 @@ void NameTable::RemoveListener(NameListener* listener)
     lock.Unlock(MUTEX_CONTEXT);
 }
 
-void NameTable::CallListeners(const qcc::String& aliasName, const qcc::String* origOwner, const qcc::String* newOwner)
+void NameTable::CallListeners(const qcc::String& aliasName,
+                              const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
+                              const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer)
 {
     lock.Lock(MUTEX_CONTEXT);
     set<ProtectedNameListener>::iterator it = listeners.begin();
     while (it != listeners.end()) {
         ProtectedNameListener nl = *it;
         lock.Unlock(MUTEX_CONTEXT);
-        (*nl)->NameOwnerChanged(aliasName, origOwner, newOwner);
+        (*nl)->NameOwnerChanged(aliasName,
+                                oldOwner, oldOwnerNameTransfer,
+                                newOwner, newOwnerNameTransfer);
         lock.Lock(MUTEX_CONTEXT);
         it = listeners.upper_bound(nl);
     }
