@@ -57,7 +57,7 @@ typedef struct _alljoyn_busattachment_handle*               alljoyn_busattachmen
  * @param obj       Remote bus object that was introspected
  * @param context   Context passed in IntrospectRemoteObjectAsync()
  */
-typedef void (*AJ_CALL alljoyn_proxybusobject_listener_introspectcb_ptr)(QStatus status, alljoyn_proxybusobject obj, void* context);
+typedef void (AJ_CALL * alljoyn_proxybusobject_listener_introspectcb_ptr)(QStatus status, alljoyn_proxybusobject obj, void* context);
 
 /**
  * Callback registered with alljoyn_proxybusobject_getpropertyasync()
@@ -70,7 +70,7 @@ typedef void (*AJ_CALL alljoyn_proxybusobject_listener_introspectcb_ptr)(QStatus
  * @param value     If status is ER_OK a MsgArg containing the returned property value
  * @param context   Caller provided context passed in to alljoyn_proxybusobject_getpropertyasync()
  */
-typedef void (*AJ_CALL alljoyn_proxybusobject_listener_getpropertycb_ptr)(QStatus status, alljoyn_proxybusobject obj, const alljoyn_msgarg value, void* context);
+typedef void (AJ_CALL * alljoyn_proxybusobject_listener_getpropertycb_ptr)(QStatus status, alljoyn_proxybusobject obj, const alljoyn_msgarg value, void* context);
 
 /**
  * Callback registered with alljoyn_proxybusobject_getallpropertiesasync()
@@ -82,7 +82,7 @@ typedef void (*AJ_CALL alljoyn_proxybusobject_listener_getpropertycb_ptr)(QStatu
  * @param values      If status is ER_OK an array of dictionary entries, signature "a{sv}" listing the properties.
  * @param context     Caller provided context passed in to alljoyn_proxybusobject_getallpropertiesasync()
  */
-typedef void (*AJ_CALL alljoyn_proxybusobject_listener_getallpropertiescb_ptr)(QStatus status, alljoyn_proxybusobject obj, const alljoyn_msgarg values, void* context);
+typedef void (AJ_CALL * alljoyn_proxybusobject_listener_getallpropertiescb_ptr)(QStatus status, alljoyn_proxybusobject obj, const alljoyn_msgarg values, void* context);
 
 /**
  * Callback registered with alljoyn_proxybusobject_setpropertyasync()
@@ -94,7 +94,7 @@ typedef void (*AJ_CALL alljoyn_proxybusobject_listener_getallpropertiescb_ptr)(Q
  * @param obj       Remote bus object that was introspected
  * @param context   Caller provided context passed in to alljoyn_proxybusobject_setpropertyasync()
  */
-typedef void (*AJ_CALL alljoyn_proxybusobject_listener_setpropertycb_ptr)(QStatus status, alljoyn_proxybusobject obj, void* context);
+typedef void (AJ_CALL * alljoyn_proxybusobject_listener_setpropertycb_ptr)(QStatus status, alljoyn_proxybusobject obj, void* context);
 
 /**
  * Create an empty proxy bus object that refers to an object at given remote service name. Note

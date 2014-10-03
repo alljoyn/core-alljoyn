@@ -63,7 +63,7 @@ static void SigIntHandler(int sig)
 }
 
 /* FoundAdvertisedName callback */
-void found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
+void AJ_CALL found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
 {
     printf("found_advertised_name(name=%s, prefix=%s)\n", name, namePrefix);
     if (0 == strcmp(name, OBJECT_NAME)) {
@@ -85,7 +85,7 @@ void found_advertised_name(const void* context, const char* name, alljoyn_transp
 }
 
 /* NameOwnerChanged callback */
-void name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
+void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
     if (newOwner && (0 == strcmp(busName, OBJECT_NAME))) {
         printf("name_owner_changed: name=%s, oldOwner=%s, newOwner=%s\n",

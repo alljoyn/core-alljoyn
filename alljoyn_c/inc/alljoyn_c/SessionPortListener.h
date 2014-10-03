@@ -51,8 +51,8 @@ typedef struct _alljoyn_sessionportlistener_handle*         alljoyn_sessionportl
  * @param opts           Session options requested by the joiner.
  * @return   Return true if JoinSession request is accepted. false if rejected.
  */
-typedef QCC_BOOL (*AJ_CALL alljoyn_sessionportlistener_acceptsessionjoiner_ptr)(const void* context, alljoyn_sessionport sessionPort,
-                                                                                const char* joiner,  const alljoyn_sessionopts opts);
+typedef QCC_BOOL (AJ_CALL * alljoyn_sessionportlistener_acceptsessionjoiner_ptr)(const void* context, alljoyn_sessionport sessionPort,
+                                                                                 const char* joiner,  const alljoyn_sessionopts opts);
 
 /**
  * Type for the SessionJoined callback.
@@ -67,8 +67,8 @@ typedef QCC_BOOL (*AJ_CALL alljoyn_sessionportlistener_acceptsessionjoiner_ptr)(
  * @param id             Id of session.
  * @param joiner         Unique name of the joiner.
  */
-typedef void (*AJ_CALL alljoyn_sessionportlistener_sessionjoined_ptr)(const void* context, alljoyn_sessionport sessionPort,
-                                                                      alljoyn_sessionid id, const char* joiner);
+typedef void (AJ_CALL * alljoyn_sessionportlistener_sessionjoined_ptr)(const void* context, alljoyn_sessionport sessionPort,
+                                                                       alljoyn_sessionid id, const char* joiner);
 
 /**
  * Structure used during alljoyn_sessionportlistener_create to provide callbacks into C.
