@@ -89,7 +89,7 @@ char*get_line(char*str, size_t num, FILE*fp)
 }
 
 /* FoundAdvertisedName callback */
-void found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
+void AJ_CALL found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
 {
     printf("found_advertised_name(name=%s, prefix=%s)\n", name, namePrefix);
     if (0 == strcmp(name, OBJECT_NAME)) {
@@ -110,7 +110,7 @@ void found_advertised_name(const void* context, const char* name, alljoyn_transp
 }
 
 /* NameOwnerChanged callback */
-void name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
+void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
     if (newOwner && (0 == strcmp(busName, OBJECT_NAME))) {
         printf("name_owner_changed: name=%s, oldOwner=%s, newOwner=%s\n",
@@ -132,8 +132,8 @@ void name_owner_changed(const void* context, const char* busName, const char* pr
  * If any other authMechanism is used other than SRP Key Exchange authentication
  * will fail.
  */
-QCC_BOOL request_credentials(const void* context, const char* authMechanism, const char* authPeer, uint16_t authCount,
-                             const char* userName, uint16_t credMask, alljoyn_credentials credentials)
+QCC_BOOL AJ_CALL request_credentials(const void* context, const char* authMechanism, const char* authPeer, uint16_t authCount,
+                                     const char* userName, uint16_t credMask, alljoyn_credentials credentials)
 {
     printf("request_credentials for authenticating %s using mechanism %s\n", authPeer, authMechanism);
     if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
@@ -154,7 +154,7 @@ QCC_BOOL request_credentials(const void* context, const char* authMechanism, con
     return QCC_FALSE;
 }
 
-void authentication_complete(const void* context, const char* authMechanism, const char* peerName, QCC_BOOL success)
+void AJ_CALL authentication_complete(const void* context, const char* authMechanism, const char* peerName, QCC_BOOL success)
 {
     printf("authentication_complete %s %s\n", authMechanism, success == QCC_TRUE ? "successful" : "failed");
 }

@@ -59,7 +59,7 @@ static void SigIntHandler(int sig)
     g_interrupt = QCC_TRUE;
 }
 
-void found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
+void AJ_CALL found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
 {
     alljoyn_sessionopts session_opts;
     QStatus status = ER_OK;
@@ -102,17 +102,17 @@ void found_advertised_name(const void* context, const char* name, alljoyn_transp
 
 }
 
-void lost_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
+void AJ_CALL lost_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
 {
     printf("LostAdvertisedName(name=%s, transport=0x%x, prefix=%s)\n", name, transport, namePrefix);
 }
 
-void name_owner_changed(const void* context, const char* name, const char* previousOwner, const char* newOwner)
+void AJ_CALL name_owner_changed(const void* context, const char* name, const char* previousOwner, const char* newOwner)
 {
     printf("NameOwnerChanged(%s, %s, %s)\n", name,  (previousOwner ? previousOwner : "null"), (newOwner ? newOwner : "null"));
 }
 
-void session_lost(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason) {
+void AJ_CALL session_lost(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason) {
     printf("SessionLost(%u) was called\n", sessionId);
     _exit(1);
 }
@@ -181,7 +181,7 @@ static const char privKey[] = {
 };
 
 
-QCC_BOOL request_credentials(const void* context, const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, alljoyn_credentials credentials)
+QCC_BOOL AJ_CALL request_credentials(const void* context, const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, alljoyn_credentials credentials)
 {
     char guid[100];
     size_t size_of_guid = 100;
@@ -260,7 +260,7 @@ QCC_BOOL request_credentials(const void* context, const char* authMechanism, con
     return QCC_FALSE;
 }
 
-QCC_BOOL verify_credentials(const void*context, const char* authMechanism, const char* authPeer, const alljoyn_credentials credentials) {
+QCC_BOOL AJ_CALL verify_credentials(const void*context, const char* authMechanism, const char* authPeer, const alljoyn_credentials credentials) {
 
     if (strcmp(authMechanism, "ALLJOYN_RSA_KEYX") == 0) {
         if (alljoyn_credentials_isset(credentials, ALLJOYN_CRED_CERT_CHAIN)) {
@@ -271,15 +271,15 @@ QCC_BOOL verify_credentials(const void*context, const char* authMechanism, const
     return QCC_FALSE;
 }
 
-void authentication_complete(const void*context, const char* authMechanism, const char* authPeer, QCC_BOOL success) {
+void AJ_CALL authentication_complete(const void*context, const char* authMechanism, const char* authPeer, QCC_BOOL success) {
     printf("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed");
 }
 
-void security_violation(const void*context, QStatus status, const alljoyn_message msg) {
+void AJ_CALL security_violation(const void*context, QStatus status, const alljoyn_message msg) {
     printf("Security violation %s\n", QCC_StatusText(status));
 }
 
-void ping_response_handler(alljoyn_message message, void* context)
+void AJ_CALL ping_response_handler(alljoyn_message message, void* context)
 {
     alljoyn_messagetype msg_type;
     const char* ret_string;

@@ -54,7 +54,7 @@ typedef struct _alljoyn_sessionlistener_handle*             alljoyn_sessionliste
  * @param alljoyn_sessionid     Id of session that was lost.
  * @param reason        The reason for the session being lost
  */
-typedef void (*AJ_CALL alljoyn_sessionlistener_sessionlost_ptr)(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason);
+typedef void (AJ_CALL * alljoyn_sessionlistener_sessionlost_ptr)(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason);
 
 /**
  * Type for the SessionMemberAdded callback.
@@ -65,8 +65,8 @@ typedef void (*AJ_CALL alljoyn_sessionlistener_sessionlost_ptr)(const void* cont
  * @param alljoyn_sessionid     Id of session whose member(s) changed.
  * @param uniqueName    Unique name of member who was added.
  */
-typedef void (*AJ_CALL alljoyn_sessionlistener_sessionmemberadded_ptr)(const void* context, alljoyn_sessionid sessionId,
-                                                                       const char* uniqueName);
+typedef void (AJ_CALL * alljoyn_sessionlistener_sessionmemberadded_ptr)(const void* context, alljoyn_sessionid sessionId,
+                                                                        const char* uniqueName);
 
 /**
  * Type for the SessionMemberRemoved callback.
@@ -77,8 +77,8 @@ typedef void (*AJ_CALL alljoyn_sessionlistener_sessionmemberadded_ptr)(const voi
  * @param alljoyn_sessionid     Id of session whose member(s) changed.
  * @param uniqueName    Unique name of member who was removed.
  */
-typedef void (*AJ_CALL alljoyn_sessionlistener_sessionmemberremoved_ptr)(const void* context, alljoyn_sessionid sessionId,
-                                                                         const char* uniqueName);
+typedef void (AJ_CALL * alljoyn_sessionlistener_sessionmemberremoved_ptr)(const void* context, alljoyn_sessionid sessionId,
+                                                                          const char* uniqueName);
 
 /**
  * Structure used during alljoyn_sessionlistener_create to provide callbacks into C.
