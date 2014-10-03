@@ -63,12 +63,6 @@ if env['OS_GROUP'] == 'windows':
         env.AppendUnique(LIBS = ['libeay32', 'ssleay32'])
         print 'Using OPENSSL crypto libraries'
 
-elif env['OS_GROUP'] == 'winrt':
-    env['CRYPTO'] = 'winrt'
-    print 'Using WINRT crypto libraries'
-    env.AppendUnique(CFLAGS=['/D_WINRT_DLL'])
-    env.AppendUnique(CXXFLAGS=['/D_WINRT_DLL'])	
-
 elif env['OS'] in ['linux', 'openwrt']:
     env.AppendUnique(LIBS =['rt', 'stdc++', 'pthread', 'crypto', 'ssl', 'm'])
 
@@ -99,23 +93,20 @@ commonenv.VariantDir('$OBJDIR_COMMON/os', 'os/${OS_GROUP}', duplicate = 0)
 commonenv.VariantDir('$OBJDIR_COMMON/crypto', 'crypto/${CRYPTO}', duplicate = 0)
 
 # Setup dependent include directories
-if commonenv['OS_GROUP'] == 'winrt':
-    hdrs = {}
-else:
-    hdrs = { 'qcc': commonenv.File(['inc/qcc/Log.h',
-                                    'inc/qcc/Debug.h',
-                                    'inc/qcc/ManagedObj.h',
-                                    'inc/qcc/Mutex.h',
-                                    'inc/qcc/String.h',
-                                    'inc/qcc/StringUtil.h',
-                                    'inc/qcc/atomic.h',
-                                    'inc/qcc/platform.h']),
-             'qcc/${OS_GROUP}': commonenv.File(['inc/qcc/${OS_GROUP}/atomic.h',
-                                                'inc/qcc/${OS_GROUP}/platform_types.h',
-                                                'inc/qcc/${OS_GROUP}/Mutex.h']) }
+hdrs = { 'qcc': commonenv.File(['inc/qcc/Log.h',
+                                'inc/qcc/Debug.h',
+                                'inc/qcc/ManagedObj.h',
+                                'inc/qcc/Mutex.h',
+                                'inc/qcc/String.h',
+                                'inc/qcc/StringUtil.h',
+                                'inc/qcc/atomic.h',
+                                'inc/qcc/platform.h']),
+         'qcc/${OS_GROUP}': commonenv.File(['inc/qcc/${OS_GROUP}/atomic.h',
+                                            'inc/qcc/${OS_GROUP}/platform_types.h',
+                                            'inc/qcc/${OS_GROUP}/Mutex.h']) }
 
-    if commonenv['OS_GROUP'] == 'windows':
-        hdrs['qcc/${OS_GROUP}'] += commonenv.File(['inc/qcc/${OS_GROUP}/mapping.h'])
+if commonenv['OS_GROUP'] == 'windows':
+    hdrs['qcc/${OS_GROUP}'] += commonenv.File(['inc/qcc/${OS_GROUP}/mapping.h'])
 
 
 # under normal build conditions the Status.xml found in alljoyn_core is used to
@@ -132,14 +123,10 @@ else:
 
 
 # Build the sources
-status_cpp0x_src = ['Status_CPP0x.cc', 'StatusComment.cc']
 status_src = ['Status.cc']
 
 
 srcs = commonenv.Glob('$OBJDIR_COMMON/*.cc') + commonenv.Glob('$OBJDIR_COMMON/os/*.cc') + commonenv.Glob('$OBJDIR_COMMON/crypto/*.cc')
-
-if commonenv['OS_GROUP'] == 'winrt':
-    srcs = [ f for f in srcs if basename(str(f)) not in status_cpp0x_src ]
 
 # Make sure Status never gets included from common for contained projects
 srcs = [ f for f in srcs if basename(str(f)) not in status_src ]
