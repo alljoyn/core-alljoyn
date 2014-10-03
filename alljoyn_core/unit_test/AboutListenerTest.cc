@@ -203,7 +203,6 @@ TEST_F(AboutListenerTest, ReceiverAnnouncement) {
     status = clientBus.Join();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
-
 /*
  * for most of the tests the interfaces are all added then the listener is
  * registered for this test we will register the listener before adding the
@@ -746,7 +745,6 @@ TEST_F(AboutListenerTest, MatchMultipleInterfaces) {
     status = clientBus.Join();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
-
 TEST_F(AboutListenerTest, MatchMultipleInterfacesSubSet) {
     QStatus status;
     announceListenerFlag = false;
@@ -1337,6 +1335,103 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
     EXPECT_EQ(2u, aboutListener.announceListenerCount);
 
     status = clientBus.CancelWhoImplements(ifaceNames[0].c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    clientBus.UnregisterAboutListener(aboutListener);
+
+    status = clientBus.Stop();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Join();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+}
+/*
+ * Stress test:
+ *    Service announce 100 interfaces, client interested in 100 interfaces.
+ *    Client get announcement.
+ */
+TEST_F(AboutListenerTest, StressInterfaces) {
+    QStatus status;
+
+    qcc::GUID128 guid;
+
+    // Use a randomly generated prefix to avoid unexpected conflicts
+    const qcc::String INTERFACE_PREFIX = "a" + guid.ToString() + ".";
+
+    // Max interface name length is 255 chars
+    const size_t MAX_INTERFACE_BODY_LEN = 255 - INTERFACE_PREFIX.length();
+    // 100 interfaces
+    const size_t INTERFACE_COUNT = 100;
+
+    qcc::String ifaceNames[INTERFACE_COUNT];
+    qcc::String interfaceXml = "<node>";
+
+    // Test can't support more than 221 interfaces since max interface length is 255
+    // each test interface name has a prefix and variable body
+    ASSERT_TRUE(INTERFACE_COUNT < MAX_INTERFACE_BODY_LEN) << " Too many interfaces";
+
+    char randChar = 'a';
+    for (size_t i = 0; i < INTERFACE_COUNT; i++) {
+        // Generate a pseudo-random char (loop from a-z)
+        randChar = 'a' + (i % 26);
+
+        // Generate string with different length per loop like a/bb/ccc/dddd...
+        qcc::String randStr((i + 1), (randChar));
+
+        ifaceNames[i] = INTERFACE_PREFIX + randStr;
+        interfaceXml += "<interface name='" + ifaceNames[i] + "'>"
+                        "  <method name='Foo'>"
+                        "  </method>"
+                        "</interface>";
+    }
+    interfaceXml += "</node>";
+
+    //printf("Interface xml %s \n", interfaceXml.c_str());
+
+    status = serviceBus->CreateInterfacesFromXml(interfaceXml.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutListenerTestObject2 altObj(*serviceBus, "/org/test/stress", ifaceNames, INTERFACE_COUNT);
+    status = serviceBus->RegisterBusObject(altObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObj aboutObj(*serviceBus);
+
+    // receive
+    BusAttachment clientBus("Receive Announcement client Test", true);
+    status = clientBus.Start();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Connect();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutTestAboutListener3 aboutListener;
+
+    const char* ifaces[INTERFACE_COUNT];
+    for (size_t i = 0; i < INTERFACE_COUNT; i++) {
+        ifaces[i] = ifaceNames[i].c_str();
+    }
+
+    announceListenerFlag3 = false;
+
+    clientBus.RegisterAboutListener(aboutListener);
+
+    status = clientBus.WhoImplements(ifaces, INTERFACE_COUNT);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    aboutObj.Announce(port, aboutData);
+
+    //Wait for a maximum of 10 sec for the Announce Signal.
+    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+        if (announceListenerFlag3) {
+            break;
+        }
+        qcc::Sleep(WAIT_TIME);
+    }
+
+    ASSERT_TRUE(announceListenerFlag3);
+
+    status = clientBus.CancelWhoImplements(ifaces, INTERFACE_COUNT);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     clientBus.UnregisterAboutListener(aboutListener);
