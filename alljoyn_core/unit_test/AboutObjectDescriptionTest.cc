@@ -19,6 +19,7 @@
 #include <alljoyn/AboutIconObj.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/version.h>
+#include <alljoyn/AboutObj.h>
 
 #include <BusInternal.h>
 
@@ -64,12 +65,13 @@ class AboutObjectDescriptionTestObject_Add : public BusObject {
     }
 };
 
-TEST(AboutObjectDescriptionTest, Add)
+TEST(AboutObjectDescriptionTest, Construct)
 {
     QStatus status = ER_FAIL;
     BusAttachment bus("AboutObjectDescritpion test");
     //add the org.alljoyn.Icon interface
     AboutIconObj aboutIconObj(bus, "", "http://www.example.com", NULL, (size_t)0);
+
     //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
     const qcc::String interface = "<node>"
                                   "<interface name='org.alljoyn.test'>"
@@ -122,6 +124,7 @@ TEST(AboutObjectDescriptionTest, Add)
 //
 //    printf("******************\n%s\n*****************\n", arg.ToString().c_str());
 }
+
 
 
 TEST(AboutObjectDescriptionTest, GetMsgArg)
@@ -565,4 +568,104 @@ TEST(AboutObjectDescriptionTest, GetInterfacePaths) {
     EXPECT_STREQ("/test/path6", paths[5]);
     delete [] paths;
     paths = NULL;
+}
+/*
+ * Negative test
+ *  Empty AboutObjectDescription if:
+ *  1. No interface, AboutObj and AboutIconObj created
+ *  2. No bus object implements interface registered even interfaces created
+ */
+TEST(AboutObjectDescriptionTest, Empty_Negative)
+{
+    QStatus status = ER_FAIL;
+    BusAttachment bus("AboutObjectDescritpion test");
+
+    MsgArg arg;
+    status = bus.GetInternal().GetAnnouncedObjectDescription(arg);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObjectDescription aod(arg);
+
+    EXPECT_FALSE(aod.HasInterface("org.alljoyn.Icon"));
+    EXPECT_FALSE(aod.HasInterface("org.alljoyn.About"));
+
+    //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
+    const qcc::String interface = "<node>"
+                                  "<interface name='org.alljoyn.test'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='org.alljoyn.game'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='org.alljoyn.mediaplayer'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+
+    status = bus.CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = bus.GetInternal().GetAnnouncedObjectDescription(arg);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObjectDescription aod1(arg);
+
+    EXPECT_FALSE(aod1.HasInterface("org.alljoyn.Icon"));
+    EXPECT_FALSE(aod1.HasInterface("org.alljoyn.About"));
+
+    EXPECT_FALSE(aod1.HasInterface("/org/alljoyn/test", "org.alljoyn.test"));
+    EXPECT_FALSE(aod1.HasInterface("/org/alljoyn/test", "org.alljoyn.game"));
+    EXPECT_FALSE(aod1.HasInterface("/org/alljoyn/test", "org.alljoyn.mediaplayer"));
+
+    EXPECT_FALSE(aod1.HasInterface("org.alljoyn.test"));
+    EXPECT_FALSE(aod1.HasInterface("org.alljoyn.game"));
+    EXPECT_FALSE(aod1.HasInterface("org.alljoyn.mediaplayer"));
+
+}
+/* Positive test
+ *  Create AboutObj with ANNOUNCED flag, About interface is included
+ */
+TEST(AboutObjectDescriptionTest, AboutInterface)
+{
+    QStatus status = ER_FAIL;
+    BusAttachment bus("AboutObjectDescritpion test");
+
+    //add the org.alljoyn.About interface
+    AboutObj aboutObj(bus, BusObject::ANNOUNCED);
+
+    MsgArg arg;
+
+    status = bus.GetInternal().GetAnnouncedObjectDescription(arg);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObjectDescription aod(arg);
+
+    EXPECT_TRUE(aod.HasInterface("/About", "org.alljoyn.About"));
+
+    EXPECT_TRUE(aod.HasInterface("org.alljoyn.About"));
+
+}
+/* Negative test
+ *  Create AboutObj without ANNOUNCED flag, About interface is NOT included
+ */
+TEST(AboutObjectDescriptionTest, NoAboutInterface)
+{
+    QStatus status = ER_FAIL;
+    BusAttachment bus("AboutObjectDescritpion test");
+
+    //add the org.alljoyn.About interface
+    AboutObj aboutObj(bus);
+
+    MsgArg arg;
+    status = bus.GetInternal().GetAnnouncedObjectDescription(arg);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObjectDescription aod(arg);
+
+    EXPECT_FALSE(aod.HasInterface("/About", "org.alljoyn.About"));
+
+    EXPECT_FALSE(aod.HasInterface("org.alljoyn.About"));
 }
