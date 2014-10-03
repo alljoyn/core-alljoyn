@@ -135,7 +135,7 @@ class AboutListenerTestObject : public BusObject {
 
         /* Register the method handlers with the object */
         const MethodEntry methodEntries[] = {
-            iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutListenerTestObject::Foo)
+            { iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutListenerTestObject::Foo) }
         };
         status = AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -658,7 +658,7 @@ class AboutListenerTestObject2 : public BusObject {
 
             /* Register the method handlers with the object */
             const MethodEntry methodEntries[] = {
-                iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutListenerTestObject2::Foo)
+                { iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutListenerTestObject2::Foo) }
             };
             status = AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
             EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -1002,7 +1002,7 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching) {
         qcc::Sleep(WAIT_TIME);
     }
 
-    ASSERT_EQ(1, aboutListener.announceListenerCount);
+    ASSERT_EQ(1u, aboutListener.announceListenerCount);
 
     status = clientBus.CancelWhoImplements(wildCard.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -1077,7 +1077,7 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching2) {
         qcc::Sleep(WAIT_TIME);
     }
 
-    ASSERT_EQ(1, aboutListener.announceListenerCount);
+    ASSERT_EQ(1u, aboutListener.announceListenerCount);
 
     status = clientBus.CancelWhoImplements(wildCard.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -1152,7 +1152,7 @@ TEST_F(AboutListenerTest, MultipleWildCardInterfaceMatching) {
         qcc::Sleep(WAIT_TIME);
     }
 
-    ASSERT_EQ(1, aboutListener.announceListenerCount);;
+    ASSERT_EQ(1u, aboutListener.announceListenerCount);;
 
     status = clientBus.CancelWhoImplements(interfacelist, 2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -1226,7 +1226,7 @@ TEST_F(AboutListenerTest, MixedWildCardNonWildCardInterfaceMatching) {
         qcc::Sleep(WAIT_TIME);
     }
 
-    ASSERT_EQ(1, aboutListener.announceListenerCount);;
+    ASSERT_EQ(1u, aboutListener.announceListenerCount);;
 
     status = clientBus.CancelWhoImplements(interfacelist, 2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -1319,7 +1319,7 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
         qcc::Sleep(WAIT_TIME);
     }
 
-    EXPECT_EQ(1, aboutListener.announceListenerCount);
+    EXPECT_EQ(1u, aboutListener.announceListenerCount);
 
     serviceBus->UnregisterBusObject(altObj1);
 
@@ -1334,7 +1334,7 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
         qcc::Sleep(WAIT_TIME);
     }
 
-    EXPECT_EQ(2, aboutListener.announceListenerCount);
+    EXPECT_EQ(2u, aboutListener.announceListenerCount);
 
     status = clientBus.CancelWhoImplements(ifaceNames[0].c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);

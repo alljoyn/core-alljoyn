@@ -78,9 +78,9 @@ class AboutServiceSampleBusObject : public BusObject {
 
         /* Register the method handlers with the object */
         const MethodEntry methodEntries[] = {
-            test_iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutServiceSampleBusObject::Foo),
-            game_iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutServiceSampleBusObject::Foo),
-            mediaplayer_iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutServiceSampleBusObject::Foo)
+            { test_iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutServiceSampleBusObject::Foo) },
+            { game_iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutServiceSampleBusObject::Foo) },
+            { mediaplayer_iface->GetMember("Foo"), static_cast<MessageReceiver::MethodHandler>(&AboutServiceSampleBusObject::Foo) }
         };
         AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
 

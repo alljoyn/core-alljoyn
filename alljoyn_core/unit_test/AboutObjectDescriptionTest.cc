@@ -232,7 +232,7 @@ TEST(AboutObjectDescriptionTest, GetPaths) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     size_t numPaths = aod.GetPaths(NULL, 0);
-    ASSERT_EQ(2, numPaths);
+    ASSERT_EQ(2u, numPaths);
     const char** paths = new const char*[numPaths];
     aod.GetPaths(paths, numPaths);
     // We don't know what order the paths will be returned
@@ -275,17 +275,17 @@ TEST(AboutObjectDescriptionTest, GetInterfaces) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     size_t numPaths = aod.GetPaths(NULL, 0);
-    ASSERT_EQ(2, numPaths);
+    ASSERT_EQ(2u, numPaths);
 
     size_t numInterfaces = aod.GetInterfaces("/About/DeviceIcon", NULL, 0);
-    ASSERT_EQ(1, numInterfaces);
+    ASSERT_EQ(1u, numInterfaces);
     const char** interfaces = new const char*[numInterfaces];
     aod.GetInterfaces("/About/DeviceIcon", interfaces, numInterfaces);
     EXPECT_STREQ("org.alljoyn.Icon", interfaces[0]);
     delete [] interfaces;
 
     numInterfaces = aod.GetInterfaces("/org/alljoyn/test", NULL, 0);
-    ASSERT_EQ(3, numInterfaces);
+    ASSERT_EQ(3u, numInterfaces);
     interfaces = new const char*[numInterfaces];
     aod.GetInterfaces("/org/alljoyn/test", interfaces, numInterfaces);
     // We don't konw what order the interfaces will be returned
