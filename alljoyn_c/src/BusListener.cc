@@ -30,7 +30,7 @@
 
 #define QCC_MODULE "ALLJOYN_C"
 
-static void __PropertyChanged(alljoyn_buslistener_bus_prop_changed_ptr fcn, const void* context, const char* prop_name, alljoyn_msgarg prop_value)
+static void AJ_CALL __PropertyChanged(alljoyn_buslistener_bus_prop_changed_ptr fcn, const void* context, const char* prop_name, alljoyn_msgarg prop_value)
 {
     fcn(context, prop_name, prop_value);
 

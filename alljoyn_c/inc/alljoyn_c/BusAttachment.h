@@ -51,7 +51,7 @@ typedef struct _alljoyn_busattachment_handle*               alljoyn_busattachmen
 /**
  * Type for the joinsession callback used with the asynchronous joinsession request.
  */
-typedef void (*AJ_CALL alljoyn_busattachment_joinsessioncb_ptr)(QStatus status, alljoyn_sessionid sessionId, const alljoyn_sessionopts opts, void* context);
+typedef void (AJ_CALL * alljoyn_busattachment_joinsessioncb_ptr)(QStatus status, alljoyn_sessionid sessionId, const alljoyn_sessionopts opts, void* context);
 
 /**
  * Type for the setlinktimeout callback used with the asynchronous setlinktimeout request.
@@ -63,7 +63,7 @@ typedef void (*AJ_CALL alljoyn_busattachment_joinsessioncb_ptr)(QStatus status, 
  * @param timeout      Timeout value (possibly adjusted from original request).
  * @param context      User defined context which will be passed as-is to callback.
  */
-typedef void (*AJ_CALL alljoyn_busattachment_setlinktimeoutcb_ptr)(QStatus status, uint32_t timeout, void* context);
+typedef void (AJ_CALL * alljoyn_busattachment_setlinktimeoutcb_ptr)(QStatus status, uint32_t timeout, void* context);
 /**
  * Allocate an alljoyn_busattachment.
  *
