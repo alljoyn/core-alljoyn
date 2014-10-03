@@ -5468,12 +5468,11 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     }
 
     /*
-     * The Function HelloReply creates and marshals the BusHello reply for
-     * the remote side.  Once it is marshaled, there is a buffer associated
-     * with the message that contains the on-the-wire version of the
-     * messsage.  The ARDP code expects to take responsibility for the
-     * buffer since it may need to retransmit it, so we need to copy out the
-     * contents of that (small) buffer.
+     * The Function HelloReply creates and marshals the BusHello reply for the
+     * remote side.  Once it is marshaled, there is a buffer associated with the
+     * message that contains the on-the-wire version of the messsage.  The ARDP
+     * code copies this data in to deal with the possibility of having to
+     * retransmit it; So we need to remember to deal with freeing the buffer.
      */
     size_t helloReplyBufLen = activeHello->GetBufferSize();
 
@@ -5499,6 +5498,14 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
      */
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): ARDP_Accept()"));
     status = ARDP_Accept(handle, conn, m_ardpConfig.segmax, m_ardpConfig.segbmax, helloReplyBuf, helloReplyBufLen);
+
+    /*
+     * No matter what, we need to free the buffer holding the Hello reply
+     * message.
+     */
+    delete[] helloReplyBuf;
+    helloReplyBuf = NULL;
+
     if (status != ER_OK) {
         /*
          * If ARDP_Accept returns an error, most likely it is becuase the underlying
@@ -5512,8 +5519,6 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
          * current scope).
          */
         udpEp->Stop();
-        delete[] helloReplyBuf;
-        helloReplyBuf = NULL;
         QCC_LogError(status, ("UDPTransport::AcceptCb(): ARDP_Accept() failed"));
 
         m_connLock.Lock(MUTEX_CONTEXT);
