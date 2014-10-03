@@ -8,7 +8,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -70,7 +70,7 @@ class AuthMechLogon : public AuthMechanism {
      * Function of type AuthMechanismManager::AuthMechFactory. The listener cannot be NULL for
      * this authentication mechanism.
      *
-     * @param keyStore   The key store avaiable to this authentication mechansim.
+     * @param keyStore   The key store available to this authentication mechanism.
      * @param listener   The listener to register
      *
      * @return  An object of class AuthMechLogon

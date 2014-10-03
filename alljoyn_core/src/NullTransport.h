@@ -205,7 +205,6 @@ class NullTransport : public Transport {
     BusAttachment& bus;           /**< The message bus for this transport */
     bool running;                 /**< True after Start() has been called, before Stop() */
     BusEndpoint endpoint;         /**< The active endpoint */
-    BusAttachment* routerBus;     /**< The router bus attachment if the a bundled router was launched */
 
     static RouterLauncher* routerLauncher; /**< The router launcher if there is bundled router present */
 };

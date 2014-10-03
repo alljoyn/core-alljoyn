@@ -61,7 +61,7 @@ typedef struct _alljoyn_busobject_handle*                   alljoyn_busobject;
  * @return #ER_BUS_NO_SUCH_PROPERTY (Should be changed to #ER_OK by user implementation of alljoyn_busobject_prop_get_ptr
  *                                   if the request results in successfully reading a property from the object.)
  */
-typedef QStatus (*alljoyn_busobject_prop_get_ptr)(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val);
+typedef QStatus (*AJ_CALL alljoyn_busobject_prop_get_ptr)(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val);
 
 /**
  * Callback for property set method.
@@ -79,7 +79,7 @@ typedef QStatus (*alljoyn_busobject_prop_get_ptr)(const void* context, const cha
  * @return #ER_BUS_NO_SUCH_PROPERTY (Should be changed to #ER_OK by user implementation of alljoyn_busobject_prop_set_ptr
  *                                   is the set request results in successfully changing the property.)
  */
-typedef QStatus (*alljoyn_busobject_prop_set_ptr)(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val);
+typedef QStatus (*AJ_CALL alljoyn_busobject_prop_set_ptr)(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val);
 
 /**
  * Callback for ObjectRegistered and ObjectUnregistered
@@ -89,7 +89,7 @@ typedef QStatus (*alljoyn_busobject_prop_set_ptr)(const void* context, const cha
  *
  * @param context   context pointer passed in when creating a new alljoyn_busobject
  */
-typedef void (*alljoyn_busobject_object_registration_ptr)(const void* context);
+typedef void (*AJ_CALL alljoyn_busobject_object_registration_ptr)(const void* context);
 
 /**
  * a structure containing a collection of function pointers.
@@ -138,15 +138,15 @@ typedef struct {
  *
  * @return allocated alljoyn_busobject
  */
-extern AJ_API alljoyn_busobject alljoyn_busobject_create(const char* path, QCC_BOOL isPlaceholder,
-                                                         const alljoyn_busobject_callbacks* callbacks_in, const void* context_in);
+extern AJ_API alljoyn_busobject AJ_CALL alljoyn_busobject_create(const char* path, QCC_BOOL isPlaceholder,
+                                                                 const alljoyn_busobject_callbacks* callbacks_in, const void* context_in);
 
 /**
  * Destroy an alljoyn_busobject
  *
  * @param bus Bus to destroy.
  */
-extern AJ_API void alljoyn_busobject_destroy(alljoyn_busobject bus);
+extern AJ_API void AJ_CALL alljoyn_busobject_destroy(alljoyn_busobject bus);
 
 /**
  * Return the path for the object
@@ -154,7 +154,7 @@ extern AJ_API void alljoyn_busobject_destroy(alljoyn_busobject bus);
  * @param bus alljoyn_busobject on which to get the path.
  * @return Object path
  */
-extern AJ_API const char* alljoyn_busobject_getpath(alljoyn_busobject bus);
+extern AJ_API const char* AJ_CALL alljoyn_busobject_getpath(alljoyn_busobject bus);
 
 
 /**
@@ -166,11 +166,11 @@ extern AJ_API const char* alljoyn_busobject_getpath(alljoyn_busobject bus);
  * @param val       The new value of the property
  * @param id        ID of the session we broadcast the signal to (0 for all)
  */
-extern AJ_API void alljoyn_busobject_emitpropertychanged(alljoyn_busobject bus,
-                                                         const char* ifcName,
-                                                         const char* propName,
-                                                         alljoyn_msgarg val,
-                                                         alljoyn_sessionid id);
+extern AJ_API void AJ_CALL alljoyn_busobject_emitpropertychanged(alljoyn_busobject bus,
+                                                                 const char* ifcName,
+                                                                 const char* propName,
+                                                                 alljoyn_msgarg val,
+                                                                 alljoyn_sessionid id);
 
 /**
  * Get the name of this object.
@@ -183,7 +183,7 @@ extern AJ_API void alljoyn_busobject_emitpropertychanged(alljoyn_busobject bus,
  * @param bufferSz  The size of the buffer provided.
  * @return The size of the name string, if the returned value is > bufferSz, the entire name was not copied into buffer.
  */
-extern AJ_API size_t alljoyn_busobject_getname(alljoyn_busobject bus, char* buffer, size_t bufferSz);
+extern AJ_API size_t AJ_CALL alljoyn_busobject_getname(alljoyn_busobject bus, char* buffer, size_t bufferSz);
 
 /**
  * Add an interface to this object. If the interface has properties this will also add the
@@ -203,7 +203,7 @@ extern AJ_API size_t alljoyn_busobject_getname(alljoyn_busobject bus, char* buff
  *      - #ER_BUS_IFACE_ALREADY_EXISTS if the interface already exists.
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_busobject_addinterface(alljoyn_busobject bus, const alljoyn_interfacedescription iface);
+extern AJ_API QStatus AJ_CALL alljoyn_busobject_addinterface(alljoyn_busobject bus, const alljoyn_interfacedescription iface);
 
 /**
  * Add a method handler to this object. The interface for the method handler must have already
@@ -219,7 +219,7 @@ extern AJ_API QStatus alljoyn_busobject_addinterface(alljoyn_busobject bus, cons
  *      - #ER_OK if the method handler was added.
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_busobject_addmethodhandler(alljoyn_busobject bus, const alljoyn_interfacedescription_member member, alljoyn_messagereceiver_methodhandler_ptr handler, void* context);
+extern AJ_API QStatus AJ_CALL alljoyn_busobject_addmethodhandler(alljoyn_busobject bus, const alljoyn_interfacedescription_member member, alljoyn_messagereceiver_methodhandler_ptr handler, void* context);
 
 /**
  * Add a set of method handers at once.
@@ -232,9 +232,9 @@ extern AJ_API QStatus alljoyn_busobject_addmethodhandler(alljoyn_busobject bus, 
  *      - #ER_OK if all the methods were added
  *      - #ER_BUS_NO_SUCH_INTERFACE is method can not be added because interface does not exist.
  */
-extern AJ_API QStatus alljoyn_busobject_addmethodhandlers(alljoyn_busobject bus,
-                                                          const alljoyn_busobject_methodentry* entries,
-                                                          size_t numEntries);
+extern AJ_API QStatus AJ_CALL alljoyn_busobject_addmethodhandlers(alljoyn_busobject bus,
+                                                                  const alljoyn_busobject_methodentry* entries,
+                                                                  size_t numEntries);
 
 /**
  * Reply to a method call
@@ -247,8 +247,8 @@ extern AJ_API QStatus alljoyn_busobject_addmethodhandlers(alljoyn_busobject bus,
  *      - #ER_OK if successful
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_busobject_methodreply_args(alljoyn_busobject bus, alljoyn_message msg,
-                                                         const alljoyn_msgarg args, size_t numArgs);
+extern AJ_API QStatus AJ_CALL alljoyn_busobject_methodreply_args(alljoyn_busobject bus, alljoyn_message msg,
+                                                                 const alljoyn_msgarg args, size_t numArgs);
 /**
  * Reply to a method call with an error message
  *
@@ -260,8 +260,8 @@ extern AJ_API QStatus alljoyn_busobject_methodreply_args(alljoyn_busobject bus, 
  *      - #ER_OK if successful
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_busobject_methodreply_err(alljoyn_busobject bus, alljoyn_message msg,
-                                                        const char* error, const char* errorMessage);
+extern AJ_API QStatus AJ_CALL alljoyn_busobject_methodreply_err(alljoyn_busobject bus, alljoyn_message msg,
+                                                                const char* error, const char* errorMessage);
 /**
  * Reply to a method call with an error message
  *
@@ -272,7 +272,7 @@ extern AJ_API QStatus alljoyn_busobject_methodreply_err(alljoyn_busobject bus, a
  *      - #ER_OK if successful
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_busobject_methodreply_status(alljoyn_busobject bus, alljoyn_message msg, QStatus status);
+extern AJ_API QStatus AJ_CALL alljoyn_busobject_methodreply_status(alljoyn_busobject bus, alljoyn_message msg, QStatus status);
 
 /**
  * Get a reference to the underlying alljoyn_busattachment
@@ -288,7 +288,7 @@ extern AJ_API QStatus alljoyn_busobject_methodreply_status(alljoyn_busobject bus
  *
  * @return a reference to the alljoyn_busattachment
  */
-extern AJ_API const alljoyn_busattachment alljoyn_busobject_getbusattachment(alljoyn_busobject bus);
+extern AJ_API const alljoyn_busattachment AJ_CALL alljoyn_busobject_getbusattachment(alljoyn_busobject bus);
 /**
  * Send a signal.
  *
@@ -314,15 +314,15 @@ extern AJ_API const alljoyn_busattachment alljoyn_busobject_getbusattachment(all
  *      - #ER_OK if successful
  *      - An error status otherwise
  */
-extern AJ_API QStatus alljoyn_busobject_signal(alljoyn_busobject bus,
-                                               const char* destination,
-                                               alljoyn_sessionid sessionId,
-                                               const alljoyn_interfacedescription_member signal,
-                                               const alljoyn_msgarg args,
-                                               size_t numArgs,
-                                               uint16_t timeToLive,
-                                               uint8_t flags,
-                                               alljoyn_message msg);
+extern AJ_API QStatus AJ_CALL alljoyn_busobject_signal(alljoyn_busobject bus,
+                                                       const char* destination,
+                                                       alljoyn_sessionid sessionId,
+                                                       const alljoyn_interfacedescription_member signal,
+                                                       const alljoyn_msgarg args,
+                                                       size_t numArgs,
+                                                       uint16_t timeToLive,
+                                                       uint8_t flags,
+                                                       alljoyn_message msg);
 /**
  * Remove sessionless message sent from this object from local router's
  * store/forward cache.
@@ -331,7 +331,7 @@ extern AJ_API QStatus alljoyn_busobject_signal(alljoyn_busobject bus,
  * @param serialNumber    Serial number of previously sent sessionless signal.
  * @return   ER_OK if successful.
  */
-extern AJ_API QStatus alljoyn_busobject_cancelsessionlessmessage_serial(alljoyn_busobject bus, uint32_t serialNumber);
+extern AJ_API QStatus AJ_CALL alljoyn_busobject_cancelsessionlessmessage_serial(alljoyn_busobject bus, uint32_t serialNumber);
 
 /**
  * Remove sessionless message sent from this object from local router's
@@ -341,7 +341,7 @@ extern AJ_API QStatus alljoyn_busobject_cancelsessionlessmessage_serial(alljoyn_
  * @param msg    Message to be removed.
  * @return   ER_OK if successful.
  */
-extern AJ_API QStatus alljoyn_busobject_cancelsessionlessmessage(alljoyn_busobject bus, const alljoyn_message msg);
+extern AJ_API QStatus AJ_CALL alljoyn_busobject_cancelsessionlessmessage(alljoyn_busobject bus, const alljoyn_message msg);
 
 /**
  * Indicates if this object is secure.
@@ -351,7 +351,7 @@ extern AJ_API QStatus alljoyn_busobject_cancelsessionlessmessage(alljoyn_busobje
  * @return Return QCC_TRUE if authentication is required to emit signals or
  *                call methods on this object.
  */
-extern AJ_API QCC_BOOL alljoyn_busobject_issecure(alljoyn_busobject bus);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_busobject_issecure(alljoyn_busobject bus);
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -57,7 +57,7 @@ class AuthManager {
      * provide a function of this type when registering with the AllJoynAuthentication mechanism manager.
      *
      * @param keyStore  The key store for keys and other security credentials required for the
-     *                  authentication mechansim.
+     *                  authentication mechanism.
      *
      * @param listener  Provides callouts for authentication mechanisms that interact with the user or
      *                  application.

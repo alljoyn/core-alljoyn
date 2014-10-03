@@ -69,7 +69,6 @@ QStatus Rule::enable()
         eventMember = existingIntf->GetMember(mEvent->mMember.c_str());
     } else {
         //introspect to collect interface
-        SessionId sessionId;
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
         mBus->EnableConcurrentCallbacks();
         status = mBus->JoinSession(mEvent->mUniqueName.c_str(), mEvent->mPort, this,  mSessionId, opts);

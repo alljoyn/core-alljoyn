@@ -495,7 +495,9 @@ void DBusObj::RemoveAliasComplete(const qcc::String& aliasName,
     }
 }
 
-void DBusObj::NameOwnerChanged(const qcc::String& alias, const qcc::String* oldOwner, const qcc::String* newOwner)
+void DBusObj::NameOwnerChanged(const qcc::String& alias,
+                               const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
+                               const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer)
 {
     QStatus status;
     const qcc::String& shortGuidStr = bus.GetInternal().GetGlobalGUID().ToShortString();
@@ -511,40 +513,50 @@ void DBusObj::NameOwnerChanged(const qcc::String& alias, const qcc::String* oldO
     aliasArg.v_string.str = alias.c_str();
     aliasArg.v_string.len = alias.size();
 
-    /* Send a NameLost signal if necessary */
-    /* Don't send lost signal for a lost unique name since the endpoint is already gone */
-    if (oldOwner && !oldOwner->empty() && (alias[0] != ':') && (0 == ::strncmp(oldOwner->c_str() + 1,
-                                                                               shortGuidStr.c_str(),
-                                                                               shortGuidStr.size()))) {
-        const InterfaceDescription::Member* nameLost = dbusIntf->GetMember("NameLost");
-        assert(nameLost);
-        status = Signal(oldOwner->c_str(), 0, *nameLost, &aliasArg, 1);
-        if (ER_OK != status) {
-            QCC_DbgPrintf(("Failed to send NameLost signal for %s to %s (%s)", alias.c_str(), oldOwner->c_str(), QCC_StatusText(status)));
-        }
-    }
+    /* When newOwner and oldOwner are the same, only the name transfer changed. */
+    if (newOwner != oldOwner) {
 
-    /* Send a NameAcquired signal if necessary */
-    if (newOwner && !newOwner->empty() && (0 == ::strncmp(newOwner->c_str() + 1, shortGuidStr.c_str(),
-                                                          shortGuidStr.size()))) {
-        const InterfaceDescription::Member* nameAcquired = dbusIntf->GetMember("NameAcquired");
-        assert(nameAcquired);
-        status = Signal(newOwner->c_str(), 0, *nameAcquired, &aliasArg, 1);
-        if (ER_OK != status) {
-            QCC_DbgPrintf(("Failed to send NameAcquired signal for %s to %s (%s)", alias.c_str(), newOwner->c_str(), QCC_StatusText(status)));
+        /* Send a NameLost signal if necessary */
+        /* Don't send lost signal for a lost unique name since the endpoint is already gone */
+        if (oldOwner && !oldOwner->empty() && (alias[0] != ':') && (0 == ::strncmp(oldOwner->c_str() + 1,
+                                                                                   shortGuidStr.c_str(),
+                                                                                   shortGuidStr.size()))) {
+            const InterfaceDescription::Member* nameLost = dbusIntf->GetMember("NameLost");
+            assert(nameLost);
+            status = Signal(oldOwner->c_str(), 0, *nameLost, &aliasArg, 1);
+            if (ER_OK != status) {
+                QCC_DbgPrintf(("Failed to send NameLost signal for %s to %s (%s)", alias.c_str(), oldOwner->c_str(), QCC_StatusText(status)));
+            }
+        }
+
+        /* Send a NameAcquired signal if necessary */
+        if (newOwner && !newOwner->empty() && (0 == ::strncmp(newOwner->c_str() + 1, shortGuidStr.c_str(),
+                                                              shortGuidStr.size()))) {
+            const InterfaceDescription::Member* nameAcquired = dbusIntf->GetMember("NameAcquired");
+            assert(nameAcquired);
+            status = Signal(newOwner->c_str(), 0, *nameAcquired, &aliasArg, 1);
+            if (ER_OK != status) {
+                QCC_DbgPrintf(("Failed to send NameAcquired signal for %s to %s (%s)", alias.c_str(), newOwner->c_str(), QCC_StatusText(status)));
+            }
         }
     }
 
     /* Send NameOwnerChanged signal */
-    MsgArg ownerChangedArgs[3];
-    size_t numArgs = ArraySize(ownerChangedArgs);
-    MsgArg::Set(ownerChangedArgs, numArgs, "sss", alias.c_str(), oldOwner ? oldOwner->c_str() : "", newOwner ? newOwner->c_str() : "");
+    if ((oldOwner && SessionOpts::ALL_NAMES == oldOwnerNameTransfer) ||
+        (newOwner && SessionOpts::ALL_NAMES == newOwnerNameTransfer)) {
+        MsgArg ownerChangedArgs[3];
+        size_t numArgs = ArraySize(ownerChangedArgs);
+        MsgArg::Set(ownerChangedArgs, numArgs, "sss",
+                    alias.c_str(),
+                    (oldOwner && SessionOpts::ALL_NAMES == oldOwnerNameTransfer) ? oldOwner->c_str() : "",
+                    (newOwner && SessionOpts::ALL_NAMES == newOwnerNameTransfer) ? newOwner->c_str() : "");
 
-    const InterfaceDescription::Member* nameOwnerChanged = dbusIntf->GetMember("NameOwnerChanged");
-    assert(nameOwnerChanged);
-    status = Signal(NULL, 0, *nameOwnerChanged, ownerChangedArgs, numArgs);
-    if (status != ER_OK) {
-        QCC_DbgPrintf(("Failed to send NameOwnerChanged signal for %s to %s (%s)", alias.c_str(), newOwner ? newOwner->c_str() : "", QCC_StatusText(status)));
+        const InterfaceDescription::Member* nameOwnerChanged = dbusIntf->GetMember("NameOwnerChanged");
+        assert(nameOwnerChanged);
+        status = Signal(NULL, 0, *nameOwnerChanged, ownerChangedArgs, numArgs);
+        if (status != ER_OK) {
+            QCC_DbgPrintf(("Failed to send NameOwnerChanged signal for %s to %s (%s)", alias.c_str(), newOwner ? newOwner->c_str() : "", QCC_StatusText(status)));
+        }
     }
 }
 

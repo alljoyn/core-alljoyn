@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -21,24 +21,25 @@
 
 #include "alljoyn/version.h"
 
-static const unsigned int architecture = 0;
-static const unsigned int apiLevel = 0;
-static const unsigned int release = 1;
+static const unsigned int year = 0;
+static const unsigned int month = 0;
+static const unsigned int feature = 0; /* feature is always 0 for core. */
+static const unsigned int bugfix = ' ';
 
 static const char version[] = "##VERSION_STRING##";
 static const char build[] = "AllJoyn Library ##BUILD_STRING##";
 
-const char * ajn::GetVersion()
+const char* ajn::GetVersion()
 {
     return version;
 }
 
-const char * ajn::GetBuildInfo()
+const char* ajn::GetBuildInfo()
 {
     return build;
 }
 
 uint32_t ajn::GetNumericVersion()
 {
-    return GenerateVersionValue(architecture, apiLevel, release);
+    return GenerateNumericVersionValue(year, month, feature, bugfix);
 }

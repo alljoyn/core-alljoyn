@@ -568,6 +568,8 @@ QStatus DaemonRouter::AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEn
             assert(destEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL);
             QCC_LogError(status, ("AddSessionRef(this=%s, %u, %s) failed", srcEp->GetUniqueName().c_str(), id, (*srcB2bEp)->GetUniqueName().c_str()));
             VirtualEndpoint::cast(destEp)->RemoveSessionRef(id);
+            /* Need to hit NameTable here since name ownership of a destEp alias may have changed */
+            nameTable.UpdateVirtualAliases(destEp->GetUniqueName());
         }
     }
 
@@ -601,47 +603,6 @@ QStatus DaemonRouter::AddSessionRoute(SessionId id, BusEndpoint& srcEp, RemoteEn
     return status;
 }
 
-QStatus DaemonRouter::RemoveSessionRoute(SessionId id, BusEndpoint& srcEp, BusEndpoint& destEp)
-{
-    QCC_DbgTrace(("DaemonRouter::RemoveSessionRoute(%u, \"%s\", \"%s\")", id, srcEp->GetUniqueName().c_str(), destEp->GetUniqueName().c_str()));
-    QStatus status = ER_OK;
-    RemoteEndpoint srcB2bEp;
-    RemoteEndpoint destB2bEp;
-    if (id == 0) {
-        return ER_BUS_NO_SESSION;
-    }
-
-    /* Update virtual endpoint state */
-    if (destEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
-        VirtualEndpoint vDestEp = VirtualEndpoint::cast(destEp);
-        destB2bEp = vDestEp->GetBusToBusEndpoint(id);
-        vDestEp->RemoveSessionRef(id);
-    }
-    if (srcEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
-        VirtualEndpoint vSrcEp = VirtualEndpoint::cast(srcEp);
-        srcB2bEp = vSrcEp->GetBusToBusEndpoint(id);
-        vSrcEp->RemoveSessionRef(id);
-    }
-
-    /* Remove entries from sessionCastSet */
-    if (status == ER_OK) {
-        sessionCastSetLock.Lock(MUTEX_CONTEXT);
-        SessionCastEntry entry(id, srcEp->GetUniqueName(), destB2bEp, destEp);
-        set<SessionCastEntry>::iterator it = sessionCastSet.find(entry);
-        if (it != sessionCastSet.end()) {
-            sessionCastSet.erase(it);
-        }
-
-        SessionCastEntry entry2(id, destEp->GetUniqueName(), srcB2bEp, srcEp);
-        set<SessionCastEntry>::iterator it2 = sessionCastSet.find(entry2);
-        if (it2 != sessionCastSet.end()) {
-            sessionCastSet.erase(it2);
-        }
-        sessionCastSetLock.Unlock(MUTEX_CONTEXT);
-    }
-    return status;
-}
-
 void DaemonRouter::RemoveSessionRoutes(const char* src, SessionId id)
 {
     QCC_DbgTrace(("DaemonRouter::RemoveSessionRoutes(\"%s\", %d.)", src, id));
@@ -655,6 +616,8 @@ void DaemonRouter::RemoveSessionRoutes(const char* src, SessionId id)
             if ((it->id != 0) && (it->destEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL)) {
                 BusEndpoint destEp = it->destEp;
                 VirtualEndpoint::cast(destEp)->RemoveSessionRef(it->id);
+                /* Need to hit NameTable here since name ownership of a destEp alias may have changed */
+                nameTable.UpdateVirtualAliases(destEp->GetUniqueName());
             }
             sessionCastSet.erase(it++);
         } else {

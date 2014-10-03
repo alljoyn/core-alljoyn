@@ -135,8 +135,13 @@ QStatus AboutIconClient::GetContent(const char* busName, uint8_t** content, size
         if (numArgs == 1) {
             uint8_t* temp = NULL;
             status = returnArgs[0].Get("ay", &contentSize, &temp);
-            (*content) = new uint8_t[contentSize];
-            memcpy((*content), temp, sizeof(uint8_t) * contentSize);
+            if ((contentSize > 0) && temp) {
+                (*content) = new uint8_t[contentSize];
+                memcpy((*content), temp, sizeof(uint8_t) * contentSize);
+            } else {
+                (*content) = NULL;
+                contentSize = 0;
+            }
         } else {
             status = ER_BUS_BAD_VALUE;
         }

@@ -908,7 +908,7 @@ TEST_F(AnnounceHandlerTest, WildCardInterfaceMatching)
         qcc::Sleep(WAIT_TIME);
     }
 
-    ASSERT_EQ(1, announceHandler.announceHandlerCount);
+    ASSERT_EQ(1U, announceHandler.announceHandlerCount);
 
     AnnouncementRegistrar::UnRegisterAnnounceHandler(clientBus, announceHandler,
                                                      interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
@@ -971,7 +971,7 @@ TEST_F(AnnounceHandlerTest, WildCardInterfaceMatching2)
         qcc::Sleep(WAIT_TIME);
     }
 
-    ASSERT_EQ(1, announceHandler.announceHandlerCount);
+    ASSERT_EQ(1U, announceHandler.announceHandlerCount);
 
     AnnouncementRegistrar::UnRegisterAnnounceHandler(clientBus, announceHandler,
                                                      interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
@@ -1031,7 +1031,7 @@ TEST_F(AnnounceHandlerTest, MultipleWildCardInterfaceMatching)
         qcc::Sleep(WAIT_TIME);
     }
 
-    ASSERT_EQ(1, announceHandler.announceHandlerCount);
+    ASSERT_EQ(1U, announceHandler.announceHandlerCount);
 
     AnnouncementRegistrar::UnRegisterAnnounceHandler(clientBus, announceHandler,
                                                      interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
@@ -1090,7 +1090,7 @@ TEST_F(AnnounceHandlerTest, MixedWildCardNonWildCardInterfaceMatching)
         qcc::Sleep(WAIT_TIME);
     }
 
-    ASSERT_EQ(1, announceHandler.announceHandlerCount);
+    ASSERT_EQ(1U, announceHandler.announceHandlerCount);
 
     AnnouncementRegistrar::UnRegisterAnnounceHandler(clientBus, announceHandler,
                                                      interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
@@ -1106,20 +1106,26 @@ TEST_F(AnnounceHandlerTest, MixedWildCardNonWildCardInterfaceMatching)
 class RemoveObjectDescriptionAnnounceHandler : public ajn::services::AnnounceHandler {
 
   public:
-    RemoveObjectDescriptionAnnounceHandler() : announceHandlerCount(0) { }
+    RemoveObjectDescriptionAnnounceHandler(const char* objToBeRemoved) : announceHandlerCount(0), toRemove(objToBeRemoved) { }
     void Announce(unsigned short version, unsigned short port, const char* busName, const ObjectDescriptions& objectDescs,
                   const AboutData& aboutData) {
         if (announceHandlerCount == 0) {
             EXPECT_NE(objectDescs.end(), objectDescs.find("/org/alljoyn/test/a"));
             EXPECT_NE(objectDescs.end(), objectDescs.find("/org/alljoyn/test/b"));
         } else {
-            EXPECT_NE(objectDescs.end(), objectDescs.find("/org/alljoyn/test/a"));
-            EXPECT_EQ(objectDescs.end(), objectDescs.find("/org/alljoyn/test/b"));
+            if (toRemove == "/org/alljoyn/test/b") {
+                EXPECT_NE(objectDescs.end(), objectDescs.find("/org/alljoyn/test/a"));
+                EXPECT_EQ(objectDescs.end(), objectDescs.find("/org/alljoyn/test/b"));
+            } else {
+                EXPECT_EQ(objectDescs.end(), objectDescs.find("/org/alljoyn/test/a"));
+                EXPECT_NE(objectDescs.end(), objectDescs.find("/org/alljoyn/test/b"));
+            }
         }
         announceHandlerCount++;
     }
 
     uint32_t announceHandlerCount;
+    qcc::String toRemove;
 };
 
 TEST_F(AnnounceHandlerTest, RemoveObjectDescriptionAnnouncement)
@@ -1149,7 +1155,7 @@ TEST_F(AnnounceHandlerTest, RemoveObjectDescriptionAnnouncement)
     status = clientBus.Connect();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    RemoveObjectDescriptionAnnounceHandler announceHandler;
+    RemoveObjectDescriptionAnnounceHandler announceHandler("/org/alljoyn/test/b");
 
     const char* interfaces[1];
     interfaces[0] = ifaceNames[0].c_str();
@@ -1168,7 +1174,7 @@ TEST_F(AnnounceHandlerTest, RemoveObjectDescriptionAnnouncement)
         qcc::Sleep(WAIT_TIME);
     }
 
-    EXPECT_EQ(1, announceHandler.announceHandlerCount);
+    EXPECT_EQ(1U, announceHandler.announceHandlerCount);
 
     status = AboutServiceApi::getInstance()->RemoveObjectDescription("/org/alljoyn/test/b", object_interfaces2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -1184,7 +1190,81 @@ TEST_F(AnnounceHandlerTest, RemoveObjectDescriptionAnnouncement)
         qcc::Sleep(WAIT_TIME);
     }
 
-    EXPECT_EQ(2, announceHandler.announceHandlerCount);
+    EXPECT_EQ(2U, announceHandler.announceHandlerCount);
+
+    AnnouncementRegistrar::UnRegisterAnnounceHandler(clientBus, announceHandler,
+                                                     interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+
+    status = clientBus.Stop();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Join();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+}
+
+TEST_F(AnnounceHandlerTest, RemoveLastInterestingObject)
+{
+    QStatus status;
+
+    qcc::GUID128 guid;
+    qcc::String ifaceNames[2];
+    ifaceNames[0] = "o" + guid.ToShortString() + ".test.AnnounceHandlerTest.a";
+    ifaceNames[1] = "o" + guid.ToShortString() + ".test.AnnounceHandlerTest.b";
+
+    std::vector<qcc::String> object_interfaces1;
+    object_interfaces1.push_back(ifaceNames[0]);
+    status = AboutServiceApi::getInstance()->AddObjectDescription("/org/alljoyn/test/a", object_interfaces1);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    std::vector<qcc::String> object_interfaces2;
+    object_interfaces2.push_back(ifaceNames[1]);
+    status = AboutServiceApi::getInstance()->AddObjectDescription("/org/alljoyn/test/b", object_interfaces2);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    // receive
+    BusAttachment clientBus("Receive Announcement client Test", true);
+    status = clientBus.Start();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Connect();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    RemoveObjectDescriptionAnnounceHandler announceHandler("/org/alljoyn/test/a");
+
+    const char* interfaces[1];
+    interfaces[0] = ifaceNames[0].c_str();
+    AnnouncementRegistrar::RegisterAnnounceHandler(clientBus, announceHandler,
+                                                   interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+
+
+    status = AboutServiceApi::getInstance()->Announce();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    //Wait for a maximum of 10 sec for the Announce Signal.
+    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+        if (announceHandler.announceHandlerCount == 1) {
+            break;
+        }
+        qcc::Sleep(WAIT_TIME);
+    }
+
+    EXPECT_EQ(1U, announceHandler.announceHandlerCount);
+
+    status = AboutServiceApi::getInstance()->RemoveObjectDescription("/org/alljoyn/test/a", object_interfaces1);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = AboutServiceApi::getInstance()->Announce();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    //Wait for a maximum of 10 sec for the Announce Signal.
+    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+        if (announceHandler.announceHandlerCount == 2) {
+            break;
+        }
+        qcc::Sleep(WAIT_TIME);
+    }
+
+    EXPECT_EQ(2U, announceHandler.announceHandlerCount);
 
     AnnouncementRegistrar::UnRegisterAnnounceHandler(clientBus, announceHandler,
                                                      interfaces, sizeof(interfaces) / sizeof(interfaces[0]));

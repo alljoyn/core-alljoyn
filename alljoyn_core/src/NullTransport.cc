@@ -223,7 +223,7 @@ QStatus _NullEndpoint::PushMessage(Message& msg)
     return status;
 }
 
-NullTransport::NullTransport(BusAttachment& bus) : bus(bus), running(false), routerBus(NULL)
+NullTransport::NullTransport(BusAttachment& bus) : bus(bus), running(false)
 {
 }
 

@@ -72,7 +72,9 @@
 #define FP_INFINITE (_FPCLASS_NINF | _FPCLASS_PINF)
 /// @endcond
 #else
+#ifdef __cplusplus
 #include <algorithm>
+#endif
 #endif
 
 #endif
