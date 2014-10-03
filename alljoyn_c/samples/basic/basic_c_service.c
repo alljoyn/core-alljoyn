@@ -70,13 +70,13 @@ static void SigIntHandler(int sig)
 }
 
 /* ObjectRegistered callback */
-void busobject_object_registered(const void* context)
+void AJ_CALL busobject_object_registered(const void* context)
 {
     printf("ObjectRegistered has been called\n");
 }
 
 /* NameOwnerChanged callback */
-void name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
+void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
     if (newOwner && (0 == strcmp(busName, OBJECT_NAME))) {
         printf("name_owner_changed: name=%s, oldOwner=%s, newOwner=%s\n",
@@ -87,8 +87,8 @@ void name_owner_changed(const void* context, const char* busName, const char* pr
 }
 
 /* AcceptSessionJoiner callback */
-QCC_BOOL accept_session_joiner(const void* context, alljoyn_sessionport sessionPort,
-                               const char* joiner,  const alljoyn_sessionopts opts)
+QCC_BOOL AJ_CALL accept_session_joiner(const void* context, alljoyn_sessionport sessionPort,
+                                       const char* joiner,  const alljoyn_sessionopts opts)
 {
     QCC_BOOL ret = QCC_FALSE;
     if (sessionPort != SERVICE_PORT) {
@@ -102,7 +102,7 @@ QCC_BOOL accept_session_joiner(const void* context, alljoyn_sessionport sessionP
 }
 
 /* Exposed concatenate method */
-void cat_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
+void AJ_CALL cat_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
     QStatus status;
     alljoyn_msgarg outArg;

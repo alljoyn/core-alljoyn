@@ -46,9 +46,9 @@ typedef struct _alljoyn_busobject_handle*                   alljoyn_busobject;
  * @param member    Method interface member entry.
  * @param message   The received method call message.
  */
-typedef void (*AJ_CALL alljoyn_messagereceiver_methodhandler_ptr)(alljoyn_busobject bus,
-                                                                  const alljoyn_interfacedescription_member* member,
-                                                                  alljoyn_message message);
+typedef void (AJ_CALL * alljoyn_messagereceiver_methodhandler_ptr)(alljoyn_busobject bus,
+                                                                   const alljoyn_interfacedescription_member* member,
+                                                                   alljoyn_message message);
 
 /**
  * ReplyHandlers are %MessageReceiver functions which are called by AllJoyn library
@@ -57,7 +57,7 @@ typedef void (*AJ_CALL alljoyn_messagereceiver_methodhandler_ptr)(alljoyn_busobj
  * @param message   The received message.
  * @param context   User-defined context passed to MethodCall and returned upon reply.
  */
-typedef void (*AJ_CALL alljoyn_messagereceiver_replyhandler_ptr)(alljoyn_message message, void* context);
+typedef void (AJ_CALL * alljoyn_messagereceiver_replyhandler_ptr)(alljoyn_message message, void* context);
 
 /**
  * SignalHandlers are %MessageReceiver functions which are called by AllJoyn library
@@ -67,8 +67,8 @@ typedef void (*AJ_CALL alljoyn_messagereceiver_replyhandler_ptr)(alljoyn_message
  * @param srcPath   Object path of signal emitter.
  * @param message   The received message.
  */
-typedef void (*AJ_CALL alljoyn_messagereceiver_signalhandler_ptr)(const alljoyn_interfacedescription_member* member,
-                                                                  const char* srcPath, alljoyn_message message);
+typedef void (AJ_CALL * alljoyn_messagereceiver_signalhandler_ptr)(const alljoyn_interfacedescription_member* member,
+                                                                   const char* srcPath, alljoyn_message message);
 
 #ifdef __cplusplus
 } /* extern "C" */
