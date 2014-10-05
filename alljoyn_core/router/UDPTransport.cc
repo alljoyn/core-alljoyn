@@ -4700,6 +4700,43 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
     m_preListLock.Unlock(MUTEX_CONTEXT);
 
     /*
+     * This is an opportune time to deal with authenticating endpoints that have
+     * snuck in (asynchronously completed) due to race conditions if we are
+     * stopping.  If the transport is stopping, all of its endpoints must be in
+     * the process of stopping, so we walk the list of active endpoints and call
+     * Stop() on them.  If they are already stopping, no harm no foul.
+     *
+     * In the case of authenticating endpoints, we don't want to wait for some
+     * large number of seconds to time out, so we Stop() them and move them out
+     * of authenticating state.  If the endpoint is really in the middle of
+     * authenticating, in-process authentication responses will just be dropped
+     * at least until ARDP is finally killed, at which we will be all done
+     * anyway.
+     *
+     * Calling Stop() on an active or authenticating endpoint will begin the
+     * process of causing any waiting threads, etc., to be dislodged and remove
+     * depenencies on the endpoints in question.  When we look to do the Join()
+     * below, we will actually wait for the actions we start here to be
+     * completed.
+     */
+    if (IsRunning() == false || m_stopping == true) {
+        i = m_endpointList.begin();
+        while (i != m_endpointList.end()) {
+            UDPEndpoint ep = *i;
+            ep->Stop();
+        }
+
+        i = m_authList.begin();
+        while (i != m_authList.end()) {
+            UDPEndpoint ep = *i;
+            ep->Stop();
+            m_endpointList.insert(ep);
+            m_authList.erase(i);
+            i = m_authList.begin();
+        }
+    }
+
+    /*
      * Run through the list of connections on the authList and cleanup any that
      * are taking too long to authenticate.  These are connections that are in
      * the middle of the three-way handshake.
@@ -5158,6 +5195,15 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
     IncrementAndFetch(&m_refCount);
     QCC_DbgHLPrintf(("UDPTransport::AcceptCb(handle=%p, ipAddr=\"%s\", ipPort=%d., conn=%p)", handle, ipAddr.ToString().c_str(), ipPort, conn));
 
+    /*
+     * We never want to accept connections if we are shutting down.
+     */
+    if (IsRunning() == false || m_stopping == true) {
+        QCC_LogError(ER_BUS_TRANSPORT_NOT_STARTED, ("UDPTransport::AcceptCb(): Stopping or not running"));
+        DecrementAndFetch(&m_refCount);
+        return false;
+    }
+
     if (buf == NULL || len == 0) {
         QCC_LogError(ER_UDP_INVALID, ("UDPTransport::AcceptCb(): No BusHello with SYN"));
         DecrementAndFetch(&m_refCount);
@@ -5464,7 +5510,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         m_connLock.Unlock(MUTEX_CONTEXT);
 
         DecrementAndFetch(&m_refCount);
-        return status;
+        return false;
     }
 
     /*
@@ -5510,7 +5556,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         /*
          * If ARDP_Accept returns an error, most likely it is becuase the underlying
          * SYN + ACK didn't go out.  The contract with ARDP says that if an error
-         * happens here, we shouldn't expect an disconnect, so we just don't bother
+         * happens here, we shouldn't expect a disconnect, so we just don't bother
          * to finish seting up the endpoint.
          *
          * Even though we haven't actually started the endpoint, we call Stop() to
@@ -5527,7 +5573,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
         m_connLock.Unlock(MUTEX_CONTEXT);
 
         DecrementAndFetch(&m_refCount);
-        return status;
+        return false;
     }
 
     /*
@@ -5636,6 +5682,20 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
     QCC_DbgHLPrintf(("UDPTransport::DoConnectCb(handle=%p, conn=%p)", handle, conn));
 
     /*
+     * If the transport has been asked to stop, we don't want to take any more
+     * actions that could cause endpoints to be brought up.  We expect the
+     * process of stopping will cause threads waiting active connections to
+     * complete will be stopped in other ways, so it is safe to kill possible
+     * responses here.
+     */
+    if (IsRunning() == false || m_stopping == true) {
+        status = ER_UDP_STOPPING;
+        QCC_LogError(status, ("ArdpStream::PushBytes(): UDP Transport not running or stopping"));
+        DecrementAndFetch(&m_refCount);
+        return;
+    }
+
+    /*
      * We are in DoConnectCb() which is always run off of the dispatcher thread.
      * If we are going to take the preListLock and munge the preList we
      * absolutely, positively must not try to take ardpLock with preListLock
@@ -5653,7 +5713,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
 
     set<UDPEndpoint>::iterator i = m_preList.begin();
     while (i != m_preList.end()) {
-        QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Moving endpoint from m_preList to m_authList"));
+        QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Moving endpoint from m_preList to m_authList"));
         UDPEndpoint ep = *i;
         m_authList.insert(ep);
         m_preList.erase(i);
@@ -5902,8 +5962,9 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
 
         /*
          * If the connection was valid, we expect to have an event still there
-         * in its context.  The thread may not be there, but since we put the
-         * event in, we assert that it (at least) is still there.
+         * in its context.  The thread originally waiting for this event may not
+         * be there, but since we put the event in, we assert that it (at least)
+         * is still there.
          */
         assert(event && "UDPTransport::DoConnectCb(): Connection context did not provide an event");
 
