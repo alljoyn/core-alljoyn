@@ -212,7 +212,7 @@ class ThreadClass : public Thread {
 
         while ((!g_interrupt) && (IsRunning())) {
             uint32_t ms;
-            ARDP_Run(m_handle, m_sock, true, &ms);
+            ARDP_Run(m_handle, m_sock, true, false, &ms);
             //qcc::Sleep(1000);
         }
 

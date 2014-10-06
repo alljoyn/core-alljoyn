@@ -2866,8 +2866,9 @@ QStatus Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint16_t 
     return ER_OK;
 }
 
-QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool socketReady, uint32_t* ms)
+QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool readReady, bool writeReady, uint32_t* ms)
 {
+    bool socketReady = readReady;         /* BUGBUG FIXME when writeReady is implemented */
     const size_t bufferSize = 65536;      /* UDP packet can be up to 64K long */
     uint8_t* buf = new uint8_t[bufferSize];
     qcc::IPAddress address;               /* The IP address of the foreign side */

@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -191,6 +191,13 @@ class Event {
      * @return  The underlying file descriptor or INVALID_SOCKET_FD.
      */
     SocketFd GetFD() { return ioFd; }
+
+    /**
+     * Get the underlying event type.
+     *
+     * @return  The underlying event type.
+     */
+    EventType GetEventType() { return eventType; }
 
     /**
      * Get the number of threads that are currently blocked waiting for this event
