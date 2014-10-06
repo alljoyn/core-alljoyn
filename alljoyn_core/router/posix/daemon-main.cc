@@ -493,7 +493,6 @@ exit:
 int daemon(OptParse& opts, bool forked) {
     struct sigaction act, oldact;
     sigset_t sigmask, waitmask;
-    uint32_t pid(GetPid());
     ConfigDB* config = ConfigDB::GetConfigDB();
 
     // block all signals by default for all threads
@@ -617,24 +616,6 @@ int daemon(OptParse& opts, bool forked) {
                 strerror(errno));
         }
     }
-    fd = opts.GetPrintPidFd();
-    if ((fd >= 0) || !pidfn.empty()) {
-        String pidStr(U32ToString(pid));
-        pidStr += "\n";
-        if (fd > 0) {
-            int ret = write(fd, pidStr.c_str(), pidStr.size());
-            if (ret == -1) {
-                Log(LOG_ERR, "Failed to print pid: %s\n", strerror(errno));
-            }
-        }
-        if (!pidfn.empty()) {
-            FileSink pidfile(pidfn);
-            if (pidfile.IsValid()) {
-                size_t sent;
-                pidfile.PushBytes(pidStr.c_str(), pidStr.size(), sent);
-            }
-        }
-    }
 
     if (forked) {
         /*
@@ -668,10 +649,6 @@ int daemon(OptParse& opts, bool forked) {
 
     Log(LOG_INFO, "Terminating.\n");
     ajBus.StopListen(listenSpecs.c_str());
-
-    if (!pidfn.empty()) {
-        unlink(pidfn.c_str());
-    }
 
     return DAEMON_EXIT_OK;
 }
@@ -748,58 +725,6 @@ int main(int argc, char** argv, char** env)
 
     Log(LOG_NOTICE, versionPreamble, GetVersion(), GetBuildInfo());
 
-#if !defined(ROUTER_LIB)
-    if (!opts.GetNoSwitchUser()) {
-#if defined(QCC_OS_LINUX) || defined(QCC_OS_ANDROID)
-        // Keep all capabilities before switching users
-        prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
-#endif
-
-#if defined(QCC_OS_ANDROID)
-        // Android uses hard coded UIDs.
-        setuid(BLUETOOTH_UID);
-#else
-        String user = config.GetUser();
-        if ((getuid() == 0) && !user.empty()) {
-            // drop root privileges if <user> is specified.
-            struct passwd* pwent;
-            setpwent();
-            while ((pwent = getpwent())) {
-                if (user.compare(pwent->pw_name) == 0) {
-                    if (setuid(pwent->pw_uid) == 0) {
-                        Log(LOG_INFO, "Dropping root privileges (running as %s)\n", pwent->pw_name);
-                    } else {
-                        Log(LOG_ERR, "Failed to drop root privileges - set userid failed: %s\n", user.c_str());
-                        endpwent();
-                        return DAEMON_EXIT_CONFIG_ERROR;
-                    }
-                    break;
-                }
-            }
-            endpwent();
-            if (!pwent) {
-                Log(LOG_ERR, "Failed to drop root privileges - userid does not exist: %s\n", user.c_str());
-                return DAEMON_EXIT_CONFIG_ERROR;
-            }
-        }
-#endif
-
-#if defined(QCC_OS_LINUX) || defined(QCC_OS_ANDROID)
-        // Set the capabilities we need.
-        struct __user_cap_header_struct header;
-        struct __user_cap_data_struct cap;
-        header.version = _LINUX_CAPABILITY_VERSION;
-        header.pid = 0;
-        cap.permitted = (1 << CAP_NET_RAW | 1 << CAP_NET_ADMIN | 1 << CAP_NET_BIND_SERVICE);
-        cap.effective = cap.permitted;
-        cap.inheritable = 0;
-        capset(&header, &cap);
-#endif
-    }
-#endif
-
-    Log(LOG_INFO, "Running with effective userid %d\n", geteuid());
-
     bool forked = false;
     if (opts.GetFork() || (config.GetFork() && !opts.GetNoFork())) {
         Log(LOG_DEBUG, "Forking into daemon mode...\n");
@@ -808,9 +733,80 @@ int main(int argc, char** argv, char** env)
             Log(LOG_ERR, "Failed to fork(): %s\n", strerror(errno));
             return DAEMON_EXIT_FORK_ERROR;
         } else if (pid > 0) {
+            String pidfn = config.GetPidfile();
+            int fd = opts.GetPrintPidFd();
+            String pidStr(U32ToString(pid));
+            pidStr += "\n";
+
+            if (fd > 0) {
+                int ret = write(fd, pidStr.c_str(), pidStr.size());
+                if (ret == -1) {
+                    Log(LOG_ERR, "Failed to print pid: %s\n", strerror(errno));
+                }
+            }
+
+            if (!pidfn.empty()) {
+                FileSink pidfile(pidfn);
+                size_t sent;
+                pidfile.PushBytes(pidStr.c_str(), pidStr.size(), sent);
+            }
+
             // Unneeded parent process, just exit.
             _exit(DAEMON_EXIT_OK);
         } else {
+
+#if !defined(ROUTER_LIB)
+            if (!opts.GetNoSwitchUser()) {
+#if defined(QCC_OS_LINUX) || defined(QCC_OS_ANDROID)
+                // Keep all capabilities before switching users
+                prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
+#endif
+
+#if defined(QCC_OS_ANDROID)
+                // Android uses hard coded UIDs.
+                setuid(BLUETOOTH_UID);
+#else
+                String user = config.GetUser();
+                if ((getuid() == 0) && !user.empty()) {
+                    // drop root privileges if <user> is specified.
+                    struct passwd* pwent;
+                    setpwent();
+                    while ((pwent = getpwent())) {
+                        if (user.compare(pwent->pw_name) == 0) {
+                            if (setuid(pwent->pw_uid) == 0) {
+                                Log(LOG_INFO, "Dropping root privileges (running as %s)\n", pwent->pw_name);
+                            } else {
+                                Log(LOG_ERR, "Failed to drop root privileges - set userid failed: %s\n", user.c_str());
+                                endpwent();
+                                return DAEMON_EXIT_CONFIG_ERROR;
+                            }
+                            break;
+                        }
+                    }
+                    endpwent();
+                    if (!pwent) {
+                        Log(LOG_ERR, "Failed to drop root privileges - userid does not exist: %s\n", user.c_str());
+                        return DAEMON_EXIT_CONFIG_ERROR;
+                    }
+                }
+#endif
+
+#if defined(QCC_OS_LINUX) || defined(QCC_OS_ANDROID)
+                // Set the capabilities we need.
+                struct __user_cap_header_struct header;
+                struct __user_cap_data_struct cap;
+                header.version = _LINUX_CAPABILITY_VERSION;
+                header.pid = 0;
+                cap.permitted = (1 << CAP_NET_RAW | 1 << CAP_NET_ADMIN | 1 << CAP_NET_BIND_SERVICE);
+                cap.effective = cap.permitted;
+                cap.inheritable = 0;
+                capset(&header, &cap);
+#endif
+            }
+#endif
+
+            Log(LOG_INFO, "Running with effective userid %d\n", geteuid());
+
             // create new session ID
             pid_t sid = setsid();
             if (sid < 0) {

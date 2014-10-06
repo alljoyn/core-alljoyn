@@ -27,6 +27,11 @@
 #ifndef _WIN32
 #define _BSD_SOURCE /* usleep */
 #endif
+#ifdef _WIN32
+/* To avoid compilation error in VS generated due to use of snprintf */
+#define _CRT_SECURE_NO_WARNINGS 1
+#endif
+
 #include <qcc/platform.h>
 
 #include <assert.h>
@@ -96,7 +101,7 @@ QCC_BOOL accept_session_joiner(const void* context, alljoyn_sessionport sessionP
     return ret;
 }
 
-/* Exposed concatinate method */
+/* Exposed concatenate method */
 void cat_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
     QStatus status;
@@ -126,7 +131,7 @@ void cat_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member
 int main(int argc, char** argv, char** envArg)
 {
     QStatus status = ER_OK;
-    char* connectArgs = "unix:abstract=alljoyn";
+    char* connectArgs = NULL;
     alljoyn_interfacedescription testIntf = NULL;
     alljoyn_busobject_callbacks busObjCbs = {
         NULL,
