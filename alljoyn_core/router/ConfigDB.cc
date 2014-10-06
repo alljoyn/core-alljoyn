@@ -23,7 +23,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <sys/types.h>
-#if !defined(QCC_OS_GROUP_WINDOWS) && !defined(QCC_OS_GROUP_WINRT)
+#if !defined(QCC_OS_GROUP_WINDOWS)
 #include <pwd.h>
 #endif
 

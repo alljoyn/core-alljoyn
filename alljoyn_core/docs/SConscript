@@ -1,4 +1,4 @@
-# Copyright (c) 2011, 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2011, 2013, 2014 AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -20,7 +20,6 @@ Import('core_headers')
 
 docenv = ajenv.Clone()
 docenv['ENV']['CPP_DISTDIR'] = str(docenv.Dir('$CPP_DISTDIR'))
-docenv['ENV']['WINRT_DISTDIR'] = str(docenv.Dir('$WINRT_DISTDIR'))
 
 installedDocs = None
 
@@ -67,54 +66,6 @@ elif docenv['DOCS'] == 'sandcastle':
 
     # import the envrionment variable from the system
     shfbroot = chm_env.Dir(os.environ['SHFBROOT'])
-
-    # choose the correct build flavor
-    if chm_env['OS'] == 'win8' or chm_env['OS'] == 'win8_nt':
-        if chm_env['CPU'] == 'x86':
-            platform = 'Win32'
-        elif chm_env['CPU'] == 'x86_64':
-            platform = 'x64'
-        elif chm_env['CPU'] == 'arm':
-            platform = 'ARM'
-
-        if chm_env['VARIANT'] == 'debug':
-            variant = 'Debug'
-        else:
-            variant = 'Release'
-
-        # Because SHFB expects a dll filename instead of the winmd,
-        # make a copy, build the doc, then delete the temporary file
-        chm_cmd = chm_env.Command('winrt/Help/AllJoyn.chm',
-                            ['$DISTDIR/bin/AllJoyn.winmd', '$DISTDIR/bin/AllJoyn.xml'],
-                            [
-                            Copy('${SOURCE}.dll','${SOURCE}'),
-                            ''.join([
-                                    'cd alljoyn_core\\docs\\winrt && ',
-                                    'msbuild.exe AllJoyn.shfbproj /t:Rebuild /p:',
-                                    'Configuration=', variant,
-                                    ';Platform=', platform,
-                                    ';SHFBROOT="', shfbroot.path, '"'
-                                    ]),
-                            Delete('${SOURCE}.dll')
-                            ]
-                            )
-
-        installedDocs = chm_env.Install('$DISTDIR/bin', 'winrt/Help/AllJoyn.chm')
-
-        # make sure the chm file is built before trying to install it.
-        Depends(installedDocs, chm_cmd)
-
-elif docenv['DOCS'] == 'chm':
-    chm_env = docenv.Clone();
-    # the target directory 'docs/tmp' is never built this will cause doxygen
-    # to run every time DOCS == 'chm'
-
-    def always_decider(dependency, target, prev_ni):
-        return 1
-
-    chm_env.Decider(always_decider)
-    chm_env.Doxygen(source='Doxygen_chm', target=File('html/AllJoyn.chm'))
-    installedDocs = chm_env.Install('$WINRT_DISTDIR/docs', 'html/AllJoyn.chm')
 
 if installedDocs:
     docenv.Depends(installedDocs, core_headers);

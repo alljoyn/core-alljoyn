@@ -22,43 +22,38 @@ if test_env['BR'] == 'on':
     # Build apps with bundled daemon support
     test_env.Prepend(LIBS = [test_env['brobj'], test_env['ajrlib']])
 
-if test_env['OS'] != 'win8':
-    # Test Programs
-    progs = [
-        test_env.Program('bastress',      ['bastress.cc']),
-        test_env.Program('bastress2',     ['bastress2.cc']),
-        test_env.Program('bignum',        ['bignum.cc']),
-        test_env.Program('socktest',      ['socktest.cc']),
-        test_env.Program('remarshal',     ['remarshal.cc']),
-        test_env.Program('unpack',        ['unpack.cc']),
-        test_env.Program('rsa',           ['rsa.cc']),
-        test_env.Program('srp',           ['srp.cc']),
-        test_env.Program('aes_ccm',       ['aes_ccm.cc']),
-        test_env.Program('keystore',      ['keystore.cc']),
-        test_env.Program('bbservice',     ['bbservice.cc']),
-        test_env.Program('bbsig',         ['bbsig.cc']),
-        test_env.Program('bbclient',      ['bbclient.cc']),
-        test_env.Program('bbjoin',        ['bbjoin.cc']),
-        test_env.Program('bbjitter',      ['bbjitter.cc']),
-        test_env.Program('marshal',       ['marshal.cc']),
-        test_env.Program('names',         ['names.cc']),
-        test_env.Program('compression',   ['compression.cc']),
-        test_env.Program('rawclient',     ['rawclient.cc']),
-        test_env.Program('rawservice',    ['rawservice.cc']),
-        test_env.Program('sessions',      ['sessions.cc']),
-        test_env.Program('bbsigtest',     ['bbsigtest.cc'])
-        ]
+# Test Programs
+progs = [
+    test_env.Program('bastress',      ['bastress.cc']),
+    test_env.Program('bastress2',     ['bastress2.cc']),
+    test_env.Program('bignum',        ['bignum.cc']),
+    test_env.Program('socktest',      ['socktest.cc']),
+    test_env.Program('remarshal',     ['remarshal.cc']),
+    test_env.Program('unpack',        ['unpack.cc']),
+    test_env.Program('rsa',           ['rsa.cc']),
+    test_env.Program('srp',           ['srp.cc']),
+    test_env.Program('aes_ccm',       ['aes_ccm.cc']),
+    test_env.Program('keystore',      ['keystore.cc']),
+    test_env.Program('bbservice',     ['bbservice.cc']),
+    test_env.Program('bbsig',         ['bbsig.cc']),
+    test_env.Program('bbclient',      ['bbclient.cc']),
+    test_env.Program('bbjoin',        ['bbjoin.cc']),
+    test_env.Program('bbjitter',      ['bbjitter.cc']),
+    test_env.Program('marshal',       ['marshal.cc']),
+    test_env.Program('names',         ['names.cc']),
+    test_env.Program('compression',   ['compression.cc']),
+    test_env.Program('rawclient',     ['rawclient.cc']),
+    test_env.Program('rawservice',    ['rawservice.cc']),
+    test_env.Program('sessions',      ['sessions.cc']),
+    test_env.Program('bbsigtest',     ['bbsigtest.cc'])
+    ]
 
-    if test_env['OS'] == 'linux' or test_env['OS'] == 'android':
-        progs.extend(test_env.Program('mc-rcv',     ['mc-rcv.cc']))
-        progs.extend(test_env.Program('mc-snd',     ['mc-snd.cc']))
+if test_env['OS'] == 'linux' or test_env['OS'] == 'android':
+    progs.extend(test_env.Program('mc-rcv',     ['mc-rcv.cc']))
+    progs.extend(test_env.Program('mc-snd',     ['mc-snd.cc']))
 
-    if test_env['OS'] == 'win7':
-        progs.extend(test_env.Program('mouseclient', ['mouseclient.cc']))
-        progs.extend(test_env.Program('litegen',     ['litegen.cc']))
+if test_env['OS'] == 'win7':
+    progs.extend(test_env.Program('mouseclient', ['mouseclient.cc']))
+    progs.extend(test_env.Program('litegen',     ['litegen.cc']))
 
-    Return('progs')
-    
-# win8    
-progs=[]    
 Return('progs')
