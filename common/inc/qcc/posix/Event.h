@@ -193,6 +193,13 @@ class Event {
     SocketFd GetFD() { return ioFd; }
 
     /**
+     * Get the underlying event type.
+     *
+     * @return  The underlying event type.
+     */
+    EventType GetEventType() { return eventType; }
+
+    /**
      * Get the number of threads that are currently blocked waiting for this event
      *
      * @return The number of blocked threads

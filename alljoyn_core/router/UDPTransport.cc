@@ -49,6 +49,11 @@
 #include "ScatterGatherList.h"
 #endif
 
+/*
+ * BUGBUG FIXME Until we can coordinate getting this into master and
+ * feature/udp_transport
+ */
+#define ER_ARDP_WRITE_BLOCKED_temp (-12345678)
 
 /*
  * How the transport fits into the system
@@ -1706,7 +1711,6 @@ class MessagePump {
          * put itself on the past threads list so it can be Join()ed.
          */
         if (m_activeThread == NULL) {
-            QDP(("MessagePump::RecvCb(): Spin up new PumpThread"));
             QCC_DbgPrintf(("MessagePump::RecvCb(): Spin up new PumpThread"));
             m_activeThread = new PumpThread(this);
             m_activeThread->Start(NULL, NULL);
@@ -3582,7 +3586,6 @@ ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
     QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Alert()"));
     m_pump->m_transport->Alert();
     QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Return"));
-    QDP(("MessagePump::PumpThread::Run(): PumpThread exiting"));
     return 0;
 }
 
@@ -6636,6 +6639,21 @@ void UDPTransport::SendWindowCb(ArdpHandle* handle, ArdpConnRecord* conn, uint16
 }
 
 /**
+ * A struct to hold information about IO_WRITE events that can be used
+ * transiently to enable ARDP to wait for sockets to become writable after
+ * it discovers the socket queue is full.
+ *
+ * Would be nice if it could be a local type to UDPTransport::Run() but Android
+ * balks.
+ */
+struct WriteEntry {
+    WriteEntry(bool active, SocketFd socket, Event* event) : m_active(active), m_socket(socket), m_event(event) { }
+    bool m_active;      /**< If true indicates that ARDP wants to know when m_socket is writeable */
+    SocketFd m_socket;  /**< The socket FD of interest */
+    Event* m_event;     /**< The IO_WRITE event used to wait for writeable state */
+};
+
+/**
  * This is the run method of the main loop of the UDP Transport maintenance
  * thread -- the center of the UDP Transport universe.
  */
@@ -6660,12 +6678,36 @@ void* UDPTransport::Run(void* arg)
     }
 
     /*
-     * Events driving the main loop execution below.  Always listen for the
-     * (thread) stop event firing.  Create a timer event that the ARDP protocol
-     * will borrow for its timers -- it never pops unless ARDP says to, so it
-     * starts waiting forever.
+     * ARDP wants to write its output to a datagram socket.  This socket has a
+     * buffer.  If this buffer fills up, ARDP will begin getting ER_WOULDBLOCK
+     * on its sendto calls.  ARDP will return ER_ARDP_WRITE_BLOCKED in this
+     * case.
+     *
+     * When this happens, ARDP needs to wait until the underlying socket becomes
+     * writable.  Since the select or epoll that is underlying our Event::Wait
+     * is level, not edge triggered, we don't want to naively add write events,
+     * which would then mostly be signaled causing the main loop to effectively
+     * poll for readable sockets.
+     *
+     * In theory, we can have multiple listen specs for multiple interfaces,
+     * which leads to multiple sockets coming ready and various times.  We call
+     * ARDP sequentially with these different sockets, so When ARDP_Run()
+     * returns ER_ARDP_WRITE_BLOCKED on a call in which a specific socket is
+     * supplied, we should assume that it is this socket ARDP wants to know
+     * about becoming writable again.  Since there can be multiple sockets, ARDP
+     * can be interested in hearing about multiple sockets being writable.
+     *
+     * We don't want to be newing up annd deleting events all the time, so we
+     * want to do the event creation when the list of listen FDs changes.  We
+     * are always interested in the IO_READ events, but sometimes interested in
+     * the IO_WRITE events.  Whenever we notice the list of listen FDs change,
+     * we create a list of IO_READ events which will always be used, and a list
+     * of corresponding IO_WRITE events from which we can pick and choose
+     * depending on whether or not the look for the being-writable state.
      */
     vector<Event*> checkEvents, signaledEvents;
+    vector<WriteEntry> writeEvents;
+
     qcc::Event ardpTimerEvent(qcc::Event::WAIT_FOREVER, 0);
     qcc::Event maintenanceTimerEvent(qcc::Event::WAIT_FOREVER, 0);
 
@@ -6706,7 +6748,12 @@ void* UDPTransport::Run(void* arg)
                 }
             }
 
+            for (vector<WriteEntry>::iterator i = writeEvents.begin(); i != writeEvents.end(); ++i) {
+                delete i->m_event;
+            }
+
             checkEvents.clear();
+            writeEvents.clear();
 
             QCC_DbgPrintf(("UDPTransport::Run(): Not STATE_RELOADED. Creating events"));
             checkEvents.push_back(&stopEvent);
@@ -6716,9 +6763,13 @@ void* UDPTransport::Run(void* arg)
             QCC_DbgPrintf(("UDPTransport::Run(): Not STATE_RELOADED. Creating socket events"));
             for (list<pair<qcc::String, SocketFd> >::const_iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
                 QCC_DbgPrintf(("UDPTransport::Run(): Not STATE_RELOADED. Creating event for socket %d", i->second));
+
                 qcc::Event* eventRd = new Event(i->second, Event::IO_READ);
                 checkEvents.push_back(eventRd);
-                eventRd = NULL;
+
+                qcc::Event* eventWr = new Event(i->second, Event::IO_WRITE);
+                WriteEntry entry(false, i->second, eventWr);
+                writeEvents.push_back(entry);
             }
 
             m_reload = STATE_RELOADED;
@@ -6751,10 +6802,35 @@ void* UDPTransport::Run(void* arg)
         }
 
         /*
-         * We have our list of events, so now wait for something to happen on
-         * that list.  The number of events in checkEvents should be 3 + the
-         * number of sockets listened (stopEvent, ardpTimerEvent, maintenanceTimerEvent and sockets).
+         * We now have a list of checkEvents that includes all of the IO_READ
+         * socket events and maybe some write events.  We have to decide which
+         * write events should be tacked on the end and remove the others.
+         * Since we expect the typical case will be to not be interested in
+         * write events, we bias toward that case.  Every time through the loop
+         * we remove all write events from checkEvents.  Then, we scan through
+         * writeEvents looking for active events (which we expect to find only
+         * rarely) and add them to checkEvents.  We expect to be working with
+         * very small vectors here.
          */
+        for (vector<Event*>::iterator i = checkEvents.begin(); i != checkEvents.end();) {
+            Event* checkEvent = *i;
+            if (checkEvent->GetEventType() == Event::IO_WRITE) {
+                checkEvents.erase(i++);
+            } else {
+                ++i;
+            }
+        }
+
+        /*
+         * Add any write events we are actively seeking.
+         */
+        for (vector<WriteEntry>::iterator i = writeEvents.begin(); i != writeEvents.end(); ++i) {
+            if (i->m_active) {
+                QCC_DbgPrintf(("UDPTransport::Run(): Looking for socket %d. to become writable"));
+                checkEvents.push_back(i->m_event);
+            }
+        }
+
         signaledEvents.clear();
 
         status = Event::Wait(checkEvents, signaledEvents);
@@ -6794,17 +6870,27 @@ void* UDPTransport::Run(void* arg)
             }
 
             /*
-             * Determine if this was a socket event (the socket became ready) or
-             * if it was a timer event.  If we are calling ARDP because
-             * something new came in, let it know by setting a flag.
-             *
-             * TODO: If we are passing the socket FD in every time,
-             * why do we have it stashed in the handle or conn?
+             * Events of interest to ARDP is if the time requested has expired
+             * or if some socket has become readable or writable.  First,
+             * determine if this was a socket event (the socket became ready) or
+             * if it was a timer event.  If it was a socket ready event,
+             * determine if the socket became readable or writable.
              */
             bool socketReady = (*i != &ardpTimerEvent && *i != &maintenanceTimerEvent && *i != &stopEvent);
+            bool readReady = (*i)->GetEventType() == Event::IO_READ;
+            bool writeReady = (*i)->GetEventType() == Event::IO_WRITE;
+
+            QCC_DbgPrintf(("UDPTransport::Run(): ARDP_Run(): readReady=\"%s\", writeReady=\"%s\"",
+                           readReady ? "true" : "false", writeReady ? "true" : "false"));
+
             uint32_t ms;
+            QStatus ardpStatus;
             m_ardpLock.Lock();
-            ARDP_Run(m_handle, socketReady ? (*i)->GetFD() : qcc::INVALID_SOCKET_FD, socketReady, &ms);
+            if (socketReady) {
+                ardpStatus = ARDP_Run(m_handle, (*i)->GetFD(), readReady, writeReady, &ms);
+            } else {
+                ardpStatus = ARDP_Run(m_handle, qcc::INVALID_SOCKET_FD, false, false, &ms);
+            }
             m_ardpLock.Unlock();
 
             /*
@@ -6820,6 +6906,29 @@ void* UDPTransport::Run(void* arg)
              * do something we expect to require a retransmission or callback.
              */
             ardpTimerEvent.ResetTime(ms, 0);
+
+            /*
+             * As described above, whenever we pass a socket into ARDP_Run() it
+             * will return ER_ARDP_WRITE_BLOCKED if it wants us to call it back
+             * when that socket becomes writable.  If ARDP_run() does not return
+             * ER_ARDP_WRITE_BLOCKED it is telling us that it is able to write or that
+             * we should not worry about that socket being writable.
+             */
+            if (socketReady) {
+                for (vector<WriteEntry>::iterator j = writeEvents.begin(); j != writeEvents.end(); ++j) {
+                    if ((*i)->GetFD() == (*j).m_socket) {
+                        if (ardpStatus == ER_ARDP_WRITE_BLOCKED_temp) {
+                            QCC_DbgPrintf(("UDPTransport::Run(): ARDP_Run(): ER_ARDP_WRITE_BLOCKED for SocketFd=%d.",
+                                           (*i)->GetFD()));
+                            (*j).m_active = true;
+                        } else {
+                            QCC_DbgPrintf(("UDPTransport::Run(): ARDP_Run(): SocketFd=%d. not blocked for write",
+                                           (*i)->GetFD()));
+                            (*j).m_active = false;
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -6831,6 +6940,12 @@ void* UDPTransport::Run(void* arg)
             delete *i;
         }
     }
+    checkEvents.clear();
+
+    for (vector<WriteEntry>::iterator i = writeEvents.begin(); i != writeEvents.end(); ++i) {
+        delete i->m_event;
+    }
+    writeEvents.clear();
 
     /*
      * If we're stopping, it is our responsibility to clean up the list of FDs
