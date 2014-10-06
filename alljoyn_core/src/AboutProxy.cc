@@ -52,6 +52,13 @@ QStatus AboutProxy::GetObjectDescription(MsgArg& objectDesc)
     Message replyMsg(*m_BusAttachment);
     status = m_aboutProxyObj.MethodCall(org::alljoyn::About::InterfaceName, "GetObjectDescription", NULL, 0, replyMsg);
     if (ER_OK != status) {
+        if (replyMsg->GetErrorName() != NULL) {
+            if (strcmp(replyMsg->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0 && replyMsg->GetArg(1)) {
+                status = static_cast<QStatus>(replyMsg->GetArg(1)->v_uint16);
+            } else {
+                QCC_LogError(status, ("AboutProxy::GetObjectDescription error %s", replyMsg->GetErrorDescription().c_str()));
+            }
+        }
         return status;
     }
     const ajn::MsgArg* returnArgs = NULL;
@@ -75,15 +82,24 @@ QStatus AboutProxy::GetAboutData(const char* languageTag, MsgArg& data)
 {
     QCC_DbgTrace(("AboutClient::%s", __FUNCTION__));
     QStatus status = ER_OK;
-
     Message replyMsg(*m_BusAttachment);
     MsgArg args[1];
     status = args[0].Set("s", languageTag);
     if (ER_OK != status) {
         return status;
     }
+
     status = m_aboutProxyObj.MethodCall(org::alljoyn::About::InterfaceName, "GetAboutData", args, 1, replyMsg);
     if (ER_OK != status) {
+        if (replyMsg->GetErrorName() != NULL) {
+            if (strcmp(replyMsg->GetErrorName(), "org.alljoyn.Error.LanguageNotSupported") == 0) {
+                status = ER_LANGUAGE_NOT_SUPPORTED;
+            } else if (strcmp(replyMsg->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0 && replyMsg->GetArg(1)) {
+                status = static_cast<QStatus>(replyMsg->GetArg(1)->v_uint16);
+            } else {
+                QCC_LogError(status, ("AboutProxy::GetAboutData error %s", replyMsg->GetErrorDescription().c_str()));
+            }
+        }
         return status;
     }
     const ajn::MsgArg* returnArgs = NULL;
@@ -113,6 +129,7 @@ QStatus AboutProxy::GetVersion(uint16_t& version)
     if (ER_OK == status) {
         version = arg.v_variant.val->v_int16;
     }
+
     return status;
 }
 }

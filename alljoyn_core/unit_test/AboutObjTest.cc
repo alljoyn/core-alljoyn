@@ -84,7 +84,7 @@ class AboutObjTest : public testing::Test {
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = aboutData.SetHardwareVersion("0.0.1");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = aboutData.SetSupportUrl("http://www.alljoyn.org");
+        status = aboutData.SetSupportUrl("http://www.example.com");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         if (!aboutData.IsValid()) {
             printf("failed to setup about data.\n");
@@ -141,18 +141,20 @@ class AboutObjTestBusObject : public BusObject {
 
 class AboutObjTestAboutListener : public AboutListener {
   public:
-    AboutObjTestAboutListener() : announceListenerFlag(false), busName(), port(0) { }
+    AboutObjTestAboutListener() : announceListenerFlag(false), busName(), port(0), version(0) { }
 
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescription, const MsgArg& aboutData) {
         EXPECT_FALSE(announceListenerFlag) << "We don't expect the flag to already be true when an AnnouceSignal is received.";
         this->busName = qcc::String(busName);
         this->port = port;
+        this->version = version;
         announceListenerFlag = true;
     }
     bool announceListenerFlag;
     qcc::String busName;
     SessionPort port;
+    uint16_t version;
 };
 
 TEST_F(AboutObjTest, Announce) {
@@ -219,6 +221,131 @@ TEST_F(AboutObjTest, Announce) {
     char* echoReply;
     replyMsg->GetArg(0)->Get("s", &echoReply);
     EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    clientBus.Stop();
+    clientBus.Join();
+}
+
+
+TEST_F(AboutObjTest, ProxyAccessToAboutObj) {
+    QStatus status = ER_FAIL;
+    qcc::GUID128 interface_rand_string;
+    qcc::String ifaceName = "test.about.a" + interface_rand_string.ToString();
+    qcc::String interface = "<node>"
+                            "<interface name='" + ifaceName + "'>"
+                            "  <method name='Echo'>"
+                            "    <arg name='out_arg' type='s' direction='in' />"
+                            "    <arg name='return_arg' type='s' direction='out' />"
+                            "  </method>"
+                            "</interface>"
+                            "</node>";
+
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    AboutObjTestBusObject busObject(*serviceBus, "/test/alljoyn/AboutObj", ifaceName);
+    status = serviceBus->RegisterBusObject(busObject);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    BusAttachment clientBus("AboutObjTestClient", true);
+
+    status = clientBus.Start();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Connect();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObjTestAboutListener aboutListener;
+    clientBus.RegisterAboutListener(aboutListener);
+
+    status = clientBus.WhoImplements(ifaceName.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObj aboutObj(*serviceBus);
+    aboutObj.Announce(port, aboutData);
+
+    for (uint32_t msec = 0; msec < 5000; msec += WAIT_TIME) {
+        if (aboutListener.announceListenerFlag == true) {
+            break;
+        }
+        qcc::Sleep(WAIT_TIME);
+    }
+
+    ASSERT_TRUE(aboutListener.announceListenerFlag) << "The announceListenerFlag must be true to continue this test.";
+    EXPECT_STREQ(serviceBus->GetUniqueName().c_str(), aboutListener.busName.c_str());
+    EXPECT_EQ(port, aboutListener.port);
+
+    SessionId sessionId;
+    SessionOpts opts;
+    status = clientBus.JoinSession(aboutListener.busName.c_str(), aboutListener.port, NULL, sessionId, opts);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutProxy aProxy(clientBus, aboutListener.busName.c_str(), sessionId);
+
+    // Call each of the proxy methods
+    // GetObjDescription
+    // GetAboutData
+    // GetVersion
+    uint16_t ver;
+    status = aProxy.GetVersion(ver);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(aboutListener.version, ver);
+
+    MsgArg aboutArg;
+    status = aProxy.GetAboutData("en", aboutArg);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    AboutData aboutData(aboutArg);
+
+    char* appName;
+    status = aboutData.GetAppName(&appName, "en");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("Application", appName);
+
+    char* manufacturer;
+    status = aboutData.GetManufacturer(&manufacturer, "en");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("Manufacturer", manufacturer);
+
+    char* modelNum;
+    status = aboutData.GetModelNumber(&modelNum);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("123456", modelNum);
+
+    char* desc;
+    status = aboutData.GetDescription(&desc);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("A poetic description of this application", desc);
+
+    char* dom;
+    status = aboutData.GetDateOfManufacture(&dom);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("2014-03-24", dom);
+
+    char* softVer;
+    status = aboutData.GetSoftwareVersion(&softVer);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("0.1.2", softVer);
+
+    char* hwVer;
+    status = aboutData.GetHardwareVersion(&hwVer);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("0.0.1", hwVer);
+
+    char* support;
+    status = aboutData.GetSupportUrl(&support);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_STREQ("http://www.example.com", support);
+
+    // French is an specified language. expect an error
+    MsgArg aboutArg_fr;
+    status = aProxy.GetAboutData("fr", aboutArg_fr);
+    EXPECT_EQ(ER_LANGUAGE_NOT_SUPPORTED, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    MsgArg objDesc;
+    status = aProxy.GetObjectDescription(objDesc);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    AboutObjectDescription aObjDesc(objDesc);
+    EXPECT_TRUE(aObjDesc.HasPath("/test/alljoyn/AboutObj"));
+    EXPECT_TRUE(aObjDesc.HasInterface(ifaceName.c_str()));
 
     clientBus.Stop();
     clientBus.Join();
