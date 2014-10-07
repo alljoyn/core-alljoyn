@@ -77,8 +77,10 @@ class AboutIconProxy {
     /**
      * Construct an AboutIconProxy.
      * @param bus reference to BusAttachment
+     * @param[in] busName Unique or well-known name of AllJoyn bus
+     * @param[in] sessionId the session received  after joining AllJoyn sessio
      */
-    AboutIconProxy(BusAttachment& bus);
+    AboutIconProxy(BusAttachment& bus, const char* busName, SessionId sessionId = 0);
     /**
      * Destruct AboutIconProxy.
      */
@@ -86,52 +88,49 @@ class AboutIconProxy {
     }
     /**
      *
-     * @param[in] busName Unique or well-known name of AllJoyn bus
      * @param[in] url of the icon
-     * @param[in] sessionId the session received  after joining AllJoyn session
      * @return ER_OK if successful
      */
-    QStatus GetUrl(const char* busName, qcc::String& url, SessionId sessionId = 0);
+    QStatus GetUrl(qcc::String& url);
 
     /**
-     * @param[in] busName Unique or well-known name of AllJoyn bus
      * @param[out] icon class that holds icon content
-     * @param[in] sessionId the session received  after joining AllJoyn session
      * @return ER_OK if successful
      */
-    QStatus GetIcon(const char* busName, Icon& icon, SessionId sessionId = 0);
+    QStatus GetIcon(Icon& icon);
     /**
+     * Get the version of the About Icon Interface
      *
-     * @param[in] busName Unique or well-known name of AllJoyn bus
      * @param[out] version of the AboutIcontClient
-     * @param[in] sessionId the session received  after joining AllJoyn session
+     *
      * @return ER_OK if successful
      */
-    QStatus GetVersion(const char* busName, uint16_t& version, SessionId sessionId = 0);
+    QStatus GetVersion(uint16_t& version);
 
     /**
+     * Get the mime type of the About Icon
      *
-     * @param[in] busName Unique or well-known name of AllJoyn bus
      * @param[out] mimeType of the icon
-     * @param[in] sessionId the session received  after joining AllJoyn session
+     *
      * @return ER_OK if successful
      */
-    QStatus GetMimeType(const char* busName, qcc::String& mimeType, SessionId sessionId = 0);
+    QStatus GetMimeType(qcc::String& mimeType);
 
     /**
+     * Get the Size of the About Icon
      *
-     * @param[in] busName Unique or well-known name of AllJoyn bus
      * @param[out] size of the icon
-     * @param[in] sessionId the session received  after joining AllJoyn session
+     *
      * @return ER_OK if successful
      */
-    QStatus GetSize(const char* busName, size_t& size, SessionId sessionId = 0);
+    QStatus GetSize(size_t& size);
 
   private:
     /**
      * pointer to BusAttachment
      */
     BusAttachment* m_BusAttachment;
+    ajn::ProxyBusObject m_aboutIconProxyObj;
 
 };
 

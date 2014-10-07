@@ -21,9 +21,6 @@
 #ifndef _ALLJOYN_ABOUTPROXY_H_
 #define _ALLJOYN_ABOUTPROXY_H_
 
-//#include <map>
-//#include <vector>
-//#include <string>
 #include <alljoyn/AboutObjectDescription.h>
 #include <alljoyn/AboutData.h>
 #include <alljoyn/BusAttachment.h>
@@ -32,9 +29,9 @@
 namespace ajn {
 
 /**
- * AboutProxy give proxy access to the org.alljoyn.About interface
- * AboutProxy class enables the user to interact with the remote About BusObject
- * instance exposing the following methods:
+ * AboutProxy give proxy access to the org.alljoyn.About interface AboutProxy
+ * class enables the user to interact with the remote About BusObject instance
+ * exposing the following methods:
  * - GetObjectDescriptions
  * - GetAboutData
  * - GetVersion
@@ -46,7 +43,7 @@ class AboutProxy : public ajn::MessageReceiver {
      * AboutProxy Constructor
      *
      * @param  bus reference to BusAttachment
-     * @param[in] busName Unique or well-known name of AllJoyn bus
+     * @param[in] busName Unique or well-known name of remote AllJoyn bus
      * @param[in] sessionId the session received after joining AllJoyn session
      */
     AboutProxy(BusAttachment& bus, const char* busName, SessionId sessionId = 0);

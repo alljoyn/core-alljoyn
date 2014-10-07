@@ -60,9 +60,9 @@ TEST(AboutIconTest, GetUrl) {
     status = clientBus.Connect();
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    AboutIconProxy aiProxy(clientBus);
+    AboutIconProxy aiProxy(clientBus, serviceBus.GetUniqueName().c_str());
     qcc::String url;
-    aiProxy.GetUrl(serviceBus.GetUniqueName().c_str(), url, 0);
+    aiProxy.GetUrl(url);
     EXPECT_STREQ("http://www.example.com", url.c_str());
 }
 
@@ -82,9 +82,9 @@ TEST(AboutIconTest, GetVersion) {
     status = clientBus.Connect();
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    AboutIconProxy aiProxy(clientBus);
+    AboutIconProxy aiProxy(clientBus, serviceBus.GetUniqueName().c_str());
     uint16_t version;
-    aiProxy.GetVersion(serviceBus.GetUniqueName().c_str(), version, 0);
+    aiProxy.GetVersion(version);
     EXPECT_EQ(aboutIcon.VERSION, version);
 }
 
@@ -120,10 +120,10 @@ TEST(AboutIconTest, GetIcon) {
     status = clientBus.Connect();
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    AboutIconProxy aiProxy(clientBus);
+    AboutIconProxy aiProxy(clientBus, serviceBus.GetUniqueName().c_str());
 
     AboutIconProxy::Icon icon;
-    aiProxy.GetIcon(serviceBus.GetUniqueName().c_str(), icon, 0);
+    aiProxy.GetIcon(icon);
     EXPECT_STREQ("image/png", icon.mimetype.c_str());
     ASSERT_EQ(sizeof(aboutIconContent) / sizeof(aboutIconContent[0]), icon.contentSize);
     for (size_t i = 0; i < icon.contentSize; ++i) {
@@ -131,10 +131,10 @@ TEST(AboutIconTest, GetIcon) {
     }
 
     size_t icon_size;
-    aiProxy.GetSize(serviceBus.GetUniqueName().c_str(), icon_size, 0);
+    aiProxy.GetSize(icon_size);
     EXPECT_EQ(sizeof(aboutIconContent) / sizeof(aboutIconContent[0]), icon_size);
 
     qcc::String retMimeType;
-    aiProxy.GetMimeType(serviceBus.GetUniqueName().c_str(), retMimeType, 0);
+    aiProxy.GetMimeType(retMimeType);
     EXPECT_STREQ(mimeType.c_str(), retMimeType.c_str());
 }

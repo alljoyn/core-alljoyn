@@ -28,30 +28,22 @@ QStatus AboutIconProxy::Icon::SetContent(const MsgArg& arg) {
     return m_arg.Get("ay", &contentSize, &content);
 }
 
-AboutIconProxy::AboutIconProxy(ajn::BusAttachment& bus)
-    : m_BusAttachment(&bus)
+AboutIconProxy::AboutIconProxy(ajn::BusAttachment& bus, const char* busName, SessionId sessionId)
+    : m_BusAttachment(&bus),
+    m_aboutIconProxyObj(bus, busName, org::alljoyn::Icon::ObjectPath, sessionId)
 {
     QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
+    const InterfaceDescription* p_InterfaceDescription = bus.GetInterface(org::alljoyn::Icon::InterfaceName);
+    assert(p_InterfaceDescription);
+    m_aboutIconProxyObj.AddInterface(*p_InterfaceDescription);
 }
 
-QStatus AboutIconProxy::GetUrl(const char* busName, qcc::String& url, ajn::SessionId sessionId) {
+QStatus AboutIconProxy::GetUrl(qcc::String& url) {
     QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
     QStatus status = ER_OK;
-    const InterfaceDescription* p_InterfaceDescription = m_BusAttachment->GetInterface(org::alljoyn::Icon::InterfaceName);
-    if (!p_InterfaceDescription) {
-        return ER_FAIL;
-    }
-    ProxyBusObject* proxyBusObj = new ProxyBusObject(*m_BusAttachment, busName, org::alljoyn::Icon::ObjectPath, sessionId);
-    if (!proxyBusObj) {
-        return ER_FAIL;
-    }
-    status = proxyBusObj->AddInterface(*p_InterfaceDescription);
-    if (status != ER_OK) {
-        delete proxyBusObj;
-        return status;
-    }
+
     Message replyMsg(*m_BusAttachment);
-    status = proxyBusObj->MethodCall(org::alljoyn::Icon::InterfaceName, "GetUrl", NULL, 0, replyMsg);
+    status = m_aboutIconProxyObj.MethodCall(org::alljoyn::Icon::InterfaceName, "GetUrl", NULL, 0, replyMsg);
     if (status == ER_OK) {
         const ajn::MsgArg* returnArgs;
         size_t numArgs;
@@ -66,29 +58,15 @@ QStatus AboutIconProxy::GetUrl(const char* busName, qcc::String& url, ajn::Sessi
             status = ER_BUS_BAD_VALUE;
         }
     }
-    delete proxyBusObj;
     return status;
 }
 
-QStatus AboutIconProxy::GetIcon(const char* busName, Icon& icon, ajn::SessionId sessionId) {
+QStatus AboutIconProxy::GetIcon(Icon& icon) {
     QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
     QStatus status = ER_OK;
-    const InterfaceDescription* p_InterfaceDescription = m_BusAttachment->GetInterface(org::alljoyn::Icon::InterfaceName);
-    if (!p_InterfaceDescription) {
-        return ER_FAIL;
-    }
-    ProxyBusObject*proxyBusObj = new ProxyBusObject(*m_BusAttachment, busName, org::alljoyn::Icon::ObjectPath, sessionId);
-    if (!proxyBusObj) {
-        return ER_FAIL;
-    }
-    status = proxyBusObj->AddInterface(*p_InterfaceDescription);
-    if (status != ER_OK) {
-        delete proxyBusObj;
-        proxyBusObj = NULL;
-        return status;
-    }
+
     Message replyMsg(*m_BusAttachment);
-    status = proxyBusObj->MethodCall(org::alljoyn::Icon::InterfaceName, "GetContent", NULL, 0, replyMsg);
+    status = m_aboutIconProxyObj.MethodCall(org::alljoyn::Icon::InterfaceName, "GetContent", NULL, 0, replyMsg);
     if (status == ER_OK) {
         const ajn::MsgArg* returnArgs;
         size_t numArgs;
@@ -101,87 +79,51 @@ QStatus AboutIconProxy::GetIcon(const char* busName, Icon& icon, ajn::SessionId 
     }
 
     MsgArg arg;
-    status = proxyBusObj->GetProperty(org::alljoyn::Icon::InterfaceName, "MimeType", arg);
+    status = m_aboutIconProxyObj.GetProperty(org::alljoyn::Icon::InterfaceName, "MimeType", arg);
     if (ER_OK == status) {
         char* temp;
         arg.Get("s", &temp);
         icon.mimetype = temp;
     }
 
-    delete proxyBusObj;
-    proxyBusObj = NULL;
     return status;
 }
 
-QStatus AboutIconProxy::GetVersion(const char* busName, uint16_t& version, ajn::SessionId sessionId) {
+QStatus AboutIconProxy::GetVersion(uint16_t& version) {
     QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
     QStatus status = ER_OK;
-    const InterfaceDescription* p_InterfaceDescription = m_BusAttachment->GetInterface(org::alljoyn::Icon::InterfaceName);
-    if (!p_InterfaceDescription) {
-        return ER_FAIL;
-    }
-    ProxyBusObject* proxyBusObj = new ProxyBusObject(*m_BusAttachment, busName, org::alljoyn::Icon::ObjectPath, sessionId);
-    if (!proxyBusObj) {
-        return ER_FAIL;
-    }
+
     MsgArg arg;
-    if (ER_OK == proxyBusObj->AddInterface(*p_InterfaceDescription)) {
-        status = proxyBusObj->GetProperty(org::alljoyn::Icon::InterfaceName, "Version", arg);
-        if (ER_OK == status) {
-            version = arg.v_variant.val->v_int16;
-        }
+    status = m_aboutIconProxyObj.GetProperty(org::alljoyn::Icon::InterfaceName, "Version", arg);
+    if (ER_OK == status) {
+        version = arg.v_variant.val->v_int16;
     }
-    delete proxyBusObj;
-    proxyBusObj = NULL;
     return status;
 }
 
-QStatus AboutIconProxy::GetSize(const char* busName, size_t& size, ajn::SessionId sessionId) {
+QStatus AboutIconProxy::GetSize(size_t& size) {
     QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
     QStatus status = ER_OK;
-    const InterfaceDescription* p_InterfaceDescription = m_BusAttachment->GetInterface(org::alljoyn::Icon::InterfaceName);
-    if (!p_InterfaceDescription) {
-        return ER_FAIL;
-    }
-    ProxyBusObject*proxyBusObj = new ProxyBusObject(*m_BusAttachment, busName, org::alljoyn::Icon::ObjectPath, sessionId);
-    if (!proxyBusObj) {
-        return ER_FAIL;
-    }
+
     MsgArg arg;
-    if (ER_OK == proxyBusObj->AddInterface(*p_InterfaceDescription)) {
-        status = proxyBusObj->GetProperty(org::alljoyn::Icon::InterfaceName, "Size", arg);
-        if (ER_OK == status) {
-            size = arg.v_variant.val->v_uint64;
-        }
+    status = m_aboutIconProxyObj.GetProperty(org::alljoyn::Icon::InterfaceName, "Size", arg);
+    if (ER_OK == status) {
+        size = arg.v_variant.val->v_uint64;
     }
-    delete proxyBusObj;
-    proxyBusObj = NULL;
     return status;
 }
 
-QStatus AboutIconProxy::GetMimeType(const char* busName, qcc::String& mimeType, ajn::SessionId sessionId) {
+QStatus AboutIconProxy::GetMimeType(qcc::String& mimeType) {
     QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
     QStatus status = ER_OK;
 
-    const InterfaceDescription* p_InterfaceDescription = m_BusAttachment->GetInterface(org::alljoyn::Icon::InterfaceName);
-    if (!p_InterfaceDescription) {
-        return ER_FAIL;
-    }
-    ProxyBusObject*proxyBusObj = new ProxyBusObject(*m_BusAttachment, busName, org::alljoyn::Icon::ObjectPath, sessionId);
-    if (!proxyBusObj) {
-        return ER_FAIL;
-    }
     MsgArg arg;
-    if (ER_OK == proxyBusObj->AddInterface(*p_InterfaceDescription)) {
-        status = proxyBusObj->GetProperty(org::alljoyn::Icon::InterfaceName, "MimeType", arg);
-        if (ER_OK == status) {
-            char* temp;
-            arg.Get("s", &temp);
-            mimeType.assign(temp);
-        }
+    status = m_aboutIconProxyObj.GetProperty(org::alljoyn::Icon::InterfaceName, "MimeType", arg);
+    if (ER_OK == status) {
+        char* temp;
+        arg.Get("s", &temp);
+        mimeType.assign(temp);
     }
-    delete proxyBusObj;
-    proxyBusObj = NULL;
     return status;
 }
 
