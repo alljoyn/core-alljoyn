@@ -42,9 +42,6 @@ extern const AJNTransportMask kAJNTransportMaskWWAN;
 /**< Wired local-area network transport */
 extern const AJNTransportMask kAJNTransportMaskLAN;
 
-/**< Transport using WinRT Proximity Framework */
-extern const AJNTransportMask kAJNTransportMaskProximity;
-
 /**< Transport using Wi-Fi Direct transport */
 extern const AJNTransportMask kAJNTransportMaskWiFiDirect;
 

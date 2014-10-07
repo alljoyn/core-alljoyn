@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2013, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2013, 2014 AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -30,7 +30,7 @@ objs_shared = env.SharedObject(srcs)
 # called alljoyn_c.lib.
 # see http://msdn.microsoft.com/en-us/library/ba1z7822.aspx for more info.
 # For all other OSs there is no need to make this distinction.   
-if env['OS_GROUP'] == 'windows' or env['OS_GROUP'] == 'winrt':
+if env['OS_GROUP'] == 'windows':
     liballjoyn_c_static = env.StaticLibrary('alljoyn_c_static', objs)
 else:
     liballjoyn_c_static = env.StaticLibrary('alljoyn_c', objs)

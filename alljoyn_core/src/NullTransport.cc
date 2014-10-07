@@ -90,7 +90,7 @@ class _NullEndpoint : public _BusEndpoint {
     uint32_t GetProcessId() const { return qcc::GetPid(); }
 
     bool SupportsUnixIDs() const {
-#if defined(QCC_OS_GROUP_WINDOWS) || defined(QCC_OS_GROUP_WINRT)
+#if defined(QCC_OS_GROUP_WINDOWS)
         return false;
 #else
         return true;

@@ -29,5 +29,5 @@ for test_p in test_programs:
     test_obj = test_env.Object(test_p)
     built_test_programs.append(test_env.Program(test_p,  [test_obj]))
 
-if test_env['OS_GROUP'] != 'windows' and test_env['OS_GROUP'] != 'winrt': 
+if test_env['OS_GROUP'] != 'windows':
     test_env.Install('$C_DISTDIR/bin', built_test_programs)

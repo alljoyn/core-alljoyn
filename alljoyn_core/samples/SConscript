@@ -15,36 +15,35 @@
 
 Import('env')
 
-if env['OS'] != 'win8':
-    samples_env = env.Clone()
+samples_env = env.Clone()
 
-    if samples_env['BR'] == 'on':
-        # Build apps with bundled daemon support
-        samples_env.Prepend(LIBS = [samples_env['brobj'], samples_env['ajrlib']])
+if samples_env['BR'] == 'on':
+    # Build apps with bundled daemon support
+    samples_env.Prepend(LIBS = [samples_env['brobj'], samples_env['ajrlib']])
 
-    # About feature sample programs
-    samples_env.SConscript('about/SConscript', exports = {'env': samples_env})
- 
-    # Basic Sample programs
-    samples_env.SConscript('basic/SConscript', exports = {'env': samples_env})
+# About feature sample programs
+samples_env.SConscript('about/SConscript', exports = {'env': samples_env})
 
-    # Simple Sample programs
-    samples_env.SConscript('simple/SConscript', exports = {'env': samples_env})
+# Basic Sample programs
+samples_env.SConscript('basic/SConscript', exports = {'env': samples_env})
 
-    # Security Sample programs
-    samples_env.SConscript('secure/SConscript', exports = {'env': samples_env})
+# Simple Sample programs
+samples_env.SConscript('simple/SConscript', exports = {'env': samples_env})
 
-    # Chat Sample program
-    samples_env.SConscript('chat/SConscript', exports = {'env': samples_env})
+# Security Sample programs
+samples_env.SConscript('secure/SConscript', exports = {'env': samples_env})
 
-    # File transfer Sample program
-    samples_env.SConscript('FileTransfer/SConscript', exports = {'env': samples_env})
+# Chat Sample program
+samples_env.SConscript('chat/SConscript', exports = {'env': samples_env})
 
-    # Sample Daemon program
-    samples_env.SConscript('SampleDaemon/SConscript', exports = {'env': samples_env})
+# File transfer Sample program
+samples_env.SConscript('FileTransfer/SConscript', exports = {'env': samples_env})
 
-    # Event and Action Sample program
-    samples_env.SConscript('eventaction/SConscript', exports = {'env': samples_env})
+# Sample Daemon program
+samples_env.SConscript('SampleDaemon/SConscript', exports = {'env': samples_env})
+
+# Event and Action Sample program
+samples_env.SConscript('eventaction/SConscript', exports = {'env': samples_env})
 
 # Install readme
 if env['OS_CONF'] == 'windows':
