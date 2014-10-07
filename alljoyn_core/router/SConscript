@@ -57,23 +57,13 @@ if router_env['OS'] == "android":
 # Bundled daemon object file
 brobj = router_env.SConscript('bundled/SConscript', exports = ['router_env'])
 
-# AllJoyn Daemon
-if router_env['OS_GROUP']=='winrt':
-    Import('winrt_objs')
-    router_objs.extend(winrt_objs + [brobj])
-
 progs = router_env.SConscript('${OS_GROUP}/SConscript', exports=['router_env', 'router_objs'])
 
 # Daemon library
-if router_env['OS_GROUP'] != 'winrt':
-    lib = router_env.StaticLibrary('ajrouter', router_objs);
-else:
-    lib = []
+lib = router_env.StaticLibrary('ajrouter', router_objs);
 
 # AllJoyn Daemon test programs
-if router_env['OS_GROUP'] == 'winrt':
-    tests = []
-elif router_env['OS'] == 'darwin':
+if router_env['OS'] == 'darwin':
     if router_env['CPU'] in ['arm', 'armv7', 'armv7s']:
         print 'Not building unit tests for iOS...'    
         tests = []

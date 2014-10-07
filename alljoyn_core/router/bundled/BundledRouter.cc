@@ -46,10 +46,6 @@
 #include "NullTransport.h"
 #include "PasswordManager.h"
 
-#if defined(QCC_OS_WINRT)
-#include "ProximityTransport.h"
-#endif
-
 #if defined(QCC_OS_ANDROID)
 //#include "android/WFDTransport.h"
 #endif
@@ -296,9 +292,6 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
             Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
             Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
 
-#if defined(QCC_OS_WINRT)
-//            Add(new TransportFactory<ProximityTransport>(ProximityTransport::TransportName, false));
-#endif
 #if defined(QCC_OS_ANDROID)
 //            QCC_DbgPrintf(("adding WFD transport"));
 //            Add(new TransportFactory<WFDTransport>(WFDTransport::TransportName, false));

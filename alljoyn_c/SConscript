@@ -54,7 +54,7 @@ alljoyn_core_headers += clibenv.Install('inc/alljoyn_c', '$DISTDIR/cpp/inc/alljo
 alljoyn_core_headers += clibenv.Install('inc/qcc', '$DISTDIR/cpp/inc/qcc/platform.h')
 alljoyn_core_headers += clibenv.Install('inc/qcc/${OS_GROUP}', '$DISTDIR/cpp/inc/qcc/${OS_GROUP}/platform_types.h')
 
-if clibenv['OS_GROUP'] == 'windows' or clibenv['OS_GROUP'] == 'win8':
+if clibenv['OS_GROUP'] == 'windows':
     alljoyn_core_headers += clibenv.Install('inc/qcc/${OS_GROUP}', '$DISTDIR/cpp/inc/qcc/${OS_GROUP}/mapping.h')
 
 c_headers = clibenv.Install('$C_DISTDIR/inc/alljoyn_c', clibenv.Glob('inc/alljoyn_c/*.h'))
@@ -75,7 +75,7 @@ dlibs = clibenv.Install('$C_DISTDIR/lib', libs)
 # Search through the list and assign the static library to the ALLJOYN_C_LIB_STATIC 
 # clibenv variable and the shared library to ALLJOYN_C_LIB_SHARED clibenv variable.
 for x in dlibs: 
-    if clibenv['OS_GROUP'] == 'windows' or clibenv['OS_GROUP'] == 'winrt':
+    if clibenv['OS_GROUP'] == 'windows':
         if 'alljoyn_c_static' + clibenv['LIBSUFFIX'] in str(x):
             clibenv['ALLJOYN_C_LIB_STATIC'] = x;
     else:

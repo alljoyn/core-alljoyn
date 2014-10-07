@@ -613,13 +613,16 @@ void DaemonRouter::RemoveSessionRoutes(const char* src, SessionId id)
     set<SessionCastEntry>::const_iterator it = sessionCastSet.begin();
     while (it != sessionCastSet.end()) {
         if (((it->id == id) || (id == 0)) && ((it->src == src) || (it->destEp == ep))) {
-            if ((it->id != 0) && (it->destEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL)) {
-                BusEndpoint destEp = it->destEp;
-                VirtualEndpoint::cast(destEp)->RemoveSessionRef(it->id);
+            SessionCastEntry entry = *it;
+            sessionCastSet.erase(it);
+            sessionCastSetLock.Unlock();
+            if ((entry.id != 0) && (entry.destEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL)) {
+                VirtualEndpoint::cast(entry.destEp)->RemoveSessionRef(entry.id);
                 /* Need to hit NameTable here since name ownership of a destEp alias may have changed */
-                nameTable.UpdateVirtualAliases(destEp->GetUniqueName());
+                nameTable.UpdateVirtualAliases(entry.destEp->GetUniqueName());
             }
-            sessionCastSet.erase(it++);
+            sessionCastSetLock.Lock();
+            it = sessionCastSet.upper_bound(entry);
         } else {
             ++it;
         }
