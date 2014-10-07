@@ -37,6 +37,7 @@ class AboutIconObj : public BusObject {
     static const uint16_t VERSION;
 
     /**
+     * Construct an About Icon BusObject.
      *
      * @param[in] bus  BusAttachment instance associated with this AboutService
      * @param[in]  mimetype of the icon
@@ -46,7 +47,7 @@ class AboutIconObj : public BusObject {
      */
     AboutIconObj(BusAttachment& bus, qcc::String const& mimetype, qcc::String const& url, uint8_t* data, size_t csize);
     /**
-     *  Desctructor of AboutIconObj
+     *  Destructor of the About Icon BusObject
      */
     virtual ~AboutIconObj() {
     }

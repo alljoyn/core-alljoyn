@@ -27,9 +27,6 @@
 
 namespace ajn {
 
-
-//#define CHECK_BREAK(x) if ((status = x) != ER_OK) { break; }
-
 AboutProxy::AboutProxy(BusAttachment& bus, const char* busName, SessionId sessionId) :
     m_BusAttachment(&bus),
     m_aboutProxyObj(bus, busName, org::alljoyn::About::ObjectPath, sessionId)
@@ -72,7 +69,7 @@ QStatus AboutProxy::GetObjectDescription(MsgArg& objectDesc)
         // copy that information.
         objectDesc.Stabilize();
     } else {
-        //TODO change to more meaningfull error status
+        //TODO change to more meaningful error status
         status = ER_FAIL;
     }
     return status;
@@ -113,7 +110,7 @@ QStatus AboutProxy::GetAboutData(const char* languageTag, MsgArg& data)
         // copy that information.
         data.Stabilize();
     } else {
-        //TODO change to more meaningfull error status
+        //TODO change to more meaningful error status
         status = ER_FAIL;
     }
     return status;
