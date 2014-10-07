@@ -4461,24 +4461,22 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
     /*
      * We are given a session options structure that defines the kind of
      * transports that are being sought.  The UDP transport provides reliable
-     * traffic as understood by the session options, so we only return someting
-     * if the traffic type is TRAFFIC_MESSAGES or TRAFFIC_RAW_RELIABLE.  It's
-     * not an error if we don't match, we just don't have anything to offer.
+     * traffic as understood by the session options.  UDP does not support raw
+     * sockets, so we only return someting if the traffic type is
+     * TRAFFIC_MESSAGES.  It's not an error if we don't match, we just don't
+     * have anything to offer.
      */
-    if (opts.traffic != SessionOpts::TRAFFIC_MESSAGES && opts.traffic != SessionOpts::TRAFFIC_RAW_RELIABLE) {
-        QCC_DbgPrintf(("UDPTransport::GetListenAddresses(): traffic mismatch"));
+    if (opts.traffic != SessionOpts::TRAFFIC_MESSAGES) {
+        QCC_DbgPrintf(("UDPTransport::GetListenAddresses(): opts.traffic mismatch"));
         DecrementAndFetch(&m_refCount);
         return ER_OK;
     }
 
     /*
      * The other session option that we need to filter on is the transport
-     * bitfield.  We have no easy way of figuring out if we are a wireless
-     * local-area, wireless wide-area, wired local-area or local transport,
-     * but we do exist, so we respond if the caller is asking for any of
-     * those: cogito ergo some.
+     * bitfield.
      */
-    if (!(opts.transports & (TRANSPORT_WLAN | TRANSPORT_WWAN | TRANSPORT_LAN))) {
+    if (!(opts.transports & (TRANSPORT_UDP))) {
         QCC_DbgPrintf(("UDPTransport::GetListenAddresses(): transport mismatch"));
         DecrementAndFetch(&m_refCount);
         return ER_OK;
@@ -4516,7 +4514,7 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
     std::vector<qcc::IfConfigEntry> entries;
     QStatus status = qcc::IfConfig(entries);
     if (status != ER_OK) {
-        QCC_LogError(status, ("UDPTransport::GetListenAddresses(): ns.IfConfig() failed"));
+        QCC_LogError(status, ("UDPTransport::GetListenAddresses(): IfConfig() failed"));
         DecrementAndFetch(&m_refCount);
         return status;
     }
@@ -4561,6 +4559,7 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
      * to mach it up with interfaces actually found in the system.
      */
     for (std::set<qcc::String>::const_iterator it = interfaceSet.begin(); it != interfaceSet.end(); it++) {
+
         /*
          * We got a set of interfaces, so we need to work our way through
          * the set.  Each entry in the list  may be  an interface name, or a
@@ -4576,6 +4575,7 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
          */
         for (uint32_t i = 0; i < entries.size(); ++i) {
             QCC_DbgPrintf(("UDPTransport::GetListenAddresses(): matching %s", entries[i].m_name.c_str()));
+
             /*
              * To match a configuration entry, the name of the interface must:
              *
@@ -4622,21 +4622,37 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
                     IpNameService::Instance().Enabled(TRANSPORT_UDP,
                                                       reliableIpv4PortMap, reliableIpv6Port,
                                                       unreliableIpv4PortMap, unreliableIpv6port);
+
                     /*
                      * If no listening port corresponding to this network interface is found in the map,
                      * then it hasn't been set and this implies that there is no listener for this transport
                      * on this network interface. We should only return a bus address corresponding to this
                      * network interface if we have a listener on this network interface.
+                     *
+                     * Note that if we find a "*" in the unreliableIPv4PortMap it is a wildcard and therefore
+                     * matches the entry we are comparing to, in which case we are not comparing the entry to
+                     * what's in the port map, we are using what's in the port map to confirm the entry.
                      */
-                    if (unreliableIpv4PortMap.find(entries[i].m_name) != unreliableIpv4PortMap.end()) {
+                    bool portMapWildcard = unreliableIpv4PortMap.find(qcc::String("*")) != unreliableIpv4PortMap.end();
+                    bool portMapExplicit = unreliableIpv4PortMap.find(entries[i].m_name) != unreliableIpv4PortMap.end();
+
+                    if (portMapWildcard || portMapExplicit) {
+                        uint16_t port = 0;
+                        if (portMapWildcard) {
+                            port = unreliableIpv4PortMap[qcc::String("*")];
+                        } else {
+                            port = unreliableIpv4PortMap[entries[i].m_name];
+                        }
+
                         /*
                          * Now put this information together into a bus address
                          * that the rest of the AllJoyn world can understand.
                          */
                         if (!entries[i].m_addr.empty() && (entries[i].m_family == QCC_AF_INET)) {
                             qcc::String busAddr = "udp:addr=" + entries[i].m_addr + ","
-                                                  "port=" + U32ToString(unreliableIpv4PortMap[entries[i].m_name]) + ","
+                                                  "port=" + U32ToString(port) + ","
                                                   "family=ipv4";
+                            QCC_DbgPrintf(("UDPTransport::GetListenAddresses(): push busAddr=\"%s\"", busAddr.c_str()));
                             busAddrs.push_back(busAddr);
                         }
                     }
@@ -7884,7 +7900,7 @@ QStatus UDPTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& ou
 QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newEp)
 {
     IncrementAndFetch(&m_refCount);
-    QCC_DbgHLPrintf(("UDPTransport::Connect(connectSpec=%s, opts=%p, newEp-%p)", connectSpec, &opts, &newEp));
+    QCC_DbgTrace(("UDPTransport::Connect(connectSpec=%s, opts=%p, newEp-%p)", connectSpec, &opts, &newEp));
 
     /*
      * We only want to allow this call to proceed if we have a running server
@@ -7950,6 +7966,11 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     IPAddress ipAddr(argMap.find("addr")->second);
     uint16_t ipPort = StringToU32(argMap["port"]);
 
+#ifndef NDEBUG
+    if (ipAddr.IsLoopback()) {
+        QCC_DbgPrintf(("UDPTransport::Connect(): \"%s\" is a loopback address", ipAddr.ToString().c_str()));
+    }
+#endif
     /*
      * The semantics of the Connect method tell us that we want to connect to a
      * remote daemon.  UDP will happily allow us to connect to ourselves, but
@@ -7995,9 +8016,10 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
 
     /*
      * Look to see if we are already listening on the provided connectSpec
-     * either explicitly or via the INADDR_ANY address.
+     * explicitly.  If we see that we are listening on the INADDR_ANY address
+     * make a note of it.  We sort that out in the next bit of code.
      */
-    QCC_DbgPrintf(("UDPTransport::Connect(): Checking for connection to self"));
+    QCC_DbgPrintf(("UDPTransport::Connect(): Checking for connection to self (\"%s\"", normSpec.c_str()));
     m_listenFdsLock.Lock(MUTEX_CONTEXT);
     bool anyEncountered = false;
     for (list<pair<qcc::String, SocketFd> >::iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
@@ -8016,8 +8038,8 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
 
         /*
          * If we are listening to INADDR_ANY and the supplied port, then we have
-         * to look to the currently UP interfaces to decide if this call is bogus
-         * or not.  Set a flag to remind us.
+         * to take a closer look to decide if this call is bogus or not.  Set a
+         * flag to remind us.
          */
         if (i->first == normAnySpec) {
             QCC_DbgPrintf(("UDPTransport::Connect(): Possible implicit connection to self detected"));
@@ -8040,7 +8062,18 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * addr.
      */
     if (anyEncountered) {
-        QCC_DbgPrintf(("UDPTransport::Connect(): Checking for implicit connection to self"));
+        /*
+         * If anyEncountered is set to true, it means we discovered an INADDR_ANY listen spec with
+         * a specified port that matches the one in the connect spec.  We have to make sure
+         * that we are not connecting to this INADDR_ANY listener through a loopback address.
+         */
+        QCC_DbgPrintf(("UDPTransport::Connect(): Checking for implicit connection to self through loopback"));
+
+        if (ipAddr.IsLoopback()) {
+            QCC_DbgPrintf(("UDPTransport::Connect(): Attempted connection to self through loopback; exiting"));
+            DecrementAndFetch(&m_refCount);
+            return ER_BUS_ALREADY_LISTENING;
+        }
 
         /*
          * Loop through the network interface entries looking for an UP
@@ -8050,6 +8083,8 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
          * listener listening on *any* UP interface on the specified port, a
          * match on the interface address with the connect address is a hit.
          */
+        QCC_DbgPrintf(("UDPTransport::Connect(): Checking for implicit connection to self through INADDR_ANY"));
+
         for (uint32_t i = 0; i < entries.size(); ++i) {
             QCC_DbgPrintf(("UDPTransport::Connect(): Checking interface %s", entries[i].m_name.c_str()));
             if (entries[i].m_flags & qcc::IfConfigEntry::UP) {
@@ -8102,6 +8137,8 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
             }
         }
 
+        QCC_DbgPrintf(("UDPTransport::Connect(): prefixlen=%d.", prefixLen));
+
         /*
          * Create a netmask with a one in the leading bits for each position
          * implied by the prefix length.
@@ -8141,6 +8178,11 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         DecrementAndFetch(&m_refCount);
         return status;
     }
+#ifndef NDEBUG
+    else {
+        QCC_DbgPrintf(("UDPTransport::Connect(): Socket %d. talks to network implied by \"%s\"", sock, normSpec.c_str()));
+    }
+#endif
 
     /*
      * We've done the basic homework to see if this is a reasonable request.
@@ -8469,7 +8511,7 @@ QStatus UDPTransport::Disconnect(const char* connectSpec)
 QStatus UDPTransport::StartListen(const char* listenSpec)
 {
     IncrementAndFetch(&m_refCount);
-    QCC_DbgTrace(("UDPTransport::StartListen()"));
+    QCC_DbgTrace(("UDPTransport::StartListen(\"%s\")", listenSpec));
 
     /*
      * We only want to allow this call to proceed if we have a running server
@@ -8535,6 +8577,8 @@ QStatus UDPTransport::StartListen(const char* listenSpec)
     QCC_DbgPrintf(("UDPTransport::StartListen(): %s = \"%s\", port = \"%s\"",
                    key.c_str(), argMap[key].c_str(), argMap["port"].c_str()));
 
+    QCC_DbgTrace(("UDPTransport::StartListen(): Final normSpec=\"%s\"", normSpec.c_str()));
+
     /*
      * Because we are sending a *request* to start listening on a given
      * normalized listen spec to another thread, and the server thread starts
@@ -8564,6 +8608,7 @@ QStatus UDPTransport::StartListen(const char* listenSpec)
     }
     m_listenSpecsLock.Unlock(MUTEX_CONTEXT);
 
+    QCC_DbgTrace(("UDPTransport::StartListen(): QueueStartListen(\"%s\")", normSpec.c_str()));
     QueueStartListen(normSpec);
     DecrementAndFetch(&m_refCount);
     return ER_OK;
@@ -8572,7 +8617,7 @@ QStatus UDPTransport::StartListen(const char* listenSpec)
 void UDPTransport::QueueStartListen(qcc::String& normSpec)
 {
     IncrementAndFetch(&m_refCount);
-    QCC_DbgTrace(("UDPTransport::QueueStartListen()"));
+    QCC_DbgTrace(("UDPTransport::QueueStartListen(\"%s\")", normSpec.c_str()));
 
     /*
      * In order to start a listen, we send the maintenance thread a message
@@ -8593,7 +8638,7 @@ void UDPTransport::QueueStartListen(qcc::String& normSpec)
 QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
 {
     IncrementAndFetch(&m_refCount);
-    QCC_DbgPrintf(("UDPTransport::DoStartListen()"));
+    QCC_DbgPrintf(("UDPTransport::DoStartListen(\"%s\")", normSpec.c_str()));
 
     /*
      * Since the name service is created before the server accept thread is spun
@@ -8623,22 +8668,6 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
                    key.c_str(), argMap[key].c_str(), argMap["port"].c_str()));
 
     /*
-     * If we're going to listen on an address, we are going to listen on a
-     * corresponding network interface.  We need to convince the name service
-     * to send advertisements out over that interface, or nobody will know to
-     * connect to the listening daemon.
-     *
-     * So, we need to get the configuration item telling us which network
-     * interfaces we should run the name service over and listen on.  The
-     * name service waits until it finds the specified interface IFF_UP and
-     * multicast capable with an assigned IP address and then starts using
-     * the interface.  If the configuration item contains "*" (the wildcard)
-     * it is interpreted as meaning all multicast-capable interfaces.  If the
-     * configuration item is empty (not assigned in the configuration database)
-     * it defaults to "*".
-     */
-
-    /*
      * We have been given a listenSpec that provides an iface or addr and a port
      * in the parameters to this method.  We are expected to listen on that
      * network interface's primary IPv4 address and port for inbound connections.
@@ -8661,8 +8690,8 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
      * will advertise and discover over the underlying network interface
      * as long as it retains that address.
      *
-     *    iface                 Action
-     *    --------               -----------------------------------------
+     *     iface                  Action
+     *     ----------             -----------------------------------------
      * 1.  *                      Listen on 0.0.0.0 and advertise/discover
      *                            over '*'.  This is the default case where
      *                            the system listens on all interfaces and
@@ -8689,8 +8718,8 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
      *                            network interface named 'specific' to be
      *                            known a-priori.
      *
-     *    address                Action
-     *    --------               -----------------------------------------
+     *     address                Action
+     *     --------               -----------------------------------------
      * 1.  0.0.0.0                Listen on 0.0.0.0 and advertise/discover
      *                            over '*'.  This is the default case where
      *                            the system listens on all interfaces and
@@ -8711,11 +8740,11 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
      *                            to one.  Other daemons configured this
      *                            way must select another port.
      *
-     * This is much harder to describe than to implement; but the upshot is
-     * that we listen on the primary IPv4 address of the named network interface
-     * that comes in with the listenSpec and we enable the name service on that
-     * same interface. It is up to the person doing the configuration to
-     * understand what he or she is trying to do and the impact of choosing those values.
+     * This is much harder to describe than to implement; but the upshot is that
+     * we listen on the primary IPv4 address of the named network interface that
+     * comes in with the listenSpec and we enable the name service on that same
+     * interface. It is up to the person doing the configuration to understand
+     * what he or she is trying to do and the impact of choosing those values.
      */
     uint16_t listenPort = StringToU32(argMap["port"]);
     qcc::String interface = "";
@@ -8727,9 +8756,8 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
         addr = IPAddress(argMap["addr"]);
     }
 
-    /* We first determine whether a network interface name or an IP
-     * address was specified and then we invoke the appropriate name
-     * service method.
+    /* We first determine whether a network interface name or an IP address was
+     * specified and then we invoke the appropriate name service method.
      */
     if (!interface.empty()) {
         m_requestedInterfaces[interface] = qcc::IPEndpoint("0.0.0.0", listenPort);

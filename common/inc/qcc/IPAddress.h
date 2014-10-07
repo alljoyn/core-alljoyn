@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -125,16 +125,58 @@ class IPAddress {
     /**
      * Test if IP address is an IPv4 address.
      *
-     * @return  "true" if IP address in an IPv4 address.
+     * @return  "true" if IP address is an IPv4 address.
      */
     bool IsIPv4(void) const { return addrSize == IPv4_SIZE; }
 
     /**
      * Test if IP address is an IPv6 address.
      *
-     * @return  "true" if IP address in an IPv6 address.
+     * @return  "true" if IP address is an IPv6 address.
      */
     bool IsIPv6(void) const { return addrSize == IPv6_SIZE; }
+
+    /**
+     * Test if IP address is a loopback address.
+     *
+     * @return  "true" if IP address is a loopback.
+     */
+    bool IsLoopback(void) const
+    {
+        if (addrSize == IPv4_SIZE) {
+            uint32_t addr =  GetIPv4AddressCPUOrder();
+            /*
+             * A Loopback address in IPv4 is 127.X.Y.Z for all X, Y, Z
+             */
+            if ((addr & 0x7f000000) != (127 << 24)) {
+                return false;
+            }
+        } else {
+            /*
+             * The Loopback address in IPv6 is ::1
+             *
+             * This is 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 which is
+             * three uint32_t 0x00000000 followed by one 0x00000001 (in network
+             * order).
+             */
+            for (uint32_t i = 0; i < 3; ++i) {
+                if (*(uint32_t*)(&addr[i << 2])) {
+                    return false;
+                }
+            }
+            uint32_t last = *(uint32_t*)(&addr[12]);
+#if (QCC_TARGET_ENDIAN == QCC_LITTLE_ENDIAN)
+            if (last != 0x01000000) {
+                return false;
+            }
+#else
+            if (last != 0x00000001) {
+                return false;
+            }
+#endif
+        }
+        return true;
+    }
 
     /**
      * Convert the IP address into a human readable form in a string.  IPv4
