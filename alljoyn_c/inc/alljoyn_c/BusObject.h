@@ -61,7 +61,7 @@ typedef struct _alljoyn_busobject_handle*                   alljoyn_busobject;
  * @return #ER_BUS_NO_SUCH_PROPERTY (Should be changed to #ER_OK by user implementation of alljoyn_busobject_prop_get_ptr
  *                                   if the request results in successfully reading a property from the object.)
  */
-typedef QStatus (*AJ_CALL alljoyn_busobject_prop_get_ptr)(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val);
+typedef QStatus (AJ_CALL * alljoyn_busobject_prop_get_ptr)(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val);
 
 /**
  * Callback for property set method.
@@ -79,7 +79,7 @@ typedef QStatus (*AJ_CALL alljoyn_busobject_prop_get_ptr)(const void* context, c
  * @return #ER_BUS_NO_SUCH_PROPERTY (Should be changed to #ER_OK by user implementation of alljoyn_busobject_prop_set_ptr
  *                                   is the set request results in successfully changing the property.)
  */
-typedef QStatus (*AJ_CALL alljoyn_busobject_prop_set_ptr)(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val);
+typedef QStatus (AJ_CALL * alljoyn_busobject_prop_set_ptr)(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val);
 
 /**
  * Callback for ObjectRegistered and ObjectUnregistered
@@ -89,7 +89,7 @@ typedef QStatus (*AJ_CALL alljoyn_busobject_prop_set_ptr)(const void* context, c
  *
  * @param context   context pointer passed in when creating a new alljoyn_busobject
  */
-typedef void (*AJ_CALL alljoyn_busobject_object_registration_ptr)(const void* context);
+typedef void (AJ_CALL * alljoyn_busobject_object_registration_ptr)(const void* context);
 
 /**
  * a structure containing a collection of function pointers.
