@@ -6835,8 +6835,9 @@ void* UDPTransport::Run(void* arg)
          */
         for (vector<Event*>::iterator i = checkEvents.begin(); i != checkEvents.end();) {
             Event* checkEvent = *i;
+
             if (checkEvent->GetEventType() == Event::IO_WRITE) {
-                checkEvents.erase(i++);
+                i = checkEvents.erase(i);
             } else {
                 ++i;
             }
