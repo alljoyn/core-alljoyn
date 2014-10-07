@@ -2449,6 +2449,21 @@ class _UDPEndpoint : public _RemoteEndpoint {
     QStatus PushMessage(Message& msg)
     {
         IncrementAndFetch(&m_refCount);
+        QCC_DbgTrace(("_UDPEndpoint::PushMessage(msg=%p)", &msg));
+
+        if (m_transport->IsRunning() == false || m_transport->m_stopping == true) {
+            QStatus status = ER_UDP_STOPPING;
+            QCC_LogError(status, ("_UDPEndpoint::PushBytes(): UDP Transport not running or stopping"));
+            DecrementAndFetch(&m_refCount);
+            return status;
+        }
+
+        if (GetEpState() != EP_STARTED) {
+            QStatus status = ER_UDP_ENDPOINT_NOT_STARTED;
+            QCC_LogError(status, ("_UDPEndpoint::PushBytes(): UDP endpoint not started"));
+            DecrementAndFetch(&m_refCount);
+            return status;
+        }
 
         /*
          * We need to make sure that this endpoint stays on one of our endpoint
@@ -2458,15 +2473,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * holds a reference during this process.
          */
         m_transport->m_endpointListLock.Lock(MUTEX_CONTEXT);
-
-        QCC_DbgHLPrintf(("_UDPEndpoint::PushMessage(msg=%p)", &msg));
-        if (GetEpState() != EP_STARTED) {
-            QStatus status = ER_UDP_ENDPOINT_NOT_STARTED;
-            QCC_LogError(status, ("_UDPEndpoint::PushBytes(): UDP endpoint not started"));
-            m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
-            DecrementAndFetch(&m_refCount);
-            return status;
-        }
 
         /*
          * Find the managed endpoint to which the connection ID of the current
@@ -4720,8 +4726,7 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
      * completed.
      */
     if (IsRunning() == false || m_stopping == true) {
-        i = m_endpointList.begin();
-        while (i != m_endpointList.end()) {
+        for (i = m_endpointList.begin(); i != m_endpointList.end(); ++i) {
             UDPEndpoint ep = *i;
             ep->Stop();
         }
