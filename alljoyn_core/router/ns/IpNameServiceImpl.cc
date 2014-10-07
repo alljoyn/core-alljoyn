@@ -1063,7 +1063,7 @@ QStatus CreateMulticastSocket(IfConfigEntry entry, const char* ipv4_multicast_gr
     }
     if (entry.m_family == qcc::QCC_AF_INET) {
 
-        status = qcc::Bind(sockFd, qcc::IPAddress(entry.m_addr), port);
+        status = qcc::Bind(sockFd, qcc::IPAddress("0.0.0.0"), port);
         if (status != ER_OK) {
             QCC_LogError(status, ("CreateMulticastSocket(): bind(0.0.0.0) failed"));
             qcc::Close(sockFd);
@@ -1072,7 +1072,7 @@ QStatus CreateMulticastSocket(IfConfigEntry entry, const char* ipv4_multicast_gr
         }
     } else if (entry.m_family == qcc::QCC_AF_INET6) {
 
-        status = qcc::Bind(sockFd, qcc::IPAddress(entry.m_addr), port);
+        status = qcc::Bind(sockFd, qcc::IPAddress("::"), port);
         if (status != ER_OK) {
             QCC_LogError(status, ("CreateMulticastSocket(): bind(::) failed"));
             qcc::Close(sockFd);
