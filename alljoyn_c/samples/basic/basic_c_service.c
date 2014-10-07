@@ -216,7 +216,7 @@ int main(int argc, char** argv, char** envArg)
         if (ER_OK == status) {
             status = alljoyn_busattachment_connect(g_msgBus, connectArgs);
             if (ER_OK != status) {
-                printf("alljoyn_busattachment_connect(\"%s\") failed\n", connectArgs);
+                printf("alljoyn_busattachment_connect(\"%s\") failed\n", (connectArgs) ? connectArgs : "NULL");
             } else {
                 printf("alljoyn_busattachment connected to \"%s\"\n", alljoyn_busattachment_getconnectspec(g_msgBus));
             }
