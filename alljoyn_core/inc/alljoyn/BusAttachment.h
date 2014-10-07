@@ -1298,20 +1298,19 @@ class BusAttachment : public MessageReceiver {
      * WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
      * @endcode
      *
-     * If the handler should be called if "com.example.Audio" <em>or</em>
-     * "com.example.Video" interfaces are implemented then call
-     * RegisterAboutListener multiple times:
+     * If the AboutListener should be called if "com.example.Audio"
+     * <em>or</em> "com.example.Video" interfaces are implemented then call
+     * WhoImplements multiple times:
      * @code
      *
      * RegisterAboutListener(aboutListener);
      * const char* audioInterface[] = {"com.example.Audio"};
-     * WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
      * WhoImplements(audioInterface, sizeof(audioInterface) / sizeof(audioInterface[0]));
      * const char* videoInterface[] = {"com.example.Video"};
      * WhoImplements(videoInterface, sizeof(videoInterface) / sizeof(videoInterface[0]));
      * @endcode
      *
-     * The interface name may be a prefix followed by a *.  Using
+     * The interface name may be a prefix followed by a `*`.  Using
      * this, the example where we are interested in "com.example.Audio" <em>or</em>
      * "com.example.Video" interfaces could be written as:
      * @code
@@ -1323,13 +1322,17 @@ class BusAttachment : public MessageReceiver {
      * The AboutListener will receive any announcement that implements an interface
      * beginning with the "com.example." name.
      *
-     * If the same AboutListener is used for for multiple interfaces then it is
-     * the listeners responsibility to parse through the reported interfaces to
-     * figure out what should be done in response to the Announce signal.
+     * It is the AboutListeners responsibility to parse through the reported
+     * interfaces to figure out what should be done in response to the Announce
+     * signal.
+     *
+     * WhoImplements is ref counted. If WhoImplements is called with the same
+     * list of interfaces multiple times then CancelWhoImplements must also be
+     * called multiple times with the same list of interfaces.
      *
      * Note: specifying NULL for the implementsInterfaces parameter could have
      * significant impact on network performance and should be avoided unless
-     * its known that all announcements are needed.
+     * all announcements are needed.
      *
      * @param[in] implementsInterfaces a list of interfaces that the Announce
      *               signal reports as implemented. NULL to receive all Announce
@@ -1359,7 +1362,7 @@ class BusAttachment : public MessageReceiver {
     QStatus WhoImplements(const char* interface);
 
     /**
-     * Stop showing interest in the listed interfaces. Stop recieving announce
+     * Stop showing interest in the listed interfaces. Stop receiving announce
      * signals from the devices with the listed interfaces.
      *
      * Note if WhoImplements has been called multiple times the announce signal
@@ -1377,7 +1380,7 @@ class BusAttachment : public MessageReceiver {
     QStatus CancelWhoImplements(const char** implementsInterfaces, size_t numberInterfaces);
 
     /**
-     * Stop showing interest in the listed interfaces. Stop recieving announce
+     * Stop showing interest in the listed interfaces. Stop receiving announce
      * signals from the devices with the listed interfaces.
      *
      * This is identical to CancelWhoImplements(const char**, size_t)
