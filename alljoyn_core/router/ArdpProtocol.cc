@@ -1852,7 +1852,7 @@ static void AddRcvMsk(ArdpConnRecord* conn, uint32_t delta)
     uint32_t bin32 = (delta - 1) / 32;
     uint32_t offset = (uint32_t)32 - (delta - (bin32 << 5));
 
-    assert(bin32 < (conn->rcv.eack.fixedSz >> 2));
+    assert(bin32 < (uint32_t) (conn->rcv.eack.fixedSz >> 2));
     conn->rcv.eack.mask[bin32] = conn->rcv.eack.mask[bin32] | ((uint32_t)1 << offset);
     QCC_DbgPrintf(("AddRcvMsk: bin = %d, offset=%d, mask = 0x%f", bin32, offset, conn->rcv.eack.mask[bin32]));
     if (conn->rcv.eack.sz < bin32 + 1) {
