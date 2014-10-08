@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2012, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2012, 2014 AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -60,79 +60,3 @@ def is_vsip_installed( ):
             print 'Could not find the expected version of the Visual Studio 2012 SDK'
         pass
     return vsip_installed
-
-
-# only run this operation when all of the files exist.
-if (vsix_env['OS'] == 'win8' and 
-    is_vsip_installed() and 
-    os.path.exists('../../build/win8/x86_64/debug/dist/bin/AllJoyn.dll') and
-    os.path.exists('../../build/win8/x86_64/release/dist/bin/AllJoyn.dll') and
-    os.path.exists('../../build/win8/x86/debug/dist/bin/AllJoyn.dll') and
-    os.path.exists('../../build/win8/x86/release/dist/bin/AllJoyn.dll') and
-    os.path.exists('../../build/win8/arm/debug/dist/bin/AllJoyn.dll') and
-    os.path.exists('../../build/win8/arm/release/dist/bin/AllJoyn.dll') and
-    os.path.exists('../../build/win8/x86_64/debug/dist/bin/AllJoyn.winmd') and
-    os.path.exists('../../build/win8/x86_64/debug/dist/bin/AllJoyn.xml')):
-
-
-    # work around 64/32 bit oddness with SCons/Python and MSBuild
-    NewestDotNetFramework = FindNewestDotNet()
-
-    # this magic setting is needed for MSBuild to create a complete .vsix file
-    vsix_env['ENV']['SystemDrive'] = os.environ['SystemDrive']
-
-
-    # always build the vsix
-    makevsix = vsix_env.Command('AllJoynSDKVSIX/AllJoynSDKVSIX/bin/Release/AllJoynSDK.vsix', 
-                            [   # The installation depends 
-                                'AllJoynSDKVSIX/AllJoynSDKVSIX.sln',
-                                '../../build/win8/x86_64/release/dist/bin/AllJoyn.dll',
-                                '../../build/win8/x86/debug/dist/bin/AllJoyn.dll',
-                                '../../build/win8/x86/release/dist/bin/AllJoyn.dll',
-                                '../../build/win8/arm/debug/dist/bin/AllJoyn.dll',
-                                '../../build/win8/arm/release/dist/bin/AllJoyn.dll',
-                                '../../build/win8/x86_64/debug/dist/bin/AllJoyn.winmd',
-                                '../../build/win8/x86_64/debug/dist/bin/AllJoyn.xml',
-                            ],
-                            NewestDotNetFramework + '\\msbuild.exe ${SOURCE} /t:Rebuild /p:Configuration=Release;Platform="Any CPU"'
-                            )
-
-    # clean out old binaries 
-    clean_bin = vsix_env.Command('cleanbin.out', None, [Delete(vsix_env.Dir('./AllJoynSDKVSIX/AllJoynSDKVSIX/bin'), must_exist=0)] )
-    clean_obj = vsix_env.Command('cleanobj.out', None, [Delete(vsix_env.Dir('./AllJoynSDKVSIX/AllJoynSDKVSIX/obj'), must_exist=0)] )
-    vsix_env.Depends(makevsix, clean_bin)
-    vsix_env.Depends(makevsix, clean_obj)
-
-
-
-    ##
-    ## Copy the .winmd, .xml , and .dll into the right location for the VSIX solution to package everything
-    # x64
-    copybin = vsix_env.Command('AllJoynSDKVSIX/AllJoynSDKVSIX/Redist/Debug/x64/AllJoyn.dll',  '../../build/win8/x86_64/debug/dist/bin/AllJoyn.dll', Copy('$TARGET','$SOURCE') )
-    vsix_env.Depends(makevsix, copybin)
-    copybin = vsix_env.Command('AllJoynSDKVSIX/AllJoynSDKVSIX/Redist/Retail/x64/AllJoyn.dll', '../../build/win8/x86_64/release/dist/bin/AllJoyn.dll', Copy('$TARGET','$SOURCE') )
-    vsix_env.Depends(makevsix, copybin)
-
-    # x86
-    copybin = vsix_env.Command('AllJoynSDKVSIX/AllJoynSDKVSIX/Redist/Debug/x86/AllJoyn.dll',  '../../build/win8/x86/debug/dist/bin/AllJoyn.dll', Copy('$TARGET','$SOURCE') )
-    vsix_env.Depends(makevsix, copybin)
-    copybin = vsix_env.Command('AllJoynSDKVSIX/AllJoynSDKVSIX/Redist/Retail/x86/AllJoyn.dll', '../../build/win8/x86/release/dist/bin/AllJoyn.dll', Copy('$TARGET','$SOURCE') )
-    vsix_env.Depends(makevsix, copybin)
-
-    #ARM
-    copybin = vsix_env.Command('AllJoynSDKVSIX/AllJoynSDKVSIX/Redist/Debug/ARM/AllJoyn.dll',  '../../build/win8/arm/debug/dist/bin/AllJoyn.dll', Copy('$TARGET','$SOURCE') )
-    vsix_env.Depends(makevsix, copybin)
-    copybin = vsix_env.Command('AllJoynSDKVSIX/AllJoynSDKVSIX/Redist/Retail/ARM/AllJoyn.dll', '../../build/win8/arm/release/dist/bin/AllJoyn.dll', Copy('$TARGET','$SOURCE') )
-    vsix_env.Depends(makevsix, copybin)
-
-    #winmd and .xml
-    copybin = vsix_env.Command('AllJoynSDKVSIX/AllJoynSDKVSIX/References/CommonConfiguration/neutral/AllJoyn.winmd', '../../build/win8/x86_64/debug/dist/bin/AllJoyn.winmd', Copy('$TARGET','$SOURCE') )
-    vsix_env.Depends(makevsix, copybin)
-    copybin = vsix_env.Command('AllJoynSDKVSIX/AllJoynSDKVSIX/References/CommonConfiguration/neutral/AllJoyn.xml',   '../../build/win8/x86_64/debug/dist/bin/AllJoyn.xml', Copy('$TARGET','$SOURCE') )
-    vsix_env.Depends(makevsix, copybin)
-
-
-    # Install vsix at the same level as the architecture directory
-    makevsix_install = vsix_env.Install('$DISTDIR/../../../vsix', source = vsix_env.Glob('AllJoynSDKVSIX/AllJoynSDKVSIX/bin/Release/*.*'))
-    vsix_env.Depends(makevsix_install, makevsix)
-

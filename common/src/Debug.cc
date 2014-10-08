@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2012,2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -373,7 +373,7 @@ void DebugContext::Vprintf(const char* fmt, va_list ap)
 
 // vsnprintf has been deprecated in the Windows API. Switching Windows to the _s version but
 // leaving other platforms with the standard version of the API until compatibility can be confirmed
-#if defined(QCC_OS_GROUP_WINDOWS) || defined(QCC_OS_GROUP_WINRT)
+#if defined(QCC_OS_GROUP_WINDOWS)
             mlen = _vsnprintf_s(msg + msgLen, sizeof(msg) - msgLen, _TRUNCATE, fmt, ap);
 #else
             mlen = vsnprintf(msg + msgLen, sizeof(msg) - msgLen, fmt, ap);

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -150,7 +150,7 @@ class DeferredCallback {
 template <typename R, typename T>
 class DeferredCallback_1 : public DeferredCallback {
   public:
-    typedef R (*DeferredCallback_1_Callback)(T arg1);
+    typedef R (AJ_CALL * DeferredCallback_1_Callback)(T arg1);
 
     DeferredCallback_1(DeferredCallback_1_Callback callback, T param1) : _callback(callback), _param1(param1)
     {
@@ -187,7 +187,7 @@ class DeferredCallback_1 : public DeferredCallback {
 template <typename T>
 class DeferredCallback_1<void, T> : public DeferredCallback {
   public:
-    typedef void (*DeferredCallback_1_Callback)(T arg1);
+    typedef void (AJ_CALL * DeferredCallback_1_Callback)(T arg1);
 
     DeferredCallback_1(DeferredCallback_1_Callback callback, T param1) : _callback(callback), _param1(param1)
     {
@@ -221,7 +221,7 @@ class DeferredCallback_1<void, T> : public DeferredCallback {
 template <typename R, typename T, typename U>
 class DeferredCallback_2 : public DeferredCallback {
   public:
-    typedef R (*DeferredCallback_2_Callback)(T arg1, U arg2);
+    typedef R (AJ_CALL * DeferredCallback_2_Callback)(T arg1, U arg2);
 
     DeferredCallback_2(DeferredCallback_2_Callback callback, T param1, U param2) : _callback(callback), _param1(param1), _param2(param2)
     {
@@ -259,7 +259,7 @@ class DeferredCallback_2 : public DeferredCallback {
 template <typename T, typename U>
 class DeferredCallback_2<void, T, U> : public DeferredCallback {
   public:
-    typedef void (*DeferredCallback_2_Callback)(T arg1, U arg2);
+    typedef void (AJ_CALL * DeferredCallback_2_Callback)(T arg1, U arg2);
 
     DeferredCallback_2(DeferredCallback_2_Callback callback, T param1, U param2) : _callback(callback), _param1(param1), _param2(param2)
     {
@@ -294,7 +294,7 @@ class DeferredCallback_2<void, T, U> : public DeferredCallback {
 template <typename R, typename T, typename U, typename V>
 class DeferredCallback_3 : public DeferredCallback {
   public:
-    typedef R (*DeferredCallback_3_Callback)(T arg1, U arg2, V arg3);
+    typedef R (AJ_CALL * DeferredCallback_3_Callback)(T arg1, U arg2, V arg3);
 
     DeferredCallback_3(DeferredCallback_3_Callback callback, T param1, U param2, V param3) :
         _callback(callback), _param1(param1), _param2(param2), _param3(param3)
@@ -334,7 +334,7 @@ class DeferredCallback_3 : public DeferredCallback {
 template <typename T, typename U, typename V>
 class DeferredCallback_3<void, T, U, V> : public DeferredCallback {
   public:
-    typedef void (*DeferredCallback_3_Callback)(T arg1, U arg2, V arg3);
+    typedef void (AJ_CALL * DeferredCallback_3_Callback)(T arg1, U arg2, V arg3);
 
     DeferredCallback_3(DeferredCallback_3_Callback callback, T param1, U param2, V param3) :
         _callback(callback), _param1(param1), _param2(param2), _param3(param3)
@@ -371,7 +371,7 @@ class DeferredCallback_3<void, T, U, V> : public DeferredCallback {
 template <typename R, typename T, typename U, typename V, typename W>
 class DeferredCallback_4 : public DeferredCallback {
   public:
-    typedef R (*DeferredCallback_4_Callback)(T arg1, U arg2, V arg3, W arg4);
+    typedef R (AJ_CALL * DeferredCallback_4_Callback)(T arg1, U arg2, V arg3, W arg4);
 
     DeferredCallback_4(DeferredCallback_4_Callback callback, T param1, U param2, V param3, W param4) :
         _callback(callback), _param1(param1), _param2(param2), _param3(param3), _param4(param4)
@@ -412,7 +412,7 @@ class DeferredCallback_4 : public DeferredCallback {
 template <typename T, typename U, typename V, typename W>
 class DeferredCallback_4<void, T, U, V, W> : public DeferredCallback {
   public:
-    typedef void (*DeferredCallback_4_Callback)(T arg1, U arg2, V arg3, W arg4);
+    typedef void (AJ_CALL * DeferredCallback_4_Callback)(T arg1, U arg2, V arg3, W arg4);
 
     DeferredCallback_4(DeferredCallback_4_Callback callback, T param1, U param2, V param3, W param4) :
         _callback(callback), _param1(param1), _param2(param2), _param3(param3), _param4(param4)

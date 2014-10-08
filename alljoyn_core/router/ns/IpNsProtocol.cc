@@ -24,6 +24,7 @@
 #include <qcc/SocketTypes.h>
 #include <qcc/IPAddress.h>
 #include <qcc/StringUtil.h>
+#include <alljoyn/AllJoynStd.h>
 #include "IpNsProtocol.h"
 
 #define QCC_MODULE "NS"
@@ -2949,6 +2950,7 @@ MDNSSenderRData::MDNSSenderRData(uint16_t version)
     : MDNSTextRData(version)
 {
     MDNSTextRData::SetValue("pv", NS_VERSION);
+    MDNSTextRData::SetValue("ajpv", ALLJOYN_PROTOCOL_VERSION);
 }
 
 uint16_t MDNSSenderRData::GetSearchID()

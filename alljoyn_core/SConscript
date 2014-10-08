@@ -1,4 +1,3 @@
-
 # Copyright (c) 2010 - 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
@@ -30,7 +29,6 @@ common_hdrs, common_static_objs, common_shared_objs = env.SConscript(['../common
 # Make alljoyn C++ dist a sub-directory of the alljoyn dist.
 env['CPP_DISTDIR'] = env['DISTDIR'] + '/cpp'
 env['CPP_TESTDIR'] = env['TESTDIR'] + '/cpp'
-env['WINRT_DISTDIR'] = env['DISTDIR'] + '/winRT'
 
 env['OBJDIR_ALLJOYN_CORE'] = env['OBJDIR'] + '/alljoyn_core'
 
@@ -54,14 +52,6 @@ ajenv.Depends('$OBJDIR_ALLJOYN_CORE/Status.h', 'src/Status.xml')
 ajenv.Depends('$OBJDIR_ALLJOYN_CORE/Status.h', '../common/src/Status.xml')
 ajenv.Append(STATUS_FLAGS=['--base=%s' % os.getcwd()])
 
-
-if ajenv['OS_GROUP'] == 'winrt':
-    ajenv.Depends('$OBJDIR_ALLJOYN_CORE/Status_CPP0x.h', 'src/Status.xml')
-    ajenv.Depends('$OBJDIR_ALLJOYN_CORE/Status_CPP0x.h', '../common/src/Status.xml')
-    ajenv.AppendUnique(CFLAGS=['/D_WINRT_DLL'])
-    ajenv.AppendUnique(CXXFLAGS=['/D_WINRT_DLL'])
-    ajenv.Append(STATUS_FLAGS=['--cpp0xnamespace=AllJoyn'])
-
 # Add support for multiple build targets in the same workset
 ajenv.VariantDir('$OBJDIR_ALLJOYN_CORE', 'src', duplicate = 0)
 ajenv.VariantDir('$OBJDIR_ALLJOYN_CORE/test', 'test', duplicate = 0)
@@ -73,8 +63,6 @@ ajenv.VariantDir('$OBJDIR_ALLJOYN_CORE/alljoyn_android', 'alljoyn_android', dupl
 ajenv.Install('$OBJDIR_ALLJOYN_CORE', ajenv.File('src/Status.xml'))
 ajenv.Status('$OBJDIR_ALLJOYN_CORE/Status')
 core_headers = ajenv.Install('$CPP_DISTDIR/inc/alljoyn', '$OBJDIR_ALLJOYN_CORE/Status.h')
-if ajenv['OS_GROUP'] == 'winrt':
-    core_headers += ajenv.Install('$CPP_DISTDIR/inc/alljoyn', '$OBJDIR_ALLJOYN_CORE/Status_CPP0x.h')
 
 core_headers += ajenv.Install('$CPP_DISTDIR/inc/alljoyn', [ h for h in ajenv.Glob('inc/alljoyn/*.h') if h not in ajenv.Glob('inc/alljoyn/Status*.h') ])
 
@@ -92,26 +80,12 @@ libs, static_objs, shared_objs = ajenv.SConscript('$OBJDIR_ALLJOYN_CORE/SConscri
 
 ajenv.Install('$CPP_DISTDIR/lib', libs)
 
-if ajenv['OS_GROUP'] != 'winrt':
-    # Do not include alljoyn.lib in LIBS otherwise linking errors will occur.
-    env.Prepend(LIBS = 'alljoyn')
-
-# AllJoyn Daemon, daemon library, and bundled daemon object file
-if ajenv['OS_GROUP'] == 'winrt':
-    winrt_objs = static_objs
-    daemon_progs, ajrlib, brobj = ajenv.SConscript('$OBJDIR_ALLJOYN_CORE/router/SConscript', exports = ['winrt_objs'])
-    ajenv.Install('$WINRT_DISTDIR/bin', daemon_progs)
-    # WinRT needs the full path to the exact file.
-    bundled_router_obj = brobj
-    router_lib = ajrlib
-
-else:
-    daemon_progs, ajrlib, brobj = ajenv.SConscript('$OBJDIR_ALLJOYN_CORE/router/SConscript')
-    ajenv.Install('$CPP_DISTDIR/bin', daemon_progs)
-    ajenv.Install('$CPP_DISTDIR/lib', ajrlib)
-    bundled_router_obj = ajenv.Install('$CPP_DISTDIR/lib', brobj)
-    router_lib = 'ajrouter'
-
+env.Prepend(LIBS = 'alljoyn')
+daemon_progs, ajrlib, brobj = ajenv.SConscript('$OBJDIR_ALLJOYN_CORE/router/SConscript')
+ajenv.Install('$CPP_DISTDIR/bin', daemon_progs)
+ajenv.Install('$CPP_DISTDIR/lib', ajrlib)
+bundled_router_obj = ajenv.Install('$CPP_DISTDIR/lib', brobj)
+router_lib = 'ajrouter'
 
 # The global env needs the 'brobj' for the Java binding
 env['brobj'] = bundled_router_obj
@@ -148,8 +122,6 @@ ajenv.SConscript('$OBJDIR_ALLJOYN_CORE/alljoyn_android/SConscript')
 if ajenv['OS_CONF'] == 'darwin':
     if ajenv['CPU'] == 'x86':
         ajenv.InstallAs('$DISTDIR/README.txt', 'docs/README.darwin.txt')
-elif ajenv['OS_CONF'] == 'winrt':
-    ajenv.InstallAs('$DISTDIR/README.txt', 'docs/README.winrt.txt')
 elif ajenv['OS_CONF'] == 'windows':
     ajenv.InstallAs('$DISTDIR/README.txt', 'docs/README.windows.txt')
 elif ajenv['OS_CONF'] == 'android':

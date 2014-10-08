@@ -40,7 +40,4 @@ if router_env['OS'] == 'android':
    libbbdaemon = libenv.StaticLibrary(['bbdaemon-lib'] + router_objs)
    dlibs = libenv.Install('$CPP_DISTDIR/lib', libbbdaemon)
 
-if router_env['OS_GROUP'] == 'winrt':
-    progs = []
-	
 Return('progs')
