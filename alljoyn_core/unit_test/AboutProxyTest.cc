@@ -109,13 +109,10 @@ class AboutProxyTest : public testing::Test {
 
 
         // Initialize english data
-        printf("SetUp English data...\n");
         setUpEnglishData();
         aboutEnglishData.SetSupportedLanguage(SPANISH_TAG);
 
         // Initialize spanish data
-        printf("SetUp Spanish data...\n");
-
         setUpSpanishData();
         aboutSpanishData.SetSupportedLanguage(ENGLISH_TAG);
 
@@ -558,7 +555,7 @@ TEST_F(AboutProxyTest, GetAboutdata_Spanish) {
 }
 
 //ASACORE-958
-TEST_F(AboutProxyTest, DISABLED_GetAboutdata_UnsupportedLanguage) {
+TEST_F(AboutProxyTest, GetAboutdata_UnsupportedLanguage) {
     QStatus status = ER_FAIL;
     qcc::GUID128 interface_rand_string;
     qcc::String ifaceName = "test.about.d" + interface_rand_string.ToString();
