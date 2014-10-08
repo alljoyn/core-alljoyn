@@ -3823,6 +3823,19 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
                      */
                     QCC_DbgPrintf(("UDPTransport::DispatcherThread::Run(): CONNECT_CB: DoConnectCb()"));
                     m_transport->DoConnectCb(entry.m_handle, entry.m_conn, entry.m_connId, entry.m_passive, entry.m_buf, entry.m_len, entry.m_status);
+
+                    /*
+                     * The UDPTransport::ConnectCb() handler allocated a copy of
+                     * the data buffer from ARDP since ARDP expected its buffer
+                     * back immediately.  We need to delete this copy now that
+                     * we're done with it.
+                     */
+#ifndef NDEBUG
+                    CheckSeal(entry.m_buf + entry.m_len);
+#endif
+                    delete[] entry.m_buf;
+                    entry.m_buf = NULL;
+                    entry.m_len = 0;
                 } else {
                     bool haveLock = true;
                     m_transport->m_endpointListLock.Lock(MUTEX_CONTEXT);
@@ -6093,17 +6106,6 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             DecrementAndFetch(&m_refCount);
             return;
         }
-
-        /*
-         * The dispatcher thread allocated a copy of the buffer from ARDP since
-         * ARDP expected its buffer back, so we need to delete this copy.
-         */
-#ifndef NDEBUG
-        CheckSeal(buf + len);
-#endif
-        delete[] buf;
-        buf = NULL;
-        len = 0;
 
         /*
          * Unmarshal the message.  We need to provide and endpoint unique name
