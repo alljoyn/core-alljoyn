@@ -265,6 +265,17 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     QStatus GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs) const;
 
     /**
+     * Does this transport support connections as described by the provided
+     * Session options.
+     *
+     * @param opts  Proposed session options.
+     * @return
+     *      - true if the SessionOpts specifies a supported option set.
+     *      - false otherwise.
+     */
+    bool SupportsOptions(const SessionOpts& opts) const;
+
+    /**
      * Indicates whether this transport is used for client-to-bus or bus-to-bus connections.
      *
      * @return  Always returns true, TCP is a bus-to-bus transport.
