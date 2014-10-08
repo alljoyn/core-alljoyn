@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -34,25 +34,25 @@ static QCC_BOOL bus_stopping_flag = QCC_FALSE;
 static QCC_BOOL bus_disconnected_flag = QCC_FALSE;
 
 /* bus listener functions */
-static void listener_registered(const void* context, alljoyn_busattachment bus) {
+static void AJ_CALL listener_registered(const void* context, alljoyn_busattachment bus) {
     listener_registered_flag = QCC_TRUE;
 }
-static void listener_unregistered(const void* context) {
+static void AJ_CALL listener_unregistered(const void* context) {
     listener_unregistered_flag = QCC_TRUE;
 }
-static void found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix) {
+static void AJ_CALL found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix) {
     found_advertised_name_flag = QCC_TRUE;
 }
-static void lost_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix) {
+static void AJ_CALL lost_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix) {
     lost_advertised_name_flag = QCC_TRUE;
 }
-static void name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner) {
+static void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner) {
     name_owner_changed_flag = QCC_TRUE;
 }
-static void bus_stopping(const void* context) {
+static void AJ_CALL bus_stopping(const void* context) {
     bus_stopping_flag = QCC_TRUE;
 }
-static void bus_disconnected(const void* context) {
+static void AJ_CALL bus_disconnected(const void* context) {
     bus_disconnected_flag = QCC_TRUE;
 }
 
