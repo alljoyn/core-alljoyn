@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -28,9 +28,9 @@ bool registersignalhandler_flag2;
 char sourcePath1[256];
 char sourcePath2[256];
 
-void registersignalHandler_Handler(const alljoyn_interfacedescription_member* member,
-                                   const char* srcPath,
-                                   alljoyn_message message) {
+void AJ_CALL registersignalHandler_Handler(const alljoyn_interfacedescription_member* member,
+                                           const char* srcPath,
+                                           alljoyn_message message) {
     QStatus status = ER_FAIL;
     EXPECT_STREQ(sourcePath1, srcPath);
     char* str;
@@ -40,9 +40,9 @@ void registersignalHandler_Handler(const alljoyn_interfacedescription_member* me
     registersignalhandler_flag = true;
 }
 
-void registersignalHandler_Handler2(const alljoyn_interfacedescription_member* member,
-                                    const char* srcPath,
-                                    alljoyn_message message) {
+void AJ_CALL registersignalHandler_Handler2(const alljoyn_interfacedescription_member* member,
+                                            const char* srcPath,
+                                            alljoyn_message message) {
     QStatus status = ER_FAIL;
     EXPECT_STREQ(sourcePath2, srcPath);
     char* str;
