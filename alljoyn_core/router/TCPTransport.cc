@@ -1344,8 +1344,22 @@ QStatus TCPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
                      * then it hasn't been set and this implies that there is no listener for this transport
                      * on this network interface. We should only return a bus address corresponding to this
                      * network interface if we have a listener on this network interface.
+                     *
+                     * Note that if we find a "*" in the reliableIPv4PortMap it is a wildcard and therefore
+                     * matches the entry we are comparing to, in which case we are not comparing the entry to
+                     * what's in the port map, we are using what's in the port map to confirm the entry.
                      */
-                    if (reliableIpv4PortMap.find(entries[i].m_name) != reliableIpv4PortMap.end()) {
+                    bool portMapWildcard = reliableIpv4PortMap.find(qcc::String("*")) != reliableIpv4PortMap.end();
+                    bool portMapExplicit = reliableIpv4PortMap.find(entries[i].m_name) != reliableIpv4PortMap.end();
+
+                    if (portMapWildcard || portMapExplicit) {
+                        uint16_t port = 0;
+                        if (portMapWildcard) {
+                            port = reliableIpv4PortMap[qcc::String("*")];
+                        } else {
+                            port = reliableIpv4PortMap[entries[i].m_name];
+                        }
+
                         /*
                          * Now put this information together into a bus address
                          * that the rest of the AllJoyn world can understand.
@@ -1354,7 +1368,7 @@ QStatus TCPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
                          */
                         if (!entries[i].m_addr.empty() && (entries[i].m_family == QCC_AF_INET)) {
                             qcc::String busAddr = "tcp:addr=" + entries[i].m_addr + ","
-                                                  "port=" + U32ToString(reliableIpv4PortMap[entries[i].m_name]) + ","
+                                                  "port=" + U32ToString(port) + ","
                                                   "family=ipv4";
                             busAddrs.push_back(busAddr);
                         }
