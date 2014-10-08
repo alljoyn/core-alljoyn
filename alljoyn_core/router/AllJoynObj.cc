@@ -3610,6 +3610,10 @@ void AllJoynObj::ExchangeNamesSignalHandler(const InterfaceDescription::Member* 
         const String& shortOtherGuidStr = otherGuid.ToShortString();
         StringMapKey key = bit->first;
         for (size_t i = 0; i < numItems; ++i) {
+            if (bit == b2bEndpoints.end()) {
+                QCC_DbgPrintf(("b2bEp %s disappeared during ExchangeNamesSignalHandler", key.c_str()));
+                break;
+            }
             assert(items[i].typeId == ALLJOYN_STRUCT);
             qcc::String uniqueName = items[i].v_struct.members[0].v_string.str;
             if (!IsLegalUniqueName(uniqueName.c_str())) {

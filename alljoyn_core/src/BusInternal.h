@@ -290,6 +290,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     typedef std::set<ProtectedBusListener> ListenerSet;
     ListenerSet listeners;               /* List of registered BusListeners */
     qcc::IODispatch m_ioDispatch;         /* iodispatch for this bus */
+    std::map<qcc::StringMapKey, InterfaceDescription> ifaceDescriptions;
     TransportList transportList;          /* List of active transports */
     KeyStore keyStore;                    /* The key store for the bus attachment */
     AuthManager authManager;              /* The authentication manager for the bus attachment */
@@ -299,7 +300,6 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     PeerStateTable peerStateTable;        /* Table that maintains state information about remote peers */
     LocalEndpoint localEndpoint;          /* The local endpoint */
     CompressionRules compressionRules;    /* Rules for compresssing and decompressing headers */
-    std::map<qcc::StringMapKey, InterfaceDescription> ifaceDescriptions;
 
     bool allowRemoteMessages;             /* true iff endpoints of this attachment can receive messages from remote devices */
     qcc::String listenAddresses;          /* The set of bus addresses that this bus can listen on. (empty for clients) */

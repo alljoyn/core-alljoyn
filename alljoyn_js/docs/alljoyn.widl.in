@@ -1691,8 +1691,6 @@ dictionary SessionOpts {
     const unsigned short TRANSPORT_WWAN = 0x0008;
     /** Wired local-area network transport */
     const unsigned short TRANSPORT_LAN = 0x0010;
-    /** Transport using WinRT Proximity Framework */
-    const unsigned short TRANSPORT_PROXIMITY = 0x0040;
     /**
      * \brief The allowed transports.
      */

@@ -83,8 +83,8 @@ static const uint16_t ALLJOYN_CRED_ONE_TIME_PWD = 0x2001; /**< Indicates the cre
  *          requests is being rejected. If the request is rejected the authentication is
  *          complete.
  */
-typedef QCC_BOOL (*AJ_CALL alljoyn_authlistener_requestcredentials_ptr)(const void* context, const char* authMechanism, const char* peerName, uint16_t authCount,
-                                                                        const char* userName, uint16_t credMask, alljoyn_credentials credentials);
+typedef QCC_BOOL (AJ_CALL * alljoyn_authlistener_requestcredentials_ptr)(const void* context, const char* authMechanism, const char* peerName, uint16_t authCount,
+                                                                         const char* userName, uint16_t credMask, alljoyn_credentials credentials);
 
 /**
  * Authentication mechanism asynchronous request for credentials. If the user name is not an empty string
@@ -110,9 +110,9 @@ typedef QCC_BOOL (*AJ_CALL alljoyn_authlistener_requestcredentials_ptr)(const vo
  *      - ER_OK if the request is handled.
  *      - ER_NOT_IMPLEMENTED if implementation not found (default)
  */
-typedef QStatus (*AJ_CALL alljoyn_authlistener_requestcredentialsasync_ptr)(const void* context, alljoyn_authlistener listener,
-                                                                            const char* authMechanism, const char* peerName, uint16_t authCount,
-                                                                            const char* userName, uint16_t credMask, void* authContext);
+typedef QStatus (AJ_CALL * alljoyn_authlistener_requestcredentialsasync_ptr)(const void* context, alljoyn_authlistener listener,
+                                                                             const char* authMechanism, const char* peerName, uint16_t authCount,
+                                                                             const char* userName, uint16_t credMask, void* authContext);
 
 /**
  * Respond to a call to alljoyn_authlistener_requestcredentialsasync_ptr.
@@ -142,8 +142,8 @@ extern AJ_API QStatus AJ_CALL alljoyn_authlistener_requestcredentialsresponse(al
  * @return  The listener should return true if the credentials are acceptable or false if the
  *          credentials are being rejected.
  */
-typedef QCC_BOOL (*AJ_CALL alljoyn_authlistener_verifycredentials_ptr)(const void* context, const char* authMechanism, const char* peerName,
-                                                                       const alljoyn_credentials credentials);
+typedef QCC_BOOL (AJ_CALL * alljoyn_authlistener_verifycredentials_ptr)(const void* context, const char* authMechanism, const char* peerName,
+                                                                        const alljoyn_credentials credentials);
 
 /**
  * Authentication mechanism asynchronous request for verification of credentials from a remote peer.
@@ -162,8 +162,8 @@ typedef QCC_BOOL (*AJ_CALL alljoyn_authlistener_verifycredentials_ptr)(const voi
  *  - ER_OK if the request is handled.
  *  - ER_NOT_IMPLEMENTED (default)
  */
-typedef QStatus (*AJ_CALL alljoyn_authlistener_verifycredentialsasync_ptr)(const void* context, alljoyn_authlistener listener,
-                                                                           const char* authMechanism, const char* peerName, const alljoyn_credentials credentials, void* authContext);
+typedef QStatus (AJ_CALL * alljoyn_authlistener_verifycredentialsasync_ptr)(const void* context, alljoyn_authlistener listener,
+                                                                            const char* authMechanism, const char* peerName, const alljoyn_credentials credentials, void* authContext);
 
 /**
  * Respond to a call to alljoyn_authlistener_verifycredentialsasync_ptr.
@@ -188,7 +188,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_authlistener_verifycredentialsresponse(all
  * @param status   A status code indicating the type of security violation.
  * @param msg      The message that cause the security violation.
  */
-typedef void (*AJ_CALL alljoyn_authlistener_securityviolation_ptr)(const void* context, QStatus status, const alljoyn_message msg);
+typedef void (AJ_CALL * alljoyn_authlistener_securityviolation_ptr)(const void* context, QStatus status, const alljoyn_message msg);
 
 /**
  * Type for the AuthenticationComplete callback.
@@ -202,7 +202,7 @@ typedef void (*AJ_CALL alljoyn_authlistener_securityviolation_ptr)(const void* c
  *                       accepting side this will be the unique bus name for the remote peer.
  * @param success        true if the authentication was successful, otherwise false.
  */
-typedef void (*AJ_CALL alljoyn_authlistener_authenticationcomplete_ptr)(const void* context, const char* authMechanism, const char* peerName, QCC_BOOL success);
+typedef void (AJ_CALL * alljoyn_authlistener_authenticationcomplete_ptr)(const void* context, const char* authMechanism, const char* peerName, QCC_BOOL success);
 
 /**
  * Structure used during alljoyn_authlistener_create to provide callbacks into C.

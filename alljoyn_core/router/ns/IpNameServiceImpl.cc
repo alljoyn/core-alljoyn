@@ -429,9 +429,6 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
     // Set the broadcast bit to true for WinRT. For all other platforms,
     // this field should be derived from the property disable_directed_broadcast
     //
-#ifdef QCC_OS_WINRT
-    m_broadcast = true;
-#endif
 
     m_guid = guid;
     m_loopback = loopback;
@@ -1066,11 +1063,7 @@ QStatus CreateMulticastSocket(IfConfigEntry entry, const char* ipv4_multicast_gr
     }
     if (entry.m_family == qcc::QCC_AF_INET) {
 
-#ifndef QCC_OS_WINRT
         status = qcc::Bind(sockFd, qcc::IPAddress("0.0.0.0"), port);
-#else
-        status = qcc::Bind(sockFd, qcc::IPAddress(entry.m_addr), port);
-#endif
         if (status != ER_OK) {
             QCC_LogError(status, ("CreateMulticastSocket(): bind(0.0.0.0) failed"));
             qcc::Close(sockFd);
@@ -1079,11 +1072,7 @@ QStatus CreateMulticastSocket(IfConfigEntry entry, const char* ipv4_multicast_gr
         }
     } else if (entry.m_family == qcc::QCC_AF_INET6) {
 
-#ifndef QCC_OS_WINRT
         status = qcc::Bind(sockFd, qcc::IPAddress("::"), port);
-#else
-        status = qcc::Bind(sockFd, qcc::IPAddress(entry.m_addr), port);
-#endif
         if (status != ER_OK) {
             QCC_LogError(status, ("CreateMulticastSocket(): bind(::) failed"));
             qcc::Close(sockFd);

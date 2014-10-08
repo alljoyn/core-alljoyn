@@ -52,7 +52,7 @@ typedef struct _alljoyn_busattachment_handle*               alljoyn_busattachmen
  * @param context  The context pointer that was passed into the alljoyn_buslistener_create function
  * @param bus      The alljoyn_busattachment the listener is registered with.
  */
-typedef void (*AJ_CALL alljoyn_buslistener_listener_registered_ptr)(const void* context, alljoyn_busattachment bus);
+typedef void (AJ_CALL * alljoyn_buslistener_listener_registered_ptr)(const void* context, alljoyn_busattachment bus);
 
 /**
  * Type for the ListenerUnregistered callback.
@@ -61,7 +61,7 @@ typedef void (*AJ_CALL alljoyn_buslistener_listener_registered_ptr)(const void* 
  *
  * @param context  The context pointer that was passed into the alljoyn_buslistener_create function
  */
-typedef void (*AJ_CALL alljoyn_buslistener_listener_unregistered_ptr)(const void* context);
+typedef void (AJ_CALL * alljoyn_buslistener_listener_unregistered_ptr)(const void* context);
 
 /**
  * Type for the FoundAdvertisedName callback.
@@ -74,7 +74,7 @@ typedef void (*AJ_CALL alljoyn_buslistener_listener_unregistered_ptr)(const void
  * @param transport    Transport that received the advertisement.
  * @param namePrefix   The well-known name prefix used in call to FindAdvertisedName that triggered this callback.
  */
-typedef void (*AJ_CALL alljoyn_buslistener_found_advertised_name_ptr)(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix);
+typedef void (AJ_CALL * alljoyn_buslistener_found_advertised_name_ptr)(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix);
 
 /**
  * Type for the LostAdvertisedName callback.
@@ -86,7 +86,7 @@ typedef void (*AJ_CALL alljoyn_buslistener_found_advertised_name_ptr)(const void
  * @param transport    Transport that stopped receiving the given advertised name.
  * @param namePrefix   The well-known name prefix that was used in a call to FindAdvertisedName that triggered this callback.
  */
-typedef void (*AJ_CALL alljoyn_buslistener_lost_advertised_name_ptr)(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix);
+typedef void (AJ_CALL * alljoyn_buslistener_lost_advertised_name_ptr)(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix);
 
 /**
  * Type for the NameOwnerChanged callback.
@@ -98,7 +98,7 @@ typedef void (*AJ_CALL alljoyn_buslistener_lost_advertised_name_ptr)(const void*
  * @param previousOwner  The unique name that previously owned the name or NULL if there was no previous owner.
  * @param newOwner       The unique name that now owns the name or NULL if the there is no new owner.
  */
-typedef void (*AJ_CALL alljoyn_buslistener_name_owner_changed_ptr)(const void* context, const char* busName, const char* previousOwner, const char* newOwner);
+typedef void (AJ_CALL * alljoyn_buslistener_name_owner_changed_ptr)(const void* context, const char* busName, const char* previousOwner, const char* newOwner);
 
 
 /**
@@ -106,14 +106,14 @@ typedef void (*AJ_CALL alljoyn_buslistener_name_owner_changed_ptr)(const void* c
  *
  * @param context  The context pointer that was passed into the alljoyn_buslistener_create function
  */
-typedef void (*AJ_CALL alljoyn_buslistener_bus_stopping_ptr)(const void* context);
+typedef void (AJ_CALL * alljoyn_buslistener_bus_stopping_ptr)(const void* context);
 
 /**
  * Type for the BusDisconnected callback.
  *
  * @param context  The context pointer that was passed into the alljoyn_buslistener_create function
  */
-typedef void (*AJ_CALL alljoyn_buslistener_bus_disconnected_ptr)(const void* context);
+typedef void (AJ_CALL * alljoyn_buslistener_bus_disconnected_ptr)(const void* context);
 
 /**
  * Type for the PropertyChanged callback.
@@ -124,7 +124,7 @@ typedef void (*AJ_CALL alljoyn_buslistener_bus_disconnected_ptr)(const void* con
  * @param propName       The well-known name that has changed.
  * @param propValue      The new value of the property; NULL if not present
  */
-typedef void (*AJ_CALL alljoyn_buslistener_bus_prop_changed_ptr)(const void* context, const char* prop_name, alljoyn_msgarg prop_value);
+typedef void (AJ_CALL * alljoyn_buslistener_bus_prop_changed_ptr)(const void* context, const char* prop_name, alljoyn_msgarg prop_value);
 
 /**
  * Struct containing callbacks used for creation of an alljoyn_buslistener.

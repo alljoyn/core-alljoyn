@@ -22,7 +22,5 @@ libs
 xcuserdata/*.xcuserdatad/*
 /daemon/bt_windowsKernel/objchk_win7_amd64/
 /daemon/bt_windowsKernel/objchk_win7_x86/
-/win8_sdk/AllJoynSDKVSIX/AllJoynSDKVSIX/Redist/
-/win8_sdk/AllJoynSDKVSIX/AllJoynSDKVSIX/References/
 whitespace.db
 cscope.out
