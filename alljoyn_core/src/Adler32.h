@@ -8,7 +8,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -54,16 +54,18 @@ class Adler32 {
      * @return The current hash value.
      */
     uint32_t Update(const uint8_t* data, size_t len) {
-        while (data && len) {
-            size_t l = len % 3800; // Max number of iterations before modulus must be computed
-            uint32_t a = adler & 0xFFFF;
-            uint32_t b = adler >> 16;
-            len -= l;
-            while (l--) {
-                a += *data++;
-                b += a;
+        if (data) {
+            while (len) {
+                size_t l = (len < 4095) ? len : 4095; // Max number of iterations before modulus must be computed
+                uint32_t a = adler & 0xFFFF;
+                uint32_t b = adler >> 16;
+                len -= l;
+                while (l--) {
+                    a += *data++;
+                    b += a;
+                }
+                adler = ((b % ADLER_PRIME) << 16) | (a % ADLER_PRIME);
             }
-            adler = ((b % ADLER_PRIME) << 16) | (a % ADLER_PRIME);
         }
         return adler;
     }
