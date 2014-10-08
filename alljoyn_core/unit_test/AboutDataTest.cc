@@ -41,6 +41,99 @@ TEST(AboutData, constants) {
     EXPECT_STREQ("SupportUrl", AboutData::SUPPORT_URL);
 }
 
+TEST(AboutData, VerifyFieldValues) {
+    AboutData aboutData;
+    //AppId
+    EXPECT_TRUE(aboutData.IsFieldRequired(AboutData::APP_ID));
+    EXPECT_TRUE(aboutData.IsFieldAnnounced(AboutData::APP_ID));
+    EXPECT_FALSE(aboutData.IsFieldLocalized(AboutData::APP_ID));
+    EXPECT_STREQ("ay", aboutData.GetFieldSignature(AboutData::APP_ID));
+
+    //DefaultLanguage
+    EXPECT_TRUE(aboutData.IsFieldRequired(AboutData::DEFAULT_LANGUAGE));
+    EXPECT_TRUE(aboutData.IsFieldAnnounced(AboutData::DEFAULT_LANGUAGE));
+    EXPECT_FALSE(aboutData.IsFieldLocalized(AboutData::DEFAULT_LANGUAGE));
+    EXPECT_STREQ("s", aboutData.GetFieldSignature(AboutData::DEFAULT_LANGUAGE));
+
+    //DeviceName
+    EXPECT_FALSE(aboutData.IsFieldRequired(AboutData::DEVICE_NAME));
+    EXPECT_TRUE(aboutData.IsFieldAnnounced(AboutData::DEVICE_NAME));
+    EXPECT_TRUE(aboutData.IsFieldLocalized(AboutData::DEVICE_NAME));
+    EXPECT_STREQ("s", aboutData.GetFieldSignature(AboutData::DEVICE_NAME));
+
+    //DeviceId
+    EXPECT_TRUE(aboutData.IsFieldRequired(AboutData::DEVICE_ID));
+    EXPECT_TRUE(aboutData.IsFieldAnnounced(AboutData::DEVICE_ID));
+    EXPECT_FALSE(aboutData.IsFieldLocalized(AboutData::DEVICE_ID));
+    EXPECT_STREQ("s", aboutData.GetFieldSignature(AboutData::DEVICE_ID));
+
+    //AppName
+    EXPECT_TRUE(aboutData.IsFieldRequired(AboutData::APP_NAME));
+    EXPECT_TRUE(aboutData.IsFieldAnnounced(AboutData::APP_NAME));
+    EXPECT_TRUE(aboutData.IsFieldLocalized(AboutData::APP_NAME));
+    EXPECT_STREQ("s", aboutData.GetFieldSignature(AboutData::APP_NAME));
+
+    //Manufacturer
+    EXPECT_TRUE(aboutData.IsFieldRequired(AboutData::MANUFACTURER));
+    EXPECT_TRUE(aboutData.IsFieldAnnounced(AboutData::MANUFACTURER));
+    EXPECT_TRUE(aboutData.IsFieldLocalized(AboutData::MANUFACTURER));
+    EXPECT_STREQ("s", aboutData.GetFieldSignature(AboutData::MANUFACTURER));
+
+    //ModelNumber
+    EXPECT_TRUE(aboutData.IsFieldRequired(AboutData::MODEL_NUMBER));
+    EXPECT_TRUE(aboutData.IsFieldAnnounced(AboutData::MODEL_NUMBER));
+    EXPECT_FALSE(aboutData.IsFieldLocalized(AboutData::MODEL_NUMBER));
+    EXPECT_STREQ("s", aboutData.GetFieldSignature(AboutData::MODEL_NUMBER));
+
+    //SupportedLanguages
+    EXPECT_TRUE(aboutData.IsFieldRequired(AboutData::SUPPORTED_LANGUAGES));
+    EXPECT_FALSE(aboutData.IsFieldAnnounced(AboutData::SUPPORTED_LANGUAGES));
+    EXPECT_FALSE(aboutData.IsFieldLocalized(AboutData::SUPPORTED_LANGUAGES));
+    EXPECT_STREQ("as", aboutData.GetFieldSignature(AboutData::SUPPORTED_LANGUAGES));
+
+    //Description
+    EXPECT_TRUE(aboutData.IsFieldRequired(AboutData::DESCRIPTION));
+    EXPECT_FALSE(aboutData.IsFieldAnnounced(AboutData::DESCRIPTION));
+    EXPECT_TRUE(aboutData.IsFieldLocalized(AboutData::DESCRIPTION));
+    EXPECT_STREQ("s", aboutData.GetFieldSignature(AboutData::DESCRIPTION));
+
+    //DateOfManufacture
+    EXPECT_FALSE(aboutData.IsFieldRequired(AboutData::DATE_OF_MANUFACTURE));
+    EXPECT_FALSE(aboutData.IsFieldAnnounced(AboutData::DATE_OF_MANUFACTURE));
+    EXPECT_FALSE(aboutData.IsFieldLocalized(AboutData::DATE_OF_MANUFACTURE));
+    EXPECT_STREQ("s", aboutData.GetFieldSignature(AboutData::DATE_OF_MANUFACTURE));
+
+    //SoftwareVersion
+    EXPECT_TRUE(aboutData.IsFieldRequired(AboutData::SOFTWARE_VERSION));
+    EXPECT_FALSE(aboutData.IsFieldAnnounced(AboutData::SOFTWARE_VERSION));
+    EXPECT_FALSE(aboutData.IsFieldLocalized(AboutData::SOFTWARE_VERSION));
+    EXPECT_STREQ("s", aboutData.GetFieldSignature(AboutData::SOFTWARE_VERSION));
+
+    //AJSoftwareVersion
+    EXPECT_TRUE(aboutData.IsFieldRequired(AboutData::AJ_SOFTWARE_VERSION));
+    EXPECT_FALSE(aboutData.IsFieldAnnounced(AboutData::AJ_SOFTWARE_VERSION));
+    EXPECT_FALSE(aboutData.IsFieldLocalized(AboutData::AJ_SOFTWARE_VERSION));
+    EXPECT_STREQ("s", aboutData.GetFieldSignature(AboutData::AJ_SOFTWARE_VERSION));
+
+    //HardwareVersion
+    EXPECT_FALSE(aboutData.IsFieldRequired(AboutData::HARDWARE_VERSION));
+    EXPECT_FALSE(aboutData.IsFieldAnnounced(AboutData::HARDWARE_VERSION));
+    EXPECT_FALSE(aboutData.IsFieldLocalized(AboutData::HARDWARE_VERSION));
+    EXPECT_STREQ("s", aboutData.GetFieldSignature(AboutData::HARDWARE_VERSION));
+
+    //SupportUrl
+    EXPECT_FALSE(aboutData.IsFieldRequired(AboutData::SUPPORT_URL));
+    EXPECT_FALSE(aboutData.IsFieldAnnounced(AboutData::SUPPORT_URL));
+    EXPECT_FALSE(aboutData.IsFieldLocalized(AboutData::SUPPORT_URL));
+    EXPECT_STREQ("s", aboutData.GetFieldSignature(AboutData::SUPPORT_URL));
+
+    //Unknown field
+    EXPECT_FALSE(aboutData.IsFieldRequired("Unknown"));
+    EXPECT_FALSE(aboutData.IsFieldAnnounced("Unknown"));
+    EXPECT_FALSE(aboutData.IsFieldLocalized("Unknown"));
+    EXPECT_TRUE(NULL == aboutData.GetFieldSignature("Unknown"));
+}
+
 TEST(AboutData, DefaultLanguageNotSpecified) {
     QStatus status = ER_FAIL;
     AboutData aboutData;
@@ -1130,7 +1223,7 @@ class AboutDataTestAboutData : public AboutData {
     {
         QStatus status = ER_OK;
         MsgArg arg;
-        status = arg.Set(m_aboutFields[TEST_FIELDABC].signature.c_str(), testFieldABC);
+        status = arg.Set(GetFieldSignature(TEST_FIELDABC), testFieldABC);
         if (status != ER_OK) {
             return status;
         }
@@ -1146,7 +1239,7 @@ class AboutDataTestAboutData : public AboutData {
         if (status != ER_OK) {
             return status;
         }
-        status = arg->Get(m_aboutFields[TEST_FIELDABC].signature.c_str(), testFieldABC);
+        status = arg->Get(GetFieldSignature(TEST_FIELDABC), testFieldABC);
         return status;
     }
 };

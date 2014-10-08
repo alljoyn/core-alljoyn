@@ -556,6 +556,7 @@ class AboutData : public AboutDataListener {
      *                                             not found.
      */
     QStatus SetField(const char* name, MsgArg value, const char* language = NULL);
+
     /**
      * generic way to get field.
      *
@@ -604,6 +605,53 @@ class AboutData : public AboutDataListener {
      * @return ER_OK if successful
      */
     QStatus GetMsgArgAnnounce(MsgArg* msgArg);
+
+    /**
+     * Is the given field name required to make an About announcement
+     *
+     * @param[in] fieldName the name of the field
+     *
+     * @return
+     *  - true if the field is required to make an About announcement
+     *  - false otherwise.  If the fieldName is unknown false will be returned
+     */
+    bool IsFieldRequired(const char* fieldName);
+
+    /**
+     * Is the given field part of the announce signal
+     *
+     * @param[in] fieldName the name of the field
+     *
+     * @return
+     *  - true if the field is part of the announce signal
+     *  - false otherwise.  If the fieldName is unknown false will be returned
+     */
+    bool IsFieldAnnounced(const char* fieldName);
+
+    /**
+     * Is the given field a localized field.
+     *
+     * Localized fields should be provided for every supported language
+     *
+     * @param[in] fieldName the name of the field
+     *
+     * @return
+     *  - true if the field is a localizable value
+     *  - false otherwise.  If the fieldName is unknown false will be returned.
+     */
+    bool IsFieldLocalized(const char* fieldName);
+
+    /**
+     * Get the signature for the given field.
+     *
+     * @param[in] fieldName the name of the field
+     *
+     * @return
+     *  - the signature of the field
+     *  - NULL is field is unknown
+     */
+    const char* GetFieldSignature(const char* fieldName);
+
     /*
      * we should add a way to generate a UUID based on RFC-4122. This should probably
      * be a in common since generation of the RFC-4122 id is not really core to alljoyn
@@ -699,11 +747,18 @@ class AboutData : public AboutDataListener {
         qcc::String signature;
     } FieldDetails;
 
+  private:
+    /**
+     * Initialize the Field Details with the values specified in the About Feature
+     * specification. This is called by each constructor.
+     */
+    void InitializeFieldDetails();
+
     /**
      * A std::map that maps the field name to its FieldDetails.
      */
     std::map<qcc::String, FieldDetails> m_aboutFields;
-  private:
+
     /**
      * property store used to hold property store values that are not localized
      * key: Field Name
