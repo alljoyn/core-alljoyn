@@ -1158,6 +1158,44 @@ QStatus TCPTransport::Join(void)
     return ER_OK;
 }
 
+/**
+ * This is a convenience function that tells a caller whether or not this
+ * transport will support a set of options for a connection.  Lets the caller
+ * decide up front whether or not a connection will succeed due to options
+ * conflicts.
+ */
+bool TCPTransport::SupportsOptions(const SessionOpts& opts) const
+{
+    QCC_DbgTrace(("TCPTransport::SupportsOptions()"));
+    bool rc = true;
+
+    /*
+     * TCP only suports reliable messaging, which means TRAFFIC_RAW_RELIABLE
+     * (raw sockets over a reliable underlying transport) or TRAFFIC_MESSAGES
+     * (which is AllJoyn Messages over a reliable underlying transport).  It's
+     * not an error if we don't match, we just don't have anything to offer.
+     */
+    if (opts.traffic != SessionOpts::TRAFFIC_MESSAGES && opts.traffic != SessionOpts::TRAFFIC_RAW_RELIABLE) {
+        QCC_DbgPrintf(("TCPTransport::SupportsOptions(): traffic type mismatch"));
+        rc = false;
+    }
+
+    /*
+     * The other session option that we need to filter on is the transport
+     * bitfield.  This transport supports TRANSPORT_TCP of course, but we allow
+     * TRANSPORT_WLAN, TRANSPORT_WWAN, and TRANSPORT_LAN to be synonymous with
+     * TRANSPORT_TCP.  If you are explicitly looking for something other than
+     * TCP (or one of the aliases) we can't help you.
+     */
+    if (!(opts.transports & (TRANSPORT_TCP | TRANSPORT_WLAN | TRANSPORT_WWAN | TRANSPORT_LAN))) {
+        QCC_DbgPrintf(("TCPTransport::SupportsOptions(): transport mismatch"));
+        rc = false;
+    }
+
+    QCC_DbgPrintf(("TCPTransport::SupportsOptions(): returns \"%s\"", rc == true ? "true" : "false"));
+    return rc;
+}
+
 /*
  * The default interface for the name service to use.  The wildcard character
  * means to listen and transmit over all interfaces that are up and multicast
@@ -1172,25 +1210,11 @@ QStatus TCPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
 
     /*
      * We are given a session options structure that defines the kind of
-     * transports that are being sought.  TCP provides reliable traffic as
-     * understood by the session options, so we only return someting if
-     * the traffic type is TRAFFIC_MESSAGES or TRAFFIC_RAW_RELIABLE.  It's
-     * not an error if we don't match, we just don't have anything to offer.
+     * transports that are being sought.  It's not an error if we don't match
+     * requested options, we just don't have anything to offer.
      */
-    if (opts.traffic != SessionOpts::TRAFFIC_MESSAGES && opts.traffic != SessionOpts::TRAFFIC_RAW_RELIABLE) {
-        QCC_DbgPrintf(("TCPTransport::GetListenAddresses(): traffic mismatch"));
-        return ER_OK;
-    }
-
-    /*
-     * The other session option that we need to filter on is the transport
-     * bitfield.  We have no easy way of figuring out if we are a wireless
-     * local-area, wireless wide-area, wired local-area or local transport,
-     * but we do exist, so we respond if the caller is asking for any of
-     * those: cogito ergo some.
-     */
-    if (!(opts.transports & (TRANSPORT_WLAN | TRANSPORT_WWAN | TRANSPORT_LAN))) {
-        QCC_DbgPrintf(("TCPTransport::GetListenAddresses(): transport mismatch"));
+    if (SupportsOptions(opts) == false) {
+        QCC_DbgPrintf(("TCPTransport::GetListenAddresses(): Supported options mismatch"));
         return ER_OK;
     }
 
@@ -2735,6 +2759,17 @@ QStatus TCPTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& ou
 QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newEp)
 {
     QCC_DbgHLPrintf(("TCPTransport::Connect(): %s", connectSpec));
+
+    /*
+     * We are given a session options structure that defines the kind of
+     * connection that is being sought.  Can we support the connection being
+     * requested?  If not, don't even try.
+     */
+    if (SupportsOptions(opts) == false) {
+        QStatus status = ER_BUS_BAD_SESSION_OPTS;
+        QCC_LogError(status, ("TCPTransport::Connect(): Supported options mismatch"));
+        return status;
+    }
 
     /*
      * We need to find the defaults for our connection limits.  These limits

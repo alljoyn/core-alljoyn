@@ -4445,6 +4445,45 @@ QStatus UDPTransport::Join(void)
     return ER_OK;
 }
 
+/**
+ * This is a convenience function that tells a caller whether or not this
+ * transport will support a set of options for a connection.  Lets the caller
+ * decide up front whether or not a connection will succeed due to options
+ * conflicts.
+ */
+bool UDPTransport::SupportsOptions(const SessionOpts& opts) const
+{
+    IncrementAndFetch(&m_refCount);
+    QCC_DbgTrace(("UDPTransport::SupportsOptions()"));
+
+    bool rc = true;
+
+    /*
+     * UDP does not support raw sockets, since there is only one socket that
+     * must be shared among all users; so we only return true if the traffic
+     * type is TRAFFIC_MESSAGES.  It's not an error if we don't match, we just
+     * don't have anything to offer.
+     */
+    if (opts.traffic != SessionOpts::TRAFFIC_MESSAGES) {
+        QCC_DbgPrintf(("UDPTransport::SupportsOptions(): traffic type mismatch"));
+        rc = false;
+    }
+
+    /*
+     * The other session option that we need to filter on is the transport
+     * bitfield.  If you are explicitly looking for something other than UDP we
+     * can't help you.
+     */
+    if ((opts.transports & TRANSPORT_UDP) == false) {
+        QCC_DbgPrintf(("UDPTransport::SupportsOptions(): transport mismatch"));
+        rc = false;
+    }
+
+    QCC_DbgPrintf(("UDPTransport::SupportsOptions(): returns \"%s\"", rc == true ? "true" : "false"));
+    DecrementAndFetch(&m_refCount);
+    return rc;
+}
+
 /*
  * The default interface for the name service to use.  The wildcard character
  * means to listen and transmit over all interfaces that are up and multicast
@@ -4467,24 +4506,11 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
 
     /*
      * We are given a session options structure that defines the kind of
-     * transports that are being sought.  The UDP transport provides reliable
-     * traffic as understood by the session options.  UDP does not support raw
-     * sockets, so we only return someting if the traffic type is
-     * TRAFFIC_MESSAGES.  It's not an error if we don't match, we just don't
-     * have anything to offer.
+     * transports that are being sought.  It's not an error if we don't match
+     * requested options, we just don't have anything to offer.
      */
-    if (opts.traffic != SessionOpts::TRAFFIC_MESSAGES) {
-        QCC_DbgPrintf(("UDPTransport::GetListenAddresses(): opts.traffic mismatch"));
-        DecrementAndFetch(&m_refCount);
-        return ER_OK;
-    }
-
-    /*
-     * The other session option that we need to filter on is the transport
-     * bitfield.
-     */
-    if (!(opts.transports & (TRANSPORT_UDP))) {
-        QCC_DbgPrintf(("UDPTransport::GetListenAddresses(): transport mismatch"));
+    if (SupportsOptions(opts) == false) {
+        QCC_DbgPrintf(("UDPTransport::GetListenAddresses(): Supported options mismatch"));
         DecrementAndFetch(&m_refCount);
         return ER_OK;
     }
@@ -7898,6 +7924,18 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
 {
     IncrementAndFetch(&m_refCount);
     QCC_DbgTrace(("UDPTransport::Connect(connectSpec=%s, opts=%p, newEp-%p)", connectSpec, &opts, &newEp));
+
+    /*
+     * We are given a session options structure that defines the kind of
+     * connection that is being sought.  Can we support the connection being
+     * requested?  If not, don't even try.
+     */
+    if (SupportsOptions(opts) == false) {
+        QStatus status = ER_BUS_BAD_SESSION_OPTS;
+        QCC_LogError(status, ("UDPTransport::Connect(): Supported options mismatch"));
+        DecrementAndFetch(&m_refCount);
+        return status;
+    }
 
     /*
      * We only want to allow this call to proceed if we have a running server

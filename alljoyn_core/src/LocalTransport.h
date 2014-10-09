@@ -696,6 +696,25 @@ class LocalTransport : public Transport {
     QStatus GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs) const { return ER_OK; }
 
     /**
+     * Does this transport support connections as described by the provided
+     * session options.
+     *
+     * @param opts  Proposed session options.
+     * @return
+     *      - true if the SessionOpts specifies a supported option set.
+     *      - false otherwise.
+     */
+    bool SupportsOptions(const SessionOpts& opts) const
+    {
+        bool rc = true;
+        /* Supports any traffic so long as it is reliable */
+        if (opts.traffic != SessionOpts::TRAFFIC_MESSAGES && opts.traffic != SessionOpts::TRAFFIC_RAW_RELIABLE) {
+            rc = false;
+        }
+        return rc;
+    }
+
+    /**
      * Indicates whether this transport is used for client-to-bus or bus-to-bus connections.
      *
      * @return  Always returns false, the LocalTransport belongs to the local application.
