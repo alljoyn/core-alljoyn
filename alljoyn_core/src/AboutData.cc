@@ -341,7 +341,7 @@ QStatus AboutData::GetAppId(uint8_t** appId, size_t* num)
     return status;
 }
 
-QStatus AboutData::SetDefaultLanguage(char* defaultLanguage)
+QStatus AboutData::SetDefaultLanguage(const char* defaultLanguage)
 {
     QStatus status = ER_OK;
     MsgArg arg;
