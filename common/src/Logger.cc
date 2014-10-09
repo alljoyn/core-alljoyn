@@ -165,7 +165,6 @@ LoggerSetting::LoggerSetting(const char* name, int level, bool useSyslog, FILE* 
         openlog(name, 0, LOG_DAEMON);
     }
 #endif
-    singleton = this;
 }
 
 
@@ -180,7 +179,8 @@ LoggerSetting::~LoggerSetting()
 
 
 LoggerSetting* LoggerSetting::GetLoggerSetting(const char* name, int level,
-                                               bool useSyslog, FILE* file) {
+                                               bool useSyslog, FILE* file)
+{
     if (!singleton) {
         singleton = new LoggerSetting(name, level, useSyslog, file);
     } else {
@@ -192,4 +192,13 @@ LoggerSetting* LoggerSetting::GetLoggerSetting(const char* name, int level,
         singleton->lock.Unlock();
     }
     return singleton;
+}
+
+
+void LoggerSetting::Cleanup(void)
+{
+    if (singleton) {
+        delete singleton;
+        singleton = NULL;
+    }
 }
