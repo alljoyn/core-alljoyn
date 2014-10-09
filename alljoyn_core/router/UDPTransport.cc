@@ -1634,6 +1634,7 @@ class MessagePump {
                  * calls DoJoin(both=true).
                  */
                 if (both) {
+
                     /*
                      * We need to wait for the active thread to put itself on
                      * the past threads queue.
@@ -1641,9 +1642,27 @@ class MessagePump {
                      * TODO: use condition variable and thread exit routine
                      * instead of sleeping/polling.
                      */
+                    assert(m_stopping == true && "MessagePump::DoJoin(): m_stopping must be true if both=true)");
+
                     m_lock.Unlock();
                     qcc::Sleep(10);
                     m_lock.Lock();
+
+                    /*
+                     * We are taking and giving the mutex lock constantly in
+                     * order to call out to Join() in particular which might
+                     * block.  Since we are turning loose of the lock, it could
+                     * be the case that there are race conditions between the
+                     * Stop() and condition Signal that is going to drive the
+                     * active thread to exit, and the spinning up of new active
+                     * threads.  In order to prevent waiting around forever, we
+                     * keep poking the active thread as we wait for it to go
+                     * away.
+                     */
+                    if (m_activeThread) {
+                        m_activeThread->Stop();
+                        m_condition.Signal();
+                    }
                 } else {
                     /*
                      * Okay to leave the m_activeThread unJoin()ed.
@@ -1654,9 +1673,9 @@ class MessagePump {
         }
 #ifndef NDEBUG
         if (both) {
-            assert(m_spawnedThreads == 0 && "MessagePump::Join(): m_spawnedThreads must be 0 after DoJoin(true)");
+            assert(m_spawnedThreads == 0 && "MessagePump::DoJoin(): m_spawnedThreads must be 0 after DoJoin(true)");
         } else {
-            assert(m_spawnedThreads <= 1 && "MessagePump::Join(): m_spawnedThreads must be 0 or 1 after DoJoin(false)");
+            assert(m_spawnedThreads <= 1 && "MessagePump::DoJoin(): m_spawnedThreads must be 0 or 1 after DoJoin(false)");
         }
 #endif
         m_lock.Unlock();
@@ -3456,7 +3475,7 @@ ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
          * Note that if the condition returns an unexpected status we loop in
          * the hope that it is recoverable.
          */
-        while (m_pump->m_queue.empty() && !IsStopping() && status != ER_TIMEOUT) {
+        while (m_pump->m_queue.empty() && !m_pump->m_stopping && !IsStopping() && status != ER_TIMEOUT) {
             QCC_DbgPrintf(("MessagePump::PumpThread::Run(): TimedWait for condition"));
             status = m_pump->m_condition.TimedWait(m_pump->m_lock, UDP_MESSAGE_PUMP_TIMEOUT);
             QCC_DbgPrintf(("MessagePump::PumpThread::Run(): TimedWait returns \"%s\"", QCC_StatusText(status)));
