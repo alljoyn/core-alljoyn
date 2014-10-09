@@ -920,8 +920,8 @@ class ArdpStream : public qcc::Stream {
         m_transport->m_cbLock.Lock();
         while (done != true) {
             if (m_transport->IsRunning() == false || m_transport->m_stopping == true) {
-                QCC_LogError(status, ("ArdpStream::PushBytes(): UDP transport is stopping"));
                 status = ER_UDP_STOPPING;
+                QCC_LogError(status, ("ArdpStream::PushBytes(): UDP transport is stopping"));
                 done = true;
                 continue;
             }
@@ -932,8 +932,8 @@ class ArdpStream : public qcc::Stream {
             int32_t tRemaining = tStart + timeout - tNow;
             QCC_DbgPrintf(("ArdpStream::PushBytes(): tRemaining is %d.", tRemaining));
             if (tRemaining <= 0) {
-                QCC_LogError(status, ("ArdpStream::PushBytes(): Timed out"));
                 status = ER_TIMEOUT;
+                QCC_LogError(status, ("ArdpStream::PushBytes(): Timed out"));
                 done = true;
                 continue;
             }
