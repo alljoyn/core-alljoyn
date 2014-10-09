@@ -70,7 +70,6 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_BUS_REPLY_IS_ERROR_MESSAGE" value="0x9032" comment="Response from a method call was an ERROR message"/>
   <status name="ER_BUS_NOT_AUTHENTICATING" value="0x9033" comment="Not in an authentication conversation"/>
   <status name="ER_BUS_NO_LISTENER" value="0x9034" comment="A listener is required to implement the requested function"/>
-  <status name="ER_BUS_BT_TRANSPORT_ERROR" value="0x9035" comment="The Bluetooth transport reported an error"/>
   <status name="ER_BUS_NOT_ALLOWED" value="0x9036" comment="The operation attempted is not allowed"/>
   <status name="ER_BUS_WRITE_QUEUE_FULL" value="0x9037" comment="Write failed because write queue is full"/>
   <status name="ER_BUS_ENDPOINT_CLOSING" value="0x9038" comment="Operation not permitted on endpoint in process of closing"/>
@@ -123,7 +122,6 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_BUS_NO_SUCH_HANDLE" value="0x906b" comment="Handle is not in the handle table"/>
   <status name="ER_BUS_HANDLES_NOT_ENABLED" value="0x906c" comment="Passing of handles is not enabled for this connection"/>
   <status name="ER_BUS_HANDLES_MISMATCH" value="0x906d" comment="Message had more handles than expected"/>
-  <status name="ER_BT_MAX_CONNECTIONS_USED" value="0x906e" comment="Maximum Bluetooth connections already in use"/>
   <status name="ER_BUS_NO_SESSION" value="0x906f" comment="Session id is not valid"/>
   <status name="ER_BUS_ELEMENT_NOT_FOUND" value="0x9070" comment="Dictionary element was not found"/>
   <status name="ER_BUS_NOT_A_DICTIONARY" value="0x9071" comment="MsgArg was not an array of dictionary elements"/>
@@ -169,7 +167,7 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NOT_SUPPORTED" value="0x90a0" comment="Local router does not support SetLinkTimeout"/>
   <status name="ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NO_DEST_SUPPORT" value="0x90a1" comment="SetLinkTimeout not supported by destination"/>
   <status name="ER_ALLJOYN_SETLINKTIMEOUT_REPLY_FAILED" value="0x90a2" comment="SetLinkTimeout failed"/>
-  <status name="ER_ALLJOYN_ACCESS_PERMISSION_WARNING" value="0x90a3" comment="No permission to use Wifi/Bluetooth"/>
+  <status name="ER_ALLJOYN_ACCESS_PERMISSION_WARNING" value="0x90a3" comment="No permission to use Wifi"/>
   <status name="ER_ALLJOYN_ACCESS_PERMISSION_ERROR" value="0x90a4" comment="No permission to access peer service"/>
   <status name="ER_BUS_DESTINATION_NOT_AUTHENTICATED" value="0x90a5" comment="Cannot send a signal to a destination that is not authenticated"/>
   <status name="ER_BUS_ENDPOINT_REDIRECTED" value="0x90a6" comment="Endpoint was redirected to another address"/>

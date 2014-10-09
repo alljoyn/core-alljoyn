@@ -22,7 +22,6 @@ General Prerequisites
 Linux Prerequites
 -----------------
 * `apt-get install libssl-dev`
-* `apt-get install libbluetooth-dev`
 
 Android Prerequisites for Google baseline phones (G1, Nexus One, etc)
 ---------------------------------------------------------------------

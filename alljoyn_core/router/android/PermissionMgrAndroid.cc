@@ -38,13 +38,6 @@ QStatus TransportPermission::FilterTransports(BusEndpoint& srcEp, const qcc::Str
     QCC_DbgPrintf(("TransportPermission::FilterTransports() callerName(%s)", callerName));
     QStatus status = ER_OK;
     if (srcEp->IsValid()) {
-        if (transports & TRANSPORT_BLUETOOTH) {
-            bool allowed = PermissionDB::GetDB().IsBluetoothAllowed(srcEp->GetUserId());
-            if (!allowed) {
-                transports ^= TRANSPORT_BLUETOOTH;
-                QCC_LogError(ER_ALLJOYN_ACCESS_PERMISSION_WARNING, ("AllJoynObj::%s() WARNING: No permission to use Bluetooth", (callerName == NULL) ? "" : callerName));
-            }
-        }
         if (transports & TRANSPORT_WLAN) {
             bool allowed = PermissionDB::GetDB().IsWifiAllowed(srcEp->GetUserId());
             if (!allowed) {

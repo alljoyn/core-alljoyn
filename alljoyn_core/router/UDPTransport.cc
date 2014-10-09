@@ -50,10 +50,9 @@
  * AllJoyn provides the concept of a Transport which provides a relatively
  * abstract way for the daemon to use different network mechanisms for getting
  * Messages from place to another.  Conceptually, think of, for example, a Unix
- * transport that moves bits using unix domain sockets, a Bluetooth transport
- * that moves bits over a Bluetooth link, or a TCP transport that moves Messages
- * over a TCP connection.  A UDP transport moves Messages over UDP datagrams
- * using a reliability layer.
+ * transport that moves bits using unix domain sockets or a TCP transport that
+ * moves Messages over a TCP connection.  A UDP transport moves Messages over
+ * UDP datagrams using a reliability layer.
  *
  * BSD sockets is oriented toward clients and servers.  There are different
  * sockets calls required for a program implementing a server-side part and a
@@ -259,14 +258,14 @@
  * recover gracefully.
  *
  * When the daemon is brought up, its TransportList is Start()ed.  The transport
- * specs string (e.g., "unix:abstract=alljoyn;udp:;tcp:;bluetooth:") is provided
- * to TransportList::Start() as a parameter.  The transport specs string is
- * parsed and in the example above, results in "unix" transports, "tcp"
- * transports, "udp" transports and "bluetooth" transports being instantiated
- * and started.  As mentioned previously "udp:" in the daemon translates into
- * UDPTransport.  Once the desired transports are instantiated, each is
- * Start()ed in turn.  In the case of the UDPTransport, this will start the
- * maintenance loop.  Initially there are no sockets to listen on.
+ * specs string (e.g., "unix:abstract=alljoyn;udp:;tcp:") is provided to
+ * TransportList::Start() as a parameter.  The transport specs string is parsed
+ * and in the example above, results in "unix" transports, "tcp" transports and
+ * "udp" transports being instantiated and started.  As mentioned previously
+ * "udp:" in the daemon translates into UDPTransport.  Once the desired
+ * transports are instantiated, each is Start()ed in turn.  In the case of the
+ * UDPTransport, this will start the maintenance loop.  Initially there are no
+ * sockets to listen on.
  *
  * The daemon then needs to start listening on inbound addresses and ports.
  * This is done by the StartListen() command.  This also takes the same kind of

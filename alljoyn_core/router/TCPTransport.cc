@@ -47,9 +47,8 @@
  * AllJoyn provides the concept of a Transport which provides a relatively
  * abstract way for the daemon to use different network mechanisms for getting
  * Messages from place to another.  Conceptually, think of, for example, a Unix
- * transport that moves bits using unix domain sockets, a Bluetooth transport
- * that moves bits over a Bluetooth link and a TCP transport that moves Messages
- * over a TCP connection.
+ * transport that moves bits using unix domain sockets and a TCP transport that
+ * moves Messages over a TCP connection.
  *
  * In networking 101, one discovers that BSD sockets is oriented toward clients
  * and servers.  There are different sockets calls required for a program
@@ -238,27 +237,26 @@
  * another out from under an Event without its knowledge.
  *
  * To summarize, consider the following "big picture' view of the transport.  A
- * single TCPTransport is constructed if the daemon TransportList
- * indicates that TCP support is required.  The high-level daemon code (see
- * bbdaemon.cc for example) builds a TransportFactoryContainer that is
- * initialized with a factory that knows how to make TCPTransport objects
- * if they are needed, and associates the factory with the string "tcp".  The
- * daemon also constructs "server args" which may contain the string "tcp" or
- * "bluetooth" or "unix".  If the factory container provides a "tcp" factory and
- * the server args specify a "tcp" transport is needed then a TCPTransport
- * object is instantiated and entered into the daemon's internal transport list
- * (list of available transports).  Also provided for each transport is an abstract
- * address to listen for incoming connection requests on.
+ * single TCPTransport is constructed if the daemon TransportList indicates that
+ * TCP support is required.  The high-level daemon code (see bbdaemon.cc for
+ * example) builds a TransportFactoryContainer that is initialized with a
+ * factory that knows how to make TCPTransport objects if they are needed, and
+ * associates the factory with the string "tcp".  The daemon also constructs
+ * "server args" which may contain the string "tcp" or "unix".  If the factory
+ * container provides a "tcp" factory and the server args specify a "tcp"
+ * transport is needed then a TCPTransport object is instantiated and entered
+ * into the daemon's internal transport list (list of available transports).
+ * Also provided for each transport is an abstract address to listen for
+ * incoming connection requests on.
  *
  * When the daemon is brought up, its TransportList is Start()ed.  The transport
- * specs string (e.g., "unix:abstract=alljoyn;tcp:;bluetooth:") is provided to
+ * specs string (e.g., "unix:abstract=alljoyn;tcp:") is provided to
  * TransportList::Start() as a parameter.  The transport specs string is parsed
- * and in the example above, results in "unix" transports, "tcp" transports and
- * "bluetooth" transports being instantiated and started.  As mentioned
- * previously "tcp" in the daemon translates into TCPTransport.  Once the
- * desired transports are instantiated, each is Start()ed in turn.  In the case
- * of the TCPTransport, this will start the server accept loop.  Initially
- * there are no sockets to listen on.
+ * and in the example above, results in "unix" transports and "tcp" transports
+ * being instantiated and started.  As mentioned previously "tcp" in the daemon
+ * translates into TCPTransport.  Once the desired transports are instantiated,
+ * each is Start()ed in turn.  In the case of the TCPTransport, this will start
+ * the server accept loop.  Initially there are no sockets to listen on.
  *
  * The daemon then needs to start listening on some inbound addresses and ports.
  * This is done by the StartListen() command which you can find in bbdaemon, for
