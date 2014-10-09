@@ -348,8 +348,12 @@ class AboutData : public AboutDataListener {
 
     /**
      * Set a supported language.
+     *
      * This is a string representing the a single language. The language is
      * specified using IETF language tags specified by the RFC 5646.
+     *
+     * If the language tag has already been added ER_OK will be returned with no
+     * additional changes being made.
      *
      * @param[in] language the IETF language tag
      *
