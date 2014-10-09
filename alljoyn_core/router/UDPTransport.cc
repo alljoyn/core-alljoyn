@@ -50,12 +50,6 @@
 #endif
 
 /*
- * BUGBUG FIXME Until we can coordinate getting this into master and
- * feature/udp_transport
- */
-#define ER_ARDP_WRITE_BLOCKED_temp (-12345678)
-
-/*
  * How the transport fits into the system
  * ======================================
  *
@@ -6939,7 +6933,7 @@ void* UDPTransport::Run(void* arg)
             if (socketReady) {
                 for (vector<WriteEntry>::iterator j = writeEvents.begin(); j != writeEvents.end(); ++j) {
                     if ((*i)->GetFD() == (*j).m_socket) {
-                        if (ardpStatus == ER_ARDP_WRITE_BLOCKED_temp) {
+                        if (ardpStatus == ER_ARDP_WRITE_BLOCKED) {
                             QCC_DbgPrintf(("UDPTransport::Run(): ARDP_Run(): ER_ARDP_WRITE_BLOCKED for SocketFd=%d.",
                                            (*i)->GetFD()));
                             (*j).m_active = true;
