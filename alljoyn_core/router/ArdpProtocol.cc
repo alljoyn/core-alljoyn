@@ -1443,8 +1443,8 @@ static ArdpConnRecord* FindConn(ArdpHandle* handle, uint16_t local, uint16_t for
 
 static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, uint32_t ttl)
 {
-    QStatus status;
-    uint32_t timeout;
+    QStatus status = ER_OK;
+    uint32_t timeout = handle->config.initialDataTimeout;
     uint16_t fcnt;
     uint32_t lastLen;
     uint8_t* segData = buf;
@@ -1468,6 +1468,8 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
         lastLen = len - conn->snd.maxDlen * (fcnt - 1);
         QCC_DbgPrintf(("SendData(): Large buffer %d, partitioning into %d segments", len, fcnt));
     }
+
+    assert(fcnt != 0);
 
     /* Check if receiver's window is wide enough to accept FCNT number of segments */
     if (fcnt > conn->window) {
