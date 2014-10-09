@@ -31,7 +31,7 @@ static QCC_BOOL chirp_method_flag = QCC_FALSE;
 static QCC_BOOL name_owner_changed_flag = QCC_FALSE;
 
 /* Exposed methods */
-static void ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
+static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
     alljoyn_msgarg inArg = alljoyn_message_getarg(msg, 0);
@@ -43,7 +43,7 @@ static void ping_method(alljoyn_busobject bus, const alljoyn_interfacedescriptio
     alljoyn_msgarg_destroy(outArg);
 }
 
-static void chirp_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
+static void AJ_CALL chirp_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
     chirp_method_flag = QCC_TRUE;
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
@@ -57,7 +57,7 @@ static void chirp_method(alljoyn_busobject bus, const alljoyn_interfacedescripti
 }
 
 /* NameOwnerChanged callback */
-static void name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
+static void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
     if (strcmp(busName, OBJECT_NAME) == 0) {
         name_owner_changed_flag = QCC_TRUE;
@@ -215,7 +215,7 @@ TEST_F(ProxyBusObjectTest, introspectremoteobject) {
 
 QCC_BOOL introspect_callback_flag = QCC_FALSE;
 
-void introspect_callback(QStatus status, alljoyn_proxybusobject obj, void* context)
+void AJ_CALL introspect_callback(QStatus status, alljoyn_proxybusobject obj, void* context)
 {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     alljoyn_interfacedescription intf = alljoyn_proxybusobject_getinterface(obj, "org.freedesktop.DBus.Introspectable");
@@ -532,7 +532,7 @@ TEST_F(ProxyBusObjectTest, methodcall_member_noreply) {
 }
 QCC_BOOL ping_methodcall_reply_handler_flag = QCC_FALSE;
 QCC_BOOL chirp_methodcall_reply_handler_flag = QCC_FALSE;
-void ping_methodcall_reply_handler(alljoyn_message message, void* context)
+void AJ_CALL ping_methodcall_reply_handler(alljoyn_message message, void* context)
 {
     // TODO add alljoyn_message_gettype()
     EXPECT_EQ(ALLJOYN_MESSAGE_METHOD_RET, alljoyn_message_gettype(message));
