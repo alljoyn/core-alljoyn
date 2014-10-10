@@ -1473,6 +1473,16 @@ QStatus BusAttachment::UnbindSessionPort(SessionPort sessionPort)
     return status;
 }
 
+
+bool BusAttachment::Internal::IsSessionPortBound(SessionPort sessionPort) {
+    sessionListenersLock.Lock(MUTEX_CONTEXT);
+    if (sessionPortListeners.find(sessionPort) != sessionPortListeners.end()) {
+        sessionListenersLock.Unlock(MUTEX_CONTEXT);
+        return true;
+    }
+    sessionListenersLock.Unlock(MUTEX_CONTEXT);
+    return false;
+}
 QStatus BusAttachment::JoinSessionAsync(const char* sessionHost, SessionPort sessionPort, SessionListener* sessionListener,
                                         const SessionOpts& opts, BusAttachment::JoinSessionAsyncCB* callback, void* context)
 {
