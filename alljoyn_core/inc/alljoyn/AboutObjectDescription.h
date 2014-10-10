@@ -24,10 +24,6 @@
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/Status.h>
 #include <qcc/String.h>
-#include <qcc/Mutex.h>
-
-#include <set>
-#include <map>
 
 namespace ajn {
 /**
@@ -44,13 +40,13 @@ class AboutObjectDescription {
      * class.
      */
     AboutObjectDescription();
-
     /**
      * Fill in the ObjectDescription fields using a MsgArg
      *
      * The MsgArg must contain an array of type a(oas) The expected use of this
-     * class is to fill in the ObjectDescription using a MsgArg obtain from the Announce
-     * signal or the GetObjectDescription method from org.alljoyn.About interface.
+     * class is to fill in the ObjectDescription using a MsgArg obtain from the
+     * Announce signal or the GetObjectDescription method from org.alljoyn.About
+     * interface.
      *
      * If the arg came from the org.alljoyn.About.Announce signal or the
      * org.alljoyn.AboutGetObjectDescrption method then it can be used to create
@@ -64,11 +60,17 @@ class AboutObjectDescription {
     AboutObjectDescription(const MsgArg& arg);
 
     /**
+     * Destructor
+     */
+    ~AboutObjectDescription();
+
+    /**
      * Fill in the ObjectDescription fields using a MsgArg
      *
      * The MsgArg must contain an array of type a(oas) The expected use of this
-     * class is to fill in the ObjectDescription using a MsgArg obtain from the Announce
-     * signal or the GetObjectDescription method from org.alljoyn.about interface.
+     * class is to fill in the ObjectDescription using a MsgArg obtain from the
+     * Announce signal or the GetObjectDescription method from org.alljoyn.about
+     * interface.
      *
      * @param arg MsgArg contain AboutData dictionary
      *
@@ -198,18 +200,15 @@ class AboutObjectDescription {
      */
     QStatus Add(const char* path, const char* interfaceName);
 
+    /// @cond ALLJOYN_DEV
     /**
-     * Mutex that protects the m_AnnounceObjectsMap
-     *
-     * this is marked as mutable so we can grab the lock to prevent the Objects
-     * map being modified while its being read.
+     * @internal
+     * Class for internal state for AboutObjectDescription.
      */
-    mutable qcc::Mutex m_AnnounceObjectsMapLock;
+    class Internal;
 
-    /**
-     *  map that holds interfaces that will be announced
-     */
-    std::map<qcc::String, std::set<qcc::String> > m_AnnounceObjectsMap;
+    Internal* aodInternal;    /**< Internal state information */
+    /// @endcond ALLJOYN_DEV
 };
 }
 

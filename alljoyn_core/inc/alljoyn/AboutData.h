@@ -25,12 +25,7 @@
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/Status.h>
 
-#include <map>
-#include <set>
-
 #include <qcc/String.h>
-#include <qcc/Mutex.h>
-
 
 namespace ajn {
 
@@ -751,32 +746,15 @@ class AboutData : public AboutDataListener {
      */
     void InitializeFieldDetails();
 
+    /// @cond ALLJOYN_DEV
     /**
-     * A std::map that maps the field name to its FieldDetails.
+     * @internal
+     * Class for internal state for AboutData.
      */
-    std::map<qcc::String, FieldDetails> m_aboutFields;
+    class Internal;
 
-    /**
-     * property store used to hold property store values that are not localized
-     * key: Field Name
-     * value: Data
-     */
-    std::map<qcc::String, MsgArg> m_propertyStore;
-    /**
-     * key: Field Name
-     * value: map of language / Data
-     */
-    std::map<qcc::String, std::map<qcc::String, MsgArg> > m_localizedPropertyStore;
-
-    /**
-     * local member variable for supported languages
-     */
-    std::set<qcc::String> m_supportedLanguages;
-
-    /**
-     * mutex lock to protect the property store.
-     */
-    qcc::Mutex m_propertyStoreLock;
+    Internal* aboutDataInternal;     /**< Internal state information */
+    /// @endcond ALLJOYN_DEV
 };
 }
 

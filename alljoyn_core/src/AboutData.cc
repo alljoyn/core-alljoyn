@@ -24,6 +24,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include "AboutDataInternal.h"
+
 #define QCC_MODULE "ALLJOYN_ABOUT"
 
 namespace ajn {
@@ -48,7 +50,7 @@ AboutData::AboutData() {
 
     MsgArg arg;
     // The AllJoyn software version should always be set by default.
-    arg.Set(m_aboutFields[AJ_SOFTWARE_VERSION].signature.c_str(), GetVersion());
+    arg.Set(aboutDataInternal->aboutFields[AJ_SOFTWARE_VERSION].signature.c_str(), GetVersion());
     SetField(AJ_SOFTWARE_VERSION, arg);
 
     //TODO should the constructor also set the DeviceID as well?
@@ -59,12 +61,12 @@ AboutData::AboutData(const char* defaultLanguage) {
 
     // The user must specify a default language when creating the AboutData class
     MsgArg arg;
-    arg.Set(m_aboutFields[DEFAULT_LANGUAGE].signature.c_str(), defaultLanguage);
+    arg.Set(aboutDataInternal->aboutFields[DEFAULT_LANGUAGE].signature.c_str(), defaultLanguage);
     SetField(DEFAULT_LANGUAGE, arg);
     // The default language should automatically be added to the list of supported languages
     SetSupportedLanguage(defaultLanguage);
     // The AllJoyn software version should always be set by default.
-    arg.Set(m_aboutFields[AJ_SOFTWARE_VERSION].signature.c_str(), GetVersion());
+    arg.Set(aboutDataInternal->aboutFields[AJ_SOFTWARE_VERSION].signature.c_str(), GetVersion());
     SetField(AJ_SOFTWARE_VERSION, arg);
 
     //TODO should the constructor also set the DeviceID as well?
@@ -80,26 +82,27 @@ AboutData::AboutData(const MsgArg arg) {
 }
 
 void AboutData::InitializeFieldDetails() {
+    aboutDataInternal = new AboutData::Internal();
     // FieldDetails: Required, Announced, Localized, signature
-    m_aboutFields[APP_ID] = FieldDetails(REQUIRED | ANNOUNCED, "ay");
-    m_aboutFields[DEFAULT_LANGUAGE] = FieldDetails(REQUIRED | ANNOUNCED, "s");
-    m_aboutFields[DEVICE_NAME] = FieldDetails(ANNOUNCED | LOCALIZED, "s");
-    m_aboutFields[DEVICE_ID] = FieldDetails(REQUIRED | ANNOUNCED, "s");
-    m_aboutFields[APP_NAME] = FieldDetails(REQUIRED | ANNOUNCED | LOCALIZED, "s");
-    m_aboutFields[MANUFACTURER] = FieldDetails(REQUIRED | ANNOUNCED | LOCALIZED, "s");
-    m_aboutFields[MODEL_NUMBER] = FieldDetails(REQUIRED | ANNOUNCED, "s");
-    m_aboutFields[SUPPORTED_LANGUAGES] = FieldDetails(REQUIRED, "as");
-    m_aboutFields[DESCRIPTION] = FieldDetails(REQUIRED | LOCALIZED, "s");
-    m_aboutFields[DATE_OF_MANUFACTURE] = FieldDetails(EMPTY_MASK, "s");
-    m_aboutFields[SOFTWARE_VERSION] = FieldDetails(REQUIRED, "s");
-    m_aboutFields[AJ_SOFTWARE_VERSION] = FieldDetails(REQUIRED, "s");
-    m_aboutFields[HARDWARE_VERSION] = FieldDetails(EMPTY_MASK, "s");
-    m_aboutFields[SUPPORT_URL] = FieldDetails(EMPTY_MASK, "s");
+    aboutDataInternal->aboutFields[APP_ID] = FieldDetails(REQUIRED | ANNOUNCED, "ay");
+    aboutDataInternal->aboutFields[DEFAULT_LANGUAGE] = FieldDetails(REQUIRED | ANNOUNCED, "s");
+    aboutDataInternal->aboutFields[DEVICE_NAME] = FieldDetails(ANNOUNCED | LOCALIZED, "s");
+    aboutDataInternal->aboutFields[DEVICE_ID] = FieldDetails(REQUIRED | ANNOUNCED, "s");
+    aboutDataInternal->aboutFields[APP_NAME] = FieldDetails(REQUIRED | ANNOUNCED | LOCALIZED, "s");
+    aboutDataInternal->aboutFields[MANUFACTURER] = FieldDetails(REQUIRED | ANNOUNCED | LOCALIZED, "s");
+    aboutDataInternal->aboutFields[MODEL_NUMBER] = FieldDetails(REQUIRED | ANNOUNCED, "s");
+    aboutDataInternal->aboutFields[SUPPORTED_LANGUAGES] = FieldDetails(REQUIRED, "as");
+    aboutDataInternal->aboutFields[DESCRIPTION] = FieldDetails(REQUIRED | LOCALIZED, "s");
+    aboutDataInternal->aboutFields[DATE_OF_MANUFACTURE] = FieldDetails(EMPTY_MASK, "s");
+    aboutDataInternal->aboutFields[SOFTWARE_VERSION] = FieldDetails(REQUIRED, "s");
+    aboutDataInternal->aboutFields[AJ_SOFTWARE_VERSION] = FieldDetails(REQUIRED, "s");
+    aboutDataInternal->aboutFields[HARDWARE_VERSION] = FieldDetails(EMPTY_MASK, "s");
+    aboutDataInternal->aboutFields[SUPPORT_URL] = FieldDetails(EMPTY_MASK, "s");
 }
 
 AboutData::~AboutData()
 {
-
+    delete aboutDataInternal;
 }
 
 uint8_t CharToNibble(char c) {
@@ -134,7 +137,7 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
      */
     typedef std::map<qcc::String, FieldDetails>::iterator it_aboutFields;
     MsgArg arg;
-    for (it_aboutFields it = m_aboutFields.begin(); it != m_aboutFields.end(); ++it) {
+    for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
         // Supported languages are implicitly added no need to look for a
         // SupportedLanguages languages tag.
         if (it->first == SUPPORTED_LANGUAGES) {
@@ -169,7 +172,7 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
                         return ER_FAIL;
                     }
                 } else {
-                    assert(m_aboutFields[it->first].signature == "s");
+                    assert(aboutDataInternal->aboutFields[it->first].signature == "s");
                     arg.Set("s", root->GetChild(it->first)->GetContent().c_str());
                     status = SetField(it->first.c_str(), arg);
                     if (status != ER_OK) {
@@ -197,9 +200,9 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
     std::vector<qcc::XmlElement*> elements = root->GetChildren();
     std::vector<qcc::XmlElement*>::iterator it;
     for (std::vector<qcc::XmlElement*>::iterator it = elements.begin(); it != elements.end(); ++it) {
-        if (IsFieldLocalized((*it)->GetName().c_str()) || (m_aboutFields.find((*it)->GetName()) == m_aboutFields.end())) {
+        if (IsFieldLocalized((*it)->GetName().c_str()) || (aboutDataInternal->aboutFields.find((*it)->GetName()) == aboutDataInternal->aboutFields.end())) {
             //printf("Setting field: name=%s, value=%s, lang=%s\n", (*it)->GetName().c_str(), (*it)->GetContent().c_str(), (*it)->GetAttribute("lang").c_str());
-            //assert(m_aboutFields[it->first].dataType == "s");
+            //assert(aboutDataInternal->m_aboutFields[it->first].dataType == "s");
             status = arg.Set("s", (*it)->GetContent().c_str());
             if (status != ER_OK) {
                 return status;
@@ -236,29 +239,29 @@ bool AboutData::IsValid(const char* language)
      * specified the default language is assumed.
      */
     typedef std::map<qcc::String, FieldDetails>::iterator it_aboutFields;
-    for (it_aboutFields it = m_aboutFields.begin(); it != m_aboutFields.end(); ++it) {
+    for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
         if (IsFieldRequired(it->first.c_str())) {
             if (IsFieldLocalized(it->first.c_str())) {
-                if (m_localizedPropertyStore.find(it->first) == m_localizedPropertyStore.end()) {
+                if (aboutDataInternal->localizedPropertyStore.find(it->first) == aboutDataInternal->localizedPropertyStore.end()) {
                     return false;
                 } else {
                     if (language == NULL) {
                         char* defaultLanguage;
-                        QStatus status = m_propertyStore[DEFAULT_LANGUAGE].Get(m_aboutFields[DEFAULT_LANGUAGE].signature.c_str(), &defaultLanguage);
+                        QStatus status = aboutDataInternal->propertyStore[DEFAULT_LANGUAGE].Get(aboutDataInternal->aboutFields[DEFAULT_LANGUAGE].signature.c_str(), &defaultLanguage);
                         if (status != ER_OK) {
                             return false;
                         }
-                        if (m_localizedPropertyStore[it->first].find(defaultLanguage) == m_localizedPropertyStore[it->first].end()) {
+                        if (aboutDataInternal->localizedPropertyStore[it->first].find(defaultLanguage) == aboutDataInternal->localizedPropertyStore[it->first].end()) {
                             return false;
                         }
                     } else {
-                        if (m_localizedPropertyStore[it->first].find(language) == m_localizedPropertyStore[it->first].end()) {
+                        if (aboutDataInternal->localizedPropertyStore[it->first].find(language) == aboutDataInternal->localizedPropertyStore[it->first].end()) {
                             return false;
                         }
                     }
                 }
             } else {
-                if (m_propertyStore.find(it->first) == m_propertyStore.end()) {
+                if (aboutDataInternal->propertyStore.find(it->first) == aboutDataInternal->propertyStore.end()) {
                     return false;
                 }
             }
@@ -297,22 +300,22 @@ QStatus AboutData::CreatefromMsgArg(const MsgArg& arg, const char* language)
         if (status != ER_OK) {
             return status;
         }
-        // OEM specific field found add that field to the m_aboutFields
-        if (m_aboutFields.find(fieldName) == m_aboutFields.end()) {
-            m_aboutFields[fieldName] = FieldDetails(LOCALIZED, fieldValue->Signature().c_str());
+        // OEM specific field found add that field to the aboutDataInternal->m_aboutFields
+        if (aboutDataInternal->aboutFields.find(fieldName) == aboutDataInternal->aboutFields.end()) {
+            aboutDataInternal->aboutFields[fieldName] = FieldDetails(LOCALIZED, fieldValue->Signature().c_str());
         }
-        if (fieldValue->Signature() != m_aboutFields[fieldName].signature) {
+        if (fieldValue->Signature() != aboutDataInternal->aboutFields[fieldName].signature) {
             return ER_BUS_SIGNATURE_MISMATCH;
         }
         if (IsFieldLocalized(fieldName)) {
             if (language != NULL) {
-                m_localizedPropertyStore[fieldName][language] = *fieldValue;
+                aboutDataInternal->localizedPropertyStore[fieldName][language] = *fieldValue;
             } else {
-                m_localizedPropertyStore[fieldName][defaultLanguage] = *fieldValue;
+                aboutDataInternal->localizedPropertyStore[fieldName][defaultLanguage] = *fieldValue;
             }
 
         } else {
-            m_propertyStore[fieldName] = *fieldValue;
+            aboutDataInternal->propertyStore[fieldName] = *fieldValue;
         }
     }
     return status;
@@ -322,7 +325,7 @@ QStatus AboutData::SetAppId(const uint8_t* appId, const size_t num)
 {
     QStatus status = ER_OK;
     MsgArg arg;
-    status = arg.Set(m_aboutFields[APP_ID].signature.c_str(), num, appId);
+    status = arg.Set(aboutDataInternal->aboutFields[APP_ID].signature.c_str(), num, appId);
     if (status != ER_OK) {
         return status;
     }
@@ -337,7 +340,7 @@ QStatus AboutData::GetAppId(uint8_t** appId, size_t* num)
     if (status != ER_OK) {
         return status;
     }
-    status = arg->Get(m_aboutFields[APP_ID].signature.c_str(), num, appId);
+    status = arg->Get(aboutDataInternal->aboutFields[APP_ID].signature.c_str(), num, appId);
     return status;
 }
 
@@ -345,7 +348,7 @@ QStatus AboutData::SetDefaultLanguage(const char* defaultLanguage)
 {
     QStatus status = ER_OK;
     MsgArg arg;
-    status = arg.Set(m_aboutFields[DEFAULT_LANGUAGE].signature.c_str(), defaultLanguage);
+    status = arg.Set(aboutDataInternal->aboutFields[DEFAULT_LANGUAGE].signature.c_str(), defaultLanguage);
     if (status != ER_OK) {
         return status;
     }
@@ -363,7 +366,7 @@ QStatus AboutData::GetDefaultLanguage(char** defaultLanguage)
     if (status != ER_OK) {
         return status;
     }
-    status = arg->Get(m_aboutFields[DEFAULT_LANGUAGE].signature.c_str(), defaultLanguage);
+    status = arg->Get(aboutDataInternal->aboutFields[DEFAULT_LANGUAGE].signature.c_str(), defaultLanguage);
     return status;
 }
 
@@ -371,7 +374,7 @@ QStatus AboutData::SetDeviceName(const char* deviceName, const char* language)
 {
     QStatus status = ER_OK;
     MsgArg arg;
-    status = arg.Set(m_aboutFields[DEVICE_NAME].signature.c_str(), deviceName);
+    status = arg.Set(aboutDataInternal->aboutFields[DEVICE_NAME].signature.c_str(), deviceName);
     if (status != ER_OK) {
         return status;
     }
@@ -387,7 +390,7 @@ QStatus AboutData::GetDeviceName(char** deviceName, const char* language)
     if (status != ER_OK) {
         return status;
     }
-    status = arg->Get(m_aboutFields[DEVICE_NAME].signature.c_str(), deviceName);
+    status = arg->Get(aboutDataInternal->aboutFields[DEVICE_NAME].signature.c_str(), deviceName);
     return status;
 }
 
@@ -395,7 +398,7 @@ QStatus AboutData::SetDeviceId(const char* deviceId)
 {
     QStatus status = ER_OK;
     MsgArg arg;
-    status = arg.Set(m_aboutFields[DEVICE_ID].signature.c_str(), deviceId);
+    status = arg.Set(aboutDataInternal->aboutFields[DEVICE_ID].signature.c_str(), deviceId);
     if (status != ER_OK) {
         return status;
     }
@@ -410,7 +413,7 @@ QStatus AboutData::GetDeviceId(char** deviceId)
     if (status != ER_OK) {
         return status;
     }
-    status = arg->Get(m_aboutFields[DEVICE_ID].signature.c_str(), deviceId);
+    status = arg->Get(aboutDataInternal->aboutFields[DEVICE_ID].signature.c_str(), deviceId);
     return status;
 }
 
@@ -418,7 +421,7 @@ QStatus AboutData::SetAppName(const char* appName, const char* language)
 {
     QStatus status = ER_OK;
     MsgArg arg;
-    status = arg.Set(m_aboutFields[APP_NAME].signature.c_str(), appName);
+    status = arg.Set(aboutDataInternal->aboutFields[APP_NAME].signature.c_str(), appName);
     if (status != ER_OK) {
         return status;
     }
@@ -434,7 +437,7 @@ QStatus AboutData::GetAppName(char** appName, const char* language)
     if (status != ER_OK) {
         return status;
     }
-    status = arg->Get(m_aboutFields[APP_NAME].signature.c_str(), appName);
+    status = arg->Get(aboutDataInternal->aboutFields[APP_NAME].signature.c_str(), appName);
     return status;
 }
 
@@ -442,7 +445,7 @@ QStatus AboutData::SetManufacturer(const char* manufacturer, const char* languag
 {
     QStatus status = ER_OK;
     MsgArg arg;
-    status = arg.Set(m_aboutFields[MANUFACTURER].signature.c_str(), manufacturer);
+    status = arg.Set(aboutDataInternal->aboutFields[MANUFACTURER].signature.c_str(), manufacturer);
     if (status != ER_OK) {
         return status;
     }
@@ -457,7 +460,7 @@ QStatus AboutData::GetManufacturer(char** manufacturer, const char* language)
     if (status != ER_OK) {
         return status;
     }
-    status = arg->Get(m_aboutFields[MANUFACTURER].signature.c_str(), manufacturer);
+    status = arg->Get(aboutDataInternal->aboutFields[MANUFACTURER].signature.c_str(), manufacturer);
     return status;
 }
 
@@ -465,7 +468,7 @@ QStatus AboutData::SetModelNumber(const char* modelNumber)
 {
     QStatus status = ER_OK;
     MsgArg arg;
-    status = arg.Set(m_aboutFields[MODEL_NUMBER].signature.c_str(), modelNumber);
+    status = arg.Set(aboutDataInternal->aboutFields[MODEL_NUMBER].signature.c_str(), modelNumber);
     if (status != ER_OK) {
         return status;
     }
@@ -480,7 +483,7 @@ QStatus AboutData::GetModelNumber(char** modelNumber)
     if (status != ER_OK) {
         return status;
     }
-    status = arg->Get(m_aboutFields[MODEL_NUMBER].signature.c_str(), modelNumber);
+    status = arg->Get(aboutDataInternal->aboutFields[MODEL_NUMBER].signature.c_str(), modelNumber);
     return status;
 }
 
@@ -491,19 +494,19 @@ QStatus AboutData::SetSupportedLanguage(const char* language)
     //     tags conform to this RFC
     QStatus status = ER_OK;
 
-    std::pair<std::set<qcc::String>::iterator, bool> ret =  m_supportedLanguages.insert(language);
+    std::pair<std::set<qcc::String>::iterator, bool> ret =  aboutDataInternal->supportedLanguages.insert(language);
     // A new language has been added rebuild the MsgArg and update the field.
     if (true == ret.second) {
-        size_t supportedLangsNum = m_supportedLanguages.size();
+        size_t supportedLangsNum = aboutDataInternal->supportedLanguages.size();
         //char* supportedLangs[supportedLangsNum];
         const char** supportedLangs = new const char*[supportedLangsNum];
         size_t count = 0;
-        for (std::set<qcc::String>::iterator it = m_supportedLanguages.begin(); it != m_supportedLanguages.end(); ++it) {
+        for (std::set<qcc::String>::iterator it = aboutDataInternal->supportedLanguages.begin(); it != aboutDataInternal->supportedLanguages.end(); ++it) {
             supportedLangs[count] = it->c_str();
             ++count;
         }
         MsgArg arg;
-        status = arg.Set(m_aboutFields[SUPPORTED_LANGUAGES].signature.c_str(), supportedLangsNum, supportedLangs);
+        status = arg.Set(aboutDataInternal->aboutFields[SUPPORTED_LANGUAGES].signature.c_str(), supportedLangsNum, supportedLangs);
         if (status != ER_OK) {
             return status;
         }
@@ -516,10 +519,10 @@ QStatus AboutData::SetSupportedLanguage(const char* language)
 size_t AboutData::GetSupportedLanguages(qcc::String* supportedLanguages, size_t num)
 {
     if (supportedLanguages == NULL) {
-        return m_supportedLanguages.size();
+        return aboutDataInternal->supportedLanguages.size();
     }
     size_t count = 0;
-    for (std::set<qcc::String>::iterator it = m_supportedLanguages.begin(); it != m_supportedLanguages.end() && count < num; ++it) {
+    for (std::set<qcc::String>::iterator it = aboutDataInternal->supportedLanguages.begin(); it != aboutDataInternal->supportedLanguages.end() && count < num; ++it) {
         supportedLanguages[count] = *it;
         ++count;
     }
@@ -530,7 +533,7 @@ QStatus AboutData::SetDescription(const char* descritption, const char* language
 {
     QStatus status = ER_OK;
     MsgArg arg;
-    status = arg.Set(m_aboutFields[DESCRIPTION].signature.c_str(), descritption);
+    status = arg.Set(aboutDataInternal->aboutFields[DESCRIPTION].signature.c_str(), descritption);
     if (status != ER_OK) {
         return status;
     }
@@ -545,7 +548,7 @@ QStatus AboutData::GetDescription(char** description, const char* language)
     if (status != ER_OK) {
         return status;
     }
-    status = arg->Get(m_aboutFields[DESCRIPTION].signature.c_str(), description);
+    status = arg->Get(aboutDataInternal->aboutFields[DESCRIPTION].signature.c_str(), description);
     return status;
 }
 
@@ -554,7 +557,7 @@ QStatus AboutData::SetDateOfManufacture(const char* dateOfManufacture)
     //TODO check that the dateOfManufacture string is of the correct format YYYY-MM-DD
     QStatus status = ER_OK;
     MsgArg arg;
-    status = arg.Set(m_aboutFields[DATE_OF_MANUFACTURE].signature.c_str(), dateOfManufacture);
+    status = arg.Set(aboutDataInternal->aboutFields[DATE_OF_MANUFACTURE].signature.c_str(), dateOfManufacture);
     if (status != ER_OK) {
         return status;
     }
@@ -569,7 +572,7 @@ QStatus AboutData::GetDateOfManufacture(char** dateOfManufacture)
     if (status != ER_OK) {
         return status;
     }
-    status = arg->Get(m_aboutFields[DATE_OF_MANUFACTURE].signature.c_str(), dateOfManufacture);
+    status = arg->Get(aboutDataInternal->aboutFields[DATE_OF_MANUFACTURE].signature.c_str(), dateOfManufacture);
     return status;
 }
 
@@ -577,7 +580,7 @@ QStatus AboutData::SetSoftwareVersion(const char* softwareVersion)
 {
     QStatus status = ER_OK;
     MsgArg arg;
-    status = arg.Set(m_aboutFields[SOFTWARE_VERSION].signature.c_str(), softwareVersion);
+    status = arg.Set(aboutDataInternal->aboutFields[SOFTWARE_VERSION].signature.c_str(), softwareVersion);
     if (status != ER_OK) {
         return status;
     }
@@ -592,7 +595,7 @@ QStatus AboutData::GetSoftwareVersion(char** softwareVersion)
     if (status != ER_OK) {
         return status;
     }
-    status = arg->Get(m_aboutFields[SOFTWARE_VERSION].signature.c_str(), softwareVersion);
+    status = arg->Get(aboutDataInternal->aboutFields[SOFTWARE_VERSION].signature.c_str(), softwareVersion);
     return status;
 }
 
@@ -604,7 +607,7 @@ QStatus AboutData::GetAJSoftwareVersion(char** ajSoftwareVersion)
     if (status != ER_OK) {
         return status;
     }
-    status = arg->Get(m_aboutFields[AJ_SOFTWARE_VERSION].signature.c_str(), ajSoftwareVersion);
+    status = arg->Get(aboutDataInternal->aboutFields[AJ_SOFTWARE_VERSION].signature.c_str(), ajSoftwareVersion);
     return status;
 }
 
@@ -612,7 +615,7 @@ QStatus AboutData::SetHardwareVersion(const char* hardwareVersion)
 {
     QStatus status = ER_OK;
     MsgArg arg;
-    status = arg.Set(m_aboutFields[HARDWARE_VERSION].signature.c_str(), hardwareVersion);
+    status = arg.Set(aboutDataInternal->aboutFields[HARDWARE_VERSION].signature.c_str(), hardwareVersion);
     if (status != ER_OK) {
         return status;
     }
@@ -628,7 +631,7 @@ QStatus AboutData::GetHardwareVersion(char** hardwareVersion)
     if (status != ER_OK) {
         return status;
     }
-    status = arg->Get(m_aboutFields[HARDWARE_VERSION].signature.c_str(), hardwareVersion);
+    status = arg->Get(aboutDataInternal->aboutFields[HARDWARE_VERSION].signature.c_str(), hardwareVersion);
     return status;
 }
 
@@ -636,7 +639,7 @@ QStatus AboutData::SetSupportUrl(const char* supportUrl)
 {
     QStatus status = ER_OK;
     MsgArg arg;
-    status = arg.Set(m_aboutFields[SUPPORT_URL].signature.c_str(), supportUrl);
+    status = arg.Set(aboutDataInternal->aboutFields[SUPPORT_URL].signature.c_str(), supportUrl);
     if (status != ER_OK) {
         return status;
     }
@@ -651,7 +654,7 @@ QStatus AboutData::GetSupportUrl(char** supportUrl)
     if (status != ER_OK) {
         return status;
     }
-    status = arg->Get(m_aboutFields[SUPPORT_URL].signature.c_str(), supportUrl);
+    status = arg->Get(aboutDataInternal->aboutFields[SUPPORT_URL].signature.c_str(), supportUrl);
     return status;
 }
 
@@ -662,23 +665,23 @@ QStatus AboutData::SetField(const char* name, ajn::MsgArg value, const char* lan
     //    not required
     //    not announced
     //    can be localized
-    if (m_aboutFields.find(name) == m_aboutFields.end()) {
-        m_aboutFields[name] = FieldDetails(LOCALIZED, value.Signature().c_str());
+    if (aboutDataInternal->aboutFields.find(name) == aboutDataInternal->aboutFields.end()) {
+        aboutDataInternal->aboutFields[name] = FieldDetails(LOCALIZED, value.Signature().c_str());
     }
     if (IsFieldLocalized(name)) {
         if (language == NULL || strcmp(language, "") == 0) {
-            std::map<qcc::String, MsgArg>::iterator it = m_propertyStore.find(DEFAULT_LANGUAGE);
-            if (it == m_propertyStore.end()) {
+            std::map<qcc::String, MsgArg>::iterator it = aboutDataInternal->propertyStore.find(DEFAULT_LANGUAGE);
+            if (it == aboutDataInternal->propertyStore.end()) {
                 return ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED;
             }
             char* defaultLanguage;
-            status = it->second.Get(m_aboutFields[DEFAULT_LANGUAGE].signature.c_str(), &defaultLanguage);
+            status = it->second.Get(aboutDataInternal->aboutFields[DEFAULT_LANGUAGE].signature.c_str(), &defaultLanguage);
             if (status != ER_OK) {
                 return status;
             }
-            m_localizedPropertyStore[name][static_cast<qcc::String>(defaultLanguage)] = value;
+            aboutDataInternal->localizedPropertyStore[name][static_cast<qcc::String>(defaultLanguage)] = value;
         } else {
-            m_localizedPropertyStore[name][language] = value;
+            aboutDataInternal->localizedPropertyStore[name][language] = value;
             //implicitly add all language tags to the supported languages
             status = SetSupportedLanguage(language);
             if (status != ER_OK) {
@@ -686,7 +689,7 @@ QStatus AboutData::SetField(const char* name, ajn::MsgArg value, const char* lan
             }
         }
     } else {
-        m_propertyStore[name] = value;
+        aboutDataInternal->propertyStore[name] = value;
     }
     return status;
 }
@@ -694,20 +697,20 @@ QStatus AboutData::SetField(const char* name, ajn::MsgArg value, const char* lan
 QStatus AboutData::GetField(const char* name, ajn::MsgArg*& value, const char* language) {
     QStatus status = ER_OK;
     if (!IsFieldLocalized(name)) {
-        value = &(m_propertyStore[name]);
+        value = &(aboutDataInternal->propertyStore[name]);
         size_t num;
         uint8_t* appId;
-        value->Get(m_aboutFields[APP_ID].signature.c_str(), &num, &appId);
+        value->Get(aboutDataInternal->aboutFields[APP_ID].signature.c_str(), &num, &appId);
     } else {
         if (language == NULL) {
             char* defaultLanguage;
-            status = m_propertyStore[DEFAULT_LANGUAGE].Get(m_aboutFields[DEFAULT_LANGUAGE].signature.c_str(), &defaultLanguage);
+            status = aboutDataInternal->propertyStore[DEFAULT_LANGUAGE].Get(aboutDataInternal->aboutFields[DEFAULT_LANGUAGE].signature.c_str(), &defaultLanguage);
             if (status != ER_OK) {
                 return status;
             }
-            value = &(m_localizedPropertyStore[name][static_cast<qcc::String>(defaultLanguage)]);
+            value = &(aboutDataInternal->localizedPropertyStore[name][static_cast<qcc::String>(defaultLanguage)]);
         } else {
-            value = &(m_localizedPropertyStore[name][language]);
+            value = &(aboutDataInternal->localizedPropertyStore[name][language]);
         }
     }
     return status;
@@ -730,7 +733,7 @@ QStatus AboutData::GetMsgArg(MsgArg* msgArg, const char* language)
     // Check to see if the language is a supported language
     if (!(language == NULL || 0 == strcmp(language, ""))) {
         bool languageTagFound = false;
-        for (std::set<qcc::String>::iterator it = m_supportedLanguages.begin(); it != m_supportedLanguages.end(); ++it) {
+        for (std::set<qcc::String>::iterator it = aboutDataInternal->supportedLanguages.begin(); it != aboutDataInternal->supportedLanguages.end(); ++it) {
             if (it->compare(language) == 0) {
                 languageTagFound = true;
                 break;
@@ -744,22 +747,22 @@ QStatus AboutData::GetMsgArg(MsgArg* msgArg, const char* language)
 
     size_t dictonarySize = 0;
     typedef std::map<qcc::String, FieldDetails>::iterator it_aboutFields;
-    for (it_aboutFields it = m_aboutFields.begin(); it != m_aboutFields.end(); ++it) {
+    for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
         if (IsFieldRequired(it->first.c_str())) {
             dictonarySize++;
         } else {
             if (IsFieldLocalized(it->first.c_str())) {
                 if (language == NULL || 0 == strcmp(language, "")) {
-                    if (m_localizedPropertyStore[it->first].find(defaultLanguage) != m_localizedPropertyStore[it->first].end()) {
+                    if (aboutDataInternal->localizedPropertyStore[it->first].find(defaultLanguage) != aboutDataInternal->localizedPropertyStore[it->first].end()) {
                         dictonarySize++;
                     }
                 } else {
-                    if (m_localizedPropertyStore[it->first].find(language) != m_localizedPropertyStore[it->first].end()) {
+                    if (aboutDataInternal->localizedPropertyStore[it->first].find(language) != aboutDataInternal->localizedPropertyStore[it->first].end()) {
                         dictonarySize++;
                     }
                 }
             } else {
-                if (m_propertyStore.find(it->first) != m_propertyStore.end()) {
+                if (aboutDataInternal->propertyStore.find(it->first) != aboutDataInternal->propertyStore.end()) {
                     dictonarySize++;
                 }
             }
@@ -769,32 +772,32 @@ QStatus AboutData::GetMsgArg(MsgArg* msgArg, const char* language)
     MsgArg* aboutDictonary = new MsgArg[dictonarySize];
     size_t count = 0;
 
-    for (it_aboutFields it = m_aboutFields.begin(); it != m_aboutFields.end(); ++it) {
+    for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
         if (IsFieldRequired(it->first.c_str())) {
             if (IsFieldLocalized(it->first.c_str())) {
                 if (language == NULL || 0 == strcmp(language, "")) {
-                    status = aboutDictonary[count++].Set("{sv}", it->first.c_str(), &m_localizedPropertyStore[it->first][defaultLanguage]);
+                    status = aboutDictonary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->localizedPropertyStore[it->first][defaultLanguage]);
                 } else {
-                    status = aboutDictonary[count++].Set("{sv}", it->first.c_str(), &m_localizedPropertyStore[it->first][language]);
+                    status = aboutDictonary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->localizedPropertyStore[it->first][language]);
                 }
 
             } else {
-                status = aboutDictonary[count++].Set("{sv}", it->first.c_str(), &m_propertyStore[it->first]);
+                status = aboutDictonary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->propertyStore[it->first]);
             }
         } else {
             if (IsFieldLocalized(it->first.c_str())) {
                 if (language == NULL || 0 == strcmp(language, "")) {
-                    if (m_localizedPropertyStore[it->first].find(defaultLanguage) != m_localizedPropertyStore[it->first].end()) {
-                        status = aboutDictonary[count++].Set("{sv}", it->first.c_str(), &m_localizedPropertyStore[it->first][defaultLanguage]);
+                    if (aboutDataInternal->localizedPropertyStore[it->first].find(defaultLanguage) != aboutDataInternal->localizedPropertyStore[it->first].end()) {
+                        status = aboutDictonary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->localizedPropertyStore[it->first][defaultLanguage]);
                     }
                 } else {
-                    if (m_localizedPropertyStore[it->first].find(defaultLanguage) != m_localizedPropertyStore[it->first].end()) {
-                        status = aboutDictonary[count++].Set("{sv}", it->first.c_str(), &m_localizedPropertyStore[it->first][language]);
+                    if (aboutDataInternal->localizedPropertyStore[it->first].find(defaultLanguage) != aboutDataInternal->localizedPropertyStore[it->first].end()) {
+                        status = aboutDictonary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->localizedPropertyStore[it->first][language]);
                     }
                 }
             } else {
-                if (m_propertyStore.find(it->first) != m_propertyStore.end()) {
-                    status = aboutDictonary[count++].Set("{sv}", it->first.c_str(), &m_propertyStore[it->first]);
+                if (aboutDataInternal->propertyStore.find(it->first) != aboutDataInternal->propertyStore.end()) {
+                    status = aboutDictonary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->propertyStore[it->first]);
                 }
             }
         }
@@ -818,24 +821,24 @@ QStatus AboutData::GetMsgArgAnnounce(MsgArg* msgArg)
     }
     char* defaultLanguage;
     status = GetDefaultLanguage(&defaultLanguage);
-    //QStatus status = m_defaultLanguage.Get(m_aboutFields[DEFAULT_LANGUAGE].dataType.c_str(), &defaultLanguage);
+    //QStatus status = m_defaultLanguage.Get(aboutDataInternal->m_aboutFields[DEFAULT_LANGUAGE].dataType.c_str(), &defaultLanguage);
     if (status != ER_OK) {
         return status;
     }
 
     size_t dictonarySize = 0;
     typedef std::map<qcc::String, FieldDetails>::iterator it_aboutFields;
-    for (it_aboutFields it = m_aboutFields.begin(); it != m_aboutFields.end(); ++it) {
+    for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
         if (IsFieldAnnounced(it->first.c_str())) {
             if (IsFieldRequired(it->first.c_str())) {
                 dictonarySize++;
             } else {
                 if (IsFieldLocalized(it->first.c_str())) {
-                    if (m_localizedPropertyStore[it->first].find(defaultLanguage) != m_localizedPropertyStore[it->first].end()) {
+                    if (aboutDataInternal->localizedPropertyStore[it->first].find(defaultLanguage) != aboutDataInternal->localizedPropertyStore[it->first].end()) {
                         dictonarySize++;
                     }
                 } else {
-                    if (m_propertyStore.find(it->first) != m_propertyStore.end()) {
+                    if (aboutDataInternal->propertyStore.find(it->first) != aboutDataInternal->propertyStore.end()) {
                         dictonarySize++;
                     }
                 }
@@ -845,22 +848,22 @@ QStatus AboutData::GetMsgArgAnnounce(MsgArg* msgArg)
 
     MsgArg* announceDictonary = new MsgArg[dictonarySize];
     size_t count = 0;
-    for (it_aboutFields it = m_aboutFields.begin(); it != m_aboutFields.end(); ++it) {
+    for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
         if (IsFieldAnnounced(it->first.c_str())) {
             if (IsFieldRequired(it->first.c_str())) {
                 if (IsFieldLocalized(it->first.c_str())) {
-                    status = announceDictonary[count++].Set("{sv}", it->first.c_str(), &m_localizedPropertyStore[it->first][defaultLanguage]);
+                    status = announceDictonary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->localizedPropertyStore[it->first][defaultLanguage]);
                 } else {
-                    status = announceDictonary[count++].Set("{sv}", it->first.c_str(), &m_propertyStore[it->first]);
+                    status = announceDictonary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->propertyStore[it->first]);
                 }
             } else {
                 if (IsFieldLocalized(it->first.c_str())) {
-                    if (m_localizedPropertyStore[it->first].find(defaultLanguage) != m_localizedPropertyStore[it->first].end()) {
-                        status = announceDictonary[count++].Set("{sv}", it->first.c_str(), &m_localizedPropertyStore[it->first][defaultLanguage]);
+                    if (aboutDataInternal->localizedPropertyStore[it->first].find(defaultLanguage) != aboutDataInternal->localizedPropertyStore[it->first].end()) {
+                        status = announceDictonary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->localizedPropertyStore[it->first][defaultLanguage]);
                     }
                 } else {
-                    if (m_propertyStore.find(it->first) != m_propertyStore.end()) {
-                        status = announceDictonary[count++].Set("{sv}", it->first.c_str(), &m_propertyStore[it->first]);
+                    if (aboutDataInternal->propertyStore.find(it->first) != aboutDataInternal->propertyStore.end()) {
+                        status = announceDictonary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->propertyStore[it->first]);
                     }
                 }
             }
@@ -878,36 +881,36 @@ QStatus AboutData::GetMsgArgAnnounce(MsgArg* msgArg)
 }
 
 bool AboutData::IsFieldRequired(const char* fieldName) {
-    if (m_aboutFields.find(fieldName) != m_aboutFields.end()) {
-        return ((m_aboutFields[fieldName].fieldMask & REQUIRED) == REQUIRED);
+    if (aboutDataInternal->aboutFields.find(fieldName) != aboutDataInternal->aboutFields.end()) {
+        return ((aboutDataInternal->aboutFields[fieldName].fieldMask & REQUIRED) == REQUIRED);
     }
     return false;
 }
 bool AboutData::IsFieldAnnounced(const char* fieldName) {
-    if (m_aboutFields.find(fieldName) != m_aboutFields.end()) {
-        return ((m_aboutFields[fieldName].fieldMask & ANNOUNCED) == ANNOUNCED);
+    if (aboutDataInternal->aboutFields.find(fieldName) != aboutDataInternal->aboutFields.end()) {
+        return ((aboutDataInternal->aboutFields[fieldName].fieldMask & ANNOUNCED) == ANNOUNCED);
     }
     return false;
 }
 
 bool AboutData::IsFieldLocalized(const char* fieldName) {
-    if (m_aboutFields.find(fieldName) != m_aboutFields.end()) {
-        return ((m_aboutFields[fieldName].fieldMask & LOCALIZED) == LOCALIZED);
+    if (aboutDataInternal->aboutFields.find(fieldName) != aboutDataInternal->aboutFields.end()) {
+        return ((aboutDataInternal->aboutFields[fieldName].fieldMask & LOCALIZED) == LOCALIZED);
     }
     return false;
 }
 
 const char* AboutData::GetFieldSignature(const char* fieldName) {
-    if (m_aboutFields.find(fieldName) != m_aboutFields.end()) {
-        return m_aboutFields[fieldName].signature.c_str();
+    if (aboutDataInternal->aboutFields.find(fieldName) != aboutDataInternal->aboutFields.end()) {
+        return aboutDataInternal->aboutFields[fieldName].signature.c_str();
     }
     return NULL;
 }
 
 QStatus AboutData::SetNewFieldDetails(const char* fieldName, AboutFieldMask fieldMask, const char* signature)
 {
-    if (m_aboutFields.find(fieldName) == m_aboutFields.end()) {
-        m_aboutFields[fieldName] = FieldDetails(fieldMask, signature);
+    if (aboutDataInternal->aboutFields.find(fieldName) == aboutDataInternal->aboutFields.end()) {
+        aboutDataInternal->aboutFields[fieldName] = FieldDetails(fieldMask, signature);
     } else {
         return ER_ABOUT_FIELD_ALREADY_SPECIFIED;
     }
