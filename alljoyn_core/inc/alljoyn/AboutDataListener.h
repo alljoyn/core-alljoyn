@@ -56,7 +56,7 @@ class AboutDataListener {
      *
      * @return ER_OK on successful
      */
-    virtual QStatus GetMsgArg(MsgArg* msgArg, const char* language) = 0;
+    virtual QStatus GetAboutData(MsgArg* msgArg, const char* language) = 0;
 
     /**
      * Return a MsgArg pointer containing dictionary containing the AboutData that
@@ -82,7 +82,7 @@ class AboutDataListener {
      *                    data.
      * @return ER_OK if successful
      */
-    virtual QStatus GetMsgArgAnnounce(MsgArg* msgArg) = 0;
+    virtual QStatus GetAnnouncedAboutData(MsgArg* msgArg) = 0;
 };
 }
 #endif /* _ALLJOYN_ABOUTDATALISTENER_H */

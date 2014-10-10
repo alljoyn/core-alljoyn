@@ -89,7 +89,7 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
         return status;
     }
     announceArgs[2] = m_objectDescription;
-    m_aboutDataListener->GetMsgArgAnnounce(&announceArgs[3]);
+    m_aboutDataListener->GetAnnouncedAboutData(&announceArgs[3]);
     Message msg(*m_busAttachment);
     uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
 #if !defined(NDEBUG)
@@ -120,7 +120,7 @@ void AboutObj::GetAboutData(const ajn::InterfaceDescription::Member* member, ajn
         ajn::MsgArg retargs[1];
         //status = m_PropertyStore->ReadAll(args[0].v_string.str, PropertyStore::READ, retargs[0]);
         QCC_DbgPrintf(("GetAboutData for GetMsgArg for lang=%s", args[0].v_string.str));
-        status = m_aboutDataListener->GetMsgArg(retargs, args[0].v_string.str);
+        status = m_aboutDataListener->GetAboutData(retargs, args[0].v_string.str);
         //QCC_DbgPrintf(("m_pPropertyStore->ReadAll(%s,PropertyStore::READ)  =%s", args[0].v_string.str, QCC_StatusText(status)));
         if (status != ER_OK) {
             QCC_DbgPrintf(("AboutService::%s : Call to GetMsgArg failed with %s", __FUNCTION__, QCC_StatusText(status)));

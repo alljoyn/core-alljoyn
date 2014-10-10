@@ -737,7 +737,7 @@ QStatus AboutData::GetField(const char* name, ajn::MsgArg*& value, const char* l
     return status;
 }
 
-QStatus AboutData::GetMsgArg(MsgArg* msgArg, const char* language)
+QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
 {
     QStatus status;
     if (!IsValid()) {
@@ -833,7 +833,7 @@ QStatus AboutData::GetMsgArg(MsgArg* msgArg, const char* language)
     return status;
 }
 
-QStatus AboutData::GetMsgArgAnnounce(MsgArg* msgArg)
+QStatus AboutData::GetAnnouncedAboutData(MsgArg* msgArg)
 {
     QStatus status;
     if (!IsValid()) {
