@@ -41,13 +41,22 @@ using namespace std;
 
 namespace qcc {
 
+static Environ* environSingleton = NULL;
+
 Environ* Environ::GetAppEnviron(void)
 {
-    static Environ* env = NULL;      // Environment variable singleton.
-    if (env == NULL) {
-        env = new Environ();
+    if (environSingleton == NULL) {
+        environSingleton = new Environ();
     }
-    return env;
+    return environSingleton;
+}
+
+void Environ::Cleanup(void)
+{
+    if (environSingleton != NULL) {
+        delete environSingleton;
+        environSingleton = NULL;
+    }
 }
 
 qcc::String Environ::Find(const qcc::String& key, const char* defaultValue)
