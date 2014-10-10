@@ -228,6 +228,7 @@ void ARDP_SetRecvCb(ArdpHandle* handle, ARDP_RECV_CB RecvCb);
 QStatus ARDP_Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, uint32_t ttl);
 void ARDP_SetSendCb(ArdpHandle* handle, ARDP_SEND_CB SendCb);
 void ARDP_SetSendWindowCb(ArdpHandle* handle, ARDP_SEND_WINDOW_CB SendWindowCb);
+uint32_t ARDP_GetDataTimeout(ArdpHandle* handle, ArdpConnRecord* conn);
 
 #if ARDP_TESTHOOKS
 void ARDP_HookSendToSG(ArdpHandle* handle, ARDP_SENDTOSG_TH SendToSG);
