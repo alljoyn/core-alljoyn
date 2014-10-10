@@ -24,7 +24,9 @@
  ******************************************************************************/
 
 #include <qcc/platform.h>
+#include <set>
 #include <qcc/String.h>
+#include <qcc/StringMapKey.h>
 #include <alljoyn/InterfaceDescription.h>
 #include <alljoyn/MessageReceiver.h>
 #include <alljoyn/MsgArg.h>
@@ -863,6 +865,16 @@ class ProxyBusObject : public MessageReceiver {
 
     /**
      * @internal
+     * Method return handler for replies to AddMatch/RemoveMatch when
+     * registering/unregistering properties changed handlers.
+     *
+     * @param msg     Method return message
+     * @param context Opaque context passed from method_call to method_return
+     */
+    void AddMatchReplyHandler(Message& msg, void* context);
+
+    /**
+     * @internal
      * Introspection method_reply handler. (Internal use only)
      *
      * @param message Method return Message
@@ -965,8 +977,9 @@ class ProxyBusObject : public MessageReceiver {
     bool isExiting;             /**< true iff ProxyBusObject is in the process of begin destroyed */
     bool isSecure;              /**< Indicates if this object is secure or not */
 
-    /** Static variable to keep track of how many property changed listeners there are.*/
-    static int sAddMatchPropertiesChanged;
+    /** Static multiset to keep track of how many property changed listeners there are per interface.*/
+    static std::multiset<qcc::StringMapKey> propChangeAddMatchRules;
+    static qcc::Mutex propChangeAddMatchRulesLock;
 };
 
 /**
