@@ -9493,6 +9493,75 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         }
 
         /*
+         * We are going to use UDP, and the socket buffers for UDP sockets are
+         * most likely set unnecessarily low by default.  IN the optimal case,
+         * we are going to want to spew out SEGBMAX * SEGMAX bytes of data on
+         * each connection.  Typical values might be 65535 bytes per buffer * 50
+         * buffers = 3,276,800 bytes.  Since there may be N connections running
+         * over that single socket, it would imply a requirement to buffer N * 3
+         * megabytes total.  Unlikely.  We set the buffer large enough to buffer
+         * enough in-flight data to service one fully utilized connection
+         * completely.  After the buffer fills, we share capacity.
+         *
+         * Just because we ask for this amount of buffer does not mean we will
+         * get it.  Systems provide a maximum number.  On Linux, for example,
+         * you can find the maximum value in /proc/sys/net/core/wmem_max.  On my
+         * Fedora 20- box it is set to 131071, so the doubled value returned by
+         * GetSndBuf() would be 262142.  Consider changing this value on a
+         * server-class system.
+         *
+         * Note that this is not a fatal error if it fails.  We just may get less
+         * buffer capacity than we might like.
+         */
+        size_t sndSize = m_ardpConfig.segmax * m_ardpConfig.segbmax;
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): SetSndBuf(listenFd=%d, %zu.)", listenFd, sndSize));
+        QDP(("UDPTransport::HandleNetworkEventInstance(): SetSndBuf(listenFd=%d, %zu.)", listenFd, sndSize));
+        status = qcc::SetSndBuf(listenFd, sndSize);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): SetSndbuf() failed"));
+        }
+
+#ifndef NDEBUG
+        sndSize = 0;
+        qcc::GetSndBuf(listenFd, sndSize);
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): GetSndBuf(listenFd=%d) <= %zu. bytes)", listenFd, sndSize));
+        QDP(("UDPTransport::HandleNetworkEventInstance(): GetSndBuf(listenFd=%d) <= %zu. bytes)", listenFd, sndSize));
+#endif
+
+        /*
+         * Ditto for the receive side.  The remote sides of connections may
+         * conspire against us to have N fully utilized connections inbound from
+         * different remotes to our single instance, but we cannot simly
+         * allocate 300 megabytes of buffering, so we set the receive buffer to
+         * SEGBMAX * SEGMAX as well, and limit buffer usage by letting UDP drop
+         * inbound messages to rate limit overrunning connections.
+         *
+         * Just because we ask for this amount of buffer does not mean we will
+         * get it.  Systems provide a maximum number.  On Linux, for example,
+         * you can find the maximum value in /proc/sys/net/core/rmem_max.  On my
+         * Fedora 20- box it is set to 131071, so the doubled value returned by
+         * GetRcvBuf() would be 262142.  Consider changing this value on a
+         * server-class system.
+         *
+         * Note that this is not a fatal error if it fails.  We just may get less
+         * buffer capacity than we might like.
+         */
+        size_t rcvSize = m_ardpConfig.segmax * m_ardpConfig.segbmax;
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): SetSndBuf(listenFd=%d, %zu.)", listenFd, rcvSize));
+        QDP(("UDPTransport::HandleNetworkEventInstance(): SetSndBuf(listenFd=%d, %zu.)", listenFd, rcvSize));
+        status = qcc::SetRcvBuf(listenFd, sndSize);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): SetRcvBuf() failed"));
+        }
+
+#ifndef NDEBUG
+        rcvSize = 0;
+        qcc::GetRcvBuf(listenFd, rcvSize);
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): GetRcvBuf(listenFd=%d) <= %zu. bytes)", listenFd, rcvSize));
+        QDP(("UDPTransport::HandleNetworkEventInstance(): GetRcvBuf(listenFd=%d) <= %zu. bytes)", listenFd, rcvSize));
+#endif
+
+        /*
          * If ephemeralPort is set, it means that the listen spec did not provide a
          * specific port and wants us to choose one.  In this case, we first try the
          * default port; but it that port is already taken in the system, we let the
