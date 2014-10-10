@@ -123,15 +123,17 @@ PeerStateTable::PeerStateTable()
 
 PeerState PeerStateTable::GetPeerState(const qcc::String& busName, bool createIfUnknown)
 {
-    PeerState result;
     lock.Lock(MUTEX_CONTEXT);
     std::map<const qcc::String, PeerState>::iterator iter = peerMap.find(busName);
     QCC_DbgHLPrintf(("PeerStateTable::GetPeerState() %s state for %s", (iter == peerMap.end()) ? "no" : "got", busName.c_str()));
     if (iter != peerMap.end() || createIfUnknown) {
-        result = peerMap[busName];
+        PeerState result = peerMap[busName];
+        lock.Unlock(MUTEX_CONTEXT);
+        return result;
     }
+
     lock.Unlock(MUTEX_CONTEXT);
-    return result;
+    return PeerState();
 }
 
 PeerState PeerStateTable::GetPeerState(const qcc::String& uniqueName, const qcc::String& aliasName)

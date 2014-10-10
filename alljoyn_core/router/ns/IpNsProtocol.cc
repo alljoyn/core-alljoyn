@@ -24,6 +24,7 @@
 #include <qcc/SocketTypes.h>
 #include <qcc/IPAddress.h>
 #include <qcc/StringUtil.h>
+#include <alljoyn/AllJoynStd.h>
 #include "IpNsProtocol.h"
 
 #define QCC_MODULE "NS"
@@ -2728,14 +2729,23 @@ void MDNSAdvertiseRData::RemoveNameAt(TransportMask transportMask, int index)
     Fields::const_iterator it;
     for (it = m_fields.begin(); it != m_fields.end(); ++it) {
         if (it->first.find("t_") != String::npos && (StringToU32(it->second, 16) == transportMask)) {
+            uint32_t numNames = 0;
+            Fields::const_iterator trans = it;
             it++;
             while (it != m_fields.end() && it->first.find("t_") == String::npos) {
                 Fields::const_iterator nxt = it;
                 nxt++;
-                if (it->first.find("n_") != String::npos && index-- == 0) {
-                    MDNSTextRData::RemoveEntry(it->first);
+                if (it->first.find("n_") != String::npos) {
+                    if (index-- == 0) {
+                        MDNSTextRData::RemoveEntry(it->first);
+                    } else {
+                        numNames++;
+                    }
                 }
                 it = nxt;
+            }
+            if (!numNames) {
+                MDNSTextRData::RemoveEntry(trans->first);
             }
             break;
         }
@@ -2940,6 +2950,7 @@ MDNSSenderRData::MDNSSenderRData(uint16_t version)
     : MDNSTextRData(version)
 {
     MDNSTextRData::SetValue("pv", NS_VERSION);
+    MDNSTextRData::SetValue("ajpv", ALLJOYN_PROTOCOL_VERSION);
 }
 
 uint16_t MDNSSenderRData::GetSearchID()
@@ -3662,11 +3673,24 @@ void _MDNSPacket::RemoveAnswer(qcc::String str, MDNSResourceRecord::RRType type)
     while (it1 != m_answers.end()) {
         if (((*it1).GetDomainName() == str) && ((*it1).GetRRType() == type)) {
             m_answers.erase(it1++);
+            m_header.SetANCount(m_answers.size());
             return;
         }
         it1++;
     }
 }
 
+void _MDNSPacket::RemoveQuestion(qcc::String str)
+{
+    std::vector<MDNSQuestion>::iterator it1 = m_questions.begin();
+    while (it1 != m_questions.end()) {
+        if (((*it1).GetQName() == str)) {
+            m_questions.erase(it1);
+            m_header.SetQDCount(m_questions.size());
+            return;
+        }
+        it1++;
+    }
+}
 
 } // namespace ajn

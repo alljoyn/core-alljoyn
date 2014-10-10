@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -131,6 +131,13 @@ class _VirtualEndpoint : public _BusEndpoint {
      *         (endpoint->IsValid() == false) if there is no such endpoint.
      */
     RemoteEndpoint GetBusToBusEndpoint(SessionId sessionId = 0, int* b2bCount = NULL) const;
+
+    /**
+     * Gets the BusToBus endpoints associated with this virtual endpoint.
+     *
+     * @return The set of BusToBus endpoints that can route for this virtual endpoint.
+     */
+    std::multimap<SessionId, RemoteEndpoint> GetBusToBusEndpoints() const;
 
     /**
      * Add an alternate bus-to-bus endpoint that can route for this endpoint.

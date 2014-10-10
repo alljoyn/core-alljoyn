@@ -151,16 +151,9 @@ class _PolicyDB {
      */
     const IDSet LookupBusNameID(const char* busName) const;
 
-    /**
-     * Name owner changed listener implementation for tracking when well known
-     * names change onwer ship.  The ownership information is used when
-     * normalizing bus names.
-     *
-     * @param alias     The well known name
-     * @param oldOwner  Unique name of previous owner or NULL if no previous owner
-     * @param newOwner  Unique name of new owner or NULL of no new owner
-     */
-    void NameOwnerChanged(const qcc::String& alias, const qcc::String* oldOwner, const qcc::String* newOwner);
+    void NameOwnerChanged(const qcc::String& alias,
+                          const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
+                          const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer);
 
     /**
      * Adds a rule to the Policy database.

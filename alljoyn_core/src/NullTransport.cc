@@ -90,7 +90,7 @@ class _NullEndpoint : public _BusEndpoint {
     uint32_t GetProcessId() const { return qcc::GetPid(); }
 
     bool SupportsUnixIDs() const {
-#if defined(QCC_OS_GROUP_WINDOWS) || defined(QCC_OS_GROUP_WINRT)
+#if defined(QCC_OS_GROUP_WINDOWS)
         return false;
 #else
         return true;
@@ -223,7 +223,7 @@ QStatus _NullEndpoint::PushMessage(Message& msg)
     return status;
 }
 
-NullTransport::NullTransport(BusAttachment& bus) : bus(bus), running(false), routerBus(NULL)
+NullTransport::NullTransport(BusAttachment& bus) : bus(bus), running(false)
 {
 }
 

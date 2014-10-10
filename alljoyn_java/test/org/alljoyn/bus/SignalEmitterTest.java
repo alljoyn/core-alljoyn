@@ -22,9 +22,6 @@ import org.alljoyn.bus.BusObject;
 import org.alljoyn.bus.SignalEmitter;
 import org.alljoyn.bus.Status;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import static junit.framework.Assert.*;
 import junit.framework.TestCase;
 
 public class SignalEmitterTest extends TestCase {
@@ -119,14 +116,8 @@ public class SignalEmitterTest extends TestCase {
         bus = null;
     }
 
-    private boolean signalReceived = false;
-    private int signalsHandled = 0;
-    private MessageContext rxMessageContext;
-
     public void signalHandler(String string) throws BusException {
-        rxMessageContext = bus.getMessageContext();
-        ++signalsHandled;
-        signalReceived = true;
+        bus.getMessageContext();
     }
 
     public void testTimeToLive() throws Exception {
@@ -155,7 +146,6 @@ public class SignalEmitterTest extends TestCase {
         emitter.setCompressHeader(false);
         emitter.setSessionlessFlag(true);
         emitter.setTimeToLive(0);
-        signalReceived = false;
         emitter.emit("sessionless1");
         MessageContext ctx = emitter.getMessageContext();
         assertEquals("/emitter", ctx.objectPath);
@@ -170,7 +160,6 @@ public class SignalEmitterTest extends TestCase {
         emitter.setCompressHeader(false);
         emitter.setSessionlessFlag(true);
         emitter.setTimeToLive(0);
-        signalReceived = false;
         emitter.emit("sessionless2");
         int serial = emitter.getMessageContext().serial;
         Status status = emitter.cancelSessionlessSignal(serial);

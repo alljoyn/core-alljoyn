@@ -53,9 +53,9 @@ namespace qcc {
 
 /* Global Data */
 
-static const String* emptyString = new String();
+static const String emptyString;
 
-const String& String::Empty = *emptyString;
+const String& String::Empty = emptyString;
 
 String::ManagedCtx String::nullContext = { 0 };
 

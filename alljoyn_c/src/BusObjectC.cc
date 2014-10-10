@@ -242,47 +242,47 @@ struct _alljoyn_busobject_handle {
     /* Empty by design, this is just to allow the type restrictions to save coders from themselves */
 };
 
-alljoyn_busobject alljoyn_busobject_create(const char* path, QCC_BOOL isPlaceholder,
-                                           const alljoyn_busobject_callbacks* callbacks_in, const void* context_in)
+alljoyn_busobject AJ_CALL alljoyn_busobject_create(const char* path, QCC_BOOL isPlaceholder,
+                                                   const alljoyn_busobject_callbacks* callbacks_in, const void* context_in)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return (alljoyn_busobject) new ajn::BusObjectC(path, isPlaceholder, callbacks_in, context_in);
 }
 
-void alljoyn_busobject_destroy(alljoyn_busobject bus)
+void AJ_CALL alljoyn_busobject_destroy(alljoyn_busobject bus)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     delete (ajn::BusObjectC*)bus;
 }
 
-const char* alljoyn_busobject_getpath(alljoyn_busobject bus)
+const char* AJ_CALL alljoyn_busobject_getpath(alljoyn_busobject bus)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::BusObjectC*)bus)->GetPath();
 }
 
 
-void alljoyn_busobject_emitpropertychanged(alljoyn_busobject bus,
-                                           const char* ifcName,
-                                           const char* propName,
-                                           alljoyn_msgarg val,
-                                           alljoyn_sessionid id)
+void AJ_CALL alljoyn_busobject_emitpropertychanged(alljoyn_busobject bus,
+                                                   const char* ifcName,
+                                                   const char* propName,
+                                                   alljoyn_msgarg val,
+                                                   alljoyn_sessionid id)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ((ajn::BusObjectC*)bus)->EmitPropChangedC(ifcName, propName, val, id);
 }
 
-void alljoyn_busobject_emitpropertieschanged(alljoyn_busobject bus,
-                                             const char* ifcName,
-                                             const char** propNames,
-                                             size_t numProps,
-                                             alljoyn_sessionid id)
+void AJ_CALL alljoyn_busobject_emitpropertieschanged(alljoyn_busobject bus,
+                                                     const char* ifcName,
+                                                     const char** propNames,
+                                                     size_t numProps,
+                                                     alljoyn_sessionid id)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ((ajn::BusObjectC*)bus)->EmitPropChangedC(ifcName, propNames, numProps, id);
 }
 
-size_t alljoyn_busobject_getname(alljoyn_busobject bus, char* buffer, size_t bufferSz)
+size_t AJ_CALL alljoyn_busobject_getname(alljoyn_busobject bus, char* buffer, size_t bufferSz)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     qcc::String name = ((ajn::BusObjectC*)bus)->GetName();
@@ -294,59 +294,59 @@ size_t alljoyn_busobject_getname(alljoyn_busobject bus, char* buffer, size_t buf
     return name.length() + 1;
 }
 
-QStatus alljoyn_busobject_addinterface(alljoyn_busobject bus, const alljoyn_interfacedescription iface)
+QStatus AJ_CALL alljoyn_busobject_addinterface(alljoyn_busobject bus, const alljoyn_interfacedescription iface)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::BusObjectC*)bus)->AddInterfaceC(iface);
 }
 
-QStatus alljoyn_busobject_addmethodhandler(alljoyn_busobject bus, const alljoyn_interfacedescription_member member, alljoyn_messagereceiver_methodhandler_ptr handler, void* context)
+QStatus AJ_CALL alljoyn_busobject_addmethodhandler(alljoyn_busobject bus, const alljoyn_interfacedescription_member member, alljoyn_messagereceiver_methodhandler_ptr handler, void* context)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::BusObjectC*)bus)->AddMethodHandlerC(member, handler, context);
 }
 
-QStatus alljoyn_busobject_addmethodhandlers(alljoyn_busobject bus, const alljoyn_busobject_methodentry* entries, size_t numEntries)
+QStatus AJ_CALL alljoyn_busobject_addmethodhandlers(alljoyn_busobject bus, const alljoyn_busobject_methodentry* entries, size_t numEntries)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::BusObjectC*)bus)->AddMethodHandlersC(entries, numEntries);
 }
 
-QStatus alljoyn_busobject_methodreply_args(alljoyn_busobject bus, alljoyn_message msg,
-                                           const alljoyn_msgarg args, size_t numArgs)
+QStatus AJ_CALL alljoyn_busobject_methodreply_args(alljoyn_busobject bus, alljoyn_message msg,
+                                                   const alljoyn_msgarg args, size_t numArgs)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::BusObjectC*)bus)->MethodReplyC(msg, args, numArgs);
 }
 
-QStatus alljoyn_busobject_methodreply_err(alljoyn_busobject bus, alljoyn_message msg,
-                                          const char* error, const char* errorMessage)
+QStatus AJ_CALL alljoyn_busobject_methodreply_err(alljoyn_busobject bus, alljoyn_message msg,
+                                                  const char* error, const char* errorMessage)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::BusObjectC*)bus)->MethodReplyC(msg, error, errorMessage);
 }
 
-QStatus alljoyn_busobject_methodreply_status(alljoyn_busobject bus, alljoyn_message msg, QStatus status)
+QStatus AJ_CALL alljoyn_busobject_methodreply_status(alljoyn_busobject bus, alljoyn_message msg, QStatus status)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::BusObjectC*)bus)->MethodReplyC(msg, status);
 }
 
-const alljoyn_busattachment alljoyn_busobject_getbusattachment(alljoyn_busobject bus)
+const alljoyn_busattachment AJ_CALL alljoyn_busobject_getbusattachment(alljoyn_busobject bus)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return (const alljoyn_busattachment) &((ajn::BusObjectC*)bus)->GetBusAttachment();
 }
 
-QStatus alljoyn_busobject_signal(alljoyn_busobject bus,
-                                 const char* destination,
-                                 alljoyn_sessionid sessionId,
-                                 const alljoyn_interfacedescription_member signal,
-                                 const alljoyn_msgarg args,
-                                 size_t numArgs,
-                                 uint16_t timeToLive,
-                                 uint8_t flags,
-                                 alljoyn_message msg)
+QStatus AJ_CALL alljoyn_busobject_signal(alljoyn_busobject bus,
+                                         const char* destination,
+                                         alljoyn_sessionid sessionId,
+                                         const alljoyn_interfacedescription_member signal,
+                                         const alljoyn_msgarg args,
+                                         size_t numArgs,
+                                         uint16_t timeToLive,
+                                         uint8_t flags,
+                                         alljoyn_message msg)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     const ajn::InterfaceDescription::Member* member = ((ajn::InterfaceDescription*)signal.iface)->GetMember(signal.name);
@@ -366,19 +366,19 @@ QStatus alljoyn_busobject_signal(alljoyn_busobject bus,
                msg);
 }
 
-QStatus alljoyn_busobject_cancelsessionlessmessage_serial(alljoyn_busobject bus, uint32_t serialNumber)
+QStatus AJ_CALL alljoyn_busobject_cancelsessionlessmessage_serial(alljoyn_busobject bus, uint32_t serialNumber)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::BusObjectC*)bus)->CancelSessionlessMessage(serialNumber);
 }
 
-QStatus alljoyn_busobject_cancelsessionlessmessage(alljoyn_busobject bus, const alljoyn_message msg)
+QStatus AJ_CALL alljoyn_busobject_cancelsessionlessmessage(alljoyn_busobject bus, const alljoyn_message msg)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::BusObjectC*)bus)->CancelSessionlessMessage(*((ajn::Message*)msg));
 }
 
-QCC_BOOL alljoyn_busobject_issecure(alljoyn_busobject bus)
+QCC_BOOL AJ_CALL alljoyn_busobject_issecure(alljoyn_busobject bus)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return (((ajn::BusObjectC*)bus)->IsSecure() == true ? QCC_TRUE : QCC_FALSE);

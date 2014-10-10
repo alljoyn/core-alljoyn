@@ -23,7 +23,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <sys/types.h>
-#if !defined(QCC_OS_GROUP_WINDOWS) && !defined(QCC_OS_GROUP_WINRT)
+#if !defined(QCC_OS_GROUP_WINDOWS)
 #include <pwd.h>
 #endif
 
@@ -117,12 +117,16 @@ ConfigDB* ConfigDB::singleton = NULL;
 #ifdef ENABLE_POLICYDB
 void ConfigDB::NameOwnerChanged(const String& alias,
                                 const String* oldOwner,
-                                const String* newOwner)
+                                SessionOpts::NameTransferType oldOwnerNameTransfer,
+                                const String* newOwner,
+                                SessionOpts::NameTransferType newOwnerNameTransfer)
 {
     rwlock.RDLock();
     PolicyDB policy = db->policyDB;
     rwlock.Unlock();
-    policy->NameOwnerChanged(alias, oldOwner, newOwner);
+    policy->NameOwnerChanged(alias,
+                             oldOwner, oldOwnerNameTransfer,
+                             newOwner, newOwnerNameTransfer);
 }
 #endif
 

@@ -27,6 +27,11 @@
 #ifndef _WIN32
 #define _BSD_SOURCE /* usleep */
 #endif
+#ifdef _WIN32
+/* To avoid compilation error in VS generated due to use of snprintf */
+#define _CRT_SECURE_NO_WARNINGS 1
+#endif
+
 #include <qcc/platform.h>
 
 #include <assert.h>
@@ -65,13 +70,13 @@ static void SigIntHandler(int sig)
 }
 
 /* ObjectRegistered callback */
-void busobject_object_registered(const void* context)
+void AJ_CALL busobject_object_registered(const void* context)
 {
     printf("ObjectRegistered has been called\n");
 }
 
 /* NameOwnerChanged callback */
-void name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
+void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
     if (newOwner && (0 == strcmp(busName, OBJECT_NAME))) {
         printf("name_owner_changed: name=%s, oldOwner=%s, newOwner=%s\n",
@@ -82,8 +87,8 @@ void name_owner_changed(const void* context, const char* busName, const char* pr
 }
 
 /* AcceptSessionJoiner callback */
-QCC_BOOL accept_session_joiner(const void* context, alljoyn_sessionport sessionPort,
-                               const char* joiner,  const alljoyn_sessionopts opts)
+QCC_BOOL AJ_CALL accept_session_joiner(const void* context, alljoyn_sessionport sessionPort,
+                                       const char* joiner,  const alljoyn_sessionopts opts)
 {
     QCC_BOOL ret = QCC_FALSE;
     if (sessionPort != SERVICE_PORT) {
@@ -96,8 +101,8 @@ QCC_BOOL accept_session_joiner(const void* context, alljoyn_sessionport sessionP
     return ret;
 }
 
-/* Exposed concatinate method */
-void cat_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
+/* Exposed concatenate method */
+void AJ_CALL cat_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
     QStatus status;
     alljoyn_msgarg outArg;
@@ -126,7 +131,7 @@ void cat_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member
 int main(int argc, char** argv, char** envArg)
 {
     QStatus status = ER_OK;
-    char* connectArgs = "unix:abstract=alljoyn";
+    char* connectArgs = NULL;
     alljoyn_interfacedescription testIntf = NULL;
     alljoyn_busobject_callbacks busObjCbs = {
         NULL,
@@ -211,7 +216,7 @@ int main(int argc, char** argv, char** envArg)
         if (ER_OK == status) {
             status = alljoyn_busattachment_connect(g_msgBus, connectArgs);
             if (ER_OK != status) {
-                printf("alljoyn_busattachment_connect(\"%s\") failed\n", connectArgs);
+                printf("alljoyn_busattachment_connect(\"%s\") failed\n", (connectArgs) ? connectArgs : "NULL");
             } else {
                 printf("alljoyn_busattachment connected to \"%s\"\n", alljoyn_busattachment_getconnectspec(g_msgBus));
             }

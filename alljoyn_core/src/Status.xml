@@ -152,6 +152,7 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_ALLJOYN_ADVERTISENAME_REPLY_ALREADY_ADVERTISING" value="0x908d" comment="AdvertiseName reply: This endpoint is already advertising this name"/>
   <status name="ER_ALLJOYN_ADVERTISENAME_REPLY_FAILED" value="0x908e" comment="AdvertiseName reply: Advertise failed"/>
   <status name="ER_ALLJOYN_CANCELADVERTISENAME_REPLY_FAILED" value="0x9090" comment="CancelAdvertiseName reply: Advertise failed"/>
+  <status name="ER_ALLJOYN_FINDADVERTISEDNAME_REPLY_TRANSPORT_NOT_AVAILABLE" value="0x9091" comment="FindAdvertisedName reply: The specified transport is unavailable for discovery"/>
   <status name="ER_ALLJOYN_FINDADVERTISEDNAME_REPLY_ALREADY_DISCOVERING" value="0x9092" comment="FindAdvertisedName reply: This endpoint is already discovering this name"/>
   <status name="ER_ALLJOYN_FINDADVERTISEDNAME_REPLY_FAILED" value="0x9093" comment="FindAdvertisedName reply: Failed"/>
   <status name="ER_ALLJOYN_CANCELFINDADVERTISEDNAME_REPLY_FAILED" value="0x9095" comment="CancelFindAdvertisedName reply: Failed"/>
@@ -267,4 +268,7 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_UDP_ENDPOINT_REMOVED" value="0x911e" comment="Attempt to send on a UDP endpoint that has been removed"/>
   <status name="ER_ARDP_VERSION_NOT_SUPPORTED" value="0x911f" comment="Specified version of ARDP Protocol is not supported"/>
   <status name="ER_CONNECTION_LIMIT_EXCEEDED" value="0x9120" comment="Connection rejected due to configured connection limits"/>
+  <status name="ER_ARDP_WRITE_BLOCKED" value="0x9121" comment="ARDP cannot write to UDP socket (queue is full)"/>
+  <status name="ER_PERMISSION_DENIED" value="0x9122" comment="Permission denied"/>
+  <status name="ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED" value="0x9123" comment="Default language must be specified before setting a localized field"/>
 </status_block>

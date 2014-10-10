@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -199,7 +199,9 @@ void Bus::UnregisterBusListener(BusListener& listener)
     listenersLock.Unlock(MUTEX_CONTEXT);
 }
 
-void Bus::NameOwnerChanged(const qcc::String& alias, const qcc::String* oldOwner, const qcc::String* newOwner)
+void Bus::NameOwnerChanged(const qcc::String& alias,
+                           const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
+                           const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer)
 {
     listenersLock.Lock(MUTEX_CONTEXT);
     set<ProtectedBusListener>::iterator it = busListeners.begin();

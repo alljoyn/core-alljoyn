@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -122,7 +122,7 @@ class BasicSampleObject : public BusObject {
 class ThreadClass : public Thread {
 
   public:
-    ThreadClass(char*name, int index);
+    ThreadClass(char* name);
 
     friend class ClientBusListener;
 
@@ -146,7 +146,6 @@ class ThreadClass : public Thread {
 
   private:
     String name;
-    int index;
 };
 
 
@@ -236,15 +235,14 @@ class ServiceBusListener : public BusListener, public SessionPortListener {
     }
 };
 
-inline ThreadClass::ThreadClass(char*name, int index) : Thread(name),
+inline ThreadClass::ThreadClass(char* name) : Thread(name),
     joinComplete(false),
     clientBusListener(NULL),
     serviceBusListener(NULL),
     bus(NULL),
     busObject(NULL),
     sessionId(0),
-    name(name),
-    index(index)
+    name(name)
 {
 }
 
@@ -616,7 +614,7 @@ int main(int argc, char**argv)
         for (unsigned int i = 0; i < threads; i++) {
             char buf[256];
             sprintf(buf, "Thread.n%d", i);
-            threadList[i] = new ThreadClass((char*)buf, i);
+            threadList[i] = new ThreadClass((char*)buf);
             threadList[i]->Start(&connectArgs);
             QCC_SyncPrintf("started threadList[%d]... \n", i);
         }

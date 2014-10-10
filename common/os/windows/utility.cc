@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -33,18 +33,17 @@
 
 void strerror_r(uint32_t errCode, char* ansiBuf, uint16_t ansiBufSize)
 {
-    LPTSTR unicodeBuf = 0;
+    if (!ansiBuf || (ansiBufSize == 0)) {
+        return;
+    }
 
-    uint32_t len = FormatMessage(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER |
-        FORMAT_MESSAGE_FROM_SYSTEM |
-        FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL,
-        errCode,
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPTSTR) &unicodeBuf,
-        ansiBufSize - 1, NULL);
-    memset(ansiBuf, 0, ansiBufSize);
-    WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)unicodeBuf, -1, ansiBuf, (int)len, NULL, NULL);
-    LocalFree(unicodeBuf);
+    if (!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                        NULL,
+                        errCode,
+                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                        (LPSTR)ansiBuf,
+                        ansiBufSize,
+                        NULL)) {
+        ansiBuf[0] = '\0';
+    }
 }

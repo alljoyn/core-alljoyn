@@ -525,8 +525,15 @@ void _PolicyDB::Finalize(Bus* bus)
 }
 
 
-void _PolicyDB::NameOwnerChanged(const String& alias, const String* oldOwner, const String* newOwner)
+void _PolicyDB::NameOwnerChanged(const String& alias,
+                                 const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
+                                 const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer)
 {
+    /* When newOwner and oldOwner are the same, only the name transfer changed. */
+    if (newOwner == oldOwner) {
+        return;
+    }
+
     /*
      * Bus name matching rules must treat all aliases (well known names) they
      * resolve to as thesame, otherwise it would be relatively trivial to

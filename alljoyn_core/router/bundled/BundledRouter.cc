@@ -46,10 +46,6 @@
 #include "NullTransport.h"
 #include "PasswordManager.h"
 
-#if defined(QCC_OS_WINRT)
-#include "ProximityTransport.h"
-#endif
-
 #if defined(QCC_OS_ANDROID)
 //#include "android/WFDTransport.h"
 #endif
@@ -77,9 +73,8 @@ static const char internalConfig[] =
 #if defined(QCC_OS_DARWIN)
     "  <listen>launchd:env=DBUS_LAUNCHD_SESSION_BUS_SOCKET</listen>"
 #endif
-    "  <listen>tcp:r4addr=0.0.0.0,r4port=0</listen>"
-    "  <listen>udp:u4addr=0.0.0.0,u4port=0</listen>"
-    "  <property name=\"ns_interfaces\">*</property>"
+    "  <listen>tcp:iface=*,port=0</listen>"
+    "  <listen>udp:iface=*,port=0</listen>"
     "</busconfig>";
 
 class ClientAuthListener : public AuthListener {
@@ -297,9 +292,6 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
             Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
             Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
 
-#if defined(QCC_OS_WINRT)
-//            Add(new TransportFactory<ProximityTransport>(ProximityTransport::TransportName, false));
-#endif
 #if defined(QCC_OS_ANDROID)
 //            QCC_DbgPrintf(("adding WFD transport"));
 //            Add(new TransportFactory<WFDTransport>(WFDTransport::TransportName, false));

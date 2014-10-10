@@ -8,7 +8,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011,2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -28,15 +28,11 @@
 #elif defined(QCC_OS_GROUP_WINDOWS)
 #include <qcc/windows/platform_types.h>
 #include <qcc/windows/mapping.h>
-#elif defined(QCC_OS_GROUP_WINRT)
-#include <qcc/winrt/platform_types.h>
-#include <qcc/winrt/mapping.h>
 #else
 #error No OS GROUP defined.
 #endif
 
 #if defined(__GNUC__)
-
 
 #define GCC_VERSION ((__GNUC__ * 10000) + (__GNUC_MINOR__ * 100) + __GNUC_PATCHLEVEL__)
 #if (GCC_VERSION < 40700L)

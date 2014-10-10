@@ -337,7 +337,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         ENABLE_ADVERTISEMENT_INSTANCE,   /**< An EnableAdvertisement() has happened */
         DISABLE_ADVERTISEMENT_INSTANCE,  /**< A DisableAdvertisement() has happened */
         ENABLE_DISCOVERY_INSTANCE,       /**< An EnableDiscovery() has happened */
-        DISABLE_DISCOVERY_INSTANCE       /**< A DisableDiscovery() has happened */
+        DISABLE_DISCOVERY_INSTANCE,      /**< A DisableDiscovery() has happened */
+        HANDLE_NETWORK_EVENT             /**< A network event has happened */
     };
 
     /**
@@ -352,6 +353,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         qcc::String m_requestParam;
         bool m_requestParamOpt;
         TransportMask m_requestTransportMask;
+        std::map<qcc::String, qcc::IPAddress> ifMap;
     };
 
     qcc::Mutex m_listenRequestsLock;                               /**< Mutex that protects m_listenRequests */
@@ -460,6 +462,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      */
     void DoStopListen(qcc::String& listenSpec);
 
+    void QueueHandleNetworkEvent(const std::map<qcc::String, qcc::IPAddress>&);
+
     /**
      * @internal
      * @brief Authentication complete notificiation.
@@ -495,6 +499,15 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     FoundCallback m_foundCallback;  /**< Called by IpNameService when new busses are discovered */
 
+    class NetworkEventCallback {
+      public:
+        NetworkEventCallback(UDPTransport& transport) : m_transport(transport) { }
+        void Handler(const std::map<qcc::String, qcc::IPAddress>&);
+      private:
+        UDPTransport& m_transport;
+    };
+
+    NetworkEventCallback m_networkEventCallback;  /**< Called by IpNameService when new network interfaces come up */
     /**
      * @brief The default timeout for in-process authentications.
      *
@@ -676,6 +689,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void DisableAdvertisementInstance(ListenRequest& listenRequest);
     void EnableDiscoveryInstance(ListenRequest& listenRequest);
     void DisableDiscoveryInstance(ListenRequest& listenRequest);
+    void HandleNetworkEventInstance(ListenRequest& listenRequest);
     void UntrustedClientExit();
     QStatus UntrustedClientStart();
     bool m_isAdvertising;
@@ -698,10 +712,23 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     ManageState m_manage;       /**< Flag used for synchronization of ManageEndpoints() */
 
-    uint16_t m_listenPort;     /**< If m_isListening, is the port on which we are listening */
+    std::map<qcc::String, uint16_t> m_listenPortMap; /**< If m_isListening, a map of the ports on which we are listening on different interfaces/addresses */
+
+    std::map<qcc::String, qcc::IPEndpoint> m_requestedInterfaces; /**< A map of requested interfaces and corresponding IP addresses/ports or defaults */
+
+    std::map<qcc::String, qcc::String> m_requestedAddresses; /**< A map of requested IP addresses to interfaces or defaults */
+
+    std::map<qcc::String, uint16_t> m_requestedAddressPortMap; /**< A map of requested IP addresses to ports */
+
+    std::list<ListenRequest> m_pendingAdvertisements; /**< A list of advertisement requests that came in while no interfaces were yet IFF_UP */
+
+    std::list<ListenRequest> m_pendingDiscoveries; /**< A list of discovery requests that came in while no interfaces were yet IFF_UP */
 
     int32_t m_nsReleaseCount; /**< the number of times we have released the name service singleton */
 
+    bool m_wildcardIfaceProcessed; /**< flag to avoid processing network events if we have a wildcard interface request */
+
+    bool m_wildcardAddressProcessed;
 
     /**< The router advertisement prefix set in the configuration file appended with the BusController's unique name */
     qcc::String m_routerName;

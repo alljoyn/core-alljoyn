@@ -28,7 +28,6 @@
 static const char* INTERFACE_NAME = "org.alljoyn.test.c.keystorelistener";
 static const char* OBJECT_NAME = "org.alljoyn.test.c.keystorelistener";
 static const char* OBJECT_PATH = "/org/alljoyn/test";
-static const alljoyn_sessionport SERVICE_PORT = 42;
 
 static QCC_BOOL name_owner_changed_flag = QCC_FALSE;
 
@@ -42,7 +41,7 @@ static QCC_BOOL keystorelistener_loadrequest_flag = QCC_FALSE;
 static QCC_BOOL keystorelistener_storerequest_flag = QCC_FALSE;
 
 /* NameOwnerChanged callback */
-static void name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
+static void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
     if (strcmp(busName, OBJECT_NAME) == 0) {
         name_owner_changed_flag = QCC_TRUE;
@@ -50,7 +49,7 @@ static void name_owner_changed(const void* context, const char* busName, const c
 }
 
 /* Exposed methods */
-static void ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
+static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
     alljoyn_msgarg inArg = alljoyn_message_getarg(msg, 0);
@@ -65,7 +64,7 @@ static void ping_method(alljoyn_busobject bus, const alljoyn_interfacedescriptio
 /* Keystore listener callback functions */
 static char* inMemoryKeystore = NULL;
 
-static QStatus alljoyn_keystorelistener_loadrequest(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore)
+static QStatus AJ_CALL alljoyn_keystorelistener_loadrequest(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore)
 {
     QStatus status = alljoyn_keystorelistener_putkeys(listener, keyStore, inMemoryKeystore, "password");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -74,7 +73,7 @@ static QStatus alljoyn_keystorelistener_loadrequest(const void* context, alljoyn
 
 }
 
-static QStatus alljoyn_keystorelistener_storerequest(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore)
+static QStatus AJ_CALL alljoyn_keystorelistener_storerequest(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore)
 {
     QStatus status = ER_FAIL; // default state is a fail state
     if (inMemoryKeystore != NULL) {
@@ -236,10 +235,10 @@ class KeyStoreListenerTest : public testing::Test {
 };
 
 /* AuthListener callback functions*/
-static QStatus authlistener_requestcredentialsasync_service_srp_keyx(const void* context, alljoyn_authlistener listener,
-                                                                     const char* authMechanism, const char* peerName,
-                                                                     uint16_t authCount, const char* userName,
-                                                                     uint16_t credMask, void* authContext) {
+static QStatus AJ_CALL authlistener_requestcredentialsasync_service_srp_keyx(const void* context, alljoyn_authlistener listener,
+                                                                             const char* authMechanism, const char* peerName,
+                                                                             uint16_t authCount, const char* userName,
+                                                                             uint16_t credMask, void* authContext) {
     alljoyn_credentials creds = alljoyn_credentials_create();
     EXPECT_STREQ("context test string", (const char*)context);
     EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
@@ -252,18 +251,18 @@ static QStatus authlistener_requestcredentialsasync_service_srp_keyx(const void*
     return status;
 }
 
-static void alljoyn_authlistener_authenticationcomplete_service_srp_keyx(const void* context, const char* authMechanism,
-                                                                         const char* peerName, QCC_BOOL success) {
+static void AJ_CALL alljoyn_authlistener_authenticationcomplete_service_srp_keyx(const void* context, const char* authMechanism,
+                                                                                 const char* peerName, QCC_BOOL success) {
     EXPECT_STREQ("context test string", (const char*)context);
     EXPECT_TRUE(success);
     authenticationcomplete_service_flag = QCC_TRUE;
 }
 
 
-static QStatus authlistener_requestcredentialsasync_client_srp_keyx(const void* context, alljoyn_authlistener listener,
-                                                                    const char* authMechanism, const char* peerName,
-                                                                    uint16_t authCount, const char* userName,
-                                                                    uint16_t credMask, void* authContext) {
+static QStatus AJ_CALL authlistener_requestcredentialsasync_client_srp_keyx(const void* context, alljoyn_authlistener listener,
+                                                                            const char* authMechanism, const char* peerName,
+                                                                            uint16_t authCount, const char* userName,
+                                                                            uint16_t credMask, void* authContext) {
     alljoyn_credentials creds = alljoyn_credentials_create();
     EXPECT_STREQ("context test string", (const char*)context);
     EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
@@ -276,8 +275,8 @@ static QStatus authlistener_requestcredentialsasync_client_srp_keyx(const void* 
     return status;
 }
 
-static void alljoyn_authlistener_authenticationcomplete_client_srp_keyx(const void* context, const char* authMechanism,
-                                                                        const char* peerName, QCC_BOOL success) {
+static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_srp_keyx(const void* context, const char* authMechanism,
+                                                                                const char* peerName, QCC_BOOL success) {
     EXPECT_STREQ("context test string", (const char*)context);
     EXPECT_TRUE(success);
     authenticationcomplete_client_flag = QCC_TRUE;

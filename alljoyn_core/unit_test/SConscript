@@ -46,6 +46,10 @@ else:
     vars.AddVariables(('GTEST_HOME', '', gtest_dir))
     vars.Update(gtest_env)
 
+    if gtest_env['CXX'].startswith('clang'):
+        # Suppress a clang warning in google-test code.
+        gtest_env.Append(CPPFLAGS = ['-Wno-unused-private-field'])
+
     if gtest_dir == '/usr':
         gtest_src_base = '%s/src/gtest' % gtest_dir
     else:
@@ -131,66 +135,3 @@ else:
 
     # install gtest utilities
     unittest_env.Install('$TESTDIR/cpp/bin', Dir('test_report').srcnode())
-
-if (env['OS'] == 'win8' and
-    (env['WINRT_UNITTEST_RUN'] == 'on' or env['WINRT_UNITTEST_BUILD'] == 'on') and
-    have_developer_license() and
-    env['CPU'] in ['x86', 'x86_64']):
-
-    appx_env = env.Clone();
-
-    # choose the correct build flavor
-    if appx_env['CPU'] == 'x86':
-        platform = 'x86'
-    elif appx_env['CPU'] == 'x86_64':
-        platform = 'x64'
-
-    # Change the name slightly when building a debug version
-    if appx_env['VARIANT'].lower() == 'debug':
-        debug_name = '_Debug'
-    else:
-        debug_name = ''
-
-    # this magic setting is needed for vstest.console.exe to run for the right processor architecture
-    if appx_env['HOST_ARCH'] == 'x86_64':
-        appx_env['ENV']['PROCESSOR_ARCHITECTURE'] = 'AMD64'
-    elif appx_env['HOST_ARCH'] == 'x86':
-        appx_env['ENV']['PROCESSOR_ARCHITECTURE'] = 'X86'
-
-
-    unit_test_appx_name_stem = 'winrt/AllJoynUnitTests/AppPackages/AllJoynUnitTests_1.0.0.0_' + platform + debug_name + '_Test/AllJoynUnitTests_1.0.0.0_' + platform + debug_name + '.appx'
-    unit_test_appx_name = '../../../../alljoyn_core/unit_test/' + unit_test_appx_name_stem
-
-
-    # make_appx_cmd:
-    #    produces the appx files with the unit tests inside,
-    #    depends on AllJoyn.dll to exist
-    #    runs msbuild on the AllJoynUnitTests solution file.
-    make_appx_cmd = appx_env.Command(
-                          unit_test_appx_name,
-                        [   # source files to depend upon
-                            'winrt/AllJoynUnitTests.sln',
-                            '$WINRT_DISTDIR/bin/AllJoyn.dll',
-                            '$WINRT_DISTDIR/bin/AllJoyn.winmd'
-                        ],
-                        'msbuild.exe ${SOURCE.abspath} /t:Clean,Rebuild /p:Configuration=' + appx_env['VARIANT'] + ';Platform=' + platform,
-                        )
-
-    # the unit test:
-    #    produces no files,
-    #    depends on the .appx to exist
-    #    runs vstest.console.exe on the appx file.
-    if appx_env['WINRT_UNITTEST_RUN'] == 'on':
-        run_appx_unit_test = appx_env.Command( None,
-                             unit_test_appx_name_stem,
-                             'vstest.console.exe "${SOURCE.abspath} " /InIsolation /platform:' + platform
-                             )
-
-#    # Install vsix at the same level as the architecture directory
-#    makeappx_install = appx_env.Install('$CPP_DISTDIR/../test', source = unit_test_appx_name_stem )
-#    appx_env.Depends(makeappx_install, make_appx_cmd)
-
-
-    # make sure the appx file is built before trying to run the unit test.
-    if appx_env['WINRT_UNITTEST_RUN'] == 'on':
-        appx_env.Depends(run_appx_unit_test, make_appx_cmd)

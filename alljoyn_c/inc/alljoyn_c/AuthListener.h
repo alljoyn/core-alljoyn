@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -66,7 +66,7 @@ static const uint16_t ALLJOYN_CRED_ONE_TIME_PWD = 0x2001; /**< Indicates the cre
  * whether to allow or reject multiple authentication attempts to the same peer.
  *
  * An implementation must provide an alljoyn_authlistener_callbacks or
- * an alljoyn_authlistenerasync_callbacks but not both..
+ * an alljoyn_authlistenerasync_callbacks but not both.
  *
  * @param context        The context pointer passed into the alljoyn_authlistener_create function
  * @param authMechanism  The name of the authentication mechanism issuing the request.
@@ -83,8 +83,8 @@ static const uint16_t ALLJOYN_CRED_ONE_TIME_PWD = 0x2001; /**< Indicates the cre
  *          requests is being rejected. If the request is rejected the authentication is
  *          complete.
  */
-typedef QCC_BOOL (*alljoyn_authlistener_requestcredentials_ptr)(const void* context, const char* authMechanism, const char* peerName, uint16_t authCount,
-                                                                const char* userName, uint16_t credMask, alljoyn_credentials credentials);
+typedef QCC_BOOL (AJ_CALL * alljoyn_authlistener_requestcredentials_ptr)(const void* context, const char* authMechanism, const char* peerName, uint16_t authCount,
+                                                                         const char* userName, uint16_t credMask, alljoyn_credentials credentials);
 
 /**
  * Authentication mechanism asynchronous request for credentials. If the user name is not an empty string
@@ -110,7 +110,9 @@ typedef QCC_BOOL (*alljoyn_authlistener_requestcredentials_ptr)(const void* cont
  *      - ER_OK if the request is handled.
  *      - ER_NOT_IMPLEMENTED if implementation not found (default)
  */
-typedef QStatus (*alljoyn_authlistener_requestcredentialsasync_ptr)(const void* context, alljoyn_authlistener listener, const char* authMechanism, const char* peerName, uint16_t authCount, const char* userName, uint16_t credMask, void* authContext);
+typedef QStatus (AJ_CALL * alljoyn_authlistener_requestcredentialsasync_ptr)(const void* context, alljoyn_authlistener listener,
+                                                                             const char* authMechanism, const char* peerName, uint16_t authCount,
+                                                                             const char* userName, uint16_t credMask, void* authContext);
 
 /**
  * Respond to a call to alljoyn_authlistener_requestcredentialsasync_ptr.
@@ -123,7 +125,7 @@ typedef QStatus (*alljoyn_authlistener_requestcredentialsasync_ptr)(const void* 
  * @return   Returns ER_OK if the credential verification response was expected. Returns an error status if
  *           the credentials verification response was not expected.
  */
-extern AJ_API QStatus alljoyn_authlistener_requestcredentialsresponse(alljoyn_authlistener listener, void* authContext, QCC_BOOL accept, alljoyn_credentials credentials);
+extern AJ_API QStatus AJ_CALL alljoyn_authlistener_requestcredentialsresponse(alljoyn_authlistener listener, void* authContext, QCC_BOOL accept, alljoyn_credentials credentials);
 
 /**
  * Type for the VerifyCredentials callback.
@@ -140,8 +142,8 @@ extern AJ_API QStatus alljoyn_authlistener_requestcredentialsresponse(alljoyn_au
  * @return  The listener should return true if the credentials are acceptable or false if the
  *          credentials are being rejected.
  */
-typedef QCC_BOOL (*alljoyn_authlistener_verifycredentials_ptr)(const void* context, const char* authMechanism, const char* peerName,
-                                                               const alljoyn_credentials credentials);
+typedef QCC_BOOL (AJ_CALL * alljoyn_authlistener_verifycredentials_ptr)(const void* context, const char* authMechanism, const char* peerName,
+                                                                        const alljoyn_credentials credentials);
 
 /**
  * Authentication mechanism asynchronous request for verification of credentials from a remote peer.
@@ -160,7 +162,8 @@ typedef QCC_BOOL (*alljoyn_authlistener_verifycredentials_ptr)(const void* conte
  *  - ER_OK if the request is handled.
  *  - ER_NOT_IMPLEMENTED (default)
  */
-typedef QStatus (*alljoyn_authlistener_verifycredentialsasync_ptr)(const void* context, alljoyn_authlistener listener, const char* authMechanism, const char* peerName, const alljoyn_credentials credentials, void* authContext);
+typedef QStatus (AJ_CALL * alljoyn_authlistener_verifycredentialsasync_ptr)(const void* context, alljoyn_authlistener listener,
+                                                                            const char* authMechanism, const char* peerName, const alljoyn_credentials credentials, void* authContext);
 
 /**
  * Respond to a call to alljoyn_authlistener_verifycredentialsasync_ptr.
@@ -172,7 +175,7 @@ typedef QStatus (*alljoyn_authlistener_verifycredentialsasync_ptr)(const void* c
  * @return   Returns ER_OK if the credential verification response was expected. Returns an error status if
  *           the credentials verification response was not expected.
  */
-extern AJ_API QStatus alljoyn_authlistener_verifycredentialsresponse(alljoyn_authlistener listener, void* authContext, QCC_BOOL accept);
+extern AJ_API QStatus AJ_CALL alljoyn_authlistener_verifycredentialsresponse(alljoyn_authlistener listener, void* authContext, QCC_BOOL accept);
 /**
  * Type for the SecurityViolation callback.
  *
@@ -185,7 +188,7 @@ extern AJ_API QStatus alljoyn_authlistener_verifycredentialsresponse(alljoyn_aut
  * @param status   A status code indicating the type of security violation.
  * @param msg      The message that cause the security violation.
  */
-typedef void (*alljoyn_authlistener_securityviolation_ptr)(const void* context, QStatus status, const alljoyn_message msg);
+typedef void (AJ_CALL * alljoyn_authlistener_securityviolation_ptr)(const void* context, QStatus status, const alljoyn_message msg);
 
 /**
  * Type for the AuthenticationComplete callback.
@@ -199,7 +202,7 @@ typedef void (*alljoyn_authlistener_securityviolation_ptr)(const void* context, 
  *                       accepting side this will be the unique bus name for the remote peer.
  * @param success        true if the authentication was successful, otherwise false.
  */
-typedef void (*alljoyn_authlistener_authenticationcomplete_ptr)(const void* context, const char* authMechanism, const char* peerName, QCC_BOOL success);
+typedef void (AJ_CALL * alljoyn_authlistener_authenticationcomplete_ptr)(const void* context, const char* authMechanism, const char* peerName, QCC_BOOL success);
 
 /**
  * Structure used during alljoyn_authlistener_create to provide callbacks into C.
@@ -260,7 +263,7 @@ typedef struct {
  *
  * @return Handle to newly allocated alljoyn_authlistener.
  */
-extern AJ_API alljoyn_authlistener alljoyn_authlistener_create(const alljoyn_authlistener_callbacks* callbacks, const void* context);
+extern AJ_API alljoyn_authlistener AJ_CALL alljoyn_authlistener_create(const alljoyn_authlistener_callbacks* callbacks, const void* context);
 
 /**
  * Create an alljoyn_authlistener which will trigger the provided callbacks, passing along the provided context.
@@ -270,35 +273,35 @@ extern AJ_API alljoyn_authlistener alljoyn_authlistener_create(const alljoyn_aut
  *
  * @return Handle to newly allocated alljoyn_authlistener.
  */
-extern AJ_API alljoyn_authlistener alljoyn_authlistenerasync_create(const alljoyn_authlistenerasync_callbacks* callbacks, const void* context);
+extern AJ_API alljoyn_authlistener AJ_CALL alljoyn_authlistenerasync_create(const alljoyn_authlistenerasync_callbacks* callbacks, const void* context);
 
 /**
  * Destroy an alljoyn_authlistener.
  *
  * @param listener alljoyn_authlistener to destroy.
  */
-extern AJ_API void alljoyn_authlistener_destroy(alljoyn_authlistener listener);
+extern AJ_API void AJ_CALL alljoyn_authlistener_destroy(alljoyn_authlistener listener);
 
 /**
  * Destroy an alljoyn_authlistener.
  *
  * @param listener alljoyn_authlistener to destroy.
  */
-extern AJ_API void alljoyn_authlistenerasync_destroy(alljoyn_authlistener listener);
+extern AJ_API void AJ_CALL alljoyn_authlistenerasync_destroy(alljoyn_authlistener listener);
 
 /**
  * Create credentials
  *
  * @return Newly created credentials.
  */
-extern AJ_API alljoyn_credentials alljoyn_credentials_create();
+extern AJ_API alljoyn_credentials AJ_CALL alljoyn_credentials_create();
 
 /**
  * Destroy credentials
  *
  * @param cred Credentials to destroy.
  */
-extern AJ_API void alljoyn_credentials_destroy(alljoyn_credentials cred);
+extern AJ_API void AJ_CALL alljoyn_credentials_destroy(alljoyn_credentials cred);
 
 /**
  * Tests if one or more credentials are set.
@@ -307,7 +310,7 @@ extern AJ_API void alljoyn_credentials_destroy(alljoyn_credentials cred);
  * @param creds  A logical or of the credential bit values.
  * @return true if the credentials are set.
  */
-extern AJ_API QCC_BOOL alljoyn_credentials_isset(const alljoyn_credentials cred, uint16_t creds);
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_credentials_isset(const alljoyn_credentials cred, uint16_t creds);
 
 /**
  * Sets a requested password, pincode, or passphrase.
@@ -315,7 +318,7 @@ extern AJ_API QCC_BOOL alljoyn_credentials_isset(const alljoyn_credentials cred,
  * @param cred The credentials to set.
  * @param pwd  The password to set.
  */
-extern AJ_API void alljoyn_credentials_setpassword(alljoyn_credentials cred, const char* pwd);
+extern AJ_API void AJ_CALL alljoyn_credentials_setpassword(alljoyn_credentials cred, const char* pwd);
 
 /**
  * Sets a requested user name.
@@ -323,7 +326,7 @@ extern AJ_API void alljoyn_credentials_setpassword(alljoyn_credentials cred, con
  * @param cred      The credentials to set.
  * @param userName  The user name to set.
  */
-extern AJ_API void alljoyn_credentials_setusername(alljoyn_credentials cred, const char* userName);
+extern AJ_API void AJ_CALL alljoyn_credentials_setusername(alljoyn_credentials cred, const char* userName);
 
 /**
  * Sets a requested public key certificate chain. The certificates must be PEM encoded.
@@ -331,7 +334,7 @@ extern AJ_API void alljoyn_credentials_setusername(alljoyn_credentials cred, con
  * @param cred       The credentials to set.
  * @param certChain  The certificate chain to set.
  */
-extern AJ_API void alljoyn_credentials_setcertchain(alljoyn_credentials cred, const char* certChain);
+extern AJ_API void AJ_CALL alljoyn_credentials_setcertchain(alljoyn_credentials cred, const char* certChain);
 
 /**
  * Sets a requested private key. The private key must be PEM encoded and may be encrypted. If
@@ -340,7 +343,7 @@ extern AJ_API void alljoyn_credentials_setcertchain(alljoyn_credentials cred, co
  * @param cred The credentials to set.
  * @param pk   The private key to set.
  */
-extern AJ_API void alljoyn_credentials_setprivatekey(alljoyn_credentials cred, const char* pk);
+extern AJ_API void AJ_CALL alljoyn_credentials_setprivatekey(alljoyn_credentials cred, const char* pk);
 
 /**
  * Sets a logon entry. For example for the Secure Remote Password protocol in RFC 5054, a
@@ -351,7 +354,7 @@ extern AJ_API void alljoyn_credentials_setprivatekey(alljoyn_credentials cred, c
  * @param cred        The credentials to set.
  * @param logonEntry  The logon entry to set.
  */
-extern AJ_API void alljoyn_credentials_setlogonentry(alljoyn_credentials cred, const char* logonEntry);
+extern AJ_API void AJ_CALL alljoyn_credentials_setlogonentry(alljoyn_credentials cred, const char* logonEntry);
 
 /**
  * Sets an expiration time in seconds relative to the current time for the credentials. This value is optional and
@@ -362,7 +365,7 @@ extern AJ_API void alljoyn_credentials_setlogonentry(alljoyn_credentials cred, c
  * @param cred        The credentials to set.
  * @param expiration  The expiration time in seconds.
  */
-extern AJ_API void alljoyn_credentials_setexpiration(alljoyn_credentials cred, uint32_t expiration);
+extern AJ_API void AJ_CALL alljoyn_credentials_setexpiration(alljoyn_credentials cred, uint32_t expiration);
 
 /**
  * Gets the password, pincode, or passphrase from this credentials instance.
@@ -370,7 +373,7 @@ extern AJ_API void alljoyn_credentials_setexpiration(alljoyn_credentials cred, u
  * @param cred The credentials to query.
  * @return A password or an empty string.
  */
-extern AJ_API const char* alljoyn_credentials_getpassword(const alljoyn_credentials cred);
+extern AJ_API const char* AJ_CALL alljoyn_credentials_getpassword(const alljoyn_credentials cred);
 
 /**
  * Gets the user name from this credentials instance.
@@ -378,7 +381,7 @@ extern AJ_API const char* alljoyn_credentials_getpassword(const alljoyn_credenti
  * @param cred The credentials to query.
  * @return A user name or an empty string.
  */
-extern AJ_API const char* alljoyn_credentials_getusername(const alljoyn_credentials cred);
+extern AJ_API const char* AJ_CALL alljoyn_credentials_getusername(const alljoyn_credentials cred);
 
 /**
  * Gets the PEM encoded X509 certificate chain from this credentials instance.
@@ -386,7 +389,7 @@ extern AJ_API const char* alljoyn_credentials_getusername(const alljoyn_credenti
  * @param cred The credentials to query.
  * @return An X509 certificate chain or an empty string.
  */
-extern AJ_API const char* alljoyn_credentials_getcertchain(const alljoyn_credentials cred);
+extern AJ_API const char* AJ_CALL alljoyn_credentials_getcertchain(const alljoyn_credentials cred);
 
 /**
  * Gets the PEM encode private key from this credentials instance.
@@ -394,7 +397,7 @@ extern AJ_API const char* alljoyn_credentials_getcertchain(const alljoyn_credent
  * @param cred The credentials to query.
  * @return An PEM encode private key or an empty string.
  */
-extern AJ_API const char* alljoyn_credentials_getprivateKey(const alljoyn_credentials cred);
+extern AJ_API const char* AJ_CALL alljoyn_credentials_getprivateKey(const alljoyn_credentials cred);
 
 /**
  * Gets a logon entry.
@@ -402,7 +405,7 @@ extern AJ_API const char* alljoyn_credentials_getprivateKey(const alljoyn_creden
  * @param cred The credentials to query.
  * @return An encoded logon entry or an empty string.
  */
-extern AJ_API const char* alljoyn_credentials_getlogonentry(const alljoyn_credentials cred);
+extern AJ_API const char* AJ_CALL alljoyn_credentials_getlogonentry(const alljoyn_credentials cred);
 
 /**
  * Get the expiration time in seconds if it is set.
@@ -410,14 +413,14 @@ extern AJ_API const char* alljoyn_credentials_getlogonentry(const alljoyn_creden
  * @param cred The credentials to query.
  * @return The expiration or the max 32 bit unsigned value if it was not set.
  */
-extern AJ_API uint32_t alljoyn_credentials_getexpiration(const alljoyn_credentials cred);
+extern AJ_API uint32_t AJ_CALL alljoyn_credentials_getexpiration(const alljoyn_credentials cred);
 
 /**
  * Clear the credentials.
  *
  * @param cred The credentials to clear.
  */
-extern AJ_API void alljoyn_credentials_clear(alljoyn_credentials cred);
+extern AJ_API void AJ_CALL alljoyn_credentials_clear(alljoyn_credentials cred);
 
 #ifdef __cplusplus
 } /* extern "C" */

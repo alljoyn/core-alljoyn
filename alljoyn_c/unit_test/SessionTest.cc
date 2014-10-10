@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -33,8 +33,8 @@ static alljoyn_sessionid joinsessionid;
 static alljoyn_sessionid joinsessionid_alt;
 
 /* AcceptSessionJoiner callback */
-static QCC_BOOL accept_session_joiner(const void* context, alljoyn_sessionport sessionPort,
-                                      const char* joiner,  const alljoyn_sessionopts opts)
+static QCC_BOOL AJ_CALL accept_session_joiner(const void* context, alljoyn_sessionport sessionPort,
+                                              const char* joiner,  const alljoyn_sessionopts opts)
 {
     QCC_BOOL ret = QCC_FALSE;
     if (sessionPort == SESSION_PORT) {
@@ -43,7 +43,7 @@ static QCC_BOOL accept_session_joiner(const void* context, alljoyn_sessionport s
     return ret;
 }
 
-static void session_joined(const void* context, alljoyn_sessionport sessionPort, alljoyn_sessionid id, const char* joiner)
+static void AJ_CALL session_joined(const void* context, alljoyn_sessionport sessionPort, alljoyn_sessionid id, const char* joiner)
 {
     //printf("session_joined\n");
     EXPECT_EQ(SESSION_PORT, sessionPort);
@@ -51,7 +51,7 @@ static void session_joined(const void* context, alljoyn_sessionport sessionPort,
     sessionjoined_flag = true;
 }
 
-static void joinsessionhandler(QStatus status, alljoyn_sessionid sessionId, const alljoyn_sessionopts opts, void* context)
+static void AJ_CALL joinsessionhandler(QStatus status, alljoyn_sessionid sessionId, const alljoyn_sessionopts opts, void* context)
 {
     EXPECT_STREQ("A test string to send as the context void*", (char*)context);
     joinsessionid_alt = sessionId;
@@ -60,7 +60,7 @@ static void joinsessionhandler(QStatus status, alljoyn_sessionid sessionId, cons
 
 
 /* FoundAdvertisedName callback */
-void found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
+void AJ_CALL found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
 {
     //printf("FoundAdvertisedName(name=%s, prefix=%s)\n", name, namePrefix);
     EXPECT_STREQ(OBJECT_NAME, name);
@@ -69,7 +69,7 @@ void found_advertised_name(const void* context, const char* name, alljoyn_transp
     }
 }
 /* Exposed methods */
-static void ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
+static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
     outArg = alljoyn_message_getarg(msg, 0);
@@ -364,7 +364,7 @@ TEST_F(SessionTest, setLinkTimeout)
 }
 
 QCC_BOOL setlinktimeout_flag = QCC_FALSE;
-void alljoyn_busattachment_setlinktimeoutcb(QStatus status, uint32_t timeout, void* context)
+void AJ_CALL alljoyn_busattachment_setlinktimeoutcb(QStatus status, uint32_t timeout, void* context)
 {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_EQ(120u, timeout);

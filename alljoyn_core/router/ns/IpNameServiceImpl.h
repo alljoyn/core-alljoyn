@@ -304,7 +304,7 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     QStatus CreateVirtualInterface(const qcc::IfConfigEntry& entry);
 
-    QStatus CreateUnicastSocket(qcc::AddressFamily family);
+    QStatus CreateUnicastSocket();
 
     /**
      * @brief Delete a virtual network interface. In normal cases WiFi-Direct
@@ -479,12 +479,12 @@ class IpNameServiceImpl : public qcc::Thread {
      *
      * @param transportMask A bitmask containing the transport handling the specified
      *     endpoints.
-     * @param reliableIPv4Port Indicates the port number of a server listening for
-     *     connections if enableReliableIPv4 is true
+     * @param reliableIPv4PortMap Indicates a map of interfaces to port numbers
+     *     of a server listening for connections if enableReliableIPv4 is true
      * @param reliableIPv6Port Indicates the port number of a server listening for
-     *     connections if enableUnreliableIPv4 is true
-     * @param unreliableIPv4Port Indicates the port number of a server listening for
-     *     connections if enableReliableIPv6 is true
+     *     connections if enableUnreliableIPv6 is true
+     * @param unreliableIPv4Port Indicates a map of interfaces to port numbers
+     *     of a server listening for connections if enableUnreliableIPv4 is true
      * @param unreliableIPv6Port Indicates the port number of a server listening for
      *     connections if enableUnreliableIPv6 is true.
      * @param enableReliableIPv4
@@ -501,8 +501,8 @@ class IpNameServiceImpl : public qcc::Thread {
      *     - false indicates this protocol is not enabled.
      */
     QStatus Enable(TransportMask transportMask,
-                   uint16_t reliableIPv4Port, uint16_t reliableIPv6Port,
-                   uint16_t unreliableIPv4Port, uint16_t unreliableIPv6Port,
+                   const std::map<qcc::String, uint16_t>& reliableIPv4PortMap, uint16_t reliableIPv6Port,
+                   const std::map<qcc::String, uint16_t>& unreliableIPv4PortMap, uint16_t unreliableIPv6Port,
                    bool enableReliableIPv4, bool enableReliableIPv6,
                    bool enableUnreliableIPv4, bool enableUnreliableIPv6);
 
@@ -512,18 +512,18 @@ class IpNameServiceImpl : public qcc::Thread {
      *
      * @param transportMask A bitmask containing the transport handling the specified
      *     endpoints.
-     * @param reliableIPv4Port If zero, indicates this protocol is not enabled.  If
-     *     non-zero, indicates the port number of a server listening for connections.
+     * @param reliableIPv4PortMap If empty, indicates this protocol is not enabled.  If
+     *     not empty, indicates the interfaces/port numbers of a server listening for connections.
      * @param reliableIPv6Port If zero, indicates this protocol is not enabled.  If
      *     non-zero, indicates the port number of a server listening for connections.
-     * @param unreliableIPv4Port If zero, indicates this protocol is not enabled.  If
-     *     non-zero, indicates the port number of a server listening for connections.
+     * @param unreliableIPv4PortMap If empty, indicates this protocol is not enabled.  If
+     *     not empty, indicates the interfaces/port numbers of a server listening for connections.
      * @param unreliableIPv6Port If zero, indicates this protocol is not enabled.  If
      *     non-zero, indicates the port number of a server listening for connections.
      */
     QStatus Enabled(TransportMask transportMask,
-                    uint16_t& reliableIPv4Port, uint16_t& reliableIPv6Port,
-                    uint16_t& unreliableIPv4Port, uint16_t& unreliableIPv6Port);
+                    std::map<qcc::String, uint16_t>& reliableIPv4PortMap, uint16_t& reliableIPv6Port,
+                    std::map<qcc::String, uint16_t>& unreliableIPv4PortMap, uint16_t& unreliableIPv6Port);
 
     /**
      * Allow a user to select what kind of retry policy should be used when
@@ -694,12 +694,25 @@ class IpNameServiceImpl : public qcc::Thread {
                         Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint32_t>* cb);
 
     /**
+     * @brief Set the Callback for notification of network interface events.
+     *
+     */
+    QStatus SetNetworkEventCallback(TransportMask transportMask,
+                                    Callback<void, const std::map<qcc::String, qcc::IPAddress>&>* cb);
+
+    /**
      * @brief Clear the callbacks for all transports.
      *
      * Used during the shutdown of the IpNameService singleton to make sure that
      * no more callbacks escape from the implementation.
      */
     void ClearCallbacks(void);
+
+    /**
+     * @brief Clear the network interface event callbacks for all transports.
+     *
+     */
+    void ClearNetworkEventCallbacks(void);
 
     /**
      * @brief Advertise an AllJoyn daemon service.
@@ -1014,6 +1027,13 @@ class IpNameServiceImpl : public qcc::Thread {
     bool m_protect_callback;
 
     /**
+     * @internal
+     * @brief Variable used to indicate that network event callbacks are currently
+     * in use and may not be deleted.
+     */
+    bool m_protect_net_callback;
+
+    /**
      * Send outbound name service messages out the current live interfaces.
      */
     void SendOutboundMessages(void);
@@ -1115,11 +1135,14 @@ class IpNameServiceImpl : public qcc::Thread {
      *     interface for which the is-at message is eventually destined.
      * @param iPv6port The port that the daemon is listening to of the IPv6
      *     interface for which the is-at message is eventually destined.
+     * @param interface The network interface name over which the message
+     *     is to be sent.
      */
     void RewriteVersionSpecific(uint32_t msgVersion, Packet packet,
                                 bool haveIPv4address, qcc::IPAddress ipv4address,
                                 bool haveIPv6Address, qcc::IPAddress ipv6address,
-                                uint16_t unicastIpv4Port = 0);
+                                uint16_t unicastIpv4Port = 0, const qcc::String& interface = qcc::String(),
+                                const uint16_t reliableTransportPort = 0, const uint16_t unreliableTransportPort = 0);
 
     /**
      * @internal
@@ -1186,6 +1209,8 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint32_t>* m_callback[N_TRANSPORTS];
 
+    Callback<void, const std::map<qcc::String, qcc::IPAddress>&>* m_networkEventCallback[N_TRANSPORTS];
+
     /**
      * @internal @brief A vector of list of all of the names that the various
      * transports have actively advertised.
@@ -1233,10 +1258,10 @@ class IpNameServiceImpl : public qcc::Thread {
 
     /**
      * @internal
-     * @brief The ports on this daemon that are listening for reliable (TCP)
-     * inbound connections over IPv4.
+     * @brief A map of network interfaces to ports on this daemon that are listening
+     * for reliable (TCP) inbound connections over IPv4.
      */
-    uint16_t m_reliableIPv4Port[N_TRANSPORTS];
+    std::map<qcc::String, uint16_t> m_reliableIPv4PortMap[N_TRANSPORTS];
 
     /**
      * @internal
@@ -1255,10 +1280,10 @@ class IpNameServiceImpl : public qcc::Thread {
 
     /**
      * @internal
-     * @brief The ports on this daemon that are listening for unreliable (UDP)
-     * inbound connections over IPv4.
+     * @brief A map of network interfaces to ports on this daemon that are listening
+     * for unreliable (UDP) inbound connections over IPv4.
      */
-    uint16_t m_unreliableIPv4Port[N_TRANSPORTS];
+    std::map<qcc::String, uint16_t> m_unreliableIPv4PortMap[N_TRANSPORTS];
 
     /**
      * @internal
@@ -1434,7 +1459,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @brief Make sure that we have socket open to talk and listen to as many
      * of our desired interfaces as possible.
      */
-    void LazyUpdateInterfaces(const std::set<uint32_t>& networkRefreshSet = std::set<uint32_t>());
+    void LazyUpdateInterfaces(const qcc::NetworkEventSet& networkEvents = qcc::NetworkEventSet());
 
     /**
      * @internal
@@ -1477,6 +1502,12 @@ class IpNameServiceImpl : public qcc::Thread {
 
     /**
      * @internal
+     * @brief If true, invoke the transport network event callbacks.
+     */
+    bool m_processTransport;
+
+    /**
+     * @internal
      * @brief If set to true, request the name service run thread to enable
      * communication with the outside world.
      */
@@ -1506,7 +1537,7 @@ class IpNameServiceImpl : public qcc::Thread {
     qcc::SocketFd m_ipv6QuietSockFd;
 
     qcc::SocketFd m_ipv4UnicastSockFd;
-    qcc::SocketFd m_ipv6UnicastSockFd;
+    qcc::Event* m_unicastEvent;
 
     std::list<BurstResponseHeader> m_burstQueue;
     /**
@@ -1581,7 +1612,7 @@ class IpNameServiceImpl : public qcc::Thread {
     PacketScheduler m_packetScheduler;
 
     uint32_t m_networkChangeScheduleCount;
-    std::set<uint32_t> m_networkChangeRefreshSet;
+    qcc::NetworkEventSet m_networkEvents;
     qcc::Timespec m_networkChangeTimeStamp;
     bool PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateSid);
 };

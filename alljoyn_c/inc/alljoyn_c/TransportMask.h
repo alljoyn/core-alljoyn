@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2010, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2010, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -33,7 +33,6 @@ typedef uint16_t alljoyn_transportmask;
 #define ALLJOYN_TRANSPORT_WLAN      (alljoyn_transportmask)0x0004   /**< Wireless local-area network transport */
 #define ALLJOYN_TRANSPORT_WWAN      (alljoyn_transportmask)0x0008   /**< Wireless wide-area network transport */
 #define ALLJOYN_TRANSPORT_LAN       (alljoyn_transportmask)0x0010   /**< Wired local-area network transport */
-#define ALLJOYN_TRANSPORT_PROXIMITY (alljoyn_transportmask)0x0040   /**< Transport using WinRT Proximity Framework */
 #define ALLJOYN_TRANSPORT_WFD       (alljoyn_transportmask)0x0080   /**< Transport using Wi-Fi Direct transport */
 #define ALLJOYN_TRANSPORT_TCP       (alljoyn_transportmask)0x0004   /**< TCP/IP transport */
 #define ALLJOYN_TRANSPORT_UDP       (alljoyn_transportmask)0x0100   /**< UDP/IP transport */

@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -32,7 +32,6 @@ using namespace qcc;
  * link establishment packets
  */
 static const char* LinkCtrlPacketNames[5] = { "NONE", "CONN", "ACPT", "NEGO", "NRSP" };
-static const size_t ExpectedLen[5] = { 0, 4, 4, 7, 7 };
 
 const uint8_t BOUNDARY_BYTE         = 0xC0;
 const uint8_t BOUNDARY_SUBSTITUTE   = 0xDC;

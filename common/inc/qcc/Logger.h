@@ -26,13 +26,13 @@
 #include <qcc/platform.h>
 
 #include <stdio.h>
-#if !defined(QCC_OS_GROUP_WINDOWS) && !defined(QCC_OS_GROUP_WINRT)
+#if !defined(QCC_OS_GROUP_WINDOWS)
 #include <syslog.h>
 #endif
 
 #include <qcc/Mutex.h>
 
-#if defined(QCC_OS_GROUP_WINDOWS) || defined(QCC_OS_GROUP_WINRT)
+#if defined(QCC_OS_GROUP_WINDOWS)
 // Define the same log levels as used by UNIX syslog facility.
 #define LOG_EMERG       0       /**< system is unusable */
 #define LOG_ALERT       1       /**< action must be taken immediately */
@@ -143,7 +143,10 @@ class LoggerSetting {
                                            bool useSyslog = LOGGERSETTING_DEFAULT_SYSLOG,
                                            FILE* file = LOGGERSETTING_DEFAULT_FILE);
 
-
+    /**
+     * Delete the static singleton object. Must be the last call.
+     */
+    static void Cleanup(void);
 
   private:
     static LoggerSetting* singleton;    ///< Static pointer to most recent instance.

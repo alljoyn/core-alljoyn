@@ -91,7 +91,7 @@ public interface AboutService extends ServiceCommon
      * <p>The handler is only called if all the interfaces are implemented.
      * For example, if the handler should be called if both "com.example.Audio"
      * <i>and</i> "com.example.Video" are implemented then call</p>
-     * addAnnouncementHandler once:<br/>
+     * addAnnouncementHandler once:
      * <pre>
      * {@code
      * addAnnouncementHandler(handler, new String[] {"com.example.Audio", "com.example.Video"});
@@ -99,7 +99,7 @@ public interface AboutService extends ServiceCommon
      *
      * <p>If the handler should be called if "com.example.Audio" <i>or</i>
      * "com.example.Video" is implemented then call</p>
-     * addAnnouncementHandler multiple times:<br/>
+     * addAnnouncementHandler multiple times:
      * <pre>
      * {@code
      * addAnnouncementHandler(handler, new String[] {"com.example.Audio"});
@@ -117,8 +117,7 @@ public interface AboutService extends ServiceCommon
      *
      * <p>If RegisterAnnounceHandler is called with lists of interfaces that overlap
      * then multiple Announcements will occur.</p>
-     * For example given the following:<br/>
-     *
+     * For example given the following:
      * <pre>
      * {@code
      * addAnnouncementHandler(handler, new String[] {"com.example.Audio"});

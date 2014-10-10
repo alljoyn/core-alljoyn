@@ -57,10 +57,11 @@ namespace qcc {
 
 const SocketFd INVALID_SOCKET_FD = -1;
 const int MAX_LISTEN_CONNECTIONS = SOMAXCONN;
-const int CONNECT_TIMEOUT = 5;
 
 #if defined(QCC_OS_DARWIN)
+const int CONNECT_TIMEOUT = 5;
 #define MSG_NOSIGNAL 0
+
 static void DisableSigPipe(SocketFd socket)
 {
     int disableSigPipe = 1;

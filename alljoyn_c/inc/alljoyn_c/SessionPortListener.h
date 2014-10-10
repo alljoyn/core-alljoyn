@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -51,8 +51,8 @@ typedef struct _alljoyn_sessionportlistener_handle*         alljoyn_sessionportl
  * @param opts           Session options requested by the joiner.
  * @return   Return true if JoinSession request is accepted. false if rejected.
  */
-typedef QCC_BOOL (*alljoyn_sessionportlistener_acceptsessionjoiner_ptr)(const void* context, alljoyn_sessionport sessionPort,
-                                                                        const char* joiner,  const alljoyn_sessionopts opts);
+typedef QCC_BOOL (AJ_CALL * alljoyn_sessionportlistener_acceptsessionjoiner_ptr)(const void* context, alljoyn_sessionport sessionPort,
+                                                                                 const char* joiner,  const alljoyn_sessionopts opts);
 
 /**
  * Type for the SessionJoined callback.
@@ -67,8 +67,8 @@ typedef QCC_BOOL (*alljoyn_sessionportlistener_acceptsessionjoiner_ptr)(const vo
  * @param id             Id of session.
  * @param joiner         Unique name of the joiner.
  */
-typedef void (*alljoyn_sessionportlistener_sessionjoined_ptr)(const void* context, alljoyn_sessionport sessionPort,
-                                                              alljoyn_sessionid id, const char* joiner);
+typedef void (AJ_CALL * alljoyn_sessionportlistener_sessionjoined_ptr)(const void* context, alljoyn_sessionport sessionPort,
+                                                                       alljoyn_sessionid id, const char* joiner);
 
 /**
  * Structure used during alljoyn_sessionportlistener_create to provide callbacks into C.
@@ -94,15 +94,15 @@ typedef struct {
  *
  * @return Handle to newly allocated alljoyn_sessionportlistener.
  */
-extern AJ_API alljoyn_sessionportlistener alljoyn_sessionportlistener_create(const alljoyn_sessionportlistener_callbacks* callbacks,
-                                                                             const void* context);
+extern AJ_API alljoyn_sessionportlistener AJ_CALL alljoyn_sessionportlistener_create(const alljoyn_sessionportlistener_callbacks* callbacks,
+                                                                                     const void* context);
 
 /**
  * Destroy an alljoyn_sessionportlistener.
  *
  * @param listener alljoyn_sessionportlistener to destroy.
  */
-extern AJ_API void alljoyn_sessionportlistener_destroy(alljoyn_sessionportlistener listener);
+extern AJ_API void AJ_CALL alljoyn_sessionportlistener_destroy(alljoyn_sessionportlistener listener);
 
 #ifdef __cplusplus
 } /* extern "C" */

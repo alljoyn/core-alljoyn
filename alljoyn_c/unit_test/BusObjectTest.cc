@@ -29,7 +29,6 @@
 static const char* INTERFACE_NAME = "org.alljoyn.test.BusObjectTest";
 static const char* OBJECT_NAME = "org.alljoyn.test.BusObjectTest";
 static const char* OBJECT_PATH = "/org/alljoyn/test/BusObjectTest";
-static const alljoyn_sessionport SERVICE_PORT = 25;
 
 /*********** BusObject callback functions **************/
 static QCC_BOOL object_registered_flag = QCC_FALSE;
@@ -40,7 +39,7 @@ static QCC_BOOL prop_changed_flag = QCC_FALSE;
 static const char* prop1 = "AllJoyn BusObject Test"; //read only property
 static int32_t prop2; //write only property
 static uint32_t prop3; //RW property
-static QStatus get_property(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val)
+static QStatus AJ_CALL get_property(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val)
 {
     EXPECT_STREQ(INTERFACE_NAME, ifcName);
     QStatus status = ER_OK;
@@ -56,7 +55,7 @@ static QStatus get_property(const void* context, const char* ifcName, const char
     return status;
 }
 
-static QStatus set_property(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val)
+static QStatus AJ_CALL set_property(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val)
 {
     EXPECT_STREQ(INTERFACE_NAME, ifcName);
     QStatus status = ER_OK;
@@ -72,18 +71,18 @@ static QStatus set_property(const void* context, const char* ifcName, const char
     return status;
 }
 
-static void busobject_registered(const void* context)
+static void AJ_CALL busobject_registered(const void* context)
 {
     object_registered_flag = QCC_TRUE;
 }
 
-static void busobject_unregistered(const void* context)
+static void AJ_CALL busobject_unregistered(const void* context)
 {
     object_unregistered_flag = QCC_TRUE;
 }
 
 /* NameOwnerChanged callback */
-static void name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
+static void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
     if (strcmp(busName, OBJECT_NAME) == 0) {
         name_owner_changed_flag = QCC_TRUE;
@@ -91,7 +90,7 @@ static void name_owner_changed(const void* context, const char* busName, const c
 }
 
 /* Property changed callback */
-static void obj_prop_changed(alljoyn_proxybusobject obj, const char* iface_name, alljoyn_msgarg changed, alljoyn_msgarg invalidated, void* context)
+static void AJ_CALL obj_prop_changed(alljoyn_proxybusobject obj, const char* iface_name, alljoyn_msgarg changed, alljoyn_msgarg invalidated, void* context)
 {
     alljoyn_msgarg argList;
     size_t argListSize;
@@ -102,7 +101,7 @@ static void obj_prop_changed(alljoyn_proxybusobject obj, const char* iface_name,
     status = alljoyn_msgarg_get(invalidated, "as", &argListSize, &argList);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     if (argListSize > 0) {
-        EXPECT_EQ(1, argListSize);
+        EXPECT_EQ(1UL, argListSize);
         ASSERT_TRUE(argList);
         for (size_t index = 0; index < argListSize; index++) {
             char* propName;
@@ -119,7 +118,7 @@ static void obj_prop_changed(alljoyn_proxybusobject obj, const char* iface_name,
     status = alljoyn_msgarg_get(changed, "a{sv}", &argListSize, &argList);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     if (argListSize > 0) {
-        EXPECT_EQ(1, argListSize);
+        EXPECT_EQ(1UL, argListSize);
         ASSERT_TRUE(argList);
         for (size_t index = 0; index < argListSize; index++) {
             char* propName;
@@ -142,7 +141,7 @@ static void obj_prop_changed(alljoyn_proxybusobject obj, const char* iface_name,
 static QCC_BOOL chirp_method_flag = QCC_FALSE;
 
 /* Exposed methods */
-static void ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
+static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
     alljoyn_msgarg inArg = alljoyn_message_getarg(msg, 0);
@@ -154,7 +153,7 @@ static void ping_method(alljoyn_busobject bus, const alljoyn_interfacedescriptio
     alljoyn_msgarg_destroy(outArg);
 }
 
-static void chirp_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
+static void AJ_CALL chirp_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
     alljoyn_msgarg inArg = alljoyn_message_getarg(msg, 0);
@@ -900,7 +899,7 @@ TEST_F(BusObjectTest, addmethodhandler_addmethodhandlers_mix)
 
 static QCC_BOOL getpropertycb_flag = QCC_FALSE;
 
-static void getpropertycb_prop1(QStatus status, alljoyn_proxybusobject obj, const alljoyn_msgarg value, void* context) {
+static void AJ_CALL getpropertycb_prop1(QStatus status, alljoyn_proxybusobject obj, const alljoyn_msgarg value, void* context) {
     const char*str;
     status = alljoyn_msgarg_get(value, "s", &str);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -909,13 +908,13 @@ static void getpropertycb_prop1(QStatus status, alljoyn_proxybusobject obj, cons
     getpropertycb_flag = QCC_TRUE;
 }
 
-static void getpropertycb_prop2(QStatus status, alljoyn_proxybusobject obj, const alljoyn_msgarg value, void* context) {
+static void AJ_CALL getpropertycb_prop2(QStatus status, alljoyn_proxybusobject obj, const alljoyn_msgarg value, void* context) {
     EXPECT_EQ(ER_BUS_PROPERTY_ACCESS_DENIED, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("AllJoyn Test String.", (char*)context);
     getpropertycb_flag = QCC_TRUE;
 }
 
-static void getpropertycb_prop3(QStatus status, alljoyn_proxybusobject obj, const alljoyn_msgarg value, void* context) {
+static void AJ_CALL getpropertycb_prop3(QStatus status, alljoyn_proxybusobject obj, const alljoyn_msgarg value, void* context) {
     uint32_t return_value;
     status = alljoyn_msgarg_get(value, "u", &return_value);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -983,14 +982,14 @@ TEST_F(BusObjectTest, get_propertyasync_handler)
 
 static QCC_BOOL setpropertycb_flag = QCC_FALSE;
 
-static void setpropertycb_prop1(QStatus status, alljoyn_proxybusobject obj, void* context)
+static void AJ_CALL setpropertycb_prop1(QStatus status, alljoyn_proxybusobject obj, void* context)
 {
     EXPECT_EQ(ER_BUS_PROPERTY_ACCESS_DENIED, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("AllJoyn Test String.", (char*)context);
     setpropertycb_flag = QCC_TRUE;
 }
 
-static void setpropertycb_prop2(QStatus status, alljoyn_proxybusobject obj, void* context)
+static void AJ_CALL setpropertycb_prop2(QStatus status, alljoyn_proxybusobject obj, void* context)
 {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("AllJoyn Test String.", (char*)context);
@@ -1069,7 +1068,7 @@ TEST_F(BusObjectTest, set_propertyasync_handler)
 
 static QCC_BOOL getallpropertiescb_flag = QCC_FALSE;
 
-static void getallpropertiescb(QStatus status, alljoyn_proxybusobject obj, const alljoyn_msgarg values, void* context)
+static void AJ_CALL getallpropertiescb(QStatus status, alljoyn_proxybusobject obj, const alljoyn_msgarg values, void* context)
 {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 

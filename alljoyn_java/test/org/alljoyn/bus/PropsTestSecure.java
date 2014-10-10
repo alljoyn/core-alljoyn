@@ -22,15 +22,9 @@ import org.alljoyn.bus.BusObject;
 import org.alljoyn.bus.ProxyBusObject;
 import org.alljoyn.bus.Status;
 import org.alljoyn.bus.Variant;
-import org.alljoyn.bus.AuthListener.AuthRequest;
-import org.alljoyn.bus.AuthListener.PasswordRequest;
-import org.alljoyn.bus.ObjectSecurityTest.SrpAuthListener;
-import org.alljoyn.bus.ObjectSecurityTest.TestKeyStoreListener;
-import org.alljoyn.bus.ifaces.DBusProxyObj;
 import org.alljoyn.bus.ifaces.Properties;
 
 import java.util.Map;
-import java.util.TreeMap;
 
 import junit.framework.TestCase;
 
@@ -88,7 +82,6 @@ public class PropsTestSecure extends TestCase {
 
     static private String INTERFACE_NAME = "org.alljoyn.bus.PropsInterfaceSecure";
     static private String UNSECURE_INTERFACE_NAME = "org.alljoyn.bus.PropsInterface";
-    static private String WELLKNOWN_NAME = "org.alljoyn.test.secureproperties";
     static private String OBJECT_PATH    = "/org/alljoyn/test/secureproperties";
 
     /*
@@ -398,7 +391,7 @@ public class PropsTestSecure extends TestCase {
                                                          BusAttachment.SESSION_ID_ANY,
                                                          new Class<?>[] { PropsInterface.class,
                                                                           Properties.class }, true);
-        PropsInterface iface = proxy.getInterface(PropsInterface.class);
+        proxy.getInterface(PropsInterface.class);
 
         /* Use the org.freedesktop.DBus.Properties interface to get all the properties */
         Properties properties = proxy.getInterface(Properties.class);

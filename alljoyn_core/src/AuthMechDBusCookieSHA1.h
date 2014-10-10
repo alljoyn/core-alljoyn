@@ -58,7 +58,7 @@ class AuthMechDBusCookieSHA1 : public AuthMechanism {
     /**
      * Function of type AuthMechanismManager::AuthMechFactory
      *
-     * @param keyStore   The key store avaiable to this authentication mechansim.
+     * @param keyStore   The key store available to this authentication mechanism.
      * @param listener   The listener to register (listener is not used by AuthMechDBusCookieSHA1)
      *
      * @return  An object of class AuthMechDBusCookieSHA1

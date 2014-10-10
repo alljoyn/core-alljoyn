@@ -83,11 +83,10 @@ static const char defaultConfig[] =
 static const char internalConfig[] =
     "<busconfig>"
     "  <type>alljoyn</type>"
-    "  <listen>tcp:r4addr=0.0.0.0,r4port=9956</listen>"
-    "  <listen>udp:u4addr=0.0.0.0,u4port=9955</listen>"
+    "  <listen>tcp:iface=*,port=9956</listen>"
+    "  <listen>udp:iface=*,u4port=9955</listen>"
     "  <listen>localhost:port=9955</listen>"
     "  <listen>localhost:port=9956</listen>"
-    "  <property name=\"ns_interfaces\">*</property>"
     "</busconfig>";
 
 static volatile sig_atomic_t g_interrupt = false;
@@ -174,7 +173,7 @@ OptParse::ParseResultCode OptParse::ParseResult()
 
         if (arg.compare("--version") == 0) {
             printf("AllJoyn Message Bus Daemon version: %s\n"
-                   "Copyright (c) 2009-2013 AllSeen Alliance.\n"
+                   "Copyright (c) 2009-2014 AllSeen Alliance.\n"
                    "\n"
                    "\n"
                    "Build: %s\n", ajn::GetVersion(), GetBuildInfo());

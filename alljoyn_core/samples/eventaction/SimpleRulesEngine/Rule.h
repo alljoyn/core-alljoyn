@@ -28,7 +28,7 @@
 class Rule : public ajn::SessionListener, public ajn::MessageReceiver {
   public:
     Rule(ajn::BusAttachment* bus, RuleInfo* event, RuleInfo* action)
-        : mBus(bus), mEvent(event), mAction(action), eventMember(NULL), mSessionId(0), actionObject(NULL), mLock()
+        : eventMember(NULL), mSessionId(0), actionObject(NULL), mBus(bus), mEvent(event), mAction(action), mLock()
     { };
 
     virtual ~Rule();

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -29,7 +29,6 @@
 static const char* INTERFACE_NAME = "org.alljoyn.test.c.authlistener";
 static const char* OBJECT_NAME = "org.alljoyn.test.c.authlistener";
 static const char* OBJECT_PATH = "/org/alljoyn/test";
-static const alljoyn_sessionport SERVICE_PORT = 42;
 
 static QCC_BOOL name_owner_changed_flag = QCC_FALSE;
 
@@ -44,7 +43,7 @@ static QCC_BOOL verifycredentials_client_flag = QCC_FALSE;
 static QCC_BOOL securityviolation_client_flag = QCC_TRUE;
 
 /* NameOwnerChanged callback */
-static void name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
+static void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
     if (strcmp(busName, OBJECT_NAME) == 0) {
         name_owner_changed_flag = QCC_TRUE;
@@ -52,7 +51,7 @@ static void name_owner_changed(const void* context, const char* busName, const c
 }
 
 /* Exposed methods */
-static void ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
+static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
     alljoyn_msgarg inArg = alljoyn_message_getarg(msg, 0);
@@ -223,10 +222,10 @@ class AuthListenerTest : public testing::Test {
 };
 
 /* AuthListener callback functions*/
-static QCC_BOOL authlistener_requestcredentials_service_srp_keyx(const void* context, const char* authMechanism,
-                                                                 const char* peerName, uint16_t authCount,
-                                                                 const char* userName, uint16_t credMask,
-                                                                 alljoyn_credentials credentials) {
+static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_srp_keyx(const void* context, const char* authMechanism,
+                                                                         const char* peerName, uint16_t authCount,
+                                                                         const char* userName, uint16_t credMask,
+                                                                         alljoyn_credentials credentials) {
     EXPECT_STREQ("context test string", (const char*)context);
     EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
     if (credMask & ALLJOYN_CRED_PASSWORD) {
@@ -236,18 +235,18 @@ static QCC_BOOL authlistener_requestcredentials_service_srp_keyx(const void* con
     return QCC_TRUE;
 }
 
-static void alljoyn_authlistener_authenticationcomplete_service_srp_keyx(const void* context, const char* authMechanism,
-                                                                         const char* peerName, QCC_BOOL success) {
+static void AJ_CALL alljoyn_authlistener_authenticationcomplete_service_srp_keyx(const void* context, const char* authMechanism,
+                                                                                 const char* peerName, QCC_BOOL success) {
     EXPECT_STREQ("context test string", (const char*)context);
     EXPECT_TRUE(success);
     authenticationcomplete_service_flag = QCC_TRUE;
 }
 
 
-static QCC_BOOL authlistener_requestcredentials_client_srp_keyx(const void* context, const char* authMechanism,
-                                                                const char* peerName, uint16_t authCount,
-                                                                const char* userName, uint16_t credMask,
-                                                                alljoyn_credentials credentials) {
+static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_srp_keyx(const void* context, const char* authMechanism,
+                                                                        const char* peerName, uint16_t authCount,
+                                                                        const char* userName, uint16_t credMask,
+                                                                        alljoyn_credentials credentials) {
     EXPECT_STREQ("context test string", (const char*)context);
     EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
     if (credMask & ALLJOYN_CRED_PASSWORD) {
@@ -257,8 +256,8 @@ static QCC_BOOL authlistener_requestcredentials_client_srp_keyx(const void* cont
     return QCC_TRUE;
 }
 
-static void alljoyn_authlistener_authenticationcomplete_client_srp_keyx(const void* context, const char* authMechanism,
-                                                                        const char* peerName, QCC_BOOL success) {
+static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_srp_keyx(const void* context, const char* authMechanism,
+                                                                                const char* peerName, QCC_BOOL success) {
     EXPECT_STREQ("context test string", (const char*)context);
     EXPECT_TRUE(success);
     authenticationcomplete_client_flag = QCC_TRUE;
@@ -314,10 +313,10 @@ TEST_F(AuthListenerTest, srp_keyx) {
 }
 
 /* AuthListener callback functions*/
-static QCC_BOOL authlistener_requestcredentials_service_srp_logon(const void* context, const char* authMechanism,
-                                                                  const char* peerName, uint16_t authCount,
-                                                                  const char* userName, uint16_t credMask,
-                                                                  alljoyn_credentials credentials) {
+static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_srp_logon(const void* context, const char* authMechanism,
+                                                                          const char* peerName, uint16_t authCount,
+                                                                          const char* userName, uint16_t credMask,
+                                                                          alljoyn_credentials credentials) {
     EXPECT_STREQ("ALLJOYN_SRP_LOGON", authMechanism);
     if (!userName) {
         return QCC_FALSE;
@@ -335,17 +334,17 @@ static QCC_BOOL authlistener_requestcredentials_service_srp_logon(const void* co
     return QCC_TRUE;
 }
 
-static void alljoyn_authlistener_authenticationcomplete_service_srp_logon(const void* context, const char* authMechanism,
-                                                                          const char* peerName, QCC_BOOL success) {
+static void AJ_CALL alljoyn_authlistener_authenticationcomplete_service_srp_logon(const void* context, const char* authMechanism,
+                                                                                  const char* peerName, QCC_BOOL success) {
     EXPECT_TRUE(success);
     authenticationcomplete_service_flag = QCC_TRUE;
 }
 
 
-static QCC_BOOL authlistener_requestcredentials_client_srp_logon(const void* context, const char* authMechanism,
-                                                                 const char* peerName, uint16_t authCount,
-                                                                 const char* userName, uint16_t credMask,
-                                                                 alljoyn_credentials credentials) {
+static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_srp_logon(const void* context, const char* authMechanism,
+                                                                         const char* peerName, uint16_t authCount,
+                                                                         const char* userName, uint16_t credMask,
+                                                                         alljoyn_credentials credentials) {
     EXPECT_STREQ("ALLJOYN_SRP_LOGON", authMechanism);
     if (credMask & ALLJOYN_CRED_USER_NAME) {
         alljoyn_credentials_setusername(credentials, "Mr. Cuddles");
@@ -358,8 +357,8 @@ static QCC_BOOL authlistener_requestcredentials_client_srp_logon(const void* con
     return QCC_TRUE;
 }
 
-static void alljoyn_authlistener_authenticationcomplete_client_srp_logon(const void* context, const char* authMechanism,
-                                                                         const char* peerName, QCC_BOOL success) {
+static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_srp_logon(const void* context, const char* authMechanism,
+                                                                                 const char* peerName, QCC_BOOL success) {
     EXPECT_TRUE(success);
     authenticationcomplete_client_flag = QCC_TRUE;
 }
@@ -415,10 +414,10 @@ TEST_F(AuthListenerTest, srp_logon) {
 
 
 /* AuthListener callback functions*/
-static QCC_BOOL authlistener_requestcredentials_service_pin_keyx(const void* context, const char* authMechanism,
-                                                                 const char* peerName, uint16_t authCount,
-                                                                 const char* userName, uint16_t credMask,
-                                                                 alljoyn_credentials credentials) {
+static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_pin_keyx(const void* context, const char* authMechanism,
+                                                                         const char* peerName, uint16_t authCount,
+                                                                         const char* userName, uint16_t credMask,
+                                                                         alljoyn_credentials credentials) {
     EXPECT_STREQ("ALLJOYN_PIN_KEYX", authMechanism);
     if (credMask & ALLJOYN_CRED_PASSWORD) {
         alljoyn_credentials_setpassword(credentials, "FEE_FI_FO_FUM");
@@ -427,17 +426,17 @@ static QCC_BOOL authlistener_requestcredentials_service_pin_keyx(const void* con
     return QCC_TRUE;
 }
 
-static void alljoyn_authlistener_authenticationcomplete_service_pin_keyx(const void* context, const char* authMechanism,
-                                                                         const char* peerName, QCC_BOOL success) {
+static void AJ_CALL alljoyn_authlistener_authenticationcomplete_service_pin_keyx(const void* context, const char* authMechanism,
+                                                                                 const char* peerName, QCC_BOOL success) {
     EXPECT_TRUE(success);
     authenticationcomplete_service_flag = QCC_TRUE;
 }
 
 
-static QCC_BOOL authlistener_requestcredentials_client_pin_keyx(const void* context, const char* authMechanism,
-                                                                const char* peerName, uint16_t authCount,
-                                                                const char* userName, uint16_t credMask,
-                                                                alljoyn_credentials credentials) {
+static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_pin_keyx(const void* context, const char* authMechanism,
+                                                                        const char* peerName, uint16_t authCount,
+                                                                        const char* userName, uint16_t credMask,
+                                                                        alljoyn_credentials credentials) {
     EXPECT_STREQ("ALLJOYN_PIN_KEYX", authMechanism);
     if (credMask & ALLJOYN_CRED_PASSWORD) {
         alljoyn_credentials_setpassword(credentials, "FEE_FI_FO_FUM");
@@ -446,8 +445,8 @@ static QCC_BOOL authlistener_requestcredentials_client_pin_keyx(const void* cont
     return QCC_TRUE;
 }
 
-static void alljoyn_authlistener_authenticationcomplete_client_pin_keyx(const void* context, const char* authMechanism,
-                                                                        const char* peerName, QCC_BOOL success) {
+static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_pin_keyx(const void* context, const char* authMechanism,
+                                                                                const char* peerName, QCC_BOOL success) {
     EXPECT_TRUE(success);
     authenticationcomplete_client_flag = QCC_TRUE;
 }
@@ -600,10 +599,10 @@ static const char client_privKey[] = {
 };
 
 /* AuthListener callback functions*/
-static QCC_BOOL authlistener_requestcredentials_service_rsa_keyx(const void* context, const char* authMechanism,
-                                                                 const char* peerName, uint16_t authCount,
-                                                                 const char* userName, uint16_t credMask,
-                                                                 alljoyn_credentials credentials) {
+static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_rsa_keyx(const void* context, const char* authMechanism,
+                                                                         const char* peerName, uint16_t authCount,
+                                                                         const char* userName, uint16_t credMask,
+                                                                         alljoyn_credentials credentials) {
     EXPECT_STREQ("ALLJOYN_RSA_KEYX", authMechanism);
     if (credMask & ALLJOYN_CRED_CERT_CHAIN) {
         alljoyn_credentials_setcertchain(credentials, service_x509certChain);
@@ -618,24 +617,24 @@ static QCC_BOOL authlistener_requestcredentials_service_rsa_keyx(const void* con
     return QCC_TRUE;
 }
 
-static QCC_BOOL authlistener_verifycredentials_service_rsa_keyx(const void* context, const char* authMechanism,
-                                                                const char* peerName, const alljoyn_credentials credentials) {
+static QCC_BOOL AJ_CALL authlistener_verifycredentials_service_rsa_keyx(const void* context, const char* authMechanism,
+                                                                        const char* peerName, const alljoyn_credentials credentials) {
     // TODO add code that actually verifies the alljoyn_credentials.
     verifycredentials_service_flag = QCC_TRUE;
     return QCC_TRUE;
 }
 
-static void alljoyn_authlistener_authenticationcomplete_service_rsa_keyx(const void* context, const char* authMechanism,
-                                                                         const char* peerName, QCC_BOOL success) {
+static void AJ_CALL alljoyn_authlistener_authenticationcomplete_service_rsa_keyx(const void* context, const char* authMechanism,
+                                                                                 const char* peerName, QCC_BOOL success) {
     EXPECT_TRUE(success);
     authenticationcomplete_service_flag = QCC_TRUE;
 }
 
 
-static QCC_BOOL authlistener_requestcredentials_client_rsa_keyx(const void* context, const char* authMechanism,
-                                                                const char* peerName, uint16_t authCount,
-                                                                const char* userName, uint16_t credMask,
-                                                                alljoyn_credentials credentials) {
+static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_rsa_keyx(const void* context, const char* authMechanism,
+                                                                        const char* peerName, uint16_t authCount,
+                                                                        const char* userName, uint16_t credMask,
+                                                                        alljoyn_credentials credentials) {
     EXPECT_STREQ("ALLJOYN_RSA_KEYX", authMechanism);
     if (credMask & ALLJOYN_CRED_CERT_CHAIN) {
         alljoyn_credentials_setcertchain(credentials, client_x509cert);
@@ -650,15 +649,15 @@ static QCC_BOOL authlistener_requestcredentials_client_rsa_keyx(const void* cont
     return QCC_TRUE;
 }
 
-static QCC_BOOL authlistener_verifycredentials_client_rsa_keyx(const void* context, const char* authMechanism,
-                                                               const char* peerName, const alljoyn_credentials credentials) {
+static QCC_BOOL AJ_CALL authlistener_verifycredentials_client_rsa_keyx(const void* context, const char* authMechanism,
+                                                                       const char* peerName, const alljoyn_credentials credentials) {
     // TODO add code that actually verifies the alljoyn_credentials.
     verifycredentials_client_flag = QCC_TRUE;
     return QCC_TRUE;
 }
 
-static void alljoyn_authlistener_authenticationcomplete_client_rsa_keyx(const void* context, const char* authMechanism,
-                                                                        const char* peerName, QCC_BOOL success) {
+static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_rsa_keyx(const void* context, const char* authMechanism,
+                                                                                const char* peerName, QCC_BOOL success) {
     EXPECT_TRUE(success);
     authenticationcomplete_client_flag = QCC_TRUE;
 }
@@ -716,32 +715,32 @@ TEST_F(AuthListenerTest, rsa_keyx) {
 
 
 /* AuthListener callback functions*/
-static QCC_BOOL authlistener_requestcredentials_service_srp_keyx2(const void* context, const char* authMechanism,
-                                                                  const char* peerName, uint16_t authCount,
-                                                                  const char* userName, uint16_t credMask,
-                                                                  alljoyn_credentials credentials) {
+static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_srp_keyx2(const void* context, const char* authMechanism,
+                                                                          const char* peerName, uint16_t authCount,
+                                                                          const char* userName, uint16_t credMask,
+                                                                          alljoyn_credentials credentials) {
     EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
     requestcredentials_service_flag = QCC_TRUE;
     return QCC_FALSE;
 }
 
-static void alljoyn_authlistener_authenticationcomplete_service_srp_keyx2(const void* context, const char* authMechanism,
-                                                                          const char* peerName, QCC_BOOL success) {
+static void AJ_CALL alljoyn_authlistener_authenticationcomplete_service_srp_keyx2(const void* context, const char* authMechanism,
+                                                                                  const char* peerName, QCC_BOOL success) {
     EXPECT_FALSE(success);
     authenticationcomplete_service_flag = QCC_TRUE;
 }
 
 
-static QCC_BOOL authlistener_requestcredentials_client_srp_keyx2(const void* context, const char* authMechanism,
-                                                                 const char* peerName, uint16_t authCount,
-                                                                 const char* userName, uint16_t credMask,
-                                                                 alljoyn_credentials credentials) {
+static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_srp_keyx2(const void* context, const char* authMechanism,
+                                                                         const char* peerName, uint16_t authCount,
+                                                                         const char* userName, uint16_t credMask,
+                                                                         alljoyn_credentials credentials) {
     EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
     requestcredentials_client_flag = QCC_TRUE;
     return QCC_FALSE;
 }
 
-static void authlistener_securityviolation_client_srp_keyx2(const void* context, QStatus status, const alljoyn_message msg) {
+static void AJ_CALL authlistener_securityviolation_client_srp_keyx2(const void* context, QStatus status, const alljoyn_message msg) {
     securityviolation_client_flag = QCC_TRUE;
 }
 
@@ -749,8 +748,8 @@ static void authlistener_securityviolation_client_srp_keyx2(const void* context,
  * Run the SRP Key Exchange test again except this time fail the authentication
  * we expect to see an authlistener secutity violation.
  */
-static void alljoyn_authlistener_authenticationcomplete_client_srp_keyx2(const void* context, const char* authMechanism,
-                                                                         const char* peerName, QCC_BOOL success) {
+static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_srp_keyx2(const void* context, const char* authMechanism,
+                                                                                 const char* peerName, QCC_BOOL success) {
     EXPECT_FALSE(success);
     authenticationcomplete_client_flag = QCC_TRUE;
 }

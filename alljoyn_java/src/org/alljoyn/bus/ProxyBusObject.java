@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -17,8 +17,6 @@
 package org.alljoyn.bus;
 
 import org.alljoyn.bus.annotation.BusProperty;
-import org.alljoyn.bus.annotation.BusSignalHandler;
-import org.alljoyn.bus.annotation.Secure;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -69,7 +67,7 @@ public class ProxyBusObject {
      * @param busInterfaces  A list of BusInterfaces that this proxy should respond to.
      */
     protected ProxyBusObject(BusAttachment busAttachment, String busName, String objPath, int sessionId,
-                             Class[] busInterfaces) {
+                             Class<?>[] busInterfaces) {
         this(busAttachment, busName, objPath, sessionId, busInterfaces, false);
     }
 
@@ -84,7 +82,7 @@ public class ProxyBusObject {
      * @param secure         the security mode for the remote object
      */
     protected ProxyBusObject(BusAttachment busAttachment, String busName, String objPath, int sessionId,
-                             Class[] busInterfaces, boolean secure) {
+                             Class<?>[] busInterfaces, boolean secure) {
         this.bus = busAttachment;
         this.busName = busName;
         this.objPath = objPath;

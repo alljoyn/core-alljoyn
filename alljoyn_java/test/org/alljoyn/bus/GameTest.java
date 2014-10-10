@@ -19,13 +19,11 @@ package org.alljoyn.bus;
 import org.alljoyn.bus.BusAttachment;
 import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.BusObject;
-import org.alljoyn.bus.MessageContext;
 import org.alljoyn.bus.SignalEmitter;
 import org.alljoyn.bus.Status;
 import org.alljoyn.bus.annotation.BusSignalHandler;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 
-import java.lang.reflect.Method;
 import junit.framework.TestCase;
 
 public class GameTest extends TestCase {

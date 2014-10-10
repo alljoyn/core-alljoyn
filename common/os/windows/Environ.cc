@@ -41,13 +41,22 @@ using namespace std;
 
 namespace qcc {
 
+static Environ* environSingleton = NULL;
+
 Environ* Environ::GetAppEnviron(void)
 {
-    static Environ* env = NULL;      // Environment variable singleton.
-    if (env == NULL) {
-        env = new Environ();
+    if (environSingleton == NULL) {
+        environSingleton = new Environ();
     }
-    return env;
+    return environSingleton;
+}
+
+void Environ::Cleanup(void)
+{
+    if (environSingleton != NULL) {
+        delete environSingleton;
+        environSingleton = NULL;
+    }
 }
 
 qcc::String Environ::Find(const qcc::String& key, const char* defaultValue)
@@ -79,8 +88,8 @@ void Environ::Preload(const char* keyPrefix)
 {
     size_t prefixLen = strlen(keyPrefix);
     lock.Lock();
-    LPTCH env = GetEnvironmentStrings();
-    LPTSTR var = env ? reinterpret_cast<LPTSTR>(env) + 1 : NULL;
+    LPWCH env = GetEnvironmentStringsW();
+    LPWSTR var = env ? reinterpret_cast<LPWSTR>(env) + 1 : NULL;
     if (var == NULL) {
         Log(LOG_ERR, "Environ::Preload unable to read Environment Strings");
         lock.Unlock();
@@ -106,7 +115,7 @@ void Environ::Preload(const char* keyPrefix)
         var += len + 1;
     }
     if (env) {
-        FreeEnvironmentStrings(env);
+        FreeEnvironmentStringsW(env);
     }
     lock.Unlock();
 }

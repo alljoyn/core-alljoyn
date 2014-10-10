@@ -1,13 +1,13 @@
 /**
  * @file
  *
- * Define a class that abstracts mutex's.
+ * Define a class that abstracts mutexes.
  */
 
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -30,8 +30,6 @@
 #include <qcc/posix/Mutex.h>
 #elif defined(QCC_OS_GROUP_WINDOWS)
 #include <qcc/windows/Mutex.h>
-#elif defined(QCC_OS_GROUP_WINRT)
-#include <qcc/winrt/Mutex.h>
 #else
 #error No OS GROUP defined.
 #endif

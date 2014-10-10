@@ -242,6 +242,7 @@ extern const char* InterfaceName;                 /**< Interface name */
 #define ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS                1   /**< FindAdvertisedName reply: Success */
 #define ALLJOYN_FINDADVERTISEDNAME_REPLY_ALREADY_DISCOVERING    2   /**< FindAdvertisedName reply: This enpoint has already requested discover for name */
 #define ALLJOYN_FINDADVERTISEDNAME_REPLY_FAILED                 3   /**< FindAdvertisedName reply: Failed */
+#define ALLJOYN_FINDADVERTISEDNAME_REPLY_TRANSPORT_NOT_AVAILABLE 4  /**< FindAdvertisedName reply: The specified transport is unavailable for discovery */
 // @}
 
 /**

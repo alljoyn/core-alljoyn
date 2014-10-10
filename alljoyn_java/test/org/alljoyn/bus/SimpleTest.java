@@ -23,7 +23,6 @@ import org.alljoyn.bus.BusObject;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 import org.alljoyn.bus.Status;
 
-import java.lang.Thread;
 import junit.framework.TestCase;
 
 public class SimpleTest extends TestCase {
@@ -68,7 +67,7 @@ public class SimpleTest extends TestCase {
         }
 
         /* Get a remote object */
-        Class[] ifaces = { SimpleInterface.class };
+        Class<?>[] ifaces = { SimpleInterface.class };
         ProxyBusObject remoteObj = bus.getProxyBusObject("org.alljoyn.bus.samples.simple",
                                                          "/testobject",
                                                          BusAttachment.SESSION_ID_ANY,

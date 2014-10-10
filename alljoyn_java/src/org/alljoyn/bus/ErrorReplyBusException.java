@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -89,4 +89,12 @@ public class ErrorReplyBusException extends BusException {
      * @return the message
      */
     public String getErrorMessage() { return message; }
+
+    /**
+     * serialVersionUID is recommended for all serializable classes.
+     *
+     * This class is not expected to be serialized. This is added to address
+     * build warnings.
+     */
+    private static final long serialVersionUID = -3417085194459513418L;
 }

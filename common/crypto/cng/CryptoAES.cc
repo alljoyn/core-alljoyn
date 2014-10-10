@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -33,6 +33,8 @@
 
 #include <Status.h>
 
+#include "CngCache.h"
+
 // This status code is defined in ntstatus.h but including nststatus.h generate numerous compiler
 // warnings about duplicate defines.
 #ifndef STATUS_AUTH_TAG_MISMATCH
@@ -43,10 +45,6 @@ using namespace std;
 using namespace qcc;
 
 #define QCC_MODULE "CRYPTO"
-
-// Cache of open algorithm handles
-static BCRYPT_ALG_HANDLE ecbHandle = 0;
-static BCRYPT_ALG_HANDLE ccmHandle = 0;
 
 struct Crypto_AES::KeyState {
   public:
@@ -76,29 +74,29 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NUL
     assert(sizeof(Block) == 16);
 
     if (mode == CCM) {
-        if (!ccmHandle) {
-            if (BCryptOpenAlgorithmProvider(&ccmHandle, BCRYPT_AES_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0) < 0) {
+        if (!cngCache.ccmHandle) {
+            if (BCryptOpenAlgorithmProvider(&cngCache.ccmHandle, BCRYPT_AES_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0) < 0) {
                 status = ER_CRYPTO_ERROR;
                 QCC_LogError(status, ("Failed to open AES algorithm provider"));
                 return;
             }
             // Enable CCM
-            if (BCryptSetProperty(ccmHandle, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CCM, wcslen(BCRYPT_CHAIN_MODE_CCM) + 1, 0) < 0) {
+            if (BCryptSetProperty(cngCache.ccmHandle, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CCM, wcslen(BCRYPT_CHAIN_MODE_CCM) + 1, 0) < 0) {
                 status = ER_CRYPTO_ERROR;
                 QCC_LogError(status, ("Failed to enable CCM mode on AES algorithm provider"));
                 return;
             }
         }
-        aesHandle = ccmHandle;
+        aesHandle = cngCache.ccmHandle;
     } else {
-        if (!ecbHandle) {
-            if (BCryptOpenAlgorithmProvider(&ecbHandle, BCRYPT_AES_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0) < 0) {
+        if (!cngCache.ecbHandle) {
+            if (BCryptOpenAlgorithmProvider(&cngCache.ecbHandle, BCRYPT_AES_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0) < 0) {
                 status = ER_CRYPTO_ERROR;
                 QCC_LogError(status, ("Failed to open AES algorithm provider"));
                 return;
             }
         }
-        aesHandle = ecbHandle;
+        aesHandle = cngCache.ecbHandle;
     }
 
     // Initialize a BCRYPT key blob with the key
@@ -112,7 +110,12 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NUL
     // Get length of key object and allocate the object
     DWORD got;
     ULONG keyObjLen;
-    BCryptGetProperty(aesHandle, BCRYPT_OBJECT_LENGTH, (PBYTE)&keyObjLen, sizeof(ULONG), &got, 0);
+    if (BCryptGetProperty(aesHandle, BCRYPT_OBJECT_LENGTH, (PBYTE)&keyObjLen, sizeof(ULONG), &got, 0) < 0) {
+        status = ER_CRYPTO_ERROR;
+        QCC_LogError(status, ("Failed to get AES object length property"));
+        free(kbh);
+        return;
+    }
 
     keyState = new KeyState(keyObjLen);
 
