@@ -584,7 +584,7 @@ class AboutData : public AboutDataListener {
      *
      * @return ER_OK on successful
      */
-    QStatus GetMsgArg(MsgArg* msgArg, const char* language = NULL);
+    QStatus GetAboutData(MsgArg* msgArg, const char* language = NULL);
 
     /**
      * Return a MsgArg pointer containing dictionary containing the AboutData that
@@ -608,7 +608,7 @@ class AboutData : public AboutDataListener {
      *                    data.
      * @return ER_OK if successful
      */
-    QStatus GetMsgArgAnnounce(MsgArg* msgArg);
+    QStatus GetAnnouncedAboutData(MsgArg* msgArg);
 
     /**
      * Is the given field name required to make an About announcement

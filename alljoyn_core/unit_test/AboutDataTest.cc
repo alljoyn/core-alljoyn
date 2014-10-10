@@ -553,7 +553,7 @@ TEST(AboutData, IsValid_Negative)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(aboutData.IsValid("es"));
 }
-TEST(AboutData, GetMsgArg)
+TEST(AboutData, GetAboutData)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -586,7 +586,7 @@ TEST(AboutData, GetMsgArg)
     EXPECT_TRUE(aboutData.IsValid("es"));
 
     MsgArg aboutArg;
-    status = aboutData.GetMsgArg(&aboutArg);
+    status = aboutData.GetAboutData(&aboutArg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     //printf("*****\n%s\n*****\n", aboutArg.ToString().c_str());
@@ -662,7 +662,7 @@ TEST(AboutData, GetMsgArg_es_language)
     EXPECT_TRUE(aboutData.IsValid("es"));
 
     MsgArg aboutArg;
-    status = aboutData.GetMsgArg(&aboutArg, "es");
+    status = aboutData.GetAboutData(&aboutArg, "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     //printf("*****\n%s\n*****\n", aboutArg.ToString().c_str());
@@ -737,13 +737,13 @@ TEST(AboutData, GetMsgArg_language_not_supported)
     EXPECT_TRUE(aboutData.IsValid("es"));
 
     MsgArg aboutArg;
-    status = aboutData.GetMsgArg(&aboutArg, "fr");
+    status = aboutData.GetAboutData(&aboutArg, "fr");
     EXPECT_EQ(ER_LANGUAGE_NOT_SUPPORTED, status) << "  Actual Status: " << QCC_StatusText(status);
 
     //printf("*****\n%s\n*****\n", aboutArg.ToString().c_str());
 }
 
-TEST(AboutData, GetMsgArgAnnounce)
+TEST(AboutData, GetAnnouncedAboutData)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -766,7 +766,7 @@ TEST(AboutData, GetMsgArgAnnounce)
     EXPECT_TRUE(aboutData.IsValid());
 
     MsgArg announceArg;
-    status = aboutData.GetMsgArgAnnounce(&announceArg);
+    status = aboutData.GetAnnouncedAboutData(&announceArg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     MsgArg* args;
@@ -888,7 +888,7 @@ TEST(AboutData, GetMsgArgWithOEMSpecificField)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     MsgArg aboutArg;
-    aboutData.GetMsgArg(&aboutArg);
+    aboutData.GetAboutData(&aboutArg);
 
     //printf("*****\n%s\n*****\n", aboutArg.ToString().c_str());
 
@@ -989,7 +989,7 @@ TEST(AboutData, InitUsingMsgArg)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     MsgArg aboutArg;
-    aboutData.GetMsgArg(&aboutArg);
+    aboutData.GetAboutData(&aboutArg);
 
     //TODO make a constructor for about data that does not require the default
     //     language
@@ -1267,7 +1267,7 @@ TEST(AboutData, SetNewField) {
     EXPECT_TRUE(aboutData.IsValid());
 
     MsgArg announceArg;
-    status = aboutData.GetMsgArgAnnounce(&announceArg);
+    status = aboutData.GetAnnouncedAboutData(&announceArg);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     MsgArg* args;
