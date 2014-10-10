@@ -11990,7 +11990,7 @@ class JAboutObject : public AboutObj, public AboutDataListener {
         }
     }
 
-    QStatus GetMsgArg(MsgArg* msgArg, const char* language)
+    QStatus GetAboutData(MsgArg* msgArg, const char* language)
     {
         QCC_DbgPrintf(("JAboutObject::GetMsgArg"));
 
@@ -12024,7 +12024,7 @@ class JAboutObject : public AboutObj, public AboutDataListener {
         return ER_OK;
     }
 
-    QStatus GetMsgArgAnnounce(MsgArg* msgArg)
+    QStatus GetAnnouncedAboutData(MsgArg* msgArg)
     {
         QCC_DbgPrintf(("JAboutObject::~GetMsgArgAnnounce"));
         QStatus status = ER_FAIL;

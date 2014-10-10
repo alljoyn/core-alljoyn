@@ -583,7 +583,7 @@ class AboutData : public AboutDataListener {
      *
      * @return ER_OK on successful
      */
-    QStatus GetMsgArg(MsgArg* msgArg, const char* language = NULL);
+    QStatus GetAboutData(MsgArg* msgArg, const char* language = NULL);
 
     /**
      * Return a MsgArg pointer containing dictionary containing the AboutData that
@@ -607,7 +607,7 @@ class AboutData : public AboutDataListener {
      *                    data.
      * @return ER_OK if successful
      */
-    QStatus GetMsgArgAnnounce(MsgArg* msgArg);
+    QStatus GetAnnouncedAboutData(MsgArg* msgArg);
     /*
      * we should add a way to generate a UUID based on RFC-4122. This should probably
      * be a in common since generation of the RFC-4122 id is not really core to alljoyn
