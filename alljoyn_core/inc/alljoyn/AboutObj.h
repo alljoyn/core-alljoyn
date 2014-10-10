@@ -86,7 +86,9 @@ class AboutObj : public BusObject {
      * @param aboutData   the AboutDataListener that contains the AboutData for
      *                    this announce signal.
      *
-     * @return ER_OK on success
+     * @return
+     *  - ER_OK on success
+     *  - ER_ABOUT_SESSIONPORT_NOT_BOUND if the SessionPort given is not bound
      */
     QStatus Announce(SessionPort sessionPort, AboutDataListener& aboutData);
 

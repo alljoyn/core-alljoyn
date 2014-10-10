@@ -61,6 +61,11 @@ AboutObj::AboutObj(ajn::BusAttachment& bus, AnnounceFlag isAboutIntfAnnounced) :
 QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& aboutData)
 {
     QCC_DbgTrace(("AboutService::%s", __FUNCTION__));
+
+    if (m_busAttachment->GetInternal().IsSessionPortBound(sessionPort) == false) {
+        return ER_ABOUT_SESSIONPORT_NOT_BOUND;
+    }
+
     m_busAttachment->GetInternal().GetAnnouncedObjectDescription(m_objectDescription);
     m_aboutDataListener = &aboutData;
     const InterfaceDescription* aboutIntf = m_busAttachment->GetInterface(org::alljoyn::About::InterfaceName);
@@ -90,6 +95,10 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
     }
     announceArgs[2] = m_objectDescription;
     m_aboutDataListener->GetMsgArgAnnounce(&announceArgs[3]);
+
+    // TODO ASACORE-1006 check the AboutData to make sure it has all the required fields.
+    // if it does not have the required fields return ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD;
+
     Message msg(*m_busAttachment);
     uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
 #if !defined(NDEBUG)

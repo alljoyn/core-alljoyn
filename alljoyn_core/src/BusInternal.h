@@ -263,6 +263,15 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
         return router->PushMessage(msg, busEndpoint);
     }
 
+    /**
+     * Find out if the BusAttachment has bound the specified SessionPort
+     *
+     * @param sessionPort port number being checked
+     *
+     * @return true if the sessionPort is bound
+     */
+    bool IsSessionPortBound(SessionPort sessionPort);
+
   private:
 
     /**
