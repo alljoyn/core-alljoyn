@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -44,15 +44,21 @@ AboutIconObj::AboutIconObj(ajn::BusAttachment& bus, qcc::String const& mimetype,
 
     status = AddInterface(*intf, ANNOUNCED);
     QCC_DbgPrintf(("Add AboutIcon interface %s\n", QCC_StatusText(status)));
+    if (status == ER_OK) {
+        AddMethodHandler(intf->GetMember("GetUrl"),
+                         static_cast<MessageReceiver::MethodHandler>(&AboutIconObj::GetUrl));
 
-    AddMethodHandler(intf->GetMember("GetUrl"),
-                     static_cast<MessageReceiver::MethodHandler>(&AboutIconObj::GetUrl));
+        AddMethodHandler(intf->GetMember("GetContent"),
+                         static_cast<MessageReceiver::MethodHandler>(&AboutIconObj::GetContent));
 
-    AddMethodHandler(intf->GetMember("GetContent"),
-                     static_cast<MessageReceiver::MethodHandler>(&AboutIconObj::GetContent));
-
-    status = m_busAttachment->RegisterBusObject(*this);
-    QCC_DbgHLPrintf(("AboutObj RegisterBusOBject %s", QCC_StatusText(status)));
+        status = m_busAttachment->RegisterBusObject(*this);
+        QCC_DbgHLPrintf(("AboutIconObj RegisterBusOBject %s", QCC_StatusText(status)));
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Failed to register AboutIcon BusObject"));
+        }
+    } else {
+        QCC_LogError(status, ("Failed to Add AboutIcon"));
+    }
 }
 
 void AboutIconObj::GetUrl(const ajn::InterfaceDescription::Member* member, ajn::Message& msg) {
