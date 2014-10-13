@@ -44,21 +44,7 @@ const char* AboutData::HARDWARE_VERSION = "HardwareVersion";
 const char* AboutData::SUPPORT_URL = "SupportUrl";
 
 AboutData::AboutData() {
-    // FieldDetails: Required, Announced, Localized, signature
-    m_aboutFields[APP_ID] = FieldDetails(true, true, false, "ay");
-    m_aboutFields[DEFAULT_LANGUAGE] = FieldDetails(true, true, false, "s");
-    m_aboutFields[DEVICE_NAME] = FieldDetails(false, true, true, "s");
-    m_aboutFields[DEVICE_ID] = FieldDetails(true, true, false, "s");
-    m_aboutFields[APP_NAME] = FieldDetails(true, true, true, "s");
-    m_aboutFields[MANUFACTURER] = FieldDetails(true, true, true, "s");
-    m_aboutFields[MODEL_NUMBER] = FieldDetails(true, true, false, "s");
-    m_aboutFields[SUPPORTED_LANGUAGES] = FieldDetails(true, false, false, "as");
-    m_aboutFields[DESCRIPTION] = FieldDetails(true, false, true, "s");
-    m_aboutFields[DATE_OF_MANUFACTURE] = FieldDetails(false, false, false, "s");
-    m_aboutFields[SOFTWARE_VERSION] = FieldDetails(false, false, false, "s");
-    m_aboutFields[AJ_SOFTWARE_VERSION] = FieldDetails(true, false, false, "s");
-    m_aboutFields[HARDWARE_VERSION] = FieldDetails(false, false, false, "s");
-    m_aboutFields[SUPPORT_URL] = FieldDetails(false, false, false, "s");
+    InitializeFieldDetails();
 
     MsgArg arg;
     // The AllJoyn software version should always be set by default.
@@ -69,21 +55,7 @@ AboutData::AboutData() {
 }
 
 AboutData::AboutData(const char* defaultLanguage) {
-    // FieldDetails: Required, Announced, Localized, signature
-    m_aboutFields[APP_ID] = FieldDetails(true, true, false, "ay");
-    m_aboutFields[DEFAULT_LANGUAGE] = FieldDetails(true, true, false, "s");
-    m_aboutFields[DEVICE_NAME] = FieldDetails(false, true, true, "s");
-    m_aboutFields[DEVICE_ID] = FieldDetails(true, true, false, "s");
-    m_aboutFields[APP_NAME] = FieldDetails(true, true, true, "s");
-    m_aboutFields[MANUFACTURER] = FieldDetails(true, true, true, "s");
-    m_aboutFields[MODEL_NUMBER] = FieldDetails(true, true, false, "s");
-    m_aboutFields[SUPPORTED_LANGUAGES] = FieldDetails(true, false, false, "as");
-    m_aboutFields[DESCRIPTION] = FieldDetails(true, false, true, "s");
-    m_aboutFields[DATE_OF_MANUFACTURE] = FieldDetails(false, false, false, "s");
-    m_aboutFields[SOFTWARE_VERSION] = FieldDetails(false, false, false, "s");
-    m_aboutFields[AJ_SOFTWARE_VERSION] = FieldDetails(true, false, false, "s");
-    m_aboutFields[HARDWARE_VERSION] = FieldDetails(false, false, false, "s");
-    m_aboutFields[SUPPORT_URL] = FieldDetails(false, false, false, "s");
+    InitializeFieldDetails();
 
     // The user must specify a default language when creating the AboutData class
     MsgArg arg;
@@ -99,6 +71,15 @@ AboutData::AboutData(const char* defaultLanguage) {
 }
 
 AboutData::AboutData(const MsgArg arg) {
+    InitializeFieldDetails();
+
+    QStatus status = CreatefromMsgArg(arg);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("AboutData::AboutData(MsgARg): failed to parse MsgArg."));
+    }
+}
+
+void AboutData::InitializeFieldDetails() {
     // FieldDetails: Required, Announced, Localized, signature
     m_aboutFields[APP_ID] = FieldDetails(true, true, false, "ay");
     m_aboutFields[DEFAULT_LANGUAGE] = FieldDetails(true, true, false, "s");
@@ -110,15 +91,10 @@ AboutData::AboutData(const MsgArg arg) {
     m_aboutFields[SUPPORTED_LANGUAGES] = FieldDetails(true, false, false, "as");
     m_aboutFields[DESCRIPTION] = FieldDetails(true, false, true, "s");
     m_aboutFields[DATE_OF_MANUFACTURE] = FieldDetails(false, false, false, "s");
-    m_aboutFields[SOFTWARE_VERSION] = FieldDetails(false, false, false, "s");
+    m_aboutFields[SOFTWARE_VERSION] = FieldDetails(true, false, false, "s");
     m_aboutFields[AJ_SOFTWARE_VERSION] = FieldDetails(true, false, false, "s");
     m_aboutFields[HARDWARE_VERSION] = FieldDetails(false, false, false, "s");
     m_aboutFields[SUPPORT_URL] = FieldDetails(false, false, false, "s");
-
-    QStatus status = CreatefromMsgArg(arg);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("AboutData::AboutData(MsgARg): failed to parse MsgArg."));
-    }
 }
 
 AboutData::~AboutData()
@@ -899,6 +875,33 @@ QStatus AboutData::GetMsgArgAnnounce(MsgArg* msgArg)
     msgArg->Set("a{sv}", dictonarySize, announceDictonary);
     msgArg->Stabilize();
     return status;
+}
+
+bool AboutData::IsFieldRequired(const char* fieldName) {
+    if (m_aboutFields.find(fieldName) != m_aboutFields.end()) {
+        return m_aboutFields[fieldName].required;
+    }
+    return false;
+}
+bool AboutData::IsFieldAnnounced(const char* fieldName) {
+    if (m_aboutFields.find(fieldName) != m_aboutFields.end()) {
+        return m_aboutFields[fieldName].announced;
+    }
+    return false;
+}
+
+bool AboutData::IsFieldLocalized(const char* fieldName) {
+    if (m_aboutFields.find(fieldName) != m_aboutFields.end()) {
+        return m_aboutFields[fieldName].localized;
+    }
+    return false;
+}
+
+const char* AboutData::GetFieldSignature(const char* fieldName) {
+    if (m_aboutFields.find(fieldName) != m_aboutFields.end()) {
+        return m_aboutFields[fieldName].signature.c_str();
+    }
+    return NULL;
 }
 
 QStatus AboutData::SetNewFieldDetails(const char* fieldName, bool isRequired, bool isAnnounced, bool isLocalized, const char* signature)
