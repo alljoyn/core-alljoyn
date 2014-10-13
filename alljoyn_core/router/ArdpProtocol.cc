@@ -35,12 +35,6 @@
 
 namespace ajn {
 
-/*
- * BUGBUG FIXME Until we can coordinate getting this into master and
- * feature/udp_transport
- */
-#define ER_ARDP_WRITE_BLOCKED (-12345678)
-
 #define UDP_MTU 1472
 
 #define ARDP_VERSION_BITS 0xC0   /* Bits 6-7 of FLAGS byte in ARDP segment header*/
