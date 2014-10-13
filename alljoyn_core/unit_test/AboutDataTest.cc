@@ -486,12 +486,17 @@ TEST(AboutData, IsValid)
     EXPECT_TRUE(aboutData.IsValid("es"));
 }
 //ASACORE-914
-TEST(AboutData, DISABLED_IsValid_Negative)
+TEST(AboutData, IsValid_Negative)
 {
     QStatus status = ER_FAIL;
-    AboutData aboutData("en");
-
+    AboutData aboutData;
+    //DefaultLanguage and other required fields are missing
     EXPECT_FALSE(aboutData.IsValid());
+
+    status = aboutData.SetDefaultLanguage("en");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_FALSE(aboutData.IsValid());
+
     uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
     status = aboutData.SetAppId(appId, 6);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -520,13 +525,8 @@ TEST(AboutData, DISABLED_IsValid_Negative)
 
     status = aboutData.SetDescription("A poetic description of this application");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    //DeviceName and SoftwareVersion are missing
-    EXPECT_FALSE(aboutData.IsValid());
-
-    status = aboutData.SetDeviceName("Dish Washer");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    // SoftwareVersion is still missing
-    EXPECT_FALSE(aboutData.IsValid());
+    //SoftwareVersion missing
+    EXPECT_FALSE(aboutData.IsValid());;
 
     status = aboutData.SetSoftwareVersion("0.1.2");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -536,27 +536,21 @@ TEST(AboutData, DISABLED_IsValid_Negative)
 
     status = aboutData.SetSupportedLanguage("es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    // Missing DeviceName/AppName/Manufacture/Description
+    // Missing AppName/Manufacture/Description
     EXPECT_FALSE(aboutData.IsValid("es"));
 
     status = aboutData.SetAppName("aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    // Missing DeviceName/Manufacture/Description
+    // Missing Manufacture/Description
     EXPECT_FALSE(aboutData.IsValid("es"));
 
     status = aboutData.SetManufacturer("manufactura", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    // Missing DeviceName/Description
+    // Missing Description
     EXPECT_FALSE(aboutData.IsValid("es"));
 
     status = aboutData.SetDescription("Una descripcion poetica de esta aplicacion", "es");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    // Missing DeviceName
-    EXPECT_FALSE(aboutData.IsValid("es"));
-
-    status = aboutData.SetDeviceName("manufactura", "es");
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
     EXPECT_TRUE(aboutData.IsValid("es"));
 }
 TEST(AboutData, GetMsgArg)

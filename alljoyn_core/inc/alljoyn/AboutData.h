@@ -184,7 +184,7 @@ class AboutData : public AboutDataListener {
      *
      * @return ER_OK on success
      */
-    QStatus SetDefaultLanguage(char* defaultLanguage);
+    QStatus SetDefaultLanguage(const char* defaultLanguage);
 
     /**
      * Get the DefaultLanguage from the AboutData
