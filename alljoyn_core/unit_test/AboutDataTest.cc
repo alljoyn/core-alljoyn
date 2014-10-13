@@ -1209,10 +1209,10 @@ class AboutDataTestAboutData : public AboutData {
 
     AboutDataTestAboutData() : AboutData() {
         // test field abc is required, is announced, not localized
-        SetNewFieldDetails(TEST_FIELDABC, true, true, false, "s");
+        SetNewFieldDetails(TEST_FIELDABC, REQUIRED | ANNOUNCED, "s");
     }
     AboutDataTestAboutData(const char* defaultLanguage) : AboutData(defaultLanguage) {
-        SetNewFieldDetails(TEST_FIELDABC, true, true, false, "s");
+        SetNewFieldDetails(TEST_FIELDABC, REQUIRED | ANNOUNCED, "s");
     }
 
     QStatus SetTestFieldABC(const char* testFieldABC)

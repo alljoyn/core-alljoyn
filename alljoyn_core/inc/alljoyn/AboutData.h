@@ -686,6 +686,11 @@ class AboutData : public AboutDataListener {
     static const char* SUPPORT_URL; ///< The support URL provided by the OEM or software developer
     // @}
   protected:
+    typedef uint8_t AboutFieldMask;
+    static const AboutFieldMask EMPTY_MASK = 0;
+    static const AboutFieldMask REQUIRED = 1;
+    static const AboutFieldMask ANNOUNCED = 2;
+    static const AboutFieldMask LOCALIZED = 4;
     /**
      * Derived classes have the ability to fully specify their own AboutData including
      * requirements that can not be changed using the base class.  The derived class
@@ -702,7 +707,7 @@ class AboutData : public AboutDataListener {
      *     - #ER_OK on success
      *     - #ER_ABOUT_FIELD_ALREADY_SPECIFIED if that field has already been specified
      */
-    QStatus SetNewFieldDetails(const char* fieldName, bool isRequired, bool isAnnounced, bool isLocalized, const char* signature);
+    QStatus SetNewFieldDetails(const char* fieldName, AboutFieldMask fieldMask, const char* signature);
 
     /**
      * Holds information for each AboutData field.
@@ -721,30 +726,18 @@ class AboutData : public AboutDataListener {
         /**
          * Create an uninitialized FieldDetails struct
          */
-        FieldDetails() { }
+        FieldDetails() : fieldMask(EMPTY_MASK) { }
         /**
          * Create an initialized FieldDetails struct
-         * @param[in] r the value for the required field
-         * @param[in] a the value for the announced field
-         * @param[in] l the value for the localized field
+         * @param[in] fieldMask a bitmask value indicating the properties of the field
          * @param[in] s the value for the signature field
          */
-        FieldDetails(bool r, bool a, bool l, const char* s) : required(r), announced(a), localized(l), signature(s) { }
+        FieldDetails(AboutFieldMask fieldMask, const char* s) : fieldMask(fieldMask), signature(s) { }
         /**
-         * This is a boolean field if this is `true` then the field is required
-         * for the AboutData to be a Valid.
+         * Mask indicating if the field is required, announced, or localized
          */
-        bool required;
-        /**
-         * If this field is marked as `true` then the field will be part of the
-         * Announce signal
-         */
-        bool announced;
-        /**
-         * This field contains a value that can be localized into multiple
-         * languages/regions
-         */
-        bool localized;
+        AboutFieldMask fieldMask;
+
         /**
          * The signature of the underlying MsgArg dictionary value.
          */
