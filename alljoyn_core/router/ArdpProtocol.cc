@@ -1075,8 +1075,8 @@ static void PersistTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* 
     ArdpTimer* timer = &conn->persistTimer;
     QStatus status;
 
-    QCC_DbgTrace(("PersistTimerHandler: handle=%p conn=%p context=%p delta %u retry %u",
-                  handle, conn, context, timer->delta, timer->retry));
+    QCC_DbgHLPrintf(("PersistTimerHandler: handle=%p conn=%p context=%p delta %u retry %u",
+                     handle, conn, context, timer->delta, timer->retry));
 
     if (conn->window < conn->minSendWindow && (conn->snd.UNA == conn->snd.NXT)) {
         if (timer->retry > 1) {
@@ -1813,6 +1813,7 @@ static void ShiftRcvMsk(ArdpConnRecord* conn)
     /* First bit represents rcv.CUR + 2 */
     uint32_t saveBits = 0;
     uint16_t newSz = 0;
+    uint32_t i = 1;
 
     /* Shift the bitmask */
     conn->rcv.eack.mask[0] = conn->rcv.eack.mask[0] << 1;
@@ -1820,7 +1821,7 @@ static void ShiftRcvMsk(ArdpConnRecord* conn)
         newSz = 1;
     }
 
-    for (uint32_t i = 1; i < conn->rcv.eack.sz; i++) {
+    for (; i < conn->rcv.eack.sz; i++) {
         if (conn->rcv.eack.mask[i] == 0) {
             continue;
         }
@@ -1829,11 +1830,13 @@ static void ShiftRcvMsk(ArdpConnRecord* conn)
         conn->rcv.eack.mask[i - 1] =  conn->rcv.eack.mask[i - 1] | saveBits;
         if (conn->rcv.eack.mask[i] > 0) {
             newSz = i + 1;
+        } else if (saveBits != 0) {
+            newSz = i;
         }
         conn->rcv.eack.htnMask[i - 1] = htonl(conn->rcv.eack.mask[i - 1]);
-        conn->rcv.eack.htnMask[i] = htonl(conn->rcv.eack.mask[i]);
     }
-    conn->rcv.eack.htnMask[0] = htonl(conn->rcv.eack.mask[0]);
+    conn->rcv.eack.htnMask[i - 1] = htonl(conn->rcv.eack.mask[i - 1]);
+
     conn->rcv.eack.sz = newSz;
 
 #ifndef NDEBUG
@@ -2652,11 +2655,11 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
             if (conn->window != seg->WINDOW) {
                 /* Schedule persist timer only if there are no pending retransmits */
-                if ((conn->snd.UNA == conn->snd.NXT) && (seg->WINDOW < conn->minSendWindow) && (conn->persistTimer.retry == 0)) {
+                if (IsEmpty(&handle->dataTimers) && (seg->WINDOW < conn->minSendWindow) && (conn->persistTimer.retry == 0)) {
                     /* Start Persist Timer */
                     UpdateTimer(handle, conn, &conn->persistTimer, handle->config.persistInterval,
                                 handle->config.totalAppTimeout / handle->config.persistInterval + 1);
-                } else if ((conn->persistTimer.retry != 0) && (seg->WINDOW >= conn->minSendWindow || (conn->snd.UNA != conn->snd.NXT))) {
+                } else if ((conn->persistTimer.retry != 0) && (seg->WINDOW >= conn->minSendWindow || !IsEmpty(&handle->dataTimers))) {
                     /* Cancel Persist Timer */
                     conn->persistTimer.retry = 0;
                 }
