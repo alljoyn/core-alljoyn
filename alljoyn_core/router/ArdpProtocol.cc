@@ -1000,14 +1000,20 @@ inline static uint32_t GetRTO(ArdpHandle* handle, ArdpConnRecord* conn)
     return MIN(ms, (uint32_t)ARDP_MAX_RTO);
 }
 
+inline static uint32_t GetDataTimeout(ArdpHandle* handle, ArdpConnRecord* conn)
+{
+    uint32_t timeout = (conn->rttInit) ?
+                       (MAX((conn->snd.SEGMAX * conn->snd.SEGBMAX * (conn->rttMean >> 1)) / UDP_MTU, handle->config.totalDataRetryTimeout)) :
+                       handle->config.totalDataRetryTimeout;
+    return timeout;
+}
+
 static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
 {
     ArdpSndBuf* sBuf = (ArdpSndBuf*) context;
     ArdpTimer* timer = &sBuf->timer;
     uint32_t msElapsed = TimeNow(handle->tbase) - sBuf->tStart;
-    uint32_t timeout = (conn->rttInit) ?
-                       (MAX((conn->snd.SEGMAX * conn->snd.SEGBMAX * (conn->rttMean >> 1)) / UDP_MTU, handle->config.totalDataRetryTimeout)) :
-                       handle->config.totalDataRetryTimeout;
+    uint32_t timeout = GetDataTimeout(handle, conn);
 
     QCC_DbgTrace(("RetransmitTimerHandler: handle=%p conn=%p context=%p", handle, conn, context));
 
@@ -1321,9 +1327,24 @@ uint16_t ARDP_GetIpPortFromConn(ArdpHandle* handle, ArdpConnRecord* conn)
         assert(false && "Connection not found");
     }
     /*
-       *Note: this is called ONLY from successful ConnectCb(). It should be safe
-     * to return an IP port here. The above check is for catching programming error. */
+     * Note: this is called ONLY from successful ConnectCb(). It should be safe
+     * to return an IP port here. The above check is for catching programming error.
+     */
     return conn->ipPort;
+}
+
+/*
+ * Dynamic data timeout based on connection statistics.
+ * Add some headroom for data timeout as it will appear outside ARDP.
+ */
+uint32_t ARDP_GetDataTimeout(ArdpHandle* handle, ArdpConnRecord* conn)
+{
+    if (!IsConnValid(handle, conn)) {
+        QCC_LogError(ER_ARDP_INVALID_CONNECTION, ("ARDP_GetIpPortFromConn(handle=%p), context = %p", handle, handle->context));
+        return handle->config.totalDataRetryTimeout + 2 * handle->config.initialDataTimeout;
+    }
+
+    return (GetDataTimeout(handle, conn) + 2 * handle->config.initialDataTimeout);
 }
 
 static ArdpConnRecord* NewConnRecord(void)

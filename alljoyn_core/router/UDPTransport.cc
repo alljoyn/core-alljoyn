@@ -561,8 +561,6 @@ class ArdpStream : public qcc::Stream {
         m_endpoint(NULL),
         m_handle(NULL),
         m_conn(NULL),
-        m_dataTimeout(0),
-        m_dataRetries(0),
         m_lock(),
         m_disc(false),
         m_discSent(false),
@@ -731,46 +729,6 @@ class ArdpStream : public qcc::Stream {
     }
 
     /**
-     * Get the data transmission timeout that the underlying ARDP protocol
-     * connection will be using
-     */
-    uint32_t GetDataTimeout() const
-    {
-        QCC_DbgTrace(("ArdpStream::GetDataTimeout(): => %d.", m_dataTimeout));
-        return m_dataTimeout;
-    }
-
-    /**
-     * Set the data transmission timeout that the underlying ARDP protocol
-     * connection will be using
-     */
-    void SetDataTimeout(uint32_t dataTimeout)
-    {
-        QCC_DbgTrace(("ArdpStream::SetDataTimeout(dataTimeout=%d.)", dataTimeout));
-        m_dataTimeout = dataTimeout;
-    }
-
-    /**
-     * Get the data transmission retries that the underlying ARDP protocol
-     * connection will be using
-     */
-    uint32_t GetDataRetries() const
-    {
-        QCC_DbgTrace(("ArdpStream::GetDataRetries(): => %d.", m_dataRetries));
-        return m_dataRetries;
-    }
-
-    /**
-     * Set the data transmission retries that the underlying ARDP protocol
-     * connection will be using
-     */
-    void SetDataRetries(uint32_t dataRetries)
-    {
-        QCC_DbgTrace(("ArdpStream::SetDataRetries(dataRetries=%d.)", dataRetries));
-        m_dataRetries = dataRetries;
-    }
-
-    /**
      * Set the stream's write condition if it exists.  This will wake exactly
      * one waiting thread which will then loop back around and try to do its
      * work again.
@@ -884,18 +842,15 @@ class ArdpStream : public qcc::Stream {
          * Set up a timeout on the write.  If we call ARDP_Send, we expect it to
          * come back with some a send callback if it accepts the data.  As a
          * double-check, we add our own timeout that expires some time after we
-         * expect ARDP to time out.  On a write that would be at
-         *
-         *    dataTimeout * (1 + dataRetries)
-         *
-         * To give ARDP a chance, we timeout one retry interval later, at
-         *
-         *    dataTimeout * (2 + dataRetries)
-         *
+         * expect ARDP to time out.
          */
-        uint32_t timeout = GetDataTimeout() * (2 + GetDataRetries());
-
+        uint32_t timeout;
         Timespec tStart;
+
+        m_transport->m_ardpLock.Lock();
+        timeout = ARDP_GetDataTimeout(m_handle, m_conn);
+        m_transport->m_ardpLock.Unlock();
+
         GetTimeNow(&tStart);
         QCC_DbgPrintf(("ArdpStream::PushBytes(): Start time is %d.", tStart));
 
@@ -1405,8 +1360,6 @@ class ArdpStream : public qcc::Stream {
     _UDPEndpoint* m_endpoint;          /**< The endpoint that created the stream */
     ArdpHandle* m_handle;              /**< The handle to the ARDP protocol instance this stream works with */
     ArdpConnRecord* m_conn;            /**< The ARDP connection associated with this endpoint / stream combination */
-    uint32_t m_dataTimeout;            /**< The timeout that the ARDP protocol will use when retrying sends */
-    uint32_t m_dataRetries;            /**< The number of retries that the ARDP protocol will use when sending */
     qcc::Mutex m_lock;                 /**< Mutex that protects m_threads and disconnect state */
     bool m_disc;                       /**< Set to true when ARDP fires the DisconnectCb on the associated connection */
     bool m_discSent;                   /**< Set to true when the endpoint calls ARDP_Disconnect */
@@ -2414,8 +2367,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_stream->SetEndpoint(this);
         m_stream->SetHandle(handle);
         m_stream->SetConn(conn);
-        m_stream->SetDataTimeout(dataTimeout);
-        m_stream->SetDataRetries(dataRetries);
 
         /*
          * This is actually a call to the underlying endpoint that provides the
