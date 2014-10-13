@@ -21,6 +21,7 @@
 #ifndef _ALLJOYN_ABOUTICONOBJ_H
 #define _ALLJOYN_ABOUTICONOBJ_H
 
+#include <alljoyn/AboutIcon.h>
 #include <alljoyn/BusObject.h>
 
 namespace ajn {
@@ -40,12 +41,10 @@ class AboutIconObj : public BusObject {
      * Construct an About Icon BusObject.
      *
      * @param[in] bus  BusAttachment instance associated with this AboutService
-     * @param[in]  mimetype of the icon
-     * @param[in]  url of the icon
-     * @param[in]  data is the content of the icon
-     * @param[in]  csize is the size of the content in bytes.
+     * @param[in] icon instance of an AboutIcon which holds the icon image
      */
-    AboutIconObj(BusAttachment& bus, qcc::String const& mimetype, qcc::String const& url, uint8_t* data, size_t csize);
+    AboutIconObj(BusAttachment& bus, AboutIcon& icon);
+
     /**
      *  Destructor of the About Icon BusObject
      */
@@ -80,25 +79,11 @@ class AboutIconObj : public BusObject {
      *  pointer to BusAttachment
      */
     BusAttachment* m_busAttachment;
-    /**
-     *  stores the mime type of the icon.
-     */
-    qcc::String m_MimeType;
-    /**
-     *  stores the url of the icon
-     */
-    qcc::String m_Url;
 
     /**
-     *  stores the content of the icon
+     * pointer to AboutIcon
      */
-    uint8_t* m_Content;
-
-    /**
-     *  stores the size of the icon's content
-     */
-    size_t m_ContentSize;
-
+    AboutIcon* m_icon;
 };
 
 }
