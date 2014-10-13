@@ -5194,48 +5194,6 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
         ep->PrintEpState("UDPTransport::ManageEndpoints(): Managing m_endpointList");
 #endif
 
-        Timespec tNow;
-        GetTimeNow(&tNow);
-
-        if (ep->GetStartTime() + authTimeout < tNow) {
-            QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Scavenging slow starter"));
-
-            bool threadWaiting = false;
-            set<ConnectEntry>::iterator j = m_connectThreads.begin();
-            for (; j != m_connectThreads.end(); ++j) {
-                if (j->m_connId == ep->GetConnId()) {
-                    QCC_DbgTrace(("UDPTransport::ManageEndpoints(): Waking thread on slow authenticator with conn ID == %d.", j->m_connId));
-                    j->m_event->SetEvent();
-                    threadWaiting = true;
-                    changeMade = true;
-                }
-            }
-
-            if (threadWaiting == false) {
-                QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Moving slow authenticator with conn ID == %d. to m_endpointList", ep->GetConnId()));
-
-                /*
-                 * If the endpoint is on the auth list, it occupies a slot on
-                 * both the authentication count and the total conneciton count.
-                 * If we remove it from the authentication list and put it on
-                 * the endpoint list, we are saying we are done with
-                 * authentication.  Update that count, but leave the endpoint as
-                 * occupying a slot in the total connection count since it is an
-                 * endpoint on a list.
-                 */
-                m_connLock.Lock(MUTEX_CONTEXT);
-                m_authList.erase(i);
-                ep->Stop();
-                m_endpointList.insert(ep);
-                --m_currAuth;
-                m_connLock.Unlock(MUTEX_CONTEXT);
-
-                i = m_authList.upper_bound(ep);
-                changeMade = true;
-                continue;
-            }
-        }
-
         /*
          * We expect endpoints to be in one of the following states if they are
          * on the m_endpointList:
@@ -5277,12 +5235,22 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                 ep->IsEpJoined() ||
                 ep->IsEpDone()) && "UDPTransport::ManageEndpoints(): Endpoint in unexpected state");
 
+        /*
+         * If the current endpoint is starting becuase of either an active or
+         * passive connection request, it is in a transient state because a call
+         * to the daemon router is outstanding.  We can't just delete the
+         * endpoint out from under the daemon router which may be at any
+         * arbitrarily vulnerable point.  We have to just let it finish.  If it
+         * never does, we have bigger problems than a stalled endpoint.
+         */
         if (ep->IsEpActiveStarted() || ep->IsEpPassiveStarted()) {
             Timespec tNow;
             GetTimeNow(&tNow);
             Timespec tStart = ep->GetStartTime();
             if (tNow - tStart > UDP_WATCHDOG_TIMEOUT) {
-                QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d stalled", ep->GetConnId()));
+                QCC_LogError(ER_UDP_ENDPOINT_STALLED,
+                             ("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d stalled (\"%s\")",
+                              ep->GetConnId(), ep->IsEpActiveStarted() ? "EP_ACTIVE_STARTED" : "EP_PASSIVE_STARTED"));
 #ifndef NDEBUG
                 ep->PrintEpState("UDPTransport::ManageEndpoints(): Stalled");
 #endif
