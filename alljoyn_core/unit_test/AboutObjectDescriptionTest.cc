@@ -16,6 +16,7 @@
 
 
 #include <alljoyn/AboutObjectDescription.h>
+#include <alljoyn/AboutIcon.h>
 #include <alljoyn/AboutIconObj.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/version.h>
@@ -70,8 +71,10 @@ TEST(AboutObjectDescriptionTest, Construct)
     QStatus status = ER_FAIL;
     BusAttachment bus("AboutObjectDescritpion test");
     //add the org.alljoyn.Icon interface
-    AboutIconObj aboutIconObj(bus, "", "http://www.example.com", NULL, (size_t)0);
-
+    AboutIcon aicon;
+    status = aicon.SetUrl("image/png", "http://www.example.com");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    AboutIconObj aboutIconObj(bus, aicon);
     //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
     const qcc::String interface = "<node>"
                                   "<interface name='org.alljoyn.test'>"
@@ -132,7 +135,10 @@ TEST(AboutObjectDescriptionTest, GetMsgArg)
     QStatus status = ER_FAIL;
     BusAttachment bus("AboutObjectDescritpion test");
     //add the org.alljoyn.Icon interface
-    AboutIconObj aboutIconObj(bus, "", "http://www.example.com", NULL, (size_t)0);
+    AboutIcon aicon;
+    status = aicon.SetUrl("image/png", "http://www.example.com");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    AboutIconObj aboutIconObj(bus, aicon);
     //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
     const qcc::String interface = "<node>"
                                   "<interface name='org.alljoyn.test'>"
@@ -205,7 +211,10 @@ TEST(AboutObjectDescriptionTest, GetPaths) {
     QStatus status = ER_FAIL;
     BusAttachment bus("AboutObjectDescritpion test");
     //add the org.alljoyn.Icon interface
-    AboutIconObj aboutIconObj(bus, "", "http://www.example.com", NULL, (size_t)0);
+    AboutIcon aicon;
+    status = aicon.SetUrl("image/png", "http://www.example.com");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    AboutIconObj aboutIconObj(bus, aicon);
     //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
     const qcc::String interface = "<node>"
                                   "<interface name='org.alljoyn.test'>"
@@ -248,7 +257,10 @@ TEST(AboutObjectDescriptionTest, GetInterfaces) {
     QStatus status = ER_FAIL;
     BusAttachment bus("AboutObjectDescritpion test");
     //add the org.alljoyn.Icon interface
-    AboutIconObj aboutIconObj(bus, "", "http://www.example.com", NULL, (size_t)0);
+    AboutIcon aicon;
+    status = aicon.SetUrl("image/png", "http://www.example.com");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    AboutIconObj aboutIconObj(bus, aicon);
     //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
     const qcc::String interface = "<node>"
                                   "<interface name='org.alljoyn.test'>"
@@ -310,7 +322,10 @@ TEST(AboutObjectDescriptionTest, Clear)
 
     BusAttachment bus("AboutObjectDescritpion test");
     //add the org.alljoyn.Icon interface
-    AboutIconObj aboutIconObj(bus, "", "http://www.example.com", NULL, (size_t)0);
+    AboutIcon aicon;
+    status = aicon.SetUrl("image/png", "http://www.example.com");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    AboutIconObj aboutIconObj(bus, aicon);
     //add org.alljoyn.test, org.alljoyn.game, and org.alljoyn.mediaplayer interfaces
     const qcc::String interface = "<node>"
                                   "<interface name='org.alljoyn.test'>"

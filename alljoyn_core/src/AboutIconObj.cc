@@ -25,14 +25,10 @@ using namespace ajn;
 
 const uint16_t AboutIconObj::VERSION = 1;
 
-AboutIconObj::AboutIconObj(ajn::BusAttachment& bus, qcc::String const& mimetype,
-                           qcc::String const& url, uint8_t* content, size_t contentSize) :
+AboutIconObj::AboutIconObj(ajn::BusAttachment& bus, AboutIcon& icon) :
     BusObject(org::alljoyn::Icon::ObjectPath),
     m_busAttachment(&bus),
-    m_MimeType(mimetype),
-    m_Url(url),
-    m_Content(content),
-    m_ContentSize(contentSize)
+    m_icon(&icon)
 {
     QCC_DbgTrace(("AboutIconObj::%s", __FUNCTION__));
     QStatus status;
@@ -68,7 +64,7 @@ void AboutIconObj::GetUrl(const ajn::InterfaceDescription::Member* member, ajn::
     msg->GetArgs(numArgs, args);
     if (numArgs == 0) {
         ajn::MsgArg retargs[1];
-        QStatus status = retargs[0].Set("s", m_Url.c_str());
+        QStatus status = retargs[0].Set("s", m_icon->url.c_str());
         if (status != ER_OK) {
             MethodReply(msg, status);
         } else {
@@ -86,7 +82,7 @@ void AboutIconObj::GetContent(const ajn::InterfaceDescription::Member* member, a
     msg->GetArgs(numArgs, args);
     if (numArgs == 0) {
         ajn::MsgArg retargs[1];
-        QStatus status = retargs[0].Set("ay", m_ContentSize, m_Content);
+        QStatus status = retargs[0].Set("ay", m_icon->contentSize, m_icon->content);
         if (status != ER_OK) {
             MethodReply(msg, status);
         } else {
@@ -104,9 +100,9 @@ QStatus AboutIconObj::Get(const char*ifcName, const char*propName, MsgArg& val) 
         if (0 == strcmp("Version", propName)) {
             status = val.Set("q", VERSION);
         } else if (0 == strcmp("MimeType", propName)) {
-            status = val.Set("s", m_MimeType.c_str());
+            status = val.Set("s", m_icon->mimetype.c_str());
         } else if (0 == strcmp("Size", propName)) {
-            status = val.Set("u", m_ContentSize);
+            status = val.Set("u", static_cast<uint32_t>(m_icon->contentSize));
         }
     }
     return status;

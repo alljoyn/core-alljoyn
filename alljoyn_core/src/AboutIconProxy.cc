@@ -22,12 +22,6 @@
 
 using namespace ajn;
 
-QStatus AboutIconProxy::Icon::SetContent(const MsgArg& arg) {
-    m_arg = arg;
-    m_arg.Stabilize();
-    return m_arg.Get("ay", &contentSize, &content);
-}
-
 AboutIconProxy::AboutIconProxy(ajn::BusAttachment& bus, const char* busName, SessionId sessionId)
     : m_BusAttachment(&bus),
     m_aboutIconProxyObj(bus, busName, org::alljoyn::Icon::ObjectPath, sessionId)
@@ -38,30 +32,7 @@ AboutIconProxy::AboutIconProxy(ajn::BusAttachment& bus, const char* busName, Ses
     m_aboutIconProxyObj.AddInterface(*p_InterfaceDescription);
 }
 
-QStatus AboutIconProxy::GetUrl(qcc::String& url) {
-    QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
-    QStatus status = ER_OK;
-
-    Message replyMsg(*m_BusAttachment);
-    status = m_aboutIconProxyObj.MethodCall(org::alljoyn::Icon::InterfaceName, "GetUrl", NULL, 0, replyMsg);
-    if (status == ER_OK) {
-        const ajn::MsgArg* returnArgs;
-        size_t numArgs;
-        replyMsg->GetArgs(numArgs, returnArgs);
-        if (numArgs == 1) {
-            char* temp;
-            status = returnArgs[0].Get("s", &temp);
-            if (status == ER_OK) {
-                url.assign(temp);
-            }
-        } else {
-            status = ER_BUS_BAD_VALUE;
-        }
-    }
-    return status;
-}
-
-QStatus AboutIconProxy::GetIcon(Icon& icon) {
+QStatus AboutIconProxy::GetIcon(AboutIcon& icon) {
     QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
     QStatus status = ER_OK;
 
@@ -78,12 +49,47 @@ QStatus AboutIconProxy::GetIcon(Icon& icon) {
         }
     }
 
-    MsgArg arg;
-    status = m_aboutIconProxyObj.GetProperty(org::alljoyn::Icon::InterfaceName, "MimeType", arg);
+    status = m_aboutIconProxyObj.MethodCall(org::alljoyn::Icon::InterfaceName, "GetUrl", NULL, 0, replyMsg);
+    if (status == ER_OK) {
+        const ajn::MsgArg* returnArgs;
+        size_t numArgs;
+        replyMsg->GetArgs(numArgs, returnArgs);
+        if (numArgs == 1) {
+            char* temp;
+            status = returnArgs[0].Get("s", &temp);
+            if (status == ER_OK) {
+                icon.url.assign(temp);
+            }
+        } else {
+            status = ER_BUS_BAD_VALUE;
+        }
+    }
+
+    MsgArg iconsProperties_arg;
+    status = m_aboutIconProxyObj.GetAllProperties(org::alljoyn::Icon::InterfaceName, iconsProperties_arg);
     if (ER_OK == status) {
-        char* temp;
-        arg.Get("s", &temp);
-        icon.mimetype = temp;
+        MsgArg* iconPropertiesValues;
+        size_t numValues;
+        status = iconsProperties_arg.Get("a{sv}", &numValues, &iconPropertiesValues);
+        if (status != ER_OK) {
+            return status;
+        }
+        for (size_t i = 0; i < numValues; ++i) {
+            if (status == ER_OK) {
+                if (iconPropertiesValues[i].v_dictEntry.key->v_string.str != NULL) {
+                    if (strcmp("MimeType", iconPropertiesValues[i].v_dictEntry.key->v_string.str) == 0) {
+                        icon.mimetype.assign(iconPropertiesValues[i].v_dictEntry.val->v_variant.val->v_string.str);
+                        continue;
+                    }
+                    if (strcmp("Size", iconPropertiesValues[i].v_dictEntry.key->v_string.str) == 0) {
+                        icon.contentSize = iconPropertiesValues[i].v_dictEntry.val->v_variant.val->v_uint32;
+                        continue;
+                    }
+                }
+            } else {
+                return status;
+            }
+        }
     }
 
     return status;
@@ -100,30 +106,3 @@ QStatus AboutIconProxy::GetVersion(uint16_t& version) {
     }
     return status;
 }
-
-QStatus AboutIconProxy::GetSize(size_t& size) {
-    QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
-    QStatus status = ER_OK;
-
-    MsgArg arg;
-    status = m_aboutIconProxyObj.GetProperty(org::alljoyn::Icon::InterfaceName, "Size", arg);
-    if (ER_OK == status) {
-        size = arg.v_variant.val->v_uint64;
-    }
-    return status;
-}
-
-QStatus AboutIconProxy::GetMimeType(qcc::String& mimeType) {
-    QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
-    QStatus status = ER_OK;
-
-    MsgArg arg;
-    status = m_aboutIconProxyObj.GetProperty(org::alljoyn::Icon::InterfaceName, "MimeType", arg);
-    if (ER_OK == status) {
-        char* temp;
-        arg.Get("s", &temp);
-        mimeType.assign(temp);
-    }
-    return status;
-}
-

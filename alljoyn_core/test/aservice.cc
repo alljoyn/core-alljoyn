@@ -167,7 +167,12 @@ int main(int argc, char** argv)
         printf("failed to setup about data.\n");
     }
 
-    AboutIconObj aboutIconObj(bus, "", "http://www.example.com", NULL, (size_t)0);
+    AboutIcon icon;
+    status = icon.SetUrl("image/png", "http://www.example.com");
+    if (ER_OK != status) {
+        printf("Failed to setup the AboutIcon.\n");
+    }
+    AboutIconObj aboutIconObj(bus, icon);
 
     // Announce about signal
     AboutObj aboutObj(bus);
