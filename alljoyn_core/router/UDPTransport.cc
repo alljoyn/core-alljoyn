@@ -5219,7 +5219,9 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
          *     this state must be Join()ed by this management thread.
          *
          * EP_JOINED: Both Stop() and Join() have been called on this endpoint
-         *     and there are no threads wandering through the endpoint.
+         *     and there are no threads wandering through the endpoint.  Once we
+         *     reach the EP_JOINED state, a final Exit() function is scheduled
+         *     which will drive the transition to EP_DONE state.
          *
          * EP_DONE: The endpoint has been Stop()ped, Join()ed and the Exit
          *     function has been called to ensure that the endpoint is
@@ -5341,8 +5343,12 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                 QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Join()ing stopping endpoint with conn ID == %d.", ep->GetConnId()));
 
                 /*
-                 * We now expect that Join() will complete without having to
-                 * wait for anything.
+                 * We know we are in either EP_STOPPING or EP_JOINED state here.
+                 * If we are in EP_STOPPING state, we just verified that we've
+                 * dislodged any threads which may be waiting for the endpoint,
+                 * and we've gone through our disconnect dance with ARDP.  We
+                 * now expect that Join() will complete without having to wait
+                 * for anything.
                  */
                 if (ep->IsEpJoined() == false) {
                     QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Join() endpoint with conn ID == %d.", ep->GetConnId()));
@@ -5351,53 +5357,46 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                 }
 
                 /*
-                 * If the endpoint has been registered with the daemon router
-                 * we need to schedule an exit function to be run to detach
-                 * (unregister) it.  We need to do that in the context of the
-                 * dispatcher thread for deadlock avoidance.
+                 * At this point, we have Join()ed the endpoint, but the
+                 * endpoint may still have tendrils connecting it to the Daemon
+                 * Router.  Since disconnecting the Daemon Router involves a
+                 * call out to some foreign land, we don't want to make that
+                 * call with locks taken, first to avoid blocking the endpoint
+                 * management thread and second in case the router decides to
+                 * call back into ARDP (which could cause a deadlock).  So we
+                 * shedule a function to make that happen; which then runs the
+                 * Exit() function in the context of the dispatcher thread.
+                 *
+                 * Note: since the call out to register endpoints cannot be made
+                 * with our locks held, we are never completely certain that a
+                 * registration has succeeded or not.  For example, we could
+                 * have put the endpoint on the endpoint list and begun the call
+                 * out to the Daemon Router to register the endpoint, but
+                 * received an ARDP_Disconnect() before the register call
+                 * completed.  When we get the ARDP_Disconnect() we will start
+                 * the process of tearing down the endpoint by calling Stop(),
+                 * then Join() above.  Clearly, the Stop(), Join() and
+                 * scheduling of the Exit() happens asynchronously with respect
+                 * to the Daemon Registration process.  The registration process
+                 * is a lengthy one involving creation of a virtual endpoint and
+                 * starting the ExchangeNames process.  We expect that in a
+                 * networked system having a connection go down in the middle of
+                 * this process is not an unheard of situation and so we expect
+                 * the Daemon Router to gracefully handle the case that an
+                 * endpoint is invalidated and unregister is called before
+                 * during or after a call to register.
+                 *
+                 * So, if we have not scheduled an Exit() function to be called
+                 * on the endpoint, we do so irrespective of whether or not a
+                 * register has completed or is in process.
                  */
-                if (ep->GetRegistered()) {
-                    QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. is registerd", ep->GetConnId()));
-
-                    /*
-                     * Schedule the endpoint exit function to be run if it has
-                     * not been run before.  At this point we have stopped
-                     * and joined the endpoint, but we must wait until the detach
-                     * happens, as indicated by EndpointExited() returning true,
-                     * before removing our (last) reference to the endpoint below.
-                     * When the endpoint Exit() function is actually run by the
-                     * dispatcher, it sets the endpoint state to EP_DONE, which
-                     * we check for below.
-                     */
-                    if (ep->GetExitScheduled() == false) {
-                        QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Schedule Exit() on endpoint with conn ID == %d.", ep->GetConnId()));
-                        ep->SetExitScheduled();
-                        ExitEndpoint(ep->GetConnId());
-                        changeMade = true;
-                    }
-                } else {
-                    /*
-                     * It may be the case that the endpoint was never actually
-                     * registered with the daemon (it's startup never completed)
-                     * or it was unregistered for some other reason.  In case
-                     * the normal sequence of events was never finished, we have
-                     * to manually drop the state to EP_DONE in that case since
-                     * there will be no Exit() to do it for us.
-                     *
-                     * Be careful we don't step in and set the state if the Exit
-                     * is actually in the process of being run (and we happen to
-                     * notice that the endpoint is unregistered while the exit
-                     * routine is in the process of completing), so only step in
-                     * if GetExitScheduled() is false (it cannot be running).
-                     */
-                    if (ep->GetExitScheduled() == false) {
-                        QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Setting EP_DONE on endpoint with conn ID == %d.", ep->GetConnId()));
-                        ep->SetEpDone();
-                        changeMade = true;
-                    } else {
-                        QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Exit() scheduled on endpoint with conn ID == %d.", ep->GetConnId()));
-                    }
+                if (ep->GetExitScheduled() == false) {
+                    QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Schedule Exit() on endpoint with conn ID == %d.", ep->GetConnId()));
+                    ep->SetExitScheduled();
+                    ExitEndpoint(ep->GetConnId());
+                    changeMade = true;
                 }
+
 #ifndef NDEBUG
             } else {
                 QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. is not idle", ep->GetConnId()));
