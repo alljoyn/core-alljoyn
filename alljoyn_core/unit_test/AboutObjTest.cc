@@ -191,7 +191,8 @@ TEST_F(AboutObjTest, Announce) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Announce(port, aboutData);
+    status = aboutObj.Announce(port, aboutData);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     for (uint32_t msec = 0; msec < 5000; msec += WAIT_TIME) {
         if (aboutListener.announceListenerFlag == true) {
@@ -226,6 +227,23 @@ TEST_F(AboutObjTest, Announce) {
     clientBus.Join();
 }
 
+TEST_F(AboutObjTest, AnnounceSessionPortNotBound) {
+    QStatus status = ER_FAIL;
+    AboutObj aboutObj(*serviceBus);
+    //the SessionPort 5154 is not bound so should return ER_ABOUT_SESSIONPORT_NOT_BOUND error.
+    status = aboutObj.Announce(static_cast<SessionPort>(5154), aboutData);
+    EXPECT_EQ(ER_ABOUT_SESSIONPORT_NOT_BOUND, status) << "  Actual Status: " << QCC_StatusText(status);
+}
+
+// ASACORE-1006
+TEST_F(AboutObjTest, DISABLED_AnnounceMissingRequiredField) {
+    QStatus status = ER_FAIL;
+    AboutObj aboutObj(*serviceBus);
+    //The AboutData is does not have all the required fields
+    AboutData badAboutData("en");
+    status = aboutObj.Announce(port, badAboutData);
+    EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status) << "  Actual Status: " << QCC_StatusText(status);
+}
 
 TEST_F(AboutObjTest, ProxyAccessToAboutObj) {
     QStatus status = ER_FAIL;
@@ -261,7 +279,8 @@ TEST_F(AboutObjTest, ProxyAccessToAboutObj) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AboutObj aboutObj(*serviceBus);
-    aboutObj.Announce(port, aboutData);
+    status = aboutObj.Announce(port, aboutData);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     for (uint32_t msec = 0; msec < 5000; msec += WAIT_TIME) {
         if (aboutListener.announceListenerFlag == true) {
