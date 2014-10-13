@@ -302,7 +302,7 @@ TEST(AboutData, SetSupportedLanguage)
     languages = NULL;
 }
 //ASACORE-910
-TEST(AboutData, DISABLED_SetSupportedLanguage_Duplicate)
+TEST(AboutData, SetSupportedLanguage_Duplicate)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -312,12 +312,14 @@ TEST(AboutData, DISABLED_SetSupportedLanguage_Duplicate)
 
     // Duplicate language already added from constructor
     status = aboutData.SetSupportedLanguage("en");
-    EXPECT_NE(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     // Duplicate language already added, error status should be generated
     status = aboutData.SetSupportedLanguage("es");
-    EXPECT_NE(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
+    // Even though "en" and "es" languages have been added multiple times only
+    // two languages should be reported in the list of SupportedLanguages.
     size_t numRetLang = aboutData.GetSupportedLanguages();
     EXPECT_EQ(2u, numRetLang);
 }
