@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
    <!--
 
-        Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+        Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
 
            Permission to use, copy, modify, and/or distribute this software for any
            purpose with or without fee is hereby granted, provided that the above
@@ -28,9 +28,6 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"></uses-permission>
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"></uses-permission>
-    <!-- Permission required to use the Bluetooth transport -->
-    <uses-permission android:name="android.permission.BLUETOOTH"></uses-permission>
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"></uses-permission> 
 	
 	<uses-sdk android:minSdkVersion="15" />
 	

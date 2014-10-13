@@ -18,7 +18,6 @@
 
 const AJNTransportMask kAJNTransportMaskNone      = 0x0000;   /**< no transports */
 const AJNTransportMask kAJNTransportMaskLocal     = 0x0001;   /**< Local (same device) transport */
-const AJNTransportMask kAJNTransportMaskBluetooth = 0x0002;   /**< Bluetooth transport */
 const AJNTransportMask kAJNTransportMaskWLAN      = 0x0004;   /**< Wireless local-area network transport */
 const AJNTransportMask kAJNTransportMaskWWAN      = 0x0008;   /**< Wireless wide-area network transport */
 const AJNTransportMask kAJNTransportMaskLAN       = 0x0010;   /**< Wired local-area network transport */

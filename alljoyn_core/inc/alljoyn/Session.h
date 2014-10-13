@@ -164,7 +164,7 @@ class SessionOpts {
      *
      * last transports.
      *
-     * #TRANSPORT_LOCAL \< #TRANSPORT_BLUETOOTH \< #TRANSPORT_WLAN \< #TRANSPORT_WWAN \< #TRANSPORT_ANY
+     * #TRANSPORT_LOCAL \< #TRANSPORT_WLAN \< #TRANSPORT_WWAN \< #TRANSPORT_ANY
      *
      *
      * @param other the SessionOpts being compared against
