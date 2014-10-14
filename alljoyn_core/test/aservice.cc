@@ -175,7 +175,7 @@ int main(int argc, char** argv)
     AboutIconObj aboutIconObj(bus, icon);
 
     // Announce about signal
-    AboutObj aboutObj(bus);
+    AboutObj aboutObj(bus, BusObject::ANNOUNCED);
     status = aboutObj.Announce(ASSIGNED_SESSION_PORT, aboutData);
     if (ER_OK == status) {
         printf("AboutObj Announce Succeeded.\n");
