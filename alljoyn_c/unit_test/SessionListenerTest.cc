@@ -55,12 +55,12 @@ static alljoyn_transportmask transport_found = 0;
 static char* member_added_uniquename = NULL;
 static char* member_removed_uniquename = NULL;
 /* session listener functions */
-static void session_lost(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason) {
+static void AJ_CALL session_lost(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason) {
     sessionlostreason = reason;
     session_lost_flag = QCC_TRUE;
 }
 
-static void session_member_added(const void* context, alljoyn_sessionid sessionid, const char* uniqueName) {
+static void AJ_CALL session_member_added(const void* context, alljoyn_sessionid sessionid, const char* uniqueName) {
     int uniqueNameSize = strlen(uniqueName);
     if (member_added_uniquename != NULL) {
         free(member_added_uniquename);
@@ -72,7 +72,7 @@ static void session_member_added(const void* context, alljoyn_sessionid sessioni
     session_member_added_flag = QCC_TRUE;
 }
 
-static void session_member_removed(const void* context, alljoyn_sessionid sessionId, const char* uniqueName) {
+static void AJ_CALL session_member_removed(const void* context, alljoyn_sessionid sessionId, const char* uniqueName) {
     int uniqueNameSize = strlen(uniqueName);
     if (member_removed_uniquename != NULL) {
         free(member_removed_uniquename);
@@ -85,8 +85,8 @@ static void session_member_removed(const void* context, alljoyn_sessionid sessio
 }
 
 /* session port listener */
-static QCC_BOOL accept_session_joiner(const void* context, alljoyn_sessionport sessionPort,
-                                      const char* joiner,  const alljoyn_sessionopts opts) {
+static QCC_BOOL AJ_CALL accept_session_joiner(const void* context, alljoyn_sessionport sessionPort,
+                                              const char* joiner,  const alljoyn_sessionopts opts) {
     QCC_BOOL ret = QCC_FALSE;
     if (sessionPort == SESSION_PORT) {
         ret = QCC_TRUE;
@@ -95,24 +95,24 @@ static QCC_BOOL accept_session_joiner(const void* context, alljoyn_sessionport s
     return ret;
 }
 
-static void session_joined(const void* context, alljoyn_sessionport sessionPort,
-                           alljoyn_sessionid id, const char* joiner) {
+static void AJ_CALL session_joined(const void* context, alljoyn_sessionport sessionPort,
+                                   alljoyn_sessionid id, const char* joiner) {
     EXPECT_EQ(SESSION_PORT, sessionPort);
     joinsessionid = id;
     session_joined_flag = QCC_TRUE;
 }
 
 /* bus listener functions */
-static void found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix) {
+static void AJ_CALL found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix) {
     transport_found |= transport;
     found_advertised_name_flag = QCC_TRUE;
 }
-static void lost_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix) {
+static void AJ_CALL lost_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix) {
     lost_advertised_name_flag = QCC_TRUE;
 }
 
 /* Exposed methods */
-static void ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
+static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
     outArg = alljoyn_message_getarg(msg, 0);
@@ -453,12 +453,12 @@ void resetServicSessionListenerFlags() {
 }
 
 /* service session listener functions */
-static void service_session_lost(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason) {
+static void AJ_CALL service_session_lost(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason) {
     service_sessionlostreason = reason;
     service_session_lost_flag = QCC_TRUE;
 }
 
-static void service_session_member_added(const void* context, alljoyn_sessionid sessionid, const char* uniqueName) {
+static void AJ_CALL service_session_member_added(const void* context, alljoyn_sessionid sessionid, const char* uniqueName) {
     int uniqueNameSize = strlen(uniqueName);
     if (service_member_added_uniquename != NULL) {
         free(service_member_added_uniquename);
@@ -470,7 +470,7 @@ static void service_session_member_added(const void* context, alljoyn_sessionid 
     service_session_member_added_flag = QCC_TRUE;
 }
 
-static void service_session_member_removed(const void* context, alljoyn_sessionid sessionId, const char* uniqueName) {
+static void AJ_CALL service_session_member_removed(const void* context, alljoyn_sessionid sessionId, const char* uniqueName) {
     int uniqueNameSize = strlen(uniqueName);
     if (service_member_removed_uniquename != NULL) {
         free(service_member_removed_uniquename);

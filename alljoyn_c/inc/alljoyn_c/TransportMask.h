@@ -29,7 +29,6 @@ typedef uint16_t alljoyn_transportmask;
 
 #define ALLJOYN_TRANSPORT_NONE      (alljoyn_transportmask)0x0000   /**< no transports */
 #define ALLJOYN_TRANSPORT_LOCAL     (alljoyn_transportmask)0x0001   /**< Local (same device) transport */
-#define ALLJOYN_TRANSPORT_BLUETOOTH (alljoyn_transportmask)0x0002   /**< Bluetooth transport */
 #define ALLJOYN_TRANSPORT_WLAN      (alljoyn_transportmask)0x0004   /**< Wireless local-area network transport */
 #define ALLJOYN_TRANSPORT_WWAN      (alljoyn_transportmask)0x0008   /**< Wireless wide-area network transport */
 #define ALLJOYN_TRANSPORT_LAN       (alljoyn_transportmask)0x0010   /**< Wired local-area network transport */

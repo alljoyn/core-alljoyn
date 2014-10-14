@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -30,11 +30,11 @@ static const char* OBJECT_NAME = "org.alljoyn.test.BusAttachmentTest";
 static QCC_BOOL name_owner_changed_flag = QCC_FALSE;
 static QCC_BOOL listener_registered_flag = QCC_FALSE;
 
-static void listener_registered(const void* context, alljoyn_busattachment s_bus) {
+static void AJ_CALL listener_registered(const void* context, alljoyn_busattachment s_bus) {
     listener_registered_flag = QCC_TRUE;
 }
 
-static void name_owner_changed_blocking_call(const void* context, const char* busName, const char* previousOwner, const char* newOwner) {
+static void AJ_CALL name_owner_changed_blocking_call(const void* context, const char* busName, const char* previousOwner, const char* newOwner) {
     QStatus status = ER_FAIL;
     alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create(s_bus, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
     EXPECT_TRUE(proxyObj);
@@ -94,7 +94,7 @@ TEST(ConcurrentCallbackTest, enableconcurrentcallbacks_not_used)
     alljoyn_buslistener_destroy(buslistener);
 }
 
-static void name_owner_changed_enableconcurrentcallbacks(const void* context, const char* busName, const char* previousOwner, const char* newOwner) {
+static void AJ_CALL name_owner_changed_enableconcurrentcallbacks(const void* context, const char* busName, const char* previousOwner, const char* newOwner) {
     QStatus status = ER_FAIL;
     alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create(s_bus, "org.alljoyn.Bus", "/org/alljoyn/Bus", 0);
     EXPECT_TRUE(proxyObj);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -97,7 +97,6 @@ public class AllJoynApp extends Application {
                                               "<busconfig>" +
                                               "  <listen>unix:abstract=alljoyn</listen>" +
                                               "  <listen>launchd:env=DBUS_LAUNCHD_SESSION_BUS_SOCKET</listen>" +
-                                              "  <listen>bluetooth:</listen>" +
                                               "  <listen>tcp:addr=0.0.0.0,port=9955,family=ipv4</listen>" +
                                               "  <limit auth_timeout=\"5000\"/>" +
                                               "  <limit max_incomplete_connections=\"4\"/>" +

@@ -19,6 +19,9 @@ package org.allseen.sample.eventaction;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.allseen.sample.event.tester.ActionDescription;
+import org.allseen.sample.event.tester.EventDescription;
+
 
 public class Device {
 	private int sessionId;
@@ -26,8 +29,8 @@ public class Device {
 	private String path;
 	private String friendlyName;
 
-	private List<EventDescription> events = new LinkedList<EventDescription>();
 	private List<ActionDescription> actions = new LinkedList<ActionDescription>();
+	private List<EventDescription> events = new LinkedList<EventDescription>();
 
 	public Device(String sessionName, int sessionId, String friendlyName, String path) {
 		this.setSessionId(sessionId);
@@ -73,11 +76,10 @@ public class Device {
 	}
 
 	public void addEvent(EventDescription event) {
-		//ensure correct sessionName has been set to the event
 		event.setSessionName(sessionName);
-		events.add(event);
+		this.events.add(event);
 	}
-
+	
 	public List<ActionDescription> getActions() {
 		return actions;
 	}
@@ -85,6 +87,7 @@ public class Device {
 	public void addAction(ActionDescription action) {
 		//ensure correct sessionName has been set for the action
 		action.setSessionName(sessionName);
+		action.setFriendlyName(friendlyName);
 		this.actions.add(action);
 	}
 }

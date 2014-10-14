@@ -171,7 +171,6 @@ namespace AllJoynUnity
 			None = 0x0000, /**< no transports */
 			Any = 0xFF7F, /**< ANY transport (but Wi-Fi Direct) */
 			Local = 0x0001, /**< Local (same device) transport */
-			Bluetooth = 0x0002, /**< Bluetooth transport */
 			WLAN = 0x0004, /**< Wireless local-area network transport */
 			WWAN = 0x0008, /**< Wireless wide-area network transport */
 			LAN = 0x0010, /**< Wired local-area network transport */
