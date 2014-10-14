@@ -1710,8 +1710,6 @@ static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t
         AdjustRTT(handle, conn, sBuf);
     }
 
-    assert(SEQ32_LET(lcs, conn->snd.UNA));
-
 
     /* Cycle through the buffers from snd.LCS + 1 to ACK */
     index = (conn->snd.LCS + 1) % conn->snd.SEGMAX;
@@ -2871,10 +2869,17 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, u
     SEG.SOM = ntohl(header->som);                 /* Sequence number of the first fragment in message */
     SEG.FCNT = ntohs(header->fcnt);               /* Number of segments comprising fragmented message */
 
+
     if (!(SEG.FLG & ARDP_FLAG_SYN)) {
-        if ((conn->snd.NXT - SEG.LCS) > conn->snd.SEGMAX) {
-            QCC_DbgHLPrintf(("Receive: lcs %u out of range, nxt = %u, segmax = %u",
-                             SEG.LCS, conn->snd.NXT, conn->snd.SEGMAX));
+
+        if (SEQ32_LT(conn->snd.NXT, SEG.ACK)) {
+            QCC_DbgHLPrintf(("Receive: ack %u ahead of SND>NXT %u", SEG.ACK, conn->snd.NXT));
+            return ER_ARDP_INVALID_RESPONSE;
+        }
+
+        if (SEQ32_LT(SEG.ACK, SEG.LCS)) {
+            QCC_DbgHLPrintf(("Receive: lcs %u and ack %u out of order", SEG.LCS, SEG.ACK));
+            return ER_ARDP_INVALID_RESPONSE;
         }
 
         /*
