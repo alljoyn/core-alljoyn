@@ -2969,8 +2969,7 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
     handle->msnext = CheckTimers(handle);
 
     if (sockRead) {
-        status = qcc::RecvFrom(sock, address, port, buf, bufferSize, nbytes);
-        if (status == ER_OK) {
+        while ((status = qcc::RecvFrom(sock, address, port, buf, bufferSize, nbytes)) == ER_OK) {
 #if ARDP_TESTHOOKS
             /*
              * Call the inbound testhook in case the test team needs to munge the
@@ -3018,6 +3017,8 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
 
                     /* Ignore anything else */
                 }
+            } else {
+                break;
             }
         }
     }
