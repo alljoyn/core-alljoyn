@@ -498,10 +498,6 @@ static uint32_t CheckConnTimers(ArdpHandle* handle, ArdpConnRecord* conn, uint32
         /* Update "call-me-next-ms" value */
         next = conn->persistTimer.when;
         moveAhead(handle, conn);
-
-        /* No pending retransmits should be present on the connection if
-         * we have fired up persist timer */
-        assert((conn->snd.UNA + 1) == conn->snd.NXT);
     }
 
     return next;
@@ -840,6 +836,10 @@ static void ExpireMessageSnd(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBu
      * advance snd.UNA counter to the start of the next message.
      */
     if (SEQ32_LET(som, conn->snd.UNA) && SEQ32_LT(conn->snd.UNA, som + fcnt)) {
+        /*
+         * Notice that it is possible for UNA to catch up with NXT when the expired
+         * message is the last one that has been sent out.
+         */
         conn->snd.UNA = som + fcnt;
         /* Schedule "unsolicited" ACK to allow the receiver to move on */
         if (conn->ackTimer.retry == 0) {
@@ -1078,6 +1078,11 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
     }
 }
 
+static inline bool IsDataRetransmitScheduled(ArdpConnRecord* conn)
+{
+    return (((conn->snd.UNA + 1) != conn->snd.NXT) && (conn->snd.UNA != conn->snd.NXT));
+}
+
 static void PersistTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
 {
     ArdpTimer* timer = &conn->persistTimer;
@@ -1086,7 +1091,7 @@ static void PersistTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* 
     QCC_DbgHLPrintf(("PersistTimerHandler: handle=%p conn=%p context=%p delta %u retry %u",
                      handle, conn, context, timer->delta, timer->retry));
 
-    if (conn->window < conn->minSendWindow && ((conn->snd.UNA + 1) == conn->snd.NXT)) {
+    if (conn->window < conn->minSendWindow && !IsDataRetransmitScheduled(conn)) {
         if (timer->retry > 1) {
             QCC_DbgPrintf(("PersistTimerHandler: window %u, need at least %u", conn->window, conn->minSendWindow));
             status = Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER | ARDP_FLAG_NUL, conn->snd.NXT, conn->rcv.CUR);
@@ -2676,11 +2681,11 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
             if (conn->window != seg->WINDOW) {
                 /* Schedule persist timer only if there are no pending retransmits */
-                if (((conn->snd.UNA + 1) == conn->snd.NXT) && (seg->WINDOW < conn->minSendWindow) && (conn->persistTimer.retry == 0)) {
+                if (!IsDataRetransmitScheduled(conn) && (seg->WINDOW < conn->minSendWindow) && (conn->persistTimer.retry == 0)) {
                     /* Start Persist Timer */
                     UpdateTimer(handle, conn, &conn->persistTimer, handle->config.persistInterval,
                                 handle->config.totalAppTimeout / handle->config.persistInterval + 1);
-                } else if ((conn->persistTimer.retry != 0) && ((seg->WINDOW >= conn->minSendWindow) || ((conn->snd.UNA + 1) != conn->snd.NXT))) {
+                } else if ((conn->persistTimer.retry != 0) && ((seg->WINDOW >= conn->minSendWindow) || IsDataRetransmitScheduled(conn))) {
                     /* Cancel Persist Timer */
                     conn->persistTimer.retry = 0;
                 }
