@@ -501,7 +501,13 @@ void ProxyBusObject::PropertiesChangedHandler(const InterfaceDescription::Member
         if (ctx->properties.empty()) {
             // handler wants all changed/invalid properties in signal
             changedOut.Set("a{sv}", numChangedProps, changedProps);
-            invalidOut.Set("as", numInvalidProps, invalidProps);
+            for (i = 0; i < numInvalidProps; ++i) {
+                const char* propName;
+                invalidProps[i].Get("s", &propName);
+                invalidOutArray[invalidOutArraySize++] = propName;
+
+            }
+            invalidOut.Set("as", numInvalidProps, invalidOutArray);
         } else {
             for (i = 0; i < numChangedProps; ++i) {
                 const char* propName;
