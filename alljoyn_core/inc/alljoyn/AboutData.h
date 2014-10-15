@@ -74,8 +74,9 @@ class AboutData : public AboutDataListener {
      * member function to fill in the AboutData class.
      *
      * @param arg MsgArg with signature a{sv}containing AboutData fields.
+     * @param language the language of the arg MsgArg. Use NULL for default language
      */
-    AboutData(const MsgArg arg);
+    AboutData(const MsgArg arg, const char* language = NULL);
 
     /**
      * Destructor
@@ -573,6 +574,20 @@ class AboutData : public AboutDataListener {
      * @return ER_OK on success
      */
     QStatus GetField(const char* name, MsgArg*& value, const char* language = NULL);
+
+    /**
+     * Get a list of the fields contained in this AboutData class.  This may be
+     * required if a the AboutData comes from a remote source. User defined
+     * fields are permitted. Use the GetFields method to get a list of all fields
+     * currently found known by the AboutData.
+     *
+     * @param[out] fields an array of const char* that will contain all the strings
+     * @param[in]  num_fields the size of the array
+     *
+     * @return
+     *  The number of fields returned or the total number of fields if the fields parameter is NULL
+     */
+    size_t GetFields(const char** fields = NULL, size_t num_fields = 0) const;
 
     /**
      * @param[out] msgArg a the dictionary containing all of the AboutData fields for
