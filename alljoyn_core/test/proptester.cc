@@ -266,10 +266,6 @@ class PropTesterObject2 : public BusObject, private Thread {
     PropTesterObject2(BusAttachment& bus, const char* path, SessionId id, bool autoChange);
     ~PropTesterObject2();
 
-    void Set(int32_t v);
-    void Set(uint32_t v);
-    void Set(const char* v);
-
     void ObjectRegistered(void) { if (autoChange) { Start(); } }
 
   private:
@@ -353,6 +349,7 @@ ThreadReturn STDCALL PropTesterObject2::Run(void* arg)
         QCC_SyncPrintf("PropTesterObject2::Run : (%d) %d -- %s\n", id, intProp, stringProp.c_str());
         status = EmitPropChanged("org.alljoyn.Testing.PropertyTester2", propTester2Names, propTester2Count, id, ALLJOYN_FLAG_GLOBAL_BROADCAST);
         assert(status == ER_OK);
+        (void)status; // avoid warning in case of non-debug build (assert not called)
         lock.Unlock();
         Event::Wait(dummy, 2000);
         lock.Lock();
@@ -542,8 +539,8 @@ _PropTesterProxyObject2::_PropTesterProxyObject2(BusAttachment& bus, const Strin
     AddInterface(*ifc);
 
     assert(ER_OK == RegisterPropertiesChangedHandler("org.alljoyn.Testing.PropertyTester2",
-                                                     propTester2Names,
-                                                     propTester2Count,
+                                                     NULL,
+                                                     0,
                                                      *this,
                                                      NULL));
 }
