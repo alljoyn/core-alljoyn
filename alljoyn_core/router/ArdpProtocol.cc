@@ -1401,7 +1401,7 @@ static QStatus InitConnRecord(ArdpHandle* handle, ArdpConnRecord* conn, qcc::Soc
     local = (qcc::Rand32() % 65534) + 1;  /* Allocate an "ephemeral" source port */
 
     /* Make sure this is a unique combiation of foreign/local */
-    while (FindConn(handle, conn->local, foreign) != NULL) {
+    while (FindConn(handle, local, foreign) != NULL) {
         local++;
         count++;
         if (count == 65535) {
@@ -1449,7 +1449,7 @@ static ArdpConnRecord* FindConn(ArdpHandle* handle, uint16_t local, uint16_t for
 
     for (ListNode* ln = &handle->conns; (ln = ln->fwd) != &handle->conns;) {
         ArdpConnRecord* conn = (ArdpConnRecord*)ln;
-        QCC_DbgPrintf(("FindConn(): check out conn->local = %d, conn->foreign = %d", conn->local, conn->foreign));
+        QCC_DbgPrintf(("FindConn(): conn %p local = %d, foreign = %d", conn, conn->local, conn->foreign));
         if (conn->local == local && conn->foreign == foreign) {
             QCC_DbgPrintf(("FindConn(): Found conn %p", conn));
             return conn;
