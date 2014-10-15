@@ -29,6 +29,7 @@
 
 #include <qcc/Debug.h>
 #include <qcc/String.h>
+#include <qcc/StringMapKey.h>
 #include <qcc/StringSource.h>
 #include <qcc/XmlElement.h>
 #include <qcc/Util.h>
@@ -60,6 +61,11 @@ using namespace qcc;
 using namespace std;
 
 namespace ajn {
+
+/** Static multiset to keep track of how many property changed listeners there are per interface.*/
+static multiset<StringMapKey> propChangeAddMatchRules;
+static Mutex propChangeAddMatchRulesLock;
+
 
 template <typename _cbType> struct CBContext {
     CBContext(ProxyBusObject* obj, ProxyBusObject::Listener* listener, _cbType callback, void* context)
@@ -366,8 +372,6 @@ void ProxyBusObject::SetPropMethodCB(Message& message, void* context)
     delete ctx;
 }
 
-multiset<StringMapKey> ProxyBusObject::propChangeAddMatchRules;
-Mutex ProxyBusObject::propChangeAddMatchRulesLock;
 
 QStatus ProxyBusObject::RegisterPropertiesChangedHandler(const char* iface,
                                                          const char** properties,

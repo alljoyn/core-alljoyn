@@ -26,7 +26,6 @@
 #include <qcc/platform.h>
 #include <set>
 #include <qcc/String.h>
-#include <qcc/StringMapKey.h>
 #include <alljoyn/InterfaceDescription.h>
 #include <alljoyn/MessageReceiver.h>
 #include <alljoyn/MsgArg.h>
@@ -976,10 +975,6 @@ class ProxyBusObject : public MessageReceiver {
     mutable qcc::Mutex* lock;   /**< Lock that protects access to components member */
     bool isExiting;             /**< true iff ProxyBusObject is in the process of begin destroyed */
     bool isSecure;              /**< Indicates if this object is secure or not */
-
-    /** Static multiset to keep track of how many property changed listeners there are per interface.*/
-    static std::multiset<qcc::StringMapKey> propChangeAddMatchRules;
-    static qcc::Mutex propChangeAddMatchRulesLock;
 };
 
 /**
