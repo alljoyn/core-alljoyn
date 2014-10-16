@@ -30,4 +30,15 @@ void strerror_r(uint32_t errCode, char* ansiBuf, uint16_t ansiBufSize);
 
 
 
+/**
+ * Ensure that Winsock API is loaded.
+ * Called before any operation that might be called before winsock has been started.
+ */
+void WinsockCheck();
+
+/**
+ * Clean up Winsock API. Caller must ensure that this is the last call to Winsock.
+ */
+void WinsockCleanup();
+
 #endif
