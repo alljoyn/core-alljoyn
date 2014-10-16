@@ -1,3 +1,6 @@
+#ifndef SECMGR_POLICY_H_
+#define SECMGR_POLICY_H_
+
 /******************************************************************************
  * Copyright (c) 2014, AllSeen Alliance. All rights reserved.
  *
@@ -14,54 +17,36 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#ifndef APPGUILDINFO_H_
-#define APPGUILDINFO_H_
-
+#include <vector>
 #include <qcc/String.h>
 #include <qcc/GUID.h>
-#include <PublicKey.h>
+#include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/Status.h>
-#include <alljoyn/BusAttachment.h>
-
-#define QCC_MODULE "SEC_MGR"
 
 namespace ajn {
 namespace securitymgr {
-/*
- * \brief Represents any application info that is persisted in local storage.
- */
-struct ManagedApplicationInfo {
-    PublicKey publicKey;
-    qcc::String userDefinedName;
-    qcc::String deviceName;
-    qcc::String appName;
-    qcc::String appID;
-    qcc::String manifest;
-    qcc::String policy;
-};
+class PolicyGenerator {
+  public:
+    /*
+     * Generates a default policy in which any member of the specified guilds can
+     * provide any interface to this application and can modify any interface
+     * provided by this application.
+     *
+     * \param[in]  guildIds  the ids of the guilds in the generated policy
+     * \param[out] policy    the generated policy
+     *
+     */
+    static QStatus DefaultPolicy(const std::vector<qcc::GUID128>& guildIds,
+                                 PermissionPolicy& policy);
 
-struct GuildInfo {
-    qcc::GUID128 guid;
-    qcc::String name;
-    qcc::String desc;
+  private:
+    static QStatus DefaultGuildPolicyTerm(const uint8_t* guildId,
+                                          const size_t guildIdLen,
+                                          PermissionPolicy::Term& term);
 
-    bool operator==(const GuildInfo& gi) const
-    {
-        if (guid != gi.guid) {
-            return false;
-        }
-
-        if (name != gi.name) {
-            return false;
-        }
-
-        if (desc != gi.desc) {
-            return false;
-        }
-        return true;
-    }
+    static QStatus DefaultGuildPolicyRule(PermissionPolicy::Rule& rule);
 };
 }
 }
-#undef QCC_MODULE
-#endif /* APPGUILDINFO_H_ */
+
+#endif

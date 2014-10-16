@@ -248,7 +248,7 @@ QStatus Stub::AdvertiseApplication(const char* guid)
     return ER_OK;
 }
 
-std::map<qcc::String, qcc::String> Stub::GetMembershipCertificates() const
+std::map<GUID128, qcc::String> Stub::GetMembershipCertificates() const
 {
     return pm->GetMembershipCertificates();
 }

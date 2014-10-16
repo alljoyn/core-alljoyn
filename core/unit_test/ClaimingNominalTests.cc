@@ -69,7 +69,9 @@ TEST_F(ClaimingNominalTests, SuccessfulClaimingWithoutOOB) {
     sem_wait(&sem);
     ASSERT_EQ(tal._lastAppInfo.runningState, ApplicationRunningState::RUNNING);
     ASSERT_EQ(tal._lastAppInfo.claimState, ApplicationClaimState::NOT_CLAIMED);
-    ASSERT_EQ(tal._lastAppInfo, secMgr->GetApplications()[0]);
+
+    ASSERT_TRUE(tal._lastAppInfo == secMgr->GetApplications()[0]);
+
     ASSERT_EQ(tal._lastAppInfo.rootOfTrustList.size(), (size_t)0);
     ASSERT_EQ(secMgr->GetApplications(ApplicationClaimState::CLAIMED).size(), (size_t)0);
 
@@ -102,19 +104,14 @@ TEST_F(ClaimingNominalTests, SuccessfulClaimingWithoutOOB) {
     ASSERT_EQ(tal._lastAppInfo.rootOfTrustList.size(), (size_t)1);
     qcc::ECCPublicKey pb = secMgr->GetRootOfTrust().GetPublicKey();
     printf("'%s'\n", tal._lastAppInfo.rootOfTrustList.at(0).ToString().c_str());
-    char buf[sizeof(pb.data) * 2 + 1];
-    char* ptr = &buf[0];
-    for (unsigned int i = 0; i < sizeof(pb.data); i++, ptr += 2) {
-        sprintf(ptr, "%02x", pb.data[i]);
-    }
-    printf("'%s'\n", qcc::String(buf).c_str());
-    ASSERT_TRUE(tal._lastAppInfo.rootOfTrustList.at(0).ToString() ==  qcc::String(buf));
+
+    PublicKey rot(&pb);
+    printf("'%s'\n", rot.ToString().c_str());
+    ASSERT_TRUE(tal._lastAppInfo.rootOfTrustList.at(0) ==  rot);
     //ASSERT_NE(secMgr->GetIdentityForApplication(_lastAppInfo), NULL);
     ASSERT_EQ(stub->GetRoTKeys().size(), (size_t)1);
 
-    ASSERT_TRUE(0 ==
-                memcmp(stub->GetRoTKeys()[0]->data, secMgr->GetRootOfTrust().GetPublicKey().data,
-                       sizeof(secMgr->GetRootOfTrust().GetPublicKey().data)));
+    ASSERT_TRUE(PublicKey(stub->GetRoTKeys()[0]) == PublicKey(&(secMgr->GetRootOfTrust().GetPublicKey())));
 
     ASSERT_NE(stub->GetInstalledIdentityCertificate(), "");
 

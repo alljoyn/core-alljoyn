@@ -61,7 +61,7 @@ void BasicTest::SetUp()
     }
     qcc::String path = storage_path;
     path += std::to_string(counter++).c_str();
-    unlink(path.c_str());
+    remove(path.c_str());
     ajn::securitymgr::SecurityManagerFactory& secFac = ajn::securitymgr::SecurityManagerFactory::GetInstance();
     ba = new BusAttachment("test", true);
     ASSERT_TRUE(ba != NULL);
@@ -76,12 +76,12 @@ void BasicTest::SetUp()
 
 void BasicTest::TearDown()
 {
-    delete secMgr;
     if (ba) {
         ba->Disconnect();
         ba->Stop();
         ba->Join();
-        delete ba;
     }
+    delete secMgr;
+    delete ba;
 }
 }

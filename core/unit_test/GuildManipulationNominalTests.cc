@@ -45,7 +45,7 @@ class GuildManipulationNominalTests :
 TEST_F(GuildManipulationNominalTests, GuildManipBasic) {
     GuildInfo guildInfo;
 
-    qcc::String guid = "TestGUID1237577764700000000000";
+    qcc::GUID128 guid("B509480EE7B5A000B82A7E37E");
     qcc::String name = "Hello Guild";
     qcc::String desc = "This is a hello world test guild";
 
@@ -82,16 +82,14 @@ TEST_F(GuildManipulationNominalTests, GuildManipManyGuilds) {
     int times = 200;
     std::vector<GuildInfo> guilds;
 
-    qcc::String guid = "TestGUID1237577764700000000000";
     qcc::String name = "Hello Guild";
     qcc::String desc = "This is a hello world test guild";
 
-    guildInfo.guid = guid;
     guildInfo.name = name;
     guildInfo.desc = desc;
 
     for (int i = 0; i < times; i++) {
-        guildInfo.guid = guid + std::to_string(i).c_str();
+        guildInfo.guid = GUID128();
         guildInfo.name = name + std::to_string(i).c_str();
         guildInfo.desc = desc + std::to_string(i).c_str();
         ASSERT_EQ(secMgr->StoreGuild(guildInfo), ER_OK);
@@ -103,11 +101,11 @@ TEST_F(GuildManipulationNominalTests, GuildManipManyGuilds) {
     for (std::vector<GuildInfo>::const_iterator g = guilds.begin(); g != guilds.end(); g++) {
         int i = g - guilds.begin();
 
-        compareToGuild.guid = guid + std::to_string(i).c_str();
         compareToGuild.name = name + std::to_string(i).c_str();
         compareToGuild.desc = desc + std::to_string(i).c_str();
 
-        ASSERT_EQ(*g, compareToGuild);
+        ASSERT_EQ(g->name, compareToGuild.name);
+        ASSERT_EQ(g->desc, compareToGuild.desc);
         ASSERT_EQ(secMgr->RemoveGuild(g->guid), ER_OK);
     }
 

@@ -24,6 +24,7 @@
 #include <qcc/String.h>
 
 #include <semaphore.h>
+#include "Stub.h"
 
 using namespace ajn::securitymgr;
 using namespace std;
@@ -89,6 +90,64 @@ class TestApplicationListener :
 
     void OnApplicationStateChange(const ApplicationInfo* old,
                                   const ApplicationInfo* updated);
+};
+
+class ClaimedTest :
+    public ClaimTest {
+  public:
+    sem_t sem;
+    Stub* stub;
+    ApplicationInfo appInfo;
+    TestApplicationListener* tal;
+    TestClaimListener* tcl;
+
+    void SetUp()
+    {
+        BasicTest::SetUp();
+        sem_init(&sem, 0, 0);
+        bool claimAnswer = true;
+        tcl = new TestClaimListener(claimAnswer);
+        tal = new TestApplicationListener(sem);
+
+        secMgr->RegisterApplicationListener(tal);
+
+        stub = new Stub(tcl);
+        sem_wait(&sem);
+        /* Open claim window */
+        stub->OpenClaimWindow();
+        sem_wait(&sem);
+        /* Claim ! */
+        secMgr->ClaimApplication(tal->_lastAppInfo, &AutoAcceptManifest);
+        sem_wait(&sem);
+        appInfo = tal->_lastAppInfo;
+    }
+
+    void TearDown()
+    {
+        if (stub) {
+            destroy();
+        }
+
+        BasicTest::TearDown();
+
+        delete tcl;
+        tcl = NULL;
+        delete tal;
+        tal = NULL;
+    }
+
+    void destroy()
+    {
+        delete stub;
+        stub = NULL;
+        sem_wait(&sem);
+        sem_destroy(&sem);
+    }
+
+    ClaimedTest() :
+        stub(NULL), tal(NULL), tcl(NULL)
+    {
+    }
 };
 }
 #endif /* TESTUTIL_H_ */

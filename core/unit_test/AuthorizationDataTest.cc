@@ -46,4 +46,15 @@ TEST(AuthorizationDataTest, BasicTest) {
     qcc::String str3 = ad3.ToString();
     std::cout << "Deserialized the authorization data:" << str3 << "\n";
     ASSERT_TRUE(str3 == expectedStr);
+
+    AuthorizationData emptyAd;
+    qcc::String emptyAdExpectedStr = "{\"version\":1,\"rules\":[]}";
+    qcc::String emptyAdStr = emptyAd.ToString();
+    std::cout << "Serialized empty authorization data:" << emptyAdStr << "\n";
+    ASSERT_TRUE(emptyAdStr == emptyAdExpectedStr);
+    AuthorizationData emptyAd2;
+    emptyAd2.FromString(emptyAdStr);
+    qcc::String emptyAdStr2 = emptyAd2.ToString();
+    std::cout << "Deserialized empty authorization data:" << emptyAdStr2 << "\n";
+    ASSERT_TRUE(emptyAdStr2 == emptyAdExpectedStr);
 }

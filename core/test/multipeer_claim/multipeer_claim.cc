@@ -29,6 +29,9 @@
 #include "AuthorizationData.h"
 #include "AppGuildInfo.h"
 
+#include <PolicyGenerator.h>
+#include <alljoyn/PermissionPolicy.h>
+
 using namespace ajn::securitymgr;
 using namespace std;
 
@@ -66,6 +69,13 @@ class TestClaimListener :
         cout << "waitforauthdata --> ok" << endl;
     }
 
+    void WaitForPolicy()
+    {
+        std::unique_lock<std::mutex> lk(m);
+        cv_pol.wait(lk, [this] { return policy != ""; });
+        cout << "waitforpolicy --> ok" << endl;
+    }
+
   private:
     bool& claimAnswer;
     bool claimed;
@@ -74,9 +84,11 @@ class TestClaimListener :
     std::condition_variable cv_id;
     std::condition_variable cv_memb;
     std::condition_variable cv_auth;
+    std::condition_variable cv_pol;
     qcc::String pemIdentityCertificate;
     std::vector<qcc::String> pemMembershipCertificates;
     std::vector<AuthorizationData> authData;
+    qcc::String policy;
 
     bool OnClaimRequest(const qcc::ECCPublicKey* pubKeyRot,
                         void* ctx)
@@ -119,6 +131,15 @@ class TestClaimListener :
         cv_memb.notify_one();
         cout << "on membership installed " << getpid() << endl;
     }
+
+    virtual void OnPolicyInstalled(PermissionPolicy& _policy)
+    {
+        std::unique_lock<std::mutex> lk(m);
+        assert(_policy.GetTermsSize() > 0);
+        policy = _policy.ToString();
+        cv_pol.notify_one();
+        cout << "on policy installed " << getpid() << endl;
+    }
 };
 
 static int be_peer()
@@ -153,6 +174,8 @@ static int be_peer()
         tcl.WaitForMembershipCertificate();
         cout << "Waiting for Authorization data " << getpid() << endl;
         tcl.WaitForAuthData();
+        cout << "Waiting for policy " << getpid() << endl;
+        tcl.WaitForPolicy();
 
         if (stub.GetInstalledIdentityCertificate() == "") {
             cerr << "Identity certificate not installed" << endl;
@@ -160,7 +183,7 @@ static int be_peer()
             break;
         }
 
-        std::map<qcc::String, qcc::String> membershipCertificates = stub.GetMembershipCertificates();
+        std::map<GUID128, qcc::String> membershipCertificates = stub.GetMembershipCertificates();
         if (membershipCertificates.size() != 1) {
             cerr << "Membership certificate not installed" << endl;
             retval = false;
@@ -322,8 +345,16 @@ static int be_secmgr(size_t peers)
         }
 
         GuildInfo guild;
-        guild.guid = "test";
+        guild.guid = GUID128("E4DD81F54E7DB918EA5B2CE79D72200E");
         secMgr->StoreGuild(guild);
+
+        PermissionPolicy policy;
+        vector<GUID128> guildIds;
+        guildIds.push_back(guild.guid);
+        if (ER_OK != PolicyGenerator::DefaultPolicy(guildIds, policy)) {
+            cerr << "Failed to generate policy." << endl;
+            break;
+        }
 
         apps = secMgr->GetApplications();
         for (ApplicationInfo app : apps) {
@@ -332,6 +363,11 @@ static int be_secmgr(size_t peers)
                 cout << "Trying to install membership certificate on " << app.busName.c_str() << endl;
                 if (secMgr->InstallMembership(app, guild) != ER_OK) {
                     cerr << "Could not install membership certificate on " << app.busName.c_str() << endl;
+                    breakhit = true;
+                    break;
+                }
+                if (secMgr->InstallPolicy(app, policy) != ER_OK) {
+                    cerr << "Could not install policy on " << app.busName.c_str() << endl;
                     breakhit = true;
                     break;
                 }

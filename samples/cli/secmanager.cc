@@ -28,12 +28,17 @@
 #include <alljoyn/BusAttachment.h>
 #include <AuthorizationData.h>
 #include <string>
+#include <sstream>
+#include <PolicyGenerator.h>
+#include <alljoyn/PermissionPolicy.h>
 
 using namespace std;
+using namespace ajn;
 using namespace ajn::securitymgr;
 
 #define GUILDINFO_DELIMITER "/"
 #define GUILD_DESC_MAX 200
+#define GUILD_ID_MAX 32
 
 // Event listener for the monitor
 class EventListener :
@@ -57,7 +62,7 @@ class EventListener :
 
 std::ostream& operator<<(std::ostream& strm, const GuildInfo& gi)
 {
-    return strm << "Guild: (" << gi.guid << " / " << gi.name << " / " << gi.desc
+    return strm << "Guild: (" << gi.guid.ToString() << " / " << gi.name << " / " << gi.desc
            << ")";
 }
 
@@ -203,33 +208,30 @@ static void claim_application(ajn::securitymgr::SecurityManager* secMgr,
     }
 }
 
+static vector<string> split(const string& s, char delim)
+{
+    vector<string> elems;
+    stringstream ss(s);
+    string item;
+    while (getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
+}
+
 static void add_guild(ajn::securitymgr::SecurityManager* secMgr,
                       const string& arg)
 {
-    if (arg.empty()) {
-        cout << "Empty guild information" << endl;
+    vector<string> args = split(arg, '/');
+
+    if (args.size() < 2) {
+        cerr << "Please provide a guild name and a description." << endl;
         return;
     }
 
     GuildInfo guildInfo;
-
-    string tmp(arg);
-
-    cout << "tmp 1: " << tmp << endl;
-
-    size_t pos = tmp.find(GUILDINFO_DELIMITER);
-    guildInfo.guid = tmp.substr(0, pos).c_str();
-
-    if (pos != string::npos) {
-        tmp.erase(0, pos + string(GUILDINFO_DELIMITER).length());
-        pos = tmp.find(GUILDINFO_DELIMITER);
-        guildInfo.name = tmp.substr(0, pos).c_str();
-        if (pos != string::npos) {
-            tmp.erase(0, pos + string(GUILDINFO_DELIMITER).length());
-            pos = tmp.find(GUILDINFO_DELIMITER);
-            guildInfo.desc = tmp.substr(0, GUILD_DESC_MAX).c_str();
-        }
-    }
+    guildInfo.name = args[0].c_str();
+    guildInfo.desc = args[1].substr(0, GUILD_DESC_MAX).c_str();
 
     if (ER_OK != secMgr->StoreGuild(guildInfo)) {
         cerr << "Guild was not added" << endl;
@@ -248,8 +250,8 @@ static void get_guild(ajn::securitymgr::SecurityManager* secMgr,
     }
 
     GuildInfo guildInfo;
-
-    guildInfo.guid = arg.substr(0, GUILD_DESC_MAX).c_str();
+    GUID128 guildID(arg.substr(0, GUILD_ID_MAX).c_str());
+    guildInfo.guid = guildID;
 
     if (ER_OK != secMgr->GetGuild(guildInfo)) {
         cerr << "Guild was not found" << endl;
@@ -282,7 +284,9 @@ static void remove_guild(ajn::securitymgr::SecurityManager* secMgr,
         return;
     }
 
-    if (ER_OK != secMgr->RemoveGuild(arg.substr(0, GUILD_DESC_MAX).c_str())) {
+    GUID128 guildID(arg.substr(0, GUILD_ID_MAX).c_str());
+
+    if (ER_OK != secMgr->RemoveGuild(guildID)) {
         cerr << "Guild was not found" << endl;
     } else {
         cout << "Guild was successfully removed" << endl;
@@ -320,10 +324,10 @@ static void update_membership(ajn::securitymgr::SecurityManager* secMgr,
     }
 
     GuildInfo guildInfo;
-    guildInfo.guid = arg.substr(delpos + 1, string::npos).c_str();
+    guildInfo.guid = GUID128(arg.substr(delpos + 1, string::npos).c_str());
 
     if (ER_OK != secMgr->GetGuild(guildInfo)) {
-        cerr << "Could not find guild with id " << guildInfo.guid << "." << endl;
+        cerr << "Could not find guild with id " << guildInfo.guid.ToString() << "." << endl;
         return;
     }
 
@@ -332,6 +336,88 @@ static void update_membership(ajn::securitymgr::SecurityManager* secMgr,
     } else {
         secMgr->RemoveMembership(appInfo, guildInfo);
     }
+}
+
+static void install_policy(SecurityManager* secMgr,
+                           const string& arg)
+{
+    vector<string> args = split(arg, ' ');
+
+    if (args.size() < 1) {
+        cerr << "Please provide an application bus name." << endl;
+        return;
+    }
+
+    ApplicationInfo appInfo;
+    qcc::String busName = args[0].c_str();
+    appInfo.busName = busName;
+
+    if (ER_OK != secMgr->GetApplication(appInfo)) {
+        cerr << "Could not find application." << endl;
+        return;
+    }
+
+    vector<GUID128> guilds;
+    for (size_t i = 1; i < args.size(); ++i) {
+        GUID128 guildID(args[i].c_str());
+        GuildInfo guildInfo;
+        guildInfo.guid = guildID;
+        if (ER_OK != secMgr->GetGuild(guildInfo)) {
+            cerr << "Could not find guild with id " << args[i] << endl;
+            return;
+        }
+        guilds.push_back(guildID);
+    }
+
+    PermissionPolicy policy;
+    if (ER_OK != PolicyGenerator::DefaultPolicy(guilds, policy)) {
+        cerr << "Failed to generate default policy." << endl;
+        return;
+    }
+
+    if (ER_OK != secMgr->InstallPolicy(appInfo, policy)) {
+        cerr << "Failed to install policy." << endl;
+        return;
+    }
+    cout << "Successfully installed policy." << endl;
+}
+
+static void get_policy(SecurityManager* secMgr,
+                       const string& arg)
+{
+    vector<string> args = split(arg, ' ');
+
+    if (args.size() < 1) {
+        cerr << "Please provide an application bus name." << endl;
+        return;
+    }
+
+    ApplicationInfo appInfo;
+    qcc::String busName = args[0].c_str();
+    appInfo.busName = busName;
+
+    if (ER_OK != secMgr->GetApplication(appInfo)) {
+        cerr << "Could not find application." << endl;
+        return;
+    }
+
+    PermissionPolicy policyRemote;
+    PermissionPolicy policyLocal;
+    if (ER_OK != secMgr->GetPolicy(appInfo, policyRemote, true)) {
+        cerr << "Failed to get remote policy." << endl;
+        return;
+    }
+
+    if (ER_OK != secMgr->GetPolicy(appInfo, policyLocal, false)) {
+        cerr << "Failed to get locally persisted policy." << endl;
+        return;
+    }
+
+    cout << "Successfully retrieved remote policy for " << busName.c_str() << ":" << endl;
+    cout << policyRemote.ToString() << endl;
+
+    cout << "Successfully retrieved locally persisted policy for " << busName.c_str() << ":" << endl;
+    cout << policyLocal.ToString() << endl;
 }
 
 static void help()
@@ -344,12 +430,14 @@ static void help()
     cout << "    c   claim an application (busnm)" << endl;
     cout << "    l   list all claimed applications" << endl;
     cout << "    a   list all active applications" << endl;
-    cout << "    g   create a guild (id/name/description)" << endl;
+    cout << "    g   create a guild (name/description)" << endl;
     cout << "    r   remove a guild (id)" << endl;
     cout << "    k   get a guild (id)" << endl;
     cout << "    p   list all guilds" << endl;
-    cout << "    m   install a membership certificate (busnm, guildid)" << endl;
-    cout << "    d   delete a membership certificate (busnm, guildid)" << endl;
+    cout << "    m   install a membership certificate (busnm guildid)" << endl;
+    cout << "    d   delete a membership certificate (busnm guildid)" << endl;
+    cout << "    o   install a policy (busnm guildid1 guildid2 ...)" << endl;
+    cout << "    e   get policy (busnm)" << endl;
     cout << "    h   show this help message" << endl << endl;
 }
 
@@ -412,6 +500,14 @@ static bool parse(ajn::securitymgr::SecurityManager* secMgr,
 
     case 'd':
         update_membership(secMgr, arg, false);
+        break;
+
+    case 'o':
+        install_policy(secMgr, arg);
+        break;
+
+    case 'e':
+        get_policy(secMgr, arg);
         break;
 
     case 'h':

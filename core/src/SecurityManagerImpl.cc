@@ -177,6 +177,16 @@ SecurityManagerImpl::SecurityManagerImpl(qcc::String userName,             //TOD
             info.appName = it->appName;
             qcc::String manifest = it->manifest;
             info.manifest.Deserialize(manifest);
+
+            if (!it->policy.empty()) {
+                PermissionPolicy tmpPolicy;
+                tmpPolicy.Import(*busAttachment, (const uint8_t*)it->policy.data(), it->policy.size());
+                info.policy = tmpPolicy.ToString();
+                qcc::String dbgPrint = "Warm Start - Application " + info.appName + " has this stored policy: \n";
+                dbgPrint += info.policy;
+                QCC_DbgHLPrintf((dbgPrint.c_str()));
+            }
+
             appsMutex.Lock(__FILE__, __LINE__);
             applications[info.publicKey] = info;
             appsMutex.Unlock(__FILE__, __LINE__);
@@ -201,6 +211,7 @@ SecurityManagerImpl::SecurityManagerImpl(qcc::String userName,             //TOD
             QCC_LogError(status, ("Failed to register announce handler"));
             break;
         }
+
         status = ER_OK;
     } while (0);
 }
@@ -226,12 +237,14 @@ QStatus SecurityManagerImpl::CreateInterface(ajn::BusAttachment* bus,
                      ("Failed to create interface '%s' on security manager bus attachment", MNGT_INTF_NAME));
         return status;
     }
-    intf->AddMethod("Claim", "ay", "ay", "rotPublicKey,appPublicKey", 0);
+    intf->AddMethod("Claim", "(ayay)", "(ayay)", "rotPublicKey,appPublicKey", 0);
     intf->AddMethod("InstallIdentity", "s", "b", "cert,result", 0);
     intf->AddMethod("InstallMembership", "ay", NULL, "cert", 0);
     intf->AddMethod("RemoveMembership", "ay", NULL, "guildID", 0);
     intf->AddMethod("GetManifest", NULL, "a{sa{sy}}", "manifest", 0);
     intf->AddMethod("InstallAuthorizationData", "a{sa{sy}}", NULL, "authData", 0);
+    intf->AddMethod("InstallPolicy", "(yv)",  NULL, "authorization");
+    intf->AddMethod("GetPolicy", NULL, "(yv)", "authorization");
     intf->Activate();
 
     return ER_OK;
@@ -251,10 +264,12 @@ QStatus SecurityManagerImpl::EstablishPSKSession(const ApplicationInfo& app,
 QStatus SecurityManagerImpl::ClaimApplication(const ApplicationInfo& appInfo, AcceptManifestCB amcb)
 {
     ManagedApplicationInfo managedApplicationInfo;
-    managedApplicationInfo.appName = "TestApp"; //TODO get the right name.
+    managedApplicationInfo.appName = "TestApp";     //TODO get the right name.
     ajn::ProxyBusObject* remoteObj = NULL;
-    uint8_t* pubKey;
-    size_t pubKeynumOfBytes;
+    uint8_t* pubKeyX;
+    size_t pubKeyXnumOfBytes;
+    uint8_t* pubKeyY;
+    size_t pubKeyYnumOfBytes;
     qcc::ECCPublicKey eccAppPubKey;
     QStatus funcStatus = ER_FAIL;
 
@@ -300,9 +315,11 @@ QStatus SecurityManagerImpl::ClaimApplication(const ApplicationInfo& appInfo, Ac
         QCC_DbgPrintf(
             ("\nSending RoT public Key: %s", PubKeyToString(&rot.GetPublicKey()).c_str()));
 
-        const uint8_t(&keyBytes)[qcc::ECC_PUBLIC_KEY_SZ] =
-            rot.GetPublicKey().data;
-        inputs[0].Set("ay", qcc::ECC_PUBLIC_KEY_SZ, keyBytes);
+        const uint8_t(&keyXBytes)[qcc::ECC_COORDINATE_SZ] =
+            rot.GetPublicKey().x;
+        const uint8_t(&keyYBytes)[qcc::ECC_COORDINATE_SZ] =
+            rot.GetPublicKey().y;
+        inputs[0].Set("(ayay)", qcc::ECC_COORDINATE_SZ, keyXBytes, qcc::ECC_COORDINATE_SZ, keyYBytes);
 
         funcStatus = remoteObj->MethodCall(MNGT_INTF_NAME, "Claim", inputs, 1, reply,
                                            5000);
@@ -319,13 +336,14 @@ QStatus SecurityManagerImpl::ClaimApplication(const ApplicationInfo& appInfo, Ac
             break;
         }
 
-        if (ER_OK != (funcStatus = result->Get("ay", &pubKeynumOfBytes, &pubKey))) {
+        if (ER_OK !=
+            (funcStatus = result->Get("(ayay)", &pubKeyXnumOfBytes, &pubKeyX, &pubKeyYnumOfBytes, &pubKeyY))) {
             QCC_DbgRemoteError(
                 ("Marshalling error: could not extract public key of remote application"));
             break;
         }
         // Verify key
-        if (qcc::ECC_PUBLIC_KEY_SZ != pubKeynumOfBytes) {
+        if ((qcc::ECC_COORDINATE_SZ != pubKeyXnumOfBytes) || (ECC_COORDINATE_SZ != pubKeyYnumOfBytes)) {
             QCC_DbgRemoteError(
                 ("Remote error: remote application public key has invalid number of bytes"));
             funcStatus = ER_FAIL;
@@ -362,7 +380,8 @@ QStatus SecurityManagerImpl::ClaimApplication(const ApplicationInfo& appInfo, Ac
          *         Generate Identity certificate (TODO: get the right certificate)
          */
 
-        memcpy(eccAppPubKey.data, pubKey, qcc::ECC_PUBLIC_KEY_SZ);
+        memcpy(eccAppPubKey.x, pubKeyX, pubKeyXnumOfBytes);
+        memcpy(eccAppPubKey.y, pubKeyY, pubKeyYnumOfBytes);
 
         qcc::IdentityCertificate idCertificate;
         idCertificate.SetAlias(qcc::String("TODO Alias"));
@@ -419,8 +438,11 @@ QStatus SecurityManagerImpl::ClaimApplication(const ApplicationInfo& appInfo, Ac
          * Step 5: store claimed app data into the storage
          *         wait on result
          */
-        memcpy(managedApplicationInfo.publicKey.data, eccAppPubKey.data,
-               qcc::ECC_PUBLIC_KEY_SZ);
+        memcpy(managedApplicationInfo.publicKey.x, eccAppPubKey.x,
+               qcc::ECC_COORDINATE_SZ);
+        memcpy(managedApplicationInfo.publicKey.y, eccAppPubKey.y,
+               qcc::ECC_COORDINATE_SZ);
+
         managedApplicationInfo.appName = app.appName;
         busAttachment->GetPeerGUID(app.busName.c_str(), managedApplicationInfo.appID);
         managedApplicationInfo.deviceName = app.deviceName;
@@ -545,13 +567,13 @@ QStatus SecurityManagerImpl::InstallMembership(const ApplicationInfo& appInfo,
     app = appItr->second;
 
     qcc::MemberShipCertificate cert;
-    cert.SetGuildId(gi.guid);
+    cert.SetGuildId(gi.guid.ToString());
     cert.SetSubject(&app.publicKey);
     AuthorizationData data;
     storageMutex.Lock(__FILE__, __LINE__);
     if (ER_OK != storage->GetCertificate(cert)) {
         // Generate Membership Certificate
-        cert.SetGuildId(guildInfo.guid);
+        cert.SetGuildId(guildInfo.guid.ToString());
         cert.SetDelegate(false);
         cert.SetApplicationID(app.appID);
 
@@ -628,7 +650,12 @@ QStatus SecurityManagerImpl::InstallMembership(const ApplicationInfo& appInfo,
             ajn::MsgArg outArg;
             data.Marshal(outArg);
             Message replyMsg1(*busAttachment);
-            funcStatus = remoteObj->MethodCall(MNGT_INTF_NAME, "InstallAuthorizationData", &outArg, 1, replyMsg1, 5000);
+            funcStatus = remoteObj->MethodCall(MNGT_INTF_NAME,
+                                               "InstallAuthorizationData",
+                                               &outArg,
+                                               1,
+                                               replyMsg1,
+                                               5000);
             if (funcStatus != ER_OK) {
                 QCC_DbgRemoteError(
                     ("Could not call 'InstallAuthorizationData' on ProxyBusObject to remote application"));
@@ -655,10 +682,14 @@ QStatus SecurityManagerImpl::RemoveMembership(const ApplicationInfo& appInfo,
     app = appItr->second;
 
     qcc::MemberShipCertificate cert;
-    cert.SetGuildId(guildInfo.guid);
+    cert.SetGuildId(guildInfo.guid.ToString());
     qcc::ECCPublicKey eccAppPubKey;
-    memcpy(eccAppPubKey.data, appInfo.publicKey.data,
-           sizeof(eccAppPubKey.data));
+
+    memcpy(eccAppPubKey.x, appInfo.publicKey.x,
+           sizeof(eccAppPubKey.x));
+    memcpy(eccAppPubKey.y, appInfo.publicKey.y,
+           sizeof(eccAppPubKey.y));
+
     cert.SetSubject(&eccAppPubKey);
 
     storageMutex.Lock(__FILE__, __LINE__);
@@ -686,8 +717,8 @@ QStatus SecurityManagerImpl::RemoveMembership(const ApplicationInfo& appInfo,
             ("Could not create a ProxyBusObject to remote application"));
     } else {
         ajn::MsgArg inputs[1];
-        qcc::String guildid = guildInfo.guid;
-        inputs[0].Set("ay", guildid.length(), guildid.data());
+        GUID128 guildid = guildInfo.guid;
+        inputs[0].Set("ay", GUID128::SIZE, guildid.GetBytes());
 
         Message replyMsg(*busAttachment);
         funcStatus = remoteObj->MethodCall(MNGT_INTF_NAME, "RemoveMembership", inputs, 1, replyMsg, 5000);
@@ -699,6 +730,146 @@ QStatus SecurityManagerImpl::RemoveMembership(const ApplicationInfo& appInfo,
         proxyObjMgr->ReleaseProxyObject(remoteObj);
     }
     return funcStatus;
+}
+
+QStatus SecurityManagerImpl::InstallPolicy(const ApplicationInfo& appInfo,
+                                           PermissionPolicy& policy)
+{
+    QStatus status = ER_OK;
+    uint8_t* policyData = NULL;
+    size_t policySize;
+    bool exist;
+    ApplicationInfoMap::iterator appItr = SafeAppExist(appInfo.publicKey, exist);
+    if (!exist) {
+        QCC_LogError(ER_FAIL, ("Unkown application."));
+        return ER_FAIL;
+    }
+    ApplicationInfo app = appItr->second;
+
+    // Persisting the policy in all cases
+    storageMutex.Lock(__FILE__, __LINE__);
+    ManagedApplicationInfo managedAppInfo;
+    managedAppInfo.publicKey = appItr->first;
+    if (ER_OK == (status = storage->GetManagedApplication(managedAppInfo))) {
+        if (ER_OK != (status = policy.Export(*busAttachment, &policyData, &policySize))) {
+            QCC_LogError(status, ("Could not export policy from origin."));
+            return status;
+        }
+
+        managedAppInfo.policy = qcc::String((const char*)policyData, policySize);
+
+        if (ER_OK == (status = storage->StoreApplication(managedAppInfo, true))) {         //update flag set
+            qcc::String print = "Persisted policy : \n";
+            print += policy.ToString();
+            QCC_DbgHLPrintf((print.c_str()));
+        } else {
+            QCC_LogError(status, ("Could not persist policy !"));
+            return status;
+        }
+        delete[] policyData;
+    } else {
+        QCC_LogError(status,
+                     ("Trying to persist a policy for an unmanaged application."));
+        return status;
+    }
+    storageMutex.Unlock(__FILE__, __LINE__);
+
+    MsgArg msgArg;
+    status = policy.Export(msgArg);
+    if (ER_OK != status) {
+        QCC_LogError(status,
+                     ("Failed to GeneratePolicyArgs."));
+        return status;
+    }
+
+    ProxyBusObject* remoteObj;
+    status = proxyObjMgr->GetProxyObject(app, ProxyObjectManager::SessionType::ECDHE_DSA, &remoteObj);
+    if (ER_OK != status) {
+        QCC_LogError(status,
+                     ("Could not create a ProxyBusObject to remote application."));
+    } else {
+        Message replyMsg(*busAttachment);
+        status = remoteObj->MethodCall(MNGT_INTF_NAME, "InstallPolicy", &msgArg, 1, replyMsg, 5000);
+        if (ER_OK != status) {
+            QCC_DbgRemoteError(
+                ("Could not call 'InstallPolicy' on ProxyBusObject to remote application."));
+        }
+        proxyObjMgr->ReleaseProxyObject(remoteObj);
+    }
+
+    return status;
+}
+
+QStatus SecurityManagerImpl::GetPolicy(const ApplicationInfo& appInfo,
+                                       PermissionPolicy& policy, bool remote)
+{
+    QStatus status = ER_FAIL;
+    bool exist;
+    ApplicationInfoMap::iterator appItr = SafeAppExist(appInfo.publicKey, exist);
+    if (!exist) {
+        QCC_LogError(ER_FAIL, ("Unkown application."));
+        return ER_FAIL;
+    }
+    ApplicationInfo app = appItr->second;
+
+    if (remote) {
+        ProxyBusObject* remoteObj;
+        Message replyMsg(*busAttachment);
+
+        status = proxyObjMgr->GetProxyObject(app, ProxyObjectManager::SessionType::ECDHE_DSA, &remoteObj);
+        if (ER_OK != status) {
+            QCC_LogError(status,
+                         ("Could not create a ProxyBusObject to remote application."));
+            return status;
+        }
+
+        QStatus methodStatus;
+        methodStatus = remoteObj->MethodCall(MNGT_INTF_NAME, "GetPolicy", NULL, 0, replyMsg, 5000);
+        if (ER_OK != methodStatus) {
+            QCC_DbgRemoteError(
+                ("Could not call 'GetPolicy' on ProxyBusObject to remote application."));
+        }
+
+        status = proxyObjMgr->ReleaseProxyObject(remoteObj);
+        if (ER_OK != status) {
+            QCC_LogError(status,
+                         ("Could not release ProxyBusObject to remote application."));
+            return status;
+        }
+
+        if (ER_OK != methodStatus) {
+            return methodStatus;
+        }
+
+        uint8_t version;
+        MsgArg* variant;
+        replyMsg->GetArg(0)->Get("(yv)", &version, &variant);
+
+        if (ER_OK != (status = policy.Import(version, *variant))) {
+            QCC_LogError(
+                status, ("Could not build policy of remote application."));
+        }
+    } else {
+        //fetching persisted policy if it exists
+        ManagedApplicationInfo mgdAppInfo;
+        mgdAppInfo.publicKey = app.publicKey;
+        if (ER_OK != (status = storage->GetManagedApplication(mgdAppInfo))) {
+            QCC_LogError(status, ("Could not find a persisted policy."));
+            return status;
+        }
+
+        if (!mgdAppInfo.policy.empty()) {
+            if (ER_OK !=
+                (status =
+                     policy.Import(*busAttachment, (const uint8_t*)mgdAppInfo.policy.data(),
+                                   mgdAppInfo.policy.size()))) {
+                QCC_LogError(status, ("Could not import policy to target."));
+            }
+        } else {
+            QCC_DbgHLPrintf(("Empty policy"));
+        }
+    }
+    return status;
 }
 
 void SecurityManagerImpl::OnSecurityStateChange(const SecurityInfo* oldSecInfo,
@@ -734,7 +905,7 @@ void SecurityManagerImpl::OnSecurityStateChange(const SecurityInfo* oldSecInfo,
         for (ApplicationListener* listener : listeners) {
             listener->OnApplicationStateChange(&old, &foundAppItr->second);
         }
-    } else {     /* New application */
+    } else {         /* New application */
         ApplicationInfo old;
         old.busName = oldSecInfo->busName;
         old.runningState = oldSecInfo->runningState;
@@ -871,7 +1042,7 @@ QStatus SecurityManagerImpl::StoreGuild(const GuildInfo& guildInfo, const bool u
     return funcStatus;
 }
 
-QStatus SecurityManagerImpl::RemoveGuild(const qcc::String& guildId)
+QStatus SecurityManagerImpl::RemoveGuild(const GUID128& guildId)
 {
     storageMutex.Lock(__FILE__, __LINE__);
     QStatus funcStatus = storage->RemoveGuild(guildId);
@@ -984,6 +1155,7 @@ SecurityManagerImpl::ApplicationInfoMap::iterator SecurityManagerImpl::SafeAppEx
     appsMutex.Unlock(__FILE__, __LINE__);
     return ret;
 }
+
 }
 }
 #undef QCC_MODULE

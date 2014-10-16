@@ -85,25 +85,31 @@ SecurityManager* SecurityManagerFactory::GetSecurityManager(qcc::String userName
         }
         qcc::Crypto_ECC crypto;
 
-        qcc::KeyBlob pubKey;
-        qcc::String filenamePubKey = userName + "pub_keystore";
-        qcc::FileSource sourcePubKey(filenamePubKey);
-        QStatus pubKeyLoadResult = pubKey.Load(sourcePubKey);
+        qcc::KeyBlob pubKeyX;
+        qcc::String filenamePubKeyX = userName + "pubx_keystore";
+        qcc::FileSource sourcePubKeyX(filenamePubKeyX);
+        QStatus pubKeyXLoadResult = pubKeyX.Load(sourcePubKeyX);
+
+        qcc::KeyBlob pubKeyY;
+        qcc::String filenamePubKeyY = userName + "puby_keystore";
+        qcc::FileSource sourcePubKeyY(filenamePubKeyY);
+        QStatus pubKeyYLoadResult = pubKeyY.Load(sourcePubKeyY);
 
         qcc::KeyBlob privKey;
         qcc::String filenamePrivKey = userName + "priv_keystore";
         qcc::FileSource sourcePrivKey(filenamePrivKey);
         QStatus privKeyLoadResult = privKey.Load(sourcePrivKey);
 
-        if ((ER_OK == pubKeyLoadResult) && (ER_OK == privKeyLoadResult)) {
+        if ((ER_OK == pubKeyXLoadResult) && (ER_OK == pubKeyYLoadResult) && (ER_OK == privKeyLoadResult)) {
             // Load both public and private keys
 
             qcc::ECCPublicKey eccPubKey;
-            memcpy((void*)&eccPubKey.data, (void*)pubKey.GetData(), qcc::ECC_PUBLIC_KEY_SZ);
+            memcpy((void*)&eccPubKey.x, (void*)pubKeyX.GetData(), qcc::ECC_COORDINATE_SZ);
+            memcpy((void*)&eccPubKey.y, (void*)pubKeyY.GetData(), qcc::ECC_COORDINATE_SZ);
             crypto.SetDHPublicKey(&eccPubKey);
 
             qcc::ECCPrivateKey eccPrivKey;
-            memcpy((void*)&eccPrivKey.data, (void*)privKey.GetData(), qcc::ECC_PRIVATE_KEY_SZ);
+            memcpy((void*)&eccPrivKey.x, (void*)privKey.GetData(), qcc::ECC_COORDINATE_SZ);
             crypto.SetDHPrivateKey(&eccPrivKey);
         } else {
             // There is no key yet (or missing a counter part), generate new pair
@@ -111,17 +117,21 @@ SecurityManager* SecurityManagerFactory::GetSecurityManager(qcc::String userName
                 return NULL;
             }
 
-            pubKey.Erase();
-            qcc::FileSink sinkPubKey(filenamePubKey);
+            pubKeyX.Erase();
+            pubKeyY.Erase();
+            qcc::FileSink sinkPubKeyX(filenamePubKeyX);
+            qcc::FileSink sinkPubKeyY(filenamePubKeyY);
             qcc::ECCPublicKey* eccPubKey = const_cast<qcc::ECCPublicKey*>(crypto.GetDHPublicKey());
-            pubKey = qcc::KeyBlob(eccPubKey->data, qcc::ECC_PUBLIC_KEY_SZ, qcc::KeyBlob::DSA_PUBLIC);
+            pubKeyX = qcc::KeyBlob(eccPubKey->x, qcc::ECC_COORDINATE_SZ, qcc::KeyBlob::DSA_PUBLIC);
+            pubKeyY = qcc::KeyBlob(eccPubKey->y, qcc::ECC_COORDINATE_SZ, qcc::KeyBlob::DSA_PUBLIC);
 
             privKey.Erase();
             qcc::FileSink sinkPrivKey(filenamePrivKey);
             qcc::ECCPrivateKey* eccPrivKey = const_cast<qcc::ECCPrivateKey*>(crypto.GetDHPrivateKey());
-            privKey = qcc::KeyBlob(eccPrivKey->data, qcc::ECC_PRIVATE_KEY_SZ, qcc::KeyBlob::DSA_PRIVATE);
+            privKey = qcc::KeyBlob(eccPrivKey->x, qcc::ECC_COORDINATE_SZ, qcc::KeyBlob::DSA_PRIVATE);
 
-            if ((ER_OK != pubKey.Store(sinkPubKey)) || (ER_OK != privKey.Store(sinkPrivKey))) {
+            if ((ER_OK != pubKeyX.Store(sinkPubKeyX)) || (ER_OK != pubKeyY.Store(sinkPubKeyY)) ||
+                (ER_OK != privKey.Store(sinkPrivKey))) {
                 // unable to store key.
                 return NULL;
             }

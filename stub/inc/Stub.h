@@ -69,7 +69,7 @@ class Stub {
         return pm->SendClaimDataSignal();
     }
 
-    std::map<qcc::String, qcc::String> GetMembershipCertificates() const;
+    std::map<GUID128, qcc::String> GetMembershipCertificates() const;
 
   private:
     BusAttachment ba;

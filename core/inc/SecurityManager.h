@@ -20,6 +20,7 @@
 #include <IdentityData.h>
 #include <alljoyn/Status.h>
 #include <alljoyn/AllJoynStd.h>
+#include <alljoyn/PermissionPolicy.h>
 #include <RootOfTrust.h>
 #include <ApplicationInfo.h>
 #include <AppGuildInfo.h>
@@ -199,7 +200,7 @@ class SecurityManager {
      * \retval ER_OK  on success
      * \retval others on failure
      */
-    QStatus RemoveGuild(const qcc::String& guildId);
+    QStatus RemoveGuild(const GUID128& guildId);
 
     /**
      * \brief Get the information pertaining to a managed Guild.
@@ -247,6 +248,35 @@ class SecurityManager {
      */
     QStatus RemoveMembership(const ApplicationInfo& appInfo,
                              const GuildInfo& guildInfo);
+
+    /**
+     * \brief Install a policy on an application. This method does not persist
+     * the policy locally.
+     *
+     * \param[in] appInfo the application on which the policy should be
+     * installed.
+     * \param[in] policy  the policy that needs to be installed on the
+     * application.
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus InstallPolicy(const ApplicationInfo& appInfo,
+                          PermissionPolicy& policy);
+
+    /**
+     * \brief Retrieve the policy of an  application.
+     *
+     * \param[in] appInfo      the application from which the policy should be received.
+     * \param[in, out] policy  the policy of the application
+     * \param[in] remote       this flag determines from where the policy should be fetched, i.e., locally (persisted) or remotely.
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus GetPolicy(const ApplicationInfo& appInfo,
+                      PermissionPolicy& policy,
+                      bool remote);
 
     ~SecurityManager();
 

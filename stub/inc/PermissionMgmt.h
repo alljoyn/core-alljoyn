@@ -21,13 +21,16 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/InterfaceDescription.h>
+#include <alljoyn/PermissionPolicy.h>
 #include <cassert>
 #include <qcc/CryptoECC.h>
+#include <qcc/GUID.h>
 #include <AuthorizationData.h>
 
 #define ONLYCLAIMSTATE 0
 
 using namespace ajn;
+using namespace qcc;
 
 const char SECINTFNAME[] = "org.alljoyn.Security.PermissionMgmt";
 const char UNSECINTFNAME[] = "org.alljoyn.Security.SecInfo";
@@ -58,6 +61,10 @@ class ClaimListener {
     {
     }
 
+    virtual void OnPolicyInstalled(PermissionPolicy& policy)
+    {
+    }
+
     friend class PermissionMgmt;
 
   public:
@@ -69,13 +76,14 @@ class PermissionMgmt :
   private:
     qcc::Crypto_ECC* crypto;
     std::vector<qcc::ECCPublicKey*> pubKeyRoTs;
-    std::map<qcc::String, qcc::String> memberships; //guildId, certificate (in PEM)
+    std::map<GUID128, qcc::String> memberships; //guildId, certificate (in PEM)
     qcc::String pemIdentityCertificate;
     ClaimListener* cl;
     ClaimableState claimableState;
     void* ctx;
     const InterfaceDescription::Member* unsecInfoSignalMember;
     AuthorizationData manifest;
+    PermissionPolicy policy;
 
     static qcc::String PubKeyToString(const qcc::ECCPublicKey* pubKey);
 
@@ -96,6 +104,12 @@ class PermissionMgmt :
 
     void GetManifest(const ajn::InterfaceDescription::Member* member,
                      ajn::Message& msg);
+
+    void InstallPolicy(const ajn::InterfaceDescription::Member* member,
+                       ajn::Message& msg);
+
+    void GetPolicy(const ajn::InterfaceDescription::Member* member,
+                   ajn::Message& msg);
 
   public:
     PermissionMgmt(ajn::BusAttachment& ba,
@@ -121,7 +135,7 @@ class PermissionMgmt :
 
     qcc::String GetInstalledIdentityCertificate() const;
 
-    std::map<qcc::String, qcc::String> GetMembershipCertificates() const;
+    std::map<GUID128, qcc::String> GetMembershipCertificates() const;
 
     void SetUsedManifest(const AuthorizationData& manifest);
 

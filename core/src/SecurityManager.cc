@@ -106,7 +106,7 @@ QStatus SecurityManager::StoreGuild(const GuildInfo& guildInfo, const bool updat
     return securityManagerImpl->StoreGuild(guildInfo, update);
 }
 
-QStatus SecurityManager::RemoveGuild(const qcc::String& guildId)
+QStatus SecurityManager::RemoveGuild(const GUID128& guildId)
 {
     return securityManagerImpl->RemoveGuild(guildId);
 }
@@ -132,6 +132,18 @@ QStatus SecurityManager::RemoveMembership(const ApplicationInfo& appInfo,
                                           const GuildInfo& guildInfo)
 {
     return securityManagerImpl->RemoveMembership(appInfo, guildInfo);
+}
+
+QStatus SecurityManager::InstallPolicy(const ApplicationInfo& appInfo,
+                                       PermissionPolicy& policy)
+{
+    return securityManagerImpl->InstallPolicy(appInfo, policy);
+}
+
+QStatus SecurityManager::GetPolicy(const ApplicationInfo& appInfo,
+                                   PermissionPolicy& policy, bool remote)
+{
+    return securityManagerImpl->GetPolicy(appInfo, policy, remote);
 }
 
 void SecurityManager::FlushStorage()

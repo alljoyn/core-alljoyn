@@ -81,9 +81,11 @@ class AuthorizationData {
 
     qcc::String ToString(Rules::const_iterator i) const;
 
-    QStatus ActionFromString(qcc::String& str, Action& a) const;
+    QStatus ActionFromString(qcc::String& str,
+                             Action& a) const;
 
-    QStatus IfnRuleFromString(qcc::String& ifn, qcc::String& str);
+    QStatus IfnRuleFromString(qcc::String& ifn,
+                              qcc::String& str);
 
     QStatus RuleFromString(qcc::String& str);
 

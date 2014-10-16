@@ -91,13 +91,13 @@ int main(int arg, char** argv)
 
         case 'm':
             {
-                std::map<qcc::String, qcc::String> memberships = stub.GetMembershipCertificates();
+                std::map<GUID128, qcc::String> memberships = stub.GetMembershipCertificates();
                 if (0 != memberships.size()) {
                     // Printout valid RoT pub key
-                    for (std::map<qcc::String, qcc::String>::const_iterator it = memberships.begin();
+                    for (std::map<GUID128, qcc::String>::const_iterator it = memberships.begin();
                          it != memberships.end();
                          ++it) {
-                        printf("Guild ID = '%s'; Certificate\n %s", it->first.c_str(), it->second.c_str());
+                        printf("Guild ID = '%s'; Certificate\n %s", it->first.ToString().c_str(), it->second.c_str());
                     }
                 } else {
                     printf("There are currently no Membership certificates installed \n");
@@ -114,11 +114,18 @@ int main(int arg, char** argv)
                          it != publicRoTKeys.end();
                          ++it) {
                         std::string printableRoTKey = "";
-                        for (int i = 0; i < (int)qcc::ECC_PUBLIC_KEY_SZ; ++i) {
+
+                        for (int i = 0; i < (int)qcc::ECC_COORDINATE_SZ; ++i) {
                             char buff[4];
-                            sprintf(buff, "%02x", (unsigned char)((*it)->data[i]));
+                            sprintf(buff, "%02x", (unsigned char)((*it)->x[i]));
                             printableRoTKey = printableRoTKey + buff;
                         }
+                        for (int i = 0; i < (int)qcc::ECC_COORDINATE_SZ; ++i) {
+                            char buff[4];
+                            sprintf(buff, "%02x", (unsigned char)((*it)->y[i]));
+                            printableRoTKey = printableRoTKey + buff;
+                        }
+
                         printf("RoT pubKey: %s \n", printableRoTKey.c_str());
                     }
                 } else {

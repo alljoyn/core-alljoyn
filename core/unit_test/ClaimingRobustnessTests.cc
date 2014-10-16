@@ -94,7 +94,8 @@ TEST_F(ClaimingRobustnessTests, InvalidArguments) {
     sem_wait(&sem);
 
     ApplicationInfo info = tal._lastAppInfo;
-    memset(info.publicKey.data, 'f', qcc::ECC_PUBLIC_KEY_SZ); // some rubbish key
+    memset(info.publicKey.x, 'f', qcc::ECC_COORDINATE_SZ); // some rubbish key
+    memset(info.publicKey.y, 'f', qcc::ECC_COORDINATE_SZ); // some rubbish key
     info.busName = tal._lastAppInfo.busName;
 
     ASSERT_EQ(secMgr->ClaimApplication(info, &AutoAcceptManifest), ER_FAIL);
@@ -116,7 +117,7 @@ TEST_F(ClaimingRobustnessTests, InvalidArguments) {
  *		-# Teardown the security manager and the busattachment used
  *		-# Get a new security manager
  *		-# Get the previously claimed stub/app from the security manager
- *              -# Make sure the retrieved application info match that of the originally claimed app
+ *      -# Make sure the retrieved application info match that of the originally claimed app
  * */
 TEST_F(ClaimingRobustnessTests, SMClaimedAppsWarmStart) {
     sem_t sem;
@@ -133,9 +134,11 @@ TEST_F(ClaimingRobustnessTests, SMClaimedAppsWarmStart) {
 
     ASSERT_EQ(secMgr->ClaimApplication(tal._lastAppInfo, &AutoAcceptManifest), ER_OK);
     sem_wait(&sem);
+
     ASSERT_EQ(tal._lastAppInfo.runningState, ApplicationRunningState::RUNNING);
     ASSERT_EQ(tal._lastAppInfo.claimState, ApplicationClaimState::CLAIMED);
 
+    qcc::String origBusName = tal._lastAppInfo.busName;
     TearDown(); //Kill secMgr and ba
 
     ajn::securitymgr::SecurityManagerFactory& secFac = ajn::securitymgr::SecurityManagerFactory::GetInstance();
@@ -146,21 +149,24 @@ TEST_F(ClaimingRobustnessTests, SMClaimedAppsWarmStart) {
 
     secMgr = secFac.GetSecurityManager("hello", "world", sc, NULL, ba);
     ASSERT_TRUE(secMgr != NULL);
+    secMgr->RegisterApplicationListener(&tal);
+    sem_wait(&sem);
 
     ApplicationInfo cmprInfo;
+    cmprInfo.busName = origBusName;
     ASSERT_EQ(ER_OK, secMgr->GetApplication(cmprInfo));
 
     ASSERT_EQ(tal._lastAppInfo.publicKey, cmprInfo.publicKey);
     ASSERT_EQ(tal._lastAppInfo.userDefinedName, cmprInfo.userDefinedName);
     ASSERT_EQ(tal._lastAppInfo.deviceName, cmprInfo.deviceName);
     ASSERT_EQ(tal._lastAppInfo.appName, cmprInfo.appName);
-    //ASSERT_EQ(tal._lastAppInfo.appID, cmprInfo.appID); TODO fix this !!!
+    ASSERT_EQ(tal._lastAppInfo.appID, cmprInfo.appID);
     ASSERT_EQ(tal._lastAppInfo.claimState, cmprInfo.claimState);
-#if 0 //TODO ALERT NEED TO FIX
+
     ASSERT_EQ(tal._lastAppInfo.busName, cmprInfo.busName);
     ASSERT_EQ(tal._lastAppInfo.rootOfTrustList.size(), cmprInfo.rootOfTrustList.size());
     ASSERT_EQ(tal._lastAppInfo.runningState, cmprInfo.runningState);
-#endif
+
     delete stub;
     sem_destroy(&sem);
 }

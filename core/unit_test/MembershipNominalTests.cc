@@ -19,12 +19,11 @@
 #include "SecurityManagerFactory.h"
 #include "PermissionMgmt.h"
 #include "TestUtil.h"
-#include "Stub.h"
 #include <semaphore.h>
 #include <stdio.h>
 
 /**
- * Several claiming nominal tests.
+ * Several nominal tests for membership certificates.
  */
 namespace secmgrcoretest_unit_nominaltests {
 using namespace secmgrcoretest_unit_testutil;
@@ -33,74 +32,23 @@ using namespace ajn::securitymgr;
 using namespace std;
 
 class MembershipNominalTests :
-    public ClaimTest {
+    public ClaimedTest {
   private:
 
   protected:
 
   public:
-    sem_t sem;
-    Stub* stub;
-    ApplicationInfo appInfo;
-    TestApplicationListener* tal;
-    TestClaimListener* tcl;
 
     void SetUp()
     {
-        BasicTest::SetUp();
-        sem_init(&sem, 0, 0);
-        bool claimAnswer = true;
-        tcl = new TestClaimListener(claimAnswer);
-        tal = new TestApplicationListener(sem);
+        ClaimedTest::SetUp();
 
-        secMgr->RegisterApplicationListener(tal);
-
-        stub = new Stub(tcl);
-        sem_wait(&sem);
-        /* Open claim window */
-        ASSERT_EQ(stub->OpenClaimWindow(), ER_OK);
-        sem_wait(&sem);
-        ASSERT_EQ(tal->_lastAppInfo.runningState, ApplicationRunningState::RUNNING);
-        ASSERT_EQ(tal->_lastAppInfo.claimState, ApplicationClaimState::CLAIMABLE);
-        /* Claim ! */
-        ASSERT_EQ(secMgr->ClaimApplication(tal->_lastAppInfo, &AutoAcceptManifest), ER_OK);
-        sem_wait(&sem);
-        ASSERT_EQ(tal->_lastAppInfo.runningState, ApplicationRunningState::RUNNING);
-        ASSERT_EQ(tal->_lastAppInfo.claimState, ApplicationClaimState::CLAIMED);
-        appInfo = tal->_lastAppInfo;
         //Dummy manifest
         qcc::String ifn = "org.allseen.control.TV";
         qcc::String mbr = "*";
         Type t = Type::SIGNAL;
         Action a = Action::PROVIDE;
         appInfo.manifest.AddRule(ifn, mbr, t, a);
-    }
-
-    void TearDown()
-    {
-        if (stub) {
-            destroy();
-        }
-
-        BasicTest::TearDown();
-
-        delete tcl;
-        tcl = NULL;
-        delete tal;
-        tal = NULL;
-    }
-
-    void destroy()
-    {
-        delete stub;
-        stub = NULL;
-        sem_wait(&sem);
-        sem_destroy(&sem);
-    }
-
-    MembershipNominalTests() :
-        stub(NULL), tal(NULL), tcl(NULL)
-    {
     }
 };
 
@@ -113,21 +61,21 @@ TEST_F(MembershipNominalTests, SuccessfulMembership)
 {
     /* Test Memberships ...*/
     GuildInfo guildInfo1;
-    guildInfo1.guid = "1.123456789";
+    guildInfo1.guid = GUID128("B509480EE75397473B5A000B82A7E37E");
     guildInfo1.name = "MyGuild 1";
     guildInfo1.desc = "My test guild 1 description";
 
     GuildInfo guildInfo2;
-    guildInfo2.guid = "2.123456789";
+    guildInfo2.guid = GUID128("E4DD81F54E7DB918EA5B2CE79D72200E");
     guildInfo2.name = "MyGuild 2";
     guildInfo2.desc = "My test guild 2 description";
 
     ASSERT_EQ(stub->GetMembershipCertificates().size(), ((size_t)0));
     ASSERT_EQ(secMgr->StoreGuild(guildInfo1, false), ER_OK);
     ASSERT_EQ(secMgr->InstallMembership(appInfo, guildInfo1), ER_OK);
-    std::map<qcc::String, qcc::String> certificates = stub->GetMembershipCertificates();
+    std::map<GUID128, qcc::String> certificates = stub->GetMembershipCertificates();
     ASSERT_EQ(certificates.size(), ((size_t)1));
-    std::map<qcc::String, qcc::String>::iterator it = certificates.find(guildInfo1.guid);
+    std::map<GUID128, qcc::String>::iterator it = certificates.find(guildInfo1.guid);
     ASSERT_FALSE(it == certificates.end());
     ASSERT_EQ(it->first, guildInfo1.guid);
 
@@ -159,7 +107,6 @@ TEST_F(MembershipNominalTests, InvalidArgsMembership)
 {
     //Stub is claimed ...
     GuildInfo guildInfo;
-    guildInfo.guid = "123456789";
     guildInfo.name = "MyGuild";
     guildInfo.desc = "My test guild description";
 
@@ -195,7 +142,6 @@ TEST_F(MembershipNominalTests, InvalidArgsMembership)
     ASSERT_EQ(ER_OK, secMgr->InstallMembership(appInfo, guildInfo));
 
     GuildInfo guildInfo2;
-    guildInfo2.guid = "2.123456789";
     guildInfo2.name = "2 MyGuild";
     guildInfo2.desc = "2 My test guild description";
     secMgr->StoreGuild(guildInfo2, true);

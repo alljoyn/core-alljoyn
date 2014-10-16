@@ -28,7 +28,7 @@
 
 #define QCC_MODULE "SEC_MGR"
 #define SECINFO_MEMBER "SecInfo"
-#define SECINFO_SIG "ayyaay"
+#define SECINFO_SIG "(ayay)ya(ayay)"
 #define SECINFO_ARGS "publicKey, claimableState, rotPublicKeys"
 
 using namespace ajn;
@@ -66,14 +66,19 @@ ApplicationMonitor::ApplicationMonitor(ajn::BusAttachment* ba) :
 
         intf->AddSignal(SECINFO_MEMBER, SECINFO_SIG, SECINFO_ARGS, 0);
         intf->Activate();
-        busAttachment->AddMatch(
-            "type='signal',interface='" INFO_INTF_NAME "',member='" SECINFO_MEMBER "',sessionless='t'");
 
         status = busAttachment->RegisterSignalHandler(
             this, static_cast<MessageReceiver::SignalHandler>(&ApplicationMonitor::StateChangedSignalHandler),
             intf->GetMember(SECINFO_MEMBER), NULL);
         if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to find advertised name"));
+            QCC_LogError(status, ("Failed to register a security signal handler."));
+            break;
+        }
+
+        status = busAttachment->AddMatch(
+            "type='signal',interface='" INFO_INTF_NAME "',member='" SECINFO_MEMBER "',sessionless='t'");
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to add match rule for security info signal."));
             break;
         }
     } while (0);
@@ -88,6 +93,8 @@ void ApplicationMonitor::StateChangedSignalHandler(const InterfaceDescription::M
                                                    const char* sourcePath,
                                                    Message& msg)
 {
+    QStatus status = ER_FAIL;
+
     PrettyPrintStateChangeSignal(sourcePath, msg);
     qcc::String busName = qcc::String(msg->GetSender());
     std::map<qcc::String, SecurityInfo>::iterator it = applications.find(busName);
@@ -97,15 +104,46 @@ void ApplicationMonitor::StateChangedSignalHandler(const InterfaceDescription::M
     std::vector<PublicKey> rotList;
     const MsgArg* rots = array.GetElements();
     for (size_t i = 0; i < rotCount; i++) {
+        uint8_t* xCoord;
+        size_t xLen;
+        uint8_t* yCoord;
+        size_t yLen;
+
+        status = rots[i].Get("(ayay)", &xLen, &xCoord, &yLen, &yCoord);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Invalid RoT."));
+            return;
+        }
+        if ((xLen != ECC_COORDINATE_SZ) || (yLen != ECC_COORDINATE_SZ)) {
+            QCC_LogError(status, ("Invalid RoT."));
+            return;
+        }
         PublicKey rot;
-        rot.SetData(rots[i].v_scalarArray);
+        rot.SetData(xLen, xCoord, yLen, yCoord);
         rotList.push_back(rot);
     }
 
     if (it != applications.end()) {
         /* we already know this application */
         SecurityInfo old = it->second;
-        it->second.publicKey.SetData(msg->GetArg(0)->v_scalarArray);
+
+        uint8_t* xCoord;
+        size_t xLen;
+        uint8_t* yCoord;
+        size_t yLen;
+
+        status = msg->GetArg(0)->Get("(ayay)", &xLen, &xCoord, &yLen, &yCoord);
+
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Invalid public key."));
+            return;
+        }
+        if ((xLen != ECC_COORDINATE_SZ) || (yLen != ECC_COORDINATE_SZ)) {
+            QCC_LogError(status, ("Invalid public key."));
+            return;
+        }
+
+        it->second.publicKey.SetData(xLen, xCoord, yLen, yCoord);
         it->second.runningState = ApplicationRunningState::RUNNING;
         it->second.claimState = ToClaimState(msg->GetArg(1)->v_byte);
         it->second.rotList = rotList;
@@ -122,7 +160,25 @@ void ApplicationMonitor::StateChangedSignalHandler(const InterfaceDescription::M
         info.busName = busName;
         info.runningState = ApplicationRunningState::RUNNING;
         info.claimState = ToClaimState(msg->GetArg(1)->v_byte);
-        info.publicKey.SetData(msg->GetArg(0)->v_scalarArray);
+
+        uint8_t* xCoord;
+        size_t xLen;
+        uint8_t* yCoord;
+        size_t yLen;
+
+        status = msg->GetArg(0)->Get("(ayay)", &xLen, &xCoord, &yLen, &yCoord);
+
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Invalid public key."));
+            return;
+        }
+        if ((xLen != ECC_COORDINATE_SZ) || (yLen != ECC_COORDINATE_SZ)) {
+            QCC_LogError(status, ("Invalid public key."));
+            return;
+        }
+
+        info.publicKey.SetData(xLen, xCoord, yLen, yCoord);
+
         info.rotList = rotList;
         old.publicKey = info.publicKey;
         applications[busName] = info;

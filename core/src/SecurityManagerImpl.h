@@ -19,9 +19,11 @@
 
 #include <alljoyn/about/AnnounceHandler.h>
 #include <alljoyn/Status.h>
+#include <alljoyn/PermissionPolicy.h>
 #include <qcc/CryptoECC.h>
 #include <qcc/String.h>
 #include <qcc/Mutex.h>
+#include <qcc/GUID.h>
 
 #include <RootOfTrust.h>
 #include <ApplicationListener.h>
@@ -79,9 +81,9 @@ class SecurityManagerImpl :
 
     const RootOfTrust& GetRootOfTrust() const;
 
-    std::vector<ApplicationInfo> GetApplications(
-        ajn::securitymgr::ApplicationClaimState acs =
-            ajn::securitymgr::ApplicationClaimState::UNKNOWN_CLAIM_STATE) const;
+    std::vector<ApplicationInfo> GetApplications(ajn::securitymgr::ApplicationClaimState acs =
+                                                     ajn::securitymgr::ApplicationClaimState::UNKNOWN_CLAIM_STATE)
+    const;
 
     void RegisterApplicationListener(ApplicationListener* al);
 
@@ -92,7 +94,7 @@ class SecurityManagerImpl :
     QStatus StoreGuild(const GuildInfo& guildInfo,
                        const bool update = false);
 
-    QStatus RemoveGuild(const qcc::String& guildId);
+    QStatus RemoveGuild(const GUID128& guildId);
 
     QStatus GetGuild(GuildInfo& guildInfo) const;
 
@@ -104,6 +106,13 @@ class SecurityManagerImpl :
 
     QStatus RemoveMembership(const ApplicationInfo& appInfo,
                              const GuildInfo& guildInfo);
+
+    QStatus InstallPolicy(const ApplicationInfo& appInfo,
+                          PermissionPolicy& policy);
+
+    QStatus GetPolicy(const ApplicationInfo& appInfo,
+                      PermissionPolicy& policy,
+                      bool remote);
 
     QStatus GetStatus() const;
 
@@ -131,7 +140,8 @@ class SecurityManagerImpl :
                   const ObjectDescriptions& objectDescs,
                   const AboutData& aboutData);
 
-    ApplicationInfoMap::iterator SafeAppExist(const PublicKey& publicKey, bool& exist);
+    ApplicationInfoMap::iterator SafeAppExist(const PublicKey& publicKey,
+                                              bool& exist);
 
   private:
     QStatus status;

@@ -190,7 +190,7 @@ class Storage {
      * \retval ER_OK  on success
      * \retval others on failure
      */
-    virtual QStatus RemoveGuild(const qcc::String& guildId) = 0;
+    virtual QStatus RemoveGuild(const GUID128& guildId) = 0;
 
     /**
      * \brief Get the info stored for a given Guild.

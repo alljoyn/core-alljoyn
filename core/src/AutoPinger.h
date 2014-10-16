@@ -49,9 +49,9 @@ struct PingGroup;
 /**
  * AutoPinger class
  */
-class AutoPinger : public qcc::AlarmListener {
+class AutoPinger :
+    public qcc::AlarmListener {
   public:
-
 
     /**
      * Create instance of autopinger
@@ -81,7 +81,9 @@ class AutoPinger : public qcc::AlarmListener {
      * @param  listener Listener called when a change was detected in the reachability of a destination
      * @param  pingInterval Ping interval in seconds
      */
-    void AddPingGroup(const qcc::String& group, PingListener& listener, uint32_t pingInterval = 5);
+    void AddPingGroup(const qcc::String& group,
+                      PingListener& listener,
+                      uint32_t pingInterval = 5);
 
     /**
      * Remove complete ping group, including all destinations
@@ -98,7 +100,8 @@ class AutoPinger : public qcc::AlarmListener {
      * @return QStatus ER_OK: Interval updated
      *                 ER_FAIL: group did not exist
      */
-    QStatus SetPingInterval(const qcc::String& group, uint32_t pingInterval);
+    QStatus SetPingInterval(const qcc::String& group,
+                            uint32_t pingInterval);
 
     /**
      * Add a destination to the specified ping group
@@ -109,7 +112,8 @@ class AutoPinger : public qcc::AlarmListener {
      * @return QStatus ER_OK: destination added
      *                 ER_FAIL: group did not exist
      */
-    QStatus AddDestination(const qcc::String& group, const qcc::String& destination);
+    QStatus AddDestination(const qcc::String& group,
+                           const qcc::String& destination);
 
     /**
      * Remove a destination from the specified ping group
@@ -121,7 +125,9 @@ class AutoPinger : public qcc::AlarmListener {
      * @return QStatus ER_OK: destination removed or was not present
      *                 ER_FAIL: group did not exist
      */
-    QStatus RemoveDestination(const qcc::String& group, const qcc::String& destination, bool removeAll = false);
+    QStatus RemoveDestination(const qcc::String& group,
+                              const qcc::String& destination,
+                              bool removeAll = false);
 
   private:
     class AutoPingAsyncCB;
@@ -139,10 +145,16 @@ class AutoPinger : public qcc::AlarmListener {
     AutoPinger(const AutoPinger&);
     void operator=(const AutoPinger&);
 
-    bool UpdatePingStateOfDestination(const qcc::String& group, const qcc::String& destination, const AutoPinger::PingState state);
+    bool UpdatePingStateOfDestination(const qcc::String& group,
+                                      const qcc::String& destination,
+                                      const AutoPinger::PingState state);
+
     void PingGroupDestinations(const qcc::String& group);
+
     bool IsRunning();
-    void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
+
+    void AlarmTriggered(const qcc::Alarm& alarm,
+                        QStatus reason);
 
     qcc::Timer timer; /* Single Timerthread */
     ajn::BusAttachment& busAttachment;

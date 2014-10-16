@@ -360,6 +360,10 @@ QStatus AuthorizationData::IfnRuleFromString(qcc::String& ifn, qcc::String& str)
 
 QStatus AuthorizationData::RuleFromString(qcc::String& str)
 {
+    if (str == "") {
+        return ER_OK;
+    }
+
     // TODO: add error checking
     std::size_t pos = str.find_first_of(":");
     qcc::String ifnStr = str.substr(1, pos - 2).c_str();
@@ -377,9 +381,12 @@ QStatus AuthorizationData::RuleFromString(qcc::String& str)
 
 QStatus AuthorizationData::FromString(qcc::String& str)
 {
-    std::size_t p = str.find("\"rules\":[");
+    qcc::String rulesDel = "\"rules\":[";
+    std::size_t p = str.find(rulesDel);
+    p = p + rulesDel.size();
     std::size_t p2 = str.find("]", p);
-    qcc::String rules = str.substr(p + 9, p2 - 1);
+    std::size_t len = p2 - p;
+    qcc::String rules = str.substr(p, len);
     // std::cout << "rules: " << rules << std::endl;
 
     // TODO: add loop

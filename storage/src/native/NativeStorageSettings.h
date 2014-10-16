@@ -23,7 +23,6 @@
 #define CLAIMED_APPS_TABLE_NAME "CLAIMED_APPLICATIONS"
 #define IDENTITY_CERTS_TABLE_NAME "IDENTITY_CERTS"
 #define MEMBERSHIP_CERTS_TABLE_NAME "MEMBERSHIP_CERTS"
-#define POLICY_CERTS_TABLE_NAME "POLICY_CERTS"
 #define USER_EQ_CERTS_TABLE_NAME "USER_EQ_CERTS"
 #define CERTSDATA_TABLE_NAME "CERTS_DATA"
 #define SERIALNUMBER_TABLE_NAME "SERIALNUMBER"
@@ -44,7 +43,8 @@
         APP_ID   TEXT,    \
         DEV_NAME   TEXT,    \
         USER_DEF_NAME   TEXT,\
-        MANIFEST BLOB\
+        MANIFEST BLOB,\
+        POLICY BLOB\
 ); "
 
 #define IDENTITY_CERTS_TABLE_SCHEMA \
@@ -89,21 +89,6 @@
         VALIDITYFROM UNSIGNED BIG INT NOT NULL,\
         VALIDITYTO UNSIGNED BIG INT NOT NULL,\
         SN BLOB NOT NULL,\
-        PRIMARY KEY(SUBJECT),\
-        FOREIGN KEY(SUBJECT) REFERENCES " CLAIMED_APPS_TABLE_NAME                                                                                                                                                                                                                                                                                                                                                                                    \
-    " (APPLICATION_PUBKEY)\
-); "
-
-#define POLICY_CERTS_TABLE_SCHEMA \
-    "CREATE TABLE IF NOT EXISTS " POLICY_CERTS_TABLE_NAME \
-    " (\
-        SUBJECT BLOB NOT NULL,\
-        VERSION TEXT NOT NULL,\
-        ISSUER BLOB NOT NULL,\
-        VALIDITYFROM UNSIGNED BIG INT NOT NULL,\
-        VALIDITYTO UNSIGNED BIG INT NOT NULL,\
-        SN BLOB NOT NULL,\
-        DATAID BLOB NOT NULL,\
         PRIMARY KEY(SUBJECT),\
         FOREIGN KEY(SUBJECT) REFERENCES " CLAIMED_APPS_TABLE_NAME                                                                                                                                                                                                                                                                                                                                                                                    \
     " (APPLICATION_PUBKEY)\

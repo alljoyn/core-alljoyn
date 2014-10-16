@@ -46,6 +46,7 @@ struct ApplicationInfo {
     ApplicationClaimState claimState;
     ApplicationRunningState runningState;
     AuthorizationData manifest;
+    qcc::String policy; //Human readable format - This has to change to PermissionPolicy once the latter has a copy constructor
 
     bool operator==(const ApplicationInfo& ai) const
     {
@@ -78,6 +79,9 @@ struct ApplicationInfo {
         }
 
         if (runningState != ai.runningState) {
+            return false;
+        }
+        if (policy != ai.policy) {
             return false;
         }
 

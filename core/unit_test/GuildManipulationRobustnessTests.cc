@@ -35,10 +35,8 @@ class GuildManipulationRobustnessTests :
 
 /**
  * \test The test should make sure that basic guild manipulation can fail gracefully.
- *       -# Create a guildInfo with an empty Guild ID (guid)
- *       -# Try to add the guild and make sure this fails
- *       -# Try to get the guild and make sure this fails
- *       -# Try to remove the guild and make sure this fails
+ *       -# Try to get an unknown guild and make sure this fails
+ *       -# Try to remove an unknown guild and make sure this fails
  *       -# Try to get all managed guilds and make sure the vector is empty
  *       -# change the guildInfo to some dummy info
  *       -# Store it and make sure this was successful
@@ -49,17 +47,14 @@ TEST_F(GuildManipulationRobustnessTests, FailedBasicGuildOperations) {
 
     GuildInfo guildInfo;
 
-    guildInfo.guid = "";
     guildInfo.name = "Wrong Guild";
     guildInfo.desc = "This is should never be there";
 
-    ASSERT_NE(secMgr->StoreGuild(guildInfo), ER_OK);
     ASSERT_NE(secMgr->GetGuild(guildInfo), ER_OK);
     ASSERT_NE(secMgr->RemoveGuild(guildInfo.guid), ER_OK);
     ASSERT_EQ(secMgr->GetManagedGuilds(empty), ER_OK);
     ASSERT_TRUE(empty.empty());
 
-    guildInfo.guid = "Dummy";
     guildInfo.name = "Dummy Guild";
     guildInfo.desc = "This is a dummy Guild";
 
@@ -82,7 +77,6 @@ TEST_F(GuildManipulationRobustnessTests, GuildUpdate) {
 
     GuildInfo guildInfo;
 
-    guildInfo.guid  = "TestGUID1237577764700000000000";
     qcc::String name = "Hello Guild";
     qcc::String desc = "This is a hello world test guild";
 

@@ -155,7 +155,8 @@ QStatus X509CertificateGenerator::GetPemEncodedX509Certificate(qcc::String exten
     qcc::String endTime = ToASN1TimeString(period->validTo);
     const qcc::ECCPublicKey* subjectPublicKey = inputCertificate.GetSubject();
 
-    qcc::String pubkey = String((char*)subjectPublicKey->data, qcc::ECC_PUBLIC_KEY_SZ);
+    qcc::String pubkey = String((char*)subjectPublicKey->x, qcc::ECC_COORDINATE_SZ);
+    pubkey += String((char*)subjectPublicKey->y, qcc::ECC_COORDINATE_SZ);
 
     qcc::String tbsCertificate = ""; //The certificate to be signed.
     status = Crypto_ASN1::Encode(tbsCertificate,
@@ -187,15 +188,18 @@ QStatus X509CertificateGenerator::GetPemEncodedX509Certificate(qcc::String exten
 
     /* Encode Certificate */
     if (status == ER_OK) {
+        qcc::ECCSignatureOldEncoding signatureOld;
         qcc::ECCSignature signature;
+        Crypto_ECC ecc;
+        ecc.ReEncode(&signatureOld, &signature);
         keys->DSASign((uint8_t*)tbsCertificate.data(), (uint16_t)tbsCertificate.size(), &signature);
         /* Certificate parameter */
-        qcc::String SignatureValue = qcc::String((char*)signature.data, sizeof(signature.data));
+        qcc::String SignatureValue = qcc::String((char*)signatureOld.data, sizeof(signatureOld.data));
         qcc::String derCert;
         status = Crypto_ASN1::Encode(derCert, "(R(o)b)",
                                      &tbsCertificate, // R
                                      &OID_signatureAlgorithm, // (o)
-                                     &SignatureValue, 8 * sizeof(signature.data)); // b
+                                     &SignatureValue, 8 * sizeof(signatureOld.data)); // b
         if (status  == ER_OK) {
             qcc::String certificate = "-----BEGIN CERTIFICATE-----\n";
             status = qcc::Crypto_ASN1::EncodeBase64(derCert, certificate);

@@ -33,7 +33,6 @@
 #define QCC_MODULE "AUTOPINGER"
 
 namespace ajn {
-
 /**
  * PingListener base class
  */

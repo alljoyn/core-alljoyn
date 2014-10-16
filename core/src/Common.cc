@@ -53,13 +53,20 @@ qcc::String ByteArrayToHex(const uint8_t* bytes, const size_t len)
 
 qcc::String PubKeyToString(const qcc::ECCPublicKey* pubKey)
 {
-    qcc::String str;
-    for (int i = 0; i < (int)qcc::ECC_PUBLIC_KEY_SZ; ++i) {
-        char buff[4];
-        sprintf(buff, "%02x", (unsigned char)(pubKey->data[i]));
-        str = str + buff;
-    }
+    qcc::String str = "";
 
+    if (pubKey) {
+        for (int i = 0; i < (int)qcc::ECC_COORDINATE_SZ; ++i) {
+            char buff[4];
+            sprintf(buff, "%02x", (unsigned char)(pubKey->x[i]));
+            str = str + buff;
+        }
+        for (int i = 0; i < (int)qcc::ECC_COORDINATE_SZ; ++i) {
+            char buff[4];
+            sprintf(buff, "%02x", (unsigned char)(pubKey->y[i]));
+            str = str + buff;
+        }
+    }
     return str;
 }
 

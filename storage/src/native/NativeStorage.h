@@ -105,7 +105,7 @@ class NativeStorage :
     QStatus StoreGuild(const GuildInfo& guildInfo,
                        const bool update = false);
 
-    QStatus RemoveGuild(const qcc::String& guildId);
+    QStatus RemoveGuild(const GUID128& guildId);
 
     QStatus GetGuild(GuildInfo& guildInfo) const;
 

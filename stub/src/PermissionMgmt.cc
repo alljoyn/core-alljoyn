@@ -20,13 +20,20 @@
 
 qcc::String PermissionMgmt::PubKeyToString(const qcc::ECCPublicKey* pubKey)
 {
-    qcc::String str;
-    for (int i = 0; i < (int)qcc::ECC_PUBLIC_KEY_SZ; ++i) {
-        char buff[4];
-        sprintf(buff, "%02x", (unsigned char)(pubKey->data[i]));
-        str = str + buff;
-    }
+    qcc::String str = "";
 
+    if (pubKey) {
+        for (int i = 0; i < (int)qcc::ECC_COORDINATE_SZ; ++i) {
+            char buff[4];
+            sprintf(buff, "%02x", (unsigned char)(pubKey->x[i]));
+            str = str + buff;
+        }
+        for (int i = 0; i < (int)qcc::ECC_COORDINATE_SZ; ++i) {
+            char buff[4];
+            sprintf(buff, "%02x", (unsigned char)(pubKey->y[i]));
+            str = str + buff;
+        }
+    }
     return str;
 }
 
@@ -59,9 +66,12 @@ void PermissionMgmt::Claim(const ajn::InterfaceDescription::Member* member, ajn:
             errorStr.append("RoT key missing");
             break;
         }
-        uint8_t* roTKey;
-        size_t numOfBytes;
-        QStatus extraction = inputArg->Get("ay", &numOfBytes, &roTKey);
+        uint8_t* roTKeyX;
+        uint8_t* roTKeyY;
+        size_t numOfBytesX;
+        size_t numOfBytesY;
+        QStatus extraction = inputArg->Get("(ayay)", &numOfBytesX, &roTKeyX, &numOfBytesY, &roTKeyY);
+
         if (ER_OK != extraction) {
             printf("Claim: Error extracting RoT key from input argument.\n");
             errorStr.append("RoT key invalid: extraction error");
@@ -69,17 +79,16 @@ void PermissionMgmt::Claim(const ajn::InterfaceDescription::Member* member, ajn:
         }
 
         // Verify key
-        if (qcc::ECC_PUBLIC_KEY_SZ != numOfBytes) {
-            printf("Claim: Error RoT key has wrong number of bytes: %zu iso. %zu. \n",
-                   numOfBytes,
-                   qcc::ECC_PUBLIC_KEY_SZ);
+        if ((qcc::ECC_COORDINATE_SZ != numOfBytesX) || (qcc::ECC_COORDINATE_SZ != numOfBytesY)) {
+            printf("Claim: Error RoT key has wrong number of bytes");
             errorStr.append("RoT key invalid: wrong number of bytes");
             break;
         }
 
         // Copy the key data
         qcc::ECCPublicKey* pubKeyRoT = new qcc::ECCPublicKey();
-        memcpy((void*)&pubKeyRoT->data, (void*)roTKey, qcc::ECC_PUBLIC_KEY_SZ);
+        memcpy(&(pubKeyRoT->x), roTKeyX, numOfBytesX);
+        memcpy(&(pubKeyRoT->y), roTKeyY, numOfBytesY);
         pubKeyRoTs.push_back(pubKeyRoT);
 
         // Printout valid RoT pub key
@@ -96,8 +105,8 @@ void PermissionMgmt::Claim(const ajn::InterfaceDescription::Member* member, ajn:
 
         // Send public Key back as response
         ajn::MsgArg output;
-        const uint8_t(&keyBytes)[qcc::ECC_PUBLIC_KEY_SZ] = PermissionMgmt::crypto->GetDHPublicKey()->data;
-        output.Set("ay", qcc::ECC_PUBLIC_KEY_SZ, keyBytes);
+        output.Set("(ayay)", qcc::ECC_COORDINATE_SZ,
+                   crypto->GetDHPublicKey()->x, qcc::ECC_COORDINATE_SZ, crypto->GetDHPublicKey()->y);
         if (ER_OK != MethodReply(msg, &output, 1)) {
             printf("Claim: Error sending reply.\n");
         }
@@ -167,7 +176,8 @@ void PermissionMgmt::InstallMembership(const ajn::InterfaceDescription::Member* 
 
     printf("\nInstalling Membership certificate for guild ID: '%s'\n%s\n", guildID.c_str(), certificate.c_str());
 
-    memberships[guildID] = certificate;
+    GUID128 guildGUID(guildID.c_str());
+    memberships[guildGUID] = certificate;
 
     MethodReply(msg, ER_OK);
 
@@ -178,10 +188,10 @@ void PermissionMgmt::InstallMembership(const ajn::InterfaceDescription::Member* 
 
 void PermissionMgmt::RemoveMembership(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
-    qcc::String guildID = qcc::String((const char*)msg->GetArg(0)->v_scalarArray.v_byte, msg->GetArg(
-                                          0)->v_scalarArray.numElements);
+    GUID128 guildID;
+    guildID.SetBytes(msg->GetArg(0)->v_scalarArray.v_byte);
 
-    printf("\nRemoving Membership for guild ID: '%s'\n", guildID.c_str());
+    printf("\nRemoving Membership for guild ID: '%s'\n", guildID.ToString().c_str());
     memberships.erase(guildID);
     MethodReply(msg, ER_OK);
 }
@@ -212,6 +222,39 @@ void PermissionMgmt::GetManifest(const ajn::InterfaceDescription::Member* member
     if (ER_OK != MethodReply(msg, &outArg, 1)) {
         printf("GetManifest: Error sending reply.\n");
     }
+}
+
+void PermissionMgmt::InstallPolicy(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
+{
+    QStatus status = ER_FAIL;
+    uint8_t version;
+    MsgArg* variant;
+    msg->GetArg(0)->Get("(yv)", &version, &variant);
+
+    if (ER_OK != (status = policy.Import(version, *variant))) {
+        printf("InstallPolicy: Failed to unmarchal policy.");
+        return;
+    }
+
+    printf("InstallPolicy: Received policy\n %s", policy.ToString().data());
+
+    if (ER_OK != MethodReply(msg, status)) {
+        printf("InstallPolicy: Error sending reply.\n");
+    }
+
+    if (cl != NULL) {
+        cl->OnPolicyInstalled(policy);
+    }
+}
+
+void PermissionMgmt::GetPolicy(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
+{
+    MsgArg replyArg;
+    policy.Export(replyArg);
+
+    printf("GetPolicy: Received request\n");
+
+    MethodReply(msg, &replyArg, 1);
 }
 
 PermissionMgmt::PermissionMgmt(ajn::BusAttachment& ba,
@@ -248,7 +291,11 @@ PermissionMgmt::PermissionMgmt(ajn::BusAttachment& ba,
         { secPermIntf->GetMember("InstallAuthorizationData"),
           static_cast<MessageReceiver::MethodHandler>(&PermissionMgmt::InstallAuthorizationData) },
         { secPermIntf->GetMember("GetManifest"),
-          static_cast<MessageReceiver::MethodHandler>(&PermissionMgmt::GetManifest) }
+          static_cast<MessageReceiver::MethodHandler>(&PermissionMgmt::GetManifest) },
+        { secPermIntf->GetMember("InstallPolicy"),
+          static_cast<MessageReceiver::MethodHandler>(&PermissionMgmt::InstallPolicy) },
+        { secPermIntf->GetMember("GetPolicy"),
+          static_cast<MessageReceiver::MethodHandler>(&PermissionMgmt::GetPolicy) }
     };
     QStatus status = AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
     if (ER_OK != status) {
@@ -304,7 +351,12 @@ QStatus PermissionMgmt::SendClaimDataSignal()
     MsgArg claimData[3];
 
     /* Fill the first element with a byte array of your own public key or 0 */
-    claimData[0].Set("ay", (crypto) ? qcc::ECC_PUBLIC_KEY_SZ : 0, (crypto) ? crypto->GetDHPublicKey()->data : NULL);
+    if (crypto) {
+        claimData[0].Set("(ayay)", qcc::ECC_COORDINATE_SZ,
+                         crypto->GetDHPublicKey()->x, qcc::ECC_COORDINATE_SZ, crypto->GetDHPublicKey()->y);
+    } else {
+        claimData[0].Set("(ayay)", 0, NULL, 0, NULL);
+    }
 
     /* The second element is the current claimable state */
     claimData[1].Set("y", claimableState);
@@ -314,18 +366,18 @@ QStatus PermissionMgmt::SendClaimDataSignal()
     int i = 0;
     if (!pubKeyRoTs.size()) {
         /* if there are not yet RoTs, fill with 0 */
-        RoTs[0].Set("ay", 0, NULL);
+        RoTs[0].Set("(ayay)", 0, NULL);
     } else {
         for (std::vector<qcc::ECCPublicKey*>::const_iterator it = pubKeyRoTs.begin();
              it != pubKeyRoTs.end();
              ++it) {
-            RoTs[i].Set("ay", qcc::ECC_PUBLIC_KEY_SZ, (*it)->data);
+            RoTs[i].Set("(ayay)", qcc::ECC_COORDINATE_SZ, (*it)->x, qcc::ECC_COORDINATE_SZ, (*it)->y);
             i++;
         }
     }
 
     /* use the RoTs array to fill the third element */
-    claimData[2].Set("aay", pubKeyRoTs.size(), RoTs);
+    claimData[2].Set("a(ayay)", pubKeyRoTs.size(), RoTs);
 #endif
     uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
 
@@ -353,12 +405,14 @@ QStatus PermissionMgmt::CreateInterface(BusAttachment& ba)
 #endif
     if (ER_OK == status) {
         printf("Secure Interface created.\n");
-        secIntf->AddMethod("Claim", "ay",  "ay", "rotPublicKey,appPublicKey", 0);
+        secIntf->AddMethod("Claim", "(ayay)",  "(ayay)", "rotPublicKey,appPublicKey", 0);
         secIntf->AddMethod("InstallIdentity", "s", "b", "PEMofIdentityCert,result", 0);
         secIntf->AddMethod("InstallMembership", "ay", NULL, "cert", 0);
         secIntf->AddMethod("RemoveMembership", "ay", NULL, "guildID", 0);
         secIntf->AddMethod("GetManifest", NULL, "a{sa{sy}}", "manifest", 0);
         secIntf->AddMethod("InstallAuthorizationData", "a{sa{sy}}", NULL, "authData", 0);
+        secIntf->AddMethod("InstallPolicy", "(yv)", NULL, "authorization");
+        secIntf->AddMethod("GetPolicy", NULL, "(yv)", "authorization");
         secIntf->Activate();
     } else {
         printf("Failed to create Secure PermissionMgmt interface.\n");
@@ -378,7 +432,7 @@ QStatus PermissionMgmt::CreateInterface(BusAttachment& ba)
          * claimableState: enum ClaimableState
          * rotPublicKeys: array of rot public keys
          */
-        unsecIntf->AddSignal("SecInfo", "ayyaay", "publicKey,claimableState,rotPublicKeys", 0);
+        unsecIntf->AddSignal("SecInfo", "(ayay)ya(ayay)", "publicKey,claimableState,rotPublicKeys", 0);
 #endif
         unsecIntf->Activate();
     } else {
@@ -418,7 +472,7 @@ qcc::String PermissionMgmt::GetInstalledIdentityCertificate() const
     return pemIdentityCertificate;
 }
 
-std::map<qcc::String, qcc::String> PermissionMgmt::GetMembershipCertificates() const
+std::map<GUID128, qcc::String> PermissionMgmt::GetMembershipCertificates() const
 {
     return memberships;
 }

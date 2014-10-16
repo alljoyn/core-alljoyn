@@ -19,14 +19,17 @@
 
 using namespace ajn;
 
-class AutoPingerTest : public testing::Test {
+class AutoPingerTest :
+    public testing::Test {
   public:
     BusAttachment bus;
     AutoPinger autoPinger;
 
-    AutoPingerTest() : bus("BusAttachmentTest", false), autoPinger(bus) { };
+    AutoPingerTest() :
+        bus("BusAttachmentTest", false), autoPinger(bus) { };
 
-    virtual void SetUp() {
+    virtual void SetUp()
+    {
         QStatus status = ER_OK;
         status = bus.Start();
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -36,16 +39,15 @@ class AutoPingerTest : public testing::Test {
         ASSERT_TRUE(bus.IsConnected());
     }
 
-    virtual void TearDown() {
+    virtual void TearDown()
+    {
         bus.Stop();
         bus.Join();
     }
-
 };
 
-
-class TestPingListener : public PingListener {
-
+class TestPingListener :
+    public PingListener {
   private:
     std::set<qcc::String> found;
     qcc::Mutex foundmutex;
@@ -53,27 +55,25 @@ class TestPingListener : public PingListener {
     std::set<qcc::String> lost;
     qcc::Mutex lostmutex;
 
-    virtual void DestinationLost(const qcc::String& group, const qcc::String& destination) {
-
+    virtual void DestinationLost(const qcc::String& group, const qcc::String& destination)
+    {
         std::cout << "on lost " << destination  << std::endl;
         lostmutex.Lock();
         lost.insert(destination);
         lostmutex.Unlock();
-
     }
 
-    virtual void DestinationFound(const qcc::String& group, const qcc::String& destination) {
-
+    virtual void DestinationFound(const qcc::String& group, const qcc::String& destination)
+    {
         std::cout << "on found " << destination  << std::endl;
         foundmutex.Lock();
         found.insert(destination);
         foundmutex.Unlock();
-
     }
 
   public:
-    void WaitUntilFound(const qcc::String& destination) {
-
+    void WaitUntilFound(const qcc::String& destination)
+    {
         std::cout << "Wait until we see " << destination << std::endl;
         foundmutex.Lock();
         while (found.find(destination) == found.end()) {
@@ -82,11 +82,10 @@ class TestPingListener : public PingListener {
             foundmutex.Lock();
         }
         foundmutex.Unlock();
-
     }
 
-    void WaitUntilLost(const qcc::String& destination) {
-
+    void WaitUntilLost(const qcc::String& destination)
+    {
         std::cout << "Wait until " << destination << "is gone " << std::endl;
         lostmutex.Lock();
         while (lost.find(destination) == lost.end()) {
@@ -95,12 +94,10 @@ class TestPingListener : public PingListener {
             lostmutex.Lock();
         }
         lostmutex.Unlock();
-
     }
 };
 
 TEST_F(AutoPingerTest, Basic) {
-
     BusAttachment bus2("app", false);
     EXPECT_EQ(ER_OK, bus2.Start());
     EXPECT_EQ(ER_OK, bus2.Connect());
@@ -124,7 +121,6 @@ TEST_F(AutoPingerTest, Basic) {
     EXPECT_EQ(ER_FAIL, autoPinger.SetPingInterval("badgroup", 2));
     EXPECT_EQ(ER_OK, autoPinger.SetPingInterval("testgroup", 2)); /* no real test on updated interval */
 
-
     autoPinger.Pause();
     autoPinger.Pause();
     autoPinger.Resume();
@@ -138,12 +134,9 @@ TEST_F(AutoPingerTest, Basic) {
 
     autoPinger.RemovePingGroup("badgroup");
     autoPinger.RemovePingGroup("testgroup");
-
 }
 
-
 TEST_F(AutoPingerTest, Multibus) {
-
     const size_t G = 2;
     TestPingListener tpl[G];
     qcc::String groupNames[G] = { "evengroup", "oddgroup" };
@@ -175,6 +168,4 @@ TEST_F(AutoPingerTest, Multibus) {
     for (size_t i = 0; i < busses.size(); ++i) {
         delete busses[i];
     }
-
 }
-
