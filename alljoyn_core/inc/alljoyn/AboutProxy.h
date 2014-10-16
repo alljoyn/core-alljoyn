@@ -37,7 +37,7 @@ namespace ajn {
  * - GetVersion
  *
  */
-class AboutProxy : public ajn::MessageReceiver {
+class AboutProxy : public ProxyBusObject {
   public:
     /**
      * AboutProxy Constructor
@@ -91,7 +91,6 @@ class AboutProxy : public ajn::MessageReceiver {
      *  pointer to  BusAttachment
      */
     ajn::BusAttachment* m_BusAttachment;
-    ajn::ProxyBusObject m_aboutProxyObj;
 };
 
 }

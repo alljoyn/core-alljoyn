@@ -33,7 +33,7 @@ namespace ajn {
  *  GetMimeType
  *  GetSize
  */
-class AboutIconProxy {
+class AboutIconProxy : public ProxyBusObject {
   public:
     /**
      * Construct an AboutIconProxy.
@@ -67,8 +67,6 @@ class AboutIconProxy {
      * pointer to BusAttachment
      */
     BusAttachment* m_BusAttachment;
-    ajn::ProxyBusObject m_aboutIconProxyObj;
-
 };
 }
 

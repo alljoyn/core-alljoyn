@@ -28,13 +28,13 @@
 namespace ajn {
 
 AboutProxy::AboutProxy(BusAttachment& bus, const char* busName, SessionId sessionId) :
-    m_BusAttachment(&bus),
-    m_aboutProxyObj(bus, busName, org::alljoyn::About::ObjectPath, sessionId)
+    ProxyBusObject(bus, busName, org::alljoyn::About::ObjectPath, sessionId),
+    m_BusAttachment(&bus)
 {
     QCC_DbgTrace(("AboutProxy::%s", __FUNCTION__));
     const InterfaceDescription* p_InterfaceDescription = bus.GetInterface(org::alljoyn::About::InterfaceName);
     assert(p_InterfaceDescription);
-    m_aboutProxyObj.AddInterface(*p_InterfaceDescription);
+    AddInterface(*p_InterfaceDescription);
 }
 
 AboutProxy::~AboutProxy()
@@ -47,7 +47,7 @@ QStatus AboutProxy::GetObjectDescription(MsgArg& objectDesc)
     QStatus status = ER_OK;
 
     Message replyMsg(*m_BusAttachment);
-    status = m_aboutProxyObj.MethodCall(org::alljoyn::About::InterfaceName, "GetObjectDescription", NULL, 0, replyMsg);
+    status = MethodCall(org::alljoyn::About::InterfaceName, "GetObjectDescription", NULL, 0, replyMsg);
     if (ER_OK != status) {
         if (replyMsg->GetErrorName() != NULL) {
             if (strcmp(replyMsg->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0 && replyMsg->GetArg(1)) {
@@ -86,7 +86,7 @@ QStatus AboutProxy::GetAboutData(const char* languageTag, MsgArg& data)
         return status;
     }
 
-    status = m_aboutProxyObj.MethodCall(org::alljoyn::About::InterfaceName, "GetAboutData", args, 1, replyMsg);
+    status = MethodCall(org::alljoyn::About::InterfaceName, "GetAboutData", args, 1, replyMsg);
     if (ER_OK != status) {
         if (replyMsg->GetErrorName() != NULL) {
             if (strcmp(replyMsg->GetErrorName(), "org.alljoyn.Error.LanguageNotSupported") == 0) {
@@ -122,7 +122,7 @@ QStatus AboutProxy::GetVersion(uint16_t& version)
     QStatus status = ER_OK;
 
     MsgArg arg;
-    status = m_aboutProxyObj.GetProperty(org::alljoyn::About::InterfaceName, "Version", arg);
+    status = GetProperty(org::alljoyn::About::InterfaceName, "Version", arg);
     if (ER_OK == status) {
         version = arg.v_variant.val->v_int16;
     }
