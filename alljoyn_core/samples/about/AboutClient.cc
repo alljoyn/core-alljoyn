@@ -59,8 +59,8 @@ class MyAboutListener : public AboutListener {
         printf("\tFrom bus %s\n", busName);
         printf("\tAbout version %hu\n", version);
         printf("\tSessionPort %hu\n", port);
-        printf("\tObjectDescription\n\%s\n", objectDescriptionArg.ToString().c_str());
-        printf("\tAboutData:\n\%s\n", aboutDataArg.ToString().c_str());
+        printf("\tObjectDescription\n%s\n", objectDescriptionArg.ToString().c_str());
+        printf("\tAboutData:\n%s\n", aboutDataArg.ToString().c_str());
         printf("*********************************************************************************\n");
         QStatus status;
 

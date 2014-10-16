@@ -22,14 +22,14 @@
 
 using namespace ajn;
 
-AboutIconProxy::AboutIconProxy(ajn::BusAttachment& bus, const char* busName, SessionId sessionId)
-    : m_BusAttachment(&bus),
-    m_aboutIconProxyObj(bus, busName, org::alljoyn::Icon::ObjectPath, sessionId)
+AboutIconProxy::AboutIconProxy(ajn::BusAttachment& bus, const char* busName, SessionId sessionId) :
+    ProxyBusObject(bus, busName, org::alljoyn::Icon::ObjectPath, sessionId),
+    m_BusAttachment(&bus)
 {
     QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
     const InterfaceDescription* p_InterfaceDescription = bus.GetInterface(org::alljoyn::Icon::InterfaceName);
     assert(p_InterfaceDescription);
-    m_aboutIconProxyObj.AddInterface(*p_InterfaceDescription);
+    AddInterface(*p_InterfaceDescription);
 }
 
 QStatus AboutIconProxy::GetIcon(AboutIcon& icon) {
@@ -37,7 +37,7 @@ QStatus AboutIconProxy::GetIcon(AboutIcon& icon) {
     QStatus status = ER_OK;
 
     Message replyMsg(*m_BusAttachment);
-    status = m_aboutIconProxyObj.MethodCall(org::alljoyn::Icon::InterfaceName, "GetContent", NULL, 0, replyMsg);
+    status = MethodCall(org::alljoyn::Icon::InterfaceName, "GetContent", NULL, 0, replyMsg);
     if (status == ER_OK) {
         const ajn::MsgArg* returnArgs;
         size_t numArgs;
@@ -49,7 +49,7 @@ QStatus AboutIconProxy::GetIcon(AboutIcon& icon) {
         }
     }
 
-    status = m_aboutIconProxyObj.MethodCall(org::alljoyn::Icon::InterfaceName, "GetUrl", NULL, 0, replyMsg);
+    status = MethodCall(org::alljoyn::Icon::InterfaceName, "GetUrl", NULL, 0, replyMsg);
     if (status == ER_OK) {
         const ajn::MsgArg* returnArgs;
         size_t numArgs;
@@ -66,7 +66,7 @@ QStatus AboutIconProxy::GetIcon(AboutIcon& icon) {
     }
 
     MsgArg iconsProperties_arg;
-    status = m_aboutIconProxyObj.GetAllProperties(org::alljoyn::Icon::InterfaceName, iconsProperties_arg);
+    status = GetAllProperties(org::alljoyn::Icon::InterfaceName, iconsProperties_arg);
     if (ER_OK == status) {
         MsgArg* iconPropertiesValues;
         size_t numValues;
@@ -100,7 +100,7 @@ QStatus AboutIconProxy::GetVersion(uint16_t& version) {
     QStatus status = ER_OK;
 
     MsgArg arg;
-    status = m_aboutIconProxyObj.GetProperty(org::alljoyn::Icon::InterfaceName, "Version", arg);
+    status = GetProperty(org::alljoyn::Icon::InterfaceName, "Version", arg);
     if (ER_OK == status) {
         version = arg.v_variant.val->v_int16;
     }
