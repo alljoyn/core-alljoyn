@@ -90,7 +90,7 @@ public class AboutListenerTest  extends TestCase {
             arg.put("HardwareVersion", new Variant(new String("0.1alpha")));
             arg.put("SupportUrl", new Variant(new String("http://www.example.com/support")));
             //localized values
-            if(language.equals("en")) {
+            if((language == null) || (language.length() == 0) || language.equals("en")) {
                 arg.put("DeviceName", new Variant(new String("A device name")));
                 arg.put("AppName", new Variant(new String("An application name")));
                 arg.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
