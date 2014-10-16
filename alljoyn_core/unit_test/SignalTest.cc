@@ -351,6 +351,16 @@ TEST_F(SignalTest, Point2PointSimple)
     recvA.verify_norecv();
     recvB.verify_recv();
 
+    /* sessioncast on all sessions */
+    B.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
+    wait_for_signal();
+    recvA.verify_norecv();
+    recvB.verify_norecv();
+    A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
+    wait_for_signal();
+    recvA.verify_norecv();
+    recvB.verify_recv();
+
     B.LeaveSession(A, false);
 }
 
@@ -446,6 +456,18 @@ TEST_F(SignalTest, MultiPointSimple)
     recvB.verify_recv();
     recvC.verify_recv();
 
+    /* sessioncast on all hosted sessions */
+    B.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
+    wait_for_signal();
+    recvA.verify_norecv();
+    recvB.verify_norecv();
+    recvC.verify_norecv();
+    A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
+    wait_for_signal();
+    recvA.verify_norecv();
+    recvB.verify_recv();
+    recvC.verify_recv();
+
     B.LeaveSession(A, true);
     C.LeaveSession(A, true);
 }
@@ -470,4 +492,74 @@ TEST_F(SignalTest, Paths) {
     recvBy.verify_recv();
     recvAn.verify_norecv();
     recvBn.verify_norecv();
+    B.LeaveSession(A, false);
+}
+
+TEST_F(SignalTest, Point2PointComplex) {
+    Participant A("A.A");
+    Participant B("B.B");
+    Participant C("C.C");
+    SignalReceiver recvA, recvB, recvC;
+    recvA.Register(&A);
+    recvB.Register(&B);
+    recvC.Register(&C);
+
+    /* x -> y means "x hosts p2p session for y" */
+
+    /* A -> B, B -> C, C -> A */
+    B.JoinSession(A, false);
+    C.JoinSession(B, false);
+    A.JoinSession(C, false);
+
+    /* sessioncast on all hosted sessions */
+    A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
+    wait_for_signal();
+    recvA.verify_norecv();
+    recvB.verify_recv();
+    recvC.verify_norecv();
+
+    /* A -> B, A -> C, B -> C, C -> A */
+    C.JoinSession(A, false);
+    A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
+    wait_for_signal();
+    recvA.verify_norecv();
+    recvB.verify_recv();
+    recvC.verify_recv();
+
+    B.LeaveSession(A, false);
+    C.LeaveSession(A, false);
+    C.LeaveSession(B, false);
+}
+
+TEST_F(SignalTest, MultiSession) {
+    Participant A("A.A");
+    Participant B("B.B");
+    SignalReceiver recvA, recvB;
+    recvA.Register(&A);
+    recvB.Register(&B);
+
+    /* Enter in 2 sessions with A */
+    B.JoinSession(A, false);
+    B.JoinSession(A, true);
+    A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
+    wait_for_signal();
+    /* verify B received the signal twice */
+    recvA.verify_norecv();
+    recvB.verify_recv(2);
+
+    /* leave one of the sessions */
+    B.LeaveSession(A, false);
+    A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
+    wait_for_signal();
+    /* verify B still received the signal */
+    recvA.verify_norecv();
+    recvB.verify_recv();
+
+    /* leave the last session */
+    B.LeaveSession(A, true);
+    A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
+    wait_for_signal();
+    /* verify B did not received the signal */
+    recvA.verify_norecv();
+    recvB.verify_norecv();
 }

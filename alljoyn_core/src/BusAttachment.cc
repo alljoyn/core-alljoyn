@@ -130,7 +130,9 @@ BusAttachment::Internal::Internal(const char* appName,
     allowRemoteMessages(allowRemoteMessages),
     listenAddresses(listenAddresses ? listenAddresses : ""),
     stopLock(),
-    stopCount(0)
+    stopCount(0),
+    hostedSessions(),
+    hostedSessionsLock()
 {
     /*
      * Bus needs a pointer to this internal object.
@@ -1694,6 +1696,9 @@ QStatus BusAttachment::LeaveSession(const SessionId& sessionId)
      * Do this regardless of whether LeaveSession succeeds or fails.
      */
     busInternal->sessionListenersLock.Lock(MUTEX_CONTEXT);
+    busInternal->hostedSessionsLock.Lock(MUTEX_CONTEXT);
+    busInternal->hostedSessions.erase(sessionId);
+    busInternal->hostedSessionsLock.Unlock(MUTEX_CONTEXT);
     Internal::SessionListenerMap::iterator it = busInternal->sessionListeners.find(sessionId);
     if (it != busInternal->sessionListeners.end()) {
         Internal::ProtectedSessionListener l = it->second;
@@ -1954,6 +1959,11 @@ void BusAttachment::Internal::AllJoynSignalHandler(const InterfaceDescription::M
             sessionListenersLock.Lock(MUTEX_CONTEXT);
             SessionId id = static_cast<SessionId>(args[0].v_uint32);
             SessionListener::SessionLostReason reason = static_cast<SessionListener::SessionLostReason>(args[1].v_uint32);
+
+            hostedSessionsLock.Lock(MUTEX_CONTEXT);
+            hostedSessions.erase(id);
+            hostedSessionsLock.Unlock(MUTEX_CONTEXT);
+
             SessionListenerMap::iterator slit = sessionListeners.find(id);
             if (slit != sessionListeners.end()) {
                 ProtectedSessionListener pl = slit->second;
@@ -2090,6 +2100,10 @@ void BusAttachment::Internal::CallJoinedListeners(SessionPort sessionPort, Sessi
     sessionListenersLock.Lock(MUTEX_CONTEXT);
     SessionPortListenerMap::iterator it = sessionPortListeners.find(sessionPort);
     if (it != sessionPortListeners.end()) {
+        /* add sessionId to the set of sessions we host */
+        hostedSessionsLock.Lock(MUTEX_CONTEXT);
+        hostedSessions.insert(sessionId);
+        hostedSessionsLock.Unlock(MUTEX_CONTEXT);
         /*
          * Add entry to sessionListeners if this is a client-side bus attachment.
          * Daemon side busAttachments cannot use sessionListners because these busAttachments are the ones
