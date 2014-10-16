@@ -405,10 +405,9 @@ QStatus ProxyBusObject::RegisterPropertiesChangedHandler(const char* iface,
 
     QStatus status = ER_OK;
     propChangeAddMatchRulesLock.Lock();
+    String ifaceStr = iface;
     if (propChangeAddMatchRules.find(iface) == propChangeAddMatchRules.end()) {
         /* first listener for this interface */
-        String ifaceStr = iface;
-
         String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + ifaceStr + "'");
         MsgArg arg("s", rule.c_str());
         const ProxyBusObject& dbusObj = bus->GetDBusProxyObj();
@@ -416,9 +415,9 @@ QStatus ProxyBusObject::RegisterPropertiesChangedHandler(const char* iface,
                                          const_cast<MessageReceiver*>(static_cast<const MessageReceiver* const>(this)),
                                          static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::AddMatchReplyHandler),
                                          &arg, 1, new pair<String, bool>(ifaceStr, true));
-        if (status == ER_OK) {
-            propChangeAddMatchRules.insert(ifaceStr);
-        }
+    }
+    if (status == ER_OK) {
+        propChangeAddMatchRules.insert(ifaceStr);
     }
     propChangeAddMatchRulesLock.Unlock();
 
