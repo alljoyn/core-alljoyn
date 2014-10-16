@@ -810,6 +810,14 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_setProperty
 JNIEXPORT jboolean JNICALL Java_org_alljoyn_bus_ProxyBusObject_isProxyBusObjectSecure
   (JNIEnv *, jobject);
 
+/*
+ * Class:     org_alljoyn_bus_ProxyBusObject
+ * Method:    registerPropertiesChangedHandler
+ * Signature: (Ljava/lang/String;[Ljava/lang/String;Lorg/alljoyn/bus/PropertyChangedListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerPropertiesChangedHandler
+  (JNIEnv *, jobject, jstring, jobjectArray, jobject);
+
 #ifdef __cplusplus
 }
 #endif

@@ -16,8 +16,6 @@
 
 package org.alljoyn.bus;
 
-import org.alljoyn.bus.ProxyBusObject;
-
 /**
  * Implemented by a user-defined classes that is interested in handling
  * property change notification.
@@ -55,15 +53,18 @@ import org.alljoyn.bus.ProxyBusObject;
  * receive thread will deadlock (with itself).  The deadlock is typically broken
  * after a bus timeout eventually happens.
  */
-public class PropertyChangedListener {
+public abstract class PropertyChangedListener {
 
+    protected PropertyChangedListener(BusAttachment busAttachment, String busName, String objPath, int sessionId) {
+        create(busAttachment, busName, objPath, sessionId);
+    }
 
+    // TODO: this function is not implemented in native counterpart!
     /** Allocate native resources. */
     private native void create(BusAttachment busAttachment, String busName, String objPath, int sessionId);
 
     /** Release native resources. */
     private synchronized native void destroy();
-
 
     /**
      * Called by the bus when the value of a property changes if that property has annotation
@@ -78,6 +79,11 @@ public class PropertyChangedListener {
      * @param propName       The name of the property that has changed.
      * @param propValue      The new value of the property; NULL to simply indicate that any local copy should now be considered invalidated.
      */
-    public void propertyChanged(ProxyBusObject pObj, String ifaceName, String propName, Variant propValue) {}
-}
+    public abstract void propertyChanged(ProxyBusObject pObj, String ifaceName, String propName, Variant propValue);
 
+    /**
+     * The opaque pointer to the underlying C++ object which is actually tied
+     * to the AllJoyn code.
+     */
+    private long handle = 0;
+}
