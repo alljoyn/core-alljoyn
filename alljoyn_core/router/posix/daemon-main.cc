@@ -73,9 +73,6 @@ extern int capset(cap_user_header_t hdrp, const cap_user_data_t datap);
 }
 #endif
 
-#if defined(QCC_OS_ANDROID)
-#define BLUETOOTH_UID 1002
-#endif
 #endif
 
 #define DAEMON_EXIT_OK            0
@@ -309,12 +306,9 @@ void OptParse::PrintUsage() {
         "    --no-launchd\n"
         "        Disable the Launchd transport (override config file setting).\n\n"
 #endif
+#if defined(QCC_OS_LINUX)
         "    --no-switch-user\n"
-        "        Don't switch from root to "
-#if defined(QCC_OS_ANDROID)
-        "bluetooth.\n\n"
-#else
-        "the user specified in the config file.\n\n"
+        "        Don't switch from root to the user specified in the config file.\n\n"
 #endif
         "    --verbosity=LEVEL\n"
         "        Set the logging level to LEVEL.\n\n"
@@ -757,15 +751,12 @@ int main(int argc, char** argv, char** env)
 
 #if !defined(ROUTER_LIB)
             if (!opts.GetNoSwitchUser()) {
-#if defined(QCC_OS_LINUX) || defined(QCC_OS_ANDROID)
+#if defined(QCC_OS_LINUX)
                 // Keep all capabilities before switching users
                 prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
 #endif
 
-#if defined(QCC_OS_ANDROID)
-                // Android uses hard coded UIDs.
-                setuid(BLUETOOTH_UID);
-#else
+#if !defined(QCC_OS_ANDROID)
                 String user = config.GetUser();
                 if ((getuid() == 0) && !user.empty()) {
                     // drop root privileges if <user> is specified.
@@ -791,7 +782,7 @@ int main(int argc, char** argv, char** env)
                 }
 #endif
 
-#if defined(QCC_OS_LINUX) || defined(QCC_OS_ANDROID)
+#if defined(QCC_OS_LINUX)
                 // Set the capabilities we need.
                 struct __user_cap_header_struct header;
                 struct __user_cap_data_struct cap;

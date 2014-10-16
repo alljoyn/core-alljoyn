@@ -1657,8 +1657,8 @@ void SessionlessObj::RemoveImplicitRules(const RuleIterator& explicitRule) {
                     implicitRules.erase(irit);
                     deleted = true;
                 }
+                break;
             }
-            break;
         }
         if (deleted) {
             irit = implicitRules.begin();

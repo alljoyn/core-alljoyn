@@ -35,7 +35,7 @@ void AboutClientSessionJoiner::JoinSessionCB(QStatus status, SessionId id, const
         std::cout << "JoinSessionCB(" << m_BusName << ") succeeded with id: " << id << std::endl;
         if (m_Callback) {
             std::cout << "Calling SessionJoiner Callback" << std::endl;
-            m_Callback(bus.GetUniqueName(), id);
+            m_Callback(m_BusName, id);
         }
     } else {
         std::cout << "JoinSessionCB(" << m_BusName << ") failed with status: " << QCC_StatusText(status) << std::endl;

@@ -47,9 +47,8 @@
  * AllJoyn provides the concept of a Transport which provides a relatively
  * abstract way for the daemon to use different network mechanisms for getting
  * Messages from place to another.  Conceptually, think of, for example, a Unix
- * transport that moves bits using unix domain sockets, a Bluetooth transport
- * that moves bits over a Bluetooth link and a TCP transport that moves Messages
- * over a TCP connection.
+ * transport that moves bits using unix domain sockets and a TCP transport that
+ * moves Messages over a TCP connection.
  *
  * In networking 101, one discovers that BSD sockets is oriented toward clients
  * and servers.  There are different sockets calls required for a program
@@ -238,27 +237,26 @@
  * another out from under an Event without its knowledge.
  *
  * To summarize, consider the following "big picture' view of the transport.  A
- * single TCPTransport is constructed if the daemon TransportList
- * indicates that TCP support is required.  The high-level daemon code (see
- * bbdaemon.cc for example) builds a TransportFactoryContainer that is
- * initialized with a factory that knows how to make TCPTransport objects
- * if they are needed, and associates the factory with the string "tcp".  The
- * daemon also constructs "server args" which may contain the string "tcp" or
- * "bluetooth" or "unix".  If the factory container provides a "tcp" factory and
- * the server args specify a "tcp" transport is needed then a TCPTransport
- * object is instantiated and entered into the daemon's internal transport list
- * (list of available transports).  Also provided for each transport is an abstract
- * address to listen for incoming connection requests on.
+ * single TCPTransport is constructed if the daemon TransportList indicates that
+ * TCP support is required.  The high-level daemon code (see bbdaemon.cc for
+ * example) builds a TransportFactoryContainer that is initialized with a
+ * factory that knows how to make TCPTransport objects if they are needed, and
+ * associates the factory with the string "tcp".  The daemon also constructs
+ * "server args" which may contain the string "tcp" or "unix".  If the factory
+ * container provides a "tcp" factory and the server args specify a "tcp"
+ * transport is needed then a TCPTransport object is instantiated and entered
+ * into the daemon's internal transport list (list of available transports).
+ * Also provided for each transport is an abstract address to listen for
+ * incoming connection requests on.
  *
  * When the daemon is brought up, its TransportList is Start()ed.  The transport
- * specs string (e.g., "unix:abstract=alljoyn;tcp:;bluetooth:") is provided to
+ * specs string (e.g., "unix:abstract=alljoyn;tcp:") is provided to
  * TransportList::Start() as a parameter.  The transport specs string is parsed
- * and in the example above, results in "unix" transports, "tcp" transports and
- * "bluetooth" transports being instantiated and started.  As mentioned
- * previously "tcp" in the daemon translates into TCPTransport.  Once the
- * desired transports are instantiated, each is Start()ed in turn.  In the case
- * of the TCPTransport, this will start the server accept loop.  Initially
- * there are no sockets to listen on.
+ * and in the example above, results in "unix" transports and "tcp" transports
+ * being instantiated and started.  As mentioned previously "tcp" in the daemon
+ * translates into TCPTransport.  Once the desired transports are instantiated,
+ * each is Start()ed in turn.  In the case of the TCPTransport, this will start
+ * the server accept loop.  Initially there are no sockets to listen on.
  *
  * The daemon then needs to start listening on some inbound addresses and ports.
  * This is done by the StartListen() command which you can find in bbdaemon, for
@@ -1344,8 +1342,22 @@ QStatus TCPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
                      * then it hasn't been set and this implies that there is no listener for this transport
                      * on this network interface. We should only return a bus address corresponding to this
                      * network interface if we have a listener on this network interface.
+                     *
+                     * Note that if we find a "*" in the reliableIPv4PortMap it is a wildcard and therefore
+                     * matches the entry we are comparing to, in which case we are not comparing the entry to
+                     * what's in the port map, we are using what's in the port map to confirm the entry.
                      */
-                    if (reliableIpv4PortMap.find(entries[i].m_name) != reliableIpv4PortMap.end()) {
+                    bool portMapWildcard = reliableIpv4PortMap.find(qcc::String("*")) != reliableIpv4PortMap.end();
+                    bool portMapExplicit = reliableIpv4PortMap.find(entries[i].m_name) != reliableIpv4PortMap.end();
+
+                    if (portMapWildcard || portMapExplicit) {
+                        uint16_t port = 0;
+                        if (portMapWildcard) {
+                            port = reliableIpv4PortMap[qcc::String("*")];
+                        } else {
+                            port = reliableIpv4PortMap[entries[i].m_name];
+                        }
+
                         /*
                          * Now put this information together into a bus address
                          * that the rest of the AllJoyn world can understand.
@@ -1354,7 +1366,7 @@ QStatus TCPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
                          */
                         if (!entries[i].m_addr.empty() && (entries[i].m_family == QCC_AF_INET)) {
                             qcc::String busAddr = "tcp:addr=" + entries[i].m_addr + ","
-                                                  "port=" + U32ToString(reliableIpv4PortMap[entries[i].m_name]) + ","
+                                                  "port=" + U32ToString(port) + ","
                                                   "family=ipv4";
                             busAddrs.push_back(busAddr);
                         }

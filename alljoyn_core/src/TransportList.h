@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -78,7 +78,7 @@ class TransportList : public TransportListener {
      *   &lt;transportName&gt;:&lt;param1&gt;=&lt;value1&gt;,&lt;param2&gt;=&lt;value2&gt;[;]
      *
      * @param transportSpec  Either a connectSpec or a listenSpec. Must be a string that starts with one
-     *                       of the known transport types: @c tcp, @c unix or @c bluetooth or @c ice.
+     *                       of the known transport types: @c tcp, @c unix or or @c ice.
      * @return  A transport instance or NULL if no such transport exists
      */
     Transport* GetTransport(const qcc::String& transportSpec);

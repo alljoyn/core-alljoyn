@@ -777,7 +777,7 @@ static const size_t MAX_PULL = (128 * 1024);
 
 /*
  * Timeout is scaled by the amount of data being read but is very conservative to allow for
- * congested Bluetooth links.
+ * congested links.
  */
 #define PULL_TIMEOUT(num)  (20000 + num / 2)
 

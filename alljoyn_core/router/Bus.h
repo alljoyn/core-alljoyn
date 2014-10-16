@@ -102,7 +102,7 @@ class Bus : public BusAttachment, public NameListener {
 
     /**
      * Get addresses that can be used by applications running on other
-     * machines (i.e., tcp: and bluetooth:).
+     * machines (i.e., tcp:).
      *
      * @return  External bus addresses in standard DBus address notation
      */

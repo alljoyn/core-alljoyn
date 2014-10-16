@@ -1,0 +1,61 @@
+<!--
+  Copyright (c) 2014, AllSeen Alliance. All rights reserved.
+
+     Permission to use, copy, modify, and/or distribute this software for any
+     purpose with or without fee is hereby granted, provided that the above
+     copyright notice and this permission notice appear in all copies.
+
+     THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+     WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+     MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+     ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+     WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+     ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+     OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    android:orientation="vertical"
+    >
+
+    <LinearLayout
+        android:id="@+id/rule_buttons"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:orientation="horizontal"
+	    android:layout_gravity="center_horizontal"
+	    android:weightSum="2"
+	    >
+	    <Button 
+	        android:layout_weight="1"
+		    android:id="@+id/rule_save"
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="@string/enable_events"/>
+    </LinearLayout>
+    
+	<LinearLayout
+	    android:layout_width="match_parent"
+	    android:layout_height="wrap_content"
+	    android:weightSum="2"
+	    android:orientation="vertical"
+	    >
+	    	
+	    <fragment
+	        android:id="@+id/rules_events_fragment"
+	        android:name="org.allseen.sample.eventaction.ruleassigner.ActionsFragment"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_weight="1"
+	        android:layout_marginTop="@dimen/activity_vertical_margin"
+	        class="org.allseen.sample.event.tester.EventsFragment"
+	        tools:layout="@layout/event_fragment" />
+	
+	</LinearLayout>
+</LinearLayout>
