@@ -249,6 +249,16 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
         return router->PushMessage(msg, busEndpoint);
     }
 
+    /**
+     * Get the session ids for all sessions we host
+     */
+    std::set<SessionId> GetHostedSessions() {
+        hostedSessionsLock.Lock(MUTEX_CONTEXT);
+        std::set<SessionId> copy = hostedSessions;
+        hostedSessionsLock.Unlock(MUTEX_CONTEXT);
+        return copy;
+    }
+
   private:
 
     /**
@@ -317,6 +327,9 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     std::map<qcc::Thread*, JoinContext> joinThreads;  /* List of threads waiting to join */
     qcc::Mutex joinLock;                              /* Mutex that protects joinThreads */
     KeyStoreKeyEventListener ksKeyEventListener;
+
+    std::set<SessionId> hostedSessions;    /* session IDs for all sessions hosted by this bus attachment */
+    qcc::Mutex hostedSessionsLock;         /* Mutex that protects hostedSessions */
 };
 }
 
