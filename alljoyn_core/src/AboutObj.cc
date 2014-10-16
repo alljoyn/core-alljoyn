@@ -62,12 +62,34 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
 {
     QCC_DbgTrace(("AboutService::%s", __FUNCTION__));
 
+    QStatus status = ER_OK;
     if (m_busAttachment->GetInternal().IsSessionPortBound(sessionPort) == false) {
         return ER_ABOUT_SESSIONPORT_NOT_BOUND;
     }
 
-    m_busAttachment->GetInternal().GetAnnouncedObjectDescription(m_objectDescription);
     m_aboutDataListener = &aboutData;
+
+    // ASACORE-1006 check the AboutData to make sure it has all the required fields.
+    // if it does not have the required fields return
+    // ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD note not all required fields are
+    // announced for that reason we Get the AboutData MsgArg for the default language
+    // not the announced AboutData. If the GetAboutData is an instance of the
+    // C++ AboutData class then this will return
+    // ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD other wise we create a C++
+    // AboutData class and call IsValid to check that the AboutData contains
+    // all the required data fields.
+    MsgArg aboutDataArg;
+    status = m_aboutDataListener->GetAboutData(&aboutDataArg, NULL);
+    if (ER_OK != status) {
+        return status;
+    }
+    AboutData aData(aboutDataArg);
+    if (aData.IsValid() == false) {
+        return ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD;
+    }
+
+    m_busAttachment->GetInternal().GetAnnouncedObjectDescription(m_objectDescription);
+
     const InterfaceDescription* aboutIntf = m_busAttachment->GetInterface(org::alljoyn::About::InterfaceName);
 
     if (!aboutIntf) {
@@ -77,8 +99,6 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
     const ajn::InterfaceDescription::Member* announceSignalMember = aboutIntf->GetMember("Announce");
     assert(announceSignalMember);
 
-
-    QStatus status = ER_OK;
     if (announceSignalMember == NULL) {
         return ER_FAIL;
     }
@@ -95,9 +115,6 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
     }
     announceArgs[2] = m_objectDescription;
     m_aboutDataListener->GetAnnouncedAboutData(&announceArgs[3]);
-
-    // TODO ASACORE-1006 check the AboutData to make sure it has all the required fields.
-    // if it does not have the required fields return ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD;
 
     Message msg(*m_busAttachment);
     uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;

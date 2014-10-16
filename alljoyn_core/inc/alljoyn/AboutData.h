@@ -592,7 +592,11 @@ class AboutData : public AboutDataListener {
      *                     is NULL or an empty string the MsgArg for the default
      *                     language will be returned
      *
-     * @return ER_OK on successful
+     * @return
+     *  - ER_OK on successful
+     *  - ER_LANGUAGE_NOT_SUPPORTED if language is not supported
+     *  - ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD if a required field is missing
+     *  - other error indicating failure
      */
     QStatus GetAboutData(MsgArg* msgArg, const char* language = NULL);
 

@@ -238,7 +238,7 @@ bool AboutData::IsValid(const char* language)
      * checking localizing will be taken into account. If the language is not
      * specified the default language is assumed.
      */
-    typedef std::map<qcc::String, FieldDetails>::iterator it_aboutFields;
+    typedef std::map<qcc::String, FieldDetails>::const_iterator it_aboutFields;
     for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
         if (IsFieldRequired(it->first.c_str())) {
             if (IsFieldLocalized(it->first.c_str())) {
@@ -756,8 +756,7 @@ QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
 {
     QStatus status;
     if (!IsValid()) {
-        // TODO put in an ER code that is more meaningful
-        return ER_FAIL;
+        return ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD;
     }
 
     char* defaultLanguage;

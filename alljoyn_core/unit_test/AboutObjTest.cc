@@ -236,13 +236,63 @@ TEST_F(AboutObjTest, AnnounceSessionPortNotBound) {
 }
 
 // ASACORE-1006
-TEST_F(AboutObjTest, DISABLED_AnnounceMissingRequiredField) {
+TEST_F(AboutObjTest, AnnounceMissingRequiredField) {
     QStatus status = ER_FAIL;
     AboutObj aboutObj(*serviceBus);
-    //The AboutData is does not have all the required fields
-    AboutData badAboutData("en");
+
+    AboutData badAboutData;
+    //DefaultLanguage and other required fields are missing
     status = aboutObj.Announce(port, badAboutData);
     EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = badAboutData.SetDefaultLanguage("en");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = aboutObj.Announce(port, badAboutData);
+    EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
+    status = badAboutData.SetAppId(appId, 6);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    //DeviceId and other required fields are missing
+    status = aboutObj.Announce(port, badAboutData);
+    EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = badAboutData.SetDeviceId("fakeID");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    //AppName and other required fields are missing
+    status = aboutObj.Announce(port, badAboutData);
+    EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = badAboutData.SetAppName("Application");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    //Manufacturer and other required fields are missing
+    status = aboutObj.Announce(port, badAboutData);
+    EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = badAboutData.SetManufacturer("Manufacturer");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    //ModelNumber and other required fields are missing
+    status = aboutObj.Announce(port, badAboutData);
+    EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = badAboutData.SetModelNumber("123456");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    //Description and other required fields are missing
+    status = aboutObj.Announce(port, badAboutData);
+    EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = badAboutData.SetDescription("A poetic description of this application");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    //SoftwareVersion missing
+    status = aboutObj.Announce(port, badAboutData);
+    EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = badAboutData.SetSoftwareVersion("0.1.2");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    // Now all required fields are set for the default language
+    status = aboutObj.Announce(port, badAboutData);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
 
 TEST_F(AboutObjTest, ProxyAccessToAboutObj) {
