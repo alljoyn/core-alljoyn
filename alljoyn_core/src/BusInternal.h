@@ -240,6 +240,13 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     void PingAsyncCB(Message& message, void* context);
 
     /**
+     * Get a reference to the internal permission manager
+     *
+     * @return A reference to the bus's permmision manager
+     */
+    PermissionManager& GetPermissionManager() { return permissionManager; }
+
+    /**
      * Push a message into the local endpoint
      *
      * @param msg  The message to push
@@ -249,13 +256,6 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
         BusEndpoint busEndpoint = BusEndpoint::cast(localEndpoint);
         return router->PushMessage(msg, busEndpoint);
     }
-
-    /**
-     * Get a reference to the internal permission manager
-     *
-     * @return A reference to the bus's permmision manager
-     */
-    PermissionManager& GetPermissionManager() { return permissionManager; }
 
   private:
 

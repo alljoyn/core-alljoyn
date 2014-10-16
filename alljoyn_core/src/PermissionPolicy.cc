@@ -358,8 +358,7 @@ static QStatus GenerateRuleArgs(MsgArg** retArgs, PermissionPolicy::Rule* rules,
             }
             if (aRule->GetNumOfMembers() > 0) {
                 MsgArg* ruleMembersArgs = NULL;
-                QStatus status = GenerateMemberArgs(&ruleMembersArgs, aRule->GetMembers(), aRule->GetNumOfMembers());
-                QCC_DbgPrintf(("PermissionPolicy::GenerateRuleArgs #1 got status 0x%x\n", status));
+                GenerateMemberArgs(&ruleMembersArgs, aRule->GetMembers(), aRule->GetNumOfMembers());
                 ruleArgs[idx].Set("(yv)", PermissionPolicy::Rule::TAG_INTERFACE_MEMBERS,
                                   new MsgArg("aa(yv)", aRule->GetNumOfMembers(), ruleMembersArgs));
                 idx++;
@@ -757,15 +756,13 @@ QStatus PermissionPolicy::GeneratePolicyArgs(MsgArg& msgArg, PermissionPolicy& p
             }
             if (aTerm->GetAllowRules()) {
                 MsgArg* allowVariants = NULL;
-                QStatus status = GenerateRuleArgs(&allowVariants, (PermissionPolicy::Rule*) aTerm->GetAllowRules(), aTerm->GetAllowRuleSize());
-                QCC_DbgPrintf(("PermissionPolicy::GeneratePolicyArgs #1 got status 0x%x\n", status));
+                GenerateRuleArgs(&allowVariants, (PermissionPolicy::Rule*) aTerm->GetAllowRules(), aTerm->GetAllowRuleSize());
                 termItems[idx++].Set("(yv)", PermissionPolicy::Term::TAG_ALLOW,
                                      new MsgArg("aa(yv)", aTerm->GetAllowRuleSize(), allowVariants));
             }
             if (aTerm->GetAllowAllExceptRules()) {
                 MsgArg* allowVariants = NULL;
-                QStatus status = GenerateRuleArgs(&allowVariants, (Rule*) aTerm->GetAllowAllExceptRules(), aTerm->GetAllowAllExceptRuleSize());
-                QCC_DbgPrintf(("PermissionPolicy::GeneratePolicyArgs #2 got status 0x%x\n", status));
+                GenerateRuleArgs(&allowVariants, (Rule*) aTerm->GetAllowAllExceptRules(), aTerm->GetAllowAllExceptRuleSize());
 
                 termItems[idx++].Set("(yv)", PermissionPolicy::Term::TAG_ALLOWALLEXCEPT,
                                      new MsgArg("aa(yv)", aTerm->GetAllowAllExceptRuleSize(), allowVariants));
@@ -793,15 +790,13 @@ QStatus PermissionPolicy::GeneratePolicyArgs(MsgArg& msgArg, PermissionPolicy& p
             size_t idx = 0;
             if (anACL->GetAllowRules()) {
                 MsgArg* allowVariants = NULL;
-                QStatus status = GenerateRuleArgs(&allowVariants, (Rule*) anACL->GetAllowRules(), anACL->GetAllowRuleSize());
-                QCC_DbgPrintf(("PermissionPolicy::GeneratePolicyArgs #3 got status 0x%x\n", status));
+                GenerateRuleArgs(&allowVariants, (Rule*) anACL->GetAllowRules(), anACL->GetAllowRuleSize());
                 aclItems[idx++].Set("(yv)", Term::TAG_ALLOW,
                                     new MsgArg("aa(yv)", anACL->GetAllowRuleSize(), allowVariants));
             }
             if (anACL->GetAllowAllExceptRules()) {
                 MsgArg* allowVariants = NULL;
-                QStatus status = GenerateRuleArgs(&allowVariants, (Rule*) anACL->GetAllowAllExceptRules(), anACL->GetAllowAllExceptRuleSize());
-                QCC_DbgPrintf(("PermissionPolicy::GeneratePolicyArgs #4 got status 0x%x\n", status));
+                GenerateRuleArgs(&allowVariants, (Rule*) anACL->GetAllowAllExceptRules(), anACL->GetAllowAllExceptRuleSize());
                 aclItems[idx++].Set("(yv)", PermissionPolicy::Term::TAG_ALLOWALLEXCEPT,
                                     new MsgArg("aa(yv)", anACL->GetAllowAllExceptRuleSize(), allowVariants));
             }
