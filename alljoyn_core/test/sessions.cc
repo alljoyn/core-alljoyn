@@ -1041,6 +1041,14 @@ int main(int argc, char** argv)
                 continue;
             }
             sessionTestObj.SendChatSignal(id, chatMsg.c_str(), flags);
+        } else if (cmd == "anychat") {
+            uint8_t flags = 0;
+            String chatMsg = Trim(line);
+            if (chatMsg.empty()) {
+                printf("Usage: schat <msg>\n");
+                continue;
+            }
+            sessionTestObj.SendChatSignal(ajn::SESSION_ID_ALL_HOSTED, chatMsg.c_str(), flags);
         } else if (cmd == "autochat") {
             SessionId id = NextTokAsSessionId(line);
             uint32_t count = StringToU32(NextTok(line), 0, 0);
@@ -1129,6 +1137,7 @@ int main(int argc, char** argv)
             printf("chat <sessionId> <msg>                                        - Send a message over a given session\n");
             printf("cchat <sessionId> <msg>                                       - Send a message over a given session with compression\n");
             printf("schat <msg>                                                   - Send a sessionless message\n");
+            printf("anychat <msg>                                                 - Send a message on all hosted sessions\n");
             printf("cancelsessionless <serialNum>                                 - Cancel a sessionless message\n");
             printf("autochat <sessionId> [count] [delay] [minSize] [maxSize]      - Send periodic messages of various sizes\n");
             printf("timeout <sessionId> <linkTimeout>                             - Set link timeout for a session\n");
