@@ -1136,6 +1136,9 @@ static void ProbeTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* co
 #if ARDP_STATS
                 ++handle->stats.nulSends;
 #endif
+            } else if (status != ER_WOULDBLOCK) {
+                /* Socket error */
+                Disconnect(handle, conn, ER_FAIL);
             }
         }
     }
