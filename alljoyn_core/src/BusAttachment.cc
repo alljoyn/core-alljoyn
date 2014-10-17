@@ -2179,7 +2179,7 @@ QStatus BusAttachment::WhoImplements(const char** implementsInterfaces, size_t n
 QStatus BusAttachment::WhoImplements(const char* interface)
 {
     if (interface == NULL) {
-        return ER_BAD_ARG_1;
+        return WhoImplements(NULL, size_t(0));
     }
     const char** tmp = &interface;
     return WhoImplements(tmp, size_t(1));
@@ -2203,7 +2203,7 @@ QStatus BusAttachment::CancelWhoImplements(const char** implementsInterfaces, si
 QStatus BusAttachment::CancelWhoImplements(const char* interface)
 {
     if (interface == NULL) {
-        return ER_BAD_ARG_1;
+        return CancelWhoImplements(NULL, 0);
     }
     const char** tmp = &interface;
     return CancelWhoImplements(tmp, 1);
