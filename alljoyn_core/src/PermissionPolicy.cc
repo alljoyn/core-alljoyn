@@ -46,7 +46,20 @@ qcc::String PermissionPolicy::Rule::Member::ToString()
     } else if (memberType == PROPERTY) {
         str += "  property\n";
     }
-    str += "  read-only: " + U32ToString(readOnly) + "\n";
+    str += "  action mask:";
+    if ((actionMask & ACTION_DENIED) == ACTION_DENIED) {
+        str += " Denied";
+    }
+    if ((actionMask & ACTION_PROVIDE) == ACTION_PROVIDE) {
+        str += " Provide";
+    }
+    if ((actionMask & ACTION_OBSERVE) == ACTION_OBSERVE) {
+        str += " Observe";
+    }
+    if ((actionMask & ACTION_MODIFY) == ACTION_MODIFY) {
+        str += " Modify";
+    }
+    str += "\n";
     return str;
 }
 
@@ -59,9 +72,9 @@ qcc::String PermissionPolicy::Rule::ToString()
     }
     if (interfaceName.length() > 0) {
         str += "  interfaceName: " + interfaceName + "\n";
-        for (size_t cnt = 0; cnt < GetNumOfMembers(); cnt++) {
-            str += members[cnt].ToString();
-        }
+    }
+    for (size_t cnt = 0; cnt < GetMembersSize(); cnt++) {
+        str += members[cnt].ToString();
     }
     return str;
 }
@@ -93,33 +106,20 @@ qcc::String PermissionPolicy::Peer::ToString()
     return str;
 }
 
-qcc::String PermissionPolicy::ACL::ToString()
-{
-    qcc::String str;
-    str += "ACL:\n";
-    if ((allowRuleSize > 0) && allowRules) {
-        for (size_t cnt = 0; cnt < allowRuleSize; cnt++) {
-            str += "  allow[" + U32ToString(cnt) + "]: " + allowRules[cnt].ToString();
-        }
-    }
-    if ((allowAllExceptRuleSize > 0) && allowAllExceptRules) {
-        for (size_t cnt = 0; cnt < allowAllExceptRuleSize; cnt++) {
-            str += "  allowAllExceptRules[" + U32ToString(cnt) + "]: " + allowAllExceptRules[cnt].ToString();
-        }
-    }
-    return str;
-}
-
 qcc::String PermissionPolicy::Term::ToString()
 {
     qcc::String str;
     str += "Term:\n";
-    if ((peerSize > 0) && peers) {
-        for (size_t cnt = 0; cnt < peerSize; cnt++) {
-            str += "  peer[" + U32ToString(cnt) + "]: " + peers[cnt].ToString();
+    if ((peersSize > 0) && peers) {
+        for (size_t cnt = 0; cnt < peersSize; cnt++) {
+            str += "  peers[" + U32ToString(cnt) + "]: " + peers[cnt].ToString();
         }
     }
-    str += PermissionPolicy::ACL::ToString();
+    if ((rulesSize > 0) && rules) {
+        for (size_t cnt = 0; cnt < rulesSize; cnt++) {
+            str += "  rules[" + U32ToString(cnt) + "]: " + rules[cnt].ToString();
+        }
+    }
     return str;
 }
 
@@ -130,29 +130,17 @@ qcc::String PermissionPolicy::ToString()
     str += "  version: " +  U32ToString(version) + "\n";
     str += "  serial number: " + U32ToString(serialNum) + "\n";
 
-    if ((adminSize > 0) && admins) {
-        for (size_t cnt = 0; cnt < adminSize; cnt++) {
-            str += "  admin[" + U32ToString(cnt) + "]: " + admins[cnt].ToString();
+    if ((adminsSize > 0) && admins) {
+        for (size_t cnt = 0; cnt < adminsSize; cnt++) {
+            str += "  admins[" + U32ToString(cnt) + "]: " + admins[cnt].ToString();
         }
     }
-    if ((providerSize > 0) && providers) {
-        for (size_t cnt = 0; cnt < providerSize; cnt++) {
-            str += "  provider[" + U32ToString(cnt) + "]: " + providers[cnt].ToString();
-        }
-    }
-    if ((consumerSize > 0) && consumers) {
-        for (size_t cnt = 0; cnt < consumerSize; cnt++) {
-            str += "  consumer[" + U32ToString(cnt) + "]: " + consumers[cnt].ToString();
+    if ((termsSize > 0) && terms) {
+        for (size_t cnt = 0; cnt < termsSize; cnt++) {
+            str += "  terms[" + U32ToString(cnt) + "]: " + terms[cnt].ToString();
         }
     }
     return str;
-}
-
-void PermissionPolicy::ACL::SetAllowAllExceptRules(size_t count, Rule* exceptions)
-{
-    allowAllExceptRules = exceptions;
-    allowAllExceptRuleSize = count;
-
 }
 
 static QStatus GeneratePeerArgs(MsgArg** retArgs, PermissionPolicy::Peer* peers, size_t count)
@@ -288,9 +276,9 @@ static QStatus GenerateMemberArgs(MsgArg** retArgs, const PermissionPolicy::Rule
         if (aRule->GetMemberType() != PermissionPolicy::Rule::Member::NOT_SPECIFIED) {
             fieldCnt++;
         }
-        if (!aRule->GetReadOnly()) {
-            fieldCnt++;
-        }
+        /* account for action mask */
+        fieldCnt++;
+        /* default is true for mutual auth */
         if (!aRule->GetMutualAuth()) {
             fieldCnt++;
         }
@@ -298,25 +286,19 @@ static QStatus GenerateMemberArgs(MsgArg** retArgs, const PermissionPolicy::Rule
         if (fieldCnt > 0) {
             int idx = 0;
             ruleArgs = new MsgArg[fieldCnt];
-            if (aRule->GetMemberName().size() > 0) {
-                ruleArgs[idx].Set("(yv)", PermissionPolicy::Rule::Member::TAG_MEMBER_NAME,
-                                  new MsgArg("s", aRule->GetMemberName().c_str()));
-                idx++;
+            if (!aRule->GetMemberName().empty()) {
+                ruleArgs[idx++].Set("(yv)", PermissionPolicy::Rule::Member::TAG_MEMBER_NAME,
+                                    new MsgArg("s", aRule->GetMemberName().c_str()));
             }
             if (aRule->GetMemberType() != PermissionPolicy::Rule::Member::NOT_SPECIFIED) {
-                ruleArgs[idx].Set("(yv)", PermissionPolicy::Rule::Member::TAG_MEMBER_TYPE,
-                                  new MsgArg("y", aRule->GetMemberType()));
-                idx++;
+                ruleArgs[idx++].Set("(yv)", PermissionPolicy::Rule::Member::TAG_MEMBER_TYPE,
+                                    new MsgArg("y", aRule->GetMemberType()));
             }
-            if (!aRule->GetReadOnly()) {
-                ruleArgs[idx].Set("(yv)", PermissionPolicy::Rule::Member::TAG_READ_ONLY,
-                                  new MsgArg("b", aRule->GetReadOnly()));
-                idx++;
-            }
+            ruleArgs[idx++].Set("(yv)", PermissionPolicy::Rule::Member::TAG_ACTION_MASK,
+                                new MsgArg("y", aRule->GetActionMask()));
             if (!aRule->GetMutualAuth()) {
-                ruleArgs[idx].Set("(yv)", PermissionPolicy::Rule::Member::TAG_MUTUAL_AUTH,
-                                  new MsgArg("b", aRule->GetMutualAuth()));
-                idx++;
+                ruleArgs[idx++].Set("(yv)", PermissionPolicy::Rule::Member::TAG_MUTUAL_AUTH,
+                                    new MsgArg("b", aRule->GetMutualAuth()));
             }
         }
         variants[cnt].Set("a(yv)", fieldCnt, ruleArgs);
@@ -333,35 +315,32 @@ static QStatus GenerateRuleArgs(MsgArg** retArgs, PermissionPolicy::Rule* rules,
         /* count the set fields */
         PermissionPolicy::Rule* aRule = &rules[cnt];
         int fieldCnt = 0;
-        if (aRule->GetObjPath().size() > 0) {
+        if (!aRule->GetObjPath().empty()) {
             fieldCnt++;
         }
         if (aRule->GetInterfaceName().size() > 0) {
             fieldCnt++;
         }
-        if (aRule->GetNumOfMembers() > 0) {
+        if (aRule->GetMembersSize() > 0) {
             fieldCnt++;
         }
         MsgArg* ruleArgs = NULL;
         if (fieldCnt > 0) {
             int idx = 0;
             ruleArgs = new MsgArg[fieldCnt];
-            if (aRule->GetObjPath().size() > 0) {
-                ruleArgs[idx].Set("(yv)", PermissionPolicy::Rule::TAG_OBJPATH,
-                                  new MsgArg("s", aRule->GetObjPath().c_str()));
-                idx++;
+            if (!aRule->GetObjPath().empty()) {
+                ruleArgs[idx++].Set("(yv)", PermissionPolicy::Rule::TAG_OBJPATH,
+                                    new MsgArg("s", aRule->GetObjPath().c_str()));
             }
-            if (aRule->GetInterfaceName().size() > 0) {
-                ruleArgs[idx].Set("(yv)", PermissionPolicy::Rule::TAG_INTERFACE_NAME,
-                                  new MsgArg("s", aRule->GetInterfaceName().c_str()));
-                idx++;
+            if (!aRule->GetInterfaceName().empty()) {
+                ruleArgs[idx++].Set("(yv)", PermissionPolicy::Rule::TAG_INTERFACE_NAME,
+                                    new MsgArg("s", aRule->GetInterfaceName().c_str()));
             }
-            if (aRule->GetNumOfMembers() > 0) {
+            if (aRule->GetMembersSize() > 0) {
                 MsgArg* ruleMembersArgs = NULL;
-                GenerateMemberArgs(&ruleMembersArgs, aRule->GetMembers(), aRule->GetNumOfMembers());
-                ruleArgs[idx].Set("(yv)", PermissionPolicy::Rule::TAG_INTERFACE_MEMBERS,
-                                  new MsgArg("aa(yv)", aRule->GetNumOfMembers(), ruleMembersArgs));
-                idx++;
+                GenerateMemberArgs(&ruleMembersArgs, aRule->GetMembers(), aRule->GetMembersSize());
+                ruleArgs[idx++].Set("(yv)", PermissionPolicy::Rule::TAG_INTERFACE_MEMBERS,
+                                    new MsgArg("aa(yv)", aRule->GetMembersSize(), ruleMembersArgs));
             }
         }
         variants[cnt].Set("a(yv)", fieldCnt, ruleArgs);
@@ -434,14 +413,14 @@ static QStatus BuildMembersFromArg(MsgArg& arg, PermissionPolicy::Rule::Member**
                 }
                 break;
 
-            case PermissionPolicy::Rule::Member::TAG_READ_ONLY:
-                status = field->Get("b", &boolVal);
+            case PermissionPolicy::Rule::Member::TAG_ACTION_MASK:
+                status = field->Get("y", &oneByte);
                 if (ER_OK != status) {
                     QCC_DbgPrintf(("BuildMembersFromArg #9 [%d][%d] got status 0x%x\n", cnt, fld, status));
                     delete [] ruleArray;
                     return status;
                 }
-                pr->SetReadOnly(boolVal);
+                pr->SetActionMask(oneByte);
                 break;
 
             case PermissionPolicy::Rule::Member::TAG_MUTUAL_AUTH:
@@ -481,7 +460,7 @@ static QStatus BuildRulesFromArg(MsgArg& arg, PermissionPolicy::Rule** rules, si
         status = ruleListArgs[cnt].Get("a(yv)", &fieldCnt, &fieldArgs);
         if (ER_OK != status) {
             QCC_DbgPrintf(("BuildRulesFromArg #3 [%d] got status 0x%x\n", cnt, status));
-            delete ruleArray;
+            delete [] ruleArray;
             return status;
         }
         PermissionPolicy::Rule* pr = &ruleArray[cnt];
@@ -491,7 +470,7 @@ static QStatus BuildRulesFromArg(MsgArg& arg, PermissionPolicy::Rule** rules, si
             status = fieldArgs[fld].Get("(yv)", &fieldType, &field);
             if (ER_OK != status) {
                 QCC_DbgPrintf(("BuildRulesFromArg #4 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                delete ruleArray;
+                delete [] ruleArray;
                 return status;
             }
             char* str;
@@ -500,7 +479,7 @@ static QStatus BuildRulesFromArg(MsgArg& arg, PermissionPolicy::Rule** rules, si
                 status = field->Get("s", &str);
                 if (ER_OK != status) {
                     QCC_DbgPrintf(("BuildRulesFromArg #5 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                    delete ruleArray;
+                    delete [] ruleArray;
                     return status;
                 }
                 pr->SetObjPath(String(str));
@@ -510,7 +489,7 @@ static QStatus BuildRulesFromArg(MsgArg& arg, PermissionPolicy::Rule** rules, si
                 status = field->Get("s", &str);
                 if (ER_OK != status) {
                     QCC_DbgPrintf(("BuildRulesFromArg #6 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                    delete ruleArray;
+                    delete [] ruleArray;
                     return status;
                 }
                 pr->SetInterfaceName(String(str));
@@ -522,7 +501,7 @@ static QStatus BuildRulesFromArg(MsgArg& arg, PermissionPolicy::Rule** rules, si
                 status = BuildMembersFromArg(*field, &memberRules, &ruleCount);
                 if (ER_OK != status) {
                     QCC_DbgPrintf(("BuildRulesFromArg #6 [%d][%d] got status 0x%x\n", cnt, fld, status));
-                    delete ruleArray;
+                    delete [] ruleArray;
                     return status;
                 }
                 if (ruleCount > 0) {
@@ -537,7 +516,7 @@ static QStatus BuildRulesFromArg(MsgArg& arg, PermissionPolicy::Rule** rules, si
     return ER_OK;
 }
 
-static QStatus BuildProviderFromArg(MsgArg& arg, PermissionPolicy::Term** providerTerms, size_t* count)
+static QStatus BuildTermsFromArg(MsgArg& arg, PermissionPolicy::Term** terms, size_t* count)
 {
     MsgArg* termListArgs = NULL;
     size_t termCount;
@@ -556,7 +535,7 @@ static QStatus BuildProviderFromArg(MsgArg& arg, PermissionPolicy::Term** provid
         size_t itemCount;
         status = termListArgs[cnt].Get("a(yv)", &itemCount, &itemArgs);
         if (ER_OK != status) {
-            QCC_DbgPrintf(("BuildProviderFromArg #3 [%d] got status 0x%x.  The signature is %s\n", cnt, status, termListArgs[cnt].Signature().c_str()));
+            QCC_DbgPrintf(("BuildTermsFromArg #3 [%d] got status 0x%x.  The signature is %s\n", cnt, status, termListArgs[cnt].Signature().c_str()));
             delete [] termArray;
             return status;
         }
@@ -571,7 +550,7 @@ static QStatus BuildProviderFromArg(MsgArg& arg, PermissionPolicy::Term** provid
                 return status;
             }
             switch (fieldType) {
-            case PermissionPolicy::Term::TAG_PEER:
+            case PermissionPolicy::Term::TAG_PEERS:
                 {
                     PermissionPolicy::Peer* peers;
                     size_t peerCount;
@@ -587,7 +566,7 @@ static QStatus BuildProviderFromArg(MsgArg& arg, PermissionPolicy::Term** provid
                 }
                 break;
 
-            case PermissionPolicy::Term::TAG_ALLOW:
+            case PermissionPolicy::Term::TAG_RULES:
                 {
                     PermissionPolicy::Rule* rules;
                     size_t ruleCount;
@@ -598,23 +577,7 @@ static QStatus BuildProviderFromArg(MsgArg& arg, PermissionPolicy::Term** provid
                         return status;
                     }
                     if (ruleCount > 0) {
-                        pt->SetAllowRules(ruleCount, rules);
-                    }
-                }
-                break;
-
-            case PermissionPolicy::Term::TAG_ALLOWALLEXCEPT:
-                {
-                    PermissionPolicy::Rule* rules;
-                    size_t ruleCount;
-                    status = BuildRulesFromArg(*field, &rules, &ruleCount);
-                    if (ER_OK != status) {
-                        QCC_DbgPrintf(("BuildProviderFromArg #6 [%d] got status 0x%x\n", cnt, status));
-                        delete [] termArray;
-                        return status;
-                    }
-                    if (ruleCount > 0) {
-                        pt->SetAllowAllExceptRules(ruleCount, rules);
+                        pt->SetRules(ruleCount, rules);
                     }
                 }
                 break;
@@ -623,83 +586,9 @@ static QStatus BuildProviderFromArg(MsgArg& arg, PermissionPolicy::Term** provid
     }
 
     *count = termCount;
-    *providerTerms = termArray;
+    *terms = termArray;
     return ER_OK;
 
-}
-
-static QStatus BuildConsumerFromArg(MsgArg& arg, PermissionPolicy::ACL** consumerACLs, size_t* count)
-{
-    MsgArg* aclListArgs = NULL;
-    size_t aclCount;
-    QStatus status = arg.Get("aa(yv)", &aclCount, &aclListArgs);
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("BuildConsumerFromArg #1 got status 0x%x\n", status));
-        return status;
-    }
-    if (aclCount == 0) {
-        *count = aclCount;
-        return ER_OK;
-    }
-    PermissionPolicy::Term* aclArray = new PermissionPolicy::Term[aclCount];
-    for (size_t cnt = 0; cnt < aclCount; cnt++) {
-        MsgArg* itemArgs;
-        size_t itemCount;
-        status = aclListArgs[cnt].Get("a(yv)", &itemCount, &itemArgs);
-        if (ER_OK != status) {
-            QCC_DbgPrintf(("BuildConsumerFromArg #3 [%d] got status 0x%x.  The signature is %s\n", cnt, status, aclListArgs[cnt].Signature().c_str()));
-            delete aclArray;
-            return status;
-        }
-        PermissionPolicy::ACL* acl = &aclArray[cnt];
-        for (size_t idx = 0; idx < itemCount; idx++) {
-            MsgArg* field;
-            uint8_t fieldType;
-            status = itemArgs[idx].Get("(yv)", &fieldType, &field);
-            if (ER_OK != status) {
-                QCC_DbgPrintf(("BuildConsumerFromArg #4 [%d] got status 0x%x\n", cnt, status));
-                delete aclArray;
-                return status;
-            }
-            switch (fieldType) {
-            case PermissionPolicy::ACL::TAG_ALLOW:
-                {
-                    PermissionPolicy::Rule* rules;
-                    size_t ruleCount;
-                    status = BuildRulesFromArg(*field, &rules, &ruleCount);
-                    if (ER_OK != status) {
-                        QCC_DbgPrintf(("BuildConsumerFromArg #6 [%d] got status 0x%x\n", cnt, status));
-                        delete aclArray;
-                        return status;
-                    }
-                    if (ruleCount > 0) {
-                        acl->SetAllowRules(ruleCount, rules);
-                    }
-                }
-                break;
-
-            case PermissionPolicy::ACL::TAG_ALLOWALLEXCEPT:
-                {
-                    PermissionPolicy::Rule* rules;
-                    size_t ruleCount;
-                    status = BuildRulesFromArg(*field, &rules, &ruleCount);
-                    if (ER_OK != status) {
-                        QCC_DbgPrintf(("BuildConsumerFromArg #6 [%d] got status 0x%x\n", cnt, status));
-                        delete aclArray;
-                        return status;
-                    }
-                    if (ruleCount > 0) {
-                        acl->SetAllowAllExceptRules(ruleCount, rules);
-                    }
-                }
-                break;
-            }
-        }
-    }
-
-    *count = aclCount;
-    *consumerACLs = aclArray;
-    return ER_OK;
 }
 
 QStatus PermissionPolicy::GeneratePolicyArgs(MsgArg& msgArg, PermissionPolicy& policy)
@@ -713,10 +602,7 @@ QStatus PermissionPolicy::GeneratePolicyArgs(MsgArg& msgArg, PermissionPolicy& p
     if (policy.GetAdmins()) {
         sectionCount++;
     }
-    if (policy.GetProviders()) {
-        sectionCount++;
-    }
-    if (policy.GetConsumers()) {
+    if (policy.GetTerms()) {
         sectionCount++;
     }
     if (sectionCount > 0) {
@@ -725,24 +611,21 @@ QStatus PermissionPolicy::GeneratePolicyArgs(MsgArg& msgArg, PermissionPolicy& p
 
     if (policy.GetAdmins()) {
         MsgArg* adminVariants;
-        GeneratePeerArgs(&adminVariants, (PermissionPolicy::Peer*) policy.GetAdmins(), policy.GetAdminSize());
-        sectionVariants[sectionIndex++].Set("(yv)", PermissionPolicy::TAG_ADMIN,
-                                            new MsgArg("a(ya(yv))", policy.GetAdminSize(), adminVariants));
+        GeneratePeerArgs(&adminVariants, (PermissionPolicy::Peer*) policy.GetAdmins(), policy.GetAdminsSize());
+        sectionVariants[sectionIndex++].Set("(yv)", PermissionPolicy::TAG_ADMINS,
+                                            new MsgArg("a(ya(yv))", policy.GetAdminsSize(), adminVariants));
     }
-    if (policy.GetProviders()) {
-        MsgArg* providerVariants = new MsgArg[policy.GetProviderSize()];
-        PermissionPolicy::Term* providers = (PermissionPolicy::Term*) policy.GetProviders();
-        for (size_t cnt = 0; cnt < policy.GetProviderSize(); cnt++) {
-            PermissionPolicy::Term* aTerm = &providers[cnt];
+    if (policy.GetTerms()) {
+        MsgArg* termsVariants = new MsgArg[policy.GetTermsSize()];
+        PermissionPolicy::Term* terms = (PermissionPolicy::Term*) policy.GetTerms();
+        for (size_t cnt = 0; cnt < policy.GetTermsSize(); cnt++) {
+            PermissionPolicy::Term* aTerm = &terms[cnt];
             /* count the item in a term */
             size_t termItemCount = 0;
             if (aTerm->GetPeers()) {
                 termItemCount++;
             }
-            if (aTerm->GetAllowRules()) {
-                termItemCount++;
-            }
-            if (aTerm->GetAllowAllExceptRules()) {
+            if (aTerm->GetRules()) {
                 termItemCount++;
             }
             MsgArg* termItems = new MsgArg[termItemCount];
@@ -750,60 +633,20 @@ QStatus PermissionPolicy::GeneratePolicyArgs(MsgArg& msgArg, PermissionPolicy& p
 
             if (aTerm->GetPeers()) {
                 MsgArg* peerVariants;
-                GeneratePeerArgs(&peerVariants, (PermissionPolicy::Peer*) aTerm->GetPeers(), aTerm->GetPeerSize());
-                termItems[idx++].Set("(yv)", PermissionPolicy::Term::TAG_PEER,
-                                     new MsgArg("a(ya(yv))", aTerm->GetPeerSize(), peerVariants));
+                GeneratePeerArgs(&peerVariants, (PermissionPolicy::Peer*) aTerm->GetPeers(), aTerm->GetPeersSize());
+                termItems[idx++].Set("(yv)", PermissionPolicy::Term::TAG_PEERS,
+                                     new MsgArg("a(ya(yv))", aTerm->GetPeersSize(), peerVariants));
             }
-            if (aTerm->GetAllowRules()) {
-                MsgArg* allowVariants = NULL;
-                GenerateRuleArgs(&allowVariants, (PermissionPolicy::Rule*) aTerm->GetAllowRules(), aTerm->GetAllowRuleSize());
-                termItems[idx++].Set("(yv)", PermissionPolicy::Term::TAG_ALLOW,
-                                     new MsgArg("aa(yv)", aTerm->GetAllowRuleSize(), allowVariants));
+            if (aTerm->GetRules()) {
+                MsgArg* rulesVariants = NULL;
+                GenerateRuleArgs(&rulesVariants, (PermissionPolicy::Rule*) aTerm->GetRules(), aTerm->GetRulesSize());
+                termItems[idx++].Set("(yv)", PermissionPolicy::Term::TAG_RULES,
+                                     new MsgArg("aa(yv)", aTerm->GetRulesSize(), rulesVariants));
             }
-            if (aTerm->GetAllowAllExceptRules()) {
-                MsgArg* allowVariants = NULL;
-                GenerateRuleArgs(&allowVariants, (Rule*) aTerm->GetAllowAllExceptRules(), aTerm->GetAllowAllExceptRuleSize());
-
-                termItems[idx++].Set("(yv)", PermissionPolicy::Term::TAG_ALLOWALLEXCEPT,
-                                     new MsgArg("aa(yv)", aTerm->GetAllowAllExceptRuleSize(), allowVariants));
-            }
-            providerVariants[cnt].Set("a(yv)", termItemCount, termItems);
+            termsVariants[cnt].Set("a(yv)", termItemCount, termItems);
         }
-        sectionVariants[sectionIndex++].Set("(yv)", PermissionPolicy::TAG_PROVIDER,
-                                            new MsgArg("aa(yv)", policy.GetProviderSize(), providerVariants));
-    }
-
-    if (policy.GetConsumers()) {
-        MsgArg* consumerVariants = new MsgArg[policy.GetConsumerSize()];
-        PermissionPolicy::ACL* consumers = (PermissionPolicy::ACL*) policy.GetConsumers();
-        for (size_t cnt = 0; cnt < policy.GetConsumerSize(); cnt++) {
-            ACL* anACL = &consumers[cnt];
-            /* count the item in an ACL */
-            size_t aclItemCount = 0;
-            if (anACL->GetAllowRules()) {
-                aclItemCount++;
-            }
-            if (anACL->GetAllowAllExceptRules()) {
-                aclItemCount++;
-            }
-            MsgArg* aclItems = new MsgArg[aclItemCount];
-            size_t idx = 0;
-            if (anACL->GetAllowRules()) {
-                MsgArg* allowVariants = NULL;
-                GenerateRuleArgs(&allowVariants, (Rule*) anACL->GetAllowRules(), anACL->GetAllowRuleSize());
-                aclItems[idx++].Set("(yv)", Term::TAG_ALLOW,
-                                    new MsgArg("aa(yv)", anACL->GetAllowRuleSize(), allowVariants));
-            }
-            if (anACL->GetAllowAllExceptRules()) {
-                MsgArg* allowVariants = NULL;
-                GenerateRuleArgs(&allowVariants, (Rule*) anACL->GetAllowAllExceptRules(), anACL->GetAllowAllExceptRuleSize());
-                aclItems[idx++].Set("(yv)", PermissionPolicy::Term::TAG_ALLOWALLEXCEPT,
-                                    new MsgArg("aa(yv)", anACL->GetAllowAllExceptRuleSize(), allowVariants));
-            }
-            consumerVariants[cnt].Set("a(yv)", aclItemCount, aclItems);
-        }
-        sectionVariants[sectionIndex++].Set("(yv)", PermissionPolicy::TAG_CONSUMER,
-                                            new MsgArg("aa(yv)", policy.GetConsumerSize(), consumerVariants));
+        sectionVariants[sectionIndex++].Set("(yv)", PermissionPolicy::TAG_TERMS,
+                                            new MsgArg("aa(yv)", policy.GetTermsSize(), termsVariants));
     }
 
     msgArg.Set("(yv)", policy.GetVersion(), new MsgArg("(ua(yv))",
@@ -836,7 +679,7 @@ QStatus PermissionPolicy::BuildPolicyFromArgs(uint8_t version, const MsgArg& msg
             return status;
         }
         switch (sectionType) {
-        case PermissionPolicy::TAG_ADMIN:
+        case PermissionPolicy::TAG_ADMINS:
             {
                 PermissionPolicy::Peer* peers;
                 size_t count;
@@ -851,32 +694,17 @@ QStatus PermissionPolicy::BuildPolicyFromArgs(uint8_t version, const MsgArg& msg
             }
             break;
 
-        case PermissionPolicy::TAG_PROVIDER:
+        case PermissionPolicy::TAG_TERMS:
             {
                 PermissionPolicy::Term* terms;
                 size_t count;
-                status = BuildProviderFromArg(*section, &terms, &count);
+                status = BuildTermsFromArg(*section, &terms, &count);
                 if (ER_OK != status) {
                     QCC_DbgPrintf(("BuildPolicyFromArgs #4 got status 0x%x\n", status));
                     return status;
                 }
                 if (count > 0) {
-                    policy.SetProviders(count, terms);
-                }
-            }
-            break;
-
-        case PermissionPolicy::TAG_CONSUMER:
-            {
-                PermissionPolicy::ACL* acls;
-                size_t count;
-                status = BuildConsumerFromArg(*section, &acls, &count);
-                if (ER_OK != status) {
-                    QCC_DbgPrintf(("BuildPolicyFromArgs #5 got status 0x%x\n", status));
-                    return status;
-                }
-                if (count > 0) {
-                    policy.SetConsumers(count, acls);
+                    policy.SetTerms(count, terms);
                 }
             }
             break;

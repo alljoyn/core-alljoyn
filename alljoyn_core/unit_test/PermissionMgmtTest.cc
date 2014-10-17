@@ -460,78 +460,89 @@ PermissionPolicy* GeneratePolicy(qcc::GUID128& guid)
 
     /* add the provider section */
 
-    PermissionPolicy::Term* providers = new PermissionPolicy::Term[3];
+    PermissionPolicy::Term* terms = new PermissionPolicy::Term[3];
 
-    /* provider record 0 */
+    /* terms record 0 */
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY);
-    providers[0].SetPeers(1, peers);
-    PermissionPolicy::Rule* allow = new PermissionPolicy::Rule[1];
-    allow[0].SetInterfaceName("org.allseenalliance.control.OnOff");
-    providers[0].SetAllowRules(1, allow);
-    /* provider record 1 */
+    terms[0].SetPeers(1, peers);
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
+    rules[0].SetInterfaceName("org.allseenalliance.control.OnOff");
+    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    rules[0].SetMembers(1, prms);
+    terms[0].SetRules(1, rules);
+
+    /* terms record 1 */
     peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
     qcc::GUID128 guildGUID("5668dd0e9bf2d7f8b73998a430834f5a");
     peers[0].SetID(guildGUID.GetBytes(), guildGUID.SIZE);
     const char* guildAuthority = "guildPubKey";
     peers[0].SetGuildAuthority((const uint8_t*) guildAuthority, strlen(guildAuthority));
-    providers[1].SetPeers(1, peers);
-    allow = new PermissionPolicy::Rule[2];
-    allow[0].SetInterfaceName("org.allseenalliance.control.TV");
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[3];
+    terms[1].SetPeers(1, peers);
+    rules = new PermissionPolicy::Rule[2];
+    rules[0].SetInterfaceName("org.allseenalliance.control.TV");
+    prms = new PermissionPolicy::Rule::Member[3];
     prms[0].SetMemberName("Up");
     prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
     prms[1].SetMemberName("Down");
     prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
     prms[2].SetMemberName("Channel");
     prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    allow[0].SetMembers(3, prms);
+    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    rules[0].SetMembers(3, prms);
 
-    allow[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
-    providers[1].SetAllowRules(2, allow);
+    rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
+    prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    rules[1].SetMembers(1, prms);
+    terms[1].SetRules(2, rules);
 
-    /* provider record 2 */
+    /* terms record 2 */
     peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
     qcc::GUID128 guildGUID2("317dc2429a69499df9d3eba302fbb3b2");
     peers[0].SetID(guildGUID2.GetBytes(), guildGUID.SIZE);
     const char* guild2Authority = "guild2PubKey";
     peers[0].SetGuildAuthority((const uint8_t*) guild2Authority, strlen(guild2Authority));
-    providers[2].SetPeers(1, peers);
-    PermissionPolicy::Rule* allowAllExcept = new PermissionPolicy::Rule[1];
-    allowAllExcept[0].SetObjPath("/control/settings");
-    providers[2].SetAllowAllExceptRules(1, allowAllExcept);
+    terms[2].SetPeers(1, peers);
+    rules = new PermissionPolicy::Rule[2];
+    rules[0].SetObjPath("/control/settings");
+    prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_DENIED);
+    rules[0].SetMembers(1, prms);
+    rules[1].SetObjPath("*");
+    prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    rules[1].SetMembers(1, prms);
 
-    policy->SetProviders(3, providers);
+    terms[2].SetRules(2, rules);
 
-    /* add the consumer section */
-    PermissionPolicy::ACL* consumers = new PermissionPolicy::ACL[1];
-
-    /* consumer record 0 */
-    allow = new PermissionPolicy::Rule[1];
-    allow[0].SetInterfaceName("org.allseenalliance.control.OnOff");
-    consumers[0].SetAllowRules(1, allow);
-    policy->SetConsumers(1, consumers);
+    policy->SetTerms(3, terms);
 
     return policy;
 }
 
-
-QStatus InstallPolicy(BusAttachment* bus, ProxyBusObject* remoteObj, PermissionPolicy& policy)
+QStatus InstallPolicy(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy& policy)
 {
     QStatus status;
-    const InterfaceDescription* itf = bus->GetInterface(INTERFACE_NAME);
-    remoteObj->AddInterface(*itf);
-    Message reply(*bus);
+    const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
     MsgArg policyArg;
 
     status = PermissionPolicy::GeneratePolicyArgs(policyArg, policy);
-    if (ER_OK == status) {
-    } else {
+    if (ER_OK != status) {
         return status;
     }
-    status = remoteObj->MethodCall(INTERFACE_NAME, "InstallPolicy", &policyArg, 1, reply, 5000);
+    status = remoteObj.MethodCall(INTERFACE_NAME, "InstallPolicy", &policyArg, 1, reply, 5000);
 
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
@@ -541,14 +552,14 @@ QStatus InstallPolicy(BusAttachment* bus, ProxyBusObject* remoteObj, PermissionP
     return status;
 }
 
-QStatus GetPolicy(BusAttachment* bus, ProxyBusObject* remoteObj, PermissionPolicy& policy)
+QStatus GetPolicy(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy& policy)
 {
     QStatus status;
-    const InterfaceDescription* itf = bus->GetInterface(INTERFACE_NAME);
-    remoteObj->AddInterface(*itf);
-    Message reply(*bus);
+    const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
 
-    status = remoteObj->MethodCall(INTERFACE_NAME, "GetPolicy", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(INTERFACE_NAME, "GetPolicy", NULL, 0, reply, 5000);
 
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
@@ -559,11 +570,7 @@ QStatus GetPolicy(BusAttachment* bus, ProxyBusObject* remoteObj, PermissionPolic
     uint8_t version;
     MsgArg* variant;
     reply->GetArg(0)->Get("(yv)", &version, &variant);
-    status = PermissionPolicy::BuildPolicyFromArgs(version, *variant, policy);
-    if (ER_OK != status) {
-        return status;
-    }
-    return status;
+    return PermissionPolicy::BuildPolicyFromArgs(version, *variant, policy);
 }
 
 /*
@@ -608,23 +615,21 @@ TEST_F(PermissionMgmtTest, InstallPolicy)
     SetSignalReceived(false);
     PermissionPolicy* policy = GeneratePolicy(localGUID);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    status = InstallPolicy(&clientBus, &clientProxyObject, *policy);
+    status = InstallPolicy(clientBus, clientProxyObject, *policy);
     EXPECT_EQ(ER_OK, status) << "  InstallPolicy failed.  Actual Status: " << QCC_StatusText(status);
 
     /* retrieve back the policy to compare */
     PermissionPolicy retPolicy;
-    status = GetPolicy(&clientBus, &clientProxyObject, retPolicy);
+    status = GetPolicy(clientBus, clientProxyObject, retPolicy);
     EXPECT_EQ(ER_OK, status) << "  GetPolicy failed.  Actual Status: " << QCC_StatusText(status);
 
     EXPECT_EQ(policy->GetSerialNum(), retPolicy.GetSerialNum()) << " GetPolicy failed. Different serial number.";
-    EXPECT_EQ(policy->GetAdminSize(), retPolicy.GetAdminSize()) << " GetPolicy failed. Different admin size.";
-    EXPECT_EQ(policy->GetProviderSize(), retPolicy.GetProviderSize()) << " GetPolicy failed. Different provider size.";
-    EXPECT_EQ(policy->GetConsumerSize(), retPolicy.GetConsumerSize()) << " GetPolicy failed. Different provider size.";
+    EXPECT_EQ(policy->GetAdminsSize(), retPolicy.GetAdminsSize()) << " GetPolicy failed. Different admin size.";
+    EXPECT_EQ(policy->GetTermsSize(), retPolicy.GetTermsSize()) << " GetPolicy failed. Different provider size.";
     delete policy;
     /* sleep a few seconds to see whether the signal is received */
     qcc::Sleep(1000);
     EXPECT_TRUE(GetSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
 }
-
 
 
