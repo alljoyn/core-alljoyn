@@ -21,16 +21,23 @@
 #include <map>
 #include <algorithm>
 
+#include "AboutObjectDescriptionInternal.h"
+
 namespace ajn {
 
-AboutObjectDescription::AboutObjectDescription()
+AboutObjectDescription::AboutObjectDescription() : aodInternal(new AboutObjectDescription::Internal)
 {
     //Empty constructor
 }
 
-AboutObjectDescription::AboutObjectDescription(const MsgArg& arg)
+AboutObjectDescription::AboutObjectDescription(const MsgArg& arg) : aodInternal(new AboutObjectDescription::Internal)
 {
     CreateFromMsgArg(arg);
+}
+
+AboutObjectDescription::~AboutObjectDescription()
+{
+    delete aodInternal;
 }
 
 QStatus AboutObjectDescription::CreateFromMsgArg(const MsgArg& arg)
@@ -71,50 +78,50 @@ QStatus AboutObjectDescription::CreateFromMsgArg(const MsgArg& arg)
 QStatus AboutObjectDescription::Add(const char* path, const char* interfaceName)
 {
     QStatus status = ER_OK;
-    m_AnnounceObjectsMapLock.Lock(MUTEX_CONTEXT);
-    if (m_AnnounceObjectsMap.find(path) == m_AnnounceObjectsMap.end()) {
+    aodInternal->announceObjectsMapLock.Lock(MUTEX_CONTEXT);
+    if (aodInternal->announceObjectsMap.find(path) == aodInternal->announceObjectsMap.end()) {
         std::set<qcc::String> newInterfaceName;
         newInterfaceName.insert(interfaceName);
-        m_AnnounceObjectsMap[path] = newInterfaceName;
+        aodInternal->announceObjectsMap[path] = newInterfaceName;
     } else {
-        m_AnnounceObjectsMap[path].insert(interfaceName);
+        aodInternal->announceObjectsMap[path].insert(interfaceName);
     }
-    m_AnnounceObjectsMapLock.Unlock(MUTEX_CONTEXT);
+    aodInternal->announceObjectsMapLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 size_t AboutObjectDescription::GetPaths(const char** paths, size_t numPaths) const
 {
     if (paths == NULL) {
-        return m_AnnounceObjectsMap.size();
+        return aodInternal->announceObjectsMap.size();
     }
-    m_AnnounceObjectsMapLock.Lock(MUTEX_CONTEXT);
+    aodInternal->announceObjectsMapLock.Lock(MUTEX_CONTEXT);
     size_t count = 0;
-    for (std::map<qcc::String, std::set<qcc::String> >::const_iterator it = m_AnnounceObjectsMap.begin();
-         it != m_AnnounceObjectsMap.end() && count < numPaths; ++it, ++count) {
+    for (std::map<qcc::String, std::set<qcc::String> >::const_iterator it = aodInternal->announceObjectsMap.begin();
+         it != aodInternal->announceObjectsMap.end() && count < numPaths; ++it, ++count) {
         paths[count] = it->first.c_str();
     }
-    m_AnnounceObjectsMapLock.Unlock(MUTEX_CONTEXT);
-    return m_AnnounceObjectsMap.size();
+    aodInternal->announceObjectsMapLock.Unlock(MUTEX_CONTEXT);
+    return aodInternal->announceObjectsMap.size();
 }
 
 size_t AboutObjectDescription::GetInterfaces(const char* path, const char** interfaces, size_t numInterfaces) const
 {
-    std::map<qcc::String, std::set<qcc::String> >::const_iterator aom_it = m_AnnounceObjectsMap.find(path);
-    if (aom_it == m_AnnounceObjectsMap.end()) {
+    std::map<qcc::String, std::set<qcc::String> >::const_iterator aom_it = aodInternal->announceObjectsMap.find(path);
+    if (aom_it == aodInternal->announceObjectsMap.end()) {
         return static_cast<size_t>(0);
     }
 
     if (interfaces == NULL) {
         return aom_it->second.size();
     }
-    m_AnnounceObjectsMapLock.Lock(MUTEX_CONTEXT);
+    aodInternal->announceObjectsMapLock.Lock(MUTEX_CONTEXT);
     size_t count = 0;
     for (std::set<qcc::String>::iterator it = aom_it->second.begin();
          it != aom_it->second.end() && count < numInterfaces; ++it, ++count) {
         interfaces[count] = it->c_str();
     }
-    m_AnnounceObjectsMapLock.Unlock(MUTEX_CONTEXT);
+    aodInternal->announceObjectsMapLock.Unlock(MUTEX_CONTEXT);
     return aom_it->second.size();
 }
 
@@ -122,8 +129,8 @@ size_t AboutObjectDescription::GetInterfacePaths(const char* interface, const ch
 {
     std::map<qcc::String, std::set<qcc::String> >::const_iterator it;
     size_t count = 0;
-    m_AnnounceObjectsMapLock.Lock(MUTEX_CONTEXT);
-    for (it = m_AnnounceObjectsMap.begin(); it != m_AnnounceObjectsMap.end(); ++it) {
+    aodInternal->announceObjectsMapLock.Lock(MUTEX_CONTEXT);
+    for (it = aodInternal->announceObjectsMap.begin(); it != aodInternal->announceObjectsMap.end(); ++it) {
         std::set<qcc::String>::const_iterator it2 = it->second.find(interface);
         if (it2 != it->second.end()) {
             if (count < numPaths) {
@@ -132,27 +139,27 @@ size_t AboutObjectDescription::GetInterfacePaths(const char* interface, const ch
             ++count;
         }
     }
-    m_AnnounceObjectsMapLock.Unlock(MUTEX_CONTEXT);
+    aodInternal->announceObjectsMapLock.Unlock(MUTEX_CONTEXT);
     return count;
 }
 
 void AboutObjectDescription::Clear()
 {
-    m_AnnounceObjectsMapLock.Lock(MUTEX_CONTEXT);
-    m_AnnounceObjectsMap.clear();
-    m_AnnounceObjectsMapLock.Unlock(MUTEX_CONTEXT);
+    aodInternal->announceObjectsMapLock.Lock(MUTEX_CONTEXT);
+    aodInternal->announceObjectsMap.clear();
+    aodInternal->announceObjectsMapLock.Unlock(MUTEX_CONTEXT);
 }
 bool AboutObjectDescription::HasPath(const char* path)  const
 {
-    std::map<qcc::String, std::set<qcc::String> >::const_iterator find_it = m_AnnounceObjectsMap.find(path);
-    std::map<qcc::String, std::set<qcc::String> >::const_iterator end_it = m_AnnounceObjectsMap.end();
+    std::map<qcc::String, std::set<qcc::String> >::const_iterator find_it = aodInternal->announceObjectsMap.find(path);
+    std::map<qcc::String, std::set<qcc::String> >::const_iterator end_it = aodInternal->announceObjectsMap.end();
     return (find_it != end_it);
 }
 
 bool AboutObjectDescription::HasInterface(const char* interfaceName) const
 {
     std::map<qcc::String, std::set<qcc::String> >::const_iterator it;
-    for (it = m_AnnounceObjectsMap.begin(); it != m_AnnounceObjectsMap.end(); ++it) {
+    for (it = aodInternal->announceObjectsMap.begin(); it != aodInternal->announceObjectsMap.end(); ++it) {
         if (HasInterface(it->first.c_str(), interfaceName)) {
             return true;
         }
@@ -163,8 +170,8 @@ bool AboutObjectDescription::HasInterface(const char* interfaceName) const
 
 bool AboutObjectDescription::HasInterface(const char* path, const char* interfaceName) const
 {
-    std::map<qcc::String, std::set<qcc::String> >::const_iterator it = m_AnnounceObjectsMap.find(path);
-    if (it == m_AnnounceObjectsMap.end()) {
+    std::map<qcc::String, std::set<qcc::String> >::const_iterator it = aodInternal->announceObjectsMap.find(path);
+    if (it == aodInternal->announceObjectsMap.end()) {
         return false;
     }
     qcc::String interfaceNameStr(interfaceName);
@@ -183,10 +190,10 @@ bool AboutObjectDescription::HasInterface(const char* path, const char* interfac
 QStatus AboutObjectDescription::GetMsgArg(MsgArg* msgArg)
 {
     QStatus status = ER_OK;
-    MsgArg* announceObjectsArg = new MsgArg[m_AnnounceObjectsMap.size()];
+    MsgArg* announceObjectsArg = new MsgArg[aodInternal->announceObjectsMap.size()];
     int objIndex = 0;
-    for (std::map<qcc::String, std::set<qcc::String> >::const_iterator it = m_AnnounceObjectsMap.begin();
-         it != m_AnnounceObjectsMap.end(); ++it) {
+    for (std::map<qcc::String, std::set<qcc::String> >::const_iterator it = aodInternal->announceObjectsMap.begin();
+         it != aodInternal->announceObjectsMap.end(); ++it) {
 
         qcc::String objectPath = it->first;
         const char** interfaces = new const char*[it->second.size()];
