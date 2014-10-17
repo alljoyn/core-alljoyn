@@ -1700,7 +1700,7 @@ static QStatus SendRst(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ip
     return qcc::SendTo(sock, ipAddr, ipPort, &h, ARDP_FIXED_HEADER_LEN, sent);
 }
 
-static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t ack, uint32_t lcs) {
+static QStatus UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t ack, uint32_t lcs) {
     QCC_DbgTrace(("UpdateSndSegments(): handle=%p, conn=%p, ack=%u, lcs=%u", handle, conn, ack, lcs));
     uint16_t index = ack % conn->snd.SEGMAX;
     ArdpSndBuf* sBuf = &conn->snd.buf[index];
@@ -1709,7 +1709,7 @@ static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t
     /* Nothing to clean up */
     if (conn->snd.pending == 0) {
         conn->snd.LCS = lcs;
-        return;
+        return ER_OK;
     }
 
     /*
@@ -1730,8 +1730,12 @@ static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t
         uint32_t seq = ntohl(h->seq);
         uint16_t fcnt = ntohs(h->fcnt);
 
-        assert(sBuf->inUse);
-        assert(SEQ32_LET(seq, ack));
+        if (!(sBuf->inUse) || (SEQ32_LT(ack, seq))) {
+            QCC_LogError(ER_ARDP_INVALID_RESPONSE, ("Bad update: %s SND %u ACK %u",
+                                                    (sBuf->inUse) ? "full" : "empty", seq, ack));
+            return ER_ARDP_INVALID_RESPONSE;
+        }
+
         if (sBuf->inUse) {
             /* If fragmented, wait for the last segment. Issue sendCB on the first fragment in message.*/
             QCC_DbgPrintf(("UpdateSndSegments(): fragment=%u, som=%u, fcnt=%d",
@@ -1772,6 +1776,8 @@ static void UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t
 
     /* Update the counter on our SND side */
     conn->snd.LCS = lcs;
+
+    return ER_OK;
 }
 
 static void FastRetransmit(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf)
@@ -2613,22 +2619,6 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 FlushExpiredRcvMessages(handle, conn, seg->ACKNXT);
             }
 
-            /* If we got NUL segment, send ACK without delay */
-            if (seg->FLG & ARDP_FLAG_NUL) {
-                QCC_DbgPrintf(("ArdpMachine(): OPEN: got NUL, send LCS %u", conn->rcv.LCS));
-#if ARDP_STATS
-                ++handle->stats.nulRecvs;
-#endif
-                status = Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->snd.NXT, conn->rcv.CUR);
-                if (status == ER_OK && conn->ackTimer.retry != 0) {
-                    UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
-                    conn->rcv.ackPending = 0;
-                } else if (status == ER_WOULDBLOCK) {
-                    UpdateTimer(handle, conn, &conn->ackTimer, 0, 1);
-                }
-                break;
-            }
-
             if (seg->FLG & ARDP_FLAG_ACK) {
                 QCC_DbgPrintf(("ArdpMachine(): OPEN: Got ACK %u LCS %u Window %u", seg->ACK, seg->LCS, seg->WINDOW));
                 bool needUpdate = false;
@@ -2648,11 +2638,29 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 }
 
                 if (needUpdate) {
-                    UpdateSndSegments(handle, conn, seg->ACK, seg->LCS);
+                    status = UpdateSndSegments(handle, conn, seg->ACK, seg->LCS);
+                    if (status != ER_OK) {
+                        Disconnect(handle, conn, status);
+                        break;
+                    }
                 }
             }
 
-            if (seg->DLEN) {
+            /* If we got NUL segment, send ACK without delay */
+            if (seg->FLG & ARDP_FLAG_NUL) {
+                QCC_DbgPrintf(("ArdpMachine(): OPEN: got NUL, send LCS %u", conn->rcv.LCS));
+#if ARDP_STATS
+                ++handle->stats.nulRecvs;
+#endif
+                status = Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->snd.NXT, conn->rcv.CUR);
+                if (status == ER_OK && conn->ackTimer.retry != 0) {
+                    UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
+                    conn->rcv.ackPending = 0;
+                } else if (status == ER_WOULDBLOCK) {
+                    UpdateTimer(handle, conn, &conn->ackTimer, 0, 1);
+                }
+
+            } else if (seg->DLEN) {
                 QCC_DbgPrintf(("ArdpMachine(): OPEN: Got %d bytes of Data with SEQ %u, rcv.CUR = %u).", seg->DLEN, seg->SEQ, conn->rcv.CUR));
                 status = ER_OK;
                 /*
