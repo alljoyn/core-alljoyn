@@ -126,6 +126,51 @@ class AboutObj : public BusObject {
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
 
     /**
+     * check that the MsgArg returned from AboutDataListener.GetAboutData
+     * contains all the required fields
+     * Fields are:
+     *  - AppId
+     *  - DefaultLanguage
+     *  - DeviceId
+     *  - AppName
+     *  - Manufacture
+     *  - ModelNumber
+     *  - SupportedLanguages
+     *  - Description
+     *  - SoftwareVersion
+     *  - AJSoftwareVersion
+     *
+     *  @param adl   the AboutDataListener that we want to check the AboutData
+     *
+     *  return true if it contains all the required fields
+     */
+    bool HasAllRequiredFields(AboutDataListener& adl);
+
+    /**
+     *
+     * check that the MsgArg returned from AboutDataListener.GetAnnouncedAboutData
+     * contains all the required fields
+     * Fields are:
+     *  - AppId
+     *  - DefaultLanguage
+     *  - DeviceId
+     *  - AppName
+     *  - Manufacture
+     *  - ModelNumber
+     *
+     *  @param adl   the AboutDataListener that we want to check the AboutData
+     *
+     *  return true if it contains all the required fields
+     */
+    bool HasAllAnnouncedFields(AboutDataListener& adl);
+
+    /**
+     * Check that the values in the Announced Fields and the Requried Fields
+     * agree.
+     */
+    bool AnnouncedDataAgreesWithAboutData(AboutDataListener& adl);
+
+    /**
      *  pointer to BusAttachment
      */
     BusAttachment* m_busAttachment;

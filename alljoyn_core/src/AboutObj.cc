@@ -69,23 +69,14 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
 
     m_aboutDataListener = &aboutData;
 
-    // ASACORE-1006 check the AboutData to make sure it has all the required fields.
-    // if it does not have the required fields return
-    // ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD note not all required fields are
-    // announced for that reason we Get the AboutData MsgArg for the default language
-    // not the announced AboutData. If the GetAboutData is an instance of the
-    // C++ AboutData class then this will return
-    // ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD other wise we create a C++
-    // AboutData class and call IsValid to check that the AboutData contains
-    // all the required data fields.
-    MsgArg aboutDataArg;
-    status = m_aboutDataListener->GetAboutData(&aboutDataArg, NULL);
-    if (ER_OK != status) {
-        return status;
-    }
-    AboutData aData(aboutDataArg);
-    if (aData.IsValid() == false) {
+    if (!HasAllRequiredFields(*m_aboutDataListener)) {
         return ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD;
+    }
+    if (!HasAllAnnouncedFields(*m_aboutDataListener)) {
+        return ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD;
+    }
+    if (!AnnouncedDataAgreesWithAboutData(*m_aboutDataListener)) {
+        return ER_ABOUT_INVALID_ABOUT_DATA_LISTENER;
     }
 
     m_busAttachment->GetInternal().GetAnnouncedObjectDescription(m_objectDescription);
@@ -187,4 +178,220 @@ QStatus AboutObj::Get(const char*ifcName, const char*propName, MsgArg& val) {
     return status;
 }
 
+bool AboutObj::HasAllRequiredFields(AboutDataListener& adl)
+{
+    //Required Fields are:
+    // AppId
+    // DefaultLanguage
+    // DeviceId
+    // AppName
+    // Manufacture
+    // ModelNumber
+    // SupportedLanguages
+    // Description
+    // SoftwareVersion
+    // AJSoftwareVersion
+    QStatus status = ER_FAIL;
+    MsgArg aboutDataArg;
+    status = adl.GetAboutData(&aboutDataArg, NULL);
+    if (ER_OK != status) {
+        return false;
+    }
+    if (aboutDataArg.Signature().compare("a{sv}") != 0) {
+        return false;
+    }
+    MsgArg* field;
+    status = aboutDataArg.GetElement("{sv}", AboutData::APP_ID, &field);
+    if (ER_OK != status || field->Signature().compare("ay") != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::APP_ID));
+        return false;
+    }
+    status = aboutDataArg.GetElement("{sv}", AboutData::DEFAULT_LANGUAGE, &field);
+    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::DEFAULT_LANGUAGE));
+        return false;
+    }
+    status = aboutDataArg.GetElement("{sv}", AboutData::DEVICE_ID, &field);
+    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::DEVICE_ID));
+        return false;
+    }
+    status = aboutDataArg.GetElement("{sv}", AboutData::APP_NAME, &field);
+    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::APP_NAME));
+        return false;
+    }
+    status = aboutDataArg.GetElement("{sv}", AboutData::MANUFACTURER, &field);
+    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::MANUFACTURER));
+        return false;
+    }
+    status = aboutDataArg.GetElement("{sv}", AboutData::MODEL_NUMBER, &field);
+    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::MODEL_NUMBER));
+        return false;
+    }
+    status = aboutDataArg.GetElement("{sv}", AboutData::SUPPORTED_LANGUAGES, &field);
+    if (ER_OK != status || field->Signature().compare("as") != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::SUPPORTED_LANGUAGES));
+        return false;
+    }
+    status = aboutDataArg.GetElement("{sv}", AboutData::DESCRIPTION, &field);
+    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::DESCRIPTION));
+        return false;
+    }
+    status = aboutDataArg.GetElement("{sv}", AboutData::SOFTWARE_VERSION, &field);
+    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::SOFTWARE_VERSION));
+        return false;
+    }
+    status = aboutDataArg.GetElement("{sv}", AboutData::AJ_SOFTWARE_VERSION, &field);
+    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::AJ_SOFTWARE_VERSION));
+        return false;
+    }
+    return true;
+}
+
+bool AboutObj::HasAllAnnouncedFields(AboutDataListener& adl)
+{
+    //Announced Fields are:
+    // AppId
+    // DefaultLanguage
+    // DeviceId
+    // AppName
+    // Manufacture
+    // ModelNumber
+    QStatus status = ER_FAIL;
+    MsgArg announcedDataArg;
+    status = adl.GetAnnouncedAboutData(&announcedDataArg);
+    if (ER_OK != status) {
+        return false;
+    }
+    if (announcedDataArg.Signature().compare("a{sv}") != 0) {
+        return false;
+    }
+    MsgArg* field;
+    status = announcedDataArg.GetElement("{sv}", AboutData::APP_ID, &field);
+    if (ER_OK != status || field->Signature().compare("ay") != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::APP_ID));
+        return false;
+    }
+    status = announcedDataArg.GetElement("{sv}", AboutData::DEFAULT_LANGUAGE, &field);
+    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::DEFAULT_LANGUAGE));
+        return false;
+    }
+    status = announcedDataArg.GetElement("{sv}", AboutData::DEVICE_ID, &field);
+    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::DEVICE_ID));
+        return false;
+    }
+    status = announcedDataArg.GetElement("{sv}", AboutData::APP_NAME, &field);
+    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::APP_NAME));
+        return false;
+    }
+    status = announcedDataArg.GetElement("{sv}", AboutData::MANUFACTURER, &field);
+    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::MANUFACTURER));
+        return false;
+    }
+    status = announcedDataArg.GetElement("{sv}", AboutData::MODEL_NUMBER, &field);
+    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+        QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::MODEL_NUMBER));
+        return false;
+    }
+    return true;
+}
+
+bool AboutObj::AnnouncedDataAgreesWithAboutData(AboutDataListener& adl)
+{
+    // This code makes some assumptions that the member functions
+    // HasAllRequiredFields, and HasAllAnnouncedFields have alread been run
+    // and they both return true. Because of this assumption we don't check the
+    // return values from the MsgArg.GetElement methods
+
+    //Announced Fields are:
+    // AppId
+    // DefaultLanguage
+    // DeviceId
+    // AppName
+    // Manufacture
+    // ModelNumber
+    // DeviceName (optional)
+    QStatus status = ER_FAIL;
+    MsgArg aboutDataArg;
+    status = adl.GetAboutData(&aboutDataArg, NULL);
+    if (ER_OK != status) {
+        return false;
+    }
+    if (aboutDataArg.Signature().compare("a{sv}") != 0) {
+        return false;
+    }
+
+    MsgArg announcedDataArg;
+    status = adl.GetAnnouncedAboutData(&announcedDataArg);
+    if (ER_OK != status) {
+        return false;
+    }
+    if (announcedDataArg.Signature().compare("a{sv}") != 0) {
+        return false;
+    }
+
+    MsgArg* field;
+    MsgArg* afield;
+    aboutDataArg.GetElement("{sv}", AboutData::APP_ID, &field);
+    announcedDataArg.GetElement("{sv}", AboutData::APP_ID, &afield);
+    if (*field != *afield) {
+        QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::APP_ID));
+        return false;
+    }
+    aboutDataArg.GetElement("{sv}", AboutData::DEFAULT_LANGUAGE, &field);
+    announcedDataArg.GetElement("{sv}", AboutData::DEFAULT_LANGUAGE, &afield);
+    if (*field != *afield) {
+        QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::DEFAULT_LANGUAGE));
+        return false;
+    }
+    aboutDataArg.GetElement("{sv}", AboutData::DEVICE_ID, &field);
+    announcedDataArg.GetElement("{sv}", AboutData::DEVICE_ID, &afield);
+    if (*field != *afield) {
+        QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::DEVICE_ID));
+        return false;
+    }
+    aboutDataArg.GetElement("{sv}", AboutData::APP_NAME, &field);
+    announcedDataArg.GetElement("{sv}", AboutData::APP_NAME, &afield);
+    if (*field != *afield) {
+        QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::APP_NAME));
+        return false;
+    }
+
+    aboutDataArg.GetElement("{sv}", AboutData::MANUFACTURER, &field);
+    announcedDataArg.GetElement("{sv}", AboutData::MANUFACTURER, &afield);
+    if (*field != *afield) {
+        QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::MANUFACTURER));
+        return false;
+    }
+    aboutDataArg.GetElement("{sv}", AboutData::MODEL_NUMBER, &field);
+    announcedDataArg.GetElement("{sv}", AboutData::MODEL_NUMBER, &afield);
+    if (*field != *afield) {
+        QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::MODEL_NUMBER));
+        return false;
+    }
+
+    status = aboutDataArg.GetElement("{sv}", AboutData::DEVICE_NAME, &field);
+    QStatus astatus = announcedDataArg.GetElement("{sv}", AboutData::DEVICE_NAME, &afield);
+    if (status == ER_OK && astatus == ER_OK) {
+        if (*field != *afield) {
+            QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::DEVICE_NAME));
+            return false;
+        }
+        // DEVICE_NAME is optional so if is not found we are still good
+    } else if (!(status == ER_BUS_ELEMENT_NOT_FOUND && astatus == ER_BUS_ELEMENT_NOT_FOUND)) {
+        QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::DEVICE_NAME));
+        return false;
+    }
+    return true;
+}
 } //endnamespace
