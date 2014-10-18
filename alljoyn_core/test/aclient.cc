@@ -36,6 +36,54 @@ static void SigIntHandler(int sig) {
 
 BusAttachment* g_bus;
 
+// Print out the fields found in the AboutData. Only fields with known signatures
+// are printed out.  All others will be treated as an unknown field.
+void printAboutData(AboutData& aboutData, const char* language, int tabNum)
+{
+    size_t count = aboutData.GetFields();
+    // The 8 fields set above + 3 implicitly created fields: AJSoftwareVersion,
+    // SupportedLanguages, and DefaultLanguage.
+
+    const char** fields = new const char*[count];
+    aboutData.GetFields(fields, count);
+
+    for (size_t i = 0; i < count; ++i) {
+        for (int j = 0; j < tabNum; ++j) {
+            printf("\t");
+        }
+        printf("Key: %s", fields[i]);
+
+        MsgArg* tmp;
+        aboutData.GetField(fields[i], tmp, language);
+        printf("\t");
+        if (tmp->Signature() == "s") {
+            const char* tmp_s;
+            tmp->Get("s", &tmp_s);
+            printf("%s", tmp_s);
+        } else if (tmp->Signature() == "as") {
+            size_t las;
+            MsgArg* as_arg;
+            tmp->Get("as", &las, &as_arg);
+            for (size_t j = 0; j < las; ++j) {
+                const char* tmp_s;
+                as_arg[j].Get("s", &tmp_s);
+                printf("%s ", tmp_s);
+            }
+        } else if (tmp->Signature() == "ay") {
+            size_t lay;
+            uint8_t* pay;
+            tmp->Get("ay", &lay, &pay);
+            for (size_t j = 0; j < lay; ++j) {
+                printf("%02x ", pay[j]);
+            }
+        } else {
+            printf("User Defined Value\tSignature: %s", tmp->Signature().c_str());
+        }
+        printf("\n");
+    }
+    delete [] fields;
+}
+
 class AboutThread : public Thread, public ThreadListener {
   public:
     static AboutThread* Launch(const char* busName, SessionPort port)
@@ -79,15 +127,53 @@ class AboutThread : public Thread, public ThreadListener {
 
             if (status == ER_OK) {
                 printf("*********************************************************************************\n");
-                printf("AboutProxy.GetObjectDescription:\n%s\n", objArg.ToString().c_str());
+                printf("AboutProxy.GetObjectDescription:\n");
+                AboutObjectDescription aod(objArg);
+                size_t path_num = aod.GetPaths(NULL, 0);
+                const char** paths = new const char*[path_num];
+                aod.GetPaths(paths, path_num);
+                for (size_t i = 0; i < path_num; ++i) {
+                    printf("\t%s\n", paths[i]);
+                    size_t intf_num = aod.GetInterfaces(paths[i], NULL, 0);
+                    const char** intfs = new const char*[intf_num];
+                    aod.GetInterfaces(paths[i], intfs, intf_num);
+                    for (size_t j = 0; j < intf_num; ++j) {
+                        printf("\t\t%s\n", intfs[j]);
+                    }
+                    delete [] intfs;
+                }
+                delete [] paths;
                 printf("*********************************************************************************\n");
 
                 MsgArg aArg;
-                status = aboutProxy.GetAboutData("en", aArg);
-
+                status = aboutProxy.GetAboutData(NULL, aArg);
                 if (status == ER_OK) {
                     printf("*********************************************************************************\n");
-                    printf("AboutProxy.GetAboutData:\n%s\n", aArg.ToString().c_str());
+                    printf("AboutProxy.GetAboutData: (Default Language)\n");
+                    AboutData aboutData(aArg);
+                    printAboutData(aboutData, NULL, 1);
+                    size_t lang_num;
+                    lang_num = aboutData.GetSupportedLanguages();
+                    // If the lang_num == 1 we only have a default language
+                    if (lang_num > 1) {
+                        qcc::String* langs = new qcc::String[lang_num];
+                        aboutData.GetSupportedLanguages(langs, lang_num);
+                        char* defaultLanguage;
+                        aboutData.GetDefaultLanguage(&defaultLanguage);
+                        // print out the AboutData for every language but the
+                        // default it has already been printed.
+                        for (size_t i = 0; i < lang_num; ++i) {
+                            if (strcmp(defaultLanguage, langs[i].c_str()) != 0) {
+                                status = aboutProxy.GetAboutData(langs[i].c_str(), aArg);
+                                if (ER_OK == status) {
+                                    aboutData.CreatefromMsgArg(aArg, langs[i].c_str());
+                                    printf("AboutProxy.GetAboutData: (%s)\n", langs[i].c_str());
+                                    printAboutData(aboutData, langs[i].c_str(), 1);
+                                }
+                            }
+                        }
+                        delete [] langs;
+                    }
                     printf("*********************************************************************************\n");
 
                     uint16_t ver;
@@ -128,7 +214,26 @@ class MyAboutListener : public AboutListener {
         printf("\tFrom bus %s\n", busName);
         printf("\tAbout version %hu\n", version);
         printf("\tSessionPort %hu\n", port);
+        printf("\tAnnounced ObjectDescription:\n");
+        AboutObjectDescription aod(objectDescriptionArg);
+        size_t path_num = aod.GetPaths(NULL, 0);
+        const char** paths = new const char*[path_num];
+        aod.GetPaths(paths, path_num);
+        for (size_t i = 0; i < path_num; ++i) {
+            printf("\t\t%s\n", paths[i]);
+            size_t intf_num = aod.GetInterfaces(paths[i], NULL, 0);
+            const char** intfs = new const char*[intf_num];
+            aod.GetInterfaces(paths[i], intfs, intf_num);
+            for (size_t j = 0; j < intf_num; ++j) {
+                printf("\t\t\t%s\n", intfs[j]);
+            }
+            delete [] intfs;
+        }
+        delete [] paths;
 
+        printf("\tAnnounced AboutData:\n");
+        AboutData aboutData(aboutDataArg);
+        printAboutData(aboutData, NULL, 2);
         printf("*********************************************************************************\n");
 
         if (g_bus != NULL) {
@@ -171,7 +276,7 @@ int main(int argc, char** argv)
     MyAboutListener aboutListener;
     bus.RegisterAboutListener(aboutListener);
 
-    const char* interfaces[] = { "org.alljoyn.test" };
+    const char* interfaces[] = { "org.alljoyn.About", "org.alljoyn.Icon" };
     status = bus.WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
     if (ER_OK == status) {
         printf("WhoImplements called.\n");
