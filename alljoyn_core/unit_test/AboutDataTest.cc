@@ -1041,6 +1041,8 @@ TEST(AboutData, InitUsingMsgArg)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("888-555-1234", supportNumber);
 
+    size_t number_languages = aboutDataInit.GetSupportedLanguages();
+    EXPECT_EQ(2u, number_languages);
     //TODO complete the test for language and other required
 }
 
@@ -1310,6 +1312,62 @@ TEST(AboutData, SetNewField) {
     char* testFieldabc;
     args->Get("s", &testFieldabc);
     EXPECT_STREQ("Mary had a little lamb.", testFieldabc);
+}
+
+bool hasField(const char** fields, size_t count, const char* fieldName) {
+    for (size_t i = 0; i < count; ++i) {
+        if (strcmp(fieldName, fields[i]) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+TEST(AboutData, GetFields) {
+    QStatus status = ER_FAIL;
+    AboutDataTestAboutData aboutData("en");
+
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
+    status = aboutData.SetAppId(appId, 6);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = aboutData.SetDeviceId("fakeID");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = aboutData.SetAppName("Application");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = aboutData.SetManufacturer("Manufacturer");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = aboutData.SetModelNumber("123456");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = aboutData.SetDescription("A poetic description of this application");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = aboutData.SetSoftwareVersion("0.1.2");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_FALSE(aboutData.IsValid());
+    status = aboutData.SetTestFieldABC("Mary had a little lamb.");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    EXPECT_TRUE(aboutData.IsValid());
+
+    size_t count = aboutData.GetFields();
+    // The 8 fields set above + 3 implicitly created fields: AJSoftwareVersion,
+    // SupportedLanguages, and DefaultLanguage.
+    EXPECT_EQ(11u, count);
+
+    const char** fields = new const char*[count];
+    EXPECT_EQ(count, aboutData.GetFields(fields, count));
+
+    EXPECT_TRUE(hasField(fields, count, "AJSoftwareVersion"));
+    EXPECT_TRUE(hasField(fields, count, "AppId"));
+    EXPECT_TRUE(hasField(fields, count, "DefaultLanguage"));
+    EXPECT_TRUE(hasField(fields, count, "DeviceId"));
+    EXPECT_TRUE(hasField(fields, count, "ModelNumber"));
+    EXPECT_TRUE(hasField(fields, count, "SoftwareVersion"));
+    EXPECT_TRUE(hasField(fields, count, "SupportedLanguages"));
+    EXPECT_TRUE(hasField(fields, count, "TestFieldABC"));
+    EXPECT_TRUE(hasField(fields, count, "AppName"));
+    EXPECT_TRUE(hasField(fields, count, "Description"));
+    EXPECT_TRUE(hasField(fields, count, "Manufacturer"));
+
+    delete [] fields;
 }
 
 //TEST(AboutData, SetSupportUrlEmpty) {

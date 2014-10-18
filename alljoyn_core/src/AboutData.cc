@@ -72,12 +72,12 @@ AboutData::AboutData(const char* defaultLanguage) {
     //TODO should the constructor also set the DeviceID as well?
 }
 
-AboutData::AboutData(const MsgArg arg) {
+AboutData::AboutData(const MsgArg arg, const char* language) {
     InitializeFieldDetails();
 
-    QStatus status = CreatefromMsgArg(arg);
+    QStatus status = CreatefromMsgArg(arg, language);
     if (ER_OK != status) {
-        QCC_LogError(status, ("AboutData::AboutData(MsgARg): failed to parse MsgArg."));
+        QCC_LogError(status, ("AboutData::AboutData(MsgArg): failed to parse MsgArg."));
     }
 }
 
@@ -316,6 +316,19 @@ QStatus AboutData::CreatefromMsgArg(const MsgArg& arg, const char* language)
 
         } else {
             aboutDataInternal->propertyStore[fieldName] = *fieldValue;
+            //Since the GetSupportedLanguages function looks at the member
+            // variable m_supportedLanguages we must set up the make sure
+            // the member function is filled in.
+            if (strcmp(SUPPORTED_LANGUAGES, fieldName) == 0) {
+                size_t language_count;
+                MsgArg* languagesArg;
+                fieldValue->Get(this->GetFieldSignature(SUPPORTED_LANGUAGES), &language_count, &languagesArg);
+                for (size_t i = 0; i < language_count; ++i) {
+                    char* lang;
+                    languagesArg[i].Get("s", &lang);
+                    aboutDataInternal->supportedLanguages.insert(lang);
+                }
+            }
         }
     }
     return status;
@@ -714,6 +727,29 @@ QStatus AboutData::GetField(const char* name, ajn::MsgArg*& value, const char* l
         }
     }
     return status;
+}
+
+size_t AboutData::GetFields(const char** fields, size_t num_fields) const
+{
+    if (fields == NULL) {
+        return (aboutDataInternal->propertyStore.size() + aboutDataInternal->localizedPropertyStore.size());
+    }
+    size_t field_count = 0;
+    std::map<qcc::String, MsgArg>::const_iterator pstore_it;
+    for (pstore_it = aboutDataInternal->propertyStore.begin();
+         (pstore_it != aboutDataInternal->propertyStore.end()) && (field_count < num_fields);
+         ++pstore_it) {
+        fields[field_count] = pstore_it->first.c_str();
+        ++field_count;
+    }
+    std::map<qcc::String, std::map<qcc::String, MsgArg> >::const_iterator lpstore_it;
+    for (lpstore_it = aboutDataInternal->localizedPropertyStore.begin();
+         (lpstore_it != aboutDataInternal->localizedPropertyStore.end()) && (field_count < num_fields);
+         ++lpstore_it) {
+        fields[field_count] = lpstore_it->first.c_str();
+        ++field_count;
+    }
+    return field_count;
 }
 
 QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
