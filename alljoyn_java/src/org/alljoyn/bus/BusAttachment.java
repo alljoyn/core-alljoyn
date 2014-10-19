@@ -184,6 +184,7 @@ public class BusAttachment {
      * <ul>
      * <li>OK if the name advertisements were stopped.</li>
      * <li>BUS_NOT_CONNECTED if a connection has not been made with a local bus</li>
+     * <li>BUS_MATCH_RULE_NOT_FOUND if interfaces added using the WhoImplements method were not found.</li>
      * <li>other error status codes indicating a failure.</li>
      * </ul>
      */

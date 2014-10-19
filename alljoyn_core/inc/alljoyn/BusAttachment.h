@@ -1379,6 +1379,8 @@ class BusAttachment : public MessageReceiver {
      *               implementsInterfaces list
      * @return
      *    - #ER_OK on success
+     *    - #ER_BUS_MATCH_RULE_NOT_FOUND if interfaces added using the WhoImplements
+     *                                   member function were not found.
      *    - An error status otherwise
      */
     QStatus CancelWhoImplements(const char** implementsInterfaces, size_t numberInterfaces);
@@ -1396,6 +1398,8 @@ class BusAttachment : public MessageReceiver {
      *
      * @return
      *    - #ER_OK on success
+     *    - #ER_BUS_MATCH_RULE_NOT_FOUND if interface added using the WhoImplements
+     *                                   member function were not found.
      *    - An error status otherwise
      */
     QStatus CancelWhoImplements(const char* interface);
