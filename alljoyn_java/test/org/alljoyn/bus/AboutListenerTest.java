@@ -1076,50 +1076,16 @@ public class AboutListenerTest  extends TestCase {
         clientBus.release();
     }
     /*
-     * Negative test
+     * Negative test ASACORE-1020
      *  ASACORE-1020 cancelWhoImplements mismatch whoImplements
      */
-    public synchronized void CancelImplementsMisMatch() {
-        Intfabc intfabc = new Intfabc();
-        assertEquals(Status.OK, serviceBus.registerBusObject(intfabc, "/about/test"));
-
+    public synchronized void testCancelImplementsMisMatch() {
         BusAttachment clientBus = new BusAttachment("AboutListenerTestClient", RemoteMessage.Receive);
         assertEquals(Status.OK, clientBus.connect());
 
-        AboutListenerTestAboutListener aListener = new AboutListenerTestAboutListener();
-        aListener.announcedFlag = false;
-        clientBus.registerAboutListener(aListener);
         assertEquals(Status.OK, clientBus.whoImplements(new String[] {"com.example.test.AboutListenerTest.*"}));
 
-        AboutObj aboutObj = new AboutObj(serviceBus);
-        AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
-        assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
-
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
-        }
-
-        assertTrue(aListener.announcedFlag);
-
-        boolean aboutPathFound = false;
-        boolean aboutInterfaceFound = false;
-        assertEquals(PORT_NUMBER, aListener.port);
-        for (AboutObjectDescription aod : aListener.aod) {
-            if (aod.path.equals("/about/test")) {
-                aboutPathFound = true;
-                for (String s : aod.interfaces) {
-                    if (s.contains("com.example.test.AboutListenerTest")) {
-                        aboutInterfaceFound = true;
-                    }
-                }
-            }
-        }
-        assertTrue(aboutPathFound);
-        assertTrue(aboutInterfaceFound);
-
-        assertEquals(Status.OK, clientBus.cancelWhoImplements(new String[] {"com.example.test.AboutListenerTest.a"}));
+        assertEquals(Status.BUS_MATCH_RULE_NOT_FOUND, clientBus.cancelWhoImplements(new String[] {"com.example.test.AboutListenerTest.a"}));
         clientBus.disconnect();
         clientBus.release();
     }

@@ -1033,6 +1033,9 @@ QStatus BusAttachment::RemoveMatch(const char* rule)
     QStatus status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "RemoveMatch", args, numArgs, reply);
     if (ER_OK != status) {
         QCC_LogError(status, ("%s.RemoveMatch returned ERROR_MESSAGE (error=%s)", org::freedesktop::DBus::InterfaceName, reply->GetErrorDescription().c_str()));
+        if (strcmp(reply->GetErrorName(), "org.freedesktop.DBus.Error.MatchRuleNotFound") == 0) {
+            status = ER_BUS_MATCH_RULE_NOT_FOUND;
+        }
     }
     return status;
 }

@@ -1520,3 +1520,28 @@ TEST_F(AboutListenerTest, StressInterfaces) {
     status = clientBus.Join();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
+
+TEST_F(AboutListenerTest, CancelWhoImplementsMisMatch) {
+    QStatus status;
+    announceListenerFlag = false;
+
+    qcc::GUID128 guid;
+    qcc::String ifaceName = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest.a";
+
+    // receive
+    BusAttachment clientBus("Receive Announcement client Test", true);
+    status = clientBus.Start();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Connect();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.CancelWhoImplements(ifaceName.c_str());
+    EXPECT_EQ(ER_BUS_MATCH_RULE_NOT_FOUND, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Stop();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Join();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+}
