@@ -5107,7 +5107,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_cancelWhoImplements
     int len = (jinterfaces != NULL) ? env->GetArrayLength(jinterfaces) : 0;
     if (0 == len) {
         // both null and size zero interfaces are used the same.
-        status = busPtr->WhoImplements(NULL, 0);
+        status = busPtr->CancelWhoImplements(NULL, 0);
     } else {
         const char** rawIntfString = new const char*[len];
         memset(rawIntfString, 0, len * sizeof(const char*));
@@ -5127,7 +5127,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_cancelWhoImplements
                 goto cleanup;
             }
         }
-        status = busPtr->WhoImplements(rawIntfString, len);
+        status = busPtr->CancelWhoImplements(rawIntfString, len);
     cleanup:
         for (int i = 0; i < len; ++i) {
             if (jintfs[i] && rawIntfString[i]) {
