@@ -796,12 +796,29 @@ const ProxyBusObject& BusAttachment::GetAllJoynDebugObj()
     return busInternal->localEndpoint->GetAllJoynDebugObj();
 }
 
+QStatus BusAttachment::RegisterSignalHandlerWithRule(MessageReceiver* receiver,
+                                                     MessageReceiver::SignalHandler signalHandler,
+                                                     const InterfaceDescription::Member* member,
+                                                     const char* matchRule)
+{
+    return busInternal->localEndpoint->RegisterSignalHandler(receiver, signalHandler, member, matchRule);
+}
+
 QStatus BusAttachment::RegisterSignalHandler(MessageReceiver* receiver,
                                              MessageReceiver::SignalHandler signalHandler,
                                              const InterfaceDescription::Member* member,
                                              const char* srcPath)
 {
-    return busInternal->localEndpoint->RegisterSignalHandler(receiver, signalHandler, member, srcPath);
+    if (!member) {
+        return ER_BAD_ARG_3;
+    }
+
+    qcc::String matchRule("type='signal',member='");
+    matchRule += String(member->name) + "',interface='" + member->iface->GetName() + "'";
+    if (srcPath) {
+        matchRule += String(",path='") + srcPath + "'";
+    }
+    return RegisterSignalHandlerWithRule(receiver, signalHandler, member, matchRule.c_str());
 }
 
 QStatus BusAttachment::UnregisterSignalHandler(MessageReceiver* receiver,
@@ -809,7 +826,24 @@ QStatus BusAttachment::UnregisterSignalHandler(MessageReceiver* receiver,
                                                const InterfaceDescription::Member* member,
                                                const char* srcPath)
 {
-    return busInternal->localEndpoint->UnregisterSignalHandler(receiver, signalHandler, member, srcPath);
+    if (!member) {
+        return ER_BAD_ARG_3;
+    }
+
+    qcc::String matchRule("type='signal',member='");
+    matchRule += String(member->name) + "',interface='" + member->iface->GetName() + "'";
+    if (srcPath) {
+        matchRule += String(",path='") + srcPath + "'";
+    }
+    return UnregisterSignalHandlerWithRule(receiver, signalHandler, member, matchRule.c_str());
+}
+
+QStatus BusAttachment::UnregisterSignalHandlerWithRule(MessageReceiver* receiver,
+                                                       MessageReceiver::SignalHandler signalHandler,
+                                                       const InterfaceDescription::Member* member,
+                                                       const char* matchRule)
+{
+    return busInternal->localEndpoint->UnregisterSignalHandler(receiver, signalHandler, member, matchRule);
 }
 
 QStatus BusAttachment::UnregisterAllHandlers(MessageReceiver* receiver)

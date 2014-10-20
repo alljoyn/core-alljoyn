@@ -265,6 +265,21 @@ class PathReceiver : public SignalReceiver {
     }
 };
 
+class RuleReceiver : public SignalReceiver {
+    qcc::String matchRule;
+  public:
+    RuleReceiver(const char* rule) : SignalReceiver(), matchRule(rule) { }
+    virtual ~RuleReceiver() { }
+
+    virtual void RegisterSignalHandler(const InterfaceDescription::Member* member) {
+        QStatus status = participant->bus.RegisterSignalHandlerWithRule(this,
+                                                                        static_cast<MessageReceiver::SignalHandler>(&RuleReceiver::SignalHandler),
+                                                                        member,
+                                                                        matchRule.c_str());
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    }
+};
+
 class SignalTest : public testing::Test {
   public:
     virtual void SetUp() { }
@@ -472,29 +487,6 @@ TEST_F(SignalTest, MultiPointSimple)
     C.LeaveSession(A, true);
 }
 
-TEST_F(SignalTest, Paths) {
-    Participant A("A.A");
-    Participant B("B.B");
-    PathReceiver recvAy("/signals/test");
-    PathReceiver recvAn("/not/right");
-    PathReceiver recvBy("/signals/test");
-    PathReceiver recvBn("/not/right");
-    recvAy.Register(&A);
-    recvAn.Register(&A);
-    recvBy.Register(&B);
-    recvBn.Register(&B);
-
-    B.JoinSession(A, false);
-    A.busobj->SendSignal(NULL, B.GetJoinedSessionId(A, false), 0);
-    B.busobj->SendSignal(NULL, B.GetJoinedSessionId(A, false), 0);
-    wait_for_signal();
-    recvAy.verify_recv();
-    recvBy.verify_recv();
-    recvAn.verify_norecv();
-    recvBn.verify_norecv();
-    B.LeaveSession(A, false);
-}
-
 TEST_F(SignalTest, Point2PointComplex) {
     Participant A("A.A");
     Participant B("B.B");
@@ -562,4 +554,48 @@ TEST_F(SignalTest, MultiSession) {
     /* verify B did not received the signal */
     recvA.verify_norecv();
     recvB.verify_norecv();
+}
+
+TEST_F(SignalTest, Paths) {
+    Participant A("A.A");
+    Participant B("B.B");
+    PathReceiver recvAy("/signals/test");
+    PathReceiver recvAn("/not/right");
+    PathReceiver recvBy("/signals/test");
+    PathReceiver recvBn("/not/right");
+    recvAy.Register(&A);
+    recvAn.Register(&A);
+    recvBy.Register(&B);
+    recvBn.Register(&B);
+
+    B.JoinSession(A, false);
+    A.busobj->SendSignal(NULL, B.GetJoinedSessionId(A, false), 0);
+    B.busobj->SendSignal(NULL, B.GetJoinedSessionId(A, false), 0);
+    wait_for_signal();
+    recvAy.verify_recv();
+    recvBy.verify_recv();
+    recvAn.verify_norecv();
+    recvBn.verify_norecv();
+}
+
+TEST_F(SignalTest, Rules) {
+    Participant A("A.A");
+    Participant B("B.B");
+    RuleReceiver recvAy("type='signal'");
+    RuleReceiver recvAn("type='signal',member='nonexistent'");
+    RuleReceiver recvBy("type='signal'");
+    RuleReceiver recvBn("type='signal',member='nonexistent'");
+    recvAy.Register(&A);
+    recvAn.Register(&A);
+    recvBy.Register(&B);
+    recvBn.Register(&B);
+
+    B.JoinSession(A, false);
+    A.busobj->SendSignal(NULL, B.GetJoinedSessionId(A, false), 0);
+    B.busobj->SendSignal(NULL, B.GetJoinedSessionId(A, false), 0);
+    wait_for_signal();
+    recvAy.verify_recv();
+    recvBy.verify_recv();
+    recvAn.verify_norecv();
+    recvBn.verify_norecv();
 }
