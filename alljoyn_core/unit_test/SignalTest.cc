@@ -61,13 +61,7 @@ class TestObject : public BusObject {
     BusAttachment& bus;
 };
 
-class AlwaysAcceptSessionPortListener : public SessionPortListener {
-  public:
-    virtual ~AlwaysAcceptSessionPortListener() { }
-    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
-};
-
-class Participant : public MessageReceiver  {
+class Participant : public SessionPortListener, public SessionListener {
   public:
     SessionPort port;
     SessionPort mpport;
@@ -76,21 +70,16 @@ class Participant : public MessageReceiver  {
     BusAttachment bus;
     TestObject* busobj;
 
-    AlwaysAcceptSessionPortListener spl;
-    AlwaysAcceptSessionPortListener mpspl;
-
     SessionOpts opts;
     SessionOpts mpopts;
 
-    int signalReceived;
-
-    std::map<std::pair<qcc::String, bool>, SessionId> sessionMap;
+    std::map<std::pair<qcc::String, bool>, SessionId> hostedSessionMap;
+    std::map<std::pair<qcc::String, bool>, SessionId> joinedSessionMap;
 
     Participant(const char* name) : port(42), mpport(84), name(name), bus(name),
         opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY),
         mpopts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY)
     {
-        signalReceived = 0;
         Init();
     }
 
@@ -100,8 +89,8 @@ class Participant : public MessageReceiver  {
         ASSERT_EQ(ER_OK, bus.Start());
         ASSERT_EQ(ER_OK, bus.Connect(getConnectArg().c_str()));
 
-        ASSERT_EQ(ER_OK, bus.BindSessionPort(port, opts, spl));
-        ASSERT_EQ(ER_OK, bus.BindSessionPort(mpport, mpopts, mpspl));
+        ASSERT_EQ(ER_OK, bus.BindSessionPort(port, opts, *this));
+        ASSERT_EQ(ER_OK, bus.BindSessionPort(mpport, mpopts, *this));
 
         ASSERT_EQ(ER_OK, bus.RequestName(name, DBUS_NAME_FLAG_DO_NOT_QUEUE));
         ASSERT_EQ(ER_OK, bus.AdvertiseName(name, TRANSPORT_ANY));
@@ -114,13 +103,6 @@ class Participant : public MessageReceiver  {
         status = servicetestIntf->AddSignal("my_signal", "s", NULL, 0);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         servicetestIntf->Activate();
-        const InterfaceDescription::Member* signal_member = servicetestIntf->GetMember("my_signal");
-
-        status = bus.RegisterSignalHandler(this,
-                                           static_cast<MessageReceiver::SignalHandler>(&Participant::SignalHandler),
-                                           signal_member,
-                                           NULL);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
         /* create bus object */
         busobj = new TestObject(bus);
@@ -139,8 +121,22 @@ class Participant : public MessageReceiver  {
         ASSERT_EQ(ER_OK, bus.Join());
     }
 
-    void SignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg) {
-        signalReceived++;
+    virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
+    virtual void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
+        hostedSessionMap[std::make_pair(qcc::String(joiner), (sessionPort == mpport))] = id;
+        bus.SetSessionListener(id, this);
+    }
+    virtual void SessionLost(SessionId sessionId, SessionLostReason reason) {
+        /* we only set a session listener on the hosted sessions */
+        std::map<std::pair<qcc::String, bool>, SessionId>::iterator iter = hostedSessionMap.begin();
+        while (iter != hostedSessionMap.end()) {
+            if (iter->second == sessionId) {
+                hostedSessionMap.erase(iter);
+                iter = hostedSessionMap.begin();
+            } else {
+                ++iter;
+            }
+        }
     }
 
     void AddMatch() {
@@ -153,24 +149,103 @@ class Participant : public MessageReceiver  {
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     }
 
-    void JoinSession(const char* name, bool multipoint) {
+    void JoinSession(Participant& part, bool multipoint) {
         SessionId outIdA;
         SessionOpts outOptsA;
         SessionPort p = multipoint ? mpport : port;
-        ASSERT_EQ(ER_OK, bus.JoinSession(name, p, NULL, outIdA, multipoint ? mpopts : opts));
-        sessionMap[std::make_pair(qcc::String(name), multipoint)] = outIdA;
+        ASSERT_EQ(ER_OK, bus.JoinSession(part.name, p, NULL, outIdA, multipoint ? mpopts : opts));
+        joinedSessionMap[std::make_pair(qcc::String(part.name), multipoint)] = outIdA;
+
+        /* make sure both sides know we're in session before we continue */
+        while (part.hostedSessionMap.find(std::make_pair(bus.GetUniqueName(), multipoint)) == part.hostedSessionMap.end()) {
+            qcc::Sleep(10);
+        }
     }
 
     void LeaveSession(const char* name, bool multipoint) {
         std::pair<qcc::String, bool> key = std::make_pair(qcc::String(name), multipoint);
-        SessionId id = sessionMap[key];
-        sessionMap.erase(key);
+        SessionId id = joinedSessionMap[key];
+        joinedSessionMap.erase(key);
         ASSERT_EQ(ER_OK, bus.LeaveSession(id));
     }
 
-    SessionId GetSessionId(const char* name, bool multipoint) {
+    SessionId GetJoinedSessionId(const char* name, bool multipoint) {
         std::pair<qcc::String, bool> key = std::make_pair(qcc::String(name), multipoint);
-        return sessionMap[key];
+        return joinedSessionMap[key];
+    }
+};
+
+class SignalReceiver : public MessageReceiver {
+  protected:
+    Participant* participant;
+    int signalReceived;
+  public:
+    SignalReceiver() : signalReceived(0) { }
+    virtual ~SignalReceiver() { }
+
+    void Register(Participant* part) {
+        participant = part;
+
+        const InterfaceDescription* servicetestIntf = part->bus.GetInterface("org.test");
+        const InterfaceDescription::Member* signal_member = servicetestIntf->GetMember("my_signal");
+        RegisterSignalHandler(signal_member);
+    }
+
+    /* override this for non-standard signal subscriptions */
+    virtual void RegisterSignalHandler(const InterfaceDescription::Member* member) {
+        QStatus status = participant->bus.RegisterSignalHandler(this,
+                                                                static_cast<MessageReceiver::SignalHandler>(&SignalReceiver::SignalHandler),
+                                                                member,
+                                                                NULL);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    }
+
+    void SignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg) {
+        signalReceived++;
+    }
+
+    void verify_recv(int expected = 1) {
+// #define PRINT
+#ifdef PRINT
+        fprintf(stderr, "VERIFICATION: FOR %s EXPECTED %d\n", participant->name, expected);
+#endif
+        EXPECT_EQ(expected, signalReceived);
+        signalReceived = 0;
+    }
+
+    void verify_norecv() {
+        verify_recv(0);
+    }
+
+};
+
+class PathReceiver : public SignalReceiver {
+    qcc::String senderpath;
+  public:
+    PathReceiver(const char* path) : SignalReceiver(), senderpath(path) { }
+    virtual ~PathReceiver() { }
+
+    virtual void RegisterSignalHandler(const InterfaceDescription::Member* member) {
+        QStatus status = participant->bus.RegisterSignalHandler(this,
+                                                                static_cast<MessageReceiver::SignalHandler>(&PathReceiver::SignalHandler),
+                                                                member,
+                                                                senderpath.c_str());
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    }
+};
+
+class RuleReceiver : public SignalReceiver {
+    qcc::String matchRule;
+  public:
+    RuleReceiver(const char* rule) : SignalReceiver(), matchRule(rule) { }
+    virtual ~RuleReceiver() { }
+
+    virtual void RegisterSignalHandler(const InterfaceDescription::Member* member) {
+        QStatus status = participant->bus.RegisterSignalHandlerWithRule(this,
+                                                                        static_cast<MessageReceiver::SignalHandler>(&RuleReceiver::SignalHandler),
+                                                                        member,
+                                                                        matchRule.c_str());
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     }
 };
 
@@ -185,52 +260,46 @@ void wait_for_signal()
     qcc::Sleep(1000);
 }
 
-void verify_recv(Participant& participant, int expected = 1) {
-    EXPECT_EQ(expected, participant.signalReceived);
-    participant.signalReceived = 0;
-}
-
-void verify_norecv(Participant& participant) {
-    verify_recv(participant, 0);
-}
-
 TEST_F(SignalTest, Point2PointSimple)
 {
     Participant A("A.A");
     Participant B("B.B");
+    SignalReceiver recvA, recvB;
+    recvA.Register(&A);
+    recvB.Register(&B);
 
-    B.JoinSession("A.A", false);
+    B.JoinSession(A, false);
 
     /* unicast signal */
     B.busobj->SendSignal("A.A", 0, 0);
     wait_for_signal();
-    verify_recv(A);
-    verify_norecv(B);
+    recvA.verify_recv();
+    recvB.verify_norecv();
 
     A.busobj->SendSignal("B.B", 0, 0);
     wait_for_signal();
-    verify_norecv(A);
-    verify_recv(B);
+    recvA.verify_norecv();
+    recvB.verify_recv();
 
     /* dbus broadcast signal */
     /* no addmatches */
     B.busobj->SendSignal(NULL, 0, 0);
     A.busobj->SendSignal(NULL, 0, 0);
     wait_for_signal();
-    verify_norecv(A);
-    verify_norecv(B);
+    recvA.verify_norecv();
+    recvB.verify_norecv();
 
     /* with addmatches */
     A.AddMatch();
     B.AddMatch();
     B.busobj->SendSignal(NULL, 0, 0);
     wait_for_signal();
-    verify_recv(A);
-    verify_recv(B);
+    recvA.verify_recv();
+    recvB.verify_recv();
     A.busobj->SendSignal(NULL, 0, 0);
     wait_for_signal();
-    verify_recv(A);
-    verify_recv(B);
+    recvA.verify_recv();
+    recvB.verify_recv();
     A.RemoveMatch();
     B.RemoveMatch();
 
@@ -239,42 +308,42 @@ TEST_F(SignalTest, Point2PointSimple)
     B.busobj->SendSignal(NULL, 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
     A.busobj->SendSignal(NULL, 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
     wait_for_signal();
-    verify_norecv(A);
-    verify_norecv(B);
+    recvA.verify_norecv();
+    recvB.verify_norecv();
 
     /* with addmatches */
     A.AddMatch();
     B.AddMatch();
     B.busobj->SendSignal(NULL, 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
     wait_for_signal();
-    verify_recv(A);
-    verify_recv(B);
+    recvA.verify_recv();
+    recvB.verify_recv();
     A.busobj->SendSignal(NULL, 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
     wait_for_signal();
-    verify_recv(A);
-    verify_recv(B);
+    recvA.verify_recv();
+    recvB.verify_recv();
     A.RemoveMatch();
     B.RemoveMatch();
 
     /* sessioncast */
-    B.busobj->SendSignal(NULL, B.GetSessionId("A.A", false), 0);
+    B.busobj->SendSignal(NULL, B.GetJoinedSessionId("A.A", false), 0);
     wait_for_signal();
-    verify_recv(A);
-    verify_norecv(B);
-    A.busobj->SendSignal(NULL, B.GetSessionId("A.A", false), 0);
+    recvA.verify_recv();
+    recvB.verify_norecv();
+    A.busobj->SendSignal(NULL, B.GetJoinedSessionId("A.A", false), 0);
     wait_for_signal();
-    verify_norecv(A);
-    verify_recv(B);
+    recvA.verify_norecv();
+    recvB.verify_recv();
 
     /* sessioncast on all sessions */
     B.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
     wait_for_signal();
-    verify_norecv(A);
-    verify_norecv(B);
+    recvA.verify_norecv();
+    recvB.verify_norecv();
     A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
     wait_for_signal();
-    verify_norecv(A);
-    verify_recv(B);
+    recvA.verify_norecv();
+    recvB.verify_recv();
 
     B.LeaveSession("A.A", false);
 }
@@ -284,31 +353,35 @@ TEST_F(SignalTest, MultiPointSimple)
     Participant A("A.A");
     Participant B("B.B");
     Participant C("C.C");
+    SignalReceiver recvA, recvB, recvC;
+    recvA.Register(&A);
+    recvB.Register(&B);
+    recvC.Register(&C);
 
-    B.JoinSession("A.A", true);
-    C.JoinSession("A.A", true);
+    B.JoinSession(A, true);
+    C.JoinSession(A, true);
 
     /* unicast signal */
     B.busobj->SendSignal("A.A", 0, 0);
     wait_for_signal();
-    verify_recv(A);
-    verify_norecv(B);
-    verify_norecv(C);
+    recvA.verify_recv();
+    recvB.verify_norecv();
+    recvC.verify_norecv();
 
     A.busobj->SendSignal("B.B", 0, 0);
     wait_for_signal();
-    verify_norecv(A);
-    verify_recv(B);
-    verify_norecv(C);
+    recvA.verify_norecv();
+    recvB.verify_recv();
+    recvC.verify_norecv();
 
     /* dbus broadcast signal */
     /* no addmatches */
     B.busobj->SendSignal(NULL, 0, 0);
     A.busobj->SendSignal(NULL, 0, 0);
     wait_for_signal();
-    verify_norecv(A);
-    verify_norecv(B);
-    verify_norecv(C);
+    recvA.verify_norecv();
+    recvB.verify_norecv();
+    recvC.verify_norecv();
 
     /* with addmatches */
     A.AddMatch();
@@ -316,14 +389,14 @@ TEST_F(SignalTest, MultiPointSimple)
     C.AddMatch();
     B.busobj->SendSignal(NULL, 0, 0);
     wait_for_signal();
-    verify_recv(A);
-    verify_recv(B);
-    verify_recv(C);
+    recvA.verify_recv();
+    recvB.verify_recv();
+    recvC.verify_recv();
     A.busobj->SendSignal(NULL, 0, 0);
     wait_for_signal();
-    verify_recv(A);
-    verify_recv(B);
-    verify_recv(C);
+    recvA.verify_recv();
+    recvB.verify_recv();
+    recvC.verify_recv();
     A.RemoveMatch();
     B.RemoveMatch();
     C.RemoveMatch();
@@ -333,9 +406,9 @@ TEST_F(SignalTest, MultiPointSimple)
     B.busobj->SendSignal(NULL, 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
     A.busobj->SendSignal(NULL, 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
     wait_for_signal();
-    verify_norecv(A);
-    verify_norecv(B);
-    verify_norecv(C);
+    recvA.verify_norecv();
+    recvB.verify_norecv();
+    recvC.verify_norecv();
 
     /* with addmatches */
     A.AddMatch();
@@ -343,41 +416,41 @@ TEST_F(SignalTest, MultiPointSimple)
     C.AddMatch();
     B.busobj->SendSignal(NULL, 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
     wait_for_signal();
-    verify_recv(A);
-    verify_recv(B);
-    verify_recv(C);
+    recvA.verify_recv();
+    recvB.verify_recv();
+    recvC.verify_recv();
     A.busobj->SendSignal(NULL, 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
     wait_for_signal();
-    verify_recv(A);
-    verify_recv(B);
-    verify_recv(C);
+    recvA.verify_recv();
+    recvB.verify_recv();
+    recvC.verify_recv();
     A.RemoveMatch();
     B.RemoveMatch();
     C.RemoveMatch();
 
     /* sessioncast */
-    B.busobj->SendSignal(NULL, B.GetSessionId("A.A", true), 0);
+    B.busobj->SendSignal(NULL, B.GetJoinedSessionId("A.A", true), 0);
     wait_for_signal();
-    verify_recv(A);
-    verify_norecv(B);
-    verify_recv(C);
-    A.busobj->SendSignal(NULL, B.GetSessionId("A.A", true), 0);
+    recvA.verify_recv();
+    recvB.verify_norecv();
+    recvC.verify_recv();
+    A.busobj->SendSignal(NULL, B.GetJoinedSessionId("A.A", true), 0);
     wait_for_signal();
-    verify_norecv(A);
-    verify_recv(B);
-    verify_recv(C);
+    recvA.verify_norecv();
+    recvB.verify_recv();
+    recvC.verify_recv();
 
     /* sessioncast on all hosted sessions */
     B.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
     wait_for_signal();
-    verify_norecv(A);
-    verify_norecv(B);
-    verify_norecv(C);
+    recvA.verify_norecv();
+    recvB.verify_norecv();
+    recvC.verify_norecv();
     A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
     wait_for_signal();
-    verify_norecv(A);
-    verify_recv(B);
-    verify_recv(C);
+    recvA.verify_norecv();
+    recvB.verify_recv();
+    recvC.verify_recv();
 
     B.LeaveSession("A.A", true);
     C.LeaveSession("A.A", true);
@@ -388,30 +461,34 @@ TEST_F(SignalTest, Point2PointComplex) {
     Participant A("A.A");
     Participant B("B.B");
     Participant C("C.C");
+    SignalReceiver recvA, recvB, recvC;
+    recvA.Register(&A);
+    recvB.Register(&B);
+    recvC.Register(&C);
 
     /* x -> y means "x hosts p2p session for y"
      * x m> y means "x hosts mp session for y"
      */
 
     /* A -> B, B -> C, C -> A */
-    B.JoinSession("A.A", false);
-    C.JoinSession("B.B", false);
-    A.JoinSession("C.C", false);
+    B.JoinSession(A, false);
+    C.JoinSession(B, false);
+    A.JoinSession(C, false);
 
     /* sessioncast on all hosted sessions */
     A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
     wait_for_signal();
-    verify_norecv(A);
-    verify_recv(B);
-    verify_norecv(C);
+    recvA.verify_norecv();
+    recvB.verify_recv();
+    recvC.verify_norecv();
 
     /* A -> B, A -> C, B -> C, C -> A */
-    C.JoinSession("A.A", false);
+    C.JoinSession(A, false);
     A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
     wait_for_signal();
-    verify_norecv(A);
-    verify_recv(B);
-    verify_recv(C);
+    recvA.verify_norecv();
+    recvB.verify_recv();
+    recvC.verify_recv();
 
     B.LeaveSession("A.A", false);
     C.LeaveSession("A.A", false);
@@ -421,33 +498,80 @@ TEST_F(SignalTest, Point2PointComplex) {
 TEST_F(SignalTest, MultiSession) {
     Participant A("A.A");
     Participant B("B.B");
+    SignalReceiver recvA, recvB;
+    recvA.Register(&A);
+    recvB.Register(&B);
 
     B.AddMatch();
 
     /* Enter in 2 sessions with A */
-    B.JoinSession("A.A", false);
-    B.JoinSession("A.A", true);
+    B.JoinSession(A, false);
+    B.JoinSession(A, true);
     A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
     wait_for_signal();
     /* verify B received the signal twice */
-    verify_norecv(A);
-    verify_recv(B, 2);
+    recvA.verify_norecv();
+    recvB.verify_recv(2);
 
     /* leave one of the sessions */
     B.LeaveSession("A.A", false);
     A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
     wait_for_signal();
     /* verify B still received the signal */
-    verify_norecv(A);
-    verify_recv(B);
+    recvA.verify_norecv();
+    recvB.verify_recv();
 
     /* leave the last session */
     B.LeaveSession("A.A", true);
     A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
     wait_for_signal();
     /* verify B did not received the signal */
-    verify_norecv(A);
-    verify_norecv(B);
+    recvA.verify_norecv();
+    recvB.verify_norecv();
 
     B.RemoveMatch();
+}
+
+TEST_F(SignalTest, Paths) {
+    Participant A("A.A");
+    Participant B("B.B");
+    PathReceiver recvAy("/signals/test");
+    PathReceiver recvAn("/not/right");
+    PathReceiver recvBy("/signals/test");
+    PathReceiver recvBn("/not/right");
+    recvAy.Register(&A);
+    recvAn.Register(&A);
+    recvBy.Register(&B);
+    recvBn.Register(&B);
+
+    B.JoinSession(A, false);
+    A.busobj->SendSignal(NULL, B.GetJoinedSessionId("A.A", false), 0);
+    B.busobj->SendSignal(NULL, B.GetJoinedSessionId("A.A", false), 0);
+    wait_for_signal();
+    recvAy.verify_recv();
+    recvBy.verify_recv();
+    recvAn.verify_norecv();
+    recvBn.verify_norecv();
+}
+
+TEST_F(SignalTest, Rules) {
+    Participant A("A.A");
+    Participant B("B.B");
+    RuleReceiver recvAy("type='signal'");
+    RuleReceiver recvAn("type='signal',member='nonexistent'");
+    RuleReceiver recvBy("type='signal'");
+    RuleReceiver recvBn("type='signal',member='nonexistent'");
+    recvAy.Register(&A);
+    recvAn.Register(&A);
+    recvBy.Register(&B);
+    recvBn.Register(&B);
+
+    B.JoinSession(A, false);
+    A.busobj->SendSignal(NULL, B.GetJoinedSessionId("A.A", false), 0);
+    B.busobj->SendSignal(NULL, B.GetJoinedSessionId("A.A", false), 0);
+    wait_for_signal();
+    recvAy.verify_recv();
+    recvBy.verify_recv();
+    recvAn.verify_norecv();
+    recvBn.verify_norecv();
 }

@@ -574,6 +574,23 @@ class BusAttachment : public MessageReceiver {
                                   const char* srcPath);
 
     /**
+     * Register a signal handler.
+     *
+     * Signals are forwarded to the signalHandler if sender, interface, member, path and rule
+     * qualifiers are ALL met.
+     *
+     * @param receiver       The object receiving the signal.
+     * @param signalHandler  The signal handler method.
+     * @param member         The interface/member of the signal.
+     * @param matchRule      A filter rule.
+     * @return #ER_OK
+     */
+    QStatus RegisterSignalHandlerWithRule(MessageReceiver* receiver,
+                                          MessageReceiver::SignalHandler signalHandler,
+                                          const InterfaceDescription::Member* member,
+                                          const char* matchRule);
+
+    /**
      * Unregister a signal handler.
      *
      * Remove the signal handler that was registered with the given parameters.
@@ -588,6 +605,22 @@ class BusAttachment : public MessageReceiver {
                                     MessageReceiver::SignalHandler signalHandler,
                                     const InterfaceDescription::Member* member,
                                     const char* srcPath);
+
+    /**
+     * Unregister a signal handler.
+     *
+     * Remove the signal handler that was registered with the given parameters.
+     *
+     * @param receiver       The object receiving the signal.
+     * @param signalHandler  The signal handler method.
+     * @param member         The interface/member of the signal.
+     * @param matchRule      A filter rule.
+     * @return #ER_OK
+     */
+    QStatus UnregisterSignalHandlerWithRule(MessageReceiver* receiver,
+                                            MessageReceiver::SignalHandler signalHandler,
+                                            const InterfaceDescription::Member* member,
+                                            const char* matchRule);
 
     /**
      * Unregister all signal and reply handlers for the specified message receiver. This function is
