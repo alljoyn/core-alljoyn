@@ -2090,6 +2090,13 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
         start = current->next;
         startSeq = conn->rcv.CUR + 1;
         delta = 0;
+
+        /* If no EACKs in RCV queue, just update the counter */
+        if ((conn->rcv.eack.sz == 0)) {
+            conn->rcv.CUR = acknxt - 1;
+            return;
+        }
+
     } else {
         /* Message was partially received. Move to the beginning of incomplete message */
         start = &conn->rcv.buf[current->som % conn->rcv.SEGMAX];
@@ -2904,7 +2911,7 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, u
          * SEQ and ACKNXT must fall within receive window. In case of segment with no payload,
          * allow one extra.
          */
-        if (((SEG.SEQ - SEG.ACKNXT) > conn->rcv.SEGMAX) ||
+        if (((SEG.SEQ - SEG.ACKNXT) > conn->rcv.SEGMAX) || (SEQ32_LT(SEG.SEQ, SEG.ACKNXT)) ||
             ((SEG.DLEN != 0) && ((SEG.SEQ - SEG.ACKNXT) == conn->rcv.SEGMAX))) {
             QCC_DbgHLPrintf(("Receive: incorrect sequence numbers seg.seq = %u, seg.acknxt = %u",
                              SEG.SEQ - SEG.ACKNXT));
