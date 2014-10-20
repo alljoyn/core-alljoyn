@@ -16,9 +16,12 @@
 
 package org.alljoyn.bus;
 
+import org.alljoyn.bus.ifaces.Properties;
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.Arrays;
 
 /**
  * A helper proxy used by BusObjects to send signals.  A SignalEmitter
@@ -70,8 +73,11 @@ public class SignalEmitter {
         this.flags = (globalBroadcast == GlobalBroadcast.On)
                 ? this.flags | GLOBAL_BROADCAST
                 : this.flags & ~GLOBAL_BROADCAST;
-        proxy = Proxy.newProxyInstance(source.getClass().getClassLoader(),
-                                       source.getClass().getInterfaces(), new Emitter());
+        
+        Class<?>[] interfaces = source.getClass().getInterfaces();
+        Class<?>[] interfacesNew = Arrays.copyOf(interfaces, interfaces.length + 1);
+        interfacesNew[interfaces.length] = Properties.class;
+        proxy = Proxy.newProxyInstance(source.getClass().getClassLoader(), interfacesNew, new Emitter());
         msgContext = new MessageContext();
     }
 
