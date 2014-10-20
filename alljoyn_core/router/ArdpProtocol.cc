@@ -963,11 +963,15 @@ static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reas
  *        new meanVar = 3/4 * meanVar + 1/4 * |error|
  *    else
  *        new meanVar = 31/32 * meanVar + 1/32 * |error|
+ *
+ *    Note: Since ARDP segments can have varying length, base RTT calculation on
+ *          UDP-MTU unit.
  */
 static void AdjustRTT(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf)
 {
     uint32_t now = TimeNow(handle->tbase);
-    uint32_t rtt = now - sBuf->tStart;
+    uint16_t units = (sBuf->datalen + UDP_MTU - 1) / UDP_MTU;
+    uint32_t rtt = (now - sBuf->tStart) / units;
     int32_t err;
 
     if (!conn->rttInit) {
@@ -993,12 +997,16 @@ static void AdjustRTT(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf
     QCC_DbgHLPrintf(("AdjustRtt: New mean = %u, var =%u", conn->rttMean, conn->rttMeanVar));
 }
 
-inline static uint32_t GetRTO(ArdpHandle* handle, ArdpConnRecord* conn)
+inline static uint32_t GetRTO(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t datalen)
 {
     /*
      * RTO = (rttMean + (4 * rttMeanVar)) << backoff
+     * Note: Since ARDP segments can have varying length, base RTT calculation on
+     *       UDP-MTU unit:
+     * Adjusted RTO = RTO * numMTUs
      */
     uint32_t ms = (MAX((uint32_t)ARDP_MIN_RTO, conn->rttMean + (4 * conn->rttMeanVar))) << conn->backoff;
+    ms = ms * ((datalen + UDP_MTU - 1) / UDP_MTU);
     return MIN(ms, (uint32_t)ARDP_MAX_RTO);
 }
 
@@ -1062,7 +1070,7 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         if (status == ER_OK) {
             conn->backoff = MAX(conn->backoff, timer->retry);
             if (conn->rttInit) {
-                timer->delta = GetRTO(handle, conn);
+                timer->delta = GetRTO(handle, conn, sBuf->datalen);
             } else {
                 timer->delta = handle->config.initialDataTimeout;
             }
@@ -1119,6 +1127,11 @@ static void ProbeTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* co
 
     QCC_DbgHLPrintf(("ProbeTimerHandler: handle=%p conn=%p delta %u now %u lastSeen = %u elapsed %u",
                      handle, conn, timer->delta, now, conn->lastSeen, elapsed));
+
+    /* If there are no sent segments in flight, reset RTT calculation. */
+    if (!IsDataRetransmitScheduled(conn)) {
+        conn->rttInit = false;
+    }
 
     /*
      * Checking for total link timeout in very unlikely case the socket write is blocked for
@@ -1557,7 +1570,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
         if (!handle->trafficJam) {
             status = SendMsgData(handle, conn, sBuf, ttlSend);
             if (conn->rttInit) {
-                timeout = GetRTO(handle, conn);
+                timeout = GetRTO(handle, conn, sBuf->datalen);
             } else {
                 timeout = handle->config.initialDataTimeout;
             }
