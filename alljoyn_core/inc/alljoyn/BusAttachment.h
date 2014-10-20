@@ -1351,6 +1351,10 @@ class BusAttachment : public MessageReceiver {
      * This is identical to WhoImplements(const char**, size_t)
      * except this is specialized for a single interface not several interfaces.
      *
+     * Note: specifying NULL for the interface parameter could have significant
+     * impact on network performance and should be avoided unless all
+     * announcements are needed.
+     *
      * @see WhoImplements(const char**, size_t)
      * @param[in] interface     interface that the remove user must implement to
      *                          receive the announce signal.

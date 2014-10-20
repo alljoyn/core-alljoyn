@@ -24,7 +24,7 @@
 
 using namespace ajn;
 
-TEST(AboutData, constants) {
+TEST(AboutDataTest, constants) {
     EXPECT_STREQ("AppId", AboutData::APP_ID);
     EXPECT_STREQ("DefaultLanguage", AboutData::DEFAULT_LANGUAGE);
     EXPECT_STREQ("DeviceName", AboutData::DEVICE_NAME);
@@ -41,7 +41,7 @@ TEST(AboutData, constants) {
     EXPECT_STREQ("SupportUrl", AboutData::SUPPORT_URL);
 }
 
-TEST(AboutData, VerifyFieldValues) {
+TEST(AboutDataTest, VerifyFieldValues) {
     AboutData aboutData;
     //AppId
     EXPECT_TRUE(aboutData.IsFieldRequired(AboutData::APP_ID));
@@ -134,7 +134,7 @@ TEST(AboutData, VerifyFieldValues) {
     EXPECT_TRUE(NULL == aboutData.GetFieldSignature("Unknown"));
 }
 
-TEST(AboutData, DefaultLanguageNotSpecified) {
+TEST(AboutDataTest, DefaultLanguageNotSpecified) {
     QStatus status = ER_FAIL;
     AboutData aboutData;
     status = aboutData.SetDeviceName("Device Name");
@@ -150,7 +150,7 @@ TEST(AboutData, DefaultLanguageNotSpecified) {
     EXPECT_EQ(ER_ABOUT_DEFAULT_LANGUAGE_NOT_SPECIFIED, status) << "  Actual Status: " << QCC_StatusText(status);
 }
 
-TEST(AboutData, Constructor) {
+TEST(AboutDataTest, Constructor) {
     AboutData aboutData("en");
     char* language;
     aboutData.GetDefaultLanguage(&language);
@@ -160,7 +160,7 @@ TEST(AboutData, Constructor) {
     EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersion);
 }
 
-TEST(AboutData, SetAppId) {
+TEST(AboutDataTest, SetAppId) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
@@ -177,7 +177,7 @@ TEST(AboutData, SetAppId) {
         EXPECT_EQ(originalAppId[i], appId[i]);
     }
 }
-TEST(AboutData, SetDeviceName) {
+TEST(AboutDataTest, SetDeviceName) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
     char* language;
@@ -205,7 +205,7 @@ TEST(AboutData, SetDeviceName) {
     EXPECT_STREQ("dispositivo", deviceName);
 }
 
-TEST(AboutData, SetDeviceId) {
+TEST(AboutDataTest, SetDeviceId) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
@@ -218,7 +218,7 @@ TEST(AboutData, SetDeviceId) {
     EXPECT_STREQ("avec-awe1213-1234559xvc123", deviceId);
 }
 
-TEST(AboutData, SetAppName) {
+TEST(AboutDataTest, SetAppName) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
@@ -238,7 +238,7 @@ TEST(AboutData, SetAppName) {
     EXPECT_STREQ("aplicacion", appName);
 }
 
-TEST(AboutData, SetManufacturer) {
+TEST(AboutDataTest, SetManufacturer) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
@@ -258,7 +258,7 @@ TEST(AboutData, SetManufacturer) {
     EXPECT_STREQ("manufactura", manufacturer);
 }
 
-TEST(AboutData, SetModelNumber) {
+TEST(AboutDataTest, SetModelNumber) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
@@ -271,7 +271,7 @@ TEST(AboutData, SetModelNumber) {
     EXPECT_STREQ("xBnc345", modelNumber);
 }
 
-TEST(AboutData, SetSupportedLanguage)
+TEST(AboutDataTest, SetSupportedLanguage)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -302,7 +302,7 @@ TEST(AboutData, SetSupportedLanguage)
     languages = NULL;
 }
 //ASACORE-910
-TEST(AboutData, SetSupportedLanguage_Duplicate)
+TEST(AboutDataTest, SetSupportedLanguage_Duplicate)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -325,7 +325,7 @@ TEST(AboutData, SetSupportedLanguage_Duplicate)
 }
 
 //ASACORE-911
-TEST(AboutData, DISABLED_SetSupportedLanguage_Invalid_Tag)
+TEST(AboutDataTest, DISABLED_SetSupportedLanguage_Invalid_Tag)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -349,7 +349,7 @@ TEST(AboutData, DISABLED_SetSupportedLanguage_Invalid_Tag)
 }
 
 //ASACORE-907
-TEST(AboutData, GetSupportedLanguages)
+TEST(AboutDataTest, GetSupportedLanguages)
 {
     AboutData aboutData("en");
 
@@ -358,7 +358,7 @@ TEST(AboutData, GetSupportedLanguages)
     EXPECT_EQ(1u, numLanguages);
 }
 
-TEST(AboutData, SetDescription) {
+TEST(AboutDataTest, SetDescription) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
@@ -378,7 +378,7 @@ TEST(AboutData, SetDescription) {
     EXPECT_STREQ("Una descripcion poetica de esta aplicacion", description);
 }
 
-TEST(AboutData, SetDateOfManufacture) {
+TEST(AboutDataTest, SetDateOfManufacture) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
@@ -393,7 +393,7 @@ TEST(AboutData, SetDateOfManufacture) {
 }
 
 // ASACORE-906
-TEST(AboutData, DISABLED_SetDateOfManufacture_Negative) {
+TEST(AboutDataTest, DISABLED_SetDateOfManufacture_Negative) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
@@ -411,7 +411,7 @@ TEST(AboutData, DISABLED_SetDateOfManufacture_Negative) {
     EXPECT_NE(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
 
-TEST(AboutData, SetSoftwareVersion) {
+TEST(AboutDataTest, SetSoftwareVersion) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
@@ -424,7 +424,7 @@ TEST(AboutData, SetSoftwareVersion) {
     EXPECT_STREQ("0.1.2", softwareVersion);
 }
 
-TEST(AboutData, SetHardwareVersion) {
+TEST(AboutDataTest, SetHardwareVersion) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
@@ -437,7 +437,7 @@ TEST(AboutData, SetHardwareVersion) {
     EXPECT_STREQ("3.2.1", hardwareVersion);
 }
 
-TEST(AboutData, SetSupportUrl) {
+TEST(AboutDataTest, SetSupportUrl) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
@@ -450,7 +450,7 @@ TEST(AboutData, SetSupportUrl) {
     EXPECT_STREQ("www.example.com", supportUrl);
 }
 
-TEST(AboutData, IsValid)
+TEST(AboutDataTest, IsValid)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -486,7 +486,7 @@ TEST(AboutData, IsValid)
     EXPECT_TRUE(aboutData.IsValid("es"));
 }
 //ASACORE-914
-TEST(AboutData, IsValid_Negative)
+TEST(AboutDataTest, IsValid_Negative)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData;
@@ -553,7 +553,7 @@ TEST(AboutData, IsValid_Negative)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_TRUE(aboutData.IsValid("es"));
 }
-TEST(AboutData, GetAboutData)
+TEST(AboutDataTest, GetAboutData)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -629,7 +629,7 @@ TEST(AboutData, GetAboutData)
 }
 
 
-TEST(AboutData, GetMsgArg_es_language)
+TEST(AboutDataTest, GetMsgArg_es_language)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -704,7 +704,7 @@ TEST(AboutData, GetMsgArg_es_language)
     EXPECT_STREQ("123456", modelNumber);
 }
 
-TEST(AboutData, GetMsgArg_language_not_supported)
+TEST(AboutDataTest, GetMsgArg_language_not_supported)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -743,7 +743,7 @@ TEST(AboutData, GetMsgArg_language_not_supported)
     //printf("*****\n%s\n*****\n", aboutArg.ToString().c_str());
 }
 
-TEST(AboutData, GetAnnouncedAboutData)
+TEST(AboutDataTest, GetAnnouncedAboutData)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -806,7 +806,7 @@ TEST(AboutData, GetAnnouncedAboutData)
     EXPECT_STREQ("123456", modelNumber);
 }
 
-TEST(AboutData, SetOEMSpecificField)
+TEST(AboutDataTest, SetOEMSpecificField)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -842,7 +842,7 @@ TEST(AboutData, SetOEMSpecificField)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_STREQ("800-555-4321", supportNumber);
 }
-TEST(AboutData, GetMsgArgWithOEMSpecificField)
+TEST(AboutDataTest, GetMsgArgWithOEMSpecificField)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -934,7 +934,7 @@ TEST(AboutData, GetMsgArgWithOEMSpecificField)
     EXPECT_STREQ("888-555-1234", supportNumber);
 }
 
-TEST(AboutData, InitUsingMsgArgBadSignature) {
+TEST(AboutDataTest, InitUsingMsgArgBadSignature) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
     MsgArg notADictionary("s", "incorrect type.");
@@ -943,7 +943,7 @@ TEST(AboutData, InitUsingMsgArgBadSignature) {
     EXPECT_EQ(ER_BUS_SIGNATURE_MISMATCH, status) << "  Actual Status: " << QCC_StatusText(status);
 }
 
-TEST(AboutData, InitUsingMsgArg)
+TEST(AboutDataTest, InitUsingMsgArg)
 {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
@@ -1046,7 +1046,7 @@ TEST(AboutData, InitUsingMsgArg)
     //TODO complete the test for language and other required
 }
 
-TEST(AboutData, UTF8_test)
+TEST(AboutDataTest, UTF8_test)
 {
     char str[] = "привет";
     QStatus status = ER_FAIL;
@@ -1061,7 +1061,7 @@ TEST(AboutData, UTF8_test)
     EXPECT_STREQ(str, ruOut);
 }
 
-TEST(AboutData, CreateFromXml) {
+TEST(AboutDataTest, CreateFromXml) {
     QStatus status = ER_FAIL;
     AboutData aboutData;
     qcc::String xml =
@@ -1244,7 +1244,7 @@ class AboutDataTestAboutData : public AboutData {
 
 const char* AboutDataTestAboutData::TEST_FIELDABC = "TestFieldABC";
 
-TEST(AboutData, SetNewField) {
+TEST(AboutDataTest, SetNewField) {
     QStatus status = ER_FAIL;
     AboutDataTestAboutData aboutData("en");
 
@@ -1323,7 +1323,7 @@ bool hasField(const char** fields, size_t count, const char* fieldName) {
     return false;
 }
 
-TEST(AboutData, GetFields) {
+TEST(AboutDataTest, GetFields) {
     QStatus status = ER_FAIL;
     AboutDataTestAboutData aboutData("en");
 
@@ -1370,7 +1370,7 @@ TEST(AboutData, GetFields) {
     delete [] fields;
 }
 
-//TEST(AboutData, SetSupportUrlEmpty) {
+//TEST(AboutDataTest, SetSupportUrlEmpty) {
 //    QStatus status = ER_FAIL;
 //    AboutData aboutData("en");
 //

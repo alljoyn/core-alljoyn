@@ -203,6 +203,84 @@ TEST_F(AboutListenerTest, ReceiverAnnouncement) {
     status = clientBus.Join();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
+
+TEST_F(AboutListenerTest, ReceiveAnnouncementNullWhoImplementsValue) {
+    QStatus status;
+    announceListenerFlag = false;
+
+    qcc::GUID128 guid;
+    qcc::String ifaceName = "org.test.a" + guid.ToString() + ".AnnounceHandlerTest";
+    AboutObj aboutObj(*serviceBus);
+
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceName + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutListenerTestObject altObj(*serviceBus, "/org/test/about", ifaceName.c_str());
+    serviceBus->RegisterBusObject(altObj);
+
+    // receive
+    BusAttachment clientBus("Receive Announcement client Test", true);
+    status = clientBus.Start();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Connect();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutTestAboutListener aboutListener;
+
+    clientBus.RegisterAboutListener(aboutListener);
+
+    status = clientBus.WhoImplements(NULL);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    aboutObj.Announce(port, aboutData);
+
+    //Wait for a maximum of 10 sec for the Announce Signal.
+    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+        if (announceListenerFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_TIME);
+    }
+
+    ASSERT_TRUE(announceListenerFlag);
+
+    status = clientBus.CancelWhoImplements(NULL);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    announceListenerFlag = false;
+    status = clientBus.WhoImplements(NULL, 0);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    aboutObj.Announce(port, aboutData);
+
+    //Wait for a maximum of 10 sec for the Announce Signal.
+    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+        if (announceListenerFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_TIME);
+    }
+
+    ASSERT_TRUE(announceListenerFlag);
+
+    status = clientBus.CancelWhoImplements(NULL, 0);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    clientBus.UnregisterAboutListener(aboutListener);
+
+    status = clientBus.Stop();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Join();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+}
 /*
  * for most of the tests the interfaces are all added then the listener is
  * registered for this test we will register the listener before adding the
