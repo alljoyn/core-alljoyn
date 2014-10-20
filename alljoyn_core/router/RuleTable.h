@@ -25,90 +25,13 @@
 #define _ALLJOYN_RULETABLE_H
 
 #include <qcc/platform.h>
-
-#include <map>
-#include <set>
-
-#include <qcc/String.h>
 #include <qcc/Mutex.h>
 
-#include <alljoyn/Message.h>
-
 #include "BusEndpoint.h"
+#include "Rule.h"
 
-#include <alljoyn/Status.h>
 
 namespace ajn {
-
-/**
- * Rule defines a message bus routing rule.
- */
-struct Rule {
-
-    /** Rule type specifier */
-    AllJoynMessageType type;
-
-    /** Busname of sender or empty for all senders */
-    qcc::String sender;
-
-    /** Interface or empty for all interfaces */
-    qcc::String iface;
-
-    /** Member or empty for all methods */
-    qcc::String member;
-
-    /** Object path or empty for all object paths */
-    qcc::String path;
-
-    /** Destination bus name or empty for all destinations */
-    qcc::String destination;
-
-    /** true iff Rule specifies a filter for sessionless signals */
-    enum {SESSIONLESS_NOT_SPECIFIED, SESSIONLESS_FALSE, SESSIONLESS_TRUE} sessionless;
-
-    /** Interfaces implemented in org.alljoyn.About.Announce sessionless signal */
-    std::set<qcc::String> implements;
-
-    /** Map of argument matches */
-    // @@ TODO
-
-    /** Equality comparison */
-    bool operator==(const Rule& o) const {
-        return (type == o.type) && (sender == o.sender) && (iface == o.iface) &&
-               (member == o.member) && (path == o.path) && (destination == o.destination) &&
-               (implements == o.implements);
-    }
-
-    /** Constructor */
-    Rule() : type(MESSAGE_INVALID), sessionless(SESSIONLESS_NOT_SPECIFIED) { }
-
-    /**
-     * Construct a rule from a rule string.
-     *
-     * @param ruleStr   String describing the rule.
-     *                  This format of this string is specified in the DBUS spec.
-     *                  AllJoyn has added the following additional parameters:
-     *                     sessionless  - Valid values are "true" and "false"
-     *
-     * @param status    ER_OK if ruleStr was successfully parsed.
-     */
-    Rule(const char* ruleStr, QStatus* status = NULL);
-
-    /**
-     * Return true if messages matches rule.
-     *
-     * @param msg   Message to compare with rule.
-     * @return  true if this rule matches the message.
-     */
-    bool IsMatch(Message& msg) const;
-
-    /**
-     * String representation of a rule
-     */
-    qcc::String ToString() const;
-
-};
-
 
 /** Rule iterator */
 typedef std::multimap<BusEndpoint, Rule>::iterator RuleIterator;
