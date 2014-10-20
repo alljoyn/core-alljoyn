@@ -437,7 +437,7 @@ QStatus PermissionMgmtObj::RetrievePolicy(PermissionPolicy& policy)
 
 QStatus PermissionMgmtObj::NotifyConfig()
 {
-    uint8_t flags = ALLJOYN_FLAG_GLOBAL_BROADCAST;
+    uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
 
     qcc::GUID128 localGUID;
     QStatus status = ca->GetGuid(localGUID);

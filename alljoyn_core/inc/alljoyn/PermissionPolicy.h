@@ -65,12 +65,20 @@ class PermissionPolicy {
             } MemberType;
 
             /**
+             * The permission action masks
+             */
+            static const uint8_t ACTION_DENIED = 0x01;   /** < permission denied */
+            static const uint8_t ACTION_PROVIDE = 0x02;   /** < allow to provide */
+            static const uint8_t ACTION_OBSERVE = 0x04;   /** < allow to observe */
+            static const uint8_t ACTION_MODIFY = 0x08;   /** < allow to modify */
+
+            /**
              * Enumeration for the different types of field id
              */
             typedef enum {
                 TAG_MEMBER_NAME = 1,  ///< tag for member field
                 TAG_MEMBER_TYPE = 2,  ///< tag for member type field
-                TAG_READ_ONLY = 3,    ///< tag for read-only field
+                TAG_ACTION_MASK = 3,    ///< tag for action mask field
                 TAG_MUTUAL_AUTH = 4   ///< tag for mutual auth field
             } TagType;
 
@@ -78,7 +86,7 @@ class PermissionPolicy {
              * Constructor
              *
              */
-            Member() : memberName(), memberType(NOT_SPECIFIED), readOnly(false), mutualAuth(false)
+            Member() : memberName(), memberType(NOT_SPECIFIED), actionMask(0), mutualAuth(true)
             {
             }
 
@@ -109,14 +117,14 @@ class PermissionPolicy {
                 return memberType;
             }
 
-            void SetReadOnly(bool readOnly)
+            void SetActionMask(uint8_t actionMask)
             {
-                this->readOnly = readOnly;
+                this->actionMask = actionMask;
             }
 
-            const bool GetReadOnly()
+            const uint8_t GetActionMask()
             {
-                return readOnly;
+                return actionMask;
             }
 
             void SetMutualAuth(bool flag)
@@ -134,7 +142,7 @@ class PermissionPolicy {
           private:
             qcc::String memberName;
             MemberType memberType;
-            bool readOnly;
+            uint8_t actionMask;
             bool mutualAuth;
         };
 
@@ -151,7 +159,7 @@ class PermissionPolicy {
          * Constructor
          *
          */
-        Rule() : objPath(), interfaceName(), members(NULL), numOfMembers(0)
+        Rule() : objPath(), interfaceName(), members(NULL), membersSize(0)
         {
         }
 
@@ -186,13 +194,13 @@ class PermissionPolicy {
         /**
          * Set the array of members for the given interface.
          * @param   count   the size of the array
-         * @param members  The array of member fields.  The memory for the array must be new'd and
+         * @param members  The array of member fields.  The memory for the array must be new'd by the caller and
          *          will be deleted by this object.
          */
         void SetMembers(size_t count, Member* members)
         {
             this->members = members;
-            numOfMembers = count;
+            membersSize = count;
         }
 
         /**
@@ -204,9 +212,9 @@ class PermissionPolicy {
             return members;
         }
 
-        const size_t GetNumOfMembers()
+        const size_t GetMembersSize()
         {
-            return numOfMembers;
+            return membersSize;
         }
 
         qcc::String ToString();
@@ -215,7 +223,7 @@ class PermissionPolicy {
         qcc::String objPath;
         qcc::String interfaceName;
         Member* members;
-        size_t numOfMembers;
+        size_t membersSize;
     };
 
 
@@ -366,91 +374,10 @@ class PermissionPolicy {
     };
 
     /**
-     * Class to allow the application to specify an access control list
-     */
-
-    class ACL {
-
-      public:
-
-        /**
-         * Enumeration for the different types of field id
-         */
-        typedef enum {
-            TAG_ALLOW = 2,            ///< tag for allow rules field
-            TAG_ALLOWALLEXCEPT = 3    ///< tag for allowAllExcept field
-        } TagType;
-
-
-        /**
-         * Constructor
-         *
-         */
-        ACL() : allowRuleSize(0), allowRules(NULL), allowAllExceptRuleSize(0), allowAllExceptRules(NULL)
-        {
-        }
-
-        /**
-         * virtual destructor
-         */
-        virtual ~ACL()
-        {
-            delete [] allowRules;
-            delete [] allowAllExceptRules;
-        }
-
-
-        /**
-         * Set the list of allow rules.
-         * @param count the number of rules
-         * @param allow the list of allow rules. The list must be new'd by the caller.  It will be deleted by this object.
-         */
-        void SetAllowRules(size_t count, Rule* allowRules)
-        {
-            allowRuleSize = count;
-            this->allowRules = allowRules;
-        }
-
-        const size_t GetAllowRuleSize() {
-            return allowRuleSize;
-        }
-
-        const Rule* GetAllowRules()
-        {
-            return allowRules;
-        }
-
-        /**
-         * Set the list of allow all except rules.
-         * @param count the number of rules
-         * @param exceptions the list of allow all except rules. The list must be new'd by the caller.  It will be deleted by this object.
-         */
-        void SetAllowAllExceptRules(size_t count, Rule* exceptions);
-
-        const size_t GetAllowAllExceptRuleSize()
-        {
-            return allowAllExceptRuleSize;
-        }
-
-        const Rule* GetAllowAllExceptRules()
-        {
-            return allowAllExceptRules;
-        }
-
-        qcc::String ToString();
-
-      private:
-        size_t allowRuleSize;
-        Rule* allowRules;
-        size_t allowAllExceptRuleSize;
-        Rule* allowAllExceptRules;
-    };
-
-    /**
      * Class to allow the application to specify a permission term
      */
 
-    class Term : public ACL {
+    class Term {
 
       public:
 
@@ -458,17 +385,15 @@ class PermissionPolicy {
          * Enumeration for the different types of field id
          */
         typedef enum {
-            TAG_PEER = 1,            ///< tag for the peer field
-            TAG_ALLOW = 2,           ///< tag for the allow field
-            TAG_ALLOWALLEXCEPT = 3   ///< tag for the allowAllExcept field
+            TAG_PEERS = 1,            ///< tag for the peers field
+            TAG_RULES = 2           ///< tag for the rules field
         } TagType;
-
 
         /**
          * Constructor
          *
          */
-        Term() : ACL(), peerSize(0), peers(NULL)
+        Term() : peersSize(0), peers(NULL), rulesSize(0), rules(NULL)
         {
         }
 
@@ -478,21 +403,22 @@ class PermissionPolicy {
         virtual ~Term()
         {
             delete [] peers;
+            delete [] rules;
         }
 
         /**
-         * Set the list of peers
+         * Set the array of peers
          * @param count the number of peers
-         * @param peer the list of peers. The list must be new'd. It will be deleted by this object.
+         * @param peer the array of peers. The array must be new'd by the caller. It will be deleted by this object.
          */
         void SetPeers(size_t count, Peer* peers)
         {
             this->peers = peers;
-            peerSize = count;
+            peersSize = count;
         }
 
-        const size_t GetPeerSize() {
-            return peerSize;
+        const size_t GetPeersSize() {
+            return peersSize;
         }
 
         const Peer* GetPeers()
@@ -500,22 +426,41 @@ class PermissionPolicy {
             return peers;
         }
 
+        /**
+         * Set the array of rules.
+         * @param count the number of rules
+         * @param rules the array of rules. The array must be new'd by the caller.  It will be deleted by this object.
+         */
+        void SetRules(size_t count, Rule* rules)
+        {
+            rulesSize = count;
+            this->rules = rules;
+        }
+
+        const size_t GetRulesSize() {
+            return rulesSize;
+        }
+
+        const Rule* GetRules()
+        {
+            return rules;
+        }
+
         qcc::String ToString();
 
-
       private:
-        size_t peerSize;
+        size_t peersSize;
         Peer* peers;
+        size_t rulesSize;
+        Rule* rules;
     };
-
 
     /**
      * Enumeration for the different types of field id
      */
     typedef enum {
-        TAG_ADMIN = 1,      ///< tag for the admin field
-        TAG_PROVIDER = 2,   ///< tag for the provider field
-        TAG_CONSUMER = 3   ///< tag for the consumer field
+        TAG_ADMINS = 1,     ///< tag for the admins field
+        TAG_TERMS = 2       ///< tag for the terms field
     } TagType;
 
 
@@ -523,7 +468,7 @@ class PermissionPolicy {
      * Constructor
      *
      */
-    PermissionPolicy() : version(1), serialNum(0), adminSize(0), admins(NULL), providerSize(0), providers(NULL), consumerSize(0), consumers(NULL)
+    PermissionPolicy() : version(1), serialNum(0), adminsSize(0), admins(NULL), termsSize(0), terms(NULL)
     {
     }
 
@@ -533,8 +478,7 @@ class PermissionPolicy {
     virtual ~PermissionPolicy()
     {
         delete [] admins;
-        delete [] providers;
-        delete [] consumers;
+        delete [] terms;
     }
 
 
@@ -557,18 +501,18 @@ class PermissionPolicy {
     }
 
     /**
-     * Set the list of admins
+     * Set the array of admins
      * @param count the number of admins
-     * @param admins the list of admins. The list must be new'd by the caller. It will be deleted byt this object.
+     * @param admins the array of admins. The array must be new'd by the caller. It will be deleted byt this object.
      */
     void SetAdmins(size_t count, Peer* admins)
     {
         this->admins = admins;
-        adminSize = count;
+        adminsSize = count;
     }
 
-    const size_t GetAdminSize() {
-        return adminSize;
+    const size_t GetAdminsSize() {
+        return adminsSize;
     }
 
     const Peer* GetAdmins()
@@ -577,44 +521,23 @@ class PermissionPolicy {
     }
 
     /**
-     * Set the list of permissions as a provider
+     * Set the array of permission terms
      * @param count the number of permission terms
-     * @param provider the list of permission terms as a provider. The list must be new'd by the caller. It will be deleted by this object.
+     * @param provider the array of permission terms. The array must be new'd by the caller. It will be deleted by this object.
      */
-    void SetProviders(size_t count, Term* providers)
+    void SetTerms(size_t count, Term* terms)
     {
-        providerSize = count;
-        this->providers = providers;
+        termsSize = count;
+        this->terms = terms;
     }
 
-    const size_t GetProviderSize() {
-        return providerSize;
+    const size_t GetTermsSize() {
+        return termsSize;
     }
 
-    const Term* GetProviders()
+    const Term* GetTerms()
     {
-        return providers;
-    }
-
-    /**
-     * Set the list of permissions as a consumer
-     * @param count the number of permission terms
-     * @param provider the list of permission terms as a consumer. The list must be new'd by the caller. It will be deleted by this object.
-     */
-    void SetConsumers(size_t count, ACL* consumers)
-    {
-        consumerSize = count;
-        this->consumers = consumers;
-    }
-
-    const size_t GetConsumerSize()
-    {
-        return consumerSize;
-    }
-
-    const ACL* GetConsumers()
-    {
-        return consumers;
+        return terms;
     }
 
     qcc::String ToString();
@@ -643,12 +566,10 @@ class PermissionPolicy {
   private:
     uint8_t version;
     uint32_t serialNum;
-    size_t adminSize;
+    size_t adminsSize;
     Peer* admins;
-    size_t providerSize;
-    Term* providers;
-    size_t consumerSize;
-    ACL* consumers;
+    size_t termsSize;
+    Term* terms;
 
 };
 
