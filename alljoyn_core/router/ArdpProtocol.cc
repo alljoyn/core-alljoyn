@@ -144,7 +144,6 @@ typedef struct {
     uint32_t SEGBMAX;    /* The largest possible segment that WE can receive (our receive buffer, specified by our user on an open) */
     uint32_t IRS;        /* The initial receive sequence number.  The sequence number of the SYN that established the connection */
     uint32_t LCS;        /* The sequence number of last consumed segment */
-    uint32_t acknxt;     /* Sequence number the sender wants us to acknowledge, everything before the number has expired */
     ArdpRcvBuf* buf;     /* Array holding received buffers not consumed by the app */
     ArdpEack eack;       /* Tracking of received out-of-order segments */
     uint16_t ackPending; /* Number of segments pending acknowledgement */
@@ -895,6 +894,7 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
     if (status == ER_OK) {
         if (conn->ackTimer.retry != 0) {
             UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
+            conn->rcv.ackPending = 0;
         }
         handle->trafficJam = false;
     } else if (status == ER_WOULDBLOCK) {
