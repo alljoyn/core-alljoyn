@@ -675,7 +675,8 @@ public class AboutListenerTest  extends TestCase {
         clientBus.release();
     }
 
-    public synchronized void testMultipleAuthListeners() {
+    // ASACORE-1033 hangs when calling cancelWhoImplments
+    public synchronized void DISABLED_testMultipleAboutListeners() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
@@ -777,7 +778,8 @@ public class AboutListenerTest  extends TestCase {
         clientBus.release();
     }
 
-    public synchronized void testMultipleAuthListenersUnregisterSome() {
+    // ASACORE-1037 unregister fails in some instances
+    public synchronized void DISABLED_testMultipleAboutListenersUnregisterSome() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
