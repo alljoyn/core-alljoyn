@@ -157,15 +157,18 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
                 if (it->first == APP_ID) {
                     size_t strSize = root->GetChild(it->first)->GetContent().size();
                     if (strSize % 2 == 0) {
-                        uint8_t* appId_bites = new uint8_t[strSize / 2];
+                        uint8_t* appId_bytes = new uint8_t[strSize / 2];
                         for (size_t i = 0; i < strSize / 2; ++i) {
-                            appId_bites[i] = (CharToNibble(root->GetChild(it->first)->GetContent()[2 * i]) << 4) |
+                            appId_bytes[i] = (CharToNibble(root->GetChild(it->first)->GetContent()[2 * i]) << 4) |
                                              CharToNibble(root->GetChild(it->first)->GetContent()[2 * i + 1]);
-                            status = SetAppId(appId_bites, strSize / 2);
-                            if (status != ER_OK) {
-                                return status;
-                            }
                         }
+                        status = SetAppId(appId_bytes, strSize / 2);
+                        if (status != ER_OK) {
+                            delete [] appId_bytes;
+                            return status;
+                        }
+                        aboutDataInternal->propertyStore[APP_ID].Stabilize();
+                        delete [] appId_bytes;
                     } else {
                         // we must have an even number of characters
                         // TODO put more meaningful status
@@ -837,6 +840,7 @@ QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
             }
         }
         if (status != ER_OK) {
+            delete [] aboutDictonary;
             return status;
         }
     }
@@ -844,6 +848,7 @@ QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
 
     msgArg->Set("a{sv}", dictonarySize, aboutDictonary);
     msgArg->Stabilize();
+    delete [] aboutDictonary;
     return status;
 }
 
@@ -912,6 +917,7 @@ QStatus AboutData::GetAnnouncedAboutData(MsgArg* msgArg)
 
     msgArg->Set("a{sv}", dictonarySize, announceDictonary);
     msgArg->Stabilize();
+    delete [] announceDictonary;
     return status;
 }
 

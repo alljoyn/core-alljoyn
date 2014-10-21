@@ -205,15 +205,15 @@ QStatus AboutObjectDescription::GetMsgArg(MsgArg* msgArg)
         }
 
         status = announceObjectsArg[objIndex].Set("(oas)", objectPath.c_str(), it->second.size(), interfaces);
-        // TODO check there is no memory leak here.
-        //announceObjectsArg[objIndex].SetOwnershipFlags(MsgArg::OwnsData);
+        announceObjectsArg[objIndex].Stabilize();
+        delete [] interfaces;
         if (ER_OK != status) {
             return status;
         }
         objIndex++;
     }
     status = msgArg->Set("a(oas)", objIndex, announceObjectsArg);
-    msgArg->SetOwnershipFlags(MsgArg::OwnsArgs);
+    msgArg->SetOwnershipFlags(MsgArg::OwnsArgs | MsgArg::OwnsData, true);
     return status;
 }
 }
