@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011,20120144 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -39,12 +39,12 @@ namespace ajn {
 void SignalTable::Add(MessageReceiver* receiver,
                       MessageReceiver::SignalHandler handler,
                       const InterfaceDescription::Member* member,
-                      const qcc::String& rule)
+                      const Rule& rule)
 {
     QCC_DbgTrace(("SignalTable::Add(iface = {%s}, member = {%s}, rule = \"%s\")",
                   member->iface->GetName(),
                   member->name.c_str(),
-                  rule.c_str()));
+                  rule.ToString().c_str()));
     Entry entry(handler, receiver, member, rule);
     Key key(member->iface->GetName(), member->name);
     lock.Lock(MUTEX_CONTEXT);
@@ -55,7 +55,7 @@ void SignalTable::Add(MessageReceiver* receiver,
 void SignalTable::Remove(MessageReceiver* receiver,
                          MessageReceiver::SignalHandler handler,
                          const InterfaceDescription::Member* member,
-                         const char* rule)
+                         const Rule& rule)
 {
     Key key(member->iface->GetName(), member->name.c_str());
     iterator iter;
@@ -78,7 +78,7 @@ void SignalTable::Remove(MessageReceiver* receiver,
     lock.Unlock(MUTEX_CONTEXT);
 }
 
-void SignalTable::RemoveAll(MessageReceiver* receiver)
+void SignalTable::RemoveAll(MessageReceiver* receiver, std::vector<qcc::String>& rulesToRemove)
 {
     bool removed;
     lock.Lock(MUTEX_CONTEXT);
@@ -86,6 +86,7 @@ void SignalTable::RemoveAll(MessageReceiver* receiver)
         removed = false;
         for (iterator iter = hashTable.begin(); iter != hashTable.end(); ++iter) {
             if (iter->second.object == receiver) {
+                rulesToRemove.push_back(iter->second.rule.ToString());
                 hashTable.erase(iter);
                 removed = true;
                 break;

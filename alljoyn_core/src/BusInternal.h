@@ -259,6 +259,22 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
         return copy;
     }
 
+    /**
+     * Add an implicit match rule
+     */
+    void AddImplicitMatch(qcc::String rule);
+
+    /**
+     * Remove an implicit match rule
+     */
+    void RemoveImplicitMatch(qcc::String rule);
+
+    /**
+     * Perform AddMatch calls for match rules installed
+     * before the bus attachment was connected.
+     */
+    void SendPendingAddMatches();
+
   private:
 
     /**
@@ -330,6 +346,9 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
 
     std::set<SessionId> hostedSessions;    /* session IDs for all sessions hosted by this bus attachment */
     qcc::Mutex hostedSessionsLock;         /* Mutex that protects hostedSessions */
+
+    std::multiset<qcc::String> implicitMatchRules;    /* match rules associated with signal handlers */
+    qcc::Mutex implicitMatchRulesLock;                /* Mutex that protects implicitMatchRules */
 };
 }
 

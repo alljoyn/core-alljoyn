@@ -767,7 +767,7 @@ bool _LocalEndpoint::ResumeReplyHandlerTimeout(Message& methodCallMsg)
 QStatus _LocalEndpoint::RegisterSignalHandler(MessageReceiver* receiver,
                                               MessageReceiver::SignalHandler signalHandler,
                                               const InterfaceDescription::Member* member,
-                                              const char* matchRule)
+                                              const Rule& matchRule)
 {
     if (!receiver) {
         return ER_BAD_ARG_1;
@@ -777,9 +777,6 @@ QStatus _LocalEndpoint::RegisterSignalHandler(MessageReceiver* receiver,
     }
     if (!member) {
         return ER_BAD_ARG_3;
-    }
-    if (!matchRule) {
-        return ER_BAD_ARG_4;
     }
     signalTable.Add(receiver, signalHandler, member, matchRule);
     return ER_OK;
@@ -788,7 +785,7 @@ QStatus _LocalEndpoint::RegisterSignalHandler(MessageReceiver* receiver,
 QStatus _LocalEndpoint::UnregisterSignalHandler(MessageReceiver* receiver,
                                                 MessageReceiver::SignalHandler signalHandler,
                                                 const InterfaceDescription::Member* member,
-                                                const char* matchRule)
+                                                const Rule& matchRule)
 {
     if (!receiver) {
         return ER_BAD_ARG_1;
@@ -799,19 +796,17 @@ QStatus _LocalEndpoint::UnregisterSignalHandler(MessageReceiver* receiver,
     if (!member) {
         return ER_BAD_ARG_3;
     }
-    if (!matchRule) {
-        return ER_BAD_ARG_4;
-    }
     signalTable.Remove(receiver, signalHandler, member, matchRule);
     return ER_OK;
 }
 
-QStatus _LocalEndpoint::UnregisterAllHandlers(MessageReceiver* receiver)
+QStatus _LocalEndpoint::UnregisterAllHandlers(MessageReceiver* receiver, vector<String>& rulesToRemove)
 {
     /*
      * Remove all the signal handlers for this receiver.
      */
-    signalTable.RemoveAll(receiver);
+    signalTable.RemoveAll(receiver, rulesToRemove);
+
     /*
      * Remove any reply handlers for this receiver
      */

@@ -236,7 +236,7 @@ class SignalReceiver : public MessageReceiver {
     }
 
     void verify_recv(int expected = 1) {
-// #define PRINT
+#define PRINT
 #ifdef PRINT
         fprintf(stderr, "VERIFICATION: FOR %s EXPECTED %d\n", participant->name, expected);
 #endif
@@ -317,8 +317,9 @@ TEST_F(SignalTest, Point2PointSimple)
     B.busobj->SendSignal(NULL, 0, 0);
     A.busobj->SendSignal(NULL, 0, 0);
     wait_for_signal();
-    recvA.verify_norecv();
-    recvB.verify_norecv();
+    /* starting from protocol version 11, the AddMatch is done implicitly */
+    recvA.verify_recv(2);
+    recvB.verify_recv(2);
 
     /* with addmatches */
     A.AddMatch();
@@ -339,8 +340,9 @@ TEST_F(SignalTest, Point2PointSimple)
     B.busobj->SendSignal(NULL, 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
     A.busobj->SendSignal(NULL, 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
     wait_for_signal();
-    recvA.verify_norecv();
-    recvB.verify_norecv();
+    /* starting from protocol version 11, the AddMatch is done implicitly */
+    recvA.verify_recv(2);
+    recvB.verify_recv(2);
 
     /* with addmatches */
     A.AddMatch();
@@ -410,9 +412,10 @@ TEST_F(SignalTest, MultiPointSimple)
     B.busobj->SendSignal(NULL, 0, 0);
     A.busobj->SendSignal(NULL, 0, 0);
     wait_for_signal();
-    recvA.verify_norecv();
-    recvB.verify_norecv();
-    recvC.verify_norecv();
+    /* starting from protocol version 11, the AddMatch is done implicitly */
+    recvA.verify_recv(2);
+    recvB.verify_recv(2);
+    recvC.verify_recv(2);
 
     /* with addmatches */
     A.AddMatch();
@@ -437,9 +440,10 @@ TEST_F(SignalTest, MultiPointSimple)
     B.busobj->SendSignal(NULL, 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
     A.busobj->SendSignal(NULL, 0, ALLJOYN_FLAG_GLOBAL_BROADCAST);
     wait_for_signal();
-    recvA.verify_norecv();
-    recvB.verify_norecv();
-    recvC.verify_norecv();
+    /* starting from protocol version 11, the AddMatch is done implicitly */
+    recvA.verify_recv(2);
+    recvB.verify_recv(2);
+    recvC.verify_recv(2);
 
     /* with addmatches */
     A.AddMatch();

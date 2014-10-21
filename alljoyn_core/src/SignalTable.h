@@ -84,11 +84,11 @@ class SignalTable {
         /**
          * Construct an Entry
          */
-        Entry(const MessageReceiver::SignalHandler& handler, MessageReceiver* object, const InterfaceDescription::Member* member, const qcc::String& matchRule)
+        Entry(const MessageReceiver::SignalHandler& handler, MessageReceiver* object, const InterfaceDescription::Member* member, const Rule& matchRule)
             : handler(handler),
             object(object),
             member(member),
-            rule(matchRule.c_str()) { }
+            rule(matchRule) { }
 
         /**
          * Construct an empty Entry.
@@ -141,7 +141,7 @@ class SignalTable {
     void Add(MessageReceiver* receiver,
              MessageReceiver::SignalHandler func,
              const InterfaceDescription::Member* member,
-             const qcc::String& rule);
+             const Rule& rule);
 
     /**
      * Remove an entry from the signal hash table.
@@ -154,14 +154,15 @@ class SignalTable {
     void Remove(MessageReceiver* receiver,
                 MessageReceiver::SignalHandler func,
                 const InterfaceDescription::Member* member,
-                const char* rule);
+                const Rule& rule);
 
     /**
      * Remove all entries from the signal hash table for the specified receiver.
      *
-     * @param receiver    Object receiving the message.
+     * @param receiver             Object receiving the message.
+     * @param [out] rulesToRemove  the set of match rules to remove from the router
      */
-    void RemoveAll(MessageReceiver* receiver);
+    void RemoveAll(MessageReceiver* receiver, std::vector<qcc::String>& rulesToRemove);
 
     /**
      * Find Entries for a certain signal

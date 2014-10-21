@@ -47,6 +47,7 @@ namespace ajn {
  * %BusAttachment is the top-level object responsible for connecting to and optionally managing a message bus.
  */
 class BusAttachment : public MessageReceiver {
+    friend class _LocalEndpoint;
 
   public:
 
@@ -1394,6 +1395,38 @@ class BusAttachment : public MessageReceiver {
      * Validate the response to JoinSession
      */
     QStatus GetJoinSessionResponse(Message& reply, SessionId& sessionId, SessionOpts& opts);
+
+    /**
+     * Add a DBus match rule but don't wait for the router's reply.
+     *
+     * This method is a shortcut/helper that issues an org.freedesktop.DBus.AddMatch method call to the local router.
+     * This fire-and-forget variant is intentionally private, it's used exclusively in
+     * BusAttachment::RegisterSignalHandlerWithRule.
+     *
+     * @param[in]  rule  Match rule to be added (see DBus specification for format of this string).
+     *
+     * @return
+     *      - #ER_OK if the AddMatch request was successful.
+     *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+     *      - Other error status codes indicating a failure.
+     */
+    QStatus AddMatchFireAndForget(const char* rule);
+
+    /**
+     * Remove a DBus match rule but don't wait for the router's reply.
+     *
+     * This method is a shortcut/helper that issues an org.freedesktop.DBus.RemoveMatch method call to the local router.
+     * This fire-and-forget variant is intentionally private, it's used exclusively in
+     * BusAttachment::(Un)RegisterSignalHandlerWithRule.
+     *
+     * @param[in]  rule  Match rule to be removed (see DBus specification for format of this string).
+     *
+     * @return
+     *      - #ER_OK if the RemoveMatch request was successful.
+     *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+     *      - Other error status codes indicating a failure.
+     */
+    QStatus RemoveMatchFireAndForget(const char* rule);
 
     qcc::String connectSpec;  /**< The connect spec used to connect to the bus */
     bool isStarted;           /**< Indicates if the bus has been started */
