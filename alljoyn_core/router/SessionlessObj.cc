@@ -381,7 +381,7 @@ QStatus SessionlessObj::PushMessage(Message& msg)
     /* Match the message against any existing implicit rules */
     uint32_t fromRulesId = nextRulesId - (numeric_limits<uint32_t>::max() >> 1);
     uint32_t toRulesId = nextRulesId;
-    SendMatchingThroughEndpoint(0, msg, fromRulesId, toRulesId, true);
+    SendMatchingThroughEndpoint(0, msg, fromRulesId, toRulesId);
 
     /* Put the message in the local cache */
     SessionlessMessageKey key(msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath());

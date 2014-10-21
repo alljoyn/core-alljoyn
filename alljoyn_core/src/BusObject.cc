@@ -622,6 +622,11 @@ QStatus BusObject::MethodReply(const Message& msg, const MsgArg* args, size_t nu
         return ER_BUS_OBJECT_NOT_REGISTERED;
     }
 
+    if (msg->GetFlags() & ALLJOYN_FLAG_NO_REPLY_EXPECTED) {
+        /* no reply expected, so we don't send any either */
+        return ER_OK;
+    }
+
     if (msg->GetType() != MESSAGE_METHOD_CALL) {
         status = ER_BUS_NO_CALL_FOR_REPLY;
     } else {
@@ -644,6 +649,11 @@ QStatus BusObject::MethodReply(const Message& msg, const char* errorName, const 
         return ER_BUS_OBJECT_NOT_REGISTERED;
     }
 
+    if (msg->GetFlags() & ALLJOYN_FLAG_NO_REPLY_EXPECTED) {
+        /* no reply expected, so we don't send any either */
+        return ER_OK;
+    }
+
     if (msg->GetType() != MESSAGE_METHOD_CALL) {
         status = ER_BUS_NO_CALL_FOR_REPLY;
         return status;
@@ -663,6 +673,11 @@ QStatus BusObject::MethodReply(const Message& msg, QStatus status)
     /* Protect against calling before object is registered */
     if (!bus) {
         return ER_BUS_OBJECT_NOT_REGISTERED;
+    }
+
+    if (msg->GetFlags() & ALLJOYN_FLAG_NO_REPLY_EXPECTED) {
+        /* no reply expected, so we don't send any either */
+        return ER_OK;
     }
 
     if (status == ER_OK) {

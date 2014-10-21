@@ -166,6 +166,71 @@ BusAttachment::Internal::~Internal()
     router = NULL;
 }
 
+void BusAttachment::Internal::AddImplicitMatch(const Rule& rule)
+{
+    qcc::String ruleStr = rule.ToString();
+    implicitMatchRulesLock.Lock(MUTEX_CONTEXT);
+    implicitMatchRules.insert(ruleStr);
+    implicitMatchRulesLock.Unlock(MUTEX_CONTEXT);
+
+    if (bus.IsConnected()) {
+        MsgArg args[1];
+        size_t numArgs = ArraySize(args);
+
+        MsgArg::Set(args, numArgs, "s", ruleStr.c_str());
+
+        const ProxyBusObject& dbusObj = localEndpoint->GetDBusProxyObj();
+        QStatus status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "AddMatch", args, numArgs);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("%s.AddMatch returned ERROR_MESSAGE", org::freedesktop::DBus::InterfaceName));
+        }
+    }
+}
+
+void BusAttachment::Internal::RemoveImplicitMatch(const Rule& rule)
+{
+    qcc::String ruleStr = rule.ToString();
+    implicitMatchRulesLock.Lock(MUTEX_CONTEXT);
+    std::multiset<qcc::String>::iterator it = implicitMatchRules.find(ruleStr);
+    if (it != implicitMatchRules.end()) {
+        implicitMatchRules.erase(it);
+    }
+    implicitMatchRulesLock.Unlock(MUTEX_CONTEXT);
+
+    if (bus.IsConnected()) {
+        MsgArg args[1];
+        size_t numArgs = ArraySize(args);
+
+        MsgArg::Set(args, numArgs, "s", ruleStr.c_str());
+
+        const ProxyBusObject& dbusObj = localEndpoint->GetDBusProxyObj();
+        QStatus status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "RemoveMatch", args, numArgs);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("%s.RemoveMatch returned ERROR_MESSAGE", org::freedesktop::DBus::InterfaceName));
+        }
+    }
+}
+
+void BusAttachment::Internal::SendPendingImplicitMatches()
+{
+    implicitMatchRulesLock.Lock(MUTEX_CONTEXT);
+    std::multiset<qcc::String> rules = implicitMatchRules;
+    implicitMatchRulesLock.Unlock(MUTEX_CONTEXT);
+
+    for (std::multiset<qcc::String>::iterator it = rules.begin(); it != rules.end(); ++it) {
+        MsgArg args[1];
+        size_t numArgs = ArraySize(args);
+
+        MsgArg::Set(args, numArgs, "s", it->c_str());
+
+        const ProxyBusObject& dbusObj = localEndpoint->GetDBusProxyObj();
+        QStatus status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "AddMatch", args, numArgs);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("%s.AddMatch returned ERROR_MESSAGE", org::freedesktop::DBus::InterfaceName));
+        }
+    }
+}
+
 /*
  * Transport factory container for transports this bus attachment uses to communicate with the daemon.
  */
@@ -401,6 +466,7 @@ QStatus BusAttachment::TryConnect(const char* connectSpec)
     } else {
         status = ER_BUS_TRANSPORT_NOT_AVAILABLE;
     }
+
     return status;
 }
 
@@ -441,6 +507,11 @@ QStatus BusAttachment::Connect(const char* connectSpec)
                 }
             }
         }
+
+        if (status == ER_OK) {
+            busInternal->SendPendingImplicitMatches();
+        }
+
         /* If this is a client (non-daemon) bus attachment, then register signal handlers for BusListener */
         if ((ER_OK == status) && !isDaemon) {
             const InterfaceDescription* iface = GetInterface(org::freedesktop::DBus::InterfaceName);
@@ -801,7 +872,19 @@ QStatus BusAttachment::RegisterSignalHandlerWithRule(MessageReceiver* receiver,
                                                      const InterfaceDescription::Member* member,
                                                      const char* matchRule)
 {
-    return busInternal->localEndpoint->RegisterSignalHandler(receiver, signalHandler, member, matchRule);
+    QStatus status;
+    Rule rule(matchRule, &status);
+
+    QCC_DbgTrace(("BusAttachment::RegisterSignalHandlerWithRule(%s::%s, %s)", member->iface->GetName(), member->name.c_str(), matchRule));
+
+    if (status == ER_OK) {
+        status = busInternal->localEndpoint->RegisterSignalHandler(receiver, signalHandler, member, rule);
+        if (status == ER_OK) {
+            busInternal->AddImplicitMatch(rule);
+        }
+    }
+
+    return status;
 }
 
 QStatus BusAttachment::RegisterSignalHandler(MessageReceiver* receiver,
@@ -817,6 +900,13 @@ QStatus BusAttachment::RegisterSignalHandler(MessageReceiver* receiver,
     matchRule += String(member->name) + "',interface='" + member->iface->GetName() + "'";
     if (srcPath) {
         matchRule += String(",path='") + srcPath + "'";
+    }
+    if (member->isSessionlessSignal) {
+        /* Weak point here: you can't rely on this being set properly when the InterfaceDescription
+         * is built. If the sessionless flag is not properly set at that time, it's up to the
+         * application developer to add the proper match rule by himself, either as a separate
+         * AddMatch or via RegisterSignalHandlerWithRule. */
+        matchRule += String(",sessionless='t'");
     }
     return RegisterSignalHandlerWithRule(receiver, signalHandler, member, matchRule.c_str());
 }
@@ -843,12 +933,25 @@ QStatus BusAttachment::UnregisterSignalHandlerWithRule(MessageReceiver* receiver
                                                        const InterfaceDescription::Member* member,
                                                        const char* matchRule)
 {
-    return busInternal->localEndpoint->UnregisterSignalHandler(receiver, signalHandler, member, matchRule);
+    QStatus status;
+    Rule rule(matchRule, &status);
+    if (status == ER_OK) {
+        status = busInternal->localEndpoint->UnregisterSignalHandler(receiver, signalHandler, member, rule);
+        if (status == ER_OK) {
+            busInternal->RemoveImplicitMatch(rule);
+        }
+    }
+    return status;
 }
 
 QStatus BusAttachment::UnregisterAllHandlers(MessageReceiver* receiver)
 {
-    return busInternal->localEndpoint->UnregisterAllHandlers(receiver);
+    vector<String> rulesToRemove;
+    QStatus status = busInternal->localEndpoint->UnregisterAllHandlers(receiver, rulesToRemove);
+    for (vector<String>::iterator it = rulesToRemove.begin(); it != rulesToRemove.end(); ++it) {
+        busInternal->RemoveImplicitMatch(Rule(it->c_str()));
+    }
+    return status;
 }
 
 bool BusAttachment::IsConnected() const {
