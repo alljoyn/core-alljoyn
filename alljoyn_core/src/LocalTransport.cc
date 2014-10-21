@@ -673,6 +673,7 @@ QStatus _LocalEndpoint::GetAnnouncedObjectDescription(MsgArg& objectDescriptionA
             ++argCount;
         }
         if (ER_OK != status) {
+            delete [] announceObjectsArg;
             objectsLock.Unlock(MUTEX_CONTEXT);
             return status;
         }
@@ -681,7 +682,8 @@ QStatus _LocalEndpoint::GetAnnouncedObjectDescription(MsgArg& objectDescriptionA
     assert(argCount == announcedObjectsCount);
 
     status = objectDescriptionArg.Set("a(oas)", announcedObjectsCount, announceObjectsArg);
-    objectDescriptionArg.SetOwnershipFlags(MsgArg::OwnsArgs);
+    objectDescriptionArg.Stabilize();
+    delete [] announceObjectsArg;
     objectsLock.Unlock(MUTEX_CONTEXT);
 
     return status;
