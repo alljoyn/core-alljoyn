@@ -27,6 +27,7 @@
 #endif
 
 #include <alljoyn/BusObject.h>
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <qcc/CryptoECC.h>
 #include <alljoyn/PermissionPolicy.h>
@@ -55,11 +56,14 @@ class PermissionMgmtObj : public BusObject {
     /**
      * virtual destructor
      */
-    virtual ~PermissionMgmtObj()
-    {
-        delete ca;
-    }
+    virtual ~PermissionMgmtObj();
 
+    /**
+     * Called by the message bus when the object has been successfully registered. The object can
+     * perform any initialization such as adding match rules at this time.
+     */
+
+    virtual void ObjectRegistered(void);
 
   private:
 
@@ -85,6 +89,20 @@ class PermissionMgmtObj : public BusObject {
         }
     };
 
+    class PortListener : public SessionPortListener {
+
+      public:
+
+        PortListener() : SessionPortListener()
+        {
+        }
+
+        bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
+        {
+            return (ALLJOYN_SESSIONPORT_PERMISSION_MGMT == sessionPort);
+        }
+    };
+
     void Claim(const InterfaceDescription::Member* member, Message& msg);
     void InstallPolicy(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetACLGUID(ACLEntryType aclEntryType, qcc::GUID128& guid);
@@ -103,6 +121,11 @@ class PermissionMgmtObj : public BusObject {
     QStatus RetrievePolicy(PermissionPolicy& policy);
 
     void GetPolicy(const InterfaceDescription::Member* member, Message& msg);
+    /**
+     * Bind to an exclusive port for PermissionMgmt object.
+     */
+    QStatus BindPort();
+
     QStatus NotifyConfig();
 
     BusAttachment& bus;
@@ -110,6 +133,7 @@ class PermissionMgmtObj : public BusObject {
     const InterfaceDescription::Member* notifySignalName;
     ClaimableState claimableState;
     uint32_t serialNum;
+    PortListener* portListener;
 };
 
 }

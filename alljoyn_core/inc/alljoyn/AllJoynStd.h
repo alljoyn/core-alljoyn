@@ -115,7 +115,7 @@ extern const char* InterfaceName;                 /**< Interface name */
  * Create a named session for other bus nodes to join.
  *
  * In params:
- *  inPort       - Session Port number to bind to or SESSION_PORT_ANY to have router allocate an available port number.
+ *  inPort       - Session Port number to bind to (see below for reserved values and range) or SESSION_PORT_ANY to have router allocate an available port number.
  *  isMultipoint - true iff session supports more than two participants.
  *  opts         - Session options
  *
@@ -125,6 +125,9 @@ extern const char* InterfaceName;                 /**< Interface name */
  */
 // @{
 /* org.alljoyn.Bus.BindSessionPort */
+/* The router session port range is from 1 to 999 */
+#define ALLJOYN_SESSIONPORT_SESSIONLESS      100 /**< BindSessionPort port reserved for the SessionlessObj to connect */
+#define ALLJOYN_SESSIONPORT_PERMISSION_MGMT  101 /**< BindSessionPort port reserved for the PermissionMgmt object */
 #define ALLJOYN_BINDSESSIONPORT_REPLY_SUCCESS         1   /**< BindSessionPort reply: Success */
 #define ALLJOYN_BINDSESSIONPORT_REPLY_ALREADY_EXISTS  2   /**< BindSessionPort reply: SessionPort already exists */
 #define ALLJOYN_BINDSESSIONPORT_REPLY_FAILED          3   /**< BindSessionPort reply: Failed */

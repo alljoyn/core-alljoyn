@@ -34,7 +34,7 @@ namespace ajn {
 
 PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
     BusObject(org::allseen::Security::PermissionMgmt::ObjectPath, false),
-    bus(bus), notifySignalName(NULL)
+    bus(bus), notifySignalName(NULL), portListener(NULL)
 {
     /* Add org.allseen.Security.PermissionMgmt interface */
     const InterfaceDescription* ifc = bus.GetInterface(org::allseen::Security::PermissionMgmt::InterfaceName);
@@ -70,7 +70,17 @@ PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus) :
     } else {
         serialNum = 0;
     }
+
     NotifyConfig();
+}
+
+PermissionMgmtObj::~PermissionMgmtObj()
+{
+    delete ca;
+    if (portListener) {
+        bus.UnbindSessionPort(ALLJOYN_SESSIONPORT_PERMISSION_MGMT);
+        delete portListener;
+    }
 }
 
 QStatus PermissionMgmtObj::GetACLGUID(ACLEntryType aclEntryType, qcc::GUID128& guid)
@@ -184,6 +194,7 @@ QStatus PermissionMgmtObj::RetrieveDSAPrivateKey(ECCPrivateKey* privateKey)
     memcpy(privateKey, kb.GetData(), kb.GetSize());
     return ER_OK;
 }
+
 
 void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Message& msg)
 {
@@ -321,6 +332,7 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
                      new MsgArg("(ayyyv)", GUID128::SIZE, newGUID.GetBytes(), KeyInfo::USAGE_SIGNING, KeyInfoECC::KEY_TYPE,
                                 new MsgArg("(yyv)", keyInfo.GetAlgorithm(), keyInfo.GetCurve(),
                                            new MsgArg("(ayay)", KeyInfoECC::ECC_COORDINATE_SZ, keyInfo.GetXCoord(), KeyInfoECC::ECC_COORDINATE_SZ, keyInfo.GetYCoord()))));
+    replyArgs[0].SetOwnershipFlags(MsgArg::OwnsArgs, true);
     MethodReply(msg, replyArgs, ArraySize(replyArgs));
 
     NotifyConfig();
@@ -451,6 +463,25 @@ QStatus PermissionMgmtObj::NotifyConfig()
     args[2].Set("u", serialNum);
     args[3].Set("a(ayay)", 0, NULL);
     return Signal(NULL, 0, *notifySignalName, args, 4, 0, flags);
+}
+
+void PermissionMgmtObj::ObjectRegistered(void)
+{
+    /* Bind to the reserved port for PermissionMgmt */
+    BindPort();
+}
+
+QStatus PermissionMgmtObj::BindPort()
+{
+    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+    SessionPort sessionPort = ALLJOYN_SESSIONPORT_PERMISSION_MGMT;
+    portListener = new PortListener();
+    QStatus status = bus.BindSessionPort(sessionPort, opts, *portListener);
+    if (ER_OK != status) {
+        delete portListener;
+        portListener = NULL;
+    }
+    return status;
 }
 
 } /* namespace ajn */

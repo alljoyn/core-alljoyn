@@ -22,6 +22,7 @@
 #include <alljoyn/ProxyBusObject.h>
 #include <alljoyn/InterfaceDescription.h>
 #include <alljoyn/DBusStd.h>
+#include <alljoyn/AllJoynStd.h>
 #include <qcc/Thread.h>
 #include <qcc/Util.h>
 #include <qcc/CryptoECC.h>
@@ -429,7 +430,7 @@ QStatus Claim(BusAttachment* bus, ProxyBusObject* remoteObj, const ECCPublicKey*
                   new MsgArg("(ayyyv)", GUID128::SIZE, localGUID.GetBytes(), KeyInfo::USAGE_SIGNING, KeyInfoECC::KEY_TYPE,
                              new MsgArg("(yyv)", keyInfo.GetAlgorithm(), keyInfo.GetCurve(),
                                         new MsgArg("(ayay)", KeyInfoECC::ECC_COORDINATE_SZ, keyInfo.GetXCoord(), KeyInfoECC::ECC_COORDINATE_SZ, keyInfo.GetYCoord()))));
-
+    inputs[0].SetOwnershipFlags(MsgArg::OwnsArgs, true);
     GUID128 claimGUID;
     inputs[1].Set("ay", GUID128::SIZE, claimGUID.GetBytes());
     status = remoteObj->MethodCall(INTERFACE_NAME, "Claim", inputs, 2, reply, 5000);
@@ -583,10 +584,15 @@ TEST_F(PermissionMgmtTest, Claim)
     EnableSecurity("ALLJOYN_ECDHE_NULL");
     clientBus.ClearKeyStore();
     serviceBus.ClearKeyStore();
+    SessionId sessionId;
+    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+    status = clientBus.JoinSession(serviceBus.GetUniqueName().c_str(),
+                                   ALLJOYN_SESSIONPORT_PERMISSION_MGMT, NULL, sessionId, opts);
+    EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
     String certChainPEM(clientCertChainType1PEM);
     status = ParseCertChainPEM(certChainPEM);
     EXPECT_EQ(ER_OK, status) << "  Claim failed.  Parsing cert chain PEM failed.  Actual Status: " << QCC_StatusText(status);
-    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), object_path, 0, false);
+    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), object_path, sessionId, false);
     status = Claim(&clientBus, &clientProxyObject, certChain[0]->GetSubject());
     EXPECT_EQ(ER_OK, status) << "  Claim failed.  Actual Status: " << QCC_StatusText(status);
 
@@ -631,5 +637,4 @@ TEST_F(PermissionMgmtTest, InstallPolicy)
     qcc::Sleep(1000);
     EXPECT_TRUE(GetSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
 }
-
 
