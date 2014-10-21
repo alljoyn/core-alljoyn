@@ -184,7 +184,7 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
 
     /**
      * Register a signal handler.
-     * Signals are forwarded to the signalHandler if sender, interface, member and path
+     * Signals are forwarded to the signalHandler if sender, interface member and rule
      * qualifiers are ALL met.
      *
      * @param receiver       The object receiving the signal.
@@ -198,7 +198,7 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     QStatus RegisterSignalHandler(MessageReceiver* receiver,
                                   MessageReceiver::SignalHandler signalHandler,
                                   const InterfaceDescription::Member* member,
-                                  const char* matchRule);
+                                  const Rule& matchRule);
 
     /**
      * Un-Register a signal handler.
@@ -215,17 +215,18 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     QStatus UnregisterSignalHandler(MessageReceiver* receiver,
                                     MessageReceiver::SignalHandler signalHandler,
                                     const InterfaceDescription::Member* member,
-                                    const char* matchRule);
+                                    const Rule& matchRule);
 
     /**
      * Un-Register all signal and reply handlers registered to the specified MessageReceiver.
      *
-     * @param receiver   The object receiving the signal or waiting for the reply.
+     * @param receiver            The object receiving the signal or waiting for the reply.
+     * @param[out] rulesToRemove  Implicit match rules to remove
      * @return
      *      - ER_OK if successful
      *      - An error status otherwise
      */
-    QStatus UnregisterAllHandlers(MessageReceiver* receiver);
+    QStatus UnregisterAllHandlers(MessageReceiver* receiver, std::vector<qcc::String>& rulesToRemove);
 
     /**
      * Get the endpoint's unique name.

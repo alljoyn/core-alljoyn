@@ -43,6 +43,7 @@
 #include "Transport.h"
 #include "TransportList.h"
 #include "CompressionRules.h"
+#include "Rule.h"
 
 #include <alljoyn/Status.h>
 
@@ -259,6 +260,22 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
         return copy;
     }
 
+    /**
+     * Add an implicit match rule
+     */
+    void AddImplicitMatch(const Rule& rule);
+
+    /**
+     * Remove an implicit match rule
+     */
+    void RemoveImplicitMatch(const Rule& rule);
+
+    /**
+     * Perform AddMatch calls for implicit match rules installed
+     * before the bus attachment was connected.
+     */
+    void SendPendingImplicitMatches();
+
   private:
 
     /**
@@ -330,6 +347,9 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
 
     std::set<SessionId> hostedSessions;    /* session IDs for all sessions hosted by this bus attachment */
     qcc::Mutex hostedSessionsLock;         /* Mutex that protects hostedSessions */
+
+    std::vector<Rule> implicitMatchRules;  /* match rules associated with signal handlers */
+    qcc::Mutex implicitMatchRulesLock;     /* Mutex that protects implicitMatchRules */
 };
 }
 

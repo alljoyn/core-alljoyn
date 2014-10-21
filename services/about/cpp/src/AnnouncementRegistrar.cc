@@ -84,10 +84,15 @@ QStatus AnnouncementRegistrar::RegisterAnnounceHandler(ajn::BusAttachment& bus, 
             internalAnnounceHandler->announceSignalMember = getIface->GetMember("Announce");
         }
 
-        status = bus.RegisterSignalHandler(internalAnnounceHandler,
-                                           static_cast<MessageReceiver::SignalHandler>(&InternalAnnounceHandler::AnnounceSignalHandler),
-                                           internalAnnounceHandler->announceSignalMember,
-                                           0);
+        /* NOTE: the filter rule here must NOT include sessionless='t'.
+         * If it does, we inadvertently install a catch-all About rule in the
+         * router's SessionlessObj, which is something we explicitly want to
+         * avoid. Instead, we'll install more fine grained match rules for
+         * SessionlessObj via AddMatch. */
+        status = bus.RegisterSignalHandlerWithRule(internalAnnounceHandler,
+                                                   static_cast<MessageReceiver::SignalHandler>(&InternalAnnounceHandler::AnnounceSignalHandler),
+                                                   internalAnnounceHandler->announceSignalMember,
+                                                   "type='signal',member='Announce',interface='org.alljoyn.About'");
         if (status != ER_OK) {
             return status;
         }

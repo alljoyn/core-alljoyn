@@ -381,7 +381,7 @@ QStatus SessionlessObj::PushMessage(Message& msg)
     /* Match the message against any existing implicit rules */
     uint32_t fromRulesId = nextRulesId - (numeric_limits<uint32_t>::max() >> 1);
     uint32_t toRulesId = nextRulesId;
-    SendMatchingThroughEndpoint(0, msg, fromRulesId, toRulesId, true);
+    SendMatchingThroughEndpoint(0, msg, fromRulesId, toRulesId);
 
     /* Put the message in the local cache */
     SessionlessMessageKey key(msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath());
@@ -451,8 +451,7 @@ bool SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
     return true;
 }
 
-void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId,
-                                                 bool onlySendIfImplicit)
+void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId)
 {
     uint32_t rulesRangeLen = toRulesId - fromRulesId;
     RuleIterator rit = rules.begin();
@@ -501,8 +500,7 @@ void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uin
             isImplicitMatch = IsOnlyImplicitMatch(epName, msg);
         }
 
-        if ((onlySendIfImplicit && !isExplicitMatch && isImplicitMatch) ||
-            (!onlySendIfImplicit && (isExplicitMatch || isImplicitMatch))) {
+        if (isExplicitMatch || isImplicitMatch) {
             lock.Unlock();
             router.UnlockNameTable();
             SendThroughEndpoint(msg, ep, sid);
