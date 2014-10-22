@@ -377,7 +377,11 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
 
     while ((asn < eod) && (status == ER_OK)) {
         size_t len = 0;
-        uint8_t tag = *asn++ & 0x1F;
+        uint8_t tag = *asn++;
+        //TODO: check this
+        if (ASN_CONTEXT_SPECIFIC != (tag & ASN_CONTEXT_SPECIFIC)) {
+            tag &= 0x1F;
+        }
         switch (*syntax++) {
         case '/':
             --asn;
@@ -436,6 +440,15 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                     asn += len;
                     *va_arg(argp, size_t*) = len * 8 - unusedBits;
                 }
+            }
+            continue;
+
+        case 'z':
+            if ((tag != ASN_BOOLEAN) || !DecodeLen(asn, eod, len) || (len != 1)) {
+                status = ER_FAIL;
+            } else {
+                uint32_t* v = va_arg(argp, uint32_t*);
+                *v = *asn++;
             }
             continue;
 
@@ -505,6 +518,27 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                 status = ER_FAIL;
             }
             break;
+
+        case 'c':
+            {
+                uint32_t v = va_arg(argp, uint32_t);
+                if (v >= 32 || *syntax++ != '(') {
+                    status = ER_FAIL;
+                    continue;
+                }
+                if ((tag != (ASN_CONTEXT_SPECIFIC | v)) || !DecodeLen(asn, eod, len)) {
+                    status = ER_FAIL;
+                } else {
+                    qcc::String seq;
+                    status = DecodeV(syntax, asn, len, &argp);
+                    if (*syntax++ != ')') {
+                        status = ER_FAIL;
+                    } else if (status == ER_OK) {
+                        asn += len;
+                    }
+                }
+            }
+            continue;
 
         case 't':
             if ((tag != ASN_UTC_TIME) || !DecodeLen(asn, eod, len)) {

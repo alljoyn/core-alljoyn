@@ -1768,8 +1768,9 @@ static QStatus Crypto_ECC_GenerateKeyPair(ECCPublicKey* publicKey, ECCPrivateKey
     if (ECDH_generate(&ap, &k) != 0) {
         return ER_FAIL;
     }
-    U32ArrayToU8BeArray((const uint32_t*) &ap, U32_AFFINEPOINT_SZ, (uint8_t*) publicKey);
-    U32ArrayToU8BeArray((const uint32_t*) &k, U32_BIGVAL_SZ, (uint8_t*) privateKey);
+    bigval_to_binary(&ap.x, publicKey->x, sizeof(publicKey->x));
+    bigval_to_binary(&ap.y, publicKey->y, sizeof(publicKey->y));
+    bigval_to_binary(&k, privateKey->x, sizeof(privateKey->x));
     return ER_OK;
 }
 
@@ -1796,8 +1797,10 @@ static QStatus Crypto_ECC_GenerateSharedSecret(const ECCPublicKey* peerPublicKey
     affine_point_t pub;
     bigval_t pk;
 
-    U8BeArrayToU32Array((const uint8_t*) peerPublicKey, sizeof(ECCPublicKey), (uint32_t*) &pub);
-    U8BeArrayToU32Array((const uint8_t*) privateKey, sizeof(ECCPrivateKey), (uint32_t*) &pk);
+    pub.infinity = 0;
+    binary_to_bigval(peerPublicKey->x, &pub.x, sizeof(peerPublicKey->x));
+    binary_to_bigval(peerPublicKey->y, &pub.y, sizeof(peerPublicKey->y));
+    binary_to_bigval(privateKey->x, &pk, sizeof(privateKey->x));
     derive_rv = ECDH_derive_pt(&localSecret, &pk, &pub);
     if (!derive_rv) {
         return ER_FAIL;  /* bad */
@@ -1807,7 +1810,8 @@ static QStatus Crypto_ECC_GenerateSharedSecret(const ECCPublicKey* peerPublicKey
             return ER_FAIL;  /* bad */
         }
     }
-    U32ArrayToU8BeArray((const uint32_t*) &localSecret, U32_AFFINEPOINT_SZ, (uint8_t*) secret);
+    bigval_to_binary(&localSecret.x, secret->x, sizeof(secret->x));
+    bigval_to_binary(&localSecret.y, secret->y, sizeof(secret->y));
     return ER_OK;
 }
 
@@ -1843,11 +1847,12 @@ static QStatus Crypto_ECC_DSASignDigest(const uint8_t* digest, uint32_t len, con
     bigval_t privKey;
     ECDSA_sig_t localSig;
 
-    U8BeArrayToU32Array((const uint8_t*) signingPrivateKey, sizeof(ECCPrivateKey), (uint32_t*) &privKey);
+    binary_to_bigval(signingPrivateKey->x, &privKey, sizeof(signingPrivateKey->x));
     if (ECDSA_sign(&source, &privKey, &localSig) != 0) {
         return ER_FAIL;
     }
-    U32ArrayToU8BeArray((const uint32_t*) &localSig, U32_ECDSASIG_SZ, (uint8_t*) sig);
+    bigval_to_binary(&localSig.r, sig->r, sizeof(sig->r));
+    bigval_to_binary(&localSig.s, sig->s, sizeof(sig->s));
 
     return ER_OK;
 }
@@ -1900,13 +1905,16 @@ static QStatus Crypto_ECC_DSAVerifyDigest(const uint8_t* digest, uint32_t len, c
         return ER_FAIL;
     }
     bigval_t source;
-    ECC_hash_to_bigval(&source, digest, len);
     affine_point_t pub;
     ECDSA_sig_t localSig;
 
-    U8BeArrayToU32Array((const uint8_t*) signingPubKey, sizeof(ECCPublicKey), (uint32_t*) &pub);
-    U8BeArrayToU32Array((const uint8_t*) sig, sizeof(ECCSignature), (uint32_t*) &localSig);
+    pub.infinity = 0;
+    binary_to_bigval(signingPubKey->x, &pub.x, sizeof(signingPubKey->x));
+    binary_to_bigval(signingPubKey->y, &pub.y, sizeof(signingPubKey->y));
+    binary_to_bigval(sig->r, &localSig.r, sizeof(sig->r));
+    binary_to_bigval(sig->s, &localSig.s, sizeof(sig->s));
 
+    ECC_hash_to_bigval(&source, digest, len);
     if (!ECDSA_verify(&source, &pub, &localSig)) {
         return ER_FAIL;
     }
@@ -1949,23 +1957,63 @@ Crypto_ECC::~Crypto_ECC()
 {
 }
 
-QStatus KeyInfoNISTP256::Export(ECCPublicKey* pubKey)
+/*
+ * New to Old
+ */
+QStatus Crypto_ECC::ReEncode(const ECCPrivateKey* newenc, ECCPrivateKeyOldEncoding* oldenc)
 {
-    affine_point_t ap;
-    ap.infinity = 0;
-    binary_to_bigval(x, &ap.x, sizeof(ECCBigVal));
-    binary_to_bigval(y, &ap.y, sizeof(ECCBigVal));
-    U32ArrayToU8BeArray((const uint32_t*) &ap, U32_AFFINEPOINT_SZ, (uint8_t*) pubKey);
+    bigval_t bv;
+    binary_to_bigval(newenc->x, &bv, sizeof(newenc->x));
+    U32ArrayToU8BeArray((const uint32_t*) &bv, U32_BIGVAL_SZ, (uint8_t*) oldenc);
     return ER_OK;
 }
 
-QStatus KeyInfoNISTP256::Import(const ECCPublicKey* pubKey)
+QStatus Crypto_ECC::ReEncode(const ECCPublicKey* newenc, ECCPublicKeyOldEncoding* oldenc)
 {
     affine_point_t ap;
     ap.infinity = 0;
-    U8BeArrayToU32Array((const uint8_t*) pubKey, sizeof(ECCPublicKey), (uint32_t*) &ap);
-    bigval_to_binary(&ap.x, x, sizeof(ECCBigVal));
-    bigval_to_binary(&ap.y, y, sizeof(ECCBigVal));
+    binary_to_bigval(newenc->x, &ap.x, sizeof(newenc->x));
+    binary_to_bigval(newenc->y, &ap.y, sizeof(newenc->y));
+    U32ArrayToU8BeArray((const uint32_t*) &ap, U32_AFFINEPOINT_SZ, (uint8_t*) oldenc);
+    return ER_OK;
+}
+
+QStatus Crypto_ECC::ReEncode(const ECCSignature* newenc, ECCSignatureOldEncoding* oldenc)
+{
+    ECDSA_sig_t st;
+    binary_to_bigval(newenc->r, &st.r, sizeof(newenc->r));
+    binary_to_bigval(newenc->s, &st.s, sizeof(newenc->s));
+    U32ArrayToU8BeArray((const uint32_t*) &st, U32_ECDSASIG_SZ, (uint8_t*) oldenc);
+    return ER_OK;
+}
+
+/*
+ * Old to New
+ */
+QStatus Crypto_ECC::ReEncode(const ECCPrivateKeyOldEncoding* oldenc, ECCPrivateKey* newenc)
+{
+    bigval_t bv;
+    U8BeArrayToU32Array((const uint8_t*) oldenc, sizeof(ECCPrivateKeyOldEncoding), (uint32_t*) &bv);
+    bigval_to_binary(&bv, newenc->x, sizeof(newenc->x));
+    return ER_OK;
+}
+
+QStatus Crypto_ECC::ReEncode(const ECCPublicKeyOldEncoding* oldenc, ECCPublicKey* newenc)
+{
+    affine_point_t ap;
+    ap.infinity = 0;
+    U8BeArrayToU32Array((const uint8_t*) oldenc, sizeof(ECCPublicKeyOldEncoding), (uint32_t*) &ap);
+    bigval_to_binary(&ap.x, newenc->x, sizeof(newenc->x));
+    bigval_to_binary(&ap.y, newenc->y, sizeof(newenc->y));
+    return ER_OK;
+}
+
+QStatus Crypto_ECC::ReEncode(const ECCSignatureOldEncoding* oldenc, ECCSignature* newenc)
+{
+    ECDSA_sig_t st;
+    U8BeArrayToU32Array((const uint8_t*) oldenc, sizeof(ECCSignatureOldEncoding), (uint32_t*) &st);
+    bigval_to_binary(&st.r, newenc->r, sizeof(newenc->r));
+    bigval_to_binary(&st.s, newenc->s, sizeof(newenc->s));
     return ER_OK;
 }
 

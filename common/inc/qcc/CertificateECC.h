@@ -107,10 +107,7 @@ class CertificateType0 : public CertificateECC {
      */
     virtual void SetVersion(uint32_t val);
 
-    const ECCPublicKey* GetIssuer()
-    {
-        return (ECCPublicKey*) &encoded[OFFSET_ISSUER];
-    }
+    const ECCPublicKey* GetIssuer();
 
     void SetIssuer(const ECCPublicKey* issuer);
 
@@ -121,10 +118,7 @@ class CertificateType0 : public CertificateECC {
 
     void SetExternalDataDigest(const uint8_t* externalDataDigest);
 
-    const ECCSignature* GetSig()
-    {
-        return (ECCSignature*) &encoded[OFFSET_SIG];
-    }
+    const ECCSignature* GetSig();
 
     void SetSig(const ECCSignature* sig);
 
@@ -197,6 +191,8 @@ class CertificateType0 : public CertificateECC {
     static const size_t ENCODED_LEN = OFFSET_SIG + ECC_SIGNATURE_SZ;
 
     uint8_t encoded[ENCODED_LEN];
+    ECCPublicKey issuer;
+    ECCSignature signature;
 };
 
 /**
@@ -218,17 +214,11 @@ class CertificateType1 : public CertificateECC {
      */
     virtual void SetVersion(uint32_t val);
 
-    const ECCPublicKey* GetIssuer()
-    {
-        return (ECCPublicKey*) &encoded[OFFSET_ISSUER];
-    }
+    const ECCPublicKey* GetIssuer();
 
     void SetIssuer(const ECCPublicKey* issuer);
 
-    const ECCPublicKey* GetSubject()
-    {
-        return (ECCPublicKey*) &encoded[OFFSET_SUBJECT];
-    }
+    const ECCPublicKey* GetSubject();
 
     void SetSubject(const ECCPublicKey* subject);
 
@@ -256,10 +246,7 @@ class CertificateType1 : public CertificateECC {
 
     void SetExternalDataDigest(const uint8_t* externalDataDigest);
 
-    const ECCSignature* GetSig()
-    {
-        return (ECCSignature*) &encoded[OFFSET_SIG];
-    }
+    const ECCSignature* GetSig();
 
     void SetSig(const ECCSignature* sig);
 
@@ -337,6 +324,9 @@ class CertificateType1 : public CertificateECC {
 
     uint8_t encoded[ENCODED_LEN];
     ValidPeriod validity;
+    ECCPublicKey issuer;
+    ECCPublicKey subject;
+    ECCSignature signature;
 };
 
 /**
@@ -358,17 +348,11 @@ class CertificateType2 : public CertificateECC {
      */
     virtual void SetVersion(uint32_t val);
 
-    const ECCPublicKey* GetIssuer()
-    {
-        return (ECCPublicKey*) &encoded[OFFSET_ISSUER];
-    }
+    const ECCPublicKey* GetIssuer();
 
     void SetIssuer(const ECCPublicKey* issuer);
 
-    const ECCPublicKey* GetSubject()
-    {
-        return (ECCPublicKey*) &encoded[OFFSET_SUBJECT];
-    }
+    const ECCPublicKey* GetSubject();
 
     void SetSubject(const ECCPublicKey* subject);
 
@@ -402,10 +386,7 @@ class CertificateType2 : public CertificateECC {
     }
     void SetExternalDataDigest(const uint8_t* externalDataDigest);
 
-    const ECCSignature* GetSig()
-    {
-        return (ECCSignature*) &encoded[OFFSET_SIG];
-    }
+    const ECCSignature* GetSig();
 
     void SetSig(const ECCSignature* sig);
 
@@ -486,7 +467,9 @@ class CertificateType2 : public CertificateECC {
 
     uint8_t encoded[ENCODED_LEN];
     ValidPeriod validity;
-
+    ECCPublicKey issuer;
+    ECCPublicKey subject;
+    ECCSignature signature;
 };
 
 /**
@@ -569,6 +552,163 @@ QStatus CertECCUtil_GetCertChain(const String &encoded, CertificateECC * certCha
  *      - NULL if the encoded bytes are invalid
  */
 CertificateECC* CertECCUtil_GetInstance(const uint8_t* encoded, size_t len);
+
+/**
+ * The X.509 OIDs
+ */
+extern const qcc::String OID_SIG_ECDSA_SHA256;
+extern const qcc::String OID_KEY_ECC;
+extern const qcc::String OID_CRV_PRIME256V1;
+extern const qcc::String OID_DN_OU;
+extern const qcc::String OID_DN_CN;
+extern const qcc::String OID_BASIC_CONSTRAINTS;
+
+class CertificateX509 : public Certificate {
+
+  public:
+
+    typedef enum {
+        GUID_CERTIFICATE,
+        GUILD_CERTIFICATE
+    } CertificateType;
+
+    /**
+     * Default constructor.
+     */
+    CertificateX509(CertificateType type) : Certificate(3) { this->type = type; };
+
+    /**
+     * Import a PEM encoded certificate.
+     * @param pem the encoded certificate.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus ImportCertificatePEM(const qcc::String& pem);
+
+    /**
+     * Export the certificate as PEM encoded.
+     * @param pem the encoded certificate.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus ExportCertificatePEM(qcc::String& pem);
+
+    /**
+     * Sign the certificate.
+     * @param key the ECDSA private key.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus Sign(const ECCPrivateKey* key);
+
+    /**
+     * Verify a self-signed certificate.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus Verify();
+
+    /**
+     * Verify the certificate.
+     * @param key the ECDSA public key.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus Verify(const ECCPublicKey* key);
+
+    void SetSerial(const qcc::String& serial)
+    {
+        this->serial = serial;
+    }
+    const qcc::String& GetSerial()
+    {
+        return serial;
+    }
+    void SetIssuer(const qcc::String& guid)
+    {
+        this->issuer = guid;
+    }
+    const qcc::String& GetIssuer() const
+    {
+        return issuer;
+    }
+    void SetSubject(const qcc::String& guid)
+    {
+        this->subject = guid;
+    }
+    const qcc::String& GetSubject() const
+    {
+        return subject;
+    }
+    void SetGuild(const qcc::String& guid)
+    {
+        this->guild = guid;
+    }
+    const qcc::String& GetGuild() const
+    {
+        return guild;
+    }
+    void SetValidity(const ValidPeriod* validPeriod)
+    {
+        validity = *validPeriod;
+    }
+    const ValidPeriod* GetValidity()
+    {
+        return &validity;
+    }
+    void SetSubjectPublicKey(const ECCPublicKey* key)
+    {
+        memcpy(&publickey, key, sizeof (publickey));
+    }
+    const ECCPublicKey* GetSubjectPublicKey()
+    {
+        return &publickey;
+    }
+
+    /**
+     * Returns a human readable string for a cert if there is one associated with this key.
+     *
+     * @return A string for the cert or and empty string if there is no cert.
+     */
+    qcc::String ToString();
+
+    /**
+     * Destructor
+     */
+    ~CertificateX509() { };
+
+  private:
+
+    /**
+     * Assignment operator is private
+     */
+    CertificateX509& operator=(const CertificateX509& other);
+
+    /**
+     * Copy constructor is private
+     */
+    CertificateX509(const CertificateX509& other);
+
+    QStatus DecodeCertificateDER(const qcc::String& der);
+    QStatus EncodeCertificateDER(qcc::String& der);
+    QStatus DecodeCertificateTBS();
+    QStatus EncodeCertificateTBS();
+    QStatus DecodeCertificateName(const qcc::String& dn, qcc::String& cn);
+    QStatus EncodeCertificateName(qcc::String& dn, qcc::String& cn);
+    QStatus DecodeCertificateName(const qcc::String& dn, qcc::String& cn, qcc::String& ou);
+    QStatus EncodeCertificateName(qcc::String& dn, qcc::String& cn, qcc::String& ou);
+    QStatus DecodeCertificatePub(const qcc::String& pub);
+    QStatus EncodeCertificatePub(qcc::String& pub);
+    QStatus DecodeCertificateExt(const qcc::String& ext);
+    QStatus EncodeCertificateExt(qcc::String& ext);
+    QStatus DecodeCertificateSig(const qcc::String& sig);
+    QStatus EncodeCertificateSig(qcc::String& sig);
+
+    CertificateType type;
+    qcc::String tbs;
+    qcc::String serial;
+    qcc::String issuer;
+    qcc::String subject;
+    qcc::String guild;
+    ValidPeriod validity;
+    ECCPublicKey publickey;
+    ECCSignature signature;
+};
 
 } /* namespace qcc */
 

@@ -250,7 +250,7 @@ class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
 
 class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
   public:
-    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener) : KeyExchangerECDHE(initiator, peerObj, bus, listener), certChainLen(0), hasDSAKeys(false) {
+    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener) : KeyExchangerECDHE(initiator, peerObj, bus, listener), certChainLen(0), certChain(NULL), hasDSAKeys(false) {
     }
 
     virtual ~KeyExchangerECDHE_ECDSA();

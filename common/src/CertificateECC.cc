@@ -34,14 +34,24 @@ using namespace qcc;
 
 namespace qcc {
 
+/**
+ * The X.509 OIDs
+ */
+const qcc::String OID_SIG_ECDSA_SHA256 = "1.2.840.10045.4.3.2";
+const qcc::String OID_KEY_ECC = "1.2.840.10045.2.1";
+const qcc::String OID_CRV_PRIME256V1 = "1.2.840.10045.3.1.7";
+const qcc::String OID_DN_OU = "2.5.4.11";
+const qcc::String OID_DN_CN = "2.5.4.3";
+const qcc::String OID_BASIC_CONSTRAINTS = "2.5.29.19";
+
 #define CERT_TYPE0_SIGN_LEN Crypto_SHA256::DIGEST_SIZE
-#define CERT_TYPE0_RAW_LEN sizeof(uint32_t) + sizeof(ECCPublicKey) + CERT_TYPE0_SIGN_LEN + sizeof(ECCSignature)
+#define CERT_TYPE0_RAW_LEN sizeof(uint32_t) + sizeof(ECCPublicKeyOldEncoding) + CERT_TYPE0_SIGN_LEN + sizeof(ECCSignatureOldEncoding)
 
-#define CERT_TYPE1_SIGN_LEN sizeof(uint32_t) + 2 * sizeof(ECCPublicKey) + sizeof(ValidPeriod) + sizeof (uint8_t) + Crypto_SHA256::DIGEST_SIZE
-#define CERT_TYPE1_RAW_LEN CERT_TYPE1_SIGN_LEN + sizeof(ECCSignature)
+#define CERT_TYPE1_SIGN_LEN sizeof(uint32_t) + 2 * sizeof(ECCPublicKeyOldEncoding) + sizeof(ValidPeriod) + sizeof (uint8_t) + Crypto_SHA256::DIGEST_SIZE
+#define CERT_TYPE1_RAW_LEN CERT_TYPE1_SIGN_LEN + sizeof(ECCSignatureOldEncoding)
 
-#define CERT_TYPE2_SIGN_LEN sizeof(uint32_t) + 2 * sizeof(ECCPublicKey) + sizeof(ValidPeriod) + sizeof (uint8_t) + GUILD_ID_LEN + Crypto_SHA256::DIGEST_SIZE
-#define CERT_TYPE2_RAW_LEN CERT_TYPE2_SIGN_LEN + sizeof(ECCSignature)
+#define CERT_TYPE2_SIGN_LEN sizeof(uint32_t) + 2 * sizeof(ECCPublicKeyOldEncoding) + sizeof(ValidPeriod) + sizeof (uint8_t) + GUILD_ID_LEN + Crypto_SHA256::DIGEST_SIZE
+#define CERT_TYPE2_RAW_LEN CERT_TYPE2_SIGN_LEN + sizeof(ECCSignatureOldEncoding)
 
 static qcc::String EncodeRawByte(const uint8_t* raw, size_t rawLen, const char* beginToken, const char* endToken)
 {
@@ -269,9 +279,19 @@ void CertificateType0::SetVersion(uint32_t val)
     *p = htobe32(val);
 }
 
+const ECCPublicKey* CertificateType0::GetIssuer()
+{
+    Crypto_ECC ecc;
+    ecc.ReEncode((const ECCPublicKeyOldEncoding*) &encoded[OFFSET_ISSUER], &issuer);
+    return &issuer;
+}
+
 void CertificateType0::SetIssuer(const ECCPublicKey* issuer)
 {
-    memcpy(&encoded[OFFSET_ISSUER], issuer, sizeof(ECCPublicKey));
+    Crypto_ECC ecc;
+    ECCPublicKeyOldEncoding oldenc;
+    ecc.ReEncode(issuer, &oldenc);
+    memcpy(&encoded[OFFSET_ISSUER], &oldenc, sizeof(ECCPublicKeyOldEncoding));
 }
 
 void CertificateType0::SetExternalDataDigest(const uint8_t* externalDataDigest)
@@ -279,17 +299,29 @@ void CertificateType0::SetExternalDataDigest(const uint8_t* externalDataDigest)
     memcpy(&encoded[OFFSET_DIGEST], externalDataDigest, Crypto_SHA256::DIGEST_SIZE);
 }
 
-void CertificateType0::SetSig(const ECCSignature* sig)
+const ECCSignature* CertificateType0::GetSig()
 {
-    memcpy(&encoded[OFFSET_SIG], sig, sizeof(ECCSignature));
+    Crypto_ECC ecc;
+    ecc.ReEncode((const ECCSignatureOldEncoding*) &encoded[OFFSET_SIG], &signature);
+    return &signature;
 }
 
+void CertificateType0::SetSig(const ECCSignature* sig)
+{
+    Crypto_ECC ecc;
+    ECCSignatureOldEncoding oldenc;
+    ecc.ReEncode(sig, &oldenc);
+    memcpy(&encoded[OFFSET_SIG], &oldenc, sizeof(ECCSignatureOldEncoding));
+}
 
 QStatus CertificateType0::Sign(const ECCPrivateKey* dsaPrivateKey)
 {
     Crypto_ECC ecc;
+    ECCSignature newenc;
     ecc.SetDSAPrivateKey(dsaPrivateKey);
-    return ecc.DSASignDigest(GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE, (ECCSignature*) &encoded[OFFSET_SIG]);
+    QStatus status = ecc.DSASignDigest(GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE, &newenc);
+    ecc.ReEncode(&newenc, (ECCSignatureOldEncoding*) &encoded[OFFSET_SIG]);
+    return status;
 }
 
 bool CertificateType0::VerifySignature()
@@ -339,13 +371,13 @@ qcc::String CertificateType0::ToString()
     str += U32ToString(GetVersion());
     str += "\n";
     str += "issuer: ";
-    str += BytesToHexString((const uint8_t*) GetIssuer(), sizeof(ECCPublicKey));
+    str += BytesToHexString((const uint8_t*) GetIssuer(), sizeof(ECCPublicKeyOldEncoding));
     str += "\n";
     str += "digest: ";
     str += BytesToHexString((const uint8_t*) GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE);
     str += "\n";
     str += "sig: ";
-    str += BytesToHexString((const uint8_t*) GetSig(), sizeof(ECCSignature));
+    str += BytesToHexString((const uint8_t*) GetSig(), sizeof(ECCSignatureOldEncoding));
     str += "\n";
     return str;
 }
@@ -356,14 +388,34 @@ void CertificateType1::SetVersion(uint32_t val)
     *p = htobe32(val);
 }
 
-void CertificateType1::SetIssuer(const ECCPublicKey* issuer)
+const ECCPublicKey* CertificateType1::GetIssuer()
 {
-    memcpy(&encoded[OFFSET_ISSUER], issuer, sizeof(ECCPublicKey));
+    Crypto_ECC ecc;
+    ecc.ReEncode((const ECCPublicKeyOldEncoding*) &encoded[OFFSET_ISSUER], &issuer);
+    return &issuer;
 }
 
-void CertificateType1::SetSubject(const ECCPublicKey* subject)
+void CertificateType1::SetIssuer(const ECCPublicKey* issuer)
 {
-    memcpy(&encoded[OFFSET_SUBJECT], subject, sizeof(ECCPublicKey));
+    Crypto_ECC ecc;
+    ECCPublicKeyOldEncoding oldenc;
+    ecc.ReEncode(issuer, &oldenc);
+    memcpy(&encoded[OFFSET_ISSUER], &oldenc, sizeof(ECCPublicKeyOldEncoding));
+}
+
+const ECCPublicKey* CertificateType1::GetSubject()
+{
+    Crypto_ECC ecc;
+    ecc.ReEncode((const ECCPublicKeyOldEncoding*) &encoded[OFFSET_SUBJECT], &subject);
+    return &subject;
+}
+
+void CertificateType1::SetSubject(const ECCPublicKey* issuer)
+{
+    Crypto_ECC ecc;
+    ECCPublicKeyOldEncoding oldenc;
+    ecc.ReEncode(issuer, &oldenc);
+    memcpy(&encoded[OFFSET_SUBJECT], &oldenc, sizeof(ECCPublicKeyOldEncoding));
 }
 
 void CertificateType1::SetValidity(const ValidPeriod* validPeriod)
@@ -389,21 +441,35 @@ void CertificateType1::SetExternalDataDigest(const uint8_t* externalDataDigest)
     memcpy(&encoded[OFFSET_DIGEST], externalDataDigest, Crypto_SHA256::DIGEST_SIZE);
 }
 
+const ECCSignature* CertificateType1::GetSig()
+{
+    Crypto_ECC ecc;
+    ecc.ReEncode((const ECCSignatureOldEncoding*) &encoded[OFFSET_SIG], &signature);
+    return &signature;
+}
+
 void CertificateType1::SetSig(const ECCSignature* sig)
 {
-    memcpy(&encoded[OFFSET_SIG], sig, sizeof(ECCSignature));
+    Crypto_ECC ecc;
+    ECCSignatureOldEncoding oldenc;
+    ecc.ReEncode(sig, &oldenc);
+    memcpy(&encoded[OFFSET_SIG], &oldenc, sizeof(ECCSignatureOldEncoding));
 }
 
 QStatus CertificateType1::Sign(const ECCPrivateKey* dsaPrivateKey)
 {
+    QStatus status;
     Crypto_ECC ecc;
     ecc.SetDSAPrivateKey(dsaPrivateKey);
+    ECCSignature newenc;
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     Crypto_SHA256 hash;
     hash.Init();
     hash.Update(encoded, OFFSET_SIG);
     hash.GetDigest(digest);
-    return ecc.DSASignDigest(digest, sizeof(digest), (ECCSignature*) &encoded[OFFSET_SIG]);
+    status = ecc.DSASignDigest(digest, sizeof(digest), &newenc);
+    ecc.ReEncode(&newenc, (ECCSignatureOldEncoding*) &encoded[OFFSET_SIG]);
+    return status;
 }
 
 bool CertificateType1::VerifySignature()
@@ -462,10 +528,10 @@ qcc::String CertificateType1::ToString()
     str += U32ToString(GetVersion());
     str += "\n";
     str += "issuer: ";
-    str += BytesToHexString((const uint8_t*) GetIssuer(), sizeof(ECCPublicKey));
+    str += BytesToHexString((const uint8_t*) GetIssuer(), sizeof(ECCPublicKeyOldEncoding));
     str += "\n";
     str += "subject: ";
-    str +=  BytesToHexString((const uint8_t*) GetSubject(), sizeof(ECCPublicKey));
+    str +=  BytesToHexString((const uint8_t*) GetSubject(), sizeof(ECCPublicKeyOldEncoding));
     str += "\n";
     str += "validity: not-before ";
     str += U64ToString(GetValidity()->validFrom);
@@ -481,7 +547,7 @@ qcc::String CertificateType1::ToString()
     str += BytesToHexString((const uint8_t*) GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE);
     str += "\n";
     str += "sig: ";
-    str += BytesToHexString((const uint8_t*) GetSig(), sizeof(ECCSignature));
+    str += BytesToHexString((const uint8_t*) GetSig(), sizeof(ECCSignatureOldEncoding));
     str += "\n";
     return str;
 }
@@ -493,14 +559,34 @@ void CertificateType2::SetVersion(uint32_t val)
     *p = htobe32(val);
 }
 
-void CertificateType2::SetIssuer(const ECCPublicKey* issuer)
+const ECCPublicKey* CertificateType2::GetIssuer()
 {
-    memcpy(&encoded[OFFSET_ISSUER], issuer, sizeof(ECCPublicKey));
+    Crypto_ECC ecc;
+    ecc.ReEncode((const ECCPublicKeyOldEncoding*) &encoded[OFFSET_ISSUER], &issuer);
+    return &issuer;
 }
 
-void CertificateType2::SetSubject(const ECCPublicKey* subject)
+void CertificateType2::SetIssuer(const ECCPublicKey* issuer)
 {
-    memcpy(&encoded[OFFSET_SUBJECT], subject, sizeof(ECCPublicKey));
+    Crypto_ECC ecc;
+    ECCPublicKeyOldEncoding oldenc;
+    ecc.ReEncode(issuer, &oldenc);
+    memcpy(&encoded[OFFSET_ISSUER], &oldenc, sizeof(ECCPublicKeyOldEncoding));
+}
+
+const ECCPublicKey* CertificateType2::GetSubject()
+{
+    Crypto_ECC ecc;
+    ecc.ReEncode((const ECCPublicKeyOldEncoding*) &encoded[OFFSET_SUBJECT], &subject);
+    return &subject;
+}
+
+void CertificateType2::SetSubject(const ECCPublicKey* issuer)
+{
+    Crypto_ECC ecc;
+    ECCPublicKeyOldEncoding oldenc;
+    ecc.ReEncode(issuer, &oldenc);
+    memcpy(&encoded[OFFSET_SUBJECT], &oldenc, sizeof(ECCPublicKeyOldEncoding));
 }
 
 void CertificateType2::SetValidity(const ValidPeriod* validPeriod)
@@ -526,21 +612,35 @@ void CertificateType2::SetExternalDataDigest(const uint8_t* externalDataDigest)
     memcpy(&encoded[OFFSET_DIGEST], externalDataDigest, Crypto_SHA256::DIGEST_SIZE);
 }
 
+const ECCSignature* CertificateType2::GetSig()
+{
+    Crypto_ECC ecc;
+    ecc.ReEncode((const ECCSignatureOldEncoding*) &encoded[OFFSET_SIG], &signature);
+    return &signature;
+}
+
 void CertificateType2::SetSig(const ECCSignature* sig)
 {
-    memcpy(&encoded[OFFSET_SIG], sig, sizeof(ECCSignature));
+    Crypto_ECC ecc;
+    ECCSignatureOldEncoding oldenc;
+    ecc.ReEncode(sig, &oldenc);
+    memcpy(&encoded[OFFSET_SIG], &oldenc, sizeof(ECCSignatureOldEncoding));
 }
 
 QStatus CertificateType2::Sign(const ECCPrivateKey* dsaPrivateKey)
 {
+    QStatus status;
     Crypto_ECC ecc;
     ecc.SetDSAPrivateKey(dsaPrivateKey);
+    ECCSignature newenc;
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     Crypto_SHA256 hash;
     hash.Init();
     hash.Update(encoded, OFFSET_SIG);
     hash.GetDigest(digest);
-    return ecc.DSASignDigest(digest, sizeof(digest), (ECCSignature*) &encoded[OFFSET_SIG]);
+    status = ecc.DSASignDigest(digest, sizeof(digest), &newenc);
+    ecc.ReEncode(&newenc, (ECCSignatureOldEncoding*) &encoded[OFFSET_SIG]);
+    return status;
 }
 
 bool CertificateType2::VerifySignature()
@@ -602,7 +702,6 @@ void CertificateType2::SetGuild(const uint8_t* newGuild, size_t guildLen)
     memcpy(&encoded[OFFSET_GUILD], newGuild, len);
 }
 
-
 String CertificateType2::ToString()
 {
     qcc::String str("Certificate:\n");
@@ -610,10 +709,10 @@ String CertificateType2::ToString()
     str += U32ToString(GetVersion());
     str += "\n";
     str += "issuer: ";
-    str += BytesToHexString((const uint8_t*) GetIssuer(), sizeof(ECCPublicKey));
+    str += BytesToHexString((const uint8_t*) GetIssuer(), sizeof(ECCPublicKeyOldEncoding));
     str += "\n";
     str += "subject: ";
-    str +=  BytesToHexString((const uint8_t*) GetSubject(), sizeof(ECCPublicKey));
+    str +=  BytesToHexString((const uint8_t*) GetSubject(), sizeof(ECCPublicKeyOldEncoding));
     str += "\n";
     str += "validity: not-before ";
     str += U64ToString(GetValidity()->validFrom);
@@ -632,8 +731,424 @@ String CertificateType2::ToString()
     str += BytesToHexString((const uint8_t*) GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE);
     str += "\n";
     str += "sig: ";
-    str += BytesToHexString((const uint8_t*) GetSig(), sizeof(ECCSignature));
+    str += BytesToHexString((const uint8_t*) GetSig(), sizeof(ECCSignatureOldEncoding));
     str += "\n";
+    return str;
+}
+
+QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, qcc::String& cn)
+{
+    QStatus status;
+    qcc::String oid;
+
+    status = Crypto_ASN1::Decode(dn, "{(op)}", &oid, &cn);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (OID_DN_CN != oid) {
+        return ER_FAIL;
+    }
+
+    return status;
+}
+
+QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, qcc::String& cn)
+{
+    QStatus status;
+    qcc::String oid = OID_DN_CN;
+
+    status = Crypto_ASN1::Encode(dn, "{(op)}", &oid, &cn);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    return status;
+}
+
+QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, qcc::String& ou, qcc::String& cn)
+{
+    QStatus status = ER_OK;
+    qcc::String oid1;
+    qcc::String oid2;
+
+    status = Crypto_ASN1::Decode(dn, "{(op)}{(op)}", &oid1, &ou, &oid2, &cn);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (OID_DN_OU != oid1) {
+        return ER_FAIL;
+    }
+    if (OID_DN_CN != oid2) {
+        return ER_FAIL;
+    }
+
+    return status;
+}
+
+QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, qcc::String& ou, qcc::String& cn)
+{
+    QStatus status = ER_OK;
+    qcc::String oid1 = OID_DN_OU;
+    qcc::String oid2 = OID_DN_CN;
+
+    status = Crypto_ASN1::Encode(dn, "{(op)}{(op)}", &oid1, &ou, &oid2, &cn);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    return status;
+}
+
+QStatus CertificateX509::DecodeCertificatePub(const qcc::String& pub)
+{
+    QStatus status = ER_OK;
+    qcc::String oid1;
+    qcc::String oid2;
+    qcc::String key;
+    size_t keylen;
+
+    status = Crypto_ASN1::Decode(pub, "(oo)b", &oid1, &oid2, &key, &keylen);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (OID_KEY_ECC != oid1) {
+        return ER_FAIL;
+    }
+    if (OID_CRV_PRIME256V1 != oid2) {
+        return ER_FAIL;
+    }
+    if (1 + sizeof (publickey) != key.size()) {
+        return ER_FAIL;
+    }
+    // Uncompressed points only
+    if (0x4 != *key.data()) {
+        return ER_FAIL;
+    }
+    memcpy((uint8_t*) &publickey, key.data() + 1, key.size() - 1);
+
+    return status;
+}
+
+QStatus CertificateX509::EncodeCertificatePub(qcc::String& pub)
+{
+    QStatus status = ER_OK;
+    qcc::String oid1 = OID_KEY_ECC;
+    qcc::String oid2 = OID_CRV_PRIME256V1;
+
+    // Uncompressed points only
+    qcc::String key(0x4);
+    key += qcc::String((const char*) &publickey, sizeof (publickey));
+    status = Crypto_ASN1::Encode(pub, "(oo)b", &oid1, &oid2, &key, 8 * key.size());
+    if (ER_OK != status) {
+        return status;
+    }
+
+    return status;
+}
+
+QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
+{
+    QStatus status = ER_OK;
+    qcc::String oid;
+    qcc::String tmp1;
+    qcc::String tmp2;
+    uint32_t ca;
+
+    status = Crypto_ASN1::Decode(ext, "c(.)", 3, &tmp1);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = Crypto_ASN1::Decode(tmp1, "((ox))", &oid, &tmp2);
+    if (OID_BASIC_CONSTRAINTS != oid) {
+        return ER_FAIL;
+    }
+    status = Crypto_ASN1::Decode(tmp2, "(z)", &ca);
+
+    return status;
+}
+
+QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext)
+{
+    QStatus status = ER_OK;
+    qcc::String oid = OID_BASIC_CONSTRAINTS;
+    qcc::String tmp1;
+    qcc::String tmp2;
+    uint32_t ca = 0;
+
+    status = Crypto_ASN1::Encode(tmp1, "(z)", ca);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = Crypto_ASN1::Encode(tmp2, "((ox))", &oid, &tmp1);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = Crypto_ASN1::Encode(ext, "c(R)", 3, &tmp2);
+
+    return status;
+}
+
+QStatus CertificateX509::DecodeCertificateTBS()
+{
+    QStatus status = ER_OK;
+    uint32_t version;
+    qcc::String oid;
+    qcc::String iss;
+    qcc::String sub;
+    qcc::String time1;
+    qcc::String time2;
+    qcc::String pub;
+    qcc::String ext;
+
+    status = Crypto_ASN1::Decode(tbs, "(c(i)l(o)(.)(tt)(.)(.).)",
+                                 0, &version, &serial, &oid, &iss, &time1, &time2, &sub, &pub, &ext);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (0x2 != version) {
+        return ER_FAIL;
+    }
+    if (OID_SIG_ECDSA_SHA256 != oid) {
+        return ER_FAIL;
+    }
+    status = ER_FAIL;
+    if (GUID_CERTIFICATE == type) {
+        status = DecodeCertificateName(iss, issuer);
+    } else if (GUILD_CERTIFICATE == type) {
+        qcc::String tmp; // The test cert has OU for issuer
+        status = DecodeCertificateName(iss, tmp, issuer);
+    }
+    if (ER_OK != status) {
+        return status;
+    }
+    //TODO read out the time values
+    status = ER_FAIL;
+    if (GUID_CERTIFICATE == type) {
+        status = DecodeCertificateName(sub, subject);
+    } else if (GUILD_CERTIFICATE == type) {
+        status = DecodeCertificateName(sub, guild, subject);
+    }
+    if (ER_OK != status) {
+        return status;
+    }
+    status = DecodeCertificatePub(pub);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = DecodeCertificateExt(ext);
+
+    return status;
+}
+
+QStatus CertificateX509::EncodeCertificateTBS()
+{
+    QStatus status = ER_OK;
+    uint32_t version = 2;
+    qcc::String oid = OID_SIG_ECDSA_SHA256;
+    qcc::String iss;
+    qcc::String sub;
+    qcc::String time1 = "140101000000Z";
+    qcc::String time2 = "150101000000Z";
+    qcc::String pub;
+    qcc::String ext;
+
+    status = EncodeCertificateName(iss, issuer);
+    if (ER_OK != status) {
+        return status;
+    }
+    //TODO time
+    status = ER_FAIL;
+    if (GUID_CERTIFICATE == type) {
+        status = EncodeCertificateName(sub, subject);
+    } else if (GUILD_CERTIFICATE == type) {
+        status = EncodeCertificateName(sub, guild, subject);
+    }
+    if (ER_OK != status) {
+        return status;
+    }
+    status = EncodeCertificatePub(pub);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = EncodeCertificateExt(ext);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = Crypto_ASN1::Encode(tbs, "(c(i)l(o)(R)(tt)(R)(R)R)",
+                                 0, version, &serial, &oid, &iss, &time1, &time2, &sub, &pub, &ext);
+
+    return status;
+}
+
+QStatus CertificateX509::DecodeCertificateSig(const qcc::String& sig)
+{
+    QStatus status = ER_OK;
+    qcc::String r;
+    qcc::String s;
+
+    status = Crypto_ASN1::Decode(sig, "(ll)", &r, &s);
+    if (ER_OK != status) {
+        return status;
+    }
+    memset(&signature, 0, sizeof (signature));
+    if (sizeof (signature.r) < r.size()) {
+        return ER_FAIL;
+    }
+    if (sizeof (signature.s) < s.size()) {
+        return ER_FAIL;
+    }
+    memcpy(signature.r, r.data(), r.size());
+    memcpy(signature.s, s.data(), s.size());
+
+    return status;
+}
+
+QStatus CertificateX509::EncodeCertificateSig(qcc::String& sig)
+{
+    QStatus status = ER_OK;
+    qcc::String r((const char*) signature.r, sizeof (signature.r));
+    qcc::String s((const char*) signature.s, sizeof (signature.s));
+
+    status = Crypto_ASN1::Encode(sig, "(ll)", &r, &s);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    return status;
+}
+
+QStatus CertificateX509::DecodeCertificateDER(const qcc::String& der)
+{
+    QStatus status;
+    qcc::String oid;
+    qcc::String sig;
+    qcc::String tmp;
+    size_t siglen;
+
+    status = Crypto_ASN1::Decode(der, "((.)(o)b)", &tmp, &oid, &sig, &siglen);
+    if (ER_OK != status) {
+        return status;
+    }
+    // Put the sequence back on the TBS
+    status = Crypto_ASN1::Encode(tbs, "(R)", &tmp);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (OID_SIG_ECDSA_SHA256 != oid) {
+        return ER_FAIL;
+    }
+    status = DecodeCertificateTBS();
+    if (ER_OK != status) {
+        return status;
+    }
+    status = DecodeCertificateSig(sig);
+
+    return status;
+}
+
+QStatus CertificateX509::EncodeCertificateDER(qcc::String& der)
+{
+    QStatus status;
+    qcc::String oid = OID_SIG_ECDSA_SHA256;
+    qcc::String sig;
+
+    if (tbs.empty()) {
+        return ER_FAIL;
+    }
+    status = EncodeCertificateSig(sig);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = Crypto_ASN1::Encode(der, "(R(o)b)", &tbs, &oid, &sig, 8 * sig.size());
+
+    return status;
+}
+
+QStatus CertificateX509::ImportCertificatePEM(const qcc::String& pem)
+{
+    QStatus status;
+    size_t pos;
+    qcc::String rem;
+    qcc::String der;
+    qcc::String tag1 = "-----BEGIN CERTIFICATE-----";
+    qcc::String tag2 = "-----END CERTIFICATE-----";
+
+    pos = pem.find(tag1);
+    if (pos == qcc::String::npos) {
+        return ER_INVALID_DATA;
+    }
+    rem = pem.substr(pos + tag1.size());
+
+    pos = rem.find(tag2);
+    if (pos == qcc::String::npos) {
+        return ER_INVALID_DATA;
+    }
+    rem = rem.substr(0, pos);
+
+    status = Crypto_ASN1::DecodeBase64(rem, der);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = DecodeCertificateDER(der);
+
+    return status;
+}
+
+QStatus CertificateX509::ExportCertificatePEM(qcc::String& pem)
+{
+    QStatus status;
+    qcc::String rem;
+    qcc::String der;
+    qcc::String tag1 = "-----BEGIN CERTIFICATE-----\n";
+    qcc::String tag2 = "-----END CERTIFICATE-----";
+
+    status = EncodeCertificateDER(der);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = Crypto_ASN1::EncodeBase64(der, rem);
+    if (ER_OK != status) {
+        return status;
+    }
+    pem = tag1 + rem + tag2;
+
+    return status;
+}
+
+QStatus CertificateX509::Verify()
+{
+    return Verify(&publickey);
+}
+
+QStatus CertificateX509::Verify(const ECCPublicKey* key)
+{
+    Crypto_ECC ecc;
+    ecc.SetDSAPublicKey(key);
+    return ecc.DSAVerify((const uint8_t*) tbs.data(), tbs.size(), &signature);
+}
+
+QStatus CertificateX509::Sign(const ECCPrivateKey* key)
+{
+    QStatus status;
+    Crypto_ECC ecc;
+    ecc.SetDSAPrivateKey(key);
+    status = EncodeCertificateTBS();
+    if (ER_OK != status) {
+        return status;
+    }
+    return ecc.DSASign((const uint8_t*) tbs.data(), tbs.size(), &signature);
+}
+
+String CertificateX509::ToString()
+{
+    qcc::String str("Certificate:\n");
+    str += "issuer:    " + issuer + "\n";
+    str += "subject:   " + subject + "\n";
+    if (guild.size()) {
+        str += "guild:     " + guild + "\n";
+    }
+    str += "publickey: " + BytesToHexString((const uint8_t*) &publickey, sizeof(publickey)) + "\n";
+    str += "signature: " + BytesToHexString((const uint8_t*) &signature, sizeof(signature)) + "\n";
     return str;
 }
 

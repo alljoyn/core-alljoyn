@@ -21,6 +21,7 @@
 
 #include <alljoyn/AllJoynStd.h>
 #include <qcc/KeyInfoECC.h>
+#include <qcc/CertificateECC.h>
 #include "PermissionMgmtObj.h"
 #include "PeerState.h"
 #include "BusInternal.h"
@@ -250,7 +251,7 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
         MethodReply(msg, ER_INVALID_DATA);
         return;
     }
-    if ((xLen != KeyInfoECC::ECC_COORDINATE_SZ) || (yLen != KeyInfoECC::ECC_COORDINATE_SZ)) {
+    if ((xLen != ECC_COORDINATE_SZ) || (yLen != ECC_COORDINATE_SZ)) {
         MethodReply(msg, ER_INVALID_DATA);
         return;
     }
@@ -283,13 +284,12 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
         MethodReply(msg, status);
         return;
     }
-    ECCPublicKey adminPubKey;
-    keyInfo.Export(&adminPubKey);
+    const ECCPublicKey* adminPubKey = keyInfo.GetPublicKey();
     QCC_DbgPrintf(("PermissionMgmtObj::Claim kid %s peer guid %s",
                    BytesToHexString(kid, kidLen).c_str(),
                    peerGuid.ToString().c_str()));
 
-    status = InstallTrustAnchor(peerGuid, (const uint8_t*) &adminPubKey, sizeof(ECCPublicKey));
+    status = InstallTrustAnchor(peerGuid, (const uint8_t*) adminPubKey, sizeof(ECCPublicKey));
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionMgmtObj::Claim failed to store trust anchor"));
         MethodReply(msg, ER_PERMISSION_DENIED);
@@ -327,11 +327,11 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
     }
     claimableState = STATE_CLAIMED;
 
-    keyInfo.Import(&pubKey);
+    keyInfo.SetPublicKey(&pubKey);
     replyArgs[0].Set("(yv)", keyFormat,
                      new MsgArg("(ayyyv)", GUID128::SIZE, newGUID.GetBytes(), KeyInfo::USAGE_SIGNING, KeyInfoECC::KEY_TYPE,
                                 new MsgArg("(yyv)", keyInfo.GetAlgorithm(), keyInfo.GetCurve(),
-                                           new MsgArg("(ayay)", KeyInfoECC::ECC_COORDINATE_SZ, keyInfo.GetXCoord(), KeyInfoECC::ECC_COORDINATE_SZ, keyInfo.GetYCoord()))));
+                                           new MsgArg("(ayay)", ECC_COORDINATE_SZ, keyInfo.GetXCoord(), ECC_COORDINATE_SZ, keyInfo.GetYCoord()))));
     replyArgs[0].SetOwnershipFlags(MsgArg::OwnsArgs, true);
     MethodReply(msg, replyArgs, ArraySize(replyArgs));
 

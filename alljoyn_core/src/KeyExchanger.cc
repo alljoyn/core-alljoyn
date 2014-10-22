@@ -86,7 +86,9 @@ QStatus KeyExchangerECDHE::GenerateMasterSecret()
 {
     QStatus status;
     uint8_t keymatter[48];      /* RFC5246 */
-    KeyBlob pmsBlob((const uint8_t*) &pms, sizeof (ECCSecret), KeyBlob::GENERIC);
+    ECCSecretOldEncoding oldenc;
+    ecc.ReEncode(&pms, &oldenc);
+    KeyBlob pmsBlob((const uint8_t*) &oldenc, sizeof (ECCSecretOldEncoding), KeyBlob::GENERIC);
     status = Crypto_PseudorandomFunction(pmsBlob, "master secret", "", keymatter, sizeof (keymatter));
     masterSecret.Set(keymatter, sizeof(keymatter), KeyBlob::GENERIC);
     return status;
@@ -101,11 +103,13 @@ void KeyExchanger::ShowCurrentDigest(const char* ref)
 
 QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, uint32_t remoteAuthMask, uint32_t authMask)
 {
+    QCC_DbgHLPrintf(("KeyExchangerECDHE::RespondToKeyExchange"));
     uint8_t* replyPubKey;
     size_t replyPubKeyLen;
     variant->Get("ay", &replyPubKeyLen, &replyPubKey);
     /* the first byte is the ECC curve type */
-    if (replyPubKeyLen != (1 + sizeof(ECCPublicKey))) {
+    if (replyPubKeyLen != (1 + sizeof(ECCPublicKeyOldEncoding))) {
+        QCC_DbgHLPrintf(("KeyExchangerECDHE::RespondToKeyExchange invalid public key size %d expecting 1 + %d\n", replyPubKeyLen, sizeof(ECCPublicKeyOldEncoding)));
         return ER_INVALID_DATA;
     }
     uint8_t eccCurveType = replyPubKey[0];
@@ -113,27 +117,33 @@ QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, u
         QCC_DbgHLPrintf(("KeyExchangerECDHE::RespondToKeyExchange invalid ECC curve %d\n", eccCurveType));
         return ER_INVALID_DATA;
     }
-    memcpy(&peerPubKey, &replyPubKey[1], sizeof(ECCPublicKey));
+    ECCPublicKeyOldEncoding oldenc;
+    memcpy(&oldenc, &replyPubKey[1], sizeof(ECCPublicKeyOldEncoding));
+    ecc.ReEncode(&oldenc, &peerPubKey);
     /* hash the handshake data */
     hashUtil.Update(HexStringToByteString(U32ToString(remoteAuthMask, 16, 2 * sizeof (authMask), '0')));
     hashUtil.Update(replyPubKey, replyPubKeyLen);
 
     QStatus status = GenerateECDHEKeyPair();
     if (status != ER_OK) {
+        QCC_DbgHLPrintf(("KeyExchangerECDHE::RespondToKeyExchange failed to generate ECDHE key pair"));
         return status;
     }
     status = GenerateECDHESecret(&peerPubKey);
     if (status != ER_OK) {
+        QCC_DbgHLPrintf(("KeyExchangerECDHE::RespondToKeyExchange failed to generate ECDHE secret"));
         return status;
     }
     status = GenerateMasterSecret();
     if (status != ER_OK) {
+        QCC_DbgHLPrintf(("KeyExchangerECDHE::RespondToKeyExchange failed to generate master secret"));
         return status;
     }
     MsgArg outVariant;
-    uint8_t buf[1 + sizeof(ECCPublicKey)];
+    uint8_t buf[1 + sizeof(ECCPublicKeyOldEncoding)];
     buf[0] = ecc.GetCurveType();
-    memcpy(&buf[1], GetECDHEPublicKey(), sizeof(ECCPublicKey));
+    ecc.ReEncode(GetECDHEPublicKey(), &oldenc);
+    memcpy(&buf[1], &oldenc, sizeof(ECCPublicKeyOldEncoding));
     outVariant.Set("ay", sizeof(buf), buf);
     MsgArg args[2];
     args[0].Set("u", authMask);
@@ -153,9 +163,11 @@ QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& ca
     }
     Message replyMsg(bus);
     MsgArg variant;
-    uint8_t buf[1 + sizeof(ECCPublicKey)];
+    uint8_t buf[1 + sizeof(ECCPublicKeyOldEncoding)];
     buf[0] = ecc.GetCurveType();
-    memcpy(&buf[1], GetECDHEPublicKey(), sizeof(ECCPublicKey));
+    ECCPublicKeyOldEncoding oldenc;
+    ecc.ReEncode(GetECDHEPublicKey(), &oldenc);
+    memcpy(&buf[1], &oldenc, sizeof(ECCPublicKeyOldEncoding));
     variant.Set("ay", sizeof(buf), buf);
     MsgArg args[2];
     args[0].Set("u", authMask);
@@ -167,23 +179,31 @@ QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& ca
 
     status = callback.SendKeyExchange(args, ArraySize(args), &replyMsg);
     if (status != ER_OK) {
+        QCC_DbgHLPrintf(("KeyExchangerECDHE::ExecKeyExchange send KeyExchange fails status 0x%x\n", status));
         return status;
     }
     *remoteAuthMask = replyMsg->GetArg(0)->v_uint32;
     MsgArg* outVariant;
     status = replyMsg->GetArg(1)->Get("v", &outVariant);
+    if (status != ER_OK) {
+        QCC_DbgHLPrintf(("KeyExchangerECDHE::ExecKeyExchange send KeyExchange fails to retrieve variant from response status 0x%x\n", status));
+        return status;
+    }
     uint8_t* replyPubKey;
     size_t replyPubKeyLen;
     outVariant->Get("ay", &replyPubKeyLen, &replyPubKey);
     /* the first byte is the ECC curve type */
-    if (replyPubKeyLen != (1 + sizeof(ECCPublicKey))) {
+    if (replyPubKeyLen != (1 + sizeof(ECCPublicKeyOldEncoding))) {
+        QCC_DbgHLPrintf(("KeyExchangerECDHE::ExecKeyExchange invalid public key size %d expecting 1 + %d\n", replyPubKeyLen, sizeof(ECCPublicKeyOldEncoding)));
         return ER_INVALID_DATA;
     }
     uint8_t eccCurveID = replyPubKey[0];
     if (eccCurveID != ecc.GetCurveType()) {
+        QCC_DbgHLPrintf(("KeyExchangerECDHE::ExecKeyExchange invalid curve type %d expecting %d\n", eccCurveID, ecc.GetCurveType()));
         return ER_INVALID_DATA;
     }
-    memcpy(&peerPubKey, &replyPubKey[1], sizeof(ECCPublicKey));
+    memcpy(&oldenc, &replyPubKey[1], sizeof(ECCPublicKeyOldEncoding));
+    ecc.ReEncode(&oldenc, &peerPubKey);
     /* hash the handshake data */
     hashUtil.Update(HexStringToByteString(U32ToString(*remoteAuthMask, 16, 2 * sizeof (authMask), '0')));
     hashUtil.Update(replyPubKey, replyPubKeyLen);
@@ -566,6 +586,11 @@ QStatus KeyExchangerECDHE_ECDSA::ParseCertChainPEM(String& encodedCertChain)
         return status;
     }
     certChainLen = count;
+    delete [] certChain;
+    certChain = NULL;
+    if (count == 0) {
+        return ER_OK;
+    }
     certChain = new CertificateECC *[count];
     status = CertECCUtil_GetCertChain(encodedCertChain, certChain, certChainLen);
     if (status != ER_OK) {
@@ -580,10 +605,12 @@ QStatus KeyExchangerECDHE_ECDSA::ParseCertChainPEM(String& encodedCertChain)
 
 QStatus KeyExchangerECDHE_ECDSA::StoreDSAKeys(String& encodedPrivateKey, String& encodedCertChain)
 {
-    QStatus status = CertECCUtil_DecodePrivateKey(encodedPrivateKey, (uint32_t*) &issuerPrivateKey, sizeof(ECCPrivateKey));
+    ECCPrivateKeyOldEncoding oldenc;
+    QStatus status = CertECCUtil_DecodePrivateKey(encodedPrivateKey, (uint32_t*) &oldenc, sizeof(ECCPrivateKeyOldEncoding));
     if (status != ER_OK) {
         return status;
     }
+    ecc.ReEncode(&oldenc, &issuerPrivateKey);
     status = ParseCertChainPEM(encodedCertChain);
     if (status != ER_OK) {
         return status;
@@ -599,7 +626,6 @@ QStatus KeyExchangerECDHE_ECDSA::StoreDSAKeys(String& encodedPrivateKey, String&
 static QStatus GenerateCertificateType0(uint8_t* verifier, size_t verifierLen, const ECCPrivateKey* privateKey, const ECCPublicKey* issuer, CertificateType0& cert)
 {
     cert.SetIssuer(issuer);
-
     // the verifier is the digest
     cert.SetExternalDataDigest(verifier);
 

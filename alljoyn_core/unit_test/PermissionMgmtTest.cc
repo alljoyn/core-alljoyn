@@ -37,12 +37,53 @@ using namespace qcc;
 
 static const char* INTERFACE_NAME = "org.allseen.Security.PermissionMgmt";
 static const char* NOTIFY_INTERFACE_NAME = "org.allseen.Security.PermissionMgmt.Notification";
-static const char* object_path = "/org/allseen/Security/PermissionMgmt";
+static const char* PERMISSION_MGMT_PATH = "/org/allseen/Security/PermissionMgmt";
+static const char* APP_PATH = "/app";
 
 static const char* KEYX_ECDHE_NULL = "ALLJOYN_ECDHE_NULL";
 static const char* KEYX_ECDHE_PSK = "ALLJOYN_ECDHE_PSK";
 static const char* KEYX_ECDHE_ECDSA = "ALLJOYN_ECDHE_ECDSA";
 
+static const GUID128 claimedGUID;
+static GUID128 membershipGUID1;
+static GUID128 membershipGUID2;
+static GUID128 membershipGUID3;
+
+static const char root_prvkey[] = {
+    "-----BEGIN EC PRIVATE KEY-----\n"
+    "MHcCAQEEIGZCS4YnnUWPEMDtfR0XFTMK4vQnvAmJ0Aw6hVA3a8GHoAoGCCqGSM49\n"
+    "AwEHoUQDQgAE1nsW4M+U4l5hvnYhm+EHxtshbwS91zUCNYt7zFSbVk7FmAa4DYyr\n"
+    "oyOgKk20i+taKe0m7nqMtmrcEZC58UJWwQ==\n"
+    "-----END EC PRIVATE KEY-----"
+};
+
+static const char test_certificate1[] = {
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBXjCCAQOgAwIBAgIJAMZdgnwFrNYaMAoGCCqGSM49BAMCMCsxKTAnBgNVBAMT\n"
+    "IDVjMDliMmQ0MjI5OWM4NmNlMzBlN2YwODUxYjhjOTUzMB4XDTE0MTAwMjA0MjU1\n"
+    "OVoXDTE1MTAwMjA0MjU1OVowKzEpMCcGA1UEAxMgNWMwOWIyZDQyMjk5Yzg2Y2Uz\n"
+    "MGU3ZjA4NTFiOGM5NTMwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAATWexbgz5Ti\n"
+    "XmG+diGb4QfG2yFvBL3XNQI1i3vMVJtWTsWYBrgNjKujI6AqTbSL61op7Sbueoy2\n"
+    "atwRkLnxQlbBoxAwDjAMBgNVHRMEBTADAQH/MAoGCCqGSM49BAMCA0kAMEYCIQD6\n"
+    "iT+iiqzfk7bX4XfZRLduZxGL7NYcKXAhGl2c6OE68gIhANa9DhNIkK2pd1p7ilxh\n"
+    "HZ7cMwEFYILns0etDdw/t8VB\n"
+    "-----END CERTIFICATE-----"
+};
+
+static const char test_certificate2[] = {
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIBszCCAVmgAwIBAgIJALHwSys0KBEJMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsT\n"
+    "IDhjOGE3ODY3YTZkMWU1M2FhOWVlMzE0NjE0YTljYTkzMSkwJwYDVQQDEyA1YzA5\n"
+    "YjJkNDIyOTljODZjZTMwZTdmMDg1MWI4Yzk1MzAeFw0xNDEwMDIwNDI2MjlaFw0x\n"
+    "NTEwMDIwNDI2MjlaMFYxKTAnBgNVBAsTIDhjOGE3ODY3YTZkMWU1M2FhOWVlMzE0\n"
+    "NjE0YTljYTkzMSkwJwYDVQQDEyA1YzA5YjJkNDIyOTljODZjZTMwZTdmMDg1MWI4\n"
+    "Yzk1MzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABNZ7FuDPlOJeYb52IZvhB8bb\n"
+    "IW8Evdc1AjWLe8xUm1ZOxZgGuA2Mq6MjoCpNtIvrWintJu56jLZq3BGQufFCVsGj\n"
+    "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIhAO91mYv/wCoje4Jm\n"
+    "tQYaDx+qBTPiN7JY0wf7VcgCHkPyAiBtYbKifPO0+vizTvfQvZ0LqM646PVEe0fa\n"
+    "Q+jk4t5MKg==\n"
+    "-----END CERTIFICATE-----"
+};
 
 static const char clientPrivateKeyPEM[] = {
     "-----BEGIN PRIVATE KEY-----\n"
@@ -195,6 +236,7 @@ class ECDHEKeyXListener : public AuthListener {
     }
 
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        printf("AuthenticationComplete auth mechanism %s success %d\n", authMechanism, success);
     }
 
   private:
@@ -203,17 +245,21 @@ class ECDHEKeyXListener : public AuthListener {
 
 class PermissionMgmtTest : public testing::Test, public BusObject {
   public:
-    PermissionMgmtTest() : BusObject("/test/PermissionMgmt"),
+
+    PermissionMgmtTest() : BusObject(APP_PATH),
         clientBus("PermissionMgmtTestClient", false),
         serviceBus("PermissionMgmtTestService", false),
         status(ER_OK),
         authComplete(false),
         certChain(NULL),
+        serviceKeyListener(NULL),
+        clientKeyListener(NULL),
         certChainLen(0), signalReceived(false)
     {
     }
 
-    virtual void SetUp() {
+    virtual void SetUp()
+    {
         status = clientBus.Start();
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = clientBus.Connect(ajn::getConnectArg().c_str());
@@ -230,8 +276,8 @@ class PermissionMgmtTest : public testing::Test, public BusObject {
         EXPECT_EQ(ER_OK, status) << "  Failed to show interest in session-less signal.  Actual Status: " << QCC_StatusText(status);
     }
 
-    virtual void TearDown() {
-
+    virtual void TearDown()
+    {
         status = clientBus.Disconnect(ajn::getConnectArg().c_str());
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = serviceBus.Disconnect(ajn::getConnectArg().c_str());
@@ -281,6 +327,11 @@ class PermissionMgmtTest : public testing::Test, public BusObject {
             delete [] certChain;
             certChain = NULL;
             certChainLen = 0;
+        }
+        for (size_t cnt = 0; cnt < certChainLen; cnt++) {
+            printf("Cert chain[%d] issuer %s subject %s\n", (int) cnt,
+                   BytesToHexString((uint8_t*) certChain[cnt]->GetIssuer(), sizeof(ECCPublicKey)).c_str(),
+                   BytesToHexString((uint8_t*) certChain[cnt]->GetSubject(), sizeof(ECCPublicKey)).c_str());
         }
         return status;
     }
@@ -403,41 +454,41 @@ QStatus ReadClaimResponse(Message& msg, ECCPublicKey* pubKey)
     if (ER_OK != status) {
         return status;
     }
-    if ((xLen != KeyInfoECC::ECC_COORDINATE_SZ) || (yLen != KeyInfoECC::ECC_COORDINATE_SZ)) {
+    if ((xLen != ECC_COORDINATE_SZ) || (yLen != ECC_COORDINATE_SZ)) {
         return status;
     }
     KeyInfoNISTP256 keyInfo;
     keyInfo.SetXCoord(xCoord);
     keyInfo.SetYCoord(yCoord);
-    keyInfo.Export(pubKey);
+    memcpy(pubKey, keyInfo.GetPublicKey(), sizeof(ECCPublicKey));
     return ER_OK;
 }
 
-QStatus Claim(BusAttachment* bus, ProxyBusObject* remoteObj, const ECCPublicKey* pubKey)
+QStatus Claim(BusAttachment& bus, ProxyBusObject& remoteObj, const ECCPublicKey* pubKey, ECCPublicKey* claimedPubKey)
 {
     QStatus status;
-    const InterfaceDescription* itf = bus->GetInterface(INTERFACE_NAME);
-    remoteObj->AddInterface(*itf);
-    Message reply(*bus);
+    const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
     MsgArg inputs[2];
 
     KeyInfoNISTP256 keyInfo;
-    keyInfo.Import(pubKey);
-    CredentialAccessor ca(*bus);
+    keyInfo.SetPublicKey(pubKey);
+    CredentialAccessor ca(bus);
     qcc::GUID128 localGUID;
     status = ca.GetGuid(localGUID);
     inputs[0].Set("(yv)", KeyInfo::FORMAT_ALLJOYN,
                   new MsgArg("(ayyyv)", GUID128::SIZE, localGUID.GetBytes(), KeyInfo::USAGE_SIGNING, KeyInfoECC::KEY_TYPE,
                              new MsgArg("(yyv)", keyInfo.GetAlgorithm(), keyInfo.GetCurve(),
-                                        new MsgArg("(ayay)", KeyInfoECC::ECC_COORDINATE_SZ, keyInfo.GetXCoord(), KeyInfoECC::ECC_COORDINATE_SZ, keyInfo.GetYCoord()))));
+                                        new MsgArg("(ayay)", ECC_COORDINATE_SZ, keyInfo.GetXCoord(), ECC_COORDINATE_SZ, keyInfo.GetYCoord()))));
     inputs[0].SetOwnershipFlags(MsgArg::OwnsArgs, true);
-    GUID128 claimGUID;
-    inputs[1].Set("ay", GUID128::SIZE, claimGUID.GetBytes());
-    status = remoteObj->MethodCall(INTERFACE_NAME, "Claim", inputs, 2, reply, 5000);
+
+    inputs[1].Set("ay", GUID128::SIZE, claimedGUID.GetBytes());
+    uint32_t timeout = 10000; /* Claim is a bit show */
+    status = remoteObj.MethodCall(INTERFACE_NAME, "Claim", inputs, 2, reply, timeout);
 
     if (ER_OK == status) {
-        ECCPublicKey claimedPubKey;
-        status = ReadClaimResponse(reply, &claimedPubKey);
+        status = ReadClaimResponse(reply, claimedPubKey);
         if (ER_OK != status) {
             return status;
         }
@@ -574,13 +625,27 @@ QStatus GetPolicy(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolic
     return PermissionPolicy::BuildPolicyFromArgs(version, *variant, policy);
 }
 
+QStatus RetrieveDSAPublicKeyFromKeyStore(BusAttachment& bus, ECCPublicKey* publicKey)
+{
+    GUID128 guid;
+    KeyBlob kb;
+    CredentialAccessor ca(bus);
+    ca.GetLocalGUID(KeyBlob::DSA_PUBLIC, guid);
+    QStatus status = ca.GetKey(guid, kb);
+    if (status != ER_OK) {
+        return status;
+    }
+    memcpy(publicKey, kb.GetData(), kb.GetSize());
+    return ER_OK;
+}
+
+
 /*
  *  Test PermissionMgmt Claim method
  */
 TEST_F(PermissionMgmtTest, Claim)
 {
     QStatus status = ER_OK;
-
     EnableSecurity("ALLJOYN_ECDHE_NULL");
     clientBus.ClearKeyStore();
     serviceBus.ClearKeyStore();
@@ -592,17 +657,24 @@ TEST_F(PermissionMgmtTest, Claim)
     String certChainPEM(clientCertChainType1PEM);
     status = ParseCertChainPEM(certChainPEM);
     EXPECT_EQ(ER_OK, status) << "  Claim failed.  Parsing cert chain PEM failed.  Actual Status: " << QCC_StatusText(status);
-    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), object_path, sessionId, false);
-    status = Claim(&clientBus, &clientProxyObject, certChain[0]->GetSubject());
+    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, sessionId, false);
+    ECCPublicKey claimedPubKey;
+    const ECCPublicKey* issuerPubKey = certChain[0]->GetIssuer();
+
+    printf("Claim 1\n");
+    status = Claim(clientBus, clientProxyObject, issuerPubKey, &claimedPubKey);
     EXPECT_EQ(ER_OK, status) << "  Claim failed.  Actual Status: " << QCC_StatusText(status);
 
     /* try to claim a second time */
-    status = Claim(&clientBus, &clientProxyObject, certChain[0]->GetSubject());
+    printf("Claim 2\n");
+    status = Claim(clientBus, clientProxyObject, issuerPubKey, &claimedPubKey);
     EXPECT_EQ(ER_PERMISSION_DENIED, status) << "  Claim is not supposed to succeed.  Actual Status: " << QCC_StatusText(status);
 
     /* sleep a few seconds to see whether the signal is received */
+    printf("Wait for signal\n");
     qcc::Sleep(1000);
     EXPECT_TRUE(GetSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+    printf("Done claiming\n");
 }
 
 /*
@@ -610,7 +682,7 @@ TEST_F(PermissionMgmtTest, Claim)
  */
 TEST_F(PermissionMgmtTest, InstallPolicy)
 {
-    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), object_path, 0, false);
+    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
     EnableSecurity("ALLJOYN_ECDHE_ECDSA");
 
     CredentialAccessor ca(clientBus);
@@ -621,6 +693,7 @@ TEST_F(PermissionMgmtTest, InstallPolicy)
     SetSignalReceived(false);
     PermissionPolicy* policy = GeneratePolicy(localGUID);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
+    printf("Installing policy %s\n", policy->ToString().c_str());
     status = InstallPolicy(clientBus, clientProxyObject, *policy);
     EXPECT_EQ(ER_OK, status) << "  InstallPolicy failed.  Actual Status: " << QCC_StatusText(status);
 
@@ -632,6 +705,7 @@ TEST_F(PermissionMgmtTest, InstallPolicy)
     EXPECT_EQ(policy->GetSerialNum(), retPolicy.GetSerialNum()) << " GetPolicy failed. Different serial number.";
     EXPECT_EQ(policy->GetAdminsSize(), retPolicy.GetAdminsSize()) << " GetPolicy failed. Different admin size.";
     EXPECT_EQ(policy->GetTermsSize(), retPolicy.GetTermsSize()) << " GetPolicy failed. Different provider size.";
+    printf("InstallPolicy gets back policy %s\n", retPolicy.ToString().c_str());
     delete policy;
     /* sleep a few seconds to see whether the signal is received */
     qcc::Sleep(1000);

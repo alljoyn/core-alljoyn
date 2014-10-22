@@ -32,6 +32,12 @@
 namespace qcc {
 
 /**
+ * The ECC coordinate size
+ */
+
+static const size_t ECC_COORDINATE_SZ = 8 * sizeof(uint32_t);
+
+/**
  * The size of the ECC big value
  */
 static const size_t ECC_BIGVAL_SZ = 9;
@@ -58,24 +64,39 @@ static const size_t ECC_SIGNATURE_SZ = 2 * ECC_BIGVAL_SZ * sizeof(uint32_t);
 /**
  * The ECC private key big endian byte array
  */
-struct ECCPrivateKey {
+struct ECCPrivateKeyOldEncoding {
     uint8_t data[ECC_PRIVATE_KEY_SZ];
+};
+
+struct ECCPrivateKey {
+    uint8_t x[ECC_COORDINATE_SZ];
 };
 
 /**
  * The ECC public key big endian byte array
  */
-struct ECCPublicKey {
+struct ECCPublicKeyOldEncoding {
     uint8_t data[ECC_PUBLIC_KEY_SZ];
+}
+;
+struct ECCPublicKey {
+    uint8_t x[ECC_COORDINATE_SZ];
+    uint8_t y[ECC_COORDINATE_SZ];
 };
 
+typedef ECCPublicKeyOldEncoding ECCSecretOldEncoding;
 typedef ECCPublicKey ECCSecret;
 
 /**
  * The ECC signature big endian byte array
  */
-struct ECCSignature {
+struct ECCSignatureOldEncoding {
     uint8_t data[ECC_SIGNATURE_SZ];
+};
+
+struct ECCSignature {
+    uint8_t r[ECC_COORDINATE_SZ];
+    uint8_t s[ECC_COORDINATE_SZ];
 };
 
 /**
@@ -233,7 +254,7 @@ class Crypto_ECC {
      *          - ER_FAIL otherwise
      *          - Other error status.
      */
-    QStatus DSAVerifyDigest(const uint8_t* digest, uint16_t len, const ECCSignature*sig);
+    QStatus DSAVerifyDigest(const uint8_t* digest, uint16_t len, const ECCSignature* sig);
 
     /**
      * Verify DSA signature of a buffer
@@ -255,6 +276,13 @@ class Crypto_ECC {
     {
         return ECC_NIST_P256;
     }
+
+    QStatus ReEncode(const ECCPrivateKey* newenc, ECCPrivateKeyOldEncoding* oldenc);
+    QStatus ReEncode(const ECCPublicKey* newenc, ECCPublicKeyOldEncoding* oldenc);
+    QStatus ReEncode(const ECCSignature* newenc, ECCSignatureOldEncoding* oldenc);
+    QStatus ReEncode(const ECCPrivateKeyOldEncoding* oldenc, ECCPrivateKey* newenc);
+    QStatus ReEncode(const ECCPublicKeyOldEncoding* oldenc, ECCPublicKey* newenc);
+    QStatus ReEncode(const ECCSignatureOldEncoding* oldenc, ECCSignature* newenc);
 
     ~Crypto_ECC();
 
