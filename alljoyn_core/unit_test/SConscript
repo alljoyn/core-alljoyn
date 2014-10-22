@@ -105,6 +105,9 @@ else:
     if gtest_dir != '/usr':
         unittest_env.Append(CPPPATH = [gtest_dir + '/include'])
 
+    # we add private header include path to test internal code
+    unittest_env.Append(CPPPATH = [ unittest_env.Dir('../router').srcnode() ])
+
     if unittest_env['OS_GROUP'] == 'windows':
         unittest_env.Append(CXXFLAGS = ['/EHsc'])
 
