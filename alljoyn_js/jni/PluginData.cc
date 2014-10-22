@@ -162,10 +162,10 @@ void PluginData::DumpNPObjects()
     lock.Lock();
     std::list<NPObject*>::iterator it = npobjects.begin();
     if (it != npobjects.end()) {
-        QCC_HLDbgPrintf(("Orphaned NPObjects"));
+        QCC_DbgHLPrintf(("Orphaned NPObjects"));
     }
     for (; it != npobjects.end(); ++it) {
-        QCC_HLDbgPrintf(("%p", *it));
+        QCC_DbgHLPrintf(("%p", *it));
     }
     lock.Unlock();
 #endif
