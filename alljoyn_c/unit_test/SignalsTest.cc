@@ -14,19 +14,23 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include <gtest/gtest.h>
+#include <alljoyn_c/DBusStdDefines.h>
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/InterfaceDescription.h>
 #include <qcc/Thread.h>
 #include <qcc/Util.h>
 #include "ajTestCommon.h"
 
+#define SESSION_PORT 666
 /*
  * values used for the registersignalhandler test
  */
 bool registersignalhandler_flag;
 bool registersignalhandler_flag2;
+bool registersignalhandler_flag3;
 char sourcePath1[256];
 char sourcePath2[256];
+char sourcePath3[256];
 
 void AJ_CALL registersignalHandler_Handler(const alljoyn_interfacedescription_member* member,
                                            const char* srcPath,
@@ -50,6 +54,29 @@ void AJ_CALL registersignalHandler_Handler2(const alljoyn_interfacedescription_m
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("AllJoyn", str);
     registersignalhandler_flag2 = true;
+}
+
+void AJ_CALL registersignalHandler_Handler3(const alljoyn_interfacedescription_member* member,
+                                            const char* srcPath,
+                                            alljoyn_message message) {
+    QStatus status = ER_FAIL;
+    EXPECT_STREQ(sourcePath3, srcPath);
+    char* str;
+    status = alljoyn_msgarg_get(alljoyn_message_getarg(message, 0), "s", &str);
+    EXPECT_EQ(ER_OK, status);
+    EXPECT_STREQ("AllJoyn", str);
+    registersignalhandler_flag3 = true;
+}
+
+static QCC_BOOL AJ_CALL accept_session_joiner(const void* context, alljoyn_sessionport sessionPort,
+                                              const char* joiner,  const alljoyn_sessionopts opts)
+{
+    return QCC_TRUE;
+}
+
+static void AJ_CALL session_joined(const void* context, alljoyn_sessionport sessionPort, alljoyn_sessionid id, const char* joiner)
+{
+    //printf("session_joined\n");
 }
 
 TEST(SignalsTest, registersignalhandler_basic) {
@@ -681,3 +708,168 @@ TEST(SignalsTest, register_unregister_sessionlesssignals) {
     alljoyn_busattachment_destroy(bus);
     alljoyn_busobject_destroy(testObj);
 }
+
+class Participant {
+  public:
+    Participant(const char* name, alljoyn_messagereceiver_signalhandler_ptr handler) { SetUp(name, handler); }
+    ~Participant() { TearDown(); }
+
+    void SetUp(const char* busname, alljoyn_messagereceiver_signalhandler_ptr handler) {
+        bus = alljoyn_busattachment_create("SessionTest", false);
+        status = alljoyn_busattachment_start(bus);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        status = alljoyn_busattachment_connect(bus, ajn::getConnectArg().c_str());
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+        alljoyn_interfacedescription testIntf = NULL;
+        status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.signalstest", &testIntf);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_TRUE(testIntf != NULL);
+        if (status == ER_OK) {
+            //alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "my_signal", "a{ys}", NULL, NULL, 0);
+            status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "testSignal", "s", NULL, "newName", 0);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            alljoyn_interfacedescription_activate(testIntf);
+        }
+        /* Set up bus object */
+        alljoyn_busobject_callbacks busObjCbs = {
+            NULL,
+            NULL,
+            NULL,
+            NULL
+        };
+        testObj = alljoyn_busobject_create("/org/alljoyn/test/signal", QCC_FALSE, &busObjCbs, NULL);
+        status = alljoyn_busobject_addinterface(testObj, testIntf);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        status = alljoyn_busattachment_registerbusobject(bus, testObj);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+        QCC_BOOL foundMember = alljoyn_interfacedescription_getmember(testIntf, "testSignal", &my_signal_member);
+        EXPECT_EQ(QCC_TRUE, foundMember);
+        status = alljoyn_busattachment_registersignalhandler(bus, handler, my_signal_member, NULL);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+        /* request name */
+        uint32_t flags = DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE;
+        status = alljoyn_busattachment_requestname(bus, busname, flags);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+        /* Create session port listener */
+        alljoyn_sessionportlistener_callbacks spl_cbs = {
+            &accept_session_joiner,     /* accept session joiner CB */
+            &session_joined     /* session joined CB */
+        };
+        sessionPortListener = alljoyn_sessionportlistener_create(&spl_cbs, NULL);
+
+        /* Bind SessionPort */
+        alljoyn_sessionopts opts = alljoyn_sessionopts_create(ALLJOYN_TRAFFIC_TYPE_MESSAGES, QCC_FALSE, ALLJOYN_PROXIMITY_ANY, ALLJOYN_TRANSPORT_ANY);
+        alljoyn_sessionport sp = SESSION_PORT;
+        status = alljoyn_busattachment_bindsessionport(bus, &sp, opts, sessionPortListener);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        /* Advertise Name */
+        status = alljoyn_busattachment_advertisename(bus, busname, alljoyn_sessionopts_get_transports(opts));
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        alljoyn_sessionopts_destroy(opts);
+    }
+
+    void TearDown() {
+        alljoyn_busattachment_stop(bus);
+        alljoyn_busattachment_join(bus);
+        EXPECT_NO_FATAL_FAILURE(alljoyn_busattachment_destroy(bus));
+        alljoyn_sessionportlistener_destroy(sessionPortListener);
+        alljoyn_busobject_destroy(testObj);
+    }
+
+    void Emit() {
+        alljoyn_msgarg arg = alljoyn_msgarg_array_create(1);
+        size_t numArgs = 1;
+        status = alljoyn_msgarg_array_set(arg, &numArgs, "s", "AllJoyn");
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+        status = alljoyn_busobject_signal(testObj, NULL, ALLJOYN_SESSION_ID_ALL_HOSTED, my_signal_member, arg, 1, 0, 0, NULL);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        alljoyn_msgarg_destroy(arg);
+    }
+
+    QStatus status;
+    alljoyn_busattachment bus;
+    alljoyn_busobject testObj;
+
+    alljoyn_buslistener buslistener;
+    alljoyn_sessionportlistener sessionPortListener;
+    alljoyn_interfacedescription_member my_signal_member;
+};
+
+TEST(SignalsTest, registersignalhandler_sessioncast) {
+    QStatus status = ER_OK;
+
+    registersignalhandler_flag = registersignalhandler_flag2 = registersignalhandler_flag3 = false;
+
+    Participant one("A.A", &registersignalHandler_Handler);
+    Participant two("B.B", &registersignalHandler_Handler2);
+    Participant three("C.C", &registersignalHandler_Handler3);
+
+    snprintf(sourcePath1, 256, "/org/alljoyn/test/signal");
+    snprintf(sourcePath2, 256, "/org/alljoyn/test/signal");
+    snprintf(sourcePath3, 256, "/org/alljoyn/test/signal");
+
+    /* no sessions set up yet */
+    one.Emit();
+    two.Emit();
+    three.Emit();
+    //Wait upto 2 seconds for the signal to complete.
+    for (int i = 0; i < 200; ++i) {
+
+        if (registersignalhandler_flag || registersignalhandler_flag2 || registersignalhandler_flag3) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_FALSE(registersignalhandler_flag);
+    EXPECT_FALSE(registersignalhandler_flag2);
+    EXPECT_FALSE(registersignalhandler_flag3);
+    registersignalhandler_flag = registersignalhandler_flag2 = registersignalhandler_flag3 = false;
+
+    /* set up some sessions */
+    alljoyn_sessionopts opts = alljoyn_sessionopts_create(ALLJOYN_TRAFFIC_TYPE_MESSAGES, QCC_FALSE, ALLJOYN_PROXIMITY_ANY, ALLJOYN_TRANSPORT_ANY);
+    alljoyn_sessionid sid;
+    status = alljoyn_busattachment_joinsession(two.bus, "A.A", SESSION_PORT, NULL, &sid, opts);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_busattachment_joinsession(three.bus, "A.A", SESSION_PORT, NULL, &sid, opts);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    alljoyn_sessionopts_destroy(opts);
+    /* give the host bus attachment some time to catch up on all this */
+    qcc::Sleep(500);
+
+    /* now we should see some signals */
+    one.Emit();
+    //Wait upto 2 seconds for the signal to complete.
+    for (int i = 0; i < 200; ++i) {
+
+        if (registersignalhandler_flag || (registersignalhandler_flag2 && registersignalhandler_flag3)) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_FALSE(registersignalhandler_flag);
+    EXPECT_TRUE(registersignalhandler_flag2);
+    EXPECT_TRUE(registersignalhandler_flag3);
+    registersignalhandler_flag = registersignalhandler_flag2 = registersignalhandler_flag3 = false;
+
+    /* we expect nothing if we emit from the joiners... */
+    two.Emit();
+    three.Emit();
+    //Wait upto 2 seconds for the signal to complete.
+    for (int i = 0; i < 200; ++i) {
+
+        if (registersignalhandler_flag || registersignalhandler_flag2 || registersignalhandler_flag3) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_FALSE(registersignalhandler_flag);
+    EXPECT_FALSE(registersignalhandler_flag2);
+    EXPECT_FALSE(registersignalhandler_flag3);
+    registersignalhandler_flag = registersignalhandler_flag2 = registersignalhandler_flag3 = false;
+}
+
