@@ -83,7 +83,7 @@ ThreadReturn STDCALL StreamPump::Run(void* args)
                         if (status != ER_OK) {
                             QCC_LogError(status, ("Stream::PushBytes failed"));
                         }
-                    } else if (status == ER_NONE) {
+                    } else if (status == ER_EOF) {
                         status = ER_OK;
                     } else {
                         QCC_LogError(status, ("Stream::PullBytes failed"));
@@ -103,7 +103,7 @@ ThreadReturn STDCALL StreamPump::Run(void* args)
                         if (status != ER_OK) {
                             QCC_LogError(status, ("Stream::PushBytes failed"));
                         }
-                    } else if (status == ER_NONE) {
+                    } else if (status == ER_EOF) {
                         status = ER_OK;
                     } else {
                         QCC_LogError(status, ("Stream::PullBytes failed"));

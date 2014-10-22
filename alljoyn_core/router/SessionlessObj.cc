@@ -990,7 +990,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
                 /* This session can't be used because the remote side doesn't support RequestRange */
                 bus.LeaveSession(sid);
                 DoSessionLost(sid, ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION);
-                status = ER_NONE;
+                status = ER_FAIL;
             }
             if (matchCapable) {
                 uint32_t rulesRangeLen = cache.toRulesId - cache.fromRulesId;

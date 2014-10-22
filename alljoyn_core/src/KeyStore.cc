@@ -378,7 +378,7 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
     keyStoreKey->Derive(password + GetGuid(), Crypto_AES::AES128_SIZE, KeyBlob::AES);
 
     /* Allow for an uninitialized (empty) key store */
-    if (status == ER_NONE) {
+    if (status == ER_EOF) {
         keys->clear();
         storeState = MODIFIED;
         revision = 0;
@@ -447,7 +447,7 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
                     QCC_DbgPrintf(("KeyStore::Pull rev:%d GUID %s %s", rev, QCC_StatusText(status), guid.ToString().c_str()));
                 }
             }
-            if (status == ER_NONE) {
+            if (status == ER_EOF) {
                 status = ER_OK;
             }
         }

@@ -57,13 +57,13 @@ class StringSource : public Source {
 
     /**
      * Pull bytes from the source.
-     * The source is exhausted when ER_NONE is returned.
+     * The source is exhausted when ER_EOF is returned.
      *
      * @param buf          Buffer to store pulled bytes
      * @param reqBytes     Number of bytes requested to be pulled from source.
      * @param actualBytes  Actual number of bytes retrieved from source.
      * @param timeout      Timeout in milliseconds.
-     * @return   OI_OK if successful. ER_NONE if source is exhausted. Otherwise an error.
+     * @return   ER_OK if successful. ER_EOF if source is exhausted. Otherwise an error.
      */
     QStatus PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout = Event::WAIT_FOREVER);
 

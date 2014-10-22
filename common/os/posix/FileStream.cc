@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -104,7 +104,7 @@ QStatus FileSource::PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, u
         return ER_FAIL;
     } else {
         actualBytes = ret;
-        return (0 == ret) ? ER_NONE : ER_OK;
+        return (0 == ret) ? ER_EOF : ER_OK;
     }
 }
 
