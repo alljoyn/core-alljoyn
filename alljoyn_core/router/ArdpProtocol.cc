@@ -2106,6 +2106,9 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
 
         /* If no EACKs in RCV queue, just update the counter */
         if ((conn->rcv.eack.sz == 0)) {
+            if (conn->rcv.LCS == conn->rcv.CUR) {
+                conn->rcv.LCS = acknxt - 1;
+            }
             conn->rcv.CUR = acknxt - 1;
             return;
         }
