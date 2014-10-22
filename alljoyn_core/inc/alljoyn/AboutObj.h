@@ -140,11 +140,11 @@ class AboutObj : public BusObject {
      *  - SoftwareVersion
      *  - AJSoftwareVersion
      *
-     *  @param adl   the AboutDataListener that we want to check the AboutData
+     *  @param aboutDataArg MsgArg containing the AboutData fields.
      *
      *  return true if it contains all the required fields
      */
-    bool HasAllRequiredFields(AboutDataListener& adl);
+    bool HasAllRequiredFields(MsgArg& aboutDataArg);
 
     /**
      *
@@ -158,17 +158,22 @@ class AboutObj : public BusObject {
      *  - Manufacture
      *  - ModelNumber
      *
-     *  @param adl   the AboutDataListener that we want to check the AboutData
+     *  @param announcedDataArg MsgArg containging the announced AboutData fields.
      *
      *  return true if it contains all the required fields
      */
-    bool HasAllAnnouncedFields(AboutDataListener& adl);
+    bool HasAllAnnouncedFields(MsgArg& announcedDataArg);
 
     /**
      * Check that the values in the Announced Fields and the Requried Fields
      * agree.
+     *
+     * @param aboutDataArg MsgArg containing the AboutData fields.
+     * @param announcedDataArg MsgArg containging the announced AboutData fields.
+     *
+     * @return true if the announced AboutData and the AboutData fields match
      */
-    bool AnnouncedDataAgreesWithAboutData(AboutDataListener& adl);
+    bool AnnouncedDataAgreesWithAboutData(MsgArg& aboutDataArg, MsgArg& announcedDataArg);
 
     /**
      *  pointer to BusAttachment
