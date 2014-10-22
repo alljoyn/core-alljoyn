@@ -375,7 +375,13 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         std::map<qcc::String, qcc::IPAddress> ifMap;
     };
 
-    qcc::Mutex m_listenRequestsLock;                               /**< Mutex that protects m_listenRequests */
+    qcc::Mutex m_listenRequestsLock;  /**< Mutex that protects m_listenRequests */
+
+    /**
+     * @internal
+     * @brief Log Warnings if endpoints are not progressing throughg states as expected
+     */
+    void EmitStallWarnings(UDPEndpoint& ep);
 
     /**
      * @internal
