@@ -220,6 +220,33 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     void RequestRangeMatchSignalHandler(const InterfaceDescription::Member* member,
                                         const char* sourcePath,
                                         Message& msg);
+    /**
+     * The parameters of the backoff algorithm.
+     */
+    struct BackoffLimits {
+        uint32_t periodMs; /**< the initial backoff period */
+        uint32_t linear; /**< the maximum linear backoff coefficient before switching to exponential */
+        uint32_t exponential; /**< the maximum exponential backoff coefficient before switching to constant */
+        uint32_t maxSecs; /**< the total backoff time in seconds before giving up */
+        BackoffLimits(uint32_t periodMs, uint32_t linear, uint32_t exponential, uint32_t maxSecs)
+            : periodMs(periodMs), linear(linear), exponential(exponential), maxSecs(maxSecs) { }
+    };
+
+    /**
+     * Computes the next time to try fetching signals from a remote router.
+     *
+     * This implements the backoff algorithm.
+     *
+     * @param[in] backoff the backoff algorithm parameters
+     * @param[in] doInitialBackoff true to do the initial backoff or false to skip.
+     * @param[in] retries the number of fetches tried so far.
+     * @param[in,out] firstJoinTime set when retries is 0, used in computing nextJoinTime when retries is greater than 0.
+     * @param[out] nextJoinTime the next time to try fetching signals.
+     *
+     * @return ER_FAIL if the total retry time is exhausted, ER_OK otherwise
+     */
+    static QStatus GetNextJoinTime(const BackoffLimits& backoff, bool doInitialBackoff,
+                                   uint32_t retries, qcc::Timespec& firstJoinTime, qcc::Timespec& nextJoinTime);
 
   private:
     friend struct RemoteCacheSnapshot;
@@ -358,14 +385,14 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /** Erase info associated with the remote cache */
     void EraseRemoteCache(RemoteCaches::iterator cit);
 
-    qcc::Mutex lock;            /**< Mutex that protects this object's data structures */
-    uint32_t curChangeId;       /**< Change id assoc with current pushed signal(s) */
-    bool isDiscoveryStarted;    /**< True when FindAdvetiseName is ongoing */
-    SessionOpts sessionOpts;    /**< SessionOpts used by internal session */
-    SessionPort sessionPort;    /**< SessionPort used by internal session */
-    bool advanceChangeId;       /**< Set to true when changeId should be advanced on next SLS send request */
-    uint32_t backoffDelayMs;    /**< The backoff delay is in the range [0,backoffDelayMs] */
-    uint32_t nextRulesId;       /**< The next added rule change ID */
+    qcc::Mutex lock;             /**< Mutex that protects this object's data structures */
+    uint32_t curChangeId;        /**< Change id assoc with current pushed signal(s) */
+    bool isDiscoveryStarted;     /**< True when FindAdvetiseName is ongoing */
+    SessionOpts sessionOpts;     /**< SessionOpts used by internal session */
+    SessionPort sessionPort;     /**< SessionPort used by internal session */
+    bool advanceChangeId;        /**< Set to true when changeId should be advanced on next SLS send request */
+    uint32_t nextRulesId;        /**< The next added rule change ID */
+    const BackoffLimits backoff; /**< The backoff algorithm parameters */
 
     /**
      * Internal helper for parsing an advertised name into its guid, change
