@@ -34,6 +34,7 @@
 #include "Router.h"
 #include "DaemonSLAPTransport.h"
 #include "BusController.h"
+#include "ConfigDB.h"
 
 #define QCC_MODULE "DAEMON_SLAP"
 
@@ -120,6 +121,36 @@ class _DaemonSLAPEndpoint : public _RemoteEndpoint {
     QStatus Join();
 
     virtual void ThreadExit(qcc::Thread* thread);
+
+    QStatus SetIdleTimeouts(uint32_t& reqIdleTimeout, uint32_t& reqProbeTimeout)
+    {
+        uint32_t maxIdleProbes = m_transport->m_numHbeatProbes;
+
+        /* If reqProbeTimeout == 0, Make no change to Probe timeout. */
+        if (reqProbeTimeout == 0) {
+            reqProbeTimeout = _RemoteEndpoint::GetProbeTimeout();
+        } else if (reqProbeTimeout > m_transport->m_maxHbeatProbeTimeout) {
+            /* Max allowed Probe timeout is m_maxHbeatProbeTimeout */
+            reqProbeTimeout = m_transport->m_maxHbeatProbeTimeout;
+        }
+
+        /* If reqIdleTimeout == 0, Make no change to Idle timeout. */
+        if (reqIdleTimeout == 0) {
+            reqIdleTimeout = _RemoteEndpoint::GetIdleTimeout();
+        }
+
+        /* Requested link timeout must be >= m_minHbeatIdleTimeout */
+        if (reqIdleTimeout < m_transport->m_minHbeatIdleTimeout) {
+            reqIdleTimeout = m_transport->m_minHbeatIdleTimeout;
+        }
+
+        /* Requested link timeout must be <= m_maxHbeatIdleTimeout */
+        if (reqIdleTimeout > m_transport->m_maxHbeatIdleTimeout) {
+            reqIdleTimeout = m_transport->m_maxHbeatIdleTimeout;
+        }
+
+        return _RemoteEndpoint::SetIdleTimeouts(reqIdleTimeout, reqProbeTimeout, maxIdleProbes);
+    }
 
   private:
     class AuthThread : public qcc::Thread {
@@ -378,6 +409,17 @@ DaemonSLAPTransport::~DaemonSLAPTransport()
 QStatus DaemonSLAPTransport::Start()
 {
     stopping = false;
+    ConfigDB* config = ConfigDB::GetConfigDB();
+    m_minHbeatIdleTimeout = config->GetLimit("slap_min_idle_timeout", MIN_HEARTBEAT_IDLE_TIMEOUT_DEFAULT);
+    m_maxHbeatIdleTimeout = config->GetLimit("slap_max_idle_timeout", MAX_HEARTBEAT_IDLE_TIMEOUT_DEFAULT);
+    m_defaultHbeatIdleTimeout = config->GetLimit("slap_default_idle_timeout", DEFAULT_HEARTBEAT_IDLE_TIMEOUT_DEFAULT);
+
+    m_numHbeatProbes = HEARTBEAT_NUM_PROBES;
+    m_maxHbeatProbeTimeout = config->GetLimit("slap_max_probe_timeout", MAX_HEARTBEAT_PROBE_TIMEOUT_DEFAULT);
+    m_defaultHbeatProbeTimeout = config->GetLimit("slap_default_probe_timeout", DEFAULT_HEARTBEAT_PROBE_TIMEOUT_DEFAULT);
+
+    QCC_DbgPrintf(("DaemonSLAPTransport: Using m_minHbeatIdleTimeout=%u, m_maxHbeatIdleTimeout=%u, m_numHbeatProbes=%u, m_defaultHbeatProbeTimeout=%u m_maxHbeatProbeTimeout=%u", m_minHbeatIdleTimeout, m_maxHbeatIdleTimeout, m_numHbeatProbes, m_defaultHbeatProbeTimeout, m_maxHbeatProbeTimeout));
+
     return Thread::Start();
 }
 
@@ -788,7 +830,7 @@ void DaemonSLAPTransport::Authenticated(DaemonSLAPEndpoint& conn)
 
     conn->SetEpStarting();
 
-    QStatus status = conn->Start();
+    QStatus status = conn->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes);
     if (status != ER_OK) {
         QCC_LogError(status, ("DaemonSLAPTransport::Authenticated(): Failed to start DaemonSLAPEndpoint"));
         /*

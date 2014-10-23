@@ -113,7 +113,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
         /**
          * Called when endpoint is about to exit.
          *
-         * @param ep   Endpoint that is exiting.
+         * @param[in] ep   Endpoint that is exiting.
          */
         virtual void EndpointExit(RemoteEndpoint& ep) = 0;
     };
@@ -136,12 +136,12 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Constructor
      *
-     * @param bus            Message bus associated with transport.
-     * @param incoming       true iff this is an incoming connection.
-     * @param connectSpec    AllJoyn connection specification for this endpoint.
-     * @param stream         Socket Stream used to communicate with media.
-     * @param type           Base name for thread.
-     * @param isSocket       true iff stream is actually a socketStream.
+     * @param[in] bus            Message bus associated with transport.
+     * @param[in] incoming       true iff this is an incoming connection.
+     * @param[in] connectSpec    AllJoyn connection specification for this endpoint.
+     * @param[in] stream         Socket Stream used to communicate with media.
+     * @param[in] type           Base name for thread.
+     * @param[in] isSocket       true iff stream is actually a socketStream.
      */
     _RemoteEndpoint(BusAttachment& bus,
                     bool incoming,
@@ -158,7 +158,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Send an outgoing message.
      *
-     * @param msg   Message to be sent.
+     * @param[in] msg   Message to be sent.
      * @return
      *      - ER_OK if successful.
      *      - An error status otherwise
@@ -175,6 +175,20 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     virtual QStatus Start();
 
     /**
+     * Start the endpoint.
+     *
+     * @param[in] idleTimeout   Idle Timeout for the link. i.e. time after which the Routing node must
+     *                send the DBus ping in case of inactivity.
+     * @param[in] probeTimeout  Probe timeout. The time from the Routing node sending the DBus
+     *                          ping to the expected response.
+     * @param[in] numProbes     Number of probes sent before the leaf node is declared dead.
+     * @return
+     *      - ER_OK if successful.
+     *      - An error status otherwise
+     */
+    virtual QStatus Start(uint32_t idleTimeout, uint32_t probeTimeout, uint32_t numProbes);
+
+    /**
      * Request the endpoint to stop executing.
      *
      * @return
@@ -186,7 +200,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Request endpoint to stop AFTER the endpoint's txqueue empties out.
      *
-     * @param maxWaitMS    Max number of ms to wait before stopping or 0 for wait indefinitely.
+     * @param[in] maxWaitMS    Max number of ms to wait before stopping or 0 for wait indefinitely.
      *
      * @return
      *     - ER_OK if successful.
@@ -204,8 +218,9 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Set the underlying stream for this RemoteEndpoint.
      * This call can be used to override the Stream set in RemoteEndpoint's constructor
+     * @param[in] stream    Stream to use.
      */
-    void SetStream(qcc::Stream* s);
+    void SetStream(qcc::Stream* stream);
 
     /**
      * Join the endpoint.
@@ -218,7 +233,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Set the listener for this endpoint.
      *
-     * @param listener   Endpoint listener.
+     * @param[in] listener   Endpoint listener.
      */
     void SetListener(EndpointListener* listener);
 
@@ -234,7 +249,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Set the unique bus name assigned by the bus for this endpoint.
      *
-     * @param uniqueName The unique bus name for this endpoint
+     * @param[in] uniqueName The unique bus name for this endpoint
      */
     void SetUniqueName(const qcc::String& uniqueName);
 
@@ -249,7 +264,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Set the bus name for the peer at the remote end of this endpoint.
      *
-     * @param remoteName The bus name of the remote side.
+     * @param[in] remoteName The bus name of the remote side.
      */
     void SetRemoteName(const qcc::String& remoteName);
 
@@ -272,12 +287,12 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Establish a connection.
      *
-     * @param authMechanisms  The authentication mechanism(s) to use.
-     * @param authUsed        [OUT]    Returns the name of the authentication method
-     *                                 that was used to establish the connection.
-     * @param redirection     [OUT}    Returns a redirection address for the endpoint. This value
-     *                                 is only meaninful if the return status is ER_BUS_ENDPOINT_REDIRECT.
-     * @param listener        Optional authentication listener
+     * @param[in] authMechanisms  The authentication mechanism(s) to use.
+     * @param[out] authUsed    Returns the name of the authentication method
+     *                         that was used to establish the connection.
+     * @param[out] redirection Returns a redirection address for the endpoint. This value
+     *                         is only meaninful if the return status is ER_BUS_ENDPOINT_REDIRECT.
+     * @param[in] listener     Optional authentication listener
      *
      * @return
      *      - ER_OK if successful.
@@ -296,7 +311,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Set the GUID of the remote side of a bus-to-bus endpoint.
      *
-     * @param remoteGUID GUID of the remote side of a bus-to-bus endpoint.
+     * @param[in] remoteGUID GUID of the remote side of a bus-to-bus endpoint.
      */
     void SetRemoteGUID(const qcc::GUID128& remoteGUID);
 
@@ -310,7 +325,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Set the connect spec for this endpoint.
      *
-     * @param connSpec The connect spec string.
+     * @param[in] connSpec The connect spec string.
      */
     void SetConnectSpec(const qcc::String& connSpec);
 
@@ -353,18 +368,30 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Set link timeout
      *
-     * @param idleTimeout    [IN/OUT] Seconds of unresponsive link time (including any transport
-     *                       specific idle probes and retries) before link will be shutdown.
+     * @param[in,out] idleTimeout Seconds of unresponsive link time (including any transport
+     *                            specific idle probes and retries) before link will be shutdown.
      * @return ER_OK if successful.
      */
     virtual QStatus SetLinkTimeout(uint32_t& idleTimeout);
+
+    /**
+     * Set Idle timeouts for Router to leaf node connection
+     *
+     * @param[in,out] reqIdleTimeout    Idle Timeout for the link. i.e. time after which the
+     *                                  Routing node must send a DBus ping to the leaf node
+     *                                  in case of inactivity.
+     * @param[in,out] reqProbeTimeout   Probe timeout. The time from the Routing node sending the DBus
+     *                                  ping to the expected response.
+     * @return ER_OK if successful.
+     */
+    virtual QStatus SetIdleTimeouts(uint32_t& reqIdleTimeout, uint32_t& reqProbeTimeout);
 
     /**
      * Set the endpoint started state variable.  Provided for endpoints that do
      * not use the standard sockets and IODispatch mechanism and therefore
      * override Start() and Stop().
      *
-     * @param value [IN] Logical value of endpoint started (or not).
+     * @param[in] value Logical value of endpoint started (or not).
      */
     void SetStarted(bool value);
 
@@ -373,7 +400,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * not use the standard sockets and IODispatch mechanism and therefore
      * override Start() and Stop().
      *
-     * @param value [IN] Logical value of whether or not the endpoint is stopping.
+     * @param[in] value Logical value of whether or not the endpoint is stopping.
      */
     void SetStopping(bool value);
 
@@ -430,14 +457,14 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
 
     /**
      * Get the IP address of the remote end.
-     * @param ipAddr [OUT] The IP address of the remote end.
+     * @param[out] ipAddr The IP address of the remote end.
      * @return status ER_OK if the IP address is valid, or error.
      */
     virtual QStatus GetRemoteIp(qcc::String& ipAddr) { return ER_NOT_IMPLEMENTED; };
 
     /**
      * Get the IP address of the local end.
-     * @param ipAddr [OUT] The IP address of the local end.
+     * @param[out] ipAddr The IP address of the local end.
      * @return status ER_OK if the IP address is valid, or error.
      */
     virtual QStatus GetLocalIp(qcc::String& ipAddr) { return ER_NOT_IMPLEMENTED; };
@@ -447,18 +474,30 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Set link timeout params (with knowledge of the underlying transport characteristics)
      *
-     * @param idleTimeout    Seconds of RX idle time before a ProbeReq will be sent (0 means infinite).
-     * @param probeTimeout   Seconds to wait for ProbeAck.
-     * @param maxIdleProbes  Number of ProbeReqs to send before delclaring the link dead.
+     * @param[in] idleTimeout    Seconds of RX idle time before a ProbeReq will be sent (0 means infinite).
+     * @param[in] probeTimeout   Seconds to wait for ProbeAck.
+     * @param[in] maxIdleProbes  Number of ProbeReqs to send before delclaring the link dead.
      * @return ER_OK if successful.
      */
     QStatus SetLinkTimeout(uint32_t idleTimeout, uint32_t probeTimeout, uint32_t maxIdleProbes);
 
     /**
+     * Set Idle timeouts for Router to leaf node connection
+     *
+     * @param[in] reqIdleTimeout   Idle Timeout for the link. i.e. time after which the
+     *                             Routing node must send the DBus ping in case of inactivity.
+     * @param[in] reqProbeTimeout  Probe timeout. The time from the Routing node sending the
+     *                             DBus ping to the expected response.
+     * @param[in] numProbes        Number of probes sent before the leaf node is declared dead.
+     * @return ER_OK if successful.
+     */
+    QStatus SetIdleTimeouts(uint32_t reqIdleTimeout, uint32_t reqProbeTimeout, uint32_t numProbes);
+
+    /**
      * Internal callback used to indicate that one of the internal threads (rx or tx) has exited.
      * RemoteEndpoint users should not call this method.
      *
-     * @param thread   Thread that exited.
+     * @param[in] thread   Thread that exited.
      */
     virtual void ThreadExit(qcc::Thread* thread);
 
@@ -474,6 +513,15 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      */
     void Exited();
 
+    /**
+     * Internal method used to return the value of Probe timeout.
+     */
+    uint32_t GetProbeTimeout();
+
+    /**
+     * Internal method used to return the value of Idle timeout.
+     */
+    uint32_t GetIdleTimeout();
   private:
 
     class Internal;
@@ -493,8 +541,8 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Utility function used to generate an idle probe (req or ack)
      *
-     * @param isAck   If true, message is a ProbeAck. If false, message is ProbeReq.
-     * @param msg     [OUT] Message.
+     * @param[in] isAck   If true, message is a ProbeAck. If false, message is ProbeReq.
+     * @param[out] msg     Message.
      * @return   ER_OK if successful
      */
     QStatus GenProbeMsg(bool isAck, Message msg);
@@ -502,8 +550,8 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Determine if message is a ProbeReq or ProbeAck message.
      *
-     * @param msg    Message to examine.
-     * @param isAck  [OUT] True if msg ProbeAck.
+     * @param[in] msg    Message to examine.
+     * @param[out] isAck True if msg ProbeAck.
      * @return  true if message is ProbeReq or ProbeAck.
      */
     bool IsProbeMsg(const Message& msg, bool& isAck);
@@ -512,8 +560,8 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * Internal callback used to indicate that data is available on the File descriptor.
      * RemoteEndpoint users should not call this method.
      *
-     * @param source   Source that data is available on.
-     * @param isTimedOut         false - if the source event has fired.
+     * @param[in] source   Source that data is available on.
+     * @param[in] isTimedOut         false - if the source event has fired.
      *                           true - if no source event has fired in the specified timeout.
      */
     QStatus ReadCallback(qcc::Source& source, bool isTimedOut);
@@ -522,8 +570,8 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * Internal callback used to indicate that data can be written to File descriptor.
      * RemoteEndpoint users should not call this method.
      *
-     * @param source   Source that data is available on.
-     * @param isTimedOut         false - if the sink event has fired.
+     * @param[in] source   Source that data is available on.
+     * @param[in] isTimedOut         false - if the sink event has fired.
      *                           true - if no sink event has fired in the specified timeout.
      * @return   ER_OK if successful
      */
