@@ -59,7 +59,9 @@ public class SignalEmitter {
      *
      * @param source the source object of any signals sent from this emitter
      * @param destination well-known or unique name of destination for signal
-     * @param sessionId A unique SessionId for this AllJoyn session instance
+     * @param sessionId A unique SessionId for this AllJoyn session instance,
+     *                  or BusAttachment.SESSION_ID_ALL_HOSTED to emit on all
+     *                  sessions hosted by the BusAttachment.
      * @param globalBroadcast whether to forward broadcast signals
      *                        across bus-to-bus connections
      */
