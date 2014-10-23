@@ -322,6 +322,12 @@ public class BusAttachment {
     public static final int SESSION_ID_ANY = 0;
 
     /**
+     * When specified during SignalEmitter creation, emits on all session hosted 
+     * by this BusAttachment.
+     */
+    public static final int SESSION_ID_ALL_HOSTED = -1;
+
+    /**
      * Cancel an existing port binding.
      *
      * @param   sessionPort    Existing session port to be un-bound.
