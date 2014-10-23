@@ -12019,6 +12019,7 @@ class JAboutObject : public AboutObj, public AboutDataListener {
                 }
             } else {
                 QCC_DbgPrintf(("JAboutObj::GetMsgArg exception with status %s", QCC_StatusText(status)));
+                return status;
             }
         }
         return ER_OK;
@@ -12047,6 +12048,7 @@ class JAboutObject : public AboutObj, public AboutDataListener {
                 }
             } else {
                 QCC_DbgPrintf(("JAboutObj::GetAnnouncedAboutData exception with status %s", QCC_StatusText(status)));
+                return status;
             }
         }
         return status;
