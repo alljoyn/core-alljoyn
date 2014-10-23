@@ -764,18 +764,6 @@ class ArdpStream : public qcc::Stream {
      * some data.  In this case we need to block the calling thread until it can
      * continue.
      *
-     * TODO: Note that the blocking is on an endpoint-by-endpoint basis, which
-     * means there is a write event per endpoint.  This could be changed to one
-     * event per transport, but would mean waking all blocked threads only to
-     * have one of them succeed and the rest go back to sleep if the event
-     * wasn't directed at them.  This is the classic thundering herd, but trades
-     * CPU for event resources which may be a good way to go since our events
-     * can be so expensive.  It's a simple change conceptually but there is no
-     * bradcast condition variable in common, which would be the way to go.
-     *
-     * For now, we will take the one event per endpoint approach and optimize
-     * that as time permits.
-     *
      * When a buffer is sent, the ARDP protocol takes ownership of it until it
      * is ACKed by the other side or it times out.  When the ACK happens, a send
      * callback is fired that will record the actual status of the send and free
@@ -841,13 +829,14 @@ class ArdpStream : public qcc::Stream {
          * Set up a timeout on the write.  If we call ARDP_Send, we expect it to
          * come back with some a send callback if it accepts the data.  As a
          * double-check, we add our own timeout that expires some time after we
-         * expect ARDP to time out.
+         * expect ARDP to time out.  We ask ARDP for the number it says it will
+         * use and we double it.
          */
         uint32_t timeout;
         Timespec tStart;
 
         m_transport->m_ardpLock.Lock();
-        timeout = ARDP_GetDataTimeout(m_handle, m_conn);
+        timeout = 2 * ARDP_GetDataTimeout(m_handle, m_conn);
         m_transport->m_ardpLock.Unlock();
 
         GetTimeNow(&tStart);
