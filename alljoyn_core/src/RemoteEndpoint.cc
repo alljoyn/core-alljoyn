@@ -83,7 +83,8 @@ class _RemoteEndpoint::Internal {
         getNextMsg(true),
         currentWriteMsg(bus),
         stopping(false),
-        sessionId(0)
+        sessionId(0),
+        pingCallSerial(0)
     {
     }
 
@@ -128,6 +129,7 @@ class _RemoteEndpoint::Internal {
     Message currentWriteMsg;                 /**< The message currently being read for this endpoint */
     bool stopping;                           /**< Is this EP stopping? */
     uint32_t sessionId;                      /**< SessionId for BusToBus endpoint. (not used for non-B2B endpoints) */
+    uint32_t pingCallSerial;
 };
 
 
@@ -330,7 +332,7 @@ QStatus _RemoteEndpoint::SetLinkTimeout(uint32_t idleTimeout, uint32_t probeTime
 {
     QCC_DbgTrace(("_RemoteEndpoint::SetLinkTimeout(%u, %u, %u) for %s", idleTimeout, probeTimeout, maxIdleProbes, GetUniqueName().c_str()));
 
-    if (minimalEndpoint) {
+    if (!internal || minimalEndpoint) {
         return ER_BUS_NO_ENDPOINT;
     }
 
@@ -349,6 +351,51 @@ QStatus _RemoteEndpoint::SetLinkTimeout(uint32_t idleTimeout, uint32_t probeTime
         return ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NO_DEST_SUPPORT;
     }
 }
+QStatus _RemoteEndpoint::SetIdleTimeouts(uint32_t& idleTimeout, uint32_t& probeTimeout)
+{
+    if (internal) {
+        internal->idleTimeout = 0;
+        internal->probeTimeout = 0;
+    }
+    return ER_OK;
+}
+QStatus _RemoteEndpoint::SetIdleTimeouts(uint32_t idleTimeout, uint32_t probeTimeout, uint32_t maxIdleProbes)
+{
+    QCC_DbgPrintf(("_RemoteEndpoint::SetIdleTimeouts(%u, %u, %u) for %s", idleTimeout, probeTimeout, maxIdleProbes, GetUniqueName().c_str()));
+
+    if (!internal || minimalEndpoint) {
+        return ER_BUS_NO_ENDPOINT;
+    }
+
+    internal->lock.Lock(MUTEX_CONTEXT);
+    internal->idleTimeout = idleTimeout;
+    internal->probeTimeout = probeTimeout;
+    internal->maxIdleProbes = maxIdleProbes;
+    IODispatch& iodispatch = internal->bus.GetInternal().GetIODispatch();
+    internal->idleTimeoutCount = 0;
+
+    QStatus status = iodispatch.EnableTimeoutCallback(internal->stream, internal->idleTimeout);
+    internal->lock.Unlock(MUTEX_CONTEXT);
+    return status;
+
+}
+uint32_t _RemoteEndpoint::GetProbeTimeout()
+{
+    if (internal) {
+        return internal->probeTimeout;
+    } else {
+        return 0;
+    }
+}
+
+uint32_t _RemoteEndpoint::GetIdleTimeout()
+{
+    if (internal) {
+        return internal->idleTimeout;
+    } else {
+        return 0;
+    }
+}
 
 QStatus _RemoteEndpoint::Start()
 {
@@ -362,9 +409,9 @@ QStatus _RemoteEndpoint::Start()
     }
 
     assert(internal->stream);
-    QCC_DbgTrace(("_RemoteEndpoint::Start(isBusToBus = %s, allowRemote = %s)",
-                  internal->features.isBusToBus ? "true" : "false",
-                  internal->features.allowRemote ? "true" : "false"));
+    QCC_DbgPrintf(("_RemoteEndpoint::Start(%s, isBusToBus = %s, allowRemote = %s)", GetUniqueName().c_str(),
+                   internal->features.isBusToBus ? "true" : "false",
+                   internal->features.allowRemote ? "true" : "false"));
     QStatus status;
     internal->started = true;
     Router& router = internal->bus.GetInternal().GetRouter();
@@ -406,9 +453,23 @@ QStatus _RemoteEndpoint::Start()
         Invalidate();
         internal->started = false;
     }
+
     return status;
 }
+QStatus _RemoteEndpoint::Start(uint32_t idleTimeout, uint32_t probeTimeout, uint32_t numProbes)
+{
+    QStatus status = Start();
+    if (status == ER_OK && endpointType == ENDPOINT_TYPE_REMOTE) {
+        /* Set idle timeouts for leaf nodes only */
+        status = SetIdleTimeouts(idleTimeout, probeTimeout, numProbes);
+    }
 
+    if (status != ER_OK) {
+        Invalidate();
+        internal->started = false;
+    }
+    return status;
+}
 void _RemoteEndpoint::SetListener(EndpointListener* listener)
 {
     if (internal) {
@@ -481,7 +542,7 @@ QStatus _RemoteEndpoint::PauseAfterRxReply()
 QStatus _RemoteEndpoint::Join(void)
 {
 /* Ensure the endpoint is valid */
-    QCC_DbgPrintf(("_RemoteEndpoint::Join(%s) called\n", GetUniqueName().c_str()));
+    QCC_DbgPrintf(("_RemoteEndpoint::Join(%s) called", GetUniqueName().c_str()));
 
     if (!internal) {
         return ER_BUS_NO_ENDPOINT;
@@ -524,7 +585,7 @@ static inline bool IsControlMessage(Message& msg)
 
 void _RemoteEndpoint::Exit()
 {
-    QCC_DbgTrace(("_RemoteEndpoint::Exit()"));
+    QCC_DbgTrace(("_RemoteEndpoint::Exit(%s)", GetUniqueName().c_str()));
 
     assert(minimalEndpoint == true && "_RemoteEndpoint::Exit(): You should have had ExitCallback() called for you!");
     /* Ensure the endpoint is valid */
@@ -548,7 +609,7 @@ void _RemoteEndpoint::Exit()
 
 void _RemoteEndpoint::Exited()
 {
-    QCC_DbgTrace(("_RemoteEndpoint::Exited()"));
+    QCC_DbgTrace(("_RemoteEndpoint::Exited(%s)", GetUniqueName().c_str()));
     if (internal) {
         internal->exitCount = 1;
     }
@@ -628,7 +689,10 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
                 case ER_OK:
                     internal->idleTimeoutCount = 0;
                     bool isAck;
-                    if (IsProbeMsg(msg, isAck)) {
+                    if ((internal->pingCallSerial != 0) && (msg->GetType() == MESSAGE_METHOD_RET) && (internal->pingCallSerial == msg->GetReplySerial())) {
+                        /* This is a response to the DBus ping sent from RN to LN. Consume the reply quietly. */
+                        internal->pingCallSerial = 0;
+                    } else if (IsProbeMsg(msg, isAck)) {
                         QCC_DbgPrintf(("%s: Received %s\n", GetUniqueName().c_str(), isAck ? "ProbeAck" : "ProbeReq"));
                         if (!isAck) {
                             /* Respond to probe request */
@@ -664,7 +728,7 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
                                 }
                             }
                             if ((router.IsDaemon() && !bus2bus) || (status == ER_BUS_SIGNATURE_MISMATCH) || (status == ER_BUS_UNMATCHED_REPLY_SERIAL) || (status == ER_BUS_ENDPOINT_CLOSING)) {
-                                QCC_DbgHLPrintf(("Discarding %s: %s", msg->Description().c_str(), QCC_StatusText(status)));
+                                QCC_DbgHLPrintf(("%s: Discarding %s: %s", GetUniqueName().c_str(), msg->Description().c_str(), QCC_StatusText(status)));
                                 status = ER_OK;
                             }
                         }
@@ -676,23 +740,26 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
                     break;
 
                 case ER_BUS_CANNOT_EXPAND_MESSAGE:
+                    internal->idleTimeoutCount = 0;
                     /*
                      * The message could not be expanded so pass it the peer object to request the expansion
                      * rule from the endpoint that sent it.
                      */
                     status = internal->bus.GetInternal().GetLocalEndpoint()->GetPeerObj()->RequestHeaderExpansion(msg, rep);
                     if ((status != ER_OK) && router.IsDaemon()) {
-                        QCC_LogError(status, ("Discarding %s", msg->Description().c_str()));
+                        QCC_LogError(status, ("%s: Discarding %s", GetUniqueName().c_str(), msg->Description().c_str()));
                         status = ER_OK;
                     }
                     break;
 
                 case ER_BUS_TIME_TO_LIVE_EXPIRED:
-                    QCC_DbgHLPrintf(("TTL expired discarding %s", msg->Description().c_str()));
+                    internal->idleTimeoutCount = 0;
+                    QCC_DbgHLPrintf(("%s: TTL expired discarding %s", GetUniqueName().c_str(), msg->Description().c_str()));
                     status = ER_OK;
                     break;
 
                 case ER_BUS_INVALID_HEADER_SERIAL:
+                    internal->idleTimeoutCount = 0;
                     /*
                      * Ignore invalid serial numbers for unreliable messages or broadcast messages that come from
                      * bus2bus endpoints as these can be delivered out-of-order or repeated.
@@ -703,10 +770,10 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
                      * In all other cases an invalid serial number cause the connection to be dropped.
                      */
                     if (msg->IsUnreliable() || msg->IsBroadcastSignal() || IsControlMessage(msg)) {
-                        QCC_DbgHLPrintf(("Invalid serial discarding %s", msg->Description().c_str()));
+                        QCC_DbgHLPrintf(("%s: Invalid serial discarding %s", GetUniqueName().c_str(), msg->Description().c_str()));
                         status = ER_OK;
                     } else {
-                        QCC_LogError(status, ("Invalid serial %s", msg->Description().c_str()));
+                        QCC_LogError(status, ("%s: Invalid serial %s", GetUniqueName().c_str(), msg->Description().c_str()));
                     }
                     break;
 
@@ -747,20 +814,43 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
             internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
         }
     } else {
+
         /* This is a timeout alarm, try to send a probe message if maximum idle
          * probe attempts has not been reached.
          */
         if (internal->idleTimeoutCount++ < internal->maxIdleProbes) {
-            Message probeMsg(internal->bus);
-            status = GenProbeMsg(false, probeMsg);
-            if (status == ER_OK) {
-                PushMessage(probeMsg);
+            if (endpointType == ENDPOINT_TYPE_BUS2BUS) {
+
+                Message probeMsg(internal->bus);
+                status = GenProbeMsg(false, probeMsg);
+                if (status == ER_OK) {
+                    PushMessage(probeMsg);
+                }
+                QCC_DbgPrintf(("%s: Sent ProbeReq (%s)\n", GetUniqueName().c_str(), QCC_StatusText(status)));
+
+            } else {
+                Message msg(internal->bus);
+                status = msg->CallMsg("",
+                                      GetUniqueName().c_str(),
+                                      0,
+                                      "/",
+                                      org::freedesktop::DBus::Peer::InterfaceName,
+                                      "Ping",
+                                      NULL,
+                                      0, 0);
+                internal->pingCallSerial = msg->GetCallSerial();
+
+                if (status == ER_OK) {
+                    PushMessage(msg);
+                }
+                QCC_DbgPrintf(("%s: Sent DBus ping (%s)\n", GetUniqueName().c_str(), QCC_StatusText(status)));
+
             }
-            QCC_DbgPrintf(("%s: Sent ProbeReq (%s)\n", GetUniqueName().c_str(), QCC_StatusText(status)));
             internal->lock.Lock(MUTEX_CONTEXT);
             uint32_t timeout = (internal->idleTimeoutCount == 0) ? internal->idleTimeout : internal->probeTimeout;
             internal->bus.GetInternal().GetIODispatch().EnableReadCallback(internal->stream, timeout);
             internal->lock.Unlock(MUTEX_CONTEXT);
+
         } else {
             QCC_DbgPrintf(("%s: Maximum number of idle probe (%d) attempts reached", GetUniqueName().c_str(), internal->maxIdleProbes));
             /* On an unexpected disconnect save the status that cause the thread exit */
@@ -812,7 +902,6 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
                  * Each copy of the message could be in different write state.
                  */
                 internal->currentWriteMsg = Message(internal->txQueue.back(), true);
-
                 /* Alert next thread on wait queue */
                 if (0 < internal->txWaitQueue.size()) {
                     Thread* wakeMe = internal->txWaitQueue.back();
@@ -844,6 +933,7 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
             status = ER_OK;
         }
         if (status == ER_OK) {
+
             /* Message has been successfully delivered. i.e. PushBytes is complete
              */
             internal->lock.Lock(MUTEX_CONTEXT);

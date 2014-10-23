@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -34,6 +34,7 @@
 #include "RemoteEndpoint.h"
 #include "Router.h"
 #include "DaemonTransport.h"
+#include "ConfigDB.h"
 
 #define QCC_MODULE "DAEMON_TRANSPORT"
 
@@ -62,6 +63,18 @@ DaemonTransport::~DaemonTransport()
 QStatus DaemonTransport::Start()
 {
     stopping = false;
+
+    ConfigDB* config = ConfigDB::GetConfigDB();
+    m_minHbeatIdleTimeout = config->GetLimit("dt_min_idle_timeout", MIN_HEARTBEAT_IDLE_TIMEOUT_DEFAULT);
+    m_maxHbeatIdleTimeout = config->GetLimit("dt_max_idle_timeout", MAX_HEARTBEAT_IDLE_TIMEOUT_DEFAULT);
+    m_defaultHbeatIdleTimeout = config->GetLimit("dt_default_idle_timeout", DEFAULT_HEARTBEAT_IDLE_TIMEOUT_DEFAULT);
+
+    m_numHbeatProbes = HEARTBEAT_NUM_PROBES;
+    m_maxHbeatProbeTimeout = config->GetLimit("dt_max_probe_timeout", MAX_HEARTBEAT_PROBE_TIMEOUT_DEFAULT);
+    m_defaultHbeatProbeTimeout = config->GetLimit("dt_default_probe_timeout", DEFAULT_HEARTBEAT_PROBE_TIMEOUT_DEFAULT);
+
+    QCC_DbgPrintf(("DaemonTransport: Using m_minHbeatIdleTimeout=%u, m_maxHbeatIdleTimeout=%u, m_numHbeatProbes=%u, m_defaultHbeatProbeTimeout=%u m_maxHbeatProbeTimeout=%u", m_minHbeatIdleTimeout, m_maxHbeatIdleTimeout, m_numHbeatProbes, m_defaultHbeatProbeTimeout, m_maxHbeatProbeTimeout));
+
     return ER_OK;
 }
 
