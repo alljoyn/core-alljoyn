@@ -232,6 +232,7 @@ struct ARDP_CONN_RECORD {
     uint32_t rttMean;       /* Smoothed RTT value */
     uint32_t rttMeanVar;    /* RTT variance */
     uint32_t backoff;       /* Backoff factor accounting for retransmits on connection, resets to 1 when receive "good ack" */
+    uint32_t rttMeanUnit;   /* Smoothed RTT value per UDP MTU */
     ArdpTimer connectTimer; /* Connect/Disconnect timer */
     ArdpTimer probeTimer;   /* Probe (link timeout) timer */
     ArdpTimer ackTimer;     /* Delayed ACK timer */
@@ -964,14 +965,15 @@ static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reas
  *    else
  *        new meanVar = 31/32 * meanVar + 1/32 * |error|
  *
- *    Note: Since ARDP segments can have varying length, base RTT calculation on
- *          UDP-MTU unit.
+ *    Since ARDP segments can have varying length, maintain additional
+ *    mean RTT calculation of UDP MTU unit that will be used in message TTL estimate.
  */
 static void AdjustRTT(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf)
 {
     uint32_t now = TimeNow(handle->tbase);
     uint16_t units = (sBuf->datalen + UDP_MTU - 1) / UDP_MTU;
-    uint32_t rtt = (now - sBuf->tStart) / units;
+    uint32_t rtt = now - sBuf->tStart;
+    uint32_t rttUnit = rtt / units;
     int32_t err;
 
     if (!conn->rttInit) {
@@ -992,29 +994,27 @@ static void AdjustRTT(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf
         conn->rttMeanVar = (conn->rttMeanVar * 31 + ABS(err)) >> 5;
     }
 
+    rttUnit = (7 * conn->rttMeanUnit + rttUnit) >> 3;
+
     conn->backoff = 0;
 
     QCC_DbgHLPrintf(("AdjustRtt: New mean = %u, var =%u", conn->rttMean, conn->rttMeanVar));
 }
 
-inline static uint32_t GetRTO(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t datalen)
+inline static uint32_t GetRTO(ArdpHandle* handle, ArdpConnRecord* conn)
 {
-    /*
-     * RTO = (rttMean + (4 * rttMeanVar)) << backoff
-     * Note: Since ARDP segments can have varying length, base RTT calculation on
-     *       UDP-MTU unit:
-     * Adjusted RTO = RTO * numMTUs
-     */
+    /* RTO = (rttMean + (4 * rttMeanVar)) << backoff */
     uint32_t ms = (MAX((uint32_t)ARDP_MIN_RTO, conn->rttMean + (4 * conn->rttMeanVar))) << conn->backoff;
-    ms = ms * ((datalen + UDP_MTU - 1) / UDP_MTU);
     return MIN(ms, (uint32_t)ARDP_MAX_RTO);
 }
 
 inline static uint32_t GetDataTimeout(ArdpHandle* handle, ArdpConnRecord* conn)
 {
-    uint32_t timeout = (conn->rttInit) ?
-                       (MAX((conn->snd.SEGMAX * conn->snd.SEGBMAX * (conn->rttMean >> 1)) / UDP_MTU, handle->config.totalDataRetryTimeout)) :
-                       handle->config.totalDataRetryTimeout;
+    uint32_t timeout = handle->config.totalDataRetryTimeout;
+
+    if (conn->rttInit) {
+        timeout = MAX(timeout, (conn->snd.SEGMAX * conn->snd.SEGBMAX * (conn->rttMean >> 1)) / UDP_MTU);
+    }
     return timeout;
 }
 
@@ -1031,9 +1031,9 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
 
     sBuf->retransmits++;
 
-    if ((msElapsed >= timeout) && (sBuf->retransmits > handle->config.minDataRetries)) {
+    if ((msElapsed >= timeout) && (timer->retry > handle->config.minDataRetries)) {
         QCC_DbgHLPrintf(("RetransmitTimerHandler seq=%u hit the time limit %u, retries %u",
-                         ntohl(((ArdpHeader*)sBuf->hdr)->seq), timeout, sBuf->retransmits));
+                         ntohl(((ArdpHeader*)sBuf->hdr)->seq), timeout, timer->retry));
         timer->retry = 0;
         Disconnect(handle, conn, ER_TIMEOUT);
     } else {
@@ -1049,7 +1049,7 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         if (sBuf->ttl != ARDP_TTL_INFINITE) {
             /* Factor in mean RTT to account for time on the wire */
             if (conn->rttInit) {
-                msElapsed += (conn->rttMean >> 1);
+                msElapsed += MIN((conn->rttMeanUnit * (sBuf->datalen + UDP_MTU - 1) / UDP_MTU) >> 1, (conn->rttMean >> 1));
             }
 
             if (msElapsed >= sBuf->ttl) {
@@ -1070,7 +1070,7 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         if (status == ER_OK) {
             conn->backoff = MAX(conn->backoff, timer->retry);
             if (conn->rttInit) {
-                timer->delta = GetRTO(handle, conn, sBuf->datalen);
+                timer->delta = GetRTO(handle, conn);
             } else {
                 timer->delta = handle->config.initialDataTimeout;
             }
@@ -1449,6 +1449,7 @@ static QStatus InitConnRecord(ArdpHandle* handle, ArdpConnRecord* conn, qcc::Soc
 
     conn->rttInit = false;
     conn->rttMean = handle->config.initialDataTimeout;
+    conn->rttMeanUnit = handle->config.initialDataTimeout;
     conn->rttMeanVar = 0;
 
     conn->backoff = 0;
@@ -1527,7 +1528,9 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
      * do not bother sending, return error.
      */
     if (conn->rttInit && (ttl != ARDP_TTL_INFINITE)) {
-        if ((ttl + conn->snd.DACKT) <= (conn->rttMean >> 1)) {
+        uint32_t expireThreshold = MIN((conn->rttMeanUnit * (len + UDP_MTU - 1) / UDP_MTU) >> 1, ((conn->rttMean * fcnt) >> 1));
+        if ((ttl + conn->snd.DACKT) <= expireThreshold) {
+
 #if ARDP_STATS
             ++handle->stats.outboundDrops;
             ++handle->stats.preflightDrops;
@@ -1539,8 +1542,8 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
         }
 
         /* If we passed the above "expire" test only due to factoring in DACKT, do not adjust ttl */
-        if (ttl > (conn->rttMean >> 1)) {
-            ttlSend = ttl - (conn->rttMean >> 1);
+        if (ttl > expireThreshold) {
+            ttlSend = ttl - expireThreshold;
         }
     }
 
@@ -1570,7 +1573,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
         if (!handle->trafficJam) {
             status = SendMsgData(handle, conn, sBuf, ttlSend);
             if (conn->rttInit) {
-                timeout = GetRTO(handle, conn, sBuf->datalen);
+                timeout = GetRTO(handle, conn);
             } else {
                 timeout = handle->config.initialDataTimeout;
             }
@@ -1729,7 +1732,7 @@ static QStatus UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint3
      * Count only "good" roundrips to ajust RTT values.
      * Note, that we decrement retries with each retransmit.
      */
-    if (sBuf->retransmits == 0 && (sBuf->timer.retry != 0)) {
+    if ((sBuf->retransmits == 0) && (sBuf->timer.retry != 0)) {
         AdjustRTT(handle, conn, sBuf);
     }
 
@@ -1795,7 +1798,10 @@ static QStatus UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint3
 
 static void FastRetransmit(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* sBuf)
 {
-    /* Fast retransmit to fill the gap.*/
+    /*
+     * Fast retransmit to fill the gap. Schedule only for those segments that haven't been
+     * tried for retransmission yet.
+     */
     if ((sBuf->fastRT == handle->config.fastRetransmitAckCounter) && (sBuf->retransmits == 0)) {
         QCC_DbgPrintf(("FastRetransmit(): priority re-send %u", ntohl(((ArdpHeader*)sBuf->hdr)->seq)));
         sBuf->timer.when = TimeNow(handle->tbase);
