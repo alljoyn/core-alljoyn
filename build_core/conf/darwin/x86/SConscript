@@ -1,4 +1,4 @@
-# Copyright (c) 2010 - 2011, AllSeen Alliance. All rights reserved.
+# Copyright (c) 2010 - 2011, 2014, AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -63,11 +63,8 @@ env.Append(CXXFLAGS=[
             '-fno-exceptions',
             '-Wc++11-extensions'])
 
-ccld = ['-arch', 'i386', '-arch', 'x86_64', '-mmacosx-version-min=10.5.4']
+ccld = ['-arch', 'i386', '-arch', 'x86_64', '-mmacosx-version-min=10.8.5']
 
 env.Append(CXXFLAGS=ccld)
 env.Append(CFLAGS=ccld)
 env.Append(LINKFLAGS=ccld)
-
-
-

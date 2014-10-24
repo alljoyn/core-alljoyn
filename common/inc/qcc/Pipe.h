@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -62,7 +62,7 @@ class Pipe : public Stream {
      * @param reqBytes     Number of bytes requested to be pulled from source.
      * @param actualBytes  Actual number of bytes retrieved from source.
      * @param timeout      Timeout in milliseconds.
-     * @return   OI_OK if successful. ER_NONE if source is exhausted. Otherwise an error.
+     * @return   ER_OK if successful. ER_EOF if source is exhausted. Otherwise an error.
      */
     QStatus PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout = Event::WAIT_FOREVER);
 
