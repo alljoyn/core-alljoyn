@@ -46,10 +46,14 @@ typedef struct _alljoyn_sessionopts_handle*                 alljoyn_sessionopts;
 typedef uint16_t alljoyn_sessionport;
 
 /** Invalid SessionPort value used to indicate that BindSessionPort should choose any available port */
-#define ALLJOYN_SESSION_PORT_ANY (alljoyn_sessionport)0;
+#define ALLJOYN_SESSION_PORT_ANY (alljoyn_sessionport)0
 
 /** SessionId uniquely identifies an AllJoyn session instance */
 typedef uint32_t alljoyn_sessionid;
+
+/** Invalid session id value used to indicate that a signal should be emitted on all hosted sessions */
+#define ALLJOYN_SESSION_ID_ALL_HOSTED ((alljoyn_sessionid)(-1))
+
 
 /** @name TrafficType */
 // {@
