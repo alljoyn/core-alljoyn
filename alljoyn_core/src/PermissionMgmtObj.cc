@@ -346,7 +346,7 @@ void PermissionMgmtObj::InstallPolicy(const InterfaceDescription::Member* member
     msg->GetArg(0)->Get("(yv)", &version, &variant);
 
     PermissionPolicy policy;
-    status = PermissionPolicy::BuildPolicyFromArgs(version, *variant, policy);
+    status = policy.Import(version, *variant);
 
     status = StorePolicy(policy);
     if (ER_OK == status) {
@@ -358,68 +358,39 @@ void PermissionMgmtObj::InstallPolicy(const InterfaceDescription::Member* member
     }
 }
 
-QStatus PermissionMgmtObj::RetrieveLocalPolicyMsg(Message& msg)
-{
-    /* retrieve data from keystore */
-    GUID128 policyGuid;
-    GetACLGUID(ENTRY_POLICY, policyGuid);
-    KeyBlob kb;
-    QStatus status = ca->GetKey(policyGuid, kb);
-    if (ER_OK != status) {
-        return status;
-    }
-
-    status = msg->LoadBytes((uint8_t*) kb.GetData(), kb.GetSize());
-    QCC_DbgPrintf(("PermissionMgmtObj::RetrieveLocalPolicyMsg LoadBytes (%d bytes) to msg return status 0x%x\n", kb.GetSize(), status));
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::RetrieveLocalPolicyMsg failed to load policy data from keystore status 0x%x\n", status));
-        return status;
-    }
-    qcc::String endpointName(bus.GetUniqueName());
-    status = msg->Unmarshal(endpointName, false, false, false, 0);
-    if (ER_OK != status) {
-        return status;
-    }
-    status = msg->UnmarshalArgs("*");
-    if (ER_OK != status) {
-        return status;
-    }
-    return status;
-}
-
 void PermissionMgmtObj::GetPolicy(const InterfaceDescription::Member* member, Message& msg)
 {
-    /* retrieve data from keystore */
-    Message localMsg(bus);
-    QStatus status = RetrieveLocalPolicyMsg(localMsg);
+    PermissionPolicy policy;
+    QStatus status = RetrievePolicy(policy);
     if (ER_OK != status) {
         MethodReply(msg, status);
         return;
     }
-    const MsgArg* replyArg = localMsg->GetArg(0);
-    if (!replyArg) {
+    MsgArg msgArg;
+    status = policy.Export(msgArg);
+    if (ER_OK != status) {
         MethodReply(msg, ER_INVALID_DATA);
         return;
     }
-    MethodReply(msg, replyArg, 1);
+    MethodReply(msg, &msgArg, 1);
 }
 
 QStatus PermissionMgmtObj::StorePolicy(PermissionPolicy& policy)
 {
-    Message msg(bus);
-
-    MsgArg args;
-    QStatus status = PermissionPolicy::GeneratePolicyArgs(args, policy);
-    status = msg->CallMsg(String("(yv)"), String("sn"), 0, String("/s"), String("ifn"),
-                          String("mn"), &args, 1, 0);
-
+    uint8_t* buf = NULL;
+    size_t size;
+    QStatus status = policy.Export(bus, &buf, &size);
+    if (ER_OK != status) {
+        return status;
+    }
     /* store the message into the key store */
     GUID128 policyGuid;
     GetACLGUID(ENTRY_POLICY, policyGuid);
-    KeyBlob kb((uint8_t*) msg->GetBuffer(), msg->GetBufferSize(), KeyBlob::GENERIC);
+    KeyBlob kb((uint8_t*) buf, size, KeyBlob::GENERIC);
+    delete [] buf;
 
     status = ca->StoreKey(policyGuid, kb);
-    QCC_DbgPrintf(("PermissionMgmtObj::StorePolicy save message size %d to key store return status 0x%x\n", msg->GetBufferSize(), status));
+    QCC_DbgPrintf(("PermissionMgmtObj::StorePolicy save message size %d to key store return status 0x%x\n", size, status));
     if (ER_OK != status) {
         return status;
     }
@@ -430,21 +401,14 @@ QStatus PermissionMgmtObj::StorePolicy(PermissionPolicy& policy)
 QStatus PermissionMgmtObj::RetrievePolicy(PermissionPolicy& policy)
 {
     /* retrieve data from keystore */
-    Message localMsg(bus);
-    QStatus status = RetrieveLocalPolicyMsg(localMsg);
+    GUID128 policyGuid;
+    GetACLGUID(ENTRY_POLICY, policyGuid);
+    KeyBlob kb;
+    QStatus status = ca->GetKey(policyGuid, kb);
     if (ER_OK != status) {
         return status;
     }
-    const MsgArg* arg = localMsg->GetArg(0);
-    if (arg) {
-        uint8_t version;
-        MsgArg* variant;
-        arg->Get("(yv)", &version, &variant);
-        status = PermissionPolicy::BuildPolicyFromArgs(version, *variant, policy);
-    } else {
-        return ER_INVALID_DATA;
-    }
-    return ER_OK;
+    return policy.Import(bus, kb.GetData(), kb.GetSize());
 }
 
 QStatus PermissionMgmtObj::NotifyConfig()

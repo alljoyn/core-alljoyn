@@ -177,6 +177,7 @@ static QStatus ParsePropertiesMessage(bool send, Message& msg, const char** iNam
 
         QCC_DbgPrintf(("PermissionManager::ParsePropertiesMessage %s %s.%s", mbrName, propIName, propName));
     } else if (strncmp(mbrName, "GetAll", 6) == 0) {
+        propName = NULL;
         if (send) {
             const MsgArg* args;
             size_t numArgs;

@@ -590,7 +590,7 @@ QStatus InstallPolicy(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionP
     Message reply(bus);
     MsgArg policyArg;
 
-    status = PermissionPolicy::GeneratePolicyArgs(policyArg, policy);
+    status = policy.Export(policyArg);
     if (ER_OK != status) {
         return status;
     }
@@ -622,7 +622,7 @@ QStatus GetPolicy(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolic
     uint8_t version;
     MsgArg* variant;
     reply->GetArg(0)->Get("(yv)", &version, &variant);
-    return PermissionPolicy::BuildPolicyFromArgs(version, *variant, policy);
+    return policy.Import(version, *variant);
 }
 
 QStatus RetrieveDSAPublicKeyFromKeyStore(BusAttachment& bus, ECCPublicKey* publicKey)

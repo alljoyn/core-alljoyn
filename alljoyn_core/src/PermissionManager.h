@@ -38,7 +38,7 @@ class PermissionManager {
      * Constructor
      *
      */
-    PermissionManager(BusAttachment& bus) : bus(bus), policy(NULL), guilds(NULL), numOfGuilds(0), permissionMgmtObj(NULL)
+    PermissionManager() : policy(NULL), guilds(NULL), numOfGuilds(0), permissionMgmtObj(NULL)
     {
     }
 
@@ -106,7 +106,6 @@ class PermissionManager {
     bool PeerHasAdminPriv(const qcc::GUID128& peerGuid);
     bool AuthorizePermissionMgmt(bool send, const qcc::GUID128& peerGuid, Message& msg);
 
-    BusAttachment& bus;
     PermissionPolicy* policy;
     qcc::GUID128* guilds;
     size_t numOfGuilds;

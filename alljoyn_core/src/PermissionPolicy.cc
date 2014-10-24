@@ -591,7 +591,7 @@ static QStatus BuildTermsFromArg(MsgArg& arg, PermissionPolicy::Term** terms, si
 
 }
 
-QStatus PermissionPolicy::GeneratePolicyArgs(MsgArg& msgArg, PermissionPolicy& policy)
+QStatus PermissionPolicy::Export(MsgArg& msgArg)
 {
 
     MsgArg* sectionVariants = NULL;
@@ -599,26 +599,26 @@ QStatus PermissionPolicy::GeneratePolicyArgs(MsgArg& msgArg, PermissionPolicy& p
     size_t sectionCount = 0;
     size_t sectionIndex = 0;
 
-    if (policy.GetAdmins()) {
+    if (GetAdmins()) {
         sectionCount++;
     }
-    if (policy.GetTerms()) {
+    if (GetTerms()) {
         sectionCount++;
     }
     if (sectionCount > 0) {
         sectionVariants = new MsgArg[sectionCount];
     }
 
-    if (policy.GetAdmins()) {
+    if (GetAdmins()) {
         MsgArg* adminVariants;
-        GeneratePeerArgs(&adminVariants, (PermissionPolicy::Peer*) policy.GetAdmins(), policy.GetAdminsSize());
+        GeneratePeerArgs(&adminVariants, (PermissionPolicy::Peer*) GetAdmins(), GetAdminsSize());
         sectionVariants[sectionIndex++].Set("(yv)", PermissionPolicy::TAG_ADMINS,
-                                            new MsgArg("a(ya(yv))", policy.GetAdminsSize(), adminVariants));
+                                            new MsgArg("a(ya(yv))", GetAdminsSize(), adminVariants));
     }
-    if (policy.GetTerms()) {
-        MsgArg* termsVariants = new MsgArg[policy.GetTermsSize()];
-        PermissionPolicy::Term* terms = (PermissionPolicy::Term*) policy.GetTerms();
-        for (size_t cnt = 0; cnt < policy.GetTermsSize(); cnt++) {
+    if (GetTerms()) {
+        MsgArg* termsVariants = new MsgArg[GetTermsSize()];
+        PermissionPolicy::Term* terms = (PermissionPolicy::Term*) GetTerms();
+        for (size_t cnt = 0; cnt < GetTermsSize(); cnt++) {
             PermissionPolicy::Term* aTerm = &terms[cnt];
             /* count the item in a term */
             size_t termItemCount = 0;
@@ -646,17 +646,17 @@ QStatus PermissionPolicy::GeneratePolicyArgs(MsgArg& msgArg, PermissionPolicy& p
             termsVariants[cnt].Set("a(yv)", termItemCount, termItems);
         }
         sectionVariants[sectionIndex++].Set("(yv)", PermissionPolicy::TAG_TERMS,
-                                            new MsgArg("aa(yv)", policy.GetTermsSize(), termsVariants));
+                                            new MsgArg("aa(yv)", GetTermsSize(), termsVariants));
     }
 
-    msgArg.Set("(yv)", policy.GetVersion(), new MsgArg("(ua(yv))",
-                                                       policy.GetSerialNum(), sectionCount, sectionVariants));
+    msgArg.Set("(yv)", GetVersion(), new MsgArg("(ua(yv))",
+                                                GetSerialNum(), sectionCount, sectionVariants));
     msgArg.SetOwnershipFlags(MsgArg::OwnsArgs, true);
     return ER_OK;
 }
 
 
-QStatus PermissionPolicy::BuildPolicyFromArgs(uint8_t version, const MsgArg& msgArg, PermissionPolicy& policy)
+QStatus PermissionPolicy::Import(uint8_t version, const MsgArg& msgArg)
 {
     QStatus status;
     MsgArg* sectionVariants;
@@ -667,8 +667,8 @@ QStatus PermissionPolicy::BuildPolicyFromArgs(uint8_t version, const MsgArg& msg
         QCC_DbgPrintf(("BuildPolicyFromArgs #1 got status 0x%x\n", status));
         return status;
     }
-    policy.SetVersion(version);
-    policy.SetSerialNum(serialNum);
+    SetVersion(version);
+    SetSerialNum(serialNum);
 
     for (size_t cnt = 0; cnt < sectionCount; cnt++) {
         uint8_t sectionType;
@@ -689,7 +689,7 @@ QStatus PermissionPolicy::BuildPolicyFromArgs(uint8_t version, const MsgArg& msg
                     return status;
                 }
                 if (count > 0) {
-                    policy.SetAdmins(count, peers);
+                    SetAdmins(count, peers);
                 }
             }
             break;
@@ -704,15 +704,70 @@ QStatus PermissionPolicy::BuildPolicyFromArgs(uint8_t version, const MsgArg& msg
                     return status;
                 }
                 if (count > 0) {
-                    policy.SetTerms(count, terms);
+                    SetTerms(count, terms);
                 }
             }
             break;
         }
     }
-    QCC_DbgPrintf(("BuildPolicyFromArgs got pocily %s", policy.ToString().c_str()));
+    QCC_DbgPrintf(("BuildPolicyFromArgs got pocily %s", ToString().c_str()));
 
     return ER_OK;
+}
+
+QStatus PermissionPolicy::Export(BusAttachment& bus, uint8_t** buf, size_t* size)
+{
+    *buf = NULL;
+    *size = 0;
+    MsgArg args;
+    QStatus status = Export(args);
+    if (ER_OK != status) {
+        return status;
+    }
+    Message msg(bus);
+    /* use an error message as it is the simplest message without many validition rules */
+    msg->ErrorMsg("/", 0);
+    status = msg->MarshalMessage("(yv)", "", MESSAGE_ERROR, &args, 1, 0, 0);
+
+    if (ER_OK != status) {
+        return status;
+    }
+    *size = msg->GetBufferSize();
+    *buf = new uint8_t[*size];
+    if (!*buf) {
+        *size = 0;
+        return ER_OUT_OF_MEMORY;
+    }
+    memcpy(*buf, msg->GetBuffer(), *size);
+    return ER_OK;
+}
+
+QStatus PermissionPolicy::Import(BusAttachment& bus, const uint8_t* buf, size_t size)
+{
+    Message msg(bus);
+    QStatus status = msg->LoadBytes((uint8_t*) buf, size);
+    QCC_DbgPrintf(("PermissionPolicy::Import (%d bytes) to msg return status 0x%x\n", size, status));
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("PermissionPolicy::Import (%d bytes) failed to load status 0x%x\n", size, status));
+        return status;
+    }
+    qcc::String endpointName(bus.GetUniqueName());
+    status = msg->Unmarshal(endpointName, false, false, false, 0);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = msg->UnmarshalArgs("*");
+    if (ER_OK != status) {
+        return status;
+    }
+    const MsgArg* arg = msg->GetArg(0);
+    if (arg) {
+        uint8_t versionNum;
+        MsgArg* variant;
+        arg->Get("(yv)", &versionNum, &variant);
+        return Import(versionNum, *variant);
+    }
+    return ER_INVALID_DATA;
 }
 
 } /* namespace ajn */

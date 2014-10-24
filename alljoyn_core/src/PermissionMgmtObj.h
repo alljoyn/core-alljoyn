@@ -117,7 +117,6 @@ class PermissionMgmtObj : public BusObject {
     QStatus RetrieveDSAPrivateKey(qcc::ECCPrivateKey* privateKey);
 
     QStatus StorePolicy(PermissionPolicy& policy);
-    QStatus RetrieveLocalPolicyMsg(Message& msg);
     QStatus RetrievePolicy(PermissionPolicy& policy);
 
     void GetPolicy(const InterfaceDescription::Member* member, Message& msg);

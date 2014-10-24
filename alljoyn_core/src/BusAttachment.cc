@@ -132,7 +132,7 @@ BusAttachment::Internal::Internal(const char* appName,
     listenAddresses(listenAddresses ? listenAddresses : ""),
     stopLock(),
     stopCount(0),
-    permissionManager(bus)
+    permissionManager()
 {
     /*
      * Bus needs a pointer to this internal object.
