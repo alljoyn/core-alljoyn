@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -309,7 +309,9 @@ const NSInteger kBusObjectTestsServicePort = 999;
     clientBasicObject = [[BasicObject alloc] initWithBusAttachment:client.bus onPath:kBusObjectTestsObjectPath];
     
     [self.bus registerBusObject:basicObject];
+    [client.bus registerBusObject:clientBasicObject];
     [client.bus registerBasicStringsDelegateSignalHandler:client];
+    [self.bus registerBasicStringsDelegateSignalHandler:self];
     [self.bus registerBusListener:self];
     [client.bus registerBusListener:client];
     
@@ -345,6 +347,27 @@ const NSInteger kBusObjectTestsServicePort = 999;
     
     [basicObject sendTestStringPropertyChangedFrom:@"Hello World" to:@"Foo Bar" inSession:self.testSessionId toDestination:nil];
     STAssertTrue([client waitForSignalToBeReceived:kBusObjectTestsWaitTimeBeforeFailure], @"The signal handler was not called.");
+    STAssertFalse([self waitForSignalToBeReceived:kBusObjectTestsWaitTimeBeforeFailure], @"The signal handler was called.");
+    self.didReceiveSignal = NO;
+    client.didReceiveSignal = NO;
+    
+    [clientBasicObject sendTestStringPropertyChangedFrom:@"Hello World" to:@"Foo Bar" inSession:self.testSessionId toDestination:nil];
+    STAssertFalse([client waitForSignalToBeReceived:kBusObjectTestsWaitTimeBeforeFailure], @"The signal handler was called.");
+    STAssertTrue([self waitForSignalToBeReceived:kBusObjectTestsWaitTimeBeforeFailure], @"The signal handler was not called.");
+    self.didReceiveSignal = NO;
+    client.didReceiveSignal = NO;
+    
+    [basicObject sendTestStringPropertyChangedFrom:@"Foo Bar" to:@"Bar Baz" inSession:kAJNSessionIdAllHosted toDestination:nil];
+    STAssertTrue([client waitForSignalToBeReceived:kBusObjectTestsWaitTimeBeforeFailure], @"The signal handler was not called.");
+    STAssertFalse([self waitForSignalToBeReceived:kBusObjectTestsWaitTimeBeforeFailure], @"The signal handler was called.");
+    self.didReceiveSignal = NO;
+    client.didReceiveSignal = NO;
+    
+    [clientBasicObject sendTestStringPropertyChangedFrom:@"Foo Bar" to:@"Bar Baz" inSession:kAJNSessionIdAllHosted toDestination:nil];
+    STAssertFalse([client waitForSignalToBeReceived:kBusObjectTestsWaitTimeBeforeFailure], @"The signal handler was called.");
+    STAssertFalse([self waitForSignalToBeReceived:kBusObjectTestsWaitTimeBeforeFailure], @"The signal handler was called.");
+    self.didReceiveSignal = NO;
+    client.didReceiveSignal = NO;
     
     status = [client.bus disconnectWithArguments:@"null:"];
     STAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");

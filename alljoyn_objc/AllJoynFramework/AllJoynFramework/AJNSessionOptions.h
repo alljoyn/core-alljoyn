@@ -39,6 +39,11 @@ typedef uint32_t AJNSessionId;
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/** Invalid SessionId value used to indicate that a signal should be emitted on all sessions hosted by this bus attachment */
+extern const AJNSessionId kAJNSessionIdAllHosted;
+
+////////////////////////////////////////////////////////////////////////////////
+
 /** Traffic type */
 typedef enum {
     kAJNTrafficMessages      = 0x01,   /**< Session carries message traffic */
