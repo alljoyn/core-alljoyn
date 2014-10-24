@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -31,7 +31,7 @@ static const char* OBJECT_PATH =   "/org/alljoyn/test/MessageTest";
 static QCC_BOOL name_owner_changed_flag = QCC_FALSE;
 
 /* Exposed methods */
-static void ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
+static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacedescription_member* member, alljoyn_message msg)
 {
     alljoyn_msgarg outArg = alljoyn_msgarg_create();
     alljoyn_msgarg inArg = alljoyn_message_getarg(msg, 0);
@@ -44,7 +44,7 @@ static void ping_method(alljoyn_busobject bus, const alljoyn_interfacedescriptio
 }
 
 /* NameOwnerChanged callback */
-static void name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
+static void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
 {
     if (strcmp(busName, OBJECT_NAME) == 0) {
         name_owner_changed_flag = QCC_TRUE;

@@ -63,7 +63,7 @@ Config::Config(void)
     FileSource iniSource(iniFileResolved);
 
     if (!iniSource.IsValid()) {
-        QCC_LogError(ER_NONE, ("Unable to open config file %s", iniFileResolved.c_str()));
+        QCC_LogError(ER_FAIL, ("Unable to open config file %s", iniFileResolved.c_str()));
         // use defaults...
         // ...
     } else {

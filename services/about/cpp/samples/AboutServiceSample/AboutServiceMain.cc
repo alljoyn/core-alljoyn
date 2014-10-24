@@ -265,8 +265,9 @@ int main(int argc, char**argv, char**envArg) {
     QStatus status = ER_OK;
     std::cout << "AllJoyn Library version: " << ajn::GetVersion() << std::endl;
     std::cout << "AllJoyn Library build info: " << ajn::GetBuildInfo() << std::endl;
-    QCC_SetLogLevels("ALLJOYN_ABOUT_SERVICE=7;");
-    QCC_SetLogLevels("ALLJOYN_ABOUT_ICON_SERVICE=7;");
+    // Uncoment to get additional logging information.
+    //QCC_SetLogLevels("ALLJOYN_ABOUT_SERVICE=7;");
+    //QCC_SetLogLevels("ALLJOYN_ABOUT_ICON_SERVICE=7;");
 
     OptParser opts(argc, argv);
     OptParser::ParseResultCode parseCode(opts.ParseResult());

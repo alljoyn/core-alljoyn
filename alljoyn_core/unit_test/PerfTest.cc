@@ -785,4 +785,8 @@ TEST_F(PerfTest, ClientTest_BasicDiscovery) {
     status = remoteObj.MethodCall("org.alljoyn.test_services.Interface", "my_ping", &pingStr, 1, replyc, 5000);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     ASSERT_STREQ("Hello World", replyc->GetArg(0)->v_string.str);
+
+    Message replyd(*client_msgBus);
+    status = remoteObj.MethodCall("org.alljoyn.test_services.Interface", "my_ping", &pingStr, 1, replyd, 5000, ALLJOYN_FLAG_NO_REPLY_EXPECTED);
+    ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }

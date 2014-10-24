@@ -8,7 +8,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -78,13 +78,13 @@ class SLAPStream : public Stream, public UARTReadListener, public AlarmListener 
 
     /**
      * Pull bytes from the source.
-     * The source is exhausted when ER_NONE is returned.
+     * The source is exhausted when ER_EOF is returned.
      *
      * @param buf          Buffer to store pulled bytes
      * @param reqBytes     Number of bytes requested to be pulled from source.
      * @param actualBytes  Actual number of bytes retrieved from source.
      * @param timeout      Time to wait to pull the requested bytes.
-     * @return   ER_OK if successful. ER_NONE if source is exhausted. Otherwise an error.
+     * @return   ER_OK if successful. ER_EOF if source is exhausted. Otherwise an error.
      */
     QStatus PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout = Event::WAIT_FOREVER);
     /**

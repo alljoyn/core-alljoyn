@@ -33,6 +33,8 @@
 
 #include <Status.h>
 
+#include "CngCache.h"
+
 
 using namespace std;
 using namespace qcc;
@@ -42,9 +44,6 @@ using namespace qcc;
 #ifndef STATUS_INVALID_SIGNATURE
 #define STATUS_INVALID_SIGNATURE ((NTSTATUS)0xC000A000L)
 #endif
-
-// Cache of open algorithm handles
-static BCRYPT_ALG_HANDLE rsaHandle = 0;
 
 // Some OIDs not defined in Windows header files
 static const qcc::String OID_PBES2           = "1.2.840.113549.1.5.13";
@@ -59,8 +58,8 @@ static const qcc::String OID_ORG             = "2.5.4.10";
 
 bool Crypto_RSA::RSA_Init()
 {
-    if (!rsaHandle) {
-        if (BCryptOpenAlgorithmProvider(&rsaHandle, BCRYPT_RSA_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0) < 0) {
+    if (!cngCache.rsaHandle) {
+        if (BCryptOpenAlgorithmProvider(&cngCache.rsaHandle, BCRYPT_RSA_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0) < 0) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to open RSA algorithm provider"));
             return false;
         }
@@ -71,7 +70,7 @@ bool Crypto_RSA::RSA_Init()
 void Crypto_RSA::Generate(uint32_t modLen)
 {
     if (RSA_Init()) {
-        if (BCryptGenerateKeyPair(rsaHandle, (BCRYPT_KEY_HANDLE*)&key, modLen, 0) < 0) {
+        if (BCryptGenerateKeyPair(cngCache.rsaHandle, (BCRYPT_KEY_HANDLE*)&key, modLen, 0) < 0) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to generate RSA key pair"));
             return;
         }
@@ -472,7 +471,7 @@ static QStatus DecryptPriv(BCRYPT_KEY_HANDLE kdKey, qcc::String& ivec, const uin
     len = sizeof(BCRYPT_RSAKEY_BLOB) + pk.size();
     pk.secure_clear();
     // Now import the key
-    ntStatus = BCryptImportKeyPair(rsaHandle, NULL, BCRYPT_PRIVATE_KEY_BLOB, &privKey, (PUCHAR)pkBlob, len, 0);
+    ntStatus = BCryptImportKeyPair(cngCache.rsaHandle, NULL, BCRYPT_PRIVATE_KEY_BLOB, &privKey, (PUCHAR)pkBlob, len, 0);
     memset(pkBlob, 0, len);
     if (ntStatus < 0) {
         QCC_LogError(status, ("Failed to import RSA blob NTSTATUS=%x", ntStatus));

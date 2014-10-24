@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -59,19 +59,19 @@ class Source {
 
     /**
      * Pull bytes from the source.
-     * The source is exhausted when ER_NONE is returned.
+     * The source is exhausted when ER_EOF is returned.
      *
      * @param buf          Buffer to store pulled bytes
      * @param reqBytes     Number of bytes requested to be pulled from source.
      * @param actualBytes  Actual number of bytes retrieved from source.
      * @param timeout      Time to wait to pull the requested bytes.
-     * @return   ER_OK if successful. ER_NONE if source is exhausted. Otherwise an error.
+     * @return   ER_OK if successful. ER_EOF if source is exhausted. Otherwise an error.
      */
-    virtual QStatus PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout = Event::WAIT_FOREVER) { return ER_NONE; }
+    virtual QStatus PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout = Event::WAIT_FOREVER) { return ER_EOF; }
 
     /**
      * Pull bytes and any accompanying file/socket descriptors from the source.
-     * The source is exhausted when ER_NONE is returned.
+     * The source is exhausted when ER_EOF is returned.
      *
      * @param buf          Buffer to store pulled bytes
      * @param reqBytes     Number of bytes requested to be pulled from source.
@@ -79,7 +79,7 @@ class Source {
      * @param fdList       Array to receive file descriptors.
      * @param numFds       [IN,OUT] On IN the size of fdList on OUT number of files descriptors pulled.
      * @param timeout      Timeout in milliseconds.
-     * @return   OI_OK if successful. ER_NONE if source is exhausted. Otherwise an error.
+     * @return   ER_OK if successful. ER_EOF if source is exhausted. Otherwise an error.
      */
     virtual QStatus PullBytesAndFds(void* buf, size_t reqBytes, size_t& actualBytes, SocketFd* fdList, size_t& numFds, uint32_t timeout = Event::WAIT_FOREVER) { return ER_NOT_IMPLEMENTED; }
 
@@ -94,7 +94,7 @@ class Source {
      * Read source up to end of line or end of file.
      *
      * @param outStr   Line output.
-     * @return  ER_OK if successful. ER_NONE if source is exhausted. Otherwise an error.
+     * @return  ER_OK if successful. ER_EOF if source is exhausted. Otherwise an error.
      */
     virtual QStatus GetLine(qcc::String& outStr, uint32_t timeout = Event::WAIT_FOREVER);
 };
@@ -143,7 +143,7 @@ class Sink {
      * @param numFds    Number of files descriptors, must be at least 1.
      * @param pid       Process id required on some platforms.
      *
-     * @return  OI_OK or an error.
+     * @return  ER_OK or an error.
      */
     virtual QStatus PushBytesAndFds(const void* buf, size_t numBytes, size_t& numSent, SocketFd* fdList, size_t numFds, uint32_t pid = -1) { return ER_NOT_IMPLEMENTED; }
 
