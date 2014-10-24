@@ -449,11 +449,11 @@ const uint32_t UDP_PERSIST_INTERVAL = 1000;  /**< How long do we wait before pin
 const uint32_t UDP_TOTAL_APP_TIMEOUT = 30000;  /**< How long to we try to ping for window opening before deciding app is not pulling data */
 const uint32_t UDP_LINK_TIMEOUT = 30000;  /**< How long before we decide a link is down (with no reponses to keepalive probes */
 const uint32_t UDP_KEEPALIVE_RETRIES = 5;  /**< How many times do we try to probe on an idle link before terminating the connection */
-const uint32_t UDP_FAST_RETRANSMIT_ACK_COUNTER = 1; /**< How many duplicate acknowledgements to we need to trigger a data retransmission */
+const uint32_t UDP_FAST_RETRANSMIT_ACK_COUNTER = 1;  /**< How many duplicate acknowledgements to we need to trigger a data retransmission */
 const uint32_t UDP_DELAYED_ACK_TIMEOUT = 100; /**< How long do we wait until acknowledging received segments */
-const uint32_t UDP_TIMEWAIT = 1000;         /**< How long do we stay in TIMWAIT state before releasing the per-connection resources */
+const uint32_t UDP_TIMEWAIT = 1000;  /**< How long do we stay in TIMWAIT state before releasing the per-connection resources */
 const uint32_t UDP_SEGBMAX = 65507;  /**< Maximum size of an ARDP message (for receive buffer sizing) */
-const uint32_t UDP_SEGMAX = 50;      /**< Maximum number of ARDP messages in-flight (bandwidth-delay product sizing) */
+const uint32_t UDP_SEGMAX = 16;  /**< Maximum number of ARDP messages in-flight (bandwidth-delay product sizing) */
 
 namespace ajn {
 
