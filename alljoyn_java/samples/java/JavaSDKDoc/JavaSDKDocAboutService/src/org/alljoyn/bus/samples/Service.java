@@ -49,7 +49,7 @@ public class Service {
 
         SampleService mySampleService = new SampleService();
 
-        status = mBus.registerBusObject(mySampleService, "/myService");
+        status = mBus.registerBusObject(mySampleService, "/example/path");
         if (status != Status.OK) {
             return;
         }
