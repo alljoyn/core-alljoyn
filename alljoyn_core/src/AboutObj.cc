@@ -69,13 +69,27 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
 
     m_aboutDataListener = &aboutData;
 
-    if (!HasAllRequiredFields(*m_aboutDataListener)) {
+    MsgArg aboutDataArg;
+    status = m_aboutDataListener->GetAboutData(&aboutDataArg, "");
+    if (ER_OK != status) {
+        return status;
+    }
+
+    MsgArg announcedDataArg;
+    status = m_aboutDataListener->GetAnnouncedAboutData(&announcedDataArg);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    if (!HasAllRequiredFields(aboutDataArg)) {
         return ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD;
     }
-    if (!HasAllAnnouncedFields(*m_aboutDataListener)) {
+
+    if (!HasAllAnnouncedFields(announcedDataArg)) {
         return ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD;
     }
-    if (!AnnouncedDataAgreesWithAboutData(*m_aboutDataListener)) {
+
+    if (!AnnouncedDataAgreesWithAboutData(aboutDataArg, announcedDataArg)) {
         return ER_ABOUT_INVALID_ABOUT_DATA_LISTENER;
     }
 
@@ -105,7 +119,7 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
         return status;
     }
     announceArgs[2] = m_objectDescription;
-    m_aboutDataListener->GetAnnouncedAboutData(&announceArgs[3]);
+    announceArgs[3] = announcedDataArg;
 
     Message msg(*m_busAttachment);
     uint8_t flags = ALLJOYN_FLAG_SESSIONLESS;
@@ -178,7 +192,7 @@ QStatus AboutObj::Get(const char*ifcName, const char*propName, MsgArg& val) {
     return status;
 }
 
-bool AboutObj::HasAllRequiredFields(AboutDataListener& adl)
+bool AboutObj::HasAllRequiredFields(MsgArg& aboutDataArg)
 {
     //Required Fields are:
     // AppId
@@ -192,11 +206,6 @@ bool AboutObj::HasAllRequiredFields(AboutDataListener& adl)
     // SoftwareVersion
     // AJSoftwareVersion
     QStatus status = ER_FAIL;
-    MsgArg aboutDataArg;
-    status = adl.GetAboutData(&aboutDataArg, NULL);
-    if (ER_OK != status) {
-        return false;
-    }
     if (aboutDataArg.Signature().compare("a{sv}") != 0) {
         return false;
     }
@@ -254,7 +263,7 @@ bool AboutObj::HasAllRequiredFields(AboutDataListener& adl)
     return true;
 }
 
-bool AboutObj::HasAllAnnouncedFields(AboutDataListener& adl)
+bool AboutObj::HasAllAnnouncedFields(MsgArg& announcedDataArg)
 {
     //Announced Fields are:
     // AppId
@@ -264,11 +273,6 @@ bool AboutObj::HasAllAnnouncedFields(AboutDataListener& adl)
     // Manufacture
     // ModelNumber
     QStatus status = ER_FAIL;
-    MsgArg announcedDataArg;
-    status = adl.GetAnnouncedAboutData(&announcedDataArg);
-    if (ER_OK != status) {
-        return false;
-    }
     if (announcedDataArg.Signature().compare("a{sv}") != 0) {
         return false;
     }
@@ -306,7 +310,7 @@ bool AboutObj::HasAllAnnouncedFields(AboutDataListener& adl)
     return true;
 }
 
-bool AboutObj::AnnouncedDataAgreesWithAboutData(AboutDataListener& adl)
+bool AboutObj::AnnouncedDataAgreesWithAboutData(MsgArg& aboutDataArg, MsgArg& announcedDataArg)
 {
     // This code makes some assumptions that the member functions
     // HasAllRequiredFields, and HasAllAnnouncedFields have alread been run
@@ -322,23 +326,6 @@ bool AboutObj::AnnouncedDataAgreesWithAboutData(AboutDataListener& adl)
     // ModelNumber
     // DeviceName (optional)
     QStatus status = ER_FAIL;
-    MsgArg aboutDataArg;
-    status = adl.GetAboutData(&aboutDataArg, NULL);
-    if (ER_OK != status) {
-        return false;
-    }
-    if (aboutDataArg.Signature().compare("a{sv}") != 0) {
-        return false;
-    }
-
-    MsgArg announcedDataArg;
-    status = adl.GetAnnouncedAboutData(&announcedDataArg);
-    if (ER_OK != status) {
-        return false;
-    }
-    if (announcedDataArg.Signature().compare("a{sv}") != 0) {
-        return false;
-    }
 
     MsgArg* field;
     MsgArg* afield;
