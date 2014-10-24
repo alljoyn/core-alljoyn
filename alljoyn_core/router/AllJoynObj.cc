@@ -4217,6 +4217,17 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
                         changedSessionMembers.push_back(it->first);
                     }
                     it->second.sessionHost.clear();
+
+                    /* Check for self-joined member */
+                    vector<String>::iterator mit = it->second.memberNames.begin();
+                    while (mit != it->second.memberNames.end()) {
+                        if (*mit == alias) {
+                            it->second.memberNames.erase(mit);
+                            break;
+                        }
+                        ++mit;
+                    }
+
                 } else {
                     vector<String>::iterator mit = it->second.memberNames.begin();
                     while (mit != it->second.memberNames.end()) {
@@ -4279,7 +4290,11 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
         /* Send session lost signals */
         vector<SessionMapEntry>::iterator slit = sessionsLost.begin();
         while (slit != sessionsLost.end()) {
-            SendSessionLost(*slit++, ER_BUS_ENDPOINT_CLOSING, ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER);
+            if (slit->memberNames.size() == 1) {
+                SendSessionLost(*slit++, ER_BUS_ENDPOINT_CLOSING, ALLJOYN_SESSIONLOST_DISPOSITION_MEMBER);
+            } else {
+                SendSessionLost(*slit++, ER_BUS_ENDPOINT_CLOSING, ALLJOYN_SESSIONLOST_DISPOSITION_HOST);
+            }
         }
     }
 
