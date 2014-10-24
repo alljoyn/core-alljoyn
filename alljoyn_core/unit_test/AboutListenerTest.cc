@@ -24,6 +24,7 @@
 
 #include <qcc/Thread.h>
 #include <qcc/GUID.h>
+#include <set>
 
 /*
  * This test uses the GUID128 in multiple places to generate a random string.
@@ -42,6 +43,8 @@
 #define WAIT_TIME 5
 
 using namespace ajn;
+using namespace qcc;
+using namespace std;
 
 class AnnounceListenerTestSessionPortListener : public SessionPortListener {
     virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
@@ -86,9 +89,7 @@ class AboutListenerTest : public testing::Test {
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = aboutData.SetSupportUrl("http://www.alljoyn.org");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        if (!aboutData.IsValid()) {
-            printf("failed to setup about data.\n");
-        }
+        EXPECT_TRUE(aboutData.IsValid()) << "failed to setup about data.\n";
 
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
         AnnounceListenerTestSessionPortListener listener;
@@ -124,6 +125,7 @@ class AboutListenerTestObject : public BusObject {
   public:
     AboutListenerTestObject(BusAttachment& bus, const char* path, const char* ifaceName)
         : BusObject(path) {
+
         const InterfaceDescription* iface = bus.GetInterface(ifaceName);
         EXPECT_TRUE(iface != NULL) << "NULL InterfaceDescription* for " << ifaceName;
         if (iface == NULL) {
@@ -1464,8 +1466,6 @@ TEST_F(AboutListenerTest, StressInterfaces) {
     }
     interfaceXml += "</node>";
 
-    //printf("Interface xml %s \n", interfaceXml.c_str());
-
     status = serviceBus->CreateInterfacesFromXml(interfaceXml.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
@@ -1510,6 +1510,146 @@ TEST_F(AboutListenerTest, StressInterfaces) {
     ASSERT_TRUE(announceListenerFlag3);
 
     status = clientBus.CancelWhoImplements(ifaces, INTERFACE_COUNT);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    clientBus.UnregisterAboutListener(aboutListener);
+
+    status = clientBus.Stop();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Join();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+}
+
+/* If whoImplements use * or null, we may get unwanted announcements
+ * This listener will filter out unwanted announcements
+ */
+class FilteredAboutListener : public AboutListener {
+  public:
+    FilteredAboutListener() :
+        objPath(),
+        expectedInterfaceSet(),
+        announcedInterfaceSet(),
+        interfaceCnt(0),
+        announceListenerCount(0)
+    { }
+
+    void Announced(const char* busName, uint16_t version, SessionPort port,
+                   const MsgArg& objectDescription, const MsgArg& aboutData)
+    {
+        QStatus status = ER_OK;
+        AboutObjectDescription aod;
+
+        status = aod.CreateFromMsgArg(objectDescription);
+        EXPECT_EQ(ER_OK, status);
+
+        // Check if this announcement is what we wanted
+        if (objPath.c_str() != NULL) {
+            if (aod.HasPath(objPath.c_str())) {
+                size_t numInterfaces = aod.GetInterfaces(objPath.c_str(), NULL, 0);
+                EXPECT_EQ(interfaceCnt, numInterfaces);
+
+                const char** announcedInterfaces = new const char*[numInterfaces];
+                aod.GetInterfaces(objPath.c_str(), announcedInterfaces, numInterfaces);
+
+                for (size_t j = 0; j < numInterfaces; j++) {
+                    announcedInterfaceSet.insert(announcedInterfaces[j]);
+                }
+
+                delete [] announcedInterfaces;
+
+                if (announcedInterfaceSet == expectedInterfaceSet) {
+                    announceListenerCount++;
+                }
+            }
+        }
+    }
+
+    void expectInterfaces(String& path, String* interfaces, size_t infCount)
+    {
+        objPath = path;
+        for (size_t i = 0; i < infCount; i++) {
+            expectedInterfaceSet.insert(interfaces[i]);
+        }
+
+        interfaceCnt = infCount;
+    }
+
+    String objPath;
+    set<String> expectedInterfaceSet;
+    set<String> announcedInterfaceSet;
+    size_t interfaceCnt;
+    uint32_t announceListenerCount;
+};
+
+/* positive test
+ *  ASACORE1007 - NULL should match all interfaces just like *
+ */
+TEST_F(AboutListenerTest, WhoImplementsNull) {
+    QStatus status;
+
+    qcc::GUID128 guid;
+    String path("/org/test/null");
+
+    qcc::String ifaceNames[3];
+    ifaceNames[0] = "null.test.a" + guid.ToString() + ".AnnounceHandlerTest.a";
+    ifaceNames[1] = "null.test.a" + guid.ToString() + ".AnnounceHandlerTest.b";
+    ifaceNames[2] = "null.test.a" + guid.ToString() + ".AnnounceHandlerTest.c";
+
+    const qcc::String interface = "<node>"
+                                  "<interface name='" + ifaceNames[0] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[1] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "<interface name='" + ifaceNames[2] + "'>"
+                                  "  <method name='Foo'>"
+                                  "  </method>"
+                                  "</interface>"
+                                  "</node>";
+    status = serviceBus->CreateInterfacesFromXml(interface.c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutListenerTestObject2 altObj(*serviceBus, path.c_str(), ifaceNames, 3);
+
+    status = serviceBus->RegisterBusObject(altObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    AboutObj aboutObj(*serviceBus);
+
+    // receive
+    BusAttachment clientBus("Receive Announcement client Test", true);
+    status = clientBus.Start();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = clientBus.Connect();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    FilteredAboutListener aboutListener;
+
+    clientBus.RegisterAboutListener(aboutListener);
+
+    status = clientBus.WhoImplements(NULL);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    aboutListener.expectInterfaces(path, ifaceNames, 3);
+
+    aboutObj.Announce(port, aboutData);
+
+    //Wait for a maximum of 10 sec for the Announce Signal.
+    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+        if (aboutListener.announceListenerCount == 1) {
+            break;
+        }
+        qcc::Sleep(WAIT_TIME);
+    }
+
+    ASSERT_EQ(1u, aboutListener.announceListenerCount);
+
+    status = clientBus.CancelWhoImplements(NULL);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     clientBus.UnregisterAboutListener(aboutListener);
