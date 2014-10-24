@@ -565,8 +565,7 @@ class ArdpStream : public qcc::Stream {
         m_discSent(false),
         m_discStatus(ER_OK),
         m_writeCondition(NULL),
-        m_writeWaits(0),
-        m_buffers()
+        m_sendsOutstanding(0)
     {
         QCC_DbgTrace(("ArdpStream::ArdpStream()"));
         m_writeCondition = new qcc::Condition();
@@ -725,6 +724,12 @@ class ArdpStream : public qcc::Stream {
 
         QCC_DbgTrace(("ArdpStream::ThreadSetEmpty(): -> %s", empty ? "true" : "false"));
         return empty;
+    }
+
+    uint32_t GetSendsOutstanding()
+    {
+        QCC_DbgTrace(("ArdpStream::GetSendsOutstanding() -> %d.", m_sendsOutstanding));
+        return m_sendsOutstanding;
     }
 
     /**
@@ -912,9 +917,12 @@ class ArdpStream : public qcc::Stream {
                  * the reference to it.
                  */
                 numSent = numBytes;
+                m_transport->m_cbLock.Lock(MUTEX_CONTEXT);
+                ++m_sendsOutstanding;
 #if SENT_SANITY
                 m_sentSet.insert(buffer);
 #endif
+                m_transport->m_cbLock.Unlock(MUTEX_CONTEXT);
                 buffer = NULL;
                 done = true;
                 continue;
@@ -1300,25 +1308,24 @@ class ArdpStream : public qcc::Stream {
     void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
     {
         QCC_DbgTrace(("ArdpStream::SendCb(handle=%p, conn=%p, buf=%p, len=%d.)", handle, conn, buf, len));
-#if SENT_SANITY
         m_transport->m_cbLock.Lock();
+        --m_sendsOutstanding;
+
+#if SENT_SANITY
         set<uint8_t*>::iterator i = find(m_sentSet.begin(), m_sentSet.end(), buf);
         if (i == m_sentSet.end()) {
-            QCC_LogError(ER_FAIL, ("ArdpStream::SendCb(): Callback for buffer never sent or already freed (%p, %d.).  Ignored", buf, len));
+            QCC_LogError(ER_FAIL, ("ArdpStream::SendCb(): Callback for unexpected buffer (%p, %d.): Ignored.", buf, len));
         } else {
             m_sentSet.erase(i);
-#ifndef NDEBUG
-            CheckSeal(buf + len);
-#endif
-            delete[] buf;
         }
+#endif
+
         m_transport->m_cbLock.Unlock();
-#else
+
 #ifndef NDEBUG
         CheckSeal(buf + len);
 #endif
         delete[] buf;
-#endif
 
         /*
          * If there are any threads waiting for a chance to send bits, wake them
@@ -1353,9 +1360,7 @@ class ArdpStream : public qcc::Stream {
     bool m_discSent;                   /**< Set to true when the endpoint calls ARDP_Disconnect */
     QStatus m_discStatus;              /**< The status code that was the reason for the last disconnect */
     qcc::Condition* m_writeCondition;  /**< The write event that callers are blocked on to apply backpressure */
-    int32_t m_writesOutstanding;       /**< The number of writes that are outstanding with ARDP */
-    int32_t m_writeWaits;              /**< The number of Threads that are blocked trying to write to an ARDP connection */
-
+    int32_t m_sendsOutstanding;        /**< The number of Message sends that are outstanding (in-flight) with ARDP */
     std::set<ThreadEntry> m_threads;   /**< Threads that are wandering around in the stream and possibly associated endpoint */
 
 #if SENT_SANITY
@@ -1371,10 +1376,7 @@ class ArdpStream : public qcc::Stream {
         ArdpRcvBuf* m_rcv;
         uint16_t m_cnt;
     };
-
-    std::list<BufEntry> m_buffers;
 };
-
 
 bool operator<(const ArdpStream::ThreadEntry& lhs, const ArdpStream::ThreadEntry& rhs)
 {
@@ -1780,6 +1782,48 @@ class _UDPEndpoint : public _RemoteEndpoint {
      * and running.  We also keep track of how endpoints were started and how
      * they move through the process from construction to running.
      *
+     *
+     *                     +----------------+
+     *                     | EP_INITIALIZED |
+     *                     +----------------+
+     *                           |    |
+     *                 Connect() |    | AcceptCb()
+     *                           |    |
+     *               +-----------+    +-----------+
+     *               |                            |
+     *               v                            v
+     *     +-------------------+        +--------------------+
+     *     | EP_ACTIVE_STARTED |        | EP_PASSIVE_STARTED |
+     *     +-------------------+        +--------------------+
+     *               |                            |
+     *    Handshake  |                            | Handshake
+     *               +-----------+    +-----------+
+     *          Daemon Register  |    |  Daemon Register
+     *                           v    v
+     *                     +----------------+
+     *                     |   EP_STARTED   |
+     *                     +----------------+
+     *                              |
+     *                   Shut down  | <----------------------+
+     *                              |                        | Idle
+     *                              v                        |
+     *                     +----------------+          +----------------+
+     *                     |   EP_STOPPING  | -------> |   EP_WAITING   |
+     *                     +----------------+  local   +----------------+
+     *                              |        disconnect
+     *                 Thread join  |
+     *                              v
+     *                     +----------------+
+     *                     |   EP_JOINED    |
+     *                     +----------------+
+     *                              |
+     *           Daemon Unregister  |
+     *                              v
+     *                     +----------------+
+     *                     |     EP_DONE    |
+     *                     +----------------+
+     *
+     *
      * When an endoint is constructed, it begins its live in EP_INITIALIZED.
      * endpoints are constructed for the purpose of service passive or active
      * connections.  A passive connection is one that is driven from a connection
@@ -1820,9 +1864,22 @@ class _UDPEndpoint : public _RemoteEndpoint {
      * trying to PushMessage into the endpoint.  The transition into state
      * EP_STOPPING means the no new operations are allowed on the endpoint and
      * the process of causing all threads to abort and leave the endpoint are
-     * started.  The endpoint management function notices this process starting
-     * and watches until it completes and then calls Join() to mark the endpoint
-     * as being thread-free.
+     * started.
+     *
+     * If the source of the disconnect is a local LeaveSession, we need to
+     * simulate socket shutdown behavior.  Specifically, we simulate
+     * shutdown(sockfd, SHUT_RDWR) which is what is done in the TCP Transport.
+     * In this state, we wait until all buffers sent to ARDP have been disposed
+     * of one way or another.  If the other side receives all queued buffers and
+     * acknowledges them we have a clean endpoint shutdown.  This additional state
+     * is called EP_WAITING and is enabled only if a local (expected) disconnect
+     * has been received.
+     *
+     * After the endpoint is EP_STOPPING and EP_WAITING is not enabled, or if
+     * the endpoint is EP_WAITING and queued buffers are fully sent, the
+     * endpoint management function notices the situation and then calls Join()
+     * to mark the endpoint as being thread-free, buffer-free ande ready to
+     * close.  This causes the endpoint to enter the EP_JOINED state.
      *
      * Once an endpoint is in state EP_JOINED, an exit function is scheduled to
      * be run to make sure the endpoint is completely disconnected from the
@@ -1839,6 +1896,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         EP_PASSIVE_STARTED,  /**< The endpoint has begun the process of coming up, due to a passive connection request */
         EP_STARTED,          /**< The endpoint is ready for use, registered with daemon, maybe threads wandering thorugh */
         EP_STOPPING,         /**< The endpoint is stopping but join has not been called */
+        EP_WAITING,          /**< Waiting for ARDP to send any queued data before closing (disconnecting) */
         EP_JOINED,           /**< The endpoint is stopping and join has been called */
         EP_DONE              /**< Threads have been shut down and joined */
     };
@@ -1865,6 +1923,10 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
         case EP_STOPPING:
             QCC_DbgPrintf(("%s: EP_STOPPING", prefix));
+            break;
+
+        case EP_WAITING:
+            QCC_DbgPrintf(("%s: EP_WAITING", prefix));
             break;
 
         case EP_JOINED:
@@ -1925,7 +1987,9 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_exitScheduled(false),
         m_disconnected(false),
         m_refCount(0),
-        m_stateLock()
+        m_pushCount(0),
+        m_stateLock(),
+        m_wait(true)
     {
         QCC_DbgHLPrintf(("_UDPEndpoint::_UDPEndpoint(transport=%p, bus=%p, incoming=%d., connectSpec=\"%s\")",
                          transport, &bus, incoming, connectSpec.c_str()));
@@ -1938,6 +2002,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     {
         QCC_DbgHLPrintf(("_UDPEndpoint::~_UDPEndpoint()"));
         QCC_DbgHLPrintf(("_UDPEndpoint::~_UDPEndpoint(): m_refCount==%d.", m_refCount));
+        QCC_DbgHLPrintf(("_UDPEndpoint::~_UDPEndpoint(): m_pushCount==%d.", m_pushCount));
 
         /*
          * Double check that the remote endpoint is sure that its threads are gone,
@@ -1949,6 +2014,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         _RemoteEndpoint::Join();
 
         assert(IncrementAndFetch(&m_refCount) == 1 && "_UDPEndpoint::~_UDPEndpoint(): non-zero reference count");
+        assert(IncrementAndFetch(&m_pushCount) == 1 && "_UDPEndpoint::~_UDPEndpoint(): non-zero PushMessage count");
 
         /*
          * Make sure that the endpoint isn't in a condition where a thread might
@@ -1991,6 +2057,19 @@ class _UDPEndpoint : public _RemoteEndpoint {
     uint32_t DecrementRefs()
     {
         return DecrementAndFetch(&m_refCount);
+    }
+
+    /**
+     * Return the number of threads currently exectuting in and under
+     * PushMessage().  The endpoint management code cannot make a decision about
+     * sending an ARDP disconnect with the PushMessage count nonzero, since even
+     * though there are no messages in-flight, PushMessage might continue
+     * running and do a send which would be lost if an ARDP disconnect was done
+     * before the ARDP_Send actually acknowledged the bits.
+     */
+    uint32_t GetPushMessageCount()
+    {
+        return m_pushCount;
     }
 
     /**
@@ -2154,6 +2233,13 @@ class _UDPEndpoint : public _RemoteEndpoint {
                 assert(m_stream->ThreadSetEmpty() == true && "_UDPEndpoint::Stop(): Inactive endpoint with threads?");
                 m_stream->EarlyExit();
             }
+
+            /*
+             * We were never started, so presumably there is no data buffered
+             * and waiting to be sent.  Disable the EP_WAITING state since it is
+             * completely unnecessary.
+             */
+            SetEpWaitEnable(false);
             SetEpStopping();
             m_stateLock.Unlock(MUTEX_CONTEXT);
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
@@ -2173,8 +2259,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * EP_STOPPING here or it will possibly overwrite other completed work
          * if Stop() is called multiple times.
          */
-        if (IsEpStopping() || IsEpJoined() || IsEpDone()) {
-            QCC_DbgPrintf(("_UDPEndpoint::Stop(): Already stopping or done"));
+        if (IsEpStopping() || IsEpWaiting() || IsEpJoined() || IsEpDone()) {
+            QCC_DbgPrintf(("_UDPEndpoint::Stop(): Already stopping, waiting, joined or done"));
             m_stateLock.Unlock(MUTEX_CONTEXT);
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
@@ -2215,27 +2301,11 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
         assert(found == 1 && "_UDPEndpoint::Stop(): Endpoint not on exactly one pending list");
 #endif
-
         /*
-         * If there was a remote (sudden) disconnect, the disconnect callback
-         * will disconnect the stream and call Stop.  This may precipitate a
-         * flood of events in the daemon with router endpoints being dereferenced
-         * and disconnected and destroyed.  This will likely result in Stop()
-         * being called multiple times.  The stream remembers what started it all
-         * and so it is safe to call it with ER_UDP_LOCAL_DISCONNECT even though
-         * this stop may have been called as part of remote disconnect handling
-         * just so long as the disconnect callback got there first.
-         *
-         * The Disconnect() below will call ARDP_Disconnect().  Calling out to
-         * ARDP with locks held is dangerous from a deadlock perspective.  For
-         * example, we took the endpoint list lock above, and will want to take
-         * ARDP lock in Disconnect(); but in the accept callback it will be
-         * called with ARDP lock taken and want to get the endpoint list lock.
-         * This is a recipe for deadlock.  We must set the state and talk to
-         * the management thread, then release the locks and finally call out
-         * to Disconnect().  Through this process we leave the thread reference
-         * count incremented so we know there is a thread that will reappear
-         * popping back out through here eventually.
+         * Set the state of the endpoint to stopping.  This will prevent any
+         * more PushMessage calls from starting operations in the endpoint and
+         * will prevent any additional inbound data from being dispatched to the
+         * Daemon Router.
          */
         SetEpStopping();
 
@@ -2244,11 +2314,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
         m_stateLock.Unlock(MUTEX_CONTEXT);
         m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
-
-        if (m_stream) {
-            m_stream->WakeThreadSet();
-            m_stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
-        }
 
         DecrementAndFetch(&m_refCount);
         return ER_OK;
@@ -2332,17 +2397,30 @@ class _UDPEndpoint : public _RemoteEndpoint {
         }
 
         /*
-         * By a process of elimination, we are either in EP_STARTED or
-         * EP_STOPPING state.  It is a programming error to call Join() without
-         * first calling Stop().  The idea is that anyone can call Stop() and
-         * the endpoint management thread waits to call Join() until all of the
-         * blocking possibilities have exited before calling Join() which will
-         * then complete without blocking.  We could just call Stop() and then
-         * continue, but that would defeat the higher level goal of not blocking
-         * in Join().  So we just assert that everyone is playing by the rules
-         * and that there are no additional states we could be confusing.
+         * By a process of elimination, we are either in EP_STARTED, EP_WAITING
+         * or EP_STOPPING state.  It is a programming error to call Join()
+         * without first calling Stop().  Calling Stop() will put us in either
+         * EP_STOPPING or EP_WAITING state.
          */
-        assert(IsEpStopping() == true && "_UDPEndpoint::Join(): Stop() not previously called or in unexpected state");
+        assert((IsEpStopping() || IsEpWaiting()) && "_UDPEndpoint::Join(): Stop() not previously called or unexpected state");
+
+        /*
+         * The only way Join() will be called while we are in EP_WAITING state
+         * is if the Transport itself starts shutting down.  In this case, it is
+         * pointless to wait until any outstanding writes are finished, but we
+         * do need to do the disconnect and switch to EP_STOPPED.  Calling
+         * Disconnect will deal with causing ARDP to abort any outstanding
+         * transactions.  This last minute change of plans may cause us to poll
+         * for completion of this cleanup in the sleep loop below.
+         */
+        if (IsEpWaiting()) {
+            ArdpStream* stream = GetStream();
+            if (stream) {
+                stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
+            }
+            SetEpWaitEnable(false);
+            SetEpStopping();
+        }
 
         /*
          * If there were any threads blocked waiting to get bytes through to a
@@ -2598,9 +2676,58 @@ class _UDPEndpoint : public _RemoteEndpoint {
      * end up calling PushBytes() on the Stream Sink associated with the
      * endpoint.  This will find its way down to the PushBytes() defined
      * in our ARDP Stream.
+     *
+     * We have a bit of a tricky situation in that AllJoyn likes to send
+     * fire-and-forget messages -- signals.  It sometimes wants to make a
+     * connection and send a bunch of signals and then disconnect.  We can't
+     * just call ARDP_Disconnect with signals queued for transmission which
+     * would send RST and tear down the connection before those signals get
+     * sent.  Method calls are okay, since the caller needs to wait for the
+     * return values, which indicates they were sent (and responded to) but
+     * signals are a different beast.  We need to simulate TCP's half-close
+     * behavior.  This means our version of a close needs to wait for ARDP to
+     * send any queued messages before calling ARDP_Disconnect.
+     *
+     * A client will use JoinSession to drive the UDPTransport::Connect() that
+     * we, in turn, use to drive ARDP_Connect().  When an AllJoyn client is
+     * done with a connection it will call LeaveSession().  This will not call
+     * a disconnect function, but will cause the associated endpoint to be
+     * invalidated and will call UDPEndpoint::Stop().  This call to Stop()
+     * begins the endpoint shutdown process, which must disallow any further
+     * writes (enforce a SHUTDOWN_WR-like behavior) but keep the underlying
+     * connection up until all data has been sent and acknowledged.  At that
+     * point, the ARDP_Disconnect() can be called and the endpoint actually
+     * torn down.  There is no Shutdown() on an Endpoint that causes it to
+     * behave like a TCP state machine, so we get to implement that behavior
+     * ourselves.
+     *
+     * This affects us here in that we have to respect a stopping indication on
+     * the UDPEndpoint (as well as the transport).  Since the message passed to
+     * us is going to wander down through the endpoint into the stream and then
+     * on out ARDP, we have to admit the possibility that even though ARDP may
+     * not have heard about a message passing through here, it is in our system.
+     * Therefore, we have a counter that indicates how many calls to
+     * PushMessage() are in process on this endpoint.  If this counter is
+     * nonzero we have to treat this case as if a Message were in flight.  It
+     * may turn out that down in the ARDPStream we detect that the endpoint is
+     * closing, but we need to include coverage for the in-process case here.
+     *
+     * The Endpoint Management thread is what processes the closing of
+     * connections and the disposition of endpoints, so it will have to wait
+     * until the in-flight message count goes to zero and also the
+     * PushMessage()s in-process goes to zero before executing a
+     * ARDP_Disconnect().
      */
     QStatus PushMessage(Message& msg)
     {
+        /*
+         * Increment the counter indicating that another thread is running
+         * inside PushMessage for the current endpoint.  THis is different from
+         * the counter indicating "something is executing inside the endpoint"
+         * bumped below.
+         */
+        IncrementAndFetch(&m_pushCount);
+
         IncrementAndFetch(&m_refCount);
         QCC_DbgTrace(("_UDPEndpoint::PushMessage(msg=%p)", &msg));
 
@@ -2608,6 +2735,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
             QStatus status = ER_UDP_STOPPING;
             QCC_LogError(status, ("_UDPEndpoint::PushBytes(): UDP Transport not running or stopping"));
             DecrementAndFetch(&m_refCount);
+            DecrementAndFetch(&m_pushCount);
             return status;
         }
 
@@ -2615,6 +2743,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
             QStatus status = ER_UDP_ENDPOINT_NOT_STARTED;
             QCC_LogError(status, ("_UDPEndpoint::PushBytes(): UDP endpoint not started"));
             DecrementAndFetch(&m_refCount);
+            DecrementAndFetch(&m_pushCount);
             return status;
         }
 
@@ -2645,6 +2774,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
             QCC_LogError(ER_UDP_ENDPOINT_REMOVED, ("_UDPEndpoint::PushMessage(): Endpoint is gone"));
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
+            DecrementAndFetch(&m_pushCount);
             return ER_UDP_ENDPOINT_REMOVED;
         }
 
@@ -2679,6 +2809,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         QStatus status = msgCopy->DeliverNonBlocking(rep);
         QCC_DbgPrintf(("_UDPEndpoint::PushMessage(): DeliverNonBlocking() returns \"%s\"", QCC_StatusText(status)));
         DecrementAndFetch(&m_refCount);
+        DecrementAndFetch(&m_pushCount);
         return status;
     }
 
@@ -3522,15 +3653,39 @@ class _UDPEndpoint : public _RemoteEndpoint {
         return m_epState == EP_STARTED;
     }
 
+
     /**
-     * Set the state of the endpoint to stopping
+     * Enable the optional EP_WAITING state
      */
-    void SetEpStopping(void)
+    void SetEpWaitEnable(bool wait)
+    {
+        QCC_DbgTrace(("_UDPEndpoint::SetEpWaitEnable(wait=\"%s\")", wait ? "true" : "false"));
+        m_wait = wait;
+    }
+
+    /**
+     * Check to see if the EP_WAITING state is enabled
+     */
+    bool IsEpWaitEnabled(void)
+    {
+        QCC_DbgTrace(("_UDPEndpoint::IsEpWaitEnabled() <= \"%s\"", m_wait ? "true" : "false"));
+        return m_wait;
+    }
+
+    /**
+     * Set the state of the endpoint to stopping.
+     *
+     * If wait is true, the endpoint is stopping because of a local disconnect
+     * and the EP_WAITING state should follow EP_STOPPING to wait for the ARDP
+     * write queue to empty before disconnecting.
+     */
+    void SetEpStopping()
     {
         QCC_DbgTrace(("_UDPEndpoint::SetEpStopping()"));
-        if (m_epState == EP_STARTED) {
-            QCC_DbgPrintf(("_UDPEndpoint::SetEpStopping(): m_epState == %d", m_epState));
-        }
+
+#ifndef NDEBUG
+        PrintEpState("_UdpEndpoint::SetEpStopping()");
+#endif
 
         /*
          * Don't allow backward progress.
@@ -3551,6 +3706,25 @@ class _UDPEndpoint : public _RemoteEndpoint {
     {
         QCC_DbgTrace(("_UDPEndpoint::IsEpStopping() <= \"%s\"", m_epState == EP_STOPPING ? "true" : "false"));
         return m_epState == EP_STOPPING;
+    }
+
+    /**
+     * Set the state of the endpoint to waiting
+     */
+    void SetEpWaiting(void)
+    {
+        QCC_DbgTrace(("_UDPEndpoint::SetEpWaiting()"));
+        assert(m_epState == EP_STOPPING);
+        m_epState = EP_WAITING;
+    }
+
+    /**
+     * Check the state of the endpoint for stopping
+     */
+    bool IsEpWaiting(void)
+    {
+        QCC_DbgTrace(("_UDPEndpoint::IsEpWaiting() <= \"%s\"", m_epState == EP_WAITING ? "true" : "false"));
+        return m_epState == EP_WAITING;
     }
 
     /**
@@ -3650,7 +3824,9 @@ class _UDPEndpoint : public _RemoteEndpoint {
     bool m_exitScheduled;             /**< Indicates if the remote endpoint exit function has been scheduled. */
     volatile bool m_disconnected;     /**< Indicates an interlocked handling of the ARDP_Disconnect has happened */
     volatile int32_t m_refCount;      /**< Incremented if a thread is wandering through the endpoint, decrememted when it leaves */
+    volatile int32_t m_pushCount;     /**< Incremented if a thread is wandering through the endpoint, decrememted when it leaves */
     qcc::Mutex m_stateLock;           /**< Mutex protecting the endpoint state against multiple threads attempting changes */
+    bool m_wait;                      /**< If true, follow EP_STOPPING state with EP_WAITING state */
 };
 
 /*
@@ -4388,6 +4564,13 @@ QStatus UDPTransport::Stop(void)
     m_preListLock.Lock(MUTEX_CONTEXT);
     for (set<UDPEndpoint>::iterator i = m_preList.begin(); i != m_preList.end(); ++i) {
         UDPEndpoint ep = *i;
+        /*
+         * Since the UDP Transport is going down, we assume the entire routing
+         * node is going down for a reason, and we should not be waiting for
+         * queued data to make its way out to the remote side.  We don't delay
+         * the shutdown process for this reason at all.
+         */
+        ep->SetEpWaitEnable(false);
         ep->Stop();
     }
     QCC_DbgPrintf(("UDPTransport::Stop(): Giving pre-auth list lock"));
@@ -4397,10 +4580,12 @@ QStatus UDPTransport::Stop(void)
     m_endpointListLock.Lock(MUTEX_CONTEXT);
     for (set<UDPEndpoint>::iterator i = m_authList.begin(); i != m_authList.end(); ++i) {
         UDPEndpoint ep = *i;
+        ep->SetEpWaitEnable(false);
         ep->Stop();
     }
     for (set<UDPEndpoint>::iterator i = m_endpointList.begin(); i != m_endpointList.end(); ++i) {
         UDPEndpoint ep = *i;
+        ep->SetEpWaitEnable(false);
         ep->Stop();
     }
 
@@ -4933,6 +5118,50 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
     return ER_OK;
 }
 
+void UDPTransport::EmitStallWarnings(UDPEndpoint& ep)
+{
+    QCC_DbgTrace(("UDPTransport::EmitStallWarnings()"));
+
+    ArdpStream* stream = ep->GetStream();
+    assert(stream && "UDPTransport::EmitStallWarnings(): stream must exist");
+
+    bool threadSetEmpty = stream->ThreadSetEmpty();
+    bool disconnected = stream->GetDisconnected();
+
+    Timespec tNow;
+    GetTimeNow(&tNow);
+    Timespec tStop = ep->GetStopTime();
+    int32_t tRemaining = tStop + UDP_WATCHDOG_TIMEOUT - tNow;
+    if (tRemaining < 0) {
+        QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::EmitStallWarnings(): Endpoint with conn ID == %d stalled", ep->GetConnId()));
+
+        if (threadSetEmpty == false) {
+            QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::EmitStallWarnings(): stalled not threadSetEmpty"));
+        }
+
+        if (disconnected == false) {
+            QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::EmitStallWarnings(): stalled not disconnected"));
+            ArdpStream* stream = ep->GetStream();
+            if (stream) {
+#ifndef NDEBUG
+                bool disc = stream->GetDisconnected();
+                bool discSent = stream->GetDiscSent();
+                ArdpConnRecord* conn = stream->GetConn();
+                bool suddenDisconnect = ep->GetSuddenDisconnect();
+                QCC_DbgPrintf(("UDPTransport::EmitStallWarnings(): stalled not disconneccted. disc=\"%s\", discSent=\"%s\", conn=%p, suddendisconnect=\"%s\"", disc ? "true" : "false", discSent ? "true" : "false", conn, suddenDisconnect ? "true" : "false"));
+#endif
+                QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::EmitStallWarnings(): stalled not disconneccted."));
+            } else {
+                QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::EmitStallWarnings(): stalled not disconnected. No stream"));
+            }
+        }
+
+        if (threadSetEmpty == false && disconnected == false) {
+            QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::EmitStallWarnings(): stalled with threadSetEmpty and disconnected"));
+        }
+    }
+}
+
 /**
  * This method is used to deal with the lifecycle of all endpoints created by
  * the UDP Transport.  It is called on-demand and periodically by the main run
@@ -5026,6 +5255,7 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
 #ifndef NDEBUG
             ep->PrintEpState("UDPTransport::ManageEndpoints(): m_stopping m_authList");
 #endif
+            ep->SetEpWaitEnable(false);
             ep->Stop();
             m_endpointList.insert(ep);
             m_authList.erase(i);
@@ -5107,6 +5337,14 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                  */
                 m_connLock.Lock(MUTEX_CONTEXT);
                 m_authList.erase(i);
+
+                /*
+                 * If we are shutting down this endpoint because it hasn't
+                 * authenticated we presume there cannot be any interesting
+                 * information buffered for transmission to the remote side.  We
+                 * therefore disable the EP_WAITING state.
+                 */
+                ep->SetEpWaitEnable(false);
                 ep->Stop();
                 m_endpointList.insert(ep);
                 --m_currAuth;
@@ -5157,22 +5395,31 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
          *     locally or remotely initiated disconnect event.  Endpoints in
          *     this state must be Join()ed by this management thread.
          *
+         * EP_WAITING: The endpoint has been Stop()ped, but the original event
+         *     leading up to the Stop() was a local disconnect.  In this case
+         *     we need to simulate shutdown(sockfd, SHUTRDWR) behavior and so
+         *     we enter the EP_WAITING state until any outstanding sends to
+         *     ARDP complete.
+         *
          * EP_JOINED: Both Stop() and Join() have been called on this endpoint
-         *     and there are no threads wandering through the endpoint.  Once we
-         *     reach the EP_JOINED state, a final Exit() function is scheduled
-         *     which will drive the transition to EP_DONE state.
+         *     and there are no threads wandering through the endpoint.  In the
+         *     case of a local disconnect, all outstanding ARDP sends have
+         *     completed.  Once we reach the EP_JOINED state, a final Exit()
+         *     function is scheduled which will drive the transition to EP_DONE
+         *     state.
          *
          * EP_DONE: The endpoint has been Stop()ped, Join()ed and the Exit
          *     function has been called to ensure that the endpoint is
          *     completely detached from the daemon router.  We are free to
          *     delete endpoints in EP_DONE state.
          *
-         * These are our expectations, so we assert that it is true.
+         * These are our expectations, so we assert that it is all true.
          */
         assert((ep->IsEpPassiveStarted() ||
                 ep->IsEpActiveStarted() ||
                 ep->IsEpStarted() ||
                 ep->IsEpStopping() ||
+                ep->IsEpWaiting() ||
                 ep->IsEpJoined() ||
                 ep->IsEpDone()) && "UDPTransport::ManageEndpoints(): Endpoint in unexpected state");
 
@@ -5199,86 +5446,119 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
         }
 
         /*
-         * This can be a little tricky since the daemon wants to reference count
-         * the endpoints and will call Stop() but not Join() in
-         * RemoveSessionRef() for example.  This is because it doesn't want to
-         * take possibly unbounded time to wait for the threads in the endpoint
-         * to exit.  What that means is that we can arbitrarily find ourselves
-         * with endpoints in EP_STOPPING state, and we will have to do the
-         * Join() to finish tearing down the endpoint.  That means we have to do
-         * a Join(), but we must also be sensitive to blocking for long periods
-         * of time since we are called out of the main loop of the transport and
-         * in the thread that is driving ARDP.
+         * Inside the following if statement is where the heavy lifting of the
+         * state machine is done.  This can be a little tricky since the daemon
+         * wants to reference count the endpoints and will call Stop() but not
+         * Join() in RemoveSessionRef() for example.  This is because it doesn't
+         * want to take possibly unbounded time to wait for the threads in the
+         * endpoint to exit.  What that means is that we can arbitrarily find
+         * ourselves with endpoints in EP_STOPPING state that were happily
+         * running the last time we looked; and we may have to wait for queued
+         * messages to be transmitted (if IsEpWaitEnabled() is true); and we
+         * will have to do the Join() to finish tearing down the endpoint; and
+         * we will have to Schedule the Exit() function to disconnect from the
+         * Daemon Router; and we will have to ultimately delete the endpoints.
+         * We must also be sensitive to blocking for long periods of time since
+         * we are called out of the main loop of the transport.  This means
+         * spending a lot of effort checking to make sure that functions will
+         * complete without blocking before calling them.
          */
-        if (ep->IsEpStopping() || ep->IsEpJoined()) {
+        if (ep->IsEpStopping() || ep->IsEpWaiting() || ep->IsEpJoined()) {
 #ifndef NDEBUG
             if (ep->IsEpStopping()) {
                 QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d is EP_STOPPING", ep->GetConnId()));
+            } else if (ep->IsEpWaiting()) {
+                QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d is EP_WAITING", ep->GetConnId()));
             } else {
                 QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d is EP_JOINED", ep->GetConnId()));
             }
 #endif
 
             /*
-             * If we are in state EP_STOPPING, not surprisingly Stop() must have
-             * been called by someone.  What we need to do is to wait until the
-             * after-effects of that Stop() have settled before we call Join()
-             * so it doesn't block.  When Stop() was called, it Alerted the set
-             * of (daemon) threads that may have been waiting on the endpoint
-             * and if no previous sudden disconnect happened it called ARDP_Disconnect
-             * to start a local disconnect.  We have to wait for the threads to
-             * leave and the disconnect to complete before doing the Join().
+             * Since we are basically waiting for other things to do what
+             * they're supposed to at this point, we call a method that prints
+             * out warnings and errors if these things are not happening at a
+             * reasonable pace.  There's not much we can do, but it is useful to
+             * print this information in debug mode.
              */
+            EmitStallWarnings(ep);
+
             ArdpStream* stream = ep->GetStream();
-            assert(stream && "UDPTransport::ManageEndpoints(): stream must exist in states EP_STOPPING and EP_JOINED");
+            assert(stream && "UDPTransport::ManageEndpoints(): stream must exist in states EP_STOPPING, EP_WAITING and EP_JOINED");
 
             /*
-             * Wait for the threads blocked on the endpoint for writing to exit,
-             * pending writes to finish (or be discarded) and the required
-             * disconnect callback to happen.
+             * If we are in state EP_STOPPING, not too surprisingly, Stop() must
+             * have been called by someone.
+             *
+             * When the endpoint transitions to EP_STOPPING, any new message
+             * send requests are prevented from being passed on to the endpoint
+             * and then to the underlying ArdpStream.
+             *
+             * We want to simulate shutdown behavior on a local disconnect; so
+             * if the cause of the Stop() was a local disconnect, we need to
+             * enter the EP_WAITING state, which is the shutdown state, and not
+             * start the teardown process quite yet.
+             *
+             * If the cause of the Stop() was a remote disconnect, we go we want
+             * to tear down the endpoint immediately.  At this point, that means
+             * telling any threads waiting for PushMessage() to wake up, notice
+             * that the endpoint is stopping and leave.
+             */
+            if (ep->IsEpStopping()) {
+                if (ep->IsEpWaitEnabled()) {
+                    QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. entering EP_WAITING", ep->GetConnId()));
+                    ep->SetEpWaiting();
+                } else {
+                    QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. WakeThreadSet()", ep->GetConnId()));
+                    stream->WakeThreadSet();
+                }
+            }
+
+            /*
+             * The difference between EP_STOPPING and EP_WAITING at this point
+             * is that if we are in EP_STOPPING, we and ARDP have already
+             * started the disconnect dance and all we have to do is wait for
+             * disconnected status to become true and threads to leave before
+             * moving forward with the state transitions to EP_DONE.
+             *
+             * In the case of a local disconnect (EP_WAITING) we have to wait
+             * for the send buffers to drain and any pending PushMessage calls
+             * to finish.  When the shutdown is then complete, we need to
+             * initiate the local disconnect to the stream, assert that there
+             * are no further PushMessage()s in process and wait for the
+             * disconnect dance with ARDP to complete.
+             *
+             * Here threadSetEmpty, if true, indicates that there are no threads
+             * blocked waiting for operations involving the endpoint to
+             * complete.  quiescent means that there are no ARDP send operations
+             * in progress.  This is different from threadSetEmpty since threads
+             * and ARDP operations may have different timelines.  For example, a
+             * thread can start a send, but be alerted and exit leaving an ARDP
+             * operation in progress.  Similarly, an ARDP operation may
+             * complete, but a scheduled callback may not have executed to
+             * notify a waiting thread.  disconnected means that the disconnect
+             * call and callback dance between the UDP Transport and ARDP has
+             * finished.
              */
             bool threadSetEmpty = stream->ThreadSetEmpty();
             bool disconnected = stream->GetDisconnected();
 
-#ifndef NDEBUG
             /*
-             * We keep an eye on endpoints that seem to be stalled waiting to
-             * have the expected things happen.  There's not much we can do if
-             * things have gone wrong, but we log errors in the hope that
-             * someone notices.
+             * If we are in EP_WAITING state and 1) there are no threads that
+             * may possibly be starting sends; and 2) ARDP has no queued
+             * outstanding sends; then we are finished with the shutdown
+             * behavior and we need to start the actual ARDP disconnect process
+             * and transition back to EP_STOPPED where we wait for the process
+             * to complete.
              */
-            Timespec tNow;
-            GetTimeNow(&tNow);
-            Timespec tStop = ep->GetStopTime();
-            int32_t tRemaining = tStop + UDP_WATCHDOG_TIMEOUT - tNow;
-            if (tRemaining < 0) {
-                QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d stalled", ep->GetConnId()));
-
-                if (threadSetEmpty == false) {
-                    QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled not threadSetEmpty"));
-                }
-
-                if (disconnected == false) {
-                    QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled not disconnected"));
-                    ArdpStream* stream = ep->GetStream();
-                    if (stream) {
-                        bool disc = stream->GetDisconnected();
-                        bool discSent = stream->GetDiscSent();
-                        ArdpConnRecord* conn = stream->GetConn();
-                        bool suddenDisconnect = ep->GetSuddenDisconnect();
-                        QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled not disconneccted. disc=\"%s\", discSent=\"%s\", conn=%p, suddendisconnect=\"%s\"", disc ? "true" : "false", discSent ? "true" : "false", conn, suddenDisconnect ? "true" : "false"));
-                    } else {
-                        QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled not disconnected. No stream"));
-                    }
-                }
-
-                if (threadSetEmpty == false && disconnected == false) {
-                    QCC_LogError(ER_UDP_ENDPOINT_STALLED, ("UDPTransport::ManageEndpoints(): stalled with threadSetEmpty and disconnected"));
-                }
+            if (ep->IsEpWaiting() && ep->GetPushMessageCount() == 0 && stream->GetSendsOutstanding() == 0) {
+                QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. exiting EP_WAITING", ep->GetConnId()));
+                ep->SetEpWaitEnable(false);
+                ep->SetEpStopping();
+                stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
             }
-#endif
 
-            if (threadSetEmpty && disconnected) {
+            if (ep->IsEpStopping() && threadSetEmpty && disconnected) {
                 QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Join()ing stopping endpoint with conn ID == %d.", ep->GetConnId()));
 
                 /*
@@ -5917,7 +6197,12 @@ bool UDPTransport::AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t 
          * set it up for the destruction process to make sure its state is changed
          * to be deletable (when we release our reference to it and the end of the
          * current scope).
+         *
+         * If we are stopping the endpoint before it ever really gets started, we
+         * presume there can be no data queued for transmission, so we disable the
+         * EP_WAITING state.
          */
+        udpEp->SetEpWaitEnable(false);
         udpEp->Stop();
         QCC_LogError(status, ("UDPTransport::AcceptCb(): ARDP_Accept() failed"));
 
@@ -6236,6 +6521,13 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
                     ArdpStream* stream = ep->GetStream();
                     assert(stream && "UDPTransport::DoConnectCb(): must have a stream at this point");
                     stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
+
+                    /*
+                     * If the connection faied before it was actually set up, we
+                     * presume that there can be no buffered data waiting to go
+                     * out so we disable the EP_WAITING state.
+                     */
+                    ep->SetEpWaitEnable(false);
                     ep->Stop();
                     m_endpointListLock.Unlock(MUTEX_CONTEXT);
                     haveLock = false;
@@ -6709,6 +7001,14 @@ void UDPTransport::DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_
             event->SetEvent();
         } else {
             QCC_DbgPrintf(("UDPTransport::DoConnectCb(): No thread waiting for endpoint"));
+
+            /*
+             * If there is no thread waiting for the endpoint to connect, it cannot
+             * have reported back success, so we presume there can be no buffered
+             * data waiting go be transmitted over this endpoint.  Therefore we
+             * disable the EP_WAITING state.
+             */
+            udpEp->SetEpWaitEnable(false);
             udpEp->Stop();
         }
 
@@ -9835,7 +10135,6 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          */
         size_t sndSize = m_ardpConfig.segmax * m_ardpConfig.segbmax;
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): SetSndBuf(listenFd=%d, %zu.)", listenFd, sndSize));
-        QDP(("UDPTransport::HandleNetworkEventInstance(): SetSndBuf(listenFd=%d, %zu.)", listenFd, sndSize));
         status = qcc::SetSndBuf(listenFd, sndSize);
         if (status != ER_OK) {
             QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): SetSndbuf() failed"));
@@ -9845,7 +10144,6 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         sndSize = 0;
         qcc::GetSndBuf(listenFd, sndSize);
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): GetSndBuf(listenFd=%d) <= %zu. bytes)", listenFd, sndSize));
-        QDP(("UDPTransport::HandleNetworkEventInstance(): GetSndBuf(listenFd=%d) <= %zu. bytes)", listenFd, sndSize));
 #endif
 
         /*
@@ -9868,7 +10166,6 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          */
         size_t rcvSize = m_ardpConfig.segmax * m_ardpConfig.segbmax;
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): SetSndBuf(listenFd=%d, %zu.)", listenFd, rcvSize));
-        QDP(("UDPTransport::HandleNetworkEventInstance(): SetSndBuf(listenFd=%d, %zu.)", listenFd, rcvSize));
         status = qcc::SetRcvBuf(listenFd, rcvSize);
         if (status != ER_OK) {
             QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): SetRcvBuf() failed"));
@@ -9878,7 +10175,6 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         rcvSize = 0;
         qcc::GetRcvBuf(listenFd, rcvSize);
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): GetRcvBuf(listenFd=%d) <= %zu. bytes)", listenFd, rcvSize));
-        QDP(("UDPTransport::HandleNetworkEventInstance(): GetRcvBuf(listenFd=%d) <= %zu. bytes)", listenFd, rcvSize));
 #endif
 
         /*
