@@ -1347,7 +1347,7 @@ class IpNameServiceImpl : public qcc::Thread {
      * @internal
      * @brief Retransmit exported advertisements.
      */
-    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask transportMask, const int32_t interfaceIndex = -1, const qcc::AddressFamily family = qcc::QCC_AF_UNSPEC, const qcc::IPAddress& localAddress =  qcc::IPAddress("0.0.0.0"));
+    void Retransmit(uint32_t index, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask transportMask, std::vector<qcc::String>& wkns, const int32_t interfaceIndex = -1, const qcc::AddressFamily family = qcc::QCC_AF_UNSPEC, const qcc::IPAddress& localAddress =  qcc::IPAddress("0.0.0.0"));
 
     void GetResponsePackets(std::list<Packet>& packets, bool quietly = false, const qcc::IPEndpoint destination = qcc::IPEndpoint("0.0.0.0", 0), uint8_t type = TRANSMIT_V2, TransportMask transportMask = (TRANSPORT_TCP | TRANSPORT_UDP), const int32_t interfaceIndex = -1, const qcc::AddressFamily family = qcc::QCC_AF_UNSPEC);
 
