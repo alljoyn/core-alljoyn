@@ -86,6 +86,7 @@ typedef struct {
     uint32_t acknxt;    /**< First unexpired segment, TTL accounting */
     uint32_t som;       /**< Start sequence number for fragmented message */
     uint16_t fcnt;      /**< Number of segments comprising fragmented message */
+    uint16_t reserve;   /**< Reserved for future use */
 } ArdpHeader;
 #pragma pack(pop)
 
@@ -93,14 +94,14 @@ typedef struct {
 static const uint16_t ARDP_MAX_HEADER_LEN = 255;
 
 /* Length of fixed part of the header (sans EACKs), see below ArdpHeader structure */
-static const uint16_t ARDP_FIXED_HEADER_LEN = sizeof(ArdpHeader);
+static const uint16_t ARDP_FIXED_HEADER_LEN = 36;
 
 /**
  * Max window size (segments in flight). Limited by :
  * a) header filed size (8 bit)
  * b) presence of EACK mask that has to be in 32-bit chunks and depends on window size.
  */
-const uint16_t ARDP_MAX_WINDOW_SIZE =  ((ARDP_MAX_HEADER_LEN * 2 - sizeof(ArdpHeader)) >> 5) << 5;
+const uint16_t ARDP_MAX_WINDOW_SIZE =  ((ARDP_MAX_HEADER_LEN * 2 - ARDP_FIXED_HEADER_LEN) >> 5) << 5;
 
 typedef struct ARDP_CONN_RECORD ArdpConnRecord;
 
