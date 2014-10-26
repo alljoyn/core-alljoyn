@@ -2419,7 +2419,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 #if ARDP_STATS
                 ++handle->stats.rstRecvs;
 #endif
-                QCC_DbgPrintf(("ArdpMachine(): LISTEN: RST on a LISTENinig connection"));
+                QCC_DbgPrintf(("ArdpMachine(): LISTEN: RST on a LISTENing connection"));
                 break;
             }
 
@@ -3040,7 +3040,7 @@ QStatus Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* rxbuf, uint16_
     QCC_DbgTrace(("Accept(handle=%p, conn=%p, buf=%p, len=%d)", handle, conn, rxbuf, len));
     assert(conn->state == CLOSED && "Accept(): ConnRecord in invalid state");
 
-    if (!(rxbuf[FLAGS_OFFSET] & ARDP_FLAG_SYN)) {
+    if (!(rxbuf[FLAGS_OFFSET] & ARDP_FLAG_SYN) || (rxbuf[FLAGS_OFFSET] & ARDP_FLAG_RST)) {
         return ER_ARDP_INVALID_CONNECTION;
     }
 
@@ -3095,6 +3095,9 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
                         if (status == ER_OK) {
                             EnList(handle->conns.bwd, (ListNode*)conn);
                             status = Accept(handle, conn, buf, nbytes);
+                        }
+                        if (status != ER_OK) {
+                            DelConnRecord(handle, conn, false);
                         }
                     } else {
                         status = ER_ARDP_INVALID_STATE;
