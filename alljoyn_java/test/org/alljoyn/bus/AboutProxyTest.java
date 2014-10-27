@@ -87,7 +87,7 @@ public class AboutProxyTest extends TestCase{
             aboutData.put("SupportedLanguages", new Variant(new String[] {"en", "es"}));
             aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
             aboutData.put("SoftwareVersion", new Variant(new String("1.0")));
-            aboutData.put("AJSoftwareVersion", new Variant(new String("0.0.1")));
+            aboutData.put("AJSoftwareVersion", new Variant(Version.get()));
             aboutData.put("HardwareVersion", new Variant(new String("0.1alpha")));
             aboutData.put("SupportUrl", new Variant(new String("http://www.example.com/support")));
             //localized values
@@ -455,7 +455,7 @@ public class AboutProxyTest extends TestCase{
                 assertEquals("Sample showing the about feature in a service application", aData.get("Description").getObject(String.class));
                 assertEquals("2014-09-23", aData.get("DateOfManufacture").getObject(String.class));
                 assertEquals("1.0", aData.get("SoftwareVersion").getObject(String.class));
-                assertEquals("0.0.1", aData.get("AJSoftwareVersion").getObject(String.class));
+                assertEquals(Version.get(), aData.get("AJSoftwareVersion").getObject(String.class));
                 assertEquals("0.1alpha", aData.get("HardwareVersion").getObject(String.class));
                 assertEquals("http://www.example.com/support", aData.get("SupportUrl").getObject(String.class));
 
@@ -539,7 +539,7 @@ public class AboutProxyTest extends TestCase{
                 assertEquals("Muestra que muestra la característica de sobre en una aplicación de servicio", aData.get("Description").getObject(String.class));
                 assertEquals("2014-09-23", aData.get("DateOfManufacture").getObject(String.class));
                 assertEquals("1.0", aData.get("SoftwareVersion").getObject(String.class));
-                assertEquals("0.0.1", aData.get("AJSoftwareVersion").getObject(String.class));
+                assertEquals(Version.get(), aData.get("AJSoftwareVersion").getObject(String.class));
                 assertEquals("0.1alpha", aData.get("HardwareVersion").getObject(String.class));
                 assertEquals("http://www.example.com/support", aData.get("SupportUrl").getObject(String.class));
 

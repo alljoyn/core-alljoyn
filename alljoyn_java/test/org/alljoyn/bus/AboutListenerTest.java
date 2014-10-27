@@ -86,7 +86,7 @@ public class AboutListenerTest  extends TestCase {
             arg.put("SupportedLanguages", new Variant(new String[] {"en", "es"}));
             arg.put("DateOfManufacture", new Variant(new String("2014-09-23")));
             arg.put("SoftwareVersion", new Variant(new String("1.0")));
-            arg.put("AJSoftwareVersion", new Variant(new String("0.0.1")));
+            arg.put("AJSoftwareVersion", new Variant(Version.get()));
             arg.put("HardwareVersion", new Variant(new String("0.1alpha")));
             arg.put("SupportUrl", new Variant(new String("http://www.example.com/support")));
             //localized values

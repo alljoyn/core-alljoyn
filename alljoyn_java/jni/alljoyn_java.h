@@ -1636,6 +1636,30 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_announce
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_cancelAnnouncement
   (JNIEnv *, jobject);
 
+/*
+ * Class:     org_alljoyn_bus_Version
+ * Method:    get
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_Version_get
+  (JNIEnv *, jclass);
+
+/*
+ * Class:     org_alljoyn_bus_Version
+ * Method:    getBuildInfo
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_Version_getBuildInfo
+  (JNIEnv *, jclass);
+
+/*
+ * Class:     org_alljoyn_bus_Version
+ * Method:    getNumeric
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL Java_org_alljoyn_bus_Version_getNumeric
+  (JNIEnv *, jclass);
+
 #ifdef __cplusplus
 }
 #endif

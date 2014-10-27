@@ -22,6 +22,7 @@ import org.alljoyn.bus.AboutDataListener;
 import org.alljoyn.bus.ErrorReplyBusException;
 import org.alljoyn.bus.Status;
 import org.alljoyn.bus.Variant;
+import org.alljoyn.bus.Version;
 
 public class MyAboutData implements AboutDataListener {
 
@@ -39,7 +40,7 @@ public class MyAboutData implements AboutDataListener {
         aboutData.put("SupportedLanguages", new Variant(new String[] { "en", "es" }));
         aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
         aboutData.put("SoftwareVersion", new Variant(new String("1.0")));
-        aboutData.put("AJSoftwareVersion", new Variant(new String("0.0.1")));
+        aboutData.put("AJSoftwareVersion", new Variant(Version.get()));
         aboutData.put("HardwareVersion", new Variant(new String("0.1alpha")));
         aboutData.put("SupportUrl", new Variant(new String(
                 "http://www.example.com/support")));

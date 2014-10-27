@@ -39,6 +39,7 @@
 #include <alljoyn/Translator.h>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/AboutObj.h>
+#include <alljoyn/version.h>
 
 #define QCC_MODULE "ALLJOYN_JAVA"
 
@@ -12154,4 +12155,17 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_cancelAnnouncement(JNIEn
         return JStatus(ER_FAIL);
     }
     return JStatus(aboutObj->CancelAnnouncement());
+}
+
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_Version_get(JNIEnv* env, jclass clazz) {
+
+    return env->NewStringUTF(ajn::GetVersion());
+}
+
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_Version_getBuildInfo(JNIEnv* env, jclass clazz) {
+    return env->NewStringUTF(ajn::GetBuildInfo());
+}
+
+JNIEXPORT jint JNICALL Java_org_alljoyn_bus_Version_getNumeric(JNIEnv* env, jclass clazz) {
+    return ajn::GetNumericVersion();
 }
