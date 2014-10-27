@@ -2581,6 +2581,10 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
             if (status != ER_OK && status != ER_WOULDBLOCK) {
                 SetState(conn, CLOSED);
+
+                /* Stop connect retry timer */
+                conn->connectTimer.retry = 0;
+
                 handle->cb.ConnectCb(handle, conn, false, NULL, 0, status);
                 /*
                  * Do not delete conection record here:
