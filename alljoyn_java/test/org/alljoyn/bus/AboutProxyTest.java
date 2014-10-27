@@ -551,4 +551,59 @@ public class AboutProxyTest extends TestCase{
         clientBus.disconnect();
         clientBus.release();
     }
+
+    public synchronized void testGetAboutDataUnsupportedLanguage() {
+        Intfa intfa = new Intfa();
+        assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
+
+        BusAttachment clientBus = new BusAttachment("AboutListenerTestClient", RemoteMessage.Receive);
+        assertEquals(Status.OK, clientBus.connect());
+
+        AboutListenerTestAboutListener aListener = new AboutListenerTestAboutListener();
+        aListener.announcedFlag = false;
+        clientBus.registerAboutListener(aListener);
+        assertEquals(Status.OK, clientBus.whoImplements(new String[] {"com.example.test.AboutListenerTest.a"}));
+
+        AboutObj aboutObj = new AboutObj(serviceBus);
+        AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
+        assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
+
+        try {
+            this.wait(10000);
+        } catch (InterruptedException e) {
+            fail("Unexpected failure when waiting for the announce singnal");
+        }
+
+        Mutable.IntegerValue sessionId = new Mutable.IntegerValue();;
+
+        SessionOpts sessionOpts = new SessionOpts();
+        sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
+        sessionOpts.isMultipoint = false;
+        sessionOpts.proximity = SessionOpts.PROXIMITY_ANY;
+        sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
+
+        assertEquals(Status.OK, clientBus.joinSession(aListener.remoteBusName, aListener.port, sessionId, sessionOpts, new SessionListener()));
+
+        try {
+            this.wait(10000);
+        } catch (InterruptedException e) {
+            fail("Unexpected failure when waiting for the announce singnal");
+        }
+
+        assertTrue(sessionPortlistener.sessionEstablished);
+        assertEquals(sessionPortlistener.sessionId, sessionId.value);
+
+        AboutProxy proxy = new AboutProxy(clientBus, aListener.remoteBusName, sessionId.value);
+        Map<String, Variant> aData = new HashMap<String, Variant>();
+        try {
+            aData = proxy.getAboutData("fr");
+            fail("Call to AboutProxyBus getAboutData should have thrown bus exception.");
+        } catch (BusException e) {
+            assertEquals("org.alljoyn.Error.LanguageNotSupported", e.getMessage());
+        }
+        assertTrue(aData.isEmpty());
+        assertEquals(Status.OK, clientBus.cancelWhoImplements(new String[] {"com.example.test.AboutListenerTest.a"}));
+        clientBus.disconnect();
+        clientBus.release();
+    }
 }
