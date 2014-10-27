@@ -92,6 +92,7 @@ public class BusAttachmentTest extends TestCase {
     private WeakReference<BusAttachment> otherBusRef = new WeakReference<BusAttachment>(otherBus);
     private int handledSignals1;
     private int handledSignals2;
+    private int handledSignals3;
     private int handledSignals4;
     private boolean pinRequested;
     private String name;
@@ -175,6 +176,18 @@ public class BusAttachmentTest extends TestCase {
         ++handledSignals2;
     }
 
+    public void signalHandler3bis(String string)
+        throws BusException
+    {
+        ++handledSignals3;
+    }
+
+    public void signalHandler4bis(String string)
+        throws BusException
+    {
+        ++handledSignals4;
+    }
+
     public synchronized void testRegisterMultipleSignalHandlersForOneSignal() throws Exception {
         bus = new BusAttachment(getClass().getName());
         Status status = bus.connect();
@@ -193,6 +206,14 @@ public class BusAttachmentTest extends TestCase {
         status = bus.registerSignalHandler("org.alljoyn.bus.EmitterInterface", "Emit",
                 this, getClass().getMethod("signalHandler2", String.class));
         assertEquals(Status.OK, status);
+        status =
+            bus.registerSignalHandlerWithRule("org.alljoyn.bus.EmitterInterface", "Emit", this,
+                getClass().getMethod("signalHandler3bis", String.class), "path='/emitter'");
+        assertEquals(Status.OK, status);
+        status =
+            bus.registerSignalHandlerWithRule("org.alljoyn.bus.EmitterInterface", "Emit", this,
+                getClass().getMethod("signalHandler4bis", String.class), "path='/wrongpath'");
+        assertEquals(Status.OK, status); // This signalhandler must never be hit
 
         //
         // Emit a signal and make sure that both of the handlers we registered
@@ -212,15 +233,17 @@ public class BusAttachmentTest extends TestCase {
             //
             // Break out as soon as we see the result we need.
             //
-            if(handledSignals1 == 1 && handledSignals2 == 1 ) {
+            if (handledSignals1 == 1 && handledSignals2 == 1 && handledSignals3 == 1) {
                 break;
             }
         }
 
         assertEquals(1, handledSignals1);
         assertEquals(1, handledSignals2);
+        assertEquals(1, handledSignals3);
+        assertEquals(0, handledSignals4);
 
-        handledSignals1 = handledSignals2 = 0;
+        handledSignals1 = handledSignals2 = handledSignals3 = 0;
 
         //
         // Unregister one of the handlers and make sure that the unregistered
@@ -243,6 +266,8 @@ public class BusAttachmentTest extends TestCase {
         this.wait(10000);
         assertEquals(0, handledSignals1);
         assertEquals(1, handledSignals2);
+        assertEquals(1, handledSignals3);
+        assertEquals(0, handledSignals4); // This must always be zero
         bus.unregisterSignalHandler(this, getClass().getMethod("signalHandler2", String.class));
         status = bus.removeMatch("type='signal',interface='org.alljoyn.bus.EmitterInterface',member='Emit'");
         assertEquals(Status.OK, status);

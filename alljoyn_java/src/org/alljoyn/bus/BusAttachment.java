@@ -904,8 +904,11 @@ public class BusAttachment {
 
     private native boolean isSecureBusObject(BusObject busObj);
 
-    private native Status registerNativeSignalHandler(String ifaceName, String signalName,
+    private native Status registerNativeSignalHandlerWithSrcPath(String ifaceName, String signalName,
             Object obj, Method handlerMethod, String source);
+
+    private native Status registerNativeSignalHandlerWithRule(String ifaceName, String signalName, Object obj,
+        Method handlerMethod, String source);
 
     /**
      * Release resources immediately.
@@ -1270,24 +1273,22 @@ public class BusAttachment {
     }
 
     /**
-     * Registers a public method to receive a signal from specific objects
-     * emitting it.
-     * Once registered, the method of the object will receive the signal
-     * specified from objects implementing the interface.
-     *
+     * Registers a public method to receive a signal from specific objects emitting it. Once registered, the method of
+     * the object will receive the signal specified from objects implementing the interface.
+     * 
      * @param ifaceName the interface name of the signal
      * @param signalName the member name of the signal
      * @param obj the object receiving the signal
      * @param handlerMethod the signal handler method
      * @param source the object path of the emitter of the signal
-     * @return OK if the register is succesful
+     * @return OK if the register is successful
      */
     public Status registerSignalHandler(String ifaceName,
             String signalName,
             Object obj,
             Method handlerMethod,
             String source) {
-        Status status = registerNativeSignalHandler(ifaceName, signalName, obj, handlerMethod,
+        Status status = registerNativeSignalHandlerWithSrcPath(ifaceName, signalName, obj, handlerMethod,
                                                     source);
         if (status == Status.BUS_NO_SUCH_INTERFACE) {
             try {
@@ -1302,13 +1303,59 @@ public class BusAttachment {
                     } catch (NoSuchMethodException ex) {
                         // Ignore, use signalName parameter provided
                     }
-                    status = registerNativeSignalHandler(ifaceName, signalName, obj, handlerMethod,
+                    status = registerNativeSignalHandlerWithSrcPath(ifaceName, signalName, obj, handlerMethod,
                                                          source);
                 }
             } catch (ClassNotFoundException ex) {
                 BusException.log(ex);
                 status = Status.BUS_NO_SUCH_INTERFACE;
             } catch (AnnotationBusException ex) {
+                BusException.log(ex);
+                status = Status.BAD_ANNOTATION;
+            }
+        }
+        return status;
+    }
+
+    /**
+     * Register a signal handler.
+     * 
+     * Signals are forwarded to the signalHandler if sender, interface, member and rule qualifiers are ALL met.
+     * 
+     * @param receiver The object receiving the signal.
+     * @param signalHandler The signal handler method.
+     * @param member The interface/member of the signal.
+     * @param matchRule A filter rule.
+     * @return OK if the register is successful
+     */
+
+    public Status registerSignalHandlerWithRule(String ifaceName, String signalName, Object obj, Method handlerMethod,
+        String matchRule)
+    {
+
+        Status status = registerNativeSignalHandlerWithRule(ifaceName, signalName, obj, handlerMethod, matchRule);
+        if (status == Status.BUS_NO_SUCH_INTERFACE) {
+            try {
+                Class<?> iface = Class.forName(ifaceName);
+                InterfaceDescription desc = new InterfaceDescription();
+                status = desc.create(this, iface);
+                if (status == Status.OK) {
+                    ifaceName = InterfaceDescription.getName(iface);
+                    try {
+                        Method signal = iface.getMethod(signalName, handlerMethod.getParameterTypes());
+                        signalName = InterfaceDescription.getName(signal);
+                    }
+                    catch (NoSuchMethodException ex) {
+                        // Ignore, use signalName parameter provided
+                    }
+                    status = registerNativeSignalHandlerWithRule(ifaceName, signalName, obj, handlerMethod, matchRule);
+                }
+            }
+            catch (ClassNotFoundException ex) {
+                BusException.log(ex);
+                status = Status.BUS_NO_SUCH_INTERFACE;
+            }
+            catch (AnnotationBusException ex) {
                 BusException.log(ex);
                 status = Status.BAD_ANNOTATION;
             }
@@ -1334,7 +1381,12 @@ public class BusAttachment {
         for (Method m : obj.getClass().getMethods()) {
             BusSignalHandler a = m.getAnnotation(BusSignalHandler.class);
             if (a != null) {
-                status = registerSignalHandler(a.iface(), a.signal(), obj, m, a.source());
+                if (a.rule() != null) {
+                    status = registerSignalHandlerWithRule(a.iface(), a.signal(), obj, m, a.rule());
+                }
+                else {
+                    status = registerSignalHandler(a.iface(), a.signal(), obj, m, a.source());
+                }
                 if (status != Status.OK) {
                     break;
                 }
