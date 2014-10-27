@@ -86,8 +86,12 @@ const NSInteger kBusAttachmentTestsServicePort = 999;
     
     // Set-up code here. Executed before each test case is run.
     //
-    self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"testApp" allowRemoteMessages:YES];
-    
+    [self setUpWithBusAttachement: [[AJNBusAttachment alloc] initWithApplicationName:@"testApp" allowRemoteMessages:YES]];
+}
+
+- (void)setUpWithBusAttachement:(AJNBusAttachment *)busAttachment
+{
+    self.bus = busAttachment;
     self.listenerDidRegisterWithBusCompleted = NO;
     self.listenerDidUnregisterWithBusCompleted = NO;
     self.didFindAdvertisedNameCompleted = NO;
@@ -811,6 +815,123 @@ const NSInteger kBusAttachmentTestsServicePort = 999;
     [client tearDown];
 }
 
+- (void)testShouldAllowServiceToLeaveSelfJoin
+{
+    BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
+    [client setUpWithBusAttachement:self.bus];
+    client.isTestClient = YES;
+    [client.bus registerBusListener:client];
+    [self.bus registerBusListener:self];
+    
+    QStatus status = [self.bus start];
+    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    
+    status = [self.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    
+    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:NO proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
+    
+    status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
+    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    
+    status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
+    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    
+    status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
+    STAssertTrue(status == ER_OK, @"Advertise name failed.");
+    
+    status = [client.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
+    STAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
+    
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
+    STAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
+    STAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
+    
+    status = [self.bus bindHostedSessionListener:self toSession:self.testSessionId];
+    STAssertTrue(status == ER_OK, @"Binding of a Service sessionlistener failed");
+    
+    status = [client.bus bindJoinedSessionListener:client toSession:client.testSessionId];
+    STAssertTrue(status == ER_OK, @"Binding of a Client sessionlistener failed");
+    
+    status = [self.bus bindHostedSessionListener:nil toSession:self.testSessionId];
+    STAssertTrue(status == ER_OK, @"Removal of the Service sessionlistener failed");
+    
+    status = [client.bus bindJoinedSessionListener:nil toSession:client.testSessionId];
+    STAssertTrue(status == ER_OK, @"Removal of the Client sessionlistener failed");
+    
+    status = [self.bus leaveHostedSession:self.testSessionId];
+    STAssertTrue(status == ER_OK, @"Service failed to leave self joined session");
+    
+    status = [self.bus stop];
+    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    
+    STAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
+    STAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
+    
+    [client.bus unregisterBusListener:client];
+    [self.bus unregisterBusListener:self];
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
+    
+    [client tearDown];
+}
+
+- (void)testShouldAllowClientToLeaveSelfJoin
+{
+    BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
+    [client setUpWithBusAttachement:self.bus];
+    client.isTestClient = YES;
+    [client.bus registerBusListener:client];
+    [self.bus registerBusListener:self];
+    
+    QStatus status = [self.bus start];
+    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    
+    status = [self.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    
+    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:NO proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
+    
+    status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
+    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    
+    status = [self.bus requestWellKnownName:kBusAttachmentTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
+    STAssertTrue(status == ER_OK, @"Request for well known name failed.");
+    
+    status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
+    STAssertTrue(status == ER_OK, @"Advertise name failed.");
+    
+    status = [client.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
+    STAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
+    
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_shouldAcceptSessionJoinerNamed], @"The service did not report that it was queried for acceptance of the client joiner.");
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
+    STAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
+    STAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
+    
+    status = [self.bus bindHostedSessionListener:self toSession:self.testSessionId];
+    STAssertTrue(status == ER_OK, @"Binding of a Service sessionlistener failed");
+    
+    status = [client.bus bindJoinedSessionListener:client toSession:client.testSessionId];
+    STAssertTrue(status == ER_OK, @"Binding of a Client sessionlistener failed");
+    
+    status = [client.bus leaveJoinedSession:client.testSessionId];
+    STAssertTrue(status == ER_OK, @"Client failed to leave self joined session");
+    
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_sessionWasLost], @"The Service was not informed that the session was lost.");
+    
+    status = [self.bus stop];
+    STAssertTrue(status == ER_OK, @"Bus failed to stop.");
+    
+    STAssertTrue([client waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
+    STAssertTrue([self waitForBusToStop:kBusAttachmentTestsWaitTimeBeforeFailure], @"The bus listener should have been notified that the bus is stopping.");
+    
+    [client.bus unregisterBusListener:client];
+    [self.bus unregisterBusListener:self];
+    STAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
+    
+    [client tearDown];
+}
 
 
 #pragma mark - Asynchronous test case support
