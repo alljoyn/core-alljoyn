@@ -1195,6 +1195,7 @@ class JAuthListener;
 class PendingAsyncJoin;
 class PendingAsyncPing;
 
+
 /**
  * The C++ class that backs the Java BusAttachment class and provides the
  * plumbing connection from AllJoyn out to Java-land.
@@ -1209,8 +1210,10 @@ class JBusAttachment : public BusAttachment {
     QStatus RegisterBusObject(const char* objPath, jobject jbusObject, jobjectArray jbusInterfaces,
                               jboolean jsecure, jstring jlangTag, jstring jdesc, jobject jtranslator);
     void UnregisterBusObject(jobject jbusObject);
+
+    template <typename T>
     QStatus RegisterSignalHandler(const char* ifaceName, const char* signalName,
-                                  jobject jsignalHandler, jobject jmethod, const char* srcPath);
+                                  jobject jsignalHandler, jobject jmethod, const char* ancillary);
     void UnregisterSignalHandler(jobject jsignalHandler, jobject jmethod);
 
     bool IsLocalBusObject(jobject jbusObject);
@@ -1235,7 +1238,7 @@ class JBusAttachment : public BusAttachment {
     /**
      * A vector of all of the C++ "halves" of the signal handler objects
      * associated with this bus attachment.  Note that this member is public
-     * since we trust that the native binding we wrote will usse it correctly.
+     * since we trust that the native binding we wrote will use it correctly.
      */
     vector<pair<jobject, JSignalHandler*> > signalHandlers;
 
@@ -2180,19 +2183,45 @@ class JProxyBusObject : public ProxyBusObject {
 class JSignalHandler : public MessageReceiver {
   public:
     JSignalHandler(jobject jobj, jobject jmethod);
-    ~JSignalHandler();
+    virtual ~JSignalHandler();
     bool IsSameObject(jobject jobj, jobject jmethod);
-    QStatus Register(BusAttachment& bus, const char* ifaceName, const char* signalName, const char* srcPath);
-    void Unregister(BusAttachment& bus);
+    virtual QStatus Register(BusAttachment& bus, const char* ifaceName, const char* signalName, const char* ancillary);
+    virtual void Unregister(BusAttachment& bus) = 0;
     void SignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg);
+  protected:
+    jweak jsignalHandler;
+    jobject jmethod;
+    const InterfaceDescription::Member* member;
+    String ancillary_data; /* can be both source or matchRule; */
+
   private:
     JSignalHandler(const JSignalHandler& other);
     JSignalHandler& operator =(const JSignalHandler& other);
 
-    jweak jsignalHandler;
-    jobject jmethod;
-    const InterfaceDescription::Member* member;
-    String source;
+};
+
+class JSignalHandlerWithSrc : public JSignalHandler {
+
+  public:
+    JSignalHandlerWithSrc(jobject jobj, jobject jmethod) : JSignalHandler(jobj, jmethod) { }
+    QStatus Register(BusAttachment& bus, const char* ifaceName, const char* signalName, const char* ancillary);
+  private:
+    JSignalHandlerWithSrc(const JSignalHandlerWithSrc& other);
+    JSignalHandlerWithSrc& operator =(const JSignalHandlerWithSrc& other);
+    void Unregister(BusAttachment& bus);
+
+};
+
+class JSignalHandlerWithRule : public JSignalHandler {
+
+  public:
+    JSignalHandlerWithRule(jobject jobj, jobject jmethod) : JSignalHandler(jobj, jmethod) { }
+    QStatus Register(BusAttachment& bus, const char* ifaceName, const char* signalName, const char* ancillary);
+  private:
+    JSignalHandlerWithRule(const JSignalHandlerWithRule& other);
+    JSignalHandlerWithRule& operator =(const JSignalHandlerWithRule& other);
+    void Unregister(BusAttachment& bus);
+
 };
 
 class JTranslator : public Translator {
@@ -4743,8 +4772,9 @@ void JBusAttachment::UnregisterBusObject(jobject jbusObject)
     return;
 }
 
+template <typename T>
 QStatus JBusAttachment::RegisterSignalHandler(const char* ifaceName, const char* signalName,
-                                              jobject jsignalHandler, jobject jmethod, const char* srcPath)
+                                              jobject jsignalHandler, jobject jmethod, const char* ancillary)
 {
     QCC_DbgPrintf(("JBusAttachment::RegisterSignalHandler(): Taking Bus Attachment common lock"));
     baCommonLock.Lock();
@@ -4767,7 +4797,7 @@ QStatus JBusAttachment::RegisterSignalHandler(const char* ifaceName, const char*
     /*
      * Create the C++ object that backs the Java signal handler object.
      */
-    JSignalHandler* signalHandler = new JSignalHandler(jsignalHandler, jmethod);
+    JSignalHandler* signalHandler = new T(jsignalHandler, jmethod);
     if (signalHandler == NULL) {
         Throw("java/lang/OutOfMemoryError", NULL);
         return ER_FAIL;
@@ -4778,7 +4808,7 @@ QStatus JBusAttachment::RegisterSignalHandler(const char* ifaceName, const char*
      * operation was successful, remember both the Java object and the C++
      * object.  If it didn't work then we might as well forget them both.
      */
-    QStatus status = signalHandler->Register(*this, ifaceName, signalName, srcPath);
+    QStatus status = signalHandler->Register(*this, ifaceName, signalName, ancillary);
     if (ER_OK == status) {
         signalHandlers.push_back(make_pair(jglobalref, signalHandler));
     } else {
@@ -9015,8 +9045,8 @@ bool JSignalHandler::IsSameObject(jobject jobj, jobject jmeth)
 }
 
 QStatus JSignalHandler::Register(BusAttachment& bus, const char* ifaceName, const char* signalName,
-                                 const char* srcPath)
-{
+                                 const char* ancillary) {
+
     if (bus.IsConnected() == false) {
         return ER_BUS_NOT_CONNECTED;
     }
@@ -9028,26 +9058,8 @@ QStatus JSignalHandler::Register(BusAttachment& bus, const char* ifaceName, cons
     if (!member) {
         return ER_BUS_INTERFACE_NO_SUCH_MEMBER;
     }
-    source = srcPath;
-    QStatus status = bus.RegisterSignalHandler(this,
-                                               static_cast<MessageReceiver::SignalHandler>(&JSignalHandler::SignalHandler),
-                                               member,
-                                               source.c_str());
-    return status;
-}
-
-void JSignalHandler::Unregister(BusAttachment& bus)
-{
-    if (bus.IsConnected() == false) {
-        return;
-    }
-
-    if (member) {
-        bus.UnregisterSignalHandler(this,
-                                    static_cast<MessageReceiver::SignalHandler>(&JSignalHandler::SignalHandler),
-                                    member,
-                                    source.c_str());
-    }
+    ancillary_data = ancillary;
+    return ER_OK;
 }
 
 void JSignalHandler::SignalHandler(const InterfaceDescription::Member* member,
@@ -9085,6 +9097,65 @@ void JSignalHandler::SignalHandler(const InterfaceDescription::Member* member,
         return;
     }
     env->CallObjectMethod(jmethod, mid, jo, (jobjectArray)jargs);
+}
+
+QStatus JSignalHandlerWithSrc::Register(BusAttachment& bus, const char* ifaceName, const char* signalName,
+                                        const char* ancillary) {
+
+    QStatus status = JSignalHandler::Register(bus, ifaceName, signalName, ancillary);
+    if (status != ER_OK) {
+        return status;
+    }
+
+    return bus.RegisterSignalHandler(this,
+                                     static_cast<MessageReceiver::SignalHandler>(&JSignalHandler::SignalHandler),
+                                     member,
+                                     ancillary_data.c_str());
+
+}
+
+void JSignalHandlerWithSrc::Unregister(BusAttachment& bus)
+{
+    if (bus.IsConnected() == false) {
+        return;
+    }
+
+    if (member) {
+        bus.UnregisterSignalHandler(this,
+                                    static_cast<MessageReceiver::SignalHandler>(&JSignalHandler::SignalHandler),
+                                    member,
+                                    ancillary_data.c_str());
+    }
+}
+
+
+QStatus JSignalHandlerWithRule::Register(BusAttachment& bus, const char* ifaceName, const char* signalName,
+                                         const char* ancillary) {
+
+    QStatus status = JSignalHandler::Register(bus, ifaceName, signalName, ancillary);
+    if (status != ER_OK) {
+        return status;
+    }
+
+    return bus.RegisterSignalHandlerWithRule(this,
+                                             static_cast<MessageReceiver::SignalHandler>(&JSignalHandler::SignalHandler),
+                                             member,
+                                             ancillary_data.c_str());
+
+}
+
+void JSignalHandlerWithRule::Unregister(BusAttachment& bus)
+{
+    if (bus.IsConnected() == false) {
+        return;
+    }
+
+    if (member) {
+        bus.UnregisterSignalHandlerWithRule(this,
+                                            static_cast<MessageReceiver::SignalHandler>(&JSignalHandler::SignalHandler),
+                                            member,
+                                            ancillary_data.c_str());
+    }
 }
 
 JTranslator::JTranslator(jobject jobj)
@@ -9216,9 +9287,10 @@ const char* JTranslator::Translate(const char* sourceLanguage,
     return buffer.c_str();
 }
 
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerNativeSignalHandler(JNIEnv* env, jobject thiz, jstring jifaceName,
-                                                                                         jstring jsignalName, jobject jsignalHandler,
-                                                                                         jobject jmethod, jstring jsource)
+template <typename T>
+static jobject registerNativeSignalHandler(JNIEnv* env, jobject thiz, jstring jifaceName,
+                                           jstring jsignalName, jobject jsignalHandler,
+                                           jobject jmethod, jstring jancillary)
 {
     QCC_DbgPrintf(("BusAttachment_registerNativeSignalHandler()"));
 
@@ -9232,14 +9304,14 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerNativeSigna
         return NULL;
     }
 
-    JString source(jsource);
+    JString ancillary(jancillary);
     if (env->ExceptionCheck()) {
         return NULL;
     }
 
-    const char* srcPath = NULL;
-    if (source.c_str() && source.c_str()[0]) {
-        srcPath = source.c_str();
+    const char* ancillarystr = NULL;
+    if (ancillary.c_str() && ancillary.c_str()[0]) {
+        ancillarystr = ancillary.c_str();
     }
 
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
@@ -9260,7 +9332,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerNativeSigna
 
     QCC_DbgPrintf(("BusAttachment_registerNativeSignalHandler(): Refcount on busPtr is %d", busPtr->GetRef()));
 
-    QStatus status = busPtr->RegisterSignalHandler(ifaceName.c_str(), signalName.c_str(), jsignalHandler, jmethod, srcPath);
+    QStatus status = busPtr->RegisterSignalHandler<T>(ifaceName.c_str(), signalName.c_str(), jsignalHandler, jmethod, ancillarystr);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("BusAttachment_registerBusObject(): Exception"));
         return NULL;
@@ -9268,6 +9340,19 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerNativeSigna
 
     return JStatus(status);
 }
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerNativeSignalHandlerWithSrcPath(JNIEnv* env, jobject thiz, jstring jifaceName,
+                                                                                                    jstring jsignalName, jobject jsignalHandler,
+                                                                                                    jobject jmethod, jstring jsource) {
+    return registerNativeSignalHandler<JSignalHandlerWithSrc>(env, thiz, jifaceName, jsignalName, jsignalHandler, jmethod, jsource);
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerNativeSignalHandlerWithRule(JNIEnv* env, jobject thiz, jstring jifaceName,
+                                                                                                 jstring jsignalName, jobject jsignalHandler,
+                                                                                                 jobject jmethod, jstring jsource) {
+    return registerNativeSignalHandler<JSignalHandlerWithRule>(env, thiz, jifaceName, jsignalName, jsignalHandler, jmethod, jsource);
+}
+
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_unregisterSignalHandler(JNIEnv* env, jobject thiz, jobject jsignalHandler, jobject jmethod)
 {
@@ -9722,7 +9807,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_create(JNIEn
          * still report its interface security as 'off'.
          */
         bool isDBusStandardIfac;
-        if (name.c_str() == NULL) { // passing NULL into strcmp is undefined behavior.
+        if (name.c_str() == NULL) {     // passing NULL into strcmp is undefined behavior.
             isDBusStandardIfac = false;
         } else {
             isDBusStandardIfac = (strcmp(org::freedesktop::DBus::Introspectable::InterfaceName, name.c_str()) == 0) ||
@@ -10457,7 +10542,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_methodCall(JNIEnv*
      *    - Failure to find a security indication will result the properties
      *      methods being used without encryption.
      */
-    if (interfaceName.c_str() != NULL) { //if interfaceName.c_str() is null strcmp is undefined behavior
+    if (interfaceName.c_str() != NULL) {     //if interfaceName.c_str() is null strcmp is undefined behavior
         if (strcmp(interfaceName.c_str(), org::freedesktop::DBus::Properties::InterfaceName) == 0) {
             char* interface_name;
             /* the fist member of the struct is the interface name*/
