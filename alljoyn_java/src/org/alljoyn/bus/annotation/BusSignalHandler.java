@@ -22,36 +22,58 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.alljoyn.bus.BusObject;
+
 /**
  * Indicates that a method should receive AllJoyn signals.
  * <p>
- * {@code iface} and {@code signal} may be either the DBus interface
- * and signal name, or the Java interface and method name.  For the
- * following interface definition:
- * <p><blockquote><pre>
- *     package org.myapp;
- *     &#64;BusInterface(name = "org.sample.MyInterface")
- *     public interface IMyInterface {
- *         &#64;BusSignal(name = "MySignal")
- *         public void EmitMySignal(String str) throws BusException;
- *     }
- * </pre></blockquote><p>
- * either of the following may be used to annotate a signal handler:
- * <p><blockquote><pre>
- *     &#64;BusSignalHandler(iface = "org.sample.MyInterface", signal = "MySignal")
- *     public void handleSignal(String str) {}
- *
- *     &#64;BusSignalHandler(iface = "org.myapp.IMyInterface", signal = "EmitMySignal")
- *     public void handleSignal(String str) {}
- * </pre></blockquote><p>
- * The first example may be used succesfully when {@code IMyInterface}
- * is known to the BusAttachment via a previous call to {@link
- * org.alljoyn.bus.BusAttachment#registerBusObject(BusObject, String)}
- * or {@link org.alljoyn.bus.BusAttachment#getProxyBusObject(String,
- * String, int, Class[])}.
+ * {@code iface} and {@code signal} may be either the DBus interface and signal name, or the Java interface and method
+ * name. For the following interface definition:
  * <p>
- * The second example may be used succesfully when {@code
- * IMyInterface} is unknown to the BusAttachment.
+ * <blockquote>
+ * 
+ * <pre>
+ * package org.myapp;
+ * 
+ * &#064;BusInterface(name = &quot;org.sample.MyInterface&quot;)
+ * public interface IMyInterface
+ * {
+ *     &#064;BusSignal(name = &quot;MySignal&quot;)
+ *     public void EmitMySignal(String str)
+ *         throws BusException;
+ * }
+ * 
+ * </pre>
+ * 
+ * </blockquote>
+ * <p>
+ * either of the following may be used to annotate a signal handler:
+ * <p>
+ * <blockquote>
+ * 
+ * <pre>
+ * &#064;BusSignalHandler(iface = &quot;org.sample.MyInterface&quot;, signal = &quot;MySignal&quot;)
+ * public void handleSignal(String str)
+ * {
+ * }
+ * 
+ * &#064;BusSignalHandler(iface = &quot;org.myapp.IMyInterface&quot;, signal = &quot;EmitMySignal&quot;)
+ * public void handleSignal(String str)
+ * {
+ * }
+ * </pre>
+ * 
+ * </blockquote>
+ * <p>
+ * The first example may be used succesfully when {@code IMyInterface} is known to the BusAttachment via a previous call
+ * to {@link org.alljoyn.bus.BusAttachment#registerBusObject(BusObject, String)} or
+ * {@link org.alljoyn.bus.BusAttachment#getProxyBusObject(String, String, int, Class[])}.
+ * <p>
+ * The second example may be used succesfully when {@code IMyInterface} is unknown to the BusAttachment.
+ * <p>
+ * The rule and source properties are mutually exclusive: first the rule property is checked. If it is non-empty, The
+ * signal handler will be registered with this rule. If it is empty, the rule will be registered with the source
+ * property.
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
@@ -59,7 +81,7 @@ import java.lang.annotation.Target;
 public @interface BusSignalHandler {
 
     /**
-     * The inferface name of the signal.
+     * The interface name of the signal.
      */
     String iface();
 
@@ -73,4 +95,9 @@ public @interface BusSignalHandler {
      * paths.
      */
     String source() default "";
+
+    /**
+     * The rule that will be used as a filter to invoke this signal handler
+     */
+    String rule() default "";
 }
