@@ -103,7 +103,7 @@ class SessionTest : public testing::Test {
 
         for (size_t i = 0; i < sizeof(busses) / sizeof(busses[0]); ++i) {
             InterfaceDescription*intf = CreateTestInterface(*busses[i]);
-            ASSERT_NE(nullptr, intf);
+            ASSERT_NE((InterfaceDescription*)0, intf);
             testobjects[busses[i]] = new BusObjectTestBusObject(*busses[i], OBJECT_PATH);
             status = busses[i]->RegisterBusObject(*testobjects[busses[i]]);
             ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -598,7 +598,7 @@ static bool SessionJoinLeaveTest(BusAttachment& busHost, BusAttachment& busJoine
         }
         signalledListener = &sessionListenerHost;
         notSignalledListener = &sessionListenerJoiner;
-        sessionLostReason = SessionListener::SessionLostReason::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION;
+        sessionLostReason = SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION;
 
     } else {
         EXPECT_EQ(ER_OK, busHost.LeaveHostedSession(sessionId));
@@ -611,7 +611,7 @@ static bool SessionJoinLeaveTest(BusAttachment& busHost, BusAttachment& busJoine
 
         signalledListener = &sessionListenerJoiner;
         notSignalledListener = &sessionListenerHost;
-        sessionLostReason = SessionListener::SessionLostReason::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION;
+        sessionLostReason = SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION;
     }
 
     qcc::Sleep(100); /* not sure if this is needed */
@@ -620,7 +620,7 @@ static bool SessionJoinLeaveTest(BusAttachment& busHost, BusAttachment& busJoine
     EXPECT_EQ(sessionLostReason, signalledListener->lastReason);
     EXPECT_EQ((SessionId)0, notSignalledListener->lastSessionId);
     EXPECT_EQ(0, notSignalledListener->sessionLostCalled);
-    EXPECT_EQ(SessionListener::SessionLostReason::ALLJOYN_SESSIONLOST_INVALID, notSignalledListener->lastReason);
+    EXPECT_EQ(SessionListener::ALLJOYN_SESSIONLOST_INVALID, notSignalledListener->lastReason);
     if (multipoint) {
         EXPECT_EQ(sessionId, sessionListenerHost.sessionMemberAddedSessionId);
         EXPECT_EQ(1, sessionListenerHost.sessionMemberAddedCalled);
