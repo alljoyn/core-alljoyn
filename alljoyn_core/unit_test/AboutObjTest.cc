@@ -479,6 +479,39 @@ TEST_F(AboutObjTest, AnnounceTheAboutObj) {
     clientBus.Join();
 }
 
+// The About interface is used for this test however this could be done with
+// any valid interface description.
+TEST_F(AboutObjTest, SetAnnounceFlag) {
+    QStatus status = ER_FAIL;
+    AboutObj aboutObj(*serviceBus);
+
+    const InterfaceDescription* aboutIface = serviceBus->GetInterface("org.alljoyn.About");
+    ASSERT_TRUE(aboutIface != NULL);
+
+
+    size_t numIfaces = aboutObj.GetAnnouncedInterfaceNames();
+    ASSERT_EQ(static_cast<size_t>(0), numIfaces);
+
+    status = aboutObj.SetAnnounceFlag(aboutIface);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    numIfaces = aboutObj.GetAnnouncedInterfaceNames();
+    ASSERT_EQ(static_cast<size_t>(1), numIfaces);
+    const char* interfaces[1];
+
+    aboutObj.GetAnnouncedInterfaceNames(interfaces, numIfaces);
+    EXPECT_STREQ("org.alljoyn.About", interfaces[0]);
+
+    const InterfaceDescription* dbusIface = serviceBus->GetInterface(org::freedesktop::DBus::InterfaceName);
+    status = aboutObj.SetAnnounceFlag(dbusIface);
+    EXPECT_EQ(ER_BUS_OBJECT_NO_SUCH_INTERFACE, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = aboutObj.SetAnnounceFlag(aboutIface, BusObject::UNANNOUNCED);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    numIfaces = aboutObj.GetAnnouncedInterfaceNames();
+    ASSERT_EQ(static_cast<size_t>(0), numIfaces);
+}
 
 TEST_F(AboutObjTest, CancelAnnouncement) {
     QStatus status = ER_FAIL;

@@ -941,4 +941,14 @@ size_t BusObject::GetAnnouncedInterfaceNames(const char** interfaces, size_t num
     return retCount;
 }
 
+QStatus BusObject::SetAnnounceFlag(const InterfaceDescription* iface, AnnounceFlag isAnnounced) {
+    for (size_t i = 0; i < components->ifaces.size(); ++i) {
+        if (iface == components->ifaces[i].first) {
+            components->ifaces[i].second = isAnnounced;
+            return ER_OK;
+        }
+    }
+    return ER_BUS_OBJECT_NO_SUCH_INTERFACE;
+}
+
 }
