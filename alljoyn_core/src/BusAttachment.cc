@@ -815,7 +815,7 @@ QStatus BusAttachment::RegisterSignalHandler(MessageReceiver* receiver,
 
     qcc::String matchRule("type='signal',member='");
     matchRule += String(member->name) + "',interface='" + member->iface->GetName() + "'";
-    if (srcPath) {
+    if (srcPath && (srcPath[0] != '\0')) {
         matchRule += String(",path='") + srcPath + "'";
     }
     return RegisterSignalHandlerWithRule(receiver, signalHandler, member, matchRule.c_str());
@@ -832,7 +832,7 @@ QStatus BusAttachment::UnregisterSignalHandler(MessageReceiver* receiver,
 
     qcc::String matchRule("type='signal',member='");
     matchRule += String(member->name) + "',interface='" + member->iface->GetName() + "'";
-    if (srcPath) {
+    if (srcPath && (srcPath[0] != '\0')) {
         matchRule += String(",path='") + srcPath + "'";
     }
     return UnregisterSignalHandlerWithRule(receiver, signalHandler, member, matchRule.c_str());
