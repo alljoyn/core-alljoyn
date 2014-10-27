@@ -802,8 +802,7 @@ QStatus _LocalEndpoint::UnregisterSignalHandler(MessageReceiver* receiver,
     if (!matchRule) {
         return ER_BAD_ARG_4;
     }
-    signalTable.Remove(receiver, signalHandler, member, matchRule);
-    return ER_OK;
+    return signalTable.Remove(receiver, signalHandler, member, matchRule);
 }
 
 QStatus _LocalEndpoint::UnregisterAllHandlers(MessageReceiver* receiver)

@@ -52,11 +52,12 @@ void SignalTable::Add(MessageReceiver* receiver,
     lock.Unlock(MUTEX_CONTEXT);
 }
 
-void SignalTable::Remove(MessageReceiver* receiver,
-                         MessageReceiver::SignalHandler handler,
-                         const InterfaceDescription::Member* member,
-                         const char* rule)
+QStatus SignalTable::Remove(MessageReceiver* receiver,
+                            MessageReceiver::SignalHandler handler,
+                            const InterfaceDescription::Member* member,
+                            const char* rule)
 {
+    QStatus status = ER_FAIL;
     Key key(member->iface->GetName(), member->name.c_str());
     iterator iter;
     pair<iterator, iterator> range;
@@ -70,12 +71,14 @@ void SignalTable::Remove(MessageReceiver* receiver,
             (iter->second.handler == handler) &&
             (iter->second.rule == matchRule)) {
             hashTable.erase(iter);
+            status = ER_OK;
             break;
         } else {
             ++iter;
         }
     }
     lock.Unlock(MUTEX_CONTEXT);
+    return status;
 }
 
 void SignalTable::RemoveAll(MessageReceiver* receiver)
