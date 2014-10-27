@@ -5092,7 +5092,9 @@ void* IpNameServiceImpl::Run(void* arg)
         //
         vector<qcc::Event*> checkEvents, signaledEvents;
         checkEvents.push_back(&stopEvent);
-        checkEvents.push_back(&timerEvent);
+        if (IsPeriodicMaintenanceTimerNeeded()) {
+            checkEvents.push_back(&timerEvent);
+        }
         checkEvents.push_back(&m_wakeEvent);
         checkEvents.push_back(&networkEvent);
         if (m_unicastEvent) {
@@ -6636,6 +6638,21 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
     }
     m_mutex.Unlock();
+}
+
+// Note: this function assumes the mutex is locked
+bool IpNameServiceImpl::IsPeriodicMaintenanceTimerNeeded(void) const
+{
+    //
+    // The timer is needed when we're in the midst of handling a terminal message,
+    // we have an outbound message queued, or we're counting down to send the
+    // queued advertisement.
+    //
+    if (m_terminal || (m_outbound.size() > 0) || (m_timer > 0)) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 void IpNameServiceImpl::DoPeriodicMaintenance(void)

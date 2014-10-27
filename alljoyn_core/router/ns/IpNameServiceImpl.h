@@ -1338,6 +1338,12 @@ class IpNameServiceImpl : public qcc::Thread {
 
     /**
      * @internal
+     * @brief Check to see if the periodic timer needs to be scheduled.
+     */
+    bool IsPeriodicMaintenanceTimerNeeded(void) const;
+
+    /**
+     * @internal
      * @brief Perform periodic protocol maintenance.  Called once per second
      * from the main listener loop.
      */
