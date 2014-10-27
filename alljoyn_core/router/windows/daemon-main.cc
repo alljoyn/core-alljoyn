@@ -45,10 +45,6 @@
 #include "TCPTransport.h"
 #include "UDPTransport.h"
 #include "DaemonTransport.h"
-//disable bluetooth on windows.
-#if !defined(QCC_OS_GROUP_WINDOWS)
-#include "BTTransport.h"
-#endif
 
 #include "Bus.h"
 #include "BusController.h"
@@ -110,7 +106,6 @@ class OptParse {
         argc(argc),
         argv(argv),
         useInternalConfig(true),
-        noBT(false),
         printAddress(false),
         verbosity(LOG_WARNING)
     { configFile.clear(); }
@@ -121,7 +116,6 @@ class OptParse {
     bool UseInternalConfig() const { return useInternalConfig; }
     bool PrintAddress() const { return printAddress; }
     int GetVerbosity() const { return verbosity; }
-    bool GetNoBT() const { return noBT; }
 
   private:
     int argc;
@@ -129,7 +123,6 @@ class OptParse {
 
     qcc::String configFile;
     bool useInternalConfig;
-    bool noBT;
     bool printAddress;
     int verbosity;
 
@@ -144,8 +137,6 @@ void OptParse::PrintUsage()
            "        Use the specified configuration file.\n\n"
            "    --print-address\n"
            "        Print the socket address to STDOUT\n\n"
-           "    --no-bt\n"
-           "        Disable the Bluetooth transport (override config file setting).\n\n"
            "    --verbosity=LEVEL\n"
            "        Set the logging level to LEVEL.\n"
            "	LEVEL can take one of the following values\n"
@@ -200,8 +191,6 @@ OptParse::ParseResultCode OptParse::ParseResult()
             useInternalConfig = false;
         } else if (arg.compare("--print-address") == 0) {
             printAddress = true;
-        } else if (arg.compare("--no-bt") == 0) {
-            noBT = true;
         } else if (arg.substr(0, sizeof("--verbosity") - 1).compare("--verbosity") == 0) {
             verbosity = StringToI32(arg.substr(sizeof("--verbosity")));
         } else if ((arg.compare("--help") == 0) || (arg.compare("-h") == 0)) {
@@ -258,8 +247,6 @@ int daemon(OptParse& opts)
             // No special processing needed for UDP.
         } else if (addrStr.compare(0, sizeof("localhost:") - 1, "localhost:") == 0) {
             // No special processing needed for localhost.
-        } else if (addrStr.compare("bluetooth:") == 0) {
-            skip = opts.GetNoBT();
         } else {
             Log(LOG_ERR, "Unsupported listen address: %s (ignoring)\n", it->c_str());
             continue;
@@ -292,11 +279,6 @@ int daemon(OptParse& opts)
     cntr.Add(new TransportFactory<DaemonTransport>(DaemonTransport::TransportName, false));
     cntr.Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
     cntr.Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
-#if !defined(QCC_OS_GROUP_WINDOWS)
-    if (!opts.GetNoBT()) {
-        cntr.Add(new TransportFactory<BTTransport>("bluetooth", false));
-    }
-#endif
     Bus ajBus("alljoyn-daemon", cntr, listenSpecs.c_str());
     /*
      * Check we have at least one authentication mechanism registered.

@@ -16,12 +16,14 @@
 
 package org.allseen.sample.eventaction;
 
+import org.allseen.sample.event.tester.BusHandler;
+import org.allseen.sample.event.tester.EventDescription;
 import org.allseen.sample.eventaction.R;
 
 import java.util.Vector;
 
-import android.support.v4.app.Fragment;
 import android.app.AlertDialog;
+import android.app.Fragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
@@ -41,9 +43,9 @@ public class EventsFragment extends Fragment {
 	private ExpandableListView eventDevices;
 	private static ExpandableAdapter eventAdapter;
 	
-	private static Description mSelectedEvent;
+	private static EventDescription mSelectedEvent;
 	
-	public Description getSelectedEvent() { return mSelectedEvent; }
+	public EventDescription getSelectedEvent() { return mSelectedEvent; }
 	
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstance) {
@@ -99,6 +101,10 @@ public class EventsFragment extends Fragment {
 			for(; loc < data.size(); loc++) {
 				Device d = data.get(loc);
 				if(d.getSessionName().compareTo(info.getSessionName()) == 0) {
+					data.remove(loc);
+					checkboxDirtyFlags.remove(loc);
+					break;
+				} else if(d.getFriendlyName().compareTo(info.getFriendlyName()) == 0){
 					data.remove(loc);
 					checkboxDirtyFlags.remove(loc);
 					break;
@@ -241,14 +247,10 @@ public class EventsFragment extends Fragment {
 				convertView = inflater.inflate(R.layout.event_item, null);
 			}
 			
+			Device info = (Device) getGroup(groupPosition);
 			TextView tv = (TextView)convertView.findViewById(R.id.device_name);
-			try{
-				Device info = (Device) getGroup(groupPosition);
-				tv.setText(info.getFriendlyName());
-			} catch(Exception e) {
-				tv.setText("Error, restart application");
-			}		
-
+			tv.setText(info.getFriendlyName());
+			
 			return convertView;
 		}
 

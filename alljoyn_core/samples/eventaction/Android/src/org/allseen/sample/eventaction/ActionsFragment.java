@@ -16,12 +16,14 @@
 
 package org.allseen.sample.eventaction;
 
+import org.allseen.sample.event.tester.ActionDescription;
+import org.allseen.sample.event.tester.Description;
 import org.allseen.sample.eventaction.R;
 
 import java.util.Vector;
 
-import android.support.v4.app.Fragment;
 import android.app.AlertDialog;
+import android.app.Fragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
@@ -40,9 +42,9 @@ public class ActionsFragment extends Fragment {
 	private ExpandableListView actionDevices;
 	private static ExpandableAdapter actionAdapter;
 	
-	static private Vector<Description> mSelectedActions = new Vector<Description>();
+	static private Vector<ActionDescription> mSelectedActions = new Vector<ActionDescription>();
 	
-	public Vector<Description> getSelectedActions() { return mSelectedActions; }
+	public Vector<ActionDescription> getSelectedActions() { return mSelectedActions; }
 	public void clearSelectedActions() { mSelectedActions.clear(); }
 	
 	@Override
@@ -98,6 +100,10 @@ public class ActionsFragment extends Fragment {
 			for(; loc < data.size(); loc++) {
 				Device d = data.get(loc);
 				if(d.getSessionName().compareTo(info.getSessionName()) == 0) {
+					data.remove(loc);
+					checkboxDirtyFlags.remove(loc);
+					break;
+				} else if(d.getFriendlyName().compareTo(info.getFriendlyName()) == 0){
 					data.remove(loc);
 					checkboxDirtyFlags.remove(loc);
 					break;
@@ -225,15 +231,9 @@ public class ActionsFragment extends Fragment {
 			if(convertView == null) {
 				convertView = inflater.inflate(R.layout.action_item, null);
 			}
-			
+			Device info = (Device) getGroup(groupPosition);
 			TextView tv = (TextView)convertView.findViewById(R.id.device_name);
-			try{
-				Device info = (Device) getGroup(groupPosition);
-				tv.setText(info.getFriendlyName());
-			} catch(Exception e) {
-				tv.setText("Error, restart application");
-			}		
-
+			tv.setText(info.getFriendlyName());
 			return convertView;
 		}
 

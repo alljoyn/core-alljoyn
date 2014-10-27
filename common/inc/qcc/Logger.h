@@ -143,7 +143,10 @@ class LoggerSetting {
                                            bool useSyslog = LOGGERSETTING_DEFAULT_SYSLOG,
                                            FILE* file = LOGGERSETTING_DEFAULT_FILE);
 
-
+    /**
+     * Delete the static singleton object. Must be the last call.
+     */
+    static void Cleanup(void);
 
   private:
     static LoggerSetting* singleton;    ///< Static pointer to most recent instance.

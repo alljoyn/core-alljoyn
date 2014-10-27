@@ -584,14 +584,13 @@ public class BusAttachment {
      *
      * The debug level can be set for individual subsystems or for "ALL"
      * subsystems.  Common subsystems are "ALLJOYN" for core AllJoyn code,
-     * "ALLJOYN_OBJ" for the sessions management code, "ALLJOYN_BT" for the
-     * Bluetooth subsystem, "ALLJOYN_BTC" for the Bluetooth topology manager,
-     * and "ALLJOYN_NS" for the TCP name services.  Debug levels for specific
-     * subsystems override the setting for "ALL" subsystems.  For example if
-     * "ALL" is set to 7, but "ALLJOYN_OBJ" is set to 1, then detailed debug
-     * output will be generated for all subsystems expcept for "ALLJOYN_OBJ"
-     * which will only generate high level debug output.  "ALL" defaults to 0
-     * which is off, or no debug output.
+     * "ALLJOYN_OBJ" for the sessions management code and "ALLJOYN_NS" for the
+     * TCP name services.  Debug levels for specific subsystems override the
+     * setting for "ALL" subsystems.  For example if "ALL" is set to 7, but
+     * "ALLJOYN_OBJ" is set to 1, then detailed debug output will be generated
+     * for all subsystems expcept for "ALLJOYN_OBJ" which will only generate
+     * high level debug output.  "ALL" defaults to 0 which is off, or no debug
+     * output.
      *
      * The debug output levels are actually a bit field that controls what
      * output is generated.  Those bit fields are described below:

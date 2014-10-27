@@ -2893,8 +2893,12 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
 
     QCC_DbgPrintf(("AllJoynObj::Advertise(%s) returned %d (status=%s)", advNameStr.c_str(), replyCode, QCC_StatusText(status)));
 
-    /* Add advertisement to local nameMap so local discoverers can see this advertisement */
-    if ((replyCode == ALLJOYN_ADVERTISENAME_REPLY_SUCCESS) && (transports & TRANSPORT_LOCAL)) {
+    /* Add advertisement to local nameMap so local discoverers can see this advertisement
+       even if the advertisement is not enabled on the local transport. Note however that
+       discoverers might see this advertisement as being advertised on the local transport
+       even though it is not enabled on the local transport.
+     */
+    if (replyCode == ALLJOYN_ADVERTISENAME_REPLY_SUCCESS) {
         vector<String> names;
         names.push_back(advNameStr);
         FoundNames("local:", bus.GetGlobalGUIDString(), TRANSPORT_LOCAL, &names, numeric_limits<uint32_t>::max());

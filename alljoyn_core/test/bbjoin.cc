@@ -191,7 +191,6 @@ static void usage(void)
     printf("   -r           = Reject incoming joinSession attempts\n");
     printf("   -s           = Stress test. Continous leave/join\n");
     printf("   -f <prefix>  = FindAdvertisedName prefix\n");
-    printf("   -b           = Advertise/Discover over Bluetooth\n");
     printf("   -t           = Advertise/Discover over TCP\n");
     printf("   -u           = Advertise/Discover over UDP\n");
     printf("   -w           = Advertise/Discover over Wi-Fi Direct\n");
@@ -244,8 +243,6 @@ int main(int argc, char** argv)
             g_stressTest = true;
         } else if (0 == strcmp("-f", argv[i])) {
             g_findPrefix = argv[++i];
-        } else if (0 == strcmp("-b", argv[i])) {
-            transportOpts |= TRANSPORT_BLUETOOTH;
         } else if (0 == strcmp("-t", argv[i])) {
             transportOpts = TRANSPORT_TCP;
         } else if (0 == strcmp("-u", argv[i])) {

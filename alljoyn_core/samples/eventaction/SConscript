@@ -26,8 +26,7 @@ if enaEnv['OS'] == 'android':
     enaEnv.Install(clientDistDir + '/Android', 'Android/.classpath')
     enaEnv.Install(clientDistDir + '/Android', 'Android/.project')
     enaEnv.Install(clientDistDir + '/Android', 'Android/project.properties')
-    enaEnv.Install(clientDistDir + '/Android/jni', enaEnv.Dir('SimpleRulesEngine').srcnode())
-    enaEnv.Install(clientDistDir + '/Android/jni', enaEnv.Glob('Android/jni/*'))
+    enaEnv.Install(clientDistDir + '/Android', enaEnv.Dir('Android/jni').srcnode())
     enaEnv.Install(clientDistDir + '/Android', enaEnv.Dir('Android/src').srcnode())
     enaEnv.Install(clientDistDir + '/Android', enaEnv.Dir('Android/res').srcnode())
 

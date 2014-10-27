@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -39,10 +39,6 @@ using namespace qcc;
 
 namespace ajn {
 
-#ifndef BLUETOOTH_UID
-#define BLUETOOTH_UID 1002
-#endif
-
 static PermissionDB permissionDB;
 
 /**
@@ -70,10 +66,9 @@ PermissionDB& PermissionDB::GetDB()
 bool PermissionDB::VerifyPermsOnAndroid(const uint32_t userId, const std::set<qcc::String>& permsReq)
 {
     bool pass = true;
-    /* 1. Root user with id 0 can do anything.
-     * 2. The bluetooth capable daemon may run as Android user Id 1002.
+    /* Root user with id 0 can do anything.
      */
-    if (userId == 0 || userId == BLUETOOTH_UID) {
+    if (userId == 0) {
         return true;
     }
     permissionDbLock.Lock(MUTEX_CONTEXT);
@@ -110,21 +105,6 @@ bool PermissionDB::VerifyPermsOnAndroid(const uint32_t userId, const std::set<qc
     return pass;
 }
 
-bool PermissionDB::IsBluetoothAllowed(uint32_t uid)
-{
-    QCC_DbgTrace(("PermissionDB::IsBluetoothAllowed(uid = %u)", uid));
-    bool allowed = true;
-
-    uint32_t userId = UniqueUserID(uid);
-    std::set<qcc::String> permsReq;
-    // For Android app, permissions "android.permission.BLUETOOTH" and "android.permission.BLUETOOTH_ADMIN" are required for usage of bluetooth
-    permsReq.insert("android.permission.BLUETOOTH");
-    permsReq.insert("android.permission.BLUETOOTH_ADMIN");
-    allowed = VerifyPermsOnAndroid(userId, permsReq);
-
-    return allowed;
-}
-
 bool PermissionDB::IsWifiAllowed(uint32_t uid)
 {
     QCC_DbgTrace(("PermissionDB::IsWifiAllowed(uid = %u)", uid));
@@ -150,8 +130,8 @@ QStatus PermissionDB::AddAliasUnixUser(uint32_t origUID, uint32_t aliasUID)
 {
     QCC_DbgTrace(("PermissionDB::AddAliasUnixUser(origUID = %d -> aliasUID = %d)", origUID, aliasUID));
     QStatus status = ER_OK;
-    /* It is not allowed to use user id 0 (root user), BLUETOOTH_UID (bluetooth user) as alias*/
-    if (aliasUID == 0 || aliasUID == BLUETOOTH_UID) {
+    /* It is not allowed to use user id 0 (root user) as alias */
+    if (aliasUID == 0) {
         status = ER_FAIL;
     }
 
