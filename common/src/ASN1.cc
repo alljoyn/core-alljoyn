@@ -236,14 +236,18 @@ QStatus Crypto_ASN1::EncodeV(const char*& syntax, qcc::String& asn, va_list* arg
                 val = va_arg(argp, qcc::String*);
                 size_t bitLen = va_arg(argp, size_t);
                 if (bitLen <= (val->size() * 8)) {
+                    //Calculate the unused bits. bitLen 3 results in 5 unused bits
                     size_t unusedBits = (8 - bitLen) & 7;
+                    //assure we have enough space to store the bits, if bitLen is not a multitude of 8.
                     size_t len = (bitLen + 7) / 8;
                     asn.push_back((char)ASN_BITS);
+                    //we write 1 extra byte to indicate how many unused bits there are in the string
                     EncodeLen(asn, len + 1);
                     asn.push_back((char)unusedBits);
                     asn.append((char*)val->data(), len - 1);
-                    // In DER encoding unused bits must be zero
-                    asn.push_back((char)(*val)[len - 1] & (0xFF >> unusedBits));
+                    // In DER encoding unused bits must be zero (and are at the end of the string)
+                    // 3 unused bits should result in 10101xxx where is xxx is zeroed out.
+                    asn.push_back((char)(*val)[len - 1] & (0xFF << unusedBits));
                 } else {
                     status = ER_FAIL;
                 }
