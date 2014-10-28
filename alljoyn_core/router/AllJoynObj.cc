@@ -3169,7 +3169,6 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
                 } else {
                     replyCode = ALLJOYN_ADVERTISENAME_REPLY_TRANSPORT_NOT_AVAILABLE;
                 }
-                stateLock.Lock(MUTEX_CONTEXT);
                 ReleaseLocks();
 
                 /* Advertise on transports specified */
@@ -3187,7 +3186,6 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
                         }
                     }
                 }
-                stateLock.Unlock(MUTEX_CONTEXT);
 
             } else {
                 ReleaseLocks();
@@ -3297,7 +3295,6 @@ QStatus AllJoynObj::ProcCancelAdvertise(const qcc::String& sender, const qcc::St
         cancelMask &= origMask;
     }
 
-    stateLock.Lock(MUTEX_CONTEXT);
     ReleaseLocks();
 
     /* Cancel transport advertisement if no other refs exist */
@@ -3315,7 +3312,6 @@ QStatus AllJoynObj::ProcCancelAdvertise(const qcc::String& sender, const qcc::St
     } else if (!foundAdvert) {
         status = ER_FAIL;
     }
-    stateLock.Unlock(MUTEX_CONTEXT);
 
     /* Remove advertisement from local nameMap so local discoverers are notified of advertisement going away */
     if ((status == ER_OK) && (transports & TRANSPORT_LOCAL)) {
@@ -3482,7 +3478,6 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
     /* Find out the transports on which discovery needs to be enabled for this name.
      * i.e. The ones that are set in the requested transport mask and not set in the origMask.
      */
-    stateLock.Lock(MUTEX_CONTEXT);
     ReleaseLocks();
     enableMask = transports & ~origMask;
     if (ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS == replyCode) {
@@ -3497,7 +3492,6 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
             }
         }
     }
-    stateLock.Unlock(MUTEX_CONTEXT);
 
     /* Reply to request */
     MsgArg replyArg("u", replyCode);
@@ -3656,7 +3650,6 @@ QStatus AllJoynObj::ProcCancelFindAdvertisement(const qcc::String& sender, const
         cancelMask &= origMask;
     }
 
-    stateLock.Lock(MUTEX_CONTEXT);
     ReleaseLocks();
 
     /* Disable discovery if certain transports are no longer referenced for the name prefix */
@@ -3671,7 +3664,6 @@ QStatus AllJoynObj::ProcCancelFindAdvertisement(const qcc::String& sender, const
     } else if (!foundFinder) {
         status = ER_FAIL;
     }
-    stateLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 

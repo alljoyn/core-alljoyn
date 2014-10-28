@@ -776,7 +776,8 @@ QStatus ProxyBusObject::MethodCall(const InterfaceDescription::Member& method,
      * if we're being called from the LocalEndpoint (callback) thread, do not allow
      * blocking calls unless BusAttachment::EnableConcurrentCallbacks has been called first
      */
-    if (localEndpoint->IsReentrantCall()) {
+    bool isDaemon = bus->GetInternal().GetRouter().IsDaemon();
+    if (localEndpoint->IsReentrantCall() && !isDaemon) {
         status = ER_BUS_BLOCKING_CALL_NOT_ALLOWED;
         goto MethodCallExit;
     }

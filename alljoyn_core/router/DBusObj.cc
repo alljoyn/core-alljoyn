@@ -337,7 +337,6 @@ void DBusObj::AddMatch(const InterfaceDescription::Member* member, Message& msg)
     assert(nameArg && (nameArg->typeId == ALLJOYN_STRING));
 
     Rule rule(nameArg->v_string.str, &status);
-    router.LockNameTable();
     if (ER_OK == status) {
         BusEndpoint ep = router.FindEndpoint(msg->GetSender());
         if (ep->IsValid()) {
@@ -346,7 +345,6 @@ void DBusObj::AddMatch(const InterfaceDescription::Member* member, Message& msg)
             status = ER_BUS_NO_ENDPOINT;
         }
     }
-    router.UnlockNameTable();
     if (ER_OK == status) {
         status = MethodReply(msg, (const MsgArg*) NULL, 0);
     } else {
