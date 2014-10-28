@@ -82,6 +82,42 @@ struct ECCPublicKeyOldEncoding {
 struct ECCPublicKey {
     uint8_t x[ECC_COORDINATE_SZ];
     uint8_t y[ECC_COORDINATE_SZ];
+
+    bool operator==(const ECCPublicKey& k) const
+    {
+        int n = memcmp(x, k.x, ECC_COORDINATE_SZ);
+        return (n == 0) && (0 == memcmp(y, k.y, ECC_COORDINATE_SZ));
+    }
+
+    bool operator!=(const ECCPublicKey& k) const
+    {
+        int n = memcmp(x, k.x, ECC_COORDINATE_SZ);
+        return (n != 0) || (0 == memcmp(y, k.y, ECC_COORDINATE_SZ));
+    }
+
+    bool operator<(const ECCPublicKey& k) const
+    {
+        int n = memcmp(x, k.x, ECC_COORDINATE_SZ);
+        if (n == 0) {
+            n = memcmp(y, k.y, ECC_COORDINATE_SZ);
+        }
+        if (n < 0) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    const qcc::String ToString() const
+    {
+        qcc::String s = "x=[";
+        s.append(BytesToHexString(x, ECC_COORDINATE_SZ));
+        s.append("], y=[");
+        s.append(BytesToHexString(y, ECC_COORDINATE_SZ));
+        s.append("]");
+        return s;
+    }
+
 };
 
 typedef ECCPublicKeyOldEncoding ECCSecretOldEncoding;
