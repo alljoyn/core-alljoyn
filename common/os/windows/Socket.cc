@@ -52,25 +52,6 @@ namespace qcc {
 const SocketFd INVALID_SOCKET_FD = INVALID_SOCKET;
 const int MAX_LISTEN_CONNECTIONS = SOMAXCONN;
 
-/*
- * Called before any operation that might be called before winsock has been started.
- */
-void WinsockCheck()
-{
-    static bool initialized = false;
-    if (!initialized) {
-        QCC_DbgHLPrintf(("Initialized winsock"));
-        WSADATA wsaData;
-        WORD version = MAKEWORD(2, 0);
-        int error = WSAStartup(version, &wsaData);
-        if (error) {
-            QCC_LogError(ER_OS_ERROR, ("WSAStartup failed with error: %d", error));
-        } else {
-            initialized = true;
-        }
-    }
-}
-
 qcc::String StrError()
 {
     WinsockCheck();
