@@ -129,7 +129,7 @@ class Participant : public SessionPortListener, public SessionListener {
     virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
     virtual void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
         hostedSessionMap[SessionMapKey(joiner, (sessionPort == mpport))] = id;
-        bus.SetSessionListener(id, this);
+        bus.SetHostedSessionListener(id, this);
     }
     virtual void SessionLost(SessionId sessionId, SessionLostReason reason) {
         /* we only set a session listener on the hosted sessions */
@@ -188,7 +188,7 @@ class Participant : public SessionPortListener, public SessionListener {
         SessionMap::key_type key = SessionMapKey(part.name, multipoint);
         SessionId id = joinedSessionMap[key];
         joinedSessionMap.erase(key);
-        ASSERT_EQ(ER_OK, bus.LeaveSession(id));
+        ASSERT_EQ(ER_OK, bus.LeaveJoinedSession(id));
 
         /* make sure both sides know the session is lost before we continue */
         int count = 0;
@@ -554,6 +554,74 @@ TEST_F(SignalTest, MultiSession) {
     /* verify B did not received the signal */
     recvA.verify_norecv();
     recvB.verify_norecv();
+}
+
+TEST_F(SignalTest, SelfJoinPointToPoint) {
+    Participant A("A.A");
+    Participant B("B.B");
+    SignalReceiver recvA, recvB;
+    recvA.Register(&A);
+    recvB.Register(&B);
+
+    B.JoinSession(A, false);
+    A.JoinSession(A, false);
+
+    A.busobj->SendSignal("A.A", 0, 0);
+    wait_for_signal();
+    recvA.verify_recv();
+    recvB.verify_norecv();
+
+    B.busobj->SendSignal(NULL, B.GetJoinedSessionId(A, false), 0);
+    wait_for_signal();
+    recvA.verify_recv();
+    recvB.verify_norecv();
+
+    A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
+    wait_for_signal();
+    recvA.verify_recv();
+    recvB.verify_recv();
+
+    B.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
+    wait_for_signal();
+    recvA.verify_norecv();
+    recvB.verify_norecv();
+
+    B.LeaveSession(A, false);
+    A.LeaveSession(A, false);
+}
+
+TEST_F(SignalTest, SelfJoinMultiPoint) {
+    Participant A("A.A");
+    Participant B("B.B");
+    SignalReceiver recvA, recvB;
+    recvA.Register(&A);
+    recvB.Register(&B);
+
+    B.JoinSession(A, true);
+    A.JoinSession(A, true);
+
+    A.busobj->SendSignal("A.A", 0, 0);
+    wait_for_signal();
+    recvA.verify_recv();
+    recvB.verify_norecv();
+
+    B.busobj->SendSignal(NULL, B.GetJoinedSessionId(A, true), 0);
+    wait_for_signal();
+    recvA.verify_recv();
+    recvB.verify_norecv();
+
+    A.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
+    wait_for_signal();
+    recvA.verify_recv();
+    recvB.verify_recv();
+
+    B.busobj->SendSignal(NULL, SESSION_ID_ALL_HOSTED, 0);
+    wait_for_signal();
+    recvA.verify_norecv();
+    recvB.verify_norecv();
+
+    B.LeaveSession(A, true);
+    A.LeaveSession(A, true);
 }
 
 TEST_F(SignalTest, Paths) {

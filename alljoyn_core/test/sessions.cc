@@ -225,7 +225,7 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
         s_lock.Lock(MUTEX_CONTEXT);
         map<SessionPort, SessionPortInfo>::iterator it = s_sessionPortMap.find(sessionPort);
         if (it != s_sessionPortMap.end()) {
-            printf("Accepting join request on %u from %s\n", sessionPort, joiner);
+            printf("Accepting join request on %u from %s (multipoint=%d)\n", sessionPort, joiner, opts.isMultipoint);
             ret = true;
         } else {
             printf("Rejecting join attempt to unregistered port %u from %s\n", sessionPort, joiner);
@@ -239,7 +239,7 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
         s_lock.Lock(MUTEX_CONTEXT);
         map<SessionPort, SessionPortInfo>::iterator it = s_sessionPortMap.find(sessionPort);
         if (it != s_sessionPortMap.end()) {
-            s_bus->SetSessionListener(id, this);
+            s_bus->SetHostedSessionListener(id, this);
             map<SessionId, SessionInfo>::iterator sit = s_sessionMap.find(id);
             if (sit == s_sessionMap.end()) {
                 SessionInfo sessionInfo(id, it->second);
@@ -613,6 +613,41 @@ static void DoLeave(SessionId id)
         printf("Invalid session id %u specified in LeaveSession\n", id);
     }
 }
+
+static void DoLeaveHosted(SessionId id)
+{
+    /* Validate session id */
+    map<SessionId, SessionInfo>::const_iterator it = s_sessionMap.find(id);
+    if (it != s_sessionMap.end()) {
+        QStatus status = s_bus->LeaveHostedSession(id);
+        if (status != ER_OK) {
+            printf("SessionLost(%u) failed with %s\n", id, QCC_StatusText(status));
+        }
+        s_lock.Lock(MUTEX_CONTEXT);
+        s_sessionMap.erase(id);
+        s_lock.Unlock(MUTEX_CONTEXT);
+    } else {
+        printf("Invalid session id %u specified in LeaveSession\n", id);
+    }
+}
+
+static void DoLeaveJoined(SessionId id)
+{
+    /* Validate session id */
+    map<SessionId, SessionInfo>::const_iterator it = s_sessionMap.find(id);
+    if (it != s_sessionMap.end()) {
+        QStatus status = s_bus->LeaveJoinedSession(id);
+        if (status != ER_OK) {
+            printf("SessionLost(%u) failed with %s\n", id, QCC_StatusText(status));
+        }
+        s_lock.Lock(MUTEX_CONTEXT);
+        s_sessionMap.erase(id);
+        s_lock.Unlock(MUTEX_CONTEXT);
+    } else {
+        printf("Invalid session id %u specified in LeaveSession\n", id);
+    }
+}
+
 static void DoRemoveMember(SessionId id, String memberName)
 {
     /* Validate session id */
@@ -999,6 +1034,20 @@ int main(int argc, char** argv)
                 continue;
             }
             DoLeave(id);
+        } else if (cmd == "leavehosted") {
+            SessionId id = NextTokAsSessionId(line);
+            if (id == 0) {
+                printf("Usage: leavehosted <sessionId>\n");
+                continue;
+            }
+            DoLeaveHosted(id);
+        } else if (cmd == "leavejoiner") {
+            SessionId id = NextTokAsSessionId(line);
+            if (id == 0) {
+                printf("Usage: leavejoiner <sessionId>\n");
+                continue;
+            }
+            DoLeaveJoined(id);
         } else if (cmd == "removemember") {
             SessionId id = NextTokAsSessionId(line);
             String name = NextTok(line);
@@ -1134,6 +1183,8 @@ int main(int argc, char** argv)
             printf("asyncjoin <name> <port> [isMultipoint] [traffic] [proximity] [transports] - Join a session asynchronously\n");
             printf("removemember <sessionId> <memberName>                         - Remove a session member\n");
             printf("leave <sessionId>                                             - Leave a session\n");
+            printf("leavehosted <sessionId>                                       - Leave a session as host\n");
+            printf("leavejoiner <sessionId>                                       - Leave a session as joiner\n");
             printf("chat <sessionId> <msg>                                        - Send a message over a given session\n");
             printf("cchat <sessionId> <msg>                                       - Send a message over a given session with compression\n");
             printf("schat <msg>                                                   - Send a sessionless message\n");
