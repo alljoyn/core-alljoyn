@@ -64,7 +64,8 @@ class AboutListener {
      *  - Manufacturer
      *  - ModelNumber
      *
-     * The DeviceName is optional an may not be included in the aboutDataArg
+     * The DeviceName is optional an may not be included in the aboutDataArg.
+     * DeviceName is required for System Apps.
      *
      * DeviceName, AppName, Manufacturer are localizable values. The localization
      * for these values in the aboutDataArg will always be for the language specified

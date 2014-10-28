@@ -40,7 +40,7 @@ class AboutIconObj : public BusObject {
     /**
      * Construct an About Icon BusObject.
      *
-     * @param[in] bus  BusAttachment instance associated with this AboutService
+     * @param[in] bus  BusAttachment instance associated with this BusObject
      * @param[in] icon instance of an AboutIcon which holds the icon image
      */
     AboutIconObj(BusAttachment& bus, AboutIcon& icon);
@@ -53,21 +53,24 @@ class AboutIconObj : public BusObject {
 
   private:
     /**
-     * Handles  GetUrl method
+     * Handles  GetUrl method call for the org.alljoyn.Icon interface
+     *
      * @param[in]  member
      * @param[in]  msg reference of AllJoyn Message
      */
     void GetUrl(const InterfaceDescription::Member* member, Message& msg);
 
     /**
-     *  Handles  GetContent method
+     * Handles  GetContent method call for the org.alljoyn.Icon interface
+     *
      * @param[in]  member
      * @param[in]  msg reference of AllJoyn Message
      */
     void GetContent(const InterfaceDescription::Member* member, Message& msg);
 
     /**
-     * Handles the GetPropery request
+     * Handles the GetPropery request for the org.alljoyn.Icon interface
+     *
      * @param[in]  ifcName  interface name
      * @param[in]  propName the name of the properly
      * @param[in]  val reference of MsgArg out parameter.
@@ -76,7 +79,7 @@ class AboutIconObj : public BusObject {
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
 
     /**
-     *  pointer to BusAttachment
+     * pointer to BusAttachment
      */
     BusAttachment* m_busAttachment;
 
