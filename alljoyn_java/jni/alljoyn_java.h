@@ -230,6 +230,22 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_leaveSession
 
 /*
  * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    leaveHostedSession
+ * Signature: (I)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_leaveHostedSession
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    leaveJoinedSession
+ * Signature: (I)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_leaveJoinedSession
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
  * Method:    removeSessionMember
  * Signature: (I;Ljava/lang/String)Lorg/alljoyn/bus/Status;
  */
@@ -280,11 +296,27 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_OnJoinSessionListener_destroy
 /*
  * Class:     org_alljoyn_bus_BusAttachment
  * Method:    setSessionListener
- * Signature: (I)Lorg/alljoyn/bus/Status;
+ * Signature: (ILorg/alljoyn/bus/SessionListener;)Lorg/alljoyn/bus/Status;
  */
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setSessionListener
   (JNIEnv *, jobject,
    jint, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    setJoinedSessionListener
+ * Signature: (ILorg/alljoyn/bus/SessionListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setJoinedSessionListener
+  (JNIEnv *, jobject, jint, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    setHostedSessionListener
+ * Signature: (ILorg/alljoyn/bus/SessionListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setHostedSessionListener
+  (JNIEnv *, jobject, jint, jobject);
 
 /*
  * Class:     org_alljoyn_bus_BusAttachment
