@@ -580,6 +580,7 @@ public:
     }
 
     static_cast<AJNSignalHandlerImpl*>(delegate.handle)->RegisterSignalHandler(*self.busAttachment);    
+    static_cast<AJNSignalHandlerImpl*>(delegate.handle)->setFilterRule(nil);    
 }
 
 - (void)unregisterSignalHandler:(id<AJNSignalHandler>)delegate
@@ -592,10 +593,35 @@ public:
     }        
 }
 
+- (void)registerSignalHandler:(id<AJNSignalHandler>)delegate withRule:(NSString*)matchRule
+{
+    @synchronized(self.signalHandlers) {
+        [self.signalHandlers addObject:delegate];
+    }
+
+    static_cast<AJNSignalHandlerImpl*>(delegate.handle)->RegisterSignalHandlerWithRule(*self.busAttachment, [matchRule UTF8String]);    
+    static_cast<AJNSignalHandlerImpl*>(delegate.handle)->setFilterRule(matchRule);    
+}
+
+- (void)unregisterSignalHandler:(id<AJNSignalHandler>)delegate withRule:(NSString*)matchRule
+{
+    @synchronized(self.signalHandlers) {
+        if ([self.signalHandlers containsObject:delegate]) {
+            static_cast<AJNSignalHandlerImpl*>(delegate.handle)->UnregisterSignalHandlerWithRule(*self.busAttachment, [matchRule UTF8String]);
+            [self.signalHandlers removeObject:delegate];            
+        }
+    }        
+}
+
 - (void)unregisterAllHandlersForReceiver:(id<AJNHandle>)receiver
 {
     if ([receiver conformsToProtocol:@protocol(AJNSignalHandler)]) {
-        [self unregisterSignalHandler:(id<AJNSignalHandler>)receiver];
+	NSString* matchRule = static_cast<AJNSignalHandlerImpl*>(delegate.handle)->getFilterRule();
+	if (matchRule == nil) {
+	    [self unregisterSignalHandler:(id<AJNSignalHandler>)receiver];
+	} else {
+	    [self unregisterSignalHandler:(id<AJNSignalHandler>)receiver withRule:matchRule];
+	}
     }
 
     if ([receiver conformsToProtocol:@protocol(AJNBusListener)]) {

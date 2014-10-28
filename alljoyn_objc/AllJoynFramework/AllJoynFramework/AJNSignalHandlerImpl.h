@@ -22,6 +22,13 @@
 #import "AJNSignalHandler.h"
 
 class AJNSignalHandlerImpl : public ajn::MessageReceiver {
+  private:
+    /**
+     * Filter rule associated with this signal handler.
+     * We need to keep track of this to facilitate proper removal of the signal handler from core.
+     */
+    NSString* m_matchRule;
+
 
   protected:
 
@@ -53,6 +60,18 @@ class AJNSignalHandlerImpl : public ajn::MessageReceiver {
     virtual void UnregisterSignalHandler(ajn::BusAttachment& bus) = 0;
 
     /**
+     * Pure virtual registration function. Implement in derived classes to handle
+     * registration of signal handlers.
+     */
+    virtual void RegisterSignalHandlerWithRule(ajn::BusAttachment& bus, const char* matchRule) = 0;
+
+    /**
+     * Pure virtual unregistration function. Implement in derived classes to
+     * handle unregistration of signal handlers.
+     */
+    virtual void UnregisterSignalHandlerWithRule(ajn::BusAttachment& bus, const char* matchRule) = 0;
+
+    /**
      * Virtual destructor for derivable class.
      */
     virtual ~AJNSignalHandlerImpl();
@@ -70,6 +89,20 @@ class AJNSignalHandlerImpl : public ajn::MessageReceiver {
      * @param delegate    The Objective-C delegate called to handle the above event methods.
      */
     void setDelegate(id<AJNSignalHandler> delegate);
+
+    /**
+     * Accessor for filter rule.
+     *
+     * @return matchRule   The filter rule associated with this signal handler.
+     */
+    NSString* getFilterRule();
+
+    /**
+     * Mutator for filter rule.
+     *
+     * @param matchRule   The filter rule associated with this signal handler.
+     */
+    void setFilterRule(NSString* matchRule);
 };
 
 inline id<AJNSignalHandler> AJNSignalHandlerImpl::getDelegate()
@@ -80,4 +113,14 @@ inline id<AJNSignalHandler> AJNSignalHandlerImpl::getDelegate()
 inline void AJNSignalHandlerImpl::setDelegate(id<AJNSignalHandler> delegate)
 {
     m_delegate = delegate;
+}
+
+inline NSString* AJNSignalHandlerImpl::getFilterRule()
+{
+    return m_matchRule;
+}
+
+inline void AJNSignalHandlerImpl::setFilterRule(NSString* matchRule)
+{
+    m_matchRule = matchRule;
 }

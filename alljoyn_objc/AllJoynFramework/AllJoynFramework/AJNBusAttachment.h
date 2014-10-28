@@ -388,6 +388,22 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
 - (void)unregisterSignalHandler:(id<AJNSignalHandler>)handler;
 
 /**
+ * Register a signal handler with a filter rule.
+ *
+ * @param handler       The delegate receiving the signal.
+ * @param matchRule     The filter rule.
+ */
+- (void)registerSignalHandler:(id<AJNSignalHandler>)handler withRule:(NSString*)matchRule;
+
+/**
+ * Unregister a signal handler with a filter rule.
+ *
+ * @param handler       The delegate receiving the signal.
+ * @param matchRule     The filter rule.
+ */
+- (void)unregisterSignalHandler:(id<AJNSignalHandler>)handler withRule:(NSString*)matchRule;
+
+/**
  * Unregister all signal and reply handlers for the specified message receiver. This function is
  * intended to be called from within the destructor of a MessageReceiver class instance. It
  * prevents any pending signals or replies from accessing the MessageReceiver after the message

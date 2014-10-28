@@ -284,6 +284,10 @@ public:
     
     virtual void UnregisterSignalHandler(ajn::BusAttachment &#38;bus);
     
+    virtual void RegisterSignalHandlerWithRule(ajn::BusAttachment &#38;bus, const char* matchRule);
+    
+    virtual void UnregisterSignalHandlerWithRule(ajn::BusAttachment &#38;bus, const char* matchRule);
+    
     /**
      * Virtual destructor for derivable class.
      */
@@ -322,6 +326,22 @@ void <xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/>Si
     <xsl:apply-templates select="signal" mode="cpp-signal-handler-impl-unregister"/>
 }
 
+void <xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/>SignalHandlerImpl::RegisterSignalHandlerWithRule(ajn::BusAttachment &#38;bus, const char* matchRule)
+{
+    QStatus status;
+    status = ER_OK;
+    const ajn::InterfaceDescription* interface = NULL;
+    <xsl:apply-templates select="signal" mode="cpp-signal-handler-impl-register-with-rule"/>
+}
+
+void <xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/>SignalHandlerImpl::UnregisterSignalHandlerWithRule(ajn::BusAttachment &#38;bus, const char* matchRule)
+{
+    QStatus status;
+    status = ER_OK;
+    const ajn::InterfaceDescription* interface = NULL;
+    <xsl:apply-templates select="signal" mode="cpp-signal-handler-impl-unregister-with-rule"/>
+}
+
 <xsl:apply-templates match="./signal" mode="cpp-signal-handler-impl-definition"/>
 
 @implementation AJNBusAttachment(<xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/>)
@@ -331,6 +351,13 @@ void <xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/>Si
     <xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/>SignalHandlerImpl *signalHandlerImpl = new <xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/>SignalHandlerImpl(signalHandler);
     signalHandler.handle = signalHandlerImpl;
     [self registerSignalHandler:signalHandler];
+}
+
+- (void)register<xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/>SignalHandler:(id&lt;<xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/>SignalHandler&gt;)signalHandler withRule:(NSString*)matchRule
+{
+    <xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/>SignalHandlerImpl *signalHandlerImpl = new <xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/>SignalHandlerImpl(signalHandler);
+    signalHandler.handle = signalHandlerImpl;
+    [self registerSignalHandler:signalHandler withRule:matchRule];
 }
 
 @end
@@ -386,6 +413,56 @@ void <xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/>Si
         static_cast&lt;MessageReceiver::SignalHandler&gt;(&#38;<xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/>SignalHandlerImpl::<xsl:value-of select="@name"/>SignalHandler),
         <xsl:value-of select="@name"/>SignalMember,
         NULL);
+        
+    if (status != ER_OK) {
+        NSLog(@"ERROR:<xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/>SignalHandlerImpl::UnregisterSignalHandler failed. %@", [AJNStatus descriptionForStatusCode:status] );
+    }
+    ////////////////////////////////////////////////////////////////////////////    
+</xsl:template>
+
+<xsl:template match="signal" mode="cpp-signal-handler-impl-register-with-rule">
+    ////////////////////////////////////////////////////////////////////////////
+    // Register signal handler for signal <xsl:value-of select="@name"/>
+    //
+    interface = bus.GetInterface("<xsl:value-of select="../@name"/>");
+
+    if (interface) {
+        // Store the <xsl:value-of select="@name"/> signal member away so it can be quickly looked up
+        <xsl:value-of select="@name"/>SignalMember = interface->GetMember("<xsl:value-of select="@name"/>");
+        assert(<xsl:value-of select="@name"/>SignalMember);
+
+        
+        // Register signal handler for <xsl:value-of select="@name"/>
+        status =  bus.RegisterSignalHandlerWithRule(this,
+            static_cast&lt;MessageReceiver::SignalHandler&gt;(&#38;<xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/>SignalHandlerImpl::<xsl:value-of select="@name"/>SignalHandler),
+            <xsl:value-of select="@name"/>SignalMember,
+            matchRule);
+            
+        if (status != ER_OK) {
+            NSLog(@"ERROR: Interface <xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/>SignalHandlerImpl::RegisterSignalHandler failed. %@", [AJNStatus descriptionForStatusCode:status] );
+        }
+    }
+    else {
+        NSLog(@"ERROR: <xsl:value-of select="../@name"/> not found.");
+    }
+    ////////////////////////////////////////////////////////////////////////////    
+</xsl:template>
+
+<xsl:template match="signal" mode="cpp-signal-handler-impl-unregister-with-rule">
+    ////////////////////////////////////////////////////////////////////////////
+    // Unregister signal handler for signal <xsl:value-of select="@name"/>
+    //
+    interface = bus.GetInterface("<xsl:value-of select="../@name"/>");
+    
+    // Store the <xsl:value-of select="@name"/> signal member away so it can be quickly looked up
+    <xsl:value-of select="@name"/>SignalMember = interface->GetMember("<xsl:value-of select="@name"/>");
+    assert(<xsl:value-of select="@name"/>SignalMember);
+    
+    // Unregister signal handler for <xsl:value-of select="@name"/>
+    status =  bus.UnregisterSignalHandlerWithRule(this,
+        static_cast&lt;MessageReceiver::SignalHandler&gt;(&#38;<xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/>SignalHandlerImpl::<xsl:value-of select="@name"/>SignalHandler),
+        <xsl:value-of select="@name"/>SignalMember,
+        matchRule);
         
     if (status != ER_OK) {
         NSLog(@"ERROR:<xsl:value-of select="../annotation[@name='org.alljoyn.lang.objc']/@value"/>SignalHandlerImpl::UnregisterSignalHandler failed. %@", [AJNStatus descriptionForStatusCode:status] );
