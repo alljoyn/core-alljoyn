@@ -476,6 +476,17 @@ QStatus AJ_CALL alljoyn_busattachment_registersignalhandler(alljoyn_busattachmen
                                                                srcPath);
 }
 
+QStatus AJ_CALL alljoyn_busattachment_registersignalhandlerwithrule(alljoyn_busattachment bus,
+                                                                    alljoyn_messagereceiver_signalhandler_ptr signal_handler,
+                                                                    const alljoyn_interfacedescription_member member,
+                                                                    const char* matchRule)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusAttachmentC*)bus)->RegisterSignalHandlerWithRuleC(signal_handler,
+                                                                       member,
+                                                                       matchRule);
+}
+
 QStatus AJ_CALL alljoyn_busattachment_unregistersignalhandler(alljoyn_busattachment bus,
                                                               alljoyn_messagereceiver_signalhandler_ptr signal_handler,
                                                               const alljoyn_interfacedescription_member member,
@@ -485,6 +496,17 @@ QStatus AJ_CALL alljoyn_busattachment_unregistersignalhandler(alljoyn_busattachm
     return ((ajn::BusAttachmentC*)bus)->UnregisterSignalHandlerC(signal_handler,
                                                                  member,
                                                                  srcPath);
+}
+
+QStatus AJ_CALL alljoyn_busattachment_unregistersignalhandlerwithrule(alljoyn_busattachment bus,
+                                                                      alljoyn_messagereceiver_signalhandler_ptr signal_handler,
+                                                                      const alljoyn_interfacedescription_member member,
+                                                                      const char* matchRule)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusAttachmentC*)bus)->UnregisterSignalHandlerWithRuleC(signal_handler,
+                                                                         member,
+                                                                         matchRule);
 }
 
 QStatus AJ_CALL alljoyn_busattachment_unregisterallhandlers(alljoyn_busattachment bus)

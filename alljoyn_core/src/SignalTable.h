@@ -150,11 +150,13 @@ class SignalTable {
      * @param func        Signal handler to remove
      * @param member      Signal member.
      * @param rule        Match rule
+     *
+     * @return ER_FAIL if the entry to remove did not exist, ER_OK otherwise
      */
-    void Remove(MessageReceiver* receiver,
-                MessageReceiver::SignalHandler func,
-                const InterfaceDescription::Member* member,
-                const char* rule);
+    QStatus Remove(MessageReceiver* receiver,
+                   MessageReceiver::SignalHandler func,
+                   const InterfaceDescription::Member* member,
+                   const char* rule);
 
     /**
      * Remove all entries from the signal hash table for the specified receiver.

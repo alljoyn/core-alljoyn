@@ -851,6 +851,27 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_registersignalhandler(alljoy
                                                                           const char* srcPath);
 
 /**
+ * Register a signal handler with a filter rule.
+ *
+ * Signals are forwarded to the signalHandler if sender, interface, member and rule
+ * qualifiers are ALL met.
+ *
+ * @param bus             The alljoyn_busattachment to register the signal handler with
+ * @param signal_handler  The signal handler method.
+ * @param member          The interface/member of the signal.
+ * @param matchRule       The filter rule.
+ * @return #ER_OK
+ */
+/*
+ * may need to create another registersignalhandler that takes a MessageReceiver
+ * type.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_registersignalhandlerwithrule(alljoyn_busattachment bus,
+                                                                                  alljoyn_messagereceiver_signalhandler_ptr signal_handler,
+                                                                                  const alljoyn_interfacedescription_member member,
+                                                                                  const char* matchRule);
+
+/**
  * Unregister a signal handler.
  *
  * Remove the signal handler that was registered with the given parameters.
@@ -865,6 +886,22 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unregistersignalhandler(allj
                                                                             alljoyn_messagereceiver_signalhandler_ptr signal_handler,
                                                                             const alljoyn_interfacedescription_member member,
                                                                             const char* srcPath);
+
+/**
+ * Unregister a signal handler with a filter rule.
+ *
+ * Remove the signal handler that was registered with the given parameters.
+ *
+ * @param bus             The alljoyn_busattachment to unregister the signal handler with
+ * @param signal_handler  The signal handler method.
+ * @param member          The interface/member of the signal.
+ * @param matchRule       The filter rule.
+ * @return #ER_OK
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unregistersignalhandlerwithrule(alljoyn_busattachment bus,
+                                                                                    alljoyn_messagereceiver_signalhandler_ptr signal_handler,
+                                                                                    const alljoyn_interfacedescription_member member,
+                                                                                    const char* matchRule);
 
 /**
  * Unregister all signal and reply handlers for the specified alljoyn_busattachment.
