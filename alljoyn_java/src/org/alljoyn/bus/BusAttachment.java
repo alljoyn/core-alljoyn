@@ -388,7 +388,7 @@ public class BusAttachment {
      *
      * @return
      * <ul>
-     * <li>OK iff method call to local router response was was successful.</li>
+     * <li>OK if method call to local router response was was successful.</li>
      * <li>BUS_NOT_CONNECTED if a connection has not been made with a local bus.</li>
      * <li>Other error status codes indicating a failure.</li>
      * </ul>
@@ -404,10 +404,9 @@ public class BusAttachment {
 
     /**
      * Leave an existing session.
-     *
-     * This method is a shortcut/helper that issues an
-     * org.alljoyn.Bus.LeaveSession method call to the local router
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveSession method call to the local router
      * and interprets the response.
+     * This method cannot be called on self-joined session.
      *
      * @param sessionId     Session id.
      *
@@ -415,10 +414,45 @@ public class BusAttachment {
      * <ul>
      * <li>OK if router response was left.</li>
      * <li>BUS_NOT_CONNECTED if a connection has not been made with a local bus</li>
+     * <li>ER_BUS_NO_SESSION if session did not exist.</li>
      * <li>other error status codes indicating failures.</li>
      * </ul>
      */
     public native Status leaveSession(int sessionId);
+
+    /**
+     * Leave an existing session as host. This function will fail if you were not the host. This method is a
+     * shortcut/helper that issues an org.alljoyn.Bus.LeaveHostedSession method call to the local router and interprets
+     * the response.
+     *
+     * @param  sessionId     Session id.
+     *
+     * @return
+     * <ul>
+     * <li>ER_OK if router response was received and the leave operation was successfully completed.</li>
+     * <li>ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.</li>
+     * <li>ER_BUS_NO_SESSION if session did not exist or if not host of the session.</li>
+     * <li>Other error status codes indicating a failure.</li>
+     * </ul>
+     */
+    public native Status leaveHostedSession(int sessionId);
+
+    /**
+     * Leave an existing session as joiner. This function will fail if you were not the joiner.
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveJoinedSession method call to the local router
+     * and interprets the response.
+     *
+     * @param sessionId Session id.
+     *
+     * @return
+     * <ul>
+     * <li>ER_OK if router response was received and the leave operation was successfully completed.</li>
+     * <li>ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.</li>
+     * <li>ER_BUS_NO_SESSION if session did not exist or if not joiner of the session.</li>
+     * <li>Other error status codes indicating a failure.</li>
+     * </ul>
+     */
+    public native Status leaveJoinedSession(int sessionId);
 
     /**
      * Remove a session member from an existing multipoint session.
@@ -440,16 +474,42 @@ public class BusAttachment {
     public native Status removeSessionMember(int sessionId, String sessionMemberName);
 
     /**
-     * Set the SessionListener for an existing session.
+     * Set the SessionListener for an existing session on both host and joiner side.
      *
      * Calling this method will override (replace) the listener set by a previoius call to
-     * setSessionListener or a listener specified in joinSession.
+     * setSessionListener, SetHostedSessionListener, SetJoinedSessionListener or a listener specified in joinSession.
      *
      * @param sessionId    The session id of an existing session.
      * @param listener     The SessionListener to associate with the session. May be null to clear previous listener.
      * @return  ER_OK if successful.
+     * @return  ER_BUS_NO_SESSION if session did not exist
      */
     public native Status setSessionListener(int sessionId, SessionListener listener);
+
+    /**
+     * Set the SessionListener for an existing sessionId on the joiner side.
+     *
+     * Calling this method will override the listener set by a previous call to SetSessionListener, SetJoinedSessionListener
+     * or any listener specified in JoinSession.
+     *
+     * @param sessionId    The session id of an existing session.
+     * @param listener     The SessionListener to associate with the session. May be NULL to clear previous listener.
+     * @return  ER_OK if successful.
+     * @return  ER_BUS_NO_SESSION if session did not exist or if not joiner side of the session
+     */
+    public native Status setJoinedSessionListener(int sessionId, SessionListener listener);
+
+    /**
+     * Set the SessionListener for an existing sessionId on the host side.
+     *
+     * Calling this method will override the listener set by a previous call to SetSessionListener or SetHostedSessionListener.
+     *
+     * @param sessionId    The session id of an existing session.
+     * @param listener     The SessionListener to associate with the session. May be NULL to clear previous listener.
+     * @return  ER_OK if successful.
+     * @return  ER_BUS_NO_SESSION if session did not exist or if not host side of the session
+     */
+    public native Status setHostedSessionListener(int sessionId, SessionListener listener);
 
     /**
      * Get the file descriptor for a raw (non-message based) session.
