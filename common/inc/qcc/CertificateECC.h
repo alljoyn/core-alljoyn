@@ -26,6 +26,7 @@
 #include <qcc/Certificate.h>
 #include <qcc/Crypto.h>
 #include <qcc/CryptoECC.h>
+#include <qcc/KeyInfoECC.h>
 
 namespace qcc {
 
@@ -578,18 +579,32 @@ class CertificateX509 : public Certificate {
     CertificateX509(CertificateType type) : Certificate(3) { this->type = type; };
 
     /**
-     * Import a PEM encoded certificate.
+     * Decode a PEM encoded certificate.
      * @param pem the encoded certificate.
      * @return ER_OK for success; otherwise, error code.
      */
-    QStatus ImportCertificatePEM(const qcc::String& pem);
+    QStatus DecodeCertificatePEM(const qcc::String& pem);
 
     /**
      * Export the certificate as PEM encoded.
-     * @param pem the encoded certificate.
+     * @param[out] pem the encoded certificate.
      * @return ER_OK for success; otherwise, error code.
      */
-    QStatus ExportCertificatePEM(qcc::String& pem);
+    QStatus EncodeCertificatePEM(qcc::String& pem);
+
+    /**
+     * Decode a DER encoded certificate.
+     * @param der the encoded certificate.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus DecodeCertificateDER(const qcc::String& der);
+
+    /**
+     * Export the certificate as DER encoded.
+     * @param[out] der the encoded certificate.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus EncodeCertificateDER(qcc::String& der);
 
     /**
      * Sign the certificate.
@@ -611,6 +626,13 @@ class CertificateX509 : public Certificate {
      */
     QStatus Verify(const ECCPublicKey* key);
 
+    /**
+     * Verify the certificate against the trust anchor.
+     * @param trustAnchor the trust anchor
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus Verify(const KeyInfoNISTP256& trustAnchor);
+
     void SetSerial(const qcc::String& serial)
     {
         this->serial = serial;
@@ -619,27 +641,27 @@ class CertificateX509 : public Certificate {
     {
         return serial;
     }
-    void SetIssuer(const qcc::String& guid)
+    void SetIssuer(const qcc::GUID128& guid)
     {
         this->issuer = guid;
     }
-    const qcc::String& GetIssuer() const
+    const qcc::GUID128& GetIssuer() const
     {
         return issuer;
     }
-    void SetSubject(const qcc::String& guid)
+    void SetSubject(const qcc::GUID128& guid)
     {
         this->subject = guid;
     }
-    const qcc::String& GetSubject() const
+    const qcc::GUID128& GetSubject() const
     {
         return subject;
     }
-    void SetGuild(const qcc::String& guid)
+    void SetGuild(const qcc::GUID128& guid)
     {
         this->guild = guid;
     }
-    const qcc::String& GetGuild() const
+    const qcc::GUID128& GetGuild() const
     {
         return guild;
     }
@@ -684,14 +706,12 @@ class CertificateX509 : public Certificate {
      */
     CertificateX509(const CertificateX509& other);
 
-    QStatus DecodeCertificateDER(const qcc::String& der);
-    QStatus EncodeCertificateDER(qcc::String& der);
     QStatus DecodeCertificateTBS();
     QStatus EncodeCertificateTBS();
-    QStatus DecodeCertificateName(const qcc::String& dn, qcc::String& cn);
-    QStatus EncodeCertificateName(qcc::String& dn, qcc::String& cn);
-    QStatus DecodeCertificateName(const qcc::String& dn, qcc::String& cn, qcc::String& ou);
-    QStatus EncodeCertificateName(qcc::String& dn, qcc::String& cn, qcc::String& ou);
+    QStatus DecodeCertificateName(const qcc::String& dn, qcc::GUID128& cn);
+    QStatus EncodeCertificateName(qcc::String& dn, qcc::GUID128& cn);
+    QStatus DecodeCertificateName(const qcc::String& dn, qcc::GUID128& cn, qcc::GUID128& ou);
+    QStatus EncodeCertificateName(qcc::String& dn, qcc::GUID128& cn, qcc::GUID128& ou);
     QStatus DecodeCertificatePub(const qcc::String& pub);
     QStatus EncodeCertificatePub(qcc::String& pub);
     QStatus DecodeCertificateExt(const qcc::String& ext);
@@ -702,9 +722,9 @@ class CertificateX509 : public Certificate {
     CertificateType type;
     qcc::String tbs;
     qcc::String serial;
-    qcc::String issuer;
-    qcc::String subject;
-    qcc::String guild;
+    qcc::GUID128 issuer;
+    qcc::GUID128 subject;
+    qcc::GUID128 guild;
     ValidPeriod validity;
     ECCPublicKey publickey;
     ECCSignature signature;

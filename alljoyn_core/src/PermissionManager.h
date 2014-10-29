@@ -38,7 +38,7 @@ class PermissionManager {
      * Constructor
      *
      */
-    PermissionManager() : policy(NULL), guilds(NULL), numOfGuilds(0), permissionMgmtObj(NULL)
+    PermissionManager() : policy(NULL), permissionMgmtObj(NULL)
     {
     }
 
@@ -48,7 +48,6 @@ class PermissionManager {
     virtual ~PermissionManager()
     {
         delete policy;
-        delete [] guilds;
     }
 
     void SetPolicy(PermissionPolicy* policy)
@@ -63,32 +62,12 @@ class PermissionManager {
     }
 
     /**
-     * Set the list of guilds.
-     * @param guilds the list of guilds must be new'd by the caller.  It will be deleted by this object.
-     */
-    void SetGuilds(size_t count, qcc::GUID128* guilds)
-    {
-        delete [] this->guilds;
-        numOfGuilds = count;
-        this->guilds = guilds;
-    }
-
-    size_t GetNumOfGuilds() {
-        return numOfGuilds;
-    }
-
-    const qcc::GUID128* GetGuilds()
-    {
-        return guilds;
-    }
-
-    /**
      * Authorize a message.  Make sure there is a proper permission is setup for this type of message.
      * @param send indicating whether is a send or receive
      * @param peerGuid the peer's GUID
      * @param msg the target message
      * @param peerGuildCount the number of guilds the peer belongs to
-     * @param peerGuilds the list of guild IDs that the peer belongs to
+     * @param peerGuilds the array of guild IDs that the peer belongs to
      * @return
      *  - ER_OK: authorized
      *  - ER_PERM_DENIED: permission denied
@@ -107,8 +86,6 @@ class PermissionManager {
     bool AuthorizePermissionMgmt(bool send, const qcc::GUID128& peerGuid, Message& msg);
 
     PermissionPolicy* policy;
-    qcc::GUID128* guilds;
-    size_t numOfGuilds;
     PermissionMgmtObj* permissionMgmtObj;
 };
 

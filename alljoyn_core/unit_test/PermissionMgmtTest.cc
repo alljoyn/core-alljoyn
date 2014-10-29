@@ -57,84 +57,35 @@ static const char root_prvkey[] = {
     "-----END EC PRIVATE KEY-----"
 };
 
-static const char test_certificate1[] = {
-    "-----BEGIN CERTIFICATE-----\n"
-    "MIIBXjCCAQOgAwIBAgIJAMZdgnwFrNYaMAoGCCqGSM49BAMCMCsxKTAnBgNVBAMT\n"
-    "IDVjMDliMmQ0MjI5OWM4NmNlMzBlN2YwODUxYjhjOTUzMB4XDTE0MTAwMjA0MjU1\n"
-    "OVoXDTE1MTAwMjA0MjU1OVowKzEpMCcGA1UEAxMgNWMwOWIyZDQyMjk5Yzg2Y2Uz\n"
-    "MGU3ZjA4NTFiOGM5NTMwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAATWexbgz5Ti\n"
-    "XmG+diGb4QfG2yFvBL3XNQI1i3vMVJtWTsWYBrgNjKujI6AqTbSL61op7Sbueoy2\n"
-    "atwRkLnxQlbBoxAwDjAMBgNVHRMEBTADAQH/MAoGCCqGSM49BAMCA0kAMEYCIQD6\n"
-    "iT+iiqzfk7bX4XfZRLduZxGL7NYcKXAhGl2c6OE68gIhANa9DhNIkK2pd1p7ilxh\n"
-    "HZ7cMwEFYILns0etDdw/t8VB\n"
-    "-----END CERTIFICATE-----"
-};
-
-static const char test_certificate2[] = {
-    "-----BEGIN CERTIFICATE-----\n"
-    "MIIBszCCAVmgAwIBAgIJALHwSys0KBEJMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsT\n"
-    "IDhjOGE3ODY3YTZkMWU1M2FhOWVlMzE0NjE0YTljYTkzMSkwJwYDVQQDEyA1YzA5\n"
-    "YjJkNDIyOTljODZjZTMwZTdmMDg1MWI4Yzk1MzAeFw0xNDEwMDIwNDI2MjlaFw0x\n"
-    "NTEwMDIwNDI2MjlaMFYxKTAnBgNVBAsTIDhjOGE3ODY3YTZkMWU1M2FhOWVlMzE0\n"
-    "NjE0YTljYTkzMSkwJwYDVQQDEyA1YzA5YjJkNDIyOTljODZjZTMwZTdmMDg1MWI4\n"
-    "Yzk1MzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABNZ7FuDPlOJeYb52IZvhB8bb\n"
-    "IW8Evdc1AjWLe8xUm1ZOxZgGuA2Mq6MjoCpNtIvrWintJu56jLZq3BGQufFCVsGj\n"
-    "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIhAO91mYv/wCoje4Jm\n"
-    "tQYaDx+qBTPiN7JY0wf7VcgCHkPyAiBtYbKifPO0+vizTvfQvZ0LqM646PVEe0fa\n"
-    "Q+jk4t5MKg==\n"
-    "-----END CERTIFICATE-----"
-};
-
 static const char clientPrivateKeyPEM[] = {
     "-----BEGIN PRIVATE KEY-----\n"
-    "CkzgQdvZSOQMmqOnddsw0BRneCNZhioNMyUoJwec9rMAAAAA"
+    "MvoVFhR8flubG1Ej1uGQpfsNhs6qmLBKa0QbgBlcs54="
     "-----END PRIVATE KEY-----"
 };
 static const char clientCertChainType1PEM[] = {
     "-----BEGIN CERTIFICATE-----\n"
-    "AAAAAZ1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n"
-    "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n"
-    "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n"
-    "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQABMa7uTLSqjDggO0t6TAgsxKNt\n"
-    "+Zhu/jc3s242BE0drNFJAiGa/u6AX5qdR+7RFxVuqm251vKPgWjfwN2AesHrAAAA\n"
-    "ANsNwJl8Z1v5jbqo077qdQIT6aM1jc+pKXdgNMk6loqFAAAAAA==\n"
+    "AAAAAfXzT3yYCx8Cv1NlxS0YfD/5Fdtb6nU5D0BOlIXghWkFAAAAAF1nXcm5Uard\n"
+    "2LdbyV3OH9DgDx0ffnbq6/DW+J+tklzGAAAAAAAAAAD18098mAsfAr9TZcUtGHw/\n"
+    "+RXbW+p1OQ9ATpSF4IVpBQAAAABdZ13JuVGq3di3W8ldzh/Q4A8dH3526uvw1vif\n"
+    "rZJcxgAAAAAAAAAAAAAAAAANb9wAAAAAAA1xCAABMa7uTLSqjDggO0t6TAgsxKNt\n"
+    "+Zhu/jc3s242BE0drDjjBTJ9VqY+0GBNpm01umYic0237jSpnCYOyPEPVh8YAAAA\n"
+    "AD9l3W8B6P7s6t83qHhxGIO8FlQti1VC87ArvJEnd3bJAAAAAA==\n"
     "-----END CERTIFICATE-----"
 };
-static const char clientCertChainType2PEM[] = {
-    "-----BEGIN CERTIFICATE-----\n"
-    "AAAAAp1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n"
-    "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n"
-    "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n"
-    "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQCJ9dkuY0Z6jjx+a8azIQh4UF0h\n"
-    "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOeMM4sUtoXPArUA+TNahfOS9Bbf\n"
-    "0Hh08SvDJSDgM2OetQAAAAAYUr2pw2kb90fWblBWVKnrddtrI5Zs8BYx/EodpMrS\n"
-    "twAAAAA=\n"
-    "-----END CERTIFICATE-----"
-};
+
 static const char servicePrivateKeyPEM[] = {
     "-----BEGIN PRIVATE KEY-----\n"
-    "tV/tGPp7kI0pUohc+opH1LBxzk51pZVM/RVKXHGFjAcAAAAA\n"
+    "61AE2gWlxyGrfQfoBy62z4sHAT7X0k0BNLIOObQJaDo="
     "-----END PRIVATE KEY-----"
 };
 static const char serviceCertChainType1PEM[] = {
     "-----BEGIN CERTIFICATE-----\n"
-    "AAAAAfUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n"
-    "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n"
-    "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n"
-    "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3AABMa7uTLSqjDggO0t6TAgsxKNt\n"
-    "+Zhu/jc3s242BE0drPcL4K+FOVJf+tlivskovQ3RfzTQ+zLoBH5ZCzG9ua/dAAAA\n"
-    "ACt5bWBzbcaT0mUqwGOVosbMcU7SmhtE7vWNn/ECvpYFAAAAAA==\n"
-    "-----END CERTIFICATE-----"
-};
-static const char serviceCertChainType2PEM[] = {
-    "-----BEGIN CERTIFICATE-----\n"
-    "AAAAAvUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n"
-    "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n"
-    "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n"
-    "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3ABjeWi1/GbBcdnK0yJvL4X/UF0h\n"
-    "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOc+WvKloM7m5NFJNSd3qFFGUhfj\n"
-    "xx/0CCRJlk/jeIWmzQAAAAB8bexqa95eHEKTqdc8+qKFKggZZXlpaj9af/MFocIP\n"
-    "NQAAAAA=\n"
+    "AAAAAbhUKIuCFdnnilH7OvIpbwhlYnOFlldH7qp/NlK13rhKAAAAANTOoKGkOnu+\n"
+    "E+2dDIIDMBAB3I+Im5WI7Cb9VH9VZyTiAAAAAAAAAABgVo+tVLvVu5NA38Ei9md0\n"
+    "Rjh/KHUU2eS7/g2RTwVsbwAAAABtQDwamvvoG4OIin2WoDwiPFnx5ahhwJJx4ml4\n"
+    "jpxQfAAAAAAAAAAAAAAAAAANPsAAAAAAAA0/7AABMa7uTLSqjDggO0t6TAgsxKNt\n"
+    "+Zhu/jc3s242BE0drFgLLKoGCRPa9WW1cHCZ7MyEemf05UpVQg6qKK4eIZqwAAAA\n"
+    "AMoJZukYYdtix9+Yq+Q+9asEW/cGEs4ixsEHhqNycFAXAAAAAA==\n"
     "-----END CERTIFICATE-----"
 };
 
@@ -178,16 +129,13 @@ class ECDHEKeyXListener : public AuthListener {
         } else if (strcmp(authMechanism, KEYX_ECDHE_ECDSA) == 0) {
             const char* privateKeyPEM;
             const char* certChainType1PEM;
-            const char* certChainType2PEM;
 
             if (isService) {
                 privateKeyPEM = servicePrivateKeyPEM;
                 certChainType1PEM = serviceCertChainType1PEM;
-                certChainType2PEM = serviceCertChainType2PEM;
             } else {
                 privateKeyPEM = clientPrivateKeyPEM;
                 certChainType1PEM = clientCertChainType1PEM;
-                certChainType2PEM = clientCertChainType2PEM;
             }
 
             /*
@@ -203,14 +151,8 @@ class ECDHEKeyXListener : public AuthListener {
                     creds.SetPrivateKey(pk);
                 }
                 if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
-                    bool useType1 = false;  /* use to toggle which cert to send */
-                    if (useType1) {
-                        String cert(certChainType1PEM, strlen(certChainType1PEM));
-                        creds.SetCertChain(cert);
-                    } else {
-                        String cert(certChainType2PEM, strlen(certChainType2PEM));
-                        creds.SetCertChain(cert);
-                    }
+                    String cert(certChainType1PEM, strlen(certChainType1PEM));
+                    creds.SetCertChain(cert);
                 }
             }
             creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
@@ -328,11 +270,6 @@ class PermissionMgmtTest : public testing::Test, public BusObject {
             certChain = NULL;
             certChainLen = 0;
         }
-        for (size_t cnt = 0; cnt < certChainLen; cnt++) {
-            printf("Cert chain[%d] issuer %s subject %s\n", (int) cnt,
-                   BytesToHexString((uint8_t*) certChain[cnt]->GetIssuer(), sizeof(ECCPublicKey)).c_str(),
-                   BytesToHexString((uint8_t*) certChain[cnt]->GetSubject(), sizeof(ECCPublicKey)).c_str());
-        }
         return status;
     }
 
@@ -402,6 +339,7 @@ static bool IsPermissionDeniedError(QStatus status, Message& msg)
         if (msg->GetErrorName() == NULL) {
             return false;
         }
+        printf("IsPermissionDeniedError error name %s error description %s\n", msg->GetErrorName(), msg->GetErrorDescription().c_str());
         if (strcmp(msg->GetErrorName(), "org.alljoyn.Bus.ER_PERMISSION_DENIED") == 0) {
             return true;
         }
@@ -625,6 +563,77 @@ QStatus GetPolicy(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolic
     return policy.Import(version, *variant);
 }
 
+QStatus RemovePolicy(BusAttachment& bus, ProxyBusObject& remoteObj)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+
+    status = remoteObj.MethodCall(INTERFACE_NAME, "RemovePolicy", NULL, 0, reply, 5000);
+
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
+
+QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPubKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, qcc::String& der)
+{
+    QStatus status = ER_CRYPTO_ERROR;
+    CertificateX509 x509(CertificateX509::GUID_CERTIFICATE);
+
+    printf("Creating certificate\n");
+    x509.SetSerial(serial);
+    x509.SetIssuer(issuer);
+    x509.SetSubject(subject);
+    x509.SetSubjectPublicKey(subjectPubKey);
+    status = x509.Sign(issuerPrivateKey);
+    if (ER_OK != status) {
+        return status;
+    }
+    printf("Certificate: %s\n", x509.ToString().c_str());
+    return x509.EncodeCertificateDER(der);
+}
+
+QStatus CreateIdentityCert(const qcc::String& serial, const qcc::GUID128& issuerGUID, const ECCPublicKey* issuerPubKey, qcc::String& der)
+{
+    // Setup root and user
+    qcc::GUID128 userGuid;
+    Crypto_ECC userECC;
+
+    ECCPrivateKey trustAnchorPrivateKey;
+    CertECCUtil_DecodePrivateKey(clientPrivateKeyPEM, (uint32_t*) &trustAnchorPrivateKey, sizeof(ECCPrivateKey));
+
+    userECC.GenerateDSAKeyPair();
+    return CreateCert(serial, issuerGUID, &trustAnchorPrivateKey, issuerPubKey, userGuid, userECC.GetDSAPublicKey(), der);
+}
+
+QStatus CreateGuildCert(const String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
+{
+    QStatus status = ER_CRYPTO_ERROR;
+    CertificateX509 x509(CertificateX509::GUILD_CERTIFICATE);
+
+    printf("Creating membership certificate\n");
+    x509.SetSerial(serial);
+    x509.SetIssuer(issuer);
+    x509.SetSubject(subject);
+    x509.SetSubjectPublicKey(subjectPubKey);
+    x509.SetGuild(guild);
+    printf("Signing certificate\n");
+    status = x509.Sign(issuerPrivateKey);
+    printf("Sign certificate return status 0x%x\n", status);
+    if (ER_OK != status) {
+        return status;
+    }
+    printf("Certificate: %s\n", x509.ToString().c_str());
+    status = x509.EncodeCertificateDER(der);
+    printf("x509.ExportDER return status 0x%x\n", status);
+    return status;
+}
+
 QStatus RetrieveDSAPublicKeyFromKeyStore(BusAttachment& bus, ECCPublicKey* publicKey)
 {
     GUID128 guid;
@@ -639,6 +648,86 @@ QStatus RetrieveDSAPublicKeyFromKeyStore(BusAttachment& bus, ECCPublicKey* publi
     return ER_OK;
 }
 
+QStatus LoadCertificateBytes(Message& msg, CertificateX509& cert)
+{
+    uint8_t encoding;
+    uint8_t* encoded;
+    size_t encodedLen;
+    QStatus status = msg->GetArg(0)->Get("(yay)", &encoding, &encodedLen, &encoded);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = ER_NOT_IMPLEMENTED;
+    if (encoding == Certificate::ENCODING_X509_DER) {
+        status = cert.DecodeCertificateDER(String((const char*) encoded, encodedLen));
+    } else if (encoding == Certificate::ENCODING_X509_DER_PEM) {
+        status = cert.DecodeCertificatePEM(String((const char*) encoded, encodedLen));
+    }
+    return status;
+}
+
+QStatus InstallIdentity(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::String& der)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+    MsgArg arg("(yay)", Certificate::ENCODING_X509_DER, der.size(), der.data());
+    printf("InstallIdentity with der length %d\n", (int) der.size());
+
+    status = remoteObj.MethodCall(INTERFACE_NAME, "InstallIdentity", &arg, 1, reply, 5000);
+
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
+
+QStatus GetIdentity(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::String& der)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+
+    status = remoteObj.MethodCall(INTERFACE_NAME, "GetIdentity", NULL, 0, reply, 5000);
+
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+        return status;
+    }
+    CertificateX509 cert(CertificateX509::GUID_CERTIFICATE);
+    status = LoadCertificateBytes(reply, cert);
+    if (ER_OK != status) {
+        printf("GetIdentity LoadCertificateBytes return status 0x%x\n", status);
+        return status;
+    }
+    status = cert.EncodeCertificateDER(der);
+    //return cert.EncodeCertificateDER(der);
+    printf("GetIdentity return status 0x%x\n", status);
+    return status;
+}
+
+QStatus RemoveIdentity(BusAttachment& bus, ProxyBusObject& remoteObj)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+
+    status = remoteObj.MethodCall(INTERFACE_NAME, "RemoveIdentity", NULL, 0, reply, 5000);
+
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
 
 /*
  *  Test PermissionMgmt Claim method
@@ -661,20 +750,16 @@ TEST_F(PermissionMgmtTest, Claim)
     ECCPublicKey claimedPubKey;
     const ECCPublicKey* issuerPubKey = certChain[0]->GetIssuer();
 
-    printf("Claim 1\n");
     status = Claim(clientBus, clientProxyObject, issuerPubKey, &claimedPubKey);
     EXPECT_EQ(ER_OK, status) << "  Claim failed.  Actual Status: " << QCC_StatusText(status);
 
     /* try to claim a second time */
-    printf("Claim 2\n");
     status = Claim(clientBus, clientProxyObject, issuerPubKey, &claimedPubKey);
     EXPECT_EQ(ER_PERMISSION_DENIED, status) << "  Claim is not supposed to succeed.  Actual Status: " << QCC_StatusText(status);
 
     /* sleep a few seconds to see whether the signal is received */
-    printf("Wait for signal\n");
     qcc::Sleep(1000);
     EXPECT_TRUE(GetSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
-    printf("Done claiming\n");
 }
 
 /*
@@ -693,7 +778,6 @@ TEST_F(PermissionMgmtTest, InstallPolicy)
     SetSignalReceived(false);
     PermissionPolicy* policy = GeneratePolicy(localGUID);
     ASSERT_TRUE(policy) << "GeneratePolicy failed.";
-    printf("Installing policy %s\n", policy->ToString().c_str());
     status = InstallPolicy(clientBus, clientProxyObject, *policy);
     EXPECT_EQ(ER_OK, status) << "  InstallPolicy failed.  Actual Status: " << QCC_StatusText(status);
 
@@ -710,5 +794,83 @@ TEST_F(PermissionMgmtTest, InstallPolicy)
     /* sleep a few seconds to see whether the signal is received */
     qcc::Sleep(1000);
     EXPECT_TRUE(GetSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+}
+
+/*
+ *  Test PermissionMgmt RemovePolicy method
+ */
+TEST_F(PermissionMgmtTest, RemovePolicy)
+{
+    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+
+    CredentialAccessor ca(clientBus);
+    qcc::GUID128 localGUID;
+    status = ca.GetGuid(localGUID);
+    EXPECT_EQ(ER_OK, status) << "  ca.GetGuid failed.  Actual Status: " << QCC_StatusText(status);
+
+    printf("ca.GetGuid return guid %s\n", localGUID.ToString().c_str());
+
+    PermissionPolicy* policy = GeneratePolicy(localGUID);
+    ASSERT_TRUE(policy) << "GeneratePolicy failed.";
+    status = InstallPolicy(clientBus, clientProxyObject, *policy);
+    EXPECT_EQ(ER_OK, status) << "  InstallPolicy failed.  Actual Status: " << QCC_StatusText(status);
+
+    /* retrieve back the policy to compare */
+    PermissionPolicy retPolicy;
+    status = GetPolicy(clientBus, clientProxyObject, retPolicy);
+    EXPECT_EQ(ER_OK, status) << "  GetPolicy failed.  Actual Status: " << QCC_StatusText(status);
+
+    /* remove the policy */
+    status = RemovePolicy(clientBus, clientProxyObject);
+    EXPECT_EQ(ER_OK, status) << "  RemovePolicy failed.  Actual Status: " << QCC_StatusText(status);
+
+    /* get policy again.  Expect it to fail */
+    status = GetPolicy(clientBus, clientProxyObject, retPolicy);
+    EXPECT_NE(ER_OK, status) << "  GetPolicy did not fail.  Actual Status: " << QCC_StatusText(status);
+    delete policy;
+    /* sleep a few seconds to see whether the signal is received */
+    qcc::Sleep(1000);
+    EXPECT_TRUE(GetSignalReceived()) << " Fail to receive expected NotifyConfig signal.";
+}
+
+/*
+ *  Test PermissionMgmt InstallIdentity method
+ */
+TEST_F(PermissionMgmtTest, InstallIdentity)
+{
+    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+
+    CredentialAccessor ca(clientBus);
+    qcc::GUID128 localGUID;
+    status = ca.GetGuid(localGUID);
+    EXPECT_EQ(ER_OK, status) << "  ca.GetGuid failed.  Actual Status: " << QCC_StatusText(status);
+    /* retrieve the trust anchor public key */
+    String certChainPEM(clientCertChainType1PEM);
+    QStatus status = ParseCertChainPEM(certChainPEM);
+    EXPECT_EQ(ER_OK, status) << "  ParseCertChainPEM failed.  Actual Status: " << QCC_StatusText(status);
+    const ECCPublicKey* issuerPubKey = certChain[0]->GetIssuer();
+    qcc::String der;
+    status = CreateIdentityCert("1010101", localGUID, issuerPubKey, der);
+    EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
+
+    status = InstallIdentity(clientBus, clientProxyObject, der);
+    EXPECT_EQ(ER_OK, status) << "  InstallIdentity failed.  Actual Status: " << QCC_StatusText(status);
+
+    /* retrieve back the identity cert PEM to compare */
+    qcc::String retIdentity;
+    status = GetIdentity(clientBus, clientProxyObject, retIdentity);
+    EXPECT_FALSE(retIdentity.empty()) << "  GetIdentity failed.  Return value is empty";
+    EXPECT_STREQ(der.c_str(), retIdentity.c_str()) << "  GetIdentity failed.  Return value does not equal original";
+
+    /* delete the identity */
+    status = RemoveIdentity(clientBus, clientProxyObject);
+    EXPECT_EQ(ER_OK, status) << "  DeleteIdentity failed.  Actual Status: " << QCC_StatusText(status);
+
+    /* retrieve back the identity cert.  Expect failure */
+    status = GetIdentity(clientBus, clientProxyObject, retIdentity);
+    EXPECT_NE(ER_OK, status) << "  GetIdentity did not fail.  Actual Status: " << QCC_StatusText(status);
+
 }
 

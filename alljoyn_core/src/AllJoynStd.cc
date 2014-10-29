@@ -170,6 +170,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("ExchangeSuites",     "au",   "au",  "localAuthList,remoteAuthList");
         ifc->AddMethod("KeyExchange",     "uv",   "uv",  "localAuthMask,localPublicKey, remoteAuthMask, remotePublicKey");
         ifc->AddMethod("KeyAuthentication",     "v",   "v",  "localVerifier,remoteVerifier");
+        ifc->AddMethod("ExchangeMembershipGuilds",     "aay",   "aay",  "guilds,guilds");
         ifc->AddProperty("Mechanisms",  "s", PROP_ACCESS_READ);
         ifc->AddProperty("Version",     "u", PROP_ACCESS_READ);
         ifc->Activate();
@@ -211,14 +212,14 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("InstallEncryptedPolicy",     "ay",  NULL, "encryptedAuthorization");
         ifc->AddMethod("GetPolicy",     NULL, "(yv)",  "authorization");
         ifc->AddMethod("RemovePolicy",     NULL, NULL, NULL);
-        ifc->AddMethod("InstallMembership",     "ay",  NULL, "cert");
-        ifc->AddMethod("InstallMembershipPolicy",     "ayayay(yv)",  NULL, "serialNum,subject,guildID,authorization");
-        ifc->AddMethod("RemoveMembership",     "ay", NULL, "guildID");
-        ifc->AddMethod("InstallIdentity",     "ay", NULL, "cert");
+        ifc->AddMethod("InstallMembership",     "(yay)",  NULL, "cert");
+        ifc->AddMethod("InstallMembershipAuthData",     "ayay(yv)",  NULL, "serialNum,issuer,authorization");
+        ifc->AddMethod("RemoveMembership",     "ayay", NULL, "serialNum,issuer");
+        ifc->AddMethod("InstallIdentity",     "(yay)", NULL, "cert");
         ifc->AddMethod("RemoveIdentity",     NULL, NULL, NULL);
-        ifc->AddMethod("GetIdentity",     NULL, "ay", "cert");
-        ifc->AddMethod("InstallGuildEquivalence",     "ay", NULL, "cert");
-        ifc->AddMethod("RemoveGuildEquivalence",     "ay", NULL, "publicKey");
+        ifc->AddMethod("GetIdentity",     NULL, "(yay)", "cert");
+        ifc->AddMethod("InstallGuildEquivalence",     "(yay)", NULL, "cert");
+        ifc->AddMethod("RemoveGuildEquivalence",     "ayay", NULL, "serialNum,issuer");
         ifc->AddMethod("GetManifest",     NULL, "yv",  "manifest");
         ifc->Activate();
     }

@@ -51,7 +51,9 @@ static QStatus GenerateCertificateType1(bool selfSign, bool regenKeys, uint32_t 
         ecc.GenerateDSAKeyPair();
         memcpy(dsaPrivateKey, ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey));
         memcpy(dsaPublicKey, ecc.GetDSAPublicKey(), sizeof(ECCPublicKey));
-        ecc.GenerateDSAKeyPair();
+        if (!selfSign) {
+            ecc.GenerateDSAKeyPair();
+        }
         memcpy(subjectPrivateKey, ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey));
         memcpy(subjectPublicKey, ecc.GetDSAPublicKey(), sizeof(ECCPublicKey));
     }
@@ -103,7 +105,9 @@ static QStatus GenerateCertificateType2(bool selfSign, bool regenKeys, uint32_t 
         ecc.GenerateDSAKeyPair();
         memcpy(dsaPrivateKey, ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey));
         memcpy(dsaPublicKey, ecc.GetDSAPublicKey(), sizeof(ECCPublicKey));
-        ecc.GenerateDSAKeyPair();
+        if (!selfSign) {
+            ecc.GenerateDSAKeyPair();
+        }
         memcpy(subjectPrivateKey, ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey));
         memcpy(subjectPublicKey, ecc.GetDSAPublicKey(), sizeof(ECCPublicKey));
     }
@@ -674,10 +678,15 @@ TEST_F(CertificateECCTest, GenCertForBBservice)
     ASSERT_EQ(ER_OK, status) << " GenereateCertificateType1 failed with actual status: " << QCC_StatusText(status);
 
     String encodedPK;
+    status = CertECCUtil_EncodePrivateKey((uint32_t*) &dsaPrivateKey, sizeof(ECCPrivateKey), encodedPK);
+    ASSERT_EQ(ER_OK, status) << " CertECCUtil_EncodePrivateKey failed with actual status: " << QCC_StatusText(status);
+
+    std::cout << "The encoded issuer private key PEM:" << endl << encodedPK.c_str() << endl;
+
     status = CertECCUtil_EncodePrivateKey((uint32_t*) &subjectPrivateKey, sizeof(ECCPrivateKey), encodedPK);
     ASSERT_EQ(ER_OK, status) << " CertECCUtil_EncodePrivateKey failed with actual status: " << QCC_StatusText(status);
 
-    std::cout << "The encoded private key PEM:" << endl << encodedPK.c_str() << endl;
+    std::cout << "The encoded subject private key PEM:" << endl << encodedPK.c_str() << endl;
 
     EXPECT_TRUE(cert1.VerifySignature());
     String pem1 = cert1.GetPEM();
@@ -689,6 +698,50 @@ TEST_F(CertificateECCTest, GenCertForBBservice)
     /* build cert2 of type2 with the same subject and signed by the same issuer as cert1*/
 
     status = GenerateCertificateType2(false, false, expiresInSecsFromNow, cert2, "Sample Certificate Type 2", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey);
+    ASSERT_EQ(ER_OK, status) << " GenereateCertificateType2 failed with actual status: " << QCC_StatusText(status);
+    EXPECT_TRUE(cert2.VerifySignature());
+
+    String pem2 = cert2.GetPEM();
+    std::cout << "The encoded cert PEM for cert2:" << endl << pem2.c_str() << endl;
+
+    std::cout << "The cert2: " << endl << cert2.ToString().c_str() << endl;
+
+}
+/**
+ * Use the encoded texts to put in the bbservice and bbclient files
+ */
+TEST_F(CertificateECCTest, GenSelfSignCertForBBservice)
+{
+    CertificateType1 cert1;
+    CertificateType2 cert2;
+    ECCPrivateKey dsaPrivateKey;
+    ECCPublicKey dsaPublicKey;
+    ECCPrivateKey subjectPrivateKey;
+    ECCPublicKey subjectPublicKey;
+    uint32_t expiresInSecsFromNow = 300; /* this key expires in 5 minutes.  Feel free to change it to fit your needs */
+
+    QStatus status = GenerateCertificateType1(true, true, expiresInSecsFromNow, cert1, "Sample Certificate Type 1", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey);
+    ASSERT_EQ(ER_OK, status) << " GenereateCertificateType1 failed with actual status: " << QCC_StatusText(status);
+
+    String encodedPK;
+    status = CertECCUtil_EncodePrivateKey((uint32_t*) &subjectPrivateKey, sizeof(ECCPrivateKey), encodedPK);
+    ASSERT_EQ(ER_OK, status) << " CertECCUtil_EncodePrivateKey failed with actual status: " << QCC_StatusText(status);
+
+    std::cout << "The encoded subject private key PEM:" << endl << encodedPK.c_str() << endl;
+
+    EXPECT_TRUE(cert1.VerifySignature());
+    String pem1 = cert1.GetPEM();
+    std::cout << "The encoded cert PEM for cert1:" << endl << pem1.c_str() << endl;
+
+    std::cout << "The cert1: " << endl << cert1.ToString().c_str() << endl;
+
+
+    printf("dsaPrivateKey: %s\n", BytesToHexString((const uint8_t*) &dsaPrivateKey, sizeof(ECCPublicKey)).c_str());
+    printf("dsaPublicKey: %s\n", BytesToHexString((const uint8_t*) &dsaPublicKey, sizeof(ECCPublicKey)).c_str());
+    printf("subPublicKey: %s\n", BytesToHexString((const uint8_t*) &subjectPublicKey, sizeof(ECCPublicKey)).c_str());
+    /* build cert2 of type2 with the same subject and signed by the same issuer as cert1*/
+
+    status = GenerateCertificateType2(true, false, expiresInSecsFromNow, cert2, "Sample Certificate Type 2", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey);
     ASSERT_EQ(ER_OK, status) << " GenereateCertificateType2 failed with actual status: " << QCC_StatusText(status);
     EXPECT_TRUE(cert2.VerifySignature());
 

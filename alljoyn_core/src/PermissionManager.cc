@@ -65,7 +65,7 @@ struct Right {
     }
 };
 
-static bool LocalAuthorized(bool send, MessageHolder& msgHolder, PermissionPolicy* policy, GUID128* guilds, size_t guildCount)
+static bool LocalAuthorized(bool send, const MessageHolder& msgHolder, const PermissionPolicy* policy, const GUID128* guilds, const size_t guildCount)
 {
     QCC_DbgPrintf(("LocalAuthorized with objPath %s iName %s mbrName %s", msgHolder.objPath, msgHolder.iName, msgHolder.mbrName));
     if (policy == NULL) {
@@ -235,13 +235,25 @@ bool PermissionManager::AuthorizePermissionMgmt(bool send, const GUID128& peerGu
             return false;  /* already claim */
         }
         return true;
-    } else if (strncmp(mbrName, "InstallPolicy", 14) == 0) {
-        /* this action requires admin privilege */
+    } else if (
+        (strncmp(mbrName, "InstallPolicy", 14) == 0) ||
+        (strncmp(mbrName, "InstallEncryptedPolicy", 22) == 0) ||
+        (strncmp(mbrName, "GetPolicy", 9) == 0) ||
+        (strncmp(mbrName, "RemovePolicy", 12) == 0) ||
+        (strncmp(mbrName, "InstallMembership", 17) == 0) ||
+        (strncmp(mbrName, "InstallMembershipAuthData", 25) == 0) ||
+        (strncmp(mbrName, "RemoveMembership", 16) == 0) ||
+        (strncmp(mbrName, "InstallIdentity", 15) == 0) ||
+        (strncmp(mbrName, "RemoveIdentity", 14) == 0) ||
+        (strncmp(mbrName, "InstallGuildEquivalence", 23) == 0) ||
+        (strncmp(mbrName, "RemoveGuildEquivalence", 22) == 0)
+        ) {
+        /* these actions require admin privilege */
         return PeerHasAdminPriv(peerGuid);
-    } else if (strncmp(mbrName, "GetPolicy", 9) == 0) {
-        /* this action requires admin privilege */
-        return PeerHasAdminPriv(peerGuid);
-    } else if (strncmp(mbrName, "NotifyConfig", 12) == 0) {
+    } else if (
+        (strncmp(mbrName, "NotifyConfig", 12) == 0) ||
+        (strncmp(mbrName, "GetIdentity", 11) == 0)
+        ) {
         return true;
     }
     return authorized;
@@ -287,9 +299,9 @@ QStatus PermissionManager::AuthorizeMessage(bool send, const GUID128& peerGuid, 
     }
 
     QCC_DbgPrintf(("PermissionManager::AuthorizeMessage with send: %d msg %s\n", send, msg->ToString().c_str()));
-    QCC_DbgPrintf(("PermissionManager::AuthorizeMessage calling LocalAuthorized with numOfGuilds %d %d\n", numOfGuilds, GetNumOfGuilds()));
+    QCC_DbgPrintf(("PermissionManager::AuthorizeMessage calling LocalAuthorized with num Of guilds %d\n", permissionMgmtObj->GetGuildsSize()));
     if (send) {
-        authorized = LocalAuthorized(send, holder, policy, guilds, numOfGuilds);
+        authorized = LocalAuthorized(send, holder, policy, permissionMgmtObj->GetGuilds(), permissionMgmtObj->GetGuildsSize());
     } else {
         authorized = LocalAuthorized(send, holder, policy, peerGuilds, peerGuildCount);
     }

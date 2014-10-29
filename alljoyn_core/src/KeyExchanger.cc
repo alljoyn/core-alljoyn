@@ -605,12 +605,11 @@ QStatus KeyExchangerECDHE_ECDSA::ParseCertChainPEM(String& encodedCertChain)
 
 QStatus KeyExchangerECDHE_ECDSA::StoreDSAKeys(String& encodedPrivateKey, String& encodedCertChain)
 {
-    ECCPrivateKeyOldEncoding oldenc;
-    QStatus status = CertECCUtil_DecodePrivateKey(encodedPrivateKey, (uint32_t*) &oldenc, sizeof(ECCPrivateKeyOldEncoding));
+    QStatus status = CertECCUtil_DecodePrivateKey(encodedPrivateKey, (uint32_t*) &issuerPrivateKey, sizeof(ECCPrivateKey));
     if (status != ER_OK) {
         return status;
     }
-    ecc.ReEncode(&oldenc, &issuerPrivateKey);
+
     status = ParseCertChainPEM(encodedCertChain);
     if (status != ER_OK) {
         return status;

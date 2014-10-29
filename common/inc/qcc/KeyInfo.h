@@ -92,7 +92,7 @@ class KeyInfo {
      * Retrieve the key ID.
      * @return  the key ID.  It's a pointer to an internal buffer. Its lifetime is the same as the object's lifetime.
      */
-    const uint8_t* GetKeyId()
+    const uint8_t* GetKeyId() const
     {
         return keyId;
     }
@@ -101,7 +101,7 @@ class KeyInfo {
      * Retrieve the key ID length.
      * @return  the key ID length.
      */
-    const size_t GetKeyIdLen()
+    const size_t GetKeyIdLen() const
     {
         return keyIdLen;
     }

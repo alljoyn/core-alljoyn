@@ -442,6 +442,27 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      */
     QStatus AuthenticatePeerUsingKeyExchange(const uint32_t* requestingAuthList, size_t requestingAuthCount, const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, qcc::GUID128& remotePeerGuid, qcc::String& mech);
 
+    /**
+     * ExchangeMembershipGuilds method call handler
+     *
+     * @param member  The member that was called
+     * @param msg     The method call message
+     */
+    void ExchangeMembershipGuilds(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * Track the peer's membership guilds.
+     * @param member  The member that was called
+     * @param msg     The method call message
+     */
+    QStatus TrackPeerGuilds(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     * Send an exchange for membership guild request.
+     * @param remotePeerObj  The remote peer
+     * @param ifc     The interface object
+     */
+    QStatus AskForMembershipGuilds(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc);
 
     /**
      * The peer-to-peer authentication mechanisms available to this object
@@ -451,7 +472,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     /**
      * The listener for interacting with the application
      */
-    ProtectedAuthListener peerAuthListener;
+    PermissionMgmtObj::KeyExchangeListener peerAuthListener;
 
     /**
      * Peer endpoints currently in an authentication conversation
@@ -478,6 +499,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     uint16_t supportedAuthSuitesCount;
     uint32_t* supportedAuthSuites;
 
+    /* PermissionMgmtObj to handle message permssion */
     PermissionMgmtObj* permissionMgmtObj;
 };
 

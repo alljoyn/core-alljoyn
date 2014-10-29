@@ -124,7 +124,7 @@ class KeyInfoNISTP256 : public KeyInfoECC {
      */
     KeyInfoNISTP256() : KeyInfoECC(Crypto_ECC::ECC_NIST_P256)
     {
-        /* using ECDSA algorithm */
+        /* using uncompressed */
         pubkey.form = 0x4;
     }
 

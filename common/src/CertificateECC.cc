@@ -35,6 +35,11 @@ using namespace qcc;
 namespace qcc {
 
 /**
+ * The X.509 Version 3
+ */
+#define X509_VERSION_3  2
+
+/**
  * The X.509 OIDs
  */
 const qcc::String OID_SIG_ECDSA_SHA256 = "1.2.840.10045.4.3.2";
@@ -736,28 +741,34 @@ String CertificateType2::ToString()
     return str;
 }
 
-QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, qcc::String& cn)
+QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, qcc::GUID128& cn)
 {
     QStatus status;
     qcc::String oid;
+    qcc::String tmp;
 
-    status = Crypto_ASN1::Decode(dn, "{(op)}", &oid, &cn);
+    status = Crypto_ASN1::Decode(dn, "{(ou)}", &oid, &tmp);
     if (ER_OK != status) {
         return status;
     }
     if (OID_DN_CN != oid) {
         return ER_FAIL;
     }
+    if (!qcc::GUID128::IsGUID(tmp)) {
+        return ER_FAIL;
+    }
+    cn = GUID128(tmp);
 
     return status;
 }
 
-QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, qcc::String& cn)
+QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, qcc::GUID128& cn)
 {
     QStatus status;
     qcc::String oid = OID_DN_CN;
+    qcc::String tmp = cn.ToString();
 
-    status = Crypto_ASN1::Encode(dn, "{(op)}", &oid, &cn);
+    status = Crypto_ASN1::Encode(dn, "{(ou)}", &oid, &tmp);
     if (ER_OK != status) {
         return status;
     }
@@ -765,13 +776,15 @@ QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, qcc::String& cn)
     return status;
 }
 
-QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, qcc::String& ou, qcc::String& cn)
+QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, qcc::GUID128& ou, qcc::GUID128& cn)
 {
     QStatus status = ER_OK;
     qcc::String oid1;
     qcc::String oid2;
+    qcc::String tmp1;
+    qcc::String tmp2;
 
-    status = Crypto_ASN1::Decode(dn, "{(op)}{(op)}", &oid1, &ou, &oid2, &cn);
+    status = Crypto_ASN1::Decode(dn, "{(ou)}{(ou)}", &oid1, &tmp1, &oid2, &tmp2);
     if (ER_OK != status) {
         return status;
     }
@@ -781,17 +794,27 @@ QStatus CertificateX509::DecodeCertificateName(const qcc::String& dn, qcc::Strin
     if (OID_DN_CN != oid2) {
         return ER_FAIL;
     }
+    if (!qcc::GUID128::IsGUID(tmp1)) {
+        return ER_FAIL;
+    }
+    if (!qcc::GUID128::IsGUID(tmp2)) {
+        return ER_FAIL;
+    }
+    ou = qcc::GUID128(tmp1);
+    cn = qcc::GUID128(tmp2);
 
     return status;
 }
 
-QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, qcc::String& ou, qcc::String& cn)
+QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, qcc::GUID128& ou, qcc::GUID128& cn)
 {
     QStatus status = ER_OK;
     qcc::String oid1 = OID_DN_OU;
     qcc::String oid2 = OID_DN_CN;
+    qcc::String tmp1 = ou.ToString();
+    qcc::String tmp2 = cn.ToString();
 
-    status = Crypto_ASN1::Encode(dn, "{(op)}{(op)}", &oid1, &ou, &oid2, &cn);
+    status = Crypto_ASN1::Encode(dn, "{(ou)}{(ou)}", &oid1, &tmp1, &oid2, &tmp2);
     if (ER_OK != status) {
         return status;
     }
@@ -891,7 +914,7 @@ QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext)
 QStatus CertificateX509::DecodeCertificateTBS()
 {
     QStatus status = ER_OK;
-    uint32_t version;
+    uint32_t x509Version;
     qcc::String oid;
     qcc::String iss;
     qcc::String sub;
@@ -901,23 +924,17 @@ QStatus CertificateX509::DecodeCertificateTBS()
     qcc::String ext;
 
     status = Crypto_ASN1::Decode(tbs, "(c(i)l(o)(.)(tt)(.)(.).)",
-                                 0, &version, &serial, &oid, &iss, &time1, &time2, &sub, &pub, &ext);
+                                 0, &x509Version, &serial, &oid, &iss, &time1, &time2, &sub, &pub, &ext);
     if (ER_OK != status) {
         return status;
     }
-    if (0x2 != version) {
+    if (X509_VERSION_3 != x509Version) {
         return ER_FAIL;
     }
     if (OID_SIG_ECDSA_SHA256 != oid) {
         return ER_FAIL;
     }
-    status = ER_FAIL;
-    if (GUID_CERTIFICATE == type) {
-        status = DecodeCertificateName(iss, issuer);
-    } else if (GUILD_CERTIFICATE == type) {
-        qcc::String tmp; // The test cert has OU for issuer
-        status = DecodeCertificateName(iss, tmp, issuer);
-    }
+    status = DecodeCertificateName(iss, issuer);
     if (ER_OK != status) {
         return status;
     }
@@ -943,7 +960,7 @@ QStatus CertificateX509::DecodeCertificateTBS()
 QStatus CertificateX509::EncodeCertificateTBS()
 {
     QStatus status = ER_OK;
-    uint32_t version = 2;
+    uint32_t x509Version = X509_VERSION_3;
     qcc::String oid = OID_SIG_ECDSA_SHA256;
     qcc::String iss;
     qcc::String sub;
@@ -975,7 +992,7 @@ QStatus CertificateX509::EncodeCertificateTBS()
         return status;
     }
     status = Crypto_ASN1::Encode(tbs, "(c(i)l(o)(R)(tt)(R)(R)R)",
-                                 0, version, &serial, &oid, &iss, &time1, &time2, &sub, &pub, &ext);
+                                 0, x509Version, &serial, &oid, &iss, &time1, &time2, &sub, &pub, &ext);
 
     return status;
 }
@@ -1064,7 +1081,7 @@ QStatus CertificateX509::EncodeCertificateDER(qcc::String& der)
     return status;
 }
 
-QStatus CertificateX509::ImportCertificatePEM(const qcc::String& pem)
+QStatus CertificateX509::DecodeCertificatePEM(const qcc::String& pem)
 {
     QStatus status;
     size_t pos;
@@ -1094,7 +1111,7 @@ QStatus CertificateX509::ImportCertificatePEM(const qcc::String& pem)
     return status;
 }
 
-QStatus CertificateX509::ExportCertificatePEM(qcc::String& pem)
+QStatus CertificateX509::EncodeCertificatePEM(qcc::String& pem)
 {
     QStatus status;
     qcc::String rem;
@@ -1127,6 +1144,19 @@ QStatus CertificateX509::Verify(const ECCPublicKey* key)
     return ecc.DSAVerify((const uint8_t*) tbs.data(), tbs.size(), &signature);
 }
 
+QStatus CertificateX509::Verify(const KeyInfoNISTP256& ta)
+{
+    Crypto_ECC ecc;
+    if (qcc::GUID128::SIZE != ta.GetKeyIdLen()) {
+        return ER_FAIL;
+    }
+    if (0 != memcmp(issuer.GetBytes(), ta.GetKeyId(), qcc::GUID128::SIZE)) {
+        return ER_FAIL;
+    }
+    ecc.SetDSAPublicKey(ta.GetPublicKey());
+    return ecc.DSAVerify((const uint8_t*) tbs.data(), tbs.size(), &signature);
+}
+
 QStatus CertificateX509::Sign(const ECCPrivateKey* key)
 {
     QStatus status;
@@ -1142,10 +1172,10 @@ QStatus CertificateX509::Sign(const ECCPrivateKey* key)
 String CertificateX509::ToString()
 {
     qcc::String str("Certificate:\n");
-    str += "issuer:    " + issuer + "\n";
-    str += "subject:   " + subject + "\n";
-    if (guild.size()) {
-        str += "guild:     " + guild + "\n";
+    str += "issuer:    " + issuer.ToString() + "\n";
+    str += "subject:   " + subject.ToString() + "\n";
+    if (GUILD_CERTIFICATE == type) {
+        str += "guild:     " + guild.ToString() + "\n";
     }
     str += "publickey: " + BytesToHexString((const uint8_t*) &publickey, sizeof(publickey)) + "\n";
     str += "signature: " + BytesToHexString((const uint8_t*) &signature, sizeof(signature)) + "\n";

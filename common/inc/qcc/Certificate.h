@@ -35,6 +35,17 @@ namespace qcc {
 class Certificate {
 
   public:
+
+    /**
+     * encoding format
+     */
+    typedef enum {
+        ENCODING_ALLJOYN = 0,      ///< AllJoyn format
+        ENCODING_JWK = 1,          ///< JSON Web Key format
+        ENCODING_X509_DER = 2,     ///< X.509 DER format
+        ENCODING_X509_DER_PEM = 3  ///< X.509 DER PEM format
+    } EncodingType;
+
     struct ValidPeriod {
         uint64_t validFrom; /* the date time when the cert becomes valid
                                 expressed in the number of seconds in EPOCH Jan 1, 1970 */

@@ -29,9 +29,11 @@
 #include <alljoyn/BusObject.h>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
+#include <qcc/KeyBlob.h>
 #include <qcc/CryptoECC.h>
 #include <alljoyn/PermissionPolicy.h>
 #include "CredentialAccessor.h"
+#include "ProtectedAuthListener.h"
 
 namespace ajn {
 
@@ -40,6 +42,25 @@ class PermissionMgmtObj : public BusObject {
     friend class PermissionManager;
 
   public:
+
+    class KeyExchangeListener : public ProtectedAuthListener {
+      public:
+        KeyExchangeListener()
+        {
+        }
+        void SetPermissionMgmtObj(PermissionMgmtObj* pmo)
+        {
+            this->pmo = pmo;
+        }
+
+        /**
+         * Simply wraps the call of the same name to the inner ProtectedAuthListener
+         */
+        bool VerifyCredentials(const char* authMechanism, const char* peerName, const Credentials& credentials);
+
+      private:
+        PermissionMgmtObj* pmo;
+    };
 
     typedef enum {
         STATE_UNCLAIMABLE = 0,   ///< not claimable
@@ -57,6 +78,26 @@ class PermissionMgmtObj : public BusObject {
      * virtual destructor
      */
     virtual ~PermissionMgmtObj();
+
+    /**
+     * Set the array of guilds.
+     * @param guilds the array of guilds must be new'd by the caller.  It will be deleted by this object.
+     */
+    void SetGuilds(size_t count, qcc::GUID128* guilds)
+    {
+        delete [] this->guilds;
+        guildsSize = count;
+        this->guilds = guilds;
+    }
+
+    size_t GetGuildsSize() {
+        return guildsSize;
+    }
+
+    const qcc::GUID128* GetGuilds()
+    {
+        return guilds;
+    }
 
     /**
      * Called by the message bus when the object has been successfully registered. The object can
@@ -118,20 +159,28 @@ class PermissionMgmtObj : public BusObject {
 
     QStatus StorePolicy(PermissionPolicy& policy);
     QStatus RetrievePolicy(PermissionPolicy& policy);
-
+    void RemovePolicy(const InterfaceDescription::Member* member, Message& msg);
     void GetPolicy(const InterfaceDescription::Member* member, Message& msg);
+    QStatus NotifyConfig();
+
+    void InstallIdentity(const InterfaceDescription::Member* member, Message& msg);
+    void GetIdentity(const InterfaceDescription::Member* member, Message& msg);
+    void RemoveIdentity(const InterfaceDescription::Member* member, Message& msg);
+    bool ValidateCertChain(const qcc::String& certChainPEM, bool& authorized);
+    QStatus LocateMembershipEntry(qcc::String& serialNum, qcc::String& issuer, qcc::GUID128& membershipGuid);
+
     /**
      * Bind to an exclusive port for PermissionMgmt object.
      */
     QStatus BindPort();
-
-    QStatus NotifyConfig();
 
     BusAttachment& bus;
     CredentialAccessor* ca;
     const InterfaceDescription::Member* notifySignalName;
     ClaimableState claimableState;
     uint32_t serialNum;
+    qcc::GUID128* guilds;
+    size_t guildsSize;
     PortListener* portListener;
 };
 

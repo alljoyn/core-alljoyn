@@ -220,7 +220,7 @@ public class AuthListenerECDHETest extends TestCase {
                         if (sendBackKeys) {
                             String certChainPEM;
                             if (mode == CLIENT_MODE) {
-                                certChainPEM = CLIENT_CERT2_PEM;
+                                certChainPEM = CLIENT_CERT1_PEM;
                             }
                             else {
                                 certChainPEM = SERVER_CERT1_PEM;
@@ -245,7 +245,7 @@ public class AuthListenerECDHETest extends TestCase {
                             peerCertVerified = certPEM.equals(SERVER_CERT1_PEM);
                         }
                         else {
-                            peerCertVerified = certPEM.equals(CLIENT_CERT2_PEM);
+                            peerCertVerified = certPEM.equals(CLIENT_CERT1_PEM);
                         }
                         System.out.println(getName() + ": verifying cert succeeds");
                     }
@@ -319,31 +319,30 @@ public class AuthListenerECDHETest extends TestCase {
 
         private static final String CLIENT_PK_PEM =
                 "-----BEGIN PRIVATE KEY-----" +
-                "CkzgQdvZSOQMmqOnddsw0BRneCNZhioNMyUoJwec9rMAAAAA" +
+                "MvoVFhR8flubG1Ej1uGQpfsNhs6qmLBKa0QbgBlcs54=" +
                 "-----END PRIVATE KEY-----";
 
-        private static final String CLIENT_CERT2_PEM =
+        private static final String CLIENT_CERT1_PEM =
         "-----BEGIN CERTIFICATE-----" +
-        "AAAAAp1LKGlnpVVtV4Sa1TULsxGJR9C53Uq5AH3fxqxJjNdYAAAAAAobbdvBKaw9\n" +
-        "eHox7o9fNbN5usuZw8XkSPSmipikYCPJAAAAAAAAAABiToQ8L3KZLwSCetlNJwfd\n" +
-        "bbxbo2x/uooeYwmvXbH2uwAAAABFQGcdlcsvhdRxgI4SVziI4hbg2d2xAMI47qVB\n" +
-        "ZZsqJAAAAAAAAAAAAAAAAAABYGEAAAAAAAFhjQCJ9dkuY0Z6jjx+a8azIQh4UF0h\n" +
-        "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOeMM4sUtoXPArUA+TNahfOS9Bbf\n" +
-        "0Hh08SvDJSDgM2OetQAAAAAYUr2pw2kb90fWblBWVKnrddtrI5Zs8BYx/EodpMrS\n" +
-        "twAAAAA=\n" +
+        "AAAAAfXzT3yYCx8Cv1NlxS0YfD/5Fdtb6nU5D0BOlIXghWkFAAAAAF1nXcm5Uard\n" +
+        "2LdbyV3OH9DgDx0ffnbq6/DW+J+tklzGAAAAAAAAAAD18098mAsfAr9TZcUtGHw/\n" +
+        "+RXbW+p1OQ9ATpSF4IVpBQAAAABdZ13JuVGq3di3W8ldzh/Q4A8dH3526uvw1vif\n" +
+        "rZJcxgAAAAAAAAAAAAAAAAANb9wAAAAAAA1xCAABMa7uTLSqjDggO0t6TAgsxKNt\n" +
+        "+Zhu/jc3s242BE0drDjjBTJ9VqY+0GBNpm01umYic0237jSpnCYOyPEPVh8YAAAA\n" +
+        "AD9l3W8B6P7s6t83qHhxGIO8FlQti1VC87ArvJEnd3bJAAAAAA==\n" +
         "-----END CERTIFICATE-----";
         private static final String SERVER_PK_PEM =
                 "-----BEGIN PRIVATE KEY-----" +
-                "tV/tGPp7kI0pUohc+opH1LBxzk51pZVM/RVKXHGFjAcAAAAA" +
+                "61AE2gWlxyGrfQfoBy62z4sHAT7X0k0BNLIOObQJaDo=" +
                 "-----END PRIVATE KEY-----";
         private static final String SERVER_CERT1_PEM =
         "-----BEGIN CERTIFICATE-----" +
-        "AAAAAfUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n" +
-        "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n" +
-        "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n" +
-        "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3AABMa7uTLSqjDggO0t6TAgsxKNt\n" +
-        "+Zhu/jc3s242BE0drPcL4K+FOVJf+tlivskovQ3RfzTQ+zLoBH5ZCzG9ua/dAAAA\n" +
-        "ACt5bWBzbcaT0mUqwGOVosbMcU7SmhtE7vWNn/ECvpYFAAAAAA==\n" +
+        "AAAAAbhUKIuCFdnnilH7OvIpbwhlYnOFlldH7qp/NlK13rhKAAAAANTOoKGkOnu+\n" +
+        "E+2dDIIDMBAB3I+Im5WI7Cb9VH9VZyTiAAAAAAAAAABgVo+tVLvVu5NA38Ei9md0\n" +
+        "Rjh/KHUU2eS7/g2RTwVsbwAAAABtQDwamvvoG4OIin2WoDwiPFnx5ahhwJJx4ml4\n" +
+        "jpxQfAAAAAAAAAAAAAAAAAANPsAAAAAAAA0/7AABMa7uTLSqjDggO0t6TAgsxKNt\n" +
+        "+Zhu/jc3s242BE0drFgLLKoGCRPa9WW1cHCZ7MyEemf05UpVQg6qKK4eIZqwAAAA\n" +
+        "AMoJZukYYdtix9+Yq+Q+9asEW/cGEs4ixsEHhqNycFAXAAAAAA==\n" +
         "-----END CERTIFICATE-----";
     }
 
