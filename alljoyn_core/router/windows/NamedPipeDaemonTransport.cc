@@ -43,6 +43,8 @@
 #include "Router.h"
 #include "NamedPipeDaemonTransport.h"
 
+#include <Netfw.h>
+
 #define QCC_MODULE "DAEMON_TRANSPORT"
 
 using namespace std;
@@ -65,7 +67,7 @@ class _NamedPipeDaemonEndpoint : public _RemoteEndpoint {
 
     _NamedPipeDaemonEndpoint(BusAttachment& bus, HANDLE serverHandle) :
         _RemoteEndpoint(bus, true, NamedPipeDaemonTransport::NamedPipeTransportName, &pipeStream, NamedPipeDaemonTransport::NamedPipeTransportName, false),
-        pipeStream(serverHandle)
+        pipeStream(serverHandle), groupId(0), userId(0)
     {
     }
 
@@ -74,11 +76,29 @@ class _NamedPipeDaemonEndpoint : public _RemoteEndpoint {
     }
 
     /*
-     * Named Pipe endpoint does not support UNIX style user, group, and process IDs.
+     * The user and group IDs are used to classify applications on Windows
      */
-    bool SupportsUnixIDs() const { return false; }
+    bool SupportsUnixIDs() const { return true; }
+
+    /*
+     * Set the group id of the endpoint.
+     *
+     * @param   groupId     Group ID number.
+     */
+    void SetGroupId(uint32_t groupId) { this->groupId = groupId; }
+
+    /*
+     * Return the group id of the endpoint.
+     *
+     * @return  Group ID number.
+     */
+    uint32_t GetGroupId() const { return groupId; }
 
     NamedPipeStream pipeStream;
+
+  private:
+    uint32_t userId;
+    uint32_t groupId;
 };
 
 static const uint32_t NUL_BYTE_TIMEOUT = 5000;  // in msec
@@ -120,7 +140,7 @@ void* NamedPipeDaemonTransport::Run(void* arg)
             &securityDescriptor,
             &securityDescriptorSize)) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): Conversion to Security Descriptor failed (0x%08X)", ::GetLastError()));
+        QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): Conversion to Security Descriptor failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
         return (void*) status;
     }
 
@@ -139,7 +159,7 @@ void* NamedPipeDaemonTransport::Run(void* arg)
 
         if (serverHandle == INVALID_HANDLE_VALUE) {
             status = ER_OS_ERROR;
-            QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): AllJoynCreateBus failed (0x%08X)", ::GetLastError()));
+            QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): AllJoynCreateBus failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
             break;
         }
 
@@ -192,12 +212,127 @@ void* NamedPipeDaemonTransport::Run(void* arg)
         if ((status != ER_OK) || (nbytes != 1) || (byte != 0)) {
             status = (status == ER_OK) ? ER_FAIL : status;
         } else {
-            /* Since Windows NamedPipeDaemonTransport enforces access control
-             * using the security descriptors, no need to implement
-             * UntrustedClientStart and UntrustedClientExit.
+
+            /*
+             * We need to determine if the connecting client is a Desktop or Universal Windows app to correctly enforce the Windows app
+             * isolation policies. Named pipe impersonation is used to determine who the caller is and the groupId is set to the
+             * correct group. The groupId can be used by the PolicyDB to enforce the app isolation rules.
              */
-            conn->SetListener(this);
-            status = conn->Establish("EXTERNAL", authName, redirection);
+            if (!ImpersonateNamedPipeClient(serverHandle)) {
+                status = ER_OS_ERROR;
+                QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): ImpersonateNamedPipeClient failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+            }
+
+            HANDLE hClientToken = NULL;
+            if ((status == ER_OK) && !OpenThreadToken(GetCurrentThread(), TOKEN_ALL_ACCESS, TRUE, &hClientToken)) {
+                status = ER_OS_ERROR;
+                QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): OpenThreadToken failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+            }
+
+            DWORD isAppContainer = 0;
+            DWORD length = sizeof(DWORD);
+            if ((status == ER_OK) && !GetTokenInformation(hClientToken, TokenIsAppContainer, &isAppContainer, length, &length)) {
+                status = ER_OS_ERROR;
+                QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): GetTokenInformation - TokenIsAppContainer failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+            }
+
+            SECURITY_IMPERSONATION_LEVEL securityLevel;
+            length = sizeof(securityLevel);
+            if ((status == ER_OK) && !GetTokenInformation(hClientToken, TokenImpersonationLevel, &securityLevel, length, &length)) {
+                status = ER_OS_ERROR;
+                QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): GetTokenInformation - TokenImpersonationLevel failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+            }
+
+            if (securityLevel == SecurityIdentification) {
+                /* We've been provided an identification-level impersonation token
+                 * so we can't actually verify if this application is an app container.
+                 * Fail out as a result.
+                 */
+                status = ER_BUS_NOT_ALLOWED;
+                QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): Impersonation token was an identification-level token and can't be trusted"));
+            }
+
+            PSID appContainerSid = NULL;
+            PSID_AND_ATTRIBUTES sidAndAttributes = NULL;
+            DWORD numAppContainers = 0;
+            BOOL isWhitelisted = FALSE;
+            length = SECURITY_MAX_SID_SIZE + sizeof(TOKEN_APPCONTAINER_INFORMATION);
+            BYTE buffer[SECURITY_MAX_SID_SIZE + sizeof(TOKEN_APPCONTAINER_INFORMATION)];
+            if ((status == ER_OK) && isAppContainer == TRUE) {
+                if (!GetTokenInformation(hClientToken, TokenAppContainerSid, buffer, length, &length)) {
+                    status = ER_OS_ERROR;
+                    QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): GetTokenInformation - TokenAppContainerSid failed OS error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+                }
+            }
+
+            // Done impersonating at this point, revert to self
+            if (!RevertToSelf()) {
+                status = ER_OS_ERROR;
+                QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): RevertToSelf failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+            }
+
+            if (hClientToken != NULL && !CloseHandle(hClientToken)) {
+                status = ER_OS_ERROR;
+                QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): CloseHandle failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+            }
+
+            /*
+             * If a universal Windows app is in the loopback exemption list, then we will treat it as a desktop application. This
+             * will allow the Universal Windows app to bypass the application isolation rules. This is allowed because an app on the
+             * loopback exemption list could start its own bundled router, so it already has permissions to talk to the system.
+             */
+            if ((status == ER_OK) && isAppContainer == TRUE) {
+                appContainerSid = ((PTOKEN_APPCONTAINER_INFORMATION)buffer)->TokenAppContainer;
+
+                uint32_t err = NetworkIsolationGetAppContainerConfig(&numAppContainers, &sidAndAttributes);
+                if (err != ERROR_SUCCESS) {
+                    status = ER_FAIL;
+                    QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): NetworkIsolationGetAppContainerConfig failed (0x%08X)", err));
+                }
+
+                if (status == ER_OK) {
+                    for (uint32_t i = 0; i < numAppContainers; i++) {
+                        if (EqualSid(appContainerSid, sidAndAttributes[i].Sid)) {
+                            LPTSTR sidString = NULL;
+                            if (ConvertSidToStringSid(appContainerSid, &sidString)) {
+                                QCC_DbgPrintf(("NamedPipeDaemonTransport::Run(): Connecting app with SID %s has a loopback exemption, will be treated as a Desktop application", sidString));
+                            }
+
+                            if (sidString != NULL) {
+                                if (LocalFree(sidString) != NULL) {
+                                    // Non-critical error, don't fail the connection but do log the error code
+                                    QCC_LogError(status, ("NamedPipeDaemonTransport::Run(): LocalFree of sidString failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+                                }
+                            }
+
+                            isAppContainer = FALSE;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (status == ER_OK) {
+                if (isWhitelisted == TRUE) {
+                    QCC_DbgPrintf(("NamedPipeDaemonTransport::Run(): Connecting application is a %s", WHITELISTED_APPLICATION));
+                    conn->SetGroupId(GetUsersGid(WHITELISTED_APPLICATION));
+                } else if (isAppContainer == TRUE) {
+                    QCC_DbgPrintf(("NamedPipeDaemonTransport::Run(): Connecting application is a %s", UNIVERSAL_WINDOWS_APPLICATION));
+                    conn->SetGroupId(GetUsersGid(UNIVERSAL_WINDOWS_APPLICATION));
+                } else {
+                    QCC_DbgPrintf(("NamedPipeDaemonTransport::Run(): Connecting application is a %s", DESKTOP_APPLICATION));
+                    conn->SetGroupId(GetUsersGid(DESKTOP_APPLICATION));
+                }
+            }
+
+            if (status == ER_OK) {
+                /* Since Windows NamedPipeDaemonTransport enforces access control
+                 * using the security descriptors, no need to implement
+                 * UntrustedClientStart and UntrustedClientExit.
+                 */
+                conn->SetListener(this);
+                status = conn->Establish("EXTERNAL", authName, redirection);
+            }
         }
         if (status == ER_OK) {
             status = conn->Start();

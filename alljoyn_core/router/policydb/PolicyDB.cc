@@ -288,6 +288,22 @@ bool _PolicyDB::AddRule(PolicyRuleList& ownList,
                     rule.busName = strID;
                 } else if (attr->first == "receive_sender") {
                     rule.busName = strID;
+                } else if (attrStr == "group") {
+                    if (attrVal == "*") {
+                        rule.groupAny = true;
+                    } else {
+                        rule.group = GetUsersGid(attrVal.c_str());
+                        skip |= (rule.group == static_cast<uint32_t>(-1));
+                    }
+                    rule.groupSet = true;
+                } else if (attrStr == "user") {
+                    if (attrVal == "*") {
+                        rule.userAny = true;
+                    } else {
+                        rule.user = GetUsersUid(attrVal.c_str());
+                        skip |= (rule.user == static_cast<uint32_t>(-1));
+                    }
+                    rule.userSet = true;
                 } else {
                     Log(LOG_ERR, "Unknown policy attribute: \"%s\"\n", attr->first.c_str());
                     success = false;
@@ -660,7 +676,9 @@ bool _PolicyDB::CheckOwn(bool& allow, const PolicyRuleList& ruleList, StringID b
 
 bool _PolicyDB::CheckMessage(bool& allow, const PolicyRuleList& ruleList,
                              const NormalizedMsgHdr& nmh,
-                             const IDSet& bnIDSet)
+                             const IDSet& bnIDSet,
+                             uint32_t userId,
+                             uint32_t groupId)
 {
     RULE_CHECKS(allow, ruleList, it,
                 (it->CheckType(nmh.type) &&
@@ -668,7 +686,9 @@ bool _PolicyDB::CheckMessage(bool& allow, const PolicyRuleList& ruleList,
                  it->CheckMember(nmh.memberID) &&
                  it->CheckPath(nmh.pathID, nmh.pathIDSet) &&
                  it->CheckError(nmh.errorID) &&
-                 it->CheckBusName(bnIDSet)));
+                 it->CheckBusName(bnIDSet) &&
+                 it->CheckUser(userId) &&
+                 it->CheckGroup(groupId)));
 }
 
 
@@ -784,32 +804,32 @@ bool _PolicyDB::OKToReceive(const NormalizedMsgHdr& nmh, BusEndpoint& dest) cons
                    nmh.msg->GetSender(), IDSet2String(nmh.senderIDSet).c_str(),
                    nmh.msg->GetDestination(), IDSet2String(nmh.destIDSet).c_str()));
 
+    uint32_t uid = dest->GetUserId();
+    uint32_t gid = dest->GetGroupId();
     if (!receiveRS.mandatoryRules.empty()) {
         QCC_DbgPrintf(("    checking mandatory receive rules"));
-        ruleMatch = CheckMessage(allow, receiveRS.mandatoryRules, nmh, nmh.senderIDSet);
+        ruleMatch = CheckMessage(allow, receiveRS.mandatoryRules, nmh, nmh.senderIDSet, uid, gid);
     }
 
-    uint32_t uid = dest->GetUserId();
     if (!ruleMatch && !receiveRS.userRules.empty()) {
         IDRuleMap::const_iterator it = receiveRS.userRules.find(uid);
         if (it != receiveRS.userRules.end()) {
             QCC_DbgPrintf(("    checking user=%u receive rules", uid));
-            ruleMatch = CheckMessage(allow, it->second, nmh, nmh.senderIDSet);
+            ruleMatch = CheckMessage(allow, it->second, nmh, nmh.senderIDSet, uid, gid);
         }
     }
 
-    uint32_t gid = dest->GetGroupId();
     if (!ruleMatch && !receiveRS.groupRules.empty()) {
         IDRuleMap::const_iterator it = receiveRS.groupRules.find(gid);
         if (it != receiveRS.groupRules.end()) {
             QCC_DbgPrintf(("    checking group=%u receive rules", gid));
-            ruleMatch = CheckMessage(allow, it->second, nmh, nmh.senderIDSet);
+            ruleMatch = CheckMessage(allow, it->second, nmh, nmh.senderIDSet, uid, gid);
         }
     }
 
     if (!ruleMatch) {
         QCC_DbgPrintf(("    checking default receive rules"));
-        ruleMatch = CheckMessage(allow, receiveRS.defaultRules, nmh, nmh.senderIDSet);
+        ruleMatch = CheckMessage(allow, receiveRS.defaultRules, nmh, nmh.senderIDSet, uid, gid);
     }
 
     return allow;
@@ -831,32 +851,32 @@ bool _PolicyDB::OKToSend(const NormalizedMsgHdr& nmh, const IDSet* destIDSet) co
                    nmh.msg->GetSender(), IDSet2String(nmh.senderIDSet).c_str(),
                    nmh.msg->GetDestination(), IDSet2String(*destIDSet).c_str()));
 
+    uint32_t uid = nmh.sender->GetUserId();
+    uint32_t gid = nmh.sender->GetGroupId();
     if (!sendRS.mandatoryRules.empty()) {
         QCC_DbgPrintf(("    checking mandatory send rules"));
-        ruleMatch = CheckMessage(allow, sendRS.mandatoryRules, nmh, *destIDSet);
+        ruleMatch = CheckMessage(allow, sendRS.mandatoryRules, nmh, *destIDSet, uid, gid);
     }
 
     if (!ruleMatch && !sendRS.userRules.empty()) {
-        uint32_t uid = nmh.sender->GetUserId();
         IDRuleMap::const_iterator it = sendRS.userRules.find(uid);
         if (it != sendRS.userRules.end()) {
             QCC_DbgPrintf(("    checking user=%u send rules", uid));
-            ruleMatch = CheckMessage(allow, it->second, nmh, *destIDSet);
+            ruleMatch = CheckMessage(allow, it->second, nmh, *destIDSet, uid, gid);
         }
     }
 
     if (!ruleMatch && !sendRS.groupRules.empty()) {
-        uint32_t gid = nmh.sender->GetGroupId();
         IDRuleMap::const_iterator it = sendRS.groupRules.find(gid);
         if (it != sendRS.groupRules.end()) {
             QCC_DbgPrintf(("    checking group=%u send rules", gid));
-            ruleMatch = CheckMessage(allow, it->second, nmh, *destIDSet);
+            ruleMatch = CheckMessage(allow, it->second, nmh, *destIDSet, uid, gid);
         }
     }
 
     if (!ruleMatch) {
         QCC_DbgPrintf(("    checking default send rules"));
-        ruleMatch = CheckMessage(allow, sendRS.defaultRules, nmh, *destIDSet);
+        ruleMatch = CheckMessage(allow, sendRS.defaultRules, nmh, *destIDSet, uid, gid);
     }
 
     return allow;

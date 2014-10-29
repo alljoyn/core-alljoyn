@@ -448,7 +448,8 @@ class _PolicyDB {
      * @return  true if match found, false if match not found
      */
     static bool CheckMessage(bool& allow, const PolicyRuleList& ruleList,
-                             const NormalizedMsgHdr& nmh, const IDSet& bnIDSet);
+                             const NormalizedMsgHdr& nmh, const IDSet& bnIDSet,
+                             uint32_t userId, uint32_t groupId);
 
     PolicyRuleListSet ownRS;        /**< bus name ownership policy rule sets */
     PolicyRuleListSet sendRS;       /**< sender message policy rule sets */
