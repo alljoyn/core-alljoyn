@@ -288,6 +288,14 @@ bool _PolicyDB::AddRule(PolicyRuleList& ownList,
                     rule.busName = strID;
                 } else if (attr->first == "receive_sender") {
                     rule.busName = strID;
+                } else if (attrStr == "group") {
+                    if (attrVal == "*") {
+                        rule.groupAny = true;
+                    } else {
+                        rule.group = GetUsersGid(attrVal.c_str());
+                        skip |= (rule.group == static_cast<uint32_t>(-1));
+                    }
+                    rule.groupSet = true;
                 } else {
                     Log(LOG_ERR, "Unknown policy attribute: \"%s\"\n", attr->first.c_str());
                     success = false;
@@ -668,7 +676,8 @@ bool _PolicyDB::CheckMessage(bool& allow, const PolicyRuleList& ruleList,
                  it->CheckMember(nmh.memberID) &&
                  it->CheckPath(nmh.pathID, nmh.pathIDSet) &&
                  it->CheckError(nmh.errorID) &&
-                 it->CheckBusName(bnIDSet)));
+                 it->CheckBusName(bnIDSet) &&
+                 it->CheckGroup(nmh.sender->GetGroupId())));
 }
 
 
