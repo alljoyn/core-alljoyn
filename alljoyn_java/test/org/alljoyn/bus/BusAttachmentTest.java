@@ -92,6 +92,7 @@ public class BusAttachmentTest extends TestCase {
     private WeakReference<BusAttachment> otherBusRef = new WeakReference<BusAttachment>(otherBus);
     private int handledSignals1;
     private int handledSignals2;
+    private int handledSignals3;
     private int handledSignals4;
     private boolean pinRequested;
     private String name;
@@ -175,6 +176,19 @@ public class BusAttachmentTest extends TestCase {
         ++handledSignals2;
     }
 
+    public void signalHandler3(String string)
+        throws BusException
+    {
+        ++handledSignals3;
+    }
+
+    /* As opposed to signalHandler4 this one only increments the value */
+    public void signalHandler4Basic(String string)
+        throws BusException
+    {
+        ++handledSignals4;
+    }
+
     public synchronized void testRegisterMultipleSignalHandlersForOneSignal() throws Exception {
         bus = new BusAttachment(getClass().getName());
         Status status = bus.connect();
@@ -193,6 +207,14 @@ public class BusAttachmentTest extends TestCase {
         status = bus.registerSignalHandler("org.alljoyn.bus.EmitterInterface", "Emit",
                 this, getClass().getMethod("signalHandler2", String.class));
         assertEquals(Status.OK, status);
+        status =
+            bus.registerSignalHandlerWithRule("org.alljoyn.bus.EmitterInterface", "Emit", this,
+                getClass().getMethod("signalHandler3", String.class), "path='/emitter'");
+        assertEquals(Status.OK, status);
+        status =
+            bus.registerSignalHandlerWithRule("org.alljoyn.bus.EmitterInterface", "Emit", this,
+                getClass().getMethod("signalHandler4Basic", String.class), "path='/wrongpath'");
+        assertEquals(Status.OK, status); // This signalhandler must never be hit
 
         //
         // Emit a signal and make sure that both of the handlers we registered
@@ -212,15 +234,17 @@ public class BusAttachmentTest extends TestCase {
             //
             // Break out as soon as we see the result we need.
             //
-            if(handledSignals1 == 1 && handledSignals2 == 1 ) {
+            if (handledSignals1 == 1 && handledSignals2 == 1 && handledSignals3 == 1) {
                 break;
             }
         }
 
         assertEquals(1, handledSignals1);
         assertEquals(1, handledSignals2);
+        assertEquals(1, handledSignals3);
+        assertEquals(0, handledSignals4);
 
-        handledSignals1 = handledSignals2 = 0;
+        handledSignals1 = handledSignals2 = handledSignals3 = 0;
 
         //
         // Unregister one of the handlers and make sure that the unregistered
@@ -243,6 +267,8 @@ public class BusAttachmentTest extends TestCase {
         this.wait(10000);
         assertEquals(0, handledSignals1);
         assertEquals(1, handledSignals2);
+        assertEquals(1, handledSignals3);
+        assertEquals(0, handledSignals4); // This must always be zero
         bus.unregisterSignalHandler(this, getClass().getMethod("signalHandler2", String.class));
         status = bus.removeMatch("type='signal',interface='org.alljoyn.bus.EmitterInterface',member='Emit'");
         assertEquals(Status.OK, status);
@@ -346,8 +372,8 @@ public class BusAttachmentTest extends TestCase {
     // suppressing the unused signalHandler3 warning this is used in the test
     // but the compiler does not know.
     @SuppressWarnings("unused")
-    private void signalHandler3(String string) throws BusException {
-    }
+     private void unusablePrivateFunction(String string) throws BusException {
+     }
 
     public void testRegisterPrivateSignalHandler() throws Exception {
         boolean thrown = false;
@@ -357,7 +383,7 @@ public class BusAttachmentTest extends TestCase {
             assertEquals(Status.OK, status);
 
             status = bus.registerSignalHandler("org.alljoyn.bus.EmitterInterface", "Emit",
-                    this, getClass().getMethod("signalHandler3", String.class));
+                    this, getClass().getMethod("unusablePrivateFunction", String.class));
             assertEquals(Status.OK, status);
         } catch (NoSuchMethodException ex) {
             thrown = true;
