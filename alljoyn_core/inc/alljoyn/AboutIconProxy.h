@@ -26,39 +26,44 @@
 
 namespace ajn {
 /**
- * AboutIconProxy enables the user of the class to interact with the remote AboutServiceIcon instance exposing the following methods:
- *  GetUrl
- *  GetContent
- *  GetVersion
- *  GetMimeType
- *  GetSize
+ * AboutIconProxy enables the user of the class to interact with the remote
+ * AboutIcon BusObject.
  */
 class AboutIconProxy : public ProxyBusObject {
   public:
     /**
-     * Construct an AboutIconProxy.
+     * Construct an AboutIconProxy Object.
+     *
      * @param bus reference to BusAttachment
-     * @param[in] busName Unique or well-known name of AllJoyn bus
-     * @param[in] sessionId the session received  after joining AllJoyn sessio
+     * @param[in] busName Unique or well-known name of an AllJoyn bus you have joined
+     * @param[in] sessionId the session received after joining an AllJoyn session
      */
     AboutIconProxy(BusAttachment& bus, const char* busName, SessionId sessionId = 0);
+
     /**
-     * Destruct AboutIconProxy.
+     * Destruct the AboutIconProxy Object.
      */
     virtual ~AboutIconProxy() {
     }
 
     /**
-     * @param[out] icon class that holds icon content
-     * @return ER_OK if successful
+     * This method makes multiple ProxyBusObject method calls to fill in the
+     * content of the AboutIcon. Its possible for any of the method calls to
+     * fail causing this member function to return an error status.
+     *
+     * @param[out] icon AboutIcon class that holds icon content
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure to get the icon content
      */
     QStatus GetIcon(AboutIcon& icon);
+
     /**
-     * Get the version of the About Icon Interface
+     * @param[out] the version of the remote AboutIcon BusObject
      *
-     * @param[out] version of the AboutIcontClient
-     *
-     * @return ER_OK if successful
+     * @return
+     * - #ER_OK if successful
+     * - an error status indicating failure
      */
     QStatus GetVersion(uint16_t& version);
 
