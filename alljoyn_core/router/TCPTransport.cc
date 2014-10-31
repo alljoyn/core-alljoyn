@@ -3337,6 +3337,10 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
      */
     assert(IpNameService::Instance().Started() && "TCPTransport::DoStartListen(): IpNameService not started");
 
+    qcc::String interfaces = ConfigDB::GetConfigDB()->GetProperty("ns_interfaces");
+    if (interfaces.size()) {
+        QCC_LogError(ER_WARNING, ("TCPTransport::DoStartListen(): The mechanism implied by \"ns_interfaces\" is no longer supported."));
+    }
     /*
      * Parse the normalized listen spec.  The easiest way to do this is to
      * re-normalize it.  If there's an error at this point, we have done
