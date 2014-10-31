@@ -1880,8 +1880,8 @@ static QStatus UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint3
         needUpdate = true;
     }
 
-    /* Schedule "unsolicited" ACK if the receiver's window is half full */
-    if (needUpdate && ((conn->snd.NXT - lcs) > (conn->snd.SEGMAX >> 1)) && (conn->ackTimer.retry == 0)) {
+    /* Schedule "unsolicited" ACK */
+    if (needUpdate && (conn->ackTimer.retry == 0)) {
         UpdateTimer(handle, conn, &conn->ackTimer, ARDP_MIN_DELAYED_ACK_TIMEOUT, 1);
     }
 
@@ -2014,6 +2014,18 @@ static void AddRcvMsk(ArdpConnRecord* conn, uint32_t delta)
 
 }
 
+static void DumpRcvQueue(ArdpConnRecord* conn)
+{
+    uint32_t i;
+    for (i = 0; i < conn->rcv.SEGMAX; i++) {
+        QCC_LogError(ER_OK, ("%d: %s, %s seq %u, som %u, fcnt %d ttl %x", i,
+                             (conn->rcv.buf[i].flags && ARDP_BUFFER_IN_USE) ? "in use" : "not in use",
+                             (conn->rcv.buf[i].flags && ARDP_BUFFER_DELIVERED) ? "delivered" : "not delivered",
+                             conn->rcv.buf[i].seq, conn->rcv.buf[i].som, conn->rcv.buf[i].fcnt, conn->rcv.buf[i].ttl));
+
+    }
+}
+
 static QStatus ReleaseRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t seq, uint16_t fcnt, QStatus reason)
 {
     uint16_t index = seq % conn->rcv.SEGMAX;
@@ -2034,7 +2046,8 @@ static QStatus ReleaseRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, uint3
             QCC_DbgPrintf(("Expired segment %u is not first in rcv queue (%u)", seq, conn->rcv.LCS + 1));
             return ER_OK;
         } else {
-            QCC_DbgPrintf(("Consumed message %u is not first in rcv queue (%u)", seq, conn->rcv.LCS + 1));
+            QCC_LogError(ER_OK, ("conn %p, Consumed message %u is not first in rcv queue (%u)", conn, seq, conn->rcv.LCS + 1));
+            DumpRcvQueue(conn);
             assert(0 && "Consumed message is not first in rcv queue");
             return ER_FAIL;
         }
@@ -2084,16 +2097,11 @@ static QStatus ReleaseRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, uint3
         QCC_DbgPrintf(("ReleaseRcvBuffers: new conn->rcv.CUR=%u", conn->rcv.CUR));
     }
 
-    /*
-     * Schedule "unsolicited" ACK if the ACK timer is not running.
-     * If the buffers have been released due to TTL expiration,
-     * schedule ACK with minimum delay.
-     */
+    /* Schedule "unsolicited" ACK if the ACK timer is not running. */
     if (conn->ackTimer.retry == 0) {
-        uint32_t timeout = (reason == ER_ARDP_TTL_EXPIRED) ? ARDP_MIN_DELAYED_ACK_TIMEOUT : handle->config.delayedAckTimeout;
         QCC_DbgHLPrintf(("ReleaseRcvBuffers: Schedule ACK timer to inform about new values of rcv.CUR %u and rcv.LCS %u",
                          conn->rcv.CUR, conn->rcv.LCS));
-        UpdateTimer(handle, conn, &conn->ackTimer, timeout, 1);
+        UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
     }
 
     return ER_OK;
@@ -2184,6 +2192,12 @@ static void AdvanceRcvQueue(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf
         conn->rcv.CUR  = seq - 1;
     }
 
+    if (conn->ackTimer.retry == 0) {
+        QCC_DbgHLPrintf(("AdvanceReleaseQueue: Schedule ACK timer to inform about new values of rcv.CUR %u and rcv.LCS %u",
+                         conn->rcv.CUR, conn->rcv.LCS));
+        UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
+    }
+
     QCC_DbgHLPrintf(("AdvanceRcvQueue: rcv.CUR = %u, rcv.LCS = %u", conn->rcv.CUR, conn->rcv.LCS));
 }
 
@@ -2195,8 +2209,8 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
     uint32_t seq;
     uint32_t delta;
     ArdpRcvBuf* start;
-
     QCC_DbgTrace(("FlushExpiredRcvMessages(handle=%p, conn=%p, acknxt=%u", handle, conn, acknxt));
+    QCC_DbgPrintf(("FlushExpiredRcvMessages(acknxt=%u, lcs=%u, cur=%u", acknxt, conn->rcv.LCS, conn->rcv.CUR));
 
     /* Move to the start of the message */
     if (!(current->flags & ARDP_BUFFER_IN_USE) || (current->seq == (current->som + current->fcnt - 1))) {
@@ -2205,12 +2219,15 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
         startSeq = conn->rcv.CUR + 1;
         delta = 0;
 
-        /* If no EACKs in RCV queue, just update the counter */
-        if ((conn->rcv.eack.sz == 0)) {
-            if (conn->rcv.LCS == conn->rcv.CUR) {
-                conn->rcv.LCS = acknxt - 1;
-            }
+        /* If this is the tail of RCV queue, just update the counter */
+        if ((conn->rcv.eack.sz == 0) && (conn->rcv.LCS == conn->rcv.CUR)) {
+            conn->rcv.LCS = acknxt - 1;
             conn->rcv.CUR = acknxt - 1;
+            if (conn->ackTimer.retry == 0) {
+                QCC_DbgHLPrintf(("FlushExpiredRcvMessages: Schedule ACK timer to inform about new values of rcv.CUR %u and rcv.LCS %u",
+                                 conn->rcv.CUR, conn->rcv.LCS));
+                UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
+            }
             return;
         }
 
@@ -2224,11 +2241,14 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
     current = start;
     seq = startSeq;
 
+    /* Mark all the segments with sequence numbers up to ACKNXT as expired */
     do {
         assert(!(current->flags & ARDP_BUFFER_DELIVERED));
         QCC_DbgPrintf(("FlushExpiredRcvMessages: seq = %u", seq));
 
         current->ttl = ARDP_TTL_EXPIRED;
+
+        /* Update EACK mask */
         if (delta == 0) {
             ShiftRcvMsk(conn);
         } else {
@@ -2254,7 +2274,13 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
         AdvanceRcvQueue(handle, conn, current);
     }
 
-    QCC_DbgPrintf(("FlushExpiredRcvMessages(UPDATE rcv.CUR = %u, acknxt = %u", conn->rcv.CUR, acknxt));
+    if (conn->ackTimer.retry == 0) {
+        QCC_DbgHLPrintf(("FlushExpiredRcvMessages: Schedule ACK timer to inform about new values of rcv.CUR %u and rcv.LCS %u",
+                         conn->rcv.CUR, conn->rcv.LCS));
+        UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
+    }
+
+    QCC_DbgPrintf(("FlushExpiredRcvMessages(UPDATE rcv.CUR = %u, rcv.LCS = %u, acknxt = %u", conn->rcv.CUR, conn->rcv.LCS, acknxt));
 }
 
 static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, uint8_t* buf, uint16_t len, bool ordered)
@@ -2876,6 +2902,8 @@ QStatus ARDP_Connect(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ipAd
         SetState(conn, SYN_SENT);
         *pConn = conn;
     }
+
+
     return status;
 }
 
