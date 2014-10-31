@@ -7,7 +7,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2009-2011,2014, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -112,6 +112,15 @@ class Event {
      */
     Event(SocketFd fd, EventType eventType);
 
+    /**
+     * Constructor used by Windows specific named pipe I/O sources/sinks.
+     * (This constructor should only be used within Windows platform specific code.)
+     *
+     * @param pipeHandle  pipe handle associated with this event.
+     * @param eventType   Type of event (IO_READ or IO_WRITE) associated with pipe.
+     */
+    Event(HANDLE pipeHandle, EventType eventType);
+
     /** Destructor */
     ~Event();
 
@@ -169,6 +178,13 @@ class Event {
      * @return ER_OK if successful.
      */
     QStatus SetEvent();
+
+    /**
+     * Indicate whether the event is associated with a socket.
+     *
+     * @return  true if the event is for sockets, otherwise false.
+     */
+    bool IsSocket() const { return isSocket; }
 
     /**
      * Reset the event to the non-signaled state.
@@ -236,6 +252,7 @@ class Event {
     int32_t numThreads;     /**< Number of threads currently waiting on this event */
     bool networkIfaceEvent;
     HANDLE networkIfaceHandle;
+    bool isSocket;          /**< Is this event for socket or named pipe */
 
     /**
      * Protected copy constructor.
@@ -264,6 +281,11 @@ class Event {
      * Decrement the count of threads blocked on this event
      */
     void DecrementNumThreads() { DecrementAndFetch(&numThreads); }
+
+    /**
+     * Event polling method used to check whether the event has been set.
+     */
+    bool IsNetworkEventSet();
 
 };
 

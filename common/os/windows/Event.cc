@@ -1,7 +1,7 @@
 /*
  * @file
  *
- * Windows implementation of event
+ * Windows implementation of event.
  */
 
 /******************************************************************************
@@ -38,6 +38,10 @@
 #include <qcc/Thread.h>
 #include <qcc/time.h>
 
+#if (_WIN32_WINNT > 0x0603)
+#include <MSAJTransport.h>
+#endif
+
 using namespace std;
 
 /** @internal */
@@ -48,6 +52,12 @@ namespace qcc {
 static const long READ_SET = FD_READ | FD_CLOSE | FD_ACCEPT;
 static const long WRITE_SET = FD_WRITE | FD_CLOSE | FD_CONNECT;
 
+#if (_WIN32_WINNT > 0x0603)
+/** Read set and Write set for Named Pipe IO events */
+static const long NP_READ_SET = ALLJOYN_READ_READY | ALLJOYN_DISCONNECTED;
+static const long NP_WRITE_SET = ALLJOYN_WRITE_READY | ALLJOYN_DISCONNECTED;
+VOID CALLBACK NamedPipeIoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired);
+#endif
 
 VOID WINAPI IpInterfaceChangeCallback(PVOID arg, PMIB_IPINTERFACE_ROW row, MIB_NOTIFICATION_TYPE notificationType);
 
@@ -80,7 +90,34 @@ class IoEventMonitor {
      */
     std::map<SocketFd, EventList*> eventMap;
 
-    void RegisterEvent(Event* event) {
+#if (_WIN32_WINNT > 0x0603)
+    /*
+     * Mapping from pipe handles to Event registrations
+     */
+    std::map<HANDLE, EventList*> namedPipeEventMap;
+
+#endif
+
+    void RegisterEvent(Event* event)
+    {
+        if (event->IsSocket()) {
+            RegisterSocketEvent(event);
+        } else {
+            RegisterNamedPipeEvent(event);
+        }
+    }
+
+    void DeregisterEvent(Event* event)
+    {
+        if (event->IsSocket()) {
+            DeregisterSocketEvent(event);
+        } else {
+            DeregisterNamedPipeEvent(event);
+        }
+    }
+
+    void RegisterSocketEvent(Event* event)
+    {
         SocketFd sock = event->GetFD();
         QCC_DbgHLPrintf(("RegisterEvent %s for fd %d (ioHandle=%d)", event->GetEventType() == Event::IO_READ ? "IO_READ" : "IO_WRITE", sock, event->GetHandle()));
         assert((event->GetEventType() == Event::IO_READ) || (event->GetEventType() == Event::IO_WRITE));
@@ -118,7 +155,9 @@ class IoEventMonitor {
         lock.Unlock();
     }
 
-    void DeregisterEvent(Event* event) {
+
+    void DeregisterSocketEvent(Event* event)
+    {
         SocketFd sock = event->GetFD();
 
         QCC_DbgPrintf(("DeregisterEvent %s for fd %d", event->GetEventType() == Event::IO_READ ? "IO_READ" : "IO_WRITE", sock));
@@ -157,6 +196,91 @@ class IoEventMonitor {
             QCC_LogError(ER_OS_ERROR, ("eventList for fd %d missing from event map", event->GetFD()));
         }
         lock.Unlock();
+    }
+
+
+    void RegisterNamedPipeEvent(Event* event)
+    {
+#if (_WIN32_WINNT > 0x0603)
+        HANDLE pipe = LongToHandle((ULONG)event->GetFD());
+        QCC_DbgHLPrintf(("RegisterEvent %s for fd %d (ioHandle=%p)", event->GetEventType() == Event::IO_READ ? "IO_READ" : "IO_WRITE", pipe, event->GetHandle()));
+        assert((event->GetEventType() == Event::IO_READ) || (event->GetEventType() == Event::IO_WRITE));
+
+        lock.Lock();
+        std::map<HANDLE, EventList*>::iterator iter = namedPipeEventMap.find(pipe);
+        EventList*eventList;
+        if (iter == namedPipeEventMap.end()) {
+            /* new IO */
+            eventList = new EventList();
+            eventList->ioEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+            eventList->fdSet = 0;
+            namedPipeEventMap[pipe] = eventList;
+            if (RegisterWaitForSingleObject(&eventList->waitObject, eventList->ioEvent, NamedPipeIoEventCallback, (void*)pipe, INFINITE, WT_EXECUTEINWAITTHREAD)) {
+                QCC_DbgHLPrintf(("RegisterWaitForSingleObject %d", eventList->waitObject));
+            } else {
+                QCC_LogError(ER_OS_ERROR, ("RegisterWaitForSingleObject failed"));
+            }
+        } else {
+            eventList = iter->second;
+        }
+        /*
+         * Add the event to the list of events for this end of pipe
+         */
+        eventList->events.push_back(event);
+        /*
+         * Check if the set of IO conditions being monitored have changed.
+         */
+        uint32_t fdSet = eventList->fdSet | ((event->GetEventType() == Event::IO_READ) ? NP_READ_SET : NP_WRITE_SET);
+        if (eventList->fdSet != fdSet) {
+            eventList->fdSet = fdSet;
+            QCC_DbgHLPrintf(("NamedPipeEventSelect %x", fdSet));
+            AllJoynEventSelect(pipe, eventList->ioEvent, fdSet);
+        }
+        lock.Unlock();
+#endif
+    }
+
+    void DeregisterNamedPipeEvent(Event* event)
+    {
+#if (_WIN32_WINNT > 0x0603)
+        HANDLE pipe = LongToHandle((ULONG)event->GetFD());
+        QCC_DbgPrintf(("DeregisterEvent %s for pipe %p", event->GetEventType() == Event::IO_READ ? "IO_READ" : "IO_WRITE", pipe));
+        assert((event->GetEventType() == Event::IO_READ) || (event->GetEventType() == Event::IO_WRITE));
+
+        lock.Lock();
+        std::map<HANDLE, EventList*>::iterator iter = namedPipeEventMap.find(pipe);
+        if (iter != namedPipeEventMap.end()) {
+            EventList*eventList = iter->second;
+            /*
+             * Remove this event from the event list
+             */
+            eventList->events.remove(event);
+            /*
+             * Remove the eventList and clean up if all the events are gone.
+             */
+            if (eventList->events.empty()) {
+                namedPipeEventMap.erase(iter);
+                AllJoynEventSelect(pipe, eventList->ioEvent, 0);
+                /*
+                 * Make sure event is not in a set state
+                 */
+                ::ResetEvent(eventList->ioEvent);
+                /*
+                 * Cannot be holding the lock while unregistering the wait because this can cause a
+                 * deadlock if the wait callback is blocked waiting for the lock.
+                 */
+                QCC_DbgHLPrintf(("UnregisterWait %d", eventList->waitObject));
+                lock.Unlock();
+                UnregisterWait(eventList->waitObject);
+                lock.Lock();
+                ::CloseHandle(eventList->ioEvent);
+                delete eventList;
+            }
+        } else {
+            QCC_LogError(ER_OS_ERROR, ("eventList for fd %d missing from event map", event->GetFD()));
+        }
+        lock.Unlock();
+#endif
     }
 
 };
@@ -222,6 +346,52 @@ VOID CALLBACK IoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
     IoMonitor->lock.Unlock();
 }
 
+#if (_WIN32_WINNT > 0x0603)
+VOID CALLBACK NamedPipeIoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
+{
+    HANDLE pipe = (HANDLE)arg;
+    BOOL ret;
+    DWORD eventMask;
+    IoMonitor->lock.Lock();
+    std::map<HANDLE, IoEventMonitor::EventList*>::iterator iter = IoMonitor->namedPipeEventMap.find(pipe);
+    if (iter != IoMonitor->namedPipeEventMap.end()) {
+        IoEventMonitor::EventList*eventList = iter->second;
+
+        ret = AllJoynEnumEvents(pipe, eventList->ioEvent, &eventMask);
+        if (ret != TRUE) {
+            QCC_LogError(ER_OS_ERROR, ("NamedPipeEventEnum returned %d, GLE = %u", ret, ::GetLastError()));
+        } else {
+            QCC_DbgHLPrintf(("NamedPipeIoEventCallback %x", eventMask));
+            if (eventMask) {
+                std::list<Event*>::iterator evit = eventList->events.begin();
+                if (evit == eventList->events.end()) {
+                    QCC_LogError(ER_OS_ERROR, ("Event list was empty"));
+                }
+                while (evit != eventList->events.end()) {
+                    Event* ev = (*evit);
+                    bool isSet = false;
+
+                    if ((eventMask & NP_WRITE_SET) && (ev->GetEventType() == Event::IO_WRITE)) {
+                        isSet = true;
+                        QCC_DbgHLPrintf(("Setting write event %d", ev->GetHandle()));
+                    }
+                    if ((eventMask & NP_READ_SET) && (ev->GetEventType() == Event::IO_READ)) {
+                        isSet = true;
+                        QCC_DbgHLPrintf(("Setting read event %d", ev->GetHandle()));
+                    }
+                    if (isSet) {
+                        if (!::SetEvent(ev->GetHandle())) {
+                            QCC_LogError(ER_OS_ERROR, ("SetEvent returned %d", ret));
+                        }
+                    }
+                    ++evit;
+                }
+            }
+        }
+    }
+    IoMonitor->lock.Unlock();
+}
+#endif
 
 Event Event::alwaysSet(0, 0);
 
@@ -229,7 +399,6 @@ Event Event::neverSet(WAIT_FOREVER, 0);
 
 QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
 {
-    static const timeval toZero = { 0, 0 };
     HANDLE handles[3];
     int numHandles = 0;
 
@@ -238,11 +407,7 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
      * the I/O status before blocking ensures that Event::Wait is idempotent.
      */
     if ((evt.eventType == IO_READ) || (evt.eventType == IO_WRITE)) {
-        fd_set fds;
-        FD_ZERO(&fds);
-        FD_SET(evt.ioFd, &fds);
-        select(1, evt.eventType == IO_READ ? &fds : NULL, evt.eventType == IO_WRITE ? &fds : NULL, NULL, &toZero);
-        if (FD_ISSET(evt.ioFd, &fds)) {
+        if (evt.IsNetworkEventSet()) {
             ::SetEvent(evt.ioHandle);
         }
     }
@@ -313,7 +478,6 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
 
 QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledEvents, uint32_t maxWaitMs)
 {
-    static const timeval toZero = { 0, 0 };
     const int MAX_HANDLES = 64;
 
     int numHandles = 0;
@@ -344,11 +508,7 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
             }
         }
         if ((evt->eventType == IO_READ) || (evt->eventType == IO_WRITE)) {
-            fd_set fds;
-            FD_ZERO(&fds);
-            FD_SET(evt->ioFd, &fds);
-            select(1, evt->eventType == IO_READ ? &fds : NULL, evt->eventType == IO_WRITE ? &fds : NULL, NULL, &toZero);
-            if (FD_ISSET(evt->ioFd, &fds)) {
+            if (evt->IsNetworkEventSet()) {
                 ::SetEvent(evt->ioHandle);
             } else {
                 /*
@@ -440,7 +600,8 @@ Event::Event() :
     ioFd(INVALID_SOCKET_FD),
     numThreads(0),
     networkIfaceEvent(false),
-    networkIfaceHandle(INVALID_HANDLE_VALUE)
+    networkIfaceHandle(INVALID_HANDLE_VALUE),
+    isSocket(false)
 {
 }
 
@@ -453,7 +614,8 @@ Event::Event(bool networkIfaceEvent) :
     ioFd(INVALID_SOCKET_FD),
     numThreads(0),
     networkIfaceEvent(networkIfaceEvent),
-    networkIfaceHandle(INVALID_HANDLE_VALUE)
+    networkIfaceHandle(INVALID_HANDLE_VALUE),
+    isSocket(false)
 {
     if (networkIfaceEvent) {
         NotifyIpInterfaceChange(AF_UNSPEC, (PIPINTERFACE_CHANGE_CALLBACK)IpInterfaceChangeCallback, this, false, &networkIfaceHandle);
@@ -469,7 +631,8 @@ Event::Event(Event& event, EventType eventType, bool genPurpose) :
     ioFd(event.ioFd),
     numThreads(0),
     networkIfaceEvent(false),
-    networkIfaceHandle(INVALID_HANDLE_VALUE)
+    networkIfaceHandle(INVALID_HANDLE_VALUE),
+    isSocket(event.isSocket)
 {
     /* Create an auto reset event for the socket fd */
     if (ioFd != INVALID_SOCKET_FD) {
@@ -491,7 +654,8 @@ Event::Event(SocketFd ioFd, EventType eventType) :
     ioFd(ioFd),
     numThreads(0),
     networkIfaceEvent(false),
-    networkIfaceHandle(INVALID_HANDLE_VALUE)
+    networkIfaceHandle(INVALID_HANDLE_VALUE),
+    isSocket(true)
 {
     /* Create an auto reset event for the socket fd */
     if (ioFd != INVALID_SOCKET_FD) {
@@ -510,8 +674,26 @@ Event::Event(uint32_t timestamp, uint32_t period) :
     ioFd(INVALID_SOCKET_FD),
     numThreads(0),
     networkIfaceEvent(false),
-    networkIfaceHandle(INVALID_HANDLE_VALUE)
+    networkIfaceHandle(INVALID_HANDLE_VALUE),
+    isSocket(false)
 {
+}
+
+Event::Event(HANDLE busHandle, EventType eventType) :
+    handle(INVALID_HANDLE_VALUE),
+    ioHandle(INVALID_HANDLE_VALUE),
+    eventType(eventType),
+    timestamp(0),
+    period(0),
+    ioFd(PtrToInt(busHandle)),
+    numThreads(0),
+    networkIfaceEvent(false),
+    networkIfaceHandle(INVALID_HANDLE_VALUE),
+    isSocket(false)
+{
+    assert((eventType == IO_READ) || (eventType == IO_WRITE));
+    ioHandle = CreateEvent(NULL, FALSE, FALSE, NULL);
+    IoMonitor->RegisterEvent(this);
 }
 
 Event::~Event()
@@ -605,6 +787,34 @@ void Event::ResetTime(uint32_t delay, uint32_t period)
         this->timestamp = GetTimestamp() + delay;
     }
     this->period = period;
+}
+
+bool Event::IsNetworkEventSet()
+{
+    bool ret = false;
+    if (this->IsSocket()) {
+        static const timeval toZero = { 0, 0 };
+        fd_set fds;
+        FD_ZERO(&fds);
+        FD_SET(this->ioFd, &fds);
+        select(1, this->eventType == IO_READ ? &fds : NULL, this->eventType == IO_WRITE ? &fds : NULL, NULL, &toZero);
+        ret = FD_ISSET(this->ioFd, &fds);
+    }
+#if (_WIN32_WINNT > 0x0603)
+    else {
+        DWORD eventMask;
+        HANDLE pipe = LongToHandle((ULONG) this->ioFd);
+        BOOL success = AllJoynEnumEvents(pipe, NULL, &eventMask);
+        assert(success);
+        if ((eventMask & NP_WRITE_SET) && (this->eventType == Event::IO_WRITE)) {
+            ret = true;
+        }
+        if ((eventMask & NP_READ_SET) && (this->eventType == Event::IO_READ)) {
+            ret = true;
+        }
+    }
+#endif
+    return ret;
 }
 
 }  /* namespace */

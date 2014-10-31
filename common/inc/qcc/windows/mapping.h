@@ -65,6 +65,13 @@
  */
 #define strdup _strdup
 
+/**
+ * Named pipe transport is available on Windows 10 and newer Windows versions.
+ */
+#if (_WIN32_WINNT > 0x0603)
+#define DEFAULT_CONNECTSPEC "npipe:"
+#endif
+
 #if _MSC_VER < 1800   /* MSVC 2013 or higher */
 /**
  * Map fpclassify to _fpclass
