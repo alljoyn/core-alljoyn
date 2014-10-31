@@ -27,14 +27,4 @@ if router_env['OS'] in ['android', 'linux', 'win7']:
    progs.append(router_env.Program('ardp',     ['ardp.cc'] +     router_objs))
    progs.append(router_env.Program('ardptest', ['ardptest.cc'] + router_objs))
 
-#
-# On Android, build a static library that can be linked into a JNI dynamic
-# library to implement the daemon as a Service
-#
-if router_env['OS'] == 'android':
-   libenv = router_env.Clone(CCFLAGS = '-DROUTER_LIB')
-   libenv.Object(target = 'bbdaemon-lib', source = 'bbdaemon.cc')
-   libbbdaemon = libenv.StaticLibrary(['bbdaemon-lib'] + router_objs)
-   dlibs = libenv.Install('$CPP_DISTDIR/lib', libbbdaemon)
-
 Return('progs')
