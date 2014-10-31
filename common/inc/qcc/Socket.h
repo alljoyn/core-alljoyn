@@ -314,6 +314,60 @@ QStatus SendWithFds(SocketFd sockfd, const void* buf, size_t len, size_t& sent, 
 QStatus SetBlocking(SocketFd sockfd, bool blocking);
 
 /**
+ * Sets the maximum socket send buffer size (in bytes).
+ *
+ * @warning Operating systems are free to modify this value according to
+ * specific platform requirements.  For example, Linux systems will double this
+ * value to account for bookkeeping overhead; so a subsequent GetSndBuf() will
+ * return twice the value passed in SetSndBuf().
+ *
+ * @param sockfd  Socket descriptor.
+ * @param size    Requested maximum send buffer size.
+ */
+QStatus SetSndBuf(SocketFd sockfd, size_t bufSize);
+
+/**
+ * Gets the current maximum socket send buffer size (in bytes).
+ *
+ * @warning Operating systems are free to modify adjust buffer sizes according
+ * to specific platform requirements.  For example, Linux systems will double
+ * the value passed in a SetEndBuf() to account for bookkeeping overhead; so a
+ * previous call to SetSndBuf() will cause a subsequent GetSndBuf() to return
+ * twice the value originally set.
+ *
+ * @param sockfd  Socket descriptor.
+ * @param size    Buffer to receive the current buffer size.
+ */
+QStatus GetSndBuf(SocketFd sockfd, size_t& bufSize);
+
+/**
+ * Sets the maximum socket receive buffer size (in bytes).
+ *
+ * @warning Operating systems are free to modify this value according to
+ * specific platform requirements.  For example, Linux systems will double this
+ * value to account for bookkeeping overhead; so a subsequent GetSndBuf() will
+ * return twice the value passed in SetSndBuf().
+ *
+ * @param sockfd  Socket descriptor.
+ * @param size    Requested maximum send buffer size.
+ */
+QStatus SetRcvBuf(SocketFd sockfd, size_t bufSize);
+
+/**
+ * Gets the current maximum socket receive buffer size (in bytes).
+ *
+ * @warning Operating systems are free to modify adjust buffer sizes according
+ * to specific platform requirements.  For example, Linux systems will double
+ * the value passed in a SetEndBuf() to account for bookkeeping overhead; so a
+ * previous call to SetSndBuf() will cause a subsequent GetSndBuf() to return
+ * twice the value originally set.
+ *
+ * @param sockfd  Socket descriptor.
+ * @param size    Buffer to receive the current buffer size.
+ */
+QStatus GetRcvBuf(SocketFd sockfd, size_t& bufSize);
+
+/**
  * Set TCP based socket to use or not use Nagle algorithm (TCP_NODELAY)
  *
  * @param sockfd  Socket descriptor.

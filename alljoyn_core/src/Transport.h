@@ -159,6 +159,19 @@ class Transport {
     virtual QStatus GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs) const { return ER_FAIL; }
 
     /**
+     * Does this transport support connections as described by the provided
+     * session options.  This is used to distinguish up front options that are
+     * fundamentally incompatible -- for example, trying to use raw sockets with
+     * the UDP Transport which cannot support them.
+     *
+     * @param opts  Proposed session options.
+     * @return
+     *      - true if the SessionOpts specifies a supported option set.
+     *      - false otherwise.
+     */
+    virtual bool SupportsOptions(const SessionOpts& opts) const { return false; }
+
+    /**
      * Normalize a transport specification.
      * Given a transport specification, convert it into a form which is guaranteed to have a one-to-one
      * relationship with a transport.
