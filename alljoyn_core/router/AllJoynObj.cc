@@ -389,6 +389,22 @@ void AllJoynObj::BindSessionPort(const InterfaceDescription::Member* member, Mes
         }
     }
 
+    /* At least one existing transport must also be capable of doing what is being asked */
+    if (replyCode == ALLJOYN_BINDSESSIONPORT_REPLY_SUCCESS) {
+        bool supports = false;
+        TransportList& transList = bus.GetInternal().GetTransportList();
+        for (size_t i = 0; i < transList.GetNumTransports(); ++i) {
+            Transport* trans = transList.GetTransport(i);
+            if (trans && trans->SupportsOptions(opts)) {
+                supports = true;
+                break;
+            }
+        }
+        if (supports == false) {
+            replyCode = ALLJOYN_BINDSESSIONPORT_REPLY_INVALID_OPTS;
+        }
+    }
+
     if (replyCode == ALLJOYN_BINDSESSIONPORT_REPLY_SUCCESS) {
         /* Assign or check uniqueness of sessionPort */
         AcquireLocks();
