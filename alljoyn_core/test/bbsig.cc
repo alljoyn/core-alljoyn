@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -462,8 +462,8 @@ static void usage(void)
     printf("   -e[k] [RSA|SRP|LOGON|PINX]   = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
     printf("   -d                          = discover remote bus with test service\n");
     printf("   -b                          = Signal is broadcast rather than multicast\n");
+    printf("   --ls                        = Call LeaveSession before tearing down the Bus Attachment\n");
 }
-
 
 /** Main entry point */
 int main(int argc, char** argv)
@@ -479,6 +479,7 @@ int main(int argc, char** argv)
     bool useSignalHandler = false;
     bool discoverRemote = false;
     bool transportSpecific = false;
+    bool ls = false;
 
     unsigned long signalDelay = 0;
     unsigned long disconnectDelay = 0;
@@ -531,6 +532,8 @@ int main(int argc, char** argv)
             useSignalHandler = true;
         } else if (0 == strcmp("-d", argv[i])) {
             discoverRemote = true;
+        } else if (0 == strcmp("--ls", argv[i])) {
+            ls = true;
         } else if (0 == strcmp("-r", argv[i])) {
             ++i;
             if (i == argc) {
@@ -765,6 +768,10 @@ int main(int argc, char** argv)
 
         if (testObj->disconnectDelay > 0) {
             qcc::Sleep(testObj->disconnectDelay);
+        }
+
+        if (ls) {
+            g_msgBus->LeaveSession(g_busListener.GetSessionId());
         }
 
         /* Clean up msg bus for next stress loop iteration*/
