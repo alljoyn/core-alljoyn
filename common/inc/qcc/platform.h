@@ -32,6 +32,10 @@
 #error No OS GROUP defined.
 #endif
 
+#ifndef DEFAULT_CONNECTSPEC
+#define DEFAULT_CONNECTSPEC "tcp:addr=127.0.0.1,port=9956"
+#endif
+
 #if defined(__GNUC__)
 
 #define GCC_VERSION ((__GNUC__ * 10000) + (__GNUC_MINOR__ * 100) + __GNUC_PATCHLEVEL__)
@@ -51,8 +55,6 @@
 #define __cplusplus 201100L
 #endif  // GCC version >= 4.6 and -std=gnu++0x
 #endif  // GCC version < 4.7
-
-
 
 #if (__GNUC__ >= 4) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 1))
 #define QCC_DEPRECATED(func) func __attribute__((deprecated)) /**< mark a function as deprecated in gcc. */
