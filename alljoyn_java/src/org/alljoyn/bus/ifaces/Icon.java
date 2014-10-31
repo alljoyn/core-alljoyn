@@ -24,8 +24,8 @@ import org.alljoyn.bus.annotation.BusProperty;
 /**
  * Definition of the Icon BusInterface
  */
-@BusInterface (name = AboutIcon.INTERFACE_NAME)
-public interface AboutIcon
+@BusInterface (name = Icon.INTERFACE_NAME, announced="true")
+public interface Icon
 {
     public static final String INTERFACE_NAME = "org.alljoyn.Icon";
     public final static String OBJ_PATH = "/About/DeviceIcon";
@@ -56,14 +56,14 @@ public interface AboutIcon
      * @return the URL if the icon is hosted on the cloud
      * @throws BusException
      */
-    @BusMethod(replySignature="s")
-    public String GetUrl() throws BusException;
+    @BusMethod(name="GetUrl", replySignature="s")
+    public String getUrl() throws BusException;
 
     /**
      * Returns binary content for the icon
      * @return binary content for the icon
      * @throws BusException
      */
-    @BusMethod(replySignature="ay")
-    public byte[] GetContent() throws BusException;
+    @BusMethod(name="GetContent", replySignature="ay")
+    public byte[] getContent() throws BusException;
 }
