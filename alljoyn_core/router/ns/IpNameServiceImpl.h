@@ -1618,6 +1618,7 @@ class IpNameServiceImpl : public qcc::Thread {
     PacketScheduler m_packetScheduler;
 
     uint32_t m_networkChangeScheduleCount;
+    bool m_doNetworkCallback;
     qcc::NetworkEventSet m_networkEvents;
     qcc::Timespec m_networkChangeTimeStamp;
     bool PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateSid);
