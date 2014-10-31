@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -250,4 +250,13 @@ TEST(StringTest, plusEqualsOperator) {
     ASSERT_TRUE(s == "foofoo");
     s.resize(s.size() + 3, 'x');
     ASSERT_TRUE(s == "foofooxxx");
+}
+
+/* ASACORE-1058 */
+TEST(StringTest, assignDoesNotAppend) {
+    const char* before = "012345678901234567890123456789012345";
+    const char* after = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdef";
+    qcc::String t(before);
+    t.assign(after);
+    ASSERT_STREQ(after, t.c_str());
 }
