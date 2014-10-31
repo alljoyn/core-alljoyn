@@ -39,6 +39,25 @@ namespace ajn {
 
 namespace org {
 namespace alljoyn {
+
+/** Interface definitions for org.alljoyn.About */
+namespace About {
+
+extern const char* ObjectPath;        /**< Object path */
+extern const char* InterfaceName;     /**< Interface name */
+extern const char* WellKnownName;     /**< Well-known bus name */
+
+}
+
+/** Interface definitions for org.alljoyn.Icon */
+namespace Icon {
+
+extern const char* ObjectPath;        /**< Object path */
+extern const char* InterfaceName;     /**< Interface name */
+extern const char* WellKnownName;     /**< Well known bus name */
+
+}
+
 /** Interface definitions for org.alljoyn.Bus */
 namespace Bus {
 

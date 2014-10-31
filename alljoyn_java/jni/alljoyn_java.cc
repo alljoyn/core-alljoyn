@@ -35,8 +35,11 @@
 #include <MsgArgUtils.h>
 #include <SignatureUtils.h>
 #include "alljoyn_java.h"
+#include <alljoyn/BusObject.h>
 #include <alljoyn/Translator.h>
 #include <alljoyn/AllJoynStd.h>
+#include <alljoyn/AboutObj.h>
+#include <alljoyn/version.h>
 
 #define QCC_MODULE "ALLJOYN_JAVA"
 
@@ -757,6 +760,7 @@ static jclass CLS_Status = NULL;
 static jclass CLS_Variant = NULL;
 static jclass CLS_BusAttachment = NULL;
 static jclass CLS_SessionOpts = NULL;
+static jclass CLS_AboutDataListener = NULL;
 
 static jmethodID MID_Integer_intValue = NULL;
 static jmethodID MID_Object_equals = NULL;
@@ -889,6 +893,12 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
             return JNI_ERR;
         }
         CLS_BusObjectListener = (jclass)env->NewGlobalRef(clazz);
+
+        clazz = env->FindClass("org/alljoyn/bus/AboutDataListener");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_AboutDataListener = (jclass)env->NewGlobalRef(clazz);
 
         clazz = env->FindClass("org/alljoyn/bus/MsgArg");
         if (!clazz) {
@@ -1301,7 +1311,7 @@ class JBusAttachment : public BusAttachment {
      * reference to them to keep them from being garbage collected.
      *
      * Note that this member is public since we trust that the native binding we
-     * wrote will usse it correctly.
+     * wrote will use it correctly.
      */
     list<jobject> busListeners;
 
@@ -5033,6 +5043,106 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_destroy(JNIEnv* env,
     SetHandle(thiz, NULL);
 }
 
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_whoImplements(JNIEnv* env, jobject thiz, jobjectArray jinterfaces) {
+    QStatus status = ER_OK;
+
+    QCC_DbgPrintf(("BusAttachment_whoImplements()"));
+
+    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
+    if (env->ExceptionCheck() || busPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_whoImplements(): Exception or NULL bus pointer"));
+        return JStatus(ER_FAIL);
+    }
+    QCC_DbgPrintf(("BusAttachment_whoImplements(): Refcount on busPtr is %d", busPtr->GetRef()));
+
+    int len = (jinterfaces != NULL) ? env->GetArrayLength(jinterfaces) : 0;
+    if (0 == len) {
+        // both null and size zero interfaces are used the same.
+        status = busPtr->WhoImplements(NULL, 0);
+    } else {
+        const char** rawIntfString = new const char*[len];
+        memset(rawIntfString, 0, len * sizeof(const char*));
+        jstring* jintfs = new jstring[len];
+        memset(jintfs, 0, len * sizeof(jstring));
+        for (int i = 0; i < len; ++i) {
+            jintfs[i] = (jstring) env->GetObjectArrayElement(jinterfaces, i);
+            if (env->ExceptionCheck() || NULL == jintfs[i]) {
+                QCC_LogError(ER_FAIL, ("BusAttachment_whoImplements(): Exception"));
+                status = ER_BAD_ARG_1;
+                goto cleanup;
+            }
+
+            rawIntfString[i] = env->GetStringUTFChars(jintfs[i], NULL);
+            if (NULL == rawIntfString[i]) {
+                status = ER_BAD_ARG_1;
+                goto cleanup;
+            }
+        }
+        status = busPtr->WhoImplements(rawIntfString, len);
+    cleanup:
+        for (int i = 0; i < len; ++i) {
+            if (jintfs[i] && rawIntfString[i]) {
+                env->ReleaseStringUTFChars(jintfs[i], rawIntfString[i]);
+            }
+        }
+        delete [] jintfs;
+        jintfs = NULL;
+        delete [] rawIntfString;
+        rawIntfString = NULL;
+    }
+    return JStatus(status);
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_cancelWhoImplements(JNIEnv* env, jobject thiz, jobjectArray jinterfaces) {
+    QStatus status = ER_OK;
+
+    QCC_DbgPrintf(("BusAttachment_cancelWhoImplements()"));
+
+    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
+    if (env->ExceptionCheck() || busPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_cancelWhoImplements(): Exception or NULL bus pointer"));
+        return JStatus(ER_FAIL);
+    }
+    QCC_DbgPrintf(("BusAttachment_cancelWhoImplements(): Refcount on busPtr is %d", busPtr->GetRef()));
+
+    int len = (jinterfaces != NULL) ? env->GetArrayLength(jinterfaces) : 0;
+    if (0 == len) {
+        // both null and size zero interfaces are used the same.
+        status = busPtr->CancelWhoImplements(NULL, 0);
+    } else {
+        const char** rawIntfString = new const char*[len];
+        memset(rawIntfString, 0, len * sizeof(const char*));
+        jstring* jintfs = new jstring[len];
+        memset(jintfs, 0, len * sizeof(jstring));
+        for (int i = 0; i < len; ++i) {
+            jintfs[i] = (jstring) env->GetObjectArrayElement(jinterfaces, i);
+            if (env->ExceptionCheck() || NULL == jintfs[i]) {
+                QCC_LogError(ER_FAIL, ("BusAttachment_whoImplements(): Exception"));
+                status = ER_BAD_ARG_1;
+                goto cleanup;
+            }
+
+            rawIntfString[i] = env->GetStringUTFChars(jintfs[i], NULL);
+            if (NULL == rawIntfString[i]) {
+                status = ER_BAD_ARG_1;
+                goto cleanup;
+            }
+        }
+        status = busPtr->CancelWhoImplements(rawIntfString, len);
+    cleanup:
+        for (int i = 0; i < len; ++i) {
+            if (jintfs[i] && rawIntfString[i]) {
+                env->ReleaseStringUTFChars(jintfs[i], rawIntfString[i]);
+            }
+        }
+        delete [] jintfs;
+        jintfs = NULL;
+        delete [] rawIntfString;
+        rawIntfString = NULL;
+    }
+    return JStatus(status);
+}
+
 /**
  * Register an object that will receive bus event notifications.  In this
  * context, registering a listener should be thought of as "adding another
@@ -8105,7 +8215,23 @@ QStatus JBusObject::AddInterfaces(jobjectArray jbusInterfaces)
         }
         assert(intf);
 
-        status = AddInterface(*intf);
+        JLocalRef<jclass> clazz = env->GetObjectClass(jbusInterface);
+        jmethodID announced_mid = env->GetMethodID(clazz, "isAnnounced", "()Z");
+        if (!announced_mid) {
+            QCC_DbgPrintf(("JBusObject::AddInterfaces() failed to call isAnnounced"));
+            status = ER_FAIL;
+            break;
+        }
+        jboolean isAnnounced = env->CallBooleanMethod(jbusInterface, announced_mid);
+
+        if (isAnnounced == JNI_TRUE) {
+            QCC_DbgPrintf(("JBusObject::AddInterfaces() isAnnounced returned true"));
+            status = AddInterface(*intf, ANNOUNCED);
+        } else {
+            QCC_DbgPrintf(("JBusObject::AddInterfaces() isAnnounced returned false"));
+            status = AddInterface(*intf);
+
+        }
         if (ER_OK != status) {
             return status;
         }
@@ -11621,7 +11747,7 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_set__JLjava_lang_String_2_3D
 
 JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_setArray(JNIEnv* env, jclass clazz, jlong jmsgArg, jstring jelemSig, jint numElements)
 {
-    // QCC_DbgPrintf(("MsgArg_setArray"));
+    QCC_DbgPrintf(("MsgArg_setArray"));
 
     JString elemSig(jelemSig);
     if (env->ExceptionCheck()) {
@@ -11636,13 +11762,15 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_setArray(JNIEnv* env, jclass
         return 0;
     }
 
+    QCC_DbgPrintf(("MsgArg_setArray calling SetElements: %s, %d, %p", elemSig.c_str(), numElements, elements));
     QStatus status = arg->v_array.SetElements(elemSig.c_str(), numElements, elements);
     if (ER_OK != status) {
+        QCC_DbgPrintf(("MsgArg_setArray calling SetElements: failed"));
         delete [] elements;
         env->ThrowNew(CLS_BusException, QCC_StatusText(status));
         return 0;
     }
-
+    QCC_DbgPrintf(("MsgArg_setArray calling SetElements: successful"));
     arg->SetOwnershipFlags(MsgArg::OwnsArgs);
     arg->typeId = ALLJOYN_ARRAY;
     return (jlong)arg;
@@ -11796,4 +11924,248 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_Translator_destroy(JNIEnv* env, jobj
 
     SetHandle(thiz, NULL);
     return;
+}
+
+/**
+ * This is classes primary responsibility is to convert the value returned from
+ * the Java AboutDataListener to a C++ values expected for a C++ AboutDataListener
+ *
+ * This class also implements the C++ AboutObj so that for every Java AboutObj
+ * an instance of this AboutDataListener also exists.
+ */
+class JAboutObject : public AboutObj, public AboutDataListener {
+  public:
+    JAboutObject(BusAttachment& bus, AnnounceFlag isAboutIntfAnnounced) :
+        AboutObj(bus, isAboutIntfAnnounced) {
+        QCC_DbgPrintf(("JAboutObject::JAboutObject"));
+        MID_getAboutData = NULL;
+        MID_getAnnouncedAboutData = NULL;
+        jaboutDataListenerRef = NULL;
+    }
+
+    QStatus announce(JNIEnv* env, jobject thiz, jshort sessionPort, jobject jaboutDataListener) {
+        // Make sure the jaboutDataListener is the latest version of the Java AboutDataListener
+        if (env->IsInstanceOf(jaboutDataListener, CLS_AboutDataListener)) {
+            JLocalRef<jclass> clazz = env->GetObjectClass(jaboutDataListener);
+
+            MID_getAboutData = env->GetMethodID(clazz, "getAboutData", "(Ljava/lang/String;)Ljava/util/Map;");
+            if (!MID_getAboutData) {
+                return ER_FAIL;
+            }
+            MID_getAnnouncedAboutData = env->GetMethodID(clazz, "getAnnouncedAboutData", "()Ljava/util/Map;");
+            if (!MID_getAnnouncedAboutData) {
+                return ER_FAIL;
+            }
+        } else {
+            return ER_FAIL;
+        }
+        QCC_DbgPrintf(("AboutObj_announce jaboutDataListener is an instance of CLS_AboutDataListener"));
+
+
+        /*
+         * The weak global reference jaboutDataListener cannot be directly used.  We
+         * have to get a "hard" reference to it and then use that.  If you try to
+         * use a weak reference directly you will crash and burn.
+         */
+        //The user can change the AboutDataListener between calls check to see
+        // we already have a a jaboutDataListenerRef if we do delete that ref
+        // and create a new one.
+        if (jaboutDataListenerRef != NULL) {
+            GetEnv()->DeleteGlobalRef(jaboutDataListenerRef);
+            jaboutDataListenerRef = NULL;
+        }
+        jaboutDataListenerRef = env->NewGlobalRef(jaboutDataListener);
+        if (!jaboutDataListenerRef) {
+            QCC_LogError(ER_FAIL, ("Can't get new local reference to AboutDataListener"));
+            return ER_FAIL;
+        }
+
+        return Announce(static_cast<SessionPort>(sessionPort), *this);
+    }
+
+    ~JAboutObject() {
+        QCC_DbgPrintf(("JAboutObject::~JAboutObject"));
+        if (jaboutDataListenerRef != NULL) {
+            GetEnv()->DeleteGlobalRef(jaboutDataListenerRef);
+            jaboutDataListenerRef = NULL;
+        }
+    }
+
+    QStatus GetAboutData(MsgArg* msgArg, const char* language)
+    {
+        QCC_DbgPrintf(("JAboutObject::GetMsgArg"));
+
+        /*
+         * JScopedEnv will automagically attach the JVM to the current native
+         * thread.
+         */
+        JScopedEnv env;
+
+        // Note we don't check that if the jlanguage is null because null is an
+        // acceptable value for the getAboutData Method call.
+        JLocalRef<jstring> jlanguage = env->NewStringUTF(language);
+
+        QStatus status = ER_FAIL;
+        if (jaboutDataListenerRef != NULL && MID_getAboutData != NULL) {
+            QCC_DbgPrintf(("Calling getAboutData for %s language.", language));
+            JLocalRef<jobject> jannounceArg = env->CallObjectMethod(jaboutDataListenerRef, MID_getAboutData, (jstring)jlanguage);
+            QCC_DbgPrintf(("JAboutObj::GetMsgArg Made Java Method call getAboutData"));
+            // check for ErrorReplyBusException exception
+            status = CheckForThrownException(env);
+            if (ER_OK == status) {
+                // Marshal the returned value
+                if (!Marshal("a{sv}", jannounceArg, msgArg)) {
+                    QCC_LogError(ER_FAIL, ("JAboutData(): GetMsgArgAnnounce() marshaling error"));
+                    return ER_FAIL;
+                }
+            } else {
+                QCC_DbgPrintf(("JAboutObj::GetMsgArg exception with status %s", QCC_StatusText(status)));
+                return status;
+            }
+        }
+        return ER_OK;
+    }
+
+    QStatus GetAnnouncedAboutData(MsgArg* msgArg)
+    {
+        QCC_DbgPrintf(("JAboutObject::~GetMsgArgAnnounce"));
+        QStatus status = ER_FAIL;
+        if (jaboutDataListenerRef != NULL && MID_getAnnouncedAboutData != NULL) {
+            QCC_DbgPrintf(("AboutObj_announce obtained jo local ref of jaboutDataListener"));
+            /*
+             * JScopedEnv will automagically attach the JVM to the current native
+             * thread.
+             */
+            JScopedEnv env;
+
+            JLocalRef<jobject> jannounceArg = env->CallObjectMethod(jaboutDataListenerRef, MID_getAnnouncedAboutData);
+            QCC_DbgPrintf(("AboutObj_announce Made Java Method call getAnnouncedAboutData"));
+            // check for ErrorReplyBusException exception
+            status = CheckForThrownException(env);
+            if (ER_OK == status) {
+                if (!Marshal("a{sv}", jannounceArg, msgArg)) {
+                    QCC_LogError(ER_FAIL, ("JAboutData(): GetMsgArgAnnounce() marshaling error"));
+                    return ER_FAIL;
+                }
+            } else {
+                QCC_DbgPrintf(("JAboutObj::GetAnnouncedAboutData exception with status %s", QCC_StatusText(status)));
+                return status;
+            }
+        }
+        return status;
+    }
+
+    /**
+     * This will check if the last method call threw an exception Since we are
+     * looking for ErrorReplyBusExceptions we know that the exception thrown
+     * correlates to a QStatus that we are trying to get.  If ER_FAIL is returned
+     * then we had an issue resolving the java method calls.
+     *
+     * @return QStatus indicating the status that was thrown from the ErrReplyBusException
+     */
+    QStatus CheckForThrownException(JScopedEnv& env) {
+        JLocalRef<jthrowable> ex = env->ExceptionOccurred();
+        if (ex) {
+            env->ExceptionClear();
+            JLocalRef<jclass> clazz = env->GetObjectClass(ex);
+            if (env->IsInstanceOf(ex, CLS_ErrorReplyBusException) && clazz != NULL) {
+                jmethodID mid = env->GetMethodID(clazz, "getErrorStatus", "()Lorg/alljoyn/bus/Status;");
+                if (!mid) {
+                    return ER_FAIL;
+                }
+                JLocalRef<jobject> jstatus = env->CallObjectMethod(ex, mid);
+                if (env->ExceptionCheck()) {
+                    return ER_FAIL;
+                }
+                JLocalRef<jclass> statusClazz = env->GetObjectClass(jstatus);
+                mid = env->GetMethodID(statusClazz, "getErrorCode", "()I");
+                if (!mid) {
+                    return ER_FAIL;
+                }
+                QStatus errorCode = (QStatus)env->CallIntMethod(jstatus, mid);
+                if (env->ExceptionCheck()) {
+                    return ER_FAIL;
+                }
+                return errorCode;
+            }
+            return ER_FAIL;
+        }
+        return ER_OK;
+    }
+    jmethodID MID_getAboutData;
+    jmethodID MID_getAnnouncedAboutData;
+    jobject jaboutDataListenerRef;
+};
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_AboutObj_create(JNIEnv* env, jobject thiz, jobject jbus, jboolean isAboutAnnounced)
+{
+    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(jbus);
+    if (env->ExceptionCheck() || busPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_create(): Exception or NULL bus pointer"));
+        return;
+    }
+    QCC_DbgPrintf(("BusAttachment_unregisterBusListener(): Refcount on busPtr is %d", busPtr->GetRef()));
+
+    JAboutObject* aboutObj;
+    if (isAboutAnnounced == JNI_TRUE) {
+        aboutObj = new JAboutObject(*busPtr, BusObject::ANNOUNCED);
+    } else {
+        aboutObj = new JAboutObject(*busPtr, BusObject::UNANNOUNCED);
+    }
+    SetHandle(thiz, aboutObj);
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_AboutObj_destroy(JNIEnv* env, jobject thiz)
+{
+    QCC_DbgPrintf(("AboutObj_destroy()"));
+
+    JAboutObject* aboutObj = GetHandle<JAboutObject*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("AboutObj_destroy(): Exception"));
+        return;
+    }
+
+    if (aboutObj == NULL) {
+        QCC_DbgPrintf(("AboutObj_destroy(): Already destroyed. Returning."));
+        return;
+    }
+
+    delete aboutObj;
+    aboutObj = NULL;
+
+    SetHandle(thiz, NULL);
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_announce(JNIEnv* env, jobject thiz, jshort sessionPort, jobject jaboutDataListener)
+{
+    QCC_DbgPrintf(("AboutObj_announce"));
+    QStatus status = ER_FAIL;
+    JAboutObject* aboutObj = GetHandle<JAboutObject*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("AboutObj_announce(): Exception"));
+        return JStatus(status);
+    }
+    return JStatus(aboutObj->announce(env, thiz, sessionPort, jaboutDataListener));
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_cancelAnnouncement(JNIEnv* env, jobject thiz) {
+    AboutObj* aboutObj = GetHandle<AboutObj*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("AboutObj_cancelAnnouncement(): Exception"));
+        return JStatus(ER_FAIL);
+    }
+    return JStatus(aboutObj->CancelAnnouncement());
+}
+
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_Version_get(JNIEnv* env, jclass clazz) {
+
+    return env->NewStringUTF(ajn::GetVersion());
+}
+
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_Version_getBuildInfo(JNIEnv* env, jclass clazz) {
+    return env->NewStringUTF(ajn::GetBuildInfo());
+}
+
+JNIEXPORT jint JNICALL Java_org_alljoyn_bus_Version_getNumeric(JNIEnv* env, jclass clazz) {
+    return ajn::GetNumericVersion();
 }

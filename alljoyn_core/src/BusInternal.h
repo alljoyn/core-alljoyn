@@ -50,7 +50,6 @@ namespace ajn {
 
 class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncCB {
     friend class BusAttachment;
-
   public:
 
     /**
@@ -141,6 +140,21 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      * Override the compressions rules for this bus attachment.
      */
     void OverrideCompressionRules(CompressionRules& newRules) { compressionRules = newRules; }
+
+    /**
+     * Get the Announced Object Description for the BusObjects registered on
+     * the BusAttachment with interfaces marked as announced.
+     *
+     * This will clear any previous contents of the of the MsgArg provided. The
+     * resulting MsgArg will have a signature a(oas) and will contain an array
+     * of object paths. For each object path an array of announced interfaces found
+     * at that object path will be listed.
+     *
+     * @param[out] aboutObjectDescriptionArg reference to a MsgArg that will
+     *             be filled in.
+     * @return ER_OK on success
+     */
+    QStatus GetAnnouncedObjectDescription(MsgArg& objectDescriptionArg);
 
     /**
      * Constructor called by BusAttachment.
@@ -249,6 +263,15 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
         return router->PushMessage(msg, busEndpoint);
     }
 
+    /**
+     * Find out if the BusAttachment has bound the specified SessionPort
+     *
+     * @param sessionPort port number being checked
+     *
+     * @return true if the sessionPort is bound
+     */
+    bool IsSessionPortBound(SessionPort sessionPort);
+
   private:
 
     /**
@@ -307,6 +330,12 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     SessionListenerMap sessionListeners;   /* Lookup SessionListener by session id */
 
     qcc::Mutex sessionListenersLock;       /* Lock protecting sessionListners maps */
+
+    typedef qcc::ManagedObj<AboutListener*> ProtectedAboutListener;
+    typedef std::set<ProtectedAboutListener> AboutListenerSet;
+    AboutListenerSet aboutListeners; /* About Signals are recieved out of Sessions so a set is all that is needed */
+
+    qcc::Mutex aboutListenersLock;   /* Lock protecting the aboutListeners set */
 
     struct JoinContext {
         QStatus status;

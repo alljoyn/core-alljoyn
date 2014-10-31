@@ -645,6 +645,50 @@ BusObject* _LocalEndpoint::FindLocalObject(const char* objectPath) {
     return ret;
 }
 
+QStatus _LocalEndpoint::GetAnnouncedObjectDescription(MsgArg& objectDescriptionArg) {
+    QStatus status = ER_OK;
+    objectDescriptionArg.Clear();
+
+    objectsLock.Lock(MUTEX_CONTEXT);
+    size_t announcedObjectsCount = 0;
+    // Find out how many of the localObjects contain Announced interfaces
+    for (std::unordered_map<const char*, BusObject*, Hash, PathEq>::iterator it = localObjects.begin(); it != localObjects.end(); ++it) {
+        if (it->second->GetAnnouncedInterfaceNames() > 0) {
+            ++announcedObjectsCount;
+        }
+    }
+    // Now that we know how many objects are have AnnouncedInterfaces lets Create
+    // an array of MsgArgs. One MsgArg for each Object with Announced interfaces.
+    MsgArg* announceObjectsArg = new MsgArg[announcedObjectsCount];
+    size_t argCount = 0;
+    // Fill the MsgArg for the announcedObjects.
+    for (std::unordered_map<const char*, BusObject*, Hash, PathEq>::iterator it = localObjects.begin(); it != localObjects.end(); ++it) {
+        size_t numInterfaces = it->second->GetAnnouncedInterfaceNames();
+        if (numInterfaces > 0) {
+            const char** interfaces = new const char*[numInterfaces];
+            it->second->GetAnnouncedInterfaceNames(interfaces, numInterfaces);
+            status = announceObjectsArg[argCount].Set("(oas)", it->first, numInterfaces, interfaces);
+            announceObjectsArg[argCount].Stabilize();
+            delete [] interfaces;
+            ++argCount;
+        }
+        if (ER_OK != status) {
+            delete [] announceObjectsArg;
+            objectsLock.Unlock(MUTEX_CONTEXT);
+            return status;
+        }
+    }
+    // If argCount and announcedObjectsCount don't match something has gone wrong
+    assert(argCount == announcedObjectsCount);
+
+    status = objectDescriptionArg.Set("a(oas)", announcedObjectsCount, announceObjectsArg);
+    objectDescriptionArg.Stabilize();
+    delete [] announceObjectsArg;
+    objectsLock.Unlock(MUTEX_CONTEXT);
+
+    return status;
+}
+
 void _LocalEndpoint::UpdateSerialNumber(Message& msg)
 {
     uint32_t serial = msg->msgHeader.serialNum;

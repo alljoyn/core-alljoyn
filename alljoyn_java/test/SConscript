@@ -18,6 +18,8 @@ import string
 Import('env')
 
 # AllJoyn Java binding
+# enable UTF-8 character in unit tests
+env.Append(JAVACFLAGS = ['-encoding', 'UTF-8'])
 test_classes = env.Java('$OBJDIR_ALLJOYN_JAVA/test/classes', '.', JAVACLASSPATH=os.pathsep.join(
         [env['JAVACLASSPATH'], env.GetBuildPath(env.subst('$JARDIR/alljoyn.jar'))]))
 
