@@ -169,7 +169,6 @@ typedef struct {
     uint32_t LCS;        /* The sequence number of last consumed segment */
     ArdpRcvBuf* buf;     /* Array holding received buffers not consumed by the app */
     ArdpEack eack;       /* Tracking of received out-of-order segments */
-    uint16_t ackPending; /* Number of segments pending acknowledgement */
 } ArdpRcv;
 
 /**
@@ -757,6 +756,9 @@ static QStatus SendMsgHeader(ArdpHandle* handle, ArdpConnRecord* conn, ArdpHeade
     if (status == ER_WOULDBLOCK) {
         QCC_DbgHLPrintf(("SendMsgHeader: ER_WOULDBLOCK"));
         handle->trafficJam = true;
+    } else {
+        /* Cancel ACK timer */
+        conn->ackTimer.retry = 0;
     }
     return status;
 }
@@ -886,10 +888,8 @@ static void AckTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* cont
 {
     QStatus status = Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->snd.NXT, conn->rcv.CUR);
 
-    if (status == ER_OK) {
-        /* Stop timer until there is something else to acknowledge */
-        conn->ackTimer.retry = 0;
-        conn->rcv.ackPending = 0;
+    if (status == ER_WOULDBLOCK) {
+        conn->ackTimer.delta = 0;
     }
 }
 
@@ -984,10 +984,8 @@ static QStatus SendMsgData(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf*
     status = qcc::SendToSG(conn->sock, conn->ipAddr, conn->ipPort, msgSG, sent);
 
     if (status == ER_OK) {
-        if (conn->ackTimer.retry != 0) {
-            UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
-            conn->rcv.ackPending = 0;
-        }
+        /* Piggyback ACKs with data. Cancel ACK timer. */
+        conn->ackTimer.retry = 0;
         handle->trafficJam = false;
     } else if (status == ER_WOULDBLOCK) {
         handle->trafficJam = true;
@@ -1880,8 +1878,8 @@ static QStatus UpdateSndSegments(ArdpHandle* handle, ArdpConnRecord* conn, uint3
         needUpdate = true;
     }
 
-    /* Schedule "unsolicited" ACK if the receiver's window is half full */
-    if (needUpdate && ((conn->snd.NXT - lcs) > (conn->snd.SEGMAX >> 1)) && (conn->ackTimer.retry == 0)) {
+    /* Schedule "unsolicited" ACK */
+    if (needUpdate && (conn->ackTimer.retry == 0)) {
         UpdateTimer(handle, conn, &conn->ackTimer, ARDP_MIN_DELAYED_ACK_TIMEOUT, 1);
     }
 
@@ -2014,6 +2012,18 @@ static void AddRcvMsk(ArdpConnRecord* conn, uint32_t delta)
 
 }
 
+static void DumpRcvQueue(ArdpConnRecord* conn)
+{
+    uint32_t i;
+    for (i = 0; i < conn->rcv.SEGMAX; i++) {
+        QCC_LogError(ER_OK, ("%d: %s, %s seq %u, som %u, fcnt %d ttl %x", i,
+                             (conn->rcv.buf[i].flags && ARDP_BUFFER_IN_USE) ? "in use" : "not in use",
+                             (conn->rcv.buf[i].flags && ARDP_BUFFER_DELIVERED) ? "delivered" : "not delivered",
+                             conn->rcv.buf[i].seq, conn->rcv.buf[i].som, conn->rcv.buf[i].fcnt, conn->rcv.buf[i].ttl));
+
+    }
+}
+
 static QStatus ReleaseRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t seq, uint16_t fcnt, QStatus reason)
 {
     uint16_t index = seq % conn->rcv.SEGMAX;
@@ -2034,7 +2044,8 @@ static QStatus ReleaseRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, uint3
             QCC_DbgPrintf(("Expired segment %u is not first in rcv queue (%u)", seq, conn->rcv.LCS + 1));
             return ER_OK;
         } else {
-            QCC_DbgPrintf(("Consumed message %u is not first in rcv queue (%u)", seq, conn->rcv.LCS + 1));
+            QCC_LogError(ER_OK, ("conn %p, Consumed message %u is not first in rcv queue (%u)", conn, seq, conn->rcv.LCS + 1));
+            DumpRcvQueue(conn);
             assert(0 && "Consumed message is not first in rcv queue");
             return ER_FAIL;
         }
@@ -2084,16 +2095,11 @@ static QStatus ReleaseRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, uint3
         QCC_DbgPrintf(("ReleaseRcvBuffers: new conn->rcv.CUR=%u", conn->rcv.CUR));
     }
 
-    /*
-     * Schedule "unsolicited" ACK if the ACK timer is not running.
-     * If the buffers have been released due to TTL expiration,
-     * schedule ACK with minimum delay.
-     */
+    /* Schedule "unsolicited" ACK if the ACK timer is not running. */
     if (conn->ackTimer.retry == 0) {
-        uint32_t timeout = (reason == ER_ARDP_TTL_EXPIRED) ? ARDP_MIN_DELAYED_ACK_TIMEOUT : handle->config.delayedAckTimeout;
         QCC_DbgHLPrintf(("ReleaseRcvBuffers: Schedule ACK timer to inform about new values of rcv.CUR %u and rcv.LCS %u",
                          conn->rcv.CUR, conn->rcv.LCS));
-        UpdateTimer(handle, conn, &conn->ackTimer, timeout, 1);
+        UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
     }
 
     return ER_OK;
@@ -2184,6 +2190,12 @@ static void AdvanceRcvQueue(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf
         conn->rcv.CUR  = seq - 1;
     }
 
+    if (conn->ackTimer.retry == 0) {
+        QCC_DbgHLPrintf(("AdvanceReleaseQueue: Schedule ACK timer to inform about new values of rcv.CUR %u and rcv.LCS %u",
+                         conn->rcv.CUR, conn->rcv.LCS));
+        UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
+    }
+
     QCC_DbgHLPrintf(("AdvanceRcvQueue: rcv.CUR = %u, rcv.LCS = %u", conn->rcv.CUR, conn->rcv.LCS));
 }
 
@@ -2195,8 +2207,8 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
     uint32_t seq;
     uint32_t delta;
     ArdpRcvBuf* start;
-
     QCC_DbgTrace(("FlushExpiredRcvMessages(handle=%p, conn=%p, acknxt=%u", handle, conn, acknxt));
+    QCC_DbgPrintf(("FlushExpiredRcvMessages(acknxt=%u, lcs=%u, cur=%u", acknxt, conn->rcv.LCS, conn->rcv.CUR));
 
     /* Move to the start of the message */
     if (!(current->flags & ARDP_BUFFER_IN_USE) || (current->seq == (current->som + current->fcnt - 1))) {
@@ -2205,12 +2217,15 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
         startSeq = conn->rcv.CUR + 1;
         delta = 0;
 
-        /* If no EACKs in RCV queue, just update the counter */
-        if ((conn->rcv.eack.sz == 0)) {
-            if (conn->rcv.LCS == conn->rcv.CUR) {
-                conn->rcv.LCS = acknxt - 1;
-            }
+        /* If this is the tail of RCV queue, just update the counter */
+        if ((conn->rcv.eack.sz == 0) && (conn->rcv.LCS == conn->rcv.CUR)) {
+            conn->rcv.LCS = acknxt - 1;
             conn->rcv.CUR = acknxt - 1;
+            if (conn->ackTimer.retry == 0) {
+                QCC_DbgHLPrintf(("FlushExpiredRcvMessages: Schedule ACK timer to inform about new values of rcv.CUR %u and rcv.LCS %u",
+                                 conn->rcv.CUR, conn->rcv.LCS));
+                UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
+            }
             return;
         }
 
@@ -2224,11 +2239,14 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
     current = start;
     seq = startSeq;
 
+    /* Mark all the segments with sequence numbers up to ACKNXT as expired */
     do {
         assert(!(current->flags & ARDP_BUFFER_DELIVERED));
         QCC_DbgPrintf(("FlushExpiredRcvMessages: seq = %u", seq));
 
         current->ttl = ARDP_TTL_EXPIRED;
+
+        /* Update EACK mask */
         if (delta == 0) {
             ShiftRcvMsk(conn);
         } else {
@@ -2254,7 +2272,13 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
         AdvanceRcvQueue(handle, conn, current);
     }
 
-    QCC_DbgPrintf(("FlushExpiredRcvMessages(UPDATE rcv.CUR = %u, acknxt = %u", conn->rcv.CUR, acknxt));
+    if (conn->ackTimer.retry == 0) {
+        QCC_DbgHLPrintf(("FlushExpiredRcvMessages: Schedule ACK timer to inform about new values of rcv.CUR %u and rcv.LCS %u",
+                         conn->rcv.CUR, conn->rcv.LCS));
+        UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
+    }
+
+    QCC_DbgPrintf(("FlushExpiredRcvMessages(UPDATE rcv.CUR = %u, rcv.LCS = %u, acknxt = %u", conn->rcv.CUR, conn->rcv.LCS, acknxt));
 }
 
 static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, uint8_t* buf, uint16_t len, bool ordered)
@@ -2581,6 +2605,10 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
             if (status != ER_OK && status != ER_WOULDBLOCK) {
                 SetState(conn, CLOSED);
+
+                /* Stop connect retry timer */
+                conn->connectTimer.retry = 0;
+
                 handle->cb.ConnectCb(handle, conn, false, NULL, 0, status);
                 /*
                  * Do not delete conection record here:
@@ -2695,6 +2723,8 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
     case OPEN:
         {
             QCC_DbgPrintf(("ArdpMachine(): conn->state = OPEN"));
+            uint32_t validWindow = (seg->DLEN != 0) ? conn->rcv.SEGMAX : (conn->rcv.SEGMAX + 1);
+            bool isDuplicate = false;
 
             if (seg->FLG & ARDP_FLAG_RST) {
 #if ARDP_STATS
@@ -2705,9 +2735,21 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 break;
             }
 
-            if (IN_RANGE(uint32_t, conn->rcv.LCS + 1, conn->rcv.SEGMAX, seg->SEQ) == false) {
-                QCC_DbgPrintf(("ArdpMachine(): OPEN: unacceptable sequence %u, conn->rcv.CUR + 1 = %u, conn->rcv.LCS + 1 = %u, MAX = %d", seg->SEQ, conn->rcv.CUR + 1, conn->rcv.LCS + 1, conn->rcv.SEGMAX));
+            if (IN_RANGE(uint32_t, conn->rcv.LCS + 1, validWindow, seg->SEQ) == false) {
                 if (seg->DLEN != 0) {
+
+                    /* Check if data segment is a duplicate. Did the remote side miss our ACK? */
+                    if ((IN_RANGE(uint32_t, conn->rcv.LCS + 1 - conn->rcv.SEGMAX, conn->rcv.SEGMAX, seg->SEQ) == true)) {
+                        /* This is a duplicate data segment */
+                        isDuplicate = true;
+                        QCC_DbgPrintf(("ArdpMachine(): OPEN: duplicate data segment %u, conn->rcv.CUR + 1 = %u, conn->rcv.LCS + 1 = %u",
+                                       seg->SEQ, conn->rcv.CUR + 1, conn->rcv.LCS + 1));
+                    }
+                }
+                /* Bad bad bad remote! Disconnect. */
+                if (!isDuplicate) {
+                    QCC_LogError(ER_ARDP_INVALID_RESPONSE, ("ArdpMachine(): OPEN: unacceptable sequence %u, conn->rcv.CUR + 1 = %u, conn->rcv.LCS + 1 = %u, MAX = %d", seg->SEQ, conn->rcv.CUR + 1, conn->rcv.LCS + 1, conn->rcv.SEGMAX));
+                    Disconnect(handle, conn, ER_ARDP_INVALID_RESPONSE);
                     break;
                 }
             }
@@ -2762,24 +2804,22 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 ++handle->stats.nulRecvs;
 #endif
                 status = Send(handle, conn, ARDP_FLAG_ACK | ARDP_FLAG_VER, conn->snd.NXT, conn->rcv.CUR);
-                if (status == ER_OK && conn->ackTimer.retry != 0) {
-                    UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
-                    conn->rcv.ackPending = 0;
-                } else if (status == ER_WOULDBLOCK) {
+
+                /* If socket was busy, re-schedule ACK timer immediately. */
+                if (status == ER_WOULDBLOCK) {
                     UpdateTimer(handle, conn, &conn->ackTimer, 0, 1);
                 }
 
             } else if (seg->DLEN) {
-                QCC_DbgPrintf(("ArdpMachine(): OPEN: Got %d bytes of Data with SEQ %u, rcv.CUR = %u).", seg->DLEN, seg->SEQ, conn->rcv.CUR));
-                status = ER_OK;
-                /*
-                 * Update RCV buffers if the segment is not a duplicate (accounting for a case when
-                 * receiving a retransmit of a segment with sequence number between LCS and CUR).
-                 */
+                QCC_DbgHLPrintf(("ArdpMachine(): OPEN: Got %d bytes of Data with SEQ %u, rcv.CUR = %u (%s)).", seg->DLEN, seg->SEQ, conn->rcv.CUR, isDuplicate ? "duplicate" : "new"));
 
-                if (SEQ32_LT(conn->rcv.CUR, seg->SEQ)) {
+                status = ER_OK;
+
+                /*
+                 * Update RCV buffers if the segment is not a duplicate.
+                 */
+                if (!isDuplicate) {
                     status = AddRcvBuffer(handle, conn, seg, buf, len, seg->SEQ == (conn->rcv.CUR + 1));
-                    conn->rcv.ackPending++;
 
                     if (status != ER_OK) {
                         Disconnect(handle, conn, status);
@@ -2787,16 +2827,10 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                     }
                 }
 
-                /*
-                 * ACKS can be scheduled based on timeout value or number of received segments
-                 * pending acknowledgement (receive window more than half-full).
-                 */
+                /* Schedule ACK timer if it's not running already */
                 if (conn->ackTimer.retry == 0) {
                     UpdateTimer(handle, conn, &conn->ackTimer, handle->config.delayedAckTimeout, 1);
-                } else if (conn->rcv.ackPending >= ((conn->rcv.SEGMAX >> 1) + 1)) {
-                    UpdateTimer(handle, conn, &conn->ackTimer, 0, 1);
                 }
-
             }
 
             if (conn->window != seg->WINDOW) {
@@ -2876,6 +2910,8 @@ QStatus ARDP_Connect(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ipAd
         SetState(conn, SYN_SENT);
         *pConn = conn;
     }
+
+
     return status;
 }
 
@@ -3066,7 +3102,7 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
     size_t nbytes;                        /* The number of bytes actually received */
     QStatus status = ER_OK;
 
-    QCC_DbgTrace(("ARDP_Run(handle=%p, sock=%d., socketRead=%d., socketWrite=%d., ms=%p)", handle, sock, sockRead, sockWrite, ms));
+    //QCC_DbgTrace(("ARDP_Run(handle=%p, sock=%d., socketRead=%d., socketWrite=%d., ms=%p)", handle, sock, sockRead, sockWrite, ms));
     if (sockWrite) {
         handle->trafficJam = false;
     }
