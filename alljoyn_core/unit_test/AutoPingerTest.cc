@@ -163,7 +163,12 @@ TEST_F(AutoPingerTest, Multibus) {
         autoPinger.AddPingGroup(groupNames[i], tpl[i], 1);
     }
 
+    // On darwin platform the number 10 causes "Too many open files error". 5 is found to sustain
+#ifdef __MACH__
+    const int N = 5;
+#else
     const int N = 10;
+#endif
     std::vector<BusAttachment*> serviceBuses(N);
     std::vector<qcc::String> uniqueNames(N);
     for (size_t i = 0; i < serviceBuses.size(); ++i) {
