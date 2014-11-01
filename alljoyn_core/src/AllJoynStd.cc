@@ -33,6 +33,16 @@
 
 namespace ajn {
 
+/** org.alljoyn.About interface definitions */
+const char* org::alljoyn::About::ObjectPath = "/About";
+const char* org::alljoyn::About::InterfaceName = "org.alljoyn.About";
+const char* org::alljoyn::About::WellKnownName = "org.alljoyn.About";
+
+/** org.alljoyn.About.Icon interface definitions */
+const char* org::alljoyn::Icon::ObjectPath = "/About/DeviceIcon";
+const char* org::alljoyn::Icon::InterfaceName = "org.alljoyn.Icon";
+const char* org::alljoyn::Icon::WellKnownName = "org.alljoyn.Icon";
+
 /** org.alljoyn.Bus interface definitions */
 const char* org::alljoyn::Bus::ErrorName = "org.alljoyn.Bus.ErStatus";
 const char* org::alljoyn::Bus::ObjectPath = "/org/alljoyn/Bus";
@@ -67,6 +77,37 @@ const char* org::allseen::Introspectable::IntrospectDocType =
 QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
 {
     QStatus status;
+    {
+        /* Create the org.alljoyn.About interface */
+        InterfaceDescription* ifc = NULL;
+        status = bus.CreateInterface(org::alljoyn::About::InterfaceName, ifc);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to create interface \"%s\"", org::alljoyn::About::InterfaceName));
+            return status;
+        }
+        ifc->AddMethod("GetAboutData", "s", "a{sv}", "languageTag,aboutData");
+        ifc->AddMethod("GetObjectDescription", NULL, "a(oas)", "Control");
+        ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
+        ifc->AddSignal("Announce", "qqa(oas)a{sv}", "version,port,objectDescription,servMetadata", 0);
+
+        ifc->Activate();
+    }
+    {
+        /* Create the org.alljoyn.Icon interface */
+        InterfaceDescription* ifc = NULL;
+        status = bus.CreateInterface(org::alljoyn::Icon::InterfaceName, ifc);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to create interface \"%s\"", org::alljoyn::Icon::InterfaceName));
+            return status;
+        }
+        ifc->AddMethod("GetUrl", NULL, "s", "url");
+        ifc->AddMethod("GetContent", NULL, "ay", "content");
+        ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
+        ifc->AddProperty("MimeType", "s", PROP_ACCESS_READ);
+        ifc->AddProperty("Size", "u", PROP_ACCESS_READ);
+
+        ifc->Activate();
+    }
     {
         /* Create the org.alljoyn.Bus interface */
         InterfaceDescription* ifc = NULL;

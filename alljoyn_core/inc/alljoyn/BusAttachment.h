@@ -30,6 +30,8 @@
 #include <qcc/String.h>
 #include <alljoyn/KeyStoreListener.h>
 #include <alljoyn/AuthListener.h>
+#include <alljoyn/AboutListener.h>
+#include <alljoyn/AboutObjectDescription.h>
 #include <alljoyn/BusListener.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/ProxyBusObject.h>
@@ -1256,6 +1258,150 @@ class BusAttachment : public MessageReceiver {
      * @return This BusAttachment's Translator
      */
     Translator* GetDescriptionTranslator();
+
+    /**
+     * Registers a handler to receive the org.alljoyn.about Announce signal.
+     *
+     * The handler is only called if a call to WhoImplements has been has been
+     * called.
+     *
+     * Important the AboutListener should be registered before calling WhoImplments
+     *
+     * @param[in] aboutListener reference to AboutListener
+     */
+    void RegisterAboutListener(AboutListener& aboutListener);
+
+    /**
+     * Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
+     *
+     * @param[in] aboutListener reference to AboutListener to unregister
+     */
+    void UnregisterAboutListener(AboutListener& aboutListener);
+
+    /**
+     * Unregisters all AboutListeners from receiving any org.alljoyn.about Announce signal
+     */
+    void UnregisterAllAboutListeners();
+
+    /**
+     * List the interfaces your application is interested in.  If a remote device
+     * is announcing that interface then the all Registered AboutListeners will
+     * be called.
+     *
+     * For example, if you need both "com.example.Audio" <em>and</em>
+     * "com.example.Video" interfaces then do the following.
+     * RegisterAboutListener once:
+     * @code
+     * const char* interfaces[] = {"com.example.Audio", "com.example.Video"};
+     * RegisterAboutListener(aboutListener);
+     * WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+     * @endcode
+     *
+     * If the AboutListener should be called if "com.example.Audio"
+     * <em>or</em> "com.example.Video" interfaces are implemented then call
+     * WhoImplements multiple times:
+     * @code
+     *
+     * RegisterAboutListener(aboutListener);
+     * const char* audioInterface[] = {"com.example.Audio"};
+     * WhoImplements(audioInterface, sizeof(audioInterface) / sizeof(audioInterface[0]));
+     * const char* videoInterface[] = {"com.example.Video"};
+     * WhoImplements(videoInterface, sizeof(videoInterface) / sizeof(videoInterface[0]));
+     * @endcode
+     *
+     * The interface name may be a prefix followed by a `*`.  Using
+     * this, the example where we are interested in "com.example.Audio" <em>or</em>
+     * "com.example.Video" interfaces could be written as:
+     * @code
+     * const char* exampleInterface[] = {"com.example.*"};
+     * RegisterAboutListener(aboutListener);
+     * WhoImplements(exampleInterface, sizeof(exampleInterface) / sizeof(exampleInterface[0]));
+     * @endcode
+     *
+     * The AboutListener will receive any announcement that implements an interface
+     * beginning with the "com.example." name.
+     *
+     * It is the AboutListeners responsibility to parse through the reported
+     * interfaces to figure out what should be done in response to the Announce
+     * signal.
+     *
+     * WhoImplements is ref counted. If WhoImplements is called with the same
+     * list of interfaces multiple times then CancelWhoImplements must also be
+     * called multiple times with the same list of interfaces.
+     *
+     * Note: specifying NULL for the implementsInterfaces parameter could have
+     * significant impact on network performance and should be avoided unless
+     * all announcements are needed.
+     *
+     * @param[in] implementsInterfaces a list of interfaces that the Announce
+     *               signal reports as implemented. NULL to receive all Announce
+     *               signals regardless of interfaces
+     * @param[in] numberInterfaces the number of interfaces in the
+     *               implementsInterfaces list
+     * @return status
+     */
+    QStatus WhoImplements(const char** implementsInterfaces, size_t numberInterfaces);
+
+    /**
+     * List an interface your application is interested in.  If a remote device
+     * is announcing that interface then the all Registered AnnounceListeners will
+     * be called.
+     *
+     * This is identical to WhoImplements(const char**, size_t)
+     * except this is specialized for a single interface not several interfaces.
+     *
+     * Note: specifying NULL for the interface parameter could have significant
+     * impact on network performance and should be avoided unless all
+     * announcements are needed.
+     *
+     * @see WhoImplements(const char**, size_t)
+     * @param[in] interface     interface that the remove user must implement to
+     *                          receive the announce signal.
+     *
+     * @return
+     *    - #ER_OK on success
+     *    - An error status otherwise
+     */
+    QStatus WhoImplements(const char* interface);
+
+    /**
+     * Stop showing interest in the listed interfaces. Stop receiving announce
+     * signals from the devices with the listed interfaces.
+     *
+     * Note if WhoImplements has been called multiple times the announce signal
+     * will still be received for any interfaces that still remain.
+     *
+     * @param[in] implementsInterfaces a list of interfaces. The list must match the
+     *                                 list previously passed to the WhoImplements
+     *                                 member function
+     * @param[in] numberInterfaces the number of interfaces in the
+     *               implementsInterfaces list
+     * @return
+     *    - #ER_OK on success
+     *    - #ER_BUS_MATCH_RULE_NOT_FOUND if interfaces added using the WhoImplements
+     *                                   member function were not found.
+     *    - An error status otherwise
+     */
+    QStatus CancelWhoImplements(const char** implementsInterfaces, size_t numberInterfaces);
+
+    /**
+     * Stop showing interest in the listed interfaces. Stop receiving announce
+     * signals from the devices with the listed interfaces.
+     *
+     * This is identical to CancelWhoImplements(const char**, size_t)
+     * except this is specialized for a single interface not several interfaces.
+     *
+     * @see CancelWhoImplements(const char**, size_t)
+     * @param[in] interface     interface that the remove user must implement to
+     *                          receive the announce signal.
+     *
+     * @return
+     *    - #ER_OK on success
+     *    - #ER_BUS_MATCH_RULE_NOT_FOUND if interface added using the WhoImplements
+     *                                   member function were not found.
+     *    - An error status otherwise
+     */
+    QStatus CancelWhoImplements(const char* interface);
 
     /// @cond ALLJOYN_DEV
     /**

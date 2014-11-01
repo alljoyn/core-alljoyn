@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -182,6 +184,7 @@ public class BusAttachment {
      * <ul>
      * <li>OK if the name advertisements were stopped.</li>
      * <li>BUS_NOT_CONNECTED if a connection has not been made with a local bus</li>
+     * <li>BUS_MATCH_RULE_NOT_FOUND if interfaces added using the WhoImplements method were not found.</li>
      * <li>other error status codes indicating a failure.</li>
      * </ul>
      */
@@ -524,7 +527,7 @@ public class BusAttachment {
      * <li>OK the name is present and responding</li>
      * <li>ALLJOYN_PING_REPLY_UNREACHABLE the name is no longer present</li>
      * </ul>
-     * The following return values indicate that the router cannot determine if the 
+     * The following return values indicate that the router cannot determine if the
      * remote name is present and responding:
      * <ul>
      * <li>ALLJOYN_PING_REPLY_TIMEOUT Ping call timed out</li>
@@ -640,6 +643,123 @@ public class BusAttachment {
      */
     public native void useOSLogging(boolean useOSLog);
 
+    private Set<AboutListener> registeredAboutListeners;
+
+    /**
+     * Register an object that will receive About Interface event notifications.
+     *
+     * @param listener  Object instance that will receive bus event notifications.
+     */
+    public void registerAboutListener(AboutListener listener)
+    {
+        if (registeredAboutListeners.isEmpty()) {
+            registerSignalHandlers(this);
+        }
+        registeredAboutListeners.add(listener);
+    }
+
+    /**
+     * unregister an object that was previously registered with registerAboutListener.
+     *
+     * @param listener  Object instance to un-register as a listener.
+     */
+    public void unregisterAboutListener(AboutListener listener)
+    {
+        registeredAboutListeners.remove(listener);
+        if (registeredAboutListeners.isEmpty()) {
+            unregisterSignalHandlers(this);
+        }
+    }
+
+    /**
+     * Signal handler used to process announce signals from the bus. It will
+     * forward the signal to the registered AboutListener
+     *
+     * @param version - version of the announce signal received
+     * @param port - Session Port used by the remote device
+     * @param objectDescriptions - list of object paths any interfaces found at
+     *                             that object path
+     * @param aboutData - A dictionary containing information about the remote
+     *                    device.
+     */
+    @BusSignalHandler(iface = "org.alljoyn.About", signal = "Announce")
+    public void announce(short version, short port, AboutObjectDescription[] objectDescriptions, Map<String, Variant> aboutData)
+    {
+        for (AboutListener al : BusAttachment.this.registeredAboutListeners) {
+            al.announced(BusAttachment.this.getMessageContext().sender, version, port, objectDescriptions, aboutData);
+        }
+    }
+
+    /**
+     * TODO cleanup the documentation make sure it is accurate remove doxygen
+     * style code blocks.
+     *
+     * List the interfaces your application is interested in.  If a remote device
+     * is announcing that interface then the all Registered AboutListeners will
+     * be called.
+     *
+     * For example, if you need both "com.example.Audio" <em>and</em>
+     * "com.example.Video" interfaces then do the following.
+     * registerAboutListener once:
+     * <pre>{@code
+     * String interfaces[] = {"com.example.Audio", "com.example.Video"};
+     * registerAboutListener(aboutListener);
+     * whoImplements(interfaces);
+     * }</pre>
+     *
+     * If the handler should be called if "com.example.Audio" <em>or</em>
+     * "com.example.Video" interfaces are implemented then call
+     * RegisterAboutListener multiple times:
+     * <pre>{@code
+     * registerAboutListener(aboutListener);
+     * String audioInterface[] = {"com.example.Audio"};
+     * whoImplements(interfaces);
+     * whoImplements(audioInterface);
+     * String videoInterface[] = {"com.example.Video"};
+     * whoImplements(videoInterface);
+     * }</pre>
+     *
+     * The interface name may be a prefix followed by a *.  Using
+     * this, the example where we are interested in "com.example.Audio" <em>or</em>
+     * "com.example.Video" interfaces could be written as:
+     * <pre>{@code
+     * String exampleInterface[] = {"com.example.*"};
+     * registerAboutListener(aboutListener);
+     * whoImplements(exampleInterface);
+     * }</pre>
+     *
+     * The AboutListener will receive any announcement that implements an interface
+     * beginning with the "com.example." name.
+     *
+     * If the same AboutListener is used for for multiple interfaces then it is
+     * the listeners responsibility to parse through the reported interfaces to
+     * figure out what should be done in response to the Announce signal.
+     *
+     * Note: specifying null for the implementsInterfaces parameter could have
+     * significant impact on network performance and should be avoided unless
+     * its known that all announcements are needed.
+     *
+     * @param interfaces a list of interfaces that the Announce
+     *               signal reports as implemented. NULL to receive all Announce
+     *               signals regardless of interfaces
+     * @return Status.OK on success. An error status otherwise.
+     */
+    public native Status whoImplements(String[] interfaces);
+
+    /**
+     * Stop showing interest in the listed interfaces. Stop receiving announce
+     * signals from the devices with the listed interfaces.
+     *
+     * Note if WhoImplements has been called multiple times the announce signal
+     * will still be received for any interfaces that still remain.
+     *
+     * @param interfaces a list of interfaces list must match a list previously
+     *                   passed to the whoImplements method.
+     *
+     * @return Status.OK on success. An error status otherwise.
+     */
+    public native Status cancelWhoImplements(String[] interfaces);
+
     /**
      * Register an object that will receive bus event notifications.
      *
@@ -648,7 +768,7 @@ public class BusAttachment {
     public native void registerBusListener(BusListener listener);
 
     /**
-     * unregister an object that was previously registered with RegisterBusListener.
+     * unregister an object that was previously registered with registerBusListener.
      *
      * @param listener  Object instance to un-register as a listener.
      */
@@ -830,6 +950,7 @@ public class BusAttachment {
                                     new Class<?>[] { DBusProxyObj.class });
         dbus = dbusbo.getInterface(DBusProxyObj.class);
         executor = Executors.newSingleThreadExecutor();
+        registeredAboutListeners = new HashSet<AboutListener>();
     }
 
     /**
