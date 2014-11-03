@@ -92,7 +92,7 @@ struct ECCPublicKey {
     bool operator!=(const ECCPublicKey& k) const
     {
         int n = memcmp(x, k.x, ECC_COORDINATE_SZ);
-        return (n != 0) || (0 == memcmp(y, k.y, ECC_COORDINATE_SZ));
+        return (n != 0) || (0 != memcmp(y, k.y, ECC_COORDINATE_SZ));
     }
 
     bool operator<(const ECCPublicKey& k) const
