@@ -45,6 +45,7 @@
 #include "CompressionRules.h"
 
 #include <alljoyn/Status.h>
+#include <set>
 
 namespace ajn {
 
@@ -224,7 +225,25 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      * @param listener   SessionListener to associate with sessionId.
      * @return  ER_OK if successful.
      */
-    QStatus SetSessionListener(SessionId id, SessionListener* listener);
+    QStatus SetSessionListener(SessionId id, SessionListener* listener, SessionSideMask bitset);
+
+    /**
+     * Check whether a session with a particular sessionId exists for host/joiner side
+     *
+     * @param id  Existing session Id.
+     * @param index      host/joiner
+     * @return  true if session exists
+     */
+    bool SessionExists(SessionId id, size_t index) const;
+
+    /**
+     * Check whether a session with a particular sessionId exists has been selfjoined
+     *
+     * @param sessionId  Existing session Id.
+     *
+     * @return  true if session exists and session was selfjoined on this leaf
+     */
+    bool IsSelfJoin(SessionId id) const;
 
     /**
      * Called if the bus attachment become disconnected from the bus.
@@ -324,12 +343,12 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     typedef qcc::ManagedObj<SessionPortListener*> ProtectedSessionPortListener;
     typedef std::map<SessionPort, ProtectedSessionPortListener> SessionPortListenerMap;
     SessionPortListenerMap sessionPortListeners;  /* Lookup SessionPortListener by session port */
+    qcc::Mutex sessionPortListenersLock;       /* Lock protecting sessionPortListeners maps */
 
     typedef qcc::ManagedObj<SessionListener*> ProtectedSessionListener;
     typedef std::map<SessionId, ProtectedSessionListener> SessionListenerMap;
-    SessionListenerMap sessionListeners;   /* Lookup SessionListener by session id */
-
-    qcc::Mutex sessionListenersLock;       /* Lock protecting sessionListners maps */
+    SessionListenerMap sessionListeners[SESSION_SIDE_NUM];   /* Lookup SessionListener by session id (index 0 for hoster, index 1 for joiner)*/
+    mutable qcc::Mutex sessionListenersLock[SESSION_SIDE_NUM];       /* Lock protecting sessionListeners maps */
 
     typedef qcc::ManagedObj<AboutListener*> ProtectedAboutListener;
     typedef std::set<ProtectedAboutListener> AboutListenerSet;
@@ -342,6 +361,10 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
         SessionId sessionId;
         SessionOpts opts;
     };
+
+
+    std::set<SessionId> sessionSet[SESSION_SIDE_NUM];
+    mutable qcc::Mutex sessionSetLock[SESSION_SIDE_NUM];
 
     std::map<qcc::Thread*, JoinContext> joinThreads;  /* List of threads waiting to join */
     qcc::Mutex joinLock;                              /* Mutex that protects joinThreads */

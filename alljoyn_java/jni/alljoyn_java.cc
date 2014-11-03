@@ -1348,6 +1348,12 @@ class JBusAttachment : public BusAttachment {
      */
     map<SessionPort, jobject> sessionPortListenerMap;
 
+    typedef struct {
+        jobject jhostedListener;
+        jobject jjoinedListener;
+        jobject jListener;
+    }BusAttachmentSessionListeners;
+
     /**
      * A map from sessions to their associated Java session listeners.
      *
@@ -1357,7 +1363,8 @@ class JBusAttachment : public BusAttachment {
      * Note that this member is public since we trust that the native binding we
      * wrote will usse it correctly.
      */
-    map<SessionId, jobject> sessionListenerMap;
+
+    map<SessionId, BusAttachmentSessionListeners> sessionListenerMap;
 
     /**
      * A List of pending asynchronous join operation informations.  We store
@@ -4316,12 +4323,21 @@ void JBusAttachment::Disconnect(const char* connectArgs)
      * join session.
      */
     QCC_DbgPrintf(("JBusAttachment::Disconnect(): Releasing SessionListeners"));
-    for (map<SessionId, jobject>::iterator i = sessionListenerMap.begin(); i != sessionListenerMap.end(); ++i) {
-        if (i->second) {
+    for (map<SessionId, BusAttachmentSessionListeners>::iterator i = sessionListenerMap.begin(); i != sessionListenerMap.end(); ++i) {
+        if (i->second.jhostedListener) {
+            QCC_DbgPrintf(("JBusAttachment::Disconnect(): Call SetHostedSessionListener(%d, %p)", i->first, 0));
+            SetHostedSessionListener(i->first, 0);
+            env->DeleteGlobalRef(i->second.jhostedListener);
+        }
+        if (i->second.jjoinedListener) {
+            QCC_DbgPrintf(("JBusAttachment::Disconnect(): Call SetJoinedSessionListener(%d, %p)", i->first, 0));
+            SetJoinedSessionListener(i->first, 0);
+            env->DeleteGlobalRef(i->second.jjoinedListener);
+        }
+        if (i->second.jListener) {
             QCC_DbgPrintf(("JBusAttachment::Disconnect(): Call SetSessionListener(%d, %p)", i->first, 0));
             SetSessionListener(i->first, 0);
-            QCC_DbgPrintf(("JBusAttachment::Disconnect(): Releasing strong global reference to SessionListener %p", i->second));
-            env->DeleteGlobalRef(i->second);
+            env->DeleteGlobalRef(i->second.jListener);
         }
     }
     sessionListenerMap.clear();
@@ -6282,7 +6298,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_joinSession(JNIEnv*
         QCC_DbgPrintf(("BusAttachment_joinSession(): Taking Bus Attachment common lock"));
         busPtr->baCommonLock.Lock();
 
-        busPtr->sessionListenerMap[sessionId] = jglobalref;
+        busPtr->sessionListenerMap[sessionId].jListener = jglobalref;
 
         QCC_DbgPrintf(("BusAttachment_joinSession(): Releasing Bus Attachment common lock"));
         busPtr->baCommonLock.Unlock();
@@ -6324,25 +6340,19 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_joinSession(JNIEnv*
     return JStatus(status);
 }
 
-/**
- * Leave (cancel) a session.  This releases the resources allocated for the
- * session, notifies the other side that we have left, and disables callbacks
- * to the associated listener.
- *
- * @param env  The environment pointer used to get access to the JNI helper
- *             functions.
- * @param thiz The Java object reference back to the BusAttachment.  Like a
- *             "this" pointer in C++.
- * @param jsessionId The SessionId value of the session to end.
- */
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_leaveSession(JNIEnv* env, jobject thiz,
-                                                                          jint jsessionId)
-{
-    QCC_DbgPrintf(("BusAttachment_leaveSession()"));
+typedef enum {
+    BA_HSL,     // BusAttachment hosted session listener index
+    BA_JSL,     // BusAttachment joined session listener index
+    BA_SL,     // BusAttachment session listener index
+    BA_LAST     // indicates the size of the enum
+} BusAttachmentSessionListenerIndex;
 
+static jobject leaveGenericSession(JNIEnv* env, jobject thiz,
+                                   jint jsessionId, BusAttachmentSessionListenerIndex index)
+{
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
     if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("BusAttachment_leaveSession(): Exception"));
+        QCC_LogError(ER_FAIL, ("Exception"));
         return NULL;
     }
 
@@ -6355,14 +6365,39 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_leaveSession(JNIEnv
         return NULL;
     }
 
-    QCC_DbgPrintf(("BusAttachment_leaveSession(): Refcount on busPtr is %d", busPtr->GetRef()));
+    QCC_DbgPrintf(("Refcount on busPtr is %d", busPtr->GetRef()));
 
     /*
      * Make the AllJoyn call.
      */
-    QCC_DbgPrintf(("BusAttachment_leaveSession(): Call LeaveSession(%d)", jsessionId));
+    QStatus status = ER_OK;
+    jobject* jsessionListener = NULL;
 
-    QStatus status = busPtr->LeaveSession(jsessionId);
+    switch (index) {
+    case BA_HSL:
+        QCC_DbgPrintf(("Call LeaveHostedSession(%d)", jsessionId));
+        status = busPtr->LeaveHostedSession(jsessionId);
+        jsessionListener = &busPtr->sessionListenerMap[jsessionId].jhostedListener;
+        break;
+
+    case BA_JSL:
+        QCC_DbgPrintf(("Call LeaveJoinedSession(%d)", jsessionId));
+        status = busPtr->LeaveJoinedSession(jsessionId);
+        jsessionListener = &busPtr->sessionListenerMap[jsessionId].jjoinedListener;
+        break;
+
+    case BA_SL:
+        QCC_DbgPrintf(("Call LeaveSession(%d)\r\n", jsessionId));
+        status = busPtr->LeaveSession(jsessionId);
+        if (ER_OK == status) {
+            jsessionListener = &busPtr->sessionListenerMap[jsessionId].jListener;
+        }
+        break;
+
+    default:
+        QCC_LogError(ER_FAIL, ("Exception unknown BusAttachmentSessionListenerIndex %d", index));
+        assert(0);
+    }
 
     /*
      * If we get an exception down in the AllJoyn code, it's hard to know what
@@ -6373,7 +6408,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_leaveSession(JNIEnv
      * log the exception and let it propagate on up the stack to the client.
      */
     if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("BusAttachment_leaveSession(): Exception"));
+        QCC_LogError(ER_FAIL, ("Exception"));
         return NULL;
     }
 
@@ -6396,29 +6431,83 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_leaveSession(JNIEnv
      * others.  We'll just leave it at that.
      */
     if (status == ER_OK) {
-        QCC_DbgPrintf(("BusAttachment_leaveSession(): Success"));
+        QCC_DbgPrintf(("Success"));
 
         /*
          * We know that AllJoyn has released its hold on C++ listener object
          * referred to by our Java listener object.  We can now release our hold on
          * the Java listener object.
          */
-        QCC_DbgPrintf(("BusAttachment_leaveSession(): Taking Bus Attachment common lock"));
+        QCC_DbgPrintf(("Taking Bus Attachment common lock"));
         busPtr->baCommonLock.Lock();
 
-        jobject jglobalref = busPtr->sessionListenerMap[jsessionId];
-        busPtr->sessionListenerMap[jsessionId] = 0;
+        jobject jglobalref = *jsessionListener;
+        *jsessionListener = 0;
 
-        QCC_DbgPrintf(("BusAttachment_leaveSession(): Releasing Bus Attachment common lock"));
+        QCC_DbgPrintf(("Releasing Bus Attachment common lock"));
         busPtr->baCommonLock.Unlock();
 
-        QCC_DbgPrintf(("BusAttachment_leaveSession(): Releasing strong global reference to SessionListener %p", jglobalref));
+        QCC_DbgPrintf(("Releasing strong global reference to SessionListener %p", jglobalref));
         env->DeleteGlobalRef(jglobalref);
     } else {
-        QCC_LogError(status, ("BusAttachment_leaveSession(): Error"));
+        QCC_LogError(status, ("Error"));
     }
 
     return JStatus(status);
+}
+
+/**
+ * Leave (cancel) a session.  This releases the resources allocated for the
+ * session, notifies the other side that we have left, and disables callbacks
+ * to the associated listener.
+ *
+ * @param env  The environment pointer used to get access to the JNI helper
+ *             functions.
+ * @param thiz The Java object reference back to the BusAttachment.  Like a
+ *             "this" pointer in C++.
+ * @param jsessionId The SessionId value of the session to end.
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_leaveSession(JNIEnv* env, jobject thiz,
+                                                                          jint jsessionId)
+{
+    QCC_DbgPrintf(("BusAttachment_leaveSession()"));
+    return leaveGenericSession(env, thiz, jsessionId, BA_SL);
+}
+
+/**
+ * Leave (cancel) a hosted session.  This releases the resources allocated for the
+ * session, notifies the other side that we have left, and disables callbacks
+ * to the associated listener.
+ *
+ * @param env  The environment pointer used to get access to the JNI helper
+ *             functions.
+ * @param thiz The Java object reference back to the BusAttachment.  Like a
+ *             "this" pointer in C++.
+ * @param jsessionId The SessionId value of the session to end.
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_leaveHostedSession(JNIEnv* env, jobject thiz,
+                                                                                jint jsessionId)
+{
+    QCC_DbgPrintf(("BusAttachment_leaveHostedSession()"));
+    return leaveGenericSession(env, thiz, jsessionId, BA_HSL);
+}
+
+/**
+ * Leave (cancel) a joined session.  This releases the resources allocated for the
+ * session, notifies the other side that we have left, and disables callbacks
+ * to the associated listener.
+ *
+ * @param env  The environment pointer used to get access to the JNI helper
+ *             functions.
+ * @param thiz The Java object reference back to the BusAttachment.  Like a
+ *             "this" pointer in C++.
+ * @param jsessionId The SessionId value of the session to end.
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_leaveJoinedSession(JNIEnv* env, jobject thiz,
+                                                                                jint jsessionId)
+{
+    QCC_DbgPrintf(("BusAttachment_leaveJoinedSession()"));
+    return leaveGenericSession(env, thiz, jsessionId, BA_JSL);
 }
 
 /**
@@ -6484,40 +6573,14 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_removeSessionMember
 
     return JStatus(status);
 }
-/**
- * Explicitly set a session listener for a given session ID.
- *
- * Clients provide session listeners when they join sessions since it makes
- * sense to associate the provided listener with the expected session ID.
- * Services, on the other hand, do not join sessions, they are notified when
- * clients join the sessions they are exporting.  So there is no easy way to
- * make the session ID to session joiner association.  Because of this, it is
- * expected that a service will make that association explicitly in its
- * session joined callback by calling this method.
- *
- * Although this is intended to be used by services, there is no rule that
- * states that this method may only be used in that context.  As such, any
- * call to this method will overwrite an existing listener, disconnecting it
- * from its callbacks.
- *
- * @param env  The environment pointer used to get access to the JNI helper
- *             functions.
- * @param thiz The Java object reference back to the BusAttachment.  Like a
- *             "this" pointer in C++.
- * @param jsessionPort The SessionPort value representing the contact port.
- * @param jsessionId Set to the resulting SessionID value if the call succeeds.
- * @param jsessionOpts Session options that services must agree to in order to
- *                     successfully join the session.
- * @param jlistener Called by the bus when session related events occur.
- */
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setSessionListener(JNIEnv* env, jobject thiz,
-                                                                                jint jsessionId, jobject jlistener)
-{
-    QCC_DbgPrintf(("BusAttachment_setSessionListener()"));
 
+static jobject setGenericSessionListener(JNIEnv* env, jobject thiz,
+                                         jint jsessionId, jobject jlistener,
+                                         BusAttachmentSessionListenerIndex index)
+{
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
     if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("BusAttachment_setSessionListener(): Exception"));
+        QCC_LogError(ER_FAIL, ("Exception"));
         return NULL;
     }
 
@@ -6530,7 +6593,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setSessionListener(
         return NULL;
     }
 
-    QCC_DbgPrintf(("BusAttachment_setSessionListener(): Refcount on busPtr is %d", busPtr->GetRef()));
+    QCC_DbgPrintf(("Refcount on busPtr is %d", busPtr->GetRef()));
 
     /*
      * We always take a strong global reference to the listener object and hold
@@ -6538,29 +6601,60 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setSessionListener(
      * acquire the reference, then we are in an exception state and returning
      * NULL is okay.
      */
-    QCC_DbgPrintf(("BusAttachment_setSessionListener(): Taking strong global reference to SessionListener %p", jlistener));
-    jobject jglobalref = env->NewGlobalRef(jlistener);
-    if (!jglobalref) {
-        return NULL;
-    }
+    jobject jglobalref = NULL;
+    JSessionListener* listener = NULL;
+    if (jlistener) {
+        QCC_DbgPrintf(("Taking strong global reference to SessionListener %p", jlistener));
+        jglobalref = env->NewGlobalRef(jlistener);
+        if (!jglobalref) {
+            return NULL;
+        }
 
-    /*
-     * Get the C++ object that must be there backing the Java listener object
-     */
-    JSessionListener* listener = GetNativeListener<JSessionListener*>(env, jlistener);
-    if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("BusAttachment_setSessionListener(): Exception"));
-        return NULL;
-    }
+        /*
+         * Get the C++ object that must be there backing the Java listener object
+         */
+        listener = GetNativeListener<JSessionListener*>(env, jlistener);
+        if (env->ExceptionCheck()) {
+            QCC_LogError(ER_FAIL, ("Exception"));
+            jthrowable exception = env->ExceptionOccurred();
+            env->ExceptionClear();
+            env->DeleteGlobalRef(jglobalref);
+            env->Throw(exception);
+            return NULL;
+        }
 
-    assert(listener);
+        assert(listener);
+    }
 
     /*
      * Make the AllJoyn call.
      */
-    QCC_DbgPrintf(("BusAttachment_setSessionListener(): Call SetSessionListener(%d, %p)", jsessionId, listener));
 
-    QStatus status = busPtr->SetSessionListener(jsessionId, listener);
+    QStatus status = ER_OK;
+    jobject* jsessionListener = NULL;
+    switch (index) {
+    case BA_HSL:
+        QCC_DbgPrintf(("Call SetHostedSessionListener(%d, %p)", jsessionId, listener));
+        status = busPtr->SetHostedSessionListener(jsessionId, listener);
+        jsessionListener = &busPtr->sessionListenerMap[jsessionId].jhostedListener;
+        break;
+
+    case BA_JSL:
+        QCC_DbgPrintf(("Call SetJoinedSessionListener(%d, %p)", jsessionId, listener));
+        status = busPtr->SetJoinedSessionListener(jsessionId, listener);
+        jsessionListener = &busPtr->sessionListenerMap[jsessionId].jjoinedListener;
+        break;
+
+    case BA_SL:
+        QCC_DbgPrintf(("Call SetSessionListener(%d, %p)", jsessionId, listener));
+        status = busPtr->SetSessionListener(jsessionId, listener);
+        jsessionListener = &busPtr->sessionListenerMap[jsessionId].jListener;
+        break;
+
+    default:
+        QCC_LogError(ER_FAIL, ("Exception unknown BusAttachmentSessionListenerIndex %d", index));
+        assert(0);
+    }
 
     /*
      * We did the call to set the session listner, but we have to ask ourselves
@@ -6584,20 +6678,20 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setSessionListener(
      * leave it at that.
      */
     if (status == ER_OK) {
-        QCC_DbgPrintf(("BusAttachment_setSessionListener(): Success"));
+        QCC_DbgPrintf(("Success"));
 
         /*
          * We know that AllJoyn has released its hold on any pre-existing C++
          * listener object referred to by a pre-existing Java listener object.
          * We can now release our hold on that Java listener object.
          */
-        QCC_DbgPrintf(("BusAttachment_setSessionListener(): Taking Bus Attachment common lock"));
+        QCC_DbgPrintf(("Taking Bus Attachment common lock"));
         busPtr->baCommonLock.Lock();
 
-        jobject joldglobalref = busPtr->sessionListenerMap[jsessionId];
-        busPtr->sessionListenerMap[jsessionId] = 0;
+        jobject joldglobalref = *jsessionListener;
+        *jsessionListener = 0;
 
-        QCC_DbgPrintf(("BusAttachment_setSessionListener(): Releasing strong global reference to SessionListener %p", joldglobalref));
+        QCC_DbgPrintf(("Releasing strong global reference to SessionListener %p", joldglobalref));
         env->DeleteGlobalRef(joldglobalref);
 
         /*
@@ -6605,12 +6699,14 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setSessionListener(
          * we just used.  We have got to keep a hold on the corresponding Java
          * object.
          */
-        busPtr->sessionListenerMap[jsessionId] = jglobalref;
+        if (jglobalref) {
+            *jsessionListener = jglobalref;
+        }
 
-        QCC_DbgPrintf(("BusAttachment_setSessionListener(): Releasing Bus Attachment common lock"));
+        QCC_DbgPrintf(("Releasing Bus Attachment common lock"));
         busPtr->baCommonLock.Unlock();
     } else {
-        QCC_LogError(status, ("BusAttachment_setSessionListener(): Error"));
+        QCC_LogError(status, ("Error"));
 
         /*
          * We know that the C++ listener corresponding to the Java listener we
@@ -6621,11 +6717,107 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setSessionListener(
          * session, and a subsequent setSessionListener fails, the existing
          * listener remains.
          */
-        QCC_DbgPrintf(("BusAttachment_setSessionListener(): Releasing strong global reference to SessionListener %p", jglobalref));
-        env->DeleteGlobalRef(jglobalref);
+        if (jglobalref) {
+            QCC_DbgPrintf(("Releasing strong global reference to SessionListener %p", jglobalref));
+            env->DeleteGlobalRef(jglobalref);
+        }
     }
 
     return JStatus(status);
+}
+
+/**
+ * Explicitly set a session listener for a given session ID.
+ *
+ * Clients provide session listeners when they join sessions since it makes
+ * sense to associate the provided listener with the expected session ID.
+ * Services, on the other hand, do not join sessions, they are notified when
+ * clients join the sessions they are exporting.  So there is no easy way to
+ * make the session ID to session joiner association.  Because of this, it is
+ * expected that a service will make that association explicitly in its
+ * session joined callback by calling this method.
+ *
+ * Although this is intended to be used by services, there is no rule that
+ * states that this method may only be used in that context.  As such, any
+ * call to this method will overwrite an existing listener, disconnecting it
+ * from its callbacks.
+ *
+ * @param env  The environment pointer used to get access to the JNI helper
+ *             functions.
+ * @param thiz The Java object reference back to the BusAttachment.  Like a
+ *             "this" pointer in C++.
+ * @param jsessionId Set to the resulting SessionID value if the call succeeds.
+ * @param jlistener Called by the bus when session related events occur.
+ *                  May be NULL to clear previous listener.
+ */
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setSessionListener(JNIEnv* env, jobject thiz,
+                                                                                jint jsessionId, jobject jlistener)
+{
+    QCC_DbgPrintf(("BusAttachment_setSessionListener()"));
+    return setGenericSessionListener(env, thiz, jsessionId, jlistener, BA_SL);
+}
+
+/**
+ * Explicitly set a joined session listener for a given session ID.
+ *
+ * Clients provide session listeners when they join sessions since it makes
+ * sense to associate the provided listener with the expected session ID.
+ * Services, on the other hand, do not join sessions, they are notified when
+ * clients join the sessions they are exporting.  So there is no easy way to
+ * make the session ID to session joiner association.  Because of this, it is
+ * expected that a service will make that association explicitly in its
+ * session joined callback by calling this method.
+ *
+ * Although this is intended to be used by services, there is no rule that
+ * states that this method may only be used in that context.  As such, any
+ * call to this method will overwrite an existing listener, disconnecting it
+ * from its callbacks.
+ *
+ * @param env  The environment pointer used to get access to the JNI helper
+ *             functions.
+ * @param thiz The Java object reference back to the BusAttachment.  Like a
+ *             "this" pointer in C++.
+ * @param jsessionId Set to the resulting SessionID value if the call succeeds.
+ * @param jlistener Called by the bus when session related events occur.
+ *                  May be NULL to clear previous listener.
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setJoinedSessionListener(JNIEnv* env, jobject thiz,
+                                                                                      jint jsessionId, jobject jlistener)
+{
+    QCC_DbgPrintf(("BusAttachment_setJoinedSessionListener()"));
+    return setGenericSessionListener(env, thiz, jsessionId, jlistener, BA_JSL);
+}
+
+/**
+ * Explicitly set a hosted session listener for a given session ID.
+ *
+ * Clients provide session listeners when they join sessions since it makes
+ * sense to associate the provided listener with the expected session ID.
+ * Services, on the other hand, do not join sessions, they are notified when
+ * clients join the sessions they are exporting.  So there is no easy way to
+ * make the session ID to session joiner association.  Because of this, it is
+ * expected that a service will make that association explicitly in its
+ * session joined callback by calling this method.
+ *
+ * Although this is intended to be used by services, there is no rule that
+ * states that this method may only be used in that context.  As such, any
+ * call to this method will overwrite an existing listener, disconnecting it
+ * from its callbacks.
+ *
+ * @param env  The environment pointer used to get access to the JNI helper
+ *             functions.
+ * @param thiz The Java object reference back to the BusAttachment.  Like a
+ *             "this" pointer in C++.
+ * @param jsessionId Set to the resulting SessionID value if the call succeeds.
+ * @param jlistener Called by the bus when session related events occur.
+ *                  May be NULL to clear previous listener.
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setHostedSessionListener(JNIEnv* env, jobject thiz,
+                                                                                      jint jsessionId, jobject jlistener)
+{
+    QCC_DbgPrintf(("BusAttachment_setHostedSessionListener()"));
+    return setGenericSessionListener(env, thiz, jsessionId, jlistener, BA_HSL);
 }
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_SessionListener_create(JNIEnv* env, jobject thiz)
@@ -6828,7 +7020,7 @@ exit:
              * failed session.
              */
             if (status == ER_OK) {
-                busPtr->sessionListenerMap[sessionId] = (*i)->jsessionListener;
+                busPtr->sessionListenerMap[sessionId].jListener = (*i)->jsessionListener;
                 (*i)->jsessionListener = NULL;
             } else {
                 QCC_DbgPrintf(("JOnJoinSessionListener::JoinSessionCB(): Release strong global reference to SessionListener %p", (*i)->jsessionListener));
