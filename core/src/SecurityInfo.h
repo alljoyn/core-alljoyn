@@ -20,26 +20,23 @@
 #include <alljoyn/about/AnnounceHandler.h>
 #include <alljoyn/about/AboutPropertyStoreImpl.h>
 #include <qcc/String.h>
-#include <ApplicationState.h>
-#include <PublicKey.h>
+#include <qcc/GUID.h>
+#include <Common.h>
 
 #define QCC_MODULE "SEC_MGR"
-
-#include <vector>
 
 namespace ajn {
 namespace securitymgr {
 /*
- * \brief Represents the data of a remote SecInfo signal.
+ * \brief Represents the data of a remote NotifyConfig signal.
  */
 struct SecurityInfo {
   public:
-    //TODO add more fields as more info becomes available
     qcc::String busName;
-    PublicKey publicKey;
-    std::vector<PublicKey> rotList;
-    enum ApplicationClaimState claimState;
-    enum ApplicationRunningState runningState;
+    qcc::ECCPublicKey publicKey;
+    ajn::PermissionConfigurator::ClaimableState claimState;
+    uint32_t policySerialNum;
+    ApplicationRunningState runningState;
 };
 }
 }

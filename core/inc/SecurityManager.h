@@ -29,9 +29,10 @@
 #include <Identity.h>
 #include <Storage.h>
 #include <memory>
-#include <AuthorizationData.h>
+#include <SecurityManagerConfig.h>
 
 #include <qcc/String.h>
+#include <qcc/X509Certificate.h>
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "SEC_MGR"
@@ -53,7 +54,10 @@ class SecurityManagerImpl;
 /**
  * Callback function to ask the administrator to accept the manifest.
  */
-typedef bool (*AcceptManifestCB)(const ajn::AuthorizationData& mnf);
+typedef bool (*AcceptManifestCB)(const ApplicationInfo& appInfo,
+                                 const PermissionPolicy::Rule* manifestRules,
+                                 const size_t manifestRulesCount,
+                                 void* cookie);
 
 class SecurityManager {
   private:
@@ -66,11 +70,10 @@ class SecurityManager {
                     ajn::BusAttachment* ba,
                     const qcc::ECCPublicKey& pubKey,
                     const qcc::ECCPrivateKey& privKey,
-                    const StorageConfig& storageCfg);
+                    const StorageConfig& storageCfg,
+                    const SecurityManagerConfig& smCfg);
 
     QStatus GetStatus() const;
-
-    void FlushStorage();
 
     SecurityManager(const SecurityManager&);
     void operator=(const SecurityManager&);
@@ -92,48 +95,69 @@ class SecurityManager {
      *   -Probably QStatus is not good enough to convey all the information when things go wrong security-wise. Either extend QStatus or come up with a new error.
      *
      * \param[in] app the application info of the application that we need to add the RoT to
-     * \param[in] AcceptMnfCb the callback function for accepting the manifest of the app
+     * \param[in] idInfo the identity info of the identity we want to link the application
+     * \param[in] amcb the callback function for accepting the manifest of the app
+     * \param[in] cookie a pointer to application specific data. This pointer will be passed to claas made to AcceptManifestCB.
      *
      * \retval ER_OK  on success
      * \retval others on failure
      */
     QStatus ClaimApplication(const ApplicationInfo& app,
-                             AcceptManifestCB amcb);
+                             const IdentityInfo& idInfo,
+                             AcceptManifestCB amcb,
+                             void* cookie = NULL);
+
+    /**
+     * \brief Retrieve the manifest of the remote application.
+     *
+     * \param[in] appInfo the application from which the manifest should be retrieved.
+     * \param[out] manifestRules an array of rules in the manifest of the application.
+     * \param[out] manifestRulesCount the number of rules in the manifestRules array.
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus GetManifest(const ApplicationInfo& appInfo,
+                        PermissionPolicy::Rule** manifestRules,
+                        size_t* manifestRulesCount);
+
+    /**
+     * \brief Claim an application if it was indeed claimable.
+     *        This entails installing a RoT, generating an identity certificate (based on the identity info)
+     *        and installing that certificate.
+     *
+     * \param[in] app the application info of the application that we need to add the RoT to
+     * \param[in] identityInfo the identity info of the identity we want to link the application
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus Claim(ApplicationInfo& app,
+                  const IdentityInfo& identityInfo);
+
+    /**
+     * \brief Retrieve the Currently installed Identity of the given application.
+     *
+     * \param[in] appInfo the application info of the application that we want to retrieve the certificate from.
+     * \param[out] certificate the identity certificate to fill in.
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus GetIdentityCertificate(const ApplicationInfo& appInfo,
+                                   qcc::IdentityCertificate& idCert) const;
 
     /**
      * \brief Install a given generated Identity on a specific application.
      *
      * \param[in] app the application info of the application that we need to add the RoT to
+     * \param[in] id the identity info describing owner/user of the application
      *
      * \retval ER_OK  on success
      * \retval others on failure
      */
-    QStatus InstallIdentity(const ApplicationInfo& app);
-
-    /**
-     * \brief Install a provided RoT on a specific application.
-     *
-     * \param[in] app the application info of the application that we need to add the RoT to
-     * \param[in] rot the RoT that needs to be added to the application in focus
-     *
-     * \retval ER_OK  on success
-     * \retval others on failure
-     */
-
-    QStatus AddRootOfTrust(const ApplicationInfo& app,
-                           const RootOfTrust& rot);
-
-    /**
-     * \brief Remove a certain RoT from a specific application.
-     *
-     * \param[in] app the application info of the application that we need to have its RoT removed
-     * \param[in] rot the RoT that needs to be removed from the application in focus
-     *
-     * \retval ER_OK  on success
-     * \retval others on failure
-     */
-    QStatus RemoveRootOfTrust(const ApplicationInfo& app,
-                              const RootOfTrust& rot);
+    QStatus InstallIdentity(const ApplicationInfo& app,
+                            const IdentityInfo& id);
 
     /**
      * \brief Get the RoT of this security manager.
@@ -153,8 +177,8 @@ class SecurityManager {
      * \retval vector<ApplicationInfo> on success
      * \retval empty-vector otherwise
      */
-    std::vector<ApplicationInfo> GetApplications(ApplicationClaimState acs =
-                                                     ApplicationClaimState::UNKNOWN_CLAIM_STATE) const;
+    std::vector<ApplicationInfo> GetApplications(
+        ajn::PermissionConfigurator::ClaimableState acs = ajn::PermissionConfigurator::STATE_UNKNOWN) const;
 
     /**
      * \brief Register a listener that is called-back whenever the application info is changed.
@@ -200,7 +224,7 @@ class SecurityManager {
      * \retval ER_OK  on success
      * \retval others on failure
      */
-    QStatus RemoveGuild(const GUID128& guildId);
+    QStatus RemoveGuild(const qcc::GUID128& guildId);
 
     /**
      * \brief Get the information pertaining to a managed Guild.
@@ -223,11 +247,53 @@ class SecurityManager {
     QStatus GetManagedGuilds(std::vector<GuildInfo>& guildsInfo) const;
 
     /**
+     * \brief Add an Identity info to be persistently stored.
+     *
+     * \param[in] identityInfo the info of a given identity that needs to be stored
+     * \param[in] update a flag to specify whether identity info should be updated if the identity already exists
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus StoreIdentity(const IdentityInfo& identityInfo,
+                          const bool update = false);
+
+    /**
+     * \brief Remove the stored information pertaining to a given Identity.
+     *
+     * \param[in] idInfoId the identifier of a given identity
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus RemoveIdentity(const qcc::GUID128& idInfoId);
+
+    /**
+     * \brief Get the info stored for a Identity Guild.
+     *
+     * \param[in, out] idInfo info of a given Identity. Only the GUID is mandatory for input
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus GetIdentity(IdentityInfo& idInfo) const;
+
+    /**
+     * \brief Get the info of all managed Identities.
+     *
+     * \param[in, out] identityInfos all info of currently managed Identities
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    QStatus GetManagedIdentities(std::vector<IdentityInfo>& identityInfos) const;
+
+    /**
      * \brief Install a membership certificate on the application, making it a member of a specific guild.
      *
      * \param[in] appInfo the application that should become a member of the specific guild.
      * \param[in] guildInfo the guild to which the application should be added.
-     * \param[in] authorizationData The authorization data for the membership or NULL to use the
+     * \param[in] authorizationData A permission policy containing the rules for the membership or NULL to use the
      *  manifest of the application.
      *
      * \retval ER_OK  on success
@@ -235,7 +301,7 @@ class SecurityManager {
      */
     QStatus InstallMembership(const ApplicationInfo& appInfo,
                               const GuildInfo& guildInfo,
-                              const AuthorizationData* authorizationData = NULL);
+                              const PermissionPolicy* authorizationData = NULL);
 
     /**
      * \brief Remove an application from a guild. Revoking its guild membership.
@@ -251,7 +317,7 @@ class SecurityManager {
 
     /**
      * \brief Install a policy on an application. This method does not persist
-     * the policy locally.
+     * the policy locally unless the installation is successful on the remote application.
      *
      * \param[in] appInfo the application on which the policy should be
      * installed.

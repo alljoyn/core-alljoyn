@@ -25,6 +25,8 @@ if env.has_key('_ALLJOYNCORE_'):
 else:
     from_alljoyn_core=0
 
+# Needed for dynamic casting of polymorphic certificates 
+env.Append(CXXFLAGS = '-frtti')
 
 # Indicate that this SConscript file has been loaded already
 env['_SECURITY_'] = True
@@ -42,12 +44,18 @@ if not env.has_key('_ALLJOYN_SERVICES_COMMON_') and os.path.exists('../../servic
 if 'cpp' in env['bindings'] and not env.has_key('_ALLJOYNCORE_') and os.path.exists('../../core/alljoyn/alljoyn_core/SConscript'):
     env.SConscript('../../core/alljoyn/alljoyn_core/SConscript')
 
-
 # Make config library and header file paths available to the global environment
 env.Append(LIBPATH = '$DISTDIR/security/lib');
 env.Append(CPPPATH = '$DISTDIR/security/inc');
 
 secenv = env.Clone(tools = ['textfile'])
+
+sys.path.append(str(secenv.Dir('../alljoyn/build_core/tools/scons').srcnode()))
+from configurejni import ConfigureJNI
+ 
+if not ConfigureJNI(secenv):
+    if not GetOption('help'):
+        Exit(1)
 
 secenv.Append(CCFLAGS = '-Werror')
 
@@ -57,8 +65,9 @@ def create_libpath(self):
 
 AddMethod(secenv, create_libpath, "CreateLibPath")
 
-# Make alljoyn C++ dist a sub-directory of the alljoyn dist.
+# Make security C++ and its jar dist a sub-directory of the alljoyn dist.
 secenv['SEC_DISTDIR'] = env['DISTDIR'] + '/security'
+secenv['JARDIR'] = secenv['SEC_DISTDIR'] + '/jar'
 
 secenv.Append(LIBS = ['alljoyn_about', 'alljoyn_services_common'])
 
@@ -69,21 +78,27 @@ secenv.Install('$SEC_DISTDIR/security/inc', secenv.Glob('security/inc/*.h'))
 
 secenv.Append(CPPPATH = ['$SEC_DISTDIR/security/inc'])
 secenv.Append(CPPPATH = ['../../../../../../core/inc/'])
+secenv.Append(CPPPATH = ['../../../../../../storage/inc'])
 
 secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('storage/src/native/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/storage/native', duplicate=0))
 secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('core/src/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/core', duplicate=0))
 secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('stub/src/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/stub', duplicate=0))
+jar, classes = secenv.SConscript('java/src/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/java', duplicate=0)
+secenv.Install('$SEC_DISTDIR/lib', [jar, classes])
+secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('java/jni/SConscript', exports = ['secenv', 'classes'], variant_dir=buildroot+'/lib/jni', duplicate=0))
 
 # Security Manager App building
 secenv.Install('$SEC_DISTDIR/bin/samples', secenv.SConscript('samples/cli/SConscript', exports=['secenv'], variant_dir=buildroot+'/samples/cli', duplicate=0))
 secenv.Install('$SEC_DISTDIR/bin/stub', secenv.SConscript('samples/stub/SConscript', exports = ['secenv'], variant_dir=buildroot+'/samples/stub', duplicate=0))
     
 # Security core tests building (are not installed)
-secenv.SConscript('core/unit_test/SConscript', variant_dir=buildroot+'/test/core/unit_test', duplicate=0, exports = {'env':secenv})
+if secenv['OS_CONF'] != 'android':
+     secenv.SConscript('core/unit_test/SConscript', variant_dir=buildroot+'/test/core/unit_test', duplicate=0, exports = {'env':secenv})
 
-for test in Glob('core/test/*', strings=True):
-    testdir = buildroot+'/test/'+'sec'+test
-    secenv.SConscript(test + '/SConscript', exports=['secenv'], variant_dir=testdir, duplicate=0)
+if secenv['OS_CONF'] != 'android':
+   for test in Glob('core/test/*', strings=True):
+          testdir = buildroot+'/test/'+'sec'+test
+          secenv.SConscript(test + '/SConscript', exports=['secenv'], variant_dir=testdir, duplicate=0)
    
 # Security storage tests building (are not installed)
 #secenv.SConscript('storage/unit_test/SConscript', exports=['secenv'], variant_dir=buildroot+'/test/storage/unit_test', duplicate=0)

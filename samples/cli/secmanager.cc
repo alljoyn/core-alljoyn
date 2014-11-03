@@ -26,13 +26,13 @@
 #include <SecurityManagerFactory.h>
 #include <ApplicationListener.h>
 #include <alljoyn/BusAttachment.h>
-#include <AuthorizationData.h>
 #include <string>
 #include <sstream>
 #include <PolicyGenerator.h>
 #include <alljoyn/PermissionPolicy.h>
 
 using namespace std;
+using namespace qcc;
 using namespace ajn;
 using namespace ajn::securitymgr;
 
@@ -48,12 +48,12 @@ class EventListener :
     {
         cout << "  Application updated:" << endl;
         cout << "  ====================" << endl;
-        cout << "  Application name :" << updated->appName << endl;
-        cout << "  Hostname            :" << updated->deviceName << endl;
-        cout << "  Busname            :" << updated->busName << endl;
-        cout << "  - claim state     :" << ToString(old->claimState) << " --> "
+        cout << "  Application name : " << updated->appName << endl;
+        cout << "  Hostname         : " << updated->deviceName << endl;
+        cout << "  Busname          : " << updated->busName << endl;
+        cout << "  - claim state    : " << ToString(old->claimState) << " --> "
              << ToString(updated->claimState) << endl;
-        cout << "  - running state     :"
+        cout << "  - running state  : "
              << ajn::securitymgr::ToString(old->runningState) << " --> "
              << ajn::securitymgr::ToString(updated->runningState) << endl
              << "> " << flush;
@@ -77,7 +77,7 @@ static void list_claimable_applications(ajn::securitymgr::SecurityManager* secMg
 
     for (; it != listOfAllApps.end(); ++it) {
         const ajn::securitymgr::ApplicationInfo& info = *it;
-        if ((ajn::securitymgr::ApplicationClaimState::CLAIMABLE
+        if ((ajn::PermissionConfigurator::STATE_CLAIMABLE
              == info.claimState)) {
             claimableApps.push_back(info);
         }
@@ -134,7 +134,7 @@ static void list_applications(ajn::securitymgr::SecurityManager* secMgr)
 static void list_claimed_applications(ajn::securitymgr::SecurityManager* secMgr)
 {
     vector<ajn::securitymgr::ApplicationInfo> managedApps =
-        secMgr->GetApplications(ApplicationClaimState::CLAIMED);
+        secMgr->GetApplications(ajn::PermissionConfigurator::STATE_CLAIMED);
     if (!managedApps.empty()) {
         cout << "  Following claimed applications have been found:" << endl;
         cout << "  ===============================================" << endl;
@@ -154,20 +154,18 @@ static void list_claimed_applications(ajn::securitymgr::SecurityManager* secMgr)
     }
 }
 
-static bool accept_manifest(const ajn::AuthorizationData& manifest)
+static bool accept_manifest(const ApplicationInfo& appInfo,
+                            const PermissionPolicy::Rule* manifestRules,
+                            const size_t manifestRulesCount,
+                            void* cookie)
 {
     bool result = false;
 
-    qcc::String mnf;
-    QStatus status = manifest.Serialize(mnf);
-
-    if (status != ER_OK) {
-        return false;
-    }
-
     cout << "The application requests the following rights:" << endl;
-    cout << mnf << endl;
-    cout << "  Accept (y/n)? ";
+    for (size_t i = 0; i < manifestRulesCount; i++) {
+        cout << manifestRules[i].ToString().c_str();
+    }
+    cout << "Accept (y/n)? ";
 
     string input;
     getline(cin, input);
@@ -204,7 +202,20 @@ static void claim_application(ajn::securitymgr::SecurityManager* secMgr,
         << endl;
         return;
     } else {
-        secMgr->ClaimApplication(appInfo, *accept_manifest);
+        vector<IdentityInfo> list;
+        secMgr->GetManagedIdentities(list);
+        if (list.size() == 0) {
+            cout
+            << "No identity defined..."
+            << endl;
+            return;
+        }
+        if (ER_OK != secMgr->ClaimApplication(appInfo, list.at(0), *accept_manifest)) {
+            cout
+            << "Failed to claim application..."
+            << endl;
+            return;
+        }
     }
 }
 
@@ -313,12 +324,12 @@ static void update_membership(ajn::securitymgr::SecurityManager* secMgr,
         return;
     }
 
-    if (appInfo.claimState != ApplicationClaimState::CLAIMED) {
+    if (appInfo.claimState != ajn::PermissionConfigurator::STATE_CLAIMED) {
         cerr << "The application is not claimed." << endl;
         return;
     }
 
-    if (appInfo.runningState != ApplicationRunningState::RUNNING) {
+    if (appInfo.runningState != STATE_RUNNING) {
         cerr << "The application is not running." << endl;
         return;
     }
@@ -519,9 +530,32 @@ static bool parse(ajn::securitymgr::SecurityManager* secMgr,
     return true;
 }
 
+static void show_usage()
+{
+    cout << "AllSeen Security Manager CLI\n";
+    cout << endl;
+    cout << "Arguments:\n";
+    cout << "\t-s\tRun against the stub instead of the core implementation.\n";
+    cout << "\t-h\tDisplays this help message.\n";
+}
+
 int main(int argc, char** argv)
 {
-//    system("reset");
+    // read command-line arguments
+    bool stub = false;
+    if (argc > 1) {
+        if (std::string(argv[1]) == "-h") {
+            show_usage();
+            return EXIT_FAILURE;
+        }
+        if (std::string(argv[1]) == "-s") {
+            stub = true;
+        } else {
+            show_usage();
+            return EXIT_FAILURE;
+        }
+    }
+
     cout << "################################################################################" << endl;
     cout << "##                  __                      _ _                               ##" << endl;
     cout << "##                 / _\\ ___  ___ _   _ _ __(_) |_ _   _                       ##" << endl;
@@ -543,8 +577,17 @@ int main(int argc, char** argv)
     ajn::securitymgr::SecurityManagerFactory& secFac =
         ajn::securitymgr::SecurityManagerFactory::GetInstance();
     ajn::securitymgr::StorageConfig storageCfg;     //Will rely on default storage path
+    ajn::securitymgr::SecurityManagerConfig smc;
+
+    // set stub configuration if needed
+    if (stub) {
+        smc.pmNotificationIfn = "org.allseen.Security.PermissionMgmt.Stub.Notification";
+        smc.pmIfn = "org.allseen.Security.PermissionMgmt.Stub";
+        smc.pmObjectPath = "/security/PermissionMgmt";
+    }
+
     ajn::securitymgr::SecurityManager* secMgr = secFac.GetSecurityManager(
-        "hello", "world", storageCfg, NULL);
+        "hello", "world", storageCfg, smc, NULL);
 
     if (NULL == secMgr) {
         cerr
@@ -557,6 +600,24 @@ int main(int argc, char** argv)
     // Activate live monitoring
     EventListener listener;
     secMgr->RegisterApplicationListener(&listener);
+    vector<IdentityInfo> list;
+    if (ER_OK != secMgr->GetManagedIdentities(list)) {
+        cerr
+        << "> Error: Failed to retrieve identities !!"
+        << endl;
+        cerr << "> Exiting" << endl << endl;
+    }
+    if (list.size() == 0) {
+        IdentityInfo info;
+        info.guid = qcc::String("abcdef1234567890");
+        info.name = "MyTestIdentity";
+        if (ER_OK != secMgr->StoreIdentity(info, false)) {
+            cerr
+            << "> Error: Failed to store default identity !!"
+            << endl;
+            cerr << "> Exiting" << endl << endl;
+        }
+    }
 
     bool done = false;
     while (!done) {

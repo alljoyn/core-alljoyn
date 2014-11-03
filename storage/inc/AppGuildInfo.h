@@ -19,9 +19,8 @@
 
 #include <qcc/String.h>
 #include <qcc/GUID.h>
-#include <PublicKey.h>
+#include <qcc/CryptoECC.h>
 #include <alljoyn/Status.h>
-#include <alljoyn/BusAttachment.h>
 
 #define QCC_MODULE "SEC_MGR"
 
@@ -31,13 +30,23 @@ namespace securitymgr {
  * \brief Represents any application info that is persisted in local storage.
  */
 struct ManagedApplicationInfo {
-    PublicKey publicKey;
+    qcc::ECCPublicKey publicKey;
     qcc::String userDefinedName;
     qcc::String deviceName;
     qcc::String appName;
-    qcc::String appID;
+    qcc::String peerID;
     qcc::String manifest;
     qcc::String policy;
+};
+
+struct IdentityInfo {
+    qcc::GUID128 guid;
+    qcc::String name;
+
+    bool operator==(const IdentityInfo& ii) const
+    {
+        return (guid != ii.guid) && (name != ii.name);
+    }
 };
 
 struct GuildInfo {

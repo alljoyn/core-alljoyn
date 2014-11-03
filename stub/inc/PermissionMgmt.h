@@ -23,20 +23,17 @@
 #include <alljoyn/InterfaceDescription.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <cassert>
+#include <map>
 #include <qcc/CryptoECC.h>
 #include <qcc/GUID.h>
-#include <AuthorizationData.h>
 
-#define ONLYCLAIMSTATE 0
+#include <vector>
 
 using namespace ajn;
 using namespace qcc;
 
-const char SECINTFNAME[] = "org.alljoyn.Security.PermissionMgmt";
-const char UNSECINTFNAME[] = "org.alljoyn.Security.SecInfo";
-
-/* Used to announce the application's claimable state */
-enum ClaimableState { UNCLAIMED, CLAIMED, CLAIMABLE };
+const char SECINTFNAME[] = "org.allseen.Security.PermissionMgmt.Stub";
+const char UNSECINTFNAME[] = "org.allseen.Security.PermissionMgmt.Stub.Notification";
 
 class ClaimListener {
   private:
@@ -57,7 +54,7 @@ class ClaimListener {
     {
     }
 
-    virtual void OnAuthData(const AuthorizationData& data)
+    virtual void OnAuthData(const PermissionPolicy* data)
     {
     }
 
@@ -79,11 +76,13 @@ class PermissionMgmt :
     std::map<GUID128, qcc::String> memberships; //guildId, certificate (in PEM)
     qcc::String pemIdentityCertificate;
     ClaimListener* cl;
-    ClaimableState claimableState;
+    ajn::PermissionConfigurator::ClaimableState claimableState;
     void* ctx;
     const InterfaceDescription::Member* unsecInfoSignalMember;
-    AuthorizationData manifest;
+    PermissionPolicy::Rule* manifestRules;
+    size_t manifestRulesCount;
     PermissionPolicy policy;
+    qcc::GUID128 peerID;
 
     static qcc::String PubKeyToString(const qcc::ECCPublicKey* pubKey);
 
@@ -99,8 +98,8 @@ class PermissionMgmt :
     void RemoveMembership(const ajn::InterfaceDescription::Member* member,
                           ajn::Message& msg);
 
-    void InstallAuthorizationData(const ajn::InterfaceDescription::Member* member,
-                                  ajn::Message& msg);
+    void InstallMembershipAuthData(const ajn::InterfaceDescription::Member* member,
+                                   ajn::Message& msg);
 
     void GetManifest(const ajn::InterfaceDescription::Member* member,
                      ajn::Message& msg);
@@ -110,6 +109,8 @@ class PermissionMgmt :
 
     void GetPolicy(const ajn::InterfaceDescription::Member* member,
                    ajn::Message& msg);
+
+    QStatus InstallIdentityCertificate(ajn::MsgArg& msgArg);
 
   public:
     PermissionMgmt(ajn::BusAttachment& ba,
@@ -129,7 +130,7 @@ class PermissionMgmt :
     /* TODO: add a function that allows the application to reset the claimable state
      * and maybe even the public keys and certificates */
 
-    ClaimableState GetClaimableState() const;
+    ajn::PermissionConfigurator::ClaimableState GetClaimableState() const;
 
     std::vector<qcc::ECCPublicKey*> GetRoTKeys() const;
 
@@ -137,9 +138,11 @@ class PermissionMgmt :
 
     std::map<GUID128, qcc::String> GetMembershipCertificates() const;
 
-    void SetUsedManifest(const AuthorizationData& manifest);
+    void SetUsedManifest(PermissionPolicy::Rule* manifestRules,
+                         size_t manifestRulesCount);
 
-    void GetUsedManifest(AuthorizationData& manifest) const;
+    void GetUsedManifest(PermissionPolicy::Rule* manifestRules,
+                         size_t manifestRulesCount) const;
 };
 
 #endif /* PERMISSIONMGMT_H_ */

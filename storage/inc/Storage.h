@@ -23,6 +23,8 @@
 #include <qcc/Certificate.h>
 #include <qcc/CryptoECC.h>
 
+#include <vector>
+
 #define QCC_MODULE "SEC_MGR"
 
 namespace ajn {
@@ -190,7 +192,7 @@ class Storage {
      * \retval ER_OK  on success
      * \retval others on failure
      */
-    virtual QStatus RemoveGuild(const GUID128& guildId) = 0;
+    virtual QStatus RemoveGuild(const qcc::GUID128& guildId) = 0;
 
     /**
      * \brief Get the info stored for a given Guild.
@@ -211,6 +213,48 @@ class Storage {
      * \retval others on failure
      */
     virtual QStatus GetManagedGuilds(std::vector<GuildInfo>& guildsInfo) const = 0;
+
+    /**
+     * \brief Add an Identity info to be persistently stored.
+     *
+     * \param[in] identityInfo the info of a given identity that needs to be stored
+     * \param[in] update a flag to specify whether identity info should be updated if the identity already exists
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus StoreIdentity(const IdentityInfo& identityInfo,
+                                  const bool update = false) = 0;
+
+    /**
+     * \brief Remove the stored information pertaining to a given Identity.
+     *
+     * \param[in] idId the identifier of a given identity
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus RemoveIdentity(const qcc::GUID128& idId) = 0;
+
+    /**
+     * \brief Get the info stored for a Identity Guild.
+     *
+     * \param[in, out] idInfo info of a given Identity. Only the GUID is mandatory for input
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus GetIdentity(IdentityInfo& idInfo) const = 0;
+
+    /**
+     * \brief Get the info of all managed Identities.
+     *
+     * \param[in, out] identityInfos all info of currently managed Identities
+     *
+     * \retval ER_OK  on success
+     * \retval others on failure
+     */
+    virtual QStatus GetManagedIdentities(std::vector<IdentityInfo>& identityInfos) const = 0;
 
     /**
      * \brief Reset the storage and delete the database.

@@ -14,6 +14,8 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include "SecurityManagerImpl.h"
+
 #include <ApplicationMonitor.h>
 #include <BusAttachment.h>
 #include <Common.h>
@@ -27,19 +29,23 @@
 #include <qcc/Debug.h>
 
 #define QCC_MODULE "SEC_MGR"
-#define SECINFO_MEMBER "SecInfo"
-#define SECINFO_SIG "(ayay)ya(ayay)"
-#define SECINFO_ARGS "publicKey, claimableState, rotPublicKeys"
+
+#define PM_NOTIF_IFN "org.allseen.Security.PermissionMgmt.Notification"
+#define PM_NOTIF_SIG "a(yv)yua(ayay)"
+#define PM_NOTIF_ARGS "publicKeyInfo,claimableState,serialNumber,memberships"
+#define PM_NOTIF_MEMBER "NotifyConfig"
+
+#define PM_STUB_NOTIF_IFN "org.allseen.Security.PermissionMgmt.Stub.Notification"
 
 using namespace ajn;
 using namespace ajn::services;
 using namespace ajn::securitymgr;
 
-ApplicationMonitor::ApplicationMonitor(ajn::BusAttachment* ba) :
+ApplicationMonitor::ApplicationMonitor(ajn::BusAttachment* ba,
+                                       qcc::String notifIfn) :
     pinger(new AutoPinger(*ba)), busAttachment(ba)
 {
     QStatus status = ER_FAIL;
-    InterfaceDescription* intf;
 
     do {
         if (NULL == busAttachment) {
@@ -53,30 +59,38 @@ ApplicationMonitor::ApplicationMonitor(ajn::BusAttachment* ba) :
         }
         pinger->AddPingGroup(qcc::String(AUTOPING_GROUPNAME), *this, 5);
 
-        status = busAttachment->CreateInterface(INFO_INTF_NAME, intf);
+        // TODO: move stub code outside production code
+        InterfaceDescription* stubIntf;
+        status = busAttachment->CreateInterface(PM_STUB_NOTIF_IFN, stubIntf);
         if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to create interface '%s' on securitymgr bus attachment", INFO_INTF_NAME));
+            QCC_LogError(status, ("Failed to create interface '%s' on securitymgr bus attachment",
+                                  PM_STUB_NOTIF_IFN));
             return;
         }
+        stubIntf->AddSignal(PM_NOTIF_MEMBER, PM_NOTIF_SIG, PM_NOTIF_ARGS, 0);
+        stubIntf->Activate();
+        // TODO: end of todo
 
+        const InterfaceDescription* intf = busAttachment->GetInterface(notifIfn.c_str());
         if (NULL == intf) {
-            QCC_LogError(status, ("NULL intf !"));
+            QCC_LogError(status, ("Failed to get interface '%s' on securitymgr bus attachment",
+                                  notifIfn.c_str()));
             return;
         }
-
-        intf->AddSignal(SECINFO_MEMBER, SECINFO_SIG, SECINFO_ARGS, 0);
-        intf->Activate();
 
         status = busAttachment->RegisterSignalHandler(
             this, static_cast<MessageReceiver::SignalHandler>(&ApplicationMonitor::StateChangedSignalHandler),
-            intf->GetMember(SECINFO_MEMBER), NULL);
+            intf->GetMember(PM_NOTIF_MEMBER), NULL);
         if (ER_OK != status) {
             QCC_LogError(status, ("Failed to register a security signal handler."));
             break;
         }
 
-        status = busAttachment->AddMatch(
-            "type='signal',interface='" INFO_INTF_NAME "',member='" SECINFO_MEMBER "',sessionless='t'");
+        qcc::String matchRule("type='signal',interface='");
+        matchRule.append(notifIfn);
+        matchRule.append("',member='" PM_NOTIF_MEMBER "',sessionless='t'");
+        QCC_DbgPrintf(("matchrule = %s", matchRule.c_str()));
+        status = busAttachment->AddMatch(matchRule.c_str());
         if (ER_OK != status) {
             QCC_LogError(status, ("Failed to add match rule for security info signal."));
             break;
@@ -89,107 +103,90 @@ ApplicationMonitor::~ApplicationMonitor()
     delete pinger;
 }
 
+QStatus ApplicationMonitor::UnmarshalSecuritySignal(Message& msg, SecurityInfo& info)
+{
+    MsgArg* keyArrayArg;
+    size_t keyArrayLen = 0;
+    QStatus status = msg->GetArg(0)->Get("a(yv)", &keyArrayLen, &keyArrayArg);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to retrieve public keys."));
+        return status;
+    }
+
+    if (keyArrayLen != 1) {
+        QCC_LogError(status, ("Wrong number of keys public keys (%d).", keyArrayLen));
+        return ER_FAIL;
+    }
+
+    if (ER_OK != (status = SecurityManagerImpl::UnmarshalPublicKey(&keyArrayArg[0], info.publicKey))) {
+        QCC_LogError(status, ("Unmarshalling to ECCPublicKey struct failed"));
+        return status;
+    }
+
+    uint8_t claimableState;
+    if (ER_OK != (status = msg->GetArg(1)->Get("y", &claimableState))) {
+        QCC_LogError(status, ("Failed to unmarshal claimable state."));
+        return status;
+    }
+    info.claimState = (ajn::PermissionConfigurator::ClaimableState)claimableState;
+    QCC_DbgPrintf(("claimState = %s", ToString(info.claimState)));
+
+    if (ER_OK != (status = msg->GetArg(2)->Get("u", &(info.policySerialNum)))) {
+        QCC_LogError(status, ("Failed to unmarshal policy serial number."));
+        return status;
+    }
+    QCC_DbgPrintf(("policySerialNumber = %d", info.policySerialNum));
+
+    info.runningState = STATE_RUNNING;
+    QCC_DbgPrintf(("runningState = %s", ToString(info.runningState)));
+
+    return status;
+}
+
 void ApplicationMonitor::StateChangedSignalHandler(const InterfaceDescription::Member* member,
                                                    const char* sourcePath,
                                                    Message& msg)
 {
-    QStatus status = ER_FAIL;
+    QCC_DbgPrintf(("Received NotifyConfig signal!!!"));
 
-    PrettyPrintStateChangeSignal(sourcePath, msg);
-    qcc::String busName = qcc::String(msg->GetSender());
-    std::map<qcc::String, SecurityInfo>::iterator it = applications.find(busName);
+    QStatus status = ER_OK;
 
-    AllJoynArray array = msg->GetArg(2)->v_array;
-    size_t rotCount = array.GetNumElements();
-    std::vector<PublicKey> rotList;
-    const MsgArg* rots = array.GetElements();
-    for (size_t i = 0; i < rotCount; i++) {
-        uint8_t* xCoord;
-        size_t xLen;
-        uint8_t* yCoord;
-        size_t yLen;
+    SecurityInfo info;
+    info.busName = qcc::String(msg->GetSender());
+    QCC_DbgPrintf(("busname = %s", info.busName.c_str()));
 
-        status = rots[i].Get("(ayay)", &xLen, &xCoord, &yLen, &yCoord);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Invalid RoT."));
-            return;
-        }
-        if ((xLen != ECC_COORDINATE_SZ) || (yLen != ECC_COORDINATE_SZ)) {
-            QCC_LogError(status, ("Invalid RoT."));
-            return;
-        }
-        PublicKey rot;
-        rot.SetData(xLen, xCoord, yLen, yCoord);
-        rotList.push_back(rot);
+    qcc::String localBusName = busAttachment->GetUniqueName();
+    // ignore signals of local security manager
+    if (info.busName == localBusName) {
+        QCC_DbgPrintf(("Ignoring NotifyConfig signal of local Security Manager."));
+        return;
     }
 
+    if (ER_OK != (status = UnmarshalSecuritySignal(msg, info))) {
+        QCC_LogError(status, ("Failed to unmarshal NotifyConfig signal."));
+        return;
+    }
+
+    SecurityInfo oldInfo = info;
+    std::map<qcc::String, SecurityInfo>::iterator it = applications.find(info.busName);
     if (it != applications.end()) {
-        /* we already know this application */
-        SecurityInfo old = it->second;
-
-        uint8_t* xCoord;
-        size_t xLen;
-        uint8_t* yCoord;
-        size_t yLen;
-
-        status = msg->GetArg(0)->Get("(ayay)", &xLen, &xCoord, &yLen, &yCoord);
-
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Invalid public key."));
-            return;
-        }
-        if ((xLen != ECC_COORDINATE_SZ) || (yLen != ECC_COORDINATE_SZ)) {
-            QCC_LogError(status, ("Invalid public key."));
-            return;
-        }
-
-        it->second.publicKey.SetData(xLen, xCoord, yLen, yCoord);
-        it->second.runningState = ApplicationRunningState::RUNNING;
-        it->second.claimState = ToClaimState(msg->GetArg(1)->v_byte);
-        it->second.rotList = rotList;
-        for (SecurityInfoListener* listener : listeners) {
-            listener->OnSecurityStateChange(&old, &it->second);
-        }
+        // we know this application
+        oldInfo = it->second;
+        it->second = info;
     } else {
-        SecurityInfo old;
-        old.busName = busName;
-        old.runningState = ApplicationRunningState::NOT_RUNNING;
-        old.claimState = ApplicationClaimState::UNKNOWN_CLAIM_STATE;
-        old.rotList = rotList;
-        SecurityInfo info;
-        info.busName = busName;
-        info.runningState = ApplicationRunningState::RUNNING;
-        info.claimState = ToClaimState(msg->GetArg(1)->v_byte);
-
-        uint8_t* xCoord;
-        size_t xLen;
-        uint8_t* yCoord;
-        size_t yLen;
-
-        status = msg->GetArg(0)->Get("(ayay)", &xLen, &xCoord, &yLen, &yCoord);
-
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Invalid public key."));
-            return;
+        oldInfo.runningState = STATE_NOT_RUNNING;
+        oldInfo.claimState = ajn::PermissionConfigurator::STATE_UNKNOWN;
+        applications[info.busName] = info;
+        if (ER_OK != (status = pinger->AddDestination(AUTOPING_GROUPNAME, info.busName))) {
+            QCC_LogError(status, ("Failed to add destination to AutoPinger."));
         }
-        if ((xLen != ECC_COORDINATE_SZ) || (yLen != ECC_COORDINATE_SZ)) {
-            QCC_LogError(status, ("Invalid public key."));
-            return;
-        }
+        QCC_DbgPrintf(("Added destination %s", info.busName.c_str()));
+    }
 
-        info.publicKey.SetData(xLen, xCoord, yLen, yCoord);
-
-        info.rotList = rotList;
-        old.publicKey = info.publicKey;
-        applications[busName] = info;
-        for (SecurityInfoListener* listener : listeners) {
-            listener->OnSecurityStateChange(&old, &info);
-        }
-        pinger->AddDestination(AUTOPING_GROUPNAME, busName);
+    for (size_t i = 0; i < listeners.size(); ++i) {
+        listeners[i]->OnSecurityStateChange(&oldInfo, &info);
     }
 }
-
-;
 
 std::vector<SecurityInfo> ApplicationMonitor::GetApplications() const
 {
@@ -227,16 +224,17 @@ void ApplicationMonitor::UnregisterSecurityInfoListener(SecurityInfoListener* al
 
 void ApplicationMonitor::DestinationLost(const qcc::String& group, const qcc::String& destination)
 {
-    //printf("DestinationLost %s\n", destination.data());
+    QCC_DbgPrintf(("DestinationLost %s\n", destination.data()));
     std::map<qcc::String, SecurityInfo>::iterator it = applications.find(destination);
 
     if (it != applications.end()) {
         /* we already know this application */
-        if (it->second.runningState != ApplicationRunningState::NOT_RUNNING) {
+        if (it->second.runningState != STATE_NOT_RUNNING) {
             SecurityInfo old = it->second;
-            it->second.runningState = ApplicationRunningState::NOT_RUNNING;
-            for (SecurityInfoListener* listener : listeners) {
-                listener->OnSecurityStateChange(&old, &it->second);
+            it->second.runningState = STATE_NOT_RUNNING;
+
+            for (size_t i = 0; i < listeners.size(); ++i) {
+                listeners[i]->OnSecurityStateChange(&old, &it->second);
             }
         }
     } else {
@@ -247,16 +245,17 @@ void ApplicationMonitor::DestinationLost(const qcc::String& group, const qcc::St
 
 void ApplicationMonitor::DestinationFound(const qcc::String& group, const qcc::String& destination)
 {
-    //printf("DestinationFound %s\n", destination.data());
+    QCC_DbgPrintf(("DestinationFound %s\n", destination.data()));
     std::map<qcc::String, SecurityInfo>::iterator it = applications.find(destination);
 
     if (it != applications.end()) {
         /* we already know this application */
-        if (it->second.runningState != ApplicationRunningState::RUNNING) {
+        if (it->second.runningState != STATE_RUNNING) {
             SecurityInfo old = it->second;
-            it->second.runningState = ApplicationRunningState::RUNNING;
-            for (SecurityInfoListener* listener : listeners) {
-                listener->OnSecurityStateChange(&old, &it->second);
+            it->second.runningState = STATE_RUNNING;
+
+            for (size_t i = 0; i < listeners.size(); ++i) {
+                listeners[i]->OnSecurityStateChange(&old, &it->second);
             }
         }
     } else {

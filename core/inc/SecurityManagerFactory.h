@@ -74,6 +74,7 @@ class SecurityManagerFactory {
     SecurityManager* GetSecurityManager(qcc::String userName,
                                         qcc::String password,
                                         const StorageConfig& storageCfg,
+                                        const SecurityManagerConfig& smCfg,
                                         IdentityData* id = NULL,
                                         ajn::BusAttachment* ba = NULL);
 

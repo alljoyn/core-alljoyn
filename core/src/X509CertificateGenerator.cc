@@ -155,12 +155,13 @@ QStatus X509CertificateGenerator::GetPemEncodedX509Certificate(qcc::String exten
     qcc::String endTime = ToASN1TimeString(period->validTo);
     const qcc::ECCPublicKey* subjectPublicKey = inputCertificate.GetSubject();
 
-    qcc::String pubkey = String((char*)subjectPublicKey->x, qcc::ECC_COORDINATE_SZ);
+    qcc::String pubkey = "\u0004";
+    pubkey += String((char*)subjectPublicKey->x, qcc::ECC_COORDINATE_SZ);
     pubkey += String((char*)subjectPublicKey->y, qcc::ECC_COORDINATE_SZ);
 
     qcc::String tbsCertificate = ""; //The certificate to be signed.
     status = Crypto_ASN1::Encode(tbsCertificate,
-                                 "(c(i)l(o)({(op)})(RR)R((oo)b)c(R))",
+                                 "(c(i)l(o)({(ou)})(RR)R((oo)b)c(R))",
                                  (uint32_t)0,
                                  (uint32_t)X509_VERTIFICATE_VERSION_V3,
                                  // i
@@ -170,7 +171,7 @@ QStatus X509CertificateGenerator::GetPemEncodedX509Certificate(qcc::String exten
                                  // (o)
                                  &OID_CommonName,
                                  &name,
-                                 // ({(op)})
+                                 // ({(ou)})
                                  &beginTime,
                                  &endTime,
                                  // (RR)
@@ -179,7 +180,7 @@ QStatus X509CertificateGenerator::GetPemEncodedX509Certificate(qcc::String exten
                                  &OIDidecPublicKey,
                                  &OIDprime256v1,
                                  &pubkey,
-                                 pubkey.size() * 8, //The keys must be writteb as a BIT string. The size must be bit length of the key.
+                                 pubkey.size() * 8, //The keys must be written as a BIT string. The size must be bit length of the key.
                                  // ((oo)b)
                                  //&IssuerUniqueID, // --> not needed
                                  //&SubjectUniqueID, // b
@@ -194,12 +195,20 @@ QStatus X509CertificateGenerator::GetPemEncodedX509Certificate(qcc::String exten
         ecc.ReEncode(&signatureOld, &signature);
         keys->DSASign((uint8_t*)tbsCertificate.data(), (uint16_t)tbsCertificate.size(), &signature);
         /* Certificate parameter */
-        qcc::String SignatureValue = qcc::String((char*)signatureOld.data, sizeof(signatureOld.data));
+        qcc::String SignatureValue;
+        qcc::String r((const char*)signature.r, sizeof(signature.r));
+        qcc::String s((const char*)signature.s, sizeof(signature.s));
+
+        status = Crypto_ASN1::Encode(SignatureValue, "(ll)", &r, &s);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to encode signature"));
+            return status;
+        }
         qcc::String derCert;
         status = Crypto_ASN1::Encode(derCert, "(R(o)b)",
                                      &tbsCertificate, // R
                                      &OID_signatureAlgorithm, // (o)
-                                     &SignatureValue, 8 * sizeof(signatureOld.data)); // b
+                                     &SignatureValue, 8 * SignatureValue.size()); // b
         if (status  == ER_OK) {
             qcc::String certificate = "-----BEGIN CERTIFICATE-----\n";
             status = qcc::Crypto_ASN1::EncodeBase64(derCert, certificate);
@@ -223,25 +232,26 @@ qcc::String X509CertificateGenerator::GetConstraints(bool ca, qcc::CertificateTy
     } else {
         Crypto_ASN1::Encode(basicConstraints, "(z)", (uint32_t)0);
     }
-
     qcc::String typeOID = OID_X509_CUSTOM_AJN_CERT_TYPE;
     qcc::String typeString;
     Crypto_ASN1::Encode(typeString, "(i)", (uint32_t)type);
 
     qcc::String extension = "";
     Crypto_ASN1::Encode(extension,
-                        "(ox)(ox)",
+                        "(ox)",
+                        //Don't send type yet is not supported right now.
+                        //"(ox)(ox)",
                         &OID_BasicConstraints, // o
-                        &basicConstraints, // x
-                        &typeOID, // o
-                        &typeString // x
+                        &basicConstraints
+                        //&typeOID, // o
+                        //&typeString // x
                         );
     return extension;
 }
 
-QStatus X509CertificateGenerator::GenerateMembershipCertificate(qcc::MemberShipCertificate& certificate)
+QStatus X509CertificateGenerator::GenerateMembershipCertificate(qcc::X509MemberShipCertificate& certificate)
 {
-    qcc::String basicConstraints = GetConstraints(certificate.IsDelegate(), CertificateType::MEMBERSHIP_CERTIFICATE);
+    qcc::String basicConstraints = GetConstraints(certificate.IsDelegate(), MEMBERSHIP_CERTIFICATE);
     qcc::String digest;
     qcc::String sha256OID = OID_SHA_256;
     qcc::String hash = certificate.GetDataDigest();
@@ -254,23 +264,25 @@ QStatus X509CertificateGenerator::GenerateMembershipCertificate(qcc::MemberShipC
     qcc::String OID_CommonName = OID_X509_COMMON_NAME;
     qcc::String OID_Org_Unit = OID_X509_OUNIT_NAME;
     qcc::String subjectDn;
-    qcc::String appID = certificate.GetApplicationID();
+    qcc::String appID = certificate.GetApplicationID().ToString();
     qcc::String guildID = certificate.GetGuildId();
-    Crypto_ASN1::Encode(subjectDn, "({(op)}{(op)})", &OID_CommonName, &appID, &OID_Org_Unit, &guildID);
+    Crypto_ASN1::Encode(subjectDn, "({(ou)}{(ou)})", &OID_Org_Unit, &guildID, &OID_CommonName, &appID);
 
     return GetPemEncodedX509Certificate(extensions, subjectDn, certificate);
 }
 
-QStatus X509CertificateGenerator::GetIdentityCertificate(qcc::IdentityCertificate& idCertificate)
+QStatus X509CertificateGenerator::GetIdentityCertificate(qcc::X509IdentityCertificate& idCertificate)
 {
     qcc::String OID_CommonName = OID_X509_COMMON_NAME;
-    qcc::String basicConstraints = GetConstraints(false, CertificateType::IDENTITY_CERTIFICATE);
+    qcc::String basicConstraints = GetConstraints(false, IDENTITY_CERTIFICATE);
     qcc::String digest;
     qcc::String sha256OID = OID_SHA_256;
     qcc::String subjectAltNameOID = OID_X509_SUBJECT_ALT_NAME;
     qcc::String hash = idCertificate.GetDataDigest();
     qcc::String subjectAltName;
-    Crypto_ASN1::Encode(subjectAltName, "(c(({(op)})))", (uint32_t)4, &OID_CommonName, &idCertificate.GetAlias());
+    qcc::String OID_Org_Unit = OID_X509_OUNIT_NAME;
+    qcc::String idID = idCertificate.GetAlias().ToString();
+    Crypto_ASN1::Encode(subjectAltName, "(c(({(ou)})))", (uint32_t)4, &OID_CommonName, &idCertificate.GetName());
     Crypto_ASN1::Encode(digest, "(ox)", &sha256OID, &hash);
     qcc::String extensions = "";
     qcc::String digestOID = OID_X509_CUSTOM_AJN_DIGEST;
@@ -284,88 +296,17 @@ QStatus X509CertificateGenerator::GetIdentityCertificate(qcc::IdentityCertificat
                         &subjectAltName);
 
     qcc::String subjectDn;
-    Crypto_ASN1::Encode(subjectDn, "({(op)})", &OID_CommonName, &idCertificate.GetApplicationID());
+    Crypto_ASN1::Encode(subjectDn,
+                        "({(ou)}{(ou)})",
+                        &OID_Org_Unit,
+                        &idID,
+                        &OID_CommonName,
+                        &idCertificate.GetApplicationID().ToString());
 
     return GetPemEncodedX509Certificate(extensions,
                                         subjectDn,
                                         idCertificate);
 }
-
-#if 0
-//leftover from prototype
-QStatus X509CertificateGenerator::Decoding(qcc::String der)
-{
-    qcc::String TBSCertificate;
-    qcc::String SignatureOID;
-    qcc::String KeyBits;
-    size_t KeyBitsSize;
-
-    /* Decode the certificate */
-    QStatus status = Crypto_ASN1::Decode(der, "((.)(on)b)", &TBSCertificate,     // (.)
-                                         &SignatureOID, // (on)
-                                         &KeyBits, &KeyBitsSize); // b
-
-    uint32_t Version;
-    qcc::String SerialNumber;
-    qcc::String Signature;
-    qcc::String IssuerOID;
-    qcc::String Issuer;
-    qcc::String timeNow;
-    qcc::String timeOneYearLater;
-    qcc::String SubjectOID;
-    qcc::String Subject;
-    qcc::String OIDidecPublicKey;
-    qcc::String OIDprime256v1;
-    qcc::String SubjectPublicKeyInfo;
-    size_t SubjectPublicKeyInfoSize;
-    qcc::String IssuerUniqueID;
-    size_t IssuerUniqueIDSize;
-    qcc::String SubjectUniqueID;
-    size_t SubjectUniqueIDSize;
-    qcc::String Extensions;
-
-    /* Decode the TBSCertificate */
-    if (status == ER_OK) {
-        status = Crypto_ASN1::Decode(TBSCertificate,
-                                     "(il(on)({(ou)})(tt)({(ou)})(oob)bb.)",
-                                     &Version, // i
-                                     &SerialNumber, // l
-                                     &Signature, // (on)
-                                     &IssuerOID, &Issuer, // ({(ou)})
-                                     &timeNow, &timeOneYearLater, // (tt)
-                                     &SubjectOID, &Subject, // ({(ou)})
-                                     &OIDidecPublicKey, &OIDprime256v1, // (oo
-                                     &SubjectPublicKeyInfo, &SubjectPublicKeyInfoSize, // b)
-                                     &IssuerUniqueID, &IssuerUniqueIDSize, // b
-                                     &SubjectUniqueID, &SubjectUniqueIDSize, // b
-                                     &Extensions); // .
-    }
-
-    qcc::String AuthorityKeyIdentifier;
-    qcc::String SubjectKeyIdentifier;
-    qcc::String OID_IssuerAltName;
-    qcc::String IssuerAltName;
-    qcc::String OID_SubjectAltName;
-    qcc::String SubjectAltName;
-
-    /* Decode the extensions */
-    if (status == ER_OK) {
-        status = Crypto_ASN1::Decode(Extensions,
-                                     "((x)x(ox)(ox))",
-                                     &AuthorityKeyIdentifier, // (x)
-                                     &SubjectKeyIdentifier, // x
-                                     &OID_IssuerAltName, &IssuerAltName, // (ox)
-                                     &OID_SubjectAltName, &SubjectAltName); // (ox)
-    }
-
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Failed decode DER into members"));
-        return status;
-    }
-    return status;
-}
-
-#endif
 }
 }
 

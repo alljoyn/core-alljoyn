@@ -16,7 +16,6 @@
 
 #include <SecurityManager.h>
 #include <SecurityManagerImpl.h>
-#include <AuthorizationData.h>
 
 #include <qcc/CryptoECC.h>
 #include <qcc/CryptoECC.h>
@@ -41,8 +40,9 @@ SecurityManager::SecurityManager(qcc::String userName,
                                  ajn::BusAttachment* ba,
                                  const qcc::ECCPublicKey& pubKey,
                                  const qcc::ECCPrivateKey& privKey,
-                                 const StorageConfig& storageCfg) :
-    securityManagerImpl(new SecurityManagerImpl(userName, password, id, ba, pubKey, privKey, storageCfg))
+                                 const StorageConfig& storageCfg,
+                                 const SecurityManagerConfig& smCfg) :
+    securityManagerImpl(new SecurityManagerImpl(userName, password, id, ba, pubKey, privKey, storageCfg, smCfg))
 {
 }
 
@@ -56,24 +56,34 @@ QStatus SecurityManager::GetStatus() const
     return securityManagerImpl->GetStatus();
 }
 
-QStatus SecurityManager::ClaimApplication(const ApplicationInfo& app, AcceptManifestCB amcb)
+QStatus SecurityManager::ClaimApplication(const ApplicationInfo& app,
+                                          const IdentityInfo& id,
+                                          AcceptManifestCB amcb,
+                                          void* cookie)
 {
-    return securityManagerImpl->ClaimApplication(app, amcb);
+    return securityManagerImpl->ClaimApplication(app, id, amcb, cookie);
 }
 
-QStatus SecurityManager::InstallIdentity(const ApplicationInfo& app)
+QStatus SecurityManager::Claim(ApplicationInfo& app, const IdentityInfo& identityInfo)
 {
-    return securityManagerImpl->InstallIdentity(app);
+    return securityManagerImpl->Claim(app, identityInfo);
 }
 
-QStatus SecurityManager::AddRootOfTrust(const ApplicationInfo& app, const RootOfTrust& rot)
+QStatus SecurityManager::GetManifest(const ApplicationInfo& appInfo,
+                                     PermissionPolicy::Rule** manifestRules,
+                                     size_t* manifestRulesCount)
 {
-    return securityManagerImpl->AddRootOfTrust(app, rot);
+    return securityManagerImpl->GetManifest(appInfo, manifestRules, manifestRulesCount);
 }
 
-QStatus SecurityManager::RemoveRootOfTrust(const ApplicationInfo& app, const RootOfTrust& rot)
+QStatus SecurityManager::InstallIdentity(const ApplicationInfo& app, const IdentityInfo& id)
 {
-    return securityManagerImpl->RemoveRootOfTrust(app, rot);
+    return securityManagerImpl->InstallIdentity(app, id);
+}
+
+QStatus SecurityManager::GetIdentityCertificate(const ApplicationInfo& appInfo, IdentityCertificate& idCert) const
+{
+    return securityManagerImpl->GetRemoteIdentityCertificate(appInfo, idCert);
 }
 
 const RootOfTrust& SecurityManager::GetRootOfTrust() const
@@ -81,7 +91,7 @@ const RootOfTrust& SecurityManager::GetRootOfTrust() const
     return securityManagerImpl->GetRootOfTrust();
 }
 
-std::vector<ApplicationInfo> SecurityManager::GetApplications(ApplicationClaimState acs) const
+std::vector<ApplicationInfo> SecurityManager::GetApplications(ajn::PermissionConfigurator::ClaimableState acs) const
 {
     return securityManagerImpl->GetApplications(acs);
 }
@@ -123,7 +133,7 @@ QStatus SecurityManager::GetManagedGuilds(std::vector<GuildInfo>& guildsInfo) co
 
 QStatus SecurityManager::InstallMembership(const ApplicationInfo& appInfo,
                                            const GuildInfo& guildInfo,
-                                           const AuthorizationData* authorizationData)
+                                           const PermissionPolicy* authorizationData)
 {
     return securityManagerImpl->InstallMembership(appInfo, guildInfo, authorizationData);
 }
@@ -146,9 +156,25 @@ QStatus SecurityManager::GetPolicy(const ApplicationInfo& appInfo,
     return securityManagerImpl->GetPolicy(appInfo, policy, remote);
 }
 
-void SecurityManager::FlushStorage()
+QStatus SecurityManager::StoreIdentity(const IdentityInfo& identityInfo,
+                                       const bool update)
 {
-    //TODO
+    return securityManagerImpl->StoreIdentity(identityInfo, update);
+}
+
+QStatus SecurityManager::RemoveIdentity(const GUID128& idId)
+{
+    return securityManagerImpl->RemoveIdentity(idId);
+}
+
+QStatus SecurityManager::GetIdentity(IdentityInfo& idInfo) const
+{
+    return securityManagerImpl->GetIdentity(idInfo);
+}
+
+QStatus SecurityManager::GetManagedIdentities(std::vector<IdentityInfo>& identityInfos) const
+{
+    return securityManagerImpl->GetManagedIdentities(identityInfos);
 }
 }
 }

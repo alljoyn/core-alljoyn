@@ -33,8 +33,8 @@
 #define OID_X509_OUNIT_NAME "2.5.4.11"
 #define OID_X509_SUBJECT_ALT_NAME "2.5.29.17"
 
-#define OID_X509_CUSTOM_AJN_DIGEST "1.2.3.4.5.6.7.8.1"
-#define OID_X509_CUSTOM_AJN_CERT_TYPE "1.2.3.4.5.6.7.8.2"
+#define OID_X509_CUSTOM_AJN_DIGEST "1.3.6.1.4.1.44924.1.2"
+#define OID_X509_CUSTOM_AJN_CERT_TYPE "1.3.6.1.4.1.44924.1.1"
 
 #define OID_EC_PUBLIC_KEY "1.2.840.10045.2.1"
 #define OID_ECC_NIST_P256_V1 "1.2.840.10045.3.1.7"
@@ -60,9 +60,9 @@ class X509CertificateGenerator {
                              qcc::Crypto_ECC* ca);
     ~X509CertificateGenerator();
 
-    QStatus GetIdentityCertificate(qcc::IdentityCertificate& certificate);
+    QStatus GetIdentityCertificate(qcc::X509IdentityCertificate& certificate);
 
-    QStatus GenerateMembershipCertificate(qcc::MemberShipCertificate& certificate);
+    QStatus GenerateMembershipCertificate(qcc::X509MemberShipCertificate& certificate);
 
     /** public scope to facilitate testing. */
     static qcc::String GetConstraints(bool ca,

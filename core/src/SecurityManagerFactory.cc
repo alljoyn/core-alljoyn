@@ -20,6 +20,7 @@
 #include <qcc/FileStream.h>
 #include <qcc/KeyBlob.h>
 #include <qcc/CryptoECC.h>
+#include <qcc/Environ.h>
 
 #include <IdentityData.h>
 #include <StorageConfig.h>
@@ -47,17 +48,29 @@ SecurityManagerFactory::~SecurityManagerFactory()
 SecurityManager* SecurityManagerFactory::GetSecurityManager(qcc::String userName,
                                                             qcc::String password,
                                                             const StorageConfig& storageCfg,
+                                                            const SecurityManagerConfig& smCfg,
                                                             IdentityData* id,
                                                             ajn::BusAttachment* _ba)
 {
     SecurityManager* sm = NULL;
+    qcc::String keysStoragePath = "";
     // TODO: - which database file to access ?
     //       - where to locate database file ?
     //       - password encrypted stored in separate table ?
     if (/* TODO: check if exists */ true) {
         // TODO: verify password
         //
-
+#ifdef QCC_OS_ANDROID //TODO we should use Environ for every env variable we need anywhere
+        std::map<qcc::String, qcc::String>::const_iterator pathItr = storageCfg.settings.find("APP_PATH");
+        if (pathItr == storageCfg.settings.end()) {
+            QCC_LogError(ER_FAIL, ("Invalid app path !"));
+            return NULL;
+        } else {
+            keysStoragePath = pathItr->second;
+            qcc::Environ::GetAppEnviron()->Add("HOME", keysStoragePath + "/");
+            keysStoragePath += "/";
+        }
+#endif
         // NOTE: keystore.h is located inside alljoyn core "src" and not in the "inc" dir.
         //       We use the public keyblob.h located in qcc "inc" dir to store and
         //       retrieve individual keys (as workaround for this POC).
@@ -83,20 +96,25 @@ SecurityManager* SecurityManagerFactory::GetSecurityManager(qcc::String userName
                 _ba = ba; //TODO: don't override; clean up code
             }
         }
-        qcc::Crypto_ECC crypto;
 
+        QCC_DbgTrace(("KEYS PATH = %s", keysStoragePath.c_str()));
+
+        qcc::Crypto_ECC crypto;
         qcc::KeyBlob pubKeyX;
-        qcc::String filenamePubKeyX = userName + "pubx_keystore";
+        qcc::String filenamePubKeyX =  keysStoragePath + userName + "pubx_keystore";
+        QCC_DbgTrace(("filenamePubKeyX is : %s", filenamePubKeyX.c_str()));
         qcc::FileSource sourcePubKeyX(filenamePubKeyX);
         QStatus pubKeyXLoadResult = pubKeyX.Load(sourcePubKeyX);
 
         qcc::KeyBlob pubKeyY;
-        qcc::String filenamePubKeyY = userName + "puby_keystore";
+        qcc::String filenamePubKeyY = keysStoragePath + userName + "puby_keystore";
+        QCC_DbgTrace(("filenamePubKeyY is : %s", filenamePubKeyY.c_str()));
         qcc::FileSource sourcePubKeyY(filenamePubKeyY);
         QStatus pubKeyYLoadResult = pubKeyY.Load(sourcePubKeyY);
 
         qcc::KeyBlob privKey;
-        qcc::String filenamePrivKey = userName + "priv_keystore";
+        qcc::String filenamePrivKey = keysStoragePath + userName + "priv_keystore";
+        QCC_DbgTrace(("filenamePrivKey is : %s", filenamePrivKey.c_str()));
         qcc::FileSource sourcePrivKey(filenamePrivKey);
         QStatus privKeyLoadResult = privKey.Load(sourcePrivKey);
 
@@ -143,7 +161,8 @@ SecurityManager* SecurityManagerFactory::GetSecurityManager(qcc::String userName
                                  _ba,
                                  *crypto.GetDHPublicKey(),
                                  *crypto.GetDHPrivateKey(),
-                                 storageCfg);
+                                 storageCfg,
+                                 smCfg);
         if (NULL != sm) {
             if (ER_OK != sm->GetStatus()) {
                 delete sm;

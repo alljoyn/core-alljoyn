@@ -16,6 +16,9 @@
 #ifndef PROXYOBJECTMANAGER_H_
 #define PROXYOBJECTMANAGER_H_
 #include "ApplicationInfo.h"
+#include <SecurityManagerConfig.h>
+
+#include <qcc/String.h>
 
 #include <alljoyn/Status.h>
 #include <alljoyn/Session.h>
@@ -32,7 +35,8 @@ class ProxyObjectManager :
         ECDHE_PSK
     };
 
-    ProxyObjectManager(ajn::BusAttachment* ba);
+    ProxyObjectManager(ajn::BusAttachment* ba,
+                       const SecurityManagerConfig& config);
 
     ~ProxyObjectManager();
 
@@ -61,6 +65,9 @@ class ProxyObjectManager :
                              SessionLostReason reason);
 
     ajn::BusAttachment* bus;
+
+    qcc::String objectPath;
+    qcc::String interfaceName;
 };
 }
 }

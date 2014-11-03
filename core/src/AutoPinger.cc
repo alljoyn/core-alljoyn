@@ -14,7 +14,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <AutoPinger.h>
+#include <alljoyn/AutoPinger.h>
 #include <alljoyn/BusAttachment.h>
 #include <qcc/time.h>
 #include <algorithm>
@@ -26,12 +26,11 @@
 #define PING_TIMEOUT 5000
 
 namespace ajn {
+
 // Destination data
 struct Destination {
-    Destination(const qcc::String& _destination,
-                const AutoPinger::PingState _oldState) :
+    Destination(const qcc::String& _destination, const AutoPinger::PingState _oldState) :
         destination(_destination), oldState(_oldState) { }
-
     qcc::String destination;
 
     /* mutable so we can modify this even while iterating;
@@ -39,13 +38,11 @@ struct Destination {
      */
     mutable AutoPinger::PingState oldState;
 
-    bool operator==(const Destination& dest) const
-    {
+    bool operator==(const Destination& dest) const {
         return (destination == dest.destination);
     }
 
-    bool operator<(const Destination& dest) const
-    {
+    bool operator<(const Destination& dest) const {
         return (destination < dest.destination);
     }
 };
@@ -58,8 +55,7 @@ struct PingGroup {
               PingListener& _pingListener) :
         alarm(pingInterval, alarmListener, context, pingInterval), pingListener(_pingListener) { }
 
-    ~PingGroup()
-    {
+    ~PingGroup() {
         qcc::String* ctx = static_cast<qcc::String*>(alarm->GetContext());
         alarm->SetContext(NULL);
         if (NULL != ctx) {
@@ -75,65 +71,74 @@ struct PingGroup {
 // Context used to pass additional info in callbacks
 class PingAsyncContext  {
   public:
-    PingAsyncContext(const AutoPinger* _pinger,
+    PingAsyncContext(AutoPinger* _pinger,
                      const qcc::String& _group,
                      const qcc::String& _destination,
                      const AutoPinger::PingState _oldState,
                      PingListener& listener) :
         pinger(_pinger), group(_group), destination(_destination), oldState(_oldState), pingListener(listener)  { }
 
-    const AutoPinger* pinger;
+    AutoPinger* pinger;
     qcc::String group;
     qcc::String destination;
     AutoPinger::PingState oldState;
     PingListener& pingListener;
 };
 
+static std::set<PingAsyncContext*> ctxs;
+static qcc::Mutex ctxMutex;
+
 // Callback handler for async pin calls
-class AutoPinger::AutoPingAsyncCB :
-    public BusAttachment::PingAsyncCB {
+class AutoPingAsyncCB : public BusAttachment::PingAsyncCB {
   public:
-    void PingCB(QStatus status, void* context)
-    {
+    void PingCB(QStatus status, void* context) {
         PingAsyncContext* ctx = (PingAsyncContext*)context;
 
-        if (((const_cast<AutoPinger*>(ctx->pinger))->IsRunning()) && (false == ctx->pinger->pausing)) {
-            if (ER_OK != status) {
-                if (ER_ALLJOYN_PING_REPLY_IN_PROGRESS != status) {
-                    if (ctx->oldState != AutoPinger::PingState::LOST) {
+        ctxMutex.Lock();
+        std::set<PingAsyncContext*>::iterator it = ctxs.find(ctx);
+
+        if (it != ctxs.end()) {
+            if ((ctx->pinger->IsRunning()) && (false == ctx->pinger->pausing)) {
+                if (ER_OK != status) {
+                    if (ER_ALLJOYN_PING_REPLY_IN_PROGRESS != status) {
+                        if (ctx->oldState != AutoPinger::LOST) {
+                            // update state
+                            if (true == (const_cast<AutoPinger*>(ctx->pinger))->UpdatePingStateOfDestination(ctx->group, ctx->destination, AutoPinger::LOST)) {
+
+                                // call external listener
+                                ctx->pingListener.DestinationLost(ctx->group, ctx->destination);
+                            }
+                        }
+                    }
+                } else {
+                    if (ctx->oldState != AutoPinger::AVAILABLE) {
                         // update state
-                        if (true ==
-                            (const_cast<AutoPinger*>(ctx->pinger))->UpdatePingStateOfDestination(ctx->group,
-                                                                                                 ctx->destination,
-                                                                                                 AutoPinger::PingState
-                                                                                                 ::LOST)) {
+                        if (true == ((ctx->pinger))->UpdatePingStateOfDestination(ctx->group, ctx->destination, AutoPinger::AVAILABLE)) {
+
                             // call external listener
-                            ctx->pingListener.DestinationLost(ctx->group, ctx->destination);
+                            ctx->pingListener.DestinationFound(ctx->group, ctx->destination);
                         }
                     }
                 }
+
             } else {
-                if (ctx->oldState != AutoPinger::PingState::AVAILABLE) {
-                    // update state
-                    if (true ==
-                        (const_cast<AutoPinger*>(ctx->pinger))->UpdatePingStateOfDestination(ctx->group,
-                                                                                             ctx->destination,
-                                                                                             AutoPinger::PingState::
-                                                                                             AVAILABLE)) {
-                        // call external listener
-                        ctx->pingListener.DestinationFound(ctx->group, ctx->destination);
-                    }
-                }
+                QCC_DbgPrintf(("AutoPinger: ignoring callback - pinger not running"));
             }
+            ctxs.erase(it);
         } else {
-            QCC_DbgPrintf(("AutoPinger: ignoring callback"));
+            QCC_DbgPrintf(("AutoPinger: ignoring callback - ping already gone"));
         }
+
+        ctxMutex.Unlock();
+
         delete ctx;
     }
 };
 
+static AutoPingAsyncCB pingCallback;
+
 AutoPinger::AutoPinger(ajn::BusAttachment& _busAttachment) :
-    timer("autopinger"), busAttachment(_busAttachment), pausing(false), pingCallback(new AutoPingAsyncCB())
+    timer("autopinger"), busAttachment(_busAttachment), pausing(false)
 {
     QCC_DbgPrintf(("AutoPinger constructed"));
     timer.Start();
@@ -149,20 +154,26 @@ AutoPinger::~AutoPinger()
         timer.Stop();
     }
 
-    // Cleanup all groups
-    pingerMutex.Lock();
-    pingGroups.clear();
-    pingerMutex.Unlock();
-
     // Wait for thread to finish up
     timer.Join();
 
-    delete pingCallback;
-
-    /* remove this piece of code when you reintroduce unique_ptr */
-    for (std::pair<qcc::String, PingGroup*> pair : pingGroups) {
-        delete pair.second;
+    // Invalidate all ctx;
+    ctxMutex.Lock();
+    for (std::set<PingAsyncContext*>::iterator it = ctxs.begin(); it != ctxs.end();) {
+        if ((*it)->pinger == this) {
+            ctxs.erase(it++);
+        } else {
+            it++;
+        }
     }
+    ctxMutex.Unlock();
+
+    // Cleanup all groups
+    pingerMutex.Lock();
+    for (std::map<qcc::String, PingGroup*>::iterator pair = pingGroups.begin(); pair != pingGroups.end(); ++pair) {
+        delete pair->second;
+    }
+    pingerMutex.Unlock();
 
     QCC_DbgPrintf(("AutoPinger destructed"));
 }
@@ -180,23 +191,22 @@ void AutoPinger::AlarmTriggered(const qcc::Alarm& alarm, QStatus reason)
 void AutoPinger::PingGroupDestinations(const qcc::String& group)
 {
     QCC_DbgPrintf(("AutoPinger: start pinging destination in group: '%s'", group.c_str()));
+    ctxMutex.Lock();
     pingerMutex.Lock();
     std::map<qcc::String, PingGroup*>::const_iterator it = pingGroups.find(group);
     if (it != pingGroups.end()) {
         std::map<Destination, unsigned int>::iterator mapIt = (*it).second->destinations.begin();
         for (; mapIt != (*it).second->destinations.end(); ++mapIt) {
-            PingAsyncContext* context = new PingAsyncContext(this,
-                                                             group,
-                                                             mapIt->first.destination,
-                                                             mapIt->first.oldState,
-                                                             (*it).second->pingListener);
-            if (ER_OK !=
-                busAttachment.PingAsync(mapIt->first.destination.c_str(), PING_TIMEOUT, pingCallback, context)) {
+            PingAsyncContext* context = new PingAsyncContext(this, group, mapIt->first.destination, mapIt->first.oldState, (*it).second->pingListener);
+            std::pair<std::set<PingAsyncContext*>::iterator, bool> pair = ctxs.insert(context);
+            if (ER_OK != busAttachment.PingAsync(mapIt->first.destination.c_str(), PING_TIMEOUT, &pingCallback, context)) {
+                ctxs.erase(pair.first);
                 delete context;
             }
         }
     }
     pingerMutex.Unlock();
+    ctxMutex.Unlock();
 }
 
 void AutoPinger::Pause()
@@ -268,6 +278,7 @@ void AutoPinger::RemovePingGroup(const qcc::String& group)
     if (it != pingGroups.end()) {
         // destructor of PingGroup cleans-up context
         timer.RemoveAlarm((*it).second->alarm, false);
+        delete it->second;
         pingGroups.erase(it);
     }
     pingerMutex.Unlock();
@@ -298,7 +309,8 @@ QStatus AutoPinger::SetPingInterval(const qcc::String& group, uint32_t pingInter
             status = ER_OK;
         }
     } else {
-        QCC_LogError(status, ("AutoPinger: cannot update ping time for none existing group: '%s'", group.c_str()));
+        status = ER_BUS_PING_GROUP_NOT_FOUND;
+        QCC_LogError(status, ("AutoPinger: cannot update ping time for non-existing group: '%s'", group.c_str()));
     }
     pingerMutex.Unlock();
     return status;
@@ -311,20 +323,18 @@ QStatus AutoPinger::AddDestination(const qcc::String& group, const qcc::String& 
     std::map<qcc::String, PingGroup*>::iterator it = pingGroups.find(group);
     if (it != pingGroups.end()) {
         status = ER_OK;
-        Destination dummy(destination, AutoPinger::PingState::UNKNOWN);
+        Destination dummy(destination, AutoPinger::UNKNOWN);
         std::map<Destination, unsigned int>::iterator dit;
         if ((dit = it->second->destinations.find(dummy)) == it->second->destinations.end()) {
             QCC_DbgPrintf(("AutoPinger: adding destination: '%s' to group: %s", destination.c_str(), group.c_str()));
-            (*it).second->destinations[(Destination(destination, AutoPinger::PingState::UNKNOWN))] = 1;
+            (*it).second->destinations[(Destination(destination, AutoPinger::UNKNOWN))] = 1;
         } else {
             dit->second++;
-            QCC_DbgPrintf(("AutoPinger: destination: '%s' already present in group: %u; increasing refcount",
-                           destination.c_str(), group.c_str()));
+            QCC_DbgPrintf(("AutoPinger: destination: '%s' already present in group: %u; increasing refcount", destination.c_str(), group.c_str()));
         }
     } else {
-        QCC_LogError(status,
-                     ("AutoPinger: cannot add destination: '%s' to none existing group: %u", destination.c_str(),
-                      group.c_str()));
+        status = ER_BUS_PING_GROUP_NOT_FOUND;
+        QCC_LogError(status, ("AutoPinger: cannot add destination: '%s' to non-existing group: %u", destination.c_str(), group.c_str()));
     }
     pingerMutex.Unlock();
 
@@ -339,7 +349,7 @@ QStatus AutoPinger::RemoveDestination(const qcc::String& group, const qcc::Strin
     std::map<qcc::String, PingGroup*>::iterator it = pingGroups.find(group);
     if (it != pingGroups.end()) {
         status = ER_OK;
-        Destination dummy(destination, AutoPinger::PingState::UNKNOWN);
+        Destination dummy(destination, AutoPinger::UNKNOWN);
         std::map<Destination, unsigned int>::iterator dit = it->second->destinations.find(dummy);
         if (dit != it->second->destinations.end()) {
             if (removeAll == true) {
@@ -367,7 +377,7 @@ bool AutoPinger::UpdatePingStateOfDestination(const qcc::String& group,
     pingerMutex.Lock();
     std::map<qcc::String, PingGroup*>::iterator it = pingGroups.find(group);
     if (it != pingGroups.end()) {
-        Destination dummy(destination, AutoPinger::PingState::UNKNOWN);
+        Destination dummy(destination, AutoPinger::UNKNOWN);
         std::map<Destination, unsigned int>::iterator dit = it->second->destinations.find(dummy);
 
         // Update state
@@ -388,4 +398,5 @@ bool AutoPinger::IsRunning()
 {
     return timer.IsRunning();
 }
+
 }

@@ -42,13 +42,6 @@ class MembershipNominalTests :
     void SetUp()
     {
         ClaimedTest::SetUp();
-
-        //Dummy manifest
-        qcc::String ifn = "org.allseen.control.TV";
-        qcc::String mbr = "*";
-        Type t = Type::SIGNAL;
-        Action a = Action::PROVIDE;
-        appInfo.manifest.AddRule(ifn, mbr, t, a);
     }
 };
 
@@ -117,7 +110,9 @@ TEST_F(MembershipNominalTests, InvalidArgsMembership)
     //Guild known, invalid app.
     ASSERT_EQ(secMgr->StoreGuild(guildInfo, false), ER_OK);
     ApplicationInfo invalid = appInfo;
-    invalid.publicKey = PublicKey();
+    qcc::Crypto_ECC ecc;
+    ecc.GenerateDSAKeyPair();
+    invalid.publicKey = *ecc.GetDSAPublicKey();
     ASSERT_EQ(ER_FAIL, secMgr->InstallMembership(invalid, guildInfo));
     ASSERT_EQ(ER_FAIL, secMgr->RemoveMembership(invalid, guildInfo));
 
@@ -147,6 +142,10 @@ TEST_F(MembershipNominalTests, InvalidArgsMembership)
     secMgr->StoreGuild(guildInfo2, true);
 
     destroy();
+    while (sem_trywait(&sem) == 0) {
+        ;
+    }
+    sem_wait(&sem);
     ASSERT_NE(ER_OK, secMgr->InstallMembership(appInfo, guildInfo));
     ASSERT_NE(ER_OK, secMgr->RemoveMembership(appInfo, guildInfo2));
 }

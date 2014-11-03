@@ -15,6 +15,7 @@
  ******************************************************************************/
 #include "TestUtil.h"
 #include "Common.h"
+#include <qcc/Util.h>
 
 using namespace ajn::securitymgr;
 using namespace std;
@@ -49,6 +50,7 @@ void TestApplicationListener::OnApplicationStateChange(const ApplicationInfo* ol
 BasicTest::BasicTest()
 {
     secMgr = NULL;
+    tal = NULL;
 }
 
 static int counter;
@@ -60,8 +62,17 @@ void BasicTest::SetUp()
         storage_path = "/tmp/secmgr.db";
     }
     qcc::String path = storage_path;
-    path += std::to_string(counter++).c_str();
+
+    stringstream tmp;
+    tmp << (++counter);
+    path += tmp.str().c_str();
     remove(path.c_str());
+
+    // clean up any lingering stub keystore
+    qcc::String fname = GetHomeDir();
+    fname.append("/.alljoyn_keystore/stub.ks");
+    remove(fname.c_str());
+
     ajn::securitymgr::SecurityManagerFactory& secFac = ajn::securitymgr::SecurityManagerFactory::GetInstance();
     ba = new BusAttachment("test", true);
     ASSERT_TRUE(ba != NULL);
@@ -70,12 +81,25 @@ void BasicTest::SetUp()
 
     sc.settings["STORAGE_PATH"] = path;
     ASSERT_EQ(sc.settings.at("STORAGE_PATH").compare(path.c_str()), 0);
-    secMgr = secFac.GetSecurityManager("hello", "world", sc, NULL, ba);
+    secMgr = secFac.GetSecurityManager("hello", "world", sc, smc, NULL, ba);
     ASSERT_TRUE(secMgr != NULL);
+
+    sem_init(&sem, 0, 0);
+
+    tal = new TestApplicationListener(sem);
+    secMgr->RegisterApplicationListener(tal);
 }
 
 void BasicTest::TearDown()
 {
+    if (tal) {
+        secMgr->UnregisterApplicationListener(tal);
+        delete tal;
+        tal = NULL;
+    }
+
+    sem_destroy(&sem);
+
     if (ba) {
         ba->Disconnect();
         ba->Stop();
@@ -83,5 +107,12 @@ void BasicTest::TearDown()
     }
     delete secMgr;
     delete ba;
+}
+
+void BasicTest::SetSmcStub()
+{
+    smc.pmNotificationIfn = "org.allseen.Security.PermissionMgmt.Stub.Notification";
+    smc.pmIfn = "org.allseen.Security.PermissionMgmt.Stub";
+    smc.pmObjectPath = "/security/PermissionMgmt";
 }
 }

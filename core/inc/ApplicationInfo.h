@@ -17,9 +17,8 @@
 #ifndef APPLICATIONINFO_H_
 #define APPLICATIONINFO_H_
 
-#include <ApplicationState.h>
-#include <AuthorizationData.h>
-#include <PublicKey.h>
+#include <Common.h>
+#include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/about/AnnounceHandler.h>
 #include <alljoyn/about/AboutPropertyStoreImpl.h>
 #include <qcc/String.h>
@@ -40,13 +39,12 @@ struct ApplicationInfo {
     qcc::String userDefinedName;     //locally stored
     qcc::String deviceName;
     qcc::String appName;
-    qcc::String appID;
-    PublicKey publicKey;
-    std::vector<PublicKey> rootOfTrustList;
-    ApplicationClaimState claimState;
+    qcc::GUID128 peerID; // PeerID in security signal
+    qcc::ECCPublicKey publicKey;
+    std::vector<qcc::ECCPublicKey> rootOfTrustList;
+    ajn::PermissionConfigurator::ClaimableState claimState;
     ApplicationRunningState runningState;
-    AuthorizationData manifest;
-    qcc::String policy; //Human readable format - This has to change to PermissionPolicy once the latter has a copy constructor
+    uint32_t policySerialNum;
 
     bool operator==(const ApplicationInfo& ai) const
     {
@@ -66,7 +64,7 @@ struct ApplicationInfo {
             return false;
         }
 
-        if (appID != ai.appID) {
+        if (peerID != ai.peerID) {
             return false;
         }
 
@@ -81,7 +79,8 @@ struct ApplicationInfo {
         if (runningState != ai.runningState) {
             return false;
         }
-        if (policy != ai.policy) {
+
+        if (policySerialNum != ai.policySerialNum) {
             return false;
         }
 

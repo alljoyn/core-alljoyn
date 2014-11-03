@@ -18,7 +18,6 @@
 #define APPLICATIONLISTENER_H_
 
 #include <ApplicationInfo.h>
-#include <ApplicationState.h>
 
 #include <qcc/Debug.h>
 #define QCC_MODULE "SEC_MGR"

@@ -17,7 +17,7 @@
 #ifndef NATIVESTORAGE_H_
 #define NATIVESTORAGE_H_
 
-#include <sqlite3.h>
+#include "sqlite3.h"
 
 #include <Storage.h>
 #include <StorageConfig.h>
@@ -30,8 +30,6 @@
 
 #include <iostream>
 
-#define QCC_MODULE "SEC_MGR"
-
 /**
  * \class NativeStorage
  * \brief A class that is meant to implement the Storage abstract class in order to provide a persistent storage
@@ -39,11 +37,17 @@
  **/
 #define INITIAL_SERIAL_NUMBER 1
 
+using namespace qcc;
 namespace ajn {
 namespace securitymgr {
 struct Keys {
     const qcc::ECCPublicKey* appECCPublicKey;
     qcc::String* guildID;
+};
+
+enum ItemType {
+    ITEM_GUILD,
+    ITEM_IDENTITY
 };
 
 class NativeStorage :
@@ -54,6 +58,15 @@ class NativeStorage :
     StorageConfig storageConfig;
 
     QStatus Init();
+
+    QStatus StoreItem(ItemType type,
+                      const GUID128& guid,
+                      const qcc::String& name,
+                      const qcc::String& description,
+                      bool update);
+
+    QStatus RemoveItem(ItemType type,
+                       const GUID128& guid);
 
     QStatus BindCertForStorage(const qcc::Certificate& certificate,
                                const char* sqlStmtText,
@@ -110,6 +123,15 @@ class NativeStorage :
     QStatus GetGuild(GuildInfo& guildInfo) const;
 
     QStatus GetManagedGuilds(std::vector<GuildInfo>& guildsInfo) const;
+
+    QStatus StoreIdentity(const IdentityInfo& idInfo,
+                          const bool update = false);
+
+    QStatus RemoveIdentity(const GUID128& guildId);
+
+    QStatus GetIdentity(IdentityInfo& idInfo) const;
+
+    QStatus GetManagedIdentities(std::vector<IdentityInfo>& idInfos) const;
 
     QStatus GetNewSerialNumber(qcc::String& serialNumber) const;
 

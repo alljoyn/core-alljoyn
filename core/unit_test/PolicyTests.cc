@@ -40,7 +40,7 @@ class PolicyTest :
  *       -# A policy can be installed on it.
  *       -# A policy can be retrieved from it.
  * */
-TEST_F(PolicyTest, SuccessfulPolicy) {
+TEST_F(PolicyTest, DISABLED_SuccessfulPolicy) {
     GUID128 guildGUID1("B509480EE75397473B5A000B82A7E37E");
     GUID128 guildGUID2("0A716F627F53F91E62835CF3F6C7CD87");
 
@@ -94,9 +94,10 @@ TEST_F(PolicyTest, InvalidArgsPolicy)
     policy1Guilds.push_back(guildGUID1);
     ASSERT_EQ(ER_OK, PolicyGenerator::DefaultPolicy(policy1Guilds, policy1));
 
-    // Guild known, invalid application public key.
     ApplicationInfo invalid = appInfo;
-    invalid.publicKey = PublicKey();
+    qcc::Crypto_ECC ecc;
+    ecc.GenerateDSAKeyPair();
+    invalid.publicKey = *ecc.GetDSAPublicKey();
     ASSERT_NE(ER_OK, secMgr->InstallPolicy(invalid, policy1));
 
     destroy();

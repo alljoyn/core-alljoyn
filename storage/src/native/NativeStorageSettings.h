@@ -20,6 +20,7 @@
 #define DEFAULT_STORAGE_PATH "~/.secmgr/secmgr.db"
 
 #define GUILDS_TABLE_NAME "GUILDS"
+#define IDENTITY_TABLE_NAME "IDENTITIES"
 #define CLAIMED_APPS_TABLE_NAME "CLAIMED_APPLICATIONS"
 #define IDENTITY_CERTS_TABLE_NAME "IDENTITY_CERTS"
 #define MEMBERSHIP_CERTS_TABLE_NAME "MEMBERSHIP_CERTS"
@@ -35,12 +36,19 @@
         GUILD_DESC   TEXT\
 ); "
 
+#define IDENTITY_TABLE_SCHEMA \
+    "CREATE TABLE IF NOT EXISTS " IDENTITY_TABLE_NAME \
+    " (\
+        ID TEXT PRIMARY KEY    NOT NULL,\
+        ID_NAME   TEXT    \
+); "
+
 #define CLAIMED_APPLICATIONS_TABLE_SCHEMA \
     "CREATE TABLE IF NOT EXISTS " CLAIMED_APPS_TABLE_NAME \
     " (\
         APPLICATION_PUBKEY BLOB PRIMARY KEY    NOT NULL,\
         APP_NAME   TEXT,    \
-        APP_ID   TEXT,    \
+        PEER_ID   TEXT,    \
         DEV_NAME   TEXT,    \
         USER_DEF_NAME   TEXT,\
         MANIFEST BLOB,\
@@ -58,6 +66,7 @@
         SN BLOB NOT NULL,\
         DATAID BLOB NOT NULL,\
         ALIAS BLOB NOT NULL,\
+        USERNAME TEXT NOT NULL,\
         PRIMARY KEY(SUBJECT, DATAID),\
         FOREIGN KEY(SUBJECT) REFERENCES " CLAIMED_APPS_TABLE_NAME                                                                                                                                                                                                                                                                                                                                                                                    \
     " (APPLICATION_PUBKEY)\

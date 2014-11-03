@@ -1,0 +1,19 @@
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:1.0.+'
+    }
+}
+
+ext.androidCompileSdkVersion = 21
+ext.androidBuildToolsVersion = "21.1.2"
+
+
+task clean {
+    project.delete buildDir
+}
+

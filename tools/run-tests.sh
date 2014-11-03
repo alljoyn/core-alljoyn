@@ -70,7 +70,7 @@ do
 done
 
 # running system tests
-echo "[[ Running system tests ]]"
+# echo "[[ Running system tests ]]"
 STORAGE_PATH=/tmp/secmgr.db "${TEST_ROOT}"/seccore/test/multipeer_claim/run.sh
 
 # generate coverage report (lcov 1.10 or better required for --no-external)

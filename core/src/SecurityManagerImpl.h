@@ -31,16 +31,18 @@
 #include <AppGuildInfo.h>
 #include <ApplicationMonitor.h>
 #include <X509CertificateGenerator.h>
-#include <AuthorizationData.h>
 #include <SecurityManager.h>
 #include "ProxyObjectManager.h"
 #include <Storage.h>
 #include <StorageConfig.h>
 #include <IdentityData.h>
+#include <SecurityManagerConfig.h>
 
 #include <memory>
 
 #define QCC_MODULE "SEC_MGR"
+
+using namespace qcc;
 
 namespace ajn {
 namespace securitymgr {
@@ -65,24 +67,30 @@ class SecurityManagerImpl :
                         ajn::BusAttachment* ba,
                         const qcc::ECCPublicKey& pubKey,
                         const qcc::ECCPrivateKey& privKey,
-                        const StorageConfig& _storageCfg);
+                        const StorageConfig& _storageCfg,
+                        const SecurityManagerConfig& smCfg);
 
     ~SecurityManagerImpl();
 
-    QStatus ClaimApplication(const ApplicationInfo &app, AcceptManifestCB);
+    QStatus ClaimApplication(const ApplicationInfo &app, const IdentityInfo &id, AcceptManifestCB, void* cookie);
 
-    QStatus InstallIdentity(const ApplicationInfo& app);
+    QStatus Claim(ApplicationInfo& app,
+                  const IdentityInfo& identityInfo);
 
-    QStatus AddRootOfTrust(const ApplicationInfo& app,
-                           const RootOfTrust& rot);
+    QStatus GetManifest(const ApplicationInfo& appInfo,
+                        PermissionPolicy::Rule** manifestRules,
+                        size_t* manifestRulesCount);
 
-    QStatus RemoveRootOfTrust(const ApplicationInfo& app,
-                              const RootOfTrust& rot);
+    QStatus InstallIdentity(const ApplicationInfo& app,
+                            const IdentityInfo& id);
+
+    QStatus GetRemoteIdentityCertificate(const ApplicationInfo& appInfo,
+                                         IdentityCertificate& idCert);
 
     const RootOfTrust& GetRootOfTrust() const;
 
-    std::vector<ApplicationInfo> GetApplications(ajn::securitymgr::ApplicationClaimState acs =
-                                                     ajn::securitymgr::ApplicationClaimState::UNKNOWN_CLAIM_STATE)
+    std::vector<ApplicationInfo> GetApplications(ajn::PermissionConfigurator::ClaimableState acs =
+                                                     ajn::PermissionConfigurator::STATE_UNKNOWN)
     const;
 
     void RegisterApplicationListener(ApplicationListener* al);
@@ -100,9 +108,18 @@ class SecurityManagerImpl :
 
     QStatus GetManagedGuilds(std::vector<GuildInfo>& guildsInfo) const;
 
+    QStatus StoreIdentity(const IdentityInfo& identityInfo,
+                          const bool update = false);
+
+    QStatus RemoveIdentity(const GUID128& idId);
+
+    QStatus GetIdentity(IdentityInfo& idInfo) const;
+
+    QStatus GetManagedIdentities(std::vector<IdentityInfo>& identityInfos) const;
+
     QStatus InstallMembership(const ApplicationInfo& appInfo,
                               const GuildInfo& guildInfo,
-                              const AuthorizationData* authorizationData);
+                              const PermissionPolicy* authorizationData);
 
     QStatus RemoveMembership(const ApplicationInfo& appInfo,
                              const GuildInfo& guildInfo);
@@ -116,16 +133,25 @@ class SecurityManagerImpl :
 
     QStatus GetStatus() const;
 
+    // TODO: move to ECCPublicKey class
+    static QStatus MarshalPublicKey(const ECCPublicKey* pubKey,
+                                    const GUID128& peerID,
+                                    MsgArg& ma);
+
+    // TODO: move to ECCPublicKey class
+    static QStatus UnmarshalPublicKey(const MsgArg* ma,
+                                      ECCPublicKey& pubKey);
+
   private:
 
-    typedef std::map<PublicKey, ApplicationInfo> ApplicationInfoMap; /* key= pubkey of app, value = info */
+    typedef std::map<ECCPublicKey, ApplicationInfo> ApplicationInfoMap; /* key = peerID of app, value = info */
 
     qcc::String GetString(::ajn::services::PropertyStoreKey key, const AboutData &aboutData) const;
 
     qcc::String GetAppId(const AboutData& aboutData) const;
 
-    QStatus CreateInterface(ajn::BusAttachment* bus,
-                            ajn::InterfaceDescription*& intf);
+    QStatus CreateStubInterface(BusAttachment* bus,
+                                InterfaceDescription*& intf);
 
     QStatus EstablishPSKSession(const ApplicationInfo& app,
                                 uint8_t* bytes,
@@ -140,8 +166,34 @@ class SecurityManagerImpl :
                   const ObjectDescriptions& objectDescs,
                   const AboutData& aboutData);
 
-    ApplicationInfoMap::iterator SafeAppExist(const PublicKey& publicKey,
+    ApplicationInfoMap::iterator SafeAppExist(const ECCPublicKey key,
                                               bool& exist);
+
+    QStatus GetIdentityCertificate(X509IdentityCertificate& idCert,
+                                   const IdentityInfo& idInfo,
+                                   const ApplicationInfo& appInfo);
+
+    QStatus InstallIdentityCertificate(X509IdentityCertificate& idCert,
+                                       const ProxyBusObject* remoteObj,
+                                       const uint32_t timeout);
+
+    QStatus PersistApplication(const ApplicationInfo& appInfo,
+                               const PermissionPolicy::Rule* manifestRules,
+                               size_t manifestRulesCount);
+
+    void CopySecurityInfo(ApplicationInfo& ai,
+                          const SecurityInfo& si);
+
+    bool IsPermissionDeniedError(QStatus status,
+                                 Message& msg);
+
+    QStatus SerializeManifest(ManagedApplicationInfo& managedAppInfo,
+                              const PermissionPolicy::Rule* manifestRules,
+                              size_t manifestRulesCount);
+
+    QStatus DeserializeManifest(const ManagedApplicationInfo managedAppInfo,
+                                const PermissionPolicy::Rule** manifestRules,
+                                size_t* manifestRulesCount);
 
   private:
     QStatus status;
@@ -160,6 +212,9 @@ class SecurityManagerImpl :
     mutable qcc::Mutex appsMutex;
     mutable qcc::Mutex storageMutex;
     qcc::Mutex aboutCacheMutex;
+    SecurityManagerConfig config;
+    qcc::GUID128 localGuid;
+    std::map<qcc::String, PermissionPolicy*> manifestCache;
 };
 }
 }

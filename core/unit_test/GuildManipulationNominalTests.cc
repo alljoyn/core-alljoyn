@@ -89,9 +89,15 @@ TEST_F(GuildManipulationNominalTests, GuildManipManyGuilds) {
     guildInfo.desc = desc;
 
     for (int i = 0; i < times; i++) {
+        stringstream tmp;
+        tmp << name << i;
+        guildInfo.name = tmp.str().c_str();
+
         guildInfo.guid = GUID128();
-        guildInfo.name = name + std::to_string(i).c_str();
-        guildInfo.desc = desc + std::to_string(i).c_str();
+
+        tmp.clear();
+        tmp << desc << i;
+        guildInfo.desc = tmp.str().c_str();
         ASSERT_EQ(secMgr->StoreGuild(guildInfo), ER_OK);
     }
 
@@ -101,8 +107,12 @@ TEST_F(GuildManipulationNominalTests, GuildManipManyGuilds) {
     for (std::vector<GuildInfo>::const_iterator g = guilds.begin(); g != guilds.end(); g++) {
         int i = g - guilds.begin();
 
-        compareToGuild.name = name + std::to_string(i).c_str();
-        compareToGuild.desc = desc + std::to_string(i).c_str();
+        stringstream tmp;
+        tmp << name << i;
+        compareToGuild.name = tmp.str().c_str();
+        tmp.clear();
+        tmp << desc << i;
+        compareToGuild.desc = tmp.str().c_str();
 
         ASSERT_EQ(g->name, compareToGuild.name);
         ASSERT_EQ(g->desc, compareToGuild.desc);

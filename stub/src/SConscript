@@ -26,6 +26,8 @@ lib_env.Append(LIBS = ['ajsecmgr'])
 # Header files
 lib_env.Append(CPPPATH = ['.'])
 lib_env.Append(CPPPATH = ['../../../../../../../securitymgr/stub/inc'])
+lib_env.Append(CPPPATH = ['../../../../../../../securitymgr/storage/inc'])
+lib_env.Append(CPPPATH = ['../../../../../../../securitymgr/core/src'])
 
 # Static library
 objs = lib_env.Object(srcs)

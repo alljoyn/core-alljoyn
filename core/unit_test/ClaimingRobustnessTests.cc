@@ -41,6 +41,7 @@ class ClaimingRobustnessTests :
   public:
     ClaimingRobustnessTests()
     {
+        SetSmcStub();
     }
 };
 
@@ -74,40 +75,40 @@ TEST_F(ClaimingRobustnessTests, DISABLED_FailedClaimingNetError) {
 
 /**
  * \test The test should make sure that the claim method handles the request in a robust way
- *  -# Try to claim an application that has a bad publicKey andmake sure that fails.
  *  -# Try to claim the same application with a valid publicKey and make sure this works even with a bad bus name
  *  -# Make sure it cannot be re-claimed
  *  -# Kill the stub app client
  *  -# Make sure the stub app cannot be claimed
  * */
 TEST_F(ClaimingRobustnessTests, InvalidArguments) {
-    sem_t sem;
-    sem_init(&sem, 0, 0);
     bool claimAnswer = true;
     TestClaimListener tcl(claimAnswer);
-    TestApplicationListener tal(sem);
-
-    secMgr->RegisterApplicationListener(&tal);
 
     Stub* stub = new Stub(&tcl);
     ASSERT_EQ(stub->OpenClaimWindow(), ER_OK);
     sem_wait(&sem);
 
-    ApplicationInfo info = tal._lastAppInfo;
-    memset(info.publicKey.x, 'f', qcc::ECC_COORDINATE_SZ); // some rubbish key
-    memset(info.publicKey.y, 'f', qcc::ECC_COORDINATE_SZ); // some rubbish key
-    info.busName = tal._lastAppInfo.busName;
+    ApplicationInfo info = tal->_lastAppInfo;
+    info.busName = tal->_lastAppInfo.busName;
 
-    ASSERT_EQ(secMgr->ClaimApplication(info, &AutoAcceptManifest), ER_FAIL);
-
-    info.publicKey = tal._lastAppInfo.publicKey;
+    info.publicKey = tal->_lastAppInfo.publicKey;
     info.busName = "My Rubbish BusName";               //the bad busname should be ignored
-    ASSERT_EQ(secMgr->ClaimApplication(info, &AutoAcceptManifest), ER_OK);
+    IdentityInfo idInfo;
+    idInfo.guid = info.peerID;
+    idInfo.name = info.appName;
+    ASSERT_EQ(ER_OK, secMgr->StoreIdentity(idInfo, false));
 
-    ASSERT_NE(secMgr->ClaimApplication(tal._lastAppInfo, &AutoAcceptManifest), ER_OK);               //already claimed
+    ASSERT_EQ(ER_OK, secMgr->ClaimApplication(info, idInfo, &AutoAcceptManifest));
+
+    ASSERT_NE(ER_OK, secMgr->ClaimApplication(tal->_lastAppInfo, idInfo, &AutoAcceptManifest));                //already claimed
 
     delete stub;
-    ASSERT_NE(secMgr->ClaimApplication(tal._lastAppInfo, &AutoAcceptManifest), ER_OK);               //we killed our peer.
+    while (sem_trywait(&sem) == 0) {
+        ;
+    }
+    sem_wait(&sem);
+
+    ASSERT_NE(ER_OK, secMgr->ClaimApplication(tal->_lastAppInfo, idInfo, &AutoAcceptManifest));                //we killed our peer.
 }
 
 /**
@@ -120,55 +121,63 @@ TEST_F(ClaimingRobustnessTests, InvalidArguments) {
  *      -# Make sure the retrieved application info match that of the originally claimed app
  * */
 TEST_F(ClaimingRobustnessTests, SMClaimedAppsWarmStart) {
-    sem_t sem;
-    sem_init(&sem, 0, 0);
     bool claimAnswer = true;
     TestClaimListener tcl(claimAnswer);
-    TestApplicationListener tal(sem);
-
-    secMgr->RegisterApplicationListener(&tal);
 
     Stub* stub = new Stub(&tcl);
     ASSERT_EQ(stub->OpenClaimWindow(), ER_OK);
     sem_wait(&sem);
 
-    ASSERT_EQ(secMgr->ClaimApplication(tal._lastAppInfo, &AutoAcceptManifest), ER_OK);
+    IdentityInfo idInfo;
+    idInfo.guid = GUID128("abcdef123456789");
+    idInfo.name = "MyName";
+    ASSERT_EQ(secMgr->StoreIdentity(idInfo, false), ER_OK);
+
+    ASSERT_EQ(secMgr->ClaimApplication(tal->_lastAppInfo, idInfo, &AutoAcceptManifest), ER_OK);
     sem_wait(&sem);
 
-    ASSERT_EQ(tal._lastAppInfo.runningState, ApplicationRunningState::RUNNING);
-    ASSERT_EQ(tal._lastAppInfo.claimState, ApplicationClaimState::CLAIMED);
+    ASSERT_EQ(tal->_lastAppInfo.runningState, ajn::securitymgr::STATE_RUNNING);
+    ASSERT_EQ(tal->_lastAppInfo.claimState, ajn::PermissionConfigurator::STATE_CLAIMED);
 
-    qcc::String origBusName = tal._lastAppInfo.busName;
-    TearDown(); //Kill secMgr and ba
+    qcc::String origBusName = tal->_lastAppInfo.busName;
+    TearDown();                    //Kill secMgr and ba
 
-    ajn::securitymgr::SecurityManagerFactory& secFac = ajn::securitymgr::SecurityManagerFactory::GetInstance();
+    ajn::securitymgr::SecurityManagerFactory& secFac =
+        ajn::securitymgr::SecurityManagerFactory::GetInstance();
     ba = new BusAttachment("test", true);
     ASSERT_TRUE(ba != NULL);
     ASSERT_EQ(ER_OK, ba->Start());
     ASSERT_EQ(ER_OK, ba->Connect());
 
-    secMgr = secFac.GetSecurityManager("hello", "world", sc, NULL, ba);
+    ajn::securitymgr::SecurityManagerConfig smc;
+    smc.pmNotificationIfn = "org.allseen.Security.PermissionMgmt.Stub.Notification";
+    smc.pmIfn = "org.allseen.Security.PermissionMgmt.Stub";
+    smc.pmObjectPath = "/security/PermissionMgmt";
+    secMgr = secFac.GetSecurityManager("hello", "world", sc, smc, NULL, ba);
     ASSERT_TRUE(secMgr != NULL);
+
+    TestApplicationListener tal(sem);
     secMgr->RegisterApplicationListener(&tal);
     sem_wait(&sem);
 
     ApplicationInfo cmprInfo;
     cmprInfo.busName = origBusName;
+
     ASSERT_EQ(ER_OK, secMgr->GetApplication(cmprInfo));
 
     ASSERT_EQ(tal._lastAppInfo.publicKey, cmprInfo.publicKey);
     ASSERT_EQ(tal._lastAppInfo.userDefinedName, cmprInfo.userDefinedName);
     ASSERT_EQ(tal._lastAppInfo.deviceName, cmprInfo.deviceName);
     ASSERT_EQ(tal._lastAppInfo.appName, cmprInfo.appName);
-    ASSERT_EQ(tal._lastAppInfo.appID, cmprInfo.appID);
+    ASSERT_EQ(tal._lastAppInfo.peerID, cmprInfo.peerID);
     ASSERT_EQ(tal._lastAppInfo.claimState, cmprInfo.claimState);
 
     ASSERT_EQ(tal._lastAppInfo.busName, cmprInfo.busName);
     ASSERT_EQ(tal._lastAppInfo.rootOfTrustList.size(), cmprInfo.rootOfTrustList.size());
     ASSERT_EQ(tal._lastAppInfo.runningState, cmprInfo.runningState);
+    secMgr->UnregisterApplicationListener(&tal);
 
     delete stub;
-    sem_destroy(&sem);
 }
 
 //TODO Add more tests for failed claiming as per identified claiming errors in the future

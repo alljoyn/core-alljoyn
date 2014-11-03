@@ -15,11 +15,37 @@
  ******************************************************************************/
 
 #include "Stub.h"
-#include "MySessionListener.h"
 
+#include <qcc/Util.h>
 #include <qcc/CryptoECC.h>
 
 #include "ECDHEKeyXListener.h"
+
+#define STUB_KEYSTORE "/.alljoyn_keystore/stub.ks"
+
+QStatus Stub::GenerateManifest(PermissionPolicy::Rule** retRules, size_t* count)
+{
+    *count = 2;
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
+    rules[0].SetInterfaceName("org.allseenalliance.control.TV");
+    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[2];
+    prms[0].SetMemberName("Up");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    prms[1].SetMemberName("Down");
+    prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[0].SetMembers(2, prms);
+
+    rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
+    prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[1].SetMembers(1, prms);
+
+    *retRules = rules;
+    return ER_OK;
+}
 
 Stub::Stub(ClaimListener* cl) :
     ba("mystub", true)
@@ -36,19 +62,27 @@ Stub::Stub(ClaimListener* cl) :
             break;
         }
 
-        if (ER_OK !=
-            ba.EnablePeerSecurity(ECDHE_KEYX, new ECDHEKeyXListener(),
-                                  "/.alljoyn_keystore/s_ecdhe.ks", false)) {
-            std::cerr << "BusAttachment::EnablePeerSecurity failed." << std::endl;
-            break;
-        }
-
         if (ba.Connect() != ER_OK) {
             std::cerr << "Could not connect" << std::endl;
             break;
         }
 
+        // BusAttachment needs to be started before PeerSecurity is enabled
+        // to deliver NotifyConfig signal
+        if (ER_OK !=
+            ba.EnablePeerSecurity(ECDHE_KEYX, new ECDHEKeyXListener(),
+                                  STUB_KEYSTORE, false)) {
+            std::cerr << "BusAttachment::EnablePeerSecurity failed." << std::endl;
+            break;
+        }
+
         pm = new PermissionMgmt(ba, cl, this);
+
+        // Generate default policy
+        PermissionPolicy::Rule* manifestRules;
+        size_t manifestRulesCount;
+        GenerateManifest(&manifestRules, &manifestRulesCount);
+        this->SetUsedManifest(manifestRules, manifestRulesCount);
 
         char guid[33];
         snprintf(guid, sizeof(guid), "A0%X%026X", rand(), rand()); /* yes, i know this is not a real guid - good enough for a stub */
@@ -73,69 +107,29 @@ Stub::~Stub()
     delete pm;
 }
 
-/** Create the session, report the result to stdout, and return the status code. */
-QStatus Stub::StartListeningForSession(TransportMask mask)
-{
-    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, mask);
-    SessionPort sp = SERVICE_PORT;
-    QStatus status = ba.BindSessionPort(sp, opts, ml);
-
-    if (ER_OK == status) {
-        printf("BindSessionPort succeeded.\n");
-    } else {
-        printf("BindSessionPort failed (%s).\n", QCC_StatusText(status));
-    }
-
-    return status;
-}
-
-QStatus Stub::StopListeningForSession()
-{
-    SessionPort sp = SERVICE_PORT;
-    QStatus status = ba.UnbindSessionPort(sp);
-
-    if (ER_OK == status) {
-        printf("UnBindSessionPort succeeded.\n");
-    } else {
-        printf("UnBindSessionPort failed (%s).\n", QCC_StatusText(status));
-    }
-
-    return status;
-}
-
 QStatus Stub::OpenClaimWindow()
 {
     QStatus status = ER_FAIL;
-    if (CLAIMED == pm->GetClaimableState()) {
+    if (ajn::PermissionConfigurator::STATE_CLAIMED == pm->GetClaimableState()) {
         std::cerr << "Application is already claimed by a RoT" << std::endl;
         return status;
     }
-    if (CLAIMABLE == pm->GetClaimableState()) {
+    if (ajn::PermissionConfigurator::STATE_CLAIMABLE == pm->GetClaimableState()) {
         std::cerr << "Claim window already open" << std::endl;
-        return status;
-    }
-    status = StartListeningForSession(TRANSPORT_ANY);
-    if (status != ER_OK) {
-        printf("Could not listen for session");
         return status;
     }
 
     /* make the device claimable */
     pm->SetClaimableState(true);
 
-    return status;
+    return ER_OK;
 }
 
 QStatus Stub::CloseClaimWindow()
 {
     QStatus status = ER_FAIL;
-    if ((0 != pm->GetRoTKeys().size()) || (CLAIMED == pm->GetClaimableState())) {
+    if ((0 != pm->GetRoTKeys().size()) || (ajn::PermissionConfigurator::STATE_CLAIMED == pm->GetClaimableState())) {
         std::cerr << "Claim window already closed" << std::endl;
-        return status;
-    }
-    status = StopListeningForSession();
-    if (status != ER_OK) {
-        printf("Could not listen for session\r\n");
         return status;
     }
 
@@ -232,7 +226,7 @@ QStatus Stub::AdvertiseApplication(const char* guid)
         return ER_FAIL;
     }
 
-    AboutServiceApi::getInstance()->Register(SERVICE_PORT);
+    AboutServiceApi::getInstance()->Register(APPLICATION_PORT);
     status = ba.RegisterBusObject(*AboutServiceApi::getInstance());
     if (status != ER_OK) {
         std::cerr << "Could not register about bus object" << std::endl;
@@ -251,4 +245,19 @@ QStatus Stub::AdvertiseApplication(const char* guid)
 std::map<GUID128, qcc::String> Stub::GetMembershipCertificates() const
 {
     return pm->GetMembershipCertificates();
+}
+
+QStatus Stub::Reset()
+{
+    // The following implementation does not seem to work.
+    ba.ClearKeyStore();
+    // This work-around seems to do the trick :)
+    qcc::String fname = GetHomeDir();
+    fname.append("/");
+    fname.append(STUB_KEYSTORE);
+    if (0 == (remove(fname.c_str()))) {
+        return ER_OK;
+    } else {
+        return ER_FAIL;
+    }
 }

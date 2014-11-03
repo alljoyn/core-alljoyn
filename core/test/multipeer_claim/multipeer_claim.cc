@@ -26,7 +26,6 @@
 #include "PermissionMgmt.h"
 #include "Common.h"
 #include "Stub.h"
-#include "AuthorizationData.h"
 #include "AppGuildInfo.h"
 
 #include <PolicyGenerator.h>
@@ -87,7 +86,7 @@ class TestClaimListener :
     std::condition_variable cv_pol;
     qcc::String pemIdentityCertificate;
     std::vector<qcc::String> pemMembershipCertificates;
-    std::vector<AuthorizationData> authData;
+    std::vector<PermissionPolicy*> authData;
     qcc::String policy;
 
     bool OnClaimRequest(const qcc::ECCPublicKey* pubKeyRot,
@@ -106,10 +105,10 @@ class TestClaimListener :
         cout << "on claimed " << getpid() << endl;
     }
 
-    virtual void OnAuthData(const AuthorizationData& data)
+    virtual void OnAuthData(const PermissionPolicy* data)
     {
         std::unique_lock<std::mutex> lk(m);
-        authData.push_back(data);
+        authData.push_back(const_cast<PermissionPolicy*>(data));
         cv_auth.notify_one();
         cout << "on Authorization Data " << getpid() << endl;
     }
@@ -214,7 +213,9 @@ class TestApplicationListener :
     {
     }
 
-    bool WaitFor(ApplicationRunningState runningState, ApplicationClaimState claimState, size_t count)
+    bool WaitFor(ApplicationRunningState runningState,
+                 ajn::PermissionConfigurator::ClaimableState claimState,
+                 size_t count)
     {
         std::unique_lock<std::mutex> lk(m);
         cv.wait(lk, [ = ] { return CheckPredicateLocked(runningState, claimState, count); });
@@ -227,7 +228,8 @@ class TestApplicationListener :
     std::mutex m;
     std::condition_variable cv;
 
-    bool CheckPredicateLocked(ApplicationRunningState runningState, ApplicationClaimState claimState,
+    bool CheckPredicateLocked(ApplicationRunningState runningState,
+                              ajn::PermissionConfigurator::ClaimableState claimState,
                               size_t count) const
     {
         if (appInfo.size() != count) {
@@ -266,7 +268,10 @@ class TestApplicationListener :
     }
 };
 
-static bool AutoAcceptManifest(const AuthorizationData& manifest)
+static bool AutoAcceptManifest(const ApplicationInfo& appInfo,
+                               const PermissionPolicy::Rule* manifestRules,
+                               const size_t manifestRulesCount,
+                               void* cookie)
 {
     return true;
 }
@@ -303,7 +308,11 @@ static int be_secmgr(size_t peers)
         ajn::securitymgr::StorageConfig sc;
         sc.settings["STORAGE_PATH"] = qcc::String(storage_path);
         assert(sc.settings.at("STORAGE_PATH").compare(storage_path) == 0);
-        SecurityManager* secMgr = secFac.GetSecurityManager("hello", "world", sc, NULL);
+        ajn::securitymgr::SecurityManagerConfig smc;
+        smc.pmNotificationIfn = "org.allseen.Security.PermissionMgmt.Stub.Notification";
+        smc.pmIfn = "org.allseen.Security.PermissionMgmt.Stub";
+        smc.pmObjectPath = "/security/PermissionMgmt";
+        SecurityManager* secMgr = secFac.GetSecurityManager("hello", "world", sc, smc, NULL);
         if (secMgr == NULL) {
             cerr << "No security manager" << endl;
             break;
@@ -312,17 +321,26 @@ static int be_secmgr(size_t peers)
         secMgr->RegisterApplicationListener(&tal);
 
         cout << "Waiting for peers to become claimable " << endl;
-        if (tal.WaitFor(ApplicationRunningState::RUNNING, ApplicationClaimState::CLAIMABLE, peers) == false) {
+        if (tal.WaitFor(STATE_RUNNING, ajn::PermissionConfigurator::STATE_CLAIMABLE, peers) == false) {
             break;
         }
 
         vector<ApplicationInfo> apps = secMgr->GetApplications();
         bool breakhit = false;
         for (ApplicationInfo app : apps) {
-            if (app.runningState == ApplicationRunningState::RUNNING && app.claimState ==
-                ApplicationClaimState::CLAIMABLE) {
+            if (app.runningState == STATE_RUNNING && app.claimState ==
+                ajn::PermissionConfigurator::STATE_CLAIMABLE) {
                 cout << "Trying to claim " << app.busName.c_str() << endl;
-                if (secMgr->ClaimApplication(app, &AutoAcceptManifest) != ER_OK) {
+                IdentityInfo idInfo;
+                idInfo.guid = app.peerID;
+                idInfo.name = "MyTestName";
+                if (secMgr->StoreIdentity(idInfo, false) != ER_OK) {
+                    cerr << "Could not store identity " << endl;
+                    breakhit = true;
+                    break;
+                }
+
+                if (secMgr->ClaimApplication(app, idInfo, &AutoAcceptManifest) != ER_OK) {
                     cerr << "Could not claim application " << app.busName.c_str() << endl;
                     breakhit = true;
                     break;
@@ -334,11 +352,11 @@ static int be_secmgr(size_t peers)
         }
 
         cout << "Waiting for peers to become claimed " << endl;
-        if (tal.WaitFor(ApplicationRunningState::RUNNING, ApplicationClaimState::CLAIMED, peers) == false) {
+        if (tal.WaitFor(STATE_RUNNING, ajn::PermissionConfigurator::STATE_CLAIMED, peers) == false) {
             break;
         }
 
-        if (secMgr->GetApplications(ApplicationClaimState::CLAIMED).size() != peers) {
+        if (secMgr->GetApplications(ajn::PermissionConfigurator::STATE_CLAIMED).size() != peers) {
             cerr << "Expected: " << peers << " claimed applications but only have " <<
             secMgr->GetApplications().size() << endl;
             break;
@@ -358,8 +376,8 @@ static int be_secmgr(size_t peers)
 
         apps = secMgr->GetApplications();
         for (ApplicationInfo app : apps) {
-            if (app.runningState == ApplicationRunningState::RUNNING && app.claimState ==
-                ApplicationClaimState::CLAIMED) {
+            if (app.runningState == STATE_RUNNING && app.claimState ==
+                ajn::PermissionConfigurator::STATE_CLAIMED) {
                 cout << "Trying to install membership certificate on " << app.busName.c_str() << endl;
                 if (secMgr->InstallMembership(app, guild) != ER_OK) {
                     cerr << "Could not install membership certificate on " << app.busName.c_str() << endl;
@@ -379,6 +397,8 @@ static int be_secmgr(size_t peers)
 
         retval = true;
     } while (0);
+
+    secMgr->UnregisterApplicationListener(&tal);
 
     delete secMgr;
     ba.Disconnect();

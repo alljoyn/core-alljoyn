@@ -19,11 +19,8 @@
 
 #define AUTOPING_GROUPNAME (qcc::String("AMPingGroup"))
 
-// Values must match those of the Stub:
-#define MNGT_INTF_NAME "org.alljoyn.Security.PermissionMgmt"
-#define INFO_INTF_NAME "org.alljoyn.Security.SecInfo"
+#define MSG_REPLY_TIMEOUT 5000
 
-#define MNGT_SERVICE_PATH "/security/PermissionMgmt"
-#define MNGT_SERVICE_PORT 3333
+#define MNGT_SERVICE_PORT 101
 
 #endif /* SECLIBDEF_H_ */

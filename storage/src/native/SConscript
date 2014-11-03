@@ -17,9 +17,9 @@ Import('secenv')
 lib_env = secenv.Clone()
 
 srcs = Glob('*.cc')
+srcs.append(Glob('*.c'))
 
 lib_env.Prepend(LIBS = ['dl'])
-lib_env.Prepend(LIBS = ['sqlite3'])
 
 libs = []
 

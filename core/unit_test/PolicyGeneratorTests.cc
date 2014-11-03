@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 #include <PolicyGenerator.h>
+#include <qcc/StringUtil.h>
 
 using namespace std;
 using namespace ajn;

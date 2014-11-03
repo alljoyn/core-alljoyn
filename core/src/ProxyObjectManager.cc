@@ -22,8 +22,9 @@
 
 namespace ajn {
 namespace securitymgr {
-ProxyObjectManager::ProxyObjectManager(ajn::BusAttachment* ba) :
-    bus(ba)
+ProxyObjectManager::ProxyObjectManager(ajn::BusAttachment* ba,
+                                       const SecurityManagerConfig& config) :
+    bus(ba), objectPath(config.pmObjectPath), interfaceName(config.pmIfn)
 {
 }
 
@@ -50,19 +51,20 @@ QStatus ProxyObjectManager::GetProxyObject(const ApplicationInfo appInfo,
      */
 
     do {
-        const InterfaceDescription* remoteIntf = bus->GetInterface(MNGT_INTF_NAME);
+        const InterfaceDescription* remoteIntf = bus->GetInterface(interfaceName.c_str());
         if (NULL == remoteIntf) {
             QCC_DbgRemoteError(("No remote interface found of app to claim"));
             status = ER_FAIL;
             break;
         }
         ajn::ProxyBusObject* remoteObj = new ajn::ProxyBusObject(*bus, appInfo.busName.c_str(),
-                                                                 MNGT_SERVICE_PATH, sessionId);
+                                                                 objectPath.c_str(), sessionId);
         if (remoteObj == NULL) {
             break;
         }
         status = remoteObj->AddInterface(*remoteIntf);
         if (status != ER_OK) {
+            QCC_LogError(status, ("Failed to add interface to proxy object."));
             delete remoteObj;
             break;
         }

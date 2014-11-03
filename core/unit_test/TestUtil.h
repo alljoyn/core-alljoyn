@@ -29,6 +29,20 @@
 using namespace ajn::securitymgr;
 using namespace std;
 namespace secmgrcoretest_unit_testutil {
+class TestApplicationListener :
+    public ApplicationListener {
+  public:
+    TestApplicationListener(sem_t& _sem);
+
+    ApplicationInfo _lastAppInfo;
+
+  private:
+    sem_t& sem;
+
+    void OnApplicationStateChange(const ApplicationInfo* old,
+                                  const ApplicationInfo* updated);
+};
+
 class BasicTest :
     public::testing::Test {
   private:
@@ -40,17 +54,25 @@ class BasicTest :
     virtual void TearDown();
 
   public:
+
     ajn::securitymgr::SecurityManager* secMgr;
     ajn::securitymgr::StorageConfig sc;
+    ajn::securitymgr::SecurityManagerConfig smc;
     ajn::BusAttachment* ba;
+    sem_t sem;
+    TestApplicationListener* tal;
     BasicTest();
+    void SetSmcStub();
 };
 
 class ClaimTest :
     public BasicTest {
   protected:
 
-    static bool AutoAcceptManifest(const ajn::AuthorizationData& authData)
+    static bool AutoAcceptManifest(const ApplicationInfo& appInfo,
+                                   const PermissionPolicy::Rule* manifestRules,
+                                   const size_t manifestRulesCount,
+                                   void* cookie)
     {
         return true;
     }
@@ -78,38 +100,21 @@ class TestClaimListener :
     }
 };
 
-class TestApplicationListener :
-    public ApplicationListener {
-  public:
-    TestApplicationListener(sem_t& _sem);
-
-    ApplicationInfo _lastAppInfo;
-
-  private:
-    sem_t& sem;
-
-    void OnApplicationStateChange(const ApplicationInfo* old,
-                                  const ApplicationInfo* updated);
-};
-
 class ClaimedTest :
     public ClaimTest {
   public:
-    sem_t sem;
+
     Stub* stub;
     ApplicationInfo appInfo;
-    TestApplicationListener* tal;
+    IdentityInfo idInfo;
     TestClaimListener* tcl;
 
     void SetUp()
     {
         BasicTest::SetUp();
-        sem_init(&sem, 0, 0);
+
         bool claimAnswer = true;
         tcl = new TestClaimListener(claimAnswer);
-        tal = new TestApplicationListener(sem);
-
-        secMgr->RegisterApplicationListener(tal);
 
         stub = new Stub(tcl);
         sem_wait(&sem);
@@ -117,9 +122,13 @@ class ClaimedTest :
         stub->OpenClaimWindow();
         sem_wait(&sem);
         /* Claim ! */
-        secMgr->ClaimApplication(tal->_lastAppInfo, &AutoAcceptManifest);
+        idInfo.guid = tal->_lastAppInfo.peerID;
+        idInfo.name = "MyTest ID Name";
+        secMgr->StoreIdentity(idInfo);
+        secMgr->ClaimApplication(tal->_lastAppInfo, idInfo, &AutoAcceptManifest);
         sem_wait(&sem);
         appInfo = tal->_lastAppInfo;
+        secMgr->GetApplication(appInfo);
     }
 
     void TearDown()
@@ -132,21 +141,18 @@ class ClaimedTest :
 
         delete tcl;
         tcl = NULL;
-        delete tal;
-        tal = NULL;
     }
 
     void destroy()
     {
         delete stub;
         stub = NULL;
-        sem_wait(&sem);
-        sem_destroy(&sem);
     }
 
     ClaimedTest() :
-        stub(NULL), tal(NULL), tcl(NULL)
+        stub(NULL), tcl(NULL)
     {
+        SetSmcStub();
     }
 };
 }

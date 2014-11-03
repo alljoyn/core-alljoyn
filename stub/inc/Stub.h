@@ -17,13 +17,14 @@
 #ifndef STUB_H_
 #define STUB_H_
 
+#define APPLICATION_PORT 3333
+
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/SessionPortListener.h>
 #include <alljoyn/about/AboutPropertyStoreImpl.h>
 
 #include "PermissionMgmt.h"
-#include "MySessionListener.h"
 #include <memory>
 
 using namespace ajn;
@@ -48,14 +49,17 @@ class Stub {
         return pm->GetInstalledIdentityCertificate();
     }
 
-    void GetUsedManifest(AuthorizationData& manifest) const
+    void GetUsedManifest(PermissionPolicy::Rule* manifestRules,
+                         size_t manifestRulesCount) const
     {
-        pm->GetUsedManifest(manifest);
+        pm->GetUsedManifest(manifestRules, manifestRulesCount);
     }
 
-    void SetUsedManifest(const AuthorizationData& manifest)
+    void SetUsedManifest(PermissionPolicy::Rule* manifestRules,
+                         size_t manifestRulesCount)
     {
-        pm->SetUsedManifest(manifest);
+        ba.GetPermissionConfigurator().SetPermissionManifest(manifestRules, manifestRulesCount);
+        pm->SetUsedManifest(manifestRules, manifestRulesCount);
     }
 
     std::vector<qcc::ECCPublicKey*> GetRoTKeys() const
@@ -71,19 +75,19 @@ class Stub {
 
     std::map<GUID128, qcc::String> GetMembershipCertificates() const;
 
+    QStatus Reset();
+
   private:
     BusAttachment ba;
-    MySessionListener ml;
     PermissionMgmt* pm;
 
     QStatus AdvertiseApplication(const char* guid);
 
-    QStatus StartListeningForSession(TransportMask mask);
-
-    QStatus StopListeningForSession();
-
     QStatus FillAboutPropertyStoreImplData(AboutPropertyStoreImpl* propStore,
                                            const char* guid);
+
+    QStatus GenerateManifest(PermissionPolicy::Rule** retRules,
+                             size_t* count);
 };
 
 #endif /* STUB_H_ */

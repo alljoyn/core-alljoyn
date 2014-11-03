@@ -18,15 +18,20 @@
 #define COMMON_H_
 
 #include <qcc/CryptoECC.h>
+#include <alljoyn/PermissionConfigurator.h>
 #include <alljoyn/Message.h>
-#include <ApplicationState.h>
-
-#include <cstdint>
+#include <stdint.h>
 
 #define QCC_MODULE "SEC_MGR"
 
 namespace ajn {
 namespace securitymgr {
+typedef enum {
+    STATE_UNKNOWN_RUNNING = 0,
+    STATE_NOT_RUNNING = 1,
+    STATE_RUNNING = 2
+}ApplicationRunningState;
+
 qcc::String ByteArrayToHex(const uint8_t* bytes,
                            const std::size_t len);
 
@@ -34,9 +39,7 @@ qcc::String ByteArrayToString(const AllJoynScalarArray bytes);
 
 qcc::String PubKeyToString(const qcc::ECCPublicKey* pubKey);
 
-const char* ToString(const ApplicationClaimState acs);
-
-ApplicationClaimState ToClaimState(const unsigned char byte);
+const char* ToString(const ajn::PermissionConfigurator::ClaimableState acs);
 
 const char* ToString(const ApplicationRunningState acs);
 

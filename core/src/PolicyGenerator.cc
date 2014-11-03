@@ -63,8 +63,11 @@ QStatus PolicyGenerator::DefaultGuildPolicyTerm(const uint8_t* guildId,
     // will be deleted by term
     PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_GUILD);
-    peers[0].SetID(guildId, guildIdLen);
 
+    // will be deleted by peer
+    KeyInfoECC* info = new KeyInfoECC();
+    info->SetKeyId(guildId, guildIdLen);
+    peers[0].SetKeyInfo(info);
     term.SetPeers(1, peers);
     term.SetRules(1, rules);
 

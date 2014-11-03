@@ -22,11 +22,13 @@
 #include <SecurityInfo.h>
 #include <SecurityInfoListener.h>
 #include <alljoyn/BusAttachment.h>
-#include <AutoPinger.h>
+#include <alljoyn/AutoPinger.h>
 #include <alljoyn/MessageReceiver.h>
 #include <qcc/String.h>
+#include <qcc/GUID.h>
 
 #include <qcc/Debug.h>
+
 #define QCC_MODULE "SEC_MGR"
 
 namespace ajn {
@@ -49,9 +51,13 @@ class ApplicationMonitor :
     ajn::BusAttachment* busAttachment;
 
     ApplicationMonitor();
-    ApplicationMonitor(ajn::BusAttachment* ba);
+    ApplicationMonitor(ajn::BusAttachment* ba,
+                       qcc::String signalIfn);
 
     void operator=(ApplicationMonitor const&) { }
+
+    QStatus UnmarshalSecuritySignal(Message& msg,
+                                    SecurityInfo& secInfo);
 
     void StateChangedSignalHandler(const InterfaceDescription::Member* member,
                                    const char* sourcePath,
@@ -64,9 +70,9 @@ class ApplicationMonitor :
                           const qcc::String& destination);
 
   public:
-    static ApplicationMonitor* GetApplicationMonitor(ajn::BusAttachment* ba)
+    static ApplicationMonitor* GetApplicationMonitor(ajn::BusAttachment* ba, qcc::String signalIfn)
     {
-        return new ApplicationMonitor(ba);
+        return new ApplicationMonitor(ba, signalIfn);
     }
 
     ~ApplicationMonitor();

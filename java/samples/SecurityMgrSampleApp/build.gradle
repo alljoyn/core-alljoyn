@@ -1,0 +1,25 @@
+
+apply plugin: "com.android.application"
+apply plugin: "alljoyn-android"
+
+android {
+    compileSdkVersion rootProject.androidCompileSdkVersion
+    buildToolsVersion rootProject.androidBuildToolsVersion
+
+    defaultConfig {
+        applicationId "org.alljoyn.securitymgr.securitymgrsampleapp"
+        targetSdkVersion rootProject.androidCompileSdkVersion
+        minSdkVersion 15
+        versionCode 1
+        versionName "1.0"
+    }
+
+}
+
+dependencies {
+    compile 'com.android.support:support-v4:21.0.+'
+    compile 'com.android.support:appcompat-v7:21.0.+'
+    compile 'com.android.support:cardview-v7:21.0.+'
+    compile 'com.android.support:recyclerview-v7:21.0.+'
+}
+
