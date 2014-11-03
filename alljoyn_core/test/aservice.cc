@@ -151,8 +151,8 @@ int main(int argc, char** argv)
     // Setup the about data
     AboutData aboutData("en");
 
-    uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.SetAppId(appId, 6);
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    status = aboutData.SetAppId(appId, 16);
     status = aboutData.SetDeviceName("My Device Name");
     status = aboutData.SetDeviceId("fakeID");
     status = aboutData.SetAppName("Application");
