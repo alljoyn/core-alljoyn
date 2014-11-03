@@ -117,7 +117,7 @@ size_t AboutObjectDescription::GetInterfaces(const char* path, const char** inte
     }
     aodInternal->announceObjectsMapLock.Lock(MUTEX_CONTEXT);
     size_t count = 0;
-    for (std::set<qcc::String>::iterator it = aom_it->second.begin();
+    for (std::set<qcc::String>::const_iterator it = aom_it->second.begin();
          it != aom_it->second.end() && count < numInterfaces; ++it, ++count) {
         interfaces[count] = it->c_str();
     }
