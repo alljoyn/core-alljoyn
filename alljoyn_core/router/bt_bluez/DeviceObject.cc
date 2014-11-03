@@ -52,7 +52,9 @@ namespace bluez {
 _DeviceObject::_DeviceObject(BusAttachment& bus, const qcc::String& path) :
     ProxyBusObject(bus, bzBusName, path.c_str(), 0),
     m_address(""),
-    m_connected(false)
+    m_connected(false),
+    m_paired(false),
+    m_alljoyn(false)
 {
 }
 

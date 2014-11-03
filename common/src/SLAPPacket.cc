@@ -35,8 +35,8 @@ using namespace qcc;
 /*
  * link establishment packets
  */
-static const char* LinkCtrlPacketNames[7] = { "NONE", "CONN", "ACPT", "NEGO", "NRSP", "DISC", "DRSP" };
-static const size_t ExpectedLen[7] = { 0, 4, 4, 7, 7, 4, 4 };
+static const char* LinkCtrlPacketNames[10] = { "NONE", "CONN", "ACPT", "NEGO", "NRSP", "DISC", "DRSP", "OFFL", "OFFC", "OFFR" };
+static const size_t ExpectedLen[10] = { 0, 4, 4, 7, 7, 4, 4, 5, 0, 0 };
 
 const uint8_t BOUNDARY_BYTE         = 0xC0;
 const uint8_t BOUNDARY_SUBSTITUTE   = 0xDC;
@@ -59,6 +59,7 @@ SLAPReadPacket::SLAPReadPacket(size_t packetSize) :
     m_readState(PACKET_NEW),
     m_packetType(INVALID_PACKET),
     m_controlType(UNKNOWN_PKT),
+    m_offlineTime(0),
     m_ackNum(0), m_sequenceNum(0)
 {
     memset(m_configField, '\0', 3);
@@ -77,6 +78,7 @@ void SLAPReadPacket::Clear()
     m_readState = PACKET_NEW;
     m_packetType = INVALID_PACKET;
     m_controlType = UNKNOWN_PKT;
+    m_offlineTime = 0;
     m_ackNum = 0;
     m_sequenceNum = 0;
     memset(m_configField, '\0', 3);
@@ -256,15 +258,29 @@ QStatus SLAPReadPacket::Validate()
 
                 for (uint8_t i = 1; i < sizeof(LinkCtrlPacketNames) / sizeof(char*); i++) {
                     if ((memcmp(&m_buffer[4], LinkCtrlPacketNames[i], SLAP_CTRL_PAYLOAD_HDR_SIZE) == 0)) {
-                        if ((m_totalLen - SLAP_HDR_LEN) == ExpectedLen[i]) {
-                            m_controlType = static_cast<ControlPacketType>(i);
-                            status = ER_OK;
-                            if ((m_controlType ==  NEGO_PKT) || (m_controlType == NEGO_RESP_PKT)) {
-                                memcpy(m_configField, &m_buffer[8], 3);
-                                QCC_DbgPrintf(("SLAP Received control packet %s. m_configField = %X %X %X", LinkCtrlPacketNames[m_controlType], m_configField[0], m_configField[1], m_configField[2]));
+                        size_t pktLen = m_totalLen - SLAP_HDR_LEN;
+                        ControlPacketType thisPkt = static_cast<ControlPacketType>(i);
+                        if (thisPkt == OFFLINE_PKT) {
+                            if (pktLen >= ExpectedLen[i]) {
+                                uint8_t j;
+                                m_offlineTime = 0;
+                                for (j = 4; j < pktLen; j++) {
+                                    m_offlineTime *= 0x100;
+                                    m_offlineTime += m_buffer[j];
+                                }
+                                QCC_DbgPrintf(("SLAP Received control packet %s, Time = %d seconds.", LinkCtrlPacketNames[thisPkt], m_offlineTime));
                             } else {
-                                QCC_DbgPrintf(("SLAP Received control packet %s.", LinkCtrlPacketNames[m_controlType]));
-
+                                status = ER_SLAP_INVALID_PACKET_LEN;
+                            }
+                        } else if (pktLen == ExpectedLen[i]) {
+                            m_controlType = thisPkt;
+                            status = ER_OK;
+                            if ((thisPkt ==  NEGO_PKT) || (thisPkt == NEGO_RESP_PKT)) {
+                                memcpy(m_configField, &m_buffer[8], 3);
+                                QCC_DbgPrintf(("SLAP Received control packet %s. m_configField = %X %X %X",
+                                               LinkCtrlPacketNames[thisPkt], m_configField[0], m_configField[1], m_configField[2]));
+                            } else {
+                                QCC_DbgPrintf(("SLAP Received control packet %s.", LinkCtrlPacketNames[thisPkt]));
                             }
                         } else {
                             status = ER_SLAP_INVALID_PACKET_LEN;

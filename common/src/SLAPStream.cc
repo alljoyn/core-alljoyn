@@ -590,12 +590,19 @@ void SLAPStream::ProcessControlPacket()
     /*
      * Ignore any other packets.
      */
-    QCC_DbgPrintf(("Discarding link packet %d", pktType));
+    QCC_DbgPrintf(("Discarding link packet %d, state:%d", pktType, m_linkState));
 }
 
 void SLAPStream::TransmitToLink()
 {
     m_streamLock.Lock(MUTEX_CONTEXT);
+
+    QCC_LogError(ER_OK, ("SLAPStream::TransmitToLink:%d", m_streamController->IsOnline()));
+    if (!m_streamController->IsOnline()) {
+        m_streamLock.Unlock(MUTEX_CONTEXT);
+        return;
+    }
+
     m_txState = TX_SENDING;
 
     QStatus status = ER_OK;
@@ -744,6 +751,7 @@ QStatus SLAPStream::PushBytes(const void* buf, size_t numBytes, size_t& numSent)
     const uint8_t* tempBuf = static_cast<const uint8_t*>(buf);
     QStatus status = ER_OK;
     size_t bytesWritten = 0;
+    QCC_LogError(ER_OK, ("SLAPStream::PushBytes online:%d", m_streamController->IsOnline()));
     while (bytesWritten < numBytes) {
         if (m_linkState == LINK_DEAD) {
             status = ER_SLAP_OTHER_END_CLOSED;
@@ -835,6 +843,12 @@ QStatus SLAPStream::PushBytes(const void* buf, size_t numBytes, size_t& numSent)
 void SLAPStream::EnqueueCtrl(ControlPacketType type, uint8_t* config)
 {
     m_streamLock.Lock(MUTEX_CONTEXT);
+
+    if (!m_streamController->IsOnline()) {
+        m_streamLock.Unlock(MUTEX_CONTEXT);
+        return;
+    }
+
     /*
      * Unreliable packets are given special treatment because they are sent
      * ahead of any packets already in the m_txQueue and do not require

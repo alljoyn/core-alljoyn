@@ -51,8 +51,12 @@ class _DeviceObject : public ProxyBusObject,
 
     QStatus SetAddress(const qcc::String addrStr) { return m_address.FromString(addrStr); }
     void SetConnected(bool connected) { m_connected = connected; }
+    void SetPaired(bool paired) { m_paired = paired; }
+    void SetAllJoyn() { m_alljoyn = true; }
     const qcc::BDAddress& GetAddress() const { return m_address; }
     bool IsConnected() const { return m_connected; }
+    bool IsPaired() const { return m_paired; }
+    bool IsAllJoyn() const { return m_alljoyn; }
 
   private:
 
@@ -63,6 +67,8 @@ class _DeviceObject : public ProxyBusObject,
                            void* context);
     qcc::BDAddress m_address;
     bool m_connected;
+    bool m_paired;
+    bool m_alljoyn;
 };
 
 typedef qcc::ManagedObj<_DeviceObject> DeviceObject;

@@ -77,6 +77,7 @@ const InterfaceDesc bzDevice1IfcTbl[] = {
     /* Properties */
     { MESSAGE_INVALID,     "UUIDs",               "as", NULL,    NULL, PROP_ACCESS_READ },
     { MESSAGE_INVALID,     "Connected",           "b",  NULL,    NULL, PROP_ACCESS_READ },
+    { MESSAGE_INVALID,     "Paired",              "b",  NULL,    NULL, PROP_ACCESS_READ },
 };
 
 

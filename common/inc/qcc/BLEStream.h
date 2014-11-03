@@ -145,10 +145,8 @@ class BLEController : public StreamController {
     BLEStream* m_bleStream;           /**< The BLE stream that this controller reads from */
     int exitCount;                    /**< Count indicating whether the ble stream has exited successfully. */
 
-    void SetConnected(bool connected) { m_connected = connected; }
-    bool IsConnected() { return m_connected; }
-  private:
-    bool m_connected;
+    void SetConnected(bool connected) { SetOnline(connected); if (connected) { m_bleStream->GoOnline(); } }
+    bool IsConnected() { return IsOnline(); }
 };
 }
 #endif

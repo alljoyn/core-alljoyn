@@ -97,7 +97,7 @@ QStatus BLEStream::PushBytes(const void* buf, size_t numBytes, size_t& actualByt
  * store the dbus object path to the remote device as a private storage string
  * */
 BLEController::BLEController(BLEStream* bleStream, StreamReadListener* readListener) :
-    StreamController(readListener),
+    StreamController(readListener, true),
     m_bleStream(bleStream), exitCount(0)
 {
 }

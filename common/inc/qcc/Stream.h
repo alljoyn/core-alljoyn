@@ -189,6 +189,9 @@ class Stream : public Source, public Sink {
 
     /* Close the stream */
     virtual void Close() { }
+
+    /* Wakeup Stream from on Offline state */
+    virtual void GoOnline() { }
 };
 
 /**
@@ -211,7 +214,8 @@ class StreamReadListener {
 
 class StreamController {
   public:
-    StreamController(StreamReadListener* readListener) : m_readListener(readListener) { };
+    StreamController(StreamReadListener* readListener, bool online) : m_readListener(readListener), m_online(online) { };
+    StreamController(StreamReadListener* readListener) : m_readListener(readListener), m_online(true) { };
     /** Destructor */
     virtual ~StreamController() { };
 
@@ -224,8 +228,11 @@ class StreamController {
      * @return   ER_OK if successful.
      */
     virtual QStatus PushBytes(const void* buf, size_t numBytes, size_t& actualBytes) = 0;
+    bool IsOnline() { return m_online; }
+    void SetOnline(bool online) { m_online = online; }
   protected:
     StreamReadListener* m_readListener;   /**< The Read listener to call back after reading data */
+    bool m_online;                        /**< Is the stream online and ready to accept PushBytes data */
 };
 }  /* namespace */
 

@@ -59,7 +59,10 @@ enum ControlPacketType {
     NEGO_PKT = 3,
     NEGO_RESP_PKT = 4,
     DISCONN_PKT = 5,
-    DISCONN_RESP_PKT = 6
+    DISCONN_RESP_PKT = 6,
+    OFFLINE_PKT = 7,
+    OFFLINE_RESP_PKT = 8,
+    OFFLINE_REJ_PKT = 9
 };
 
 class SLAPReadPacket {
@@ -168,6 +171,7 @@ class SLAPReadPacket {
 
     PacketType m_packetType;              /**< Packet type */
     ControlPacketType m_controlType;      /**< Control Packet type */
+    uint32_t m_offlineTime;               /**< Time remote will be offline */
 
     uint8_t m_ackNum;                     /**< Acknowledge number contained in this packet */
     uint8_t m_sequenceNum;                /**< Sequence number contained in this packet */

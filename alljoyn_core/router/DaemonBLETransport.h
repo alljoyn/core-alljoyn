@@ -193,6 +193,8 @@ class DaemonBLETransport :
      */
     qcc::BLEController* NewDeviceFound(const char* remoteDevice);
 
+    bool IsConnValid(qcc::BLEController*conn);
+
     /**
      * Callback indicating that an untrusted client is trying to connect to this daemon.
      */

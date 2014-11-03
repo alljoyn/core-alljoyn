@@ -597,6 +597,19 @@ exit:
     return conn;
 }
 
+QStatus DaemonBLETransport::BLEAccessor::ConnectDevice(const char*objStr)
+{
+    DeviceObject* dev = deviceProxyMap[objStr];
+    BLEController* controller = deviceMap[objStr];
+    QStatus status = ER_OK;
+
+    if (controller && dev && !controller->IsConnected()) {
+        status = (*dev)->MethodCall(*org.bluez.Device1.Connect, NULL, 0);
+        QCC_LogError(status, ("Connect"));
+    }
+    return status;
+}
+
 
 QStatus DaemonBLETransport::BLEAccessor::EnumerateAdapters()
 {
@@ -617,7 +630,7 @@ QStatus DaemonBLETransport::BLEAccessor::EnumerateAdapters()
 
         QCC_DbgTrace(("GetManagedObjects() == %d", numRecs));
         for (size_t i = 0; i < numRecs; ++i) {
-            bool connected;
+            bool connected, paired;
             const char* object;
             size_t numIfcs;
             const MsgArg* ifcs;
@@ -626,6 +639,7 @@ QStatus DaemonBLETransport::BLEAccessor::EnumerateAdapters()
             records[i].Get("{oa{sa{sv}}}", &object, &numIfcs, &ifcs);
             QCC_DbgTrace(("   GetManagedObjects() == object:%s", object));
             connected = false;
+            paired = false;
             for (size_t j = 0; j < numIfcs; ++j) {
                 const char* ifc;
                 ifcs[j].Get("{s*}", &ifc, &props);
@@ -649,15 +663,26 @@ QStatus DaemonBLETransport::BLEAccessor::EnumerateAdapters()
                     } else {
                         connected = false;
                     }
+                    status = props->GetElement("{sb}", "Paired", &paired);
+                    if (status == ER_OK && paired) {
+                        DeviceObject* dev = deviceProxyMap[object];
+                        if (dev) {
+                            (*dev)->SetPaired(paired);
+                        }
+                    } else {
+                        paired = false;
+                    }
                 } else if (strcmp(ifc, bzAllJoynIfc) == 0) {
                     const char* watchProps[] = {
-                        "Connected"
+                        "Connected",
+                        "Paired"
                     };
 
                     QCC_DbgTrace(("      GetManagedObjects() == ifc:%s", ifc));
                     DeviceObject* dev = new DeviceObject(bzBus, object);
                     (*dev)->AddInterface(*org.bluez.Device1.interface);
                     (*dev)->AddInterface(*org.bluez.AllJoyn.interface);
+                    (*dev)->SetAllJoyn();
                     deviceProxyMap[object] = dev;
                     (*dev)->RegisterPropertiesChangedHandler(bzDevice1Ifc, watchProps, ArraySize(watchProps), *this, NULL);
                     QCC_DbgTrace(("Register RxDataRecv for %s (%p)", object, dev));
@@ -671,6 +696,9 @@ QStatus DaemonBLETransport::BLEAccessor::EnumerateAdapters()
                         if (controller) {
                             deviceMap[object] = controller;
                             QCC_DbgTrace(("Save BLEController %p for \"%s\" %p %p", controller, object, &deviceMap, deviceMap[object]));
+                            if (!connected) {
+                                ConnectDevice(object);
+                            }
                         }
                     }
                     if (connected) {
@@ -680,6 +708,10 @@ QStatus DaemonBLETransport::BLEAccessor::EnumerateAdapters()
                         }
                         if (dev) {
                             (*dev)->SetConnected(connected);
+                            if (!(*dev)->IsPaired()) {
+                                //If device gets unpaired, BlueZ won't reconnect
+                                //status = (*dev)->MethodCall(*org.bluez.Device1.Pair, NULL, 0);
+                            }
                         }
                     }
                 }
@@ -880,7 +912,11 @@ void DaemonBLETransport::BLEAccessor::RxDataRecvSignalHandler(const InterfaceDes
     }
     BLEController* controller = deviceMap[sourcePath];
     QCC_DbgTrace(("DaemonBLETransport::BLEAccessor::RxDataRecvSignalHandler %s: (%d) %p %p", sourcePath, count, controller, &deviceMap));
-    controller->ReadCallback(rx_data, count);
+    if (transport->IsConnValid(controller)) {
+        controller->ReadCallback(rx_data, count);
+    } else {
+        deviceMap[sourcePath] = transport->NewDeviceFound(sourcePath);
+    }
 }
 
 void DaemonBLETransport::BLEAccessor::InterfacesAddedSignalHandler(const InterfaceDescription::Member* member,
@@ -894,6 +930,7 @@ void DaemonBLETransport::BLEAccessor::InterfacesAddedSignalHandler(const Interfa
     const MsgArg* uuids;
     size_t uuidCnt;
     bool connected = false;
+    bool paired = false;;
 
     QStatus status;
 
@@ -906,11 +943,12 @@ void DaemonBLETransport::BLEAccessor::InterfacesAddedSignalHandler(const Interfa
         return;
     }
 
-    DeviceObject* dev = deviceProxyMap[objStr];
     const char* watchProps[] = {
-        "Connected"
+        "Connected",
+        "Paired"
     };
 
+    DeviceObject* dev = deviceProxyMap[objStr];
 
     status = dictionary->GetElement("{s*}", bzDevice1Ifc, &props);
     if (status == ER_OK) {
@@ -921,6 +959,80 @@ void DaemonBLETransport::BLEAccessor::InterfacesAddedSignalHandler(const Interfa
             (*dev)->AddInterface(*org.bluez.AllJoyn.interface);
             deviceProxyMap[objStr] = dev;
             (*dev)->RegisterPropertiesChangedHandler(bzDevice1Ifc, watchProps, ArraySize(watchProps), *this, NULL);
+        }
+
+        /* As an Else here, we might want to put handling for New Adapter, keyed
+         * on the existance of the interface "org.bluez.Adapter1"
+         */
+
+        status = props->GetElement("{ss}", "Address", &addrStr);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Address Property on Device1 Interface not Found for %s", objStr));
+        } else if (dev) {
+            (*dev)->SetAddress(addrStr);
+            QCC_LogError(status, ("Address  %s", addrStr));
+        }
+
+        status = props->GetElement("{sb}", "Paired", &paired);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Paired Property on Device1 Interface not Found for %s", objStr));
+        } else if (dev) {
+            (*dev)->SetPaired(paired);
+            QCC_LogError(status, ("Paired  %d", paired));
+        }
+
+        status = props->GetElement("{sb}", "Connected", &connected);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Connected Property on Device1 Interface not Found for %s", objStr));
+        } else {
+            BLEController* controller = deviceMap[objStr];
+            if (controller) {
+                controller->SetConnected(connected);
+            }
+            if (dev) {
+                (*dev)->SetConnected(connected);
+                QCC_LogError(status, ("Connected  %d", connected));
+            }
+        }
+
+        QCC_LogError(status, ("New Remote Device:%s Address:%s", objStr, addrStr));
+
+        if (!connectable) {
+            QCC_DbgTrace(("DaemonBLETransport::BLEAccessor::InterfacesAddedSignalHandler: Not Connectable"));
+        }
+
+        status = props->GetElement("{sas}", "UUIDs", &uuidCnt, &uuids);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("No UUIDs found for %s", objStr));
+            return;
+        }
+
+        QCC_DbgTrace(("UUID cnt: %d", uuidCnt));
+        if (uuidCnt) {
+            for (size_t i = 0; i < uuidCnt; ++i) {
+                const char* uuid;
+
+                status = uuids[i].Get("s", &uuid);
+                QCC_LogError(status, ("New UUID:%s Address:%s", uuid, addrStr));
+                if ((status == ER_OK) &&
+                    (strcmp(uuid, ALLJOYN_UUID) == 0)) {
+                    /* Notify Transport of device if new */
+                    if (!deviceMap[objStr]) {
+                        BLEController* controller = transport->NewDeviceFound(objStr);
+                        if (controller) {
+                            controller->SetConnected(connected);
+                            deviceMap[objStr] = controller;
+                            QCC_DbgTrace(("Save BLEController %p for \"%s\" %p %p", controller, objStr, &deviceMap, deviceMap[objStr]));
+                            if (!connected) {
+                                ConnectDevice(objStr);
+                            } else if (dev && !(*dev)->IsPaired()) {
+                                //If device gets unpaired, BlueZ won't reconnect
+                                //status = (*dev)->MethodCall(*org.bluez.Device1.Pair, NULL, 0);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -934,6 +1046,7 @@ void DaemonBLETransport::BLEAccessor::InterfacesAddedSignalHandler(const Interfa
             deviceProxyMap[objStr] = dev;
             (*dev)->RegisterPropertiesChangedHandler(bzDevice1Ifc, watchProps, ArraySize(watchProps), *this, NULL);
         }
+        (*dev)->SetAllJoyn();
         QCC_DbgTrace(("Register RxDataRecv for %s (%p)", objStr, dev));
         bzBus.RegisterSignalHandler(this,
                                     SignalHandler(&DaemonBLETransport::BLEAccessor::RxDataRecvSignalHandler),
@@ -945,69 +1058,22 @@ void DaemonBLETransport::BLEAccessor::InterfacesAddedSignalHandler(const Interfa
             if (controller) {
                 deviceMap[objStr] = controller;
                 QCC_DbgTrace(("Save BLEController %p for \"%s\" %p %p", controller, objStr, &deviceMap, deviceMap[objStr]));
-            }
-        }
-    }
-
-    /* As an Else here, we might want to put handling for New Adapter, keyed
-     * on the existance of the interface "org.bluez.Adapter1"
-     */
-
-    status = props->GetElement("{ss}", "Address", &addrStr);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Address Property on Device1 Interface not Found for %s", objStr));
-        return;
-    } else if (dev) {
-        (*dev)->SetAddress(addrStr);
-    }
-
-    status = props->GetElement("{sb}", "Connected", &connected);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Connected Property on Device1 Interface not Found for %s", objStr));
-    } else {
-        BLEController* controller = deviceMap[objStr];
-        if (controller) {
-            controller->SetConnected(connected);
-        }
-        if (dev) {
-            (*dev)->SetConnected(connected);
-        }
-    }
-
-    QCC_LogError(status, ("New Remote Device:%s Address:%s", objStr, addrStr));
-
-    if (!connectable) {
-        QCC_DbgTrace(("DaemonBLETransport::BLEAccessor::InterfacesAddedSignalHandler: Not Connectable"));
-    }
-
-    status = props->GetElement("{sas}", "UUIDs", &uuidCnt, &uuids);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("No UUIDs found for %s", objStr));
-        return;
-    }
-
-    QCC_DbgTrace(("UUID cnt: %d", uuidCnt));
-    if (uuidCnt) {
-        for (size_t i = 0; i < uuidCnt; ++i) {
-            const char* uuid;
-
-            status = uuids[i].Get("s", &uuid);
-            QCC_LogError(status, ("New UUID:%s Address:%s", uuid, addrStr));
-            if ((status == ER_OK) &&
-                (strcmp(uuid, ALLJOYN_UUID) == 0)) {
-                /* Notify Transport of device if new */
-                if (!deviceMap[objStr]) {
-                    BLEController* controller = transport->NewDeviceFound(objStr);
-                    if (controller) {
-                        controller->SetConnected(connected);
-                        deviceMap[objStr] = controller;
-                        QCC_DbgTrace(("Save BLEController %p for \"%s\" %p %p", controller, objStr, &deviceMap, deviceMap[objStr]));
-                    }
+                if (!(*dev)->IsConnected()) {
+                    ConnectDevice(objStr);
                 }
             }
         }
+
+        QCC_LogError(status, ("Connected: %d -- Paired: %d", (*dev)->IsConnected(), (*dev)->IsPaired()));
+        if ((*dev)->IsConnected() && !(*dev)->IsPaired()) {
+            //If device gets unpaired, BlueZ won't reconnect
+            //status = (*dev)->MethodCall(*org.bluez.Device1.Pair, NULL, 0);
+            QCC_LogError(status, ("Pair request for %s", objStr));
+        }
     }
+
 }
+
 
 void DaemonBLETransport::BLEAccessor::InterfacesRemovedSignalHandler(const InterfaceDescription::Member* member,
                                                                      const char* sourcePath,
@@ -1145,6 +1211,8 @@ void DaemonBLETransport::BLEAccessor::PropertiesChanged(ProxyBusObject& obj,
 {
     QStatus status;
     bool val = 0;
+    DeviceObject* dev = deviceProxyMap[obj.GetPath()];
+    BLEController* controller = deviceMap[obj.GetPath()];
 
     QCC_LogError(ER_OK, ("I WANT THIS CALLED AS THE BLEACCESSOR!!!!!!"));
 
@@ -1162,11 +1230,25 @@ void DaemonBLETransport::BLEAccessor::PropertiesChanged(ProxyBusObject& obj,
     if (status == ER_OK) {
         QCC_LogError(status, ("Device %s property Changed - Connected: %s", obj.GetPath().c_str(), val ? "True" : "False"));
 
-        if (val) {
-            BLEController* controller = deviceMap[obj.GetPath()];
-            if (controller) {
-                controller->SetConnected(val);
+        if (controller) {
+            controller->SetConnected(val);
+        }
+
+        if (dev) {
+            (*dev)->SetConnected(val);
+            if (val && !(*dev)->IsPaired() && (*dev)->IsAllJoyn()) {
+                //If device gets unpaired, BlueZ won't reconnect
+                //status = (*dev)->MethodCall(*org.bluez.Device1.Pair, NULL, 0);
             }
+        }
+    }
+
+    status = changed.GetElement("{sb}", "Paired", &val);
+    if (status == ER_OK) {
+        QCC_LogError(status, ("Device %s property Changed - Paired: %s", obj.GetPath().c_str(), val ? "True" : "False"));
+
+        if (dev) {
+            (*dev)->SetPaired(val);
         }
     }
 }

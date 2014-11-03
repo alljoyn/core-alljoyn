@@ -105,6 +105,11 @@ class SLAPStream : public Stream, public StreamReadListener, public AlarmListene
      */
     QStatus ScheduleLinkControlPacket();
 
+    /**
+     * Restart transmissions on link that had gone offline.
+     */
+    void GoOnline() { TransmitToLink(); }
+
   private:
 
     /** Private copy constructor */

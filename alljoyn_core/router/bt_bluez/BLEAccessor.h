@@ -184,6 +184,7 @@ BLEAccessor :
                                         Message& msg);
 
     /* support */
+    QStatus ConnectDevice(const char*objStr);
     QStatus InitializeAdapterInformation(bluez::AdapterObject& adapter,
                                          const MsgArg* props);
     void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);

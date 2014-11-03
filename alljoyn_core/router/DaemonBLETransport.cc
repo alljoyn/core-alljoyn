@@ -102,7 +102,7 @@ class _DaemonBLEEndpoint :
     }
 
     EndpointState GetEpState(void) { return m_epState; }
-    ~_DaemonBLEEndpoint() { }
+    ~_DaemonBLEEndpoint() { QCC_LogError(ER_OK, ("_DaemonBLEEndpoint::Destructor state:%d", m_epState)); }
 
     QStatus Authenticate(void);
     void AuthStop(void);
@@ -127,6 +127,7 @@ class _DaemonBLEEndpoint :
     {
         assert(m_epState == EP_STARTING || m_epState == EP_STARTED || m_epState == EP_STOPPING);
         m_epState = EP_STOPPING;
+        QCC_LogError(ER_OK, ("_DaemonBLEEndpoint::SetEpStopping"));
     }
 
     void SetEpDone(void)
@@ -166,6 +167,7 @@ class _DaemonBLEEndpoint :
 
 void _DaemonBLEEndpoint::ThreadExit(qcc::Thread* thread)
 {
+    QCC_LogError(ER_OK, ("_DaemonBLEEndpoint::ThreadExit"));
     if (thread == &m_authThread) {
         if (m_authState == AUTH_INITIALIZED) {
             m_authState = AUTH_FAILED;
@@ -589,7 +591,9 @@ void DaemonBLETransport::EndpointExit(DaemonBLEEndpoint& dEp)
     /* Remove the dead endpoint from the live endpoint list */
     m_lock.Lock(MUTEX_CONTEXT);
     QCC_DbgPrintf(("DaemonBLETransport::EndpointExit()setting stopping"));
+    QCC_LogError(ER_OK, ("DaemonBLETransport::EndpointExit"));
     dEp->SetEpStopping();
+    m_EPset.erase(dEp);
     Thread::Alert();
     m_lock.Unlock(MUTEX_CONTEXT);
 }
@@ -617,6 +621,24 @@ BLEController* DaemonBLETransport::NewDeviceFound(const char* remoteDevice)
 
     return NULL;
 
+}
+
+bool DaemonBLETransport::IsConnValid(qcc::BLEController* bleController)
+{
+    m_lock.Lock(MUTEX_CONTEXT);
+    set<DaemonBLEEndpoint>::iterator i = m_EPset.begin();
+    i = m_EPset.begin();
+    while (i != m_EPset.end()) {
+        DaemonBLEEndpoint ep = *i;
+        if (&ep->m_bleController == bleController) {
+            m_lock.Unlock(MUTEX_CONTEXT);
+            return true;
+        }
+        i++;
+    }
+    QCC_LogError(ER_OK, ("BLEController *NOT* Found"));
+    m_lock.Unlock(MUTEX_CONTEXT);
+    return false;
 }
 
 void* DaemonBLETransport::Run(void* arg)
