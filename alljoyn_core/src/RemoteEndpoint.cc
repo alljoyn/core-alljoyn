@@ -84,7 +84,11 @@ class _RemoteEndpoint::Internal {
         currentWriteMsg(bus),
         stopping(false),
         sessionId(0),
-        pingCallSerial(0)
+        pingCallSerial(0),
+        sendTimeout(0),
+        maxControlMessages(30),
+        numControlMessages(0),
+        numDataMessages(0)
     {
     }
 
@@ -129,7 +133,15 @@ class _RemoteEndpoint::Internal {
     Message currentWriteMsg;                 /**< The message currently being read for this endpoint */
     bool stopping;                           /**< Is this EP stopping? */
     uint32_t sessionId;                      /**< SessionId for BusToBus endpoint. (not used for non-B2B endpoints) */
-    uint32_t pingCallSerial;
+    uint32_t pingCallSerial;                 /**< Serial number of last Heartbeat DBus ping sent */
+    uint32_t sendTimeout;                    /**< Send timeout for this endpoint i.e. time after which the Routing node must
+                                                  disconnect the remote node if it has not read a message from the link
+                                                  in the situation that the send buffer on this end and receive buffer on
+                                                  the remote end are full. */
+    size_t maxControlMessages;               /**< Number of control messages that can be queued up before disconnecting this endpoint.
+                                                  - used on Routing nodes only */
+    size_t numControlMessages;               /**< Number of control messages in txQueue - used on Routing nodes only */
+    size_t numDataMessages;                  /**< Number of data messages in txQueue - used on Routing nodes only */
 };
 
 
@@ -421,7 +433,11 @@ QStatus _RemoteEndpoint::Start()
         endpointType = ENDPOINT_TYPE_BUS2BUS;
     }
 
-    /* Set the send timeout for this endpoint */
+    /* Set the send timeout for this endpoint
+     * Note that this is set to zero even though the actual send timeout is different.
+     * This is because we want non-blocking functionality from the underlying stream.
+     * Send timeout is implemented using a timedout WriteCallback from IODispatch.
+     */
     internal->stream->SetSendTimeout(0);
 
     /* Endpoint needs to be wrapped before we can use it */
@@ -456,14 +472,15 @@ QStatus _RemoteEndpoint::Start()
 
     return status;
 }
-QStatus _RemoteEndpoint::Start(uint32_t idleTimeout, uint32_t probeTimeout, uint32_t numProbes)
+QStatus _RemoteEndpoint::Start(uint32_t idleTimeout, uint32_t probeTimeout, uint32_t numProbes, uint32_t sendTimeout)
 {
     QStatus status = Start();
     if (status == ER_OK && endpointType == ENDPOINT_TYPE_REMOTE) {
         /* Set idle timeouts for leaf nodes only */
         status = SetIdleTimeouts(idleTimeout, probeTimeout, numProbes);
     }
-
+    internal->sendTimeout = sendTimeout;
+    internal->maxControlMessages = sendTimeout * MAX_CONTROL_MSGS_PER_SECOND;
     if (status != ER_OK) {
         Invalidate();
         internal->started = false;
@@ -902,15 +919,6 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
                  * Each copy of the message could be in different write state.
                  */
                 internal->currentWriteMsg = Message(internal->txQueue.back(), true);
-                /* Alert next thread on wait queue */
-                if (0 < internal->txWaitQueue.size()) {
-                    Thread* wakeMe = internal->txWaitQueue.back();
-                    internal->txWaitQueue.pop_back();
-                    status = wakeMe->Alert();
-                    if (ER_OK != status) {
-                        QCC_LogError(status, ("Failed to alert thread blocked on full tx queue"));
-                    }
-                }
                 internal->getNextMsg = false;
                 internal->lock.Unlock(MUTEX_CONTEXT);
             } else {
@@ -939,6 +947,21 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
             internal->lock.Lock(MUTEX_CONTEXT);
             internal->txQueue.pop_back();
             internal->getNextMsg = true;
+            if (internal->bus.GetInternal().GetRouter().IsDaemon()) {
+                if (IsControlMessage(internal->currentWriteMsg)) {
+                    internal->numControlMessages--;
+                } else {
+                    internal->numDataMessages--;
+                }
+            }
+            /* Alert the first one in the txWaitQueue */
+            if (0 < internal->txWaitQueue.size()) {
+                Thread* wakeMe = internal->txWaitQueue.back();
+                status = wakeMe->Alert();
+                if (ER_OK != status) {
+                    QCC_LogError(status, ("Failed to alert thread blocked on full tx queue"));
+                }
+            }
             internal->lock.Unlock(MUTEX_CONTEXT);
         }
     }
@@ -947,8 +970,8 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
         /* Timed-out in the middle of a message write. */
         internal->lock.Lock(MUTEX_CONTEXT);
 
-        /* Set sendtimeout to 120 seconds i.e. 2 minutes. */
-        internal->bus.GetInternal().GetIODispatch().EnableWriteCallback(internal->stream, 120);
+        /* Set writecallback after sendtimeout. */
+        internal->bus.GetInternal().GetIODispatch().EnableWriteCallback(internal->stream, internal->sendTimeout);
         internal->lock.Unlock(MUTEX_CONTEXT);
     } else if (status != ER_OK) {
         /* On an unexpected disconnect save the status that cause the thread exit */
@@ -965,16 +988,250 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
     }
     return status;
 }
-
-QStatus _RemoteEndpoint::PushMessage(Message& msg)
+QStatus _RemoteEndpoint::PushMessageRouter(Message& msg, size_t& count)
 {
-    assert(minimalEndpoint == false && "_RemoteEndpoint::PushMessage(): Unexpected PushMessage with no queues");
+    QStatus status = ER_OK;
+    static const size_t MAX_DATA_MESSAGES = 30;
 
-    QCC_DbgTrace(("RemoteEndpoint::PushMessage %s (serial=%d)", GetUniqueName().c_str(), msg->GetCallSerial()));
+    internal->lock.Lock(MUTEX_CONTEXT);
+    count = internal->txQueue.size();
+    bool wasEmpty = (count == 0);
+
+    if (IsControlMessage(msg)) {
+
+        if (internal->numControlMessages < internal->maxControlMessages) {
+            internal->txQueue.push_front(msg);
+            internal->numControlMessages++;
+            if (wasEmpty) {
+                internal->bus.GetInternal().GetIODispatch().EnableWriteCallbackNow(internal->stream);
+            }
+            internal->lock.Unlock(MUTEX_CONTEXT);
+        } else {
+            internal->lock.Unlock(MUTEX_CONTEXT);
+            Invalidate();
+            internal->stopping = true;
+            internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+            QCC_LogError(ER_BUS_ENDPOINT_CLOSING, ("Endpoint Tx failed (%s)", GetUniqueName().c_str()));
+            status = ER_BUS_ENDPOINT_CLOSING;
+        }
+
+    } else {
+        /* If the txWaitQueue is not empty, dont queue the message.
+         * There are other threads that are blocked trying to send a message to
+         * this RemoteEndpoint
+         */
+        if ((internal->numDataMessages < MAX_DATA_MESSAGES) && (internal->txWaitQueue.empty())) {
+            internal->txQueue.push_front(msg);
+            internal->numDataMessages++;
+        } else {
+            /* This thread will have to wait for room in the queue */
+            Thread* thread = Thread::GetThread();
+            assert(thread);
+
+            thread->AddAuxListener(this);
+            internal->txWaitQueue.push_front(thread);
+
+            while (true) {
+                /* Remove a queue entry whose TTLs is expired.
+                 * Only threads that are the head of the txWaitqueue will purge this deque
+                 * and enqueue new messages to the txQueue.
+                 * This is to ensure that the original order of calling of PushMessage
+                 * is preserved.
+                 */
+                uint32_t maxWait = Event::WAIT_FOREVER;
+                if (internal->txWaitQueue.back() == thread) {
+                    deque<Message>::iterator it = internal->txQueue.begin();
+                    while (it != internal->txQueue.end()) {
+                        uint32_t expMs;
+                        if ((*it)->IsExpired(&expMs)) {
+                            if (IsControlMessage(internal->currentWriteMsg)) {
+                                internal->numControlMessages--;
+                            } else {
+                                internal->numDataMessages--;
+                            }
+
+                            internal->txQueue.erase(it);
+                            break;
+                        } else {
+                            ++it;
+                            if (maxWait == Event::WAIT_FOREVER) {
+                                maxWait = expMs;
+                            } else {
+                                maxWait = (std::min)(maxWait, expMs);
+                            }
+                        }
+                    }
+
+                    if (internal->numDataMessages < MAX_DATA_MESSAGES) {
+                        count = internal->txQueue.size();
+                        /* Check queue wasn't drained while we were waiting */
+                        if (internal->txQueue.size() == 0) {
+                            wasEmpty = true;
+                        }
+                        internal->txQueue.push_front(msg);
+                        internal->numDataMessages++;
+
+                        status = ER_OK;
+                        break;
+                    }
+                }
+                internal->lock.Unlock(MUTEX_CONTEXT);
+                status = Event::Wait(Event::neverSet, maxWait);
+                internal->lock.Lock(MUTEX_CONTEXT);
+                /* Reset alert status */
+                if (ER_ALERTED_THREAD == status) {
+                    if (thread->GetAlertCode() == ENDPOINT_IS_DEAD_ALERTCODE) {
+                        status = ER_BUS_ENDPOINT_CLOSING;
+                    }
+                    thread->GetStopEvent().ResetEvent();
+                }
+
+                if (internal->stopping) {
+                    status = ER_BUS_ENDPOINT_CLOSING;
+                }
+                if ((ER_OK != status) && (ER_ALERTED_THREAD != status) && (ER_TIMEOUT != status)) {
+                    break;
+                }
+
+            }
+            /* Remove thread from wait queue. */
+            thread->RemoveAuxListener(this);
+            deque<Thread*>::iterator eit = find(internal->txWaitQueue.begin(), internal->txWaitQueue.end(), thread);
+            if (eit != internal->txWaitQueue.end()) {
+                internal->txWaitQueue.erase(eit);
+            }
+
+            /* Alert the first one in the txWaitQueue */
+            if (0 < internal->txWaitQueue.size()) {
+                Thread* wakeMe = internal->txWaitQueue.back();
+                status = wakeMe->Alert();
+                if (ER_OK != status) {
+                    QCC_LogError(status, ("Failed to alert thread blocked on full tx queue"));
+                }
+            }
+
+        }
+
+
+        if (wasEmpty && (status == ER_OK)) {
+            internal->bus.GetInternal().GetIODispatch().EnableWriteCallbackNow(internal->stream);
+        }
+        internal->lock.Unlock(MUTEX_CONTEXT);
+
+    }
+
+    return status;
+}
+QStatus _RemoteEndpoint::PushMessageLeaf(Message& msg, size_t& count)
+{
     static const size_t MAX_TX_QUEUE_SIZE = 30;
 
     QStatus status = ER_OK;
+    internal->lock.Lock(MUTEX_CONTEXT);
+    count = internal->txQueue.size();
+    bool wasEmpty = (count == 0);
+    /* If the txWaitQueue is not empty, dont queue the message.
+     * There are other threads that are blocked trying to send a message to
+     * this RemoteEndpoint
+     */
+    if ((count < MAX_TX_QUEUE_SIZE) && (internal->txWaitQueue.empty())) {
+        internal->txQueue.push_front(msg);
+    } else {
+        /* This thread will have to wait for room in the queue */
+        Thread* thread = Thread::GetThread();
+        assert(thread);
 
+        thread->AddAuxListener(this);
+        internal->txWaitQueue.push_front(thread);
+
+        while (true) {
+            /* Remove a queue entry whose TTLs is expired.
+             * Only threads that are the head of the txWaitqueue will purge this deque
+             * and enqueue new messages to the txQueue.
+             * This is to ensure that the original order of calling of PushMessage
+             * is preserved.
+             */
+            uint32_t maxWait = Event::WAIT_FOREVER;
+            if (internal->txWaitQueue.back() == thread) {
+                deque<Message>::iterator it = internal->txQueue.begin();
+                while (it != internal->txQueue.end()) {
+                    uint32_t expMs;
+                    if ((*it)->IsExpired(&expMs)) {
+                        internal->txQueue.erase(it);
+                        break;
+                    } else {
+                        ++it;
+                        if (maxWait == Event::WAIT_FOREVER) {
+                            maxWait = expMs;
+                        } else {
+                            maxWait = (std::min)(maxWait, expMs);
+                        }
+                    }
+                }
+
+                if (internal->txQueue.size() < MAX_TX_QUEUE_SIZE) {
+                    count = internal->txQueue.size();
+                    /* Check queue wasn't drained while we were waiting */
+                    if (internal->txQueue.size() == 0) {
+                        wasEmpty = true;
+                    }
+                    internal->txQueue.push_front(msg);
+                    status = ER_OK;
+                    break;
+                }
+            }
+            internal->lock.Unlock(MUTEX_CONTEXT);
+            status = Event::Wait(Event::neverSet, maxWait);
+            internal->lock.Lock(MUTEX_CONTEXT);
+            /* Reset alert status */
+            if (ER_ALERTED_THREAD == status) {
+                if (thread->GetAlertCode() == ENDPOINT_IS_DEAD_ALERTCODE) {
+                    status = ER_BUS_ENDPOINT_CLOSING;
+                }
+                thread->GetStopEvent().ResetEvent();
+            }
+
+            if (internal->stopping) {
+                status = ER_BUS_ENDPOINT_CLOSING;
+            }
+            if ((ER_OK != status) && (ER_ALERTED_THREAD != status) && (ER_TIMEOUT != status)) {
+                break;
+            }
+
+        }
+        /* Remove thread from wait queue. */
+        thread->RemoveAuxListener(this);
+        deque<Thread*>::iterator eit = find(internal->txWaitQueue.begin(), internal->txWaitQueue.end(), thread);
+        if (eit != internal->txWaitQueue.end()) {
+            internal->txWaitQueue.erase(eit);
+        }
+
+        /* Alert the first one in the txWaitQueue */
+        if (0 < internal->txWaitQueue.size()) {
+            Thread* wakeMe = internal->txWaitQueue.back();
+            status = wakeMe->Alert();
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Failed to alert thread blocked on full tx queue"));
+            }
+        }
+
+
+    }
+
+
+    if (wasEmpty && (status == ER_OK)) {
+        internal->bus.GetInternal().GetIODispatch().EnableWriteCallbackNow(internal->stream);
+    }
+    internal->lock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+QStatus _RemoteEndpoint::PushMessage(Message& msg)
+{
+    assert(minimalEndpoint == false && "_RemoteEndpoint::PushMessage(): Unexpected PushMessage with no queues");
+    QCC_DbgTrace(("RemoteEndpoint::PushMessage %s (serial=%d)", GetUniqueName().c_str(), msg->GetCallSerial()));
+
+    QStatus status = ER_OK;
+    size_t count;
     /* Remote endpoints can be invalid if they were created with the default
      * constructor or being torn down. Return ER_BUS_NO_ENDPOINT only if the
      * endpoint was created with the default constructor. i.e. internal=NULL
@@ -990,76 +1247,11 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
     if (internal->stopping) {
         return ER_BUS_ENDPOINT_CLOSING;
     }
-    internal->lock.Lock(MUTEX_CONTEXT);
-    size_t count = internal->txQueue.size();
-    bool wasEmpty = (count == 0);
-    if (MAX_TX_QUEUE_SIZE > count) {
-        internal->txQueue.push_front(msg);
+    if (internal->bus.GetInternal().GetRouter().IsDaemon()) {
+        status = PushMessageRouter(msg, count);
     } else {
-        while (true) {
-            /* Remove a queue entry whose TTLs is expired if possible */
-            deque<Message>::iterator it = internal->txQueue.begin();
-            uint32_t maxWait = 20 * 1000;
-            while (it != internal->txQueue.end()) {
-                uint32_t expMs;
-                if ((*it)->IsExpired(&expMs)) {
-                    internal->txQueue.erase(it);
-                    break;
-                } else {
-                    ++it;
-                }
-                maxWait = (std::min)(maxWait, expMs);
-            }
-            if (internal->txQueue.size() < MAX_TX_QUEUE_SIZE) {
-                /* Check queue wasn't drained while we were waiting */
-                if (internal->txQueue.size() == 0) {
-                    wasEmpty = true;
-                }
-                internal->txQueue.push_front(msg);
-                status = ER_OK;
-                break;
-            } else {
-                /* This thread will have to wait for room in the queue */
-                Thread* thread = Thread::GetThread();
-                assert(thread);
-
-                thread->AddAuxListener(this);
-                internal->txWaitQueue.push_front(thread);
-                internal->lock.Unlock(MUTEX_CONTEXT);
-                status = Event::Wait(Event::neverSet, maxWait);
-                internal->lock.Lock(MUTEX_CONTEXT);
-
-                /* Reset alert status */
-                if (ER_ALERTED_THREAD == status) {
-                    if (thread->GetAlertCode() == ENDPOINT_IS_DEAD_ALERTCODE) {
-                        status = ER_BUS_ENDPOINT_CLOSING;
-                    }
-                    thread->GetStopEvent().ResetEvent();
-                }
-                /* Remove thread from wait queue. */
-                thread->RemoveAuxListener(this);
-                deque<Thread*>::iterator eit = find(internal->txWaitQueue.begin(), internal->txWaitQueue.end(), thread);
-                if (eit != internal->txWaitQueue.end()) {
-                    internal->txWaitQueue.erase(eit);
-                }
-
-                if ((ER_OK != status) && (ER_ALERTED_THREAD != status) && (ER_TIMEOUT != status)) {
-                    break;
-                }
-
-                if (internal->stopping) {
-                    status = ER_BUS_ENDPOINT_CLOSING;
-                    break;
-                }
-            }
-        }
+        status = PushMessageLeaf(msg, count);
     }
-
-
-    if (wasEmpty && (status == ER_OK)) {
-        internal->bus.GetInternal().GetIODispatch().EnableWriteCallbackNow(internal->stream);
-    }
-    internal->lock.Unlock(MUTEX_CONTEXT);
 #ifndef NDEBUG
 #undef QCC_MODULE
 #define QCC_MODULE "TXSTATS"
