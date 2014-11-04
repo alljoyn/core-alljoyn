@@ -48,8 +48,6 @@ $DIST_dbg/c/lib/alljoyn_c.pdb
 $DIST_dbg/c/lib/alljoyn_c_static.lib
 $DIST_dbg/c/samples/about/about_client.cc
 $DIST_dbg/c/samples/about/about_service.cc
-$DIST_dbg/cpp/bin/aclient.exe
-$DIST_dbg/cpp/bin/aclient.pdb
 $DIST_dbg/cpp/bin/advtunnel.exe
 $DIST_dbg/cpp/bin/advtunnel.pdb
 $DIST_dbg/cpp/bin/ajxmlcop.exe
@@ -58,10 +56,6 @@ $DIST_dbg/cpp/bin/ardp.exe
 $DIST_dbg/cpp/bin/ardp.pdb
 $DIST_dbg/cpp/bin/ardptest.exe
 $DIST_dbg/cpp/bin/ardptest.pdb
-$DIST_dbg/cpp/bin/aservice.exe
-$DIST_dbg/cpp/bin/aservice.pdb
-$DIST_dbg/cpp/bin/bastress.exe
-$DIST_dbg/cpp/bin/bastress.pdb
 $DIST_dbg/cpp/bin/bastress2.exe
 $DIST_dbg/cpp/bin/bastress2.pdb
 $DIST_dbg/cpp/bin/bbclient.exe
@@ -81,12 +75,6 @@ $DIST_dbg/cpp/bin/eventsactionservice.exe
 $DIST_dbg/cpp/bin/eventsactionservice.pdb
 $DIST_dbg/cpp/bin/init.exe
 $DIST_dbg/cpp/bin/init.pdb
-$DIST_dbg/cpp/bin/marshal.exe
-$DIST_dbg/cpp/bin/marshal.pdb
-$DIST_dbg/cpp/bin/propstresstest.exe
-$DIST_dbg/cpp/bin/propstresstest.pdb
-$DIST_dbg/cpp/bin/proptester.exe
-$DIST_dbg/cpp/bin/proptester.pdb
 $DIST_dbg/cpp/bin/rawclient.exe
 $DIST_dbg/cpp/bin/rawclient.pdb
 $DIST_dbg/cpp/bin/rawservice.exe
@@ -371,8 +359,6 @@ $DIST_rel/c/lib/alljoyn_c.pdb
 $DIST_rel/c/lib/alljoyn_c_static.lib
 $DIST_rel/c/samples/about/about_client.cc
 $DIST_rel/c/samples/about/about_service.cc
-$DIST_rel/cpp/bin/aclient.exe
-$DIST_rel/cpp/bin/aclient.pdb
 $DIST_rel/cpp/bin/advtunnel.exe
 $DIST_rel/cpp/bin/advtunnel.pdb
 $DIST_rel/cpp/bin/ajxmlcop.exe
@@ -381,10 +367,6 @@ $DIST_rel/cpp/bin/ardp.exe
 $DIST_rel/cpp/bin/ardp.pdb
 $DIST_rel/cpp/bin/ardptest.exe
 $DIST_rel/cpp/bin/ardptest.pdb
-$DIST_rel/cpp/bin/aservice.exe
-$DIST_rel/cpp/bin/aservice.pdb
-$DIST_rel/cpp/bin/bastress.exe
-$DIST_rel/cpp/bin/bastress.pdb
 $DIST_rel/cpp/bin/bastress2.exe
 $DIST_rel/cpp/bin/bastress2.pdb
 $DIST_rel/cpp/bin/bbclient.exe
@@ -404,12 +386,6 @@ $DIST_rel/cpp/bin/eventsactionservice.exe
 $DIST_rel/cpp/bin/eventsactionservice.pdb
 $DIST_rel/cpp/bin/init.exe
 $DIST_rel/cpp/bin/init.pdb
-$DIST_rel/cpp/bin/marshal.exe
-$DIST_rel/cpp/bin/marshal.pdb
-$DIST_rel/cpp/bin/propstresstest.exe
-$DIST_rel/cpp/bin/propstresstest.pdb
-$DIST_rel/cpp/bin/proptester.exe
-$DIST_rel/cpp/bin/proptester.pdb
 $DIST_rel/cpp/bin/rawclient.exe
 $DIST_rel/cpp/bin/rawclient.pdb
 $DIST_rel/cpp/bin/rawservice.exe

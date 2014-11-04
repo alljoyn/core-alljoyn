@@ -1721,11 +1721,8 @@ $SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/inc/qcc/posix/platform_t
 $SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/lib/liballjoyn_about.a
-$SDK/build/darwin/x86/debug/dist/cpp/bin/aclient
 $SDK/build/darwin/x86/debug/dist/cpp/bin/advtunnel
 $SDK/build/darwin/x86/debug/dist/cpp/bin/ajxmlcop
-$SDK/build/darwin/x86/debug/dist/cpp/bin/aservice
-$SDK/build/darwin/x86/debug/dist/cpp/bin/bastress
 $SDK/build/darwin/x86/debug/dist/cpp/bin/bastress2
 $SDK/build/darwin/x86/debug/dist/cpp/bin/bbclient
 $SDK/build/darwin/x86/debug/dist/cpp/bin/bbjoin
@@ -1734,9 +1731,6 @@ $SDK/build/darwin/x86/debug/dist/cpp/bin/bbsig
 $SDK/build/darwin/x86/debug/dist/cpp/bin/bbsigtest
 $SDK/build/darwin/x86/debug/dist/cpp/bin/eventsactionservice
 $SDK/build/darwin/x86/debug/dist/cpp/bin/init
-$SDK/build/darwin/x86/debug/dist/cpp/bin/marshal
-$SDK/build/darwin/x86/debug/dist/cpp/bin/propstresstest
-$SDK/build/darwin/x86/debug/dist/cpp/bin/proptester
 $SDK/build/darwin/x86/debug/dist/cpp/bin/rawclient
 $SDK/build/darwin/x86/debug/dist/cpp/bin/rawservice
 $SDK/build/darwin/x86/debug/dist/cpp/bin/samples/AboutClient
@@ -1858,11 +1852,8 @@ $SDK/build/darwin/x86/debug/dist/cpp/samples/secure/door/secure_door_common.cc
 $SDK/build/darwin/x86/debug/dist/cpp/samples/secure/door/secure_door_common.h
 $SDK/build/darwin/x86/debug/dist/cpp/samples/secure/door/secure_door_consumer.cc
 $SDK/build/darwin/x86/debug/dist/cpp/samples/secure/door/secure_door_provider.cc
-$SDK/build/darwin/x86/release/dist/cpp/bin/aclient
 $SDK/build/darwin/x86/release/dist/cpp/bin/advtunnel
 $SDK/build/darwin/x86/release/dist/cpp/bin/ajxmlcop
-$SDK/build/darwin/x86/release/dist/cpp/bin/aservice
-$SDK/build/darwin/x86/release/dist/cpp/bin/bastress
 $SDK/build/darwin/x86/release/dist/cpp/bin/bastress2
 $SDK/build/darwin/x86/release/dist/cpp/bin/bbclient
 $SDK/build/darwin/x86/release/dist/cpp/bin/bbjoin
@@ -1871,9 +1862,6 @@ $SDK/build/darwin/x86/release/dist/cpp/bin/bbsig
 $SDK/build/darwin/x86/release/dist/cpp/bin/bbsigtest
 $SDK/build/darwin/x86/release/dist/cpp/bin/eventsactionservice
 $SDK/build/darwin/x86/release/dist/cpp/bin/init
-$SDK/build/darwin/x86/release/dist/cpp/bin/marshal
-$SDK/build/darwin/x86/release/dist/cpp/bin/propstresstest
-$SDK/build/darwin/x86/release/dist/cpp/bin/proptester
 $SDK/build/darwin/x86/release/dist/cpp/bin/rawclient
 $SDK/build/darwin/x86/release/dist/cpp/bin/rawservice
 $SDK/build/darwin/x86/release/dist/cpp/bin/samples/AboutClient

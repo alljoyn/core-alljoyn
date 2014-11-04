@@ -105,7 +105,8 @@ if env['OS'] == 'darwin' and env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]:
 else:
     # Test programs
     progs = env.SConscript('$OBJDIR_ALLJOYN_CORE/test/SConscript')
-    ajenv.Install('$CPP_DISTDIR/bin', progs)
+    ajenv.Install('$CPP_DISTDIR/bin', progs[0])
+    ajenv.Install('$TESTDIR/cpp/bin', progs[1])
 
     # Build unit Tests
     env.SConscript('unit_test/SConscript', variant_dir='$OBJDIR_ALLJOYN_CORE/unittest', duplicate = 0)
