@@ -21,7 +21,6 @@ import java.util.Map;
 import junit.framework.TestCase;
 
 import org.alljoyn.bus.BusAttachment.RemoteMessage;
-import org.alljoyn.bus.ifaces.About;
 
 public class AboutIconProxyTest extends TestCase{
     static {
@@ -173,7 +172,7 @@ public class AboutIconProxyTest extends TestCase{
         }
         //icon.setUrl("image/png", "http://www.example.com");
         AboutIconObj aio = new AboutIconObj(serviceBus, icon);
-        
+
 
         BusAttachment clientBus = new BusAttachment("AboutIconTestClient");
         assertEquals(Status.OK, clientBus.connect());
@@ -266,7 +265,7 @@ public class AboutIconProxyTest extends TestCase{
 
         assertTrue(sessionPortlistener.sessionEstablished);
         assertEquals(sessionPortlistener.sessionId, sessionId.value);
-        
+
         AboutIconProxy aipo = new AboutIconProxy(clientBus, aListener.remoteBusName, sessionPortlistener.sessionId);
         try {
             assertEquals(org.alljoyn.bus.AboutIconObj.VERSION, aipo.getVersion());
@@ -274,7 +273,7 @@ public class AboutIconProxyTest extends TestCase{
             e.printStackTrace();
             fail("Unexpected BusException.");
         }
-        
+
         try {
             assertEquals(0, aipo.getSize());
         } catch (BusException e) {
@@ -331,7 +330,7 @@ public class AboutIconProxyTest extends TestCase{
             e1.printStackTrace();
             fail("AboutIcon threw a BusException when it was unexpected.");
         }
-        
+
         //assertEquals(Status.OK, icon.setContent("image/png", iconContent));
         AboutIconObj aio = new AboutIconObj(serviceBus, icon);
 
@@ -371,7 +370,7 @@ public class AboutIconProxyTest extends TestCase{
 
         assertTrue(sessionPortlistener.sessionEstablished);
         assertEquals(sessionPortlistener.sessionId, sessionId.value);
-        
+
         AboutIconProxy aipo = new AboutIconProxy(clientBus, aListener.remoteBusName, sessionPortlistener.sessionId);
         try {
             assertEquals(org.alljoyn.bus.AboutIconObj.VERSION, aipo.getVersion());
@@ -425,17 +424,17 @@ public class AboutIconProxyTest extends TestCase{
         clientBus.disconnect();
         clientBus.release();
     }
-    
+
     public synchronized void testAboutIconMethodCalls_contentset_large_icon() {
         byte[] badContent = new byte[AboutIcon.MAX_CONTENT_LENGTH+1];
-        
+
         AboutIcon icon = null;
         boolean busExceptionCaught = false;
         try {
             icon = new AboutIcon("image/png", badContent);
             fail("AboutIcon did not throw an exception when it was expected to.");
         } catch (BusException e1) {
-            assertEquals(e1.getMessage(), "MAX_CONTENT_LENGTH exceded");
+            assertEquals(e1.getMessage(), "MAX_CONTENT_LENGTH exceeded");
             busExceptionCaught = true;
         }
 
@@ -453,7 +452,7 @@ public class AboutIconProxyTest extends TestCase{
             e1.printStackTrace();
             fail("AboutIcon threw a BusException when it was unexpected.");
         }
-        
+
         AboutIconObj aio = new AboutIconObj(serviceBus, icon);
 
         BusAttachment clientBus = new BusAttachment("AboutListenerTestClient", RemoteMessage.Receive);
@@ -492,7 +491,7 @@ public class AboutIconProxyTest extends TestCase{
 
         assertTrue(sessionPortlistener.sessionEstablished);
         assertEquals(sessionPortlistener.sessionId, sessionId.value);
-        
+
         AboutIconProxy aipo = new AboutIconProxy(clientBus, aListener.remoteBusName, sessionPortlistener.sessionId);
         try {
             assertEquals(org.alljoyn.bus.AboutIconObj.VERSION, aipo.getVersion());
@@ -549,7 +548,7 @@ public class AboutIconProxyTest extends TestCase{
     public synchronized void testAboutIconMethodCalls_uninitialized() {
         boolean exceptionCaught = false;
         try {
-            AboutIcon icon = null; 
+            AboutIcon icon = null;
             AboutIconObj aio = new AboutIconObj(serviceBus, icon);
             fail("Expected NullPointerException");
         } catch(NullPointerException e) {
@@ -557,10 +556,10 @@ public class AboutIconProxyTest extends TestCase{
             exceptionCaught = true;
         }
         assertTrue(exceptionCaught);
-        
+
         exceptionCaught = false;
         try {
-            AboutIcon icon = null; 
+            AboutIcon icon = null;
             AboutIconObj aio = new AboutIconObj(null, icon);
             fail("Expected NullPointerException");
         } catch(NullPointerException e) {

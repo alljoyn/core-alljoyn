@@ -38,14 +38,13 @@ public class AboutIcon {
      * @param content  an array of bytes that represent an icon
      *
      * @throws BusException if unable to create AboutIcon
-     *
-     * @return
-     *  - Status.OK on success
-     *  - Status.BUS_BAD_VALUE if the data is to large to be marshaled or null
+     * <ul>
+     *   <li>"MAX_CONTENT_LENGTH exceeded" if icon is too large</li>
+     * </ul>
      */
     public AboutIcon(String mimeType, byte[] content) throws BusException {
         if (content.length > MAX_CONTENT_LENGTH) {
-            throw new BusException("MAX_CONTENT_LENGTH exceded");
+            throw new BusException("MAX_CONTENT_LENGTH exceeded");
         }
         m_mimeType = mimeType;
         m_content = content;
@@ -61,8 +60,6 @@ public class AboutIcon {
      *                     the cloud.
      *
      * @throws BusException if unable to create AboutIcon
-     *
-     * @return Status.OK on success
      */
     public AboutIcon(String mimeType, String url) throws BusException {
         m_mimeType = mimeType;
@@ -85,14 +82,13 @@ public class AboutIcon {
      * @param content  an array of bytes that represent an icon
      *
      * @throws BusException if unable to create AboutIcon
-     *
-     * @return
-     *  - Status.OK on success
-     *  - Status.BUS_BAD_VALUE if the data is to large to be marshaled or null
+     * <ul>
+     *   <li>"MAX_CONTENT_LENGTH exceeded" if icon is too large</li>
+     * </ul>
      */
     public AboutIcon(String mimeType, String url, byte[] content) throws BusException {
         if (content.length > MAX_CONTENT_LENGTH) {
-            throw new BusException("MAX_CONTENT_LENGTH exceded.");
+            throw new BusException("MAX_CONTENT_LENGTH exceeded.");
         }
         m_mimeType = mimeType;
         m_url = url;
