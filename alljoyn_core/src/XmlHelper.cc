@@ -317,7 +317,7 @@ QStatus XmlHelper::ParseNode(const XmlElement* root, ProxyBusObject* obj)
                     if (childObj) {
                         status = ParseNode(elem, childObj);
                     } else {
-                        ProxyBusObject newChild(*bus, obj->GetServiceName().c_str(), childObjPath.c_str(), obj->sessionId, obj->isSecure);
+                        ProxyBusObject newChild(*bus, obj->GetServiceName().c_str(), obj->GetUniqueName().c_str(), childObjPath.c_str(), obj->sessionId, obj->isSecure);
                         status = ParseNode(elem, &newChild);
                         if (ER_OK == status) {
                             obj->AddChild(newChild);

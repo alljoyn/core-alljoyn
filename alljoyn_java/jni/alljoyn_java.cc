@@ -10341,16 +10341,19 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerProperties
     QStatus status;
     jobject jstatus = NULL;
     const char** properties = new const char*[numProps];
+    const JString** propertiesStrings = new const JString *[numProps];
     for (size_t i = 0; i < numProps; ++i) {
         jstring jproperty = (jstring)env->GetObjectArrayElement(jproperties, i);
         if (env->ExceptionCheck()) {
             goto exit;
         }
-        JString property(jproperty);
+        JString* property = new JString(jproperty);
         if (env->ExceptionCheck()) {
             goto exit;
         }
-        properties[i] = property.c_str();
+        //Keep reference to the jstring objects, as they will get freed otherwise when going out of scope.
+        propertiesStrings[i] = property;
+        properties[i] = property->c_str();
     }
 
     status = proxyBusObj->RegisterPropertiesChangedHandler(ifaceName.c_str(),
@@ -10358,6 +10361,9 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerProperties
                                                            numProps,
                                                            *listener,
                                                            NULL);
+    for (size_t i = 0; i < numProps; ++i) {
+        delete (propertiesStrings[i]);
+    }
 
     jstatus = JStatus(status);
 

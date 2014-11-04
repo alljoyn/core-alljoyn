@@ -62,9 +62,99 @@ using namespace std;
 
 namespace ajn {
 
-/** Static multiset to keep track of how many property changed listeners there are per interface.*/
-static multiset<StringMapKey> propChangeAddMatchRules;
-static Mutex propChangeAddMatchRulesLock;
+
+class MatchRuleTracker : public MessageReceiver, public BusAttachment::GetNameOwnerAsyncCB {
+  public:
+    struct GetNameOwnerCBContext {
+        GetNameOwnerCBContext(BusAttachment& bus, String& nameRef, const char* iface) :
+            bus(bus), nameRef(nameRef), iface(iface)
+        {
+        }
+        BusAttachment& bus;
+        String& nameRef;
+        const String iface;
+    };
+
+    MatchRuleTracker() { }
+    ~MatchRuleTracker() { }
+
+    QStatus AddMatch(BusAttachment& bus, const String iface)
+    {
+        QStatus status = ER_OK;
+        propChangeAddMatchRulesLock.Lock();
+        if (propChangeAddMatchRules.find(iface) == propChangeAddMatchRules.end()) {
+            /* first listener for this interface */
+            String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + iface + "'");
+            MsgArg arg("s", rule.c_str());
+            const ProxyBusObject& dbusObj = bus.GetDBusProxyObj();
+            status = dbusObj.MethodCallAsync(org::freedesktop::DBus::InterfaceName, "AddMatch",
+                                             const_cast<MessageReceiver*>(static_cast<const MessageReceiver* const>(this)),
+                                             static_cast<MessageReceiver::ReplyHandler>(&MatchRuleTracker::MatchReplyHandler),
+                                             &arg, 1, new pair<String, bool>(iface, true));
+        }
+        if (status == ER_OK) {
+            propChangeAddMatchRules.insert(iface);
+        }
+        propChangeAddMatchRulesLock.Unlock();
+        return status;
+    }
+
+    QStatus RemoveMatch(BusAttachment& bus, const String iface)
+    {
+        QStatus status = ER_OK;
+        propChangeAddMatchRulesLock.Lock();
+        propChangeAddMatchRules.erase(propChangeAddMatchRules.find(iface));
+        if (propChangeAddMatchRules.find(iface) == propChangeAddMatchRules.end()) {
+            /* no more property change listeners for this interface */
+            String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + iface + "'");
+            MsgArg arg("s", rule.c_str());
+            const ProxyBusObject& dbusObj = bus.GetDBusProxyObj();
+            status = dbusObj.MethodCallAsync(org::freedesktop::DBus::InterfaceName, "RemoveMatch",
+                                             const_cast<MessageReceiver*>(static_cast<const MessageReceiver* const>(this)),
+                                             static_cast<MessageReceiver::ReplyHandler>(&MatchRuleTracker::MatchReplyHandler),
+                                             &arg, 1, new pair<String, bool>(iface, false));
+        }
+        propChangeAddMatchRulesLock.Unlock();
+        return status;
+    }
+
+    void MatchReplyHandler(Message& msg, void* context)
+    {
+        pair<String, bool>* ctx = static_cast<pair<String, bool>*>(context);
+        if (msg->GetType() == MESSAGE_ERROR) {
+            const String& iface = ctx->first;
+            bool add = ctx->second;
+            propChangeAddMatchRulesLock.Lock();
+            if (add) {
+                // AddMatch failed - remove entry from set
+                propChangeAddMatchRules.erase(propChangeAddMatchRules.find(iface));
+            } else {
+                // RemoveMatch failed - replace entry in set
+                propChangeAddMatchRules.insert(iface);
+            }
+            propChangeAddMatchRulesLock.Unlock();
+        }
+        delete ctx;
+    }
+
+    void GetNameOwnerCB(QStatus status, const char* uniqueName, void* context)
+    {
+        GetNameOwnerCBContext* ctx = static_cast<GetNameOwnerCBContext*>(context);
+        if (status == ER_OK) {
+            ctx->nameRef = uniqueName;
+            AddMatch(ctx->bus, ctx->iface);
+        }
+        delete ctx;
+    }
+
+  private:
+    multiset<StringMapKey> propChangeAddMatchRules;
+    Mutex propChangeAddMatchRulesLock;
+};
+
+/** Static match rule tracker to keep track of how many property changed listeners there are per interface.*/
+static MatchRuleTracker matchRuleTracker;
+
 
 
 template <typename _cbType> struct CBContext {
@@ -389,9 +479,9 @@ QStatus ProxyBusObject::RegisterPropertiesChangedHandler(const char* iface,
         }
     }
 
-    String key = iface;
+    String ifaceStr = iface;
     PropertiesChangedCB ctx(*this, listener, properties, propertiesSize, context);
-    pair<StringMapKey, PropertiesChangedCB> cbItem(key, ctx);
+    pair<StringMapKey, PropertiesChangedCB> cbItem(ifaceStr, ctx);
     lock->Lock(MUTEX_CONTEXT);
     // remove old version first
     multimap<StringMapKey, PropertiesChangedCB>::iterator it = components->propertiesChangedCBs.lower_bound(iface);
@@ -408,22 +498,11 @@ QStatus ProxyBusObject::RegisterPropertiesChangedHandler(const char* iface,
     lock->Unlock(MUTEX_CONTEXT);
 
     QStatus status = ER_OK;
-    propChangeAddMatchRulesLock.Lock();
-    String ifaceStr = iface;
-    if (propChangeAddMatchRules.find(iface) == propChangeAddMatchRules.end()) {
-        /* first listener for this interface */
-        String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + ifaceStr + "'");
-        MsgArg arg("s", rule.c_str());
-        const ProxyBusObject& dbusObj = bus->GetDBusProxyObj();
-        status = dbusObj.MethodCallAsync(org::freedesktop::DBus::InterfaceName, "AddMatch",
-                                         const_cast<MessageReceiver*>(static_cast<const MessageReceiver* const>(this)),
-                                         static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::AddMatchReplyHandler),
-                                         &arg, 1, new pair<String, bool>(ifaceStr, true));
+    if (uniqueName.empty()) {
+        status = bus->GetNameOwnerAsync(serviceName.c_str(), &matchRuleTracker, new MatchRuleTracker::GetNameOwnerCBContext(*bus, uniqueName, iface));
+    } else {
+        status = matchRuleTracker.AddMatch(*bus, ifaceStr);
     }
-    if (status == ER_OK) {
-        propChangeAddMatchRules.insert(ifaceStr);
-    }
-    propChangeAddMatchRulesLock.Unlock();
 
     return status;
 }
@@ -435,20 +514,8 @@ QStatus ProxyBusObject::UnregisterPropertiesChangedHandler(const char* iface, Pr
     }
 
     QStatus status = ER_OK;
-    propChangeAddMatchRulesLock.Lock();
-    propChangeAddMatchRules.erase(propChangeAddMatchRules.find(iface));
-    if (propChangeAddMatchRules.find(iface) == propChangeAddMatchRules.end()) {
-        /* no more property change listeners for this interface */
-        String ifaceStr = iface;
-        String rule("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='" + ifaceStr + "'");
-        MsgArg arg("s", rule.c_str());
-        const ProxyBusObject& dbusObj = bus->GetDBusProxyObj();
-        status = dbusObj.MethodCallAsync(org::freedesktop::DBus::InterfaceName, "RemoveMatch",
-                                         const_cast<MessageReceiver*>(static_cast<const MessageReceiver* const>(this)),
-                                         static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::AddMatchReplyHandler),
-                                         &arg, 1, new pair<String, bool>(ifaceStr, false));
-    }
-    propChangeAddMatchRulesLock.Unlock();
+    String ifaceStr = iface;
+    status = matchRuleTracker.RemoveMatch(*bus, ifaceStr);
 
     lock->Lock(MUTEX_CONTEXT);
     multimap<StringMapKey, PropertiesChangedCB>::iterator it = components->propertiesChangedCBs.lower_bound(iface);
@@ -473,8 +540,9 @@ void ProxyBusObject::PropertiesChangedHandler(const InterfaceDescription::Member
     MsgArg* invalidProps;
     size_t numInvalidProps;
 
-    if (message->GetArgs("sa{sv}as", &ifaceName, &numChangedProps, &changedProps, &numInvalidProps, &invalidProps) != ER_OK) {
-        // Invalid signal - ignore it
+    if ((uniqueName != message->GetSender()) ||
+        (message->GetArgs("sa{sv}as", &ifaceName, &numChangedProps, &changedProps, &numInvalidProps, &invalidProps) != ER_OK)) {
+        // Either signal is not for us or it is invalid - ignore it
         return;
     }
 
@@ -546,25 +614,6 @@ void ProxyBusObject::PropertiesChangedHandler(const InterfaceDescription::Member
 
     delete [] changedOutDict;
     delete [] invalidOutArray;
-}
-
-void ProxyBusObject::AddMatchReplyHandler(Message& msg, void* context)
-{
-    pair<String, bool>* ctx = static_cast<pair<String, bool>*>(context);
-    if (msg->GetType() == MESSAGE_ERROR) {
-        const String& iface = ctx->first;
-        bool add = ctx->second;
-        propChangeAddMatchRulesLock.Lock();
-        if (add) {
-            // AddMatch failed - remove entry from set
-            propChangeAddMatchRules.erase(propChangeAddMatchRules.find(iface));
-        } else {
-            // RemoveMatch failed - replace entry in set
-            propChangeAddMatchRules.insert(iface);
-        }
-        propChangeAddMatchRulesLock.Unlock();
-    }
-    delete ctx;
 }
 
 QStatus ProxyBusObject::SetPropertyAsync(const char* iface,
@@ -821,7 +870,8 @@ QStatus ProxyBusObject::AddChild(const ProxyBusObject& child)
             } else {
                 const char* tempServiceName = serviceName.c_str();
                 const char* tempPath = item.c_str();
-                _ProxyBusObject ro(*bus, tempServiceName, tempPath, sessionId);
+                const char* tempUniqueName = uniqueName.c_str();
+                _ProxyBusObject ro(*bus, tempServiceName, tempUniqueName, tempPath, sessionId);
                 ch.push_back(ro);
                 cur = &(*(ro));
             }
@@ -1117,6 +1167,10 @@ MethodCallExit:
     } else {
         replyMsg->ErrorMsg(status, 0);
     }
+
+    if ((status == ER_OK) && uniqueName.empty()) {
+        uniqueName = replyMsg->GetSender();
+    }
     return status;
 }
 
@@ -1213,6 +1267,9 @@ QStatus ProxyBusObject::IntrospectRemoteObject(uint32_t timeout)
     if (ER_OK == status) {
         QCC_DbgPrintf(("Introspection XML: %s\n", reply->GetArg(0)->v_string.str));
         qcc::String ident = reply->GetSender();
+        if (uniqueName.empty()) {
+            uniqueName = ident;
+        }
         ident += " : ";
         ident += reply->GetObjectPath();
         status = ParseXml(reply->GetArg(0)->v_string.str, ident.c_str());
@@ -1261,6 +1318,9 @@ void ProxyBusObject::IntrospectMethodCB(Message& msg, void* context)
     if (msg->GetType() == MESSAGE_METHOD_RET) {
         /* Parse the XML reply to update this ProxyBusObject instance (plus any new interfaces) */
         qcc::String ident = msg->GetSender();
+        if (uniqueName.empty()) {
+            uniqueName = ident;
+        }
         ident += " : ";
         ident += msg->GetObjectPath();
         status = ParseXml(msg->GetArg(0)->v_string.str, ident.c_str());
@@ -1319,13 +1379,19 @@ void ProxyBusObject::DestructComponents()
         }
 
         if (bus) {
+            multimap<StringMapKey, PropertiesChangedCB>::iterator cbit;
+            for (cbit = components->propertiesChangedCBs.begin(); cbit != components->propertiesChangedCBs.end(); ++cbit) {
+                const String ifaceStr = cbit->first.c_str();
+                matchRuleTracker.RemoveMatch(*bus, ifaceStr);
+            }
+
             bus->UnregisterAllHandlers(this);
         }
 
         /* Wait for any waiting threads to exit this object's members */
         while (components->waitingThreads.size() > 0) {
             lock->Unlock(MUTEX_CONTEXT);
-            qcc::Sleep(5);
+            qcc::Sleep(20);
             lock->Lock(MUTEX_CONTEXT);
         }
         delete components;
@@ -1339,6 +1405,23 @@ ProxyBusObject::ProxyBusObject(BusAttachment& bus, const char* service, const ch
     components(new Components),
     path(path),
     serviceName(service),
+    uniqueName((service && (service[0] == ':')) ? serviceName : ""),
+    sessionId(sessionId),
+    hasProperties(false),
+    lock(new Mutex),
+    isExiting(false),
+    isSecure(isSecure)
+{
+    /* The Peer interface is implicitly defined for all objects */
+    AddInterface(org::freedesktop::DBus::Peer::InterfaceName);
+}
+
+ProxyBusObject::ProxyBusObject(BusAttachment& bus, const char* service, const char* uniqueName, const char* path, SessionId sessionId, bool isSecure) :
+    bus(&bus),
+    components(new Components),
+    path(path),
+    serviceName(service),
+    uniqueName(uniqueName),
     sessionId(sessionId),
     hasProperties(false),
     lock(new Mutex),
@@ -1365,6 +1448,7 @@ ProxyBusObject::ProxyBusObject(const ProxyBusObject& other) :
     components(new Components),
     path(other.path),
     serviceName(other.serviceName),
+    uniqueName(other.uniqueName),
     sessionId(other.sessionId),
     hasProperties(other.hasProperties),
     b2bEp(other.b2bEp),
@@ -1395,6 +1479,7 @@ ProxyBusObject& ProxyBusObject::operator=(const ProxyBusObject& other)
         bus = other.bus;
         path = other.path;
         serviceName = other.serviceName;
+        uniqueName = other.uniqueName;
         sessionId = other.sessionId;
         hasProperties = other.hasProperties;
         b2bEp = other.b2bEp;

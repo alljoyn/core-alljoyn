@@ -104,6 +104,16 @@ struct PingAsyncCBContext {
     { }
 };
 
+struct GetNameOwnerCBContext {
+    BusAttachment::GetNameOwnerAsyncCB* callback;
+    void* context;
+
+    GetNameOwnerCBContext(BusAttachment::GetNameOwnerAsyncCB* callback, void* context) :
+        callback(callback),
+        context(context)
+    { }
+};
+
 }
 
 namespace ajn {
@@ -2400,6 +2410,79 @@ void BusAttachment::Internal::PingAsyncCB(Message& reply, void* context)
     delete ctx;
 }
 
+qcc::String BusAttachment::GetNameOwner(const char* alias)
+{
+    if (!IsConnected()) {
+        return "";
+    }
+    if (!IsLegalBusName(alias)) {
+        return "";
+    }
+    String ret;
+    if (alias[0] == ':') {
+        // the alias is already a unique name - just return it
+        ret = alias;
+    } else {
+        Message reply(*this);
+        MsgArg arg("s", alias);
+        ProxyBusObject dbusObj = GetDBusProxyObj();
+        QStatus status = dbusObj.MethodCall(org::freedesktop::DBus::InterfaceName, "GetNameOwner", &arg, 1, reply);
+        if (status == ER_OK) {
+            const char* rawUniqueName;
+            status = reply->GetArgs("s", &rawUniqueName);
+            if (status == ER_OK) {
+                ret = rawUniqueName;
+            }
+        }
+    }
+    return ret;
+}
+
+QStatus BusAttachment::GetNameOwnerAsync(const char* alias, GetNameOwnerAsyncCB* callback, void* context)
+{
+    if (!IsConnected()) {
+        return ER_BUS_NOT_CONNECTED;
+    }
+    if (!IsLegalBusName(alias)) {
+        return ER_BUS_BAD_BUS_NAME;
+    }
+    QStatus status = ER_OK;
+    if (alias[0] == ':') {
+        // the alias is already a unique name - just return it
+        String uniqueName = alias;
+        callback->GetNameOwnerCB(ER_OK, uniqueName.c_str(), context);
+    } else {
+        MsgArg arg("s", alias);
+        ProxyBusObject dbusObj = GetDBusProxyObj();
+        GetNameOwnerCBContext* cbCtx = new GetNameOwnerCBContext(callback, context);
+        status = dbusObj.MethodCallAsync(org::freedesktop::DBus::InterfaceName, "GetNameOwner",
+                                         busInternal,
+                                         static_cast<MessageReceiver::ReplyHandler>(&BusAttachment::Internal::GetNameOwnerAsyncCB),
+                                         &arg, 1, cbCtx);
+    }
+    return status;
+}
+
+void BusAttachment::Internal::GetNameOwnerAsyncCB(Message& reply, void* context)
+{
+    GetNameOwnerCBContext* ctx = reinterpret_cast<GetNameOwnerCBContext*>(context);
+    QStatus status = ER_FAIL;
+    String uniqueName;
+
+    if (reply->GetType() == MESSAGE_ERROR) {
+        status = ER_BUS_REPLY_IS_ERROR_MESSAGE;
+    } else {
+        const char* rawUniqueName;
+        status = reply->GetArgs("s", &rawUniqueName);
+        if (status == ER_OK) {
+            uniqueName = rawUniqueName;
+        }
+    }
+
+    /* Call the callback */
+    ctx->callback->GetNameOwnerCB(status, uniqueName.c_str(), ctx->context);
+    delete ctx;
+}
 
 bool KeyStoreKeyEventListener::NotifyAutoDelete(KeyStore* holder, const qcc::GUID128& guid)
 {

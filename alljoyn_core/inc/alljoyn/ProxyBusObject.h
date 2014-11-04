@@ -158,6 +158,9 @@ class ProxyBusObject : public MessageReceiver {
      * object describes in its introspection data, call IntrospectRemoteObject() or
      * IntrospectRemoteObjectAsync().
      *
+     * If the remote service name is set to a unique name, then both
+     * GetServiceName() and GetUniqueName() will return the unique name.
+     *
      * @param bus        The bus.
      * @param service    The remote service name (well-known or unique).
      * @param path       The absolute (non-relative) object path for the remote object.
@@ -165,6 +168,34 @@ class ProxyBusObject : public MessageReceiver {
      * @param secure     The security mode for the remote object.
      */
     ProxyBusObject(BusAttachment& bus, const char* service, const char* path, SessionId sessionId, bool secure = false);
+
+    /**
+     * Create an empty proxy object that refers to an object at given remote service name. Note
+     * that the created proxy object does not contain information about the interfaces that the
+     * actual remote object implements with the exception that org.freedesktop.DBus.Peer
+     * interface is special-cased (per the DBus spec) and can always be called on any object. Nor
+     * does it contain information about the child objects that the actual remote object might
+     * contain. The security mode can be specified if known or can be derived from the XML
+     * description.
+     *
+     * To fill in this object with the interfaces and child object names that the actual remote
+     * object describes in its introspection data, call IntrospectRemoteObject() or
+     * IntrospectRemoteObjectAsync().
+     *
+     * This version is primarily used during introspection where the
+     * unique name is known.  If, when creating the ProxyBusObject,
+     * both an alias is known and the unique name is known, then use
+     * this constructor.  Note, that the only the service name is used
+     * when generating messages.
+     *
+     * @param bus        The bus.
+     * @param service    The remote service name (well-known or unique).
+     * @param uniqueName The remote service's unique name.
+     * @param path       The absolute (non-relative) object path for the remote object.
+     * @param sessionId  The session id the be used for communicating with remote object.
+     * @param secure     The security mode for the remote object.
+     */
+    ProxyBusObject(BusAttachment& bus, const char* service, const char* uniqueName, const char* path, SessionId sessionId, bool secure = false);
 
     /**
      *  %ProxyBusObject destructor.
@@ -184,6 +215,13 @@ class ProxyBusObject : public MessageReceiver {
      * @return Service name (typically a well-known service name but may be a unique name)
      */
     const qcc::String& GetServiceName(void) const { return serviceName; }
+
+    /**
+     * Return the remote unique name for this object.
+     *
+     * @return Service name (typically a well-known service name but may be a unique name)
+     */
+    const qcc::String& GetUniqueName(void) const { return uniqueName; }
 
     /**
      * Return the session Id for this object.
@@ -864,16 +902,6 @@ class ProxyBusObject : public MessageReceiver {
 
     /**
      * @internal
-     * Method return handler for replies to AddMatch/RemoveMatch when
-     * registering/unregistering properties changed handlers.
-     *
-     * @param msg     Method return message
-     * @param context Opaque context passed from method_call to method_return
-     */
-    void AddMatchReplyHandler(Message& msg, void* context);
-
-    /**
-     * @internal
      * Introspection method_reply handler. (Internal use only)
      *
      * @param message Method return Message
@@ -968,7 +996,8 @@ class ProxyBusObject : public MessageReceiver {
     /** Object path of this object */
     qcc::String path;
 
-    qcc::String serviceName;    /**< Remote destination */
+    qcc::String serviceName;    /**< Remote destination alias */
+    mutable qcc::String uniqueName; /**< Remote destination unique name */
     SessionId sessionId;        /**< Session to use for communicating with remote object */
     bool hasProperties;         /**< True if proxy object implements properties */
     mutable RemoteEndpoint b2bEp; /**< B2B endpoint to use or NULL to indicates normal sessionId based routing */
