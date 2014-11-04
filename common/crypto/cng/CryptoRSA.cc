@@ -777,7 +777,7 @@ size_t Crypto_RSA::GetSize()
         assert(ntStatus >= 0);
         if (ntStatus < 0) {
             QCC_LogError(ER_CRYPTO_ERROR, ("Failed to get key strength property"));
-            len = (size_t)-1;
+            len = -1;
         }
         size = len;
     }
