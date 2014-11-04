@@ -44,15 +44,23 @@ class TestObject : public BusObject {
   public:
     TestObject(BusAttachment& bus)
         : BusObject("/signals/test"), bus(bus) {
-        const InterfaceDescription* Intf1 = bus.GetInterface("org.test");
-        EXPECT_TRUE(Intf1 != NULL);
-        AddInterface(*Intf1);
+        const InterfaceDescription* intf1 = bus.GetInterface("org.test");
+        EXPECT_TRUE(intf1 != NULL) << "bus.GetInterface(\"org.test\") returned null";
+        if (intf1 == NULL) {
+            return;
+        }
+        AddInterface(*intf1);
     }
 
     virtual ~TestObject() { }
 
     QStatus SendSignal(const char* dest, SessionId id, uint8_t flags = 0) {
-        const InterfaceDescription::Member*  signal_member = bus.GetInterface("org.test")->GetMember("my_signal");
+        const InterfaceDescription* intf1 = bus.GetInterface("org.test");
+        EXPECT_TRUE(intf1 != NULL);
+        if (intf1 == NULL) {
+            return ER_FAIL;
+        }
+        const InterfaceDescription::Member*  signal_member = intf1->GetMember("my_signal");
         MsgArg arg("s", "Signal");
         QStatus status = Signal(dest, id, *signal_member, &arg, 1, 0, flags);
         return status;
@@ -204,6 +212,11 @@ class Participant : public SessionPortListener, public SessionListener {
     SessionId GetJoinedSessionId(Participant& part, bool multipoint) {
         return joinedSessionMap[SessionMapKey(part.name, multipoint)];
     }
+  private:
+    //Private copy constructor to prevent copying the class and double freeing of memory
+    Participant(const Participant& rhs) : bus(rhs.name) { }
+    //Private assignment operator to prevent copying the class and double freeing of memory
+    Participant& operator=(const Participant& rhs) { return *this; }
 };
 
 class SignalReceiver : public MessageReceiver {
@@ -218,7 +231,15 @@ class SignalReceiver : public MessageReceiver {
         participant = part;
 
         const InterfaceDescription* servicetestIntf = part->bus.GetInterface("org.test");
+        EXPECT_TRUE(servicetestIntf != NULL) << "bus.GetInterface(\"org.test\") returned NULL";
+        if (servicetestIntf == NULL) {
+            return;
+        }
         const InterfaceDescription::Member* signal_member = servicetestIntf->GetMember("my_signal");
+        EXPECT_TRUE(signal_member != NULL) << "intf->GetMember(\"my_signal\") returned NULL";
+        if (signal_member == NULL) {
+            return;
+        }
         RegisterSignalHandler(signal_member);
     }
 
