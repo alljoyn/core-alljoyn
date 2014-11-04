@@ -7,7 +7,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := MyAllJoynCode
 
-TARGET_PLATFORM := android-8
+TARGET_PLATFORM := android-10
 
 LOCAL_C_INCLUDES := \
 	$(ALLJOYN_DIST)/cpp/inc \
