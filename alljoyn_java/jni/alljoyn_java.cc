@@ -2167,9 +2167,10 @@ jobject GetGlobalRefForObject(jobject jbusObject)
  */
 class JProxyBusObject : public ProxyBusObject {
   public:
-    JProxyBusObject(JBusAttachment* jbap, const char* endpoint, const char* path, SessionId sessionId, bool secure);
+    JProxyBusObject(jobject pbo, JBusAttachment* jbap, const char* endpoint, const char* path, SessionId sessionId, bool secure);
     ~JProxyBusObject();
     JBusAttachment* busPtr;
+    jweak jpbo;
   private:
     JProxyBusObject(const JProxyBusObject& other);
     JProxyBusObject& operator =(const JProxyBusObject& other);
@@ -2177,7 +2178,8 @@ class JProxyBusObject : public ProxyBusObject {
 
 class JPropertiesChangedListener : public ProxyBusObject::PropertiesChangedListener {
   public:
-    JPropertiesChangedListener(jobject jlistener);
+    JPropertiesChangedListener(jobject jlistener, jobject changed, jobject invalidated);
+    ~JPropertiesChangedListener();
     void PropertiesChanged(ProxyBusObject& obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context);
 
     jweak jlistener;
@@ -2186,6 +2188,9 @@ class JPropertiesChangedListener : public ProxyBusObject::PropertiesChangedListe
     JPropertiesChangedListener();
     JPropertiesChangedListener(const JPropertiesChangedListener& other);
     JPropertiesChangedListener& operator =(const JPropertiesChangedListener& other);
+
+    jobject jchangedType;
+    jobject jinvalidatedType;
 };
 
 
@@ -10128,8 +10133,60 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_activate(JNIEnv
     intf->Activate();
 }
 
-JProxyBusObject::JProxyBusObject(JBusAttachment* jbap, const char* endpoint, const char* path, SessionId sessionId, bool secure)
-    : ProxyBusObject(*jbap, endpoint, path, sessionId, secure)
+static void AddInterface(jobject thiz, JBusAttachment* busPtr, jstring jinterfaceName)
+{
+    JNIEnv* env = GetEnv();
+
+    JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("AddInterface(): Exception"));
+        return;
+    }
+
+    assert(proxyBusObj);
+
+    JString interfaceName(jinterfaceName);
+    if (env->ExceptionCheck()) {
+        return;
+    }
+
+    JLocalRef<jclass> clazz = env->GetObjectClass(thiz);
+    jmethodID mid = env->GetMethodID(clazz, "addInterface", "(Ljava/lang/String;)I");
+    if (!mid) {
+        return;
+    }
+
+    QStatus status = (QStatus)env->CallIntMethod(thiz, mid, jinterfaceName);
+    if (env->ExceptionCheck()) {
+        /* AnnotationBusException */
+        QCC_LogError(ER_FAIL, ("AddInterface(): Exception"));
+        return;
+    }
+
+    if (ER_OK != status) {
+        QCC_LogError(status, ("AddInterface(): Exception"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return;
+    }
+
+    if (busPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("AddInterface(): NULL bus pointer"));
+        return;
+    }
+
+    QCC_DbgPrintf(("AddInterface(): Refcount on busPtr is %d", busPtr->GetRef()));
+
+    const InterfaceDescription* intf = busPtr->GetInterface(interfaceName.c_str());
+    assert(intf);
+
+    status = proxyBusObj->AddInterface(*intf);
+    if (ER_OK != status) {
+        env->ThrowNew(CLS_BusException, QCC_StatusText(status));
+    }
+}
+
+JProxyBusObject::JProxyBusObject(jobject pbo, JBusAttachment* jbap, const char* endpoint, const char* path, SessionId sessionId, bool secure)
+    : ProxyBusObject(*jbap, endpoint, path, sessionId, secure), jpbo(NULL)
 {
     QCC_DbgPrintf(("JProxyBusObject::JProxyBusObject()"));
 
@@ -10143,6 +10200,8 @@ JProxyBusObject::JProxyBusObject(JBusAttachment* jbap, const char* endpoint, con
     busPtr->IncRef();
     QCC_DbgPrintf(("JProxyBusObject::JProxyBusObject(): Refcount on busPtr after is %d", busPtr->GetRef()));
 
+    JNIEnv* env = GetEnv();
+    jpbo = env->NewWeakGlobalRef(pbo);
 }
 
 JProxyBusObject::~JProxyBusObject()
@@ -10157,13 +10216,26 @@ JProxyBusObject::~JProxyBusObject()
      */
     assert(busPtr);
     QCC_DbgPrintf(("JProxyBusObject::~JProxyBusObject(): Refcount on busPtr at destruction is %d", busPtr->GetRef()));
+
+    JNIEnv* env = GetEnv();
+    env->DeleteWeakGlobalRef(jpbo);
 }
 
-JPropertiesChangedListener::JPropertiesChangedListener(jobject jobj)
-    : jlistener(NULL)
+JPropertiesChangedListener::JPropertiesChangedListener(jobject jobj, jobject jch, jobject jinval)
+    : jlistener(NULL), jchangedType(NULL), jinvalidatedType(NULL)
 {
     JNIEnv* env = GetEnv();
     jlistener = env->NewWeakGlobalRef(jobj);
+    jchangedType = env->NewGlobalRef(jch);
+    jinvalidatedType = env->NewGlobalRef(jinval);
+}
+
+JPropertiesChangedListener::~JPropertiesChangedListener()
+{
+    JNIEnv* env = GetEnv();
+    env->DeleteWeakGlobalRef(jlistener);
+    env->DeleteGlobalRef(jchangedType);
+    env->DeleteGlobalRef(jinvalidatedType);
 }
 
 void JPropertiesChangedListener::PropertiesChanged(ProxyBusObject& obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context)
@@ -10181,19 +10253,19 @@ void JPropertiesChangedListener::PropertiesChanged(ProxyBusObject& obj, const ch
      */
     JLocalRef<jstring> jifaceName = env->NewStringUTF(ifaceName);
     if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("JPropertiesChangedListener::PropertiesChanged(): Exception"));
+        QCC_LogError(ER_FAIL, ("JPropertiesChangedListener::PropertiesChanged(): Exception extracting interface"));
         return;
     }
 
-    JLocalRef<jobject> jchanged = Unmarshal(&changed, CLS_MsgArg);
+    JLocalRef<jobjectArray> jchanged = (jobjectArray)Unmarshal(&changed, jchangedType);
     if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("JPropertiesChangedListener::PropertiesChanged(): Exception"));
+        QCC_LogError(ER_FAIL, ("JPropertiesChangedListener::PropertiesChanged(): Exception extracting changed dictionary"));
         return;
     }
 
-    JLocalRef<jobject> jinvalidated = Unmarshal(&invalidated, CLS_MsgArg);
+    JLocalRef<jobjectArray> jinvalidated = (jobjectArray)Unmarshal(&invalidated, jinvalidatedType);
     if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("JPropertiesChangedListener::PropertiesChanged(): Exception"));
+        QCC_LogError(ER_FAIL, ("JPropertiesChangedListener::PropertiesChanged(): Exception extracting invalidated list"));
         return;
     }
 
@@ -10210,7 +10282,7 @@ void JPropertiesChangedListener::PropertiesChanged(ProxyBusObject& obj, const ch
 
     JLocalRef<jclass> clazz = env->GetObjectClass(jo);
     jmethodID mid = env->GetMethodID(clazz, "propertiesChanged",
-                                     "(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;");
+                                     "(Lorg/alljoyn/bus/ProxyBusObject;Ljava/lang/String;Ljava/util/Map;[Ljava/lang/String;)V");
     if (!mid) {
         QCC_LogError(ER_FAIL, ("JPropertiesChangedListener::PropertiesChanged(): Can't get new local reference to ProxyBusObjectListener property changed handler method"));
         return;
@@ -10220,13 +10292,16 @@ void JPropertiesChangedListener::PropertiesChanged(ProxyBusObject& obj, const ch
      * This call out to the property changed handler implies that the Java method must be
      * MT-safe.  This is implied by the definition of the listener.
      */
-    QCC_DbgPrintf(("JPropertiesChangedListener::PropertiesChanged(): Call out to listener object and method"));
-    env->CallVoidMethod(jo, mid, (jstring)jifaceName, (jobject)jchanged, (jobject)jinvalidated);
-    if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("JPropertiesChangedListener::PropertiesChanged(): Exception"));
-        return;
-    }
+    jobject pbo = env->NewLocalRef(((JProxyBusObject &)obj).jpbo);
 
+    if (pbo) {
+        QCC_DbgPrintf(("JPropertiesChangedListener::PropertiesChanged(): Call out to listener object and method"));
+        env->CallVoidMethod(jo, mid, pbo, (jstring)jifaceName, (jobjectArray)jchanged, (jobjectArray)jinvalidated);
+        if (env->ExceptionCheck()) {
+            QCC_LogError(ER_FAIL, ("JPropertiesChangedListener::PropertiesChanged(): Exception"));
+            return;
+        }
+    }
     QCC_DbgPrintf(("JPropertiesChangedListener::PropertiesChanged(): Return"));
 }
 
@@ -10267,7 +10342,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_create(JNIEnv* env, j
      * pointer to it in our "handle"  Note that we are giving the busPtr to the
      * new JProxyBusObject, so it must bump the reference count
      */
-    JProxyBusObject* jpbo = new JProxyBusObject(busPtr, busName.c_str(), objPath.c_str(), sessionId, secure);
+    JProxyBusObject* jpbo = new JProxyBusObject(thiz, busPtr, busName.c_str(), objPath.c_str(), sessionId, secure);
     if (!jpbo) {
         Throw("java/lang/OutOfMemoryError", NULL);
         return;
@@ -10314,9 +10389,13 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_destroy(JNIEnv* env, 
     SetHandle(thiz, NULL);
 }
 
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerPropertiesChangedHandler(JNIEnv* env, jobject thiz, jstring jifaceName, jobjectArray jproperties, jobject jpropertiesChangedListener)
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerPropertiesChangedListener(JNIEnv* env,
+                                                                                                jobject thiz,
+                                                                                                jstring jifaceName,
+                                                                                                jobjectArray jproperties,
+                                                                                                jobject jpropertiesChangedListener)
 {
-    QCC_DbgPrintf(("ProxyBusObject_registerPropertiesChangedHandler()"));
+    QCC_DbgPrintf(("ProxyBusObject_registerPropertiesChangedListener()"));
 
     JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
     if (env->ExceptionCheck()) {
@@ -10340,41 +10419,49 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerProperties
 
     QStatus status;
     jobject jstatus = NULL;
-    const char** properties = new const char*[numProps];
-    const JString** propertiesStrings = new const JString *[numProps];
+
+    AddInterface(thiz, proxyBusObj->busPtr, jifaceName);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("ProxyBusObject_registerPropertiesChangedListener(): Exception"));
+        return NULL;
+    }
+
+    const char** props = new const char*[numProps];
+    jstring* jprops = new jstring[numProps];
+    memset(props, 0, numProps * sizeof(props[0]));
+    memset(jprops, 0, numProps * sizeof(jprops[0]));
+
     for (size_t i = 0; i < numProps; ++i) {
-        jstring jproperty = (jstring)env->GetObjectArrayElement(jproperties, i);
+        jprops[i] = (jstring)env->GetObjectArrayElement(jproperties, i);
         if (env->ExceptionCheck()) {
             goto exit;
         }
-        JString* property = new JString(jproperty);
+        props[i] = env->GetStringUTFChars(jprops[i], NULL);
         if (env->ExceptionCheck()) {
             goto exit;
         }
-        //Keep reference to the jstring objects, as they will get freed otherwise when going out of scope.
-        propertiesStrings[i] = property;
-        properties[i] = property->c_str();
     }
 
-    status = proxyBusObj->RegisterPropertiesChangedHandler(ifaceName.c_str(),
-                                                           properties,
-                                                           numProps,
-                                                           *listener,
-                                                           NULL);
-    for (size_t i = 0; i < numProps; ++i) {
-        delete (propertiesStrings[i]);
-    }
-
+    status = proxyBusObj->RegisterPropertiesChangedListener(ifaceName.c_str(), props, numProps, *listener, NULL);
     jstatus = JStatus(status);
 
 exit:
-    delete [] properties;
+    for (size_t i = 0; i < numProps; ++i) {
+        if (props[i]) {
+            env->ReleaseStringUTFChars(jprops[i], props[i]);
+        }
+    }
+    delete [] props;
+    delete [] jprops;
     return jstatus;
 }
 
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_unregisterPropertiesChangedHandler(JNIEnv* env, jobject thiz, jstring jifaceName, jstring jproperty, jobject jpropertiesChangedListener)
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_unregisterPropertiesChangedListener(JNIEnv* env,
+                                                                                                  jobject thiz,
+                                                                                                  jstring jifaceName,
+                                                                                                  jobject jpropertiesChangedListener)
 {
-    QCC_DbgPrintf(("ProxyBusObject_unregisterPropertiesChangedHandler()"));
+    QCC_DbgPrintf(("ProxyBusObject_unregisterPropertiesChangedListener()"));
 
     JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
     if (env->ExceptionCheck()) {
@@ -10386,22 +10473,20 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_unregisterProperti
         return NULL;
     }
 
-    JString property(jproperty);
-    if (env->ExceptionCheck()) {
-        return NULL;
-    }
-
     JPropertiesChangedListener* listener = GetHandle<JPropertiesChangedListener*>(jpropertiesChangedListener);
     if (env->ExceptionCheck() || !listener) {
         return NULL;
     }
 
-    QStatus status = proxyBusObj->UnregisterPropertiesChangedHandler(ifaceName.c_str(), *listener);
+    QStatus status = proxyBusObj->UnregisterPropertiesChangedListener(ifaceName.c_str(), *listener);
 
     return JStatus(status);
 }
 
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertiesChangedListener_create(JNIEnv* env, jobject thiz)
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertiesChangedListener_create(JNIEnv* env,
+                                                                             jobject thiz,
+                                                                             jobject jchanged,
+                                                                             jobject jinvalidated)
 {
     QCC_DbgPrintf(("PropertiesChangedListener_create()"));
 
@@ -10412,7 +10497,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertiesChangedListener_create(JNI
     }
 
     QCC_DbgPrintf(("PropertiesChangedListener_create(): Create backing object"));
-    JPropertiesChangedListener* jojcl = new JPropertiesChangedListener(thiz);
+    JPropertiesChangedListener* jojcl = new JPropertiesChangedListener(thiz, jchanged, jinvalidated);
     if (jojcl == NULL) {
         Throw("java/lang/OutOfMemoryError", NULL);
         return;
@@ -10440,64 +10525,6 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertiesChangedListener_destroy(JN
 
     SetHandle(thiz, NULL);
     return;
-}
-
-static void AddInterface(jobject thiz, jobject jbus, jstring jinterfaceName)
-{
-    JNIEnv* env = GetEnv();
-
-    JProxyBusObject* proxyBusObj = GetHandle<JProxyBusObject*>(thiz);
-    if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("AddInterface(): Exception"));
-        return;
-    }
-
-    assert(proxyBusObj);
-
-    JString interfaceName(jinterfaceName);
-    if (env->ExceptionCheck()) {
-        return;
-    }
-
-    JLocalRef<jclass> clazz = env->GetObjectClass(thiz);
-    jmethodID mid = env->GetMethodID(clazz, "addInterface", "(Ljava/lang/String;)I");
-    if (!mid) {
-        return;
-    }
-
-    QStatus status = (QStatus)env->CallIntMethod(thiz, mid, jinterfaceName);
-    if (env->ExceptionCheck()) {
-        /* AnnotationBusException */
-        QCC_LogError(ER_FAIL, ("AddInterface(): Exception"));
-        return;
-    }
-
-    if (ER_OK != status) {
-        QCC_LogError(status, ("AddInterface(): Exception"));
-        env->ThrowNew(CLS_BusException, QCC_StatusText(status));
-        return;
-    }
-
-    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(jbus);
-    if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("AddInterface(): Exception"));
-        return;
-    }
-
-    if (busPtr == NULL) {
-        QCC_LogError(ER_FAIL, ("AddInterface(): NULL bus pointer"));
-        return;
-    }
-
-    QCC_DbgPrintf(("AddInterface(): Refcount on busPtr is %d", busPtr->GetRef()));
-
-    const InterfaceDescription* intf = busPtr->GetInterface(interfaceName.c_str());
-    assert(intf);
-
-    status = proxyBusObj->AddInterface(*intf);
-    if (ER_OK != status) {
-        env->ThrowNew(CLS_BusException, QCC_StatusText(status));
-    }
 }
 
 /*
@@ -10597,7 +10624,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_methodCall(JNIEnv*
 
     const InterfaceDescription* intf = proxyBusObj->GetInterface(interfaceName.c_str());
     if (!intf) {
-        AddInterface(thiz, jbus, jinterfaceName);
+        AddInterface(thiz, busPtr, jinterfaceName);
         if (env->ExceptionCheck()) {
             busPtr->baProxyLock.Unlock();
             QCC_LogError(ER_FAIL, ("ProxyBusObjexct_methodCall(): Exception"));
@@ -10776,7 +10803,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_getProperty(JNIEnv
     assert(proxyBusObj);
 
     if (!proxyBusObj->ImplementsInterface(interfaceName.c_str())) {
-        AddInterface(thiz, jbus, jinterfaceName);
+        AddInterface(thiz, busPtr, jinterfaceName);
         if (env->ExceptionCheck()) {
             busPtr->baProxyLock.Unlock();
             QCC_LogError(ER_FAIL, ("ProxyBusObjexct_getProperty(): Exception"));
@@ -10853,7 +10880,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_getAllProperties(J
     assert(proxyBusObj);
 
     if (!proxyBusObj->ImplementsInterface(interfaceName.c_str())) {
-        AddInterface(thiz, jbus, jinterfaceName);
+        AddInterface(thiz, busPtr, jinterfaceName);
         if (env->ExceptionCheck()) {
             busPtr->baProxyLock.Unlock();
             QCC_LogError(ER_FAIL, ("ProxyBusObjexct_getAllProperties(): Exception"));
@@ -10942,7 +10969,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_setProperty(JNIEnv* e
     assert(proxyBusObj);
 
     if (!proxyBusObj->ImplementsInterface(interfaceName.c_str())) {
-        AddInterface(thiz, jbus, jinterfaceName);
+        AddInterface(thiz, busPtr, jinterfaceName);
         if (env->ExceptionCheck()) {
             busPtr->baProxyLock.Unlock();
             QCC_LogError(ER_FAIL, ("ProxyBusObjexct_setProperty(): Exception"));

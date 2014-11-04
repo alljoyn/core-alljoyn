@@ -461,11 +461,11 @@ class ProxyBusObject : public MessageReceiver {
      *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
      *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
      */
-    QStatus RegisterPropertiesChangedHandler(const char* iface,
-                                             const char** properties,
-                                             size_t propertiesSize,
-                                             ProxyBusObject::PropertiesChangedListener& listener,
-                                             void* context);
+    QStatus RegisterPropertiesChangedListener(const char* iface,
+                                              const char** properties,
+                                              size_t propertiesSize,
+                                              ProxyBusObject::PropertiesChangedListener& listener,
+                                              void* context);
 
     /**
      * Function to unregister a handler for property change events.
@@ -477,7 +477,7 @@ class ProxyBusObject : public MessageReceiver {
      *      - #ER_OK if the handler was registered successfully
      *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
      */
-    QStatus UnregisterPropertiesChangedHandler(const char* iface, ProxyBusObject::PropertiesChangedListener& listener);
+    QStatus UnregisterPropertiesChangedListener(const char* iface, ProxyBusObject::PropertiesChangedListener& listener);
 
     /**
      * Returns the interfaces implemented by this object. Note that all proxy bus objects

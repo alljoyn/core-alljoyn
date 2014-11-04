@@ -103,7 +103,7 @@ typedef void (AJ_CALL * alljoyn_proxybusobject_listener_setpropertycb_ptr)(QStat
  * @param ifaceName     Name of the interface that defines the property.
  * @param changed       Property values that changed as an array of dictionary entries, signature "a{sv}".
  * @param invalidated   Properties whose values have been invalidated, signature "as".
- * @param context       Caller provided context passed in to RegisterPropertiesChangedHandler
+ * @param context       Caller provided context passed in to RegisterPropertiesChangedListener
  */
 typedef void (AJ_CALL * alljoyn_proxybusobject_listener_propertieschanged_ptr)(alljoyn_proxybusobject obj, const char* ifaceName, const alljoyn_msgarg changed, const alljoyn_msgarg invalidated, void* context);
 
@@ -399,12 +399,12 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_setproperty(alljoyn_proxybu
  *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
  *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  */
-extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_registerpropertieschangedhandler(alljoyn_proxybusobject proxyObj,
-                                                                                      const char* iface,
-                                                                                      const char** properties,
-                                                                                      size_t numProperties,
-                                                                                      alljoyn_proxybusobject_listener_propertieschanged_ptr callback,
-                                                                                      void* context);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_registerpropertieschangedlistener(alljoyn_proxybusobject proxyObj,
+                                                                                       const char* iface,
+                                                                                       const char** properties,
+                                                                                       size_t numProperties,
+                                                                                       alljoyn_proxybusobject_listener_propertieschanged_ptr callback,
+                                                                                       void* context);
 
 /**
  * Function to unregister a handler for property change events.
@@ -418,9 +418,9 @@ extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_registerpropertieschangedha
  *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
  *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  */
-extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_unregisterpropertieschangedhandler(const char* iface,
-                                                                                        const char* property,
-                                                                                        alljoyn_proxybusobject_listener_propertieschanged_ptr callback);
+extern AJ_API QStatus AJ_CALL alljoyn_proxybusobject_unregisterpropertieschangedlistener(const char* iface,
+                                                                                         const char* property,
+                                                                                         alljoyn_proxybusobject_listener_propertieschanged_ptr callback);
 
 /**
  * Make an asynchronous request to set a property on an interface on the remote object.

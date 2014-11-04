@@ -16,6 +16,11 @@
 
 package org.alljoyn.bus;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.Map;
+
 /**
  * Implemented by a user-defined classes that is interested in handling
  * property change notification.
@@ -26,7 +31,7 @@ package org.alljoyn.bus;
  * and destruction.  That is, every thread executing in a listener object's
  * methods 1) gets a unique copy of all temporary data (it is re-entrant); and
  * 2) all shared data -- the object instance's member variables or any globals
- * must contain no read-modify-write access patterns (okay to write or read, 
+ * must contain no read-modify-write access patterns (okay to write or read,
  * just never to read-modify-write).  If such access patterns are required, it
  * is the responsibility of the client to, for example, add the synchronized
  * keyword when overriding one of the listener methods or provide some other
@@ -42,7 +47,7 @@ package org.alljoyn.bus;
  * dealing with multithreaded code.
  *
  * Since listener objects generally run in the context of the AllJoyn thread
- * which manages reception of events, If a blocking AllJoyn call is made in 
+ * which manages reception of events, If a blocking AllJoyn call is made in
  * the context of a notification, the necessary and sufficient conditions for
  * deadlock are established.
  *
@@ -56,11 +61,19 @@ package org.alljoyn.bus;
 public abstract class PropertiesChangedListener {
 
     protected PropertiesChangedListener() {
-        create();
+        try {
+            Method m = getClass().getMethod("propertiesChanged", new Class[] {ProxyBusObject.class, String.class, Map.class, String[].class});
+            Type p[] = m.getGenericParameterTypes();
+            Type changedType = p[2];
+            Type invalidatedType = p[3];
+            create(changedType, invalidatedType);
+        } catch (NoSuchMethodException ex) {
+            System.err.println("failed to get propertiesChanged method");  // Should never happen.
+        }
     }
 
     /** Allocate native resources. */
-    private native void create();
+    private native void create(Type changed, Type invalidated);
 
     /** Release native resources. */
     private synchronized native void destroy();
@@ -69,16 +82,16 @@ public abstract class PropertiesChangedListener {
      * Called by the bus when the value of a property changes if that property has annotation
      * org.freedesktop.DBus.Properties.EmitChangedSignal=true or
      * org.freedesktop.DBus.Properties.EmitChangedSignal=invalidated
-     * 
+     *
      * Any implementation of this function must be multithread safe.  See the
      * class documentation for details.
      *
-     * @param pObj           Bus Object that owns the property that changed.
-     * @param ifaceName      The name of the interface the defines the property that changed.
-     * @param propName       The name of the property that has changed.
-     * @param propValue      The new value of the property; NULL to simply indicate that any local copy should now be considered invalidated.
+     * @param pObj          Bus Object that owns the property that changed.
+     * @param ifaceName     The name of the interface the defines the property that changed.
+     * @param changed       Property values that changed as an array of dictionary entries, signature "a{sv}".
+     * @param invalidated   Properties whose values have been invalidated, signature "as".
      */
-    public abstract void propertyChanged(ProxyBusObject pObj, String ifaceName, String propName, Variant propValue);
+    public abstract void propertiesChanged(ProxyBusObject pObj, String ifaceName, Map<String, Variant> changed, String[] invalidated);
 
     /**
      * The opaque pointer to the underlying C++ object which is actually tied

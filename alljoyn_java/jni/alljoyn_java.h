@@ -812,11 +812,19 @@ JNIEXPORT jboolean JNICALL Java_org_alljoyn_bus_ProxyBusObject_isProxyBusObjectS
 
 /*
  * Class:     org_alljoyn_bus_ProxyBusObject
- * Method:    registerPropertiesChangedHandler
+ * Method:    registerPropertiesChangedListener
  * Signature: (Ljava/lang/String;[Ljava/lang/String;Lorg/alljoyn/bus/PropertyChangedListener;)Lorg/alljoyn/bus/Status;
  */
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerPropertiesChangedHandler
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerPropertiesChangedListener
   (JNIEnv *, jobject, jstring, jobjectArray, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_ProxyBusObject
+ * Method:    unregisterPropertiesChangedListener
+ * Signature: (Ljava/lang/String;Lorg/alljoyn/bus/PropertyChangedListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_unregisterPropertiesChangedListener
+  (JNIEnv *, jobject, jstring, jobject);
 
 #ifdef __cplusplus
 }
@@ -836,7 +844,7 @@ extern "C" {
  * Signature: ()V
  */
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertiesChangedListener_create
-  (JNIEnv *, jobject);
+  (JNIEnv *, jobject, jobject, jobject);
 
 
 /*

@@ -271,26 +271,26 @@ QStatus AJ_CALL alljoyn_proxybusobject_setpropertyasync(alljoyn_proxybusobject p
                                                           timeout);
 }
 
-QStatus AJ_CALL alljoyn_proxybusobject_registerpropertieschangedhandler(alljoyn_proxybusobject proxyObj,
-                                                                        const char* iface,
-                                                                        const char** properties,
-                                                                        size_t propertiesSize,
-                                                                        alljoyn_proxybusobject_listener_propertieschanged_ptr callback,
-                                                                        void* context)
+QStatus AJ_CALL alljoyn_proxybusobject_registerpropertieschangedlistener(alljoyn_proxybusobject proxyObj,
+                                                                         const char* iface,
+                                                                         const char** properties,
+                                                                         size_t propertiesSize,
+                                                                         alljoyn_proxybusobject_listener_propertieschanged_ptr callback,
+                                                                         void* context)
 {
     ajn::ProxyBusObjectPropertiesChangedListenerC* propChangeListener = ((ProxyBusObjectC*)proxyObj)->AddListener(iface, callback);
-    return ((ProxyBusObjectC*)proxyObj)->RegisterPropertiesChangedHandler(iface, properties, propertiesSize, *propChangeListener, context);
+    return ((ProxyBusObjectC*)proxyObj)->RegisterPropertiesChangedListener(iface, properties, propertiesSize, *propChangeListener, context);
 }
 
-QStatus AJ_CALL alljoyn_proxybusobject_unregisterpropertieschangedhandler(alljoyn_proxybusobject proxyObj,
-                                                                          const char* iface,
-                                                                          alljoyn_proxybusobject_listener_propertieschanged_ptr callback)
+QStatus AJ_CALL alljoyn_proxybusobject_unregisterpropertieschangedlistener(alljoyn_proxybusobject proxyObj,
+                                                                           const char* iface,
+                                                                           alljoyn_proxybusobject_listener_propertieschanged_ptr callback)
 {
     QStatus status = ER_FAIL;
     ajn::ProxyBusObjectPropertiesChangedListenerC* propChangeListener = ((ProxyBusObjectC*)proxyObj)->RemoveListener(iface, callback);
 
     if (propChangeListener) {
-        status = ((ProxyBusObjectC*)proxyObj)->UnregisterPropertiesChangedHandler(iface, *propChangeListener);
+        status = ((ProxyBusObjectC*)proxyObj)->UnregisterPropertiesChangedListener(iface, *propChangeListener);
         delete propChangeListener;
     }
     return status;
