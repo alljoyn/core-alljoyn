@@ -144,7 +144,7 @@ public class AboutListenerTest  extends TestCase {
         }
     }
 
-    class AboutListenerTestAboutListener extends AboutListener {
+    class AboutListenerTestAboutListener implements AboutListener {
         AboutListenerTestAboutListener() {
             port = 0;
             announcedFlag = false;

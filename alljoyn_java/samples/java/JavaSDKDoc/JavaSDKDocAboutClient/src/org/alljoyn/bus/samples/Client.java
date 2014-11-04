@@ -41,7 +41,7 @@ public class Client {
 
     private static boolean isJoined = false;
 
-    static class MyAboutListener extends AboutListener {
+    static class MyAboutListener implements AboutListener {
         public void announced(String busName, int version, short port, AboutObjectDescription[] objectDescriptions, Map<String, Variant> aboutData) {
             System.out.println("Announced BusName:     " + busName);
             System.out.println("Announced Version:     " + version);
