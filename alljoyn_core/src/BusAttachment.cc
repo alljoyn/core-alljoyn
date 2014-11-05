@@ -130,7 +130,9 @@ BusAttachment::Internal::Internal(const char* appName,
     allowRemoteMessages(allowRemoteMessages),
     listenAddresses(listenAddresses ? listenAddresses : ""),
     stopLock(),
-    stopCount(0)
+    stopCount(0),
+    hostedSessions(),
+    hostedSessionsLock()
 {
     /*
      * Bus needs a pointer to this internal object.
@@ -817,12 +819,29 @@ const ProxyBusObject& BusAttachment::GetAllJoynDebugObj()
     return busInternal->localEndpoint->GetAllJoynDebugObj();
 }
 
+QStatus BusAttachment::RegisterSignalHandlerWithRule(MessageReceiver* receiver,
+                                                     MessageReceiver::SignalHandler signalHandler,
+                                                     const InterfaceDescription::Member* member,
+                                                     const char* matchRule)
+{
+    return busInternal->localEndpoint->RegisterSignalHandler(receiver, signalHandler, member, matchRule);
+}
+
 QStatus BusAttachment::RegisterSignalHandler(MessageReceiver* receiver,
                                              MessageReceiver::SignalHandler signalHandler,
                                              const InterfaceDescription::Member* member,
                                              const char* srcPath)
 {
-    return busInternal->localEndpoint->RegisterSignalHandler(receiver, signalHandler, member, srcPath);
+    if (!member) {
+        return ER_BAD_ARG_3;
+    }
+
+    qcc::String matchRule("type='signal',member='");
+    matchRule += String(member->name) + "',interface='" + member->iface->GetName() + "'";
+    if (srcPath && (srcPath[0] != '\0')) {
+        matchRule += String(",path='") + srcPath + "'";
+    }
+    return RegisterSignalHandlerWithRule(receiver, signalHandler, member, matchRule.c_str());
 }
 
 QStatus BusAttachment::UnregisterSignalHandler(MessageReceiver* receiver,
@@ -830,7 +849,24 @@ QStatus BusAttachment::UnregisterSignalHandler(MessageReceiver* receiver,
                                                const InterfaceDescription::Member* member,
                                                const char* srcPath)
 {
-    return busInternal->localEndpoint->UnregisterSignalHandler(receiver, signalHandler, member, srcPath);
+    if (!member) {
+        return ER_BAD_ARG_3;
+    }
+
+    qcc::String matchRule("type='signal',member='");
+    matchRule += String(member->name) + "',interface='" + member->iface->GetName() + "'";
+    if (srcPath && (srcPath[0] != '\0')) {
+        matchRule += String(",path='") + srcPath + "'";
+    }
+    return UnregisterSignalHandlerWithRule(receiver, signalHandler, member, matchRule.c_str());
+}
+
+QStatus BusAttachment::UnregisterSignalHandlerWithRule(MessageReceiver* receiver,
+                                                       MessageReceiver::SignalHandler signalHandler,
+                                                       const InterfaceDescription::Member* member,
+                                                       const char* matchRule)
+{
+    return busInternal->localEndpoint->UnregisterSignalHandler(receiver, signalHandler, member, matchRule);
 }
 
 QStatus BusAttachment::UnregisterAllHandlers(MessageReceiver* receiver)
@@ -2052,6 +2088,7 @@ void BusAttachment::Internal::AllJoynSignalHandler(const InterfaceDescription::M
             SessionId id = static_cast<SessionId>(args[0].v_uint32);
             SessionListener::SessionLostReason reason = static_cast<SessionListener::SessionLostReason>(args[1].v_uint32);
             unsigned int disposition = static_cast<unsigned int>(args[2].v_uint32);
+
             for (size_t i = 0; i < sizeof(sessionListeners) / sizeof(sessionListeners[0]); ++i) {
                 sessionSetLock[i].Lock(MUTEX_CONTEXT);
                 sessionSet[i].erase(id);

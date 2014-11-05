@@ -494,10 +494,18 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_unregisterBusObject
 
 /*
  * Class:     org_alljoyn_bus_BusAttachment
- * Method:    registerNativeSignalHandler
+ * Method:    registerNativeSignalHandlerWithSrcPath
  * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/reflect/Method;Ljava/lang/String;)Lorg/alljoyn/bus/Status;
  */
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerNativeSignalHandler
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerNativeSignalHandlerWithSrcPath
+  (JNIEnv *, jobject, jstring, jstring, jobject, jobject, jstring);
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    registerNativeSignalHandlerWithRule
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/reflect/Method;Ljava/lang/String;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerNativeSignalHandlerWithRule
   (JNIEnv *, jobject, jstring, jstring, jobject, jobject, jstring);
 
 /*

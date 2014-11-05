@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2012-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2012-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -23,6 +23,7 @@
 #define _ALLJOYN_C_BUSATTACHMENTC_H
 
 #include <qcc/platform.h>
+#include <qcc/Mutex.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn_c/AjAPI.h>
 #include <alljoyn_c/KeyStoreListener.h>
@@ -39,6 +40,7 @@
 
 #include <stdio.h>
 #include <map>
+#include <set>
 
 namespace ajn {
 
@@ -106,6 +108,18 @@ class BusAttachmentC : public BusAttachment, public BusAttachment::JoinSessionAs
     QStatus RegisterSignalHandlerC(alljoyn_messagereceiver_signalhandler_ptr signalHandler, const alljoyn_interfacedescription_member member, const char* srcPath);
 
     /**
+     * Take a 'C' style SignalHandler and map it to a 'C++' style SignalHandler
+     * Register the 'C++' SignalHandler with the 'C++' code.
+     *
+     * @param receiver       The object receiving the signal.
+     * @param signalHandler  The signal handler method.
+     * @param member         The interface/member of the signal.
+     * @param matchRule      The filter rule.
+     * @return #ER_OK
+     */
+    QStatus RegisterSignalHandlerWithRuleC(alljoyn_messagereceiver_signalhandler_ptr signalHandler, const alljoyn_interfacedescription_member member, const char* matchRule);
+
+    /**
      * remove the 'C' style SignalHandler from the map and Unregister the 'C++' SignalHandler.
      *
      * @param receiver       The object receiving the signal.
@@ -115,6 +129,17 @@ class BusAttachmentC : public BusAttachment, public BusAttachment::JoinSessionAs
      * @return #ER_OK
      */
     QStatus UnregisterSignalHandlerC(alljoyn_messagereceiver_signalhandler_ptr signalHandler, const alljoyn_interfacedescription_member member, const char* srcPath);
+
+    /**
+     * remove the 'C' style SignalHandler from the map and Unregister the 'C++' SignalHandler.
+     *
+     * @param receiver       The object receiving the signal.
+     * @param signalHandler  The signal handler method.
+     * @param member         The interface/member of the signal.
+     * @param srcPath        The filter rule.
+     * @return #ER_OK
+     */
+    QStatus UnregisterSignalHandlerWithRuleC(alljoyn_messagereceiver_signalhandler_ptr signalHandler, const alljoyn_interfacedescription_member member, const char* matchRule);
 
     /**
      * remove all SignalHandlers associated with the receiver alljoyn_busobject
@@ -152,12 +177,55 @@ class BusAttachmentC : public BusAttachment, public BusAttachment::JoinSessionAs
     }
 
   private:
-    /**
-     * Convert the 'C++' SignalHandler callback to a 'C' callback function
-     */
-    void SignalHandlerRemap(const InterfaceDescription::Member* member, const char* srcPath, Message& message);
 
+    struct SignalHandlerC : ajn::MessageReceiver {
+        struct Subscription {
+            const ajn::InterfaceDescription::Member* member;
+            /* qualifier is either
+             *   - an empty string (RegisterSignalHandler with srcPath == NULL)
+             *   - an object path (RegisterSignalHandler with specified srcPath)
+             *   - a match rule (RegisterSignalHandlerWithRule)
+             */
+            qcc::String qualifier;
 
+            bool operator<(const Subscription& other) const {
+                return (member < other.member) || ((member == other.member) && (qualifier < other.qualifier));
+            }
+        };
+
+        ajn::BusAttachmentC* bus;
+        alljoyn_messagereceiver_signalhandler_ptr handler;
+        std::multiset<Subscription> subscriptions;
+
+        /**
+         * Convert the 'C++' SignalHandler callback to a 'C' callback function
+         */
+        SignalHandlerC(ajn::BusAttachmentC* busC, alljoyn_messagereceiver_signalhandler_ptr cHandler) : bus(busC), handler(cHandler) { }
+
+        void SignalHandlerRemap(const InterfaceDescription::Member* member, const char* srcPath, ajn::Message& message);
+
+        void AddSubscription(const ajn::InterfaceDescription::Member* member, const char* qualifier) {
+            Subscription sub = { member, qualifier ? qualifier : "" };
+            subscriptions.insert(sub);
+        }
+
+        /**
+         * Remove subscription.
+         * @return true if there are no more subscriptions for this handler.
+         */
+        bool RemoveSubscription(const ajn::InterfaceDescription::Member* member, const char* qualifier) {
+            Subscription sub = { member, qualifier ? qualifier : "" };
+            std::multiset<Subscription>::iterator iter = subscriptions.find(sub);
+            if (iter != subscriptions.end()) {
+                subscriptions.erase(iter);
+            }
+            return subscriptions.empty();
+        }
+    };
+
+    typedef std::map<alljoyn_messagereceiver_signalhandler_ptr, SignalHandlerC*> SignalHandlerMap;
+    SignalHandlerMap signalHandlerMap;
+    qcc::Mutex signalHandlerMapLock;
 };
 }
 #endif

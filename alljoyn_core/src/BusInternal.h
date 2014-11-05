@@ -291,6 +291,18 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      */
     bool IsSessionPortBound(SessionPort sessionPort);
 
+    /**
+      * Return all hosted sessions
+      *
+      * @return set with all hosted session ids
+      */
+    std::set<SessionId> GetHostedSessions() const {
+        sessionSetLock[SESSION_SIDE_HOST].Lock(MUTEX_CONTEXT);
+        std::set<SessionId> copy = sessionSet[SESSION_SIDE_HOST];
+        sessionSetLock[SESSION_SIDE_HOST].Unlock(MUTEX_CONTEXT);
+        return copy;
+    }
+
   private:
 
     /**
@@ -369,6 +381,9 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     std::map<qcc::Thread*, JoinContext> joinThreads;  /* List of threads waiting to join */
     qcc::Mutex joinLock;                              /* Mutex that protects joinThreads */
     KeyStoreKeyEventListener ksKeyEventListener;
+
+    std::set<SessionId> hostedSessions;    /* session IDs for all sessions hosted by this bus attachment */
+    qcc::Mutex hostedSessionsLock;         /* Mutex that protects hostedSessions */
 };
 }
 
