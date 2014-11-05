@@ -508,11 +508,11 @@ IpNameServiceImpl::~IpNameServiceImpl()
         m_ipv6QuietSockFd = qcc::INVALID_SOCKET_FD;
     }
 
-    if (m_ipv4UnicastSockFd != qcc::INVALID_SOCKET_FD) {
-        qcc::Close(m_ipv4UnicastSockFd);
-        m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
-    }
-
+    //
+    // m_unicastEvent must be deleted before closing m_ipv4UnicastSockFd,
+    // because m_unicastEvent's destructor code path is using
+    // m_ipv4UnicastSockFd.
+    //
     if (m_unicastEvent) {
         delete m_unicastEvent;
         m_unicastEvent = NULL;
