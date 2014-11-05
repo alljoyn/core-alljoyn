@@ -28,7 +28,7 @@ LOCAL_MODULE := SimpleService
 
 
 # The TARGET_PLATFORM defines the targetted Android Platform API level
-TARGET_PLATFORM := android-8
+TARGET_PLATFORM := android-10
 
 # An optional list of paths, relative to the NDK *root* directory,
 # which will be appended to the include search path when compiling
