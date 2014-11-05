@@ -191,7 +191,7 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      * @param receiver       The object receiving the signal.
      * @param signalHandler  The signal handler method.
      * @param member         Interface/member of signal.
-     * @param srcPath        The object path of the emitter of the signal or NULL for all paths
+     * @param matchRule      A filter rule.
      * @return
      *      - ER_OK if successful
      *      - An error status otherwise
@@ -199,7 +199,7 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     QStatus RegisterSignalHandler(MessageReceiver* receiver,
                                   MessageReceiver::SignalHandler signalHandler,
                                   const InterfaceDescription::Member* member,
-                                  const char* srcPath);
+                                  const char* matchRule);
 
     /**
      * Un-Register a signal handler.
@@ -208,7 +208,7 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      * @param receiver       The object receiving the signal.
      * @param signalHandler  The signal handler method.
      * @param member         Interface/member of signal.
-     * @param srcPath        The object path of the emitter of the signal or NULL for all paths
+     * @param matchRule      A filter rule.
      * @return
      *      - ER_OK if successful
      *      - An error status otherwise
@@ -216,7 +216,7 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
     QStatus UnregisterSignalHandler(MessageReceiver* receiver,
                                     MessageReceiver::SignalHandler signalHandler,
                                     const InterfaceDescription::Member* member,
-                                    const char* srcPath);
+                                    const char* matchRule);
 
     /**
      * Un-Register all signal and reply handlers registered to the specified MessageReceiver.

@@ -87,34 +87,6 @@ TEST_F(BusAttachmentTest, Disconnect)
     }
 }
 
-TEST_F(BusAttachmentTest, FindName_Join_Self)
-{
-    SessionPortListener sp_listener;
-    SessionOpts opts;
-    SessionPort port = 52;
-
-    QStatus status = ER_OK;
-
-    const char* requestedName = "org.alljoyn.bus.BusAttachmentTest.JoinSelf";
-
-    status = bus.BindSessionPort(port, opts, sp_listener);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
-    status = bus.RequestName(requestedName, DBUS_NAME_FLAG_DO_NOT_QUEUE);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
-    status = bus.AdvertiseName(requestedName, TRANSPORT_ANY);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
-    status = bus.FindAdvertisedName(requestedName);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-
-
-    SessionId id;
-    status = bus.JoinSession(requestedName, port, NULL, id, opts);
-    EXPECT_EQ(ER_ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED, status) << "  Actual Status: " << QCC_StatusText(status);
-}
-
 TEST_F(BusAttachmentTest, FindName_Same_Name)
 {
     QStatus status = ER_OK;

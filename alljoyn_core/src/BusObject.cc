@@ -533,9 +533,6 @@ QStatus BusObject::Signal(const char* destination,
         return ER_BUS_OBJECT_NOT_REGISTERED;
     }
 
-    QStatus status;
-    Message msg(*bus);
-
     /*
      * If the object or interface is secure or encryption is explicitly requested the signal must be encrypted.
      */
@@ -545,21 +542,34 @@ QStatus BusObject::Signal(const char* destination,
     if ((flags & ALLJOYN_FLAG_ENCRYPTED) && !bus->IsPeerSecurityEnabled()) {
         return ER_BUS_SECURITY_NOT_ENABLED;
     }
-    status = msg->SignalMsg(signalMember.signature,
-                            destination,
-                            sessionId,
-                            path,
-                            signalMember.iface->GetName(),
-                            signalMember.name,
-                            args,
-                            numArgs,
-                            flags,
-                            timeToLive);
-    if (status == ER_OK) {
-        BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
-        status = bus->GetInternal().GetRouter().PushMessage(msg, bep);
-        if ((status == ER_OK) && outMsg) {
-            *outMsg = msg;
+
+    std::set<SessionId> ids;
+    if (sessionId != SESSION_ID_ALL_HOSTED) {
+        ids.insert(sessionId);
+    } else {
+        ids = bus->GetInternal().GetHostedSessions();
+    }
+
+    QStatus status = ER_OK;
+
+    for (std::set<SessionId>::iterator it = ids.begin(); it != ids.end(); ++it) {
+        Message msg(*bus);
+        status = msg->SignalMsg(signalMember.signature,
+                                destination,
+                                *it,
+                                path,
+                                signalMember.iface->GetName(),
+                                signalMember.name,
+                                args,
+                                numArgs,
+                                flags,
+                                timeToLive);
+        if (status == ER_OK) {
+            BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
+            QStatus status = bus->GetInternal().GetRouter().PushMessage(msg, bep);
+            if ((status == ER_OK) && outMsg) {
+                *outMsg = msg;
+            }
         }
     }
     return status;

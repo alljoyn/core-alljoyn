@@ -811,7 +811,7 @@ bool _LocalEndpoint::ResumeReplyHandlerTimeout(Message& methodCallMsg)
 QStatus _LocalEndpoint::RegisterSignalHandler(MessageReceiver* receiver,
                                               MessageReceiver::SignalHandler signalHandler,
                                               const InterfaceDescription::Member* member,
-                                              const char* srcPath)
+                                              const char* matchRule)
 {
     if (!receiver) {
         return ER_BAD_ARG_1;
@@ -822,14 +822,17 @@ QStatus _LocalEndpoint::RegisterSignalHandler(MessageReceiver* receiver,
     if (!member) {
         return ER_BAD_ARG_3;
     }
-    signalTable.Add(receiver, signalHandler, member, srcPath ? srcPath : "");
+    if (!matchRule) {
+        return ER_BAD_ARG_4;
+    }
+    signalTable.Add(receiver, signalHandler, member, matchRule);
     return ER_OK;
 }
 
 QStatus _LocalEndpoint::UnregisterSignalHandler(MessageReceiver* receiver,
                                                 MessageReceiver::SignalHandler signalHandler,
                                                 const InterfaceDescription::Member* member,
-                                                const char* srcPath)
+                                                const char* matchRule)
 {
     if (!receiver) {
         return ER_BAD_ARG_1;
@@ -840,8 +843,10 @@ QStatus _LocalEndpoint::UnregisterSignalHandler(MessageReceiver* receiver,
     if (!member) {
         return ER_BAD_ARG_3;
     }
-    signalTable.Remove(receiver, signalHandler, member, srcPath ? srcPath : "");
-    return ER_OK;
+    if (!matchRule) {
+        return ER_BAD_ARG_4;
+    }
+    return signalTable.Remove(receiver, signalHandler, member, matchRule);
 }
 
 QStatus _LocalEndpoint::UnregisterAllHandlers(MessageReceiver* receiver)
@@ -1025,7 +1030,7 @@ QStatus _LocalEndpoint::HandleSignal(Message& message)
 
     /* Look up the signal */
     pair<SignalTable::const_iterator, SignalTable::const_iterator> range =
-        signalTable.Find(message->GetObjectPath(), message->GetInterface(), message->GetMemberName());
+        signalTable.Find(message->GetInterface(), message->GetMemberName());
 
     /*
      * Quick exit if there are no handlers for this signal
@@ -1040,7 +1045,9 @@ QStatus _LocalEndpoint::HandleSignal(Message& message)
     list<SignalTable::Entry> callList;
     const InterfaceDescription::Member* signal = range.first->second.member;
     do {
-        callList.push_back(range.first->second);
+        if (range.first->second.rule.IsMatch(message)) {
+            callList.push_back(range.first->second);
+        }
     } while (++range.first != range.second);
     /*
      * We have our callback list so we can unlock the signal table.

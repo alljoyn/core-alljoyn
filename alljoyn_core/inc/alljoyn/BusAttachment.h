@@ -576,6 +576,23 @@ class BusAttachment : public MessageReceiver {
                                   const char* srcPath);
 
     /**
+     * Register a signal handler.
+     *
+     * Signals are forwarded to the signalHandler if sender, interface, member and rule
+     * qualifiers are ALL met.
+     *
+     * @param receiver       The object receiving the signal.
+     * @param signalHandler  The signal handler method.
+     * @param member         The interface/member of the signal.
+     * @param matchRule      A filter rule.
+     * @return #ER_OK
+     */
+    QStatus RegisterSignalHandlerWithRule(MessageReceiver* receiver,
+                                          MessageReceiver::SignalHandler signalHandler,
+                                          const InterfaceDescription::Member* member,
+                                          const char* matchRule);
+
+    /**
      * Unregister a signal handler.
      *
      * Remove the signal handler that was registered with the given parameters.
@@ -590,6 +607,22 @@ class BusAttachment : public MessageReceiver {
                                     MessageReceiver::SignalHandler signalHandler,
                                     const InterfaceDescription::Member* member,
                                     const char* srcPath);
+
+    /**
+     * Unregister a signal handler.
+     *
+     * Remove the signal handler that was registered with the given parameters.
+     *
+     * @param receiver       The object receiving the signal.
+     * @param signalHandler  The signal handler method.
+     * @param member         The interface/member of the signal.
+     * @param matchRule      A filter rule.
+     * @return #ER_OK
+     */
+    QStatus UnregisterSignalHandlerWithRule(MessageReceiver* receiver,
+                                            MessageReceiver::SignalHandler signalHandler,
+                                            const InterfaceDescription::Member* member,
+                                            const char* matchRule);
 
     /**
      * Unregister all signal and reply handlers for the specified message receiver. This function is
@@ -1005,31 +1038,94 @@ class BusAttachment : public MessageReceiver {
                              BusAttachment::JoinSessionAsyncCB* callback,
                              void* context = NULL);
 
+
     /**
      * Set the SessionListener for an existing sessionId.
+     * This method cannot be called on a self-joined session.
      *
-     * Calling this method will override the listener set by a previous call to SetSessionListener or any
-     * listener specified in JoinSession.
+     * Calling this method will override the listener set by a previous call to SetSessionListener,
+     * SetHostedSessionListener, SetJoinedSessionListener or any listener specified in JoinSession.
      *
      * @param sessionId    The session id of an existing session.
      * @param listener     The SessionListener to associate with the session. May be NULL to clear previous listener.
-     * @return  ER_OK if successful.
+     * @return
+     *      - #ER_OK if successful.
+     *      - #ER_BUS_NO_SESSION if session did not exist
      */
     QStatus SetSessionListener(SessionId sessionId, SessionListener* listener);
+
+    /**
+     * Set the SessionListener for an existing sessionId on the joiner side.
+     *
+     * Calling this method will override the listener set by a previous call to SetSessionListener, SetJoinedSessionListener
+     * or any listener specified in JoinSession.
+     *
+     * @param sessionId    The session id of an existing session.
+     * @param listener     The SessionListener to associate with the session. May be NULL to clear previous listener.
+     * @return
+     *      - #ER_OK if successful.
+     *      - #ER_BUS_NO_SESSION if session did not exist or if not joiner side of the session
+     */
+    QStatus SetJoinedSessionListener(SessionId sessionId, SessionListener* listener);
+
+    /**
+     * Set the SessionListener for an existing sessionId on the host side.
+     *
+     * Calling this method will override the listener set by a previous call to SetSessionListener or SetHostedSessionListener.
+     *
+     * @param sessionId    The session id of an existing session.
+     * @param listener     The SessionListener to associate with the session. May be NULL to clear previous listener.
+     * @return
+     *      - #ER_OK if successful.
+     *      - #ER_BUS_NO_SESSION if session did not exist or if not host side of the session
+     */
+    QStatus SetHostedSessionListener(SessionId sessionId, SessionListener* listener);
 
     /**
      * Leave an existing session.
      * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveSession method call to the local router
      * and interprets the response.
+     * This method cannot be called on self-joined session.
      *
      * @param[in]  sessionId     Session id.
      *
      * @return
-     *      - #ER_OK iff router response was received and the leave operation was successfully completed.
+     *      - #ER_OK if router response was received and the leave operation was successfully completed.
      *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+     *      - #ER_BUS_NO_SESSION if session did not exist.
      *      - Other error status codes indicating a failure.
      */
     QStatus LeaveSession(const SessionId& sessionId);
+
+    /**
+     * Leave an existing session as host. This function will fail if you were not the host.
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveHostedSession method call to the local router
+     * and interprets the response.
+     *
+     * @param[in]  sessionId     Session id.
+     *
+     * @return
+     *      - #ER_OK if router response was received and the leave operation was successfully completed.
+     *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+     *      - #ER_BUS_NO_SESSION if session did not exist or if not host of the session.
+     *      - Other error status codes indicating a failure.
+     */
+    QStatus LeaveHostedSession(const SessionId& sessionId);
+
+    /**
+     * Leave an existing session as joiner. This function will fail if you were not the joiner.
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveJoinedSession method call to the local router
+     * and interprets the response.
+     *
+     * @param[in]  sessionId     Session id.
+     *
+     * @return
+     *      - #ER_OK if router response was received and the leave operation was successfully completed.
+     *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+     *      - #ER_BUS_NO_SESSION if session did not exist or if not joiner of the session.
+     *      - Other error status codes indicating a failure.
+     */
+    QStatus LeaveJoinedSession(const SessionId& sessionId);
 
     /**
      * Remove a member from an existing multipoint session.
@@ -1473,6 +1569,18 @@ class BusAttachment : public MessageReceiver {
     /// @endcond
 
   private:
+    typedef uint16_t SessionSideMask;
+
+    typedef enum {
+        SESSION_SIDE_HOST = 0,
+        SESSION_SIDE_JOINER = 1,
+        SESSION_SIDE_NUM
+    } SessionSide;
+
+    static const uint8_t SESSION_SIDE_MASK_HOST = (1 << SESSION_SIDE_HOST);
+    static const uint8_t SESSION_SIDE_MASK_JOINER = (1 << SESSION_SIDE_JOINER);
+    static const uint8_t SESSION_SIDE_MASK_BOTH = (SESSION_SIDE_MASK_HOST | SESSION_SIDE_MASK_JOINER);
+
     /**
      * Assignment operator is private.
      */
@@ -1507,6 +1615,21 @@ class BusAttachment : public MessageReceiver {
      * Validate the response to JoinSession
      */
     QStatus GetJoinSessionResponse(Message& reply, SessionId& sessionId, SessionOpts& opts);
+
+    /**
+     * Leave the session as host and/or joiner
+     */
+    QStatus LeaveSession(const SessionId& sessionId, const char*method, SessionSideMask bitset);
+
+    /**
+     * Clear session listeners for a particular session
+     */
+    void ClearSessionListener(SessionId sessionId, SessionSideMask bitset);
+
+    /**
+     * Remove references to session
+     */
+    void ClearSessionSet(SessionId sessionId, SessionSideMask bitset);
 
     qcc::String connectSpec;  /**< The connect spec used to connect to the bus */
     bool isStarted;           /**< Indicates if the bus has been started */

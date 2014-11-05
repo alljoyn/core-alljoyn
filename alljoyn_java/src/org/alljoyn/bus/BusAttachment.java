@@ -325,6 +325,12 @@ public class BusAttachment {
     public static final int SESSION_ID_ANY = 0;
 
     /**
+     * When specified during SignalEmitter creation, emits on all session hosted 
+     * by this BusAttachment.
+     */
+    public static final int SESSION_ID_ALL_HOSTED = -1;
+
+    /**
      * Cancel an existing port binding.
      *
      * @param   sessionPort    Existing session port to be un-bound.
@@ -391,7 +397,7 @@ public class BusAttachment {
      *
      * @return
      * <ul>
-     * <li>OK iff method call to local router response was was successful.</li>
+     * <li>OK if method call to local router response was was successful.</li>
      * <li>BUS_NOT_CONNECTED if a connection has not been made with a local bus.</li>
      * <li>Other error status codes indicating a failure.</li>
      * </ul>
@@ -407,10 +413,9 @@ public class BusAttachment {
 
     /**
      * Leave an existing session.
-     *
-     * This method is a shortcut/helper that issues an
-     * org.alljoyn.Bus.LeaveSession method call to the local router
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveSession method call to the local router
      * and interprets the response.
+     * This method cannot be called on self-joined session.
      *
      * @param sessionId     Session id.
      *
@@ -418,10 +423,45 @@ public class BusAttachment {
      * <ul>
      * <li>OK if router response was left.</li>
      * <li>BUS_NOT_CONNECTED if a connection has not been made with a local bus</li>
+     * <li>ER_BUS_NO_SESSION if session did not exist.</li>
      * <li>other error status codes indicating failures.</li>
      * </ul>
      */
     public native Status leaveSession(int sessionId);
+
+    /**
+     * Leave an existing session as host. This function will fail if you were not the host. This method is a
+     * shortcut/helper that issues an org.alljoyn.Bus.LeaveHostedSession method call to the local router and interprets
+     * the response.
+     *
+     * @param  sessionId     Session id.
+     *
+     * @return
+     * <ul>
+     * <li>ER_OK if router response was received and the leave operation was successfully completed.</li>
+     * <li>ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.</li>
+     * <li>ER_BUS_NO_SESSION if session did not exist or if not host of the session.</li>
+     * <li>Other error status codes indicating a failure.</li>
+     * </ul>
+     */
+    public native Status leaveHostedSession(int sessionId);
+
+    /**
+     * Leave an existing session as joiner. This function will fail if you were not the joiner.
+     * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveJoinedSession method call to the local router
+     * and interprets the response.
+     *
+     * @param sessionId Session id.
+     *
+     * @return
+     * <ul>
+     * <li>ER_OK if router response was received and the leave operation was successfully completed.</li>
+     * <li>ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.</li>
+     * <li>ER_BUS_NO_SESSION if session did not exist or if not joiner of the session.</li>
+     * <li>Other error status codes indicating a failure.</li>
+     * </ul>
+     */
+    public native Status leaveJoinedSession(int sessionId);
 
     /**
      * Remove a session member from an existing multipoint session.
@@ -443,16 +483,42 @@ public class BusAttachment {
     public native Status removeSessionMember(int sessionId, String sessionMemberName);
 
     /**
-     * Set the SessionListener for an existing session.
+     * Set the SessionListener for an existing session on both host and joiner side.
      *
      * Calling this method will override (replace) the listener set by a previoius call to
-     * setSessionListener or a listener specified in joinSession.
+     * setSessionListener, SetHostedSessionListener, SetJoinedSessionListener or a listener specified in joinSession.
      *
      * @param sessionId    The session id of an existing session.
      * @param listener     The SessionListener to associate with the session. May be null to clear previous listener.
      * @return  ER_OK if successful.
+     * @return  ER_BUS_NO_SESSION if session did not exist
      */
     public native Status setSessionListener(int sessionId, SessionListener listener);
+
+    /**
+     * Set the SessionListener for an existing sessionId on the joiner side.
+     *
+     * Calling this method will override the listener set by a previous call to SetSessionListener, SetJoinedSessionListener
+     * or any listener specified in JoinSession.
+     *
+     * @param sessionId    The session id of an existing session.
+     * @param listener     The SessionListener to associate with the session. May be NULL to clear previous listener.
+     * @return  ER_OK if successful.
+     * @return  ER_BUS_NO_SESSION if session did not exist or if not joiner side of the session
+     */
+    public native Status setJoinedSessionListener(int sessionId, SessionListener listener);
+
+    /**
+     * Set the SessionListener for an existing sessionId on the host side.
+     *
+     * Calling this method will override the listener set by a previous call to SetSessionListener or SetHostedSessionListener.
+     *
+     * @param sessionId    The session id of an existing session.
+     * @param listener     The SessionListener to associate with the session. May be NULL to clear previous listener.
+     * @return  ER_OK if successful.
+     * @return  ER_BUS_NO_SESSION if session did not exist or if not host side of the session
+     */
+    public native Status setHostedSessionListener(int sessionId, SessionListener listener);
 
     /**
      * Get the file descriptor for a raw (non-message based) session.
@@ -1019,8 +1085,11 @@ public class BusAttachment {
 
     private native boolean isSecureBusObject(BusObject busObj);
 
-    private native Status registerNativeSignalHandler(String ifaceName, String signalName,
+    private native Status registerNativeSignalHandlerWithSrcPath(String ifaceName, String signalName,
             Object obj, Method handlerMethod, String source);
+
+    private native Status registerNativeSignalHandlerWithRule(String ifaceName, String signalName, Object obj,
+        Method handlerMethod, String rule);
 
     /**
      * Release resources immediately.
@@ -1385,24 +1454,22 @@ public class BusAttachment {
     }
 
     /**
-     * Registers a public method to receive a signal from specific objects
-     * emitting it.
-     * Once registered, the method of the object will receive the signal
-     * specified from objects implementing the interface.
-     *
+     * Registers a public method to receive a signal from specific objects emitting it. Once registered, the method of
+     * the object will receive the signal specified from objects implementing the interface.
+     * 
      * @param ifaceName the interface name of the signal
      * @param signalName the member name of the signal
      * @param obj the object receiving the signal
      * @param handlerMethod the signal handler method
      * @param source the object path of the emitter of the signal
-     * @return OK if the register is succesful
+     * @return OK if the register is successful
      */
     public Status registerSignalHandler(String ifaceName,
             String signalName,
             Object obj,
             Method handlerMethod,
             String source) {
-        Status status = registerNativeSignalHandler(ifaceName, signalName, obj, handlerMethod,
+        Status status = registerNativeSignalHandlerWithSrcPath(ifaceName, signalName, obj, handlerMethod,
                                                     source);
         if (status == Status.BUS_NO_SUCH_INTERFACE) {
             try {
@@ -1417,13 +1484,59 @@ public class BusAttachment {
                     } catch (NoSuchMethodException ex) {
                         // Ignore, use signalName parameter provided
                     }
-                    status = registerNativeSignalHandler(ifaceName, signalName, obj, handlerMethod,
+                    status = registerNativeSignalHandlerWithSrcPath(ifaceName, signalName, obj, handlerMethod,
                                                          source);
                 }
             } catch (ClassNotFoundException ex) {
                 BusException.log(ex);
                 status = Status.BUS_NO_SUCH_INTERFACE;
             } catch (AnnotationBusException ex) {
+                BusException.log(ex);
+                status = Status.BAD_ANNOTATION;
+            }
+        }
+        return status;
+    }
+
+    /**
+     * Register a signal handler.
+     * 
+     * Signals are forwarded to the signalHandler if sender, interface, member and rule qualifiers are ALL met.
+     * 
+     * @param receiver The object receiving the signal.
+     * @param signalHandler The signal handler method.
+     * @param member The interface/member of the signal.
+     * @param matchRule A filter rule.
+     * @return OK if the register is successful
+     */
+
+    public Status registerSignalHandlerWithRule(String ifaceName, String signalName, Object obj, Method handlerMethod,
+        String matchRule)
+    {
+
+        Status status = registerNativeSignalHandlerWithRule(ifaceName, signalName, obj, handlerMethod, matchRule);
+        if (status == Status.BUS_NO_SUCH_INTERFACE) {
+            try {
+                Class<?> iface = Class.forName(ifaceName);
+                InterfaceDescription desc = new InterfaceDescription();
+                status = desc.create(this, iface);
+                if (status == Status.OK) {
+                    ifaceName = InterfaceDescription.getName(iface);
+                    try {
+                        Method signal = iface.getMethod(signalName, handlerMethod.getParameterTypes());
+                        signalName = InterfaceDescription.getName(signal);
+                    }
+                    catch (NoSuchMethodException ex) {
+                        // Ignore, use signalName parameter provided
+                    }
+                    status = registerNativeSignalHandlerWithRule(ifaceName, signalName, obj, handlerMethod, matchRule);
+                }
+            }
+            catch (ClassNotFoundException ex) {
+                BusException.log(ex);
+                status = Status.BUS_NO_SUCH_INTERFACE;
+            }
+            catch (AnnotationBusException ex) {
                 BusException.log(ex);
                 status = Status.BAD_ANNOTATION;
             }
@@ -1449,7 +1562,12 @@ public class BusAttachment {
         for (Method m : obj.getClass().getMethods()) {
             BusSignalHandler a = m.getAnnotation(BusSignalHandler.class);
             if (a != null) {
-                status = registerSignalHandler(a.iface(), a.signal(), obj, m, a.source());
+                if (a.rule().equals("") == false) {
+                    status = registerSignalHandlerWithRule(a.iface(), a.signal(), obj, m, a.rule());
+                }
+                else {
+                    status = registerSignalHandler(a.iface(), a.signal(), obj, m, a.source());
+                }
                 if (status != Status.OK) {
                     break;
                 }
