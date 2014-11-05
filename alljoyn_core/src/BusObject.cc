@@ -334,14 +334,12 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
                         break;
                     }
                     entry->Set("{sv}", props[i]->name.c_str(), val);
+                    entry->SetOwnershipFlags(MsgArg::OwnsArgs, false);
                     entry++;
                 }
             }
             vals.Set("a{sv}", readable, dict);
-            /*
-             * Set ownership of the MsgArgs so they will be automatically freed.
-             */
-            vals.SetOwnershipFlags(MsgArg::OwnsArgs, true /*deep*/);
+            vals.SetOwnershipFlags(MsgArg::OwnsArgs, false);
         }
     } else {
         status = ER_BUS_UNKNOWN_INTERFACE;
