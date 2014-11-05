@@ -455,7 +455,7 @@ public class AboutDataTest extends TestCase{
         }
     }
 
-    class TestAboutListener extends AboutListener {
+    class TestAboutListener implements AboutListener {
         TestAboutListener() {
             remoteBusName = null;
             version = 0;

@@ -18,7 +18,7 @@ package org.alljoyn.bus;
 
 import java.util.Map;
 
-public class AboutListener {
+public interface AboutListener {
     /**
      * Called by the bus when an announcement containing information about the
      * application and interfaces is found
@@ -29,5 +29,5 @@ public class AboutListener {
      * @param objectDescriptions a list of object paths and interfaces in the announcement
      * @param aboutData a dictionary of key/value pairs of the AboutData
      */
-    public void announced(String busName, int version, short port, AboutObjectDescription[] objectDescriptions, Map<String, Variant> aboutData) {}
+    public void announced(String busName, int version, short port, AboutObjectDescription[] objectDescriptions, Map<String, Variant> aboutData);
 }

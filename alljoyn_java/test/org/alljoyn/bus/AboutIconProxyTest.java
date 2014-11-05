@@ -131,7 +131,7 @@ public class AboutIconProxyTest extends TestCase{
         }
     }
 
-    class AboutListenerTestAboutListener extends AboutListener {
+    class AboutListenerTestAboutListener implements AboutListener {
         AboutListenerTestAboutListener() {
             remoteBusName = null;
             version = 0;
