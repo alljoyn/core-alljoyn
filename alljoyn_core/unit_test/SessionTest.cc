@@ -15,7 +15,6 @@
  ******************************************************************************/
 #include <qcc/platform.h>
 
-#include <pthread.h>
 #include <assert.h>
 #include <signal.h>
 #include <stdio.h>

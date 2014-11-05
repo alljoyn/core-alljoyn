@@ -292,10 +292,10 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     bool IsSessionPortBound(SessionPort sessionPort);
 
     /**
-      * Return all hosted sessions
-      *
-      * @return set with all hosted session ids
-      */
+     * Return all hosted sessions
+     *
+     * @return set with all hosted session ids
+     */
     std::set<SessionId> GetHostedSessions() const {
         sessionSetLock[SESSION_SIDE_HOST].Lock(MUTEX_CONTEXT);
         std::set<SessionId> copy = sessionSet[SESSION_SIDE_HOST];
