@@ -588,27 +588,6 @@ public class BusAttachmentTest extends TestCase {
                         "    </method>\n" +
                         "    <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n" +
                         "  </interface>\n" +
-                        "  <interface name=\"org.freedesktop.DBus.Properties\">\n" +
-                        "    <method name=\"Get\">\n" +
-                        "      <arg name=\"interface\" type=\"s\" direction=\"in\"/>\n" +
-                        "      <arg name=\"propname\" type=\"s\" direction=\"in\"/>\n" +
-                        "      <arg name=\"value\" type=\"v\" direction=\"out\"/>\n" +
-                        "    </method>\n" +
-                        "    <method name=\"GetAll\">\n" +
-                        "      <arg name=\"interface\" type=\"s\" direction=\"in\"/>\n" +
-                        "      <arg name=\"props\" type=\"a{sv}\" direction=\"out\"/>\n" +
-                        "    </method>\n" +
-                        "    <signal name=\"PropertiesChanged\">\n" +
-                        "      <arg name=\"interface\" type=\"s\" direction=\"out\"/>\n" +
-                        "      <arg name=\"changed_props\" type=\"a{sv}\" direction=\"out\"/>\n" +
-                        "      <arg name=\"invalidated_props\" type=\"as\" direction=\"out\"/>\n" +
-                        "    </signal>\n" +
-                        "    <method name=\"Set\">\n" +
-                        "      <arg name=\"interface\" type=\"s\" direction=\"in\"/>\n" +
-                        "      <arg name=\"propname\" type=\"s\" direction=\"in\"/>\n" +
-                        "      <arg name=\"value\" type=\"v\" direction=\"in\"/>\n" +
-                        "    </method>\n" +
-                        "  </interface>\n" +
                         "</node>\n";
         assertEquals(expected, actual);
     }

@@ -164,7 +164,19 @@ qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep,
         /* Iterate over interfaces */
         vector<const InterfaceDescription*>::const_iterator itIf = components->ifaces.begin();
         while (itIf != components->ifaces.end()) {
-            xml += (*itIf++)->Introspect(indent, languageTag, bus ? bus->GetDescriptionTranslator() : NULL);
+            /*
+             * We need to omit the standard D-Bus interfaces from the
+             * introspection data due to a bug in AllJoyn 14.06 and
+             * older.  This will allow older versions of AllJoyn to
+             * introspect us and not fail.  Sadly, this hack can never
+             * be removed.
+             */
+            if ((strcmp((*itIf)->GetName(), org::freedesktop::DBus::InterfaceName) == 0) ||
+                (strcmp((*itIf)->GetName(), org::freedesktop::DBus::Properties::InterfaceName) == 0)) {
+                ++itIf;
+            } else {
+                xml += (*itIf++)->Introspect(indent, languageTag, bus ? bus->GetDescriptionTranslator() : NULL);
+            }
         }
     }
     return xml;
