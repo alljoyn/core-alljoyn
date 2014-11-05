@@ -578,12 +578,6 @@ QStatus BusAttachment::Disconnect(const char* connectSpec)
                                         alljoynIface->GetMember("MPSessionChanged"),
                                         NULL);
             }
-            if (dbusIface) {
-                UnregisterSignalHandler(busInternal,
-                                        static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
-                                        dbusIface->GetMember("PropertiesChanged"),
-                                        NULL);
-            }
         }
     }
 
