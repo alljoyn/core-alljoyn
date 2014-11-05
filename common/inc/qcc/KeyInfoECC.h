@@ -194,6 +194,7 @@ class KeyInfoNISTP256 : public KeyInfoECC {
 
     void SetPublicKey(const ECCPublicKey* key)
     {
+        /* using uncompressed */
         pubkey.form = 0x4;
         memcpy((uint8_t*) &pubkey.key, (uint8_t*) key, sizeof (pubkey.key));
     }

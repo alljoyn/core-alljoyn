@@ -59,40 +59,129 @@ static const char root_prvkey[] = {
 
 static const char clientPrivateKeyPEM[] = {
     "-----BEGIN PRIVATE KEY-----\n"
-    "MvoVFhR8flubG1Ej1uGQpfsNhs6qmLBKa0QbgBlcs54="
+    "WvfKW/zzFtv9E+8S752Y9JBbvMjVE3+bd7VQxy/r6kU="
     "-----END PRIVATE KEY-----"
+};
+
+static const char clientPublicKeyPEM[] = {
+    "-----BEGIN PUBLIC KEY-----\n"
+    "k/5HsY/cJYTrDutk/06LlyuEldPyqx53B84QlP8thIzl5Fut/+CwW2DDUWD/infS\n"
+    "SCVStzLPL8IJDCJIy9u7Lw==\n"
+    "-----END PUBLIC KEY-----"
 };
 static const char clientCertChainType1PEM[] = {
     "-----BEGIN CERTIFICATE-----\n"
-    "AAAAAfXzT3yYCx8Cv1NlxS0YfD/5Fdtb6nU5D0BOlIXghWkFAAAAAF1nXcm5Uard\n"
-    "2LdbyV3OH9DgDx0ffnbq6/DW+J+tklzGAAAAAAAAAAD18098mAsfAr9TZcUtGHw/\n"
-    "+RXbW+p1OQ9ATpSF4IVpBQAAAABdZ13JuVGq3di3W8ldzh/Q4A8dH3526uvw1vif\n"
-    "rZJcxgAAAAAAAAAAAAAAAAANb9wAAAAAAA1xCAABMa7uTLSqjDggO0t6TAgsxKNt\n"
-    "+Zhu/jc3s242BE0drDjjBTJ9VqY+0GBNpm01umYic0237jSpnCYOyPEPVh8YAAAA\n"
-    "AD9l3W8B6P7s6t83qHhxGIO8FlQti1VC87ArvJEnd3bJAAAAAA==\n"
+    "AAAAAf8thIwHzhCU8qsedyuEldP/TouX6w7rZI/cJYST/kexAAAAAMvbuy8JDCJI\n"
+    "Ms8vwkglUrf/infSYMNRYP/gsFvl5FutAAAAAAAAAAD/LYSMB84QlPKrHncrhJXT\n"
+    "/06Ll+sO62SP3CWEk/5HsQAAAADL27svCQwiSDLPL8JIJVK3/4p30mDDUWD/4LBb\n"
+    "5eRbrQAAAAAAAAAAAAAAAAASgF0AAAAAABKBiQABMa7uTLSqjDggO0t6TAgsxKNt\n"
+    "+Zhu/jc3s242BE0drFU12USXXIYQdqps/HrMtqw6q9hrZtaGJS+e9y7mJegAAAAA\n"
+    "APpeLT1cHNm3/OupnEcUCmg+jqi4SUEi4WTWSR4OzvCSAAAAAA==\n"
     "-----END CERTIFICATE-----"
 };
 
 static const char servicePrivateKeyPEM[] = {
     "-----BEGIN PRIVATE KEY-----\n"
-    "61AE2gWlxyGrfQfoBy62z4sHAT7X0k0BNLIOObQJaDo="
+    "r4xFNBM7UQVS40QJUVyuJmQCC3ey4Eduj1evmDncZCc="
     "-----END PRIVATE KEY-----"
 };
+
+static const char servicePublicKeyPEM[] = {
+    "-----BEGIN PUBLIC KEY-----\n"
+    "PULf9zxQIxiuoiu0Aih5C46b7iekwVQyC0fljWaWJYlmzgl5Knd51ilhcoT9h45g"
+    "hxgYrj8X2zPcex5b3MZN2w=="
+    "-----END PUBLIC KEY-----"
+};
+
 static const char serviceCertChainType1PEM[] = {
     "-----BEGIN CERTIFICATE-----\n"
-    "AAAAAbhUKIuCFdnnilH7OvIpbwhlYnOFlldH7qp/NlK13rhKAAAAANTOoKGkOnu+\n"
-    "E+2dDIIDMBAB3I+Im5WI7Cb9VH9VZyTiAAAAAAAAAABgVo+tVLvVu5NA38Ei9md0\n"
-    "Rjh/KHUU2eS7/g2RTwVsbwAAAABtQDwamvvoG4OIin2WoDwiPFnx5ahhwJJx4ml4\n"
-    "jpxQfAAAAAAAAAAAAAAAAAANPsAAAAAAAA0/7AABMa7uTLSqjDggO0t6TAgsxKNt\n"
-    "+Zhu/jc3s242BE0drFgLLKoGCRPa9WW1cHCZ7MyEemf05UpVQg6qKK4eIZqwAAAA\n"
-    "AMoJZukYYdtix9+Yq+Q+9asEW/cGEs4ixsEHhqNycFAXAAAAAA==\n"
+    "AAAAAWaWJYkLR+WNpMFUMo6b7icCKHkLrqIrtDxQIxg9Qt/3AAAAANzGTdvcex5b"
+    "PxfbM4cYGK79h45gKWFyhCp3edZmzgl5AAAAAAAAAABmliWJC0fljaTBVDKOm+4n"
+    "Aih5C66iK7Q8UCMYPULf9wAAAADcxk3b3HseWz8X2zOHGBiu/YeOYClhcoQqd3nW"
+    "Zs4JeQAAAAAAAAAAAAAAAAARcI0AAAAAABFxuQABMa7uTLSqjDggO0t6TAgsxKNt"
+    "+Zhu/jc3s242BE0drFkulpB/I/875Iq9JAdGCO6uLJpPHlSJwA8xZPYxzNiQAAAA"
+    "APH11DQAtqb0yrr4lry4fptgQ/Ri8ZOVlQkFFEKaD1XPAAAAAA=="
     "-----END CERTIFICATE-----"
 };
+
+static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPubKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, qcc::String& der)
+{
+    QStatus status = ER_CRYPTO_ERROR;
+    CertificateX509 x509(CertificateX509::GUID_CERTIFICATE);
+
+    printf("Creating certificate\n");
+    x509.SetSerial(serial);
+    x509.SetIssuer(issuer);
+    x509.SetSubject(subject);
+    x509.SetSubjectPublicKey(subjectPubKey);
+    status = x509.Sign(issuerPrivateKey);
+    if (ER_OK != status) {
+        return status;
+    }
+    printf("Certificate: %s\n", x509.ToString().c_str());
+    return x509.EncodeCertificateDER(der);
+}
+
+static QStatus CreateIdentityCert(CredentialAccessor& ca, const qcc::String& serial, const char* issuerPrivateKeyPEM, const char* issuerPublicKeyPEM, bool selfSign, qcc::String& der)
+{
+    qcc::GUID128 localGUID;
+    ca.GetGuid(localGUID);
+    qcc::GUID128 userGuid;
+    Crypto_ECC userECC;
+
+    ECCPrivateKey issuerPrivateKey;
+    CertECCUtil_DecodePrivateKey(issuerPrivateKeyPEM, (uint32_t*) &issuerPrivateKey, sizeof(ECCPrivateKey));
+    ECCPublicKey issuerPublicKey;
+    CertECCUtil_DecodePublicKey(issuerPublicKeyPEM, (uint32_t*) &issuerPublicKey, sizeof(ECCPublicKey));
+
+    printf("CreateIdentity certificate with issuer private key %s\n", BytesToHexString((const uint8_t*) &issuerPrivateKey, sizeof(ECCPrivateKey)).c_str());
+    printf("CreateIdentity certificate with issuer public key %s\n", BytesToHexString((const uint8_t*) &issuerPublicKey, sizeof(ECCPublicKey)).c_str());
+
+    const ECCPublicKey* subjectPublicKey;
+    if (selfSign) {
+        subjectPublicKey = &issuerPublicKey;
+    } else {
+        userECC.GenerateDSAKeyPair();
+        subjectPublicKey = userECC.GetDSAPublicKey();
+    }
+    return CreateCert(serial, localGUID, &issuerPrivateKey, &issuerPublicKey, userGuid, subjectPublicKey, der);
+}
+
+static QStatus CreateGuildCert(const String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
+{
+    QStatus status = ER_CRYPTO_ERROR;
+    CertificateX509 x509(CertificateX509::GUILD_CERTIFICATE);
+
+    printf("Creating membership certificate\n");
+    x509.SetSerial(serial);
+    x509.SetIssuer(issuer);
+    x509.SetSubject(subject);
+    x509.SetSubjectPublicKey(subjectPubKey);
+    x509.SetGuild(guild);
+    printf("Signing certificate\n");
+    status = x509.Sign(issuerPrivateKey);
+    printf("Sign certificate return status 0x%x\n", status);
+    if (ER_OK != status) {
+        return status;
+    }
+    printf("Certificate: %s\n", x509.ToString().c_str());
+    status = x509.EncodeCertificateDER(der);
+    printf("x509.ExportDER return status 0x%x\n", status);
+    return status;
+}
 
 static QStatus InterestInSignal(BusAttachment* bus)
 {
     const char* notifyConfigMatchRule = "type='signal',interface='" "org.allseen.Security.PermissionMgmt.Notification" "',member='NotifyConfig'";
     return bus->AddMatch(notifyConfigMatchRule);
+}
+
+static void MakePEM(qcc::String& der, qcc::String& pem)
+{
+    qcc::String tag1 = "-----BEGIN CERTIFICATE-----\n";
+    qcc::String tag2 = "-----END CERTIFICATE-----";
+    Crypto_ASN1::EncodeBase64(der, pem);
+    pem = tag1 + pem + tag2;
 }
 
 /*
@@ -104,7 +193,7 @@ static QStatus InterestInSignal(BusAttachment* bus)
  */
 class ECDHEKeyXListener : public AuthListener {
   public:
-    ECDHEKeyXListener(bool isService) : isService(isService)
+    ECDHEKeyXListener(bool isService, BusAttachment& bus) : isService(isService), bus(bus)
     {
     }
 
@@ -128,14 +217,14 @@ class ECDHEKeyXListener : public AuthListener {
             return true;
         } else if (strcmp(authMechanism, KEYX_ECDHE_ECDSA) == 0) {
             const char* privateKeyPEM;
-            const char* certChainType1PEM;
+            const char* publicKeyPEM;
 
             if (isService) {
                 privateKeyPEM = servicePrivateKeyPEM;
-                certChainType1PEM = serviceCertChainType1PEM;
+                publicKeyPEM = servicePublicKeyPEM;
             } else {
                 privateKeyPEM = clientPrivateKeyPEM;
-                certChainType1PEM = clientCertChainType1PEM;
+                publicKeyPEM = clientPublicKeyPEM;
             }
 
             /*
@@ -151,8 +240,13 @@ class ECDHEKeyXListener : public AuthListener {
                     creds.SetPrivateKey(pk);
                 }
                 if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
-                    String cert(certChainType1PEM, strlen(certChainType1PEM));
-                    creds.SetCertChain(cert);
+                    CredentialAccessor ca(bus);
+                    qcc::String der;
+                    /* make a self sign cert */
+                    CreateIdentityCert(ca, "1001", privateKeyPEM, publicKeyPEM, true, der);
+                    qcc::String pem;
+                    MakePEM(der, pem);
+                    creds.SetCertChain(pem);
                 }
             }
             creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
@@ -171,6 +265,7 @@ class ECDHEKeyXListener : public AuthListener {
                  * The application has to option to verify the certificate
                  * chain.  If the cert chain is validated and trusted then return true; otherwise, return false.
                  */
+                return true;
             }
             return true;
         }
@@ -183,6 +278,7 @@ class ECDHEKeyXListener : public AuthListener {
 
   private:
     bool isService;
+    BusAttachment& bus;
 };
 
 class PermissionMgmtTest : public testing::Test, public BusObject {
@@ -242,11 +338,17 @@ class PermissionMgmtTest : public testing::Test, public BusObject {
         }
     }
 
-    void EnableSecurity(const char* keyExchange)
+    void EnableSecurity(const char* keyExchange, bool clearPrevious)
     {
-        clientKeyListener = new ECDHEKeyXListener(false);
+        if (clearPrevious) {
+            clientBus.EnablePeerSecurity(NULL, NULL, NULL, false);
+            serviceBus.EnablePeerSecurity(NULL, NULL, NULL, false);
+        }
+        delete clientKeyListener;
+        clientKeyListener = new ECDHEKeyXListener(false, clientBus);
         clientBus.EnablePeerSecurity(keyExchange, clientKeyListener, NULL, false);
-        serviceKeyListener = new ECDHEKeyXListener(true);
+        delete serviceKeyListener;
+        serviceKeyListener = new ECDHEKeyXListener(true, serviceBus);
         serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, NULL, false);
     }
 
@@ -580,58 +682,12 @@ QStatus RemovePolicy(BusAttachment& bus, ProxyBusObject& remoteObj)
     return status;
 }
 
-QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPubKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, qcc::String& der)
+
+QStatus CreateMembershipCert(const String& serial, const qcc::GUID128& issuer, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
 {
-    QStatus status = ER_CRYPTO_ERROR;
-    CertificateX509 x509(CertificateX509::GUID_CERTIFICATE);
-
-    printf("Creating certificate\n");
-    x509.SetSerial(serial);
-    x509.SetIssuer(issuer);
-    x509.SetSubject(subject);
-    x509.SetSubjectPublicKey(subjectPubKey);
-    status = x509.Sign(issuerPrivateKey);
-    if (ER_OK != status) {
-        return status;
-    }
-    printf("Certificate: %s\n", x509.ToString().c_str());
-    return x509.EncodeCertificateDER(der);
-}
-
-QStatus CreateIdentityCert(const qcc::String& serial, const qcc::GUID128& issuerGUID, const ECCPublicKey* issuerPubKey, qcc::String& der)
-{
-    // Setup root and user
-    qcc::GUID128 userGuid;
-    Crypto_ECC userECC;
-
     ECCPrivateKey trustAnchorPrivateKey;
     CertECCUtil_DecodePrivateKey(clientPrivateKeyPEM, (uint32_t*) &trustAnchorPrivateKey, sizeof(ECCPrivateKey));
-
-    userECC.GenerateDSAKeyPair();
-    return CreateCert(serial, issuerGUID, &trustAnchorPrivateKey, issuerPubKey, userGuid, userECC.GetDSAPublicKey(), der);
-}
-
-QStatus CreateGuildCert(const String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
-{
-    QStatus status = ER_CRYPTO_ERROR;
-    CertificateX509 x509(CertificateX509::GUILD_CERTIFICATE);
-
-    printf("Creating membership certificate\n");
-    x509.SetSerial(serial);
-    x509.SetIssuer(issuer);
-    x509.SetSubject(subject);
-    x509.SetSubjectPublicKey(subjectPubKey);
-    x509.SetGuild(guild);
-    printf("Signing certificate\n");
-    status = x509.Sign(issuerPrivateKey);
-    printf("Sign certificate return status 0x%x\n", status);
-    if (ER_OK != status) {
-        return status;
-    }
-    printf("Certificate: %s\n", x509.ToString().c_str());
-    status = x509.EncodeCertificateDER(der);
-    printf("x509.ExportDER return status 0x%x\n", status);
-    return status;
+    return CreateGuildCert(serial, issuer, &trustAnchorPrivateKey, subject, subjectPubKey, guild, der);
 }
 
 QStatus RetrieveDSAPublicKeyFromKeyStore(BusAttachment& bus, ECCPublicKey* publicKey)
@@ -662,6 +718,60 @@ QStatus LoadCertificateBytes(Message& msg, CertificateX509& cert)
         status = cert.DecodeCertificateDER(String((const char*) encoded, encodedLen));
     } else if (encoding == Certificate::ENCODING_X509_DER_PEM) {
         status = cert.DecodeCertificatePEM(String((const char*) encoded, encodedLen));
+    }
+    return status;
+}
+
+QStatus InstallMembership(const String& serial, BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::GUID128& subjectGUID, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+
+    CredentialAccessor ca(bus);
+    qcc::GUID128 localGUID;
+    status = ca.GetGuid(localGUID);
+    if (status != ER_OK) {
+        return status;
+    }
+    qcc::String der;
+    status = CreateMembershipCert(serial, localGUID, subjectGUID, subjectPubKey, guild, der);
+    if (status != ER_OK) {
+        return status;
+    }
+    printf("Sending membership cert length %d\n", (int) der.length());
+    MsgArg arg("(yay)", Certificate::ENCODING_X509_DER, der.length(), der.c_str());
+
+    status = remoteObj.MethodCall(INTERFACE_NAME, "InstallMembership", &arg, 1, reply, 5000);
+
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
+    }
+    return status;
+}
+
+
+QStatus RemoveMembership(BusAttachment& bus, ProxyBusObject& remoteObj, const qcc::String serialNum, const qcc::GUID128& issuer)
+{
+    QStatus status;
+    const InterfaceDescription* itf = bus.GetInterface(INTERFACE_NAME);
+    remoteObj.AddInterface(*itf);
+    Message reply(bus);
+
+    MsgArg inputs[2];
+    inputs[0].Set("ay", serialNum.size(), serialNum.data());
+    qcc::String issuerStr = issuer.ToString();
+    inputs[1].Set("ay", issuerStr.size(), issuerStr.data());
+
+    status = remoteObj.MethodCall(INTERFACE_NAME, "RemoveMembership", inputs, 2, reply, 5000);
+
+    if (ER_OK != status) {
+        if (IsPermissionDeniedError(status, reply)) {
+            status = ER_PERMISSION_DENIED;
+        }
     }
     return status;
 }
@@ -735,7 +845,7 @@ QStatus RemoveIdentity(BusAttachment& bus, ProxyBusObject& remoteObj)
 TEST_F(PermissionMgmtTest, Claim)
 {
     QStatus status = ER_OK;
-    EnableSecurity("ALLJOYN_ECDHE_NULL");
+    EnableSecurity("ALLJOYN_ECDHE_NULL", false);
     clientBus.ClearKeyStore();
     serviceBus.ClearKeyStore();
     SessionId sessionId;
@@ -768,7 +878,7 @@ TEST_F(PermissionMgmtTest, Claim)
 TEST_F(PermissionMgmtTest, InstallPolicy)
 {
     ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
-    EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
 
     CredentialAccessor ca(clientBus);
     qcc::GUID128 localGUID;
@@ -802,7 +912,7 @@ TEST_F(PermissionMgmtTest, InstallPolicy)
 TEST_F(PermissionMgmtTest, RemovePolicy)
 {
     ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
-    EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
 
     CredentialAccessor ca(clientBus);
     qcc::GUID128 localGUID;
@@ -840,19 +950,11 @@ TEST_F(PermissionMgmtTest, RemovePolicy)
 TEST_F(PermissionMgmtTest, InstallIdentity)
 {
     ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
-    EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
 
     CredentialAccessor ca(clientBus);
-    qcc::GUID128 localGUID;
-    status = ca.GetGuid(localGUID);
-    EXPECT_EQ(ER_OK, status) << "  ca.GetGuid failed.  Actual Status: " << QCC_StatusText(status);
-    /* retrieve the trust anchor public key */
-    String certChainPEM(clientCertChainType1PEM);
-    QStatus status = ParseCertChainPEM(certChainPEM);
-    EXPECT_EQ(ER_OK, status) << "  ParseCertChainPEM failed.  Actual Status: " << QCC_StatusText(status);
-    const ECCPublicKey* issuerPubKey = certChain[0]->GetIssuer();
     qcc::String der;
-    status = CreateIdentityCert("1010101", localGUID, issuerPubKey, der);
+    status = CreateIdentityCert(ca, "1010101", clientPrivateKeyPEM, clientPublicKeyPEM, false, der);
     EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
 
     status = InstallIdentity(clientBus, clientProxyObject, der);
@@ -873,4 +975,45 @@ TEST_F(PermissionMgmtTest, InstallIdentity)
     EXPECT_NE(ER_OK, status) << "  GetIdentity did not fail.  Actual Status: " << QCC_StatusText(status);
 
 }
+
+/*
+ *  Test PermissionMgmt InstallMembership method
+ */
+TEST_F(PermissionMgmtTest, InstallMembership)
+{
+    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
+
+    ECCPublicKey claimedPubKey;
+    status = RetrieveDSAPublicKeyFromKeyStore(serviceBus, &claimedPubKey);
+    EXPECT_EQ(ER_OK, status) << "  InstallMembership RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
+    qcc::GUID128 guildGUID;
+    status = InstallMembership("10001", clientBus, clientProxyObject, claimedGUID, &claimedPubKey, guildGUID);
+    EXPECT_EQ(ER_OK, status) << "  InstallMembership cert1 failed.  Actual Status: " << QCC_StatusText(status);
+    status = InstallMembership("10001", clientBus, clientProxyObject, claimedGUID, &claimedPubKey, guildGUID);
+    EXPECT_NE(ER_OK, status) << "  InstallMembership cert1 again is supposed to fail.  Actual Status: " << QCC_StatusText(status);
+
+}
+
+/*
+ *  Test PermissionMgmt InstallMembership method
+ */
+TEST_F(PermissionMgmtTest, RemoveMembership)
+{
+    ProxyBusObject clientProxyObject(clientBus, serviceBus.GetUniqueName().c_str(), PERMISSION_MGMT_PATH, 0, false);
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA", false);
+    CredentialAccessor ca(clientBus);
+    qcc::GUID128 localGUID;
+    status = ca.GetGuid(localGUID);
+    EXPECT_EQ(ER_OK, status) << "  ca.GetGuid failed.  Actual Status: " << QCC_StatusText(status);
+
+    status = RemoveMembership(clientBus, clientProxyObject, "10001", localGUID);
+    EXPECT_EQ(ER_OK, status) << "  RemoveMembership failed.  Actual Status: " << QCC_StatusText(status);
+
+    /* removing it again */
+    status = RemoveMembership(clientBus, clientProxyObject, "10001", localGUID);
+    EXPECT_NE(ER_OK, status) << "  RemoveMembership succeeded.  Expect it to fail.  Actual Status: " << QCC_StatusText(status);
+
+}
+
 

@@ -64,7 +64,7 @@ static const uint32_t MAX_KEYGEN_VERSION = 0x01;
  * The base authentication version number
  */
 static const uint32_t MIN_AUTH_VERSION = 0x0001;
-static const uint32_t MAX_AUTH_VERSION = 0x0002;
+static const uint32_t MAX_AUTH_VERSION = 0x0003;
 
 static const uint32_t PREFERRED_AUTH_VERSION = (MAX_AUTH_VERSION << 16) | MIN_KEYGEN_VERSION;
 
@@ -759,7 +759,6 @@ void AllJoynPeerObj::AuthAdvance(Message& msg)
 void AllJoynPeerObj::DoKeyExchange(Message& msg)
 {
     QStatus status = ER_OK;
-    qcc::String sender = msg->GetSender();
 
     uint32_t authMask = msg->GetArg(0)->v_uint32;
     MsgArg* inVariant;
@@ -783,7 +782,16 @@ void AllJoynPeerObj::DoKeyExchange(Message& msg)
 
     uint32_t authMaskList[1];
     authMaskList[0] = effectiveAuthMask;
-    KeyExchanger*keyExchanger = GetKeyExchangerInstance(false, authMaskList, 1);
+    qcc::String sender = msg->GetSender();
+    PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
+    if (!peerStateTable->IsKnownPeer(sender)) {
+        lock.Unlock(MUTEX_CONTEXT);
+        status = ER_AUTH_FAIL;
+        MethodReply(msg, status);
+        return;
+    }
+    PeerState peerState = peerStateTable->GetPeerState(sender);
+    KeyExchanger* keyExchanger = GetKeyExchangerInstance(peerState->GetAuthVersion() >> 16, false, authMaskList, 1);
     if (!keyExchanger) {
         lock.Unlock(MUTEX_CONTEXT);
         status = ER_AUTH_FAIL;
@@ -1386,7 +1394,7 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
     QStatus status;
 
     QCC_DbgHLPrintf(("AuthenticatePeerUsingKeyExchange"));
-    KeyExchanger*keyExchanger = GetKeyExchangerInstance(true, requestingAuthList, requestingAuthCount);  /* initiator */
+    KeyExchanger*keyExchanger = GetKeyExchangerInstance(peerState->GetAuthVersion() >> 16, true, requestingAuthList, requestingAuthCount);  /* initiator */
     if (!keyExchanger) {
         return ER_AUTH_FAIL;
     }
@@ -1693,18 +1701,18 @@ void AllJoynPeerObj::SessionJoined(const InterfaceDescription::Member* member, c
     bus->GetInternal().CallJoinedListeners(sessionPort, sessionId, joiner);
 }
 
-KeyExchanger* AllJoynPeerObj::GetKeyExchangerInstance(bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount)
+KeyExchanger* AllJoynPeerObj::GetKeyExchangerInstance(uint16_t peerAuthVersion, bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount)
 {
     for (size_t cnt = 0; cnt < requestingAuthCount; cnt++) {
         uint32_t suite = requestingAuthList[cnt];
         if ((suite & AUTH_SUITE_ECDHE_ECDSA) == AUTH_SUITE_ECDHE_ECDSA) {
-            return new KeyExchangerECDHE_ECDSA(initiator, this, *bus, peerAuthListener);
+            return new KeyExchangerECDHE_ECDSA(initiator, this, *bus, peerAuthListener, peerAuthVersion);
         }
         if ((suite & AUTH_SUITE_ECDHE_PSK) == AUTH_SUITE_ECDHE_PSK) {
-            return new KeyExchangerECDHE_PSK(initiator, this, *bus, peerAuthListener);
+            return new KeyExchangerECDHE_PSK(initiator, this, *bus, peerAuthListener, peerAuthVersion);
         }
         if ((suite & AUTH_SUITE_ECDHE_NULL) == AUTH_SUITE_ECDHE_NULL) {
-            return new KeyExchangerECDHE_NULL(initiator, this, *bus, peerAuthListener);
+            return new KeyExchangerECDHE_NULL(initiator, this, *bus, peerAuthListener, peerAuthVersion);
         }
     }
     return NULL;

@@ -27,6 +27,7 @@
 
 #include <qcc/String.h>
 #include <qcc/Log.h>
+#include <qcc/CertificateECC.h>
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/DBusStd.h>
@@ -142,16 +143,29 @@ static MyBusListener s_busListener;
  * If any other authMechanism is used other than ECDHE Key Exchange authentication
  * will fail.
  */
+
+static const char privateKeyPEM[] = {
+    "-----BEGIN PRIVATE KEY-----\n"
+    "r4xFNBM7UQVS40QJUVyuJmQCC3ey4Eduj1evmDncZCc="
+    "-----END PRIVATE KEY-----"
+};
+
+static const char publicKeyPEM[] = {
+    "-----BEGIN PUBLIC KEY-----\n"
+    "PULf9zxQIxiuoiu0Aih5C46b7iekwVQyC0fljWaWJYlmzgl5Knd51ilhcoT9h45g"
+    "hxgYrj8X2zPcex5b3MZN2w=="
+    "-----END PUBLIC KEY-----"
+};
+
 class ECDHEKeyXListener : public AuthListener {
   public:
+
     ECDHEKeyXListener()
     {
     }
 
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds)
     {
-        printf("RequestCredentials for authenticating %s using mechanism %s authCount %d\n", authPeer, authMechanism, authCount);
-
         if (strcmp(authMechanism, KEYX_ECDHE_NULL) == 0) {
             creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
             return true;
@@ -159,9 +173,6 @@ class ECDHEKeyXListener : public AuthListener {
             /*
              * Solicit the Pre shared secret
              */
-            if ((credMask & AuthListener::CRED_USER_NAME) == AuthListener::CRED_USER_NAME) {
-                printf("RequestCredentials received psk ID %s\n", creds.GetUserName().c_str());
-            }
             /*
              * Based on the pre shared secret id, the application can retrieve
              * the pre shared secret from storage or from the end user.
@@ -172,57 +183,29 @@ class ECDHEKeyXListener : public AuthListener {
             creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
             return true;
         } else if (strcmp(authMechanism, KEYX_ECDHE_ECDSA) == 0) {
-            static const char privateKeyPEM[] = {
-                "-----BEGIN PRIVATE KEY-----\n"
-                "tV/tGPp7kI0pUohc+opH1LBxzk51pZVM/RVKXHGFjAcAAAAA\n"
-                "-----END PRIVATE KEY-----"
-            };
-            static const char certChainType1PEM[] = {
-                "-----BEGIN CERTIFICATE-----\n"
-                "AAAAAfUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n"
-                "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n"
-                "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n"
-                "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3AABMa7uTLSqjDggO0t6TAgsxKNt\n"
-                "+Zhu/jc3s242BE0drPcL4K+FOVJf+tlivskovQ3RfzTQ+zLoBH5ZCzG9ua/dAAAA\n"
-                "ACt5bWBzbcaT0mUqwGOVosbMcU7SmhtE7vWNn/ECvpYFAAAAAA==\n"
-                "-----END CERTIFICATE-----"
-            };
-            static const char certChainType2PEM[] = {
-                "-----BEGIN CERTIFICATE-----\n"
-                "AAAAAvUQdhMSDuFWahMG/rFmFbKM06BjIA2Scx9GH+ENLAgtAAAAAIbhHnjAyFys\n"
-                "6DoN2kKlXVCgtHpFiEYszOYXI88QDvC1AAAAAAAAAAC5dRALLg6Qh1J2pVOzhaTP\n"
-                "xI+v/SKMFurIEo2b4S8UZAAAAADICW7LLp1pKlv6Ur9+I2Vipt5dDFnXSBiifTmf\n"
-                "irEWxQAAAAAAAAAAAAAAAAABXLAAAAAAAAFd3ABjeWi1/GbBcdnK0yJvL4X/UF0h\n"
-                "8plX3uAhOlF2vT2jfxe5U06zaWSXcs9kBEQvfOc+WvKloM7m5NFJNSd3qFFGUhfj\n"
-                "xx/0CCRJlk/jeIWmzQAAAAB8bexqa95eHEKTqdc8+qKFKggZZXlpaj9af/MFocIP\n"
-                "NQAAAAA=\n"
 
-                "-----END CERTIFICATE-----"
-            };
             /*
              * The application may provide the DSA private key and public key in the certificate.
              * AllJoyn stores the keys in the key store for future use.
              * If the application does not provide the private key, AllJoyn will
              * generate the DSA key pair.
              */
-            bool providePrivateKey = true;  /* use to toggle the test */
+            bool providePrivateKey = true;      /* use to toggle the test */
             if (providePrivateKey) {
                 if ((credMask & AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
                     String pk(privateKeyPEM, strlen(privateKeyPEM));
                     creds.SetPrivateKey(pk);
                 }
                 if ((credMask & AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
-                    bool useType1 = true;  /* use to toggle which cert to send */
-                    if (useType1) {
-                        String cert(certChainType1PEM, strlen(certChainType1PEM));
-                        creds.SetCertChain(cert);
-                    } else {
-                        String cert(certChainType2PEM, strlen(certChainType2PEM));
-                        creds.SetCertChain(cert);
-                    }
+                    qcc::String der;
+                    /* make a self sign cert */
+                    qcc::GUID128 issuerGUID;
+                    CreateIdentityCert(issuerGUID, "1001", privateKeyPEM, publicKeyPEM, true, der);
+                    qcc::String pem;
+                    MakePEM(der, pem);
+                    creds.SetCertChain(pem);
                 }
             }
-
             creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
             return true;
         }
@@ -236,9 +219,10 @@ class ECDHEKeyXListener : public AuthListener {
             if (creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
                 /*
                  * AllJoyn sends back the certificate chain for the application to verify.
-                 * The application has to option to verify the certificate chain.  If the cert chain is validated and trusted then return true; otherwise, return false.
+                 * The application has to option to verify the certificate
+                 * chain.  If the cert chain is validated and trusted then return true; otherwise, return false.
                  */
-                printf("VerifyCredentials receives cert chain %s\n", creds.GetCertChain().c_str());
+                return true;
             }
             return true;
         }
@@ -246,11 +230,56 @@ class ECDHEKeyXListener : public AuthListener {
     }
 
     void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
-        printf("SampleServiceECDHE::AuthenticationComplete Authentication %s %s\n", authMechanism, success ? "successful" : "failed");
+        printf("AuthenticationComplete auth mechanism %s success %d\n", authMechanism, success);
+    }
+
+  private:
+    void MakePEM(qcc::String& der, qcc::String& pem)
+    {
+        qcc::String tag1 = "-----BEGIN CERTIFICATE-----\n";
+        qcc::String tag2 = "-----END CERTIFICATE-----";
+        Crypto_ASN1::EncodeBase64(der, pem);
+        pem = tag1 + pem + tag2;
+    }
+
+    QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPubKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, qcc::String& der)
+    {
+        QStatus status = ER_CRYPTO_ERROR;
+        CertificateX509 x509(CertificateX509::GUID_CERTIFICATE);
+
+        x509.SetSerial(serial);
+        x509.SetIssuer(issuer);
+        x509.SetSubject(subject);
+        x509.SetSubjectPublicKey(subjectPubKey);
+        status = x509.Sign(issuerPrivateKey);
+        if (ER_OK != status) {
+            return status;
+        }
+        printf("Certificate: %s\n", x509.ToString().c_str());
+        return x509.EncodeCertificateDER(der);
+    }
+
+    QStatus CreateIdentityCert(qcc::GUID128& issuer, const qcc::String& serial, const char* issuerPrivateKeyPEM, const char* issuerPublicKeyPEM, bool selfSign, qcc::String& der)
+    {
+        qcc::GUID128 userGuid;
+        Crypto_ECC userECC;
+
+        ECCPrivateKey issuerPrivateKey;
+        CertECCUtil_DecodePrivateKey(issuerPrivateKeyPEM, (uint32_t*) &issuerPrivateKey, sizeof(ECCPrivateKey));
+        ECCPublicKey issuerPublicKey;
+        CertECCUtil_DecodePublicKey(issuerPublicKeyPEM, (uint32_t*) &issuerPublicKey, sizeof(ECCPublicKey));
+
+        const ECCPublicKey* subjectPublicKey;
+        if (selfSign) {
+            subjectPublicKey = &issuerPublicKey;
+        } else {
+            userECC.GenerateDSAKeyPair();
+            subjectPublicKey = userECC.GetDSAPublicKey();
+        }
+        return CreateCert(serial, issuer, &issuerPrivateKey, &issuerPublicKey, userGuid, subjectPublicKey, der);
     }
 
 };
-
 
 /** Create the interface, report the result to stdout, and return the result status. */
 QStatus CreateInterface(void)

@@ -54,6 +54,11 @@ class PermissionMgmtObj : public BusObject {
         }
 
         /**
+         * Simply wraps the call of the same name to the inner AuthListener
+         */
+        bool RequestCredentials(const char* authMechanism, const char* peerName, uint16_t authCount, const char* userName, uint16_t credMask, Credentials& credentials);
+
+        /**
          * Simply wraps the call of the same name to the inner ProtectedAuthListener
          */
         bool VerifyCredentials(const char* authMechanism, const char* peerName, const Credentials& credentials);
@@ -164,9 +169,14 @@ class PermissionMgmtObj : public BusObject {
     QStatus NotifyConfig();
 
     void InstallIdentity(const InterfaceDescription::Member* member, Message& msg);
+    QStatus GetIdentityBlob(qcc::KeyBlob& kb);
     void GetIdentity(const InterfaceDescription::Member* member, Message& msg);
     void RemoveIdentity(const InterfaceDescription::Member* member, Message& msg);
+    void InstallMembership(const InterfaceDescription::Member* member, Message& msg);
+    void InstallMembershipAuthData(const InterfaceDescription::Member* member, Message& msg);
+    void RemoveMembership(const InterfaceDescription::Member* member, Message& msg);
     bool ValidateCertChain(const qcc::String& certChainPEM, bool& authorized);
+    void BuildListOfGuilds();
     QStatus LocateMembershipEntry(qcc::String& serialNum, qcc::String& issuer, qcc::GUID128& membershipGuid);
 
     /**

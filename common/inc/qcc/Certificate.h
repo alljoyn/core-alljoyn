@@ -37,6 +37,15 @@ class Certificate {
   public:
 
     /**
+     * Certificate format
+     */
+
+    typedef enum {
+        SPKI_CERTIFICATE = 0,   ///< SPKI certificate format
+        X509_CERTIFICATE = 1   ///< X.509 certificate format
+    } Format;
+
+    /**
      * encoding format
      */
     typedef enum {
@@ -53,8 +62,16 @@ class Certificate {
                                 expressed in the number of seconds in EPOCH Jan 1, 1970 */
     };
 
-    Certificate(uint32_t version) {
+    Certificate(uint32_t version, Format format)
+    {
         SetVersion(version);
+        SetFormat(format);
+    }
+
+    Certificate(uint32_t version)
+    {
+        SetVersion(version);
+        SetFormat(SPKI_CERTIFICATE);
     }
 
     /**
@@ -75,6 +92,23 @@ class Certificate {
         version = val;
     }
 
+    /**
+     * Get the certificate format.
+     * @return the certificate format
+     */
+    Format GetFormat()
+    {
+        return format;
+    }
+
+    /**
+     * Set the certificate format
+     * @param val the certificate format
+     */
+    virtual void SetFormat(Format val)
+    {
+        format = val;
+    }
 
     /**
      * Get the encoded bytes for the certificate
@@ -167,6 +201,7 @@ class Certificate {
 
   private:
     uint32_t version;
+    Format format;
 };
 
 } /* namespace qcc */

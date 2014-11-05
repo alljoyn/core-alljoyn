@@ -574,9 +574,18 @@ class CertificateX509 : public Certificate {
     } CertificateType;
 
     /**
+     * constructor.
+     */
+    CertificateX509(CertificateType type) : Certificate(3, X509_CERTIFICATE), type(type), encodedLen(0), encoded(NULL)
+    {
+    }
+
+    /**
      * Default constructor.
      */
-    CertificateX509(CertificateType type) : Certificate(3) { this->type = type; };
+    CertificateX509() : Certificate(3, X509_CERTIFICATE), type(GUID_CERTIFICATE), encodedLen(0), encoded(NULL)
+    {
+    }
 
     /**
      * Decode a PEM encoded certificate.
@@ -683,6 +692,38 @@ class CertificateX509 : public Certificate {
     }
 
     /**
+     * Get the encoded bytes for the certificate
+     * @return the encoded bytes
+     */
+    const uint8_t* GetEncoded();
+
+    /**
+     * Get the length of the encoded bytes for the certificate
+     * @return the length of the encoded bytes
+     */
+    size_t GetEncodedLen();
+
+    /**
+     * Load the encoded bytes for the certificate
+     * @param encodedBytes the encoded bytes
+     * @param len the length of the encoded bytes
+     * @return ER_OK for sucess; otherwise, error code.
+     */
+    QStatus LoadEncoded(const uint8_t* encodedBytes, size_t len);
+
+    /**
+     * Get the PEM encoded bytes for the certificate
+     * @return the PEM encoded bytes
+     */
+    String GetPEM();
+
+    /**
+     * Load the PEM encoded bytes for the certificate
+     * @param encoded the encoded bytes
+     * @return ER_OK for sucess; otherwise, error code.
+     */
+    QStatus LoadPEM(const String& PEM);
+    /**
      * Returns a human readable string for a cert if there is one associated with this key.
      *
      * @return A string for the cert or and empty string if there is no cert.
@@ -692,7 +733,19 @@ class CertificateX509 : public Certificate {
     /**
      * Destructor
      */
-    ~CertificateX509() { };
+    ~CertificateX509()
+    {
+        delete [] encoded;
+    }
+
+    /**
+     * Retrieve the number of X.509 certificates in a PEM string representing a cert chain.
+     * @param encoded the input string holding the PEM string
+     * @param[in,out] certChain the input string holding the array of certs.
+     * @param[in] count the expected number of certs
+     * @return ER_OK for sucess; otherwise, error code.
+     */
+    static QStatus DecodeCertChainPEM(const String& encoded, CertificateX509* certChain, size_t count);
 
   private:
 
@@ -718,6 +771,7 @@ class CertificateX509 : public Certificate {
     QStatus EncodeCertificateExt(qcc::String& ext);
     QStatus DecodeCertificateSig(const qcc::String& sig);
     QStatus EncodeCertificateSig(qcc::String& sig);
+    QStatus GenEncoded();
 
     CertificateType type;
     qcc::String tbs;
@@ -728,6 +782,8 @@ class CertificateX509 : public Certificate {
     ValidPeriod validity;
     ECCPublicKey publickey;
     ECCSignature signature;
+    size_t encodedLen;
+    uint8_t* encoded;
 };
 
 } /* namespace qcc */

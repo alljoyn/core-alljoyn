@@ -152,6 +152,36 @@ static QStatus GenerateCertificateType2(CertificateType2& cert, const char* msg)
     return GenerateCertificateType2(false, true, 3600, cert, msg, &pk, &pubk, &subjectpk, &subjectk);
 }
 
+static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPubKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, CertificateX509& x509)
+{
+    QStatus status = ER_CRYPTO_ERROR;
+
+    x509.SetSerial(serial);
+    x509.SetIssuer(issuer);
+    x509.SetSubject(subject);
+    x509.SetSubjectPublicKey(subjectPubKey);
+    status = x509.Sign(issuerPrivateKey);
+    if (ER_OK != status) {
+        return status;
+    }
+    return ER_OK;
+}
+
+static QStatus CreateIdentityCert(qcc::GUID128& issuer, const qcc::String& serial, ECCPrivateKey* dsaPrivateKey, ECCPublicKey* dsaPublicKey, ECCPrivateKey* subjectPrivateKey, ECCPublicKey* subjectPublicKey, bool selfSign, CertificateX509& x509)
+{
+    Crypto_ECC ecc;
+    ecc.GenerateDSAKeyPair();
+    memcpy(dsaPrivateKey, ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey));
+    memcpy(dsaPublicKey, ecc.GetDSAPublicKey(), sizeof(ECCPublicKey));
+    if (!selfSign) {
+        ecc.GenerateDSAKeyPair();
+    }
+    memcpy(subjectPrivateKey, ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey));
+    memcpy(subjectPublicKey, ecc.GetDSAPublicKey(), sizeof(ECCPublicKey));
+    qcc::GUID128 userGuid;
+    return CreateCert(serial, issuer, dsaPrivateKey, dsaPublicKey, userGuid, subjectPublicKey, x509);
+}
+
 TEST_F(CertificateECCTest, CertificateType1SignatureVerifies)
 {
     CertificateType1 cert1(ecc.GetDSAPublicKey(), ecc.GetDHPublicKey());
@@ -707,6 +737,7 @@ TEST_F(CertificateECCTest, GenCertForBBservice)
     std::cout << "The cert2: " << endl << cert2.ToString().c_str() << endl;
 
 }
+
 /**
  * Use the encoded texts to put in the bbservice and bbclient files
  */
@@ -729,6 +760,11 @@ TEST_F(CertificateECCTest, GenSelfSignCertForBBservice)
 
     std::cout << "The encoded subject private key PEM:" << endl << encodedPK.c_str() << endl;
 
+    status = CertECCUtil_EncodePublicKey((uint32_t*) &subjectPublicKey, sizeof(ECCPublicKey), encodedPK);
+    ASSERT_EQ(ER_OK, status) << " CertECCUtil_EncodePublicKey failed with actual status: " << QCC_StatusText(status);
+
+    std::cout << "The encoded subject public key PEM:" << endl << encodedPK.c_str() << endl;
+
     EXPECT_TRUE(cert1.VerifySignature());
     String pem1 = cert1.GetPEM();
     std::cout << "The encoded cert PEM for cert1:" << endl << pem1.c_str() << endl;
@@ -749,5 +785,38 @@ TEST_F(CertificateECCTest, GenSelfSignCertForBBservice)
     std::cout << "The encoded cert PEM for cert2:" << endl << pem2.c_str() << endl;
 
     std::cout << "The cert2: " << endl << cert2.ToString().c_str() << endl;
+}
 
+/**
+ * Use the encoded texts to put in the bbservice and bbclient files
+ */
+TEST_F(CertificateECCTest, GenSelfSignECCX509CertForBBservice)
+{
+    qcc::GUID128 issuer;
+    ECCPrivateKey dsaPrivateKey;
+    ECCPublicKey dsaPublicKey;
+    ECCPrivateKey subjectPrivateKey;
+    ECCPublicKey subjectPublicKey;
+    CertificateX509 x509(CertificateX509::GUID_CERTIFICATE);
+
+    QStatus status = CreateIdentityCert(issuer, "1010101", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, x509);
+    ASSERT_EQ(ER_OK, status) << " CreateIdentityCert failed with actual status: " << QCC_StatusText(status);
+
+    String encodedPK;
+    status = CertECCUtil_EncodePrivateKey((uint32_t*) &subjectPrivateKey, sizeof(ECCPrivateKey), encodedPK);
+    ASSERT_EQ(ER_OK, status) << " CertECCUtil_EncodePrivateKey failed with actual status: " << QCC_StatusText(status);
+
+    std::cout << "The encoded subject private key PEM:" << endl << encodedPK.c_str() << endl;
+
+    status = CertECCUtil_EncodePublicKey((uint32_t*) &subjectPublicKey, sizeof(ECCPublicKey), encodedPK);
+    ASSERT_EQ(ER_OK, status) << " CertECCUtil_EncodePublicKey failed with actual status: " << QCC_StatusText(status);
+
+    std::cout << "The encoded subject public key PEM:" << endl << encodedPK.c_str() << endl;
+
+    status = x509.Verify(&dsaPublicKey);
+    ASSERT_EQ(ER_OK, status) << " verify cert failed with actual status: " << QCC_StatusText(status);
+    String pem = x509.GetPEM();
+    std::cout << "The encoded cert PEM for ECC X.509 cert:" << endl << pem.c_str() << endl;
+
+    std::cout << "The ECC X.509 cert: " << endl << x509.ToString().c_str() << endl;
 }

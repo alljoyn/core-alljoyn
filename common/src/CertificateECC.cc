@@ -376,13 +376,13 @@ qcc::String CertificateType0::ToString()
     str += U32ToString(GetVersion());
     str += "\n";
     str += "issuer: ";
-    str += BytesToHexString((const uint8_t*) GetIssuer(), sizeof(ECCPublicKeyOldEncoding));
+    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_ISSUER], sizeof(ECCPublicKeyOldEncoding));
     str += "\n";
     str += "digest: ";
     str += BytesToHexString((const uint8_t*) GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE);
     str += "\n";
     str += "sig: ";
-    str += BytesToHexString((const uint8_t*) GetSig(), sizeof(ECCSignatureOldEncoding));
+    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_SIG], sizeof(ECCSignatureOldEncoding));
     str += "\n";
     return str;
 }
@@ -533,10 +533,10 @@ qcc::String CertificateType1::ToString()
     str += U32ToString(GetVersion());
     str += "\n";
     str += "issuer: ";
-    str += BytesToHexString((const uint8_t*) GetIssuer(), sizeof(ECCPublicKeyOldEncoding));
+    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_ISSUER], sizeof(ECCPublicKeyOldEncoding));
     str += "\n";
     str += "subject: ";
-    str +=  BytesToHexString((const uint8_t*) GetSubject(), sizeof(ECCPublicKeyOldEncoding));
+    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_SUBJECT], sizeof(ECCPublicKeyOldEncoding));
     str += "\n";
     str += "validity: not-before ";
     str += U64ToString(GetValidity()->validFrom);
@@ -552,7 +552,7 @@ qcc::String CertificateType1::ToString()
     str += BytesToHexString((const uint8_t*) GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE);
     str += "\n";
     str += "sig: ";
-    str += BytesToHexString((const uint8_t*) GetSig(), sizeof(ECCSignatureOldEncoding));
+    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_SIG], sizeof(ECCSignatureOldEncoding));
     str += "\n";
     return str;
 }
@@ -714,10 +714,10 @@ String CertificateType2::ToString()
     str += U32ToString(GetVersion());
     str += "\n";
     str += "issuer: ";
-    str += BytesToHexString((const uint8_t*) GetIssuer(), sizeof(ECCPublicKeyOldEncoding));
+    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_ISSUER], sizeof(ECCPublicKeyOldEncoding));
     str += "\n";
     str += "subject: ";
-    str +=  BytesToHexString((const uint8_t*) GetSubject(), sizeof(ECCPublicKeyOldEncoding));
+    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_SUBJECT], sizeof(ECCPublicKeyOldEncoding));
     str += "\n";
     str += "validity: not-before ";
     str += U64ToString(GetValidity()->validFrom);
@@ -736,7 +736,7 @@ String CertificateType2::ToString()
     str += BytesToHexString((const uint8_t*) GetExternalDataDigest(), Crypto_SHA256::DIGEST_SIZE);
     str += "\n";
     str += "sig: ";
-    str += BytesToHexString((const uint8_t*) GetSig(), sizeof(ECCSignatureOldEncoding));
+    str += BytesToHexString((const uint8_t*) &encoded[OFFSET_SIG], sizeof(ECCSignatureOldEncoding));
     str += "\n";
     return str;
 }
@@ -973,7 +973,6 @@ QStatus CertificateX509::EncodeCertificateTBS()
     if (ER_OK != status) {
         return status;
     }
-    //TODO time
     status = ER_FAIL;
     if (GUID_CERTIFICATE == type) {
         status = EncodeCertificateName(sub, subject);
@@ -1180,6 +1179,79 @@ String CertificateX509::ToString()
     str += "publickey: " + BytesToHexString((const uint8_t*) &publickey, sizeof(publickey)) + "\n";
     str += "signature: " + BytesToHexString((const uint8_t*) &signature, sizeof(signature)) + "\n";
     return str;
+}
+
+QStatus CertificateX509::GenEncoded()
+{
+    delete [] encoded;
+    encoded = NULL;
+    encodedLen = 0;
+    String der;
+    QStatus status = EncodeCertificateDER(der);
+    if (ER_OK != status) {
+        return status;
+    }
+    encodedLen = der.length();
+    encoded = new uint8_t[encodedLen];
+    if (!encoded) {
+        return ER_OUT_OF_MEMORY;
+    }
+    memcpy(encoded, der.data(), encodedLen);
+    return ER_OK;
+}
+
+const uint8_t* CertificateX509::GetEncoded()
+{
+    if (encodedLen == 0) {
+        GenEncoded();
+    }
+    return encoded;
+}
+
+size_t CertificateX509::GetEncodedLen()
+{
+    if (encodedLen == 0) {
+        GenEncoded();
+    }
+    return encodedLen;
+}
+
+QStatus CertificateX509::LoadEncoded(const uint8_t* encodedBytes, size_t len)
+{
+    String der((const char*) encodedBytes, len);
+    return DecodeCertificateDER(der);
+}
+
+String CertificateX509::GetPEM()
+{
+    String pem;
+    EncodeCertificatePEM(pem);
+    return pem;
+}
+
+QStatus CertificateX509::LoadPEM(const String& pem)
+{
+    return DecodeCertificatePEM(pem);
+}
+
+QStatus CertificateX509::DecodeCertChainPEM(const String& encoded, CertificateX509* certs, size_t count)
+{
+    qcc::String* chunks = new  qcc::String[count];
+
+    QStatus status = RetrieveNumOfChunksFromPEM(encoded, "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----", chunks, count);
+    if (status != ER_OK) {
+        delete [] chunks;
+        return status;
+    }
+
+    for (size_t idx = 0; idx < count; idx++) {
+        status = certs[idx].LoadPEM(chunks[idx]);
+        if (ER_OK != status) {
+            break;
+        }
+    }
+    delete [] chunks;
+    return status;
 }
 
 }
