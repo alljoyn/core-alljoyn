@@ -278,6 +278,7 @@ void AutoPinger::RemovePingGroup(const qcc::String& group)
     if (it != pingGroups.end()) {
         // destructor of PingGroup cleans-up context
         timer.RemoveAlarm((*it).second->alarm, false);
+        delete it->second;
         pingGroups.erase(it);
     }
     pingerMutex.Unlock();
