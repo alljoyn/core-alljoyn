@@ -662,98 +662,6 @@ void* DaemonBLETransport::Run(void* arg)
          */
         QCC_DbgPrintf(("DaemonBLETransport::Run()"));
 
-        qcc::BDAddress remObj;
-
-        /* gix Loop through authorizing ports (Remote Devices) */
-        set<DaemonBLEEndpoint>::iterator i = m_authList.begin();
-        while (i != m_authList.end()) {
-            remObj.SetRaw(0);
-            DaemonBLEEndpoint ep = *i;
-            _DaemonBLEEndpoint::AuthState authState = ep->GetAuthState();
-
-            if (authState == _DaemonBLEEndpoint::AUTH_FAILED) {
-                /*
-                 * The endpoint has failed authentication and the auth thread is
-                 * gone or is going away.  Since it has failed there is no way this
-                 * endpoint is going to be started so we can get rid of it as soon
-                 * as we Join() the (failed) authentication thread.
-                 */
-                QCC_DbgPrintf(("DaemonBLETransport::Run(): Scavenging failed authenticator"));
-                m_authList.erase(i);
-                remObj = ep->GetRemObj();
-                m_lock.Unlock(MUTEX_CONTEXT);
-                ep->AuthStop();
-                ep->AuthJoin();
-                m_lock.Lock(MUTEX_CONTEXT);
-                i = m_authList.upper_bound(ep);
-                for (list<ListenEntry>::iterator it = m_listenList.begin(); it != m_listenList.end(); it++) {
-
-                    if (it->listenRemObj == remObj) {
-                        QCC_DbgPrintf(("DaemonBLETransport::Run(): Reenabling %s in the listenEvents", it->args["port"].c_str()));
-                        it->listenRemObj.SetRaw(0);
-                        it->endpointStarted = false;
-                        Thread::Alert();
-                    }
-                }
-            } else {
-                i++;
-            }
-        }
-
-        /* gix Loop through Fully Instanciated Remote Devices */
-        i = m_endpointList.begin();
-        while (i != m_endpointList.end()) {
-            remObj.SetRaw(0);
-            DaemonBLEEndpoint ep = *i;
-
-            _DaemonBLEEndpoint::EndpointState endpointState = ep->GetEpState();
-            /*
-             * There are two possibilities for the disposition of the RX and
-             * TX threads.  First, they were never successfully started.  In
-             * this case, the epState will be EP_FAILED.  If we find this, we
-             * can just remove the useless endpoint from the list and delete
-             * it.  Since the threads were never started, they must not be
-             * joined.
-             */
-            if (endpointState == _DaemonBLEEndpoint::EP_FAILED) {
-                m_endpointList.erase(i);
-                remObj = ep->GetRemObj();
-                i = m_endpointList.upper_bound(ep);
-            } else if (endpointState == _DaemonBLEEndpoint::EP_STOPPING) {
-                /*
-                 * The second possibility for the disposition of the RX and
-                 * TX threads is that they were successfully started but
-                 * have been stopped for some reason, either because of a
-                 * Disconnect() or a network error.  In this case, the
-                 * epState will be EP_STOPPING, which was set in the
-                 * EndpointExit function.  If we find this, we need to Join
-                 * the endpoint threads, remove the endpoint from the
-                 * endpoint list and delete it.  Note that we are calling
-                 * the endpoint Join() to join the TX and RX threads and not
-                 * the endpoint AuthJoin() to join the auth thread.
-                 */
-                m_endpointList.erase(i);
-                remObj = ep->GetRemObj();
-                m_lock.Unlock(MUTEX_CONTEXT);
-                ep->Stop();
-                ep->Join();
-                m_lock.Lock(MUTEX_CONTEXT);
-                i = m_endpointList.upper_bound(ep);
-            } else {
-                i++;
-            }
-            if (remObj.GetRaw() != 0) {
-                for (list<ListenEntry>::iterator it = m_listenList.begin(); it != m_listenList.end(); it++) {
-
-                    if (it->listenRemObj == remObj) {
-                        QCC_DbgPrintf(("DaemonBLETransport::Run(): Reenabling back %s in the listenEvents", it->args["port"].c_str()));
-                        it->listenRemObj.SetRaw(0);
-                        it->endpointStarted = false;
-                        break;
-                    }
-                }
-            }
-        }
         vector<Event*> checkEvents, signaledEvents;
         checkEvents.clear();
         checkEvents.push_back(&stopEvent);
@@ -772,38 +680,6 @@ void* DaemonBLETransport::Run(void* arg)
                  */
                 stopEvent.ResetEvent();
                 continue;
-            } else {
-                Event* e = *i;
-                QCC_DbgPrintf(("DaemonBLETransport::Run(): Accepting connection "));
-                for (list<ListenEntry>::iterator i = m_listenList.begin(); i != m_listenList.end(); i++) {
-                    if (!i->endpointStarted) {
-                        i->endpointStarted = true;
-                        qcc::String unused;
-                        /* Accept a new connection */
-                        qcc::String authName;
-                        QCC_DbgPrintf(("DaemonBLETransport::Run(): Creating endpoint for %s",  i->listenRemObj.ToString().c_str()));
-                        RemoteEndpoint conn(bleAccessor->Accept(m_bus, e));
-
-
-                        if (!conn->IsValid()) {
-                            continue;
-                        }
-                        /* Initialized the features for this endpoint */
-                        conn->GetFeatures().isBusToBus = false;
-                        conn->GetFeatures().allowRemote = false;
-                        conn->GetFeatures().handlePassing = false;
-
-                        QCC_DbgPrintf(("BLETransport::Run: Calling conn->Establish() [for accepted connection]"));
-                        status = conn->Establish("ANONYMOUS", authName, unused);
-                        if (ER_OK == status) {
-                            QCC_DbgPrintf(("Starting endpoint [for accepted connection]"));
-                            conn->SetListener(this);
-                            status = conn->Start();
-                        }
-                        break;
-                    }
-                }
-                delete e;
             }
         }
         for (vector<qcc::Event*>::iterator i = checkEvents.begin(); i != checkEvents.end(); ++i) {
@@ -930,18 +806,6 @@ void DaemonBLETransport::ReturnEndpoint(RemoteEndpoint& r) {
 }
 
 
-QStatus DaemonBLETransport::StartFind(const BDAddressSet& ignoreAddrs, uint32_t duration)
-{
-    return bleAccessor->StartDiscovery(ignoreAddrs, duration);
-}
-
-
-QStatus DaemonBLETransport::StopFind()
-{
-    return bleAccessor->StopDiscovery();
-}
-
-
 QStatus DaemonBLETransport::StartListen()
 {
     if (!btmActive) {
@@ -964,20 +828,6 @@ void DaemonBLETransport::StopListen()
     Thread::Join();
     bleAccessor->StopConnectable();
     QCC_DbgHLPrintf(("Stopped listening"));
-}
-
-void DaemonBLETransport::FoundNamesChange(const qcc::String& guid,
-                                          const vector<String>& names,
-                                          const BDAddress& bdAddr,
-                                          uint16_t psm,
-                                          bool lost)
-{
-    if (listener) {
-        qcc::String busAddr("bluetooth:addr=" + bdAddr.ToString() +
-                            ",psm=0x" + U32ToString(psm, 16));
-
-        listener->FoundNames(busAddr, guid, TRANSPORT_LOCAL, &names, lost ? 0 : BUS_NAME_TTL);
-    }
 }
 
 }

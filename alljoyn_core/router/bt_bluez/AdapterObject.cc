@@ -73,7 +73,6 @@ void _AdapterObject::PropertiesChanged(ProxyBusObject& obj,
                                        const MsgArg& invalidated,
                                        void* context)
 {
-    QCC_LogError(ER_FAIL, ("Needs to be trapped in BLEAccessor"));
 }
 
 } // namespace bluez

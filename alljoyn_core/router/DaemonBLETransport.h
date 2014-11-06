@@ -262,24 +262,6 @@ class DaemonBLETransport :
     RemoteEndpoint LookupEndpoint(const qcc::String& busName);
     void ReturnEndpoint(RemoteEndpoint& ep);
 
-    virtual QStatus StartFind(const BDAddressSet& ignoreAddrs, uint32_t duration = 0);
-    virtual QStatus StopFind();
-
-    /**
-     * This provides the Bluetooth transport with the information needed to
-     * call AllJoynObj::FoundNames and to generate the connect spec.
-     *
-     * @param bdAddr    BD address of the connectable node
-     * @param guid      Bus GUID of the discovered bus
-     * @param names     The advertised names
-     * @param psm       L2CAP PSM accepting connections
-     * @param lost      Set to true if names are lost, false otherwise
-     */
-    virtual void FoundNamesChange(const qcc::String& guid,
-                                  const std::vector<qcc::String>& names,
-                                  const qcc::BDAddress& bdAddr,
-                                  uint16_t psm,
-                                  bool lost);
     /**
      * Tells the Bluetooth transport to start listening for incoming connections.
      *

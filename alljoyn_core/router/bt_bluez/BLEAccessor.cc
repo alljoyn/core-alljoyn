@@ -409,29 +409,6 @@ void DaemonBLETransport::BLEAccessor::NameOwnerChanged(const char* busName, cons
 }
 
 
-QStatus DaemonBLETransport::BLEAccessor::StartDiscovery(const BDAddressSet& ignoreAddrs, uint32_t duration)
-{
-    this->ignoreAddrs = ignoreAddrs;
-
-    deviceLock.Lock(MUTEX_CONTEXT);
-    set<qcc::BDAddress>::const_iterator it;
-    for (it = ignoreAddrs->begin(); it != ignoreAddrs->end(); ++it) {
-        FoundInfoMap::iterator devit = foundDevices.find(*it);
-        if (devit != foundDevices.end()) {
-            foundDevices.erase(devit);
-        }
-    }
-    deviceLock.Unlock(MUTEX_CONTEXT);
-
-    QCC_DbgPrintf(("Start Discovery"));
-    QStatus status = DiscoveryControl(true);
-    if (duration > 0) {
-        DispatchOperation(new DispatchInfo(DispatchInfo::STOP_DISCOVERY),  duration * 1000);
-    }
-    return status;
-}
-
-
 QStatus DaemonBLETransport::BLEAccessor::PushBytes(String remObj, const void* buf, size_t numBytes, size_t& actualBytes)
 {
     QStatus status;
@@ -454,14 +431,6 @@ QStatus DaemonBLETransport::BLEAccessor::PushBytes(String remObj, const void* bu
     }
     return status;
 }
-
-QStatus DaemonBLETransport::BLEAccessor::StopDiscovery()
-{
-    QCC_DbgPrintf(("Stop Discovery"));
-
-    return ER_OK;
-}
-
 
 QStatus DaemonBLETransport::BLEAccessor::StartConnectable()
 {
@@ -619,7 +588,6 @@ QStatus DaemonBLETransport::BLEAccessor::EnumerateAdapters()
     bool adapter_found = false;
     const char* adapter_object;
 
-    //status = bzManagerObj.MethodCall(*org.bluez.Manager.ListAdapters, NULL, 0, rsp, BT_DEFAULT_TO);
     status = bzManagerObj.MethodCall(*org.bluez.ObjMgr.GetManagedObjects, NULL, 0, rsp, BT_DEFAULT_TO);
     if (status == ER_OK) {
         size_t numRecs;
@@ -841,61 +809,8 @@ void DaemonBLETransport::BLEAccessor::DefaultAdapterChanged(const char* adapterO
 
 void DaemonBLETransport::BLEAccessor::AlarmTriggered(const Alarm& alarm, QStatus reason)
 {
-    DispatchInfo* op = static_cast<DispatchInfo*>(alarm->GetContext());
-
-    if (reason == ER_OK) {
-        switch (op->operation) {
-        case DispatchInfo::STOP_DISCOVERY:
-            QCC_DbgPrintf(("Stopping Discovery"));
-            StopDiscovery();
-            break;
-
-        case DispatchInfo::ADAPTER_ADDED:
-            AdapterAdded(static_cast<AdapterDispatchInfo*>(op)->adapterPath.c_str());
-            break;
-
-        case DispatchInfo::ADAPTER_REMOVED:
-            AdapterRemoved(static_cast<AdapterDispatchInfo*>(op)->adapterPath.c_str());
-            break;
-
-        case DispatchInfo::DEFAULT_ADAPTER_CHANGED:
-            DefaultAdapterChanged(static_cast<AdapterDispatchInfo*>(op)->adapterPath.c_str());
-            break;
-        }
-    }
-
-    delete op;
 }
 
-
-void DaemonBLETransport::BLEAccessor::AdapterAddedSignalHandler(const InterfaceDescription::Member* member,
-                                                                const char* sourcePath,
-                                                                Message& msg)
-{
-    QCC_DbgTrace(("DaemonBLETransport::BLEAccessor::AdapterAddedSignalHandler - signal from \"%s\"", sourcePath));
-    DispatchOperation(new AdapterDispatchInfo(DispatchInfo::ADAPTER_ADDED, msg->GetArg(0)->v_objPath.str));
-}
-
-
-void DaemonBLETransport::BLEAccessor::AdapterRemovedSignalHandler(const InterfaceDescription::Member* member,
-                                                                  const char* sourcePath,
-                                                                  Message& msg)
-{
-    QCC_DbgTrace(("DaemonBLETransport::BLEAccessor::AdapterRemovedSignalHandler - signal from \"%s\"", sourcePath));
-    DispatchOperation(new AdapterDispatchInfo(DispatchInfo::ADAPTER_REMOVED, msg->GetArg(0)->v_objPath.str));
-}
-
-
-void DaemonBLETransport::BLEAccessor::DefaultAdapterChangedSignalHandler(const InterfaceDescription::Member* member,
-                                                                         const char* sourcePath,
-                                                                         Message& msg)
-{
-    QCC_DbgTrace(("DaemonBLETransport::BLEAccessor::DefaultAdapterChangedSignalHandler - signal from \"%s\"", sourcePath));
-    /*
-     * We are in a signal handler so kick off the restart in a new thread.
-     */
-    DispatchOperation(new AdapterDispatchInfo(DispatchInfo::DEFAULT_ADAPTER_CHANGED, msg->GetArg(0)->v_objPath.str));
-}
 
 void DaemonBLETransport::BLEAccessor::RxDataRecvSignalHandler(const InterfaceDescription::Member* member,
                                                               const char* sourcePath,
@@ -1083,51 +998,6 @@ void DaemonBLETransport::BLEAccessor::InterfacesRemovedSignalHandler(const Inter
 }
 
 
-QStatus DaemonBLETransport::BLEAccessor::GetDeviceObjPath(const qcc::BDAddress& bdAddr,
-                                                          qcc::String& devObjPath)
-{
-    const qcc::String& bdAddrStr(bdAddr.ToString());
-    QCC_DbgTrace(("DaemonBLETransport::BLEAccessor::GetDeviceObjPath(bdAddr = %s)", bdAddrStr.c_str()));
-    QStatus status(ER_NONE);
-    Message rsp(bzBus);
-    MsgArg arg("s", bdAddrStr.c_str());
-    vector<AdapterObject> adapterList;
-    AdapterObject adapter;
-
-    /*
-     * Getting the object path for a device is inherently racy.  The
-     * FindDevice method call will return an error if the device has not been
-     * created and the CreateDevice method call will return an error if the
-     * device already exists.  The problem is that anyone with access to the
-     * BlueZ d-bus service can create and remove devices from the list.  In
-     * theory another process could add or remove a device between the time we
-     * call CreateDevice and FindDevice.
-     */
-
-    // Get a copy of all the adapter objects to check.
-    adapterList.reserve(adapterMap.size());
-    adapterLock.Lock(MUTEX_CONTEXT);
-    for (AdapterMap::const_iterator ait = adapterMap.begin(); ait != adapterMap.end(); ++ait) {
-        adapterList.push_back(ait->second);
-    }
-    adapterLock.Unlock(MUTEX_CONTEXT);
-
-    // Call
-    // status = *bzManagerObj.MethodCall(*org.bluez.ObjMgr.GetManagedObjects, NULL, 0, rsp, BT_DEFAULT_TO);
-    if (status != ER_OK) {
-        //status = (*it)->MethodCall(*org.bluez.Adapter.FindDevice, &arg, 1, rsp, BT_DEFAULT_TO);
-    }
-
-    if (status == ER_OK) {
-        char* objPath;
-        rsp->GetArg(0)->Get("o", &objPath);
-        devObjPath = objPath;
-    }
-
-    return status;
-}
-
-
 QStatus DaemonBLETransport::BLEAccessor::DiscoveryControl(bool start)
 {
     const InterfaceDescription::Member* method = NULL;
@@ -1213,8 +1083,6 @@ void DaemonBLETransport::BLEAccessor::PropertiesChanged(ProxyBusObject& obj,
     bool val = 0;
     DeviceObject* dev = deviceProxyMap[obj.GetPath()];
     BLEController* controller = deviceMap[obj.GetPath()];
-
-    QCC_LogError(ER_OK, ("I WANT THIS CALLED AS THE BLEACCESSOR!!!!!!"));
 
     status = changed.GetElement("{sb}", "Powered", &val);
     if (status == ER_OK) {

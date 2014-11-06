@@ -82,19 +82,6 @@ BLEAccessor :
     void Stop();
 
     /**
-     * Start discovery (inquiry)
-     *
-     * @param ignoreAddrs   Set of BD Addresses to ignore
-     * @param duration      Number of seconds to discover (0 = forever, default is 0)
-     */
-    QStatus StartDiscovery(const BDAddressSet& ignoreAddrs, uint32_t duration = 0);
-
-    /**
-     * Stop discovery (inquiry)
-     */
-    QStatus StopDiscovery();
-
-    /**
      * Push Bytes
      */
     QStatus PushBytes(qcc::String remObj, const void* buf, size_t numBytes, size_t& actualBytes);
@@ -133,16 +120,7 @@ BLEAccessor :
      */
     RemoteEndpoint Connect(BusAttachment& alljoyn, qcc::String objPath);
 
-    /**
-     * Accessor to get the L2CAP connect event object.
-     *
-     * @return pointer to the L2CAP connect event object.
-     */
-    qcc::Event* GetL2CAPConnectEvent() { return l2capEvent; }
-
   private:
-
-    struct DispatchInfo;
 
     void ConnectBlueZ();
     void DisconnectBlueZ();
@@ -156,21 +134,6 @@ BLEAccessor :
                       const MsgArg* props);
     void AdapterRemoved(const char* adapterObjPath);
     void DefaultAdapterChanged(const char* adapterObjPath);
-
-    /* Adapter management signal handlers */
-    void AdapterAddedSignalHandler(const InterfaceDescription::Member* member,
-                                   const char* sourcePath,
-                                   Message& msg);
-    void AdapterRemovedSignalHandler(const InterfaceDescription::Member* member,
-                                     const char* sourcePath,
-                                     Message& msg);
-    void DefaultAdapterChangedSignalHandler(const InterfaceDescription::Member* member,
-                                            const char* sourcePath,
-                                            Message& msg);
-    void AdapterPropertyChangedSignalHandler(const InterfaceDescription::Member* member,
-                                             const char* sourcePath,
-                                             Message& msg);
-
 
     /* Device presence management signal handlers */
     void RxDataRecvSignalHandler(const InterfaceDescription::Member* member,
@@ -188,12 +151,6 @@ BLEAccessor :
     QStatus InitializeAdapterInformation(bluez::AdapterObject& adapter,
                                          const MsgArg* props);
     void AlarmTriggered(const qcc::Alarm& alarm, QStatus reason);
-    static bool FindAllJoynUUID(const MsgArg* uuids,
-                                size_t listSize,
-                                uint32_t& uuidRev);
-    void ExpireFoundDevices(bool all);
-    QStatus GetDeviceObjPath(const qcc::BDAddress& bdAddr,
-                             qcc::String& devObjPath);
     QStatus DiscoveryControl(bool start);
     QStatus DiscoveryControl(const InterfaceDescription::Member* method);
 
@@ -216,31 +173,6 @@ BLEAccessor :
         bluez::AdapterObject adapter(defaultAdapterObj);
         adapterLock.Unlock(MUTEX_CONTEXT);
         return adapter;
-    }
-
-    bluez::AdapterObject GetAnyAdapterObject() const
-    {
-        adapterLock.Lock(MUTEX_CONTEXT);
-        bluez::AdapterObject adapter(anyAdapterObj);
-        adapterLock.Unlock(MUTEX_CONTEXT);
-        return adapter;
-    }
-
-    qcc::Alarm DispatchOperation(DispatchInfo* op, uint32_t delay = 0)
-    {
-        void* context = (void*)op;
-        qcc::Alarm alarm(delay, this, context);
-        timer.AddAlarm(alarm);
-        return alarm;
-    }
-
-    qcc::Alarm DispatchOperation(DispatchInfo* op, uint64_t triggerTime)
-    {
-        void* context = (void*)op;
-        qcc::Timespec ts(triggerTime);
-        qcc::Alarm alarm(ts, this, context);
-        timer.AddAlarm(alarm);
-        return alarm;
     }
 
     void PropertiesChanged(ProxyBusObject& obj,
@@ -269,44 +201,6 @@ BLEAccessor :
     };
     typedef std::map<qcc::BDAddress, FoundInfo> FoundInfoMap;
     typedef std::multimap<uint64_t, qcc::BDAddress> FoundInfoExpireMap;
-
-    struct DispatchInfo {
-        typedef enum {
-            STOP_DISCOVERY,
-            ADAPTER_ADDED,
-            ADAPTER_REMOVED,
-            DEFAULT_ADAPTER_CHANGED,
-        } DispatchTypes;
-        DispatchTypes operation;
-
-        DispatchInfo(DispatchTypes operation) : operation(operation) { }
-        virtual ~DispatchInfo() { }
-    };
-
-    struct AdapterDispatchInfo : public DispatchInfo {
-        qcc::String adapterPath;
-
-        AdapterDispatchInfo(DispatchTypes operation, const char* adapterPath) :
-            DispatchInfo(operation), adapterPath(adapterPath) { }
-    };
-
-    struct DeviceDispatchInfo : public DispatchInfo {
-        qcc::BDAddress addr;
-        uint32_t uuidRev;
-        bool eirCapable;
-
-        DeviceDispatchInfo(DispatchTypes operation, const qcc::BDAddress& addr, uint32_t uuidRev, bool eirCapable) :
-            DispatchInfo(operation), addr(addr), uuidRev(uuidRev), eirCapable(eirCapable) { }
-    };
-
-    struct MsgDispatchInfo : public DispatchInfo {
-        MsgArg* args;
-        size_t argCnt;
-
-        MsgDispatchInfo(DispatchTypes operation, MsgArg* args, size_t argCnt) :
-            DispatchInfo(operation), args(args), argCnt(argCnt) { }
-    };
-
 
     BusAttachment bzBus;
     const qcc::String busGuid;

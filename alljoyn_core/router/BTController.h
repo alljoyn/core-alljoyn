@@ -54,42 +54,6 @@ class BluetoothDeviceInterface {
   private:
 
     /**
-     * Start the find operation for AllJoyn capable devices.  A duration may
-     * be specified that will result in the find operation to automatically
-     * stop after the specified number of seconds.  Exclude any results from
-     * any device in the list of ignoreAddrs.
-     *
-     * @param ignoreAddrs   Set of BD addresses to ignore
-     * @param duration      Find duration in seconds (0 = forever)
-     *
-     * @return  ER_OK if successful
-     */
-    virtual QStatus StartFind(const BDAddressSet& ignoreAddrs, uint32_t duration = 0) = 0;
-
-    /**
-     * Stop the find operation.
-     *
-     * @return  ER_OK if successful
-     */
-    virtual QStatus StopFind() = 0;
-
-    /**
-     * This provides the Bluetooth transport with the information needed to
-     * call AllJoynObj::FoundNames and to generate the connect spec.
-     *
-     * @param bdAddr    BD address of the connectable node
-     * @param guid      Bus GUID of the discovered bus
-     * @param names     The advertised names
-     * @param psm       L2CAP PSM accepting connections
-     * @param lost      Set to true if names are lost, false otherwise
-     */
-    virtual void FoundNamesChange(const qcc::String& guid,
-                                  const std::vector<qcc::String>& names,
-                                  const qcc::BDAddress& bdAddr,
-                                  uint16_t psm,
-                                  bool lost) = 0;
-
-    /**
      * Tells the Bluetooth transport to start listening for incoming connections.
      *
      * @return  ER_OK if successful
