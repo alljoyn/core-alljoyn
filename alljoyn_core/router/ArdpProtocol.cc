@@ -2887,11 +2887,13 @@ QStatus ARDP_Connect(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ipAd
 
     if (segmax > ARDP_MAX_WINDOW_SIZE) {
         QCC_DbgHLPrintf(("SEGMAX %u exceeds ARDP maximum window size %u", segmax, ARDP_MAX_WINDOW_SIZE));
+        delete conn;
         return ER_BAD_ARG_5;
     }
 
     status = InitConnRecord(handle, conn, sock, ipAddr, ipPort, 0);
     if (status != ER_OK) {
+        delete conn;
         return status;
     }
 
