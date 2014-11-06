@@ -325,7 +325,7 @@ public class BusAttachment {
     public static final int SESSION_ID_ANY = 0;
 
     /**
-     * When specified during SignalEmitter creation, emits on all session hosted 
+     * When specified during SignalEmitter creation, emits on all session hosted
      * by this BusAttachment.
      */
     public static final int SESSION_ID_ALL_HOSTED = -1;
@@ -1456,7 +1456,7 @@ public class BusAttachment {
     /**
      * Registers a public method to receive a signal from specific objects emitting it. Once registered, the method of
      * the object will receive the signal specified from objects implementing the interface.
-     * 
+     *
      * @param ifaceName the interface name of the signal
      * @param signalName the member name of the signal
      * @param obj the object receiving the signal
@@ -1500,13 +1500,14 @@ public class BusAttachment {
 
     /**
      * Register a signal handler.
-     * 
+     *
      * Signals are forwarded to the signalHandler if sender, interface, member and rule qualifiers are ALL met.
-     * 
-     * @param receiver The object receiving the signal.
-     * @param signalHandler The signal handler method.
-     * @param member The interface/member of the signal.
-     * @param matchRule A filter rule.
+     *
+     * @param ifaceName the interface name of the signal
+     * @param signalName the member name of the signal
+     * @param obj the object receiving the signal
+     * @param handlerMethod the signal handler method
+     * @param matchRule a filter rule.
      * @return OK if the register is successful
      */
 
