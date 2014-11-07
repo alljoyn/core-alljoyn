@@ -29,6 +29,7 @@
 #include <Mswsock.h>
 #include <ws2tcpip.h>
 #include <windows.h>
+#include <stdlib.h>
 
 #include <qcc/Debug.h>
 #include <qcc/Logger.h>
@@ -82,4 +83,28 @@ void WinsockCleanup()
             winsockInitialized = false;
         }
     }
+}
+
+wchar_t* MultibyteToWideString(const char* str)
+{
+    wchar_t* buffer = NULL;
+
+    if (NULL == str) {
+        return buffer;
+    }
+    size_t charLen = mbstowcs(NULL, str, 0);
+    if (charLen < 0) {
+        return buffer;
+    }
+    ++charLen;
+    buffer = new wchar_t[charLen];
+    if (NULL == buffer) {
+        return buffer;
+    }
+    if (mbstowcs(buffer, str, charLen) < 0) {
+        delete[] buffer;
+        buffer = NULL;
+        return buffer;
+    }
+    return buffer;
 }
