@@ -55,7 +55,6 @@ using namespace qcc;
 
 namespace ajn {
 
-// JPDEBUG
 DBusObj::DBusObj(Bus& bus, BusController* busController) :
     BusObject(org::freedesktop::DBus::ObjectPath, false),
     bus(bus),
