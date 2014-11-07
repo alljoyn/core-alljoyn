@@ -45,7 +45,7 @@ namespace ajn {
  * The DaemonTransport class has different incarnations depending on the platform.
  */
 class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListener, public qcc::Thread {
-
+    friend class _DaemonEndpoint;
   public:
     /**
      * Create a transport to receive incoming connections from AllJoyn application.
@@ -178,6 +178,37 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
     qcc::Mutex endpointListLock;              /**< Mutex that protects the endpoint list */
 
   private:
+
+    /**
+     * @brief The default values for range and default idle timeout for
+     * the DaemonTransport in seconds.
+     *
+     * This corresponds to the configuration items "dt_min_idle_timeout",
+     * "dt_max_idle_timeout" and "dt_default_idle_timeout"
+     * To override this value, change the limit, "dt_min_idle_timeout",
+     * "dt_max_idle_timeout" and "dt_default_idle_timeout"
+     */
+    static const uint32_t MIN_HEARTBEAT_IDLE_TIMEOUT_DEFAULT = 3;
+    static const uint32_t MAX_HEARTBEAT_IDLE_TIMEOUT_DEFAULT = 30;
+    static const uint32_t DEFAULT_HEARTBEAT_IDLE_TIMEOUT_DEFAULT = 20;
+
+    /**
+     * @brief The default probe timeout for DaemonTransport in seconds.
+     *
+     * This corresponds to the configuration item "dt_default_probe_timeout"
+     * and "dt_max_probe_timeout"
+     * To override this value, change the limit, "dt_default_probe_timeout"
+     * and "dt_max_probe_timeout"
+     */
+    static const uint32_t MAX_HEARTBEAT_PROBE_TIMEOUT_DEFAULT = 30;
+    static const uint32_t DEFAULT_HEARTBEAT_PROBE_TIMEOUT_DEFAULT = 3;
+
+    /**
+     * @brief The number of DBus pings sent from Routing node to leaf node.
+     *
+     */
+    static const uint32_t HEARTBEAT_NUM_PROBES = 1;
+
     /**
      * Empty private overloaded virtual function for Thread::Start
      * this avoids the overloaded-virtual warning. For the Thread::Start
@@ -195,6 +226,25 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
      * @param arg  Thread entry arg.
      */
     qcc::ThreadReturn STDCALL Run(void* arg);
+
+    uint32_t m_minHbeatIdleTimeout; /**< The minimum allowed idle timeout for the Heartbeat between Routing node
+                                         and Leaf node - configurable in router config */
+
+    uint32_t m_defaultHbeatIdleTimeout; /**< The default idle timeout for the Heartbeat between Routing node
+                                           and Leaf node - configurable in router config */
+
+    uint32_t m_maxHbeatIdleTimeout; /**< The maximum allowed idle timeout for the Heartbeat between Routing node
+                                         and Leaf node - configurable in router config */
+
+    uint32_t m_defaultHbeatProbeTimeout;   /**< The time the Routing node should wait for Heartbeat response to be
+                                                  recieved from the Leaf node - configurable in router config */
+
+    uint32_t m_maxHbeatProbeTimeout;       /**< The max time the Routing node should wait for Heartbeat response to be
+                                                  recieved from the Leaf node - configurable in router config */
+
+    uint32_t m_numHbeatProbes;             /**< Number of probes Routing node should wait for Heartbeat response to be
+                                              recieved from the Leaf node before declaring it dead - Transport specific */
+
 };
 
 } // namespace ajn

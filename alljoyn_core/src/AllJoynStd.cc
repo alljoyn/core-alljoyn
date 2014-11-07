@@ -142,6 +142,9 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("Ping",                     "su",                "u",                 "name,timeout,disposition",                   0);
         ifc->AddMethod("FindAdvertisementByTransport",       "sq",                "u",                 "matching,transports,disposition",     0);
         ifc->AddMethod("CancelFindAdvertisementByTransport", "sq",                "u",                 "matching,transports,disposition",     0);
+        ifc->AddMethod("SetIdleTimeouts",     "uu",                "uuu",
+                       "reqLinkTO,reqProbeTO,disposition,actLinkTO,actProbeTO", 0);
+
 
         ifc->AddSignal("FoundAdvertisedName",      "sqs",              "name,transport,prefix",                        0);
         ifc->AddSignal("LostAdvertisedName",       "sqs",              "name,transport,prefix",                        0);
