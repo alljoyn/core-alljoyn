@@ -164,7 +164,7 @@ void* DaemonTransport::Run(void* arg)
                 status = conn->Establish("ANONYMOUS", authName, redirection);
             }
             if (status == ER_OK) {
-                status = conn->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes);
+                status = conn->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes, m_maxHbeatProbeTimeout);
             }
             if (status != ER_OK) {
                 QCC_LogError(status, ("Error starting DaemonEndpoint"));

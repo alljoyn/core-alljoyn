@@ -53,7 +53,7 @@ typedef qcc::ManagedObj<_RemoteEndpoint> RemoteEndpoint;
 class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public qcc::IOReadListener, public qcc::IOWriteListener, public qcc::IOExitListener {
 
   public:
-
+    const static uint32_t MAX_CONTROL_MSGS_PER_SECOND = 10;
     /**
      * RemoteEndpoint::Features type. Features are values that are negotiated during session
      * establishment.
@@ -182,11 +182,15 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * @param[in] probeTimeout  Probe timeout. The time from the Routing node sending the DBus
      *                          ping to the expected response.
      * @param[in] numProbes     Number of probes sent before the leaf node is declared dead.
+     * @param[in] sendTimeout   Send Timeout for the link. i.e. time after which the Routing node must
+     *                          disconnect the remote node if it has not read a message from the link
+     *                          in the situation that the send buffer on this end and receive buffer on
+     *                          the remote end are full.
      * @return
      *      - ER_OK if successful.
      *      - An error status otherwise
      */
-    virtual QStatus Start(uint32_t idleTimeout, uint32_t probeTimeout, uint32_t numProbes);
+    virtual QStatus Start(uint32_t idleTimeout, uint32_t probeTimeout, uint32_t numProbes, uint32_t sendTimeout);
 
     /**
      * Request the endpoint to stop executing.
@@ -584,6 +588,26 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      *
      */
     void ExitCallback();
+    /**
+     * Send an outgoing message.
+     *
+     * @param[in] msg   Message to be sent.
+     * @param[out] count   Number of messages in txQueue
+     * @return
+     *      - ER_OK if successful.
+     *      - An error status otherwise
+     */
+    virtual QStatus PushMessageRouter(Message& msg, size_t& count);
+    /**
+     * Send an outgoing message.
+     *
+     * @param[in] msg   Message to be sent.
+     * @param[out] count   Number of messages in txQueue
+     * @return
+     *      - ER_OK if successful.
+     *      - An error status otherwise
+     */
+    virtual QStatus PushMessageLeaf(Message& msg, size_t& count);
 };
 
 }

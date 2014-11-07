@@ -929,7 +929,7 @@ void TCPTransport::Authenticated(TCPEndpoint& conn)
 
     conn->SetEpStarting();
 
-    QStatus status = conn->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes);
+    QStatus status = conn->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes, m_maxHbeatProbeTimeout);
     if (status != ER_OK) {
         QCC_LogError(status, ("TCPTransport::Authenticated(): Failed to start TCP endpoint"));
         /*
@@ -3132,7 +3132,7 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         if (status == ER_OK) {
             tcpEp->SetListener(this);
             tcpEp->SetEpStarting();
-            status = tcpEp->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes);
+            status = tcpEp->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes, m_maxHbeatProbeTimeout);
             if (status == ER_OK) {
                 tcpEp->SetEpStarted();
                 tcpEp->SetAuthDone();

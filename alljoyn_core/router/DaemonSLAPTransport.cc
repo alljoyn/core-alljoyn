@@ -830,7 +830,7 @@ void DaemonSLAPTransport::Authenticated(DaemonSLAPEndpoint& conn)
 
     conn->SetEpStarting();
 
-    QStatus status = conn->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes);
+    QStatus status = conn->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes, m_maxHbeatProbeTimeout);
     if (status != ER_OK) {
         QCC_LogError(status, ("DaemonSLAPTransport::Authenticated(): Failed to start DaemonSLAPEndpoint"));
         /*
