@@ -74,6 +74,14 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
     QStatus Stop();
 
     /**
+     * Determine if this transport is stopping.
+     * Stopping means Stop() has been called but endpoints still exist.
+     *
+     * @return  Returns true if the transport is running.
+     */
+    bool IsTransportStopping() { return stopping; }
+
+    /**
      * Pend the caller until the transport stops.
      * @return ER_OK if successful.
      */
@@ -106,7 +114,7 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
      *
      * @return ER_OK if successful.
      */
-    QStatus NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, std::map<qcc::String, qcc::String>& argMap) const;
+    virtual QStatus NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, std::map<qcc::String, qcc::String>& argMap) const;
 
     /**
      * Start listening for incoming connections on a specified bus address.
@@ -117,7 +125,7 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
      *      - ER_OK if successful.
      *      - an error status otherwise.
      */
-    QStatus StartListen(const char* listenSpec);
+    virtual QStatus StartListen(const char* listenSpec);
 
     /**
      * @brief Stop listening for incoming connections on a specified bus address.
@@ -129,12 +137,12 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
      *
      * @return ER_OK if successful.
      */
-    QStatus StopListen(const char* listenSpec);
+    virtual QStatus StopListen(const char* listenSpec);
 
     /**
      * Returns the name of this transport
      */
-    const char* GetTransportName() const { return TransportName; }
+    virtual const char* GetTransportName() const { return TransportName; }
 
     /**
      * Name of transport used in transport specs.
@@ -165,6 +173,10 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
      */
     void UntrustedClientExit() { };
 
+  protected:
+    std::list<RemoteEndpoint> endpointList;   /**< List of active endpoints */
+    qcc::Mutex endpointListLock;              /**< Mutex that protects the endpoint list */
+
   private:
     /**
      * Empty private overloaded virtual function for Thread::Start
@@ -175,8 +187,6 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
 
     BusAttachment& bus;                       /**< The message bus for this transport */
     bool stopping;                            /**< True if Stop() has been called but endpoints still exist */
-    std::list<RemoteEndpoint> endpointList;   /**< List of active endpoints */
-    qcc::Mutex endpointListLock;              /**< Mutex that protects the endpoint list */
 
     /**
      * @internal
