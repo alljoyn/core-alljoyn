@@ -812,6 +812,50 @@ static void DeleteEnv(jint result)
     }
 }
 
+/*
+ * Note that some JNI calls do not set the returned value to NULL when
+ * an exception occurs.  In that case we must explicitly set the
+ * reference here to NULL to prevent calling DeleteLocalRef on an
+ * invalid reference.
+ *
+ * The list of such functions used in this file is:
+ * - CallObjectMethod
+ * - CallStaticObjectMethod
+ * - GetObjectArrayElement
+ */
+static jobject CallObjectMethod(JNIEnv* env, jobject obj, jmethodID methodID, ...)
+{
+    va_list args;
+    va_start(args, methodID);
+    jobject ret = env->CallObjectMethodV(obj, methodID, args);
+    if (env->ExceptionCheck()) {
+        ret = NULL;
+    }
+    va_end(args);
+    return ret;
+}
+
+static jobject CallStaticObjectMethod(JNIEnv* env, jclass clazz, jmethodID methodID, ...)
+{
+    va_list args;
+    va_start(args, methodID);
+    jobject ret = env->CallStaticObjectMethodV(clazz, methodID, args);
+    if (env->ExceptionCheck()) {
+        ret = NULL;
+    }
+    va_end(args);
+    return ret;
+}
+
+static jobject GetObjectArrayElement(JNIEnv* env, jobjectArray array, jsize index)
+{
+    jobject ret = env->GetObjectArrayElement(array, index);
+    if (env->ExceptionCheck()) {
+        ret = NULL;
+    }
+    return ret;
+}
+
 /**
  * Implement the load hook for the alljoyn_java native library.
  *
@@ -998,6 +1042,7 @@ class JScopedEnv {
     JScopedEnv();
     ~JScopedEnv();
     JNIEnv* operator->() { return env; }
+    operator JNIEnv*() { return env; }
   private:
     JScopedEnv(const JScopedEnv& other);
     JScopedEnv& operator =(const JScopedEnv& other);
@@ -1195,7 +1240,7 @@ static jobject JStatus(QStatus status)
     if (!mid) {
         return NULL;
     }
-    return env->CallStaticObjectMethod(CLS_Status, mid, status);
+    return CallStaticObjectMethod(env, CLS_Status, mid, status);
 }
 
 class JBusObject;
@@ -2432,7 +2477,7 @@ QStatus JKeyStoreListener::LoadRequest(KeyStore& keyStore)
      * globally by any number of threads; and that listener is responsible for being
      * MT-Safe.
      */
-    JLocalRef<jbyteArray> jarray = (jbyteArray)env->CallObjectMethod(jo, MID_getKeys);
+    JLocalRef<jbyteArray> jarray = (jbyteArray)CallObjectMethod(env, jo, MID_getKeys);
     if (env->ExceptionCheck()) {
         return ER_FAIL;
     }
@@ -2458,7 +2503,7 @@ QStatus JKeyStoreListener::LoadRequest(KeyStore& keyStore)
      * caveats apply to this char[] as do to the byte[] we got which contains
      * the keys.
      */
-    JLocalRef<jcharArray> jpasswordChar = (jcharArray)env->CallObjectMethod(jo, MID_getPassword);
+    JLocalRef<jcharArray> jpasswordChar = (jcharArray)CallObjectMethod(env, jo, MID_getPassword);
     if (env->ExceptionCheck() || !jpasswordChar) {
         return ER_FAIL;
     }
@@ -2470,7 +2515,7 @@ QStatus JKeyStoreListener::LoadRequest(KeyStore& keyStore)
      * interfering.  This call out to the bus attachment in a listener callback
      * implies that the encode method must be MT-Safe.
      */
-    JLocalRef<jbyteArray> jpassword = (jbyteArray)env->CallStaticObjectMethod(CLS_BusAttachment, MID_encode, (jcharArray)jpasswordChar);
+    JLocalRef<jbyteArray> jpassword = (jbyteArray)CallStaticObjectMethod(env, CLS_BusAttachment, MID_encode, (jcharArray)jpasswordChar);
     if (env->ExceptionCheck()) {
         return ER_FAIL;
     }
@@ -3759,12 +3804,12 @@ bool JAuthListener::RequestCredentials(const char* authMechanism, const char* au
      * This call out to the listener means that the requestCredentials method must
      * be MT-Safe.  This is implied by the definition of the listener.
      */
-    JLocalRef<jobject> jcredentials = env->CallObjectMethod(jo, MID_requestCredentials,
-                                                            (jstring)jauthMechanism,
-                                                            (jstring)jauthPeer,
-                                                            authCount,
-                                                            (jstring)juserName,
-                                                            credMask);
+    JLocalRef<jobject> jcredentials = CallObjectMethod(env, jo, MID_requestCredentials,
+                                                       (jstring)jauthMechanism,
+                                                       (jstring)jauthPeer,
+                                                       authCount,
+                                                       (jstring)juserName,
+                                                       credMask);
     /*
      * Once we have made our call, the client can go ahead and make any changes
      * to the authListener it sees fit.
@@ -5111,7 +5156,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_whoImplements(JNIEn
         jstring* jintfs = new jstring[len];
         memset(jintfs, 0, len * sizeof(jstring));
         for (int i = 0; i < len; ++i) {
-            jintfs[i] = (jstring) env->GetObjectArrayElement(jinterfaces, i);
+            jintfs[i] = (jstring) GetObjectArrayElement(env, jinterfaces, i);
             if (env->ExceptionCheck() || NULL == jintfs[i]) {
                 QCC_LogError(ER_FAIL, ("BusAttachment_whoImplements(): Exception"));
                 status = ER_BAD_ARG_1;
@@ -5161,7 +5206,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_cancelWhoImplements
         jstring* jintfs = new jstring[len];
         memset(jintfs, 0, len * sizeof(jstring));
         for (int i = 0; i < len; ++i) {
-            jintfs[i] = (jstring) env->GetObjectArrayElement(jinterfaces, i);
+            jintfs[i] = (jstring) GetObjectArrayElement(env, jinterfaces, i);
             if (env->ExceptionCheck() || NULL == jintfs[i]) {
                 QCC_LogError(ER_FAIL, ("BusAttachment_whoImplements(): Exception"));
                 status = ER_BAD_ARG_1;
@@ -8423,7 +8468,7 @@ QStatus JBusObject::AddInterfaces(jobjectArray jbusInterfaces)
     jsize len = env->GetArrayLength(jbusInterfaces);
 
     for (jsize i = 0; i < len; ++i) {
-        JLocalRef<jobject> jbusInterface = env->GetObjectArrayElement(jbusInterfaces, i);
+        JLocalRef<jobject> jbusInterface = GetObjectArrayElement(env, jbusInterfaces, i);
         if (env->ExceptionCheck()) {
             QCC_LogError(ER_FAIL, ("JBusObject::AddInterfaces(): Exception"));
             return ER_FAIL;
@@ -8485,7 +8530,7 @@ QStatus JBusObject::AddInterfaces(jobjectArray jbusInterfaces)
                     break;
                 }
 
-                JLocalRef<jobject> jmethod = env->CallObjectMethod(jbusInterface, mid, (jstring)jname);
+                JLocalRef<jobject> jmethod = CallObjectMethod(env, jbusInterface, mid, (jstring)jname);
                 if (env->ExceptionCheck()) {
                     status = ER_FAIL;
                     break;
@@ -8538,7 +8583,7 @@ QStatus JBusObject::AddInterfaces(jobjectArray jbusInterfaces)
                 break;
             }
 
-            JLocalRef<jobjectArray> jmethods = (jobjectArray)env->CallObjectMethod(jbusInterface, mid, (jstring)jname);
+            JLocalRef<jobjectArray> jmethods = (jobjectArray)CallObjectMethod(env, jbusInterface, mid, (jstring)jname);
             if (env->ExceptionCheck()) {
                 status = ER_FAIL;
                 break;
@@ -8548,7 +8593,7 @@ QStatus JBusObject::AddInterfaces(jobjectArray jbusInterfaces)
                 break;
             }
 
-            JLocalRef<jobject> jget = env->GetObjectArrayElement(jmethods, 0);
+            JLocalRef<jobject> jget = GetObjectArrayElement(env, jmethods, 0);
             if (env->ExceptionCheck()) {
                 status = ER_FAIL;
                 break;
@@ -8563,7 +8608,7 @@ QStatus JBusObject::AddInterfaces(jobjectArray jbusInterfaces)
                 property.jget = NULL;
             }
 
-            JLocalRef<jobject> jset = env->GetObjectArrayElement(jmethods, 1);
+            JLocalRef<jobject> jset = GetObjectArrayElement(env, jmethods, 1);
             if (env->ExceptionCheck()) {
                 status = ER_FAIL;
                 break;
@@ -8650,7 +8695,7 @@ static MsgArg* Marshal(const char* signature, jobjectArray jargs, MsgArg* arg)
 static jobject Unmarshal(const MsgArg* arg, jobject jtype)
 {
     JNIEnv* env = GetEnv();
-    jobject jarg = env->CallStaticObjectMethod(CLS_MsgArg, MID_MsgArg_unmarshal, (jlong)arg, jtype);
+    jobject jarg = CallStaticObjectMethod(env, CLS_MsgArg, MID_MsgArg_unmarshal, (jlong)arg, jtype);
     if (env->ExceptionCheck()) {
         return NULL;
     }
@@ -8672,8 +8717,8 @@ static QStatus Unmarshal(const MsgArg* args, size_t numArgs, jobject jmethod,
     arg.v_struct.members = (MsgArg*)args;
     arg.v_struct.numMembers = numArgs;
     JNIEnv* env = GetEnv();
-    junmarshalled = (jobjectArray)env->CallStaticObjectMethod(CLS_MsgArg, MID_MsgArg_unmarshal_array,
-                                                              jmethod, (jlong) & arg);
+    junmarshalled = (jobjectArray)CallStaticObjectMethod(env, CLS_MsgArg, MID_MsgArg_unmarshal_array,
+                                                         jmethod, (jlong) & arg);
     if (env->ExceptionCheck()) {
         return ER_FAIL;
     }
@@ -8758,7 +8803,7 @@ void JBusObject::MethodHandler(const InterfaceDescription::Member* member, Messa
 
     mapLock.Unlock();
 
-    JLocalRef<jobject> jreply = env->CallObjectMethod(method->second, mid, jo, (jobjectArray)jargs);
+    JLocalRef<jobject> jreply = CallObjectMethod(env, method->second, mid, jo, (jobjectArray)jargs);
     JLocalRef<jthrowable> ex = env->ExceptionOccurred();
     if (ex) {
         env->ExceptionClear();
@@ -8768,7 +8813,7 @@ void JBusObject::MethodHandler(const InterfaceDescription::Member* member, Messa
             MethodReply(member, msg, ER_FAIL);
             return;
         }
-        ex = (jthrowable)env->CallObjectMethod(ex, mid);
+        ex = (jthrowable)CallObjectMethod(env, ex, mid);
         if (env->ExceptionCheck()) {
             MethodReply(member, msg, ER_FAIL);
             return;
@@ -8781,7 +8826,7 @@ void JBusObject::MethodHandler(const InterfaceDescription::Member* member, Messa
                 MethodReply(member, msg, ER_FAIL);
                 return;
             }
-            JLocalRef<jobject> jstatus = env->CallObjectMethod(ex, mid);
+            JLocalRef<jobject> jstatus = CallObjectMethod(env, ex, mid);
             if (env->ExceptionCheck()) {
                 MethodReply(member, msg, ER_FAIL);
                 return;
@@ -8803,7 +8848,7 @@ void JBusObject::MethodHandler(const InterfaceDescription::Member* member, Messa
                 MethodReply(member, msg, ER_FAIL);
                 return;
             }
-            JLocalRef<jstring> jerrorName = (jstring)env->CallObjectMethod(ex, mid);
+            JLocalRef<jstring> jerrorName = (jstring)CallObjectMethod(env, ex, mid);
             if (env->ExceptionCheck()) {
                 MethodReply(member, msg, ER_FAIL);
                 return;
@@ -8819,7 +8864,7 @@ void JBusObject::MethodHandler(const InterfaceDescription::Member* member, Messa
                 MethodReply(member, msg, ER_FAIL);
                 return;
             }
-            JLocalRef<jstring> jerrorMessage = (jstring)env->CallObjectMethod(ex, mid);
+            JLocalRef<jstring> jerrorMessage = (jstring)CallObjectMethod(env, ex, mid);
             if (env->ExceptionCheck()) {
                 MethodReply(member, msg, ER_FAIL);
                 return;
@@ -8894,7 +8939,7 @@ QStatus JBusObject::MethodReply(const InterfaceDescription::Member* member, Mess
             if (!mid) {
                 return MethodReply(member, msg, ER_FAIL);
             }
-            jreplyArgs = (jobjectArray)env->CallStaticObjectMethod(CLS_Signature, mid, (jobject)jreply);
+            jreplyArgs = (jobjectArray)CallStaticObjectMethod(env, CLS_Signature, mid, (jobject)jreply);
             if (env->ExceptionCheck()) {
                 return MethodReply(member, msg, ER_FAIL);
             }
@@ -8994,7 +9039,7 @@ QStatus JBusObject::Get(const char* ifcName, const char* propName, MsgArg& val)
         return ER_FAIL;
     }
 
-    JLocalRef<jobject> jvalue = env->CallObjectMethod(property->second.jget, mid, jo, NULL);
+    JLocalRef<jobject> jvalue = CallObjectMethod(env, property->second.jget, mid, jo, NULL);
     if (env->ExceptionCheck()) {
         mapLock.Unlock();
         return ER_FAIL;
@@ -9064,7 +9109,7 @@ QStatus JBusObject::Set(const char* ifcName, const char* propName, MsgArg& val)
         return ER_FAIL;
     }
 
-    env->CallObjectMethod(property->second.jset, mid, jo, (jobjectArray)jvalue);
+    CallObjectMethod(env, property->second.jset, mid, jo, (jobjectArray)jvalue);
     if (env->ExceptionCheck()) {
         mapLock.Unlock();
         return ER_FAIL;
@@ -9101,8 +9146,8 @@ String JBusObject::GenerateIntrospection(const char* languageTag, bool deep, siz
         }
 
         JLocalRef<jstring> jlang = env->NewStringUTF(languageTag);
-        JLocalRef<jstring> jintrospection = (jstring)env->CallObjectMethod(
-            jo, MID_generateIntrospectionWithDesc, (jstring)jlang, deep, indent);
+        JLocalRef<jstring> jintrospection = (jstring)CallObjectMethod(env,
+                                                                      jo, MID_generateIntrospectionWithDesc, (jstring)jlang, deep, indent);
         if (env->ExceptionCheck()) {
             return BusObject::GenerateIntrospection(languageTag, deep, indent);
         }
@@ -9144,9 +9189,9 @@ String JBusObject::GenerateIntrospection(bool deep, size_t indent) const
 
         JLocalRef<jstring> jintrospection;
         if (MID_generateIntrospection) {
-            jintrospection = (jstring)env->CallObjectMethod(jo, MID_generateIntrospection, deep, indent);
+            jintrospection = (jstring)CallObjectMethod(env, jo, MID_generateIntrospection, deep, indent);
         } else {
-            jintrospection = (jstring)env->CallObjectMethod(jo, MID_generateIntrospectionWithDesc, deep, indent, NULL);
+            jintrospection = (jstring)CallObjectMethod(env, jo, MID_generateIntrospectionWithDesc, deep, indent, NULL);
         }
 
         if (env->ExceptionCheck()) {
@@ -9414,7 +9459,7 @@ void JSignalHandler::SignalHandler(const InterfaceDescription::Member* member,
     if (!jo) {
         return;
     }
-    env->CallObjectMethod(jmethod, mid, jo, (jobjectArray)jargs);
+    CallObjectMethod(env, jmethod, mid, jo, (jobjectArray)jargs);
 }
 
 QStatus JSignalHandlerWithSrc::Register(BusAttachment& bus, const char* ifaceName, const char* signalName,
@@ -9554,7 +9599,7 @@ void JTranslator::GetTargetLanguage(size_t index, qcc::String& ret)
         return;
     }
 
-    JLocalRef<jstring> jres = (jstring)env->CallObjectMethod(jo, MID_getTargetLanguage, (jint)index);
+    JLocalRef<jstring> jres = (jstring)CallObjectMethod(env, jo, MID_getTargetLanguage, (jint)index);
     if (!jo) {
         QCC_LogError(ER_FAIL, ("JTranslator::GetTargetLanguage(): Can't get new local reference to Translator"));
         return;
@@ -9586,7 +9631,7 @@ const char* JTranslator::Translate(const char* sourceLanguage,
     }
 
     QCC_DbgPrintf(("JTranslator::Translate(): Call out"));
-    JLocalRef<jstring> jres = (jstring)env->CallObjectMethod(jo, MID_translate, (jstring)jsourceLang, (jstring)jtargLang, (jstring)jsource);
+    JLocalRef<jstring> jres = (jstring)CallObjectMethod(env, jo, MID_translate, (jstring)jsourceLang, (jstring)jtargLang, (jstring)jsource);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("JTranslator::Translate(): Exception"));
         return NULL;
@@ -12285,7 +12330,7 @@ class JAboutObject : public AboutObj, public AboutDataListener {
         QStatus status = ER_FAIL;
         if (jaboutDataListenerRef != NULL && MID_getAboutData != NULL) {
             QCC_DbgPrintf(("Calling getAboutData for %s language.", language));
-            JLocalRef<jobject> jannounceArg = env->CallObjectMethod(jaboutDataListenerRef, MID_getAboutData, (jstring)jlanguage);
+            JLocalRef<jobject> jannounceArg = CallObjectMethod(env, jaboutDataListenerRef, MID_getAboutData, (jstring)jlanguage);
             QCC_DbgPrintf(("JAboutObj::GetMsgArg Made Java Method call getAboutData"));
             // check for ErrorReplyBusException exception
             status = CheckForThrownException(env);
@@ -12315,7 +12360,7 @@ class JAboutObject : public AboutObj, public AboutDataListener {
              */
             JScopedEnv env;
 
-            JLocalRef<jobject> jannounceArg = env->CallObjectMethod(jaboutDataListenerRef, MID_getAnnouncedAboutData);
+            JLocalRef<jobject> jannounceArg = CallObjectMethod(env, jaboutDataListenerRef, MID_getAnnouncedAboutData);
             QCC_DbgPrintf(("AboutObj_announce Made Java Method call getAnnouncedAboutData"));
             // check for ErrorReplyBusException exception
             status = CheckForThrownException(env);
@@ -12350,7 +12395,7 @@ class JAboutObject : public AboutObj, public AboutDataListener {
                 if (!mid) {
                     return ER_FAIL;
                 }
-                JLocalRef<jobject> jstatus = env->CallObjectMethod(ex, mid);
+                JLocalRef<jobject> jstatus = CallObjectMethod(env, ex, mid);
                 if (env->ExceptionCheck()) {
                     return ER_FAIL;
                 }
