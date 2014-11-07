@@ -129,7 +129,7 @@ class ProxyBusObject : public MessageReceiver {
          * @param ifaceName     Name of the interface that defines the property.
          * @param changed       Property values that changed as an array of dictionary entries, signature "a{sv}".
          * @param invalidated   Properties whose values have been invalidated, signature "as".
-         * @param context       Caller provided context passed in to RegisterPropertiesChangedHandler
+         * @param context       Caller provided context passed in to RegisterPropertiesChangedListener
          */
         virtual void PropertiesChanged(ProxyBusObject& obj,
                                        const char* ifaceName,
