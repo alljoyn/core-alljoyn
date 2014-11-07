@@ -28,6 +28,7 @@
 #include <qcc/Debug.h>
 #include <qcc/String.h>
 #include <qcc/Socket.h>
+#include <qcc/windows/utility.h>
 
 #include <qcc/IfConfig.h>
 
@@ -394,8 +395,6 @@ void IfConfigByFamily(uint32_t family, std::vector<IfConfigEntry>& entries)
 
     delete [] parray;
 }
-
-extern void WinsockCheck();
 
 QStatus IfConfig(std::vector<IfConfigEntry>& entries)
 {

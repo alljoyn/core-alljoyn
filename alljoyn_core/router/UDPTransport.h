@@ -44,6 +44,7 @@
 
 #include "Transport.h"
 #include "RemoteEndpoint.h"
+
 #include "ArdpProtocol.h"
 
 #include "ns/IpNameService.h"
@@ -53,7 +54,11 @@ namespace ajn {
 class ConnectEntry;
 bool operator<(const ConnectEntry& lhs, const ConnectEntry& rhs);
 
-class _UDPEndpoint;
+class _UDPEndpoint; /**< Forward declaration for a class of endpoints implementing UDP Transport functionality */
+
+class MessagePump; /**< Forward declaration for a class implementing an active message pump to move messages into the router */
+
+#define N_PUMPS 8 /**<  The number of message pumps and possibly concurrent threads we use to move messages */
 
 typedef qcc::ManagedObj<_UDPEndpoint> UDPEndpoint;
 
@@ -61,6 +66,7 @@ typedef qcc::ManagedObj<_UDPEndpoint> UDPEndpoint;
  * @brief A class for UDP Transports used in daemons.
  */
 class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener, public qcc::Thread {
+    friend class MessagePump;
     friend class _UDPEndpoint;
     friend class ArdpStream;
 
@@ -265,6 +271,17 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     QStatus GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs) const;
 
     /**
+     * Does this transport support connections as described by the provided
+     * session options.
+     *
+     * @param opts  Proposed session options.
+     * @return
+     *      - true if the SessionOpts specifies a supported option set.
+     *      - false otherwise.
+     */
+    bool SupportsOptions(const SessionOpts& opts) const;
+
+    /**
      * Indicates whether this transport is used for client-to-bus or bus-to-bus connections.
      *
      * @return  Always returns true, UDP is a bus-to-bus transport.
@@ -316,6 +333,8 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     std::set<ConnectEntry> m_connectThreads;                       /**< List of threads starting up active endpoints */
     qcc::Mutex m_endpointListLock;                                 /**< Mutex that protects the endpoint and auth lists */
 
+    MessagePump* m_messagePumps[N_PUMPS];                          /**< array of MessagePumps (with possiblly running pump threads) */
+
     std::list<std::pair<qcc::String, qcc::SocketFd> > m_listenFds; /**< File descriptors the transport is listening on */
     qcc::Mutex m_listenFdsLock;                                    /**< Mutex that protects m_listenFds */
 
@@ -356,7 +375,13 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         std::map<qcc::String, qcc::IPAddress> ifMap;
     };
 
-    qcc::Mutex m_listenRequestsLock;                               /**< Mutex that protects m_listenRequests */
+    qcc::Mutex m_listenRequestsLock;  /**< Mutex that protects m_listenRequests */
+
+    /**
+     * @internal
+     * @brief Log Warnings if endpoints are not progressing throughg states as expected
+     */
+    void EmitStallWarnings(UDPEndpoint& ep);
 
     /**
      * @internal
@@ -759,13 +784,6 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     uint32_t m_maxAuth;
 
     /**
-     * m_currAuth is the current number of incoming connections that are in the
-     * process of authenticating.  If starting to authenticate a new connection
-     * would mean this number exceeding m_maxAuth, we reject the new connection.
-     */
-    volatile int32_t m_currAuth;
-
-    /**
      * m_maxConn is the maximum number of active connections possible over the
      * UDP transport.  If starting to process a new connection would mean
      * exceeding this number, we reject the new connection.
@@ -773,11 +791,20 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     uint32_t m_maxConn;
 
     /**
+     * m_currAuth is the current number of incoming connections that are in the
+     * process of authenticating.  If starting to authenticate a new connection
+     * would mean this number exceeding m_maxAuth, we reject the new connection.
+     */
+    volatile int32_t m_currAuth;
+
+    /**
      * m_currConn is current number of active connections running over the
      * UDP transport.  If starting to process a new connection would mean
      * this number exceeds m_maxConn, we reject the new connection.
      */
     volatile int32_t m_currConn;
+
+    qcc::Mutex m_connLock;  /**< m_currAuth and m_currConn must be changed atomically, so need to be mutex protected */
 
     /**
      * arcpConfig are the limits from the daemon configuration database relating
@@ -842,6 +869,12 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     void DebugEndpointListCheck(UDPEndpoint uep);
 #endif
 
+#if ARDP_TESTHOOKS
+    static void ArdpSendToSGHook(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, qcc::ScatterGatherList& msgSG);
+    static void ArdpSendToHook(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, void* buf, uint32_t len);
+    static void ArdpRecvFromHook(ArdpHandle* handle, ArdpConnRecord* conn, TesthookSource source, void* buf, uint32_t len);
+#endif
+
     static bool ArdpAcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status);
     static void ArdpConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status);
     static void ArdpDisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status);
@@ -851,7 +884,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     bool AcceptCb(ArdpHandle* handle, qcc::IPAddress ipAddr, uint16_t ipPort, ArdpConnRecord* conn, uint8_t* buf, uint16_t len, QStatus status);
     void ConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status);
-    void DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, bool passive, uint8_t* buf, uint16_t len, QStatus status);
+    void DoConnectCb(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connId, bool passive, uint8_t* buf, uint16_t len, QStatus status);
     void DisconnectCb(ArdpHandle* handle, ArdpConnRecord* conn, QStatus status);
     void RecvCb(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv, QStatus status);
     void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status);

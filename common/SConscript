@@ -67,6 +67,7 @@ elif env['OS'] in ['linux', 'openwrt']:
     env.AppendUnique(LIBS =['rt', 'stdc++', 'pthread', 'crypto', 'ssl', 'm'])
 
 elif env['OS'] == 'darwin':
+    env.Append(CPPDEFINES=['MECHANISM_PIPE'])
     env.AppendUnique(LIBS =['stdc++', 'pthread', 'crypto', 'ssl'])
     if env['CPU'] in ['arm', 'armv7', 'armv7s']:
         vars = Variables()

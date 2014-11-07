@@ -42,6 +42,9 @@ const SessionPort SESSION_PORT_ANY = 0;
 /** SessionId uniquely identifies an AllJoyn session instance */
 typedef uint32_t SessionId;
 
+/** Invalid session id value used to indicate that a signal should be emitted on all hosted sessions */
+const SessionId SESSION_ID_ALL_HOSTED = ((SessionId) - 1);
+
 /**
  * SessionOpts contains a set of parameters that define a Session's characteristics.
  */
@@ -164,7 +167,7 @@ class SessionOpts {
      *
      * last transports.
      *
-     * #TRANSPORT_LOCAL \< #TRANSPORT_BLUETOOTH \< #TRANSPORT_WLAN \< #TRANSPORT_WWAN \< #TRANSPORT_ANY
+     * #TRANSPORT_LOCAL \< #TRANSPORT_WLAN \< #TRANSPORT_WWAN \< #TRANSPORT_ANY
      *
      *
      * @param other the SessionOpts being compared against

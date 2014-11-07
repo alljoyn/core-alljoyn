@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2011-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -53,14 +53,14 @@ class PacketSource {
 
     /**
      * Pull bytes from the source.
-     * The source is exhausted when ER_NONE is returned.
+     * The source is exhausted when ER_EOF is returned.
      *
      * @param buf          Buffer to store pulled bytes
      * @param reqBytes     Number of bytes requested to be pulled from source.
      * @param actualBytes  Actual number of bytes retrieved from source.
      * @param sender       Source type specific representation of the sender of the packet.
      * @param timeout      Time to wait to pull the requested bytes.
-     * @return   ER_OK if successful. ER_NONE if source is exhausted. Otherwise an error.
+     * @return   ER_OK if successful. ER_EOF if source is exhausted. Otherwise an error.
      */
     virtual QStatus PullPacketBytes(void* buf, size_t reqBytes, size_t& actualBytes, PacketDest& sender, uint32_t timeout = qcc::Event::WAIT_FOREVER) = 0;
 

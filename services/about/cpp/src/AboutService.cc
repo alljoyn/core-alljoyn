@@ -18,6 +18,7 @@
 #include <qcc/Debug.h>
 #include <alljoyn/about/AboutService.h>
 #include <alljoyn/BusAttachment.h>
+#include <alljoyn/AllJoynStd.h>
 
 #define QCC_MODULE "ALLJOYN_ABOUT_SERVICE"
 #define ABOUT_SERVICE_VERSION 1
@@ -44,37 +45,16 @@ QStatus AboutService::Register(int port) {
     QStatus status = ER_OK;
 
     m_AnnouncePort = port;
-    InterfaceDescription* p_InterfaceDescription = const_cast<InterfaceDescription*>(m_BusAttachment->GetInterface(ABOUT_INTERFACE_NAME));
-    if (!p_InterfaceDescription) {
-        status = m_BusAttachment->CreateInterface(ABOUT_INTERFACE_NAME, p_InterfaceDescription, false);
-        if (status != ER_OK) {
-            return status;
-        }
-
-        if (!p_InterfaceDescription) {
-            return ER_BUS_CANNOT_ADD_INTERFACE;
-        }
-
-        status = p_InterfaceDescription->AddMethod("GetAboutData", "s", "a{sv}", "languageTag,aboutData");
-        if (status != ER_OK) {
-            return status;
-        }
-        status = p_InterfaceDescription->AddMethod("GetObjectDescription", NULL, "a(oas)", "Control");
-        if (status != ER_OK) {
-            return status;
-        }
-        status = p_InterfaceDescription->AddSignal("Announce", "qqa(oas)a{sv}", "version,port,objectDescription,aboutData");
-        if (status != ER_OK) {
-            return status;
-        }
-        status = p_InterfaceDescription->AddProperty("Version", "q", (uint8_t) PROP_ACCESS_READ);
-        if (status != ER_OK) {
-            return status;
-        }
-        p_InterfaceDescription->Activate();
+    const InterfaceDescription* p_InterfaceDescription = NULL;
+    if (m_BusAttachment) {
+        p_InterfaceDescription = m_BusAttachment->GetInterface(org::alljoyn::About::InterfaceName);
     }
 
+    if (!p_InterfaceDescription) {
+        return ER_BUS_CANNOT_ADD_INTERFACE;
+    }
     status = AddInterface(*p_InterfaceDescription);
+
     if (status == ER_OK) {
         status = AddMethodHandler(p_InterfaceDescription->GetMember("GetAboutData"),
                                   static_cast<MessageReceiver::MethodHandler>(&AboutService::GetAboutData));

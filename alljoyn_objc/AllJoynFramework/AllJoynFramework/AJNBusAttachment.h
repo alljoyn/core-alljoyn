@@ -770,27 +770,84 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
 
 /**
  * Set the SessionListener for an existing sessionId.
- * Calling this method will override the listener set by a previous call to SetSessionListener or any
- * listener specified in JoinSession.
+ * This method cannot be called on a self-joined session.
+ *
+ * Calling this method will override the listener set by a previous call to SetSessionListener,
+ * SetHostedSessionListener, SetJoinedSessionListener or any listener specified in JoinSession.
  *
  * @param delegate     The SessionListener to associate with the session. May be nil to clear previous listener.
  * @param sessionId    The session id of an existing session.
- * @return  ER_OK if successful.
+ * @return  - ER_OK if successful.
+ *          - ER_BUS_NO_SESSION if session did not exist
  */
 - (QStatus)bindSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId;
+
+/**
+ * Set the SessionListener for an existing sessionId on the joiner side.
+ * Calling this method will override the listener set by a previous call to SetSessionListener or
+ * SetJoinedSessionListener or any listener specified in JoinSession.
+ *
+ * @param delegate     The SessionListener to associate with the session. May be nil to clear previous listener.
+ * @param sessionId    The session id of an existing session.
+ * @return  - ER_OK if successful.
+ *          - ER_BUS_NO_SESSION if session did not exist or if not host side of the session
+ */
+- (QStatus)bindJoinedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId;
+
+/**
+ * Set the SessionListener for an existing sessionId on the host side.
+ * Calling this method will override the listener set by a previous call to SetSessionListener or
+ * SetHostedSessionListener.
+ *
+ * @param delegate     The SessionListener to associate with the session. May be nil to clear previous listener.
+ * @param sessionId    The session id of an existing session.
+ * @return  - ER_OK if successful.
+ *          - ER_BUS_NO_SESSION if session did not exist or if not host side of the session
+ */
+- (QStatus)bindHostedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId;
 
 /**
  * Leave an existing session.
  * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveSession method call to the local daemon
  * and interprets the response.
+ * This method cannot be called on self-joined session.
  *
  * @param  sessionId     Session id.
  *
- * @return  - ER_OK iff daemon response was received and the leave operation was successfully completed.
+ * @return  - ER_OK if daemon response was received and the leave operation was successfully completed.
  *          - ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+ *          - ER_BUS_NO_SESSION if session did not exist
  *          - Other error status codes indicating a failure.
  */
 - (QStatus)leaveSession:(AJNSessionId)sessionId;
+
+/**
+ * Leave an existing session as joiner. This function will fail if you were not the joiner.
+ * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveJoinedSession method call to the local router
+ * and interprets the response.
+ *
+ * @param  sessionId     Session id.
+ *
+ * @return - ER_OK if router response was received and the leave operation was successfully completed.
+ *         - ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+ *         - ER_BUS_NO_SESSION if session did not exist or if not joiner of the session.
+ *         - Other error status codes indicating a failure.
+ */
+- (QStatus)leaveJoinedSession:(AJNSessionId)sessionId;
+
+/**
+ * Leave an existing session as host. This function will fail if you were not the host.
+ * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveHostedSession method call to the local router
+ * and interprets the response.
+ *
+ * @param  sessionId     Session id.
+ *
+ * @return - ER_OK if router response was received and the leave operation was successfully completed.
+ *         - ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+ *         - ER_BUS_NO_SESSION if session did not exist or if not host of the session.
+ *         - Other error status codes indicating a failure.
+ */
+- (QStatus)leaveHostedSession:(AJNSessionId)sessionId;
 
 /**
  * Remove a member from an existing multipoint session.
@@ -1162,14 +1219,13 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  *
  * The debug level can be set for individual subsystems or for "ALL"
  * subsystems.  Common subsystems are "ALLJOYN" for core AllJoyn code,
- * "ALLJOYN_OBJ" for the sessions management code, "ALLJOYN_BT" for the
- * Bluetooth subsystem, "ALLJOYN_BTC" for the Bluetooth topology manager,
- * and "ALLJOYN_NS" for the TCP name services.  Debug levels for specific
- * subsystems override the setting for "ALL" subsystems.  For example if
- * "ALL" is set to 7, but "ALLJOYN_OBJ" is set to 1, then detailed debug
- * output will be generated for all subsystems except for "ALLJOYN_OBJ"
- * which will only generate high level debug output.  "ALL" defaults to 0
- * which is off, or no debug output.
+ * "ALLJOYN_OBJ" for the sessions management code and "ALLJOYN_NS" for
+ * the TCP name services.  Debug levels for specific subsystems override
+ * the setting for "ALL" subsystems.  For example if "ALL" is set to 7,
+ * but "ALLJOYN_OBJ" is set to 1, then detailed debug output will be
+ * generated for all subsystems except for "ALLJOYN_OBJ" which will only
+ * generate high level debug output.  "ALL" defaults to 0 which is off,
+ * or no debug output.
  *
  * The debug output levels are actually a bit field that controls what
  * output is generated.  Those bit fields are described below:

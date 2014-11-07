@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -70,6 +70,7 @@ static BusAttachment* g_msgBus = NULL;
 static String g_wellKnownName = ::org::alljoyn::alljoyn_test::DefaultWellKnownName;
 static String g_advertiseName = ::org::alljoyn::alljoyn_test::DefaultAdvertiseName;
 static Event g_discoverEvent;
+static bool g_selfjoin;
 
 static TransportMask g_preferredTransport = 0;
 
@@ -440,6 +441,19 @@ class MyAuthListener : public AuthListener {
     unsigned long maxAuth;
 };
 
+class MySessionPortListener : public SessionPortListener {
+
+  public:
+    MySessionPortListener() { }
+    ~MySessionPortListener() { }
+  private:
+
+    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) { return true; }
+    void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {  }
+};
+
+static MySessionPortListener g_portListener;
+
 static void usage(void)
 {
     printf("Usage: bbsig [-n <name> ] [-a <name> ] [-h] [-l] [-s] [-r #] [-i #] [-c #] [-t #] [-x] [--tcp] [--udp] [--wfd] [-e[k] <mech>]\n\n");
@@ -462,8 +476,9 @@ static void usage(void)
     printf("   -e[k] [RSA|SRP|LOGON|PINX]   = Encrypt the test interface using specified auth mechanism, -ek means clear keys\n");
     printf("   -d                          = discover remote bus with test service\n");
     printf("   -b                          = Signal is broadcast rather than multicast\n");
+    printf("   --ls                        = Call LeaveSession before tearing down the Bus Attachment\n");
+    printf("   --self-join                 = Test self-join \n");
 }
-
 
 /** Main entry point */
 int main(int argc, char** argv)
@@ -479,6 +494,7 @@ int main(int argc, char** argv)
     bool useSignalHandler = false;
     bool discoverRemote = false;
     bool transportSpecific = false;
+    bool ls = false;
 
     unsigned long signalDelay = 0;
     unsigned long disconnectDelay = 0;
@@ -531,6 +547,8 @@ int main(int argc, char** argv)
             useSignalHandler = true;
         } else if (0 == strcmp("-d", argv[i])) {
             discoverRemote = true;
+        } else if (0 == strcmp("--ls", argv[i])) {
+            ls = true;
         } else if (0 == strcmp("-r", argv[i])) {
             ++i;
             if (i == argc) {
@@ -614,6 +632,9 @@ int main(int argc, char** argv)
                 usage();
                 exit(1);
             }
+        } else if (0 == strcmp("--self-join", argv[i])) {
+            g_selfjoin = true;
+            g_wellKnownName = g_advertiseName;
         } else {
             status = ER_FAIL;
             printf("Unknown option %s\n", argv[i]);
@@ -650,7 +671,7 @@ int main(int argc, char** argv)
         }
 
         /* Register a bus listener in order to get discovery indications */
-        if (discoverRemote) {
+        if (discoverRemote || g_selfjoin) {
             g_msgBus->RegisterBusListener(g_busListener);
         }
 
@@ -669,7 +690,18 @@ int main(int argc, char** argv)
             break;
         }
 
-        if (discoverRemote) {
+        if (g_selfjoin) {
+            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ALL);
+            SessionPort sessionPort = ::org::alljoyn::alljoyn_test::SessionPort;
+            QStatus status = g_msgBus->BindSessionPort(sessionPort, opts, g_portListener);
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Could not bind to session"));
+                break;
+            }
+
+        }
+
+        if (discoverRemote || g_selfjoin) {
             /*
              * Make sure the event is cleared so we don't pick up a stale event from the previous
              * iteration when running the stress test.
@@ -696,7 +728,7 @@ int main(int argc, char** argv)
          * If discovering, wait for the "FoundName" signal that tells us that we are connected to a
          * remote bus that is advertising bbservice's well-known name.
          */
-        if (discoverRemote && (ER_OK == status)) {
+        if ((discoverRemote  || g_selfjoin) && (ER_OK == status)) {
             for (bool discovered = false; !discovered;) {
                 /*
                  * We want to wait for the discover event, but we also want to
@@ -765,6 +797,10 @@ int main(int argc, char** argv)
 
         if (testObj->disconnectDelay > 0) {
             qcc::Sleep(testObj->disconnectDelay);
+        }
+
+        if (ls) {
+            g_msgBus->LeaveSession(g_busListener.GetSessionId());
         }
 
         /* Clean up msg bus for next stress loop iteration*/

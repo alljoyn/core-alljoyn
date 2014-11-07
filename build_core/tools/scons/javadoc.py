@@ -76,7 +76,7 @@ def javadoc_emitter(source, target, env):
    return tlist, slist
 
 def javadoc_generator(source, target, env, for_signature):
-   javadoc_classpath = '-classpath %s' % (env['JAVACLASSPATH'])
+   javadoc_classpath = '-classpath \"%s\"' % (env['JAVACLASSPATH'])
    javadoc_windowtitle = '-windowtitle \"%s\"' % (env['PROJECT_LONG_NAME'])
    javadoc_doctitle = '-doctitle \"%s<br/><h3>%s</h3>\"' % (env['PROJECT_LONG_NAME'], env['PROJECT_NUMBER'])
    javadoc_header = '-header \"<b>%s</b>\"' % (env['PROJECT_SHORT_NAME'])

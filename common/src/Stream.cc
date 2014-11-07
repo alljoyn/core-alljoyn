@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -55,5 +55,5 @@ QStatus Source::GetLine(qcc::String& outStr, uint32_t timeout)
             outStr.push_back(c);
         }
     }
-    return ((status == ER_NONE) && hasBytes) ? ER_OK : status;
+    return ((status == ER_EOF) && hasBytes) ? ER_OK : status;
 }

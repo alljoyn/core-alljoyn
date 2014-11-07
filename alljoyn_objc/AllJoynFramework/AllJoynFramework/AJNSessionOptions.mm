@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2013, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2013-2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -19,6 +19,9 @@
 
 /** Invalid SessionPort value used to indicate that BindSessionPort should choose any available port */
 const AJNSessionPort kAJNSessionPortAny = 0;
+
+/** Invalid SessionId value used to indicate that a signal should be emitted on all sessions hosted by this bus attachment */
+const AJNSessionId kAJNSessionIdAllHosted = 0xffffffff;
 
 /** Proximity types */
 const AJNProximity kAJNProximityAny      = 0xFF;

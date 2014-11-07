@@ -1,11 +1,11 @@
 /**
  * @file
  * Transport is an abstract base class implemented by physical
- * media interfaces such as TCP, UNIX, Local and Bluetooth.
+ * media interfaces such as TCP, UNIX, and Local.
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -77,7 +77,7 @@ class TransportListener {
 
 /**
  * %Transport is an abstract base class implemented by physical
- * media interfaces such as TCP, UNIX, Local and Bluetooth.
+ * media interfaces such as TCP, UNIX, and Local.
  */
 class Transport {
   public:
@@ -157,6 +157,19 @@ class Transport {
      *      - an error status otherwise.
      */
     virtual QStatus GetListenAddresses(const SessionOpts& opts, std::vector<qcc::String>& busAddrs) const { return ER_FAIL; }
+
+    /**
+     * Does this transport support connections as described by the provided
+     * session options.  This is used to distinguish up front options that are
+     * fundamentally incompatible -- for example, trying to use raw sockets with
+     * the UDP Transport which cannot support them.
+     *
+     * @param opts  Proposed session options.
+     * @return
+     *      - true if the SessionOpts specifies a supported option set.
+     *      - false otherwise.
+     */
+    virtual bool SupportsOptions(const SessionOpts& opts) const { return false; }
 
     /**
      * Normalize a transport specification.

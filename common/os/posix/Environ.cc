@@ -129,5 +129,5 @@ QStatus Environ::Parse(Source& source)
         }
     }
     lock.Unlock();
-    return (ER_NONE == status) ? ER_OK : status;
+    return (ER_EOF == status) ? ER_OK : status;
 }

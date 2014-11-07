@@ -802,6 +802,34 @@ public:
     return status;        
 }
 
+- (QStatus)bindJoinedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId
+{
+    AJNSessionListenerImpl *listenerImpl = new AJNSessionListenerImpl(self, delegate);
+    QStatus status = self.busAttachment->SetJoinedSessionListener(sessionId, listenerImpl);
+    @synchronized(self.sessionListeners) {
+        [self.sessionListeners addObject:[NSValue valueWithPointer:listenerImpl]];
+    }
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::bindJoinedSessionListener:toSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    
+    return status;
+}
+
+- (QStatus)bindHostedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId
+{
+    AJNSessionListenerImpl *listenerImpl = new AJNSessionListenerImpl(self, delegate);
+    QStatus status = self.busAttachment->SetHostedSessionListener(sessionId, listenerImpl);
+    @synchronized(self.sessionListeners) {
+        [self.sessionListeners addObject:[NSValue valueWithPointer:listenerImpl]];
+    }
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::bindHostedSessionListener:toSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    
+    return status;
+}
+
 - (QStatus)leaveSession:(AJNSessionId)sessionId
 {
     QStatus status = self.busAttachment->LeaveSession(sessionId);
@@ -809,6 +837,24 @@ public:
         NSLog(@"ERROR: AJNBusAttachment::leaveSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
     return status;    
+}
+
+- (QStatus)leaveJoinedSession:(AJNSessionId)sessionId
+{
+    QStatus status = self.busAttachment->LeaveJoinedSession(sessionId);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::leaveJoinedSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
+}
+
+- (QStatus)leaveHostedSession:(AJNSessionId)sessionId
+{
+    QStatus status = self.busAttachment->LeaveHostedSession(sessionId);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::leaveHostedSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
 }
 
 - (QStatus)removeSessionMember:(AJNSessionId)sessionId withName:(NSString *)memberName

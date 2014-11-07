@@ -34,8 +34,6 @@ import org.alljoyn.bus.annotation.BusProperty;
 import org.alljoyn.bus.annotation.BusSignal;
 import org.alljoyn.bus.annotation.Secure;
 
-import org.alljoyn.bus.Translator;
-
 /**
  * InterfaceDescription represents a message bus interface.
  * This class is used internally by registered bus objects.
@@ -55,7 +53,6 @@ class InterfaceDescription {
     private static final int AJ_IFC_SECURITY_OFF       = 2; /**< Security does not apply to this interface */
 
     private static Map<String, Translator> translatorCache = new HashMap<String, Translator>();
-
     private class Property {
 
         public String name;
@@ -97,6 +94,8 @@ class InterfaceDescription {
         members = new ArrayList<Method>();
         properties = new HashMap<String, Property>();
     }
+
+    private boolean announced;
 
     /** Allocate native resources. */
     private native Status create(BusAttachment busAttachment, String name,
@@ -213,6 +212,17 @@ class InterfaceDescription {
         }
 
         configureDescriptions(busAttachment, busInterface);
+
+        BusInterface intf = busInterface.getAnnotation(BusInterface.class);
+        if (intf != null) {
+            if(intf.announced().equals("true")) {
+                announced = true;
+            } else {
+                announced = false;
+            }
+        } else {
+            announced = false;
+        }
 
         activate();
         return Status.OK;
@@ -432,6 +442,13 @@ class InterfaceDescription {
         } else {
             return intf.getName();
         }
+    }
+
+    /**
+     * Is the interface announced
+     */
+    public boolean isAnnounced() {
+        return announced;
     }
 
     /**

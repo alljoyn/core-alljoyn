@@ -169,16 +169,14 @@ namespace AllJoynUnity
 		public enum TransportMask : ushort
 		{
 			None = 0x0000, /**< no transports */
-			Any = 0xFFFF, /**< ANY transport */
+			Any = 0xFF7F, /**< ANY transport (but Wi-Fi Direct) */
 			Local = 0x0001, /**< Local (same device) transport */
-			Bluetooth = 0x0002, /**< Bluetooth transport */
 			WLAN = 0x0004, /**< Wireless local-area network transport */
 			WWAN = 0x0008, /**< Wireless wide-area network transport */
 			LAN = 0x0010, /**< Wired local-area network transport */
 			TCP = 0x0004, /**< TCP/IP transport */
 			UDP = 0x0100, /**< UDP/IP transport */
-			IP =  0x0004  /**< IP transport (system chooses best IP transport) */
-
+			IP =  0x0104  /**< IP transport (system chooses best IP transport) */
 		}
 
 		#region DLL Imports

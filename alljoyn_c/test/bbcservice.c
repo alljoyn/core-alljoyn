@@ -663,7 +663,6 @@ void usage(void)
     printf("   -x                    = Compress signals echoed back to sender\n");
     printf("   -i #                  = Signal report interval (number of signals rx per update; default = 1000)\n");
     printf("   -n <well-known name>  = Well-known name to advertise\n");
-    printf("   -b                    = Advertise over Bluetooth (enables selective advertising)\n");
     printf("   -t                    = Advertise over TCP (enables selective advertising)\n");
     printf("   -l                    = Advertise locally (enables selective advertising)\n");
     printf("   -r                    = Advertise using the Rendezvous Server (enables selective advertising)\n");
@@ -781,8 +780,6 @@ int main(int argc, char** argv)
             }
         } else if (0 == strcmp("-m", argv[i])) {
             alljoyn_sessionopts_set_multipoint(g_sessionOpts, QCC_TRUE);
-        } else if (0 == strcmp("-b", argv[i])) {
-            alljoyn_sessionopts_set_transports(g_sessionOpts, ALLJOYN_TRANSPORT_BLUETOOTH);
         } else if (0 == strcmp("-t", argv[i])) {
             alljoyn_sessionopts_set_transports(g_sessionOpts, ALLJOYN_TRANSPORT_WLAN);
         } else if (0 == strcmp("-l", argv[i])) {

@@ -120,6 +120,7 @@ String& String::assign(const char* str, size_t len)
         append(str, len);
     } else if (context->refCount == 1) {
         context->offset = 0;
+        context->c_str[0] = 0;
         append(str, len);
     } else {
         /* Decrement ref of current context */

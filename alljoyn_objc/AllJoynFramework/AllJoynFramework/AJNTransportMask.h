@@ -30,9 +30,6 @@ extern const AJNTransportMask kAJNTransportMaskAny;
 /**< Local (same device) transport */
 extern const AJNTransportMask kAJNTransportMaskLocal;
 
-/**< Bluetooth transport */
-extern const AJNTransportMask kAJNTransportMaskBluetooth;
-
 /**< Wireless local-area network transport */
 extern const AJNTransportMask kAJNTransportMaskWLAN;
 

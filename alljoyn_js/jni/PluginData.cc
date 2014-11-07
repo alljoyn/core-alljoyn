@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -100,7 +100,7 @@ void PluginData::DestroyOnMainThread(Plugin& plugin, PluginData::CallbackContext
          * could lead to a crash if called, or a memory leak if not called.  Prefer the memory
          * leak.
          */
-        QCC_LogError(ER_NONE, ("Leaking callback context"));
+        QCC_LogError(ER_WARNING, ("Leaking callback context"));
     }
 }
 
@@ -162,10 +162,10 @@ void PluginData::DumpNPObjects()
     lock.Lock();
     std::list<NPObject*>::iterator it = npobjects.begin();
     if (it != npobjects.end()) {
-        QCC_LogError(ER_NONE, ("Orphaned NPObjects"));
+        QCC_DbgHLPrintf(("Orphaned NPObjects"));
     }
     for (; it != npobjects.end(); ++it) {
-        QCC_LogError(ER_NONE, ("%p", *it));
+        QCC_DbgHLPrintf(("%p", *it));
     }
     lock.Unlock();
 #endif

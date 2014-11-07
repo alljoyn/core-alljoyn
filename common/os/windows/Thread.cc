@@ -303,7 +303,8 @@ ThreadInternalReturn STDCALL Thread::RunInternal(void* threadArg)
     return retVal;
 }
 
-static const uint32_t stacksize = 256 * 1024;
+/* Inherit stack reserve and initial commit size from the host EXE's image file header */
+static const uint32_t stacksize = 0;
 
 QStatus Thread::Start(void* arg, ThreadListener* listener)
 {

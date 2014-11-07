@@ -124,11 +124,6 @@ public class SessionOpts {
     public static final short TRANSPORT_LOCAL     = 0x0001;
 
     /**
-     * Use only Bluetooth transport to communicate with a given session.
-     */
-    public static final short TRANSPORT_BLUETOOTH = 0x0002;
-
-    /**
      * Use only a wireless local area network to communicate with a given session.
      */
     public static final short TRANSPORT_WLAN      = 0x0004;
@@ -176,7 +171,7 @@ public class SessionOpts {
      * transport an application author must positively act and OR in the
      * TRANSPORT_WFD bit.
      */
-    public static final short TRANSPORT_ANY       = (short)0xffff & ~TRANSPORT_WFD & ~TRANSPORT_UDP;
+    public static final short TRANSPORT_ANY       = (short)0xffff & ~TRANSPORT_WFD;
 
     /**
      * Use any available IP-based transport to communicate with a given session.
@@ -184,7 +179,7 @@ public class SessionOpts {
      * Selecting the IP transport really implies letting the system decice which
      * transport is best.
      */
-    public static final short TRANSPORT_IP       = TRANSPORT_TCP;
+    public static final short TRANSPORT_IP       = (TRANSPORT_TCP | TRANSPORT_UDP);
 
     public String toString( ) {
         StringBuilder result = new StringBuilder();
@@ -211,7 +206,6 @@ public class SessionOpts {
         value = String.format("(0x%04x)", transports);
         result.append(value);
         if ((transports & TRANSPORT_LOCAL) != 0) result.append(" TRANSPORT_LOCAL");
-        if ((transports & TRANSPORT_BLUETOOTH) != 0) result.append(" TRANSPORT_BLUETOOTH");
         if ((transports & TRANSPORT_WLAN) != 0) result.append(" TRANSPORT_WLAN");
         if ((transports & TRANSPORT_WWAN) != 0) result.append(" TRANSPORT_WWAN");
         if ((transports & TRANSPORT_WFD) != 0) result.append(" TRANSPORT_WFD");

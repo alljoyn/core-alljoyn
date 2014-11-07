@@ -754,7 +754,6 @@ static void usage(void)
     printf("   -x                    = Compress signals echoed back to sender\n");
     printf("   -i #                  = Signal report interval (number of signals rx per update; default = 1000)\n");
     printf("   -n <well-known name>  = Well-known name to advertise\n");
-    printf("   -b                    = Advertise over Bluetooth (enables selective advertising)\n");
     printf("   -t                    = Advertise over TCP (enables selective advertising)\n");
     printf("   -l                    = Advertise locally (enables selective advertising)\n");
     printf("   -w                    = Advertise over Wi-Fi Direct (enables selective advertising)\n");
@@ -845,8 +844,6 @@ int main(int argc, char** argv)
             }
         } else if (0 == strcmp("-m", argv[i])) {
             opts.isMultipoint = true;
-        } else if (0 == strcmp("-b", argv[i])) {
-            opts.transports |= TRANSPORT_BLUETOOTH;
         } else if (0 == strcmp("-t", argv[i])) {
             opts.transports |= TRANSPORT_WLAN;
         } else if (0 == strcmp("-l", argv[i])) {

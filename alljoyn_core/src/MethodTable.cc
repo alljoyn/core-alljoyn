@@ -6,7 +6,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -39,6 +39,7 @@ MethodTable::~MethodTable()
     MapType::iterator iter = hashTable.begin();
     while (iter != hashTable.end()) {
         delete iter->second;
+        ++iter;
     }
 
     hashTable.clear();
@@ -56,7 +57,12 @@ void MethodTable::Add(BusObject* object,
 
     /* Method calls don't require an interface so we need to add an entry with a NULL interface */
     if (!entry->ifaceStr.empty()) {
-        hashTable[Key(object->GetPath(), NULL, member->name.c_str())] = new Entry(*entry);
+        // specification states "if there are multiple properties on an object
+        // with the same name, the results are undefined." We choose to only
+        // use the first member that was added.
+        if (hashTable.find(Key(object->GetPath(), NULL, member->name.c_str())) == hashTable.end()) {
+            hashTable[Key(object->GetPath(), NULL, member->name.c_str())] = new Entry(*entry);
+        }
     }
     lock.Unlock(MUTEX_CONTEXT);
 }

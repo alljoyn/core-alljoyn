@@ -16,6 +16,7 @@
 
 #include <qcc/Debug.h>
 #include <alljoyn/about/AboutIconService.h>
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 
 #define QCC_MODULE "ALLJOYN_ABOUT_ICON_SERVICE"
@@ -36,51 +37,27 @@ QStatus AboutIconService::Register() {
     QStatus status = ER_OK;
     QCC_DbgTrace(("AboutIconService::%s", __FUNCTION__));
 
-    InterfaceDescription* intf = const_cast<InterfaceDescription*>(m_BusAttachment->GetInterface(ABOUT_ICON_INTERFACE_NAME));
-    if (!intf) {
-        status = m_BusAttachment->CreateInterface(ABOUT_ICON_INTERFACE_NAME, intf, false);
-        if (status != ER_OK) {
-            return status;
-        }
-        if (!intf) {
-            return ER_BUS_CANNOT_ADD_INTERFACE;
-        }
+    const InterfaceDescription* intf = NULL;
+    if (m_BusAttachment) {
+        intf = m_BusAttachment->GetInterface(org::alljoyn::Icon::InterfaceName);
+    }
 
-        status = intf->AddMethod("GetUrl", NULL, "s", "url");
-        if (status != ER_OK) {
-            return status;
-        }
-        status = intf->AddMethod("GetContent", NULL, "ay", "content");
-        if (status != ER_OK) {
-            return status;
-        }
-        status = intf->AddProperty("Version", "q", (uint8_t) PROP_ACCESS_READ);
-        if (status != ER_OK) {
-            return status;
-        }
-        status = intf->AddProperty("MimeType", "s", (uint8_t) PROP_ACCESS_READ);
-        if (status != ER_OK) {
-            return status;
-        }
-        status = intf->AddProperty("Size", "u", (uint8_t) PROP_ACCESS_READ);
-        if (status != ER_OK) {
-            return status;
-        }
-        intf->Activate();
+    if (!intf) {
+        return ER_BUS_CANNOT_ADD_INTERFACE;
     }
+
     status = AddInterface(*intf);
-    if (status != ER_OK) {
-        return status;
-    }
-    status = AddMethodHandler(intf->GetMember("GetUrl"),
-                              static_cast<MessageReceiver::MethodHandler>(&AboutIconService::GetUrl));
-    if (status != ER_OK) {
-        return status;
-    }
-    status = AddMethodHandler(intf->GetMember("GetContent"),
-                              static_cast<MessageReceiver::MethodHandler>(&AboutIconService::GetContent));
-    if (status != ER_OK) {
-        return status;
+    if (status == ER_OK) {
+        status = AddMethodHandler(intf->GetMember("GetUrl"),
+                                  static_cast<MessageReceiver::MethodHandler>(&AboutIconService::GetUrl));
+        if (status != ER_OK) {
+            return status;
+        }
+        status = AddMethodHandler(intf->GetMember("GetContent"),
+                                  static_cast<MessageReceiver::MethodHandler>(&AboutIconService::GetContent));
+        if (status != ER_OK) {
+            return status;
+        }
     }
     return status;
 }

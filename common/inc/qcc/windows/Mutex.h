@@ -99,6 +99,13 @@ class Mutex {
     CRITICAL_SECTION mutex; ///< Mutex variable.
     void Init();            ///< initialize a mutex
 
+    /**
+     * Give the condition variable class access to the underlying critical
+     * section so it can get the private CRITICAL_SECTION out of a qcc::Mutex
+     * and use the Windows condition variable functions directly.
+     */
+    friend class Condition;
+
 };
 
 } /* namespace */

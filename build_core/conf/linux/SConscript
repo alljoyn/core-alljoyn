@@ -21,6 +21,8 @@ vars = Variables()
 vars.Add(BoolVariable('GCOV', 'Compile with gcov support', 'no'))
 vars.Update(env)
 
+Help(vars.GenerateHelpText(env))
+
 # Linux specific flags
 env.Append(CPPDEFINES = ['QCC_OS_LINUX'])
 env.Append(CPPDEFINES = ['_GLIBCXX_USE_C99_FP_MACROS_DYNAMIC'])

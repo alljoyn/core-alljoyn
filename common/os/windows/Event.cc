@@ -247,17 +247,23 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
         }
     }
 
-    Thread* thread = Thread::GetThread();
-
-    Event* stopEvent = &thread->GetStopEvent();
-    handles[numHandles++] = stopEvent->handle;
-
-    if (INVALID_HANDLE_VALUE != evt.handle) {
-        handles[numHandles++] = evt.handle;
-    }
+    /*
+     * The order of handle being added here is important because we want to prioritize the I/O handle.
+     * In the event that multiple handles get set during the wait, we would get the prioritized one.
+     * For example, if both the IO and stopEvent handles are set, this function would return ER_OK
+     * instead of ER_ALERTED_THREAD.
+     */
     if (INVALID_HANDLE_VALUE != evt.ioHandle) {
         handles[numHandles++] = evt.ioHandle;
     }
+    if (INVALID_HANDLE_VALUE != evt.handle) {
+        handles[numHandles++] = evt.handle;
+    }
+
+    Thread* thread = Thread::GetThread();
+    Event* stopEvent = &thread->GetStopEvent();
+    handles[numHandles++] = stopEvent->handle;
+
     if (TIMED == evt.eventType) {
         uint32_t now = GetTimestamp();
         if (evt.timestamp <= now) {
@@ -277,10 +283,17 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
     evt.DecrementNumThreads();
 
     if ((ret >= WAIT_OBJECT_0) && (ret < (WAIT_OBJECT_0 + numHandles))) {
-        if (handles[ret - WAIT_OBJECT_0] == stopEvent->handle) {
-            status = (thread && thread->IsStopping()) ? ER_STOPPING_THREAD : ER_ALERTED_THREAD;
+        if (thread && thread->IsStopping()) {
+            /* If there's a stop during the wait, prioritize the return value and ignore what was signaled */
+            status = ER_STOPPING_THREAD;
         } else {
-            status = ER_OK;
+            if (handles[ret - WAIT_OBJECT_0] == stopEvent->handle) {
+                /* The wait returned due to stopEvent */
+                status = ER_ALERTED_THREAD;
+            } else {
+                /* The wait returned due to the source event */
+                status = ER_OK;
+            }
         }
     } else if (WAIT_TIMEOUT == ret) {
         if (TIMED == evt.eventType) {
@@ -594,7 +607,14 @@ QStatus Event::ResetEvent()
 
 bool Event::IsSet()
 {
-    return (ER_TIMEOUT == Wait(*this, 0)) ? false : true;
+    QStatus status = Wait(*this, 0);
+    if (ioHandle != INVALID_HANDLE_VALUE) {
+        /* Waiting for an I/O event can be interrupted by ER_STOPPING_THREAD or
+           ER_ALERTED_THREAD, but the I/O event is set only in the ER_OK case.
+         */
+        return (ER_OK == status) ? true : false;
+    }
+    return (ER_TIMEOUT != status) ? true : false;
 }
 
 void Event::ResetTime(uint32_t delay, uint32_t period)

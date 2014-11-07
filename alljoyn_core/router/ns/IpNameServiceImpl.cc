@@ -368,7 +368,7 @@ IpNameServiceImpl::IpNameServiceImpl()
     m_ipv4QuietSockFd(qcc::INVALID_SOCKET_FD), m_ipv6QuietSockFd(qcc::INVALID_SOCKET_FD),
     m_ipv4UnicastSockFd(qcc::INVALID_SOCKET_FD), m_unicastEvent(NULL),
     m_protectListeners(false), m_packetScheduler(*this),
-    m_networkChangeScheduleCount(m_retries + 1)
+    m_networkChangeScheduleCount(m_retries + 1), m_doNetworkCallback(false)
 {
     QCC_DbgHLPrintf(("IpNameServiceImpl::IpNameServiceImpl()"));
     TRANSPORT_INDEX_TCP = IndexFromBit(TRANSPORT_TCP);
@@ -508,11 +508,11 @@ IpNameServiceImpl::~IpNameServiceImpl()
         m_ipv6QuietSockFd = qcc::INVALID_SOCKET_FD;
     }
 
-    if (m_ipv4UnicastSockFd != qcc::INVALID_SOCKET_FD) {
-        qcc::Close(m_ipv4UnicastSockFd);
-        m_ipv4UnicastSockFd = qcc::INVALID_SOCKET_FD;
-    }
-
+    //
+    // m_unicastEvent must be deleted before closing m_ipv4UnicastSockFd,
+    // because m_unicastEvent's destructor code path is using
+    // m_ipv4UnicastSockFd.
+    //
     if (m_unicastEvent) {
         delete m_unicastEvent;
         m_unicastEvent = NULL;
@@ -1479,127 +1479,25 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
         }
     }
 
-    // If m_processTransport is true, then one of the transports
-    // is waiting for us to supply the list of live interfaces so
-    // it can get things started. We only want to provide the
-    // sub-set of live interfaces that have been requested by
-    // each transport (by name or addr) when the callback is invoked.
+    // Schedule the processing of the transports'
+    // network event callbacks on the network event
+    // packet scheduler thread.
     if (m_processTransport) {
-        std::map<qcc::String, qcc::IPAddress> ifMap;
-        for (uint32_t i = 0; (m_state == IMPL_RUNNING) && (i < m_liveInterfaces.size()); ++i) {
-            if (m_liveInterfaces[i].m_address.IsIPv4()) {
-                ifMap[m_liveInterfaces[i].m_interfaceName] = m_liveInterfaces[i].m_address;
-            }
-        }
-        if (!ifMap.empty()) {
-            for (uint32_t transportIndex = 0; transportIndex < N_TRANSPORTS; transportIndex++) {
-                if (m_networkEventCallback[transportIndex]) {
-                    std::map<qcc::String, qcc::IPAddress> transportIfMap;
-                    for (uint32_t j = 0; j < m_requestedInterfaces[transportIndex].size(); j++) {
-                        for (std::map<qcc::String, qcc::IPAddress>::iterator it = ifMap.begin(); it != ifMap.end(); it++) {
-                            qcc::String name = it->first;
-                            qcc::IPAddress addr = it->second;
-                            if (m_requestedInterfaces[transportIndex][j].m_interfaceName == name || m_requestedInterfaces[transportIndex][j].m_interfaceAddr == addr) {
-                                transportIfMap[name] = addr;
-                            }
-                        }
-                    }
-                    if (m_any[transportIndex]) {
-                        transportIfMap = ifMap;
-                    }
-                    if (!transportIfMap.empty()) {
-                        m_protect_net_callback = true;
-                        QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Invoking network event callback for transport index %u", transportIndex));
-                        m_mutex.Unlock();
-                        (*m_networkEventCallback[transportIndex])(ifMap);
-                        m_mutex.Lock();
-                        m_protect_net_callback = false;
-                    }
-                }
-            }
-            m_processTransport = false;
-        }
+        m_doNetworkCallback = true;
+        m_packetScheduler.Alert();
+        m_processTransport = false;
     }
+
     if (m_refreshAdvertisements) {
         QCC_DbgHLPrintf(("Now refreshing advertisements on interface event"));
         m_timer = m_tRetransmit + 1;
         m_networkChangeScheduleCount = 0;
         std::map<qcc::String, qcc::IPAddress> ifMap;
-        // For the transport callbacks, we want to include only the
-        // interfaces that have changed their IPv4 addresses or the
-        // loopback interfaces as these retain their IPv4 addresses
-        // on interface down events on Linux.
-        // In addition, we want to include the interfaces with IPv4
-        // addresses that have changed on platforms where we do not
-        // have information about the address family that changed.
-        // We also want to include all interfaces with IPv4 addresses
-        // on platforms where we do not have information about which
-        // interface index/address family has changed.
-#ifndef QCC_OS_GROUP_WINDOWS
         for (std::set<uint32_t>::const_iterator it = networkEvents.begin(); it != networkEvents.end(); it++) {
             m_networkEvents.insert(*it);
-            for (uint32_t i = 0; (m_state == IMPL_RUNNING) && (i < m_liveInterfaces.size()); ++i) {
-                bool sameInterfaceIndex = (m_liveInterfaces[i].m_index == NETWORK_EVENT_IF_INDEX(*it));
-                bool interfaceAddrIsIPv4 = m_liveInterfaces[i].m_address.IsIPv4();
-                bool ipv4OrUnspecifiedEvent = (NETWORK_EVENT_IF_FAMILY(*it) == qcc::QCC_AF_INET_INDEX || NETWORK_EVENT_IF_FAMILY(*it) == qcc::QCC_AF_UNSPEC_INDEX);
-                bool loopbackInterface = ((m_liveInterfaces[i].m_flags & qcc::IfConfigEntry::LOOPBACK) != 0);
-                if (sameInterfaceIndex && interfaceAddrIsIPv4 && (ipv4OrUnspecifiedEvent || loopbackInterface)) {
-                    ifMap[m_liveInterfaces[i].m_interfaceName] = m_liveInterfaces[i].m_address;
-#if defined(QCC_OS_LINUX)
-                    if (loopbackInterface && NETWORK_EVENT_IF_FAMILY(*it) == qcc::QCC_AF_INET6_INDEX) {
-                        // If this is a loopback interface and we have an event for IPv6
-                        // address change, we also add an event for the IPv4 address of
-                        // the loopback interface as we don't get an event for IPv4
-                        // address changes on ifdown/up on loopback interfaces unless
-                        // the IPv4 address is also removed.
-                        NetworkEvent event = *it;
-                        event &= ~(0x3);
-                        event |=  qcc::QCC_AF_INET_INDEX;
-                        m_networkEvents.insert(event);
-                    }
-#endif
-                    break;
-                }
-            }
         }
-#else
-        for (uint32_t i = 0; (m_state == IMPL_RUNNING) && (i < m_liveInterfaces.size()); ++i) {
-            if (m_liveInterfaces[i].m_address.IsIPv4()) {
-                ifMap[m_liveInterfaces[i].m_interfaceName] = m_liveInterfaces[i].m_address;
-            }
-        }
-#endif
         m_packetScheduler.Alert();
         m_refreshAdvertisements = false;
-
-        if (ifMap.empty()) {
-            return;
-        }
-        for (uint32_t transportIndex = 0; transportIndex < N_TRANSPORTS; transportIndex++) {
-            if (m_networkEventCallback[transportIndex]) {
-                std::map<qcc::String, qcc::IPAddress> transportIfMap;
-                for (uint32_t j = 0; j < m_requestedInterfaces[transportIndex].size(); j++) {
-                    for (std::map<qcc::String, qcc::IPAddress>::iterator it = ifMap.begin(); it != ifMap.end(); it++) {
-                        qcc::String name = it->first;
-                        qcc::IPAddress addr = it->second;
-                        if (m_requestedInterfaces[transportIndex][j].m_interfaceName == name || m_requestedInterfaces[transportIndex][j].m_interfaceAddr == addr) {
-                            transportIfMap[name] = addr;
-                        }
-                    }
-                }
-                if (m_any[transportIndex]) {
-                    transportIfMap = ifMap;
-                }
-                if (!transportIfMap.empty()) {
-                    m_protect_net_callback = true;
-                    QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Invoking network event callback for transport index %u", transportIndex));
-                    m_mutex.Unlock();
-                    (*m_networkEventCallback[transportIndex])(ifMap);
-                    m_mutex.Lock();
-                    m_protect_net_callback = false;
-                }
-            }
-        }
     }
 }
 
@@ -3010,7 +2908,7 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
 
         MDNSTextRData* txtRDataTcp = new MDNSTextRData();
         if (m_reliableIPv6Port[TRANSPORT_INDEX_TCP]) {
-            txtRDataTcp->SetValue("r6port", m_reliableIPv6Port[TRANSPORT_INDEX_TCP]);
+            txtRDataTcp->SetValue("r6port", U32ToString(m_reliableIPv6Port[TRANSPORT_INDEX_TCP]));
         }
 
         MDNSResourceRecord txtRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRDataTcp);
@@ -3035,7 +2933,7 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
 
         MDNSTextRData* txtRDataUdp = new MDNSTextRData();
         if (m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]) {
-            txtRDataUdp->SetValue("u6port", m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]);
+            txtRDataUdp->SetValue("u6port", U32ToString(m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]));
         }
 
         MDNSResourceRecord txtRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, txtRDataUdp);
@@ -3788,12 +3686,12 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                         if (answerRecord->GetDomainName().find("._tcp.") != String::npos) {
 
                             if (m_reliableIPv6Port[TRANSPORT_INDEX_TCP]) {
-                                txtRData->SetValue("r6port",  m_reliableIPv6Port[TRANSPORT_INDEX_TCP]);
+                                txtRData->SetValue("r6port",  U32ToString(m_reliableIPv6Port[TRANSPORT_INDEX_TCP]));
                             }
 
                         } else if (answerRecord->GetDomainName().find("._udp.") != String::npos) {
                             if (m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]) {
-                                txtRData->SetValue("u6port",  m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]);
+                                txtRData->SetValue("u6port",  U32ToString(m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]));
                             }
 
                         }
@@ -3836,7 +3734,7 @@ bool IpNameServiceImpl::SameNetwork(uint32_t interfaceAddressPrefixLen, qcc::IPA
             return false;
         }
 
-        if (interfaceAddressPrefixLen >= 128) {
+        if (interfaceAddressPrefixLen > 128) {
             QCC_LogError(ER_FAIL, ("IpNameServiceImpl::SameNetwork(): Bad IPv6 network prefix"));
             return false;
         }
@@ -3859,6 +3757,10 @@ bool IpNameServiceImpl::SameNetwork(uint32_t interfaceAddressPrefixLen, qcc::IPA
         for (uint32_t i = 0; i < nBits; ++i) {
             mask >>= 1;
             mask |= 0x80;
+        }
+
+        if (interfaceAddressPrefixLen == 128) {
+            return true;
         }
 
         if ((addrA[nBytes] & mask) == (addrB[nBytes] & mask)) {
@@ -5092,7 +4994,9 @@ void* IpNameServiceImpl::Run(void* arg)
         //
         vector<qcc::Event*> checkEvents, signaledEvents;
         checkEvents.push_back(&stopEvent);
-        checkEvents.push_back(&timerEvent);
+        if (IsPeriodicMaintenanceTimerNeeded()) {
+            checkEvents.push_back(&timerEvent);
+        }
         checkEvents.push_back(&m_wakeEvent);
         checkEvents.push_back(&networkEvent);
         if (m_unicastEvent) {
@@ -5171,8 +5075,9 @@ void* IpNameServiceImpl::Run(void* arg)
                 m_terminal = true;
 
                 for (uint32_t index = 0; index < N_TRANSPORTS; ++index) {
-                    Retransmit(index, true, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V0_V1, MaskFromIndex(index));
-                    Retransmit(index, true, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V2, TRANSPORT_TCP | TRANSPORT_UDP);
+                    vector<String> empty;
+                    Retransmit(index, true, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V0_V1, MaskFromIndex(index), empty);
+                    Retransmit(index, true, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V2, TRANSPORT_TCP | TRANSPORT_UDP, empty);
                 }
                 break;
             } else if (*i == &timerEvent) {
@@ -5373,12 +5278,12 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
             pilotPacket->SetVersion(2, 2);
 
             if (m_reliableIPv6Port[TRANSPORT_INDEX_TCP]) {
-                txtRDataTcp.SetValue("r6port", m_reliableIPv6Port[TRANSPORT_INDEX_TCP]);
+                txtRDataTcp.SetValue("r6port", U32ToString(m_reliableIPv6Port[TRANSPORT_INDEX_TCP]));
             }
             MDNSResourceRecord txtRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataTcp);
 
             if (m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]) {
-                txtRDataUdp.SetValue("u6port", m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]);
+                txtRDataUdp.SetValue("u6port", U32ToString(m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]));
             }
 
             MDNSResourceRecord txtRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataUdp);
@@ -5569,7 +5474,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
 
                             if ((tm & TRANSPORT_TCP) && (!m_reliableIPv4PortMap[TRANSPORT_INDEX_TCP].empty() || m_reliableIPv6Port[TRANSPORT_INDEX_TCP])) {
                                 if (m_reliableIPv6Port[TRANSPORT_INDEX_TCP]) {
-                                    txtRDataTcp.SetValue("r6port", m_reliableIPv6Port[TRANSPORT_INDEX_TCP]);
+                                    txtRDataTcp.SetValue("r6port", U32ToString(m_reliableIPv6Port[TRANSPORT_INDEX_TCP]));
                                 }
                                 MDNSResourceRecord txtRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataTcp);
                                 additionalPacket->AddAnswer(ptrRecordTcp);
@@ -5579,7 +5484,7 @@ void IpNameServiceImpl::GetResponsePackets(std::list<Packet>& packets, bool quie
 
                             if (tm & TRANSPORT_UDP && (!m_unreliableIPv4PortMap[TRANSPORT_INDEX_UDP].empty() || m_unreliableIPv6Port[TRANSPORT_INDEX_UDP])) {
                                 if (m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]) {
-                                    txtRDataUdp.SetValue("u6port", m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]);
+                                    txtRDataUdp.SetValue("u6port", U32ToString(m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]));
                                 }
                                 MDNSResourceRecord txtRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, 120, &txtRDataUdp);
                                 additionalPacket->AddAnswer(ptrRecordUdp);
@@ -5859,7 +5764,7 @@ void IpNameServiceImpl::GetQueryPackets(std::list<Packet>& packets, const uint8_
     m_mutex.Unlock();
 }
 
-void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask completeTransportMask, const int32_t interfaceIndex, const qcc::AddressFamily family, const qcc::IPAddress& localAddress)
+void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool quietly, const qcc::IPEndpoint& destination, uint8_t type, TransportMask completeTransportMask, vector<qcc::String>& wkns, const int32_t interfaceIndex, const qcc::AddressFamily family, const qcc::IPAddress& localAddress)
 {
     //
     // Type can be one of the following 3 values:
@@ -5875,6 +5780,10 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         type &= ~TRANSMIT_V0_V1;
     }
 
+    if (type == 0) {
+        //Nothing to transmit
+        return;
+    }
     QCC_DbgPrintf(("IpNameServiceImpl::Retransmit()"));
 
     //
@@ -6192,6 +6101,21 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
         // advertisements but she will only be shooting herself in the foot.
         //
         for (set<qcc::String>::iterator i = m_advertised[transportIndex].begin(); i != m_advertised[transportIndex].end(); ++i) {
+
+            //Do not send non-matching names if replying quietly
+            if (quietly) {
+                bool ignore = true;
+                for (vector<String>::iterator itWkn = wkns.begin(); itWkn != wkns.end(); itWkn++) {
+                    //Do not send non-matching names if replying quietly
+                    if (!(WildcardMatch((*i), (*itWkn)))) {
+                        ignore = false;
+                        break;
+                    }
+                }
+                if (ignore) {
+                    continue;
+                }
+            }
             QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Accumulating \"%s\"", (*i).c_str()));
 
             //
@@ -6276,6 +6200,19 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
         if (quietly) {
             for (set<qcc::String>::iterator i = m_advertised_quietly[transportIndex].begin(); i != m_advertised_quietly[transportIndex].end(); ++i) {
+                if (quietly) {
+                    bool ignore = true;
+                    for (vector<String>::iterator itWkn = wkns.begin(); itWkn != wkns.end(); itWkn++) {
+                        //Do not send non-matching names if replying quietly
+                        if (!(WildcardMatch((*i), (*itWkn)))) {
+                            ignore = false;
+                            break;
+                        }
+                    }
+                    if (ignore) {
+                        continue;
+                    }
+                }
                 QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Accumulating (quiet) \"%s\"", (*i).c_str()));
 
                 size_t currentSize = nspacket->GetSerializedSize() + isAt.GetSerializedSize();
@@ -6388,7 +6325,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
             MDNSTextRData* txtRDataTcp = new MDNSTextRData();
             if (m_reliableIPv6Port[TRANSPORT_INDEX_TCP]) {
-                txtRDataTcp->SetValue("r6port", m_reliableIPv6Port[TRANSPORT_INDEX_TCP]);
+                txtRDataTcp->SetValue("r6port", U32ToString(m_reliableIPv6Port[TRANSPORT_INDEX_TCP]));
             }
 
             MDNSResourceRecord txtRecordTcp(m_guid + "._alljoyn._tcp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, exiting ? 0 : m_tDuration, txtRDataTcp);
@@ -6412,7 +6349,7 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
 
             MDNSTextRData* txtRDataUdp = new MDNSTextRData();
             if (m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]) {
-                txtRDataUdp->SetValue("u6port", m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]);
+                txtRDataUdp->SetValue("u6port", U32ToString(m_unreliableIPv6Port[TRANSPORT_INDEX_UDP]));
             }
 
             MDNSResourceRecord txtRecordUdp(m_guid + "._alljoyn._udp.local.", MDNSResourceRecord::TXT, MDNSResourceRecord::INTERNET, exiting ? 0 : m_tDuration, txtRDataUdp);
@@ -6447,6 +6384,22 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
                 advRData->SetTransport(tm);
             }
             for (set<qcc::String>::iterator it = advertising.begin(); it != advertising.end(); ++it) {
+
+                //Do not send non-matching names if requestor has set send_matching_only i.e. wkns.size() > 0
+                if (wkns.size() > 0) {
+                    bool ignore = true;
+                    for (vector<String>::iterator itWkn = wkns.begin(); itWkn != wkns.end(); itWkn++) {
+                        //Do not send non-matching names if requestor has set send_matching_only i.e. wkns.size() > 0
+                        if (!(WildcardMatch((*it), (*itWkn)))) {
+                            ignore = false;
+                            break;
+                        }
+                    }
+                    if (ignore) {
+                        continue;
+                    }
+                }
+
                 QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Accumulating \"%s\"", (*it).c_str()));
 
                 //
@@ -6521,6 +6474,20 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
             if (quietly) {
 
                 for (set<qcc::String>::iterator it = advertising_quietly.begin(); it != advertising_quietly.end(); ++it) {
+                    //Do not send non-matching names if requestor has set send_matching_only i.e. wkns.size() > 0
+                    if (wkns.size() > 0) {
+                        bool ignore = true;
+                        for (vector<String>::iterator itWkn = wkns.begin(); itWkn != wkns.end(); itWkn++) {
+                            //Do not send non-matching names if requestor has set send_matching_only i.e. wkns.size() > 0
+                            if (!(WildcardMatch((*it), (*itWkn)))) {
+                                ignore = false;
+                                break;
+                            }
+                        }
+                        if (ignore) {
+                            continue;
+                        }
+                    }
                     QCC_DbgPrintf(("IpNameServiceImpl::Retransmit(): Accumulating (quiet) \"%s\"", (*it).c_str()));
 
                     size_t currentSize = mdnsPacket->GetSerializedSize();
@@ -6575,6 +6542,21 @@ void IpNameServiceImpl::Retransmit(uint32_t transportIndex, bool exiting, bool q
     m_mutex.Unlock();
 }
 
+// Note: this function assumes the mutex is locked
+bool IpNameServiceImpl::IsPeriodicMaintenanceTimerNeeded(void) const
+{
+    //
+    // The timer is needed when we're in the midst of handling a terminal message,
+    // we have an outbound message queued, or we're counting down to send the
+    // queued advertisement.
+    //
+    if (m_terminal || (m_outbound.size() > 0) || (m_timer > 0)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 void IpNameServiceImpl::DoPeriodicMaintenance(void)
 {
 #if HAPPY_WANDERER
@@ -6591,10 +6573,8 @@ void IpNameServiceImpl::DoPeriodicMaintenance(void)
         if (m_timer == m_tRetransmit) {
             QCC_DbgPrintf(("IpNameServiceImpl::DoPeriodicMaintenance(): Retransmit()"));
             for (uint32_t index = 0; index < N_TRANSPORTS; ++index) {
-                //
-                //Remove periodic unsolicitated responses for V2
-                //
-                Retransmit(index, false, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V0_V1, MaskFromIndex(index));
+                vector<String> empty;
+                Retransmit(index, false, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V0_V1, MaskFromIndex(index), empty);
             }
             m_timer = m_tDuration;
         }
@@ -6635,7 +6615,7 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
             return;
         }
     }
-
+    vector<String> wkns;
     //
     // The who-has message doesn't specify which transport is doing the asking.
     // This is an oversight and should be fixed in a subsequent version.  The
@@ -6672,8 +6652,9 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
         bool respond = false;
         bool respondQuietly = false;
         for (uint32_t i = 0; i < whoHas.GetNumberNames(); ++i) {
-            qcc::String wkn = whoHas.GetName(i);
 
+            qcc::String wkn = whoHas.GetName(i);
+            wkns.push_back(wkn);
             //
             // Zero length strings are unmatchable.  If you want to do a wildcard
             // match, you've got to send a wildcard character.
@@ -6741,10 +6722,11 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
                 family = QCC_AF_INET6;
             }
             if (nsVersion == 0 && msgVersion == 0) {
-                Retransmit(index, false, respondQuietly, endpoint, TRANSMIT_V0, MaskFromIndex(index), interfaceIndex, family, localAddress);
+                vector<String> empty;
+                Retransmit(index, false, respondQuietly, endpoint, TRANSMIT_V0, MaskFromIndex(index), empty, interfaceIndex, family, localAddress);
             }
             if (nsVersion == 1 && msgVersion == 1) {
-                Retransmit(index, false, respondQuietly, endpoint, TRANSMIT_V1, MaskFromIndex(index), interfaceIndex, family, localAddress);
+                Retransmit(index, false, respondQuietly, endpoint, TRANSMIT_V1, MaskFromIndex(index), wkns, interfaceIndex, family, localAddress);
             }
             m_mutex.Lock();
         }
@@ -7693,7 +7675,6 @@ void IpNameServiceImpl::HandleProtocolQuery(MDNSPacket mdnsPacket, IPEndpoint en
         QCC_DbgPrintf(("Ignoring query with invalid sender info"));
         return;
     }
-
     IPEndpoint ns4(refRData->GetIPV4ResponseAddr(), refRData->GetIPV4ResponsePort());
 
     String guid = refRecord->GetDomainName().substr(sizeof("sender-info.") - 1, 32);
@@ -7750,6 +7731,8 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
         QCC_DbgPrintf(("Ignoring query with invalid search info"));
         return true;
     }
+
+    vector<String> wkns;
     //
     // The who-has message doesn't specify which transport is doing the asking.
     // This is an oversight and should be fixed in a subsequent version.  The
@@ -7786,7 +7769,9 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
         bool respond = false;
         for (int i = 0; i < searchRData->GetNumNames(); ++i) {
             String wkn = searchRData->GetNameAt(i);
-
+            if (searchRData->SendMatchOnly()) {
+                wkns.push_back(wkn);
+            }
             //
             // Zero length strings are unmatchable.  If you want to do a wildcard
             // match, you've got to send a wildcard character.
@@ -7840,7 +7825,7 @@ bool IpNameServiceImpl::HandleSearchQuery(TransportMask completeTransportMask, M
         if (respond) {
             m_mutex.Unlock();
             if (ns4.GetAddress().IsIPv4()) {
-                Retransmit(index, false, true, ns4, TRANSMIT_V2, completeTransportMask);
+                Retransmit(index, false, true, ns4, TRANSMIT_V2, completeTransportMask, wkns);
             }
             m_mutex.Lock();
         }
@@ -8187,6 +8172,46 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
         subsequentBurstpackets.clear();
         initialBurstPackets.clear();
 
+        // If m_doNetworkCallback is true, then one of the transports
+        // is waiting for us to supply the list of live interfaces so
+        // it can get things started. We only want to provide the
+        // sub-set of live interfaces that have been requested by
+        // each transport (by name or addr) when the callback is invoked.
+        if (m_impl.m_doNetworkCallback) {
+            std::map<qcc::String, qcc::IPAddress> ifMap;
+            for (uint32_t i = 0; (m_impl.m_state == IMPL_RUNNING) && (i < m_impl.m_liveInterfaces.size()); ++i) {
+                if (m_impl.m_liveInterfaces[i].m_address.IsIPv4()) {
+                    ifMap[m_impl.m_liveInterfaces[i].m_interfaceName] = m_impl.m_liveInterfaces[i].m_address;
+                }
+            }
+            if (!ifMap.empty()) {
+                for (uint32_t transportIndex = 0; transportIndex < N_TRANSPORTS; transportIndex++) {
+                    if (m_impl.m_networkEventCallback[transportIndex]) {
+                        std::map<qcc::String, qcc::IPAddress> transportIfMap;
+                        for (uint32_t j = 0; j < m_impl.m_requestedInterfaces[transportIndex].size(); j++) {
+                            for (std::map<qcc::String, qcc::IPAddress>::iterator it = ifMap.begin(); it != ifMap.end(); it++) {
+                                qcc::String name = it->first;
+                                qcc::IPAddress addr = it->second;
+                                if (m_impl.m_requestedInterfaces[transportIndex][j].m_interfaceName == name || m_impl.m_requestedInterfaces[transportIndex][j].m_interfaceAddr == addr) {
+                                    transportIfMap[name] = addr;
+                                }
+                            }
+                        }
+                        if (m_impl.m_any[transportIndex]) {
+                            transportIfMap = ifMap;
+                        }
+                        if (!transportIfMap.empty()) {
+                            m_impl.m_protect_net_callback = true;
+                            m_impl.m_mutex.Unlock();
+                            (*m_impl.m_networkEventCallback[transportIndex])(ifMap);
+                            m_impl.m_mutex.Lock();
+                            m_impl.m_protect_net_callback = false;
+                        }
+                    }
+                }
+                m_impl.m_doNetworkCallback = false;
+            }
+        }
         //Collect network change burst packets
         if ((m_impl.m_networkChangeScheduleCount <= m_impl.m_retries) && ((m_impl.m_networkChangeScheduleCount == 0) || ((m_impl.m_networkChangeTimeStamp - now) < PACKET_TIME_ACCURACY_MS))) {
 
@@ -8202,6 +8227,20 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                         family = qcc::QCC_AF_INET6;
                     }
                     interfaceIndex = NETWORK_EVENT_IF_INDEX(*iter);
+#if defined(QCC_OS_LINUX)
+                    // If this is a loopback interface and we have an event for IPv6
+                    // address change, we also add an event for the IPv4 address of
+                    // the loopback interface as we don't get an event for IPv4
+                    // address changes on ifdown/up on loopback interfaces unless
+                    // the IPv4 address is also removed.
+                    for (uint32_t i = 0; (m_impl.m_state == IMPL_RUNNING) && (i < m_impl.m_liveInterfaces.size()); ++i) {
+                        int currentIndex = m_impl.m_liveInterfaces[i].m_index;
+                        if (currentIndex == interfaceIndex && (m_impl.m_liveInterfaces[i].m_flags & qcc::IfConfigEntry::LOOPBACK)) {
+                            family = qcc::QCC_AF_UNSPEC;
+                            break;
+                        }
+                    }
+#endif
                     m_impl.GetResponsePackets(subsequentBurstpackets, false, qcc::IPEndpoint("0.0.0.0", 0), TRANSMIT_V2, (TRANSPORT_TCP | TRANSPORT_UDP), interfaceIndex, family);
                     m_impl.GetQueryPackets(subsequentBurstpackets, (TRANSMIT_V0_V1 | TRANSMIT_V2), interfaceIndex, family);
                 }
@@ -8212,10 +8251,66 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
 #endif
             if (m_impl.m_networkChangeScheduleCount == 0) {
                 m_impl.m_networkChangeTimeStamp = now + RETRY_INTERVALS[0] * 1000;
+                std::map<qcc::String, qcc::IPAddress> ifMap;
+#ifndef QCC_OS_GROUP_WINDOWS
+                // For the transport callbacks, we want to include only the
+                // interfaces that have changed their IPv4 addresses or the
+                // loopback interfaces as these retain their IPv4 addresses
+                // on interface down events on Linux.
+                // In addition, we want to include the interfaces with IPv4
+                // addresses that have changed on platforms where we do not
+                // have information about the address family that changed.
+                // We also want to include all interfaces with IPv4 addresses
+                // on platforms where we do not have information about which
+                // interface index/address family has changed.
+                for (std::set<uint32_t>::const_iterator it = m_impl.m_networkEvents.begin(); it != m_impl.m_networkEvents.end(); it++) {
+                    for (uint32_t i = 0; (m_impl.m_state == IMPL_RUNNING) && (i < m_impl.m_liveInterfaces.size()); ++i) {
+                        bool sameInterfaceIndex = (m_impl.m_liveInterfaces[i].m_index == NETWORK_EVENT_IF_INDEX(*it));
+                        bool interfaceAddrIsIPv4 = m_impl.m_liveInterfaces[i].m_address.IsIPv4();
+                        bool ipv4OrUnspecifiedEvent = (NETWORK_EVENT_IF_FAMILY(*it) == qcc::QCC_AF_INET_INDEX || NETWORK_EVENT_IF_FAMILY(*it) == qcc::QCC_AF_UNSPEC_INDEX);
+                        bool loopbackInterface = ((m_impl.m_liveInterfaces[i].m_flags & qcc::IfConfigEntry::LOOPBACK) != 0);
+                        if (sameInterfaceIndex && interfaceAddrIsIPv4 && (ipv4OrUnspecifiedEvent || loopbackInterface)) {
+                            ifMap[m_impl.m_liveInterfaces[i].m_interfaceName] = m_impl.m_liveInterfaces[i].m_address;
+                            break;
+                        }
+                    }
+                }
+#else
+                for (uint32_t i = 0; (m_impl.m_state == IMPL_RUNNING) && (i < m_impl.m_liveInterfaces.size()); ++i) {
+                    if (m_impl.m_liveInterfaces[i].m_address.IsIPv4()) {
+                        ifMap[m_impl.m_liveInterfaces[i].m_interfaceName] = m_impl.m_liveInterfaces[i].m_address;
+                    }
+                }
+#endif
+                if (!ifMap.empty()) {
+                    for (uint32_t transportIndex = 0; transportIndex < N_TRANSPORTS; transportIndex++) {
+                        if (m_impl.m_networkEventCallback[transportIndex]) {
+                            std::map<qcc::String, qcc::IPAddress> transportIfMap;
+                            for (uint32_t j = 0; j < m_impl.m_requestedInterfaces[transportIndex].size(); j++) {
+                                for (std::map<qcc::String, qcc::IPAddress>::iterator it = ifMap.begin(); it != ifMap.end(); it++) {
+                                    qcc::String name = it->first;
+                                    qcc::IPAddress addr = it->second;
+                                    if (m_impl.m_requestedInterfaces[transportIndex][j].m_interfaceName == name || m_impl.m_requestedInterfaces[transportIndex][j].m_interfaceAddr == addr) {
+                                        transportIfMap[name] = addr;
+                                    }
+                                }
+                            }
+                            if (m_impl.m_any[transportIndex]) {
+                                transportIfMap = ifMap;
+                            }
+                            if (!transportIfMap.empty()) {
+                                m_impl.m_protect_net_callback = true;
+                                m_impl.m_mutex.Unlock();
+                                (*m_impl.m_networkEventCallback[transportIndex])(ifMap);
+                                m_impl.m_mutex.Lock();
+                                m_impl.m_protect_net_callback = false;
+                            }
+                        }
+                    }
+                }
             } else {
                 //adjust m_networkChangeTimeStamp
                 m_impl.m_networkChangeTimeStamp += RETRY_INTERVALS[m_impl.m_networkChangeScheduleCount] * 1000 + (BURST_RESPONSE_RETRIES) *BURST_RESPONSE_INTERVAL;
-
             }
             if (now < m_impl.m_networkChangeTimeStamp) {
                 uint32_t delay = m_impl.m_networkChangeTimeStamp - now;

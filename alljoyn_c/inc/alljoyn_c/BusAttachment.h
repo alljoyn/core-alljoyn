@@ -851,6 +851,27 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_registersignalhandler(alljoy
                                                                           const char* srcPath);
 
 /**
+ * Register a signal handler with a filter rule.
+ *
+ * Signals are forwarded to the signalHandler if sender, interface, member and rule
+ * qualifiers are ALL met.
+ *
+ * @param bus             The alljoyn_busattachment to register the signal handler with
+ * @param signal_handler  The signal handler method.
+ * @param member          The interface/member of the signal.
+ * @param matchRule       The filter rule.
+ * @return #ER_OK
+ */
+/*
+ * may need to create another registersignalhandler that takes a MessageReceiver
+ * type.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_registersignalhandlerwithrule(alljoyn_busattachment bus,
+                                                                                  alljoyn_messagereceiver_signalhandler_ptr signal_handler,
+                                                                                  const alljoyn_interfacedescription_member member,
+                                                                                  const char* matchRule);
+
+/**
  * Unregister a signal handler.
  *
  * Remove the signal handler that was registered with the given parameters.
@@ -865,6 +886,22 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unregistersignalhandler(allj
                                                                             alljoyn_messagereceiver_signalhandler_ptr signal_handler,
                                                                             const alljoyn_interfacedescription_member member,
                                                                             const char* srcPath);
+
+/**
+ * Unregister a signal handler with a filter rule.
+ *
+ * Remove the signal handler that was registered with the given parameters.
+ *
+ * @param bus             The alljoyn_busattachment to unregister the signal handler with
+ * @param signal_handler  The signal handler method.
+ * @param member          The interface/member of the signal.
+ * @param matchRule       The filter rule.
+ * @return #ER_OK
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unregistersignalhandlerwithrule(alljoyn_busattachment bus,
+                                                                                    alljoyn_messagereceiver_signalhandler_ptr signal_handler,
+                                                                                    const alljoyn_interfacedescription_member member,
+                                                                                    const char* matchRule);
 
 /**
  * Unregister all signal and reply handlers for the specified alljoyn_busattachment.
@@ -1149,14 +1186,13 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_getpeerguid(alljoyn_busattac
  *
  * The debug level can be set for individual subsystems or for "ALL"
  * subsystems.  Common subsystems are "ALLJOYN" for core AllJoyn code,
- * "ALLJOYN_OBJ" for the sessions management code, "ALLJOYN_BT" for the
- * Bluetooth subsystem, "ALLJOYN_BTC" for the Bluetooth topology manager,
- * and "ALLJOYN_NS" for the TCP name services.  Debug levels for specific
- * subsystems override the setting for "ALL" subsystems.  For example if
- * "ALL" is set to 7, but "ALLJOYN_OBJ" is set to 1, then detailed debug
- * output will be generated for all subsystems expcept for "ALLJOYN_OBJ"
- * which will only generate high level debug output.  "ALL" defaults to 0
- * which is off, or no debug output.
+ * "ALLJOYN_OBJ" for the sessions management code and "ALLJOYN_NS"
+ * for the TCP name services.  Debug levels for specific subsystems
+ * override the setting for "ALL" subsystems.  For example if "ALL" is
+ * set to 7, but "ALLJOYN_OBJ" is set to 1, then detailed debug output
+ * will be generated for all subsystems expcept for "ALLJOYN_OBJ"
+ * which will only generate high level debug output.  "ALL" defaults
+ * to 0 which is off, or no debug output.
  *
  * The debug output levels are actually a bit field that controls what
  * output is generated.  Those bit fields are described below:

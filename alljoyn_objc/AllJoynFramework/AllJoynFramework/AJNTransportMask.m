@@ -18,12 +18,11 @@
 
 const AJNTransportMask kAJNTransportMaskNone      = 0x0000;   /**< no transports */
 const AJNTransportMask kAJNTransportMaskLocal     = 0x0001;   /**< Local (same device) transport */
-const AJNTransportMask kAJNTransportMaskBluetooth = 0x0002;   /**< Bluetooth transport */
 const AJNTransportMask kAJNTransportMaskWLAN      = 0x0004;   /**< Wireless local-area network transport */
 const AJNTransportMask kAJNTransportMaskWWAN      = 0x0008;   /**< Wireless wide-area network transport */
 const AJNTransportMask kAJNTransportMaskLAN       = 0x0010;   /**< Wired local-area network transport */
 const AJNTransportMask kAJNTransportMaskWiFiDirect= 0x0080;   /**< Transport using Wi-Fi Direct transport */
 const AJNTransportMask kAJNTransportMaskTCP       = 0x0004;   /**< TCP/IP transport */
 const AJNTransportMask kAJNTransportMaskUDP       = 0x0100;   /**< UDP/IP transport */
-const AJNTransportMask kAJNTransportMaskIP        = 0x0004;   /**< IP transport (system chooses betwen TCP and UDP) */
-const AJNTransportMask kAJNTransportMaskAny       = 0xFE7F;   /**< ANY transport (but Wi-Fi Direct and UDP for now) */
+const AJNTransportMask kAJNTransportMaskIP        = 0x0104;   /**< IP transport (system chooses betwen TCP and UDP) */
+const AJNTransportMask kAJNTransportMaskAny       = 0xFF7F;   /**< ANY transport (but Wi-Fi Direct) */

@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2010-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -35,13 +35,6 @@ class PermissionDB {
      * Get the singleton instance of PermissionDB
      */
     static PermissionDB& GetDB();
-
-    /**
-     * Check whether the endpoint is allowed to use Bluetooth
-     * @param uid   UserId to be checked
-     * @return true if allowed
-     */
-    bool IsBluetoothAllowed(uint32_t uid);
 
     /**
      * Check whether the endpoint is allowed to use WIFI
