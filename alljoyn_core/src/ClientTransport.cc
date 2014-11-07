@@ -96,7 +96,7 @@ QStatus ClientTransport::Disconnect(const char* connectSpec)
      */
     qcc::String normSpec;
     map<qcc::String, qcc::String> argMap;
-    QStatus status = ClientTransport::NormalizeTransportSpec(connectSpec, normSpec, argMap);
+    QStatus status = NormalizeTransportSpec(connectSpec, normSpec, argMap);
     if (ER_OK != status) {
         QCC_LogError(status, ("ClientTransport::Disconnect(): Invalid connect spec \"%s\"", connectSpec));
     } else {
