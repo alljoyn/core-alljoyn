@@ -23,7 +23,11 @@
 qcc::String ajn::getConnectArg(const char*envvar) {
     qcc::Environ* env = qcc::Environ::GetAppEnviron();
 #if defined(QCC_OS_GROUP_WINDOWS)
+    #if (_WIN32_WINNT > 0x0603)
+    return env->Find(envvar, "npipe:");
+    #else
     return env->Find(envvar, "tcp:addr=127.0.0.1,port=9956");
+    #endif
 #else
     return env->Find(envvar, "unix:abstract=alljoyn");
 #endif
