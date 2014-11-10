@@ -25,10 +25,11 @@
 #define _OS_QCC_UTILITY_H
 
 #include <qcc/platform.h>
+#include <windows.h>
 
 void strerror_r(uint32_t errCode, char* ansiBuf, uint16_t ansiBufSize);
 
-
+wchar_t* MultibyteToWideString(const char* str);
 
 /**
  * Ensure that Winsock API is loaded.

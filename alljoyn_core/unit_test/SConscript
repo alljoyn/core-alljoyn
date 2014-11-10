@@ -98,6 +98,9 @@ else:
     if unittest_env['BR'] == 'on':
         # Build apps with bundled daemon support
         unittest_env.Prepend(LIBS = [unittest_env['brobj'], unittest_env['ajrlib']])
+        # Add private header include path to test bundled router code
+        unittest_env.Append(CPPPATH = [ unittest_env.Dir('../router').srcnode() ])
+        test_src += gtest_env.Glob('router/*.cc')
 
     unittest_env.Append(CPPPATH = unittest_env.Dir('..').srcnode())
 

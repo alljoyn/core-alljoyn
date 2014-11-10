@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -96,7 +96,7 @@ QStatus ClientTransport::Disconnect(const char* connectSpec)
      */
     qcc::String normSpec;
     map<qcc::String, qcc::String> argMap;
-    QStatus status = ClientTransport::NormalizeTransportSpec(connectSpec, normSpec, argMap);
+    QStatus status = NormalizeTransportSpec(connectSpec, normSpec, argMap);
     if (ER_OK != status) {
         QCC_LogError(status, ("ClientTransport::Disconnect(): Invalid connect spec \"%s\"", connectSpec));
     } else {

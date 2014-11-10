@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -52,11 +52,12 @@ typedef ManagedObj<_DaemonEndpoint> DaemonEndpoint;
  * the Unix Domain Sockets way.
  */
 class _DaemonEndpoint : public _RemoteEndpoint {
-
+    friend class DaemonTransport;
   public:
 
-    _DaemonEndpoint(BusAttachment& bus, SocketFd sock) :
+    _DaemonEndpoint(DaemonTransport* transport, BusAttachment& bus, SocketFd sock) :
         _RemoteEndpoint(bus, true, DaemonTransport::TransportName, &stream, DaemonTransport::TransportName),
+        m_transport(transport),
         stream(sock)
     {
     }
@@ -68,6 +69,38 @@ class _DaemonEndpoint : public _RemoteEndpoint {
      */
     bool SupportsUnixIDs() const { return false; }
 
+    QStatus SetIdleTimeouts(uint32_t& reqIdleTimeout, uint32_t& reqProbeTimeout)
+    {
+        uint32_t maxIdleProbes = m_transport->m_numHbeatProbes;
+
+        /* If reqProbeTimeout == 0, Make no change to Probe timeout. */
+        if (reqProbeTimeout == 0) {
+            reqProbeTimeout = _RemoteEndpoint::GetProbeTimeout();
+        } else if (reqProbeTimeout > m_transport->m_maxHbeatProbeTimeout) {
+            /* Max allowed Probe timeout is m_maxHbeatProbeTimeout */
+            reqProbeTimeout = m_transport->m_maxHbeatProbeTimeout;
+        }
+
+        /* If reqIdleTimeout == 0, Make no change to Idle timeout. */
+        if (reqIdleTimeout == 0) {
+            reqIdleTimeout = _RemoteEndpoint::GetIdleTimeout();
+        }
+
+        /* Requested link timeout must be >= m_minHbeatIdleTimeout */
+        if (reqIdleTimeout < m_transport->m_minHbeatIdleTimeout) {
+            reqIdleTimeout = m_transport->m_minHbeatIdleTimeout;
+        }
+
+        /* Requested link timeout must be <= m_maxHbeatIdleTimeout */
+        if (reqIdleTimeout > m_transport->m_maxHbeatIdleTimeout) {
+            reqIdleTimeout = m_transport->m_maxHbeatIdleTimeout;
+        }
+
+        return _RemoteEndpoint::SetIdleTimeouts(reqIdleTimeout, reqProbeTimeout, maxIdleProbes);
+    }
+
+  private:
+    DaemonTransport* m_transport;        /**< The DaemonTransport holding the connection */
     SocketStream stream;
 };
 
@@ -96,7 +129,8 @@ void* DaemonTransport::Run(void* arg)
             }
             qcc::String authName;
             qcc::String redirection;
-            DaemonEndpoint conn(bus, newSock);
+            DaemonTransport* trans = this;
+            DaemonEndpoint conn(trans, bus, newSock);
 
             QCC_DbgHLPrintf(("DaemonTransport::Run(): Accepting connection newSock=%d", newSock));
 
@@ -130,7 +164,7 @@ void* DaemonTransport::Run(void* arg)
                 status = conn->Establish("ANONYMOUS", authName, redirection);
             }
             if (status == ER_OK) {
-                status = conn->Start();
+                status = conn->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes, m_maxHbeatProbeTimeout);
             }
             if (status != ER_OK) {
                 QCC_LogError(status, ("Error starting DaemonEndpoint"));

@@ -4,7 +4,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2012, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2012, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -91,6 +91,20 @@ class ClientTransport : public Transport, public _RemoteEndpoint::EndpointListen
     bool IsRunning() { return m_running; }
 
     /**
+     * Determine if this end point is valid. Valid means bus is connected.
+     *
+     * @return  Returns true if the end point is valid.
+     */
+    bool IsEndPointValid() { return m_endpoint->IsValid(); }
+
+    /**
+     * Set the end point.
+     *
+     * @param ep  End point to be set.
+     */
+    void SetEndPoint(RemoteEndpoint ep) {  m_endpoint = ep; }
+
+    /**
      * Get the transport mask for this transport
      *
      * @return the TransportMask for this transport.
@@ -108,7 +122,7 @@ class ClientTransport : public Transport, public _RemoteEndpoint::EndpointListen
      *
      * @return ER_OK if successful.
      */
-    QStatus NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, std::map<qcc::String, qcc::String>& argMap) const;
+    virtual QStatus NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, std::map<qcc::String, qcc::String>& argMap) const;
 
     /**
      * Connect to a specified remote AllJoyn/DBus address.
@@ -121,7 +135,7 @@ class ClientTransport : public Transport, public _RemoteEndpoint::EndpointListen
      *      - ER_OK if successful.
      *      - an error status otherwise.
      */
-    QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep);
+    virtual QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep);
 
     /**
      * Disconnect from a specified AllJoyn/DBus address.
@@ -146,7 +160,7 @@ class ClientTransport : public Transport, public _RemoteEndpoint::EndpointListen
     /**
      * Returns the name of this transport
      */
-    const char* GetTransportName() const { return TransportName; }
+    virtual const char* GetTransportName() const { return TransportName; }
 
     /**
      * Indicates whether this transport is used for client-to-bus or bus-to-bus connections.

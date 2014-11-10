@@ -491,6 +491,34 @@ extern const char* InterfaceName;                 /**< Interface name */
 // @}
 
 
+/**
+ * @name org.alljoyn.Bus.SetIdleTimeouts
+ *  Interface: org.alljoyn.Bus
+ *  Method: SetIdleTimeouts(uint32_t inIdleTO, uint32_t inProbeTO)
+ *
+ *  Input params:
+ *     reqIdleTO -  Requested Idle Timeout for the link. i.e. time after which the Routing node
+ *                  must send a DBus ping to Leaf node in case of inactivity.
+ *                  Use 0 to leave unchanged.
+ *     reqProbeTO - Requested Probe timeout. The time from the Routing node sending the DBus
+ *                  ping to the expected response from the leaf node.
+ *                  Use 0 to leave unchanged.
+ *
+ *  Output params:
+ *     disposition - One of the ALLJOYN_SETIDLETIMEOUTS_* dispositions listed below
+ *     actIdleTO - Actual idle Timeout for the link that was set. i.e. time after which the Routing node
+ *                 will send a DBus ping to Leaf node in case of inactivity.
+ *     actProbeTO - Actual probe timeout i.e. The time from the Routing node sending the DBus ping
+ *                 to the expected response from the leaf node.
+ *
+ */
+// @{
+/* org.alljoyn.Bus.SetIdleTimeouts */
+#define ALLJOYN_SETIDLETIMEOUTS_REPLY_SUCCESS          1   /**< SetIdleTimeouts reply: Success */
+#define ALLJOYN_SETIDLETIMEOUTS_REPLY_NOT_ALLOWED      2   /**< SetIdleTimeouts reply: Not allowed for bus-to-bus and Null endpoints */
+#define ALLJOYN_SETIDLETIMEOUTS_REPLY_FAILED           3   /**< SetIdleTimeouts reply: Failed */
+// @}
+
 }
 
 #undef QCC_MODULE

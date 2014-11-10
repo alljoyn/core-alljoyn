@@ -596,6 +596,36 @@ class _TCPEndpoint : public _RemoteEndpoint {
         return status;
     }
 
+    QStatus SetIdleTimeouts(uint32_t& reqIdleTimeout, uint32_t& reqProbeTimeout)
+    {
+        uint32_t maxIdleProbes = m_transport->m_numHbeatProbes;
+
+        /* If reqProbeTimeout == 0, Make no change to Probe timeout. */
+        if (reqProbeTimeout == 0) {
+            reqProbeTimeout = _RemoteEndpoint::GetProbeTimeout();
+        } else if (reqProbeTimeout > m_transport->m_maxHbeatProbeTimeout) {
+            /* Max allowed Probe timeout is m_maxHbeatProbeTimeout */
+            reqProbeTimeout = m_transport->m_maxHbeatProbeTimeout;
+        }
+
+        /* If reqIdleTimeout == 0, Make no change to Idle timeout. */
+        if (reqIdleTimeout == 0) {
+            reqIdleTimeout = _RemoteEndpoint::GetIdleTimeout();
+        }
+
+        /* Requested link timeout must be >= m_minHbeatIdleTimeout */
+        if (reqIdleTimeout < m_transport->m_minHbeatIdleTimeout) {
+            reqIdleTimeout = m_transport->m_minHbeatIdleTimeout;
+        }
+
+        /* Requested link timeout must be <= m_maxHbeatIdleTimeout */
+        if (reqIdleTimeout > m_transport->m_maxHbeatIdleTimeout) {
+            reqIdleTimeout = m_transport->m_maxHbeatIdleTimeout;
+        }
+
+        return _RemoteEndpoint::SetIdleTimeouts(reqIdleTimeout, reqProbeTimeout, maxIdleProbes);
+    }
+
     /*
      * Return true if the auth thread is STARTED, RUNNING or STOPPING.  A true
      * response means the authentication thread is in a state that indicates
@@ -899,7 +929,7 @@ void TCPTransport::Authenticated(TCPEndpoint& conn)
 
     conn->SetEpStarting();
 
-    QStatus status = conn->Start();
+    QStatus status = conn->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes, m_maxHbeatProbeTimeout);
     if (status != ER_OK) {
         QCC_LogError(status, ("TCPTransport::Authenticated(): Failed to start TCP endpoint"));
         /*
@@ -1648,6 +1678,16 @@ void* TCPTransport::Run(void* arg)
      * exceeding this number, we drop the new connection.
      */
     uint32_t maxConn = config->GetLimit("max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_TCP_DEFAULT);
+
+    m_minHbeatIdleTimeout = config->GetLimit("tcp_min_idle_timeout", MIN_HEARTBEAT_IDLE_TIMEOUT_DEFAULT);
+    m_maxHbeatIdleTimeout = config->GetLimit("tcp_max_idle_timeout", MAX_HEARTBEAT_IDLE_TIMEOUT_DEFAULT);
+    m_defaultHbeatIdleTimeout = config->GetLimit("tcp_default_idle_timeout", DEFAULT_HEARTBEAT_IDLE_TIMEOUT_DEFAULT);
+
+    m_numHbeatProbes = HEARTBEAT_NUM_PROBES;
+    m_maxHbeatProbeTimeout = config->GetLimit("tcp_max_probe_timeout", MAX_HEARTBEAT_PROBE_TIMEOUT_DEFAULT);
+    m_defaultHbeatProbeTimeout = config->GetLimit("tcp_default_probe_timeout", DEFAULT_HEARTBEAT_PROBE_TIMEOUT_DEFAULT);
+
+    QCC_DbgPrintf(("TCPTransport: Using m_minHbeatIdleTimeout=%u, m_maxHbeatIdleTimeout=%u, m_numHbeatProbes=%u, m_defaultHbeatProbeTimeout=%u m_maxHbeatProbeTimeout=%u", m_minHbeatIdleTimeout, m_maxHbeatIdleTimeout, m_numHbeatProbes, m_defaultHbeatProbeTimeout, m_maxHbeatProbeTimeout));
 
     QStatus status = ER_OK;
 
@@ -3092,7 +3132,7 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         if (status == ER_OK) {
             tcpEp->SetListener(this);
             tcpEp->SetEpStarting();
-            status = tcpEp->Start();
+            status = tcpEp->Start(m_defaultHbeatIdleTimeout, m_defaultHbeatProbeTimeout, m_numHbeatProbes, m_maxHbeatProbeTimeout);
             if (status == ER_OK) {
                 tcpEp->SetEpStarted();
                 tcpEp->SetAuthDone();
