@@ -334,7 +334,7 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
                         break;
                     }
                     entry->Set("{sv}", props[i]->name.c_str(), val);
-                    entry->SetOwnershipFlags(MsgArg::OwnsArgs, false);
+                    entry->v_dictEntry.val->SetOwnershipFlags(MsgArg::OwnsArgs, false);
                     entry++;
                 }
             }
