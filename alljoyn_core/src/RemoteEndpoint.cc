@@ -453,6 +453,7 @@ QStatus _RemoteEndpoint::Start()
 
         if (status != ER_OK) {
             /* Failed to register with iodispatch */
+            internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
             router.UnregisterEndpoint(this->GetUniqueName(), this->GetEndpointType());
         }
     }
@@ -462,6 +463,7 @@ QStatus _RemoteEndpoint::Start()
         status = internal->bus.GetInternal().GetIODispatch().EnableReadCallback(internal->stream);
         if (status != ER_OK) {
             /* Failed to start read with iodispatch */
+            internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
             router.UnregisterEndpoint(this->GetUniqueName(), this->GetEndpointType());
         }
     }
