@@ -79,7 +79,7 @@ public class AboutListenerTest  extends TestCase {
         public Map<String, Variant> getAboutData(String language) throws ErrorReplyBusException {
             Map<String, Variant> arg = new HashMap<String, Variant>();
             //nonlocalized values
-            arg.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9}));
+            arg.put("AppId",  new Variant(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }));
             arg.put("DefaultLanguage",  new Variant(new String("en")));
             arg.put("DeviceId",  new Variant(new String("93c06771-c725-48c2-b1ff-6a2a59d445b8")));
             arg.put("ModelNumber", new Variant(new String("A1B2C3")));
@@ -109,7 +109,7 @@ public class AboutListenerTest  extends TestCase {
         @Override
         public Map<String, Variant> getAnnouncedAboutData() throws ErrorReplyBusException {
             Map<String, Variant> announceArg = new HashMap<String, Variant>();
-            announceArg.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9}));
+            announceArg.put("AppId",  new Variant(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 }));
             announceArg.put("DefaultLanguage",  new Variant(new String("en")));
             announceArg.put("DeviceName", new Variant(new String("A device name")));
             announceArg.put("DeviceId",  new Variant(new String("93c06771-c725-48c2-b1ff-6a2a59d445b8")));

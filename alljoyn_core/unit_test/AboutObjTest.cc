@@ -252,8 +252,8 @@ TEST_F(AboutObjTest, AnnounceMissingRequiredField) {
     status = aboutObj.Announce(port, badAboutData);
     EXPECT_EQ(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = badAboutData.SetAppId(appId, 6);
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    status = badAboutData.SetAppId(appId);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     //DeviceId and other required fields are missing
     status = aboutObj.Announce(port, badAboutData);

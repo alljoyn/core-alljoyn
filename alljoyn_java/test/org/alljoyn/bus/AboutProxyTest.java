@@ -80,7 +80,7 @@ public class AboutProxyTest extends TestCase{
         public Map<String, Variant> getAboutData(String language) throws ErrorReplyBusException {
             Map<String, Variant> aboutData = new HashMap<String, Variant>();
             //nonlocalized values
-            aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9}));
+            aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
             aboutData.put("DefaultLanguage",  new Variant(new String("en")));
             aboutData.put("DeviceId",  new Variant(new String("93c06771-c725-48c2-b1ff-6a2a59d445b8")));
             aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
@@ -112,7 +112,7 @@ public class AboutProxyTest extends TestCase{
         @Override
         public Map<String, Variant> getAnnouncedAboutData() throws ErrorReplyBusException {
             Map<String, Variant> announceData = new HashMap<String, Variant>();
-            announceData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9}));
+            announceData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}));
             announceData.put("DefaultLanguage",  new Variant(new String("en")));
             announceData.put("DeviceName", new Variant(new String("A device name")));
             announceData.put("DeviceId",  new Variant(new String("93c06771-c725-48c2-b1ff-6a2a59d445b8")));
@@ -206,7 +206,7 @@ public class AboutProxyTest extends TestCase{
         try {
         // Verify the values sent in the AboutDataListener
         // looping through to test the contents of the AppId works this way since
-        // the AppId was set to {1, 2, 3, 4, 5, 6, 7, 8, 9}
+        // the AppId was set {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
         byte[] appId = aListener.announcedAboutData.get("AppId").getObject(byte[].class);
         for (int i = 0; i < appId.length; ++i) {
             assertEquals((byte)(i+1), appId[i]);

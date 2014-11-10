@@ -79,7 +79,7 @@ public class AboutIconProxyTest extends TestCase{
         public Map<String, Variant> getAboutData(String language) throws ErrorReplyBusException {
             Map<String, Variant> aboutData = new HashMap<String, Variant>();
             //nonlocalized values
-            aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9}));
+            aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 }));
             aboutData.put("DefaultLanguage",  new Variant(new String("en")));
             aboutData.put("DeviceId",  new Variant(new String("93c06771-c725-48c2-b1ff-6a2a59d445b8")));
             aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
@@ -111,7 +111,7 @@ public class AboutIconProxyTest extends TestCase{
         @Override
         public Map<String, Variant> getAnnouncedAboutData() throws ErrorReplyBusException {
             Map<String, Variant> announceData = new HashMap<String, Variant>();
-            announceData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9}));
+            announceData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 }));
             announceData.put("DefaultLanguage",  new Variant(new String("en")));
             announceData.put("DeviceName", new Variant(new String("A device name")));
             announceData.put("DeviceId",  new Variant(new String("93c06771-c725-48c2-b1ff-6a2a59d445b8")));
