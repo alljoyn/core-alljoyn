@@ -177,8 +177,8 @@ class AboutProxyTest : public testing::Test {
     void setUpSpanishData() {
         QStatus status;
         // Setup the about Spanish data
-        uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-        status = aboutSpanishData.SetAppId(appId, 6);
+        uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+        status = aboutSpanishData.SetAppId(appId, 16);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = aboutSpanishData.SetDeviceId("fakeID");
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);

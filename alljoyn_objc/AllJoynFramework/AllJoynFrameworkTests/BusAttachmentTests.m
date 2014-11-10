@@ -1127,7 +1127,7 @@ static NSMutableDictionary *gDefaultAboutData;
 
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
-    STAssertTrue(status == ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, @"Inconsistent about announce and about data should be reported as error");
+    STAssertTrue(status == ER_ABOUT_INVALID_ABOUTDATA_LISTENER, @"Inconsistent about announce and about data should be reported as error");
 
     [self.bus disconnectWithArguments:@"null:"];
     [self.bus stop];

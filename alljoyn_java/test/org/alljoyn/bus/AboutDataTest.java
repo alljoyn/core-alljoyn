@@ -577,6 +577,96 @@ public class AboutDataTest extends TestCase{
             fail("About data check succeed unexpectly!");
         }
 
-        assertEquals(Status.ABOUT_INVALID_ABOUT_DATA_LISTENER, aboutObj.announce(PORT_NUMBER, aboutBadData));
+        assertEquals(Status.ABOUT_INVALID_ABOUTDATA_LISTENER, aboutObj.announce(PORT_NUMBER, aboutBadData));
+    }
+    
+    /*
+     * Everything is correct except the AppId is not 128-bits
+     */
+    public class AboutDataBadAppId implements AboutDataListener {
+        private Map<String, Variant> aboutData = new HashMap<String, Variant>();
+        private Map<String, Variant> announceData = new HashMap<String, Variant>();
+
+        private void setAboutData(String language)
+        {
+            //nonlocalized values
+            aboutData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}));
+            aboutData.put("DefaultLanguage",  new Variant(new String("en")));
+            aboutData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
+            aboutData.put("ModelNumber", new Variant(new String("A1B2C3")));
+            aboutData.put("SupportedLanguages", new Variant(new String[] {"en", "es"}));
+            aboutData.put("DateOfManufacture", new Variant(new String("2014-09-23")));
+            aboutData.put("SoftwareVersion", new Variant(new String("1.0")));
+            aboutData.put("AJSoftwareVersion", new Variant(new String("0.0.1")));
+            aboutData.put("HardwareVersion", new Variant(new String("0.1alpha")));
+            //localized values
+            // If the language String is null or an empty string we return the
+            // default language
+            if ((language == null) || (language.length() == 0) || language.equals("en")) {
+                aboutData.put("DeviceName", new Variant(new String("A device name")));
+                aboutData.put("AppName", new Variant(new String("An application name")));
+                aboutData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
+                aboutData.put("Description", new Variant(new String("Sample showing the about feature in a service application")));
+            } else if(language.equals("es")) { //Spanish
+                aboutData.put("DeviceName", new Variant(new String("Un nombre de dispositivo")));
+                aboutData.put("AppName", new Variant(new String("Un nombre de aplicación")));
+                aboutData.put("Manufacturer", new Variant(new String("Una empresa de fabricación de poderosos")));
+                aboutData.put("Description", new Variant(new String("Muestra que muestra la característica de sobre en una aplicación de servicio")));
+            }
+        }
+
+        private void setAnnouncedData()
+        {
+            announceData.put("AppId",  new Variant(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}));
+            announceData.put("DefaultLanguage",  new Variant(new String("en")));
+            announceData.put("DeviceName", new Variant(new String("A device name")));
+            announceData.put("DeviceId",  new Variant(new String("sampleDeviceId")));
+            announceData.put("AppName", new Variant(new String("An application name")));
+            announceData.put("Manufacturer", new Variant(new String("A mighty manufacturing company")));
+            announceData.put("ModelNumber", new Variant(new String("A1B2C3")));
+        }
+
+        public AboutDataBadAppId(String language)
+        {
+            setAboutData(language);
+            setAnnouncedData();
+        }
+
+        @Override
+        public Map<String, Variant> getAboutData(String language) throws ErrorReplyBusException
+        {
+            return aboutData;
+        }
+
+        @Override
+        public Map<String, Variant> getAnnouncedAboutData() throws ErrorReplyBusException
+        {
+            return announceData;
+        }
+
+    }
+
+    /*
+     * Negative test ASACORE-1130
+     *  AppId does not contain 128-bits
+     */
+    public synchronized void testValidateAboutDataFields_BadAppId() {
+        Intfa intfa = new Intfa();
+        assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
+
+        AboutObj aboutObj = new AboutObj(serviceBus);
+
+        AboutDataBadAppId aboutBadData = new AboutDataBadAppId("en");
+        AboutDataCheck dataChecker = new AboutDataCheck();
+
+        try {
+            assertTrue(dataChecker.isDataValid(
+                    aboutBadData.getAboutData("en"),
+                    aboutBadData.getAnnouncedAboutData()));
+        } catch (ErrorReplyBusException e) {
+            fail("About data check succeed unexpectly!");
+        }
+
+        assertEquals(Status.ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, aboutObj.announce(PORT_NUMBER, aboutBadData));
     }
 }
