@@ -162,12 +162,28 @@ def writeHeaders():
 #ifndef _STATUS_H
 #define _STATUS_H
 
-#ifndef ALLJOYN_DLLExport /* Used for extern C functions. Add __declspec(dllexport) when using MSVC */
-#  if defined(_MSC_VER) /* MSVC compiler*/
-#    define ALLJOYN_DLLExport __declspec(dllexport)
-#  else /* compiler other than MSVC */
-#    define ALLJOYN_DLLExport
-#  endif /* Compiler type */
+/** This @#define allows for redefinition to __dllexport or __dllimport on relevant platforms */
+#ifndef AJ_API
+#  if defined(QCC_OS_GROUP_WINDOWS)
+#    if defined(QCC_BUILD_WINDOWS_API_DLL)
+#      define AJ_API __declspec(dllexport)
+#    else
+#      define AJ_API
+#    endif
+#  elif defined(QCC_OS_GROUP_POSIX)
+#    define AJ_API __attribute__((visibility("default")))
+#  else
+#    define AJ_API
+#  endif
+#endif
+
+/** This @#define allows for calling convention redefinition on relevant platforms */
+#ifndef AJ_CALL
+#  if defined(QCC_OS_GROUP_WINDOWS)
+#    define AJ_CALL __stdcall
+#  else
+#    define AJ_CALL
+#  endif
 #endif
 
 #ifdef __cplusplus
@@ -210,7 +226,7 @@ typedef enum {""")
 #define CASE(_status) case _status: return #_status 
     
 """)
-        codeOut.write("const char* QCC_%sStatusText(QStatus status)" % prefix)
+        codeOut.write("AJ_API const char* AJ_CALL QCC_%sStatusText(QStatus status)" % prefix)
         codeOut.write("""
 {
     switch (status) {
@@ -237,7 +253,7 @@ def writeFooters():
  * @return  C string representation of the status code.
  */
 """)
-        headerOut.write("extern ALLJOYN_DLLExport const char* QCC_%sStatusText(QStatus status);" % prefix)
+        headerOut.write("extern AJ_API const char* AJ_CALL QCC_%sStatusText(QStatus status);" % prefix)
         headerOut.write("""
 
 #ifdef __cplusplus
