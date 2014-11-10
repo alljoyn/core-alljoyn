@@ -48,6 +48,7 @@ const qcc::String OID_CRV_PRIME256V1 = "1.2.840.10045.3.1.7";
 const qcc::String OID_DN_OU = "2.5.4.11";
 const qcc::String OID_DN_CN = "2.5.4.3";
 const qcc::String OID_BASIC_CONSTRAINTS = "2.5.29.19";
+const qcc::String OID_CUSTOM_DIGEST = "1.2.3.4.5.6.7.8.1";
 
 #define CERT_TYPE0_SIGN_LEN Crypto_SHA256::DIGEST_SIZE
 #define CERT_TYPE0_RAW_LEN sizeof(uint32_t) + sizeof(ECCPublicKeyOldEncoding) + CERT_TYPE0_SIGN_LEN + sizeof(ECCSignatureOldEncoding)
@@ -872,20 +873,35 @@ QStatus CertificateX509::EncodeCertificatePub(qcc::String& pub)
 QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
 {
     QStatus status = ER_OK;
-    qcc::String oid;
+    qcc::String oid1;
+    qcc::String oid2;
+    qcc::String opt;
+    qcc::String tmp;
     qcc::String tmp1;
     qcc::String tmp2;
-    uint32_t ca;
 
-    status = Crypto_ASN1::Decode(ext, "c(.)", 3, &tmp1);
+    status = Crypto_ASN1::Decode(ext, "c(.)", 3, &tmp);
     if (ER_OK != status) {
         return status;
     }
-    status = Crypto_ASN1::Decode(tmp1, "((ox))", &oid, &tmp2);
-    if (OID_BASIC_CONSTRAINTS != oid) {
+    status = Crypto_ASN1::Decode(tmp, "((ox).)", &oid1, &tmp1, &opt);
+    if (OID_BASIC_CONSTRAINTS != oid1) {
         return ER_FAIL;
     }
-    status = Crypto_ASN1::Decode(tmp2, "(z)", &ca);
+    status = Crypto_ASN1::Decode(tmp1, "(z)", &ca);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (opt.size()) {
+        status = Crypto_ASN1::Decode(opt, "(ox)", &oid2, &tmp2);
+        if (OID_CUSTOM_DIGEST != oid2) {
+            return ER_FAIL;
+        }
+        if (sizeof (digest) < tmp2.size()) {
+            return ER_FAIL;
+        }
+        SetDigest((const uint8_t*) tmp2.data(), tmp2.size());
+    }
 
     return status;
 }
@@ -893,20 +909,26 @@ QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
 QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext)
 {
     QStatus status = ER_OK;
-    qcc::String oid = OID_BASIC_CONSTRAINTS;
+    qcc::String oid1 = OID_BASIC_CONSTRAINTS;
+    qcc::String opt;
+    qcc::String tmp;
     qcc::String tmp1;
-    qcc::String tmp2;
-    uint32_t ca = 0;
 
     status = Crypto_ASN1::Encode(tmp1, "(z)", ca);
     if (ER_OK != status) {
         return status;
     }
-    status = Crypto_ASN1::Encode(tmp2, "((ox))", &oid, &tmp1);
+    if (digestPresent) {
+        qcc::String oid2 = OID_CUSTOM_DIGEST;
+        qcc::String tmp2((const char*) digest, sizeof (digest));
+        status = Crypto_ASN1::Encode(tmp, "((ox)(ox))", &oid1, &tmp1, &oid2, &tmp2);
+    } else {
+        status = Crypto_ASN1::Encode(tmp, "((ox))", &oid1, &tmp1);
+    }
     if (ER_OK != status) {
         return status;
     }
-    status = Crypto_ASN1::Encode(ext, "c(R)", 3, &tmp2);
+    status = Crypto_ASN1::Encode(ext, "c(R)", 3, &tmp);
 
     return status;
 }
@@ -1171,12 +1193,17 @@ QStatus CertificateX509::Sign(const ECCPrivateKey* key)
 String CertificateX509::ToString()
 {
     qcc::String str("Certificate:\n");
+    str += "serial:    " + serial + "\n";
     str += "issuer:    " + issuer.ToString() + "\n";
     str += "subject:   " + subject.ToString() + "\n";
     if (GUILD_CERTIFICATE == type) {
         str += "guild:     " + guild.ToString() + "\n";
     }
     str += "publickey: " + BytesToHexString((const uint8_t*) &publickey, sizeof(publickey)) + "\n";
+    str += "ca:        " + BytesToHexString((const uint8_t*) &ca, sizeof(uint8_t)) + "\n";
+    if (digestPresent) {
+        str += "digest:    " + BytesToHexString((const uint8_t*) digest, sizeof(digest)) + "\n";
+    }
     str += "signature: " + BytesToHexString((const uint8_t*) &signature, sizeof(signature)) + "\n";
     return str;
 }

@@ -109,7 +109,6 @@ static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer,
     QStatus status = ER_CRYPTO_ERROR;
     CertificateX509 x509(CertificateX509::GUID_CERTIFICATE);
 
-    printf("Creating certificate\n");
     x509.SetSerial(serial);
     x509.SetIssuer(issuer);
     x509.SetSubject(subject);
@@ -134,9 +133,6 @@ static QStatus CreateIdentityCert(CredentialAccessor& ca, const qcc::String& ser
     ECCPublicKey issuerPublicKey;
     CertECCUtil_DecodePublicKey(issuerPublicKeyPEM, (uint32_t*) &issuerPublicKey, sizeof(ECCPublicKey));
 
-    printf("CreateIdentity certificate with issuer private key %s\n", BytesToHexString((const uint8_t*) &issuerPrivateKey, sizeof(ECCPrivateKey)).c_str());
-    printf("CreateIdentity certificate with issuer public key %s\n", BytesToHexString((const uint8_t*) &issuerPublicKey, sizeof(ECCPublicKey)).c_str());
-
     const ECCPublicKey* subjectPublicKey;
     if (selfSign) {
         subjectPublicKey = &issuerPublicKey;
@@ -147,10 +143,10 @@ static QStatus CreateIdentityCert(CredentialAccessor& ca, const qcc::String& ser
     return CreateCert(serial, localGUID, &issuerPrivateKey, &issuerPublicKey, userGuid, subjectPublicKey, der);
 }
 
-static QStatus CreateGuildCert(const String& serial, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
+static QStatus CreateGuildCert(const String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, const ECCPrivateKey* issuerPrivateKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
 {
     QStatus status = ER_CRYPTO_ERROR;
-    CertificateX509 x509(CertificateX509::GUILD_CERTIFICATE);
+    MembershipCertificate x509;
 
     printf("Creating membership certificate\n");
     x509.SetSerial(serial);
@@ -158,6 +154,7 @@ static QStatus CreateGuildCert(const String& serial, const qcc::GUID128& issuer,
     x509.SetSubject(subject);
     x509.SetSubjectPublicKey(subjectPubKey);
     x509.SetGuild(guild);
+    x509.SetDigest(authDataHash, Crypto_SHA256::DIGEST_SIZE);
     printf("Signing certificate\n");
     status = x509.Sign(issuerPrivateKey);
     printf("Sign certificate return status 0x%x\n", status);
@@ -351,6 +348,7 @@ class PermissionMgmtTest : public testing::Test, public BusObject {
         serviceKeyListener = new ECDHEKeyXListener(true, serviceBus);
         serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, NULL, false);
     }
+
 
     BusAttachment clientBus;
     BusAttachment serviceBus;
@@ -622,6 +620,30 @@ PermissionPolicy* GeneratePolicy(qcc::GUID128& guid)
     return policy;
 }
 
+PermissionPolicy* GenerateMembeshipAuthData()
+{
+    PermissionPolicy* policy = new PermissionPolicy();
+
+    policy->SetSerialNum(88473);
+
+    /* add the provider section */
+
+    PermissionPolicy::Term* terms = new PermissionPolicy::Term[1];
+
+    /* terms record 0 */
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
+    rules[0].SetInterfaceName("org.allseenalliance.control.TV");
+    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+
+    rules[0].SetMembers(1, prms);
+    terms[0].SetRules(1, rules);
+    policy->SetTerms(1, terms);
+
+    return policy;
+}
+
 QStatus InstallPolicy(BusAttachment& bus, ProxyBusObject& remoteObj, PermissionPolicy& policy)
 {
     QStatus status;
@@ -683,11 +705,11 @@ QStatus RemovePolicy(BusAttachment& bus, ProxyBusObject& remoteObj)
 }
 
 
-QStatus CreateMembershipCert(const String& serial, const qcc::GUID128& issuer, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
+QStatus CreateMembershipCert(const String& serial, const uint8_t* authDataHash, const qcc::GUID128& issuer, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der)
 {
     ECCPrivateKey trustAnchorPrivateKey;
     CertECCUtil_DecodePrivateKey(clientPrivateKeyPEM, (uint32_t*) &trustAnchorPrivateKey, sizeof(ECCPrivateKey));
-    return CreateGuildCert(serial, issuer, &trustAnchorPrivateKey, subject, subjectPubKey, guild, der);
+    return CreateGuildCert(serial, authDataHash, issuer, &trustAnchorPrivateKey, subject, subjectPubKey, guild, der);
 }
 
 QStatus RetrieveDSAPublicKeyFromKeyStore(BusAttachment& bus, ECCPublicKey* publicKey)
@@ -735,8 +757,13 @@ QStatus InstallMembership(const String& serial, BusAttachment& bus, ProxyBusObje
     if (status != ER_OK) {
         return status;
     }
+    PermissionPolicy* membershipAuthData = GenerateMembeshipAuthData();
+    Crypto_SHA256 hashUtil;
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    membershipAuthData->Digest(bus, hashUtil, digest);
+
     qcc::String der;
-    status = CreateMembershipCert(serial, localGUID, subjectGUID, subjectPubKey, guild, der);
+    status = CreateMembershipCert(serial, digest, localGUID, subjectGUID, subjectPubKey, guild, der);
     if (status != ER_OK) {
         return status;
     }
@@ -750,6 +777,22 @@ QStatus InstallMembership(const String& serial, BusAttachment& bus, ProxyBusObje
             status = ER_PERMISSION_DENIED;
         }
     }
+
+    if (ER_OK == status) {
+        /* installing the auth data */
+        MsgArg args[3];
+        args[0].Set("s", serial.c_str());
+        args[1].Set("s", localGUID.ToString().c_str());
+        membershipAuthData->Export(args[2]);
+        printf("InstallMembership calls InstallMembershipAuthData with auth data %s\n", membershipAuthData->ToString().c_str());
+        status = remoteObj.MethodCall(INTERFACE_NAME, "InstallMembershipAuthData", args, ArraySize(args), reply, 5000);
+        if (ER_OK != status) {
+            if (IsPermissionDeniedError(status, reply)) {
+                status = ER_PERMISSION_DENIED;
+            }
+        }
+    }
+    delete membershipAuthData;
     return status;
 }
 
@@ -762,9 +805,8 @@ QStatus RemoveMembership(BusAttachment& bus, ProxyBusObject& remoteObj, const qc
     Message reply(bus);
 
     MsgArg inputs[2];
-    inputs[0].Set("ay", serialNum.size(), serialNum.data());
-    qcc::String issuerStr = issuer.ToString();
-    inputs[1].Set("ay", issuerStr.size(), issuerStr.data());
+    inputs[0].Set("s", serialNum.c_str());
+    inputs[1].Set("s", issuer.ToString().c_str());
 
     status = remoteObj.MethodCall(INTERFACE_NAME, "RemoveMembership", inputs, 2, reply, 5000);
 
@@ -810,7 +852,7 @@ QStatus GetIdentity(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::String& 
         }
         return status;
     }
-    CertificateX509 cert(CertificateX509::GUID_CERTIFICATE);
+    IdentityCertificate cert;
     status = LoadCertificateBytes(reply, cert);
     if (ER_OK != status) {
         printf("GetIdentity LoadCertificateBytes return status 0x%x\n", status);
@@ -1015,5 +1057,4 @@ TEST_F(PermissionMgmtTest, RemoveMembership)
     EXPECT_NE(ER_OK, status) << "  RemoveMembership succeeded.  Expect it to fail.  Actual Status: " << QCC_StatusText(status);
 
 }
-
 

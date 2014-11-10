@@ -857,6 +857,20 @@ class _Message {
     size_t GetBufferSize() const { return bufEOD - reinterpret_cast<uint8_t*>(msgBuf); }
 
     /**
+     * Get a pointer to the current buffer for the message body.
+     *
+     * @return pointer to the message backing buffer for the message body
+     */
+    uint8_t const* const GetBodyBuffer() const { return const_cast<uint8_t const* const>(reinterpret_cast<uint8_t*>(bodyPtr)); }
+
+    /**
+     * Get the number of bytes of data currently in the message body.
+     *
+     * @return the size of the message body
+     */
+    size_t GetBodyBufferSize() const { return GetBufferSize() - (GetBodyBuffer() - GetBuffer()); }
+
+    /**
      * Struct representing the header for the AllJoyn Message
      */
     typedef struct MessageHeader {

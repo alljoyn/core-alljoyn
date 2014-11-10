@@ -28,6 +28,7 @@
 
 #include <qcc/platform.h>
 #include <qcc/String.h>
+#include <qcc/Crypto.h>
 #include <qcc/CryptoECC.h>
 #include <alljoyn/Status.h>
 #include <alljoyn/BusAttachment.h>
@@ -583,7 +584,20 @@ class PermissionPolicy {
      */
     QStatus Import(uint8_t version, const MsgArg& msgArg);
 
+    /**
+     * Generate a hash digest for the policy data
+     * @param bus the bus attachment
+     * @param hashUtil the hash utility to use
+     * @param[out] digest the buffer to hold the output digest.  It must be new[] by the caller and must have enough space to hold the digest based on the hash utility.
+     * @return
+     *      - #ER_OK if digest was successful.
+     *      - error code if fail
+     */
+    QStatus Digest(BusAttachment& bus, qcc::Crypto_Hash& hashUtil, uint8_t* digest);
+
   private:
+    QStatus Export(Message& msg);
+
     uint8_t version;
     uint32_t serialNum;
     size_t adminsSize;

@@ -380,6 +380,7 @@ void PermissionMgmtObj::RemovePolicy(const InterfaceDescription::Member* member,
     }
 }
 
+
 void PermissionMgmtObj::GetPolicy(const InterfaceDescription::Member* member, Message& msg)
 {
     PermissionPolicy policy;
@@ -505,14 +506,14 @@ void PermissionMgmtObj::InstallIdentity(const InterfaceDescription::Member* memb
         MethodReply(msg, status);
         return;
     }
-    CertificateX509 x509(CertificateX509::GUID_CERTIFICATE);
-    status = LoadCertificate((Certificate::EncodingType) encoding, encoded, encodedLen, x509, ta.guid, &ta.publicKey);
+    IdentityCertificate cert;
+    status = LoadCertificate((Certificate::EncodingType) encoding, encoded, encodedLen, cert, ta.guid, &ta.publicKey);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionMgmtObj::InstallIdentity failed to validate certificate status 0x%x", status));
         MethodReply(msg, ER_INVALID_CERTIFICATE);
         return;
     }
-    GUID128 guid(x509.GetSubject());
+    GUID128 guid(cert.GetSubject());
     /* store the Identity PEM  into the key store */
     GetACLGUID(ENTRY_IDENTITY, guid);
     KeyBlob kb(encoded, encodedLen, KeyBlob::GENERIC);
@@ -561,7 +562,17 @@ void PermissionMgmtObj::RemoveIdentity(const InterfaceDescription::Member* membe
     MethodReply(msg, status);
 }
 
-static QStatus GetMembershipGuid(CredentialAccessor* ca, GUID128& membershipHead, String serialNum, const GUID128& issuer, GUID128& membershipGuid)
+static QStatus GetMembershipCert(CredentialAccessor* ca, GUID128& guid, MembershipCertificate& cert)
+{
+    KeyBlob kb;
+    QStatus status = ca->GetKey(guid, kb);
+    if (ER_OK != status) {
+        return status;
+    }
+    return LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert, NULL, NULL);
+}
+
+static QStatus GetMembershipGuid(CredentialAccessor* ca, GUID128& membershipHead, const String& serialNum, const GUID128& issuer, GUID128& membershipGuid)
 {
     GUID128* guids = NULL;
     size_t numOfGuids;
@@ -581,9 +592,9 @@ static QStatus GetMembershipGuid(CredentialAccessor* ca, GUID128& membershipHead
         /* check the tag */
         if (kb.GetTag() == tag) {
             /* maybe a match, check both serial number and issuer */
-            CertificateX509 x509(CertificateX509::GUILD_CERTIFICATE);
-            LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), x509, NULL, NULL);
-            if ((x509.GetSerial() == serialNum) && (x509.GetIssuer() == issuer)) {
+            MembershipCertificate cert;
+            LoadCertificate(Certificate::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert, NULL, NULL);
+            if ((cert.GetSerial() == serialNum) && (cert.GetIssuer() == issuer)) {
                 membershipGuid = guids[cnt];
                 found = true;
                 break;
@@ -600,32 +611,37 @@ static QStatus GetMembershipGuid(CredentialAccessor* ca, GUID128& membershipHead
     return ER_BUS_KEY_UNAVAILABLE;  /* not found */
 }
 
-void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* member, Message& msg)
+static QStatus LoadMembershipCertFromMsgArg(const MsgArg& arg, MembershipCertificate& cert)
 {
     uint8_t encoding;
     uint8_t* encoded;
     size_t encodedLen;
-    QStatus status = msg->GetArg(0)->Get("(yay)", &encoding, &encodedLen, &encoded);
+    QStatus status = arg.Get("(yay)", &encoding, &encodedLen, &encoded);
     if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::InstallMembership failed to retrieve PEM status 0x%x", status));
+        return status;
+    }
+    if ((encoding != Certificate::ENCODING_X509_DER) && (encoding != Certificate::ENCODING_X509_DER_PEM)) {
+        return ER_NOT_IMPLEMENTED;
+    }
+    status = LoadCertificate((Certificate::EncodingType) encoding, encoded, encodedLen, cert, NULL, NULL);
+    if (ER_OK != status) {
+        return ER_INVALID_CERTIFICATE;
+    }
+    return ER_OK;
+}
+
+void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* member, Message& msg)
+{
+    MembershipCertificate cert;
+    QStatus status = LoadMembershipCertFromMsgArg(*msg->GetArg(0), cert);
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("PermissionMgmtObj::InstallMembership failed to retrieve certificate status 0x%x", status));
         MethodReply(msg, status);
         return;
     }
-    if ((encoding != Certificate::ENCODING_X509_DER) && (encoding != Certificate::ENCODING_X509_DER_PEM)) {
-        QCC_DbgPrintf(("PermissionMgmtObj::InstallMembership does not support encoding %d", encoding));
-        MethodReply(msg, ER_NOT_IMPLEMENTED);
-        return;
-    }
-    CertificateX509 x509(CertificateX509::GUILD_CERTIFICATE);
-    status = LoadCertificate((Certificate::EncodingType) encoding, encoded, encodedLen, x509, NULL, NULL);
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::InstallMembership failed to validate memship certificate status 0x%x", status));
-        MethodReply(msg, ER_INVALID_CERTIFICATE);
-        return;
-    }
-    GUID128 guildGuid(x509.GetGuild());
-    KeyBlob kb(encoded, encodedLen, KeyBlob::GENERIC);
-    kb.SetTag(x509.GetSerial());
+    GUID128 guildGuid(cert.GetGuild());
+    KeyBlob kb(cert.GetEncoded(), cert.GetEncodedLen(), KeyBlob::GENERIC);
+    kb.SetTag(cert.GetSerial());
 
     /* store the Membership PEM  into the key store */
     GUID128 membershipHead;
@@ -644,7 +660,7 @@ void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* me
     /* check for duplicate */
     if (checkDup) {
         GUID128 membershipGuid(0);
-        status = GetMembershipGuid(ca, membershipHead, x509.GetSerial(), x509.GetIssuer(), membershipGuid);
+        status = GetMembershipGuid(ca, membershipHead, cert.GetSerial(), cert.GetIssuer(), membershipGuid);
         if (ER_OK == status) {
             /* found a duplicate */
             MethodReply(msg, ER_DUPLICATE_CERTIFICATE);
@@ -658,7 +674,7 @@ void PermissionMgmtObj::InstallMembership(const InterfaceDescription::Member* me
     MethodReply(msg, status);
 }
 
-QStatus PermissionMgmtObj::LocateMembershipEntry(String& serialNum, String& issuer, GUID128& membershipGuid)
+QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const String& issuer, GUID128& membershipGuid)
 {
     /* look for memberships head in the key store */
     GUID128 membershipHead(0);
@@ -669,48 +685,79 @@ QStatus PermissionMgmtObj::LocateMembershipEntry(String& serialNum, String& issu
     if (status == ER_BUS_KEY_UNAVAILABLE) {
         return status;
     }
-    return GetMembershipGuid(ca, membershipHead, serialNum, issuer, membershipGuid);
+    return GetMembershipGuid(ca, membershipHead, serialNum, GUID128(issuer), membershipGuid);
+}
+
+static QStatus LoadPolicyFromMsgArg(MsgArg& arg, PermissionPolicy& policy)
+{
+    uint8_t version;
+    MsgArg* variant;
+    QStatus status = arg.Get("(yv)", &version, &variant);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    return policy.Import(version, *variant);
+}
+
+QStatus PermissionMgmtObj::LoadAndValidateAuthData(const String& serial, const String& issuer, MsgArg& authDataArg, PermissionPolicy& authorization, GUID128& membershipGuid)
+{
+    QStatus status;
+    status = LocateMembershipEntry(serial, issuer, membershipGuid);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    /* retrieve the authorization data */
+    status = LoadPolicyFromMsgArg(authDataArg, authorization);
+    if (ER_OK != status) {
+        return status;
+    }
+    /* check the authorization data digest against the hash from the membership cert */
+    MembershipCertificate cert;
+    status = GetMembershipCert(ca, membershipGuid, cert);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (!cert.IsDigestPresent()) {
+        return ER_MISSING_DIGEST_IN_CERTIFICATE;
+    }
+    Crypto_SHA256 hashUtil;
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    authorization.Digest(bus, hashUtil, digest);
+    if (memcmp(digest, cert.GetDigest(), Crypto_SHA256::DIGEST_SIZE)) {
+        return ER_DIGEST_MISMATCH;
+    }
+    return ER_OK;
 }
 
 void PermissionMgmtObj::InstallMembershipAuthData(const InterfaceDescription::Member* member, Message& msg)
 {
     QStatus status;
-    uint8_t* serial;
-    size_t serialLen;
-    status = msg->GetArg(0)->Get("ay", &serialLen, &serial);
+    const char* serial;
+    status = msg->GetArg(0)->Get("s", &serial);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionMgmtObj::InstallMembershipAuthData failed to retrieve serial status 0x%x", status));
         MethodReply(msg, status);
         return;
     }
-    uint8_t* issuer;
-    size_t issuerLen;
-    status = msg->GetArg(1)->Get("ay", &issuerLen, &issuer);
+    const char* issuer;
+    status = msg->GetArg(1)->Get("s", &issuer);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionMgmtObj::InstallMembershipAuthData failed to retrieve issuer status 0x%x", status));
         MethodReply(msg, status);
         return;
     }
-    String serialNum((const char*) serial, serialLen);
-    String issuerString((const char*) issuer, issuerLen);
+    String serialNum(serial);
+    String issuerString(issuer);
     GUID128 membershipGuid(0);
-    status = LocateMembershipEntry(serialNum, issuerString, membershipGuid);
-    if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
-    }
-
-    /* retrieve the authorization data */
-    uint8_t version;
-    MsgArg* variant;
-    msg->GetArg(0)->Get("(yv)", &version, &variant);
-
     PermissionPolicy authorization;
-    status = authorization.Import(version, *variant);
+    status = LoadAndValidateAuthData(serialNum, issuerString, (MsgArg &) * (msg->GetArg(2)), authorization, membershipGuid);
     if (ER_OK != status) {
         MethodReply(msg, status);
         return;
     }
+
     uint8_t* buf = NULL;
     size_t size;
     status = authorization.Export(bus, &buf, &size);
@@ -729,24 +776,22 @@ void PermissionMgmtObj::InstallMembershipAuthData(const InterfaceDescription::Me
 void PermissionMgmtObj::RemoveMembership(const InterfaceDescription::Member* member, Message& msg)
 {
     QStatus status;
-    uint8_t* serial;
-    size_t serialLen;
-    status = msg->GetArg(0)->Get("ay", &serialLen, &serial);
+    const char* serial;
+    status = msg->GetArg(0)->Get("s", &serial);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionMgmtObj::RemoveMembership failed to retrieve serial status 0x%x", status));
         MethodReply(msg, status);
         return;
     }
-    uint8_t* issuer;
-    size_t issuerLen;
-    status = msg->GetArg(1)->Get("ay", &issuerLen, &issuer);
+    const char* issuer;
+    status = msg->GetArg(1)->Get("s", &issuer);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionMgmtObj::RemoveMembership failed to retrieve issuer status 0x%x", status));
         MethodReply(msg, status);
         return;
     }
-    String serialNum((const char*) serial, serialLen);
-    String issuerString((const char*) issuer, issuerLen);
+    String serialNum(serial);
+    String issuerString(issuer);
     GUID128 membershipGuid(0);
     status = LocateMembershipEntry(serialNum, issuerString, membershipGuid);
     if (ER_OK == status) {

@@ -34,6 +34,7 @@
 #include <alljoyn/PermissionPolicy.h>
 #include "CredentialAccessor.h"
 #include "ProtectedAuthListener.h"
+#include "PeerState.h"
 
 namespace ajn {
 
@@ -177,8 +178,8 @@ class PermissionMgmtObj : public BusObject {
     void RemoveMembership(const InterfaceDescription::Member* member, Message& msg);
     bool ValidateCertChain(const qcc::String& certChainPEM, bool& authorized);
     void BuildListOfGuilds();
-    QStatus LocateMembershipEntry(qcc::String& serialNum, qcc::String& issuer, qcc::GUID128& membershipGuid);
-
+    QStatus LocateMembershipEntry(const qcc::String& serialNum, const qcc::String& issuer, qcc::GUID128& membershipGuid);
+    QStatus LoadAndValidateAuthData(const qcc::String& serial, const qcc::String& issuer, MsgArg& authDataArg, PermissionPolicy& authorization, qcc::GUID128& membershipGuid);
     /**
      * Bind to an exclusive port for PermissionMgmt object.
      */

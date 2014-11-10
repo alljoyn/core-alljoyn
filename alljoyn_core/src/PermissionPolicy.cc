@@ -715,20 +715,42 @@ QStatus PermissionPolicy::Import(uint8_t version, const MsgArg& msgArg)
     return ER_OK;
 }
 
-QStatus PermissionPolicy::Export(BusAttachment& bus, uint8_t** buf, size_t* size)
+QStatus PermissionPolicy::Export(Message& msg)
 {
-    *buf = NULL;
-    *size = 0;
     MsgArg args;
     QStatus status = Export(args);
     if (ER_OK != status) {
         return status;
     }
-    Message msg(bus);
     /* use an error message as it is the simplest message without many validition rules */
     msg->ErrorMsg("/", 0);
-    status = msg->MarshalMessage("(yv)", "", MESSAGE_ERROR, &args, 1, 0, 0);
+    return msg->MarshalMessage("(yv)", "", MESSAGE_ERROR, &args, 1, 0, 0);
+}
 
+QStatus PermissionPolicy::Digest(BusAttachment& bus, Crypto_Hash& hashUtil, uint8_t* digest)
+{
+    Message msg(bus);
+    QStatus status = Export(msg);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = hashUtil.Init();
+    if (ER_OK != status) {
+        return status;
+    }
+    status = hashUtil.Update(msg->GetBodyBuffer(), msg->GetBodyBufferSize());
+    if (ER_OK != status) {
+        return status;
+    }
+    return hashUtil.GetDigest(digest);
+}
+
+QStatus PermissionPolicy::Export(BusAttachment& bus, uint8_t** buf, size_t* size)
+{
+    *buf = NULL;
+    *size = 0;
+    Message msg(bus);
+    QStatus status = Export(msg);
     if (ER_OK != status) {
         return status;
     }

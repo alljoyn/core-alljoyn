@@ -213,8 +213,8 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("GetPolicy",     NULL, "(yv)",  "authorization");
         ifc->AddMethod("RemovePolicy",     NULL, NULL, NULL);
         ifc->AddMethod("InstallMembership",     "(yay)",  NULL, "cert");
-        ifc->AddMethod("InstallMembershipAuthData",     "ayay(yv)",  NULL, "serialNum,issuer,authorization");
-        ifc->AddMethod("RemoveMembership",     "ayay", NULL, "serialNum,issuer");
+        ifc->AddMethod("InstallMembershipAuthData",     "ss(yv)",  NULL, "serialNum,issuer,authorization");
+        ifc->AddMethod("RemoveMembership",     "ss", NULL, "serialNum,issuer");
         ifc->AddMethod("InstallIdentity",     "(yay)", NULL, "cert");
         ifc->AddMethod("RemoveIdentity",     NULL, NULL, NULL);
         ifc->AddMethod("GetIdentity",     NULL, "(yay)", "cert");

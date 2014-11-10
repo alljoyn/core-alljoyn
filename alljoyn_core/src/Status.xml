@@ -276,4 +276,6 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_CERTIFICATE_NOT_FOUND" value="0x9128" comment="Certificate not found"/>
   <status name="ER_DUPLICATE_CERTIFICATE" value="0x9129" comment="Duplicate Certificate found"/>
   <status name="ER_UNKNOWN_CERTIFICATE" value="0x912a" comment="Unknown Certificate"/>
+  <status name="ER_MISSING_DIGEST_IN_CERTIFICATE" value="0x912b" comment="Missing digest in certificate"/>
+  <status name="ER_DIGEST_MISMATCH" value="0x912c" comment="Digest mismatch"/>
 </status_block>

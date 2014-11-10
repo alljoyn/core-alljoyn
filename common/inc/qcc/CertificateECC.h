@@ -563,6 +563,7 @@ extern const qcc::String OID_CRV_PRIME256V1;
 extern const qcc::String OID_DN_OU;
 extern const qcc::String OID_DN_CN;
 extern const qcc::String OID_BASIC_CONSTRAINTS;
+extern const qcc::String OID_CUSTOM_DIGEST;
 
 class CertificateX509 : public Certificate {
 
@@ -576,14 +577,14 @@ class CertificateX509 : public Certificate {
     /**
      * constructor.
      */
-    CertificateX509(CertificateType type) : Certificate(3, X509_CERTIFICATE), type(type), encodedLen(0), encoded(NULL)
+    CertificateX509(CertificateType type) : Certificate(3, X509_CERTIFICATE), type(type), encodedLen(0), encoded(NULL), digestPresent(false)
     {
     }
 
     /**
      * Default constructor.
      */
-    CertificateX509() : Certificate(3, X509_CERTIFICATE), type(GUID_CERTIFICATE), encodedLen(0), encoded(NULL)
+    CertificateX509() : Certificate(3, X509_CERTIFICATE), type(GUID_CERTIFICATE), encodedLen(0), encoded(NULL), digestPresent(false)
     {
     }
 
@@ -691,6 +692,45 @@ class CertificateX509 : public Certificate {
         return &publickey;
     }
 
+    void SetCA(uint32_t ca)
+    {
+        this->ca = ca;
+    }
+    const uint32_t& GetCA()
+    {
+        return ca;
+    }
+
+    /**
+     * Set the digest of the external data.
+     * @param digest the digest of the external data
+     * @param count the size of the digest.
+     */
+    void SetDigest(const uint8_t* digest, size_t size)
+    {
+        memset(this->digest, 0, sizeof (this->digest));
+        memcpy(this->digest, digest, ((size > sizeof (this->digest)) ? sizeof (this->digest) : size));
+        digestPresent = true;
+    }
+
+    /**
+     * Get the digest of the external data.
+     * @param digest the digest of the external data
+     */
+    const uint8_t* GetDigest()
+    {
+        return digest;
+    }
+
+    /**
+     * Is the optional digest field present in the certificate?
+     * @return whether this optional field is present in the certificate.
+     */
+    bool IsDigestPresent()
+    {
+        return digestPresent;
+    }
+
     /**
      * Get the encoded bytes for the certificate
      * @return the encoded bytes
@@ -781,9 +821,42 @@ class CertificateX509 : public Certificate {
     qcc::GUID128 guild;
     ValidPeriod validity;
     ECCPublicKey publickey;
+    uint32_t ca;
     ECCSignature signature;
     size_t encodedLen;
     uint8_t* encoded;
+    bool digestPresent;
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+};
+
+class MembershipCertificate : public CertificateX509 {
+
+  public:
+    MembershipCertificate() : CertificateX509(GUILD_CERTIFICATE)
+    {
+    }
+    /**
+     * Destructor
+     */
+    ~MembershipCertificate()
+    {
+    }
+
+};
+
+class IdentityCertificate : public CertificateX509 {
+
+  public:
+    IdentityCertificate() : CertificateX509(GUID_CERTIFICATE)
+    {
+    }
+    /**
+     * Destructor
+     */
+    ~IdentityCertificate()
+    {
+    }
+
 };
 
 } /* namespace qcc */
