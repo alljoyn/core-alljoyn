@@ -643,7 +643,7 @@ class BusAttachment : public MessageReceiver {
      * calling this function.
      *
      * @param authMechanisms   The authentication mechanism(s) to use for peer-to-peer authentication.
-     *                         If this parameter is NULL peer-to-peer authentication is disabled.  This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA.
+     *                         If this parameter is NULL peer-to-peer authentication is disabled.  This is a space separated list of any of the following values: ALLJOYN_PIN_KEYX, ALLJOYN_SRP_LOGON, ALLJOYN_RSA_KEYX, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
      *
      * @param listener         Passes password and other authentication related requests to the application.
      *
