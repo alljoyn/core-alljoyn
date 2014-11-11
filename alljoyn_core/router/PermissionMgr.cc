@@ -41,7 +41,10 @@ PermissionMgr::DaemonBusCallPolicy PermissionMgr::GetDaemonBusCallPolicy(BusEndp
             RemoteEndpoint rEndpoint = RemoteEndpoint::cast(sender);
             QCC_DbgPrintf(("This is a RemoteEndpoint. ConnSpec = %s", rEndpoint->GetConnectSpec().c_str()));
 
-            if ((rEndpoint->GetConnectSpec() == "unix") || (rEndpoint->GetConnectSpec() == "localhost") || (rEndpoint->GetConnectSpec() == "slap")) {
+            if ((rEndpoint->GetConnectSpec() == "unix") ||
+                (rEndpoint->GetConnectSpec() == "npipe") ||
+                (rEndpoint->GetConnectSpec() == "localhost") ||
+                (rEndpoint->GetConnectSpec() == "slap")) {
                 policy = STDBUSCALL_ALLOW_ACCESS_SERVICE_ANY;
             } else if (rEndpoint->GetConnectSpec() == "tcp") {
                 if (!rEndpoint->IsTrusted()) {

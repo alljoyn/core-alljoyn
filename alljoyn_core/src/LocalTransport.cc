@@ -1166,15 +1166,14 @@ void _LocalEndpoint::OnBusConnected()
      */
     uint32_t zero = 0;
     if (dispatcher) {
-        dispatcher->AddAlarm(Alarm(zero, deferredCallbacks));
+        QStatus status = dispatcher->AddAlarm(Alarm(zero, deferredCallbacks));
+        if (ER_OK != status) {
+            QCC_DbgHLPrintf(("OnBusConnected failure to add Alarm: %s", QCC_StatusText(status)));
+        }
     }
 }
 
 void _LocalEndpoint::OnBusDisconnected() {
-    /*
-     * Allow synchronous method calls from within the object Unregistration callbacks
-     */
-    bus->EnableConcurrentCallbacks();
     /*
      * Call ObjectUnegistered for any unregistered bus objects
      */

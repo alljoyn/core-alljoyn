@@ -383,6 +383,30 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     void SetLinkTimeout(const InterfaceDescription::Member* member, Message& msg);
 
     /**
+     * Respond to a bus request to set the idle timeouts for a leaf node.
+     *
+     * The input Message (METHOD_CALL) is expected to contain the following parameters:
+     *   reqIdleTO    uint32  Requested Idle Timeout for the link. i.e. time after which the Routing node must
+     *                        must send a DBus ping to Leaf node in case of inactivity.
+     *                        Use 0 to leave unchanged.
+     *   reqProbeTO   uint32  Requested Probe timeout. The time from the Routing node sending the DBus
+     *                        ping to the expected response.
+     *                        Use 0 to leave unchanged.
+     *
+     *  Output params:
+     * The output Message (METHOD_REPLY) contains the following parameters:
+     *   disposition  uint32  ALLJOYN_SETIDLETIMEOUTS_* value
+     *   actIdleTO    uint32  Actual Idle Timeout. i.e. time after which the Routing node will
+     *                        send a DBus ping to Leaf node in case of inactivity.
+     *   actProbeTO   uint32  Actual Probe Timeout. The time from the Routing node sending the DBus ping
+     *                        to the expected response from the leaf node.
+     *
+     * @param member  Member.
+     * @param msg     The incoming message.
+     */
+    void SetIdleTimeouts(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
      * Add an alias to a Unix User ID
      * The input Message (METHOD_CALL) is expected to contain the following parameter
      *   aliasUID      uint32    The alias ID

@@ -60,6 +60,7 @@
 #include "XmlHelper.h"
 #include "ClientTransport.h"
 #include "NullTransport.h"
+#include "NamedPipeClientTransport.h"
 
 #define QCC_MODULE "ALLJOYN"
 
@@ -190,6 +191,9 @@ static class ClientTransportFactoryContainer : public TransportFactoryContainer 
          * Registration of transport factories is a one time operation.
          */
         if (IncrementAndFetch(&transportInit) == 1) {
+            if (NamedPipeClientTransport::IsAvailable()) {
+                Add(new TransportFactory<NamedPipeClientTransport>(NamedPipeClientTransport::NamedPipeTransportName, true));
+            }
             if (ClientTransport::IsAvailable()) {
                 Add(new TransportFactory<ClientTransport>(ClientTransport::TransportName, true));
             }
@@ -421,7 +425,14 @@ QStatus BusAttachment::TryConnect(const char* connectSpec)
 QStatus BusAttachment::Connect()
 {
 #ifdef _WIN32
+    /**
+     * Named pipe transport is available on Windows 10 and newer Windows versions.
+     */
+#if (_WIN32_WINNT > 0x0603)
+    const char* connectArgs = "npipe:";
+#else
     const char* connectArgs = "tcp:addr=127.0.0.1,port=9956";
+#endif
 #else
     const char* connectArgs = "unix:abstract=alljoyn";
 #endif

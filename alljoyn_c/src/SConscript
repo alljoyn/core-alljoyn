@@ -15,6 +15,10 @@
 
 Import('env')
 
+# Set the QCC_BUILD_WINDOWS_API_DLL variable which controls the dllexport declaration needed on Windows:
+if env['OS_GROUP'] == 'windows':
+    env.Append(CPPDEFINES = ['QCC_BUILD_WINDOWS_API_DLL'])    
+
 # AllJoyn Sources
 srcs = env.Glob('*.cc')
 

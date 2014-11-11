@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2012, AllSeen Alliance. All rights reserved.
+// Copyright (c) 2012, 2014, AllSeen Alliance. All rights reserved.
 //
 //    Permission to use, copy, modify, and/or distribute this software for any
 //    purpose with or without fee is hereby granted, provided that the above
@@ -98,7 +98,7 @@ BasicObjectImpl::BasicObjectImpl(BusAttachment &bus, const char *path, id<BasicS
     //
     interfaceDescription = bus.GetInterface([@"org.alljoyn.bus.sample.strings" UTF8String]);
     assert(interfaceDescription);
-    AddInterface(*interfaceDescription);
+    AddInterface(*interfaceDescription, ANNOUNCED);
 
     
     // Register the method handlers for interface BasicStringsDelegate with the object
@@ -139,7 +139,7 @@ TestSignalWithNoArgsSignalMember = interfaceDescription->GetMember("TestSignalWi
     //
     interfaceDescription = bus.GetInterface([@"org.alljoyn.bus.samples.chat" UTF8String]);
     assert(interfaceDescription);
-    AddInterface(*interfaceDescription);
+    AddInterface(*interfaceDescription, ANNOUNCED);
 
     
     // save off signal members for later
@@ -433,7 +433,7 @@ PingObjectImpl::PingObjectImpl(BusAttachment &bus, const char *path, id<PingObje
     //
     interfaceDescription = bus.GetInterface([@"org.alljoyn.bus.samples.ping" UTF8String]);
     assert(interfaceDescription);
-    AddInterface(*interfaceDescription);
+    AddInterface(*interfaceDescription, ANNOUNCED);
 
     
     // Register the method handlers for interface PingObjectDelegate with the object

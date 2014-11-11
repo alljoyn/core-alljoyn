@@ -165,7 +165,8 @@ QStatus AllJoynObj::Init()
         { alljoynIntf->GetMember("ReloadConfig"),             static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::ReloadConfig) },
         { alljoynIntf->GetMember("Ping"),                     static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::Ping) },
         { alljoynIntf->GetMember("FindAdvertisementByTransport"),        static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::FindAdvertisementByTransport) },
-        { alljoynIntf->GetMember("CancelFindAdvertisementByTransport"),  static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::CancelFindAdvertisementByTransport) }
+        { alljoynIntf->GetMember("CancelFindAdvertisementByTransport"),  static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::CancelFindAdvertisementByTransport) },
+        { alljoynIntf->GetMember("SetIdleTimeouts"),  static_cast<MessageReceiver::MethodHandler>(&AllJoynObj::SetIdleTimeouts) }
     };
 
     AddInterface(*alljoynIntf);
@@ -2947,7 +2948,51 @@ void AllJoynObj::SetLinkTimeout(const InterfaceDescription::Member* member, Mess
     QCC_DbgTrace(("AllJoynObj::SetLinkTimeout(%u, %d) (status=%s, disp=%d, lto=%d)", id, reqLinkTimeout,
                   QCC_StatusText(status), disposition, actLinkTimeout));
 }
+void AllJoynObj::SetIdleTimeouts(const InterfaceDescription::Member* member, Message& msg)
+{
+    /* Parse args */
+    uint32_t disposition = ALLJOYN_SETIDLETIMEOUTS_REPLY_FAILED;
+    size_t numArgs;
+    const MsgArg* args;
+    msg->GetArgs(numArgs, args);
+    uint32_t actIdleTimeout = 0;
+    uint32_t actProbeTimeout = 0;
+    uint32_t reqIdleTimeout = 0;
+    uint32_t reqProbeTimeout = 0;
 
+    if (numArgs == 2) {
+        reqIdleTimeout = args[0].v_uint32;
+        reqProbeTimeout = args[1].v_uint32;
+        actIdleTimeout = reqIdleTimeout;
+        actProbeTimeout = reqProbeTimeout;
+        AcquireLocks();
+        BusEndpoint senderEp = router.FindEndpoint(msg->GetSender());
+        if (senderEp->IsValid()) {
+            if (senderEp->GetEndpointType() == ENDPOINT_TYPE_REMOTE) {
+                RemoteEndpoint rep = RemoteEndpoint::cast(senderEp);
+                rep->SetIdleTimeouts(actIdleTimeout, actProbeTimeout);
+                disposition = ALLJOYN_SETIDLETIMEOUTS_REPLY_SUCCESS;
+            } else {
+                disposition = ALLJOYN_SETIDLETIMEOUTS_REPLY_NOT_ALLOWED;
+            }
+        }
+        ReleaseLocks();
+    }
+
+    /* Send response */
+    MsgArg replyArgs[3];
+    replyArgs[0].Set("u", disposition);
+    replyArgs[1].Set("u", actIdleTimeout);
+    replyArgs[2].Set("u", actProbeTimeout);
+
+    QStatus status = MethodReply(msg, replyArgs, ArraySize(replyArgs));
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to respond to org.alljoyn.Bus.SetIdleTimeouts"));
+    }
+
+    QCC_DbgPrintf(("SetIdleTimeouts(%u,%u) (disposition=%u, actIdleTo=%u, actProbeTo=%u)",
+                   reqIdleTimeout, reqProbeTimeout, disposition, actIdleTimeout, actProbeTimeout));
+}
 void AllJoynObj::AliasUnixUser(const InterfaceDescription::Member* member, Message& msg)
 {
     uint32_t replyCode = ALLJOYN_ALIASUNIXUSER_REPLY_SUCCESS;
