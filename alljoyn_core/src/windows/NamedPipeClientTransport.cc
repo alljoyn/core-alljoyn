@@ -196,7 +196,7 @@ QStatus NamedPipeClientTransport::Connect(const char* connectSpec, const Session
 
     qcc::String authName;
     qcc::String redirection;
-    status = ep->Establish("ANONYMOUS", authName, redirection);
+    status = ep->Establish("EXTERNAL", authName, redirection);
     if (status == ER_OK) {
         ep->SetListener(this);
         status = ep->Start();
