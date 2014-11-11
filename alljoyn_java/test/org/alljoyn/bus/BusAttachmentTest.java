@@ -1303,7 +1303,6 @@ public class BusAttachmentTest extends TestCase {
         }
     }
 
-    //TODO figure out how to produce the sessionLost signal
     public synchronized void testLeaveSession() throws Exception {
         found = false;
         sessionAccepted = false;
@@ -1330,8 +1329,7 @@ public class BusAttachmentTest extends TestCase {
         Mutable.ShortValue sessionPort = new Mutable.ShortValue((short) 42);
 
         //bindSessionPort new SessionPortListener
-        assertEquals(Status.OK, bus.bindSessionPort(sessionPort, sessionOpts,
-                new SessionPortListener(){
+        assertEquals(Status.OK, bus.bindSessionPort(sessionPort, sessionOpts, new SessionPortListener() {
             @Override
             public boolean acceptSessionJoiner(short sessionPort, String joiner, SessionOpts sessionOpts) {
                 if (sessionPort == 42) {
@@ -1410,11 +1408,10 @@ public class BusAttachmentTest extends TestCase {
 
         assertEquals(busSessionId, otherBusSessionId);
         assertEquals(Status.OK, otherBus.leaveSession(otherBusSessionId));
-        Status status = bus.leaveSession(busSessionId);
-        assertTrue((status == Status.OK) || (status == Status.ALLJOYN_LEAVESESSION_REPLY_NO_SESSION));
 
         found = false;
         sessionAccepted = sessionJoined = false;
+        joinSessionStatus = Status.NONE;
         busSessionId = otherBusSessionId = 0;
 
         otherBus.cancelFindAdvertisedName(name);
@@ -1423,7 +1420,7 @@ public class BusAttachmentTest extends TestCase {
         // Wait for found name and session joined
         assertEquals(true, waitForLambda(4 * 1000, new Lambda() {
                 @Override
-                public boolean func() { return found && sessionAccepted && sessionJoined; }
+                public boolean func() { return found && sessionAccepted && sessionJoined && (joinSessionStatus == Status.OK); }
             }));
 
         assertEquals(Status.OK, joinSessionStatus);
@@ -1432,8 +1429,6 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(busSessionId, otherBusSessionId);
 
         assertEquals(Status.OK, bus.leaveSession(busSessionId));
-        status = otherBus.leaveSession(otherBusSessionId);
-        assertTrue((status == Status.OK) || (status == Status.ALLJOYN_LEAVESESSION_REPLY_NO_SESSION));
 
         // Wait for session lost
         assertEquals(true, waitForLambda(4 * 1000, new Lambda() {
