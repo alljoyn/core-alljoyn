@@ -106,6 +106,43 @@ public class BusAttachmentTest extends TestCase {
         otherBus = null;
         name = "org.alljoyn.bus.BusAttachmentTest.advertise";
         address = System.getProperty("org.alljoyn.bus.address", "unix:abstract=alljoyn");
+
+        handledSignals1 = 0;
+        handledSignals2 = 0;
+        handledSignals3 = 0;
+        handledSignals4 = 0;
+        pinRequested = false;
+
+        found = false;
+        lost = false;
+
+        foundNameA = false;
+        foundNameB = false;
+
+        foundName1 = false;
+        foundName2 = false;
+        foundName3 = false;
+        transport2 = 0;
+
+        sessionAccepted = false;
+        sessionJoined = false;
+        onJoined = false;
+        joinSessionStatus = Status.NONE;
+        busSessionId = -1;
+        otherBusSessionId = -1;
+
+        sessionLost = false;
+        sessionLostReason = -1;
+
+        sessionJoinedFlag = false;
+        sessionLostFlagA = false;
+        sessionMemberAddedFlagA = false;
+        sessionMemberRemovedFlagA = false;
+        sessionLostFlagB = false;
+        sessionMemberAddedFlagB = false;
+        sessionMemberRemovedFlagB = false;
+
+        onPinged = false;
     }
 
     @Override
@@ -1182,7 +1219,7 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(true, found);
 
         this.wait(5 * 1000);
-        if(!sessionAccepted || !sessionJoined) {
+        if(!sessionAccepted || !sessionJoined || (Status.NONE == joinSessionStatus)) {
             this.wait(5 * 1000);
         }
 

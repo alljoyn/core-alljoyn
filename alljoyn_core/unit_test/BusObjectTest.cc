@@ -524,3 +524,69 @@ TEST(BusObjectTest, Make_methodcall_after_unregister_bus_object)
 
 }
 
+
+class PropsTestBusObject : public BusObject {
+  public:
+    PropsTestBusObject(BusAttachment& bus, const char* path) : BusObject(path)
+    {
+        const InterfaceDescription* Intf1 = bus.GetInterface("org.test");
+        EXPECT_TRUE(Intf1 != NULL);
+        AddInterface(*Intf1);
+        arrayStructData[0].Set("(is)", 42, "sorbet");
+        arrayStructData[1].Set("(is)", 2112, "calamari");
+    }
+
+  protected:
+    QStatus Get(const char* ifcName, const char* propName, MsgArg& val)
+    {
+        if (strcmp(propName, "arrayStruct") == 0) {
+            // Returning a local, non-new'd MsgArg array will trigger
+            // the ASACORE-1009 bug with an attempt to free an invalid
+            // pointer.
+            val.Set("a(is)", ArraySize(arrayStructData), arrayStructData);
+        }
+        return ER_OK;
+    }
+
+  private:
+    MsgArg arrayStructData[2];
+};
+
+/* ASACORE-1009 */
+TEST(BusObjectTest, GetAllPropsWithStaticMsgArgProp)
+{
+    QStatus status;
+    BusAttachment busService("test7service");
+    BusAttachment busClient("test7client");
+    InterfaceDescription* intf = NULL;
+    status = busService.CreateInterface("org.test", intf);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(intf != NULL);
+    status = intf->AddProperty("arrayStruct", "a(is)", PROP_ACCESS_READ);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    intf->Activate();
+
+    //Start a service bus attachment
+    status = busService.Start();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = busService.Connect(ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    //Start a client bus attachment
+    status = busClient.Start();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = busClient.Connect(ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    PropsTestBusObject bo(busService, OBJECT_PATH);
+    status = busService.RegisterBusObject(bo);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    ProxyBusObject pbo(busClient, busService.GetUniqueName().c_str(), OBJECT_PATH, 0, false);
+
+    status = pbo.IntrospectRemoteObject();
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    MsgArg props;
+    status = pbo.GetAllProperties("org.test", props);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+}

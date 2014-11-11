@@ -3169,7 +3169,6 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
                 } else {
                     replyCode = ALLJOYN_ADVERTISENAME_REPLY_TRANSPORT_NOT_AVAILABLE;
                 }
-                stateLock.Lock(MUTEX_CONTEXT);
                 ReleaseLocks();
 
                 /* Advertise on transports specified */
@@ -3187,7 +3186,6 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
                         }
                     }
                 }
-                stateLock.Unlock(MUTEX_CONTEXT);
 
             } else {
                 ReleaseLocks();
@@ -3297,7 +3295,6 @@ QStatus AllJoynObj::ProcCancelAdvertise(const qcc::String& sender, const qcc::St
         cancelMask &= origMask;
     }
 
-    stateLock.Lock(MUTEX_CONTEXT);
     ReleaseLocks();
 
     /* Cancel transport advertisement if no other refs exist */
@@ -3315,7 +3312,6 @@ QStatus AllJoynObj::ProcCancelAdvertise(const qcc::String& sender, const qcc::St
     } else if (!foundAdvert) {
         status = ER_FAIL;
     }
-    stateLock.Unlock(MUTEX_CONTEXT);
 
     /* Remove advertisement from local nameMap so local discoverers are notified of advertisement going away */
     if ((status == ER_OK) && (transports & TRANSPORT_LOCAL)) {
@@ -3482,7 +3478,6 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
     /* Find out the transports on which discovery needs to be enabled for this name.
      * i.e. The ones that are set in the requested transport mask and not set in the origMask.
      */
-    stateLock.Lock(MUTEX_CONTEXT);
     ReleaseLocks();
     enableMask = transports & ~origMask;
     if (ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS == replyCode) {
@@ -3497,7 +3492,6 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
             }
         }
     }
-    stateLock.Unlock(MUTEX_CONTEXT);
 
     /* Reply to request */
     MsgArg replyArg("u", replyCode);
@@ -3656,7 +3650,6 @@ QStatus AllJoynObj::ProcCancelFindAdvertisement(const qcc::String& sender, const
         cancelMask &= origMask;
     }
 
-    stateLock.Lock(MUTEX_CONTEXT);
     ReleaseLocks();
 
     /* Disable discovery if certain transports are no longer referenced for the name prefix */
@@ -3671,7 +3664,6 @@ QStatus AllJoynObj::ProcCancelFindAdvertisement(const qcc::String& sender, const
     } else if (!foundFinder) {
         status = ER_FAIL;
     }
-    stateLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
@@ -5104,8 +5096,8 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
     } else {
         assert(name);
         QCC_DbgTrace(("Ping(%s)", name));
-        /* Decide how to proceed based on the endpoint existence/type */
 
+        /* Decide how to proceed based on the endpoint existence/type */
         BusEndpoint ep = router.FindEndpoint(name);
         if ((ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE) || (ep->GetEndpointType() == ENDPOINT_TYPE_NULL) || (ep->GetEndpointType() == ENDPOINT_TYPE_LOCAL)) {
             /* Ping is to a locally connected attachment */
@@ -5146,11 +5138,34 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                     break;
                 }
             }
+
+            //
+            // If the endpoint is not valid it means that this could be a name on a remote routing node or a name that is
+            // locally advertised but not requested.
+            // 1. Check if the name is name is unique or well known name.
+            //    a. If unique then we check if it is on this routing node by comparing with guid
+            //    b. If unique name is not present on this routing node it could be a unique name advertised
+            //
+            if (!ep->IsValid()) {
+                // Could be a remote well known name or a unique name whose guid needs to be checked
+                // Check if it is a unique name
+                if (guid.empty() && (name[0] == ':')) {
+                    String guidStr = String(name).substr(1, GUID128::SHORT_SIZE);
+                    // Check if the guid in the unique name is same as ours
+                    if (strcmp(guidStr.c_str(), bus.GetInternal().GetGlobalGUID().ToString().c_str()) == 0) {
+                        QCC_LogError(ER_OK, ("Unique name has local guid"));
+                        replyCode = ALLJOYN_PING_REPLY_UNKNOWN_NAME;
+                    }
+                } else if (!foundEntry) {
+                    replyCode = ALLJOYN_PING_REPLY_UNKNOWN_NAME;
+                }
+            }
+
             //
             // Check for unique name. Get the long GUID since the name passed will be short
             // The unique name passed in should either be discovered or part of a session
             //
-            if (guid.empty() && (name[0] == ':')) {
+            if (guid.empty() && (name[0] == ':') && (replyCode != ALLJOYN_PING_REPLY_UNKNOWN_NAME)) {
                 String guidStr = String(name).substr(1, GUID128::SHORT_SIZE);
                 if (IsGuidShortStringKnown(guidStr)) {
                     guid = guidStr;
@@ -5199,8 +5214,10 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                     }
                 }
             } else {
-                replyCode = ALLJOYN_PING_REPLY_UNKNOWN_NAME;
-                ReleaseLocks();
+                if (replyCode != ALLJOYN_PING_REPLY_UNREACHABLE) {
+                    replyCode = ALLJOYN_PING_REPLY_UNKNOWN_NAME;
+                    ReleaseLocks();
+                }
             }
         }
     }

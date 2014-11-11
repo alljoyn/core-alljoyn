@@ -993,7 +993,7 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
 QStatus _RemoteEndpoint::PushMessageRouter(Message& msg, size_t& count)
 {
     QStatus status = ER_OK;
-    static const size_t MAX_DATA_MESSAGES = 30;
+    static const size_t MAX_DATA_MESSAGES = 1;
 
     internal->lock.Lock(MUTEX_CONTEXT);
     count = internal->txQueue.size();
@@ -1126,7 +1126,7 @@ QStatus _RemoteEndpoint::PushMessageRouter(Message& msg, size_t& count)
 }
 QStatus _RemoteEndpoint::PushMessageLeaf(Message& msg, size_t& count)
 {
-    static const size_t MAX_TX_QUEUE_SIZE = 30;
+    static const size_t MAX_TX_QUEUE_SIZE = 1;
 
     QStatus status = ER_OK;
     internal->lock.Lock(MUTEX_CONTEXT);
