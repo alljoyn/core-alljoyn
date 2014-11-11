@@ -322,14 +322,13 @@ void SessionlessObj::AddRule(const qcc::String& epName, Rule& rule)
         uint32_t toChangeId = curChangeId + 1;
         uint32_t toRulesId = nextRulesId;
 
-        /* Retrieve from our own cache */
-        HandleRangeRequest(epName.c_str(), 0, fromChangeId, toChangeId, fromRulesId, toRulesId);
-
-        bus.EnableConcurrentCallbacks();
         FindAdvertisedNames();
 
         lock.Unlock();
         router.UnlockNameTable();
+
+        /* Retrieve from our own cache */
+        HandleRangeRequest(epName.c_str(), 0, fromChangeId, toChangeId, fromRulesId, toRulesId);
     }
 }
 
@@ -351,7 +350,6 @@ void SessionlessObj::RemoveRule(const qcc::String& epName, Rule& rule)
         }
 
         if (rules.empty()) {
-            bus.EnableConcurrentCallbacks();
             CancelFindAdvertisedNames();
         }
 
@@ -1221,6 +1219,7 @@ void SessionlessObj::CancelAdvertisedName(const qcc::String& name)
 
 void SessionlessObj::FindAdvertisedNames()
 {
+    set<String> names;
     for (RuleIterator rit = rules.begin(); rit != rules.end(); ++rit) {
         String name;
         if (rit->second.implements.empty()) {
@@ -1237,11 +1236,7 @@ void SessionlessObj::FindAdvertisedNames()
             continue;
         }
         if (findingNames.insert(name).second) {
-            QCC_DbgPrintf(("FindAdvertisement(%s)", name.c_str()));
-            QStatus status = FindAdvertisementByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("FindAdvertisementByTransport failed"));
-            }
+            names.insert(name);
         }
     }
     if (!findingNames.empty()) {
@@ -1251,28 +1246,47 @@ void SessionlessObj::FindAdvertisedNames()
          */
         String name = String("name='") + WildcardInterfaceName + ".sl.*'";
         if (findingNames.insert(name).second) {
-            QCC_DbgPrintf(("FindAdvertisement(%s)", name.c_str()));
-            QStatus status = FindAdvertisementByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
-            if (status != ER_OK) {
-                QCC_LogError(status, ("FindAdvertisementByTransport failed"));
-            }
+            names.insert(name);
         }
     }
+
+    lock.Unlock();
+    router.UnlockNameTable();
+    set<String>::iterator it = names.begin();
+    while (it != names.end()) {
+        String name = *it;
+        QCC_DbgPrintf(("FindAdvertisement(%s)", name.c_str()));
+        QStatus status = FindAdvertisementByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("FindAdvertisementByTransport failed for name %s :", name.c_str()));
+        }
+        it++;
+    }
+    router.LockNameTable();
+    lock.Lock();
 }
 
 void SessionlessObj::CancelFindAdvertisedNames()
 {
-    set<String>::iterator it = findingNames.begin();
-    while (it != findingNames.end()) {
+    set<String> names = findingNames;
+    findingNames.clear();
+
+    lock.Unlock();
+    router.UnlockNameTable();
+    set<String>::iterator it = names.begin();
+    while (it != names.end()) {
         String name = *it;
         QStatus status = CancelFindAdvertisementByTransport(name.c_str(), TRANSPORT_ANY & ~TRANSPORT_LOCAL);
         if (status == ER_OK) {
             QCC_DbgPrintf(("CancelFindAdvertisement(%s)", name.c_str()));
         } else {
-            QCC_LogError(status, ("CancelFindAdvertisementByTransport failed"));
+            QCC_LogError(status, ("CancelFindAdvertisementByTransport failed for name %s :", name.c_str()));
         }
-        findingNames.erase(it++);
+        it++;
     }
+    router.LockNameTable();
+    lock.Lock();
+
 }
 
 SessionlessObj::RemoteCaches::iterator SessionlessObj::FindRemoteCache(SessionId sid)

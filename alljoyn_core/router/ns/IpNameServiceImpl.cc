@@ -1686,21 +1686,16 @@ QStatus IpNameServiceImpl::Enabled(TransportMask transportMask,
 void IpNameServiceImpl::TriggerTransmission(Packet packet)
 {
     BurstResponseHeader brh(packet);
-    // Maximum number of IpNameService protocol burst messages that can be queued.
-    static const size_t MAX_IPNS_MESSAGES = 50;
 
     uint32_t nsVersion, msgVersion;
     packet->GetVersion(nsVersion, msgVersion);
     assert(m_enableV1 || (msgVersion != 0 && msgVersion != 1));
 
     //Queue one instance of the packet, the rest will be taken care of by the PacketScheduler thread
+    //QueueProtocolMessage limits the maximum number of outstanding packets to MAX_IPNS_MESSAGES.
+    //Limiting m_burstQueue size could posssibly lead to stalls of up to 18 seconds (RETRY_INTERVALS).
     QueueProtocolMessage(packet);
     m_mutex.Lock();
-    while (m_burstQueue.size() >= MAX_IPNS_MESSAGES) {
-        m_mutex.Unlock();
-        qcc::Sleep(10);
-        m_mutex.Lock();
-    }
     Timespec now;
     GetTimeNow(&now);
 
