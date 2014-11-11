@@ -67,8 +67,6 @@ namespace ajn {
 #define ABS(a) ((a) >= 0 ? (a) : -(a))
 
 #define UDP_HEADER_SIZE 8
-#define IPV4_HEADER_SIZE 20
-#define IPV6_HEADER_SIZE 40
 
 /* Marshal/Unmarshal ARDP header offsets */
 #define FLAGS_OFFSET   0
@@ -1474,7 +1472,6 @@ static ArdpConnRecord* NewConnRecord(void)
 
 static QStatus InitRcv(ArdpConnRecord* conn, uint32_t segmax, uint32_t segbmax)
 {
-    QCC_DbgTrace(("InitRcv(conn=%p, segmax=%d, segbmax=%d)", conn, segmax, segbmax));
     conn->rcv.SEGMAX = segmax;     /* The maximum number of outstanding segments that we can buffer (we will tell other side) */
     conn->rcv.SEGBMAX = segbmax;   /* The largest buffer that can be received on this connection (our buffer size) */
 
@@ -2337,23 +2334,41 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
     return ER_OK;
 }
 
+static bool CheckConfigValid(uint16_t segmax, uint16_t segbmax, uint16_t window)
+{
+    uint32_t ackMaskSize = (window + 31) >> 5;
+    uint8_t hlen = ARDP_FIXED_HEADER_LEN + ackMaskSize * sizeof(uint32_t);
+    uint32_t maxPayload = segbmax - (UDP_HEADER_SIZE + hlen);
+
+    if (segmax > ARDP_MAX_WINDOW_SIZE) {
+        QCC_LogError(ER_INVALID_CONFIG, ("SEGMAX %u exceeds ARDP maximum window size %u", segmax, ARDP_MAX_WINDOW_SIZE));
+        return false;
+    }
+
+    if (segbmax <= (UDP_HEADER_SIZE + hlen)) {
+        QCC_LogError(ER_FAIL, ("InitSnd(): SEGBMAX too small %u (need at least %u)", segbmax, (UDP_HEADER_SIZE + hlen)));
+        return false;
+    }
+
+    if ((maxPayload * segmax) < (uint32_t) (ALLJOYN_MAX_PACKET_LEN)) {
+        QCC_LogError(ER_INVALID_CONFIG, ("SEGMAX %u and SEGBMAX %u cannot fit max Alljoyn message %u", segmax, segbmax, ALLJOYN_MAX_PACKET_LEN));
+        return false;
+    }
+
+    return true;
+}
+
 static QStatus InitSnd(ArdpHandle* handle, ArdpConnRecord* conn)
 {
     uint8_t* buffer;
-    uint8_t hlen;
-    /* IP header size plus UDP header size */
-    uint32_t ipHeaderSize = (conn->ipAddr.IsIPv4()) ? IPV4_HEADER_SIZE : IPV6_HEADER_SIZE;
-    uint32_t overhead = ipHeaderSize + UDP_HEADER_SIZE;
     uint32_t ackMaskSize = (conn->rcv.SEGMAX + 31) >> 5;
+    uint8_t hlen = ARDP_FIXED_HEADER_LEN + ackMaskSize * sizeof(uint32_t);
 
-    QCC_DbgPrintf(("InitSnd(conn=%p)", conn));
-    hlen = ARDP_FIXED_HEADER_LEN + ackMaskSize * sizeof(uint32_t);
     conn->rcv.eack.fixedSz = ackMaskSize * sizeof(uint32_t);
-    conn->snd.maxDlen = conn->snd.SEGBMAX - overhead - hlen;
+    conn->snd.maxDlen = conn->snd.SEGBMAX - (UDP_HEADER_SIZE + hlen);
     QCC_DbgPrintf(("InitSnd(): actual max payload len %d", conn->snd.maxDlen));
 
-    if (conn->snd.SEGBMAX < (overhead + hlen)) {
-        QCC_DbgPrintf(("InitSnd(): Provided max segment size too small %d (need at least %d)", conn->snd.SEGBMAX, (overhead + hlen)));
+    if (!CheckConfigValid(conn->snd.SEGMAX, conn->snd.SEGBMAX, conn->rcv.SEGMAX)) {
         return ER_FAIL;
     }
 
@@ -2882,14 +2897,14 @@ QStatus ARDP_Connect(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ipAd
     QCC_DbgTrace(("ARDP_Connect(handle=%p, sock=%d, ipAddr=\"%s\", ipPort=%d, segmax=%d, segbmax=%d, pConn=%p, buf=%p, len=%d, context=%p)",
                   handle, sock, ipAddr.ToString().c_str(), ipPort, segmax, segbmax, pConn, buf, len, context));
 
-    ArdpConnRecord* conn = NewConnRecord();
+    ArdpConnRecord* conn;
     QStatus status;
 
-    if (segmax > ARDP_MAX_WINDOW_SIZE) {
-        QCC_DbgHLPrintf(("SEGMAX %u exceeds ARDP maximum window size %u", segmax, ARDP_MAX_WINDOW_SIZE));
-        delete conn;
-        return ER_BAD_ARG_5;
+    if (!CheckConfigValid(segmax, segbmax, ARDP_MAX_WINDOW_SIZE)) {
+        return ER_INVALID_CONFIG;
     }
+
+    conn = NewConnRecord();
 
     status = InitConnRecord(handle, conn, sock, ipAddr, ipPort, 0);
     if (status != ER_OK) {
@@ -2926,13 +2941,17 @@ QStatus ARDP_Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t segmax, u
         return ER_ARDP_INVALID_CONNECTION;
     }
 
-    if (segmax > ARDP_MAX_WINDOW_SIZE) {
-        QCC_DbgHLPrintf(("SEGMAX %u exceeds ARDP maximum window size %u", segmax, ARDP_MAX_WINDOW_SIZE));
-        return ER_BAD_ARG_3;
+    if (!CheckConfigValid(segmax, segbmax, ARDP_MAX_WINDOW_SIZE)) {
+        status = ER_INVALID_CONFIG;
     }
 
-    status = InitRcv(conn, segmax, segbmax);             /* Initialize the receiver side of the connection */
     if (status == ER_OK) {
+        /* Initialize Receive side of the connection */
+        status = InitRcv(conn, segmax, segbmax);
+    }
+
+    if (status == ER_OK) {
+        /* Initialize Send side of the connection */
         status = InitSnd(handle, conn);
     }
 
