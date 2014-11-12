@@ -458,8 +458,8 @@ const uint32_t UDP_TIMEWAIT = 1000;  /**< How long do we stay in TIMWAIT state b
  * ALLJOYN_MAX_PACKET_LEN (135168) to ensure we can deliver a maximally sized AllJoyn
  * message.
  */
-const uint32_t UDP_SEGBMAX = 65507;  /**< Maximum size of an ARDP message (for receive buffer sizing) */
-const uint32_t UDP_SEGMAX = 16;  /**< Maximum number of ARDP messages in-flight (bandwidth-delay product sizing) */
+const uint32_t UDP_SEGBMAX = 4440;  /**< Maximum size of an ARDP segment (quantum of reliable transmission) */
+const uint32_t UDP_SEGMAX = 93;  /**< Maximum number of ARDP segment in-flight (bandwidth-delay product sizing) */
 
 namespace ajn {
 
