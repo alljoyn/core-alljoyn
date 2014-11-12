@@ -484,7 +484,7 @@ exit:
     return result;
 }
 
-int daemon(OptParse& opts, bool forked) {
+int daemon(OptParse& opts) {
     struct sigaction act, oldact;
     sigset_t sigmask, waitmask;
     ConfigDB* config = ConfigDB::GetConfigDB();
@@ -611,20 +611,6 @@ int daemon(OptParse& opts, bool forked) {
         }
     }
 
-    if (forked) {
-        /*
-         * We forked and are running as a daemon, so close STDIN, STDOUT, and
-         * STDERR as appropriate.
-         */
-        close(STDIN_FILENO);
-        if (LoggerSetting::GetLoggerSetting()->GetFile() != stdout) {
-            close(STDOUT_FILENO);
-        }
-        if (LoggerSetting::GetLoggerSetting()->GetFile() != stderr) {
-            close(STDERR_FILENO);
-        }
-    }
-
     sigfillset(&waitmask);
     sigdelset(&waitmask, SIGHUP);
     sigdelset(&waitmask, SIGINT);
@@ -717,11 +703,7 @@ int main(int argc, char** argv, char** env)
     loggerSettings->SetSyslog(config.GetSyslog());
     loggerSettings->SetFile((opts.GetFork() || (config.GetFork() && !opts.GetNoFork())) ? NULL : stderr);
 
-    Log(LOG_NOTICE, versionPreamble, GetVersion(), GetBuildInfo());
-
-    bool forked = false;
     if (opts.GetFork() || (config.GetFork() && !opts.GetNoFork())) {
-        Log(LOG_DEBUG, "Forking into daemon mode...\n");
         pid_t pid = fork();
         if (pid == -1) {
             Log(LOG_ERR, "Failed to fork(): %s\n", strerror(errno));
@@ -748,6 +730,16 @@ int main(int argc, char** argv, char** env)
             // Unneeded parent process, just exit.
             _exit(DAEMON_EXIT_OK);
         } else {
+
+            /*
+             * We forked and are running as a daemon, so close STDIN, STDOUT, and
+             * STDERR as appropriate.
+             */
+            LoggerSetting::GetLoggerSetting()->SetFile(NULL); // block logging to stdout/stderr
+            close(STDIN_FILENO);
+            close(STDOUT_FILENO);
+            close(STDERR_FILENO);
+
 
 #if !defined(ROUTER_LIB)
             if (!opts.GetNoSwitchUser()) {
@@ -808,11 +800,12 @@ int main(int argc, char** argv, char** env)
                 Log(LOG_ERR, "Failed to change directory: %s\n", strerror(errno));
                 return DAEMON_EXIT_CHDIR_ERROR;
             }
-            forked = true;
         }
     }
 
-    int ret = daemon(opts, forked);
+    Log(LOG_NOTICE, versionPreamble, GetVersion(), GetBuildInfo());
+
+    int ret = daemon(opts);
 
     return ret;
 }
