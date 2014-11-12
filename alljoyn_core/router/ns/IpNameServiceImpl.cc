@@ -421,9 +421,9 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
     m_broadcast = !config->GetFlag("ns_disable_directed_broadcast");
 
     //
-    // We don't enable v0 and v1 traffic unless explicitly configured to do so.
+    // We enable v0 and v1 traffic unless explicitly configured not to do so.
     //
-    m_enableV1 = config->GetFlag("ns_enable_v1", false);
+    m_enableV1 = config->GetFlag("ns_enable_v1", true);
 
     //
     // Set the broadcast bit to true for WinRT. For all other platforms,

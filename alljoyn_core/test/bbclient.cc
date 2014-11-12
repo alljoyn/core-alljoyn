@@ -70,13 +70,15 @@ static volatile sig_atomic_t g_interrupt = false;
 /** Static data */
 static BusAttachment* g_msgBus = NULL;
 static Event g_discoverEvent;
-static String g_wellKnownName = ::org::alljoyn::alljoyn_test::DefaultWellKnownName;
+static String g_remoteBusName = ::org::alljoyn::alljoyn_test::DefaultWellKnownName;
 static TransportMask allowedTransports = TRANSPORT_ANY;
 static uint32_t findStartTime = 0;
 static uint32_t findEndTime = 0;
 static uint32_t joinStartTime = 0;
 static uint32_t joinEndTime = 0;
 static uint32_t keyExpiration = 0xFFFFFFFF;
+static String g_testAboutApplicationName = "bbservice";
+static bool g_useAboutFeatureDiscovery = false;
 
 /** AllJoynListener receives discovery events from AllJoyn */
 class MyBusListener : public BusListener, public SessionListener {
@@ -98,13 +100,13 @@ class MyBusListener : public BusListener, public SessionListener {
         /* We must enable concurrent callbacks since some of the calls below are blocking */
         g_msgBus->EnableConcurrentCallbacks();
 
-        if (0 == ::strcmp(name, g_wellKnownName.c_str())) {
+        if (0 == ::strcmp(name, g_remoteBusName.c_str())) {
             /* We found a remote bus that is advertising bbservice's well-known name so connect to it */
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, transport);
             QStatus status;
 
             if (stopDiscover) {
-                status = g_msgBus->CancelFindAdvertisedName(g_wellKnownName.c_str());
+                status = g_msgBus->CancelFindAdvertisedName(g_remoteBusName.c_str());
                 if (ER_OK != status) {
                     QCC_LogError(status, ("CancelFindAdvertisedName(%s) failed", name));
                 }
@@ -155,6 +157,64 @@ class MyBusListener : public BusListener, public SessionListener {
 /** Static bus listener */
 static MyBusListener* g_busListener;
 
+class MyAboutListener : public AboutListener {
+  public:
+    MyAboutListener(bool stopDiscover) : sessionId(0), stopDiscover(stopDiscover) { }
+    void Announced(const char* busName, uint16_t version, SessionPort port,
+                   const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
+
+        AboutData ad;
+        ad.CreatefromMsgArg(aboutDataArg);
+
+        char* appName;
+        ad.GetAppName(&appName);
+
+        if (appName != NULL && strcmp(g_testAboutApplicationName.c_str(), appName) == 0) {
+            findEndTime = GetTimestamp();
+
+            g_remoteBusName = busName;
+
+            /* We must enable concurrent callbacks since some of the calls below are blocking */
+            g_msgBus->EnableConcurrentCallbacks();
+
+            /* We found a remote bus that is advertising bbservice's well-known name so connect to it */
+            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+            QStatus status;
+
+            if (stopDiscover) {
+                const char* interfaces[] = { ::org::alljoyn::alljoyn_test::InterfaceName,
+                                             ::org::alljoyn::alljoyn_test::values::InterfaceName };
+                status = g_msgBus->CancelWhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+                if (ER_OK != status) {
+                    QCC_LogError(status, ("CancelWhoImplements(%s) failed { %s, %s }",
+                                          ::org::alljoyn::alljoyn_test::InterfaceName,
+                                          ::org::alljoyn::alljoyn_test::values::InterfaceName));
+                }
+            }
+
+            joinStartTime = GetTimestamp();
+
+            status = g_msgBus->JoinSession(busName, port, g_busListener, sessionId, opts);
+            if (ER_OK != status) {
+                QCC_LogError(status, ("JoinSession(%s) failed", busName));
+            }
+
+            /* Release the main thread */
+            if (ER_OK == status) {
+                joinEndTime = GetTimestamp();
+                QCC_SyncPrintf("JoinSession 0x%x takes %d ms \n", TRANSPORT_ANY, (joinEndTime - joinStartTime));
+
+                g_discoverEvent.SetEvent();
+            }
+        }
+    }
+  private:
+    SessionId sessionId;
+    bool stopDiscover;
+};
+
+static MyAboutListener* g_aboutListener;
+
 static void SigIntHandler(int sig)
 {
     g_interrupt = true;
@@ -187,6 +247,7 @@ static void usage(void)
     printf("   -be                       = Send messages as big endian\n");
     printf("   -le                       = Send messages as little endian\n");
     printf("   -m <trans_mask>           = Transports allowed to connect to service\n");
+    printf("   -about [name]             = use the about feature for discovery (optional application name to join).\n");
     printf("\n");
 }
 
@@ -378,7 +439,7 @@ class MyMessageReceiver : public MessageReceiver {
         const InterfaceDescription::Member* pingMethod = static_cast<const InterfaceDescription::Member*>(context);
         if (message->GetType() == MESSAGE_METHOD_RET) {
             QCC_SyncPrintf("%s.%s returned \"%s\"\n",
-                           g_wellKnownName.c_str(),
+                           g_remoteBusName.c_str(),
                            pingMethod->name.c_str(),
                            message->GetArg(0)->v_string.str);
 
@@ -387,7 +448,7 @@ class MyMessageReceiver : public MessageReceiver {
             qcc::String errMsg;
             const char* errName = message->GetErrorName(&errMsg);
             QCC_SyncPrintf("%s.%s returned error %s: %s\n",
-                           g_wellKnownName.c_str(),
+                           g_remoteBusName.c_str(),
                            pingMethod->name.c_str(),
                            errName,
                            errMsg.c_str());
@@ -546,7 +607,7 @@ int main(int argc, char** argv)
                 usage();
                 exit(1);
             } else {
-                g_wellKnownName = argv[i];
+                g_remoteBusName = argv[i];
             }
         } else if (0 == strcmp("-h", argv[i])) {
             usage();
@@ -592,6 +653,14 @@ int main(int argc, char** argv)
             }
         } else if (0 == strcmp("-s", argv[i])) {
             waitForSigint = true;
+        } else if (0 == strcmp("-about", argv[i])) {
+            g_useAboutFeatureDiscovery = true;
+            if ((i + 1) < argc && argv[i + 1][0] != '-') {
+                ++i;
+                g_testAboutApplicationName = argv[i];
+            } else {
+                g_testAboutApplicationName = "bbservice";
+            }
         } else {
             status = ER_FAIL;
             printf("Unknown option %s\n", argv[i]);
@@ -689,7 +758,7 @@ int main(int argc, char** argv)
                 /* Start the org.alljoyn.alljoyn_test service. */
                 MsgArg args[2];
                 Message reply(*g_msgBus);
-                args[0].Set("s", g_wellKnownName.c_str());
+                args[0].Set("s", g_remoteBusName.c_str());
                 args[1].Set("u", 0);
                 const ProxyBusObject& dbusObj = g_msgBus->GetDBusProxyObj();
                 status = dbusObj.MethodCall(ajn::org::freedesktop::DBus::InterfaceName,
@@ -705,9 +774,26 @@ int main(int argc, char** argv)
                  * name-not-found state before trying to find the well-known name.
                  */
                 g_discoverEvent.ResetEvent();
-                status = g_msgBus->FindAdvertisedName(g_wellKnownName.c_str());
+                status = g_msgBus->FindAdvertisedName(g_remoteBusName.c_str());
                 if (status != ER_OK) {
                     QCC_LogError(status, ("FindAdvertisedName failed"));
+                }
+            }
+            if (g_useAboutFeatureDiscovery) {
+                /* Begin discovery on the well-known name of the service to be called */
+                findStartTime = GetTimestamp();
+                /*
+                 * Make sure the g_discoverEvent flag has been set to the
+                 * name-not-found state before trying to find the well-known name.
+                 */
+                g_discoverEvent.ResetEvent();
+                g_aboutListener = new MyAboutListener(stopDiscover);
+                g_msgBus->RegisterAboutListener(*g_aboutListener);
+                const char* interfaces[] = { ::org::alljoyn::alljoyn_test::InterfaceName,
+                                             ::org::alljoyn::alljoyn_test::values::InterfaceName };
+                status = g_msgBus->WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("WhoImplements failed"));
                 }
             }
         }
@@ -757,9 +843,9 @@ int main(int argc, char** argv)
             /* If bbservice's well-known name is not currently on the bus yet, then wait for it to appear */
             bool hasOwner = false;
             g_discoverEvent.ResetEvent();
-            status = g_msgBus->NameHasOwner(g_wellKnownName.c_str(), hasOwner);
+            status = g_msgBus->NameHasOwner(g_remoteBusName.c_str(), hasOwner);
             if ((ER_OK == status) && !hasOwner) {
-                QCC_SyncPrintf("Waiting for name %s to appear on the bus\n", g_wellKnownName.c_str());
+                QCC_SyncPrintf("Waiting for name %s to appear on the bus\n", g_remoteBusName.c_str());
                 status = Event::Wait(g_discoverEvent);
                 if (ER_OK != status) {
                     QCC_LogError(status, ("Event::Wait failed"));
@@ -771,12 +857,12 @@ int main(int argc, char** argv)
             /* Create the remote object that will be called */
             ProxyBusObject remoteObj;
             if (ER_OK == status) {
-                remoteObj = ProxyBusObject(*g_msgBus, g_wellKnownName.c_str(), ::org::alljoyn::alljoyn_test::ObjectPath, g_busListener->GetSessionId(), objSecure);
+                remoteObj = ProxyBusObject(*g_msgBus, g_remoteBusName.c_str(), ::org::alljoyn::alljoyn_test::ObjectPath, g_busListener->GetSessionId(), objSecure);
                 if (useIntrospection) {
                     status = remoteObj.IntrospectRemoteObject();
                     if (ER_OK != status) {
                         QCC_LogError(status, ("Introspection of %s (path=%s) failed",
-                                              g_wellKnownName.c_str(),
+                                              g_remoteBusName.c_str(),
                                               ::org::alljoyn::alljoyn_test::ObjectPath));
                     }
                 } else {
@@ -886,7 +972,7 @@ int main(int argc, char** argv)
                             }
                         } else {
                             QCC_SyncPrintf("%s.%s ( path=%s ) returned \"%s\"\n",
-                                           g_wellKnownName.c_str(),
+                                           g_remoteBusName.c_str(),
                                            pingMethod->name.c_str(),
                                            ::org::alljoyn::alljoyn_test::ObjectPath,
                                            reply->GetArg(0)->v_string.str);
@@ -920,12 +1006,12 @@ int main(int argc, char** argv)
                     int iVal = 0;
                     val.Get("i", &iVal);
                     QCC_SyncPrintf("%s.%s ( path=%s) returned \"%d\"\n",
-                                   g_wellKnownName.c_str(),
+                                   g_remoteBusName.c_str(),
                                    "GetProperty",
                                    ::org::alljoyn::alljoyn_test::ObjectPath,
                                    iVal);
                 } else {
-                    QCC_LogError(status, ("GetProperty on %s failed", g_wellKnownName.c_str()));
+                    QCC_LogError(status, ("GetProperty on %s failed", g_remoteBusName.c_str()));
                 }
             }
         }
@@ -942,6 +1028,9 @@ int main(int argc, char** argv)
 
         delete g_busListener;
         g_busListener = NULL;
+
+        delete g_aboutListener;
+        g_aboutListener = NULL;
 
         if (status != ER_OK) {
             break;
