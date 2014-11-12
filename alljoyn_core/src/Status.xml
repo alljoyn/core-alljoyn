@@ -274,4 +274,5 @@ Copyright (c) 2010 - 2012, 2014, AllSeen Alliance. All rights reserved.
   <status name="ER_ABOUT_INVALID_ABOUT_DATA_LISTENER" value="0x9126" comment="The AboutDataListener returns invalid data. Most likely cause: the announced data does not match with non-announced data."/>
   <status name="ER_BUS_PING_GROUP_NOT_FOUND" value="0x9127" comment="Ping group did not exist"/>
   <status name="ER_BUS_REMOVED_BY_BINDER_SELF" value="0x9128" comment="The self-joined session member was removed by the binder"/>
+  <status name="ER_INVALID_CONFIG" value="0x9129" comment="Invalid configuration item or combination of items detected"/>
 </status_block>

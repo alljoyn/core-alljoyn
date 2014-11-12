@@ -452,6 +452,12 @@ const uint32_t UDP_KEEPALIVE_RETRIES = 5;  /**< How many times do we try to prob
 const uint32_t UDP_FAST_RETRANSMIT_ACK_COUNTER = 1;  /**< How many duplicate acknowledgements to we need to trigger a data retransmission */
 const uint32_t UDP_DELAYED_ACK_TIMEOUT = 100; /**< How long do we wait until acknowledging received segments */
 const uint32_t UDP_TIMEWAIT = 1000;  /**< How long do we stay in TIMWAIT state before releasing the per-connection resources */
+
+/*
+ * Note that UDP_SEGBMAX * UDP_SEGMAX must be greater than or equal to
+ * ALLJOYN_MAX_PACKET_LEN (135168) to ensure we can deliver a maximally sized AllJoyn
+ * message.
+ */
 const uint32_t UDP_SEGBMAX = 65507;  /**< Maximum size of an ARDP message (for receive buffer sizing) */
 const uint32_t UDP_SEGMAX = 16;  /**< Maximum number of ARDP messages in-flight (bandwidth-delay product sizing) */
 
@@ -3050,7 +3056,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
             return;
         }
 
-        if (rcv->fcnt == 0 || rcv->fcnt > 3) {
+        if (rcv->fcnt == 0) {
             QCC_LogError(ER_UDP_INVALID, ("_UDPEndpoint::RecvCb(): Unexpected rcv->fcnt==%d.", rcv->fcnt));
 
             QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady()"));
@@ -4047,6 +4053,11 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     ardpConfig.timewait = config->GetLimit("udp_timewait", UDP_TIMEWAIT);
     ardpConfig.segbmax = config->GetLimit("udp_segbmax", UDP_SEGBMAX);
     ardpConfig.segmax = config->GetLimit("udp_segmax", UDP_SEGMAX);
+    if (ardpConfig.segmax * ardpConfig.segbmax < ALLJOYN_MAX_PACKET_LEN) {
+        QCC_LogError(ER_INVALID_CONFIG, ("UDPTransport::UDPTransport(): udp_segmax (%d) * udp_segbmax (%d) < ALLJOYN_MAX_PACKET_LEN (%d) ignored", ardpConfig.segbmax, ardpConfig.segmax, ALLJOYN_MAX_PACKET_LEN));
+        ardpConfig.segbmax = UDP_SEGBMAX;
+        ardpConfig.segmax = UDP_SEGMAX;
+    }
     memcpy(&m_ardpConfig, &ardpConfig, sizeof(ArdpGlobalConfig));
 
     for (uint32_t i = 0; i < N_PUMPS; ++i) {
