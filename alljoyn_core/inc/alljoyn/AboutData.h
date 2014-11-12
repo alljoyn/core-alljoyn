@@ -174,6 +174,28 @@ class AboutData : public AboutDataListener {
     QStatus GetAppId(uint8_t** appId, size_t* num);
 
     /**
+     * Set the AppId for the AboutData using a string.
+     *
+     * The string must be a ether a 32-character hex digit string
+     * (i.e. 4a354637564945188a48323c158bc02d).
+     * or a UUID string as specified in RFC 4122
+     * (i.e. 4a354637-5649-4518-8a48-323c158bc02d)
+     * AppId Must be a 128-bit UUID as specified in by RFC 4122
+     *
+     * AppId IS required
+     * AppId IS part of the Announce signal
+     * AppId CAN NOT be localized for other languages
+     *
+     * @param[in] appId the a globally unique array of bytes used as an ID for the application
+     * @param[in] num   the number of bites in the appId array
+     *
+     * @return
+     *  - #ER_OK on success
+     *  - #ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE if the AppId is not a 128-bits (16 bytes)
+     */
+    QStatus SetAppId(const char* appId);
+
+    /**
      * This language is automatically added to the SupportedLanguage list. The
      * language tag should be an IETF language tag specified by RFC 5646
      *

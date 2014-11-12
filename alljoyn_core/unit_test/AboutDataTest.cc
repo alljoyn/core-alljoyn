@@ -177,6 +177,79 @@ TEST(AboutDataTest, SetAppId) {
         EXPECT_EQ(originalAppId[i], appId[i]);
     }
 }
+
+TEST(AboutDataTest, SetAppId_using_uuid_string) {
+    QStatus status = ER_FAIL;
+    AboutData aboutData("en");
+
+    // not a hex digit
+    status = aboutData.SetAppId("g00102030405060708090a0b0c0d0e0f");
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    // not enough characters
+    status = aboutData.SetAppId("00102030405060708090a0b0c0d0e0f");
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    // not valid uuid
+    status = aboutData.SetAppId("000102030405-060708090A0B-0C0D0E0F10");
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    // not valid uuid
+    status = aboutData.SetAppId("00010203-04050607-0809-0A0B-0C0D0E0F");
+    EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = aboutData.SetAppId("000102030405060708090a0b0c0d0e0f");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    uint8_t* appId;
+    size_t num;
+    status = aboutData.GetAppId(&appId, &num);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(16u, num);
+    for (size_t i = 0; i < num; i++) {
+        EXPECT_EQ(i, appId[i]);
+    }
+
+    AboutData aboutData2("en");
+
+    //use capital hex digits
+    status = aboutData2.SetAppId("000102030405060708090A0B0C0D0E0F");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = aboutData2.GetAppId(&appId, &num);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(16u, num);
+    for (size_t i = 0; i < num; i++) {
+        EXPECT_EQ(i, appId[i]);
+    }
+
+    AboutData aboutData3("en");
+
+    //use capital hex digits UUID as per RFC 4122
+    status = aboutData3.SetAppId("00010203-0405-0607-0809-0A0B0C0D0E0F");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = aboutData3.GetAppId(&appId, &num);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(16u, num);
+    for (size_t i = 0; i < num; i++) {
+        EXPECT_EQ(i, appId[i]);
+    }
+
+    AboutData aboutData4("en");
+
+    //use lowercase hex digits UUID as per RFC 4122
+    status = aboutData4.SetAppId("00010203-0405-0607-0809-0a0b0c0d0e0f");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = aboutData4.GetAppId(&appId, &num);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(16u, num);
+    for (size_t i = 0; i < num; i++) {
+        EXPECT_EQ(i, appId[i]);
+    }
+}
+
 TEST(AboutDataTest, SetDeviceName) {
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
