@@ -1,7 +1,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011,2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -19,6 +19,7 @@
 #include "ajTestCommon.h"
 
 #include <qcc/Environ.h>
+#include <qcc/StringUtil.h>
 
 qcc::String ajn::getConnectArg() {
     qcc::Environ* env = qcc::Environ::GetAppEnviron();
@@ -27,4 +28,9 @@ qcc::String ajn::getConnectArg() {
 #else
     return env->Find("BUS_ADDRESS", "unix:abstract=alljoyn");
 #endif
+}
+
+qcc::String ajn::genUniqueName(alljoyn_busattachment bus) {
+    static uint32_t uniquifier = 0;
+    return qcc::String("test.x") + alljoyn_busattachment_getglobalguidstring(bus) + ".x" + qcc::U32ToString(uniquifier++);
 }

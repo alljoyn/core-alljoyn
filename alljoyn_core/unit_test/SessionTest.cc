@@ -46,7 +46,7 @@ using namespace std;
 using namespace qcc;
 using namespace ajn;
 
-static std::map<BusAttachment*, const char*> wkns;
+static std::map<BusAttachment*, String> wkns;
 static std::map<BusAttachment*, BusObjectTestBusObject*> testobjects;
 static std::map<BusAttachment*, BusObjectTestSignalReceiver*> signalobjects;
 
@@ -80,9 +80,9 @@ class SessionTest : public testing::Test {
             &busC,
         };
 
-        wkns[&busA] = "bus.A";
-        wkns[&busB] = "bus.B";
-        wkns[&busC] = "bus.C";
+        wkns[&busA] = genUniqueName(busA);
+        wkns[&busB] = genUniqueName(busB);
+        wkns[&busC] = genUniqueName(busC);
 
         QStatus status = ER_FAIL;
         status = busA.Start();
@@ -115,13 +115,13 @@ class SessionTest : public testing::Test {
                                                       NULL);
             ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-            ASSERT_EQ(ER_OK, busses[i]->RequestName(wkns[busses[i]], DBUS_NAME_FLAG_DO_NOT_QUEUE));
-            ASSERT_EQ(ER_OK, busses[i]->AdvertiseName(wkns[busses[i]], TRANSPORT_ANY));
+            ASSERT_EQ(ER_OK, busses[i]->RequestName(wkns[busses[i]].c_str(), DBUS_NAME_FLAG_DO_NOT_QUEUE));
+            ASSERT_EQ(ER_OK, busses[i]->AdvertiseName(wkns[busses[i]].c_str(), TRANSPORT_ANY));
         }
 
         for (size_t i = 0; i < sizeof(busses) / sizeof(busses[0]); ++i) {
             for (size_t j = 0; j < sizeof(busses) / sizeof(busses[0]); ++j) {
-                status = busses[i]->FindAdvertisedName(wkns[busses[j]]);
+                status = busses[i]->FindAdvertisedName(wkns[busses[j]].c_str());
                 ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
             }
         }
@@ -189,11 +189,11 @@ TEST_F(SessionTest, TwoMultipointSessions)
 
     SessionId outIdA;
     SessionOpts outOptsA;
-    ASSERT_EQ(ER_OK, busA.JoinSession(wkns[&busB], portB, NULL, outIdA, opts));
+    ASSERT_EQ(ER_OK, busA.JoinSession(wkns[&busB].c_str(), portB, NULL, outIdA, opts));
 
     SessionId outIdB;
     SessionOpts outOptsB;
-    ASSERT_EQ(ER_OK, busB.JoinSession(wkns[&busA], portA, NULL, outIdB, opts));
+    ASSERT_EQ(ER_OK, busB.JoinSession(wkns[&busA].c_str(), portA, NULL, outIdB, opts));
 
     /*
      * The bug is that joining two multipoint sessions with the same port resulted in only one
@@ -303,7 +303,7 @@ TEST_F(SessionTest, BindMemberAddedRemoved) {
 
     BindMemberJoinSessionAsyncCB joinSessionCB;
     BindMemberSessionListenerB sessionListenerB;
-    status = busB.JoinSessionAsync(wkns[&busA], port, &sessionListenerB, opts, &joinSessionCB);
+    status = busB.JoinSessionAsync(wkns[&busA].c_str(), port, &sessionListenerB, opts, &joinSessionCB);
 
     //Wait upto 5 seconds all callbacks and listeners to be called.
     for (int i = 0; i < 500; ++i) {
@@ -341,7 +341,7 @@ TEST_F(SessionTest, BindMemberAddedRemoved) {
 
     BindMemberSessionListenerC sessionListenerC;
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = busC.JoinSessionAsync(wkns[&busA], port, &sessionListenerC, opts, &joinSessionCB);
+    status = busC.JoinSessionAsync(wkns[&busA].c_str(), port, &sessionListenerC, opts, &joinSessionCB);
 
 
     //Wait upto 5 seconds all callbacks and listeners to be called.
@@ -532,7 +532,7 @@ static bool SessionJoinLeaveTest(BusAttachment& busHost, BusAttachment& busJoine
 
     SessionId sessionId;
 
-    status = busJoiner.JoinSession(wkns[&busHost], port, &sessionListenerJoiner, sessionId, opts);
+    status = busJoiner.JoinSession(wkns[&busHost].c_str(), port, &sessionListenerJoiner, sessionId, opts);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     EXPECT_TRUE(sessionJoinerAcceptedFlag);
@@ -763,7 +763,7 @@ TEST_F(SessionTest, RemoveSessionMember) {
     RemoveSessionMemberBusBListener sessionListener;
     SessionId sessionId;
 
-    status = busB.JoinSession(wkns[&busA], port, &sessionListener, sessionId, opts);
+    status = busB.JoinSession(wkns[&busA].c_str(), port, &sessionListener, sessionId, opts);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     EXPECT_TRUE(sessionJoinerAcceptedFlag);
@@ -839,7 +839,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
     SessionId sessionId;
 
     /* Joiner 1 */
-    status = busJoiner.JoinSession(wkns[&busHost], port, &sessionListenerJoiner, sessionId, opts);
+    status = busJoiner.JoinSession(wkns[&busHost].c_str(), port, &sessionListenerJoiner, sessionId, opts);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
 
@@ -867,7 +867,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
     EXPECT_EQ(0, sessionListenerJoiner2.sessionMemberAddedCalled);
 
     /* joiner 2 */
-    status = busJoiner2.JoinSession(wkns[&busHost], port, &sessionListenerJoiner2, sessionId, opts);
+    status = busJoiner2.JoinSession(wkns[&busHost].c_str(), port, &sessionListenerJoiner2, sessionId, opts);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     EXPECT_TRUE(sessionJoinerAcceptedFlag);
@@ -1226,7 +1226,7 @@ TEST_F(SessionTest, MultipointSelfJoinRemoveMember) {
 
     SessionId sessionId;
 
-    status = busA.JoinSession(wkns[&busA], port, &sessionListener, sessionId, opts);
+    status = busA.JoinSession(wkns[&busA].c_str(), port, &sessionListener, sessionId, opts);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     EXPECT_TRUE(sessionJoinerAcceptedFlag);

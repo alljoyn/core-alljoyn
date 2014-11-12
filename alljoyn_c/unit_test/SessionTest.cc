@@ -22,7 +22,7 @@
 
 /*constants*/
 static const char* INTERFACE_NAME = "org.alljoyn.test.SessionTest";
-static const char* OBJECT_NAME = "org.alljoyn.test.SessionTest";
+static qcc::String objectName;
 static const char* OBJECT_PATH = "/org/alljoyn/test/SessionTest";
 static const alljoyn_sessionport SESSION_PORT = 42;
 
@@ -63,8 +63,8 @@ static void AJ_CALL joinsessionhandler(QStatus status, alljoyn_sessionid session
 void AJ_CALL found_advertised_name(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix)
 {
     //printf("FoundAdvertisedName(name=%s, prefix=%s)\n", name, namePrefix);
-    EXPECT_STREQ(OBJECT_NAME, name);
-    if (0 == strcmp(name, OBJECT_NAME)) {
+    EXPECT_STREQ(objectName.c_str(), name);
+    if (0 == strcmp(name, objectName.c_str())) {
         foundadvertisedname_flag = QCC_TRUE;
     }
 }
@@ -99,6 +99,7 @@ class SessionTest : public testing::Test {
     {
         /* create/start/connect alljoyn_busattachment */
         servicebus = alljoyn_busattachment_create("SessionTestservice", false);
+        objectName = ajn::genUniqueName(servicebus);
         status = alljoyn_busattachment_start(servicebus);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = alljoyn_busattachment_connect(servicebus, ajn::getConnectArg().c_str());
@@ -151,7 +152,7 @@ class SessionTest : public testing::Test {
 
             /* request name */
             uint32_t flags = DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE;
-            status = alljoyn_busattachment_requestname(servicebus, OBJECT_NAME, flags);
+            status = alljoyn_busattachment_requestname(servicebus, objectName.c_str(), flags);
             EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
             /* Create session port listener */
@@ -167,7 +168,7 @@ class SessionTest : public testing::Test {
             status = alljoyn_busattachment_bindsessionport(servicebus, &sp, opts, sessionPortListener);
             EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
             /* Advertise Name */
-            status = alljoyn_busattachment_advertisename(servicebus, OBJECT_NAME, alljoyn_sessionopts_get_transports(opts));
+            status = alljoyn_busattachment_advertisename(servicebus, objectName.c_str(), alljoyn_sessionopts_get_transports(opts));
             EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
             alljoyn_sessionopts_destroy(opts);
         }
@@ -212,7 +213,7 @@ TEST_F(SessionTest, joinsession) {
     foundadvertisedname_flag = QCC_FALSE;
     sessionjoined_flag = QCC_FALSE;
     /* Begin discover of the well-known name */
-    status = alljoyn_busattachment_findadvertisedname(bus, OBJECT_NAME);
+    status = alljoyn_busattachment_findadvertisedname(bus, objectName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 1000; ++i) {
         if (foundadvertisedname_flag) {
@@ -225,7 +226,7 @@ TEST_F(SessionTest, joinsession) {
     /* We found a remote bus that is advertising basic service's  well-known name so connect to it */
     alljoyn_sessionopts opts = alljoyn_sessionopts_create(ALLJOYN_TRAFFIC_TYPE_MESSAGES, QCC_FALSE, ALLJOYN_PROXIMITY_ANY, ALLJOYN_TRANSPORT_ANY);
     alljoyn_sessionid sid;
-    status = alljoyn_busattachment_joinsession(bus, OBJECT_NAME, SESSION_PORT, NULL, &sid, opts);
+    status = alljoyn_busattachment_joinsession(bus, objectName.c_str(), SESSION_PORT, NULL, &sid, opts);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 1000; ++i) {
         if (sessionjoined_flag) {
@@ -268,7 +269,7 @@ TEST_F(SessionTest, joinsessionasync) {
     joinsessionid = 0;
     joinsessionid_alt = 0;
     /* Begin discover of the well-known name */
-    status = alljoyn_busattachment_findadvertisedname(bus, OBJECT_NAME);
+    status = alljoyn_busattachment_findadvertisedname(bus, objectName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 1000; ++i) {
         if (foundadvertisedname_flag) {
@@ -282,7 +283,7 @@ TEST_F(SessionTest, joinsessionasync) {
     alljoyn_sessionopts opts = alljoyn_sessionopts_create(ALLJOYN_TRAFFIC_TYPE_MESSAGES, QCC_FALSE, ALLJOYN_PROXIMITY_ANY, ALLJOYN_TRANSPORT_ANY);
 
     char dave[64] = "A test string to send as the context void*";
-    status = alljoyn_busattachment_joinsessionasync(bus, OBJECT_NAME, SESSION_PORT, NULL, opts, &joinsessionhandler, (void*)dave);
+    status = alljoyn_busattachment_joinsessionasync(bus, objectName.c_str(), SESSION_PORT, NULL, opts, &joinsessionhandler, (void*)dave);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 1000; ++i) {
         // we can not break till both session flags have been set or we have a
@@ -324,7 +325,7 @@ TEST_F(SessionTest, setLinkTimeout)
     foundadvertisedname_flag = QCC_FALSE;
     sessionjoined_flag = QCC_FALSE;
     /* Begin discover of the well-known name */
-    status = alljoyn_busattachment_findadvertisedname(bus, OBJECT_NAME);
+    status = alljoyn_busattachment_findadvertisedname(bus, objectName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 200; ++i) {
         if (foundadvertisedname_flag) {
@@ -339,7 +340,7 @@ TEST_F(SessionTest, setLinkTimeout)
                                                           QCC_FALSE, ALLJOYN_PROXIMITY_ANY,
                                                           ALLJOYN_TRANSPORT_ANY);
     alljoyn_sessionid sid;
-    status = alljoyn_busattachment_joinsession(bus, OBJECT_NAME, SESSION_PORT, NULL, &sid, opts);
+    status = alljoyn_busattachment_joinsession(bus, objectName.c_str(), SESSION_PORT, NULL, &sid, opts);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 200; ++i) {
         if (sessionjoined_flag) {
@@ -393,7 +394,7 @@ TEST_F(SessionTest, setLinkTimeoutasync)
     foundadvertisedname_flag = QCC_FALSE;
     sessionjoined_flag = QCC_FALSE;
     /* Begin discover of the well-known name */
-    status = alljoyn_busattachment_findadvertisedname(bus, OBJECT_NAME);
+    status = alljoyn_busattachment_findadvertisedname(bus, objectName.c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 200; ++i) {
         if (foundadvertisedname_flag) {
@@ -408,7 +409,7 @@ TEST_F(SessionTest, setLinkTimeoutasync)
                                                           QCC_FALSE, ALLJOYN_PROXIMITY_ANY,
                                                           ALLJOYN_TRANSPORT_ANY);
     alljoyn_sessionid sid;
-    status = alljoyn_busattachment_joinsession(bus, OBJECT_NAME, SESSION_PORT, NULL, &sid, opts);
+    status = alljoyn_busattachment_joinsession(bus, objectName.c_str(), SESSION_PORT, NULL, &sid, opts);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     for (size_t i = 0; i < 200; ++i) {
         if (sessionjoined_flag) {
