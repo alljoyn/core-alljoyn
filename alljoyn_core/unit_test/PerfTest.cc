@@ -218,10 +218,10 @@ class PerfTest : public::testing::Test {
 
 TEST_F(PerfTest, Introspect_CorrectParameters)
 {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     ProxyBusObject remoteObj(*(testclient.getClientMsgBus()),
-                             testclient.getClientWellknownName(),
+                             myService->getAlljoynWellKnownName(),
                              testclient.getClientObjectPath(),
                              0);
 
@@ -230,12 +230,11 @@ TEST_F(PerfTest, Introspect_CorrectParameters)
 }
 
 TEST_F(PerfTest, ErrorMsg_Error_invalid_path) {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     /* Invalid path  - does not begin with '/' */
     ProxyBusObject remoteObj(*(testclient.getClientMsgBus()),
-                             //testclient.getClientWellknownName(),
-                             "org.alljoyn.test_services",
+                             myService->getAlljoynWellKnownName(),
                              "org/alljoyn/alljoyn_test1",
                              0);
     QStatus status = remoteObj.IntrospectRemoteObject();
@@ -245,13 +244,13 @@ TEST_F(PerfTest, ErrorMsg_Error_invalid_path) {
 }
 
 TEST_F(PerfTest, ErrorMsg_Error_no_such_object) {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     BusAttachment* test_msgBus = testclient.getClientMsgBus();
 
     /* Valid path but-existant  */
     ProxyBusObject remoteObj(*test_msgBus,
-                             testclient.getClientWellknownName(),
+                             myService->getAlljoynWellKnownName(),
                              "/org/alljoyn/alljoyn_test1",
                              0);
 
@@ -277,7 +276,7 @@ TEST_F(PerfTest, ErrorMsg_Error_no_such_object) {
 }
 
 TEST_F(PerfTest, ErrorMsg_does_not_exist_interface) {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     BusAttachment* test_msgBus = testclient.getClientMsgBus();
 
@@ -311,11 +310,11 @@ TEST_F(PerfTest, ErrorMsg_does_not_exist_interface) {
 }
 
 TEST_F(PerfTest, ErrorMsg_MethodCallOnNonExistantMethod) {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     BusAttachment* test_msgBus = testclient.getClientMsgBus();
 
-    ProxyBusObject remoteObj(*test_msgBus, testclient.getClientWellknownName(), testclient.getClientObjectPath(), 0);
+    ProxyBusObject remoteObj(*test_msgBus, myService->getAlljoynWellKnownName(), testclient.getClientObjectPath(), 0);
     QStatus status = remoteObj.IntrospectRemoteObject();
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
@@ -329,7 +328,7 @@ TEST_F(PerfTest, ErrorMsg_MethodCallOnNonExistantMethod) {
 /* Test LargeParameters for a synchronous method call */
 
 TEST_F(PerfTest, MethodCallTest_LargeParameters) {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
     QStatus status = testclient.MethodCall(100, 2);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
@@ -338,7 +337,7 @@ TEST_F(PerfTest, MethodCallTest_LargeParameters) {
 /* Test for synchronous method call */
 
 TEST_F(PerfTest, MethodCallTest_SimpleCall) {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     QStatus status = testclient.MethodCall(1, 1);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -346,7 +345,7 @@ TEST_F(PerfTest, MethodCallTest_SimpleCall) {
 }
 
 TEST_F(PerfTest, MethodCallTest_EmptyParameters) {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     QStatus status = testclient.MethodCall(1, 3);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -354,7 +353,7 @@ TEST_F(PerfTest, MethodCallTest_EmptyParameters) {
 }
 
 TEST_F(PerfTest, MethodCallTest_InvalidParameters) {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     QStatus status = testclient.MethodCall(1, 4);
     EXPECT_EQ(ER_BUS_UNEXPECTED_SIGNATURE, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -362,11 +361,11 @@ TEST_F(PerfTest, MethodCallTest_InvalidParameters) {
 
 /* Test signals */
 TEST_F(PerfTest, Properties_SimpleSignal) {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     BusAttachment* test_msgBus = testclient.getClientMsgBus();
 
-    ProxyBusObject remoteObj(*test_msgBus, testclient.getClientWellknownName(), testclient.getClientObjectPath(), 0);
+    ProxyBusObject remoteObj(*test_msgBus, myService->getAlljoynWellKnownName(), testclient.getClientObjectPath(), 0);
     QStatus status = remoteObj.IntrospectRemoteObject();
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     MsgArg newName("s", "New returned name");
@@ -376,11 +375,11 @@ TEST_F(PerfTest, Properties_SimpleSignal) {
 }
 
 TEST_F(PerfTest, Properties_SettingNoSuchProperty) {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     BusAttachment* test_msgBus = testclient.getClientMsgBus();
 
-    ProxyBusObject remoteObj(*test_msgBus, testclient.getClientWellknownName(), testclient.getClientObjectPath(), 0);
+    ProxyBusObject remoteObj(*test_msgBus, myService->getAlljoynWellKnownName(), testclient.getClientObjectPath(), 0);
     QStatus status = remoteObj.IntrospectRemoteObject();
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
@@ -401,11 +400,11 @@ TEST_F(PerfTest, Properties_SettingNoSuchProperty) {
 }
 
 TEST_F(PerfTest, Properties_SettingReadOnlyProperty) {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     BusAttachment* test_msgBus = testclient.getClientMsgBus();
 
-    ProxyBusObject remoteObj(*test_msgBus, testclient.getClientWellknownName(), testclient.getClientObjectPath(), 0);
+    ProxyBusObject remoteObj(*test_msgBus, myService->getAlljoynWellKnownName(), testclient.getClientObjectPath(), 0);
     QStatus status = remoteObj.IntrospectRemoteObject();
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
@@ -425,7 +424,7 @@ TEST_F(PerfTest, Properties_SettingReadOnlyProperty) {
 }
 
 TEST_F(PerfTest, Signals_With_Two_Parameters) {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     testclient.setSignalFlag(0);
     QStatus status = testclient.SignalHandler(0, 1);
@@ -443,7 +442,7 @@ TEST_F(PerfTest, Signals_With_Two_Parameters) {
 
 
 TEST_F(PerfTest, Signals_With_Huge_String_Param) {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     testclient.setSignalFlag(0);
     QCC_StatusText(testclient.SignalHandler(0, 2));
@@ -462,7 +461,7 @@ TEST_F(PerfTest, Signals_With_Huge_String_Param) {
 
 /* Test Asynchronous method calls */
 TEST_F(PerfTest, AsyncMethodCallTest_SimpleCall) {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     testclient.setSignalFlag(0);
     QStatus status = testclient.AsyncMethodCall(1000, 1);
@@ -480,7 +479,7 @@ TEST_F(PerfTest, AsyncMethodCallTest_SimpleCall) {
 
 TEST_F(PerfTest, BusObject_ALLJOYN_328_BusObject_destruction)
 {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
 
 
@@ -521,14 +520,14 @@ TEST_F(PerfTest, BusObject_ALLJOYN_328_BusObject_destruction)
 
 TEST_F(PerfTest, BusObject_GetChildTest) {
     QStatus status = ER_OK;
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     /* The Client side */
     BusAttachment* client_msgBus = testclient.getClientMsgBus();
 
     /* No session required since client and service on same daemon */
     ProxyBusObject remoteObj = ProxyBusObject(*client_msgBus,
-                                              "org.alljoyn.test_services",
+                                              myService->getAlljoynWellKnownName(),
                                               "/",
                                               0);
 
@@ -548,7 +547,7 @@ TEST_F(PerfTest, BusObject_GetChildTest) {
 
     /* RemoveChild with relative path, need to reset remoteObj first */
     remoteObj = ProxyBusObject(*client_msgBus,
-                               "org.alljoyn.test_services",
+                               myService->getAlljoynWellKnownName(),
                                "/",
                                0);
 
@@ -561,13 +560,13 @@ TEST_F(PerfTest, BusObject_GetChildTest) {
 }
 
 TEST_F(PerfTest, Marshal_ByteArrayTest) {
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
 
     BusAttachment* test_msgBus = testclient.getClientMsgBus();
 
     /* Create a remote object */
-    ProxyBusObject remoteObj(*test_msgBus, testclient.getClientWellknownName(), "/org/alljoyn/service_test", 0);
+    ProxyBusObject remoteObj(*test_msgBus, myService->getAlljoynWellKnownName(), "/org/alljoyn/service_test", 0);
     QStatus status = remoteObj.IntrospectRemoteObject();
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
@@ -605,7 +604,7 @@ TEST_F(PerfTest, FindAdvertisedName_MatchAll_Success)
 {
     QStatus status = ER_OK;
 
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     BusAttachment* client_msgBus = testclient.getClientMsgBus();
 
@@ -630,7 +629,7 @@ TEST_F(PerfTest, FindAdvertisedName_MatchExactName_Success)
     Timespec endTime;
 
 
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     BusAttachment* client_msgBus = testclient.getClientMsgBus();
 
@@ -642,7 +641,7 @@ TEST_F(PerfTest, FindAdvertisedName_MatchExactName_Success)
 
     /* find every name */
     //GetTimeNow(&startTime);
-    status = client_msgBus->FindAdvertisedName("org.alljoyn.test_services");
+    status = client_msgBus->FindAdvertisedName(myService->getAlljoynWellKnownName());
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = Event::Wait(g_discoverEvent, 5000);
@@ -656,7 +655,7 @@ TEST_F(PerfTest, FindAdvertisedName_InvalidName_Fail)
 {
     QStatus status = ER_OK;
 
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     BusAttachment* client_msgBus = testclient.getClientMsgBus();
 
@@ -699,7 +698,7 @@ TEST_F(PerfTest, JoinSession_InvalidPort_Fail)
     // Have to wait for some time till service well-known name is ready
     //qcc::Sleep(5000);
 
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     client_msgBus = testclient.getClientMsgBus();
 
@@ -708,7 +707,7 @@ TEST_F(PerfTest, JoinSession_InvalidPort_Fail)
     SessionOpts qos(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
 
     /* port 450 is invalid */
-    status = client_msgBus->JoinSession("org.alljoyn.test_services", 450, NULL, sessionid, qos);
+    status = client_msgBus->JoinSession(myService->getAlljoynWellKnownName(), 450, NULL, sessionid, qos);
     ASSERT_EQ(ER_ALLJOYN_JOINSESSION_REPLY_NO_SESSION, status);
 
 }
@@ -721,7 +720,7 @@ TEST_F(PerfTest, JoinSession_RecordTime_Success)
     Timespec endTime;
 
 
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     client_msgBus = testclient.getClientMsgBus();
 
@@ -730,7 +729,7 @@ TEST_F(PerfTest, JoinSession_RecordTime_Success)
     SessionOpts qos(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
 
     //GetTimeNow(&startTime);
-    status = client_msgBus->JoinSession("org.alljoyn.test_services", 550, NULL, sessionid, qos);
+    status = client_msgBus->JoinSession(myService->getAlljoynWellKnownName(), 550, NULL, sessionid, qos);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_NE(static_cast<SessionId>(0), sessionid) << "SessionID should not be '0'";
 
@@ -746,7 +745,7 @@ TEST_F(PerfTest, ClientTest_BasicDiscovery) {
     QStatus status = ER_OK;
 
 
-    ClientSetup testclient(ajn::getConnectArg().c_str());
+    ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
 
     BusAttachment* client_msgBus = testclient.getClientMsgBus();
 
@@ -758,7 +757,7 @@ TEST_F(PerfTest, ClientTest_BasicDiscovery) {
 
     //QCC_SyncPrintf("Finding AdvertisedName\n");
     /* Do a Find Name  */
-    status = client_msgBus->FindAdvertisedName("org.alljoyn.test_services");
+    status = client_msgBus->FindAdvertisedName(myService->getAlljoynWellKnownName());
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = Event::Wait(g_discoverEvent, 5000);
@@ -767,16 +766,16 @@ TEST_F(PerfTest, ClientTest_BasicDiscovery) {
     /* Join the session */
     SessionId sessionid;
     SessionOpts qos(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-    status = client_msgBus->JoinSession("org.alljoyn.test_services", 550, NULL, sessionid, qos);
+    status = client_msgBus->JoinSession(myService->getAlljoynWellKnownName(), 550, NULL, sessionid, qos);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_NE(static_cast<SessionId>(0), sessionid) << "SessionID should not be '0'";
     /* Checking id name is on the bus */
     bool hasOwner = false;
-    status = client_msgBus->NameHasOwner("org.alljoyn.test_services", hasOwner);
+    status = client_msgBus->NameHasOwner(myService->getAlljoynWellKnownName(), hasOwner);
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     ASSERT_EQ(hasOwner, true);
 
-    ProxyBusObject remoteObj = ProxyBusObject(*client_msgBus, "org.alljoyn.test_services", "/org/alljoyn/test_services", sessionid);
+    ProxyBusObject remoteObj = ProxyBusObject(*client_msgBus, myService->getAlljoynWellKnownName(), "/org/alljoyn/test_services", sessionid);
     status = remoteObj.IntrospectRemoteObject();
     ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 

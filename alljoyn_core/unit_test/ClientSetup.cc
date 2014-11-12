@@ -27,7 +27,6 @@ const char* InterfaceName1 = "org.alljoyn.test_services.dummy.Interface1";
 const char* InterfaceName2 = "org.alljoyn.test_services.dummy.Interface2";
 const char* InterfaceName3 = "org.alljoyn.test_services.dummy.Interface3";
 }
-const char* WellKnownName = "org.alljoyn.test_services";
 const char* ObjectPath = "/org/alljoyn/test_services";
 namespace values {
 const char* InterfaceName = "org.alljoyn.test_services.Interface.values";
@@ -43,8 +42,8 @@ const char* InterfaceName3 = "org.alljoyn.test_services.values.dummy.Interface3"
 }   // end of cl
 
 /* Client setup */
-ClientSetup::ClientSetup(const char* default_bus_addr) :
-    clientMsgBus("clientSetup", true)
+ClientSetup::ClientSetup(const char* default_bus_addr, const char* wellKnownName) :
+    clientMsgBus("clientSetup", true), wellKnownName(wellKnownName)
 {
     QStatus status = ER_OK;
     {
@@ -80,7 +79,7 @@ QStatus ClientSetup::MethodCall(int noOfCalls, int type)
     QStatus status = ER_OK;
 
     ProxyBusObject remoteObj(clientMsgBus,
-                             ::cl::org::alljoyn::alljoyn_test::WellKnownName,
+                             wellKnownName.c_str(),
                              ::cl::org::alljoyn::alljoyn_test::ObjectPath,
                              0);
 
@@ -218,7 +217,7 @@ QStatus ClientSetup::AsyncMethodCall(int noOfCalls, int type)
 
     ProxyBusObject remoteObj(
         clientMsgBus,
-        ::cl::org::alljoyn::alljoyn_test::WellKnownName,
+        wellKnownName.c_str(),
         ::cl::org::alljoyn::alljoyn_test::ObjectPath,
         0);
 
@@ -287,7 +286,7 @@ QStatus ClientSetup::SignalHandler(int noOfCalls, int type)
     const InterfaceDescription::Member* mysignal_2 = NULL;
 
     /* Create a remote object */
-    ProxyBusObject remoteObj(clientMsgBus, ::cl::org::alljoyn::alljoyn_test::WellKnownName, ::cl::org::alljoyn::alljoyn_test::ObjectPath, 0);
+    ProxyBusObject remoteObj(clientMsgBus, wellKnownName.c_str(), ::cl::org::alljoyn::alljoyn_test::ObjectPath, 0);
     Message reply(clientMsgBus);
 
     status = remoteObj.IntrospectRemoteObject();
@@ -418,11 +417,6 @@ const char* ClientSetup::getClientDummyInterfaceName2() const
 const char* ClientSetup::getClientDummyInterfaceName3() const
 {
     return ::cl::org::alljoyn::alljoyn_test::dummy::InterfaceName3;
-}
-
-const char* ClientSetup::getClientWellknownName() const
-{
-    return ::cl::org::alljoyn::alljoyn_test::WellKnownName;
 }
 
 const char* ClientSetup::getClientObjectPath() const

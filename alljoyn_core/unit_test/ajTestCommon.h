@@ -19,6 +19,7 @@
 #define AJTESTCOMMON_H
 
 #include <qcc/String.h>
+#include <alljoyn/BusAttachment.h>
 
 /*
  * this header file contains a functions that can be used to replace common
@@ -36,7 +37,15 @@ namespace ajn {
  *
  * @return a qcc::String containing the default connection arg
  */
-qcc::String getConnectArg(const char*envvar = "BUS_ADDRESS");
+qcc::String getConnectArg(const char* envvar = "BUS_ADDRESS");
+
+/**
+ * Generate a globally unique name for use in advertising.
+ *
+ * Advertised names should be unique to avoid multiple running instances
+ * of the test suite from interferring with each other.
+ */
+qcc::String genUniqueName(const BusAttachment& bus);
 
 }
 #endif //AJTESTCOMMON_H

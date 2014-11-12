@@ -74,8 +74,8 @@ class Participant : public SessionPortListener, public SessionListener {
     SessionPort port;
     SessionPort mpport;
 
-    const char* name;
     BusAttachment bus;
+    String name;
     TestObject* busobj;
 
     SessionOpts opts;
@@ -85,7 +85,7 @@ class Participant : public SessionPortListener, public SessionListener {
     SessionMap hostedSessionMap;
     SessionMap joinedSessionMap;
 
-    Participant(const char* name) : port(42), mpport(84), name(name), bus(name),
+    Participant() : port(42), mpport(84), bus("Participant"), name(genUniqueName(bus)),
         opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY),
         mpopts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY)
     {
@@ -101,8 +101,8 @@ class Participant : public SessionPortListener, public SessionListener {
         ASSERT_EQ(ER_OK, bus.BindSessionPort(port, opts, *this));
         ASSERT_EQ(ER_OK, bus.BindSessionPort(mpport, mpopts, *this));
 
-        ASSERT_EQ(ER_OK, bus.RequestName(name, DBUS_NAME_FLAG_DO_NOT_QUEUE));
-        ASSERT_EQ(ER_OK, bus.AdvertiseName(name, TRANSPORT_ANY));
+        ASSERT_EQ(ER_OK, bus.RequestName(name.c_str(), DBUS_NAME_FLAG_DO_NOT_QUEUE));
+        ASSERT_EQ(ER_OK, bus.AdvertiseName(name.c_str(), TRANSPORT_ANY));
 
         /* create test interface */
         InterfaceDescription* servicetestIntf = NULL;
@@ -178,8 +178,8 @@ class Participant : public SessionPortListener, public SessionListener {
         SessionId outIdA;
         SessionOpts outOptsA;
         SessionPort p = multipoint ? mpport : port;
-        ASSERT_EQ(ER_OK, bus.JoinSession(part.name, p, NULL, outIdA, multipoint ? mpopts : opts));
-        joinedSessionMap[SessionMapKey(part.name, multipoint)] = outIdA;
+        ASSERT_EQ(ER_OK, bus.JoinSession(part.name.c_str(), p, NULL, outIdA, multipoint ? mpopts : opts));
+        joinedSessionMap[SessionMapKey(part.name.c_str(), multipoint)] = outIdA;
 
         /* make sure both sides know we're in session before we continue */
         int count = 0;
@@ -193,7 +193,7 @@ class Participant : public SessionPortListener, public SessionListener {
     }
 
     void LeaveSession(Participant& part, bool multipoint) {
-        SessionMap::key_type key = SessionMapKey(part.name, multipoint);
+        SessionMap::key_type key = SessionMapKey(part.name.c_str(), multipoint);
         SessionId id = joinedSessionMap[key];
         joinedSessionMap.erase(key);
         ASSERT_EQ(ER_OK, bus.LeaveJoinedSession(id));
@@ -210,11 +210,11 @@ class Participant : public SessionPortListener, public SessionListener {
     }
 
     SessionId GetJoinedSessionId(Participant& part, bool multipoint) {
-        return joinedSessionMap[SessionMapKey(part.name, multipoint)];
+        return joinedSessionMap[SessionMapKey(part.name.c_str(), multipoint)];
     }
   private:
     //Private copy constructor to prevent copying the class and double freeing of memory
-    Participant(const Participant& rhs) : bus(rhs.name) { }
+    Participant(const Participant& rhs) : bus("Participant") { }
     //Private assignment operator to prevent copying the class and double freeing of memory
     Participant& operator=(const Participant& rhs) { return *this; }
 };
@@ -259,7 +259,7 @@ class SignalReceiver : public MessageReceiver {
     void verify_recv(int expected = 1) {
 // #define PRINT
 #ifdef PRINT
-        fprintf(stderr, "VERIFICATION: FOR %s EXPECTED %d\n", participant->name, expected);
+        fprintf(stderr, "VERIFICATION: FOR %s EXPECTED %d\n", participant->name.c_str(), expected);
 #endif
         EXPECT_EQ(expected, signalReceived);
         signalReceived = 0;
@@ -314,8 +314,8 @@ void wait_for_signal()
 
 TEST_F(SignalTest, Point2PointSimple)
 {
-    Participant A("A.A");
-    Participant B("B.B");
+    Participant A;
+    Participant B;
     SignalReceiver recvA, recvB;
     recvA.Register(&A);
     recvB.Register(&B);
@@ -323,12 +323,12 @@ TEST_F(SignalTest, Point2PointSimple)
     B.JoinSession(A, false);
 
     /* unicast signal */
-    B.busobj->SendSignal("A.A", 0, 0);
+    B.busobj->SendSignal(A.name.c_str(), 0, 0);
     wait_for_signal();
     recvA.verify_recv();
     recvB.verify_norecv();
 
-    A.busobj->SendSignal("B.B", 0, 0);
+    A.busobj->SendSignal(B.name.c_str(), 0, 0);
     wait_for_signal();
     recvA.verify_norecv();
     recvB.verify_recv();
@@ -402,9 +402,9 @@ TEST_F(SignalTest, Point2PointSimple)
 
 TEST_F(SignalTest, MultiPointSimple)
 {
-    Participant A("A.A");
-    Participant B("B.B");
-    Participant C("C.C");
+    Participant A;
+    Participant B;
+    Participant C;
     SignalReceiver recvA, recvB, recvC;
     recvA.Register(&A);
     recvB.Register(&B);
@@ -414,13 +414,13 @@ TEST_F(SignalTest, MultiPointSimple)
     C.JoinSession(A, true);
 
     /* unicast signal */
-    B.busobj->SendSignal("A.A", 0, 0);
+    B.busobj->SendSignal(A.name.c_str(), 0, 0);
     wait_for_signal();
     recvA.verify_recv();
     recvB.verify_norecv();
     recvC.verify_norecv();
 
-    A.busobj->SendSignal("B.B", 0, 0);
+    A.busobj->SendSignal(B.name.c_str(), 0, 0);
     wait_for_signal();
     recvA.verify_norecv();
     recvB.verify_recv();
@@ -509,9 +509,9 @@ TEST_F(SignalTest, MultiPointSimple)
 }
 
 TEST_F(SignalTest, Point2PointComplex) {
-    Participant A("A.A");
-    Participant B("B.B");
-    Participant C("C.C");
+    Participant A;
+    Participant B;
+    Participant C;
     SignalReceiver recvA, recvB, recvC;
     recvA.Register(&A);
     recvB.Register(&B);
@@ -545,8 +545,8 @@ TEST_F(SignalTest, Point2PointComplex) {
 }
 
 TEST_F(SignalTest, MultiSession) {
-    Participant A("A.A");
-    Participant B("B.B");
+    Participant A;
+    Participant B;
     SignalReceiver recvA, recvB;
     recvA.Register(&A);
     recvB.Register(&B);
@@ -578,8 +578,8 @@ TEST_F(SignalTest, MultiSession) {
 }
 
 TEST_F(SignalTest, SelfJoinPointToPoint) {
-    Participant A("A.A");
-    Participant B("B.B");
+    Participant A;
+    Participant B;
     SignalReceiver recvA, recvB;
     recvA.Register(&A);
     recvB.Register(&B);
@@ -587,7 +587,7 @@ TEST_F(SignalTest, SelfJoinPointToPoint) {
     B.JoinSession(A, false);
     A.JoinSession(A, false);
 
-    A.busobj->SendSignal("A.A", 0, 0);
+    A.busobj->SendSignal(A.name.c_str(), 0, 0);
     wait_for_signal();
     recvA.verify_recv();
     recvB.verify_norecv();
@@ -612,8 +612,8 @@ TEST_F(SignalTest, SelfJoinPointToPoint) {
 }
 
 TEST_F(SignalTest, SelfJoinMultiPoint) {
-    Participant A("A.A");
-    Participant B("B.B");
+    Participant A;
+    Participant B;
     SignalReceiver recvA, recvB;
     recvA.Register(&A);
     recvB.Register(&B);
@@ -621,7 +621,7 @@ TEST_F(SignalTest, SelfJoinMultiPoint) {
     B.JoinSession(A, true);
     A.JoinSession(A, true);
 
-    A.busobj->SendSignal("A.A", 0, 0);
+    A.busobj->SendSignal(A.name.c_str(), 0, 0);
     wait_for_signal();
     recvA.verify_recv();
     recvB.verify_norecv();
@@ -646,8 +646,8 @@ TEST_F(SignalTest, SelfJoinMultiPoint) {
 }
 
 TEST_F(SignalTest, Paths) {
-    Participant A("A.A");
-    Participant B("B.B");
+    Participant A;
+    Participant B;
     PathReceiver recvAy("/signals/test");
     PathReceiver recvAn("/not/right");
     PathReceiver recvBy("/signals/test");
@@ -668,8 +668,8 @@ TEST_F(SignalTest, Paths) {
 }
 
 TEST_F(SignalTest, Rules) {
-    Participant A("A.A");
-    Participant B("B.B");
+    Participant A;
+    Participant B;
     RuleReceiver recvAy("type='signal'");
     RuleReceiver recvAn("type='signal',member='nonexistent'");
     RuleReceiver recvBy("type='signal'");

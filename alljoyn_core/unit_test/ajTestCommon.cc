@@ -19,8 +19,9 @@
 #include "ajTestCommon.h"
 
 #include <qcc/Environ.h>
+#include <qcc/StringUtil.h>
 
-qcc::String ajn::getConnectArg(const char*envvar) {
+qcc::String ajn::getConnectArg(const char* envvar) {
     qcc::Environ* env = qcc::Environ::GetAppEnviron();
 #if defined(QCC_OS_GROUP_WINDOWS)
     #if (_WIN32_WINNT > 0x0603)
@@ -31,4 +32,9 @@ qcc::String ajn::getConnectArg(const char*envvar) {
 #else
     return env->Find(envvar, "unix:abstract=alljoyn");
 #endif
+}
+
+qcc::String ajn::genUniqueName(const BusAttachment& bus) {
+    static uint32_t uniquifier = 0;
+    return "test.x" + bus.GetGlobalGUIDString() + ".x" + qcc::U32ToString(uniquifier++);
 }

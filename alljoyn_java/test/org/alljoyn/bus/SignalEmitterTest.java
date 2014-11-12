@@ -36,6 +36,11 @@ public class SignalEmitterTest extends TestCase {
         System.loadLibrary("alljoyn_java");
     }
 
+    private int uniquifier = 0;
+    private String genUniqueName(BusAttachment bus) {
+        return "test.x" + bus.getGlobalGUIDString() + ".x" + uniquifier++;
+    }
+
     private BusAttachment bus;
 
     public class Participant {
@@ -313,16 +318,20 @@ public class SignalEmitterTest extends TestCase {
     }
 
     public void testSessionCast() throws Exception {
-        Participant A = new Participant("A.A");
-        Participant B = new Participant("B.B");
-        Participant C = new Participant("C.C");
+        String AA = genUniqueName(bus);
+        String BB = genUniqueName(bus);
+        String CC = genUniqueName(bus);
 
-        A.find("B.B");
-        A.find("C.C");
-        B.find("A.A");
-        B.find("C.C");
-        C.find("A.A");
-        C.find("B.B");
+        Participant A = new Participant(AA);
+        Participant B = new Participant(BB);
+        Participant C = new Participant(CC);
+
+        A.find(BB);
+        A.find(CC);
+        B.find(AA);
+        B.find(CC);
+        C.find(AA);
+        C.find(BB);
         
 
         /* no sessions yet */
