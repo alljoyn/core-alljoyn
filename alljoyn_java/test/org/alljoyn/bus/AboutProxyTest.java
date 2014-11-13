@@ -32,10 +32,6 @@ public class AboutProxyTest extends TestCase{
     private BusAttachment serviceBus;
     static short PORT_NUMBER = 542;
 
-    public synchronized void stopWait() {
-        this.notifyAll();
-    }
-
     public void setUp() throws Exception {
         serviceBus = new BusAttachment("AboutListenerTestService");
 
@@ -62,7 +58,6 @@ public class AboutProxyTest extends TestCase{
         public void sessionJoined(short sessionPort, int id, String joiner) {
             sessionId = id;
             sessionEstablished = true;
-            stopWait();
         }
 
         public int sessionId;
@@ -141,7 +136,6 @@ public class AboutProxyTest extends TestCase{
             aod = null;
         }
         public void announced(String busName, int version, short port, AboutObjectDescription[] objectDescriptions, Map<String, Variant> aboutData) {
-            announcedFlag = true;
             remoteBusName = busName;
             this.version = version;
             this.port = port;
@@ -151,7 +145,7 @@ public class AboutProxyTest extends TestCase{
                 aod[i] = objectDescriptions[i];
             }
             announcedAboutData = aboutData;
-            stopWait();
+            announcedFlag = true;
         }
         public String remoteBusName;
         public int version;
@@ -163,7 +157,7 @@ public class AboutProxyTest extends TestCase{
 
     //This test will verify that the Values that come in the announce signal
     // The tests following this test will assume the values are correct.
-    public synchronized void testAnnounceSignal() {
+    public void testAnnounceSignal() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
@@ -179,10 +173,16 @@ public class AboutProxyTest extends TestCase{
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(aListener.announcedFlag);
@@ -230,7 +230,7 @@ public class AboutProxyTest extends TestCase{
 
     // We can Join a session using the information that comes in on the announce
     // signal
-    public synchronized void testJoinSession() {
+    public void testJoinSession() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
@@ -246,11 +246,19 @@ public class AboutProxyTest extends TestCase{
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
+        
+        assertTrue(aListener.announcedFlag);
 
         Mutable.IntegerValue sessionId = new Mutable.IntegerValue();;
 
@@ -262,10 +270,16 @@ public class AboutProxyTest extends TestCase{
 
         assertEquals(Status.OK, clientBus.joinSession(aListener.remoteBusName, aListener.port, sessionId, sessionOpts, new SessionListener()));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (sessionPortlistener.sessionEstablished) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(sessionPortlistener.sessionEstablished);
@@ -276,7 +290,7 @@ public class AboutProxyTest extends TestCase{
         clientBus.release();
     }
 
-    public synchronized void testGetVersion() {
+    public void testGetVersion() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
@@ -292,11 +306,19 @@ public class AboutProxyTest extends TestCase{
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
+        
+        assertTrue(aListener.announcedFlag);
 
         Mutable.IntegerValue sessionId = new Mutable.IntegerValue();;
 
@@ -308,10 +330,16 @@ public class AboutProxyTest extends TestCase{
 
         assertEquals(Status.OK, clientBus.joinSession(aListener.remoteBusName, aListener.port, sessionId, sessionOpts, new SessionListener()));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (sessionPortlistener.sessionEstablished) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(sessionPortlistener.sessionEstablished);
@@ -328,7 +356,7 @@ public class AboutProxyTest extends TestCase{
         clientBus.release();
     }
 
-    public synchronized void testGetObjectDescription() {
+    public void testGetObjectDescription() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
@@ -344,11 +372,19 @@ public class AboutProxyTest extends TestCase{
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
+        
+        assertTrue(aListener.announcedFlag);
 
         Mutable.IntegerValue sessionId = new Mutable.IntegerValue();;
 
@@ -360,10 +396,16 @@ public class AboutProxyTest extends TestCase{
 
         assertEquals(Status.OK, clientBus.joinSession(aListener.remoteBusName, aListener.port, sessionId, sessionOpts, new SessionListener()));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (sessionPortlistener.sessionEstablished) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(sessionPortlistener.sessionEstablished);
@@ -384,7 +426,7 @@ public class AboutProxyTest extends TestCase{
         clientBus.release();
     }
 
-    public synchronized void testGetAboutDataDefaultLanguage() {
+    public void testGetAboutDataDefaultLanguage() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
@@ -400,11 +442,19 @@ public class AboutProxyTest extends TestCase{
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
+        
+        assertTrue(aListener.announcedFlag);
 
         Mutable.IntegerValue sessionId = new Mutable.IntegerValue();;
 
@@ -416,10 +466,16 @@ public class AboutProxyTest extends TestCase{
 
         assertEquals(Status.OK, clientBus.joinSession(aListener.remoteBusName, aListener.port, sessionId, sessionOpts, new SessionListener()));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (sessionPortlistener.sessionEstablished) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(sessionPortlistener.sessionEstablished);
@@ -468,7 +524,7 @@ public class AboutProxyTest extends TestCase{
         clientBus.release();
     }
 
-    public synchronized void testGetAboutDataSpanishLanguage() {
+    public void testGetAboutDataSpanishLanguage() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
@@ -484,11 +540,19 @@ public class AboutProxyTest extends TestCase{
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
+        
+        assertTrue(aListener.announcedFlag);
 
         Mutable.IntegerValue sessionId = new Mutable.IntegerValue();;
 
@@ -500,10 +564,16 @@ public class AboutProxyTest extends TestCase{
 
         assertEquals(Status.OK, clientBus.joinSession(aListener.remoteBusName, aListener.port, sessionId, sessionOpts, new SessionListener()));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (sessionPortlistener.sessionEstablished) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(sessionPortlistener.sessionEstablished);
@@ -552,7 +622,7 @@ public class AboutProxyTest extends TestCase{
         clientBus.release();
     }
 
-    public synchronized void testGetAboutDataUnsupportedLanguage() {
+    public void testGetAboutDataUnsupportedLanguage() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
@@ -568,11 +638,19 @@ public class AboutProxyTest extends TestCase{
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
+        
+        assertTrue(aListener.announcedFlag);
 
         Mutable.IntegerValue sessionId = new Mutable.IntegerValue();;
 
@@ -584,12 +662,18 @@ public class AboutProxyTest extends TestCase{
 
         assertEquals(Status.OK, clientBus.joinSession(aListener.remoteBusName, aListener.port, sessionId, sessionOpts, new SessionListener()));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (sessionPortlistener.sessionEstablished) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
-
+        
         assertTrue(sessionPortlistener.sessionEstablished);
         assertEquals(sessionPortlistener.sessionId, sessionId.value);
 
