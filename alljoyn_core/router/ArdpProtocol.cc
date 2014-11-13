@@ -106,7 +106,6 @@ typedef void (*ArdpTimeoutHandler)(ArdpHandle* handle, ArdpConnRecord* conn, voi
 
 /* Structure encapsulating timer to to handle timeouts */
 typedef struct ARDP_TIMER {
-    ListNode list;
     ArdpConnRecord* conn;
     ArdpTimeoutHandler handler;
     void* context;
@@ -126,7 +125,7 @@ typedef struct ARDP_SEND_BUF {
     ArdpTimer timer;
     uint16_t fastRT;
     uint16_t retransmits;
-    bool inUse;;
+    bool inUse;
 } ArdpSndBuf;
 
 /**
@@ -233,7 +232,6 @@ typedef struct {
  * hosts.
  */
 struct ARDP_CONN_RECORD {
-    ListNode list;          /* Doubly linked list node on which this connection might be */
     uint32_t id;            /* Randomly chosen connection identifier */
     ArdpState state;        /* The current sate of the connection */
     bool passive;           /* If true, this is a passive open (we've been connected to); if false, we did the connecting */
@@ -252,7 +250,7 @@ struct ARDP_CONN_RECORD {
     bool rttInit;           /* Flag indicating that the first RTT was measured and SRTT calculation applies */
     uint32_t rttMean;       /* Smoothed RTT value */
     uint32_t rttMeanVar;    /* RTT variance */
-    uint32_t backoff;       /* Backoff factor accounting for retransmits on connection, resets to 1 when receive "good ack" */
+    uint32_t backoff;       /* Backoff factor accounting for retransmits on connection, resets to 1 when "good ack" is received */
     uint32_t rttMeanUnit;   /* Smoothed RTT value per UDP MTU */
     ArdpTimer connectTimer; /* Connect/Disconnect timer */
     ArdpTimer probeTimer;   /* Probe (link timeout) timer */
@@ -1468,7 +1466,6 @@ static ArdpConnRecord* NewConnRecord(void)
         conn->id = qcc::Rand32();
     } while (conn->id == ARDP_CONN_ID_INVALID);
     QCC_DbgTrace(("NewConnRecord(): conn %p, id %u", conn, conn->id));
-    SetEmpty(&conn->list);
     return conn;
 }
 
