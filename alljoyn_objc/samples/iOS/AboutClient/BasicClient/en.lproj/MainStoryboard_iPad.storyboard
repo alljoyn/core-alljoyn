@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="5056" systemVersion="12E55" targetRuntime="iOS.CocoaTouch.iPad" propertyAccessControl="none" useAutolayout="YES" initialViewController="2">
+    <dependencies>
+        <deployment defaultVersion="1536" identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="3733"/>
+    </dependencies>
+    <scenes>
+        <!--View Controller-->
+        <scene sceneID="4">
+            <objects>
+                <viewController id="2" customClass="ViewController" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="VZD-Es-BCj"/>
+                        <viewControllerLayoutGuide type="bottom" id="0ko-zQ-s8D"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="5">
+                        <rect key="frame" x="0.0" y="0.0" width="768" height="1024"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="zOf-wB-wg6">
+                                <rect key="frame" x="20" y="20" width="728" height="30"/>
+                                <state key="normal" title="Call Service">
+                                    <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                </state>
+                                <connections>
+                                    <action selector="didTouchCallServiceButton:" destination="2" eventType="touchUpInside" id="KG1-W4-Xrp"/>
+                                </connections>
+                            </button>
+                            <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" showsHorizontalScrollIndicator="NO" translatesAutoresizingMaskIntoConstraints="NO" id="1aM-yq-SNw">
+                                <rect key="frame" x="20" y="58" width="728" height="946"/>
+                                <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                <textInputTraits key="textInputTraits" autocapitalizationType="sentences"/>
+                            </textView>
+                        </subviews>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
+                        <constraints>
+                            <constraint firstAttribute="bottom" secondItem="1aM-yq-SNw" secondAttribute="bottom" constant="20" symbolic="YES" id="IQu-3y-xrt"/>
+                            <constraint firstItem="1aM-yq-SNw" firstAttribute="leading" secondItem="5" secondAttribute="leading" constant="20" symbolic="YES" id="JEw-J4-je7"/>
+                            <constraint firstAttribute="trailing" secondItem="1aM-yq-SNw" secondAttribute="trailing" constant="20" symbolic="YES" id="Rfb-XR-U4q"/>
+                            <constraint firstItem="zOf-wB-wg6" firstAttribute="top" secondItem="5" secondAttribute="top" constant="20" symbolic="YES" id="ddH-of-ujg"/>
+                            <constraint firstItem="1aM-yq-SNw" firstAttribute="top" secondItem="zOf-wB-wg6" secondAttribute="bottom" constant="8" symbolic="YES" id="pXd-7U-lYi"/>
+                            <constraint firstItem="zOf-wB-wg6" firstAttribute="leading" secondItem="5" secondAttribute="leading" constant="20" symbolic="YES" id="tpl-Wn-xNF"/>
+                            <constraint firstAttribute="trailing" secondItem="zOf-wB-wg6" secondAttribute="trailing" constant="20" symbolic="YES" id="zRh-uf-OeU"/>
+                        </constraints>
+                    </view>
+                    <connections>
+                        <outlet property="eventsTextView" destination="1aM-yq-SNw" id="sZ3-ko-kN1"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="3" sceneMemberID="firstResponder"/>
+            </objects>
+        </scene>
+    </scenes>
+    <simulatedMetricsContainer key="defaultSimulatedMetrics">
+        <simulatedStatusBarMetrics key="statusBar"/>
+        <simulatedOrientationMetrics key="orientation"/>
+        <simulatedScreenMetrics key="destination"/>
+    </simulatedMetricsContainer>
+</document>
