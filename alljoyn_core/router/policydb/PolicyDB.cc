@@ -791,11 +791,9 @@ bool _PolicyDB::OKToReceive(const NormalizedMsgHdr& nmh, BusEndpoint& dest) cons
          * destination.
          */
         const IDSet destIDSet = LookupBusNameID(dest->GetUniqueName().c_str());
-        if (!destIDSet->empty()) {
-            allow = OKToSend(nmh, dest, &destIDSet);
-            if (!allow) {
-                return false;
-            }
+        allow = OKToSend(nmh, dest, &destIDSet);
+        if (!allow) {
+            return false;
         }
     }
 

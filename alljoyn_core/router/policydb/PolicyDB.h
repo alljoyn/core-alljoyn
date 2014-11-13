@@ -494,15 +494,23 @@ class NormalizedMsgHdr {
         sender(sender)
     {
         if (destIDSet->empty()) {
-            StringID nid = policy->LookupStringID(msg->GetDestination());
-            if (nid != _PolicyDB::ID_NOT_FOUND) {
-                destIDSet->insert(nid);
+            const char* destStr = msg->GetDestination();
+            // GetDestination() will return an empty string if there is no destination
+            if (destStr != "") {
+                StringID nid = policy->LookupStringID(destStr);
+                if (nid != _PolicyDB::ID_NOT_FOUND) {
+                    destIDSet->insert(nid);
+                }
             }
         }
         if (senderIDSet->empty()) {
-            StringID nid = policy->LookupStringID(msg->GetSender());
-            if (nid != _PolicyDB::ID_NOT_FOUND) {
-                senderIDSet->insert(nid);
+            const char* senderStr = msg->GetSender();
+            // GetSender() will return an empty string if there is no sender
+            if (senderStr != "") {
+                StringID nid = policy->LookupStringID(senderStr);
+                if (nid != _PolicyDB::ID_NOT_FOUND) {
+                    senderIDSet->insert(nid);
+                }
             }
         }
     }
