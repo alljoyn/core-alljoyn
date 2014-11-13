@@ -31,10 +31,6 @@ public class AboutIconProxyTest extends TestCase{
     private BusAttachment serviceBus;
     static short PORT_NUMBER = 542;
 
-    public synchronized void stopWait() {
-        this.notifyAll();
-    }
-
     public void setUp() throws Exception {
         serviceBus = new BusAttachment("AboutIconTestService");
 
@@ -61,7 +57,6 @@ public class AboutIconProxyTest extends TestCase{
         public void sessionJoined(short sessionPort, int id, String joiner) {
             sessionId = id;
             sessionEstablished = true;
-            stopWait();
         }
 
         public int sessionId;
@@ -140,7 +135,7 @@ public class AboutIconProxyTest extends TestCase{
             aod = null;
         }
         public void announced(String busName, int version, short port, AboutObjectDescription[] objectDescriptions, Map<String, Variant> aboutData) {
-            announcedFlag = true;
+            
             remoteBusName = busName;
             this.version = version;
             this.port = port;
@@ -150,7 +145,7 @@ public class AboutIconProxyTest extends TestCase{
                 aod[i] = objectDescriptions[i];
             }
             announcedAboutData = aboutData;
-            stopWait();
+            announcedFlag = true;
         }
         public String remoteBusName;
         public int version;
@@ -162,7 +157,7 @@ public class AboutIconProxyTest extends TestCase{
 
     //This test will verify that the Values that come in the announce signal
     // The tests following this test will assume the values are correct.
-    public synchronized void testIconInterfaceIsAnnounced() {
+    public void testIconInterfaceIsAnnounced() {
         AboutIcon icon = null;
         try {
             icon = new AboutIcon("image/png", "http://www.example.com");
@@ -186,13 +181,20 @@ public class AboutIconProxyTest extends TestCase{
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(aListener.announcedFlag);
+
         assertEquals(serviceBus.getUniqueName(), aListener.remoteBusName);
         boolean aboutIconPathFound = false;
         boolean aboutIconInterfaceFound = false;
@@ -218,7 +220,7 @@ public class AboutIconProxyTest extends TestCase{
 
     // We can Join a session using the information that comes in on the announce
     // signal
-    public synchronized void testAboutIconMethodCalls_urlset() {
+    public void testAboutIconMethodCalls_urlset() {
         AboutIcon icon = null;
         try {
             icon = new AboutIcon("image/png", "http://www.example.com");
@@ -241,12 +243,20 @@ public class AboutIconProxyTest extends TestCase{
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
+        assertTrue(aListener.announcedFlag);
+        
         Mutable.IntegerValue sessionId = new Mutable.IntegerValue();;
 
         SessionOpts sessionOpts = new SessionOpts();
@@ -257,10 +267,16 @@ public class AboutIconProxyTest extends TestCase{
 
         assertEquals(Status.OK, clientBus.joinSession(aListener.remoteBusName, aListener.port, sessionId, sessionOpts, new SessionListener()));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (sessionPortlistener.sessionEstablished) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(sessionPortlistener.sessionEstablished);
@@ -308,7 +324,7 @@ public class AboutIconProxyTest extends TestCase{
     }
     // We can Join a session using the information that comes in on the announce
     // signal
-    public synchronized void testAboutIconMethodCalls_contentset() {
+    public void testAboutIconMethodCalls_contentset() {
         byte[] iconContent = { (byte)0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00,
                 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x0A,
                 0x00, 0x00, 0x00, 0x0A, 0x08, 0x02, 0x00, 0x00, 0x00, 0x02,
@@ -346,11 +362,19 @@ public class AboutIconProxyTest extends TestCase{
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
+
+        assertTrue(aListener.announcedFlag);
 
         Mutable.IntegerValue sessionId = new Mutable.IntegerValue();;
 
@@ -362,10 +386,16 @@ public class AboutIconProxyTest extends TestCase{
 
         assertEquals(Status.OK, clientBus.joinSession(aListener.remoteBusName, aListener.port, sessionId, sessionOpts, new SessionListener()));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (sessionPortlistener.sessionEstablished) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(sessionPortlistener.sessionEstablished);
@@ -425,7 +455,7 @@ public class AboutIconProxyTest extends TestCase{
         clientBus.release();
     }
 
-    public synchronized void testAboutIconMethodCalls_contentset_large_icon() {
+    public void testAboutIconMethodCalls_contentset_large_icon() {
         byte[] badContent = new byte[AboutIcon.MAX_CONTENT_LENGTH+1];
 
         AboutIcon icon = null;
@@ -467,11 +497,19 @@ public class AboutIconProxyTest extends TestCase{
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
+
+        assertTrue(aListener.announcedFlag);
 
         Mutable.IntegerValue sessionId = new Mutable.IntegerValue();;
 
@@ -483,10 +521,16 @@ public class AboutIconProxyTest extends TestCase{
 
         assertEquals(Status.OK, clientBus.joinSession(aListener.remoteBusName, aListener.port, sessionId, sessionOpts, new SessionListener()));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (sessionPortlistener.sessionEstablished) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(sessionPortlistener.sessionEstablished);
@@ -545,7 +589,7 @@ public class AboutIconProxyTest extends TestCase{
         clientBus.release();
     }
 
-    public synchronized void testAboutIconMethodCalls_uninitialized() {
+    public void testAboutIconMethodCalls_uninitialized() {
         boolean exceptionCaught = false;
         try {
             AboutIcon icon = null;

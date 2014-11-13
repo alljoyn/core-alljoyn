@@ -30,10 +30,6 @@ public class AboutListenerTest  extends TestCase {
     private BusAttachment serviceBus;
     static short PORT_NUMBER = 542;
 
-    public synchronized void stopWait() {
-        this.notifyAll();
-    }
-
     public void setUp() throws Exception {
         serviceBus = new BusAttachment("AboutListenerTestService");
 
@@ -151,21 +147,20 @@ public class AboutListenerTest  extends TestCase {
             aod = null;
         }
         public void announced(String busName, int version, short port, AboutObjectDescription[] objectDescriptions, Map<String, Variant> aboutData) {
-            announcedFlag = true;
             this.port = port;
             aod = objectDescriptions;
             aod = new AboutObjectDescription[objectDescriptions.length];
             for (int i = 0; i < objectDescriptions.length; ++i) {
                 aod[i] = objectDescriptions[i];
             }
-            stopWait();
+            announcedFlag = true;
         }
         public short port;
         public boolean announcedFlag;
         public AboutObjectDescription[] aod;
     }
 
-    public synchronized void testAnnounceTheAboutObj() {
+    public void testAnnounceTheAboutObj() {
         BusAttachment clientBus = new BusAttachment("AboutListenerTestClient", RemoteMessage.Receive);
 
         assertEquals(Status.OK, clientBus.connect());
@@ -179,10 +174,16 @@ public class AboutListenerTest  extends TestCase {
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (al.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
 
@@ -207,7 +208,7 @@ public class AboutListenerTest  extends TestCase {
         clientBus.release();
     }
 
-    public synchronized void testCancelAnnouncement() {
+    public void testCancelAnnouncement() {
         BusAttachment clientBus = new BusAttachment("AboutListenerTestClient", RemoteMessage.Receive);
 
         assertEquals(Status.OK, clientBus.connect());
@@ -221,10 +222,16 @@ public class AboutListenerTest  extends TestCase {
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (al.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(al.announcedFlag);
@@ -249,7 +256,7 @@ public class AboutListenerTest  extends TestCase {
         clientBus.release();
     }
 
-    public synchronized void testRecieveAnnouncement() {
+    public void testRecieveAnnouncement() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
@@ -265,10 +272,16 @@ public class AboutListenerTest  extends TestCase {
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(aListener.announcedFlag);
@@ -294,7 +307,7 @@ public class AboutListenerTest  extends TestCase {
     }
 
 
-    public synchronized void testNullWhoImplements() {
+    public void testNullWhoImplements() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
@@ -310,10 +323,16 @@ public class AboutListenerTest  extends TestCase {
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(aListener.announcedFlag);
@@ -338,7 +357,7 @@ public class AboutListenerTest  extends TestCase {
         clientBus.release();
     }
 
-    public synchronized void testWhoImplementsEmptyArray() {
+    public void testWhoImplementsEmptyArray() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
@@ -354,10 +373,16 @@ public class AboutListenerTest  extends TestCase {
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(aListener.announcedFlag);
@@ -382,7 +407,7 @@ public class AboutListenerTest  extends TestCase {
         clientBus.release();
     }
 
-    public synchronized void testWhoImplementsBadArg() {
+    public void testWhoImplementsBadArg() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
@@ -399,7 +424,7 @@ public class AboutListenerTest  extends TestCase {
         clientBus.release();
     }
 
-    public synchronized void testRecieveAnnouncementMultipleObjects() {
+    public void testRecieveAnnouncementMultipleObjects() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test/a"));
         Intfb intfb = new Intfb();
@@ -419,10 +444,16 @@ public class AboutListenerTest  extends TestCase {
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(aListener.announcedFlag);
@@ -471,7 +502,7 @@ public class AboutListenerTest  extends TestCase {
         clientBus.release();
     }
 
-    public synchronized void testReannounceAnnouncement() {
+    public void testReannounceAnnouncement() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
@@ -487,13 +518,18 @@ public class AboutListenerTest  extends TestCase {
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
-        assertTrue(aListener.announcedFlag);
         assertTrue(aListener.announcedFlag);
         boolean aboutPathFound = false;
         boolean aboutInterfaceFound = false;
@@ -515,13 +551,17 @@ public class AboutListenerTest  extends TestCase {
 
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
-
-        assertTrue(aListener.announcedFlag);
 
         assertTrue(aListener.announcedFlag);
         aboutPathFound = false;
@@ -545,7 +585,7 @@ public class AboutListenerTest  extends TestCase {
         clientBus.release();
     }
 
-    public synchronized void testRemoveObjectDescriptionsFromAnnouncement() {
+    public void testRemoveObjectDescriptionsFromAnnouncement() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test/a"));
         Intfb intfb = new Intfb();
@@ -565,10 +605,16 @@ public class AboutListenerTest  extends TestCase {
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(aListener.announcedFlag);
@@ -621,10 +667,16 @@ public class AboutListenerTest  extends TestCase {
 
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(aListener.announcedFlag);
@@ -676,7 +728,7 @@ public class AboutListenerTest  extends TestCase {
     }
 
     // ASACORE-1033 hangs when calling cancelWhoImplments
-    public synchronized void DISABLED_testMultipleAboutListeners() {
+    public void testMultipleAboutListeners() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
@@ -700,28 +752,19 @@ public class AboutListenerTest  extends TestCase {
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        // There are three callbacks so notify will be called three times we
-        // add a wait for each callback. Since the code contains the Syncronized
-        // key word for the wait/notify calls we should not have any issues with
-        // notify being called multiple times for one call to wait.  It is a
-        // possibility but the worst outcome will be that we wait for the full
-        // timeout.  Making the test run long.
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 20000; msec += 5) {
+            if (aListener1.announcedFlag == true && 
+                    aListener2.announcedFlag == true &&
+                    aListener3.announcedFlag == true) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
-        try {
-            this.wait(5000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
-        }
-        try {
-            this.wait(5000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
-        }
-
         assertTrue(aListener1.announcedFlag);
         boolean aboutPathFound = false;
         boolean aboutInterfaceFound = false;
@@ -779,7 +822,7 @@ public class AboutListenerTest  extends TestCase {
     }
 
     // ASACORE-1037 unregister fails in some instances
-    public synchronized void DISABLED_testMultipleAboutListenersUnregisterSome() {
+    public void testMultipleAboutListenersUnregisterSome() {
         Intfa intfa = new Intfa();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfa, "/about/test"));
 
@@ -803,26 +846,18 @@ public class AboutListenerTest  extends TestCase {
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        // There are three callbacks so notify will be called three times we
-        // add a wait for each callback. Since the code contains the Syncronized
-        // key word for the wait/notify calls we should not have any issues with
-        // notify being called multiple times for one call to wait.  It is a
-        // possibility but the worst outcome will be that we wait for the full
-        // timeout.  Making the test run long.
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
-        }
-        try {
-            this.wait(5000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
-        }
-        try {
-            this.wait(5000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 20000; msec += 5) {
+            if (aListener1.announcedFlag == true && 
+                    aListener2.announcedFlag == true &&
+                    aListener3.announcedFlag == true) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(aListener1.announcedFlag);
@@ -885,12 +920,20 @@ public class AboutListenerTest  extends TestCase {
         clientBus.unregisterAboutListener(aListener3);
 
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 20000; msec += 100) {
+            if (aListener2.announcedFlag == true) {
+                break;
+            }
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
+        // if any of these are false we most likely have an issue with
+        // unregisterAboutListener not properly unregistering
         assertFalse(aListener1.announcedFlag);
         assertTrue(aListener2.announcedFlag);
         assertFalse(aListener3.announcedFlag);
@@ -911,7 +954,7 @@ public class AboutListenerTest  extends TestCase {
         }
     }
 
-    public synchronized void testWhoImplementsMultipleInterfaces() {
+    public void testWhoImplementsMultipleInterfaces() {
         Intfabc intfabc = new Intfabc();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfabc, "/about/test"));
 
@@ -927,10 +970,16 @@ public class AboutListenerTest  extends TestCase {
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(aListener.announcedFlag);
@@ -981,7 +1030,7 @@ public class AboutListenerTest  extends TestCase {
         }
     }
 
-    public synchronized void testWhoImplementsMultipleInterfacesSubSet() {
+    public void testWhoImplementsMultipleInterfacesSubSet() {
         Intfabcdef intfabcdef = new Intfabcdef();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfabcdef, "/about/test"));
 
@@ -997,10 +1046,16 @@ public class AboutListenerTest  extends TestCase {
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(aListener.announcedFlag);
@@ -1031,7 +1086,7 @@ public class AboutListenerTest  extends TestCase {
         clientBus.release();
     }
 
-    public synchronized void testWhoImplementsWildCardMatch() {
+    public void testWhoImplementsWildCardMatch() {
         Intfabc intfabc = new Intfabc();
         assertEquals(Status.OK, serviceBus.registerBusObject(intfabc, "/about/test"));
 
@@ -1047,10 +1102,16 @@ public class AboutListenerTest  extends TestCase {
         AboutListenerTestAboutData aboutData = new AboutListenerTestAboutData();
         assertEquals(Status.OK, aboutObj.announce(PORT_NUMBER, aboutData));
 
-        try {
-            this.wait(10000);
-        } catch (InterruptedException e) {
-            fail("Unexpected failure when waiting for the announce singnal");
+        for (int msec = 0; msec < 10000; msec += 5) {
+            if (aListener.announcedFlag) {
+                break;
+            }
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                fail("unexpected InterruptedException");
+            }
         }
 
         assertTrue(aListener.announcedFlag);
@@ -1079,7 +1140,7 @@ public class AboutListenerTest  extends TestCase {
      * Negative test ASACORE-1020
      *  ASACORE-1020 cancelWhoImplements mismatch whoImplements
      */
-    public synchronized void testCancelImplementsMisMatch() {
+    public void testCancelImplementsMisMatch() {
         BusAttachment clientBus = new BusAttachment("AboutListenerTestClient", RemoteMessage.Receive);
         assertEquals(Status.OK, clientBus.connect());
 
