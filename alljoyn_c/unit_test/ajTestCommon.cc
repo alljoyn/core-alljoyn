@@ -1,7 +1,7 @@
 /******************************************************************************
  *
  *
- * Copyright (c) 2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2011, 2014 AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -22,8 +22,12 @@
 
 qcc::String ajn::getConnectArg() {
     qcc::Environ* env = qcc::Environ::GetAppEnviron();
-#if defined(QCC_OS_WINDOWS)
+#if defined(QCC_OS_GROUP_WINDOWS)
+    #if (_WIN32_WINNT > 0x0603)
+    return env->Find("BUS_ADDRESS", "npipe:");
+    #else
     return env->Find("BUS_ADDRESS", "tcp:addr=127.0.0.1,port=9956");
+    #endif
 #else
     return env->Find("BUS_ADDRESS", "unix:abstract=alljoyn");
 #endif
