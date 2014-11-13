@@ -109,8 +109,24 @@ class BusObject : public MessageReceiver {
      * @param propName  The name of the property being changed
      * @param val       The new value of the property
      * @param id        ID of the session we broadcast the signal to (0 for all)
+     * @param flags     Flags to be added to the signal.
      */
-    void EmitPropChanged(const char* ifcName, const char* propName, MsgArg& val, SessionId id);
+    void EmitPropChanged(const char* ifcName, const char* propName, MsgArg& val, SessionId id, uint8_t flags = 0);
+
+    /**
+     * Emit PropertiesChanged to signal the bus that these properties have been updated
+     *
+     *  BusObject must be registered before calling this method.
+     *
+     * @param ifcName   The name of the interface
+     * @param propNames An array with the names of the properties being changed
+     * @param numProps  The size of the propNames array
+     * @param id        ID of the session we broadcast the signal to (0 for all)
+     * @param flags     Flags to be added to the signal.
+     *
+     * @return   ER_OK if successful.
+     */
+    QStatus EmitPropChanged(const char* ifcName, const char** propNames, size_t numProps, SessionId id, uint8_t flags = 0);
 
     /**
      * Get a reference to the underlying BusAttachment

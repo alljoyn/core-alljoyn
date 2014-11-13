@@ -16,9 +16,12 @@
 
 package org.alljoyn.bus;
 
+import org.alljoyn.bus.ifaces.Properties;
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.Arrays;
 
 /**
  * A helper proxy used by BusObjects to send signals.  A SignalEmitter
@@ -30,13 +33,13 @@ public class SignalEmitter {
     private static final int COMPRESSED = 0x40;
     private static final int SESSIONLESS = 0x10;
 
-    private BusObject source;
-    private String destination;
-    private int sessionId;
+    protected BusObject source;
+    private final String destination;
+    private final int sessionId;
     private int timeToLive;
     private int flags;
-    private Object proxy;
-    private MessageContext msgContext;
+    private final Object proxy;
+    private final MessageContext msgContext;
 
     /** Controls behavior of broadcast signals ({@code null} desintation). */
     public enum GlobalBroadcast {
@@ -72,8 +75,11 @@ public class SignalEmitter {
         this.flags = (globalBroadcast == GlobalBroadcast.On)
                 ? this.flags | GLOBAL_BROADCAST
                 : this.flags & ~GLOBAL_BROADCAST;
-        proxy = Proxy.newProxyInstance(source.getClass().getClassLoader(),
-                                       source.getClass().getInterfaces(), new Emitter());
+        
+        Class<?>[] interfaces = source.getClass().getInterfaces();
+        Class<?>[] interfacesNew = Arrays.copyOf(interfaces, interfaces.length + 1);
+        interfacesNew[interfaces.length] = Properties.class;
+        proxy = Proxy.newProxyInstance(source.getClass().getClassLoader(), interfacesNew, new Emitter());
         msgContext = new MessageContext();
     }
 
@@ -116,6 +122,7 @@ public class SignalEmitter {
 
     private class Emitter implements InvocationHandler {
 
+        @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws BusException {
             for (Class<?> i : proxy.getClass().getInterfaces()) {
                 for (Method m : i.getMethods()) {

@@ -84,6 +84,8 @@ public class BusAttachmentTest extends TestCase {
         public void noReplyMethod(String str) throws BusException {}
         public void deprecatedNoReplyMethod(String str) throws BusException {}
         public void deprecatedSignal(String str) throws BusException {}
+        public String getChangeNotifyProperty() throws BusException { return ""; }
+        public void setChangeNotifyProperty(String str) throws BusException {}
     }
 
     private BusAttachment bus;
@@ -630,6 +632,9 @@ public class BusAttachmentTest extends TestCase {
                         "      <arg type=\"s\" direction=\"in\"/>\n" +
                         "      <annotation name=\"org.freedesktop.DBus.Method.NoReply\" value=\"true\"/>\n" +
                         "    </method>\n" +
+                        "    <property name=\"ChangeNotifyProperty\" type=\"s\" access=\"readwrite\">\n" +
+                        "      <annotation name=\"org.freedesktop.DBus.Property.EmitsChangedSignal\" value=\"true\"/>\n" +
+                        "    </property>\n" +
                         "  </interface>\n" +
                         "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n" +
                         "    <method name=\"Introspect\">\n" +

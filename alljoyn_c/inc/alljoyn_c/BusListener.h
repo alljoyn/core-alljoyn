@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2014 AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -77,6 +77,7 @@ typedef void (AJ_CALL * alljoyn_buslistener_listener_unregistered_ptr)(const voi
 typedef void (AJ_CALL * alljoyn_buslistener_found_advertised_name_ptr)(const void* context, const char* name, alljoyn_transportmask transport, const char* namePrefix);
 
 /**
+ * This callback is deprecated, it will not be called any more.  Use the property change notification mechanism for proxy bus objects.
  * Type for the LostAdvertisedName callback.
  *
  * Called by the bus when an advertisement previously reported through FoundName has become unavailable.

@@ -23,8 +23,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -176,6 +176,7 @@ public class ProxyBusObject {
             this.invocationCache = new HashMap<String, List<Invocation>>();
         }
 
+        @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws BusException {
             /*
              * Some notes on performance.
@@ -316,6 +317,7 @@ public class ProxyBusObject {
     /**
      * Release native resources.
      */
+    @Override
     protected void finalize() throws Throwable {
         try {
             destroy();
@@ -431,5 +433,13 @@ public class ProxyBusObject {
         }
         return map;
     }
+
+    public native Status registerPropertiesChangedListener(String iface, String[] properties,
+                                                           PropertiesChangedListener listener) throws BusException;
+
+    public native void
+        unregisterPropertiesChangedHandler(String iface, PropertiesChangedListener listener)
+            throws BusException;
+
 }
 

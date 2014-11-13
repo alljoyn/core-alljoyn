@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2010-2013, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2010-2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -63,6 +63,15 @@ class SetPropertyCallbackContext {
     void* context;
 };
 
+class PropertieschangedCallbackContext {
+  public:
+    PropertieschangedCallbackContext(alljoyn_proxybusobject_listener_propertieschanged_ptr signalhandler_ptr, void* context) :
+        signalhandler_ptr(signalhandler_ptr), context(context) { }
+
+    alljoyn_proxybusobject_listener_propertieschanged_ptr signalhandler_ptr;
+    void* context;
+};
+
 class ProxyBusObjectListenerC : public ajn::ProxyBusObject::Listener {
   public:
     void IntrospectCB(QStatus status, ajn::ProxyBusObject* obj, void* context)
@@ -103,8 +112,20 @@ class ProxyBusObjectListenerC : public ajn::ProxyBusObject::Listener {
         in->replyhandler_ptr = NULL;
         delete in;
     }
+};
 
+class ProxyBusObjectPropertiesChangedListenerC : public ajn::ProxyBusObject::PropertiesChangedListener {
+  public:
+    ProxyBusObjectPropertiesChangedListenerC(alljoyn_proxybusobject_listener_propertieschanged_ptr signalhandler_ptr) : signalhandler_ptr(signalhandler_ptr) { }
+    void PropertiesChanged(ProxyBusObject& obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context)
+    {
+        signalhandler_ptr((alljoyn_proxybusobject)(&obj), ifaceName, (alljoyn_msgarg)(&changed), (alljoyn_msgarg)(&invalidated), context);
+    }
 
+    const alljoyn_proxybusobject_listener_propertieschanged_ptr GetSignalHandler() const { return signalhandler_ptr; }
+
+  private:
+    alljoyn_proxybusobject_listener_propertieschanged_ptr signalhandler_ptr;
 };
 }
 #endif

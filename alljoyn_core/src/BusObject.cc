@@ -164,8 +164,20 @@ qcc::String BusObject::GenerateIntrospection(const char* languageTag, bool deep,
         /* Iterate over interfaces */
         vector<pair<const InterfaceDescription*, bool> >::const_iterator itIf = components->ifaces.begin();
         while (itIf != components->ifaces.end()) {
-            xml += (itIf->first)->Introspect(indent, languageTag, bus ? bus->GetDescriptionTranslator() : NULL);
-            ++itIf;
+            /*
+             * We need to omit the standard D-Bus interfaces from the
+             * introspection data due to a bug in AllJoyn 14.06 and
+             * older.  This will allow older versions of AllJoyn to
+             * introspect us and not fail.  Sadly, this hack can never
+             * be removed.
+             */
+            if ((strcmp((itIf->first)->GetName(), org::freedesktop::DBus::InterfaceName) == 0) ||
+                (strcmp((itIf->first)->GetName(), org::freedesktop::DBus::Properties::InterfaceName) == 0)) {
+                ++itIf;
+            } else {
+                xml += (itIf->first)->Introspect(indent, languageTag, bus ? bus->GetDescriptionTranslator() : NULL);
+                ++itIf;
+            }
         }
     }
     return xml;
@@ -216,39 +228,107 @@ void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg
     }
 }
 
-void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgArg& val, SessionId id)
+void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgArg& val, SessionId id, uint8_t flags)
 {
+    QCC_DbgTrace(("BusObject::EmitPropChanged(ifcName = \"%s\", propName = \"%s\", val = <>, id = %u)",
+                  ifcName, propName, id));
     assert(bus);
     const InterfaceDescription* ifc = bus->GetInterface(ifcName);
 
     qcc::String emitsChanged;
     if (ifc && ifc->GetPropertyAnnotation(propName, org::freedesktop::DBus::AnnotateEmitsChanged, emitsChanged)) {
+        QCC_DbgPrintf(("emitsChanged = %s", emitsChanged.c_str()));
         if (emitsChanged == "true") {
-            const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::InterfaceName);
+            const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
             const InterfaceDescription::Member* propChanged = (bus_ifc ? bus_ifc->GetMember("PropertiesChanged") : NULL);
 
-            if (NULL != propChanged) {
+            QCC_DbgPrintf(("propChanged = %s", propChanged ? propChanged->name.c_str() : NULL));
+            if (propChanged != NULL) {
                 MsgArg args[3];
                 args[0].Set("s", ifcName);
                 MsgArg str("{sv}", propName, &val);
                 args[1].Set("a{sv}", 1, &str);
                 args[2].Set("as", 0, NULL);
-                Signal(NULL, id, *propChanged, args, ArraySize(args));
+                Signal(NULL, id, *propChanged, args, ArraySize(args), 0, flags);
             }
         } else if (emitsChanged == "invalidates") {
-            const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::InterfaceName);
+            const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
             const InterfaceDescription::Member* propChanged = (bus_ifc ? bus_ifc->GetMember("PropertiesChanged") : NULL);
-
             if (NULL != propChanged) {
                 // EMPTY array, followed by array of strings
                 MsgArg args[3];
                 args[0].Set("s", ifcName);
                 args[1].Set("a{sv}", 0, NULL);
                 args[2].Set("as", 1, &propName);
-                Signal(NULL, id, *propChanged, args, ArraySize(args));
+                Signal(NULL, id, *propChanged, args, ArraySize(args), 0, flags);
             }
         }
     }
+}
+
+QStatus BusObject::EmitPropChanged(const char* ifcName, const char** propNames, size_t numProps, SessionId id, uint8_t flags)
+{
+    assert(bus);
+    qcc::String emitsChanged;
+    QStatus status = ER_OK;
+
+    const InterfaceDescription* ifc = bus->GetInterface(ifcName);
+    if (!ifc) {
+        status = ER_BUS_UNKNOWN_INTERFACE;
+    } else {
+        MsgArg* updatedProp = new MsgArg[numProps];
+        const char** invalidatedProp = new const char*[numProps];
+        size_t updatedPropNum = 0;
+        size_t invalidatedPropNum = 0;
+
+        for (size_t i = 0; i < numProps; ++i) {
+            const char* propName = propNames[i];
+            const InterfaceDescription::Property* prop = ifc->GetProperty(propName);
+            if (!prop) {
+                status = ER_BUS_NO_SUCH_PROPERTY;
+                break;
+            }
+            if ((prop->access & PROP_ACCESS_READ) &&
+                ifc->GetPropertyAnnotation(String(propName), org::freedesktop::DBus::AnnotateEmitsChanged,
+                                           emitsChanged)) {
+                /* property has emitschanged annotation and is readable */
+                if (emitsChanged == "true") {
+                    /* also emit the value */
+                    MsgArg* val = new MsgArg();
+                    status = Get(ifcName, propName, *val);
+                    if (status != ER_OK) {
+                        delete val;
+                        status = ER_BUS_NO_SUCH_PROPERTY;
+                        break;
+                    }
+                    updatedProp[updatedPropNum].Set("{sv}", propName, val);
+                    updatedProp[updatedPropNum].SetOwnershipFlags(MsgArg::OwnsArgs, true /*deep*/);
+                    updatedPropNum++;
+                } else if (emitsChanged == "invalidates") {
+                    /* only emit that it's invalidated */
+                    invalidatedProp[invalidatedPropNum] = propName;
+                    invalidatedPropNum++;
+                }
+            }
+        }
+        if (status == ER_OK) {
+            const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
+            assert(bus_ifc);
+            const InterfaceDescription::Member* propChanged = bus_ifc->GetMember("PropertiesChanged");
+            assert(propChanged);
+
+            MsgArg args[3];
+            args[0].Set("s", ifcName);
+            args[1].Set("a{sv}", updatedPropNum, updatedProp);
+            args[2].Set("as", invalidatedPropNum, invalidatedProp);
+            /* send the signal */
+            status = Signal(NULL, id, *propChanged, args, ArraySize(args), 0, flags);
+        }
+
+        delete[] updatedProp;
+        delete[] invalidatedProp;
+    }
+    return status;
 }
 
 
@@ -275,11 +355,7 @@ void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg
                     QCC_DbgPrintf(("Property value for %s has wrong type %s", property->v_string.str, prop->signature.c_str()));
                     status = ER_BUS_SET_WRONG_SIGNATURE;
                 } else if (prop->access & PROP_ACCESS_WRITE) {
-                    // set the value, then inform bus listeners via Signal
                     status = Set(iface->v_string.str, property->v_string.str, *(val->v_variant.val));
-                    // notify all session members that this property has changed
-                    const SessionId id = msg->hdrFields.field[ALLJOYN_HDR_FIELD_SESSION_ID].v_uint32;
-                    EmitPropChanged(iface->v_string.str, property->v_string.str, *(val->v_variant.val), id);
                 } else {
                     QCC_DbgPrintf(("No write access on property %s", property->v_string.str));
                     status = ER_BUS_PROPERTY_ACCESS_DENIED;

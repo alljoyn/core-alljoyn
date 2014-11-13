@@ -700,7 +700,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addMemberAnn
  * Signature: (Ljava/lang/String;Ljava/lang/String;I)Lorg/alljoyn/bus/Status;
  */
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addProperty
-  (JNIEnv *, jobject, jstring, jstring, jint);
+  (JNIEnv *, jobject, jstring, jstring, jint, jint);
 
 /*
  * Class:     org_alljoyn_bus_InterfaceDescription
@@ -865,10 +865,57 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_setProperty
 JNIEXPORT jboolean JNICALL Java_org_alljoyn_bus_ProxyBusObject_isProxyBusObjectSecure
   (JNIEnv *, jobject);
 
+/*
+ * Class:     org_alljoyn_bus_ProxyBusObject
+ * Method:    registerPropertiesChangedListener
+ * Signature: (Ljava/lang/String;[Ljava/lang/String;Lorg/alljoyn/bus/PropertyChangedListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_registerPropertiesChangedListener
+  (JNIEnv *, jobject, jstring, jobjectArray, jobject);
+
+/*
+ * Class:     org_alljoyn_bus_ProxyBusObject
+ * Method:    unregisterPropertiesChangedListener
+ * Signature: (Ljava/lang/String;Lorg/alljoyn/bus/PropertyChangedListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_unregisterPropertiesChangedListener
+  (JNIEnv *, jobject, jstring, jobject);
+
 #ifdef __cplusplus
 }
 #endif
 #endif
+
+/* Header for class org_alljoyn_bus_PropertiesChangedListener */
+
+#ifndef _Included_org_alljoyn_bus_PropertiesChangedListener
+#define _Included_org_alljoyn_bus_PropertiesChangedListener
+#ifdef __cplusplus
+extern "C" {
+#endif
+/*
+ * Class:     org_alljoyn_bus_PropertiesChangedListener
+ * Method:    create
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertiesChangedListener_create
+  (JNIEnv *, jobject, jobject, jobject);
+
+
+/*
+ * Class:     org_alljoyn_bus_PropertiesChangedListener
+ * Method:    destroy
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertiesChangedListener_destroy
+  (JNIEnv *, jobject);
+
+#ifdef __cplusplus
+}
+#endif
+#endif
+
+
 /* Header for class org_alljoyn_bus_ProxyBusObject_Handler */
 
 #ifndef _Included_org_alljoyn_bus_ProxyBusObject_Handler

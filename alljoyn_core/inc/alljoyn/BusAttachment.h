@@ -89,7 +89,6 @@ class BusAttachment : public MessageReceiver {
         virtual void SetLinkTimeoutCB(QStatus status, uint32_t timeout, void* context) = 0;
     };
 
-
     /**
      * Pure virtual base class implemented by classes that wish to call PingAsync().
      */
@@ -117,6 +116,24 @@ class BusAttachment : public MessageReceiver {
          * @param context      User defined context which will be passed as-is to callback.
          */
         virtual void PingCB(QStatus status, void* context) = 0;
+    };
+
+    /**
+     * Pure virtual base class implemented by classes that wish to call GetNameOwnerAsync().
+     */
+    class GetNameOwnerAsyncCB {
+      public:
+        /** Destructor */
+        virtual ~GetNameOwnerAsyncCB() { }
+
+        /**
+         * Called when GetNameOwnerAsync() completes.
+         *
+         * @param status        ER_OK if successful
+         * @param uniqueName    Unique name that owns the requested alias.
+         * @param context       User defined context which will be passed as-is to callback.
+         */
+        virtual void GetNameOwnerCB(QStatus status, const char* uniqueName, void* context) = 0;
     };
 
     /**
@@ -531,6 +548,45 @@ class BusAttachment : public MessageReceiver {
      * @return The unique name of this BusAttachment.
      */
     const qcc::String GetUniqueName() const;
+
+    /**
+     * Get the unique name of specified alias.
+     *
+     * @param alias Alias name to lookup.
+     *
+     * @return The unique name of the alias.
+     */
+    qcc::String GetNameOwner(const char* alias);
+
+    /**
+     * Get the unique name of specified alias.
+     *
+     * @param alias Alias name to lookup.
+     *
+     * @return The unique name of the alias.
+     */
+    qcc::String GetNameOwner(const qcc::String& alias) { return GetNameOwner(alias.c_str()); }
+
+    /**
+     * Get the unique name of specified alias asyncronously
+     *
+     * @param alias Alias name to lookup.
+     *
+     * @return status code from sending the message to the local routing node.
+     */
+    QStatus GetNameOwnerAsync(const char* alias, GetNameOwnerAsyncCB* callback, void* context);
+
+    /**
+     * Get the unique name of specified alias asyncronously
+     *
+     * @param alias Alias name to lookup.
+     *
+     * @return status code from sending the message to the local routing node.
+     */
+    QStatus GetNameOwnerAsync(const qcc::String& alias, GetNameOwnerAsyncCB* callback, void* context)
+    {
+        return GetNameOwnerAsync(alias.c_str(), callback, context);
+    }
 
     /**
      * Get the GUID of this BusAttachment as a 32 character hex string.

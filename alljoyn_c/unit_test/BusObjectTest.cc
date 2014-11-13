@@ -90,20 +90,51 @@ static void AJ_CALL name_owner_changed(const void* context, const char* busName,
 }
 
 /* Property changed callback */
-static void AJ_CALL bus_prop_changed(const void* context, const char* prop_name, alljoyn_msgarg prop_value) {
-    uint32_t prop3_value;
+static void AJ_CALL obj_prop_changed(alljoyn_proxybusobject obj, const char* iface_name, alljoyn_msgarg changed, alljoyn_msgarg invalidated, void* context)
+{
+    alljoyn_msgarg argList;
+    size_t argListSize;
     QStatus status = ER_FAIL; //default state is failure
-    if (0 == strcmp("prop2", prop_name)) {
-        // prop2 uses org.freedesktop.DBus.Property.EmitsChangedSignal == invalidates
-        // when EmitsChangedSignal == invalidates prop_value is NULL
-        EXPECT_EQ(NULL, prop_value);
-    } else if (0 == strcmp("prop3", prop_name)) {
-        status = alljoyn_msgarg_get(prop_value, "u", &prop3_value);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        EXPECT_EQ(prop3, prop3_value);
-    } else {
-        EXPECT_FALSE(QCC_TRUE) << "property changed signal should only be from prop2 and prop3";
+
+    ASSERT_TRUE(invalidated);
+    // Invalidated properties
+    status = alljoyn_msgarg_get(invalidated, "as", &argListSize, &argList);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    if (argListSize > 0) {
+        EXPECT_EQ(1UL, argListSize);
+        ASSERT_TRUE(argList);
+        for (size_t index = 0; index < argListSize; index++) {
+            char* propName;
+            ASSERT_TRUE(alljoyn_msgarg_array_element(argList, index));
+            status = alljoyn_msgarg_get(alljoyn_msgarg_array_element(argList, index), "s", &propName);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            ASSERT_TRUE(propName);
+            EXPECT_STREQ("prop2", propName);
+        }
     }
+
+    ASSERT_TRUE(changed);
+    // Changed properties
+    status = alljoyn_msgarg_get(changed, "a{sv}", &argListSize, &argList);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    if (argListSize > 0) {
+        EXPECT_EQ(1UL, argListSize);
+        ASSERT_TRUE(argList);
+        for (size_t index = 0; index < argListSize; index++) {
+            char* propName;
+            alljoyn_msgarg valueArg;
+            uint32_t value;
+            ASSERT_TRUE(alljoyn_msgarg_array_element(argList, index));
+            status = alljoyn_msgarg_get(alljoyn_msgarg_array_element(argList, index), "{sv}", &propName, &valueArg);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            ASSERT_TRUE(propName);
+            EXPECT_STREQ("prop3", propName);
+            status = alljoyn_msgarg_get(valueArg, "u", &value);
+            EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+            EXPECT_EQ(prop3, value);
+        }
+    }
+
     prop_changed_flag = QCC_TRUE;
 }
 /************* Method handlers *************/
@@ -412,7 +443,7 @@ TEST_F(BusObjectTest, property_changed_signal)
         &name_owner_changed,
         NULL,
         NULL,
-        &bus_prop_changed
+        NULL
     };
     buslistener = alljoyn_buslistener_create(&buslistenerCbs, NULL);
     alljoyn_busattachment_registerbuslistener(servicebus, buslistener);
@@ -455,12 +486,16 @@ TEST_F(BusObjectTest, property_changed_signal)
 
     prop_changed_flag = QCC_FALSE;
 
+    const char* props[] = { "prop2", "prop3" };
     alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create(bus, OBJECT_NAME, OBJECT_PATH, 0);
     EXPECT_TRUE(proxyObj);
     status = alljoyn_proxybusobject_introspectremoteobject(proxyObj);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    alljoyn_msgarg value;
 
+    status = alljoyn_proxybusobject_registerpropertieschangedlistener(proxyObj, INTERFACE_NAME, props, sizeof(props) / sizeof(props[0]), obj_prop_changed, NULL);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_msgarg value;
     prop_changed_flag = QCC_FALSE;
     value = alljoyn_msgarg_create_and_set("i", -888);
     status = alljoyn_proxybusobject_setproperty(proxyObj, INTERFACE_NAME, "prop2", value);
@@ -471,7 +506,7 @@ TEST_F(BusObjectTest, property_changed_signal)
         }
         qcc::Sleep(5);
     }
-    EXPECT_TRUE(prop_changed_flag);
+    EXPECT_FALSE(prop_changed_flag);
     EXPECT_EQ(-888, prop2);
     alljoyn_msgarg_destroy(value);
 
@@ -486,11 +521,13 @@ TEST_F(BusObjectTest, property_changed_signal)
         qcc::Sleep(5);
     }
     EXPECT_EQ((uint32_t)98, prop3);
-    EXPECT_TRUE(prop_changed_flag);
+    EXPECT_FALSE(prop_changed_flag);
     alljoyn_msgarg_destroy(value);
 
     prop_changed_flag = QCC_FALSE;
-    alljoyn_busobject_emitpropertychanged(testObj, INTERFACE_NAME, "prop2", NULL, 0);
+    const char* propNames[] = { "prop2", "prop3" };
+    size_t numProps = sizeof(propNames) / sizeof(propNames[0]);
+    alljoyn_busobject_emitpropertieschanged(testObj, INTERFACE_NAME, propNames, numProps, 0);
     for (size_t i = 0; i < 200; ++i) {
         if (prop_changed_flag) {
             break;
@@ -498,19 +535,6 @@ TEST_F(BusObjectTest, property_changed_signal)
         qcc::Sleep(5);
     }
     EXPECT_TRUE(prop_changed_flag);
-
-    prop_changed_flag = QCC_FALSE;
-    prop3 = 121;
-    value = alljoyn_msgarg_create_and_set("u", 121);
-    alljoyn_busobject_emitpropertychanged(testObj, INTERFACE_NAME, "prop3", value, 0);
-    for (size_t i = 0; i < 200; ++i) {
-        if (prop_changed_flag) {
-            break;
-        }
-        qcc::Sleep(5);
-    }
-    EXPECT_TRUE(prop_changed_flag);
-    alljoyn_msgarg_destroy(value);
 
     alljoyn_proxybusobject_destroy(proxyObj);
     TearDownBusObjectTestService();

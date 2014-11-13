@@ -20,6 +20,7 @@ import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.annotation.BusInterface;
 import org.alljoyn.bus.annotation.BusMethod;
 import org.alljoyn.bus.annotation.BusSignal;
+import org.alljoyn.bus.annotation.BusProperty;
 
 @BusInterface
 public interface AnnotationInterface {
@@ -35,5 +36,11 @@ public interface AnnotationInterface {
 
     @BusSignal(name="DeprecatedSignal", annotation=BusSignal.ANNOTATE_DEPRECATED)
     public void deprecatedSignal(String str) throws BusException;
+
+    @BusProperty(annotation=BusProperty.ANNOTATE_EMIT_CHANGED_SIGNAL)
+    public String getChangeNotifyProperty() throws BusException;
+
+    @BusProperty(annotation=BusProperty.ANNOTATE_EMIT_CHANGED_SIGNAL)
+    public void setChangeNotifyProperty(String str) throws BusException;
 }
 

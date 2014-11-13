@@ -24,6 +24,7 @@
  ******************************************************************************/
 
 #include <qcc/platform.h>
+#include <set>
 #include <qcc/String.h>
 #include <alljoyn/InterfaceDescription.h>
 #include <alljoyn/MessageReceiver.h>
@@ -60,11 +61,10 @@ class ProxyBusObject : public MessageReceiver {
     static const uint32_t DefaultCallTimeout = 25000;
 
     /**
-     * Pure virtual base class implemented by classes that wish to receive
-     * ProxyBusObject related messages.
+     * Base class used as a container for callback typedefs
      *
-     * @internal Do not use this pattern for creating public Async versions of the APIs.  See
-     * BusAttachment::JoinSessionAsync() instead.
+     * @internal Do not use this pattern for creating new public Async versions of the APIs.  See
+     * the PropertiesChangedListener class below for an example of how to add new async APIs.
      */
     class Listener {
       public:
@@ -116,6 +116,29 @@ class ProxyBusObject : public MessageReceiver {
     };
 
     /**
+     * Pure virtual base class for the Properties Changed listener.
+     */
+    class PropertiesChangedListener {
+      public:
+        virtual ~PropertiesChangedListener() { }
+
+        /**
+         * Callback to receive property changed events.
+         *
+         * @param obj           Remote bus object that owns the property that changed.
+         * @param ifaceName     Name of the interface that defines the property.
+         * @param changed       Property values that changed as an array of dictionary entries, signature "a{sv}".
+         * @param invalidated   Properties whose values have been invalidated, signature "as".
+         * @param context       Caller provided context passed in to RegisterPropertiesChangedListener
+         */
+        virtual void PropertiesChanged(ProxyBusObject& obj,
+                                       const char* ifaceName,
+                                       const MsgArg& changed,
+                                       const MsgArg& invalidated,
+                                       void* context) = 0;
+    };
+
+    /**
      * Create a default (unusable) %ProxyBusObject.
      *
      * This constructor exist only to support assignment.
@@ -135,6 +158,9 @@ class ProxyBusObject : public MessageReceiver {
      * object describes in its introspection data, call IntrospectRemoteObject() or
      * IntrospectRemoteObjectAsync().
      *
+     * If the remote service name is set to a unique name, then both
+     * GetServiceName() and GetUniqueName() will return the unique name.
+     *
      * @param bus        The bus.
      * @param service    The remote service name (well-known or unique).
      * @param path       The absolute (non-relative) object path for the remote object.
@@ -142,6 +168,34 @@ class ProxyBusObject : public MessageReceiver {
      * @param secure     The security mode for the remote object.
      */
     ProxyBusObject(BusAttachment& bus, const char* service, const char* path, SessionId sessionId, bool secure = false);
+
+    /**
+     * Create an empty proxy object that refers to an object at given remote service name. Note
+     * that the created proxy object does not contain information about the interfaces that the
+     * actual remote object implements with the exception that org.freedesktop.DBus.Peer
+     * interface is special-cased (per the DBus spec) and can always be called on any object. Nor
+     * does it contain information about the child objects that the actual remote object might
+     * contain. The security mode can be specified if known or can be derived from the XML
+     * description.
+     *
+     * To fill in this object with the interfaces and child object names that the actual remote
+     * object describes in its introspection data, call IntrospectRemoteObject() or
+     * IntrospectRemoteObjectAsync().
+     *
+     * This version is primarily used during introspection where the
+     * unique name is known.  If, when creating the ProxyBusObject,
+     * both an alias is known and the unique name is known, then use
+     * this constructor.  Note, that the only the service name is used
+     * when generating messages.
+     *
+     * @param bus        The bus.
+     * @param service    The remote service name (well-known or unique).
+     * @param uniqueName The remote service's unique name.
+     * @param path       The absolute (non-relative) object path for the remote object.
+     * @param sessionId  The session id the be used for communicating with remote object.
+     * @param secure     The security mode for the remote object.
+     */
+    ProxyBusObject(BusAttachment& bus, const char* service, const char* uniqueName, const char* path, SessionId sessionId, bool secure = false);
 
     /**
      *  %ProxyBusObject destructor.
@@ -161,6 +215,13 @@ class ProxyBusObject : public MessageReceiver {
      * @return Service name (typically a well-known service name but may be a unique name)
      */
     const qcc::String& GetServiceName(void) const { return serviceName; }
+
+    /**
+     * Return the remote unique name for this object.
+     *
+     * @return Service name (typically a well-known service name but may be a unique name)
+     */
+    const qcc::String& GetUniqueName(void) const { return uniqueName; }
 
     /**
      * Return the session Id for this object.
@@ -381,6 +442,42 @@ class ProxyBusObject : public MessageReceiver {
     QStatus SetProperty(const char* iface, const char* property, const qcc::String& s, uint32_t timeout = DefaultCallTimeout) const {
         MsgArg arg("s", s.c_str()); return SetProperty(iface, property, arg, timeout);
     }
+
+    /**
+     * Function to register a handler for property change events.
+     * Note that registering the same handler callback for the same
+     * interface will overwrite the previous registration.  The same
+     * handler callback may be registered for several different
+     * interfaces simultaneously.
+     *
+     * @param iface             Remote object's interface on which the property is defined.
+     * @param properties        The name of the properties to monitor (NULL for all).
+     * @param propertiesSize    Number of properties to monitor.
+     * @param listener          Reference to the object that will receive the callback.
+     * @param context           User defined context which will be passed as-is to callback.
+     *
+     * @return
+     *      - #ER_OK if the handler was registered successfully
+     *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+     */
+    QStatus RegisterPropertiesChangedListener(const char* iface,
+                                              const char** properties,
+                                              size_t propertiesSize,
+                                              ProxyBusObject::PropertiesChangedListener& listener,
+                                              void* context);
+
+    /**
+     * Function to unregister a handler for property change events.
+     *
+     * @param iface     Remote object's interface on which the property is defined.
+     * @param listener  Reference to the object that used to receive the callback.
+     *
+     * @return
+     *      - #ER_OK if the handler was registered successfully
+     *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     */
+    QStatus UnregisterPropertiesChangedListener(const char* iface, ProxyBusObject::PropertiesChangedListener& listener);
 
     /**
      * Returns the interfaces implemented by this object. Note that all proxy bus objects
@@ -841,6 +938,12 @@ class ProxyBusObject : public MessageReceiver {
 
     /**
      * @internal
+     * Handle property changed signals. (Internal use only)
+     */
+    void PropertiesChangedHandler(const InterfaceDescription::Member* member, const char* srcPath, Message& message);
+
+    /**
+     * @internal
      * Set the B2B endpoint to use for all communication with remote object.
      * This method is for internal use only.
      *
@@ -893,7 +996,8 @@ class ProxyBusObject : public MessageReceiver {
     /** Object path of this object */
     qcc::String path;
 
-    qcc::String serviceName;    /**< Remote destination */
+    qcc::String serviceName;    /**< Remote destination alias */
+    mutable qcc::String uniqueName; /**< Remote destination unique name */
     SessionId sessionId;        /**< Session to use for communicating with remote object */
     bool hasProperties;         /**< True if proxy object implements properties */
     mutable RemoteEndpoint b2bEp; /**< B2B endpoint to use or NULL to indicates normal sessionId based routing */

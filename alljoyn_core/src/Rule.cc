@@ -20,6 +20,7 @@
  ******************************************************************************/
 
 #include <qcc/String.h>
+#include <qcc/StringUtil.h>
 #include <alljoyn/Message.h>
 
 #include "Rule.h"
@@ -88,9 +89,30 @@ Rule::Rule(const char* ruleSpec, QStatus* outStatus) : type(MESSAGE_INVALID), se
         } else if (0 == strncmp("sessionless", pos, 11)) {
             sessionless = ((begQuotePos[0] == 't') || (begQuotePos[0] == 'T')) ? SESSIONLESS_TRUE : SESSIONLESS_FALSE;
         } else if (0 == strncmp("arg", pos, 3)) {
-            status = ER_NOT_IMPLEMENTED;
-            QCC_LogError(status, ("arg keys are not supported in ruleSpec \"%s\"", ruleSpec));
-            break;
+            /*
+             * Some explanation of the indices used here:
+             *   arg10='foo'
+             *   ^  ^ ^^
+             *   |  | ||
+             *   |  | |+-- eqPos (eqPos is incremented one past the '=' above)
+             *   |  | +-- eqPos - 1
+             *   |  +-- pos + 3
+             *   +-- pos
+             * So (pos + 3) is the start of the numeric portion, and
+             * (eqPos - 1) - (pos + 3) is the length of number portion.
+             */
+            uint32_t argIndex = qcc::StringToU32(qcc::String(pos + 3, (eqPos - 1) - (pos + 3)), 10, 64);
+            if (argIndex < 64) {
+                if (endQuotePos > begQuotePos) {
+                    args[argIndex] = qcc::String(begQuotePos, endQuotePos - begQuotePos);
+                } else {
+                    args[argIndex] = qcc::String();
+                }
+            } else {
+                status = ER_FAIL;
+                QCC_LogError(status, ("Invalid argument index in ruleSpec \"%s\"", ruleSpec));
+                break;
+            }
         } else if (0 == strncmp("implements", pos, 10)) {
             implements.insert(qcc::String(begQuotePos, endQuotePos - begQuotePos));
         } else {
@@ -125,6 +147,30 @@ bool Rule::IsMatch(Message& msg) const
     }
     if (!destination.empty() && (0 != strcmp(destination.c_str(), msg->GetDestination()))) {
         return false;
+    }
+    if (!args.empty()) {
+        /*
+         * Clone the message since this message is unmarshalled by the
+         * LocalEndpoint too and the process of unmarshalling is not
+         * thread-safe.
+         */
+        Message clone = Message(msg, true);
+        QStatus status = clone->UnmarshalArgs(clone->GetSignature());
+        if (status != ER_OK) {
+            return false;
+        }
+        for (map<uint32_t, String>::const_iterator it = args.begin(); it != args.end(); ++it) {
+            const MsgArg* arg = clone->GetArg(it->first);
+            if (!arg) {
+                return false;
+            }
+            if (ALLJOYN_STRING != arg->typeId) {
+                return false;
+            }
+            if (it->second != arg->v_string.str) {
+                return false;
+            }
+        }
     }
     if (!implements.empty()) {
         if (strcmp(msg->GetInterface(), "org.alljoyn.About") || strcmp(msg->GetMemberName(), "Announce")) {
@@ -187,7 +233,6 @@ bool Rule::IsMatch(Message& msg) const
         return false;
     }
 
-    // @@ TODO Arg matches are not handled
     return true;
 }
 
@@ -228,6 +273,12 @@ qcc::String Rule::ToString() const
             rule += ",";
         }
         rule += "destination='" + destination + "'";
+    }
+    for (map<uint32_t, String>::const_iterator it = args.begin(); it != args.end(); ++it) {
+        if (!rule.empty()) {
+            rule += ",";
+        }
+        rule += "arg" + U32ToString(it->first) + "='" + it->second + "'";
     }
     for (set<String>::const_iterator it = implements.begin(); it != implements.end(); ++it) {
         if (!rule.empty()) {
