@@ -6543,9 +6543,9 @@ bool IpNameServiceImpl::IsPeriodicMaintenanceTimerNeeded(void) const
     //
     // The timer is needed when we're in the midst of handling a terminal message,
     // we have an outbound message queued, or we're counting down to send the
-    // queued advertisement.
+    // queued advertisement (in V1 config).
     //
-    if (m_terminal || (m_outbound.size() > 0) || (m_timer > 0)) {
+    if (m_terminal || (m_outbound.size() > 0) || (m_enableV1 && (m_timer > 0))) {
         return true;
     } else {
         return false;
