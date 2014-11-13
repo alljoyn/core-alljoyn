@@ -1507,14 +1507,14 @@ class BusAttachment : public MessageReceiver {
      * announcements are needed.
      *
      * @see WhoImplements(const char**, size_t)
-     * @param[in] interface     interface that the remove user must implement to
+     * @param[in] iface     interface that the remove user must implement to
      *                          receive the announce signal.
      *
      * @return
      *    - #ER_OK on success
      *    - An error status otherwise
      */
-    QStatus WhoImplements(const char* interface);
+    QStatus WhoImplements(const char* iface);
 
     /**
      * Stop showing interest in the listed interfaces. Stop receiving announce
@@ -1544,7 +1544,7 @@ class BusAttachment : public MessageReceiver {
      * except this is specialized for a single interface not several interfaces.
      *
      * @see CancelWhoImplements(const char**, size_t)
-     * @param[in] interface     interface that the remove user must implement to
+     * @param[in] iface     interface that the remove user must implement to
      *                          receive the announce signal.
      *
      * @return
@@ -1553,7 +1553,7 @@ class BusAttachment : public MessageReceiver {
      *                                   member function were not found.
      *    - An error status otherwise
      */
-    QStatus CancelWhoImplements(const char* interface);
+    QStatus CancelWhoImplements(const char* iface);
 
     /// @cond ALLJOYN_DEV
     /**

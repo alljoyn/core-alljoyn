@@ -125,13 +125,13 @@ size_t AboutObjectDescription::GetInterfaces(const char* path, const char** inte
     return aom_it->second.size();
 }
 
-size_t AboutObjectDescription::GetInterfacePaths(const char* interface, const char** paths, size_t numPaths) const
+size_t AboutObjectDescription::GetInterfacePaths(const char* iface, const char** paths, size_t numPaths) const
 {
     std::map<qcc::String, std::set<qcc::String> >::const_iterator it;
     size_t count = 0;
     aodInternal->announceObjectsMapLock.Lock(MUTEX_CONTEXT);
     for (it = aodInternal->announceObjectsMap.begin(); it != aodInternal->announceObjectsMap.end(); ++it) {
-        std::set<qcc::String>::const_iterator it2 = it->second.find(interface);
+        std::set<qcc::String>::const_iterator it2 = it->second.find(iface);
         if (it2 != it->second.end()) {
             if (count < numPaths) {
                 paths[count] = it->first.c_str();

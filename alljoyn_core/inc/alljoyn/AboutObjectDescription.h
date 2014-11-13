@@ -133,7 +133,7 @@ class AboutObjectDescription {
      * GetInterfacePaths("com.example.interface", paths, numPaths);
      * @endcode
      *
-     * @param[in]  interface the interface we want to get a list of paths for
+     * @param[in]  iface the interface we want to get a list of paths for
      * @param[out] paths a char* array pointer
      * @param[in]  numPaths the size of the char* array
      *
@@ -144,7 +144,7 @@ class AboutObjectDescription {
      *    array
      *
      */
-    size_t GetInterfacePaths(const char* interface, const char** paths, size_t numPaths) const;
+    size_t GetInterfacePaths(const char* iface, const char** paths, size_t numPaths) const;
 
     /**
      * Clear all the contents of this AboutObjectDescription
