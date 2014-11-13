@@ -4617,25 +4617,16 @@ QStatus UDPTransport::Stop(void)
     QCC_DbgPrintf(("UDPTransport::Stop(): Giving endpoint list lock"));
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
-    QCC_DbgPrintf(("UDPTransport::Stop(): Stop dispatcher thread"));
-    if (m_dispatcher) {
-        m_dispatcher->Stop();
-    }
-
     /*
-     * Tell the server maintenance loop thread to shut down.  It needs to wait
-     * for all of those threads and endpoints to shut down so it doesn't
-     * unexpectedly disappear out from underneath them.  We'll wait for it
-     * to actually stop when we do a required Join() below.
+     * This is the logical place to stop the dispatcher thread and the main
+     * server thread, but we might have outstanding writes queued up with ARDP
+     * at this point.  The writes come back through callbacks which are driven
+     * by the main thread and picked up and executed by the dispatcher thread.
+     * We need to keep those puppies running until the number of outstanding
+     * writes for all streams drop to zero -- so we do the stop in Join() where
+     * we can block until this all happens.  The endpoint Stop() calls above
+     * will start the process.
      */
-    QCC_DbgPrintf(("UDPTransport::Stop(): Stop main thread"));
-    QStatus status = Thread::Stop();
-    if (status != ER_OK) {
-        QCC_LogError(status, ("UDPTransport::Stop(): Failed to Stop() server thread"));
-        DecrementAndFetch(&m_refCount);
-        return status;
-    }
-
     DecrementAndFetch(&m_refCount);
     return ER_OK;
 }
@@ -4652,6 +4643,93 @@ QStatus UDPTransport::Join(void)
     QCC_DbgTrace(("UDPTransport::Join()"));
 
     /*
+     * The logical place to stop the dispatcher thread and the main server
+     * thread would be in Stop(), but we might have outstanding writes queued up
+     * with ARDP at that point.  The writes come back through callbacks which
+     * are driven by the main thread and picked up and executed by the
+     * dispatcher thread.  We need to keep those puppies running until the
+     * number of outstanding writes for all streams drop to zero -- so we do the
+     * stop here in Join() where we can block until this all happens.  The
+     * endpoint Stop() calls in UDPTransport::Stop() will begin the process.  We
+     * need to wait for it to complete here.
+     */
+    QCC_DbgPrintf(("UDPTransport::Join(): Taking endpoint list lock"));
+    m_endpointListLock.Lock(MUTEX_CONTEXT);
+
+    QCC_DbgPrintf(("UDPTransport::Join(): Taking pre-auth list lock"));
+    m_preListLock.Lock(MUTEX_CONTEXT);
+
+    bool sendOutstanding;
+    do {
+        sendOutstanding = false;
+
+        for (set<UDPEndpoint>::iterator i = m_preList.begin(); i != m_preList.end(); ++i) {
+            UDPEndpoint ep = *i;
+            ArdpStream* stream = ep->GetStream();
+            if (stream && stream->GetSendsOutstanding()) {
+                sendOutstanding = true;
+            }
+        }
+        for (set<UDPEndpoint>::iterator i = m_authList.begin(); i != m_authList.end(); ++i) {
+            UDPEndpoint ep = *i;
+            ArdpStream* stream = ep->GetStream();
+            if (stream && stream->GetSendsOutstanding()) {
+                sendOutstanding = true;
+            }
+        }
+        for (set<UDPEndpoint>::iterator i = m_endpointList.begin(); i != m_endpointList.end(); ++i) {
+            UDPEndpoint ep = *i;
+            ArdpStream* stream = ep->GetStream();
+            if (stream && stream->GetSendsOutstanding()) {
+                sendOutstanding = true;
+            }
+        }
+
+        if (sendOutstanding) {
+            QCC_DbgPrintf(("UDPTransport::Join(): Giving pre-auth list lock"));
+            m_preListLock.Unlock(MUTEX_CONTEXT);
+
+            QCC_DbgPrintf(("UDPTransport::Join(): Giving endpoint list lock"));
+            m_endpointListLock.Unlock(MUTEX_CONTEXT);
+
+            qcc::Sleep(10);
+
+            QCC_DbgPrintf(("UDPTransport::Join(): Taking endpoint list lock"));
+            m_endpointListLock.Lock(MUTEX_CONTEXT);
+
+            QCC_DbgPrintf(("UDPTransport::Join(): Taking pre-auth list lock"));
+            m_preListLock.Lock(MUTEX_CONTEXT);
+        }
+    } while (sendOutstanding);
+
+    QCC_DbgPrintf(("UDPTransport::Join(): Giving pre-auth list lock"));
+    m_preListLock.Unlock(MUTEX_CONTEXT);
+
+    QCC_DbgPrintf(("UDPTransport::Join(): Giving endpoint list lock"));
+    m_endpointListLock.Unlock(MUTEX_CONTEXT);
+
+    /*
+     * Now that there are no more sends outstanding in ARDP, we can go ahead
+     * and take down the dispatcher thread since it has no more work.
+     */
+    QCC_DbgPrintf(("UDPTransport::Join(): Stop dispatcher thread"));
+    if (m_dispatcher) {
+        m_dispatcher->Stop();
+    }
+
+    /*
+     * Tell the main server loop thread to shut down.  We'll wait for it to do
+     * so below.
+     */
+    QCC_DbgPrintf(("UDPTransport::Join(): Stop main thread"));
+    QStatus status = Thread::Stop();
+    if (status != ER_OK) {
+        QCC_LogError(status, ("UDPTransport::Join(): Failed to Stop() server thread"));
+        DecrementAndFetch(&m_refCount);
+        return status;
+    }
+
+    /*
      * Join() all of the message pumps.
      */
     QCC_DbgPrintf(("UDPTransport::Join(): Join() message pumps"));
@@ -4659,6 +4737,10 @@ QStatus UDPTransport::Join(void)
         m_messagePumps[i]->Join();
     }
 
+    /*
+     * We waited for the dispatcher thread to finish dispatching all in-process
+     * sends above, so it has nothing to do now and we can get rid of it.
+     */
     QCC_DbgPrintf(("UDPTransport::Join(): Join and delete dispatcher thread"));
     if (m_dispatcher) {
         m_dispatcher->Join();
@@ -4666,15 +4748,22 @@ QStatus UDPTransport::Join(void)
         m_dispatcher = NULL;
     }
 
+    /*
+     * Now, if we have any message buffers queued up in our own internals it is
+     * time to get rid of them.
+     */
     QCC_DbgPrintf(("UDPTransport::Join(): Return unused message buffers to ARDP"));
     while (m_workerCommandQueue.empty() == false) {
         WorkerCommandQueueEntry entry = m_workerCommandQueue.front();
         m_workerCommandQueue.pop();
         /*
-         * However, the ARDP module will have allocated memory (in some private
-         * way) for any messages that are waiting to be routed.  We can't just
-         * ignore that situation or we may leak memory.  Give any buffers back
-         * to the protocol before leaving.
+         * The ARDP module will have allocated memory (in some private way) for
+         * any messages that are waiting to be routed.  We can't just ignore
+         * that situation or we may leak memory.  Give any buffers back to the
+         * protocol before leaving.  The assumption here is that ARDP will do
+         * the right think in ARDP_REcvReady() and not require a subsequent
+         * call to ARDP_Run() which will not happen since the main thread is
+         * Stop()ped.
          */
         if (entry.m_command == WorkerCommandQueueEntry::RECV_CB) {
             m_ardpLock.Lock();
@@ -4689,13 +4778,6 @@ QStatus UDPTransport::Join(void)
             }
 #endif
             m_ardpLock.Unlock();
-
-            /*
-             * If we do something that is going to bug the ARDP protocol, we
-             * need to call back into ARDP ASAP to get it moving.  This is done
-             * in the main thread, which we need to wake up.
-             */
-            Alert();
         }
 
         /*
@@ -4718,7 +4800,7 @@ QStatus UDPTransport::Join(void)
      * previously wandering around in the transport must be gone.
      */
     QCC_DbgPrintf(("UDPTransport::Join(): Join main thread"));
-    QStatus status = Thread::Join();
+    status = Thread::Join();
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::Join(): Failed to Join() server thread"));
         DecrementAndFetch(&m_refCount);
