@@ -54,7 +54,7 @@ class DebugControl;
 static qcc::Mutex* stdoutLock = NULL;
 static DebugControl* dbgControl = NULL;
 static int dbgControlCounter = 0;
-
+static bool dbgUseEpoch = false;
 
 int QCC_SyncPrintf(const char* fmt, ...)
 {
@@ -144,6 +144,9 @@ class DebugControl {
 
         for (iter = env->Begin(); iter != env->End(); ++iter) {
             qcc::String var(iter->first);
+            if (var.compare("ER_DEBUG_EPOCH") == 0) {
+                dbgUseEpoch = true;
+            }
             if (var.compare("ER_DEBUG_THREADNAME") == 0) {
                 printThread = ((iter->second.compare("0") != 0) &&
                                (iter->second.compare("off") != 0) &&
@@ -261,22 +264,34 @@ static const char* Type2Str(DbgMsgType type)
 }
 
 
-static void GenPrefix(qcc::String& oss, DbgMsgType type, const char* module, const char* filename, int lineno, bool printThread)
+static void GenPrefix(qcc::String& oss, DbgMsgType type, const char* module, const char* filename, int lineno, bool printThread, bool useEpoch)
 {
-    uint32_t timestamp = GetTimestamp();
     static const size_t timeTypeWidth = 18;
     static const size_t moduleWidth = 12;
     static const size_t threadWidth = 18;
     static const size_t bonusWidth = 8;
     static const size_t fileLineWidth = 32;
     size_t colStop = timeTypeWidth;
+    qcc::String logTimeSecond;
+    qcc::String logTimeMS;
 
-    oss.reserve(timeTypeWidth + moduleWidth + threadWidth + fileLineWidth + oss.capacity());
+    if (useEpoch) {
+        colStop = 24;
+        uint64_t timestamp = GetEpochTimestamp();
+        logTimeSecond = U64ToString(timestamp / 1000, 10, 10, ' ');
+        logTimeMS = U64ToString(timestamp % 1000, 10, 3, '0');
+    } else {
+        uint32_t timestamp = GetTimestamp();
+        logTimeSecond = U32ToString((timestamp / 1000) % 10000, 10, 4, ' ');
+        logTimeMS = U32ToString(timestamp % 1000, 10, 3, '0');
+    }
+
+    oss.reserve(colStop + moduleWidth + threadWidth + fileLineWidth + oss.capacity());
 
     // Timestamp - col 0
-    oss.append(U32ToString((timestamp / 1000) % 10000, 10, 4, ' '));
+    oss.append(logTimeSecond);
     oss.push_back('.');
-    oss.append(U32ToString(timestamp % 1000, 10, 3, '0'));
+    oss.append(logTimeMS);
     oss.push_back(' ');
 
     // Output type - col 9
@@ -353,7 +368,7 @@ void DebugContext::Process(DbgMsgType type, const char* module, const char* file
 
     oss.reserve(sizeof(msg));
 
-    GenPrefix(oss, type, module, filename, lineno, dbgControl->PrintThread());
+    GenPrefix(oss, type, module, filename, lineno, dbgControl->PrintThread(), dbgUseEpoch);
 
     if (msg != NULL) {
         oss.append(msg);
@@ -460,7 +475,7 @@ void _QCC_DbgDumpHex(DbgMsgType type, const char* module, const char* filename, 
 
             oss.reserve(strlen(dataStr) + 8 + dataLen * 4 + (((dataLen + 15) / 16) * (40 + strlen(module))));
 
-            GenPrefix(oss, type, module, filename, lineno, dbgControl->PrintThread());
+            GenPrefix(oss, type, module, filename, lineno, dbgControl->PrintThread(), dbgUseEpoch);
 
             oss.append(dataStr);
             oss.push_back('[');
