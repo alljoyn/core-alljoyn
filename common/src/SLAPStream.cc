@@ -55,7 +55,7 @@ const uint32_t CONN_TIMEOUT = 5000;
 /**
  * controls rate at which we send NEGO packets when the link is being established in milliseconds
  */
-const uint32_t NEGO_TIMEOUT = 5000;
+const uint32_t NEGO_TIMEOUT = 200;
 
 /**
  * controls rate at which we send DISCONN packets when the link is down in milliseconds
@@ -71,7 +71,7 @@ SLAPStream::SLAPStream(StreamController* streamController, Timer& timer, uint16_
     m_ackCtxt(new CallbackContext(ACK_ALARM)),
     m_resendControlCtxt(new CallbackContext(RESEND_CONTROL_ALARM)),
     m_timer(timer), m_txState(TX_IDLE), m_getNextPacket(true),
-    m_expectedSeq(0), m_txSeqNum(0),
+    m_alwaysAck(false), m_expectedSeq(0), m_txSeqNum(0),
     m_currentTxAck(0), m_pendingAcks(0)
 {
     m_linkParams.baudrate = baudrate;
@@ -218,18 +218,23 @@ void SLAPStream::ProcessDataSeqNum(uint8_t seq)
     QStatus status = ER_TIMER_FULL;
     Alarm ackAlarm;
 
-#ifdef ALWAYS_ACK
     ++m_pendingAcks;
+
     /*
      * If there are no packets to send we are allowed to accumulate a
      * backlog of pending ACKs up to a maximum equal to the window size.
      * In any case we are required to send an ack within a timeout
      * period so if this is the first pending ack we need to prime a timer.
      */
-
     while (m_pendingAcks && !m_timer.HasAlarm(m_ackAlarm) && status == ER_TIMER_FULL) {
         AlarmListener* listener = this;
-        uint32_t when = 0;
+        uint32_t when;
+
+        if (m_alwaysAck) {
+            when = 0;
+        } else {
+            when = (m_pendingAcks == m_linkParams.windowSize) ? 0 : m_linkParams.ackTimeout;
+        }
 
         ackAlarm = Alarm(when, listener, m_ackCtxt);
         /* Call the non-blocking version of AddAlarm, while holding the
@@ -246,37 +251,6 @@ void SLAPStream::ProcessDataSeqNum(uint8_t seq)
             m_ackAlarm = ackAlarm;
         }
     }
-
-#else
-    ++m_pendingAcks;
-
-    /*
-     * If there are no packets to send we are allowed to accumulate a
-     * backlog of pending ACKs up to a maximum equal to the window size.
-     * In any case we are required to send an ack within a timeout
-     * period so if this is the first pending ack we need to prime a timer.
-     */
-    while (m_pendingAcks && !m_timer.HasAlarm(m_ackAlarm) && status == ER_TIMER_FULL) {
-        AlarmListener* listener = this;
-        uint32_t when = (m_pendingAcks == m_linkParams.windowSize) ? 0 : m_linkParams.ackTimeout;
-
-        ackAlarm = Alarm(when, listener, m_ackCtxt);
-        /* Call the non-blocking version of AddAlarm, while holding the
-         * locks to ensure that the state of the dispatchEntry is valid.
-         */
-        status = m_timer.AddAlarmNonBlocking(ackAlarm);
-
-        if (status == ER_TIMER_FULL) {
-            m_streamLock.Unlock();
-            qcc::Sleep(2);
-            m_streamLock.Lock();
-        }
-        if (status == ER_OK) {
-            m_ackAlarm = ackAlarm;
-        }
-    }
-
-#endif
 }
 
 /**
@@ -431,7 +405,7 @@ void SLAPStream::ProcessControlPacket()
              * Initialize the link configuration packet - we are not allowed
              * to change this during link establishment.
              */
-            EnqueueCtrl(NEGO_PKT, m_configField);
+            ScheduleLinkControlPacket();
             return;
         }
         break;
@@ -534,6 +508,7 @@ void SLAPStream::ProcessControlPacket()
          * sync packets cause a transport reset.
          */
         if (pktType == NEGO_PKT) {
+            QCC_DbgPrintf(("Got NEGO_PKT, Sending NRSP"));
             m_configField[0] = m_linkParams.packetSize >> 8;
             m_configField[1] = m_linkParams.packetSize & 0xFF;
             uint8_t agreedEncWindowSize = ((m_linkParams.windowSize == 1) ? 0 : ((m_linkParams.windowSize == 2) ? 1 : ((m_linkParams.windowSize == 4) ? 2 : 3)));
@@ -552,6 +527,7 @@ void SLAPStream::ProcessControlPacket()
              * The other end went down and came back up.
              * Declare the link as dead so the app will close and re-open this port.
              */
+            QCC_DbgPrintf(("Got CONN_PKT, setting link to dead"));
             m_linkState = LINK_DEAD;
             m_sourceEvent.SetEvent();
             m_sinkEvent.SetEvent();

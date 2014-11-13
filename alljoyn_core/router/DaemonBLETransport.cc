@@ -99,6 +99,7 @@ class _DaemonBLEEndpoint :
         m_stream(&m_bleController, m_timer, packetSize, 2, 15000),
         m_bleController(&m_rawStream, &m_stream)
     {
+        m_stream.AckImmediate(true);
     }
 
     EndpointState GetEpState(void) { return m_epState; }

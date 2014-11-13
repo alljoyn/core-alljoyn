@@ -35,7 +35,7 @@ using namespace qcc;
 /*
  * link establishment packets
  */
-static const char* LinkCtrlPacketNames[10] = { "NONE", "CONN", "ACPT", "NEGO", "NRSP", "DISC", "DRSP", "OFFL", "OFFC", "OFFR" };
+static const char* LinkCtrlPacketNames[10] = { "NONE", "CONN", "ACPT", "NEGO", "NRSP", "DISC", "DRSP", "OFFL", "OFFR", "OFFC" };
 static const size_t ExpectedLen[10] = { 0, 4, 4, 7, 7, 4, 4, 5, 0, 0 };
 
 const uint8_t BOUNDARY_BYTE         = 0xC0;

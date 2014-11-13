@@ -110,6 +110,11 @@ class SLAPStream : public Stream, public StreamReadListener, public AlarmListene
      */
     void GoOnline() { TransmitToLink(); }
 
+    /**
+     * Set stream to always ACK incoming pkts immediately (or not).
+     */
+    void AckImmediate(bool immediate) { m_alwaysAck = immediate; }
+
   private:
 
     /** Private copy constructor */
@@ -199,11 +204,12 @@ class SLAPStream : public Stream, public StreamReadListener, public AlarmListene
         TX_SENDING, /**< A packet is being sent. */
         TX_COMPLETE /**< A packet has been sent. */
     } m_txState;
-    bool m_getNextPacket;                 /**< Whether to get the next packet to be transmitted */
-    uint8_t m_expectedSeq;   /**< sequence number expected in the next packet */
-    uint8_t m_txSeqNum;      /**< current transmit sequence number */
-    uint8_t m_currentTxAck;   /**< sequence number of the packet we expect to ACK next */
-    uint8_t m_pendingAcks;    /**< number of received packets waiting to be ACKed */
+    bool m_getNextPacket;   /**< Whether to get the next packet to be transmitted */
+    bool m_alwaysAck;       /**< Whether ACK should always be immediate */
+    uint8_t m_expectedSeq;  /**< sequence number expected in the next packet */
+    uint8_t m_txSeqNum;     /**< current transmit sequence number */
+    uint8_t m_currentTxAck; /**< sequence number of the packet we expect to ACK next */
+    uint8_t m_pendingAcks;  /**< number of received packets waiting to be ACKed */
 
     Mutex m_streamLock;                   /**< Lock used to protect the private data structures */
     SLAPReadPacket* m_rxCurrent;            /**< Packet currently being received */
