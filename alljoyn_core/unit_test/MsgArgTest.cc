@@ -696,7 +696,7 @@ TEST(MsgArgTest, Comparison) {
 TEST(MsgArgTest, SetOwnershipFlags_scalar_arrays) {
     QStatus status = ER_OK;
     /* Array of BYTE */
-    uint8_t* ay = new uint8_t[5];
+    uint8_t* ay = new uint8_t[9];
     //{ 9, 19, 29, 39, 49 }
     for (size_t i = 0; i < sizeof(ay) / sizeof(ay[0]); ++i) {
         ay[i] = (10 * i) + 9;
