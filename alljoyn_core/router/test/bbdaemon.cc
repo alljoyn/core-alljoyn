@@ -109,6 +109,7 @@ class LocalTestObject : public BusObject {
 
         /* Add the test interface to this object */
         const InterfaceDescription* regTestIntf = bus.GetInterface(::org::alljoyn::alljoyn_test::InterfaceName);
+        assert(regTestIntf);
         AddInterface(*regTestIntf);
         /* Add the values interface to this object */
         const InterfaceDescription* valuesIntf = bus.GetInterface(::org::alljoyn::alljoyn_test::values::InterfaceName);
