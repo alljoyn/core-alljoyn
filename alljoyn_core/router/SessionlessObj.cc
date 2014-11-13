@@ -232,6 +232,16 @@ QStatus SessionlessObj::Init()
         QCC_LogError(status, ("Failed to register SessionLost signal handler"));
     }
 
+    /* Register signal handler for SessionLostWithReasonAndDisposition */
+    /* (If we werent in the daemon, we could just use SessionListener, but it doesnt work without the full BusAttachment implementation */
+    status = bus.RegisterSignalHandler(this,
+                                       static_cast<MessageReceiver::SignalHandler>(&SessionlessObj::SessionLostSignalHandler),
+                                       ajIntf->GetMember("SessionLostWithReasonAndDisposition"),
+                                       NULL);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to register SessionLost signal handler"));
+    }
+
     /* Register a name table listener */
     if (status == ER_OK) {
         router.AddBusNameListener(this);
@@ -971,7 +981,8 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
             }
             if (!rangeCapable && (toId != cache.changeId + 1)) {
                 /* This session can't be used because the remote side doesn't support RequestRange */
-                bus.LeaveSession(sid);
+                status = bus.LeaveSession(sid);
+                QCC_LogError(status, ("Failed to leave session %u", sid));
                 DoSessionLost(sid, ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION);
                 status = ER_FAIL;
             }
@@ -1019,7 +1030,8 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
             }
             if (status != ER_OK) {
                 QCC_LogError(status, ("Failed to send Request to %s", ctx->name.c_str()));
-                bus.LeaveSession(sid);
+                status = bus.LeaveSession(sid);
+                QCC_LogError(status, ("Failed to leave session %u", sid));
 
                 lock.Lock();
                 cit = remoteCaches.find(ctx->guid);
