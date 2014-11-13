@@ -64,6 +64,7 @@ int QCC_SyncPrintf(const char* fmt, ...)
     va_start(ap, fmt);
     if (ER_OK == stdoutLock->Lock()) {
         ret = vprintf(fmt, ap);
+        fflush(stdout);
         stdoutLock->Unlock();
     }
     va_end(ap);
