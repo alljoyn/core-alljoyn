@@ -9027,7 +9027,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * retry buffer, so we are responsible for disposition of the buffer no
      * matter if the connect succeeds or fails.
      */
-    delete buf;
+    delete[] buf;
     buf = NULL;
 
     /*
