@@ -212,7 +212,7 @@ public class AboutIconProxyTest extends TestCase{
         assertTrue(aboutIconPathFound);
         assertTrue(aboutIconInterfaceFound);
 
-
+        assertEquals(Status.OK, aboutObj.cancelAnnouncement());
         assertEquals(Status.OK, clientBus.cancelWhoImplements(new String[] {org.alljoyn.bus.ifaces.Icon.INTERFACE_NAME}));
         clientBus.disconnect();
         clientBus.release();
@@ -318,6 +318,7 @@ public class AboutIconProxyTest extends TestCase{
             fail("Unexpected BusException.");
         }
 
+        assertEquals(Status.OK, aboutObj.cancelAnnouncement());
         assertEquals(Status.OK, clientBus.cancelWhoImplements(new String[] {org.alljoyn.bus.ifaces.Icon.INTERFACE_NAME}));
         clientBus.disconnect();
         clientBus.release();
@@ -450,6 +451,7 @@ public class AboutIconProxyTest extends TestCase{
             fail("Unexpected BusException.");
         }
 
+        assertEquals(Status.OK, aboutObj.cancelAnnouncement());
         assertEquals(Status.OK, clientBus.cancelWhoImplements(new String[] {org.alljoyn.bus.ifaces.Icon.INTERFACE_NAME}));
         clientBus.disconnect();
         clientBus.release();
@@ -584,6 +586,7 @@ public class AboutIconProxyTest extends TestCase{
             fail("Unexpected BusException.");
         }
 
+        assertEquals(Status.OK, aboutObj.cancelAnnouncement());
         assertEquals(Status.OK, clientBus.cancelWhoImplements(new String[] {org.alljoyn.bus.ifaces.Icon.INTERFACE_NAME}));
         clientBus.disconnect();
         clientBus.release();
