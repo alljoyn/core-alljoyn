@@ -2261,12 +2261,12 @@ QStatus BusAttachment::WhoImplements(const char** implementsInterfaces, size_t n
     return AddMatch(matchRule.c_str());
 }
 
-QStatus BusAttachment::WhoImplements(const char* interface)
+QStatus BusAttachment::WhoImplements(const char* iface)
 {
-    if (interface == NULL) {
+    if (iface == NULL) {
         return WhoImplements(NULL, size_t(0));
     }
-    const char** tmp = &interface;
+    const char** tmp = &iface;
     return WhoImplements(tmp, size_t(1));
 }
 QStatus BusAttachment::CancelWhoImplements(const char** implementsInterfaces, size_t numberInterfaces)
@@ -2285,12 +2285,12 @@ QStatus BusAttachment::CancelWhoImplements(const char** implementsInterfaces, si
     return RemoveMatch(matchRule.c_str());
 }
 
-QStatus BusAttachment::CancelWhoImplements(const char* interface)
+QStatus BusAttachment::CancelWhoImplements(const char* iface)
 {
-    if (interface == NULL) {
+    if (iface == NULL) {
         return CancelWhoImplements(NULL, 0);
     }
-    const char** tmp = &interface;
+    const char** tmp = &iface;
     return CancelWhoImplements(tmp, 1);
 }
 
