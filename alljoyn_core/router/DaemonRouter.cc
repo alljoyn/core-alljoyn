@@ -94,12 +94,20 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
     const char* destination = msg->GetDestination();
     SessionId sessionId = msg->GetSessionId();
     bool isSessionless = msg->GetFlags() & ALLJOYN_FLAG_SESSIONLESS;
+    bool destinationEmpty = destination[0] == '\0';
+    BusEndpoint destEndpoint;
+
+    if (!destinationEmpty) {
+        nameTable.Lock();
+        destEndpoint = nameTable.FindEndpoint(destination);
+        nameTable.Unlock();
+    }
 
 #ifdef ENABLE_POLICYDB
     PolicyDB policyDB = ConfigDB::GetConfigDB()->GetPolicyDB();
     NormalizedMsgHdr nmh(msg, policyDB, origSender);
 
-    if ((sender != localEndpoint) && !policyDB->OKToSend(nmh)) {
+    if ((sender != localEndpoint) && !policyDB->OKToSend(nmh, destEndpoint)) {
         /* The sender is not allowed to send this message. */
         return ER_BUS_POLICY_VIOLATION;
     }
@@ -137,11 +145,9 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& origSender)
         localEndpoint->UpdateSerialNumber(msg);
     }
 
-    bool destinationEmpty = destination[0] == '\0';
     if (!destinationEmpty) {
         QCC_DbgPrintf(("DaemonRouter::PushMessage(): destinationEmpty=false"));
         nameTable.Lock();
-        BusEndpoint destEndpoint = nameTable.FindEndpoint(destination);
         if (destEndpoint->IsValid()) {
             QCC_DbgPrintf(("DaemonRouter::PushMessage(): Valid destEndpoint"));
             /* If this message is coming from a bus-to-bus ep, make sure the receiver is willing to receive it */
