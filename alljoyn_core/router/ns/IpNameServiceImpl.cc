@@ -383,6 +383,12 @@ IpNameServiceImpl::IpNameServiceImpl()
     memset(&m_enabledReliableIPv6[0], 0, sizeof(m_enabledReliableIPv6));
     memset(&m_enabledUnreliableIPv6[0], 0, sizeof(m_enabledUnreliableIPv6));
 
+    memset(&m_reliableIPv4PortMap[0], 0, sizeof(m_reliableIPv4PortMap));
+    memset(&m_unreliableIPv4PortMap[0], 0, sizeof(m_unreliableIPv4PortMap));
+
+    memset(&m_priorReliableIPv4PortMap[0], 0, sizeof(m_priorReliableIPv4PortMap));
+    memset(&m_priorUnreliableIPv4PortMap[0], 0, sizeof(m_priorUnreliableIPv4PortMap));
+
     memset(&m_reliableIPv6Port[0], 0, sizeof(m_reliableIPv6Port));
     memset(&m_unreliableIPv6Port[0], 0, sizeof(m_unreliableIPv6Port));
 
@@ -1571,6 +1577,16 @@ QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
         if (somethingWasEnabled == false) {
             m_doEnable = true;
         }
+    }
+
+    // Keep a backup copy of the state so we can correctly
+    // send out cancel advertisements. By the time cancel
+    // advertise packets are scheduled for transmission and
+    // the packets are rewritten, the relevant transport may
+    // no longer be enabled.
+    for (uint32_t j = 0; j < N_TRANSPORTS; ++j) {
+        m_priorReliableIPv4PortMap[j] = m_reliableIPv4PortMap[j];
+        m_priorUnreliableIPv4PortMap[j] = m_unreliableIPv4PortMap[j];
     }
 
     std::map<qcc::String, uint16_t>::const_iterator it = reliableIPv4PortMap.find("*");
@@ -2889,8 +2905,8 @@ QStatus IpNameServiceImpl::Response(TransportMask completeTransportMask, uint32_
     mdnsPacket->SetHeader(mdnsHeader);
 
     // We defer the checks for the listening ports to the point when the packet is re-written.
-    if (completeTransportMask & TRANSPORT_TCP) {
 
+    if (completeTransportMask & TRANSPORT_TCP) {
         MDNSPtrRData* ptrRDataTcp = new MDNSPtrRData();
         ptrRDataTcp->SetPtrDName(m_guid + "._alljoyn._tcp.local.");
         MDNSResourceRecord ptrRecordTcp("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, MDNSResourceRecord::INTERNET, 120, ptrRDataTcp);
@@ -4535,6 +4551,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
             unreliableTransportPort = m_unreliableIPv4PortMap[TRANSPORT_INDEX_UDP][m_liveInterfaces[i].m_interfaceAddr.ToString()];
         }
 
+        bool ttlZero = false;
         if (msgVersion == 0) {
             NSPacket nsPacket  = NSPacket::cast(packet);
             if (nsPacket->GetNumberAnswers() && !reliableTransportPort) {
@@ -4552,40 +4569,35 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                 MDNSResourceRecord* ptrRecordUdp = NULL;
                 bool tcpAnswer = mdnsPacket->GetAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR, &ptrRecordTcp);
                 bool udpAnswer = mdnsPacket->GetAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR, &ptrRecordUdp);
+
+                uint32_t numMatches = mdnsPacket->GetNumMatches("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS);
+                for (uint32_t match = 0; match < numMatches; match++) {
+                    MDNSResourceRecord* advRecord;
+                    if (!mdnsPacket->GetAdditionalRecordAt("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, match, &advRecord)) {
+                        continue;
+                    }
+                    uint32_t ttl = advRecord->GetRRttl();
+                    if (!ttl) {
+                        ttlZero = true;
+                    }
+                }
                 if (!tcpAnswer && !udpAnswer) {
                     continue;
                 }
                 if (tcpAnswer && !udpAnswer) {
-                    if (!reliableTransportPort) {
+                    if (!reliableTransportPort && !ttlZero) {
                         continue;
                     }
                 }
                 if (udpAnswer && !tcpAnswer) {
-                    if (!unreliableTransportPort) {
+                    if (!unreliableTransportPort && !ttlZero) {
                         continue;
                     }
                 }
                 if (tcpAnswer && udpAnswer) {
-                    if (!reliableTransportPort && !unreliableTransportPort) {
+                    if (!reliableTransportPort && !unreliableTransportPort && !ttlZero) {
                         continue;
                     } else if (!reliableTransportPort) {
-                        removedTcp = true;
-                        MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecordTcp->GetRData());
-                        String name = ptrRData->GetPtrDName();
-                        if (!packet->InterfaceIndexSet()) {
-                            MDNSResourceRecord* record;
-                            if (mdnsPacket->GetAnswer(name, MDNSResourceRecord::SRV, &record)) {
-                                removedTcpAnswers.push_back(*record);
-                            }
-                            if (mdnsPacket->GetAnswer(name, MDNSResourceRecord::TXT, &record)) {
-                                removedTcpAnswers.push_back(*record);
-                            }
-                            removedTcpAnswers.push_back(*ptrRecordTcp);
-                        }
-                        mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
-                        mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
-                        mdnsPacket->RemoveAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR);
-
                         uint32_t numMatches = mdnsPacket->GetNumMatches("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS);
                         for (uint32_t match = 0; match < numMatches; match++) {
                             MDNSResourceRecord* advRecord;
@@ -4594,6 +4606,10 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                             }
                             MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
                             if (!advRData) {
+                                continue;
+                            }
+
+                            if (!advRecord->GetRRttl()) {
                                 continue;
                             }
 
@@ -4632,23 +4648,26 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                                 tcpUdpNames.erase(match);
                             }
                         }
-                    } else if (!unreliableTransportPort) {
-                        removedUdp = true;
-                        MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecordUdp->GetRData());
-                        String name = ptrRData->GetPtrDName();
-                        if (!packet->InterfaceIndexSet()) {
-                            MDNSResourceRecord* record;
-                            if (mdnsPacket->GetAnswer(name, MDNSResourceRecord::SRV, &record)) {
-                                removedUdpAnswers.push_back(*record);
+                        if (!ttlZero) {
+                            removedTcp = true;
+                            MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecordTcp->GetRData());
+                            String name = ptrRData->GetPtrDName();
+                            if (!packet->InterfaceIndexSet()) {
+                                MDNSResourceRecord* record;
+                                if (mdnsPacket->GetAnswer(name, MDNSResourceRecord::SRV, &record)) {
+                                    removedTcpAnswers.push_back(*record);
+                                }
+                                if (mdnsPacket->GetAnswer(name, MDNSResourceRecord::TXT, &record)) {
+                                    removedTcpAnswers.push_back(*record);
+                                }
+                                removedTcpAnswers.push_back(*ptrRecordTcp);
                             }
-                            if (mdnsPacket->GetAnswer(name, MDNSResourceRecord::TXT, &record)) {
-                                removedUdpAnswers.push_back(*record);
-                            }
+                            removedTcpAnswers.push_back(*ptrRecordTcp);
+                            mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
+                            mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
+                            mdnsPacket->RemoveAnswer("_alljoyn._tcp.local.", MDNSResourceRecord::PTR);
                         }
-                        removedUdpAnswers.push_back(*ptrRecordUdp);
-                        mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
-                        mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
-                        mdnsPacket->RemoveAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR);
+                    } else if (!unreliableTransportPort) {
                         MDNSResourceRecord* advRecord;
                         uint32_t numMatches = mdnsPacket->GetNumMatches("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS);
                         for (uint32_t match = 0; match < numMatches; match++) {
@@ -4659,7 +4678,9 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                             if (!advRData) {
                                 continue;
                             }
-
+                            if (!advRecord->GetRRttl()) {
+                                continue;
+                            }
                             uint32_t numNames = advRData->GetNumNames(TRANSPORT_TCP);
                             for (uint32_t j = 0; j < numNames; j++) {
                                 String name = advRData->GetNameAt(TRANSPORT_TCP, j);
@@ -4694,6 +4715,24 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                                 tcpUdpNames.erase(match);
                             }
                         }
+                        if (!ttlZero) {
+                            removedUdp = true;
+                            MDNSPtrRData* ptrRData = static_cast<MDNSPtrRData*>(ptrRecordUdp->GetRData());
+                            String name = ptrRData->GetPtrDName();
+                            if (!packet->InterfaceIndexSet()) {
+                                MDNSResourceRecord* record;
+                                if (mdnsPacket->GetAnswer(name, MDNSResourceRecord::SRV, &record)) {
+                                    removedUdpAnswers.push_back(*record);
+                                }
+                                if (mdnsPacket->GetAnswer(name, MDNSResourceRecord::TXT, &record)) {
+                                    removedUdpAnswers.push_back(*record);
+                                }
+                            }
+                            removedUdpAnswers.push_back(*ptrRecordUdp);
+                            mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::SRV);
+                            mdnsPacket->RemoveAnswer(name, MDNSResourceRecord::TXT);
+                            mdnsPacket->RemoveAnswer("_alljoyn._udp.local.", MDNSResourceRecord::PTR);
+                        }
                     }
                 }
             } else {
@@ -4720,6 +4759,35 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                 }
             }
         }
+
+        if (ttlZero && !reliableTransportPort) {
+            if (m_priorReliableIPv4PortMap[TRANSPORT_INDEX_TCP].find("*") != m_priorReliableIPv4PortMap[TRANSPORT_INDEX_TCP].end()) {
+                reliableTransportPort = m_priorReliableIPv4PortMap[TRANSPORT_INDEX_TCP]["*"];
+            } else if (m_priorReliableIPv4PortMap[TRANSPORT_INDEX_TCP].find("0.0.0.0") != m_priorReliableIPv4PortMap[TRANSPORT_INDEX_TCP].end()) {
+                reliableTransportPort = m_priorReliableIPv4PortMap[TRANSPORT_INDEX_TCP]["0.0.0.0"];
+            } else if (m_priorReliableIPv4PortMap[TRANSPORT_INDEX_TCP].find(m_liveInterfaces[i].m_interfaceName) != m_priorReliableIPv4PortMap[TRANSPORT_INDEX_TCP].end()) {
+                reliableTransportPort = m_priorReliableIPv4PortMap[TRANSPORT_INDEX_TCP][m_liveInterfaces[i].m_interfaceName];
+            } else if (m_priorReliableIPv4PortMap[TRANSPORT_INDEX_TCP].find(m_liveInterfaces[i].m_interfaceAddr.ToString()) != m_priorReliableIPv4PortMap[TRANSPORT_INDEX_TCP].end()) {
+                reliableTransportPort = m_priorReliableIPv4PortMap[TRANSPORT_INDEX_TCP][m_liveInterfaces[i].m_interfaceAddr.ToString()];
+            }
+        }
+
+        if (ttlZero && !unreliableTransportPort) {
+            if (m_priorUnreliableIPv4PortMap[TRANSPORT_INDEX_UDP].find("*") != m_priorUnreliableIPv4PortMap[TRANSPORT_INDEX_UDP].end()) {
+                unreliableTransportPort = m_priorUnreliableIPv4PortMap[TRANSPORT_INDEX_UDP]["*"];
+            } else if (m_priorUnreliableIPv4PortMap[TRANSPORT_INDEX_UDP].find("0.0.0.0") != m_priorUnreliableIPv4PortMap[TRANSPORT_INDEX_UDP].end()) {
+                unreliableTransportPort = m_priorUnreliableIPv4PortMap[TRANSPORT_INDEX_UDP]["0.0.0.0"];
+            } else if (m_priorUnreliableIPv4PortMap[TRANSPORT_INDEX_UDP].find(m_liveInterfaces[i].m_interfaceName) != m_priorUnreliableIPv4PortMap[TRANSPORT_INDEX_UDP].end()) {
+                unreliableTransportPort = m_priorUnreliableIPv4PortMap[TRANSPORT_INDEX_UDP][m_liveInterfaces[i].m_interfaceName];
+            } else if (m_priorUnreliableIPv4PortMap[TRANSPORT_INDEX_UDP].find(m_liveInterfaces[i].m_interfaceAddr.ToString()) != m_priorUnreliableIPv4PortMap[TRANSPORT_INDEX_UDP].end()) {
+                unreliableTransportPort = m_priorUnreliableIPv4PortMap[TRANSPORT_INDEX_UDP][m_liveInterfaces[i].m_interfaceAddr.ToString()];
+            }
+        }
+
+        if (!reliableTransportPort && !unreliableTransportPort) {
+            continue;
+        }
+
         //
         // Do the version-specific rewriting of the addresses/ports in this NS/MDNS packet.
         //

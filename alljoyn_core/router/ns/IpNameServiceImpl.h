@@ -1263,6 +1263,8 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     std::map<qcc::String, uint16_t> m_reliableIPv4PortMap[N_TRANSPORTS];
 
+    std::map<qcc::String, uint16_t> m_priorReliableIPv4PortMap[N_TRANSPORTS];
+
     /**
      * @internal
      * @brief The IPv4 address of the transports on this daemon that are listening for
@@ -1284,6 +1286,8 @@ class IpNameServiceImpl : public qcc::Thread {
      * for unreliable (UDP) inbound connections over IPv4.
      */
     std::map<qcc::String, uint16_t> m_unreliableIPv4PortMap[N_TRANSPORTS];
+
+    std::map<qcc::String, uint16_t> m_priorUnreliableIPv4PortMap[N_TRANSPORTS];
 
     /**
      * @internal
