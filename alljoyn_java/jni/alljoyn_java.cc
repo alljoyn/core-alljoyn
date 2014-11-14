@@ -1243,6 +1243,183 @@ static jobject JStatus(QStatus status)
     return CallStaticObjectMethod(env, CLS_Status, mid, status);
 }
 
+class JBusAttachment;
+
+/**
+ * This is classes primary responsibility is to convert the value returned from
+ * the Java AboutDataListener to a C++ values expected for a C++ AboutDataListener
+ *
+ * This class also implements the C++ AboutObj so that for every Java AboutObj
+ * an instance of this AboutDataListener also exists.
+ */
+class JAboutObject : public AboutObj, public AboutDataListener {
+  public:
+    JAboutObject(JBusAttachment* bus, AnnounceFlag isAboutIntfAnnounced) :
+        AboutObj(*reinterpret_cast<BusAttachment*>(bus), isAboutIntfAnnounced), busPtr(bus) {
+        QCC_DbgPrintf(("JAboutObject::JAboutObject"));
+        MID_getAboutData = NULL;
+        MID_getAnnouncedAboutData = NULL;
+        jaboutDataListenerRef = NULL;
+        jaboutObjGlobalRef = NULL;
+    }
+
+    QStatus announce(JNIEnv* env, jobject thiz, jshort sessionPort, jobject jaboutDataListener) {
+        // Make sure the jaboutDataListener is the latest version of the Java AboutDataListener
+        if (env->IsInstanceOf(jaboutDataListener, CLS_AboutDataListener)) {
+            JLocalRef<jclass> clazz = env->GetObjectClass(jaboutDataListener);
+
+            MID_getAboutData = env->GetMethodID(clazz, "getAboutData", "(Ljava/lang/String;)Ljava/util/Map;");
+            if (!MID_getAboutData) {
+                return ER_FAIL;
+            }
+            MID_getAnnouncedAboutData = env->GetMethodID(clazz, "getAnnouncedAboutData", "()Ljava/util/Map;");
+            if (!MID_getAnnouncedAboutData) {
+                return ER_FAIL;
+            }
+        } else {
+            return ER_FAIL;
+        }
+        QCC_DbgPrintf(("AboutObj_announce jaboutDataListener is an instance of CLS_AboutDataListener"));
+
+
+        /*
+         * The weak global reference jaboutDataListener cannot be directly used.  We
+         * have to get a "hard" reference to it and then use that.  If you try to
+         * use a weak reference directly you will crash and burn.
+         */
+        //The user can change the AboutDataListener between calls check to see
+        // we already have a a jaboutDataListenerRef if we do delete that ref
+        // and create a new one.
+        if (jaboutDataListenerRef != NULL) {
+            GetEnv()->DeleteGlobalRef(jaboutDataListenerRef);
+            jaboutDataListenerRef = NULL;
+        }
+        jaboutDataListenerRef = env->NewGlobalRef(jaboutDataListener);
+        if (!jaboutDataListenerRef) {
+            QCC_LogError(ER_FAIL, ("Can't get new local reference to AboutDataListener"));
+            return ER_FAIL;
+        }
+
+        return Announce(static_cast<SessionPort>(sessionPort), *this);
+    }
+
+    ~JAboutObject() {
+        QCC_DbgPrintf(("JAboutObject::~JAboutObject"));
+        if (jaboutDataListenerRef != NULL) {
+            GetEnv()->DeleteGlobalRef(jaboutDataListenerRef);
+            jaboutDataListenerRef = NULL;
+        }
+    }
+
+    QStatus GetAboutData(MsgArg* msgArg, const char* language)
+    {
+        QCC_DbgPrintf(("JAboutObject::GetMsgArg"));
+
+        /*
+         * JScopedEnv will automagically attach the JVM to the current native
+         * thread.
+         */
+        JScopedEnv env;
+
+        // Note we don't check that if the jlanguage is null because null is an
+        // acceptable value for the getAboutData Method call.
+        JLocalRef<jstring> jlanguage = env->NewStringUTF(language);
+
+        QStatus status = ER_FAIL;
+        if (jaboutDataListenerRef != NULL && MID_getAboutData != NULL) {
+            QCC_DbgPrintf(("Calling getAboutData for %s language.", language));
+            JLocalRef<jobject> jannounceArg = CallObjectMethod(env, jaboutDataListenerRef, MID_getAboutData, (jstring)jlanguage);
+            QCC_DbgPrintf(("JAboutObj::GetMsgArg Made Java Method call getAboutData"));
+            // check for ErrorReplyBusException exception
+            status = CheckForThrownException(env);
+            if (ER_OK == status) {
+                // Marshal the returned value
+                if (!Marshal("a{sv}", jannounceArg, msgArg)) {
+                    QCC_LogError(ER_FAIL, ("JAboutData(): GetMsgArgAnnounce() marshaling error"));
+                    return ER_FAIL;
+                }
+            } else {
+                QCC_DbgPrintf(("JAboutObj::GetMsgArg exception with status %s", QCC_StatusText(status)));
+                return status;
+            }
+        }
+        return ER_OK;
+    }
+
+    QStatus GetAnnouncedAboutData(MsgArg* msgArg)
+    {
+        QCC_DbgPrintf(("JAboutObject::~GetMsgArgAnnounce"));
+        QStatus status = ER_FAIL;
+        if (jaboutDataListenerRef != NULL && MID_getAnnouncedAboutData != NULL) {
+            QCC_DbgPrintf(("AboutObj_announce obtained jo local ref of jaboutDataListener"));
+            /*
+             * JScopedEnv will automagically attach the JVM to the current native
+             * thread.
+             */
+            JScopedEnv env;
+
+            JLocalRef<jobject> jannounceArg = CallObjectMethod(env, jaboutDataListenerRef, MID_getAnnouncedAboutData);
+            QCC_DbgPrintf(("AboutObj_announce Made Java Method call getAnnouncedAboutData"));
+            // check for ErrorReplyBusException exception
+            status = CheckForThrownException(env);
+            if (ER_OK == status) {
+                if (!Marshal("a{sv}", jannounceArg, msgArg)) {
+                    QCC_LogError(ER_FAIL, ("JAboutData(): GetMsgArgAnnounce() marshaling error"));
+                    return ER_FAIL;
+                }
+            } else {
+                QCC_DbgPrintf(("JAboutObj::GetAnnouncedAboutData exception with status %s", QCC_StatusText(status)));
+                return status;
+            }
+        }
+        return status;
+    }
+
+    /**
+     * This will check if the last method call threw an exception Since we are
+     * looking for ErrorReplyBusExceptions we know that the exception thrown
+     * correlates to a QStatus that we are trying to get.  If ER_FAIL is returned
+     * then we had an issue resolving the java method calls.
+     *
+     * @return QStatus indicating the status that was thrown from the ErrReplyBusException
+     */
+    QStatus CheckForThrownException(JScopedEnv& env) {
+        JLocalRef<jthrowable> ex = env->ExceptionOccurred();
+        if (ex) {
+            env->ExceptionClear();
+            JLocalRef<jclass> clazz = env->GetObjectClass(ex);
+            if (env->IsInstanceOf(ex, CLS_ErrorReplyBusException) && clazz != NULL) {
+                jmethodID mid = env->GetMethodID(clazz, "getErrorStatus", "()Lorg/alljoyn/bus/Status;");
+                if (!mid) {
+                    return ER_FAIL;
+                }
+                JLocalRef<jobject> jstatus = CallObjectMethod(env, ex, mid);
+                if (env->ExceptionCheck()) {
+                    return ER_FAIL;
+                }
+                JLocalRef<jclass> statusClazz = env->GetObjectClass(jstatus);
+                mid = env->GetMethodID(statusClazz, "getErrorCode", "()I");
+                if (!mid) {
+                    return ER_FAIL;
+                }
+                QStatus errorCode = (QStatus)env->CallIntMethod(jstatus, mid);
+                if (env->ExceptionCheck()) {
+                    return ER_FAIL;
+                }
+                return errorCode;
+            }
+            return ER_FAIL;
+        }
+        return ER_OK;
+    }
+    JBusAttachment* busPtr;
+    jmethodID MID_getAboutData;
+    jmethodID MID_getAnnouncedAboutData;
+    jobject jaboutDataListenerRef;
+    Mutex jaboutObjGlobalRefLock;
+    jobject jaboutObjGlobalRef;
+};
+
 class JBusObject;
 class JSignalHandler;
 class JKeyStoreListener;
@@ -1326,6 +1503,13 @@ class JBusAttachment : public BusAttachment {
      * Java Object set in jauthListenerRef.
      */
     JAuthListener* authListener;
+
+    /**
+     * The single (optional) C++ backing class for JAboutObject. The aboutObj
+     * contain a global ref jaboutObjGlobalRef that must be cleared when the
+     * BusAttachment is disconnected.
+     */
+    JAboutObject* aboutObj;
 
     /**
      * A JNI strong global reference to The single (optional) Java AuthListener
@@ -4124,6 +4308,7 @@ JBusAttachment::JBusAttachment(const char* applicationName, bool allowRemoteMess
     keyStoreListener(NULL),
     jkeyStoreListenerRef(NULL),
     authListener(NULL),
+    aboutObj(NULL),
     jauthListenerRef(NULL),
     refCount(1)
 {
@@ -4409,6 +4594,15 @@ void JBusAttachment::Disconnect(const char* connectArgs)
     keyStoreListener = NULL;
     QCC_DbgPrintf(("JBusAttachment::Disconnect(): Forgetting jkeyStoreListenerRef"));
     env->DeleteGlobalRef(jkeyStoreListenerRef);
+
+    if (aboutObj != NULL) {
+        aboutObj->jaboutObjGlobalRefLock.Lock();
+        if (aboutObj->jaboutObjGlobalRef != NULL) {
+            env->DeleteGlobalRef(aboutObj->jaboutObjGlobalRef);
+            aboutObj->jaboutObjGlobalRef = NULL;
+        }
+        aboutObj->jaboutObjGlobalRefLock.Unlock();
+    }
 
     QCC_DbgPrintf(("JBusAttachment::Disconnect(): Releasing Bus Attachment common lock"));
     baCommonLock.Unlock();
@@ -12465,177 +12659,6 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_Translator_destroy(JNIEnv* env, jobj
     return;
 }
 
-/**
- * This is classes primary responsibility is to convert the value returned from
- * the Java AboutDataListener to a C++ values expected for a C++ AboutDataListener
- *
- * This class also implements the C++ AboutObj so that for every Java AboutObj
- * an instance of this AboutDataListener also exists.
- */
-class JAboutObject : public AboutObj, public AboutDataListener {
-  public:
-    JAboutObject(BusAttachment& bus, AnnounceFlag isAboutIntfAnnounced) :
-        AboutObj(bus, isAboutIntfAnnounced) {
-        QCC_DbgPrintf(("JAboutObject::JAboutObject"));
-        MID_getAboutData = NULL;
-        MID_getAnnouncedAboutData = NULL;
-        jaboutDataListenerRef = NULL;
-    }
-
-    QStatus announce(JNIEnv* env, jobject thiz, jshort sessionPort, jobject jaboutDataListener) {
-        // Make sure the jaboutDataListener is the latest version of the Java AboutDataListener
-        if (env->IsInstanceOf(jaboutDataListener, CLS_AboutDataListener)) {
-            JLocalRef<jclass> clazz = env->GetObjectClass(jaboutDataListener);
-
-            MID_getAboutData = env->GetMethodID(clazz, "getAboutData", "(Ljava/lang/String;)Ljava/util/Map;");
-            if (!MID_getAboutData) {
-                return ER_FAIL;
-            }
-            MID_getAnnouncedAboutData = env->GetMethodID(clazz, "getAnnouncedAboutData", "()Ljava/util/Map;");
-            if (!MID_getAnnouncedAboutData) {
-                return ER_FAIL;
-            }
-        } else {
-            return ER_FAIL;
-        }
-        QCC_DbgPrintf(("AboutObj_announce jaboutDataListener is an instance of CLS_AboutDataListener"));
-
-
-        /*
-         * The weak global reference jaboutDataListener cannot be directly used.  We
-         * have to get a "hard" reference to it and then use that.  If you try to
-         * use a weak reference directly you will crash and burn.
-         */
-        //The user can change the AboutDataListener between calls check to see
-        // we already have a a jaboutDataListenerRef if we do delete that ref
-        // and create a new one.
-        if (jaboutDataListenerRef != NULL) {
-            GetEnv()->DeleteGlobalRef(jaboutDataListenerRef);
-            jaboutDataListenerRef = NULL;
-        }
-        jaboutDataListenerRef = env->NewGlobalRef(jaboutDataListener);
-        if (!jaboutDataListenerRef) {
-            QCC_LogError(ER_FAIL, ("Can't get new local reference to AboutDataListener"));
-            return ER_FAIL;
-        }
-
-        return Announce(static_cast<SessionPort>(sessionPort), *this);
-    }
-
-    ~JAboutObject() {
-        QCC_DbgPrintf(("JAboutObject::~JAboutObject"));
-        if (jaboutDataListenerRef != NULL) {
-            GetEnv()->DeleteGlobalRef(jaboutDataListenerRef);
-            jaboutDataListenerRef = NULL;
-        }
-    }
-
-    QStatus GetAboutData(MsgArg* msgArg, const char* language)
-    {
-        QCC_DbgPrintf(("JAboutObject::GetMsgArg"));
-
-        /*
-         * JScopedEnv will automagically attach the JVM to the current native
-         * thread.
-         */
-        JScopedEnv env;
-
-        // Note we don't check that if the jlanguage is null because null is an
-        // acceptable value for the getAboutData Method call.
-        JLocalRef<jstring> jlanguage = env->NewStringUTF(language);
-
-        QStatus status = ER_FAIL;
-        if (jaboutDataListenerRef != NULL && MID_getAboutData != NULL) {
-            QCC_DbgPrintf(("Calling getAboutData for %s language.", language));
-            JLocalRef<jobject> jannounceArg = CallObjectMethod(env, jaboutDataListenerRef, MID_getAboutData, (jstring)jlanguage);
-            QCC_DbgPrintf(("JAboutObj::GetMsgArg Made Java Method call getAboutData"));
-            // check for ErrorReplyBusException exception
-            status = CheckForThrownException(env);
-            if (ER_OK == status) {
-                // Marshal the returned value
-                if (!Marshal("a{sv}", jannounceArg, msgArg)) {
-                    QCC_LogError(ER_FAIL, ("JAboutData(): GetMsgArgAnnounce() marshaling error"));
-                    return ER_FAIL;
-                }
-            } else {
-                QCC_DbgPrintf(("JAboutObj::GetMsgArg exception with status %s", QCC_StatusText(status)));
-                return status;
-            }
-        }
-        return ER_OK;
-    }
-
-    QStatus GetAnnouncedAboutData(MsgArg* msgArg)
-    {
-        QCC_DbgPrintf(("JAboutObject::~GetMsgArgAnnounce"));
-        QStatus status = ER_FAIL;
-        if (jaboutDataListenerRef != NULL && MID_getAnnouncedAboutData != NULL) {
-            QCC_DbgPrintf(("AboutObj_announce obtained jo local ref of jaboutDataListener"));
-            /*
-             * JScopedEnv will automagically attach the JVM to the current native
-             * thread.
-             */
-            JScopedEnv env;
-
-            JLocalRef<jobject> jannounceArg = CallObjectMethod(env, jaboutDataListenerRef, MID_getAnnouncedAboutData);
-            QCC_DbgPrintf(("AboutObj_announce Made Java Method call getAnnouncedAboutData"));
-            // check for ErrorReplyBusException exception
-            status = CheckForThrownException(env);
-            if (ER_OK == status) {
-                if (!Marshal("a{sv}", jannounceArg, msgArg)) {
-                    QCC_LogError(ER_FAIL, ("JAboutData(): GetMsgArgAnnounce() marshaling error"));
-                    return ER_FAIL;
-                }
-            } else {
-                QCC_DbgPrintf(("JAboutObj::GetAnnouncedAboutData exception with status %s", QCC_StatusText(status)));
-                return status;
-            }
-        }
-        return status;
-    }
-
-    /**
-     * This will check if the last method call threw an exception Since we are
-     * looking for ErrorReplyBusExceptions we know that the exception thrown
-     * correlates to a QStatus that we are trying to get.  If ER_FAIL is returned
-     * then we had an issue resolving the java method calls.
-     *
-     * @return QStatus indicating the status that was thrown from the ErrReplyBusException
-     */
-    QStatus CheckForThrownException(JScopedEnv& env) {
-        JLocalRef<jthrowable> ex = env->ExceptionOccurred();
-        if (ex) {
-            env->ExceptionClear();
-            JLocalRef<jclass> clazz = env->GetObjectClass(ex);
-            if (env->IsInstanceOf(ex, CLS_ErrorReplyBusException) && clazz != NULL) {
-                jmethodID mid = env->GetMethodID(clazz, "getErrorStatus", "()Lorg/alljoyn/bus/Status;");
-                if (!mid) {
-                    return ER_FAIL;
-                }
-                JLocalRef<jobject> jstatus = CallObjectMethod(env, ex, mid);
-                if (env->ExceptionCheck()) {
-                    return ER_FAIL;
-                }
-                JLocalRef<jclass> statusClazz = env->GetObjectClass(jstatus);
-                mid = env->GetMethodID(statusClazz, "getErrorCode", "()I");
-                if (!mid) {
-                    return ER_FAIL;
-                }
-                QStatus errorCode = (QStatus)env->CallIntMethod(jstatus, mid);
-                if (env->ExceptionCheck()) {
-                    return ER_FAIL;
-                }
-                return errorCode;
-            }
-            return ER_FAIL;
-        }
-        return ER_OK;
-    }
-    jmethodID MID_getAboutData;
-    jmethodID MID_getAnnouncedAboutData;
-    jobject jaboutDataListenerRef;
-};
-
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_AboutObj_create(JNIEnv* env, jobject thiz, jobject jbus, jboolean isAboutAnnounced)
 {
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(jbus);
@@ -12647,10 +12670,18 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_AboutObj_create(JNIEnv* env, jobject
 
     JAboutObject* aboutObj;
     if (isAboutAnnounced == JNI_TRUE) {
-        aboutObj = new JAboutObject(*busPtr, BusObject::ANNOUNCED);
+        aboutObj = new JAboutObject(busPtr, BusObject::ANNOUNCED);
     } else {
-        aboutObj = new JAboutObject(*busPtr, BusObject::UNANNOUNCED);
+        aboutObj = new JAboutObject(busPtr, BusObject::UNANNOUNCED);
     }
+    // Make the JAboutObj Accessable to the BusAttachment so it can be used
+    // by the BusAttachment to Release the global ref contained in the JAboutObject
+    // when the BusAttachment shuts down.
+    aboutObj->busPtr->aboutObj = aboutObj;
+    // Incrament the ref so the BusAttachment will not be deleted before the About
+    // Object.
+    aboutObj->busPtr->IncRef();
+
     SetHandle(thiz, aboutObj);
 }
 
@@ -12669,6 +12700,10 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_AboutObj_destroy(JNIEnv* env, jobjec
         return;
     }
 
+    //Remove the BusAttachments pointer to the JAboutObject
+    aboutObj->busPtr->aboutObj = NULL;
+    // Decrament the ref pointer so the BusAttachment can be released.
+    aboutObj->busPtr->DecRef();
     delete aboutObj;
     aboutObj = NULL;
 
@@ -12678,21 +12713,35 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_AboutObj_destroy(JNIEnv* env, jobjec
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_announce(JNIEnv* env, jobject thiz, jshort sessionPort, jobject jaboutDataListener)
 {
     QCC_DbgPrintf(("AboutObj_announce"));
+
     QStatus status = ER_FAIL;
     JAboutObject* aboutObj = GetHandle<JAboutObject*>(thiz);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("AboutObj_announce(): Exception"));
         return JStatus(status);
     }
+    // if we don't already have a GlobalRef obtain a GlobalRef
+    aboutObj->jaboutObjGlobalRefLock.Lock();
+    if (aboutObj->jaboutObjGlobalRef == NULL) {
+        aboutObj->jaboutObjGlobalRef = env->NewGlobalRef(thiz);
+    }
+    aboutObj->jaboutObjGlobalRefLock.Unlock();
     return JStatus(aboutObj->announce(env, thiz, sessionPort, jaboutDataListener));
 }
 
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_cancelAnnouncement(JNIEnv* env, jobject thiz) {
-    AboutObj* aboutObj = GetHandle<AboutObj*>(thiz);
+    JAboutObject* aboutObj = GetHandle<JAboutObject*>(thiz);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("AboutObj_cancelAnnouncement(): Exception"));
         return JStatus(ER_FAIL);
     }
+    // Release the GlobalRef it will be re-obtained if announce is called again
+    aboutObj->jaboutObjGlobalRefLock.Lock();
+    if (aboutObj->jaboutObjGlobalRef != NULL) {
+        env->DeleteGlobalRef(aboutObj->jaboutObjGlobalRef);
+        aboutObj->jaboutObjGlobalRef = NULL;
+    }
+    aboutObj->jaboutObjGlobalRefLock.Unlock();
     return JStatus(aboutObj->CancelAnnouncement());
 }
 

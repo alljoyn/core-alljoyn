@@ -43,6 +43,7 @@ public class AboutListenerTest  extends TestCase {
     public void tearDown() throws Exception {
         serviceBus.disconnect();
         serviceBus.release();
+        System.gc();
     }
 
     public class AboutListenerTestSessionPortListener extends SessionPortListener {

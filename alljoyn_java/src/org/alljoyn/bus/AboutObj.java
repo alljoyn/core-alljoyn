@@ -58,6 +58,12 @@ public class AboutObj {
 
     public native Status announce(short sessionPort, AboutDataListener aboutData);
 
+    /**
+     * Cancel the last announce signal sent. If no signals have been sent this
+     * method call will return.
+     *
+     * @return Status.OK on success
+     */
     public native Status cancelAnnouncement();
 
     /**

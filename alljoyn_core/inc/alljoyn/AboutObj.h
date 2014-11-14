@@ -42,12 +42,14 @@ class AboutObj : public BusObject {
     /**
      * create a new About class
      *
-     * The about class is responsible for transmitting information about the
+     * This will also register the About BusObject on the passed in BusAttachment
+     *
+     * The AboutObj class is responsible for transmitting information about the
      * interfaces that are available for other applications to use. It also
      * provides application specific information that is contained in the
      * AboutDataListener class
      *
-     * It also provides mean for applications to respond to certain requests
+     * It also provides means for applications to respond to certain requests
      * concerning the interfaces.
      *
      * By default the org.alljoyn.About interface is excluded from the list of
