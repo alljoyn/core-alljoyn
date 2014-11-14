@@ -2933,7 +2933,7 @@ QStatus ARDP_Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t segmax, u
 {
     QCC_DbgTrace(("ARDP_Accept(handle=%p, conn=%p, segmax=%d, segbmax=%d, buf=%p (%s), len=%d)",
                   handle, conn, segmax, segbmax, buf, buf, len));
-    QStatus status;
+    QStatus status = ER_OK;
     if (!IsConnValid(handle, conn)) {
         return ER_ARDP_INVALID_CONNECTION;
     }
