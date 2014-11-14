@@ -125,30 +125,9 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
         processed++;
     }
 
-    uint32_t startTime = 0;
-    if (pTval) {
-        startTime = GetTimestamp();
-    }
-
     evt.IncrementNumThreads();
 
     int ret = kevent(kq, chlist, processed, evlist, processed,  pTval);
-    while (ret < 0 && errno == EINTR) {
-        if (pTval) {
-            uint32_t now = GetTimestamp();
-            if ((now - startTime) < (uint32_t) (tval.tv_sec * 1000 + tval.tv_nsec / 1000000)) {
-                tval.tv_sec -= ((now - startTime) / 1000);
-                tval.tv_nsec -= (1000000 * ((now - startTime) % 1000));
-                pTval = &tval;
-            } else {
-                tval.tv_sec = 0;
-                tval.tv_nsec = 0;
-                pTval = &tval;
-            }
-            startTime = GetTimestamp();
-        }
-        ret = kevent(kq, chlist, processed, evlist, processed,  pTval);
-    }
 
     evt.DecrementNumThreads();
 
@@ -274,30 +253,10 @@ QStatus Event::Wait(Event& evt, uint32_t maxWaitMs)
         }
     }
 
-    uint32_t startTime = 0;
-    if (pTval) {
-        startTime = GetTimestamp();
-    }
-
     evt.IncrementNumThreads();
 
     int ret = epoll_wait(epollfd, events, 2, pTval ? ((pTval->tv_sec * 1000) + (pTval->tv_usec / 1000)) : -1);
-    while (ret < 0 && errno == EINTR) {
-        if (pTval) {
-            uint32_t now = GetTimestamp();
-            if ((now - startTime) < (uint32_t) (tval.tv_sec * 1000 + tval.tv_usec / 1000)) {
-                tval.tv_sec -= ((now - startTime) / 1000);
-                tval.tv_usec -= (1000 * ((now - startTime) % 1000));
-                pTval = &tval;
-            } else {
-                tval.tv_sec = 0;
-                tval.tv_usec = 0;
-                pTval = &tval;
-            }
-            startTime = GetTimestamp();
-        }
-        ret = epoll_wait(epollfd, events, 2, pTval ? ((pTval->tv_sec * 1000) + (pTval->tv_usec / 1000)) : -1);
-    }
+
     evt.DecrementNumThreads();
 
     if (0 < ret && 0 <= stopFd) {
@@ -400,28 +359,7 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
         }
     }
 
-    uint32_t startTime = 0;
-    if (pTval) {
-        startTime = GetTimestamp();
-    }
-
     int ret = kevent(kq, chlist, processed, evlist, processed,  pTval);
-    while (ret < 0 && errno == EINTR) {
-        if (pTval) {
-            uint32_t now = GetTimestamp();
-            if ((now - startTime) < (uint32_t) (tval.tv_sec * 1000 + tval.tv_nsec / 1000000)) {
-                tval.tv_sec -= ((now - startTime) / 1000);
-                tval.tv_nsec -= (1000000 * ((now - startTime) % 1000));
-                pTval = &tval;
-            } else {
-                tval.tv_sec = 0;
-                tval.tv_nsec = 0;
-                pTval = &tval;
-            }
-            startTime = GetTimestamp();
-        }
-        ret = kevent(kq, chlist, processed, evlist, processed,  pTval);
-    }
 
     if (0 <= ret) {
         for (int n = 0; n < ret; ++n) {
@@ -587,28 +525,7 @@ QStatus Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& signaledE
         }
     }
 
-    uint32_t startTime = 0;
-    if (pTval) {
-        startTime = GetTimestamp();
-    }
-
     int ret = epoll_wait(epollfd, events, size, pTval ? ((pTval->tv_sec * 1000) + (pTval->tv_usec / 1000)) : -1);
-    while (ret < 0 && errno == EINTR) {
-        if (pTval) {
-            uint32_t now = GetTimestamp();
-            if ((now - startTime) < (uint32_t) (tval.tv_sec * 1000 + tval.tv_usec / 1000)) {
-                tval.tv_sec -= ((now - startTime) / 1000);
-                tval.tv_usec -= (1000 * ((now - startTime) % 1000));
-                pTval = &tval;
-            } else {
-                tval.tv_sec = 0;
-                tval.tv_usec = 0;
-                pTval = &tval;
-            }
-            startTime = GetTimestamp();
-        }
-        ret = epoll_wait(epollfd, events, size, pTval ? ((pTval->tv_sec * 1000) + (pTval->tv_usec / 1000)) : -1);
-    }
 
     if (0 <= ret) {
         for (int n = 0; n < ret; ++n) {
