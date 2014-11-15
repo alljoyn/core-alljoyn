@@ -8848,9 +8848,36 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     }
 
     /*
-     * Now, we have to figure out which of the current sockets we are listening
-     * on corresponds to the network of the address in the connect spec in order
-     * to send the connect request out on the right network.
+     * Now, we have to figure out which socket to use for the connect.  In the
+     * TCP Transport we would typcially create a new socket here; but we want to
+     * re-use an existing socket to save resources.
+     *
+     * In the Routing Node configuration, we expect to see some number of listen
+     * specs.  TCP interprets these as having IP addresses or interfaces and
+     * ports on which we want to listen for incoming connections.  In the UDP
+     * Transport, we create a socket for each of these interfaces and listen for
+     * incoming UDP datagrams on them.  Currently, the only configuration used
+     * is one listen spec that specifies INADDR_ANY (accept datagrams from all
+     * interfaces).  There is the possibility that multiple listen specs could
+     * be used to bind only to specific interfaces, though.  While we aren't
+     * listening for inbound connections as TCP would, the effect is the same.
+     * The action we take should therefore be conceptually similar to what TCP
+     * would do.
+     *
+     * There are therefore two cases to consider: First, if there is a socket
+     * bound to INADDR_ANY (which means that we got a listen on 0.0.0.0); and
+     * second, there are possibly multiple sockets bound to specific addresses.
+     * The upshot is that if we have a listening socket bound to INADDR_ANY we
+     * just use it.  If we don't listen to INADDR_ANY we look for a socket bound
+     * to an IP address that puts it on the same network as the destination
+     * specified for the connect.  We don't actually have to do that since UDP
+     * will route to the correct outgoing interface, but we keep the coherency
+     * to avoid nasty surprises.
+     *
+     * Note: There is a check for INADDR_ANY above, but that is a check to make
+     * sure we don't connect to ourselves inadvertently -- it includes the port
+     * number so it is not a generic test for interface.  Below, we are checking
+     * to see if any of our sockets is bound to INADDR_ANY irrespective of port.
      */
     qcc::SocketFd sock = 0;
     bool foundSock = false;
@@ -8867,8 +8894,21 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         QCC_DbgPrintf(("UDPTransport::Connect(): Check out local address \"%s\"", listenAddr.ToString().c_str()));
 
         /*
-         * Find the corresponding interface information in the IfConfig entries.
-         * We need the network mask from that entry so we can see if
+         * If we encounter a socket bound to INADDR_ANY, we use it per the
+         * simple "rules" above.
+         */
+        if (listenAddr.ToString() == "0.0.0.0") {
+            sock = i->second;
+            foundSock = true;
+            QCC_DbgPrintf(("UDPTransport::Connect(): Found socket (%d.) listening on INADDR_ANY", sock));
+            break;
+        }
+
+        /*
+         * If this isn't a socket bound to INADDR_ANY it must be bound to a
+         * specific interface.  Find the corresponding interface information in
+         * the IfConfig entries.  We need the network mask from that entry so we
+         * can see if the network numbers match.
          *
          * TODO: what if we have multiple interfaces with the same network
          * number i.e. 192.168.1.x?  The advertisement will have come in over
@@ -8910,6 +8950,13 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         if (network1 == network2) {
             QCC_DbgPrintf(("UDPTransport::Connect(): network \"%s\" matches network \"%s\"",
                            IPAddress(network1).ToString().c_str(), IPAddress(network2).ToString().c_str()));
+            /*
+             * Mark the socket as found, but don't break here in case there is a
+             * socket bound to INADDR_ANY that happens to be later in the list.
+             * We prefer to use that one since we assume a user configured it in
+             * order to be more generic.  We do the break there so that generic
+             * choice other specific choices.
+             */
             sock = i->second;
             foundSock = true;
         } else {
