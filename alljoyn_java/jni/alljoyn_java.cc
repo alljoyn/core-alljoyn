@@ -12729,10 +12729,10 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_announce(JNIEnv* env, jo
     return JStatus(aboutObj->announce(env, thiz, sessionPort, jaboutDataListener));
 }
 
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_cancelAnnouncement(JNIEnv* env, jobject thiz) {
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_unannounce(JNIEnv* env, jobject thiz) {
     JAboutObject* aboutObj = GetHandle<JAboutObject*>(thiz);
     if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("AboutObj_cancelAnnouncement(): Exception"));
+        QCC_LogError(ER_FAIL, ("AboutObj_unannounce(): Exception"));
         return JStatus(ER_FAIL);
     }
     // Release the GlobalRef it will be re-obtained if announce is called again
@@ -12742,7 +12742,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_cancelAnnouncement(JNIEn
         aboutObj->jaboutObjGlobalRef = NULL;
     }
     aboutObj->jaboutObjGlobalRefLock.Unlock();
-    return JStatus(aboutObj->CancelAnnouncement());
+    return JStatus(aboutObj->Unannounce());
 }
 
 JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_Version_get(JNIEnv* env, jclass clazz) {

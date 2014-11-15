@@ -64,7 +64,7 @@ public class AboutObj {
      *
      * @return Status.OK on success
      */
-    public native Status cancelAnnouncement();
+    public native Status unannounce();
 
     /**
      * The opaque pointer to the underlying C++ object which is actually tied

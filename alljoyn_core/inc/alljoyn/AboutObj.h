@@ -100,9 +100,9 @@ class AboutObj : public BusObject {
      *
      * @return
      *     - ER_OK on success
-     *     - annother status indicating failure.
+     *     - another status indicating failure.
      */
-    QStatus CancelAnnouncement();
+    QStatus Unannounce();
   private:
     /**
      * Handles  GetAboutData method

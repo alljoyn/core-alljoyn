@@ -89,6 +89,6 @@
  *     - annother status indicating failure.
  */
 
-- (QStatus)cancelAnnouncement;
+- (QStatus)unannounce;
 
 @end

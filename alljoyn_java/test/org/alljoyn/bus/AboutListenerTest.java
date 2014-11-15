@@ -209,7 +209,7 @@ public class AboutListenerTest  extends TestCase {
         clientBus.release();
     }
 
-    public void testCancelAnnouncement() {
+    public void testUnannounce() {
         BusAttachment clientBus = new BusAttachment("AboutListenerTestClient", RemoteMessage.Receive);
 
         assertEquals(Status.OK, clientBus.connect());
@@ -251,7 +251,7 @@ public class AboutListenerTest  extends TestCase {
         assertTrue(aboutPathFound);
         assertTrue(aboutInterfaceFound);
 
-        assertEquals(Status.OK, aboutObj.cancelAnnouncement());
+        assertEquals(Status.OK, aboutObj.unannounce());
         assertEquals(Status.OK, clientBus.cancelWhoImplements(new String[] {"org.alljoyn.About"}));
         clientBus.disconnect();
         clientBus.release();
