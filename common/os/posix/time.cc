@@ -40,7 +40,7 @@ const qcc::Timespec qcc::Timespec::Zero;
 
 using namespace qcc;
 
-static void platform_gettime(struct timespec* ts)
+static void platform_gettime(struct timespec* ts, bool useMonotonic)
 {
 #if defined(QCC_OS_DARWIN)
     clock_serv_t cclock;
@@ -52,7 +52,7 @@ static void platform_gettime(struct timespec* ts)
     ts->tv_nsec = mts.tv_nsec;
 
 #else
-    clock_gettime(CLOCK_MONOTONIC, ts);
+    clock_gettime(useMonotonic ? CLOCK_MONOTONIC : CLOCK_REALTIME, ts);
 #endif
 }
 
@@ -63,7 +63,7 @@ uint32_t qcc::GetTimestamp(void)
     struct timespec ts;
     uint32_t ret_val;
 
-    platform_gettime(&ts);
+    platform_gettime(&ts, true);
 
     if (0 == s_clockOffset) {
         s_clockOffset = ts.tv_sec;
@@ -80,7 +80,7 @@ uint64_t qcc::GetTimestamp64(void)
     struct timespec ts;
     uint64_t ret_val;
 
-    platform_gettime(&ts);
+    platform_gettime(&ts, true);
 
     if (0 == s_clockOffset) {
         s_clockOffset = ts.tv_sec;
@@ -92,10 +92,23 @@ uint64_t qcc::GetTimestamp64(void)
     return ret_val;
 }
 
+uint64_t qcc::GetEpochTimestamp(void)
+{
+    struct timespec ts;
+    uint64_t ret_val;
+
+    platform_gettime(&ts, false);
+
+    ret_val = ((uint64_t)(ts.tv_sec)) * 1000;
+    ret_val += (uint64_t)ts.tv_nsec / 1000000;
+
+    return ret_val;
+}
+
 void qcc::GetTimeNow(Timespec* ts)
 {
     struct timespec _ts;
-    platform_gettime(&_ts);
+    platform_gettime(&_ts, true);
     ts->seconds = _ts.tv_sec;
     ts->mseconds = _ts.tv_nsec / 1000000;
 }

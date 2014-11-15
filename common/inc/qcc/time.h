@@ -5,7 +5,7 @@
  */
 
 /******************************************************************************
- * Copyright (c) 2009-2011, AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2009-2011, 2014, AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -121,6 +121,12 @@ uint32_t GetTimestamp(void);
  * @return  timestamp in milliseconds.
  */
 uint64_t GetTimestamp64(void);
+
+/**
+ * Return (non-absolute) timestamp in milliseconds since Epoch.
+ * @return  timestamp in milliseconds.
+ */
+uint64_t GetEpochTimestamp(void);
 
 /**
  * Return a formatted string for current UTC date and time. Format conforms to RFC 1123
