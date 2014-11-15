@@ -43,7 +43,7 @@ using namespace ajn;
 
 class ClientSetup : public MessageReceiver {
   public:
-    ClientSetup(const char* default_bus_addr);
+    ClientSetup(const char* default_bus_addr, const char* wellKnownName);
 
     BusAttachment* getClientMsgBus();
     qcc::String getClientArgs();
@@ -66,7 +66,6 @@ class ClientSetup : public MessageReceiver {
     const char* getClientDummyInterfaceName1() const;
     const char* getClientDummyInterfaceName2() const;
     const char* getClientDummyInterfaceName3() const;
-    const char* getClientWellknownName() const;
     const char* getClientObjectPath() const;
 
     const char* getClientValuesInterfaceName() const;
@@ -78,6 +77,7 @@ class ClientSetup : public MessageReceiver {
     int g_Signal_flag;
     BusAttachment clientMsgBus;
     qcc::String clientArgs;
+    qcc::String wellKnownName;
 };
 
 #endif
