@@ -124,7 +124,7 @@ typedef struct ARDP_SEND_BUF {
     ArdpTimer timer;
     uint16_t fastRT;
     uint16_t retransmits;
-    bool inUse;;
+    bool inUse;
 } ArdpSndBuf;
 
 /**
@@ -2494,6 +2494,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 #if ARDP_STATS
                     ++handle->stats.acceptCbs;
 #endif
+
                     if (handle->cb.AcceptCb(handle, conn->ipAddr, conn->ipPort, conn, data, seg->DLEN, ER_OK) == false) {
                         QCC_DbgPrintf(("ArdpMachine(): LISTEN: SYN received. AcceptCb() returned \"false\""));
 #if ARDP_STATS
@@ -2900,6 +2901,8 @@ QStatus ARDP_Connect(ArdpHandle* handle, qcc::SocketFd sock, qcc::IPAddress ipAd
     ArdpConnRecord* conn;
     QStatus status;
 
+    *pConn = NULL;
+
     if (!CheckConfigValid(segmax, segbmax, ARDP_MAX_WINDOW_SIZE)) {
         return ER_INVALID_CONFIG;
     }
@@ -2960,8 +2963,13 @@ QStatus ARDP_Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t segmax, u
         ++handle->stats.rstSends;
 #endif
         Send(handle, conn, ARDP_FLAG_RST | ARDP_FLAG_VER, conn->snd.NXT, 0);
-        SetState(conn, CLOSED);
-        DelConnRecord(handle, conn, false);
+
+        /*
+         * Important!!! Current assumption is that ARDP_Accept() is being called from within AcceptCb()
+         * in transport layer. If this is ever to change (i.e., ARDP_Accept() is moved outside AcceptCb(),
+         * then connection state should be set to CLOSED and connection record is removed here.
+         */
+
         return status;
     }
 
@@ -3154,6 +3162,7 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
                             status = Accept(handle, conn, buf, nbytes);
                         }
                         if (status != ER_OK) {
+                            SetState(conn, CLOSED);
                             DelConnRecord(handle, conn, false);
                         }
                     } else {
