@@ -51,6 +51,11 @@
                BlueprintName = "AllJoynFrameworkTests"
                ReferencedContainer = "container:AllJoynFramework.xcodeproj">
             </BuildableReference>
+            <SkippedTests>
+               <Test
+                  Identifier = "BusAttachmentTests/testForAboutObjectDescription">
+               </Test>
+            </SkippedTests>
          </TestableReference>
       </Testables>
       <EnvironmentVariables>
@@ -72,13 +77,13 @@
       allowLocationSimulation = "YES">
       <AdditionalOptions>
          <AdditionalOption
-            key = "MallocScribble"
-            value = ""
+            key = "DYLD_INSERT_LIBRARIES"
+            value = "/usr/lib/libgmalloc.dylib"
             isEnabled = "YES">
          </AdditionalOption>
          <AdditionalOption
-            key = "DYLD_INSERT_LIBRARIES"
-            value = "/usr/lib/libgmalloc.dylib"
+            key = "NSZombieEnabled"
+            value = "YES"
             isEnabled = "YES">
          </AdditionalOption>
          <AdditionalOption
@@ -87,8 +92,8 @@
             isEnabled = "YES">
          </AdditionalOption>
          <AdditionalOption
-            key = "NSZombieEnabled"
-            value = "YES"
+            key = "MallocScribble"
+            value = ""
             isEnabled = "YES">
          </AdditionalOption>
       </AdditionalOptions>

@@ -23,7 +23,12 @@
 #import "AJNAboutIcon.h"
 #import "AJNAboutIconObject.h"
 #import "AJNAboutIconProxy.h"
+#import "AJNAboutObjectDescription.h"
 #import "BasicObject.h"
+#import "AJNMessageArgument.h"
+#import "AJNMessage.h"
+
+
 
 static NSString * const kBusAttachmentTestsAdvertisedName = @"org.alljoyn.bus.objc.tests.AReallyNiftyNameThatNoOneWillUse";
 static NSString * const kBusAttachmentTestsInterfaceName = @"org.alljoyn.bus.objc.tests.NNNNNNEEEEEEEERRRRRRRRRRDDDDDDDSSSSSSSS";
@@ -40,6 +45,9 @@ const NSTimeInterval kBusAttachmentTestsWaitTimeBeforeFailure = 10.0;
 const NSInteger kBusAttachmentTestsServicePort = 999;
 BOOL receiveAnnounce = NO;
 static NSMutableDictionary *gDefaultAboutData;
+// MAX_ICON_SIZE_IN_BYTES = ALLJOYN_MAX_ARRAY_LEN
+static const size_t MAX_ICON_SIZE_IN_BYTES = 131072;
+static const uint8_t ICON_BYTE = 0x11;
 
 @interface BusAttachmentTests() <AJNBusListener, AJNSessionListener, AJNSessionPortListener, AJNSessionDelegate, AJNPingPeerDelegate, AJNAboutDataListener, AJNAboutListener>
 
@@ -68,6 +76,11 @@ static NSMutableDictionary *gDefaultAboutData;
 @property (nonatomic) NSString *busNameToConnect;
 @property (nonatomic) AJNSessionPort sessionPortToConnect;
 @property (nonatomic) BOOL testBadAnnounceData;
+@property (nonatomic) BOOL testMissingAboutDataField;
+@property (nonatomic) BOOL testMissingAnnounceDataField;
+@property (nonatomic) BOOL testUnsupportedLanguage;
+@property (nonatomic) BOOL testNonDefaultUTFLanguage;
+
 
 - (BOOL)waitForBusToStop:(NSTimeInterval)timeoutSeconds;
 - (BOOL)waitForCompletion:(NSTimeInterval)timeoutSeconds onFlag:(BOOL*)flag;
@@ -101,6 +114,10 @@ static NSMutableDictionary *gDefaultAboutData;
 @synthesize busNameToConnect = _busNameToConnect;
 @synthesize sessionPortToConnect = _sessionPortToConnect;
 @synthesize testBadAnnounceData = _testBadAnnounceData;
+@synthesize testMissingAboutDataField = _testMissingAboutDataField;
+@synthesize testMissingAnnounceDataField = _testMissingAnnounceDataField;
+@synthesize testUnsupportedLanguage = _testUnsupportedLanguage;
+@synthesize testNonDefaultUTFLanguage = _testNonDefaultUTFLanguage;
 - (void)setUp
 {
     [super setUp];
@@ -137,6 +154,10 @@ static NSMutableDictionary *gDefaultAboutData;
     self.busNameToConnect = nil;
     self.sessionPortToConnect = nil;
     self.testBadAnnounceData = NO;
+    self.testMissingAboutDataField = NO;
+    self.testMissingAnnounceDataField = NO;
+    self.testUnsupportedLanguage = NO;
+    self.testNonDefaultUTFLanguage = NO;
 }
 
 - (void)tearDown
@@ -168,6 +189,10 @@ static NSMutableDictionary *gDefaultAboutData;
     self.busNameToConnect = nil;
     self.sessionPortToConnect = nil;
     self.testBadAnnounceData = NO;
+    self.testMissingAboutDataField = NO;
+    self.testMissingAnnounceDataField = NO;
+    self.testUnsupportedLanguage = NO;
+    self.testNonDefaultUTFLanguage = NO;
     
     self.bus = nil;    
     
@@ -1107,6 +1132,179 @@ static NSMutableDictionary *gDefaultAboutData;
     [client tearDown];
 }
 
+- (void)testShouldHandleLargeAboutIcon
+{
+    BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
+    [client setUp];
+    
+    client.isTestClient = YES;
+    client.didReceiveAnnounce = NO;
+    
+    // Service
+    BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
+    [self.bus registerBusObject:basicObject];
+    
+    QStatus status = [self.bus start];
+    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    status = [self.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    
+    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
+    
+    status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
+    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    
+    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
+    [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
+    
+    // Client
+    [client.bus registerAboutListener:client];
+    status = [client.bus start];
+    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    status = [client.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
+    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    
+    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    
+    // Service sets the About Icon
+    AJNAboutIcon *aboutIcon = [[AJNAboutIcon alloc] init];
+    status = [aboutIcon setUrlWithMimeType:@"image/png" url:@"http://www.example.com"];
+    STAssertTrue(status == ER_OK, @"Could not set Url for the About Icon");
+
+    uint8_t aboutIconContent[MAX_ICON_SIZE_IN_BYTES];
+    if (aboutIconContent) {
+        for (size_t iconByte = 0; iconByte < MAX_ICON_SIZE_IN_BYTES; iconByte++) {
+            aboutIconContent[iconByte] = ICON_BYTE;
+        }
+    }
+    
+    status = [aboutIcon setContentWithMimeType:@"image/png" data:aboutIconContent size:(sizeof(aboutIconContent) / sizeof(aboutIconContent[0])) ownsFlag:false];
+    
+    // Set AboutIconObject
+    STAssertTrue(status == ER_OK, @"Could not content for About Icon");
+    AJNAboutIconObject *aboutIconObject = [[AJNAboutIconObject alloc] initWithBusAttachment:self.bus aboutIcon:aboutIcon];
+    
+    //Client gets the About Icon
+    AJNAboutIconProxy *aboutIconProxy = [[AJNAboutIconProxy alloc] initWithBusAttachment:client.bus busName:client.busNameToConnect sessionId:client.testSessionId];
+    AJNAboutIcon *clientAboutIcon = [[AJNAboutIcon alloc] init];
+    [aboutIconProxy getIcon:clientAboutIcon];
+    
+    // Check Url
+    STAssertTrue([[clientAboutIcon getUrl] isEqualToString:[aboutIcon getUrl]], @"About Icon Url does not match");
+    
+    // Check content size
+    STAssertTrue([clientAboutIcon getContentSize] == [aboutIcon getContentSize], @"About Icon content size does not match");
+    
+    // Check About Icon content
+    uint8_t *clientAboutIconContent = [clientAboutIcon getContent];
+    
+    for (size_t i=0 ;i < [clientAboutIcon getContentSize] ; i++) {
+        STAssertTrue((clientAboutIconContent[i] == aboutIconContent[i]), @"Mistmatch in About Icon content");
+        if (clientAboutIconContent[i] != aboutIconContent[i]) {
+            break;
+        }
+        
+    }
+    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus stop];
+    
+    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus stop];
+    
+    [client.bus unregisterBusListener:self];
+    [client.bus unregisterAllAboutListeners];
+    [client tearDown];
+}
+
+- (void)testShouldFailLargeAboutIcon
+{
+    BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
+    [client setUp];
+    
+    client.isTestClient = YES;
+    client.didReceiveAnnounce = NO;
+    
+    // Service
+    BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
+    [self.bus registerBusObject:basicObject];
+    
+    QStatus status = [self.bus start];
+    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    status = [self.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    
+    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
+    
+    status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
+    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    
+    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
+    [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
+    
+    // Client
+    [client.bus registerAboutListener:client];
+    status = [client.bus start];
+    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    status = [client.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
+    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    
+    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    
+    // Service sets the About Icon
+    AJNAboutIcon *aboutIcon = [[AJNAboutIcon alloc] init];
+    status = [aboutIcon setUrlWithMimeType:@"image/png" url:@"http://www.example.com"];
+    STAssertTrue(status == ER_OK, @"Could not set Url for the About Icon");
+    
+    uint8_t aboutIconContent[MAX_ICON_SIZE_IN_BYTES + 2];
+    if (aboutIconContent) {
+        for (size_t iconByte = 0; iconByte < MAX_ICON_SIZE_IN_BYTES; iconByte++) {
+            aboutIconContent[iconByte] = ICON_BYTE;
+        }
+    }
+    
+    status = [aboutIcon setContentWithMimeType:@"image/png" data:aboutIconContent size:(sizeof(aboutIconContent) / sizeof(aboutIconContent[0])) ownsFlag:false];
+    
+    // Set AboutIconObject
+    STAssertTrue(status == ER_BUS_BAD_VALUE, @"Could not content for About Icon");
+    AJNAboutIconObject *aboutIconObject = [[AJNAboutIconObject alloc] initWithBusAttachment:self.bus aboutIcon:aboutIcon];
+    
+    //Client gets the About Icon
+    AJNAboutIconProxy *aboutIconProxy = [[AJNAboutIconProxy alloc] initWithBusAttachment:client.bus busName:client.busNameToConnect sessionId:client.testSessionId];
+    AJNAboutIcon *clientAboutIcon = [[AJNAboutIcon alloc] init];
+    [aboutIconProxy getIcon:clientAboutIcon];
+    
+    // Check Url
+    STAssertTrue([[clientAboutIcon getUrl] isEqualToString:[aboutIcon getUrl]], @"About Icon Url does not match");
+    
+    // Check content size
+    STAssertTrue([clientAboutIcon getContentSize] == [aboutIcon getContentSize], @"About Icon content size does not match");
+    
+    // Check About Icon content
+    uint8_t *clientAboutIconContent = [clientAboutIcon getContent];
+    
+    for (size_t i=0 ;i < [clientAboutIcon getContentSize] ; i++) {
+        STAssertTrue((clientAboutIconContent[i] == aboutIconContent[i]), @"Mistmatch in About Icon content");
+        if (clientAboutIconContent[i] != aboutIconContent[i]) {
+            break;
+        }
+        
+    }
+    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus stop];
+    
+    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus stop];
+    
+    [client.bus unregisterBusListener:self];
+    [client.bus unregisterAllAboutListeners];
+    [client tearDown];
+}
+
+
 - (void)testShouldHandleInconsistentAnnounceData
 {
     self.testBadAnnounceData = YES;
@@ -1133,6 +1331,430 @@ static NSMutableDictionary *gDefaultAboutData;
     [self.bus stop];
 }
 
+- (void)testShouldReportMissingFieldInAboutData
+{
+    self.testMissingAboutDataField = YES;
+    
+    // Service
+    BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
+    [self.bus registerBusObject:basicObject];
+    
+    QStatus status = [self.bus start];
+    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    status = [self.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    
+    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
+    
+    status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
+    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    
+    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
+    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
+    STAssertTrue(status == ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, @"Missing about data field should be reported as error");
+    
+    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus stop];
+}
+
+- (void)testShouldReportMissingFieldInAnnounceData
+{
+    self.testMissingAnnounceDataField = YES;
+    
+    // Service
+    BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
+    [self.bus registerBusObject:basicObject];
+    
+    QStatus status = [self.bus start];
+    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    status = [self.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    
+    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
+    
+    status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
+    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    
+    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
+    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
+    STAssertTrue(status == ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, @"Missing about data field should be reported as error");
+    
+    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus stop];
+}
+
+- (void)testShouldHandleUnsupportedLanguageForAbout
+{
+    BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
+    [client setUp];
+    
+    client.isTestClient = YES;
+    client.didReceiveAnnounce = NO;
+    client.testUnsupportedLanguage= YES;
+    
+    // Service
+    BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
+    [self.bus registerBusObject:basicObject];
+    
+    QStatus status = [self.bus start];
+    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    status = [self.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    
+    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
+    
+    status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
+    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    
+    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
+    [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
+    
+    // Client
+    [client.bus registerAboutListener:client];
+    status = [client.bus start];
+    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    status = [client.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
+    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    
+    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    
+    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus stop];
+    
+    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus stop];
+    
+    [client.bus unregisterBusListener:self];
+    [client.bus unregisterAllAboutListeners];
+    [client tearDown];
+}
+
+- (void)testForNonDefaultLanguageAbout
+{
+    BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
+    [client setUp];
+    
+    client.isTestClient = YES;
+    client.didReceiveAnnounce = NO;
+    client.testUnsupportedLanguage= YES;
+    
+    // Service
+    BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
+    [self.bus registerBusObject:basicObject];
+    
+    QStatus status = [self.bus start];
+    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    status = [self.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    
+    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
+    
+    status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
+    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    
+    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
+    [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
+    
+    // Client
+    [client.bus registerAboutListener:client];
+    status = [client.bus start];
+    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    status = [client.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
+    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    
+    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    
+    // Create AboutProxy
+    AJNAboutProxy *aboutProxy = [[AJNAboutProxy alloc] initWithBusAttachment:client.bus busName:client.busNameToConnect sessionId:client.testSessionId];
+    
+    NSMutableDictionary *aboutData;
+    status = [aboutProxy getAboutDataForLanguage:@"foo" usingDictionary:aboutData];
+    STAssertTrue(status == ER_OK, @"Non default language should not throw error");
+
+    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus stop];
+    
+    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus stop];
+    
+    [client.bus unregisterBusListener:self];
+    [client.bus unregisterAllAboutListeners];
+    [client tearDown];
+}
+
+- (void)testForNonDefaultLanguageUTFAbout
+{
+    BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
+    [client setUp];
+    
+    client.isTestClient = YES;
+    client.didReceiveAnnounce = NO;
+    client.testNonDefaultUTFLanguage= YES;
+    
+    // Service
+    BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
+    [self.bus registerBusObject:basicObject];
+    
+    QStatus status = [self.bus start];
+    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    status = [self.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    
+    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
+    
+    status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
+    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    
+    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
+    [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
+    
+    // Client
+    [client.bus registerAboutListener:client];
+    status = [client.bus start];
+    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    status = [client.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
+    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    
+    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    
+    // Create AboutProxy
+    AJNAboutProxy *aboutProxy = [[AJNAboutProxy alloc] initWithBusAttachment:client.bus busName:client.busNameToConnect sessionId:client.testSessionId];
+    
+    NSMutableDictionary *aboutData;
+    status = [aboutProxy getAboutDataForLanguage:@"foo" usingDictionary:aboutData];
+    STAssertTrue(status == ER_OK, @"Non default language should not throw error");
+    
+    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus stop];
+    
+    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus stop];
+    
+    [client.bus unregisterBusListener:self];
+    [client.bus unregisterAllAboutListeners];
+    [client tearDown];
+}
+
+- (void)testForAboutProxyGetAboutObjectDescription
+{
+    BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
+    [client setUp];
+    
+    // Service
+    BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
+    [self.bus registerBusObject:basicObject];
+    
+    QStatus status = [self.bus start];
+    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    status = [self.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    
+    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
+    
+    status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
+    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    
+    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
+    [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
+    
+    // Client
+    [client.bus registerAboutListener:client];
+    status = [client.bus start];
+    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    status = [client.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
+    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    
+    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    
+    // Create AboutProxy
+    AJNAboutProxy *aboutProxy = [[AJNAboutProxy alloc] initWithBusAttachment:client.bus busName:client.busNameToConnect sessionId:client.testSessionId];
+    
+    AJNMessageArgument *aboutObjectDescription;
+    //status = [aboutProxy getObjectDescriptionUsingMsgArg:aboutObjectDescription];
+    STAssertTrue(status == ER_OK, @"getObjectDescriptionUsingMsgArg returned error");
+    
+    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus stop];
+    
+    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus stop];
+    
+    [client.bus unregisterBusListener:self];
+    [client.bus unregisterAllAboutListeners];
+    [client tearDown];
+}
+
+- (void)testForAboutObjectDescription
+{
+    QStatus status;
+    self.testMissingAnnounceDataField = YES;
+    
+    // Service
+    BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
+    [self.bus registerBusObject:basicObject];
+    
+    // Populate a MsgArg with a(oas)
+    AJNMessageArgument *testAboutDescriptionArgs = [[AJNMessageArgument alloc] init];
+    AJNMessageArgument *entryOne = [[AJNMessageArgument alloc] init];
+    AJNMessageArgument *entryTwo = [[AJNMessageArgument alloc] init];
+    
+    
+    AJNMessageArgument *arrayOfInterfaces = [[AJNMessageArgument alloc] init];
+    char *interfaces[] = { "com.test.about", "com.foo.bar" };
+    char *objPath1 = "/test/about";
+    
+    
+    status = [arrayOfInterfaces setValue:@"(oas)", objPath1, 2, interfaces];
+    STAssertTrue(status == ER_OK, @"createFromMsgArg returned an error");
+    [arrayOfInterfaces stabilize];
+    
+    AJNMessageArgument *arrayOfInterfacesTwo = [[AJNMessageArgument alloc] init];
+    char *interfacesTwo[] = { "org.test.about", "org.foo.bar" };
+    char *objPath2 = "/test/about";
+
+    [arrayOfInterfacesTwo setValue:@"(oas)", objPath2, 2, interfacesTwo];
+    [arrayOfInterfacesTwo stabilize];
+    
+     //status = [testAboutDescriptionArgs setValue:@"a(oas)", 2, arrayOfInterfaces, arrayOfInterfacesTwo];
+    status = [testAboutDescriptionArgs setValue:@"a(oas)", 1, arrayOfInterfaces];
+//    status = [testAboutDescriptionArgs setValue:@"a(oas)", 1, entryOne];
+    STAssertTrue(status == ER_OK, @"Error creating msg arg");
+    [testAboutDescriptionArgs stabilize];
+    
+    // Call create from MsgArg
+    AJNAboutObjectDescription *aboutObjectDescription = [[AJNAboutObjectDescription alloc] initWithMsgArg:testAboutDescriptionArgs];
+    status = [aboutObjectDescription createFromMsgArg:testAboutDescriptionArgs];
+    STAssertTrue(status == ER_OK, @"createFromMsgArg returned an error");
+    
+    // Call other AJNAboutObjectDescription functions
+    
+}
+
+- (void)testWhoImplementsCallForWildCardPositive
+{
+    BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
+    [client setUp];
+    
+    client.isTestClient = YES;
+    client.didReceiveAnnounce = NO;
+    
+    // Service
+    BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
+    [self.bus registerBusObject:basicObject];
+    
+    QStatus status = [self.bus start];
+    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    status = [self.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    
+    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
+    
+    status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
+    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    
+    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
+    [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
+    
+    // Client
+    [client.bus registerAboutListener:client];
+    status = [client.bus start];
+    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    status = [client.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    status = [client.bus whoImplementsInterface:@"*"];
+    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    
+    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    
+    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus stop];
+    
+    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus stop];
+    
+    [client.bus unregisterBusListener:self];
+    [client.bus unregisterAllAboutListeners];
+    [client tearDown];
+}
+
+- (void)testWhoImplementsCallForNull
+{
+    BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
+    [client setUp];
+    
+    client.isTestClient = YES;
+    client.didReceiveAnnounce = NO;
+    
+    // Service
+    BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
+    [self.bus registerBusObject:basicObject];
+    
+    QStatus status = [self.bus start];
+    STAssertTrue(status == ER_OK, @"Bus failed to start.");
+    status = [self.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
+    
+    AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
+    
+    status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
+    STAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusAttachmentTestsServicePort);
+    
+    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
+    [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
+    
+    // Client
+    [client.bus registerAboutListener:client];
+    status = [client.bus start];
+    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    status = [client.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    status = [client.bus whoImplementsInterface:nil];
+    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    
+    STAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
+    
+    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus stop];
+    
+    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus stop];
+    
+    [client.bus unregisterBusListener:self];
+    [client.bus unregisterAllAboutListeners];
+    [client tearDown];
+}
+
+- (void)testCancelWhoImplementsMismatch
+{
+    BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
+    [client setUp];
+    
+    // Client
+    [client.bus registerAboutListener:client];
+    QStatus status = [client.bus start];
+    STAssertTrue(status == ER_OK, @"Bus for client failed to start.");
+    status = [client.bus connectWithArguments:@"null:"];
+    STAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
+    status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
+    STAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
+    status = [client.bus cancelWhoImplements:@"org.alljoyn.bus.sample.strings.mismatch"];
+    STAssertTrue(status == ER_BUS_MATCH_RULE_NOT_FOUND, @"Test for mismatched CancelWhoImplements Failed");
+    
+    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus stop];
+    
+    [client.bus unregisterBusListener:self];
+    [client.bus unregisterAllAboutListeners];
+    [client tearDown];
+}
 
 #pragma mark - AJNAboutListener delegate methods
 
@@ -1155,9 +1777,16 @@ static NSMutableDictionary *gDefaultAboutData;
         
         // Make a call to GetAboutData and GetVersion
         uint16_t version;
+        QStatus status;
         NSMutableDictionary *aboutData;
         [aboutProxy getVersion:&version];
-        [aboutProxy getAboutDataForLanguage:@"en" usingDictionary:aboutData];
+        STAssertTrue(version == 1, @"Version value is incorrect");
+        if (self.testUnsupportedLanguage == YES) {
+            status = [aboutProxy getAboutDataForLanguage:@"bar" usingDictionary:aboutData];
+            STAssertTrue(status != ER_OK, @"Unsupported language not should throw error");
+        } else {
+            [aboutProxy getAboutDataForLanguage:@"en" usingDictionary:aboutData];
+        }
         NSLog(@"Version %d", version);
        
         // Verify data by comparing the data that you set with the data that you received
@@ -1199,13 +1828,23 @@ static NSMutableDictionary *gDefaultAboutData;
     [gDefaultAboutData setValue:deviceName forKey:@"DeviceName"];
     
     AJNMessageArgument *deviceId = [[AJNMessageArgument alloc] init];
-    [deviceId setValue:@"s", "avec-awe1213-1234559xvc123"];
+    if (self.testMissingAboutDataField == YES) {
+        [deviceId setValue:@"s", ""];
+    } else {
+        [deviceId setValue:@"s", "avec-awe1213-1234559xvc123"];
+    }
+    
     [deviceId stabilize];
     [*aboutData setValue:deviceId forKey:@"DeviceId"];
     [gDefaultAboutData setValue:deviceId forKey:@"DeviceId"];
     
     AJNMessageArgument *appName = [[AJNMessageArgument alloc] init];
-    [appName setValue:@"s", "App Name"];
+    if (self.testMissingAnnounceDataField == YES) {
+        [appName setValue:@"s", ""];
+    } else {
+        [appName setValue:@"s", "App Name"];
+    }
+    
     [appName stabilize];
     [*aboutData setValue:appName forKey:@"AppName"];
     [gDefaultAboutData setValue:appName forKey:@"AppName"];
@@ -1230,7 +1869,11 @@ static NSMutableDictionary *gDefaultAboutData;
     [gDefaultAboutData setValue:supportedLang forKey:@"SupportedLanguages"];
     
     AJNMessageArgument *description = [[AJNMessageArgument alloc] init];
-    [description setValue:@"s", "Description"];
+    if (self.testNonDefaultUTFLanguage == YES) {
+        [description setValue:@"s", "Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método"];
+    } else {
+        [description setValue:@"s", "Description"];
+    }
     [description stabilize];
     [*aboutData setValue:description forKey:@"Description"];
     [gDefaultAboutData setValue:description forKey:@"Description"];
@@ -1326,7 +1969,11 @@ static NSMutableDictionary *gDefaultAboutData;
     [gDefaultAboutData setValue:supportedLang forKey:@"SupportedLanguages"];
 
     AJNMessageArgument *description = [[AJNMessageArgument alloc] init];
-    [description setValue:@"s", "Description"];
+    if (self.testNonDefaultUTFLanguage == YES) {
+        [description setValue:@"s", "Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método"];
+    } else {
+        [description setValue:@"s", "Description"];
+    }
     [description stabilize];
     [*aboutData setValue:description forKey:@"Description"];
     [gDefaultAboutData setValue:description forKey:@"Description"];
