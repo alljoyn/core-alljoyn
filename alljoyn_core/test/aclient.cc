@@ -290,4 +290,6 @@ int main(int argc, char** argv)
             qcc::Sleep(100);
         }
     }
+
+    return 0;
 }

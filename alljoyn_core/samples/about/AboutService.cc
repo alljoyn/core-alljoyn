@@ -54,6 +54,8 @@ class MyBusObject : public BusObject {
         : BusObject(path) {
         QStatus status;
         const InterfaceDescription* iface = bus.GetInterface(INTERFACE_NAME);
+        assert(iface != NULL);
+
         // Here the boolean variable `true` tells AllJoyn that this interface
         // should be announced
         status = AddInterface(*iface, ANNOUNCED);
@@ -176,4 +178,6 @@ int main(int argc, char** argv)
 #endif
         }
     }
+
+    return 0;
 }
