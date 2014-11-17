@@ -176,6 +176,17 @@ class AboutObj : public BusObject {
     bool AnnouncedDataAgreesWithAboutData(MsgArg& aboutDataArg, MsgArg& announcedDataArg);
 
     /**
+     * Validate individual AboutData fields to make sure they meet requirements.
+     *
+     *  @param aboutDataArg MsgArg containing the AboutData fields.
+     *
+     * @return
+     * - #ER_OK if all checked fields are good
+     * - Error status indicating otherwise
+     */
+    QStatus ValidateAboutDataFields(MsgArg& aboutDataArg);
+
+    /**
      *  pointer to BusAttachment
      */
     BusAttachment* m_busAttachment;

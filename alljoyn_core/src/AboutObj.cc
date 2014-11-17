@@ -90,9 +90,13 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
     }
 
     if (!AnnouncedDataAgreesWithAboutData(aboutDataArg, announcedDataArg)) {
-        return ER_ABOUT_INVALID_ABOUT_DATA_LISTENER;
+        return ER_ABOUT_INVALID_ABOUTDATA_LISTENER;
     }
 
+    status = ValidateAboutDataFields(aboutDataArg);
+    if (ER_OK != status) {
+        return status;
+    }
     m_busAttachment->GetInternal().GetAnnouncedObjectDescription(m_objectDescription);
 
     const InterfaceDescription* aboutIntf = m_busAttachment->GetInterface(org::alljoyn::About::InterfaceName);
@@ -332,38 +336,38 @@ bool AboutObj::AnnouncedDataAgreesWithAboutData(MsgArg& aboutDataArg, MsgArg& an
     aboutDataArg.GetElement("{sv}", AboutData::APP_ID, &field);
     announcedDataArg.GetElement("{sv}", AboutData::APP_ID, &afield);
     if (*field != *afield) {
-        QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::APP_ID));
+        QCC_LogError(ER_ABOUT_INVALID_ABOUTDATA_LISTENER, ("AboutDataListner %s field error", AboutData::APP_ID));
         return false;
     }
     aboutDataArg.GetElement("{sv}", AboutData::DEFAULT_LANGUAGE, &field);
     announcedDataArg.GetElement("{sv}", AboutData::DEFAULT_LANGUAGE, &afield);
     if (*field != *afield) {
-        QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::DEFAULT_LANGUAGE));
+        QCC_LogError(ER_ABOUT_INVALID_ABOUTDATA_LISTENER, ("AboutDataListner %s field error", AboutData::DEFAULT_LANGUAGE));
         return false;
     }
     aboutDataArg.GetElement("{sv}", AboutData::DEVICE_ID, &field);
     announcedDataArg.GetElement("{sv}", AboutData::DEVICE_ID, &afield);
     if (*field != *afield) {
-        QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::DEVICE_ID));
+        QCC_LogError(ER_ABOUT_INVALID_ABOUTDATA_LISTENER, ("AboutDataListner %s field error", AboutData::DEVICE_ID));
         return false;
     }
     aboutDataArg.GetElement("{sv}", AboutData::APP_NAME, &field);
     announcedDataArg.GetElement("{sv}", AboutData::APP_NAME, &afield);
     if (*field != *afield) {
-        QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::APP_NAME));
+        QCC_LogError(ER_ABOUT_INVALID_ABOUTDATA_LISTENER, ("AboutDataListner %s field error", AboutData::APP_NAME));
         return false;
     }
 
     aboutDataArg.GetElement("{sv}", AboutData::MANUFACTURER, &field);
     announcedDataArg.GetElement("{sv}", AboutData::MANUFACTURER, &afield);
     if (*field != *afield) {
-        QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::MANUFACTURER));
+        QCC_LogError(ER_ABOUT_INVALID_ABOUTDATA_LISTENER, ("AboutDataListner %s field error", AboutData::MANUFACTURER));
         return false;
     }
     aboutDataArg.GetElement("{sv}", AboutData::MODEL_NUMBER, &field);
     announcedDataArg.GetElement("{sv}", AboutData::MODEL_NUMBER, &afield);
     if (*field != *afield) {
-        QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::MODEL_NUMBER));
+        QCC_LogError(ER_ABOUT_INVALID_ABOUTDATA_LISTENER, ("AboutDataListner %s field error", AboutData::MODEL_NUMBER));
         return false;
     }
 
@@ -371,14 +375,28 @@ bool AboutObj::AnnouncedDataAgreesWithAboutData(MsgArg& aboutDataArg, MsgArg& an
     QStatus astatus = announcedDataArg.GetElement("{sv}", AboutData::DEVICE_NAME, &afield);
     if (status == ER_OK && astatus == ER_OK) {
         if (*field != *afield) {
-            QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::DEVICE_NAME));
+            QCC_LogError(ER_ABOUT_INVALID_ABOUTDATA_LISTENER, ("AboutDataListner %s field error", AboutData::DEVICE_NAME));
             return false;
         }
         // DEVICE_NAME is optional so if is not found we are still good
     } else if (!(status == ER_BUS_ELEMENT_NOT_FOUND && astatus == ER_BUS_ELEMENT_NOT_FOUND)) {
-        QCC_LogError(ER_ABOUT_INVALID_ABOUT_DATA_LISTENER, ("AboutDataListner %s field error", AboutData::DEVICE_NAME));
+        QCC_LogError(ER_ABOUT_INVALID_ABOUTDATA_LISTENER, ("AboutDataListner %s field error", AboutData::DEVICE_NAME));
         return false;
     }
     return true;
+}
+
+QStatus AboutObj::ValidateAboutDataFields(MsgArg& aboutDataArg) {
+    MsgArg* field = NULL;
+    QStatus status;
+    status = aboutDataArg.GetElement("{sv}", AboutData::APP_ID, &field);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (field->v_scalarArray.numElements != 16) {
+        QCC_LogError(ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE, ("AboutData AppId must be must be a 128-bit (16-byte) UUID"));
+        return ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE;
+    }
+    return ER_OK;
 }
 } //endnamespace

@@ -456,8 +456,8 @@ TEST(AboutDataTest, IsValid)
     AboutData aboutData("en");
 
     EXPECT_FALSE(aboutData.IsValid());
-    uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.SetAppId(appId, 6);
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    status = aboutData.SetAppId(appId, 16);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -497,8 +497,8 @@ TEST(AboutDataTest, IsValid_Negative)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     EXPECT_FALSE(aboutData.IsValid());
 
-    uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.SetAppId(appId, 6);
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    status = aboutData.SetAppId(appId, 16);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     //DeviceId and other required fields are missing
     EXPECT_FALSE(aboutData.IsValid());
@@ -558,8 +558,8 @@ TEST(AboutDataTest, GetAboutData)
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.SetAppId(appId, 6);
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    status = aboutData.SetAppId(appId, 16);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -597,7 +597,7 @@ TEST(AboutDataTest, GetAboutData)
     int8_t* appIdOut;
     size_t appIdNum;
     args->Get("ay", &appIdNum, &appIdOut);
-    ASSERT_EQ(6u, appIdNum);
+    ASSERT_EQ(16u, appIdNum);
     for (size_t i = 0; i < appIdNum; ++i) {
         EXPECT_EQ(appId[i], appIdOut[i]);
     }
@@ -634,8 +634,8 @@ TEST(AboutDataTest, GetMsgArg_es_language)
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.SetAppId(appId, 6);
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    status = aboutData.SetAppId(appId, 16);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -673,7 +673,7 @@ TEST(AboutDataTest, GetMsgArg_es_language)
     int8_t* appIdOut;
     size_t appIdNum;
     args->Get("ay", &appIdNum, &appIdOut);
-    ASSERT_EQ(6u, appIdNum);
+    ASSERT_EQ(16u, appIdNum);
     for (size_t i = 0; i < appIdNum; ++i) {
         EXPECT_EQ(appId[i], appIdOut[i]);
     }
@@ -709,8 +709,8 @@ TEST(AboutDataTest, GetMsgArg_language_not_supported)
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.SetAppId(appId, 6);
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    status = aboutData.SetAppId(appId, 16);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -748,8 +748,8 @@ TEST(AboutDataTest, GetAnnouncedAboutData)
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.SetAppId(appId, 6);
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    status = aboutData.SetAppId(appId, 16);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -775,7 +775,7 @@ TEST(AboutDataTest, GetAnnouncedAboutData)
     int8_t* appIdOut;
     size_t appIdNum;
     args->Get("ay", &appIdNum, &appIdOut);
-    ASSERT_EQ(6u, appIdNum);
+    ASSERT_EQ(16u, appIdNum);
     for (size_t i = 0; i < appIdNum; ++i) {
         EXPECT_EQ(appId[i], appIdOut[i]);
     }
@@ -847,8 +847,8 @@ TEST(AboutDataTest, GetMsgArgWithOEMSpecificField)
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.SetAppId(appId, 6);
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    status = aboutData.SetAppId(appId, 16);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -898,7 +898,7 @@ TEST(AboutDataTest, GetMsgArgWithOEMSpecificField)
     int8_t* appIdOut;
     size_t appIdNum;
     args->Get("ay", &appIdNum, &appIdOut);
-    ASSERT_EQ(6u, appIdNum);
+    ASSERT_EQ(16u, appIdNum);
     for (size_t i = 0; i < appIdNum; ++i) {
         EXPECT_EQ(appId[i], appIdOut[i]);
     }
@@ -948,8 +948,8 @@ TEST(AboutDataTest, InitUsingMsgArg)
     QStatus status = ER_FAIL;
     AboutData aboutData("en");
 
-    uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.SetAppId(appId, 6);
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    status = aboutData.SetAppId(appId, 16);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -1001,7 +1001,7 @@ TEST(AboutDataTest, InitUsingMsgArg)
     size_t numOut;
     status = aboutDataInit.GetAppId(&appIdOut, &numOut);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    ASSERT_EQ(6u, numOut);
+    ASSERT_EQ(16u, numOut);
     for (size_t i = 0; i < numOut; i++) {
         EXPECT_EQ(appId[i], appIdOut[i]);
     }
@@ -1248,8 +1248,8 @@ TEST(AboutDataTest, SetNewField) {
     QStatus status = ER_FAIL;
     AboutDataTestAboutData aboutData("en");
 
-    uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.SetAppId(appId, 6);
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    status = aboutData.SetAppId(appId, 16);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -1278,7 +1278,7 @@ TEST(AboutDataTest, SetNewField) {
     int8_t* appIdOut;
     size_t appIdNum;
     args->Get("ay", &appIdNum, &appIdOut);
-    ASSERT_EQ(6u, appIdNum);
+    ASSERT_EQ(16u, appIdNum);
     for (size_t i = 0; i < appIdNum; ++i) {
         EXPECT_EQ(appId[i], appIdOut[i]);
     }
@@ -1327,8 +1327,8 @@ TEST(AboutDataTest, GetFields) {
     QStatus status = ER_FAIL;
     AboutDataTestAboutData aboutData("en");
 
-    uint8_t appId[] = { 0, 1, 2, 3, 4, 5 };
-    status = aboutData.SetAppId(appId, 6);
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    status = aboutData.SetAppId(appId, 16);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = aboutData.SetDeviceId("fakeID");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
