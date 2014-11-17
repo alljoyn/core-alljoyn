@@ -19,6 +19,7 @@
 
 #include <qcc/XmlElement.h>
 #include <qcc/String.h>
+#include <qcc/StringUtil.h>
 #include <qcc/StringSource.h>
 
 #include <stdio.h>
@@ -105,19 +106,12 @@ AboutData::~AboutData()
     delete aboutDataInternal;
 }
 
-uint8_t CharToNibble(char c) {
-    if (c >= '0' && c <= '9') {
-        return c - '0';
-    }
-    if (c >= 'A' && c <= 'F') {
-        return c - 'A' + 10;
-    }
-    if (c >= 'a' && c <= 'f') {
-        return c - 'a' + 10;
-    }
-
-    return -1; // Error!
+bool isHexChar(char c) {
+    return ((c >= '0' && c <= '9') ||
+            (c >= 'A' && c <= 'F') ||
+            (c >= 'a' && c <= 'f'));
 }
+
 QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
 {
     QStatus status;
@@ -155,24 +149,9 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
                 // Since Languages are implicitly added we don't look for the
                 // SupportedLanguages tag.
                 if (it->first == APP_ID) {
-                    size_t strSize = root->GetChild(it->first)->GetContent().size();
-                    if (strSize % 2 == 0) {
-                        uint8_t* appId_bytes = new uint8_t[strSize / 2];
-                        for (size_t i = 0; i < strSize / 2; ++i) {
-                            appId_bytes[i] = (CharToNibble(root->GetChild(it->first)->GetContent()[2 * i]) << 4) |
-                                             CharToNibble(root->GetChild(it->first)->GetContent()[2 * i + 1]);
-                        }
-                        status = SetAppId(appId_bytes, strSize / 2);
-                        if (status != ER_OK) {
-                            delete [] appId_bytes;
-                            return status;
-                        }
-                        aboutDataInternal->propertyStore[APP_ID].Stabilize();
-                        delete [] appId_bytes;
-                    } else {
-                        // we must have an even number of characters
-                        // TODO put more meaningful status
-                        return ER_FAIL;
+                    status = SetAppId(root->GetChild(it->first)->GetContent().c_str());
+                    if (ER_OK != status) {
+                        return status;
                     }
                 } else {
                     assert(aboutDataInternal->aboutFields[it->first].signature == "s");
@@ -363,6 +342,67 @@ QStatus AboutData::GetAppId(uint8_t** appId, size_t* num)
     return status;
 }
 
+QStatus AboutData::SetAppId(const char* appId) {
+    QStatus status = ER_OK;
+    //The number of bytes needed to make a 128-bit AppId
+    const size_t APPID_BYTE_SIZE = 16;
+    //APPID_BYTE_SIZE * 2 + 4 the number of hex characers to make a 128-bit AppId
+    // plus four for each possible '-' character from a RFC 4122 UUID. (i.e. 4a354637-5649-4518-8a48-323c158bc02d)
+    size_t strSize = strnlen(appId, APPID_BYTE_SIZE * 2 + 4);
+    if (strSize % 2 == 0) {
+        if (strSize / 2 == APPID_BYTE_SIZE) {
+            //Check that every character is a hex char
+            for (size_t i = 0; i < strSize; ++i) {
+                if (!isHexChar(appId[i])) {
+                    return ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE;
+                }
+            }
+            uint8_t appId_bytes[APPID_BYTE_SIZE];
+            qcc::HexStringToBytes(static_cast<const qcc::String>(appId), appId_bytes, APPID_BYTE_SIZE);
+            status = SetAppId(appId_bytes, APPID_BYTE_SIZE);
+            if (status != ER_OK) {
+                return status;
+            }
+            aboutDataInternal->propertyStore[APP_ID].Stabilize();
+        } else if (strSize / 2 == 18) {
+            // since the sting is 36 characters long we assume its a UUID as per
+            // section 3 of RFC 4122  (i.e. 4a354637-5649-4518-8a48-323c158bc02d)
+            // The UUID according to RFC 4122 is basically a 16-byte array encoded
+            // in hexOctets with '-' characters separating parts of the string.
+            // After checking that the '-' characters are in the correct location
+            // we remove the '-' characters and pass the string without the '-'
+            // back to the SetAppId function.
+
+            // The four locations of the '-' character according to RFC 4122
+            size_t TIME_LOW_END = 8;               //location of fist '-' char
+            size_t TIME_MID_END = 13;              //location of second '-' char
+            size_t TIME_HIGH_AND_VERSION_END = 18; //location of third '-' char
+            size_t CLOCK_SEQ_END = 23;              // location of fourth '-' char
+            if (appId[TIME_LOW_END] != '-' ||
+                appId[TIME_MID_END] != '-' ||
+                appId[TIME_HIGH_AND_VERSION_END] != '-' ||
+                appId[CLOCK_SEQ_END] != '-') {
+                return ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE;
+            }
+            //APPID_BYTE_SIZE * 2 + 1 number of hex characters +1 for nul
+            char hexAppId[APPID_BYTE_SIZE * 2 + 1];
+            size_t location = 0;
+            for (size_t i = 0; i < strSize; ++i) {
+                if (appId[i] != '-') {
+                    hexAppId[location] = appId[i];
+                    ++location;
+                }
+            }
+            hexAppId[location] = '\0';
+            return SetAppId(hexAppId);
+        } else {
+            return ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE;
+        }
+    } else {
+        return ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE;
+    }
+    return status;
+}
 QStatus AboutData::SetDefaultLanguage(const char* defaultLanguage)
 {
     QStatus status = ER_OK;
