@@ -12692,6 +12692,9 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_cancelAnnouncement(JNIEn
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("AboutObj_cancelAnnouncement(): Exception"));
         return JStatus(ER_FAIL);
+    } else if (aboutObj == NULL) {
+        QCC_LogError(ER_FAIL, ("AboutObj_cancelAnnouncement(): NULL AboutObj"));
+        return JStatus(ER_FAIL);
     }
     return JStatus(aboutObj->CancelAnnouncement());
 }
