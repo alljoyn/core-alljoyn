@@ -148,6 +148,11 @@ class AutoPinger : public qcc::AlarmListener {
 
     bool pausing;
 };
+static class AutoPingerInit {
+  public:
+    AutoPingerInit();
+    ~AutoPingerInit();
+} autoPingerInit;
 }
 #undef QCC_MODULE
 #endif /* AUTOPINGER_H_ */

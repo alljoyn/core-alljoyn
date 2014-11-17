@@ -53,11 +53,30 @@ namespace qcc {
 
 /* Global Data */
 
-static const String emptyString;
+uint64_t emptyStringDummy[sizeof(String) / 8];
 
-const String& String::Empty = emptyString;
+String& emptyString = (String &)emptyStringDummy;
+
+const String& String::Empty = (String &)emptyString;
 
 String::ManagedCtx String::nullContext = { 0 };
+
+int stringInitCounter = 0;
+StringInitializer::StringInitializer()
+{
+    if (stringInitCounter++ == 0) {
+        //placement new
+        new (&emptyString)String();
+    }
+}
+
+StringInitializer::~StringInitializer()
+{
+    if (--stringInitCounter == 0) {
+        //placement delete
+        emptyString.~String();
+    }
+}
 
 String::String()
 {

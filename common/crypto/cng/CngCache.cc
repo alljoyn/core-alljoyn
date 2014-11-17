@@ -78,7 +78,27 @@ void CngCache::Cleanup()
 /**
  * The one and only CNG cache instance.
  */
-CngCache cngCache;
+uint64_t cngCacheDummy[sizeof(CngCache) / 8];
+
+CngCache& cngCache = (CngCache &)cngCacheDummy;
+
+static int cngCacheCounter = 0;
+CngCacheInit::CngCacheInit()
+{
+    if (cngCacheCounter++ == 0) {
+        //placement new
+        new (&cngCache)CngCache();
+    }
+}
+
+CngCacheInit::~CngCacheInit()
+{
+    if (--cngCacheCounter == 0) {
+        //placement delete
+        cngCache.~CngCache();
+    }
+
+}
 
 } // qcc
 

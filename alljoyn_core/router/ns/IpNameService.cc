@@ -36,21 +36,24 @@ namespace ajn {
 const uint16_t IpNameService::MULTICAST_MDNS_PORT = 5353;
 
 static IpNameService* singletonIpNameService = NULL;
+static int ipNsCounter = 0;
 
-IpNameService& IpNameService::Instance()
+IpNameServiceInitializer::IpNameServiceInitializer()
 {
-    if (!singletonIpNameService) {
+    if (0 == ipNsCounter++) {
         singletonIpNameService = new IpNameService();
     }
-    return *singletonIpNameService;
 }
 
-void IpNameService::Cleanup()
+IpNameServiceInitializer::~IpNameServiceInitializer()
 {
-    if (singletonIpNameService) {
+    if (0 == --ipNsCounter) {
         delete singletonIpNameService;
-        singletonIpNameService = NULL;
     }
+}
+IpNameService& IpNameService::Instance()
+{
+    return *singletonIpNameService;
 }
 
 IpNameService::IpNameService()

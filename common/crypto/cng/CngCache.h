@@ -34,6 +34,7 @@ namespace qcc {
  * This struct manages the lifetime of algorithm handles.
  */
 struct CngCache {
+    friend class CngCacheInit;
     CngCache();
     ~CngCache();
 
@@ -53,7 +54,12 @@ struct CngCache {
     BCRYPT_ALG_HANDLE rsaHandle;
 };
 
-extern CngCache cngCache;
+extern CngCache& cngCache;
+static class CngCacheInit {
+  public:
+    CngCacheInit();
+    ~CngCacheInit();
+} cngCacheInit;
 
 } // qcc
 

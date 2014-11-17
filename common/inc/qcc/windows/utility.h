@@ -42,4 +42,9 @@ void WinsockCheck();
  */
 void WinsockCleanup();
 
+static struct WinsockInit {
+    WinsockInit();
+    ~WinsockInit();
+} winsockInit;
+
 #endif

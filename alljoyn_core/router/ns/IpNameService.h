@@ -64,18 +64,15 @@ class IpNameServiceListener {
  * The BundledRouter is a static and so the destruction order of the two objects
  * (him and us) depends on whatever the linker decides the order should be.
  *
- * We use a Meyers Singleton, and therefore we defer construction of the
- * underlying object to the time of first use, which is going to be when the
- * transports are created, well after main() has started.  We want to have all
- * of the tear-down of the threads performed before main() ends, so we need to
- * have knowledge of when the singleton is no longer required.  We reference
+ * We use the nifty counter mechanism to create the IpNameService static object
+ * We want to have all of the tear-down of the threads performed before main() ends
+ * The singleton will be destructed during the static destruction phase.  We reference
  * count instances of transports that register with the IpNameService to
- * accomplish this.
+ * stop and join the IpNameService object.
  *
  * Whenever a transport comes up and wants to interact with the IpNameService it
  * calls our static Instance() method to get a reference to the underlying name
- * service object.  This accomplishes the construction on first use idiom.  This
- * is a very lightweight operation that does almost nothing.  The first thing
+ * service object.  The first thing
  * that a transport must do is to Acquire() the instance of the name service,
  * which is going to bump a reference count and do the hard work of starting the
  * IpNameService.  The last thing a transport must do is to Release() the
@@ -85,6 +82,7 @@ class IpNameServiceListener {
  * only be done in the transport's Join() method.
  */
 class IpNameService {
+    friend class IpNameServiceInitializer;
   public:
 
     /**
@@ -100,19 +98,13 @@ class IpNameService {
     static IpNameService& Instance();
 
     /**
-     * @brief Clean up the IpNameService singleton. Must be the last call to IpNameService.
-     */
-    static void Cleanup();
-
-    /**
      * @brief Notify the singleton that there is a transport coming up that will
      * be using the IP name service.
      *
      * Whenever a transport comes up and wants to interact with the
      * IpNameService it calls our static Instance() method to get a reference to
-     * the underlying name service object.  This accomplishes the construction
-     * on first use idiom.  This is a very lightweight operation that does
-     * almost nothing.  The first thing that a transport must do is to Acquire()
+     * the underlying name service object.
+     * The first thing that a transport must do is to Acquire()
      * the instance of the name service, which is going to bump a reference
      * count and do the hard work of starting the IpNameService.  A transport
      * author can think of this call as performin a reference-counted Start()
@@ -451,7 +443,7 @@ class IpNameService {
     /**
      * This is a singleton so the constructor is marked private to prevent
      * construction of an IpNameService instance in any other sneaky way than
-     * the Meyers singleton mechanism.
+     * the nifty counter mechanism.
      */
     IpNameService();
 
@@ -540,6 +532,12 @@ class IpNameService {
     int32_t m_refCount;          /**< The number of transports that have registered as users of the singleton */
     IpNameServiceImpl* m_pimpl;  /**< A pointer to the private implementation of the name service */
 };
+
+static class IpNameServiceInitializer {
+  public:
+    IpNameServiceInitializer();
+    ~IpNameServiceInitializer();
+} ipNameServiceInitializer;
 
 } // namespace ajn
 
