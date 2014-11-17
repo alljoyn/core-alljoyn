@@ -12700,12 +12700,16 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_AboutObj_destroy(JNIEnv* env, jobjec
         return;
     }
 
+    JBusAttachment* busPtr = aboutObj->busPtr;
+
     //Remove the BusAttachments pointer to the JAboutObject
-    aboutObj->busPtr->aboutObj = NULL;
-    // Decrament the ref pointer so the BusAttachment can be released.
-    aboutObj->busPtr->DecRef();
+    busPtr->aboutObj = NULL;
+
     delete aboutObj;
     aboutObj = NULL;
+
+    // Decrament the ref pointer so the BusAttachment can be released.
+    busPtr->DecRef();
 
     SetHandle(thiz, NULL);
 }

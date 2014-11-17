@@ -57,6 +57,11 @@ AboutIconObj::AboutIconObj(ajn::BusAttachment& bus, AboutIcon& icon) :
     }
 }
 
+AboutIconObj::~AboutIconObj()
+{
+    m_busAttachment->UnregisterBusObject(*this);
+}
+
 void AboutIconObj::GetUrl(const ajn::InterfaceDescription::Member* member, ajn::Message& msg) {
     QCC_DbgTrace(("AboutIconObj::%s", __FUNCTION__));
     const ajn::MsgArg* args;
