@@ -515,7 +515,7 @@ TEST_F(AboutObjTest, SetAnnounceFlag) {
     ASSERT_EQ(static_cast<size_t>(0), numIfaces);
 }
 
-TEST_F(AboutObjTest, CancelAnnouncement) {
+TEST_F(AboutObjTest, Unannounce) {
     QStatus status = ER_FAIL;
 
     BusAttachment clientBus("AboutObjTestClient", true);
@@ -548,7 +548,7 @@ TEST_F(AboutObjTest, CancelAnnouncement) {
     EXPECT_STREQ(serviceBus->GetUniqueName().c_str(), aboutListener.busName.c_str());
     EXPECT_EQ(port, aboutListener.port);
 
-    status = aboutObj.CancelAnnouncement();
+    status = aboutObj.Unannounce();
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     clientBus.Stop();

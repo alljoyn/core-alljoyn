@@ -71,9 +71,9 @@ using namespace ajn;
     return self.aboutObject->Announce(sessionPort, *listenerImpl);
 }
 
--(QStatus)cancelAnnouncement
+-(QStatus)unannounce
 {
-    return self.aboutObject->CancelAnnouncement();
+    return self.aboutObject->Unannounce();
 }
 
 

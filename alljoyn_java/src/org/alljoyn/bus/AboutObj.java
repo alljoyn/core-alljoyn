@@ -58,7 +58,13 @@ public class AboutObj {
 
     public native Status announce(short sessionPort, AboutDataListener aboutData);
 
-    public native Status cancelAnnouncement();
+    /**
+     * Cancel the last announce signal sent. If no signals have been sent this
+     * method call will return.
+     *
+     * @return Status.OK on success
+     */
+    public native Status unannounce();
 
     /**
      * The opaque pointer to the underlying C++ object which is actually tied

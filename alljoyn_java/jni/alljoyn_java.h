@@ -1717,10 +1717,10 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_announce
 
 /*
  * Class:     org_alljoyn_bus_AboutObj
- * Method:    cancelAnnouncement
+ * Method:    unannounce
  * Signature: ()Lorg/alljoyn/bus/Status;
  */
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_cancelAnnouncement
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AboutObj_unannounce
   (JNIEnv *, jobject);
 
 /*

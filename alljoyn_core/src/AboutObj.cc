@@ -138,7 +138,7 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
     return status;
 }
 
-QStatus AboutObj::CancelAnnouncement() {
+QStatus AboutObj::Unannounce() {
     if (m_announceSerialNumber == 0) {
         return ER_OK;
     }

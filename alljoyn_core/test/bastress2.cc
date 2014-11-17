@@ -621,7 +621,7 @@ inline void ThreadClass::ServiceRun() {
         QCC_SyncPrintf("------------------------------------------------------------\n");
         QCC_SyncPrintf("Service named %s is stopping...\n", bus->GetUniqueName().c_str());
         QCC_SyncPrintf("------------------------------------------------------------\n");
-        aboutObj.CancelAnnouncement();
+        aboutObj.Unannounce();
     } else {
         QCC_SyncPrintf("------------------------------------------------------------\n");
         QCC_SyncPrintf("Service named %s is stopping...\n", buf);
