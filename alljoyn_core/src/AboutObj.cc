@@ -58,6 +58,11 @@ AboutObj::AboutObj(ajn::BusAttachment& bus, AnnounceFlag isAboutIntfAnnounced) :
     QCC_DbgHLPrintf(("AboutObj RegisterBusOBject %s", QCC_StatusText(status)));
 }
 
+AboutObj::~AboutObj()
+{
+    m_busAttachment->UnregisterBusObject(*this);
+}
+
 QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& aboutData)
 {
     QCC_DbgTrace(("AboutService::%s", __FUNCTION__));

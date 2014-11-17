@@ -69,7 +69,7 @@ class AboutObj : public BusObject {
      */
     AboutObj(BusAttachment& bus, AnnounceFlag isAboutIntfAnnounced = UNANNOUNCED);
 
-    virtual ~AboutObj() { }
+    virtual ~AboutObj();
 
     /**
      * This is used to send the Announce signal.  It announces the list of all

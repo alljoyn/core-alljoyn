@@ -48,8 +48,7 @@ class AboutIconObj : public BusObject {
     /**
      *  Destructor of the About Icon BusObject
      */
-    virtual ~AboutIconObj() {
-    }
+    virtual ~AboutIconObj();
 
   private:
     /**
