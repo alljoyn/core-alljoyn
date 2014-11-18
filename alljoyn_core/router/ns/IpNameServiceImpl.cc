@@ -383,12 +383,6 @@ IpNameServiceImpl::IpNameServiceImpl()
     memset(&m_enabledReliableIPv6[0], 0, sizeof(m_enabledReliableIPv6));
     memset(&m_enabledUnreliableIPv6[0], 0, sizeof(m_enabledUnreliableIPv6));
 
-    memset(&m_reliableIPv4PortMap[0], 0, sizeof(m_reliableIPv4PortMap));
-    memset(&m_unreliableIPv4PortMap[0], 0, sizeof(m_unreliableIPv4PortMap));
-
-    memset(&m_priorReliableIPv4PortMap[0], 0, sizeof(m_priorReliableIPv4PortMap));
-    memset(&m_priorUnreliableIPv4PortMap[0], 0, sizeof(m_priorUnreliableIPv4PortMap));
-
     memset(&m_reliableIPv6Port[0], 0, sizeof(m_reliableIPv6Port));
     memset(&m_unreliableIPv6Port[0], 0, sizeof(m_unreliableIPv6Port));
 
